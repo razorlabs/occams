@@ -33,6 +33,7 @@ setup(name='avrc.data.store',
           "plone.app.z3cform",
           "plone.app.dexterity",
           "xlutils",
+          "collective.saconnect"
           # -*- Extra requirements: -*-
       ],
       entry_points="""
