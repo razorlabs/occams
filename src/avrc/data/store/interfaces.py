@@ -12,16 +12,44 @@ from zope.i18nmessageid import MessageFactory
 
 _ = MessageFactory(__name__)
 
-class IPII(Interface):
+# -----------------------------------------------------------------------------
+# BASE INTERFACES
+# -----------------------------------------------------------------------------
+
+class IBase(Interface):
+    """
+    Base interface class for all interfaces under this add-on module.
+    
+    TODO Rename to something more meaningful.
+    """
+
+# -----------------------------------------------------------------------------
+# MARKER INTERFACES
+# -----------------------------------------------------------------------------
+
+class IInternal(IBase):
     """
     Marker interface for information that will be regarded as Personally
-    Identifiable Information for objects that are stored.
+    Identifiable Information for objects that are stored. This information
+    should be kept "Internal" to the client product in order to protect the
+    privacy of it's subjects.
     """
     
-
-class IReference(IPII):
+    
+class IAccessible(IBase):
     """
-    The number that is used to keep track of the 
+    Marker interface for information that can be publicly accessible to parties
+    that give permissions to. This information should be completely devoid of
+    personally identifiable information, such information should be kept 
+    internal using a separate module implementing the IInternal interface.
+    """
+
+
+class ISubject(IBase):
+    """
+    A subject that that will be associated with attributes. This will also
+    serve as a way for both Internal and Accessible data to communicate
+    about a subject.
     """
     
     number = schema.Int(
@@ -29,24 +57,28 @@ class IReference(IPII):
         )
 
 
-class IExternal(IPII):
+class IReference(IBase):
     """
-    An external resource identifier. This object is intended for legacy
+    An reference identifier for a subject. This object is intended for legacy
     identifiers from previous systems.
     """
     
     name = schema.TextLine(
         title=_(u"Name"),
-        description=_(u"The name of the external source.")
+        description=_(u"The name of the reference.")
         )
     
     number = schema.TextLine(
         title=_(u"Number"),
-        description=_("The reference number of the external source.")
+        description=_("The number given to the subject under the reference.")
         )
+    
 
+# -----------------------------------------------------------------------------
+# PERSONAL INFORMATION INTERFACES
+# -----------------------------------------------------------------------------
 
-class IContact(IPII):
+class IContact(IInternal):
     """
     Represents conntact information that can apply to a reference.
     """
@@ -76,7 +108,7 @@ class IContact(IPII):
         )
 
 
-class IName(IPII):
+class IName(IInternal):
     """
     Represents a name than can apply to a reference.
     """
@@ -98,7 +130,7 @@ class IName(IPII):
         )
 
 
-class IDemographic(IPII):
+class IDemographic(IInternal):
     """
     Represents demographic information about a reference
     """
@@ -106,4 +138,10 @@ class IDemographic(IPII):
     birthdate = schema.Date(
         title=_(u"Birth Date")
         )
+    
+# -----------------------------------------------------------------------------
+# PUBLICLY ACCESSIBLE INTERFACES
+# -----------------------------------------------------------------------------
+
+
     
