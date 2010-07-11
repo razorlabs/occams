@@ -27,7 +27,7 @@ def setup_accessible(engine):
     _setup_base(Accessible, engine)
     
     
-def setup_internal(engine):
+def setup_internakl(engine):
     """
     """
     _setup_base(Internal, engine)
