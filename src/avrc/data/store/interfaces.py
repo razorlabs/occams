@@ -19,25 +19,30 @@ _ = MessageFactory(__name__)
 class IBase(Interface):
     """
     Base interface class for all interfaces under this add-on module.
+    """
+
+# -----------------------------------------------------------------------------
+# API CONTRACT INTERFACES
+# -----------------------------------------------------------------------------
     
-    TODO Rename to something more meaningful.
+class IDataStore(IBase):
     """
+    """
+    
+    title = schema.TextLine(
+        title=_(u"The name space for the instance")
+        )
 
-# -----------------------------------------------------------------------------
-# API INTERFACES
-# -----------------------------------------------------------------------------
-
-class IDataSource(IBase):
-    """
-    """
+    pii = schema.TextLine(
+        title=_(u"The DSN for the PII database. Note that if none is "
+                u"specified, the FIA connection string will be used."),
+        required=False
+        )
     
     fia = schema.TextLine(
         title=_(u"The DSN for the FIA database.")
         )
 
-    pii = schema.TextLine(
-        title=_(u"The DSN for the PII database.")
-        )    
 
 # -----------------------------------------------------------------------------
 # MARKER INTERFACES
@@ -116,7 +121,8 @@ class IContact(IInternal):
         )
     
     state = schema.Choice(
-        title=_(u"State")
+        title=_(u"State"),
+        vocabulary="states"
         )
     
     zip = schema.Int(

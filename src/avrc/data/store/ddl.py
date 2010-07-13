@@ -1,4 +1,5 @@
 """
+Data Definifinion Library, in this case, SQLAlcchemy
 Data store for objects. 
 """
 
@@ -9,28 +10,6 @@ from sqlalchemy.ext.declarative import declarative_base
 
 Accessible = declarative_base()
 Internal = declarative_base()
-
-# -----------------------------------------------------------------------------
-# SETUP
-# -----------------------------------------------------------------------------
-
-def _setup_base(base, engine):
-    """
-    """
-    base.metadata.bind = engine    
-    base.metadata.create_all(checkfirst=True)
-     
-     
-def setup_accessible(engine):
-    """
-    """
-    _setup_base(Accessible, engine)
-    
-    
-def setup_internakl(engine):
-    """
-    """
-    _setup_base(Internal, engine)
 
 # -----------------------------------------------------------------------------
 # Personal Information

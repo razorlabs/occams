@@ -7,4 +7,10 @@
 
   <includeDependencies package="." />
   
+  <subscriber handler=".datastore.handleDataStoreAdded" />
+  <subscriber handler=".datastore.handleDataStoreModified" />
+  <subscriber handler=".datastore.handleDataStoreRemoved" />
+  
+  <utility name="states" component=".vocabulary.statesVocabulary" />
+  
 </configure>
