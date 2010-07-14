@@ -11,6 +11,24 @@ from sqlalchemy.ext.declarative import declarative_base
 Accessible = declarative_base()
 Internal = declarative_base()
 
+def _setup_base(base, engine):
+    """
+    """
+    base.metadata.bind = engine    
+    base.metadata.create_all(checkfirst=True)
+     
+     
+def setup_accessible(engine):
+    """
+    """
+    _setup_base(Accessible, engine)
+    
+    
+def setup_internal(engine):
+    """
+    """
+    _setup_base(Internal, engine)
+    
 # -----------------------------------------------------------------------------
 # Personal Information
 # -----------------------------------------------------------------------------

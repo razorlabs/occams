@@ -10,6 +10,8 @@ from zope.interface import Interface
 from zope import schema
 from zope.i18nmessageid import MessageFactory
 
+from zope.app.container.interfaces import IContained
+
 _ = MessageFactory(__name__)
 
 # -----------------------------------------------------------------------------
@@ -25,13 +27,9 @@ class IBase(Interface):
 # API CONTRACT INTERFACES
 # -----------------------------------------------------------------------------
     
-class IDataStore(IBase):
+class IDataStore(IBase, IContained):
     """
     """
-    
-    title = schema.TextLine(
-        title=_(u"The name space for the instance")
-        )
 
     pii = schema.TextLine(
         title=_(u"The DSN for the PII database. Note that if none is "
@@ -43,6 +41,21 @@ class IDataStore(IBase):
         title=_(u"The DSN for the FIA database.")
         )
 
+
+class ISessionFactory(IBase):
+    """
+    Used for implementing our own SQLAlchemy session
+    """
+    
+    autocommit = schema.Bool(title=_(u"Autocommit"))
+    autoflush = schema.Bool(title=_(u"Autoflush"))
+    two_phase = schema.Bool(title=_(u"TwoPhase"))
+    
+    def __call__(self):
+        """
+        Return the session
+        """
+    
 
 # -----------------------------------------------------------------------------
 # MARKER INTERFACES

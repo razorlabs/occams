@@ -7,10 +7,12 @@
 
   <includeDependencies package="." />
   
+  <!-- Handle when a Site adds a Data Store instance -->
   <subscriber handler=".datastore.handleDataStoreAdded" />
   <subscriber handler=".datastore.handleDataStoreModified" />
   <subscriber handler=".datastore.handleDataStoreRemoved" />
   
+  <!-- Vocabularies -->
   <utility name="states" component=".vocabulary.statesVocabulary" />
   
 </configure>
