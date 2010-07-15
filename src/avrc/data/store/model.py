@@ -14,8 +14,7 @@ Internal = declarative_base()
 def _setup_base(base, engine):
     """
     """
-    base.metadata.bind = engine    
-    base.metadata.create_all(checkfirst=True)
+    base.metadata.create_all(bind=engine, checkfirst=True)
      
      
 def setup_accessible(engine):
@@ -40,6 +39,8 @@ class Name(Internal):
     
     id = sa.Column(sa.Integer, primary_key=True)
     
+    ourid = sa.Column(sa.Integer, nullable=False, index=True)
+    
     first = sa.Column(sa.Unicode, nullable=False, index=True)
     
     middle = sa.Column(sa.Unicode)
@@ -47,6 +48,9 @@ class Name(Internal):
     last = sa.Column(sa.Unicode, nullable=False, index=True)
     
     sur = sa.Column(sa.Unicode)
+    
+    createdate = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
+    
     
 class State(Internal):
     """
@@ -67,6 +71,8 @@ class Contact(Internal):
     
     id = sa.Column(sa.Integer, primary_key=True)
     
+    ourid = sa.Column(sa.Integer, nullable=False, index=True)
+    
     phone = sa.Column(sa.Unicode, index=True)
     
     address1 = sa.Column(sa.Unicode)
@@ -79,6 +85,8 @@ class Contact(Internal):
     
     zip = sa.Column(sa.Integer)
     
+    createdate = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
+    
     
 class Demographic(Internal):
     """
@@ -87,7 +95,11 @@ class Demographic(Internal):
     
     id = sa.Column(sa.Integer, primary_key=True)
     
+    ourid = sa.Column(sa.Integer, nullable=False, index=True)
+    
     birthdate = sa.Column(sa.DateTime)
+
+    createdate = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
 
 
 # -----------------------------------------------------------------------------

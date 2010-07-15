@@ -20,7 +20,8 @@ _ = MessageFactory(__name__)
 
 class IBase(Interface):
     """
-    Base interface class for all interfaces under this add-on module.
+    Convenience marker interface to serve as a base class for all interfaces
+    of this package.
     """
 
 # -----------------------------------------------------------------------------
@@ -29,6 +30,11 @@ class IBase(Interface):
     
 class IDataStore(IBase, IContained):
     """
+    Represents a Data Store instance that can be added to a site. Currently
+    only one Data Store per site is supported.
+    
+    Zope Products that wish to use this library should implement this
+    interface.
     """
 
     pii = schema.TextLine(
@@ -42,18 +48,42 @@ class IDataStore(IBase, IContained):
         )
 
 
+# -----------------------------------------------------------------------------
+# LIBRARY INTERFACES
+# -----------------------------------------------------------------------------
+
+
 class ISessionFactory(IBase):
     """
-    Used for implementing our own SQLAlchemy session
+    Used for implementing our own SQLAlchemy session. The reason for using our
+    own Interface instead of a third party's such as z3c.saconfig is because
+    we need more control over our sesession (e.g. need multiple engines
+    per Session as opposed to the single engine allowed by z3c.saconfig"
     """
     
-    autocommit = schema.Bool(title=_(u"Autocommit"))
-    autoflush = schema.Bool(title=_(u"Autoflush"))
-    two_phase = schema.Bool(title=_(u"TwoPhase"))
+    autocommit = schema.Bool(
+        title=_(u"Auto Commit Enabled"),
+        description=_(u"If set, new objects that are added to the session "
+                      u"will be automatically persisted in the underlying "
+                      u"database."),
+        default=False
+        )
     
+    autoflush = schema.Bool(
+        title=_(u"Auto Flush Enabled"),
+        description=_(u"If set, objects will automatically be retrieved from "
+                      u"the database in order to synchronize themselves."),
+        default=True,
+        )
+    
+    two_phase = schema.Bool(
+        title=_(u"Two Phase Enabled"),
+        description=_(u"See SQLAlchemy documentation...")
+        )
+
     def __call__(self):
         """
-        Return the session
+        Returns the generated SQLAlchemy Session
         """
     
 
@@ -78,6 +108,10 @@ class IAccessible(IBase):
     internal using a separate module implementing the IInternal interface.
     """
 
+
+# -----------------------------------------------------------------------------
+# REFERENCES
+# -----------------------------------------------------------------------------
 
 class ISubject(IBase):
     """
