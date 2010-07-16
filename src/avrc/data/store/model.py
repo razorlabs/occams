@@ -8,8 +8,8 @@ from datetime import datetime
 import sqlalchemy as sa
 from sqlalchemy.ext.declarative import declarative_base
 
-Accessible = declarative_base()
-Internal = declarative_base()
+FIA = declarative_base()
+PII = declarative_base()
 
 def _setup_base(base, engine):
     """
@@ -17,22 +17,22 @@ def _setup_base(base, engine):
     base.metadata.create_all(bind=engine, checkfirst=True)
      
      
-def setup_accessible(engine):
+def setup_fia(engine):
     """
     """
-    _setup_base(Accessible, engine)
+    _setup_base(FIA, engine)
     
     
-def setup_internal(engine):
+def setup_pii(engine):
     """
     """
-    _setup_base(Internal, engine)
+    _setup_base(PII, engine)
     
 # -----------------------------------------------------------------------------
 # Personal Information
 # -----------------------------------------------------------------------------
 
-class Name(Internal):
+class Name(PII):
     """
     """
     __tablename__ = "name"
@@ -52,7 +52,7 @@ class Name(Internal):
     createdate = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
     
     
-class State(Internal):
+class State(PII):
     """
     """
     __tablename__ = "state"
@@ -64,7 +64,7 @@ class State(Internal):
     name = sa.Column(sa.Unicode, nullable=False)
     
     
-class Contact(Internal):
+class Contact(PII):
     """
     """
     __tablename__ = "contact"
@@ -88,7 +88,7 @@ class Contact(Internal):
     createdate = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
     
     
-class Demographic(Internal):
+class Demographic(PII):
     """
     """
     __tablename__ = "demographic"
@@ -106,7 +106,7 @@ class Demographic(Internal):
 # Visit
 # -----------------------------------------------------------------------------
 
-class Subject(Accessible):
+class Subject(FIA):
     """
     """
     __tablename__ = "subject"
@@ -114,7 +114,7 @@ class Subject(Accessible):
     id = sa.Column(sa.Integer, primary_key=True)
     
     
-class Protocol(Accessible):
+class Protocol(FIA):
     """
     """
     __tablename__ = "protocol"
@@ -128,7 +128,7 @@ class Protocol(Accessible):
     description = sa.Column(sa.Text)
     
     
-class Enrollment(Accessible): 
+class Enrollment(FIA): 
     """
     """
     __tablename__ = "enrollment"
@@ -145,14 +145,14 @@ class Enrollment(Accessible):
     serial = sa.Column(sa.Unicode, index=True )
 
 
-visit_instance_table = sa.Table("visit_instance", Accessible.metadata,
+visit_instance_table = sa.Table("visit_instance", FIA.metadata,
     sa.Column("visit_id", sa.ForeignKey("visit.id"), nullable=False),
     sa.Column("instance_id", sa.ForeignKey("instance.id"), nullable=False),
     sa.PrimaryKeyConstraint("visit_id", "instance_id")
     )
 
 
-class Visit(Accessible):
+class Visit(FIA):
     """
     """
     __tablename__ = "visit"
@@ -170,7 +170,7 @@ class Visit(Accessible):
 # Data
 # -----------------------------------------------------------------------------
 
-class Instance(Accessible):
+class Instance(FIA):
     """
     """
     __tablename__ = "instance"
@@ -189,7 +189,7 @@ class Instance(Accessible):
     modifydate = sa.Column(sa.DateTime, nullable=False)
     
 
-class Binary(Accessible):
+class Binary(FIA):
     """
     """
     
@@ -208,7 +208,7 @@ class Binary(Accessible):
     value = sa.Column(sa.BLOB, nullable=False)
 
 
-class Datetime(Accessible):
+class Datetime(FIA):
     """
     """
     __tablename__ = "datetime"
@@ -227,7 +227,7 @@ class Datetime(Accessible):
 sa.Index("datetime_attribute_value", Datetime.attribute_id, Datetime.value)
     
     
-class Integer(Accessible):
+class Integer(FIA):
     """
     """
     __tablename__ ="integer"
@@ -246,7 +246,7 @@ class Integer(Accessible):
 sa.Index("integer_attribute_value", Integer.attribute_id, Integer.value)
 
 
-class Real(Accessible):
+class Real(FIA):
     """
     """
     __tablename__ ="real"
@@ -265,7 +265,7 @@ class Real(Accessible):
 sa.Index("real_attribute_value", Real.attribute_id, Real.value)
     
     
-class Reference(Accessible):
+class Reference(FIA):
     """
     """
     __tablename__ ="reference"
@@ -288,7 +288,7 @@ class Reference(Accessible):
 sa.Index("reference_attribute_value", Reference.attribute_id, Reference.value)
 
     
-class String(Accessible):
+class String(FIA):
     """
     """
     __tablename__ ="string"
@@ -309,7 +309,7 @@ class String(Accessible):
 sa.Index("string_attribute_value", String.attribute_id, String.value)
 
     
-class Keyword(Accessible):
+class Keyword(FIA):
     """
     """
     __tablename__ = "keyword"
@@ -328,7 +328,7 @@ class Keyword(Accessible):
 # Metadata
 # -----------------------------------------------------------------------------
 
-protocol_form_table = sa.Table("protocol_form", Accessible.metadata,
+protocol_form_table = sa.Table("protocol_form", FIA.metadata,
     sa.Column("protocol_id", sa.Integer, sa.ForeignKey("protocol.id"), 
               nullable=False),
     sa.Column("form_id", sa.Integer, sa.ForeignKey("form.id"), 
@@ -337,7 +337,7 @@ protocol_form_table = sa.Table("protocol_form", Accessible.metadata,
     )
 
 
-class Form(Accessible):
+class Form(FIA):
     """
     """
     __tablename__ = "form"
@@ -354,7 +354,7 @@ class Form(Accessible):
     createdate = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
 
 
-class Hierarchy(Accessible):
+class Hierarchy(FIA):
     """
     """
     __tablename__ = "hierarchy"
@@ -368,7 +368,7 @@ class Hierarchy(Accessible):
                                 nullable=False)
     
 
-class Schema(Accessible):
+class Schema(FIA):
     """
     """
     __tablename__ = "schema"
@@ -384,7 +384,7 @@ class Schema(Accessible):
     is_virtual = sa.Column(sa.Boolean, nullable=False, default=False)
     
     
-class Symbol(Accessible):
+class Symbol(FIA):
     """
     """
     __tablename__ = "symbol"
@@ -394,7 +394,7 @@ class Symbol(Accessible):
     title = sa.Column(sa.Unicode, nullable=False, unique=True)
          
 
-class Attribute(Accessible):
+class Attribute(FIA):
     """
     """
     __tablename__ = "attribute"
@@ -415,7 +415,7 @@ class Attribute(Accessible):
     createdate = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
 
     
-class Field(Accessible):
+class Field(FIA):
     """
     """
     __tablename__ = "field"
@@ -457,7 +457,7 @@ class Field(Accessible):
     createdate = sa.Column(sa.DateTime, nullable=False, default=datetime.now) 
     
     
-class Type(Accessible):
+class Type(FIA):
     """
     """
     __tablename__ = "type"
@@ -469,7 +469,7 @@ class Type(Accessible):
     description = sa.Column(sa.Text)
     
     
-class Hint(Accessible):
+class Hint(FIA):
     """
     """
     __tablename__ = "hint"
@@ -479,7 +479,7 @@ class Hint(Accessible):
     namespace = sa.Column(sa.Unicode, nullable=False, unique=True)
     
     
-vocabulary_term_table = sa.Table("vocabulary_term", Accessible.metadata,
+vocabulary_term_table = sa.Table("vocabulary_term", FIA.metadata,
     sa.Column("vocabulary_id", sa.Integer, sa.ForeignKey("vocabulary.id"),
               nullable=False),
     sa.Column("term_id", sa.Integer, sa.ForeignKey("term.id"),
@@ -487,7 +487,7 @@ vocabulary_term_table = sa.Table("vocabulary_term", Accessible.metadata,
     sa.PrimaryKeyConstraint("vocabulary_id", "term_id")
     )
 
-class Vocabulary(Accessible):
+class Vocabulary(FIA):
     """
     """
     __tablename__ = "vocabulary"
@@ -495,7 +495,7 @@ class Vocabulary(Accessible):
     id = sa.Column(sa.Integer, primary_key=True)
     
     
-class Term(Accessible):    
+class Term(FIA):    
     """
     """
     __tablename__ = "term"

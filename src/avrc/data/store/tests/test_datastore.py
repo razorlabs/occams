@@ -12,25 +12,14 @@ from zope.app.folder import rootFolder
 from zope.app.component.site import SiteManagerContainer, LocalSiteManager
 from zope.app.component.site import setSite
 from zope.component import getUtility
-from zope.interface import implements
+from zope.interface import verify
 
 import avrc.data.store
 from avrc.data.store import interfaces
 from avrc.data.store import model
-
+from avrc.data.store import datastore
 
 ptc.setupPloneSite()
-
-
-class MockDataStore(object):
-    implements(interfaces.IDataStore)
-    
-    __name__ = __parent__ = None
-    
-    def __init__(self, fia, pii):
-        self.fia = fia
-        self.pii = pii
-
 
 class TestCase(ptc.PloneTestCase):
     class layer(PloneSite):
@@ -43,7 +32,18 @@ class TestCase(ptc.PloneTestCase):
         @classmethod
         def tearDown(cls):
             pass
+    
+    def test_implementation(self):
+        """
+        Tests if the data store implementation has fully objected the interface
+        contract
+        """
+        interface = interfaces.IDataStore
+        cls = datastore.DataStore
         
+        self.assertTrue(interface.implementedBy(cls), "Not implemented")
+        self.assertTrue(verify.verifyClass(interface, cls))
+    
     def test_multi_site(self):
         """
         Test that the DataStore is able to handle being added to multiple sites
@@ -65,10 +65,10 @@ class TestCase(ptc.PloneTestCase):
         
         self.assertNotEqual(sm1, sm2, u"Site managers must be different.")
         
-        sm1[u"ds"] = MockDataStore(pii=u"sqlite:///:memory:",  
-                                          fia=u"sqlite:///:memory:")
-        sm2[u"ds"] = MockDataStore(pii=u"sqlite:///:memory:",  
-                                          fia=u"sqlite:///:memory:") 
+        sm1[u"ds"] = datastore.DataStore(pii_dsn=u"sqlite:///:memory:",  
+                                        fia_dsn=u"sqlite:///:memory:")
+        sm2[u"ds"] = datastore.DataStore(pii_dsn=u"sqlite:///:memory:",  
+                                        fia_dsn=u"sqlite:///:memory:") 
     
         self.assertTrue(u"ds" in sm1, u"No datastore found.")
         self.assertTrue(u"ds" in sm2, u"No datastore found.")
@@ -78,6 +78,7 @@ class TestCase(ptc.PloneTestCase):
         Session = SessionFactory()
         
         name = model.Name()
+        name.ourid=456
         name.first=u"Foo"
         name.last=u"Bar"
         
@@ -95,6 +96,7 @@ class TestCase(ptc.PloneTestCase):
         Session = SessionFactory()
         
         name = model.Name()
+        name.ourid=123
         name.first=u"Fuu"
         name.last=u"Baz"
         
