@@ -14,7 +14,6 @@ from zope.lifecycleevent import IObjectAddedEvent
 from zope.lifecycleevent import IObjectModifiedEvent
 from zope.lifecycleevent import IObjectRemovedEvent
 
-from zope.component import getUtility
 
 import sqlalchemy as sa
     

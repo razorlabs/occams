@@ -13,8 +13,7 @@ class TestCase(ptc.PloneTestCase):
         @classmethod
         def setUp(cls):
             fiveconfigure.debug_mode = True
-            zcml.load_config('configure.zcml',
-                             avrc.data.store)
+            zcml.load_config('configure.zcml', avrc.data.store)
             fiveconfigure.debug_mode = False
 
         @classmethod

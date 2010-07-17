@@ -95,10 +95,6 @@ class IProtocolManager(IBase):
         """
         """
 
-#    def getTimelineManager():
-#        """
-#        """
-
 
 class ISchemaManager(IBase):
     """
@@ -108,7 +104,7 @@ class ISchemaManager(IBase):
         """
         """
         
-    def importPredifined(schema):
+    def importSchema(schema):
         """
         """
         
@@ -310,3 +306,21 @@ class ISessionFactory(IBase):
         """
         Returns the generated SQLAlchemy Session
         """
+
+class IAttribute(IBase):
+    """
+    """
+    
+class ISchema(IBase):
+    """
+    """
+    
+class IForm(IBase):
+    """
+    """
+        
+class IField(IBase):
+    
+    min = schema.Int(title=u"Minimum Value") 
+    
+    max = schema.Int(title=u"Maximum Value")
