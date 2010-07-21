@@ -100,15 +100,15 @@ class ISchemaManager(IBase):
     """
     """
     
-    def add(title):
+    def addSchema(title):
         """
         """
         
-    def importSchema(schema):
+    def importSchema(source):
         """
         """
         
-    def getSchema(protocol, title):
+    def getSchema(title):
         """
         """
         
@@ -116,6 +116,18 @@ class ISchemaManager(IBase):
 class IMutableSchema(IBase): 
     """
     """
+    
+    # TODO: check base interface to see if this is already provided
+    __version__ = schema.TextLine(
+        title=_(u""),
+        description=_(u"")
+        )
+    
+    # TODO: check base interface to see if this is already provided
+    __module__ = schema.Text(
+        title=_(u""),
+        description=_(u"")
+        )
     
     namespace = schema.DottedName(
         title=_(u"Namespace"),

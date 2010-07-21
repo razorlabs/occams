@@ -16,6 +16,7 @@ class SessionFactory(object):
                  autocommit=False, 
                  autoflush=True, 
                  twophase=False, 
+                 bind=None,
                  binds=None):
         """
         Our ISessionFactory implementation takes an extra parameter which 
@@ -24,6 +25,7 @@ class SessionFactory(object):
         self.autocommit = autocommit
         self.autoflush = autoflush
         self.twophase = twophase
+        self.bind = bind
         self.binds = binds
     
     def __call__(self):
@@ -36,6 +38,6 @@ class SessionFactory(object):
             twophase=self.twophase
             ))
         
-        Session.configure(binds=self.binds)
+        Session.configure(bind=self.bind, binds=self.binds)
         
         return Session

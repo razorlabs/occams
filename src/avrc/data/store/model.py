@@ -6,6 +6,7 @@ Data store for objects.
 from datetime import datetime
 
 import sqlalchemy as sa
+from sqlalchemy import orm
 from sqlalchemy.ext.declarative import declarative_base
 
 FIA = declarative_base()
@@ -404,11 +405,16 @@ class Attribute(FIA):
     schema_id = sa.Column(sa.Integer, sa.ForeignKey("schema.id"), 
                           nullable=False)
     
+    schema = orm.relation("Schema", uselist=False)
+    
     symbol_id = sa.Column(sa.Integer, sa.ForeignKey("symbol.id"),
                           nullable=False)
     
-    field_id = sa.Column(sa.Integer, sa.ForeignKey("field.id"),
-                         nullable=False)
+    symbol = orm.relation("Symbol", uselist=False)
+    
+    field_id = sa.Column(sa.Integer, sa.ForeignKey("field.id"))
+    
+    field = orm.relation("Field", uselist=False)
     
     order = sa.Column(sa.Integer, nullable=False, default=1)
     
@@ -427,6 +433,8 @@ class Field(FIA):
     description = sa.Column(sa.Text)
     
     type_id = sa.Column(sa.Integer, sa.ForeignKey("type.id"), nullable=False)
+    
+    type = orm.relation("Type", uselist=False)
     
     hint_id = sa.Column(sa.Integer, sa.ForeignKey("hint.id"))
     
