@@ -22,6 +22,16 @@ _TYPE_MAP = {
 
 _REVERSE_TYPE_MAP = dict(zip(_TYPE_MAP.values() ,_TYPE_MAP.keys()))
 
+class ProtocolSchemaManager(object):
+    """
+    Apparently takes a protocol and produces a schema2
+    """
+    adapts(interfaces.IProtocol)
+    implements(interfaces.ISchemaManager)
+    
+    def __init__(self, protocol):
+        self.protocol = protocol
+
 class SchemaManager(object):
     """
     """

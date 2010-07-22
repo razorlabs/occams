@@ -14,15 +14,14 @@ from zope.lifecycleevent import IObjectAddedEvent
 from zope.lifecycleevent import IObjectModifiedEvent
 from zope.lifecycleevent import IObjectRemovedEvent
 
-
 import sqlalchemy as sa
     
 from avrc.data.store import model
 from avrc.data.store import interfaces
 from avrc.data.store import session
+from avrc.data.store import protocol
 
 _ = MessageFactory(__name__)
-
 
 class DataStore(object):
     """
@@ -44,6 +43,8 @@ class DataStore(object):
         """
         self.fia_dsn = fia_dsn
         self.pii_dsn = pii_dsn is None and fia_dsn or pii_dsn
+        
+        self.mg = protocol.ProtocolManager()
     
     def _setup(self):
         """
@@ -59,29 +60,24 @@ class DataStore(object):
         model.setup_fia(self._fia_engine)
         model.setup_pii(self._pii_engine)
     
-    
     def _unsetup(self):
         """
         """
     
-    def put(self, context, object):
+    def put(self, object):
         raise NotImplementedError()
     
-    
-    def modify(self, context, object):
+    def modify(self, object):
         raise NotImplementedError()
     
-    
-    def hide(self, context, object):
+    def hide(self, object):
         raise NotImplementedError()
     
-    
-    def remove(self, context, object):
+    def remove(self, object):
         raise NotImplementedError()
-    
     
     def getProtocolManager(self):
-        raise NotImplementedError() 
+        return self.mg
         
 
 @adapter(interfaces.IDataStore, IObjectAddedEvent)
@@ -110,7 +106,6 @@ def handleDataStoreAdded(datastore, event):
     # Get the site that added the data store and register the new Session
     sm = component.getSiteManager(datastore)
     sm.registerUtility(utility, provided=interfaces.ISessionFactory)
-    
     
 @adapter(interfaces.IDataStore, IObjectModifiedEvent)
 def handleDataStoreModified(datastore, event):

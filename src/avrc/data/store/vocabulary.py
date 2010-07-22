@@ -9,8 +9,11 @@ TYPES = (
     ('binary',),
     ('boolean',),
     ('datetime',),
+    ('date'),
+    ('time'),
     ('integer',),
     ('real',),
     ('string',),
+    ('text',),
     ('object',),
     )

@@ -5,7 +5,7 @@ from sqlalchemy import orm
 
 from avrc.data.store import model
 
-_SA_ECHO = False
+_SA_ECHO = True
 
 class TestCase(unittest.TestCase):
     

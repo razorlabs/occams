@@ -1,6 +1,9 @@
 """
-Data Definifinion Library, in this case, SQLAlcchemy
-Data store for objects. 
+Data Definition Library
+
+Note that the entities defined in this module are mapped to a database.
+Therefore, great care should be taken when updating this file, as it may
+cause live systems to fall out of sync.
 """
 
 from datetime import datetime
@@ -15,14 +18,12 @@ PII = declarative_base()
 def _setup_base(base, engine):
     """
     """
-    base.metadata.create_all(bind=engine, checkfirst=True)
-     
+    base.metadata.create_all(bind=engine, checkfirst=True) 
      
 def setup_fia(engine):
     """
     """
     _setup_base(FIA, engine)
-    
     
 def setup_pii(engine):
     """
@@ -40,8 +41,6 @@ class Name(PII):
     
     id = sa.Column(sa.Integer, primary_key=True)
     
-    ourid = sa.Column(sa.Integer, nullable=False, index=True)
-    
     first = sa.Column(sa.Unicode, nullable=False, index=True)
     
     middle = sa.Column(sa.Unicode)
@@ -49,30 +48,13 @@ class Name(PII):
     last = sa.Column(sa.Unicode, nullable=False, index=True)
     
     sur = sa.Column(sa.Unicode)
-    
-    createdate = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
-    
-    
-class State(PII):
+        
+class Address(PII):
     """
     """
-    __tablename__ = "state"
+    __tablename__ = "address"
     
     id = sa.Column(sa.Integer, primary_key=True)
-    
-    abbreviation = sa.Column(sa.Unicode, nullable=False, unique=True)
-    
-    name = sa.Column(sa.Unicode, nullable=False)
-    
-    
-class Contact(PII):
-    """
-    """
-    __tablename__ = "contact"
-    
-    id = sa.Column(sa.Integer, primary_key=True)
-    
-    ourid = sa.Column(sa.Integer, nullable=False, index=True)
     
     phone = sa.Column(sa.Unicode, index=True)
     
@@ -85,10 +67,73 @@ class Contact(PII):
     state_id = sa.Column(sa.Integer, sa.ForeignKey("state.id"))
     
     zip = sa.Column(sa.Integer)
+
+class State(PII):
+    """
+    """
+    __tablename__ = "state"
     
-    createdate = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
+    id = sa.Column(sa.Integer, primary_key=True)
     
+    country_id = sa.Column(sa.Integer, sa.ForeignKey("country.id"),
+                           nullable=False)
     
+    abbreviation = sa.Column(sa.Unicode, nullable=False)
+    
+    name = sa.Column(sa.Unicode, nullable=False)
+    
+    __table_args__ = (
+        sa.UniqueConstraint("country_id", "name"), 
+        {})
+
+class Country(PII):
+    """
+    """
+    __tablename__ = "country"
+    
+    id = sa.Column(sa.Integer, primary_key=True)
+    
+    abbreviation = sa.Column(sa.Unicode, nullable=False, unique=True)
+    
+    name = sa.Column(sa.Unicode, nullable=False, unique=True)
+    
+class Phone(PII):
+    """
+    """
+    __tablename__ = "phone"
+    
+    id = sa.Column(sa.Integer, primary_key=True)
+    
+    location_id = sa.Column(sa.Integer, sa.ForeignKey("location.id"),
+                            nullable=False)
+    
+    location = orm.relation("Location", uselist=False)
+    
+    value = sa.Column(sa.Unicode, nullable=False)
+    
+class Email(PII):
+    """
+    """
+    __tablename__ = "email"
+    
+    id = sa.Column(sa.Integer, primary_key=True)
+    
+    location_id = sa.Column(sa.Integer, sa.ForeignKey("location.id"),
+                            nullable=False)
+    
+    location = orm.relation("Location", uselist=False)
+    
+    value = sa.Column(sa.Unicode, nullable=False)    
+        
+class Location(PII):
+    """
+    """
+    __tablename__ = "location"
+    
+    id = sa.Column(sa.Integer, primary_key=True)
+    
+    title = sa.Column(sa.Unicode, nullable=False)
+        
 class Demographic(PII):
     """
     """
@@ -96,16 +141,25 @@ class Demographic(PII):
     
     id = sa.Column(sa.Integer, primary_key=True)
     
-    ourid = sa.Column(sa.Integer, nullable=False, index=True)
+    birth_date = sa.Column(sa.DateTime)
     
-    birthdate = sa.Column(sa.DateTime)
-
-    createdate = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
-
+class Physique(PII):
+    """
+    """
+    __tablename__ = "physique"
+    
+    id = sa.Column(sa.Integer, primary_key=True)
 
 # -----------------------------------------------------------------------------
 # Visit
 # -----------------------------------------------------------------------------
+
+class Curator(FIA):
+    """
+    """
+    __tablename__ = "curator"
+    
+    id = sa.Column(sa.Integer, primary_key=True)
 
 class Subject(FIA):
     """
@@ -114,6 +168,7 @@ class Subject(FIA):
     
     id = sa.Column(sa.Integer, primary_key=True)
     
+    uid = sa.Column(sa.Integer, nullable=False, unique=True)
     
 class Protocol(FIA):
     """
@@ -122,12 +177,7 @@ class Protocol(FIA):
     
     id = sa.Column(sa.Integer, primary_key=True)
     
-    short = sa.Column(sa.Unicode, index=True)
-    
     title = sa.Column(sa.Unicode, nullable=False, unique=True)
-    
-    description = sa.Column(sa.Text)
-    
     
 class Enrollment(FIA): 
     """
@@ -139,19 +189,22 @@ class Enrollment(FIA):
     protocol_id = sa.Column(sa.Integer, sa.ForeignKey("protocol.id"), 
                             nullable=False)
     
+    protocol = orm.relation("Protocol", uselist=False)
+    
     subject_id = sa.Column(sa.Integer, sa.ForeignKey("subject.id"), 
                            nullable=False)
     
+    subject = orm.relation("Subject", uselist=False)
     
-    serial = sa.Column(sa.Unicode, index=True )
-
-
-visit_instance_table = sa.Table("visit_instance", FIA.metadata,
-    sa.Column("visit_id", sa.ForeignKey("visit.id"), nullable=False),
-    sa.Column("instance_id", sa.ForeignKey("instance.id"), nullable=False),
-    sa.PrimaryKeyConstraint("visit_id", "instance_id")
-    )
-
+    start_date = sa.Column(sa.Date, nullable=False)
+    
+    stop_date = sa.Column(sa.Date)
+    
+    create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
+    
+    __table_args__ = (
+        sa.UniqueConstraint("protocol_id", "subject_id", "start_date"), 
+        {})
 
 class Visit(FIA):
     """
@@ -163,13 +216,47 @@ class Visit(FIA):
     enrollement_id = sa.Column(sa.Integer, sa.ForeignKey(Enrollment.id),
                                nullable=False)
     
+    enrollement = orm.relation("Enrollment", uselist=False)
     
-    eventdate = sa.Column(sa.Date, nullable=False)
+    visit_date = sa.Column(sa.Date, nullable=False)
 
+visit_instance_table = sa.Table("visit_instance", FIA.metadata,
+    sa.Column("visit_id", sa.ForeignKey("visit.id"), nullable=False),
+    sa.Column("instance_id", sa.ForeignKey("instance.id"), nullable=False),
+    sa.PrimaryKeyConstraint("visit_id", "instance_id")
+    )
+        
+protocol_schema_table = sa.Table("protocol_schema", FIA.metadata,
+    sa.Column("protocol_id", sa.Integer, sa.ForeignKey("protocol.id"), 
+              nullable=False),
+    sa.Column("schema_id", sa.Integer, sa.ForeignKey("schema.id"), 
+              nullable=False),
+    sa.PrimaryKeyConstraint("protocol_id", "schema_id")
+    )
         
 # -----------------------------------------------------------------------------
 # Data
 # -----------------------------------------------------------------------------
+
+class Keyword(FIA):
+    """
+    """
+    __tablename__ = "keyword"
+    
+    id = sa.Column(sa.Integer, primary_key=True)
+    
+    instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
+                            nullable=False)
+    
+    instance = orm.relation("Instance", uselist=False)
+    
+    title = sa.Column(sa.Unicode, nullable=False, index=True)
+    
+    is_synonym = sa.Column(sa.Boolean, nullable=False, default=True)
+    
+    __table_args__ = (
+        sa.UniqueConstraint("instance_id", "title"), 
+        {})
 
 class Instance(FIA):
     """
@@ -181,19 +268,19 @@ class Instance(FIA):
     schema_id = sa.Column(sa.Integer, sa.ForeignKey("schema.id"), 
                           nullable=False)
     
+    schema = orm.relation("Schema", uselist=False)
+    
     title = sa.Column(sa.Unicode, nullable=False, unique=True)
     
-    description = sa.Column(sa.Text)
+    description = sa.Column(sa.Unicode)
     
-    createdate = sa.Column(sa.DateTime, nullable=False)
+    create_date = sa.Column(sa.DateTime, nullable=False)
     
-    modifydate = sa.Column(sa.DateTime, nullable=False)
-    
+    modify_date = sa.Column(sa.DateTime, nullable=False)
 
 class Binary(FIA):
     """
     """
-    
     __tablename__ = "binary"
     
     instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
@@ -207,7 +294,6 @@ class Binary(FIA):
     extension = sa.Column(sa.Unicode)
     
     value = sa.Column(sa.BLOB, nullable=False)
-
 
 class Datetime(FIA):
     """
@@ -223,7 +309,6 @@ class Datetime(FIA):
                             primary_key=True)
     
     value = sa.Column(sa.DateTime, nullable=False)
-    
     
 sa.Index("datetime_attribute_value", Datetime.attribute_id, Datetime.value)
     
@@ -243,9 +328,7 @@ class Integer(FIA):
     
     value = sa.Column(sa.Integer, nullable=False)
     
-    
 sa.Index("integer_attribute_value", Integer.attribute_id, Integer.value)
-
 
 class Real(FIA):
     """
@@ -262,14 +345,12 @@ class Real(FIA):
     
     value = sa.Column(sa.Integer, nullable=False)
     
-    
 sa.Index("real_attribute_value", Real.attribute_id, Real.value)
-    
-    
-class Reference(FIA):
+        
+class Object(FIA):
     """
     """
-    __tablename__ ="reference"
+    __tablename__ ="object"
     
     instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
                             nullable=False,
@@ -284,11 +365,9 @@ class Reference(FIA):
                       )
     
     order = sa.Column(sa.Integer, nullable=False, default=1)
-    
-    
-sa.Index("reference_attribute_value", Reference.attribute_id, Reference.value)
+        
+sa.Index("object_attribute_value", Object.attribute_id, Object.value)
 
-    
 class String(FIA):
     """
     """
@@ -303,57 +382,12 @@ class String(FIA):
                             primary_key=True)
     
     value = sa.Column(sa.Unicode, nullable=False)
-    
-    order = sa.Column(sa.Integer, nullable=False, default=1)
 
-    
 sa.Index("string_attribute_value", String.attribute_id, String.value)
-
-    
-class Keyword(FIA):
-    """
-    """
-    __tablename__ = "keyword"
-    
-    id = sa.Column(sa.Integer, primary_key=True)
-    
-    instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
-                            nullable=False)
-    
-    title = sa.Column(sa.Unicode, nullable=False, index=True)
-    
-    is_synonym = sa.Column(sa.Boolean, nullable=False, default=True)
-    
-    
+  
 # -----------------------------------------------------------------------------
 # Metadata
 # -----------------------------------------------------------------------------
-
-protocol_form_table = sa.Table("protocol_form", FIA.metadata,
-    sa.Column("protocol_id", sa.Integer, sa.ForeignKey("protocol.id"), 
-              nullable=False),
-    sa.Column("form_id", sa.Integer, sa.ForeignKey("form.id"), 
-              nullable=False),
-    sa.PrimaryKeyConstraint("protocol_id", "form_id")
-    )
-
-
-class Form(FIA):
-    """
-    """
-    __tablename__ = "form"
-    
-    id = sa.Column(sa.Integer, primary_key=True)
-    
-    schema_id = sa.Column(sa.Integer, sa.ForeignKey("schema.id"),
-                          nullable=False)
-    
-    prologue = sa.Column(sa.Text)
-    
-    epilogue = sa.Column(sa.Text)
-    
-    createdate = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
-
 
 class Hierarchy(FIA):
     """
@@ -362,21 +396,19 @@ class Hierarchy(FIA):
     
     id = sa.Column(sa.Integer, primary_key=True)
     
-    parent_schema_id = sa.Column(sa.Integer, sa.ForeignKey("schema.id"),
-                                 nullable=False)
+    parent_id = sa.Column(sa.Integer, sa.ForeignKey("specification.id"))
 
-    child_schema_id = sa.Column(sa.Integer, sa.ForeignKey("schema.id"),
+    child_id = sa.Column(sa.Integer, sa.ForeignKey("specification.id"),
                                 nullable=False)
-    
 
-class Schema(FIA):
+class Specifiation(FIA):
     """
     """
-    __tablename__ = "schema"
+    __tablename__ = "specification"
     
     id = sa.Column(sa.Integer, primary_key=True)
     
-    title = sa.Column(sa.Unicode, nullable=False)
+    title = sa.Column(sa.Unicode, nullable=False, unique=True)
     
     description = sa.Column(sa.Text, nullable=False)
     
@@ -384,16 +416,45 @@ class Schema(FIA):
     
     is_virtual = sa.Column(sa.Boolean, nullable=False, default=False)
     
-    
-class Symbol(FIA):
+class Invariant(FIA):
     """
     """
-    __tablename__ = "symbol"
+    __tablename__ = "invariant"
     
     id = sa.Column(sa.Integer, primary_key=True)
     
-    title = sa.Column(sa.Unicode, nullable=False, unique=True)
-         
+    schema_id = sa.Column(sa.Integer, sa.ForeignKey("schema.id"),
+                          nullable=False)
+    
+    title = sa.Column(sa.Unicode, nullable=False)
+    
+schema_attribute_table = sa.Table("schema_attribute", FIA.metadata,
+    sa.Column("schema_id", sa.ForeignKey("schema.id"), nullable=False),
+    sa.Column("attribute_id", sa.ForeignKey("attribute.id"), nullable=False),
+    sa.PrimaryKeyConstraint("schema_id", "attribute_id")
+    )
+    
+class Schema(FIA):
+    """
+    """
+    __tablename__ = "schema"
+    
+    id = sa.Column(sa.Integer, primary_key=True)
+    
+    specification_id = sa.Column(sa.Integer, sa.ForeignKey("specification.id"),
+                                 nullable=False)
+    
+    specification = orm.relation("Specification", uselist=False)
+    
+    attributes = orm.relation("Attribute", 
+                              secondary=schema_attribute_table,
+                              order_by="order")
+    
+    create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
+    
+    __table_args = (
+        sa.UniqueConstraint("specification_id", "create_date"),
+        {})
 
 class Attribute(FIA):
     """
@@ -402,31 +463,7 @@ class Attribute(FIA):
     
     id = sa.Column(sa.Integer, primary_key=True) 
     
-    schema_id = sa.Column(sa.Integer, sa.ForeignKey("schema.id"), 
-                          nullable=False)
-    
-    schema = orm.relation("Schema", uselist=False)
-    
-    symbol_id = sa.Column(sa.Integer, sa.ForeignKey("symbol.id"),
-                          nullable=False)
-    
-    symbol = orm.relation("Symbol", uselist=False)
-    
-    field_id = sa.Column(sa.Integer, sa.ForeignKey("field.id"))
-    
-    field = orm.relation("Field", uselist=False)
-    
-    order = sa.Column(sa.Integer, nullable=False, default=1)
-    
-    createdate = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
-
-    
-class Field(FIA):
-    """
-    """
-    __tablename__ = "field"
-    
-    id = sa.Column(sa.Integer, primary_key=True)
+    name = sa.Column(sa.Unicode, nullable=False)
     
     title = sa.Column(sa.Unicode, nullable=False)
     
@@ -435,6 +472,8 @@ class Field(FIA):
     type_id = sa.Column(sa.Integer, sa.ForeignKey("type.id"), nullable=False)
     
     type = orm.relation("Type", uselist=False)
+    
+    order = sa.Column(sa.Integer, nullable=False, default=1)
     
     hint_id = sa.Column(sa.Integer, sa.ForeignKey("hint.id"))
     
@@ -462,7 +501,7 @@ class Field(FIA):
     
     comment = sa.Column(sa.Text)
     
-    createdate = sa.Column(sa.DateTime, nullable=False, default=datetime.now) 
+    create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now) 
     
     
 class Type(FIA):
@@ -501,6 +540,8 @@ class Vocabulary(FIA):
     __tablename__ = "vocabulary"
     
     id = sa.Column(sa.Integer, primary_key=True)
+    
+    name = sa.Column(sa.Unicode, nullable=False, index=True)
     
     
 class Term(FIA):    

@@ -282,9 +282,47 @@ class IDemographic(IPII):
 
 
 # -----------------------------------------------------------------------------
+# QUERYING
+# -----------------------------------------------------------------------------
+
+class IQuery(IBase):
+    """
+    PLANNING STAGES
+    """
+    
+    contains = schema.List(
+        title=_(u"Keywords"),
+        value_type=schema.TextLine
+        )
+    
+    all = schema.List(
+        title=_("Contains ")
+        )
+    
+    
+
+# -----------------------------------------------------------------------------
 # LIBRARY INTERFACES
 # -----------------------------------------------------------------------------
 
+class ISchemaLookup(IBase):
+    """
+    """
+    
+    def get(title):
+        """
+        """
+        
+    def getALL():
+        """
+        """
+
+
+
+class IProtocol(IBase):
+    """
+    TESTING: supposed to offert the protocol functionality
+    """
 
 class ISessionFactory(IBase):
     """
@@ -317,6 +355,15 @@ class ISessionFactory(IBase):
     def __call__():
         """
         Returns the generated SQLAlchemy Session
+        """
+
+class IReportable(IBase):
+    """
+    Promises to do some form of reporting
+    """
+    
+    def report():
+        """
         """
 
 class IAttribute(IBase):
