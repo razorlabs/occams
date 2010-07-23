@@ -3,7 +3,7 @@ from zope.component import adapts, getUtility
 from zope.interface import implements
 
 from avrc.data.store import interfaces
-from avrc.data.store import model
+from avrc.data.store import _model
 
 class SubjectName(object):
     implements(interfaces.ISubject)
@@ -16,7 +16,7 @@ class SubjectName(object):
         Session = getUtility(interfaces.ISessionFactory)
         Session()
         
-        name = Session.query(model.Name)\
+        name = Session.query(_model.Name)\
                .filter_by(ourid=self.context.number)\
                .last()
 

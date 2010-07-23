@@ -170,10 +170,10 @@ class Subject(FIA):
     
     uid = sa.Column(sa.Integer, nullable=False, unique=True)
     
-class Protocol(FIA):
+class Domain(FIA):
     """
     """
-    __tablename__ = "protocol"
+    __tablename__ = "domain"
     
     id = sa.Column(sa.Integer, primary_key=True)
     
@@ -226,12 +226,12 @@ visit_instance_table = sa.Table("visit_instance", FIA.metadata,
     sa.PrimaryKeyConstraint("visit_id", "instance_id")
     )
         
-protocol_schema_table = sa.Table("protocol_schema", FIA.metadata,
-    sa.Column("protocol_id", sa.Integer, sa.ForeignKey("protocol.id"), 
+domain_schema_table = sa.Table("domain_schema", FIA.metadata,
+    sa.Column("domain_id", sa.Integer, sa.ForeignKey("domain.id"), 
               nullable=False),
     sa.Column("schema_id", sa.Integer, sa.ForeignKey("schema.id"), 
               nullable=False),
-    sa.PrimaryKeyConstraint("protocol_id", "schema_id")
+    sa.PrimaryKeyConstraint("domain_id", "schema_id")
     )
         
 # -----------------------------------------------------------------------------

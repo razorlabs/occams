@@ -25,7 +25,47 @@ class IBase(Interface):
 # API CONTRACT INTERFACES
 # -----------------------------------------------------------------------------
     
-class IDataStore(IBase, IContained):
+class IManager(IBase):
+    """
+    Base class for all managers
+    """
+    
+    def add(target):
+        """
+        Adds the target to the manager
+        """
+        
+    def get(id):
+        """
+        Return an object contained by the manager based on it's identification
+        value. 
+        """
+        
+    def modify(target):
+        """
+        Updates the original object the the target's properties
+        """
+        
+    def expire(target):
+        """
+        Expire's the contained target. This means that it's information remains,
+        only it's not visible anymore. The reason this functionality is useful
+        is so that data can be 'brought back' if expiring caused undesired
+        side-effects.
+        """
+        
+    def remove(target):
+        """
+        Completely removes the target and all data associated with it from the
+        data store.
+        """
+        
+    def list():
+        """
+        Returns a listing of the objects being managed by this manager.
+        """
+    
+class IEngine(IBase, IContained):
     """
     Represents a Data Store instance that can be added to a site. 
     """
@@ -51,69 +91,49 @@ class IDataStore(IBase, IContained):
                       u"parties.")
         )
     
-    def put(context, value):
-        """
-        Associates an object with a value. Optionally, keywords may be attached
-        to the association.
-        """
-    
-    def modify(context, object):
-        """
-        Modifies an association.
-        """
-        
-    def hide(context, object):
-        """
-        """
-        
-    def remove(context, object):
-        """
-        """
-        
-    def getProtocolManager():
-        """
-        """
-
-
-class IProtocolManager(IBase):
+class IStorageManager(IManager):
     """
+    Marker interface for managing data objects.
+    """
+
+class IEnrollmentManager(IManager):
+    """
+    Marker interface for managing enrollments
+    """
+
+class ISchemaManager(IManager):
+    """
+    Marker interface for managing schemas
     """
     
-    def add(name):
-        """
-        """
-        
-    def delete(name):
-        """
-        """
-        
-    def list():
+class IKeywordManager(IManager):
+    """
+    Marker interface for managing keyword associations with objects
+    """
+    
+class IAttributeManager(IManager):
+    """
+    Marker interface for managing attributes
+    """
+    
+class ISchema(IBase): 
+    """
+    """
+
+    namespace = schema.DottedName(
+        title=_(u"Namespace"),
+        description=_(u"The fully qualified name of the package")
+        )
+    
+    def set_parent():
         """
         """
     
-    def getSchemaManager():
-        """
-        """
-
-
-class ISchemaManager(IBase):
-    """
-    """
-    
-    def addSchema(title):
+    def set_attribute(attribute):
         """
         """
         
-    def importSchema(source):
-        """
-        """
-        
-    def getSchema(title):
-        """
-        """
-        
-
-class IMutableSchema(IBase): 
+class IVesion(IBase):
     """
     """
     
@@ -122,37 +142,14 @@ class IMutableSchema(IBase):
         title=_(u""),
         description=_(u"")
         )
-    
-    # TODO: check base interface to see if this is already provided
-    __module__ = schema.Text(
-        title=_(u""),
-        description=_(u"")
-        )
-    
-    namespace = schema.DottedName(
-        title=_(u"Namespace"),
-        description=_(u"The fully qualified name of the package")
-        )
-    
-    def setParent():
-        """
-        """
-    
-    def setAttribute(attribute):
-        """
-        """
-
+        
+class IAttribute(IBase):
+    """
+    """
 
 class IInstance(IBase):
-    
-    def addKeyword():
-        """
-        """
-        
-    def removeKeyword():
-        """
-        """
-
+    """
+    """
 
 # -----------------------------------------------------------------------------
 # MARKER INTERFACES
@@ -166,7 +163,6 @@ class IPII(IBase):
     privacy of it's subjects.
     """
     
-    
 class IFIA(IBase):
     """
     Marker interface for information that can be publicly accessible to parties
@@ -174,7 +170,6 @@ class IFIA(IBase):
     personally identifiable information, such information should be kept 
     internal using a separate module implementing the IPII interface.
     """
-
 
 # -----------------------------------------------------------------------------
 # REFERENCES
@@ -192,7 +187,6 @@ class ISubject(IBase):
         description=_(u"")
         )
 
-
 class IReference(IBase):
     """
     An reference identifier for a subject. This object is intended for legacy
@@ -209,6 +203,99 @@ class IReference(IBase):
         description=_("The number given to the subject under the reference.")
         )
     
+# -----------------------------------------------------------------------------
+# LIBRARY INTERFACES
+# -----------------------------------------------------------------------------
+        
+class IDomain(IBase):
+    """
+    TESTING: supposed to offert the domain functionality
+    """
+
+class IReportable(IBase):
+    """
+    Interface for generatged schema Promises to do some form of reporting
+    """
+    
+    def report():
+        """
+        """
+            
+class IField(IBase):
+    
+    min = schema.Int(title=u"Minimum Value") 
+    
+    max = schema.Int(title=u"Maximum Value")
+    
+# -----------------------------------------------------------------------------
+# QUERYING
+# -----------------------------------------------------------------------------
+
+class IQueryLine(IBase):
+    """
+    """
+    value = schema.TextLine(
+        title=_(u"Search"),
+        )
+
+class IQuery(IBase):
+    """
+    Querying contract.
+    STILL IN PLANNING STAGES
+    """
+    
+    contains = schema.List(
+        title=_(u"Phrases"),
+        description=_(u"Contains any of the listed terms."),
+        value_type=schema.TextLine(title=_(u"Phrase")),
+        required=False,
+        )
+    
+    some = schema.List(
+        title=_(u"Some Phrases"),
+        description=_("Contains one or more of the listed terms."),
+        min_length=1,
+        max_length=3,
+        value_type=schema.TextLine(title=_(u"Phrase")),
+        required=False,
+        )
+    
+    ignore = schema.List(
+        title=_(u"Do not include"),
+        description=_(u"Do not include the listed terms."),
+        value_type=schema.TextLine(title=_(u"Phrase")),
+        required=False,
+        )
+    
+    domain = schema.List(
+        title=_(u"Domain search"),
+        description=_(u"Search within a domain only."),
+        value_type=schema.TextLine(title=_(u"Phrase")),
+        required=False,
+        )
+    
+    date = schema.Choice(
+        title=_(u"Date"),
+        description=_(u"How recent is the entry?"),
+        values=(_(u"anytime"),
+                _(u"past 24 hours"),
+                _(u"past week"),
+                _(u"past month"),
+                _(u"past year")),
+        required=False
+        )
+
+    range = schema.List(
+        title=_(u"Numeric ranges"),
+        description=_(u"Contains the listed value ranges"),
+        value_type=schema.Tuple(
+            title=u"Range",
+            min_length=2,
+            max_length=2,
+            value_type=schema.Float(title=_(u"Value")),
+            ),
+        required=False,
+        )
 
 # -----------------------------------------------------------------------------
 # PERSONAL INFORMATION INTERFACES
@@ -244,7 +331,6 @@ class IContact(IPII):
         title=_(u"ZIP Code")
         )
 
-
 class IName(IPII):
     """
     Represents a name than can apply to a reference.
@@ -276,110 +362,3 @@ class IDemographic(IPII):
         title=_(u"Birth Date")
         )
     
-# -----------------------------------------------------------------------------
-# PUBLICLY ACCESSIBLE INTERFACES
-# -----------------------------------------------------------------------------
-
-
-# -----------------------------------------------------------------------------
-# QUERYING
-# -----------------------------------------------------------------------------
-
-class IQuery(IBase):
-    """
-    PLANNING STAGES
-    """
-    
-    contains = schema.List(
-        title=_(u"Keywords"),
-        value_type=schema.TextLine
-        )
-    
-    all = schema.List(
-        title=_("Contains ")
-        )
-    
-    
-
-# -----------------------------------------------------------------------------
-# LIBRARY INTERFACES
-# -----------------------------------------------------------------------------
-
-class ISchemaLookup(IBase):
-    """
-    """
-    
-    def get(title):
-        """
-        """
-        
-    def getALL():
-        """
-        """
-
-
-
-class IProtocol(IBase):
-    """
-    TESTING: supposed to offert the protocol functionality
-    """
-
-class ISessionFactory(IBase):
-    """
-    Used for implementing our own SQLAlchemy session. The reason for using our
-    own Interface instead of a third party's such as z3c.saconfig is because
-    we need more control over our sesession (e.g. need multiple engines
-    per Session as opposed to the single engine allowed by z3c.saconfig"
-    """
-    
-    autocommit = schema.Bool(
-        title=_(u"Auto Commit Enabled"),
-        description=_(u"If set, new objects that are added to the session "
-                      u"will be automatically persisted in the underlying "
-                      u"database."),
-        default=False
-        )
-    
-    autoflush = schema.Bool(
-        title=_(u"Auto Flush Enabled"),
-        description=_(u"If set, objects will automatically be retrieved from "
-                      u"the database in order to synchronize themselves."),
-        default=True,
-        )
-    
-    two_phase = schema.Bool(
-        title=_(u"Two Phase Enabled"),
-        description=_(u"See SQLAlchemy documentation...")
-        )
-
-    def __call__():
-        """
-        Returns the generated SQLAlchemy Session
-        """
-
-class IReportable(IBase):
-    """
-    Promises to do some form of reporting
-    """
-    
-    def report():
-        """
-        """
-
-class IAttribute(IBase):
-    """
-    """
-    
-class ISchema(IBase):
-    """
-    """
-    
-class IForm(IBase):
-    """
-    """
-        
-class IField(IBase):
-    
-    min = schema.Int(title=u"Minimum Value") 
-    
-    max = schema.Int(title=u"Maximum Value")
