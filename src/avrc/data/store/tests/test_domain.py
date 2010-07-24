@@ -22,11 +22,21 @@ class TestCase(ptc.PloneTestCase):
         def setUp(cls):
             fiveconfigure.debug_mode = True
             zcml.load_config('configure.zcml', avrc.data.store)
-            fiveconfigure.debug_mode = False
+            fiveconfigure.debug_mode = False            
 
         @classmethod
         def tearDown(cls):
             pass
+        
+    def setUp(self):
+        print
+        print "ZAH?"
+        print
+        
+    def tearDown(self):
+        print
+        print "ZAH..."
+        print
     
     def test_implementation(self):
         """
@@ -39,17 +49,17 @@ class TestCase(ptc.PloneTestCase):
         self.assertTrue(interface.implementedBy(cls), "Not implemented")
         self.assertTrue(verify.verifyClass(interface, cls))
     
-    def test_add_schema(self):
+    def test_adapter(self):
         """
-        Test associating a schema with the domain.
+        Maker sure we can extract a domain manager out of the engine
+        """
+    
+    def test_add(self):
+        """
         """
         self.fail("TODO")
         
-    def test_schema_lock(self):
-        """
-        Test that the schema stays associated with the domain, even after
-        it is versioned. 
-        """
+    def test_remove(self):
         self.fail("TODO")
 
 

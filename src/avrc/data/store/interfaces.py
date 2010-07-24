@@ -91,6 +91,19 @@ class IEngine(IBase, IContained):
                       u"parties.")
         )
     
+class ISessionFactory(IBase):
+    """
+    Used for implementing our own SQLAlchemy session. The reason for using our
+    own Interface instead of a third party's such as z3c.saconfig is because
+    we need more control over our sesession (e.g. need multiple engines
+    per Session as opposed to the single engine allowed by z3c.saconfig"
+    """
+    
+    def __call__():
+        """
+        Returns the generated SQLAlchemy Session
+        """
+    
 class IStorageManager(IManager):
     """
     Marker interface for managing data objects.
@@ -114,6 +127,16 @@ class IKeywordManager(IManager):
 class IAttributeManager(IManager):
     """
     Marker interface for managing attributes
+    """
+    
+class IVocabularyManager(IManager):
+    """
+    Marker interface for managing vocabularies
+    """
+    
+class IDomainManager(IManager):
+    """
+    Marker interface for managing domains
     """
     
 class ISchema(IBase): 
@@ -211,6 +234,10 @@ class IDomain(IBase):
     """
     TESTING: supposed to offert the domain functionality
     """
+    
+    title = schema.TextLine(
+        title=_(u"Title")
+        )
 
 class IReportable(IBase):
     """

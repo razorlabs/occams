@@ -4,8 +4,10 @@
 import zope.schema
 from zope.component import adapts
 from zope.component import getUtility
+from zope.component.factory import Factory
 from zope.interface import implements
 from zope.interface.interface import InterfaceClass
+from zope.i18nmessageid import MessageFactory
 
 from avrc.data.store import interfaces
 from avrc.data.store import _model
@@ -22,82 +24,82 @@ _TYPE_MAP = {
 
 _REVERSE_TYPE_MAP = dict(zip(_TYPE_MAP.values() ,_TYPE_MAP.keys()))
 
-class DomainSchemaManager(object):
+_ = MessageFactory(__name__)
+
+class Schema(object):
+    pass
+
+SchemaFactory = Factory(
+    Schema,
+    title=_(u"Creates a schema"),
+    description=_(u"Zah?")
+    )
+
+class EngineSchemaManager(object):
     """
     Apparently takes a protocol and produces a schema
     """
-    adapts(interfaces.IDomain)
+    adapts(interfaces.IEngine)
     implements(interfaces.ISchemaManager)
     
-    def __init__(self, domain):
-        self.domain = domain
+    def __init__(self, engine):
+        self.engine = engine
     
-    def createSchema(self, title):
+    def add(self, source):
         """
-        """
-        Session = interfaces.ISession(self)
-        
-        specrslt = _model.Specifiation(
-            title=title,
-            description=None,
-            )
-        
-        schemarslt = _model.Schema()
-        schemarslt.specification = specrslt
-        
-        Session.add(schemarslt)
-        Session.commit()
-    
-    def addSchema(self, schema):
-        """
-        @see: avrc.data.store.interfaces.ISchemaManager#add
-        """
-        raise NotImplementedError()
-        
-    def importSchema(self, source):
-        """
-        @see: avrc.data.store.interfaces.ISchemaManager#importSchema
         """
         Session = getUtility(interfaces.ISessionFactory)()
         
-        schema = _model.Schema(
-            title=unicode(source.__name__),
-            description=unicode(source.__doc__)
+        spec_rslt = _model.Specifiation(
+            title=source.title,
+            description=source.description,
             )
         
-        Session.add(schema)
+        schema_rslt = _model.Schema()
+        schema_rslt.specification = spec_rslt
         
-        for name, type in zope.schema.getFieldsInOrder(source):
-            name = unicode(name)
-            
-            symbol = Session.query(_model.Symbol).filter_by(title=name).first()
-            
-            if symbol is None:
-                symbol = _model.Symbol(title=name)
-            
-            attribute = _model.Attribute()
-            attribute.schema = schema
-            attribute.symbol = symbol
-            attribute.order = type.order
-            attribute.field = _model.Field(
-                title=type.title,
-                description=type.description,
-                is_required=type.required,
-                )
-            
-            attribute.field.type = Session.query(_model.Type)\
-                                   .filter_by(title=_TYPE_MAP[type.__class__])\
-                                   .first()
-        
-            Session.add(attribute)
-        
+        Session.add(schema_rslt)
         Session.commit()
         
-    def getSchema(self, title):
+#        schema = _model.Schema(
+#            title=unicode(source.__name__),
+#            description=unicode(source.__doc__)
+#            )
+#        
+#        Session.add(schema)
+#        
+#        for name, type in zope.schema.getFieldsInOrder(source):
+#            name = unicode(name)
+#            
+#            symbol = Session.query(_model.Symbol).filter_by(title=name).first()
+#            
+#            if symbol is None:
+#                symbol = _model.Symbol(title=name)
+#            
+#            attribute = _model.Attribute()
+#            attribute.schema = schema
+#            attribute.symbol = symbol
+#            attribute.order = type.order
+#            attribute.field = _model.Field(
+#                title=type.title,
+#                description=type.description,
+#                is_required=type.required,
+#                )
+#            
+#            attribute.field.type = Session.query(_model.Type)\
+#                                   .filter_by(title=_TYPE_MAP[type.__class__])\
+#                                   .first()
+#        
+#            Session.add(attribute)
+#        
+#        Session.commit()
+
+        
+    def get(self, id):
         """
         @see: avrc.data.store.interfaces.ISchemaManager#getSchema
         """
-        title = unicode(title)
+        title = unicode(id)
         Session = getUtility(interfaces.ISessionFactory)()
     
         schema = Session.query(_model.Schema).filter_by(title=title).first()
@@ -121,19 +123,22 @@ class DomainSchemaManager(object):
         klass = InterfaceClass(
             name=schema.title,
             __doc__=schema.description,
-            __module__="avrc.data.store.virtual",
+            __module__="avrc.data.store._virtual",
             bases=(interfaces.IMutableSchema,),
             attrs=attrs,
             )
                 
-        return klass     
-
-class SubjectData(object):
-    """
-    """
-    implements(interfaces.IMutableSchema)
-    adapts(interfaces.ISubject)
+        return klass    
+        
+    def modify(self, target):
+        raise NotImplementedError()
+        
+    def expire(self, target):
+        raise NotImplementedError()
+        
+    def remove(self, target):
+        raise NotImplementedError()
+        
+    def list(self):
+        raise NotImplementedError()
     
-class MutableSchema(object):
-    """
-    """

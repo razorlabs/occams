@@ -48,6 +48,7 @@ class Engine(object):
     
     def _setup(self):
         """
+        Performs data base back-end setup.
         """
         self._fia_engine = sa.create_engine(self.fia_dsn)
         
@@ -62,4 +63,7 @@ class Engine(object):
             
     def _unsetup(self):
         """
+        Cleans up any data base configurations.
         """
+        # Apparently SQLAlchemy doesn't need clean up...
+        

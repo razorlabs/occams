@@ -8,42 +8,46 @@
   <includeDependencies package="." />
   
   <!-- Handle when a Site adds an engine -->
-  <subscriber handler=".datastore.handleEngineAdded" />
-  <subscriber handler=".datastore.handleEngineRemoved" />
+  <subscriber handler="._session.handleEngineAdded" />
+  <subscriber handler="._session.handleEngineRemoved" />
   
   <!-- Vocabularies -->
   <utility name="states" component=".vocabulary.statesVocabulary" />
+
+  <!-- Domains -->
+
+  <utility name="avrc.data.store.Domain" component=".domain.DomainFactory" />
+
+  <adapter
+      provides=".interfaces.IDomainManager"
+      for=".interfaces.IEngine"
+      factory=".domain.EngineDomainManager"
+      />
   
-  <!-- Adapters -->
-  <adapter 
-    factory=".session.ManagerSession"
-    for=".interfaces.IManager"
-    />
-    
-  <adapter
-    factory=".session.ManagerEngine"
-    for=".interfaces.IManager"
-    provides=".interfaces.IEngine"
-    />
-    
-    
-    
-  <adapter
-    factory=".schema.DomainSchemaManager"
-    for=".interfaces.IDomain"
-    provides=".interfaces.ISchemaManager"
-    />
+  <!-- Schemas -->
+  
+  <utility name="avrc.data.store.Schema" component=".schema.SchemaFactory" />
   
   <adapter
-    factory=".domain.EngineDomainManager"
-    for=".interfaces.IEngine"
-    provides=".interfaces.IDomainManager"
-    />
+      provides=".interfaces.ISchemaManager"
+      for=".interfaces.IEngine"
+      factory=".schema.EngineSchemaManager"
+      />-->  
+
+  <!-- Attributes -->
+  
+  <utility 
+      name="avrc.data.store.Attribute" 
+      component=".attribute.AttributeFactory" 
+      />
+
+  <adapter
+      provides=".interfaces.IAttributeManager"
+      for=".interfaces.IEngine"
+      factory=".attribute.EngineAttributeManager"
+      />
+  
+  <!-- Data -->
+  <!-- Nothing written yet -->
    
-  <adapter
-    factory=".attribute.SchemaAttributeManager"
-    for=".interfaces.ISchema"
-    provides=".interfaces.IAttributeManager"
-    />
-  
 </configure>

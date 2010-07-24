@@ -1,3 +1,3 @@
 """
-Placeholder for generated schemas, similar to how plone.dexterity does it.
+Place holder for generated schemas, similar to how plone.dexterity does it.
 """

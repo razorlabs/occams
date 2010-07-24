@@ -1,5 +1,9 @@
+"""
+"""
 
+from zope.interface import implements
 from zope.component import adapter
+from zope.component import getSiteManager
 from zope.lifecycleevent import IObjectAddedEvent
 from zope.lifecycleevent import IObjectRemovedEvent
 
@@ -7,22 +11,44 @@ from sqlalchemy import orm
 
 from avrc.data.store import interfaces
 
-@adapter(interfaces.IEngine)
-def EngineSession(engine):
+class SessionFactory(object):
     """
-    Creates the Session object and binds it to the appropriate databases.
+    @see avrc.data.store.interfaces.ISessionFactory
     """
-    Session  = orm.scoped_session(orm.sessionmaker(
-        autocommit=False,
-        autoflush=True,
-        twophase=False
-        ))
+
+    implements(interfaces.ISessionFactory)
     
-    Session.configure(binds=engine.binds)
+    def __init__(self, 
+                 autocommit=False, 
+                 autoflush=True, 
+                 twophase=False,
+                 bind=None, 
+                 binds=None):
+        """
+        Our ISessionFactory implementation takes an extra parameter which 
+        will be the database bindings.
+        """
+        self.autocommit = autocommit
+        self.autoflush = autoflush
+        self.twophase = twophase
+        self.binds = binds
+        self.bind = bind
     
-    return Session()
+    def __call__(self):
+        """
+        Creates the Session object and binds it to the appropriate databases.
+        @see: avrc.data.store.interfaces.ISessionFactory#__call__
+        """
+        Session  = orm.scoped_session(orm.sessionmaker(
+            autocommit=self.autocommit,
+            autoflush=self.autoflush,
+            twophase=self.twophase
+            ))
         
+        Session.configure(bind=self.bind, binds=self.binds)
         
+        return Session
+ 
 @adapter(interfaces.IEngine, IObjectAddedEvent)
 def handleEngineAdded(engine, event):
     """
@@ -32,10 +58,16 @@ def handleEngineAdded(engine, event):
     offer it's services.
     """
     engine._setup()
+    sm = getSiteManager(engine)
+    sm.registerUtility(SessionFactory(binds=engine.binds),  
+                       provided=interfaces.ISessionFactory)
     
 @adapter(interfaces.IEngine, IObjectRemovedEvent)
-def handleDataStoreRemoved(engine, event):
+def handleEngineRemoved(engine, event):
     """
     Triggered when a new DataStore instance is removed from a container
     """
     engine._unsetup()
+    sm = getSiteManager(engine)
+    sm.registerUtlity(None, provided=interfaces.ISessionFactory)
+    
