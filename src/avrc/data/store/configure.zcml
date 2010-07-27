@@ -32,7 +32,7 @@
       provides=".interfaces.ISchemaManager"
       for=".interfaces.IEngine"
       factory=".schema.EngineSchemaManager"
-      />-->  
+      />
 
   <!-- Attributes -->
   

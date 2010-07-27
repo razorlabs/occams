@@ -1,4 +1,6 @@
 """
+TODO: This module might have some issue with nested Sessions... this might
+need to be fixed on a per request basis. (using scoped_session maybe?)
 """
 
 from zope.interface import implements

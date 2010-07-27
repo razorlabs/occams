@@ -65,9 +65,9 @@ class IManager(IBase):
         Returns a listing of the objects being managed by this manager.
         """
     
-class IEngine(IBase, IContained):
+class IDatastore(IBase, IContained):
     """
-    Represents a Data Store instance that can be added to a site. 
+    Represents a datastore instance that can be added to a site. 
     """
 
     pii_dsn = schema.TextLine(
@@ -337,11 +337,11 @@ class IContact(IPII):
         title=_(u"Phone Number")
         )
     
-    address1 = schema.TextLine(
+    line_1 = schema.TextLine(
         title=_(u"Line 1")
         )
 
-    address2 = schema.TextLine(
+    line_2 = schema.TextLine(
         title=_(u"Line 2")
         )
 

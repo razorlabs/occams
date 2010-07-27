@@ -58,9 +58,9 @@ class Address(PII):
     
     phone = sa.Column(sa.Unicode, index=True)
     
-    address1 = sa.Column(sa.Unicode)
+    line_1 = sa.Column(sa.Unicode)
     
-    address2 = sa.Column(sa.Unicode)
+    line_2 = sa.Column(sa.Unicode)
     
     city = sa.Column(sa.Unicode)
 
@@ -179,6 +179,18 @@ class Domain(FIA):
     
     title = sa.Column(sa.Unicode, nullable=False, unique=True)
     
+    
+class Protocol(FIA):
+    """
+    TODO: incomplete
+    """
+    __tablename__ = "protocol"
+    
+    id = sa.Column(sa.Integer, primary_key=True)
+    
+    domain_id = sa.Column(sa.Integer, sa.ForeignKey("domain.id"), 
+                          nullable=False)
+    
 class Enrollment(FIA): 
     """
     """
@@ -260,6 +272,8 @@ class Keyword(FIA):
 
 class Instance(FIA):
     """
+    TODO, the title doesn't really make much sense in our situation, making
+    it optional for now...
     """
     __tablename__ = "instance"
     
@@ -270,7 +284,7 @@ class Instance(FIA):
     
     schema = orm.relation("Schema", uselist=False)
     
-    title = sa.Column(sa.Unicode, nullable=False, unique=True)
+    title = sa.Column(sa.Unicode, unique=True)
     
     description = sa.Column(sa.Unicode)
     
@@ -278,87 +292,63 @@ class Instance(FIA):
     
     modify_date = sa.Column(sa.DateTime, nullable=False)
 
-class Binary(FIA):
+class _TypedValueMixin(object):
     """
+    Mixin class for attributes in order to require the following fields
     """
-    __tablename__ = "binary"
-    
     instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
                             nullable=False,
                             primary_key=True)
     
+    instance = orm.relation("Instance", uselist=False)
+    
     attribute_id = sa.Column(sa.Integer, sa.ForeignKey("attribute.id"),
                             nullable=False,
                             primary_key=True)
+    
+    attribute = orm.relation("Attribute", uselist=False)
+
+class Binary(FIA, _TypedValueMixin):
+    """
+    """
+    __tablename__ = "binary"
     
     extension = sa.Column(sa.Unicode)
     
     value = sa.Column(sa.BLOB, nullable=False)
 
-class Datetime(FIA):
+class Datetime(FIA, _TypedValueMixin):
     """
     """
     __tablename__ = "datetime"
-    
-    instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
-                            nullable=False,
-                            primary_key=True)
-    
-    attribute_id = sa.Column(sa.Integer, sa.ForeignKey("attribute.id"),
-                            nullable=False,
-                            primary_key=True)
     
     value = sa.Column(sa.DateTime, nullable=False)
     
 sa.Index("datetime_attribute_value", Datetime.attribute_id, Datetime.value)
     
     
-class Integer(FIA):
+class Integer(FIA, _TypedValueMixin):
     """
     """
     __tablename__ ="integer"
-    
-    instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
-                            nullable=False,
-                            primary_key=True)
-    
-    attribute_id = sa.Column(sa.Integer, sa.ForeignKey("attribute.id"),
-                            nullable=False,
-                            primary_key=True)
     
     value = sa.Column(sa.Integer, nullable=False)
     
 sa.Index("integer_attribute_value", Integer.attribute_id, Integer.value)
 
-class Real(FIA):
+class Real(FIA, _TypedValueMixin):
     """
     """
     __tablename__ ="real"
-    
-    instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
-                            nullable=False,
-                            primary_key=True)
-    
-    attribute_id = sa.Column(sa.Integer, sa.ForeignKey("attribute.id"),
-                            nullable=False,
-                            primary_key=True)
     
     value = sa.Column(sa.Integer, nullable=False)
     
 sa.Index("real_attribute_value", Real.attribute_id, Real.value)
         
-class Object(FIA):
+class Object(FIA, _TypedValueMixin):
     """
     """
     __tablename__ ="object"
-    
-    instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
-                            nullable=False,
-                            primary_key=True)
-    
-    attribute_id = sa.Column(sa.Integer, sa.ForeignKey("attribute.id"),
-                            nullable=False,
-                            primary_key=True)
     
     value = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
                       nullable=False
@@ -368,18 +358,10 @@ class Object(FIA):
         
 sa.Index("object_attribute_value", Object.attribute_id, Object.value)
 
-class String(FIA):
+class String(FIA, _TypedValueMixin):
     """
     """
     __tablename__ ="string"
-    
-    instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
-                            nullable=False,
-                            primary_key=True)
-    
-    attribute_id = sa.Column(sa.Integer, sa.ForeignKey("attribute.id"),
-                            nullable=False,
-                            primary_key=True)
     
     value = sa.Column(sa.Unicode, nullable=False)
 
@@ -401,7 +383,7 @@ class Hierarchy(FIA):
     child_id = sa.Column(sa.Integer, sa.ForeignKey("specification.id"),
                                 nullable=False)
 
-class Specifiation(FIA):
+class Specification(FIA):
     """
     """
     __tablename__ = "specification"
@@ -415,6 +397,8 @@ class Specifiation(FIA):
     is_association = sa.Column(sa.Boolean, nullable=False, default=False)
     
     is_virtual = sa.Column(sa.Boolean, nullable=False, default=False)
+    
+    is_eav = sa.Column(sa.Boolean, nullable=False, default=False)
     
 class Invariant(FIA):
     """

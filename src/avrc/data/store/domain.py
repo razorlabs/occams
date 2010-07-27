@@ -1,4 +1,5 @@
 """
+Contains how to: domain and protocol
 """
 from zope.component import adapts
 from zope.component import getUtility
@@ -18,13 +19,21 @@ class Domain(object):
     
     title = None
     
+    def to_db(self):
+        pass
+    
+    @classmethod
+    def from_db(cls, rslt):
+        obj = cls()
+        return obj
+    
 DomainFactory = Factory(
     Domain,
     title=_(u"Create a new domain"),
     description=_("New domain generator")
     )
 
-class EngineDomainManager(object):
+class DatastoreDomainManager(object):
     """
     """
     adapts(interfaces.IEngine)
@@ -36,8 +45,8 @@ class EngineDomainManager(object):
     def get(id):
         """ 
         """
-        Session = getUtility(interfaces.ISessionFactory)()
         obj = None
+        Session = getUtility(interfaces.ISessionFactory)()
         rslt = Session.query(_model.Domain).filter_by(title=id).first()
         
         if rslt is not None:
@@ -77,8 +86,8 @@ class EngineDomainManager(object):
     def list(self):
         """
         """
-        Session = getUtility(interfaces.ISessionFactory)()
         listing = []
+        Session = getUtility(interfaces.ISessionFactory)()
         
         for rslt in Session.query(_model.Domain).all():
             listing.append(Domain(title=rslt.title))

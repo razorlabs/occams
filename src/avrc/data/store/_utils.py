@@ -1,4 +1,6 @@
-
+"""
+Library tools.
+"""
 from zope.component import adapts, getUtility
 from zope.interface import implements
 
