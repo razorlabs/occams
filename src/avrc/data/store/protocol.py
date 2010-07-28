@@ -8,7 +8,7 @@ from zope.interface import implements
 from zope.i18nmessageid import MessageFactory
 
 from avrc.data.store import interfaces
-from avrc.data.store import _model
+from avrc.data.store import model
 
 _ = MessageFactory(__name__)
 
@@ -40,14 +40,14 @@ class DatastoreDomainManager(object):
     implements(interfaces.IDomainManager)
     
     def __init__(self, engine):
-        self.engine = engine
+        self.datastore = engine
         
     def get(id):
         """ 
         """
         obj = None
         Session = getUtility(interfaces.ISessionFactory)()
-        rslt = Session.query(_model.Domain).filter_by(title=id).first()
+        rslt = Session.query(model.Domain).filter_by(title=id).first()
         
         if rslt is not None:
             obj = Domain(title=rslt.title)
@@ -58,14 +58,14 @@ class DatastoreDomainManager(object):
         """
         """
         Session = getUtility(interfaces.ISessionFactory)()
-        Session.add( _model.Domain(title=source.title) )
+        Session.add( model.Domain(title=source.title) )
         Session.commit()
         
     def modify(self, old, new):
         """
         """
         Session = getUtility(interfaces.ISessionFactory)()
-        rslt = Session.query(_model.Domain).filter_by(title=old.title).first()
+        rslt = Session.query(model.Domain).filter_by(title=old.title).first()
         rslt.title = new.title
         Session.commit()
         
@@ -78,7 +78,7 @@ class DatastoreDomainManager(object):
         """
         """
         Session = getUtility(interfaces.ISessionFactory)()
-        rslt = Session.query(_model.Domain).filter_by(title=source.title)
+        rslt = Session.query(model.Domain).filter_by(title=source.title)
         if rslt is not None:
             Session.remove(rslt)
         Session.commit()
@@ -89,7 +89,7 @@ class DatastoreDomainManager(object):
         listing = []
         Session = getUtility(interfaces.ISessionFactory)()
         
-        for rslt in Session.query(_model.Domain).all():
+        for rslt in Session.query(model.Domain).all():
             listing.append(Domain(title=rslt.title))
         
         return listing

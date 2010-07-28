@@ -2,6 +2,8 @@
 Responsible for schemata, attributes, and vocabularies
 """
 
+from datetime import time
+
 import zope.schema
 from zope.component import adapts
 from zope.component import getUtility
@@ -10,270 +12,163 @@ from zope.component.factory import Factory
 from zope.interface import implements
 from zope.interface.interface import InterfaceClass
 from zope.i18nmessageid import MessageFactory
-from zope.schema.vocabulary import SimpleVocabulary
 
-from avrc.data.store import _model
+from sqlalchemy import func
+
+from avrc.data.store import model
+from avrc.data.store import _utils
 from avrc.data.store import interfaces
 
 _ = MessageFactory(__name__)
 
-#
-# TODO this really need to be replaced with something much cleaner
-#
-TYPE_MAP = {
-    zope.schema.Int: u"integer",
-    zope.schema.TextLine: u"string",
-    zope.schema.Bytes: u"binary",
-    zope.schema.Bool: u"boolean",
-    zope.schema.Decimal: u"real",
-    zope.schema.Date: u"datetime",
-    zope.schema.Object: u"object",
-    }
-
-REVERSE_TYPE_MAP = dict(zip(TYPE_MAP.values() ,TYPE_MAP.keys()))
-
-"""
-"""
-from zope.component import adapts
-from zope.component import getUtility
-from zope.component.factory import Factory
-from zope.interface import implements
-from zope.i18nmessageid import MessageFactory
-
-import zope.schema
-
-from avrc.data.store import _model
-from avrc.data.store import interfaces
-
-_ = MessageFactory(__name__)
-
-class Attribute(object):
+class VocabularyManager(object):
     """
     """
-    
-    
-
-AttributeFactory = Factory(
-    Attribute,
-    title=_(u"Creates a attribute"),
-    description=_(u"Zah?")
-    )
-
-class EngineAttributeManager(object):
-    """
-    """
-    adapts(interfaces.IEngine)
-    implements(interfaces.IAttributeManager)
-    
-    def __init__(self, engine):
-        """
-        """
-        self.engine = engine
-        
-    def add(self, source):
-        """
-        """
-        Session = getUtility(interfaces.ISessionFactory)()
-        
-        schema = _model.Schema(
-            title=unicode(source.__name__),
-            description=unicode(source.__doc__)
-            )
-        
-        Session.add(schema)
-        
-        for name, type in zope.schema.getFieldsInOrder(source):
-            name = unicode(name)
-            
-            symbol = Session.query(_model.Symbol).filter_by(title=name).first()
-            
-            if symbol is None:
-                symbol = _model.Symbol(title=name)
-            
-            attribute = _model.Attribute()
-            attribute.schema = schema
-            attribute.symbol = symbol
-            attribute.order = type.order
-            attribute.field = _model.Field(
-                title=type.title,
-                description=type.description,
-                is_required=type.required,
-                )
-            
-            attribute.field.type = Session.query(_model.Type)\
-                                   .filter_by(title=TYPE_MAP[type.__class__])\
-                                   .first()
-        
-            Session.add(attribute)
-        
-        Session.commit()
-        
-    def get(self, id):
-        """
-        """
-        raise NotImplementedError()
-        
-    def modify(self, target):
-        """
-        """
-        raise NotImplementedError()
-        
-    def expire(self, target):
-        """
-        """
-        raise NotImplementedError()
-        
-    def remove(self, target):
-        """
-        """
-        raise NotImplementedError()
-        
-    def list(self):
-        """
-        """
-        raise NotImplementedError()
-
-class Schema(object):
-    pass
-
-SchemaFactory = Factory(
-    Schema,
-    title=_(u"Creates a schema"),
-    description=_(u"Zah?")
-    )
-
-class EngineSchemaManager(object):
-    """
-    Apparently takes a protocol and produces a schema
-    """
-    adapts(interfaces.IEngine)
     implements(interfaces.ISchemaManager)
     
-    def __init__(self, engine):
-        self.engine = engine
-    
-    def add(self, source):
+    def __init__(self):
         """
+        """
+        
+    def put(self, source):
+        """
+        """
+        for term in source:
+            pass
+        
+
+class SchemaManager(object):
+    """
+    """
+    implements(interfaces.ISchemaManager)
+    
+    def __init__(self):
+        """
+        """
+    
+    def put(self, source):
+        """
+        TODO: maybe upgrade an existing one if it's already in the database?
+                Can't because we don't know how to to tell if it has changed?
+        
+        @param source: A ZOPE interface specification 
         """
         Session = getUtility(interfaces.ISessionFactory)()
         
-        spec_rslt = _model.Specifiation(
-            title=source.title,
-            description=source.description,
-            )
+        title = unicode(source.__name__)
+        desc = unicode(source.__doc__)
         
-        schema_rslt = _model.Schema()
+        # If we don't already have a specification, we'll start a new schema
+        spec_rslt = Session.query(model.Specification)\
+                    .filter_by(title=title)\
+                    .first()
+                    
+        if spec_rslt is None:
+            spec_rslt = model.Specification(title=title, description=desc)
+        
+        # Upgrade the specification            
+        schema_rslt = model.Schema()
         schema_rslt.specification = spec_rslt
-        
-        am = interfaces.IAttributeManager(self.engine)
         
         for name, field in zope.schema.getFieldsInOrder(source):
             name = unicode(name)
-            attr_obj = createObject("avrc.data.store.Attribtue")
-            attr_obj.add(attr_obj)
-            attr_obj.get(attr_obj.id)
+            attribute_rslt = Session.query(model.Attribute)\
+                             .filter_by(name=name)\
+                             .join(model.Schema.specification)\
+                             .filter_by(title=title)\
+                             .first()
+
+            if attribute_rslt is None:
+                attribute_rslt = model.Attribute(
+                    name=name,
+                    title=field.title,
+                    description=field.description,
+                    is_required=field.required,
+                    order=field.order
+                    )
+            
+            type_rslt = Session.query(model.Type)\
+                        .filter_by(title=_utils.TYPE_2_STR[field.__class__])\
+                        .first()
         
+            attribute_rslt.type = type_rslt
+            
+            schema_rslt.attributes.append(attribute_rslt)
+            
         Session.add(schema_rslt)
         Session.commit()
         
-#        schema = _model.Schema(
-#            title=unicode(source.__name__),
-#            description=unicode(source.__doc__)
-#            )
-#        
-#        Session.add(schema)
-#        
-#        for name, type in zope.schema.getFieldsInOrder(source):
-#            name = unicode(name)
-#            
-#            symbol = Session.query(_model.Symbol).filter_by(title=name).first()
-#            
-#            if symbol is None:
-#                symbol = _model.Symbol(title=name)
-#            
-#            attribute = _model.Attribute()
-#            attribute.schema = schema
-#            attribute.symbol = symbol
-#            attribute.order = type.order
-#            attribute.field = _model.Field(
-#                title=type.title,
-#                description=type.description,
-#                is_required=type.required,
-#                )
-#            
-#            attribute.field.type = Session.query(_model.Type)\
-#                                   .filter_by(title=_TYPE_MAP[type.__class__])\
-#                                   .first()
-#        
-#            Session.add(attribute)
-#        
-#        Session.commit()
-
-        
-    def get(self, id):
+    def get(self, key):
         """
+        TODO: BROKEN, doesn't do versioning
         @see: avrc.data.store.interfaces.ISchemaManager#getSchema
         """
-        title = unicode(id)
+        title = unicode(key)
         Session = getUtility(interfaces.ISessionFactory)()
     
-        schema = Session.query(_model.Schema).filter_by(title=title).first()
-    
-        attributes = Session.query(_model.Attribute)\
-                      .order_by(_model.Attribute.order.asc())\
-                      .join(_model.Schema)\
+        schema_rslt = Session.query(model.Schema)\
                       .filter_by(title=title)\
-                      .all()
+                      .first()
+        
+        if schema_rslt is None:
+            return None
         
         attrs = {}
         
-        for attribute in attributes:
-            cls = REVERSE_TYPE_MAP[attribute.field.type.title] 
-            attrs[attribute.symbol.title] = cls(
-                title=attribute.field.title,
-                description=attribute.field.description,
-                required=attribute.field.is_required
+        for attribute_rslt in schema_rslt.attributes:
+            cls = _utils.STR_2_TYPE[attribute_rslt.type.title] 
+            attrs[attribute_rslt.name] = cls(
+                title=attribute_rslt.title,
+                description=attribute_rslt.description,
+                required=attribute_rslt.is_required
                 )
                 
         klass = InterfaceClass(
-            name=schema.title,
-            __doc__=schema.description,
+            name=schema_rslt.title,
+            __doc__=schema_rslt.description,
             __module__="avrc.data.store._virtual",
             bases=(interfaces.IMutableSchema,),
             attrs=attrs,
             )
                 
-        return klass    
+        return klass
         
     def modify(self, target):
         raise NotImplementedError()
         
     def expire(self, target):
-        raise NotImplementedError()
+        """
+        """
+        raise Exception(u"Expiring of schema is not allowed")
         
-    def remove(self, target):
-        raise NotImplementedError()
+    def remove(self, key, hard=False):
+        """
+        """
+        title = unicode(key)
+        Session = getUtility(interfaces.ISessionFactory)()
+        
+        num_instances = Session.query(model.Instance)\
+                        .join(model.Schema.specification)\
+                        .filter_by(title=title)\
+                        .count()
+        
+        if num_instances > 0 and not hard:
+            raise Exception("There is already data stored for %s" % key)
+        
+        schema_rslt = Session.query(model.Schema)\
+                      .join(model.Specification)\
+                      .filter_by(title=title)\
+                      .first()
+        
+        Session.remove(schema_rslt)
+        Session.commit()
         
     def list(self):
-        raise NotImplementedError()
+        """
+        Again... doesn't do versioning
+        """
+        Session = getUtility(interfaces.ISessionFactory)()
+        return Session.query(model.Specification.title).all()
     
-    
 
-
-US_STATES_LIST = ["ca", "wa"]
-
-statesVocabulary = SimpleVocabulary.fromValues(US_STATES_LIST)
-
-TYPES = (
-    ('binary',),
-    ('boolean',),
-    ('datetime',),
-    ('date'),
-    ('time'),
-    ('integer',),
-    ('real',),
-    ('string',),
-    ('text',),
-    ('object',),
-    )
-    
+        

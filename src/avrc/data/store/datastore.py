@@ -13,12 +13,12 @@ from zope.i18nmessageid import MessageFactory
 
 import sqlalchemy as sa
     
-from avrc.data.store import _model
+from avrc.data.store import model
+from avrc.data.store import _utils
 from avrc.data.store import interfaces
 from avrc.data.store import schema
-from avrc.data.store import domain
-
-from avrc.data.store.schema import TYPE_MAP
+from avrc.data.store import protocol
+from avrc.data.store import schema
 
 _ = MessageFactory(__name__)
 
@@ -44,14 +44,18 @@ class Datastore(object):
         self.fia_dsn = fia_dsn
         self.pii_dsn = pii_dsn is None and fia_dsn or pii_dsn
         
+        self.schemata = schema.SchemaManager()
+        self.protocols = protocol.ProtocolManager()
+         
+        
     @property
     def binds(self):
         # Set up the table-to-engine bindings, this will allow the session
         # to handle multiple engines in a session
         binds = {}
-        binds.update(dict.fromkeys(_model.FIA.metadata.sorted_tables, 
+        binds.update(dict.fromkeys(model.FIA.metadata.sorted_tables, 
                                    self._fia_engine))
-        binds.update(dict.fromkeys(_model.PII.metadata.sorted_tables, 
+        binds.update(dict.fromkeys(model.PII.metadata.sorted_tables, 
                                    self._pii_engine))
     
     def _setup(self):
@@ -65,8 +69,8 @@ class Datastore(object):
         else:
             self._pii_engine = sa.create_engine(self.pii_dsn)
             
-        _model.setup_fia(self._fia_engine)
-        _model.setup_pii(self._pii_engine)
+        model.setup_fia(self._fia_engine)
+        model.setup_pii(self._pii_engine)
             
     def _unsetup(self):
         """
@@ -94,21 +98,21 @@ class Datastore(object):
         #
         # TODO: VERSIONING>!!>!>!
         #
-        schema_rslt = Session.query(_model.Schema)\
-                      .join(_model.Specifiation)\
+        schema_rslt = Session.query(model.Schema)\
+                      .join(model.Specification)\
                       .filter_by(title=schema_obj.title)\
                       .first()
                       
-        instance_rslt = _model.Instance()
+        instance_rslt = model.Instance()
         instance_rslt.schema = schema_rslt
         
         Session.add(instance_rslt)
         
-        for name in zope.schema.getNames(provided):
+        for name in zope.schema.getFieldNamesInOrder(provided):
             name = unicode(name)
-            attribute_rslt = Session.query(_model.Attribute)\
+            attribute_rslt = Session.query(model.Attribute)\
                              .filter_by(name=name)\
-                             .join(_model.Schema)\
+                             .join(model.Schema)\
                              .filter_by(id=schema_rslt.id)\
                              .first()
             
@@ -117,18 +121,18 @@ class Datastore(object):
             
             if attribute_rslt.type.title in (u"binary",):
                 # TODO: unclear how binary values are going to come in
-                value_rslt = _model.Binary(value=value_raw)
+                value_rslt = model.Binary(value=value_raw)
             elif attribute_rslt.type.title in (u"date", u"time", u"datetime"):
-                value_rslt = _model.Datetime(value=value_raw)
+                value_rslt = model.Datetime(value=value_raw)
             elif attribute_rslt.type.title in (u"integer",):
-                value_rslt = _model.Integer(value=value_raw)
+                value_rslt = model.Integer(value=value_raw)
             elif attribute_rslt.type.title in (u"object",):
-                value_rslt = _model.Object()
+                value_rslt = model.Object()
                 value_rslt.instance = self.put(None, value_raw)
             elif attribute_rslt.type.title in (u"real",):
-                value_rslt = _model.Real(value=value_raw)
+                value_rslt = model.Real(value=value_raw)
             elif attribute_rslt.type.title in (u"text", u"string"):
-                value_rslt = _model.String(value=value_raw)
+                value_rslt = model.String(value=value_raw)
             else:
                 raise Exception("Type %s unsupported."  % repr(provided[name]))
 
@@ -144,7 +148,7 @@ class Datastore(object):
         """
         if isinstance(schema.Schema, obj):
             pass
-        elif isinstance(domain.Domain, obj):
+        elif isinstance(protocol.Domain, obj):
             pass
         else:
             # doesn't appear to be a major construct, check it's interface and
@@ -157,11 +161,11 @@ class Datastore(object):
         """
         Session = getUtility(interfaces.ISessionFactory)()
         
-        domain_rslt = Session.query(_model.Domain)\
+        domain_rslt = Session.query(model.Domain)\
                       .filter_by(title=title)\
                       .first()
         
-        return domain.Domain(domain_rslt)
+        return protocol.Domain(domain_rslt)
         
     def get_schema(self, title, version=None):
         """
@@ -170,8 +174,8 @@ class Datastore(object):
         version = version is not None and int(version) or None
         Session = getUtility(interfaces.ISessionFactory)()
         
-        schema_q = Session.query(_model.Schema)\
-                      .join(_model.Specification)\
+        schema_q = Session.query(model.Schema)\
+                      .join(model.Specification)\
                       .filter_by(title=title)
                       
         if version is not None:
@@ -180,4 +184,81 @@ class Datastore(object):
             
         schema_rslt = schema_q.first()
         return schema.Schema(schema_rslt)
+    
+    
+"""
+TODO: This module might have some issue with nested Sessions... this might
+need to be fixed on a per request basis. (using scoped_session maybe?)
+"""
+
+from zope.interface import implements
+from zope.component import adapter
+from zope.component import getSiteManager
+from zope.lifecycleevent import IObjectAddedEvent
+from zope.lifecycleevent import IObjectRemovedEvent
+
+from sqlalchemy import orm
+
+from avrc.data.store import interfaces
+
+class SessionFactory(object):
+    """
+    @see avrc.data.store.interfaces.ISessionFactory
+    """
+
+    implements(interfaces.ISessionFactory)
+    
+    def __init__(self, 
+                 autocommit=False, 
+                 autoflush=True, 
+                 twophase=False,
+                 bind=None, 
+                 binds=None):
+        """
+        Our ISessionFactory implementation takes an extra parameter which 
+        will be the database bindings.
+        """
+        self.autocommit = autocommit
+        self.autoflush = autoflush
+        self.twophase = twophase
+        self.binds = binds
+        self.bind = bind
+    
+    def __call__(self):
+        """
+        Creates the Session object and binds it to the appropriate databases.
+        @see: avrc.data.store.interfaces.ISessionFactory#__call__
+        """
+        Session  = orm.scoped_session(orm.sessionmaker(
+            autocommit=self.autocommit,
+            autoflush=self.autoflush,
+            twophase=self.twophase
+            ))
+        
+        Session.configure(bind=self.bind, binds=self.binds)
+        
+        return Session
+ 
+@adapter(interfaces.IEngine, IObjectAddedEvent)
+def handleEngineAdded(engine, event):
+    """
+    Triggered when a new DataStore instance is added to a container (i.e.
+    when it is added to a site.
+    This method will setup all metadata needed for the engine to fully
+    offer it's services.
+    """
+    engine._setup()
+    sm = getSiteManager(engine)
+    sm.registerUtility(SessionFactory(binds=engine.binds),  
+                       provided=interfaces.ISessionFactory)
+    
+@adapter(interfaces.IEngine, IObjectRemovedEvent)
+def handleEngineRemoved(engine, event):
+    """
+    Triggered when a new DataStore instance is removed from a container
+    """
+    engine._unsetup()
+    sm = getSiteManager(engine)
+    sm.registerUtlity(None, provided=interfaces.ISessionFactory)
+    
         

@@ -38,6 +38,7 @@ setup(
         "zope.i18nmessageid",
         # --- Database
         "SQLAlchemy>=0.5.8,<0.5.99",
+        # --- Helper modules
         # --- Forms
         "plone.app.z3cform",
         "plone.app.dexterity",

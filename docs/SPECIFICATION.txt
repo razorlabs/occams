@@ -72,6 +72,9 @@ version!
 >>> # Getting a schema
 >>> engine.get_schema(title="IDummy")
 
+>>> #HOW TO MANAGE?!?!!
+
+
 
 ATTRIBUTE
 ---------
