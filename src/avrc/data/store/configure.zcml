@@ -8,45 +8,20 @@
   <includeDependencies package="." />
   
   <!-- Handle when a Site adds an engine -->
-  <subscriber handler="._session.handleEngineAdded" />
-  <subscriber handler="._session.handleEngineRemoved" />
+  <subscriber handler=".datastore.handleDatastoreAdded" />
+  <subscriber handler=".datastore.handleDatastoreRemoved" />
   
   <!-- Vocabularies -->
-  <utility name="states" component=".vocabulary.statesVocabulary" />
+  <utility name="states" component="._utils.statesVocabulary" />
+
+  <utility 
+      name="avrc.data.store.Datastore" 
+      component=".datastore.DatastoreFactory" />
 
   <!-- Domains -->
 
-  <utility name="avrc.data.store.Domain" component=".domain.DomainFactory" />
+  <utility name="avrc.data.store.Domain" component=".protocol.DomainFactory" />
 
-  <adapter
-      provides=".interfaces.IDomainManager"
-      for=".interfaces.IEngine"
-      factory=".domain.EngineDomainManager"
-      />
-  
-  <!-- Schemas -->
-  
-  <utility name="avrc.data.store.Schema" component=".schema.SchemaFactory" />
-  
-  <adapter
-      provides=".interfaces.ISchemaManager"
-      for=".interfaces.IEngine"
-      factory=".schema.EngineSchemaManager"
-      />
-
-  <!-- Attributes -->
-  
-  <utility 
-      name="avrc.data.store.Attribute" 
-      component=".attribute.AttributeFactory" 
-      />
-
-  <adapter
-      provides=".interfaces.IAttributeManager"
-      for=".interfaces.IEngine"
-      factory=".attribute.EngineAttributeManager"
-      />
-  
   <!-- Data -->
   <!-- Nothing written yet -->
    

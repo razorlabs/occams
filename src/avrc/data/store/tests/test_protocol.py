@@ -12,7 +12,7 @@ from zope.interface import verify
 
 import avrc.data.store
 from avrc.data.store import interfaces
-from avrc.data.store import domain
+from avrc.data.store import protocol
 
 ptc.setupPloneSite()
 
@@ -44,7 +44,7 @@ class TestCase(ptc.PloneTestCase):
         contract
         """
         interface = interfaces.IProtocolManager
-        cls = domain.DataStoreDomain
+        cls = protocol.DataStoreDomain
         
         self.assertTrue(interface.implementedBy(cls), "Not implemented")
         self.assertTrue(verify.verifyClass(interface, cls))

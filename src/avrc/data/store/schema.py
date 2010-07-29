@@ -36,6 +36,17 @@ class VocabularyManager(object):
         for term in source:
             pass
         
+class VocabularySchema(object):
+    """
+    I don't know what this does yet, just skeching
+    """
+    adapts(zope.schema.interfaces.IVocabulary)
+    implements(interfaces.ISchemaManager)
+    
+    def __int__(self, vocabulary):
+        """
+        """
+        
 
 class SchemaManager(object):
     """
@@ -134,6 +145,10 @@ class SchemaManager(object):
         return klass
         
     def modify(self, target):
+        """
+        It isn't very clear how the modification of schemata is going to work.
+        That is, how will be know which parts of the schema have been changed?
+        """
         raise NotImplementedError()
         
     def expire(self, target):
@@ -143,6 +158,7 @@ class SchemaManager(object):
         
     def remove(self, key, hard=False):
         """
+        Removes a 
         """
         title = unicode(key)
         Session = getUtility(interfaces.ISessionFactory)()
@@ -165,10 +181,9 @@ class SchemaManager(object):
         
     def list(self):
         """
-        Again... doesn't do versioning
+        Returns a list of all the existing schemata NAMES only.
         """
         Session = getUtility(interfaces.ISessionFactory)()
         return Session.query(model.Specification.title).all()
-    
 
         

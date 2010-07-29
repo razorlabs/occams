@@ -38,11 +38,8 @@ class TestCase(ptc.PloneTestCase):
         Tests if the data store implementation has fully objected the interface
         contract
         """
-        interface = interfaces.IDataStore
-        cls = datastore.DataStore
-        
-        self.assertTrue(interface.implementedBy(cls), "Not implemented")
-        self.assertTrue(verify.verifyClass(interface, cls))
+        self.assertTrue(verify.verifyClass(interfaces.IDatastore, 
+                                           datastore.Datastore))
     
     def test_multi_site(self):
         """
@@ -65,9 +62,9 @@ class TestCase(ptc.PloneTestCase):
         
         self.assertNotEqual(sm1, sm2, u"Site managers must be different.")
         
-        sm1[u"ds"] = datastore.DataStore(pii_dsn=u"sqlite:///:memory:",  
+        sm1[u"ds"] = datastore.Datastore(pii_dsn=u"sqlite:///:memory:",  
                                         fia_dsn=u"sqlite:///:memory:")
-        sm2[u"ds"] = datastore.DataStore(pii_dsn=u"sqlite:///:memory:",  
+        sm2[u"ds"] = datastore.Datastore(pii_dsn=u"sqlite:///:memory:",  
                                         fia_dsn=u"sqlite:///:memory:") 
     
         self.assertTrue(u"ds" in sm1, u"No datastore found.")

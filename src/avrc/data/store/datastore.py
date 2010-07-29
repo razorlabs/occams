@@ -1,5 +1,5 @@
 """
-Datastore specific library. This module is in charge of handling the
+This module is in charge of handling the
 the datastore instances through the use of Object events to keep track of
 multiple instances across sites.  
 """
@@ -7,20 +7,27 @@ from datetime import datetime
 
 import zope.schema
 from zope.component import getUtility
+from zope.component import adapter
+from zope.component import getSiteManager
+from zope.component.factory import Factory
 from zope.interface import implements
 from zope.interface import providedBy
 from zope.i18nmessageid import MessageFactory
+from zope.lifecycleevent import IObjectAddedEvent
+from zope.lifecycleevent import IObjectRemovedEvent
 
 import sqlalchemy as sa
+from sqlalchemy import orm
     
 from avrc.data.store import model
 from avrc.data.store import _utils
 from avrc.data.store import interfaces
 from avrc.data.store import schema
 from avrc.data.store import protocol
-from avrc.data.store import schema
 
 _ = MessageFactory(__name__)
+
+_ECHO_ENABLED = True
 
 class Datastore(object):
     """
@@ -62,12 +69,12 @@ class Datastore(object):
         """
         Performs data base back-end setup.
         """
-        self._fia_engine = sa.create_engine(self.fia_dsn)
+        self._fia_engine = sa.create_engine(self.fia_dsn, echo=_ECHO_ENABLED)
         
         if self.fia_dsn == self.pii_dsn:
             self._pii_engine = self._fia_engine
         else:
-            self._pii_engine = sa.create_engine(self.pii_dsn)
+            self._pii_engine = sa.create_engine(self.pii_dsn, echo=_ECHO_ENABLED)
             
         model.setup_fia(self._fia_engine)
         model.setup_pii(self._pii_engine)
@@ -184,26 +191,18 @@ class Datastore(object):
             
         schema_rslt = schema_q.first()
         return schema.Schema(schema_rslt)
-    
-    
-"""
-TODO: This module might have some issue with nested Sessions... this might
-need to be fixed on a per request basis. (using scoped_session maybe?)
-"""
 
-from zope.interface import implements
-from zope.component import adapter
-from zope.component import getSiteManager
-from zope.lifecycleevent import IObjectAddedEvent
-from zope.lifecycleevent import IObjectRemovedEvent
-
-from sqlalchemy import orm
-
-from avrc.data.store import interfaces
+DatastoreFactory = Factory(
+    Datastore,
+    title=_(u"Data store factory"),
+    description=_(u"Does stuff")
+    )
 
 class SessionFactory(object):
     """
     @see avrc.data.store.interfaces.ISessionFactory
+    TODO: This module might have some issue with nested Sessions... this might
+    need to be fixed on a per request basis. (using scoped_session maybe?)
     """
 
     implements(interfaces.ISessionFactory)
@@ -239,21 +238,41 @@ class SessionFactory(object):
         
         return Session
  
-@adapter(interfaces.IEngine, IObjectAddedEvent)
-def handleEngineAdded(engine, event):
+@adapter(interfaces.IDatastore, IObjectAddedEvent)
+def handleDatastoreAdded(datastore, event):
     """
     Triggered when a new DataStore instance is added to a container (i.e.
     when it is added to a site.
     This method will setup all metadata needed for the engine to fully
     offer it's services.
     """
-    engine._setup()
-    sm = getSiteManager(engine)
-    sm.registerUtility(SessionFactory(binds=engine.binds),  
-                       provided=interfaces.ISessionFactory)
+    datastore._setup()
+    utility = SessionFactory(binds=datastore.binds)
+    sm = getSiteManager(datastore)
+    sm.registerUtility(utility, provided=interfaces.ISessionFactory)
     
-@adapter(interfaces.IEngine, IObjectRemovedEvent)
-def handleEngineRemoved(engine, event):
+    Session = utility()
+    
+    print
+    print
+    print Session
+    print
+    print
+    
+    Session.add_all([
+        model.Type(title=u"binary"),
+        model.Type(title=u"boolean"),
+        model.Type(title=u"datetime"),
+        model.Type(title=u"integer"),
+        model.Type(title=u"string"),
+        model.Type(title=u"real"),
+        model.Type(title=u"object"),
+        ])
+    
+    Session.commit()
+    
+@adapter(interfaces.IDatastore, IObjectRemovedEvent)
+def handleDatastoreRemoved(engine, event):
     """
     Triggered when a new DataStore instance is removed from a container
     """

@@ -29,7 +29,7 @@ def setup_pii(engine):
     """
     """
     _setup_base(PII, engine)
-    
+        
 # -----------------------------------------------------------------------------
 # Personal Information
 # -----------------------------------------------------------------------------
@@ -292,10 +292,11 @@ class Instance(FIA):
     
     modify_date = sa.Column(sa.DateTime, nullable=False)
 
-class _TypedValueMixin(object):
+class Binary(FIA):
     """
-    Mixin class for attributes in order to require the following fields
     """
+    __tablename__ = "binary"
+    
     instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
                             nullable=False,
                             primary_key=True)
@@ -306,62 +307,117 @@ class _TypedValueMixin(object):
                             nullable=False,
                             primary_key=True)
     
-    attribute = orm.relation("Attribute", uselist=False)
-
-class Binary(FIA, _TypedValueMixin):
-    """
-    """
-    __tablename__ = "binary"
+    attribute = orm.relation("Attribute", uselist=False)    
     
     extension = sa.Column(sa.Unicode)
     
     value = sa.Column(sa.BLOB, nullable=False)
 
-class Datetime(FIA, _TypedValueMixin):
+class Datetime(FIA):
     """
     """
     __tablename__ = "datetime"
+    
+    instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
+                            nullable=False,
+                            primary_key=True)
+    
+    instance = orm.relation("Instance", uselist=False)
+    
+    attribute_id = sa.Column(sa.Integer, sa.ForeignKey("attribute.id"),
+                            nullable=False,
+                            primary_key=True)
+    
+    attribute = orm.relation("Attribute", uselist=False)    
     
     value = sa.Column(sa.DateTime, nullable=False)
     
 sa.Index("datetime_attribute_value", Datetime.attribute_id, Datetime.value)
     
     
-class Integer(FIA, _TypedValueMixin):
+class Integer(FIA):
     """
     """
     __tablename__ ="integer"
+    
+    instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
+                            nullable=False,
+                            primary_key=True)
+    
+    instance = orm.relation("Instance", uselist=False)
+    
+    attribute_id = sa.Column(sa.Integer, sa.ForeignKey("attribute.id"),
+                            nullable=False,
+                            primary_key=True)
+    
+    attribute = orm.relation("Attribute", uselist=False)    
     
     value = sa.Column(sa.Integer, nullable=False)
     
 sa.Index("integer_attribute_value", Integer.attribute_id, Integer.value)
 
-class Real(FIA, _TypedValueMixin):
+class Real(FIA):
     """
     """
     __tablename__ ="real"
+    
+    instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
+                            nullable=False,
+                            primary_key=True)
+    
+    instance = orm.relation("Instance", uselist=False)
+    
+    attribute_id = sa.Column(sa.Integer, sa.ForeignKey("attribute.id"),
+                            nullable=False,
+                            primary_key=True)
+    
+    attribute = orm.relation("Attribute", uselist=False)    
     
     value = sa.Column(sa.Integer, nullable=False)
     
 sa.Index("real_attribute_value", Real.attribute_id, Real.value)
         
-class Object(FIA, _TypedValueMixin):
+class Object(FIA):
     """
     """
     __tablename__ ="object"
     
-    value = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
-                      nullable=False
-                      )
+    instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
+                            nullable=False,
+                            primary_key=True)
+    
+    instance = orm.relation("Instance",
+                            primaryjoin="Instance.id == Object.instance_id",
+                            uselist=False)
+    
+    attribute_id = sa.Column(sa.Integer, sa.ForeignKey("attribute.id"),
+                            nullable=False,
+                            primary_key=True)
+    
+    attribute = orm.relation("Attribute", uselist=False)    
+    
+    value = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),)
     
     order = sa.Column(sa.Integer, nullable=False, default=1)
         
 sa.Index("object_attribute_value", Object.attribute_id, Object.value)
 
-class String(FIA, _TypedValueMixin):
+class String(FIA):
     """
     """
     __tablename__ ="string"
+    
+    instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
+                            nullable=False,
+                            primary_key=True)
+    
+    instance = orm.relation("Instance", uselist=False)
+    
+    attribute_id = sa.Column(sa.Integer, sa.ForeignKey("attribute.id"),
+                            nullable=False,
+                            primary_key=True)
+    
+    attribute = orm.relation("Attribute", uselist=False)    
     
     value = sa.Column(sa.Unicode, nullable=False)
 
@@ -400,23 +456,23 @@ class Specification(FIA):
     
     is_eav = sa.Column(sa.Boolean, nullable=False, default=False)
     
-class Invariant(FIA):
-    """
-    """
-    __tablename__ = "invariant"
-    
-    id = sa.Column(sa.Integer, primary_key=True)
-    
-    schema_id = sa.Column(sa.Integer, sa.ForeignKey("schema.id"),
-                          nullable=False)
-    
-    title = sa.Column(sa.Unicode, nullable=False)
-    
-schema_attribute_table = sa.Table("schema_attribute", FIA.metadata,
-    sa.Column("schema_id", sa.ForeignKey("schema.id"), nullable=False),
-    sa.Column("attribute_id", sa.ForeignKey("attribute.id"), nullable=False),
-    sa.PrimaryKeyConstraint("schema_id", "attribute_id")
-    )
+#class Invariant(FIA):
+#    """
+#    """
+#    __tablename__ = "invariant"
+#    
+#    id = sa.Column(sa.Integer, primary_key=True)
+#    
+#    schema_id = sa.Column(sa.Integer, sa.ForeignKey("schema.id"),
+#                          nullable=False)
+#    
+#    title = sa.Column(sa.Unicode, nullable=False)
+#    
+#schema_attribute_table = sa.Table("schema_attribute", FIA.metadata,
+#    sa.Column("schema_id", sa.ForeignKey("schema.id"), nullable=False),
+#    sa.Column("attribute_id", sa.ForeignKey("attribute.id"), nullable=False),
+#    sa.PrimaryKeyConstraint("schema_id", "attribute_id")
+#    )
     
 class Schema(FIA):
     """
@@ -431,8 +487,8 @@ class Schema(FIA):
     specification = orm.relation("Specification", uselist=False)
     
     attributes = orm.relation("Attribute", 
-                              secondary=schema_attribute_table,
-                              order_by="order")
+#                              secondary=schema_attribute_table,
+                              order_by="Attribute.order")
     
     create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
     
@@ -447,7 +503,27 @@ class Attribute(FIA):
     
     id = sa.Column(sa.Integer, primary_key=True) 
     
+    schema_id = sa.Column(sa.Integer, sa.ForeignKey("schema.id"),
+                          nullable=False)
+    
+    schema = orm.relation("Schema", uselist=False)
+    
+    field_id = sa.Column(sa.Integer, sa.ForeignKey("field.id"))
+    
+    field = orm.relation("Field", uselist=False)
+    
     name = sa.Column(sa.Unicode, nullable=False)
+    
+    is_invariant = sa.Column(sa.Boolean, nullable=False, default=False)
+    
+    order = sa.Column(sa.Integer, nullable=False, default=1)
+
+class Field(FIA):
+    """
+    """
+    __tablename__ = "field"
+    
+    id = sa.Column(sa.Integer, primary_key=True) 
     
     title = sa.Column(sa.Unicode, nullable=False)
     
@@ -456,8 +532,6 @@ class Attribute(FIA):
     type_id = sa.Column(sa.Integer, sa.ForeignKey("type.id"), nullable=False)
     
     type = orm.relation("Type", uselist=False)
-    
-    order = sa.Column(sa.Integer, nullable=False, default=1)
     
     hint_id = sa.Column(sa.Integer, sa.ForeignKey("hint.id"))
     

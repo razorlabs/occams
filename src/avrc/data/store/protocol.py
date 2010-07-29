@@ -33,16 +33,19 @@ DomainFactory = Factory(
     description=_("New domain generator")
     )
 
+class ProtocolManager(object):
+    pass
+
 class DatastoreDomainManager(object):
     """
     """
-    adapts(interfaces.IEngine)
+    adapts(interfaces.IDatastore)
     implements(interfaces.IDomainManager)
     
     def __init__(self, engine):
         self.datastore = engine
         
-    def get(id):
+    def get(self, id):
         """ 
         """
         obj = None
