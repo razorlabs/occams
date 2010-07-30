@@ -6,6 +6,7 @@ multiple instances across sites.
 from datetime import datetime
 
 import zope.schema
+from zope.component import createObject
 from zope.component import getUtility
 from zope.component import adapter
 from zope.component import getSiteManager
@@ -57,13 +58,16 @@ class Datastore(object):
         
     @property
     def binds(self):
-        # Set up the table-to-engine bindings, this will allow the session
-        # to handle multiple engines in a session
+        """
+        Set up the table-to-engine bindings, this will allow the session
+        to handle multiple engines in a session
+        """
         binds = {}
         binds.update(dict.fromkeys(model.FIA.metadata.sorted_tables, 
                                    self._fia_engine))
         binds.update(dict.fromkeys(model.PII.metadata.sorted_tables, 
                                    self._pii_engine))
+        return binds
     
     def _setup(self):
         """
@@ -228,6 +232,7 @@ class SessionFactory(object):
         Creates the Session object and binds it to the appropriate databases.
         @see: avrc.data.store.interfaces.ISessionFactory#__call__
         """
+
         Session  = orm.scoped_session(orm.sessionmaker(
             autocommit=self.autocommit,
             autoflush=self.autoflush,
@@ -238,6 +243,25 @@ class SessionFactory(object):
         
         return Session
  
+def setupSupportedTypes():
+    """
+    This method should be used when setting up the supported types for a
+    Datastore content type being added to a folder in the zope site.
+    """
+    rslt = []
+    Session = getUtility(interfaces.ISessionFactory)()
+    types_factory = getUtility(zope.schema.interfaces.IVocabularyFactory, 
+                               name="avrc.data.store.SupportedTypes")
+    
+    for t in list(types_factory(None)):
+        rslt.append(model.Type(
+            title=unicode(t.token), 
+            description=unicode(getattr(t.value, "__doc__", None)),
+            ))
+    
+    Session.add_all(rslt)
+    Session.commit()
+ 
 @adapter(interfaces.IDatastore, IObjectAddedEvent)
 def handleDatastoreAdded(datastore, event):
     """
@@ -247,29 +271,12 @@ def handleDatastoreAdded(datastore, event):
     offer it's services.
     """
     datastore._setup()
-    utility = SessionFactory(binds=datastore.binds)
+    
+    SessionUtility = SessionFactory(binds=datastore.binds)
     sm = getSiteManager(datastore)
-    sm.registerUtility(utility, provided=interfaces.ISessionFactory)
+    sm.registerUtility(SessionUtility, provided=interfaces.ISessionFactory)
     
-    Session = utility()
-    
-    print
-    print
-    print Session
-    print
-    print
-    
-    Session.add_all([
-        model.Type(title=u"binary"),
-        model.Type(title=u"boolean"),
-        model.Type(title=u"datetime"),
-        model.Type(title=u"integer"),
-        model.Type(title=u"string"),
-        model.Type(title=u"real"),
-        model.Type(title=u"object"),
-        ])
-    
-    Session.commit()
+    setupSupportedTypes()
     
 @adapter(interfaces.IDatastore, IObjectRemovedEvent)
 def handleDatastoreRemoved(engine, event):

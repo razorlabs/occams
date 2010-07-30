@@ -2,24 +2,48 @@
 Responsible for schemata, attributes, and vocabularies
 """
 
-from datetime import time
+import datetime
 
-import zope.schema
 from zope.component import adapts
 from zope.component import getUtility
 from zope.component import createObject
 from zope.component.factory import Factory
+from zope.interface import alsoProvides
 from zope.interface import implements
 from zope.interface.interface import InterfaceClass
 from zope.i18nmessageid import MessageFactory
 
+import zope.schema
+
 from sqlalchemy import func
 
-from avrc.data.store import model
 from avrc.data.store import _utils
 from avrc.data.store import interfaces
+from avrc.data.store import model
 
 _ = MessageFactory(__name__)
+    
+def SupportedTypesVocabularyFactory(context):
+    """
+    Generates a list of supported types. This is used for auto-generating
+    meta data into the data store once it is added into a site.
+    """
+    SimpleTerm = zope.schema.vocabulary.SimpleTerm
+    return zope.schema.vocabulary.SimpleVocabulary((
+        SimpleTerm(zope.schema.Int, "integer", u"Integer"),
+        SimpleTerm(zope.schema.TextLine, "string", u"String"),
+        SimpleTerm(zope.schema.Text, "text", u"Text"),
+        SimpleTerm(zope.schema.Bytes, "binary", u"Binary"),
+        SimpleTerm(zope.schema.Bool, "boolean", u"Boolean"),
+        SimpleTerm(zope.schema.Decimal, "real", u"Decimal"),
+        SimpleTerm(zope.schema.Date, "date", u"Date"),
+        SimpleTerm(zope.schema.Datetime, "datetime", u"Datetime"),
+        SimpleTerm(zope.schema.Time, "time", u"Time"),
+        SimpleTerm(zope.schema.Object, "object", u"Object"),
+        ))
+        
+alsoProvides(SupportedTypesVocabularyFactory, 
+             zope.schema.interfaces.IVocabularyFactory)
 
 class VocabularyManager(object):
     """

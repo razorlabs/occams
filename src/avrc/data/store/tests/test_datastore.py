@@ -1,12 +1,11 @@
-"""
-"""
-
 import unittest
 
 from Products.Five import zcml
 from Products.Five import fiveconfigure
 from Products.PloneTestCase import PloneTestCase as ptc
 from Products.PloneTestCase.layer import PloneSite
+
+ptc.setupPloneSite()
 
 from zope.app.folder import rootFolder
 from zope.app.component.site import SiteManagerContainer, LocalSiteManager
@@ -16,10 +15,8 @@ from zope.interface import verify
 
 import avrc.data.store
 from avrc.data.store import interfaces
-from avrc.data.store import model
 from avrc.data.store import datastore
-
-ptc.setupPloneSite()
+from avrc.data.store import model
 
 class TestCase(ptc.PloneTestCase):
     class layer(PloneSite):

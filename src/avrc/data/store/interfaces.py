@@ -30,22 +30,27 @@ class IManager(IBase):
     Base class for all managers
     """
     
-    def add(target):
-        """
-        Adds the target to the manager
-        """
-        
-    def get(id):
+    def get(key):
         """
         Return an object contained by the manager based on it's identification
         value. 
         """
         
-    def modify(target):
+    def put(target):
         """
-        Updates the original object the the target's properties
+        Adds or modifies the target into the manager
         """
-        
+    
+#    def add(target):
+#        """
+#        Adds the target to the manager
+#        """
+#        
+#    def modify(target):
+#        """
+#        Updates the original object the the target's properties
+#        """
+      
     def expire(target):
         """
         Expire's the contained target. This means that it's information remains,
@@ -53,7 +58,7 @@ class IManager(IBase):
         is so that data can be 'brought back' if expiring caused undesired
         side-effects.
         """
-        
+      
     def remove(target):
         """
         Completely removes the target and all data associated with it from the

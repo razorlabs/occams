@@ -15,6 +15,11 @@
   <utility name="states" component="._utils.statesVocabulary" />
 
   <utility 
+      name="avrc.data.store.SupportedTypes"
+      component=".schema.SupportedTypesVocabularyFactory"
+      />
+
+  <utility 
       name="avrc.data.store.Datastore" 
       component=".datastore.DatastoreFactory" />
 
