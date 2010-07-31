@@ -1,7 +1,7 @@
 """
 This module is in charge of handling the
 the datastore instances through the use of Object events to keep track of
-multiple instances across sites.  
+multiple instances across sites.
 """
 from datetime import datetime
 
@@ -19,7 +19,7 @@ from zope.lifecycleevent import IObjectRemovedEvent
 
 import sqlalchemy as sa
 from sqlalchemy import orm
-    
+
 from avrc.data.store import model
 from avrc.data.store import _utils
 from avrc.data.store import interfaces
@@ -34,28 +34,28 @@ class Datastore(object):
     """
     """
     implements(interfaces.IDatastore)
-    
+
     __name__ = None
     __parent__ = None
-    
+
     fia_dsn = u""
     pii_dsn = u""
-    
+
     _pii_engine = None
     _fia_engine = None
-    
+
     store = {}
-    
+
     def __init__(self, fia_dsn, pii_dsn=None):
         """
         """
         self.fia_dsn = fia_dsn
         self.pii_dsn = pii_dsn is None and fia_dsn or pii_dsn
-        
+
         self.schemata = schema.SchemaManager()
         self.protocols = protocol.ProtocolManager()
-         
-        
+
+
     @property
     def binds(self):
         """
@@ -63,32 +63,32 @@ class Datastore(object):
         to handle multiple engines in a session
         """
         binds = {}
-        binds.update(dict.fromkeys(model.FIA.metadata.sorted_tables, 
+        binds.update(dict.fromkeys(model.FIA.metadata.sorted_tables,
                                    self._fia_engine))
-        binds.update(dict.fromkeys(model.PII.metadata.sorted_tables, 
+        binds.update(dict.fromkeys(model.PII.metadata.sorted_tables,
                                    self._pii_engine))
         return binds
-    
+
     def _setup(self):
         """
         Performs data base back-end setup.
         """
         self._fia_engine = sa.create_engine(self.fia_dsn, echo=_ECHO_ENABLED)
-        
+
         if self.fia_dsn == self.pii_dsn:
             self._pii_engine = self._fia_engine
         else:
             self._pii_engine = sa.create_engine(self.pii_dsn, echo=_ECHO_ENABLED)
-            
+
         model.setup_fia(self._fia_engine)
         model.setup_pii(self._pii_engine)
-            
+
     def _unsetup(self):
         """
         Cleans up any data base configurations.
         """
         # Apparently SQLAlchemy doesn't need clean up...
-        
+
     def put(self, visit, obj):
         """
         Store the object into the database based on it's interface
@@ -96,16 +96,16 @@ class Datastore(object):
         """
         provides = list(providedBy(obj))
         Session = getUtility(interfaces.ISessionFactory)()
-        
+
         if len(provides) > 1:
             raise Exception("Only one interface at a time supported.")
-        
+
         if len(provides) < 1:
             raise Exception("Object does not provide an interface.")
-        
+
         provided = provides.pop()
         schema_obj = interfaces.ISchema(provided)
-        
+
         #
         # TODO: VERSIONING>!!>!>!
         #
@@ -113,12 +113,12 @@ class Datastore(object):
                       .join(model.Specification)\
                       .filter_by(title=schema_obj.title)\
                       .first()
-                      
+
         instance_rslt = model.Instance()
         instance_rslt.schema = schema_rslt
-        
+
         Session.add(instance_rslt)
-        
+
         for name in zope.schema.getFieldNamesInOrder(provided):
             name = unicode(name)
             attribute_rslt = Session.query(model.Attribute)\
@@ -126,10 +126,10 @@ class Datastore(object):
                              .join(model.Schema)\
                              .filter_by(id=schema_rslt.id)\
                              .first()
-            
+
             value_rslt = None
             value_raw = getattr(obj, name)
-            
+
             if attribute_rslt.type.title in (u"binary",):
                 # TODO: unclear how binary values are going to come in
                 value_rslt = model.Binary(value=value_raw)
@@ -149,11 +149,11 @@ class Datastore(object):
 
             value_rslt.attribute = attribute_rslt
             value_rslt.instance = instance_rslt
-                
+
             Session.add(value_rslt)
-        
+
         Session.commit()
-        
+
     def add(self, obj):
         """
         """
@@ -166,33 +166,33 @@ class Datastore(object):
             # see we have a schema for it in the DB, if so, this is and
             # instance obj
             raise Exception("WTF")
-   
+
     def get_domain(self, title):
         """
         """
         Session = getUtility(interfaces.ISessionFactory)()
-        
+
         domain_rslt = Session.query(model.Domain)\
                       .filter_by(title=title)\
                       .first()
-        
+
         return protocol.Domain(domain_rslt)
-        
+
     def get_schema(self, title, version=None):
         """
         """
         title = unicode(title)
         version = version is not None and int(version) or None
         Session = getUtility(interfaces.ISessionFactory)()
-        
+
         schema_q = Session.query(model.Schema)\
                       .join(model.Specification)\
                       .filter_by(title=title)
-                      
+
         if version is not None:
             converted = datetime.fromtimestamp(version)
             schema_q = schema_q.filter_by(create_date=converted)
-            
+
         schema_rslt = schema_q.first()
         return schema.Schema(schema_rslt)
 
@@ -210,15 +210,15 @@ class SessionFactory(object):
     """
 
     implements(interfaces.ISessionFactory)
-    
-    def __init__(self, 
-                 autocommit=False, 
-                 autoflush=True, 
-                 twophase=False,
-                 bind=None, 
+
+    def __init__(self,
+                 autocommit=False,
+                 autoflush=True,
+                 twophase=True,
+                 bind=None,
                  binds=None):
         """
-        Our ISessionFactory implementation takes an extra parameter which 
+        Our ISessionFactory implementation takes an extra parameter which
         will be the database bindings.
         """
         self.autocommit = autocommit
@@ -226,7 +226,7 @@ class SessionFactory(object):
         self.twophase = twophase
         self.binds = binds
         self.bind = bind
-    
+
     def __call__(self):
         """
         Creates the Session object and binds it to the appropriate databases.
@@ -238,11 +238,11 @@ class SessionFactory(object):
             autoflush=self.autoflush,
             twophase=self.twophase
             ))
-        
+
         Session.configure(bind=self.bind, binds=self.binds)
-        
+
         return Session
- 
+
 def setupSupportedTypes():
     """
     This method should be used when setting up the supported types for a
@@ -250,18 +250,18 @@ def setupSupportedTypes():
     """
     rslt = []
     Session = getUtility(interfaces.ISessionFactory)()
-    types_factory = getUtility(zope.schema.interfaces.IVocabularyFactory, 
+    types_factory = getUtility(zope.schema.interfaces.IVocabularyFactory,
                                name="avrc.data.store.SupportedTypes")
-    
+
     for t in list(types_factory(None)):
         rslt.append(model.Type(
-            title=unicode(t.token), 
+            title=unicode(t.token),
             description=unicode(getattr(t.value, "__doc__", None)),
             ))
-    
+
     Session.add_all(rslt)
     Session.commit()
- 
+
 @adapter(interfaces.IDatastore, IObjectAddedEvent)
 def handleDatastoreAdded(datastore, event):
     """
@@ -271,13 +271,13 @@ def handleDatastoreAdded(datastore, event):
     offer it's services.
     """
     datastore._setup()
-    
+
     SessionUtility = SessionFactory(binds=datastore.binds)
     sm = getSiteManager(datastore)
     sm.registerUtility(SessionUtility, provided=interfaces.ISessionFactory)
-    
+
     setupSupportedTypes()
-    
+
 @adapter(interfaces.IDatastore, IObjectRemovedEvent)
 def handleDatastoreRemoved(engine, event):
     """
@@ -286,5 +286,4 @@ def handleDatastoreRemoved(engine, event):
     engine._unsetup()
     sm = getSiteManager(engine)
     sm.registerUtlity(None, provided=interfaces.ISessionFactory)
-    
-        
+

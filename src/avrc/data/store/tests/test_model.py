@@ -1,34 +1,48 @@
 import unittest
 
-import sqlalchemy as sa
-from sqlalchemy import orm
+from sqlalchemy import orm, create_engine
 
 from avrc.data.store import model
+import etc
 
-_SA_ECHO = True
+Session = orm.scoped_session(orm.sessionmaker(
+    autoflush=True,
+    autocommit=False,
+#    twophase=True
+    ))
+
+Session.configure(bind=create_engine("sqlite:///:memory:", echo=etc.SA_ECHO))
+
+model.setup(Session.bind)
 
 class TestCase(unittest.TestCase):
-    
-    def setUp(self):
-        engine = sa.create_engine("sqlite:///:memory:", echo=_SA_ECHO)
-        self.Session = orm.scoped_session(orm.sessionmaker())
-        self.Session.configure(bind=engine)
-        
-        model.FIA.metadata.create_all(bind=engine)
-        model.PII.metadata.create_all(bind=engine)
-        
-    def tearDown(self):
-        self.Session.remove()
 
-    def test_single_engine(self):
+    def setUp(self):
+        """"""
+#        Session.begin()
+#        Session.begin_nested()
+#        pass
+
+    def tearDown(self):
+        """"""
+#        Session.rollback()
+#        Session.commit()
+
+    def test_specification(self):
         """
         """
-        self.fail("Not done yet")
-    
-    def test_multi_engine(self):
-        """
-        """
-        self.fail("Not done yet")
+
+        session = Session()
+        session.add(model.Specification(title=u"IFoo")
+        session.add(model.Specification(title=u"IBar")
+        session.add(model.Specification(title=u"IBaz")
+
+        session.begin_nested() # establish a savepoint
+        session.add(model.Specification(title=u"IDummy")
+        session.rollback()  # rolls back u3, keeps u1 and u2
+
+        session.commit() # commits u1 and u2
+
 
 def test_suite():
     return unittest.defaultTestLoader.loadTestsFromName(__name__)
