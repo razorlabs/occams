@@ -37,15 +37,18 @@ setup(
         "zope.component",
         "zope.i18nmessageid",
         # --- Database
+        # Use the latest version instead of the built-in one
+        "pysqlite",
         "SQLAlchemy>=0.5.8,<0.5.99",
         # --- Helper modules
         # --- Forms
         "plone.app.z3cform",
         "plone.app.dexterity",
+        "plone.directives.form"
     ],
     entry_points="""
     # -*- Entry points: -*-
-    
+
     [z3c.autoinclude.plugin]
     target = plone
     """,

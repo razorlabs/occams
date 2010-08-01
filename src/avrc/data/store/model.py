@@ -421,35 +421,50 @@ sa.Index("string_attribute_value", String.attribute_id, String.value)
 # Metadata
 # -----------------------------------------------------------------------------
 
-class Hierarchy(FIA):
-    """
-    """
-    __tablename__ = "hierarchy"
-
-    id = sa.Column(sa.Integer, primary_key=True)
-
-    parent_id = sa.Column(sa.Integer, sa.ForeignKey("specification.id"))
-
-    child_id = sa.Column(sa.Integer, sa.ForeignKey("specification.id"),
-                                nullable=False)
+# Joining table for base class representation
+hierarchy_table = sa.Table("hierarchy", FIA.metadata,
+    sa.Column("parent_id", sa.ForeignKey("specification.id"), nullable=False),
+    sa.Column("child_id", sa.ForeignKey("specification.id"), nullable=False),
+    sa.PrimaryKeyConstraint("parent_id", "child_id")
+    )
 
 class Specification(FIA):
     """
+    Specification entity for class names
     """
+
     __tablename__ = "specification"
 
     id = sa.Column(sa.Integer, primary_key=True)
 
-    namespace = sa.Column(sa.Unicode, nullable=False, unique=True)
+    bases = orm.relation("Specification",
+                         secondary=hierarchy_table,
+                         primaryjoin=(id == hierarchy_table.c.child_id),
+                         secondaryjoin=(id == hierarchy_table.c.parent_id),
+                         foreign_keys=[hierarchy_table.c.parent_id,
+                                       hierarchy_table.c.child_id,
+                                       ]
+                         )
 
-    title = sa.Column(sa.Unicode, nullable=False)
+    # The unique module name for this spec. Doesn't necessarily have to
+    module = sa.Column(sa.Unicode, nullable=False, unique=True)
 
+    # Enforce  documentation so we know what the heck people are making...
+    documentation = sa.Column(sa.Unicode, nullable=False)
+
+    # Human readable title
+    title = sa.Column(sa.Unicode)
+
+    # Human readable description
     description = sa.Column(sa.Text)
 
+    # Association flag for specifications that act as a line in a network
     is_association = sa.Column(sa.Boolean, nullable=False, default=False)
 
+    # A class without instances. For external references (e.g. medline)
     is_virtual = sa.Column(sa.Boolean, nullable=False, default=False)
 
+    # If this entity is not in eav, it should define a corresponding table
     is_eav = sa.Column(sa.Boolean, nullable=False, default=False)
 
 #class Invariant(FIA):
