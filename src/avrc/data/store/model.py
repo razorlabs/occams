@@ -282,9 +282,10 @@ class Instance(FIA):
 
     description = sa.Column(sa.Unicode)
 
-    create_date = sa.Column(sa.DateTime, nullable=False)
+    create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
 
-    modify_date = sa.Column(sa.DateTime, nullable=False)
+    modify_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now,
+                            onupdate=datetime.now)
 
 class Binary(FIA):
     """
@@ -467,23 +468,22 @@ class Specification(FIA):
     # If this entity is not in eav, it should define a corresponding table
     is_eav = sa.Column(sa.Boolean, nullable=False, default=False)
 
-#class Invariant(FIA):
-#    """
-#    """
-#    __tablename__ = "invariant"
-#
-#    id = sa.Column(sa.Integer, primary_key=True)
-#
-#    schema_id = sa.Column(sa.Integer, sa.ForeignKey("schema.id"),
-#                          nullable=False)
-#
-#    title = sa.Column(sa.Unicode, nullable=False)
-#
-#schema_attribute_table = sa.Table("schema_attribute", FIA.metadata,
-#    sa.Column("schema_id", sa.ForeignKey("schema.id"), nullable=False),
-#    sa.Column("attribute_id", sa.ForeignKey("attribute.id"), nullable=False),
-#    sa.PrimaryKeyConstraint("schema_id", "attribute_id")
-#    )
+    create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
+
+    modify_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now,
+                            onupdate=datetime.now)
+
+class Invariant(FIA):
+    """
+    """
+    __tablename__ = "invariant"
+
+    id = sa.Column(sa.Integer, primary_key=True)
+
+    schema_id = sa.Column(sa.Integer, sa.ForeignKey("schema.id"),
+                          nullable=False)
+
+    name = sa.Column(sa.Unicode, nullable=False)
 
 class Schema(FIA):
     """
@@ -497,9 +497,9 @@ class Schema(FIA):
 
     specification = orm.relation("Specification", uselist=False)
 
-    attributes = orm.relation("Attribute",
-#                              secondary=schema_attribute_table,
-                              order_by="Attribute.order")
+    attributes = orm.relation("Attribute", order_by="Attribute.order")
+
+    invariants = orm.relation("Invariant")
 
     create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
 
@@ -517,39 +517,62 @@ class Attribute(FIA):
     schema_id = sa.Column(sa.Integer, sa.ForeignKey("schema.id"),
                           nullable=False)
 
-    schema = orm.relation("Schema", uselist=False)
-
-    field_id = sa.Column(sa.Integer, sa.ForeignKey("field.id"))
+    field_id = sa.Column(sa.Integer, sa.ForeignKey("field.id"), nullable=False)
 
     field = orm.relation("Field", uselist=False)
 
+    # Property name of the class
     name = sa.Column(sa.Unicode, nullable=False)
-
-    is_invariant = sa.Column(sa.Boolean, nullable=False, default=False)
 
     order = sa.Column(sa.Integer, nullable=False, default=1)
 
+    create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
+
+    __table_args__ = (
+        sa.UniqueConstraint("schema_id", "name"),
+        {}
+        )
+
 class Field(FIA):
     """
+    A field details entries. Note that this module is not tied to anything
+    as it can be reused by an attribute, etc. Note that if the attribute using
+    this must properly "version" the change though...
     """
+
     __tablename__ = "field"
 
     id = sa.Column(sa.Integer, primary_key=True)
 
+    # Human readable title
     title = sa.Column(sa.Unicode, nullable=False)
 
+    # Human readable description
     description = sa.Column(sa.Text)
 
+    # Internal notes about this field
+    documentation = sa.Column(sa.Text)
+
+    # The field's type
     type_id = sa.Column(sa.Integer, sa.ForeignKey("type.id"), nullable=False)
 
     type = orm.relation("Type", uselist=False)
 
-    hint_id = sa.Column(sa.Integer, sa.ForeignKey("hint.id"))
+    # The field's displaying widget
+    widget_id = sa.Column(sa.Integer, sa.ForeignKey("widget.id"))
 
+    widget = orm.relation("Widget", uselist=False)
+
+    # Can be used to enforce a class type as a valid value
     schema_id = sa.Column(sa.Integer, sa.ForeignKey("schema.id"))
+
+    schema = orm.relation("Schema", uselist=False)
 
     vocabulary_id = sa.Column(sa.Integer, sa.ForeignKey("vocabulary.id"))
 
+    vocabulary = orm.relation("Vocabulary")
+
+    # Should be added to the application's search form? Only if this applies...
     is_searchable = sa.Column(sa.Boolean, nullable=False, default=False)
 
     is_required = sa.Column(sa.Boolean, nullable=False, default=False)
@@ -558,20 +581,20 @@ class Field(FIA):
 
     is_repeatable = sa.Column(sa.Boolean)
 
+    # Min/max depending on the type
     minimum = sa.Column(sa.Integer)
 
     maximum = sa.Column(sa.Integer)
 
+    # These values are intended as parameters for the corresponding widget
     width = sa.Column(sa.Integer)
 
     height = sa.Column(sa.Integer)
 
+    # URL template for values (this applies mostly to virtual classes)
     url = sa.Column(sa.Unicode)
 
-    comment = sa.Column(sa.Text)
-
     create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
-
 
 class Type(FIA):
     """
@@ -584,16 +607,14 @@ class Type(FIA):
 
     description = sa.Column(sa.Text)
 
-
-class Hint(FIA):
+class Widget(FIA):
     """
     """
-    __tablename__ = "hint"
+    __tablename__ = "widget"
 
     id = sa.Column(sa.Integer, primary_key=True)
 
-    namespace = sa.Column(sa.Unicode, nullable=False, unique=True)
-
+    module = sa.Column(sa.Unicode, nullable=False, unique=True)
 
 vocabulary_term_table = sa.Table("vocabulary_term", FIA.metadata,
     sa.Column("vocabulary_id", sa.Integer, sa.ForeignKey("vocabulary.id"),

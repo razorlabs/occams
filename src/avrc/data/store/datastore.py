@@ -272,7 +272,8 @@ def handleDatastoreAdded(datastore, event):
     """
     datastore._setup()
 
-    SessionUtility = SessionFactory(binds=datastore.binds)
+    # Set autocommit true so that components create their own sessions.
+    SessionUtility = SessionFactory(autocommit=True, binds=datastore.binds)
     sm = getSiteManager(datastore)
     sm.registerUtility(SessionUtility, provided=interfaces.ISessionFactory)
 
