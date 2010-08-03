@@ -509,6 +509,8 @@ class Schema(FIA):
 
 class Attribute(FIA):
     """
+    This is a special table in that it serves as a joining table between fields
+    and schemata, but with extra meta data associated with the join.
     """
     __tablename__ = "attribute"
 

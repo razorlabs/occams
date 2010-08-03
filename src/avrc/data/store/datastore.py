@@ -21,7 +21,6 @@ import sqlalchemy as sa
 from sqlalchemy import orm
 
 from avrc.data.store import model
-from avrc.data.store import _utils
 from avrc.data.store import interfaces
 from avrc.data.store import schema
 from avrc.data.store import protocol
@@ -214,7 +213,7 @@ class SessionFactory(object):
     def __init__(self,
                  autocommit=False,
                  autoflush=True,
-                 twophase=True,
+                 twophase=False,
                  bind=None,
                  binds=None):
         """
@@ -253,7 +252,7 @@ def setupSupportedTypes():
     types_factory = getUtility(zope.schema.interfaces.IVocabularyFactory,
                                name="avrc.data.store.SupportedTypes")
 
-    for t in list(types_factory(None)):
+    for t in list(types_factory()):
         rslt.append(model.Type(
             title=unicode(t.token),
             description=unicode(getattr(t.value, "__doc__", None)),

@@ -1,40 +1,54 @@
 """
 Responsible for schemata, attributes, and vocabularies
+
+Additionally, we support plone.directives.form
 """
 
-import datetime
+from datetime import datetime, date, time
 
 from zope.component import adapts
 from zope.component import getUtility
-from zope.component import createObject
-from zope.component.factory import Factory
-from zope.interface import alsoProvides
 from zope.interface import implements
 from zope.interface.interface import InterfaceClass
+from zope.interface import alsoProvides
 from zope.i18nmessageid import MessageFactory
-
 import zope.schema
+
+from plone.alterego import dynamic
 
 from sqlalchemy import func
 
-from avrc.data.store import _utils
 from avrc.data.store import interfaces
 from avrc.data.store import model
 
 _ = MessageFactory(__name__)
 
-SupportedTypes = zope.schema.vocabulary.SimpleVocabulary.fromItems(
-    ("integer", zope.schema.Int),
-    ("string", zope.schema.TextLine,),
-    ("text", zope.schema.Text),
-    ("binary", zope.schema.Bytes),
-    ("boolean", zope.schema.Bool),
-    ("real", zope.schema.Decimal),
-    ("date", zope.schema.Date),
-    ("datetime", zope.schema.Datetime),
-    ("time", zope.schema.Time),
-    ("object", zope.schema.Object),
-    )
+virtual = dynamic.create(".".join([__name__, "virtual"]))
+
+supported_types_vocabulary = \
+    zope.schema.vocabulary.SimpleVocabulary.fromItems([
+        ("integer", zope.schema.Int),
+        ("string", zope.schema.TextLine),
+        ("text", zope.schema.Text),
+        ("binary", zope.schema.Bytes),
+        ("boolean", zope.schema.Bool),
+        ("real", zope.schema.Decimal),
+        ("date", zope.schema.Date),
+        ("datetime", zope.schema.Datetime),
+        ("time", zope.schema.Time),
+        ("object", zope.schema.Object),
+        ])
+
+def SupportedTypesVocabularyFactory(context=None):
+    """
+    Generates a list of supported types. This is used for auto-generating
+    meta data into the data store once it is added into a site.
+    """
+    return supported_types_vocabulary
+
+alsoProvides(SupportedTypesVocabularyFactory,
+             zope.schema.interfaces.IVocabularyFactory)
+
 
 class VocabularyManager(object):
     """
@@ -70,13 +84,19 @@ class MutableSchema(object):
 
     implements(interfaces.IMutableSchema)
 
+    _module = None
+
+    _version = None
+
     # Don't lose the session
     _session = None
 
     # The working schema
     _schema_rslt = None
 
-    # list of items already changed (can't change more than on in a transaction
+    # list of items already changed (can't change more than on in a
+    # transaction). if the item is not in this list, it is assumed unchanged
+    # and copied over from the previous version.
     _attributes = list()
     _invariants = list()
 
@@ -84,6 +104,9 @@ class MutableSchema(object):
         """
         Constructor
         """
+        self._module = unicode(module)
+        self._version = version
+
         self._session = Session = getUtility(interfaces.ISessionFactory)()
         self._session.begin()
 
@@ -92,6 +115,13 @@ class MutableSchema(object):
                     .first()
 
         self._schema_rslt = model.Schema(specification=spec_rslt)
+
+
+    @classmethod
+    def fromInterface(cls):
+        """
+        TODO
+        """
 
     def __del__(self):
         """
@@ -136,7 +166,8 @@ class MutableSchema(object):
     def __setitem__(self, name, value):
         """
         @param key: the name of the property to change
-        @param value: the zope schema value to set for the property
+        @param value: the zope schema value to set for the property, None to
+                      remove the property
         """
         name = unicode(name)
         field_obj = value
@@ -147,7 +178,7 @@ class MutableSchema(object):
                             "same version" % name)
 
         if value is not None:
-            term_obj = SupportedTypes.getTerm(field_obj.__class__)
+            term_obj = supported_types_vocabulary.getTerm(field_obj.__class__)
 
             if term_obj is None:
                 raise Exception("Not supported: %s" % str(field_obj.__class__))
@@ -173,22 +204,39 @@ class MutableSchema(object):
 
     def save(self):
         """
-        Commits it's changes to the back-end. Expires the current instance.
+        Commits its changes to the back-end. Expires the current instance.
         """
         Session = self._session
 
         if Session is None:
             raise Exception("expired")
 
-        if version is None:
+        schema_old_rslt = Session.query(model.Schema)\
+                          .filter_by(create_date=self._version)\
+                          .join(model.Specification)\
+                          .filter_by(module=self._module)\
+                          .first()
 
-        schema_rslt = Session.query(model.Schema)
+        for attribute_rslt in schema_old_rslt.attributes:
+            # Copy the properties from the last version if they haven't been
+            # changed
+            if attribute_rslt.name not in self._attributes:
+                self._schema_rslt.attributes.append(model.Attribute(
+                    name=attribute_rslt.name,
+                    is_invariant=False,
+                    order=attribute_rslt.order,
+                    field=attribute_rslt.field
+                    ))
 
-        for attribute in
+        for invariant_rslt in schema_old_rslt.invariants:
+            if invariant_rslt.name not in self._invariants:
+                self._schema_rslt.invariants.append(model.Invariant(
+                    name=invariant_rslt.name
+                    ))
 
+        Session.add(self._schema_rslt)
+        Session.commit()
         self._session = None
-
-
 
 class SchemaManager(object):
     """
@@ -257,17 +305,22 @@ class SchemaManager(object):
         Session.add(schema_rslt)
         Session.commit()
 
-    def get(self, key):
+    def get(self, module, version=None):
         """
-        TODO: BROKEN, doesn't do versioning
         @see: avrc.data.store.interfaces.ISchemaManager#getSchema
         """
-        title = unicode(key)
+        module = unicode(module)
         Session = getUtility(interfaces.ISessionFactory)()
 
-        schema_rslt = Session.query(model.Schema)\
-                      .filter_by(title=title)\
-                      .first()
+        schema_q = Session.query(model.Schema)\
+                  .join(model.Specification)\
+                  .filter_by(module=module)
+
+        if version is not None:
+            schema_q = schema_q.filter(model.Schema.create_date==version)
+
+        schema_rslt = schema_q.first()
+
 
         if schema_rslt is None:
             return None
@@ -285,7 +338,7 @@ class SchemaManager(object):
         klass = InterfaceClass(
             name=schema_rslt.title,
             __doc__=schema_rslt.description,
-            __module__="avrc.data.store._virtual",
+            __module__="avrc.data.store.generated",
             bases=(interfaces.IMutableSchema,),
             attrs=attrs,
             )

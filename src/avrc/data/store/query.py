@@ -8,7 +8,4 @@ from zope.interface import implements
 from avrc.data.store import interfaces
 from avrc.data.store import model
 
-
-
-
 raise NotImplementedError(u"This library is not yet operational.")

@@ -3,25 +3,22 @@
     xmlns:five="http://namespaces.zope.org/five"
     i18n_domain="avrc.data.store">
 
-  <five:registerPackage package="." initialize=".initialize" />
-
   <includeDependencies package="." />
-  
+
   <!-- Handle when a Site adds an engine -->
   <subscriber handler=".datastore.handleDatastoreAdded" />
   <subscriber handler=".datastore.handleDatastoreRemoved" />
-  
-  <!-- Vocabularies -->
-  <utility name="states" component="._utils.statesVocabulary" />
 
-  <utility 
+  <!-- Vocabularies -->
+  <utility
       name="avrc.data.store.SupportedTypes"
       component=".schema.SupportedTypesVocabularyFactory"
       />
 
-  <utility 
-      name="avrc.data.store.Datastore" 
-      component=".datastore.DatastoreFactory" />
+  <utility
+      name="avrc.data.store.Datastore"
+      component=".datastore.DatastoreFactory"
+      />
 
   <!-- Domains -->
 
@@ -29,5 +26,5 @@
 
   <!-- Data -->
   <!-- Nothing written yet -->
-   
+
 </configure>

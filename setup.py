@@ -35,16 +35,16 @@ setup(
         "zope.interface",
         "zope.schema",
         "zope.component",
+        "zope.lifecycleevent",
         "zope.i18nmessageid",
+        "zope.app.container",
         # --- Database
         # Use the latest version instead of the built-in one
         "pysqlite",
         "SQLAlchemy>=0.5.8,<0.5.99",
         # --- Helper modules
-        # --- Forms
-        "plone.app.z3cform",
-        "plone.app.dexterity",
-        "plone.directives.form"
+        "plone.alterego",
+        "plone.directives.form",
     ],
     entry_points="""
     # -*- Entry points: -*-
