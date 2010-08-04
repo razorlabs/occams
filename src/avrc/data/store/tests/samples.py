@@ -2,17 +2,53 @@ import zope.schema
 from zope.interface import Interface
 from plone.directives import form
 
-SA_ECHO = True
-
-class IObject(Interface):
+class ISimple(Interface):
     """
     OBJECT SCHEMAZ
     """
     foo = zope.schema.TextLine(title=u"FOO")
 
-class IDummy(Interface):
+class IStandaloneInterface(Interface):
+    """
+    This is very simple stanalone interface.
+    """
+    
+    foo = zope.schema.TextLine(
+        title=u"Foo", 
+        description=u"Something about foo.",
+        required=True
+        )
+    
+    bar = zope.schema.Text(
+        title=u"Bar",
+        description=u"Something about bar."
+        )
+    
+    baz = zope.schema.Int(
+        title=u"Baz",
+        description=u"Something about baz."
+        )
+
+class IComposedInterface(Interface):
+    """
+    This class contains annotations which SHOULD be saved as well...
+    """
+
+    integer = zope.schema.Int(
+        title=u"INTEGER",
+        description=u"INTEGERDESC"
+        )
+    
+    object = zope.schema.Object(
+        title=u"OBJECT",
+        description=u"OBJECTDESC",
+        schema=ISimple
+        )
+
+class IAnnotatedInterface(Interface):
     """
     This is a dummy schema to test if the schema manger can properly import it.
+    Also this class contains annotations which SHOULD be saved as well...
     """
 
     form.mode(integer='hidden')
@@ -20,7 +56,14 @@ class IDummy(Interface):
         title=u"INTEGER",
         description=u"INTEGERDESC"
         )
+    
+    form.omitted('integer')
+    integer = zope.schema.Int(
+        title=u"OMITME",
+        description=u"PLEASE"
+        )
 
+    form.read_permission(list="zope2.View")
     form.widget(text='plone.app.z3cform.wysiwyg.WysiwygFieldWidget',)
     text = zope.schema.Text(
         title=u"TEXT",
@@ -51,14 +94,11 @@ class IDummy(Interface):
         description=u"DATE"
         )
 
-    form.omitted('object')
-    object = zope.schema.Object(
-        title=u"OBJECT",
-        description=u"OBJECTDESC",
-        schema=IObject
-        )
-
-    form.read_permission(list="zope2.View")
+class IContainsListInterface(Interface):
+    """
+    This simply tests that a vocabulary
+    """
+    
     list = zope.schema.List(
         title=u"LIST",
         description=u"LIST",

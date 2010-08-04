@@ -22,6 +22,22 @@ class IBase(Interface):
     """
 
 # -----------------------------------------------------------------------------
+# ERRORS
+# -----------------------------------------------------------------------------
+
+class Error(Exception):
+    """Base class for all errors in this package"""
+    
+class DatatoreError(Error):
+    """Base class for datastore-related errors"""
+    
+class SchemaError(Error):
+    """Base class for schama-related errors"""
+    
+class UndefinedSchemaError(Error):
+    """Raised when trying to access a schema that is not in the datastore"""
+
+# -----------------------------------------------------------------------------
 # API CONTRACT INTERFACES
 # -----------------------------------------------------------------------------
 
@@ -152,6 +168,12 @@ class IMutableSchema(IBase):
         title=_(u"Namespace"),
         description=_(u"The fully qualified name of the package")
         )
+    
+class IVersionedInterface(IBase):
+    """
+    """
+    
+    __version__ = Attribute(_(u"The version for this Interface"))
 
 class IVesion(IBase):
     """

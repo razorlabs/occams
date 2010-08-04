@@ -49,7 +49,6 @@ def SupportedTypesVocabularyFactory(context=None):
 alsoProvides(SupportedTypesVocabularyFactory,
              zope.schema.interfaces.IVocabularyFactory)
 
-
 class VocabularyManager(object):
     """
     """
@@ -84,77 +83,50 @@ class MutableSchema(object):
 
     implements(interfaces.IMutableSchema)
 
-    _module = None
+    __version__ = None
 
-    _version = None
+    __module__ = None
 
-    # Don't lose the session
-    _session = None
+    __documentation__ = None
 
-    # The working schema
-    _schema_rslt = None
+    __attributes__ = None
 
-    # list of items already changed (can't change more than on in a
-    # transaction). if the item is not in this list, it is assumed unchanged
-    # and copied over from the previous version.
-    _attributes = list()
-    _invariants = list()
+    __directives__ = None
 
-    def __init__(self, module, version=None):
+    __invariants__ = None
+
+    def __init__(self,
+                 module,
+                 documentation=None,
+                 directives=None,
+                 version=None):
         """
         Constructor
         """
-        self._module = unicode(module)
-        self._version = version
+        self.__module__ = unicode(module)
+        self.__documentation__ = unicode(documentation)
+        self.__version__ = version
+        self.__attributes__ = {}
+        self.__directives__ = {}
+        self.__invariants__ = set([])
 
-        self._session = Session = getUtility(interfaces.ISessionFactory)()
-        self._session.begin()
-
-        spec_rslt = Session.query(model.Specification)\
-                    .filter_by(module=self._module)\
-                    .first()
-
-        self._schema_rslt = model.Schema(specification=spec_rslt)
-
-
-    @classmethod
-    def fromInterface(cls):
-        """
-        TODO
-        """
-
-    def __del__(self):
-        """
-        Destructor (NOT FOR python del command...)
-        """
-        # Rollback any unsaved changes
-        self._session.rollback()
-
-    def create_invariant(self, name):
+    def add_invariant(self, name):
         """
         """
-        if name in self._changed:
-            raise Exception("Can't change %s more than once in the "
-                            "same version" % name)
-
-        name = unicode(name)
-        Session = self._session
-
-        if name in self._invariants:
-            raise Exception("Can't change %s more than once in the "
-                            "same version" % name)
-
-        self._schema_rslt.invariants.append(model.Invariant(name=name))
-        self._invariants.append(name)
+        self.__invariants__.add(unicode(name))
 
     def remove_invariant(self, name):
         """
         """
-        name = unicode(name)
-        if name in self._invariants:
-            raise Exception("Can't change %s more than once in the "
-                            "same version" % name)
-        self._invariants.append(name)
+        try:
+            self.__invariants__.remove(unicode(name))
+        except KeyError:
+            pass
+
+    def apply_directive(self, name, value):
+        """
+        """
+        
 
     def revert_attribute(self, key, version):
         """
@@ -163,33 +135,77 @@ class MutableSchema(object):
         said  version.
         """
 
-    def __setitem__(self, name, value):
+    def __setitem__(self, name, field_obj):
         """
         @param key: the name of the property to change
         @param value: the zope schema value to set for the property, None to
                       remove the property
         """
-        name = unicode(name)
-        field_obj = value
-        Session = self._session
+        if isinstance(field_obj, zope.schema.Object):
+            exists = MutableSchema.has_interface(field_obj.schema.__name__, 
+                                                 version=None)
+            if not exists:
+                raise interfaces.UndefinedSchemaError()
+        
+        self.__attributes__[unicode(name)] = field_obj
 
-        if name in self._attributes:
-            raise Exception("Can't change %s more than once in the "
-                            "same version" % name)
+    def save(self):
+        """
+        Commits its changes to the back-end. Expires the current instance.
+        """
+        Session = getUtility(interfaces.ISessionFactory)()
 
-        if value is not None:
+        spec_rslt = Session.query(model.Specification)\
+                    .filter_by(module=self.__module__)\
+                    .first()
+
+        # Create a spec if one doesn't already exist
+        if spec_rslt is None:
+            spec_rslt = model.Specification(
+                module=self.__module__,
+                documentation=self.__documentation__
+                )
+
+        schema_rslt = model.Schema(specification=spec_rslt)
+
+        # Need toe old schema (if any) to copy over unchanged fields
+        schema_old_rslt = Session.query(model.Schema)\
+                          .filter_by(create_date=self.__version__)\
+                          .join(model.Specification)\
+                          .filter_by(module=self.__module__)\
+                          .first()
+
+        if schema_old_rslt is not None:
+            for attribute_rslt in schema_old_rslt.attributes:
+                # Copy unchanged properties from the last version
+                if attribute_rslt.name not in self.__attributes__:
+                    schema_rslt.attributes.append(model.Attribute(
+                        name=attribute_rslt.name,
+                        order=attribute_rslt.order,
+                        field=attribute_rslt.field
+                        ))
+
+            for invariant_rslt in schema_old_rslt.invariants:
+                if invariant_rslt.name not in self.__invariants__:
+                    schema_rslt.invariants.append(model.Invariant(
+                        name=invariant_rslt.name
+                        ))
+
+        # Now add/remove in all the changed fields
+        for name, field_obj in self.__attributes__.items():
+            if field_obj.__class__ not in supported_types_vocabulary:
+                continue
+                #Session.rollback()
+                #raise Exception("Not supported: %s" % str(field_obj.__class__))
+
             term_obj = supported_types_vocabulary.getTerm(field_obj.__class__)
-
-            if term_obj is None:
-                raise Exception("Not supported: %s" % str(field_obj.__class__))
 
             type_rslt = Session.query(model.Type)\
                         .filter_by(title=unicode(term_obj.token))\
                         .first()
 
-            self._schema_rslt.attributes.append(model.Attribute(
+            schema_rslt.attributes.append(model.Attribute(
                 name=name,
-                is_invariant=False,
                 order=field_obj.order,
                 field=model.Field(
                     title=unicode(field_obj.title),
@@ -199,115 +215,57 @@ class MutableSchema(object):
                     )
                 ))
 
-        self._attributes.append(name)
-        Session.flush()
+        Session.add(schema_rslt)
+        Session.commit()
+        self.__attributes__ = {}
+        self.__invariants__.clear()
 
-    def save(self):
+    def delete(self, hard=False):
         """
-        Commits its changes to the back-end. Expires the current instance.
         """
         Session = self._session
 
-        if Session is None:
-            raise Exception("expired")
+        num_instances = Session.query(model.Instance)\
+                        .join(model.Schema.specification)\
+                        .filter_by(module=self._module)\
+                        .count()
 
-        schema_old_rslt = Session.query(model.Schema)\
-                          .filter_by(create_date=self._version)\
-                          .join(model.Specification)\
-                          .filter_by(module=self._module)\
-                          .first()
+        if num_instances > 0 and not hard:
+            raise Exception("There is already data stored for %s" % self._module)
 
-        for attribute_rslt in schema_old_rslt.attributes:
-            # Copy the properties from the last version if they haven't been
-            # changed
-            if attribute_rslt.name not in self._attributes:
-                self._schema_rslt.attributes.append(model.Attribute(
-                    name=attribute_rslt.name,
-                    is_invariant=False,
-                    order=attribute_rslt.order,
-                    field=attribute_rslt.field
-                    ))
+        schema_rslt = Session.query(model.Schema)\
+                      .join(model.Specification)\
+                      .filter_by(module=self._module)\
+                      .first()
 
-        for invariant_rslt in schema_old_rslt.invariants:
-            if invariant_rslt.name not in self._invariants:
-                self._schema_rslt.invariants.append(model.Invariant(
-                    name=invariant_rslt.name
-                    ))
-
-        Session.add(self._schema_rslt)
+        Session.remove(schema_rslt)
         Session.commit()
-        self._session = None
 
-class SchemaManager(object):
-    """
-    """
-    implements(interfaces.ISchemaManager)
-
-    def __init__(self):
+    @classmethod
+    def list(cls):
         """
-        """
-
-    def save(self, target):
-        """
+        Returns a list of all the existing schemata module names only.
         """
         Session = getUtility(interfaces.ISessionFactory)()
-        Session.commit()
+        return Session.query(model.Specification.module).all()
 
-    def put(self, source):
-        """
-        TODO: maybe upgrade an existing one if it's already in the database?
-                Can't because we don't know how to to tell if it has changed?
-
-        @param source: A ZOPE interface specification
-        """
+    @classmethod
+    def has_interface(cls, module, version=None):
+        module = unicode(module)
         Session = getUtility(interfaces.ISessionFactory)()
+        
+        schema_q = Session.query(model.Schema)\
+                  .join(model.Specification)\
+                  .filter_by(module=module)
 
-        title = unicode(source.__name__)
-        desc = unicode(source.__doc__)
+        if version is not None:
+            schema_q = schema_q.filter(model.Schema.create_date==version)
 
-        # If we don't already have a specification, we'll start a new schema
-        spec_rslt = Session.query(model.Specification)\
-                    .filter_by(title=title)\
-                    .first()
+        return schema_q.count() > 0
 
-        if spec_rslt is None:
-            spec_rslt = model.Specification(title=title, description=desc)
-
-        # Upgrade the specification
-        schema_rslt = model.Schema()
-        schema_rslt.specification = spec_rslt
-
-        for name, field in zope.schema.getFieldsInOrder(source):
-            name = unicode(name)
-            attribute_rslt = Session.query(model.Attribute)\
-                             .filter_by(name=name)\
-                             .join(model.Schema.specification)\
-                             .filter_by(title=title)\
-                             .first()
-
-            if attribute_rslt is None:
-                attribute_rslt = model.Attribute(
-                    name=name,
-                    title=field.title,
-                    description=field.description,
-                    is_required=field.required,
-                    order=field.order
-                    )
-
-            type_rslt = Session.query(model.Type)\
-                        .filter_by(title=_utils.TYPE_2_STR[field.__class__])\
-                        .first()
-
-            attribute_rslt.type = type_rslt
-
-            schema_rslt.attributes.append(attribute_rslt)
-
-        Session.add(schema_rslt)
-        Session.commit()
-
-    def get(self, module, version=None):
+    @classmethod
+    def get_interface(cls, module, version=None):
         """
-        @see: avrc.data.store.interfaces.ISchemaManager#getSchema
         """
         module = unicode(module)
         Session = getUtility(interfaces.ISessionFactory)()
@@ -328,61 +286,35 @@ class SchemaManager(object):
         attrs = {}
 
         for attribute_rslt in schema_rslt.attributes:
-            cls = _utils.STR_2_TYPE[attribute_rslt.type.title]
-            attrs[attribute_rslt.name] = cls(
-                title=attribute_rslt.title,
-                description=attribute_rslt.description,
-                required=attribute_rslt.is_required
+            token = str(attribute_rslt.field.type.title)            
+            field = supported_types_vocabulary.getTermByToken(token).value
+            attrs[attribute_rslt.name] = field(
+                title=attribute_rslt.field.title,
+                description=attribute_rslt.field.description,
+                required=attribute_rslt.field.is_required
                 )
 
         klass = InterfaceClass(
-            name=schema_rslt.title,
-            __doc__=schema_rslt.description,
-            __module__="avrc.data.store.generated",
+            name=schema_rslt.specification.module,
+            __doc__=schema_rslt.specification.documentation,
+            __module__="avrc.data.store.schema.generated",
             bases=(interfaces.IMutableSchema,),
             attrs=attrs,
             )
 
         return klass
 
-    def modify(self, target):
+    @classmethod
+    def import_(cls, interface):
         """
-        It isn't very clear how the modification of schemata is going to work.
-        That is, how will be know which parts of the schema have been changed?
+        @param source: A ZOPE interface specification
         """
-        raise NotImplementedError()
+        schema_obj = cls(module=unicode(interface.__name__),
+                         documentation=unicode(interface.__doc__)
+                         )
 
-    def expire(self, target):
-        """
-        """
-        raise Exception(u"Expiring of schema is not allowed")
+        for name, field in zope.schema.getFieldsInOrder(interface):
+            schema_obj[unicode(name)] = field
 
-    def remove(self, key, hard=False):
-        """
-        Removes a
-        """
-        title = unicode(key)
-        Session = getUtility(interfaces.ISessionFactory)()
+        schema_obj.save()
 
-        num_instances = Session.query(model.Instance)\
-                        .join(model.Schema.specification)\
-                        .filter_by(title=title)\
-                        .count()
-
-        if num_instances > 0 and not hard:
-            raise Exception("There is already data stored for %s" % key)
-
-        schema_rslt = Session.query(model.Schema)\
-                      .join(model.Specification)\
-                      .filter_by(title=title)\
-                      .first()
-
-        Session.remove(schema_rslt)
-        Session.commit()
-
-    def list(self):
-        """
-        Returns a list of all the existing schemata NAMES only.
-        """
-        Session = getUtility(interfaces.ISessionFactory)()
-        return Session.query(model.Specification.title).all()
