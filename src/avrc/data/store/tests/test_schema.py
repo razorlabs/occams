@@ -63,15 +63,15 @@ class TestCase(ptc.PloneTestCase):
         data store, retrieves it and then checks if it's equivalent.
         """
         itest = samples.IStandaloneInterface
-        
+
         schema.MutableSchema.import_(itest)
-        
+
         klass = schema.MutableSchema.get_interface(itest.__name__)
 
         self.assertTrue(isinstance(klass, InterfaceClass))
         self.assertTrue(klass.isOrExtends(interfaces.IMutableSchema))
         self.assertEquals(klass.__name__, itest.__name__)
-        self.assertEquals("avrc.data.store.schema.generated", klass.__module__)
+        self.assertEquals(schema.virtual.__name__, klass.__module__)
 
         # Check to make sure the generated interface still specifies the
         # correct fields
@@ -87,28 +87,41 @@ class TestCase(ptc.PloneTestCase):
         """
         Test a schema that contains a object field to a another schema
         """
-        
+
         itest = samples.IComposedInterface
-        
-        self.assertRaises(interfaces.UndefinedSchemaError, 
+
+        self.assertRaises(interfaces.UndefinedSchemaError,
                           schema.MutableSchema.import_,
                           itest)
-        
+
         schema.MutableSchema.import_(samples.ISimple)
         schema.MutableSchema.import_(samples.IComposedInterface)
-        
+
         # TODO check this
-        
+
     def test_vocabulary_import(self):
         """
         """
-        
+
     def test_annotated_import(self):
         """
         """
         itest = samples.IAnnotatedInterface
         schema.MutableSchema.import_(itest)
-        
+
+        # Make sure the annotations are intact
+        klass = schema.MutableSchema.get_interface(itest.__name__)
+
+        from pprint import pprint
+#        print
+#        print
+        pprint(itest.queryTaggedValue('__form_directive_values__'))
+        pprint(klass.queryTaggedValue('__form_directive_values__'))
+#        print
+#        print
+#        print
+
+
     def test_versioning(self):
         """
         """

@@ -560,19 +560,16 @@ class Field(FIA):
 
     type = orm.relation("Type", uselist=False)
 
-    # The field's displaying widget
-    widget_id = sa.Column(sa.Integer, sa.ForeignKey("widget.id"))
-
-    widget = orm.relation("Widget", uselist=False)
+    directive = orm.relation("Directive", uselist=False)
 
     # Can be used to enforce a class type as a valid value
     schema_id = sa.Column(sa.Integer, sa.ForeignKey("schema.id"))
 
     schema = orm.relation("Schema", uselist=False)
 
-    vocabulary_id = sa.Column(sa.Integer, sa.ForeignKey("vocabulary.id"))
-
-    vocabulary = orm.relation("Vocabulary")
+#    vocabulary_id = sa.Column(sa.Integer, sa.ForeignKey("vocabulary.id"))
+#
+#    vocabulary = orm.relation("Vocabulary")
 
     # Should be added to the application's search form? Only if this applies...
     is_searchable = sa.Column(sa.Boolean, nullable=False, default=False)
@@ -598,6 +595,33 @@ class Field(FIA):
 
     create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
 
+class Directive(FIA):
+    """
+    For plone.directives.form compatibility
+    """
+    __tablename__ = "directive"
+
+    id = sa.Column(sa.Integer, primary_key=True)
+
+    field_id = sa.Column(sa.Integer, sa.ForeignKey("field.id"),
+                         nullable=False)
+
+    widget = sa.Column(sa.Unicode)
+
+    omitted = sa.Column(sa.Boolean)
+
+    no_ommit = sa.Column(sa.Unicode)
+
+    mode = sa.Column(sa.Unicode)
+
+    order_before = sa.Column(sa.Unicode)
+
+    order_after = sa.Column(sa.Unicode)
+
+    read_permission = sa.Column(sa.Unicode)
+
+    write_persmission = sa.Column(sa.Unicode)
+
 class Type(FIA):
     """
     """
@@ -608,44 +632,3 @@ class Type(FIA):
     title = sa.Column(sa.Unicode, nullable=False, unique=True)
 
     description = sa.Column(sa.Text)
-
-class Widget(FIA):
-    """
-    """
-    __tablename__ = "widget"
-
-    id = sa.Column(sa.Integer, primary_key=True)
-
-    module = sa.Column(sa.Unicode, nullable=False, unique=True)
-
-vocabulary_term_table = sa.Table("vocabulary_term", FIA.metadata,
-    sa.Column("vocabulary_id", sa.Integer, sa.ForeignKey("vocabulary.id"),
-              nullable=False),
-    sa.Column("term_id", sa.Integer, sa.ForeignKey("term.id"),
-              nullable=False),
-    sa.PrimaryKeyConstraint("vocabulary_id", "term_id")
-    )
-
-class Vocabulary(FIA):
-    """
-    """
-    __tablename__ = "vocabulary"
-
-    id = sa.Column(sa.Integer, primary_key=True)
-
-    name = sa.Column(sa.Unicode, nullable=False, index=True)
-
-
-class Term(FIA):
-    """
-    """
-    __tablename__ = "term"
-
-    id = sa.Column(sa.Integer, primary_key=True)
-
-    label = sa.Column(sa.Unicode)
-
-    value = sa.Column(sa.Unicode, nullable=False)
-
-    order = sa.Column(sa.Integer, nullable=False, default=1)
-

@@ -4,25 +4,33 @@ Responsible for schemata, attributes, and vocabularies
 Additionally, we support plone.directives.form
 """
 
-from datetime import datetime, date, time
-
 from zope.component import adapts
 from zope.component import getUtility
 from zope.interface import implements
 from zope.interface.interface import InterfaceClass
 from zope.interface import alsoProvides
-from zope.i18nmessageid import MessageFactory
 import zope.schema
+from zope.i18nmessageid import MessageFactory
 
 from plone.alterego import dynamic
 
-from sqlalchemy import func
+# Placing all directives under dexterity's namespace
+from plone.directives.form.schema import TEMP_KEY
+
+# Necessary keys for directives
+from plone.autoform.interfaces import OMITTED_KEY
+from plone.autoform.interfaces import WIDGETS_KEY
+from plone.autoform.interfaces import MODES_KEY
+from plone.autoform.interfaces import ORDER_KEY
+from plone.autoform.interfaces import READ_PERMISSIONS_KEY
+from plone.autoform.interfaces import WRITE_PERMISSIONS_KEY
 
 from avrc.data.store import interfaces
 from avrc.data.store import model
 
 _ = MessageFactory(__name__)
 
+# Stored schemata will be summoned from the nether with a virtual name space
 virtual = dynamic.create(".".join([__name__, "virtual"]))
 
 supported_types_vocabulary = \
@@ -39,14 +47,34 @@ supported_types_vocabulary = \
         ("object", zope.schema.Object),
         ])
 
+supported_directives_vocabulary = \
+    zope.schema.vocabulary.SimpleVocabulary.fromValues([
+        OMITTED_KEY,
+        WIDGETS_KEY,
+        MODES_KEY,
+        ORDER_KEY,
+        READ_PERMISSIONS_KEY,
+        WRITE_PERMISSIONS_KEY
+        ])
+
 def SupportedTypesVocabularyFactory(context=None):
     """
-    Generates a list of supported types. This is used for auto-generating
-    meta data into the data store once it is added into a site.
+    Convenience factory for getting the supported types vocabulary
+    This is used for auto-generating meta data into the data store once it
+    is added into a site.
     """
     return supported_types_vocabulary
 
 alsoProvides(SupportedTypesVocabularyFactory,
+             zope.schema.interfaces.IVocabularyFactory)
+
+def SupportedDirectivesVocabularyFactory(context=None):
+    """
+    Convenience method for getting the supported directives.
+    """
+    return supported_directives_vocabulary
+
+alsoProvides(SupportedDirectivesVocabularyFactory,
              zope.schema.interfaces.IVocabularyFactory)
 
 class VocabularyManager(object):
@@ -79,6 +107,8 @@ class MutableSchema(object):
     """
     This module is in charge of controlling the actual properties of the
     target module. It's sole purpose is for writing, not retrieving properties.
+
+    Behaves like a delta of the last version and this version.
     """
 
     implements(interfaces.IMutableSchema)
@@ -107,7 +137,7 @@ class MutableSchema(object):
         self.__documentation__ = unicode(documentation)
         self.__version__ = version
         self.__attributes__ = {}
-        self.__directives__ = {}
+        self.__directives__ = directives or {}
         self.__invariants__ = set([])
 
     def add_invariant(self, name):
@@ -126,7 +156,7 @@ class MutableSchema(object):
     def apply_directive(self, name, value):
         """
         """
-        
+
 
     def revert_attribute(self, key, version):
         """
@@ -142,12 +172,17 @@ class MutableSchema(object):
                       remove the property
         """
         if isinstance(field_obj, zope.schema.Object):
-            exists = MutableSchema.has_interface(field_obj.schema.__name__, 
+            exists = MutableSchema.has_interface(field_obj.schema.__name__,
                                                  version=None)
             if not exists:
                 raise interfaces.UndefinedSchemaError()
-        
+
         self.__attributes__[unicode(name)] = field_obj
+
+    def _apply_directive(self, attribute_rslt, KEY, value):
+        """
+        Helper method
+        """
 
     def save(self):
         """
@@ -191,6 +226,8 @@ class MutableSchema(object):
                         name=invariant_rslt.name
                         ))
 
+        attrs = {}
+
         # Now add/remove in all the changed fields
         for name, field_obj in self.__attributes__.items():
             if field_obj.__class__ not in supported_types_vocabulary:
@@ -204,7 +241,7 @@ class MutableSchema(object):
                         .filter_by(title=unicode(term_obj.token))\
                         .first()
 
-            schema_rslt.attributes.append(model.Attribute(
+            attrs[name] = model.Attribute(
                 name=name,
                 order=field_obj.order,
                 field=model.Field(
@@ -213,7 +250,18 @@ class MutableSchema(object):
                     type=type_rslt,
                     is_required=field_obj.required,
                     )
-                ))
+                )
+
+            schema_rslt.attributes.append(attrs[name])
+
+        for key, item in self.__directives__.items():
+            if key not in supported_directives_vocabulary:
+                continue
+
+            if key is WIDGETS_KEY:
+                for name, module in item.items():
+                    self._apply_direcitve(attrs[name], key, module)
+
 
         Session.add(schema_rslt)
         Session.commit()
@@ -253,7 +301,7 @@ class MutableSchema(object):
     def has_interface(cls, module, version=None):
         module = unicode(module)
         Session = getUtility(interfaces.ISessionFactory)()
-        
+
         schema_q = Session.query(model.Schema)\
                   .join(model.Specification)\
                   .filter_by(module=module)
@@ -286,7 +334,7 @@ class MutableSchema(object):
         attrs = {}
 
         for attribute_rslt in schema_rslt.attributes:
-            token = str(attribute_rslt.field.type.title)            
+            token = str(attribute_rslt.field.type.title)
             field = supported_types_vocabulary.getTermByToken(token).value
             attrs[attribute_rslt.name] = field(
                 title=attribute_rslt.field.title,
@@ -297,7 +345,7 @@ class MutableSchema(object):
         klass = InterfaceClass(
             name=schema_rslt.specification.module,
             __doc__=schema_rslt.specification.documentation,
-            __module__="avrc.data.store.schema.generated",
+            __module__=virtual.__name__,
             bases=(interfaces.IMutableSchema,),
             attrs=attrs,
             )
@@ -310,7 +358,8 @@ class MutableSchema(object):
         @param source: A ZOPE interface specification
         """
         schema_obj = cls(module=unicode(interface.__name__),
-                         documentation=unicode(interface.__doc__)
+                         documentation=unicode(interface.__doc__),
+                         directives=interface.queryTaggedValue(TEMP_KEY)
                          )
 
         for name, field in zope.schema.getFieldsInOrder(interface):
