@@ -12,150 +12,25 @@ import sqlalchemy as sa
 from sqlalchemy import orm
 from sqlalchemy.ext.declarative import declarative_base
 
-FIA = declarative_base()
-PII = declarative_base()
+Entity = declarative_base()
 
-def _setup_base(base, engine):
+def setup(engine):
     """
     """
-    base.metadata.create_all(bind=engine, checkfirst=True)
-
-def setup(fia_engine, pii_engine=None):
-    _setup_base(FIA, fia_engine)
-    _setup_base(PII, pii_engine and pii_engine or fia_engine)
-
-# -----------------------------------------------------------------------------
-# Personal Information
-# -----------------------------------------------------------------------------
-
-class Name(PII):
-    """
-    """
-    __tablename__ = "name"
-
-    id = sa.Column(sa.Integer, primary_key=True)
-
-    first = sa.Column(sa.Unicode, nullable=False, index=True)
-
-    middle = sa.Column(sa.Unicode)
-
-    last = sa.Column(sa.Unicode, nullable=False, index=True)
-
-    sur = sa.Column(sa.Unicode)
-
-class Address(PII):
-    """
-    """
-    __tablename__ = "address"
-
-    id = sa.Column(sa.Integer, primary_key=True)
-
-    phone = sa.Column(sa.Unicode, index=True)
-
-    line_1 = sa.Column(sa.Unicode)
-
-    line_2 = sa.Column(sa.Unicode)
-
-    city = sa.Column(sa.Unicode)
-
-    state_id = sa.Column(sa.Integer, sa.ForeignKey("state.id"))
-
-    zip = sa.Column(sa.Integer)
-
-class State(PII):
-    """
-    """
-    __tablename__ = "state"
-
-    id = sa.Column(sa.Integer, primary_key=True)
-
-    country_id = sa.Column(sa.Integer, sa.ForeignKey("country.id"),
-                           nullable=False)
-
-    abbreviation = sa.Column(sa.Unicode, nullable=False)
-
-    name = sa.Column(sa.Unicode, nullable=False)
-
-    __table_args__ = (
-        sa.UniqueConstraint("country_id", "name"),
-        {})
-
-class Country(PII):
-    """
-    """
-    __tablename__ = "country"
-
-    id = sa.Column(sa.Integer, primary_key=True)
-
-    abbreviation = sa.Column(sa.Unicode, nullable=False, unique=True)
-
-    name = sa.Column(sa.Unicode, nullable=False, unique=True)
-
-class Phone(PII):
-    """
-    """
-    __tablename__ = "phone"
-
-    id = sa.Column(sa.Integer, primary_key=True)
-
-    location_id = sa.Column(sa.Integer, sa.ForeignKey("location.id"),
-                            nullable=False)
-
-    location = orm.relation("Location", uselist=False)
-
-    value = sa.Column(sa.Unicode, nullable=False)
-
-class Email(PII):
-    """
-    """
-    __tablename__ = "email"
-
-    id = sa.Column(sa.Integer, primary_key=True)
-
-    location_id = sa.Column(sa.Integer, sa.ForeignKey("location.id"),
-                            nullable=False)
-
-    location = orm.relation("Location", uselist=False)
-
-    value = sa.Column(sa.Unicode, nullable=False)
-
-class Location(PII):
-    """
-    """
-    __tablename__ = "location"
-
-    id = sa.Column(sa.Integer, primary_key=True)
-
-    title = sa.Column(sa.Unicode, nullable=False)
-
-class Demographic(PII):
-    """
-    """
-    __tablename__ = "demographic"
-
-    id = sa.Column(sa.Integer, primary_key=True)
-
-    birth_date = sa.Column(sa.DateTime)
-
-class Physique(PII):
-    """
-    """
-    __tablename__ = "physique"
-
-    id = sa.Column(sa.Integer, primary_key=True)
+    Entity.metadata.create_all(bind=engine, checkfirst=True)
 
 # -----------------------------------------------------------------------------
 # Visit
 # -----------------------------------------------------------------------------
 
-class Curator(FIA):
+class Curator(Entity):
     """
     """
     __tablename__ = "curator"
 
     id = sa.Column(sa.Integer, primary_key=True)
 
-class Subject(FIA):
+class Subject(Entity):
     """
     """
     __tablename__ = "subject"
@@ -164,7 +39,7 @@ class Subject(FIA):
 
     uid = sa.Column(sa.Integer, nullable=False, unique=True)
 
-class Domain(FIA):
+class Domain(Entity):
     """
     """
     __tablename__ = "domain"
@@ -174,7 +49,7 @@ class Domain(FIA):
     title = sa.Column(sa.Unicode, nullable=False, unique=True)
 
 
-class Protocol(FIA):
+class Protocol(Entity):
     """
     TODO: incomplete
     """
@@ -185,7 +60,7 @@ class Protocol(FIA):
     domain_id = sa.Column(sa.Integer, sa.ForeignKey("domain.id"),
                           nullable=False)
 
-class Enrollment(FIA):
+class Enrollment(Entity):
     """
     """
     __tablename__ = "enrollment"
@@ -212,7 +87,7 @@ class Enrollment(FIA):
         sa.UniqueConstraint("protocol_id", "subject_id", "start_date"),
         {})
 
-class Visit(FIA):
+class Visit(Entity):
     """
     """
     __tablename__ = "visit"
@@ -226,13 +101,13 @@ class Visit(FIA):
 
     visit_date = sa.Column(sa.Date, nullable=False)
 
-visit_instance_table = sa.Table("visit_instance", FIA.metadata,
+visit_instance_table = sa.Table("visit_instance", Entity.metadata,
     sa.Column("visit_id", sa.ForeignKey("visit.id"), nullable=False),
     sa.Column("instance_id", sa.ForeignKey("instance.id"), nullable=False),
     sa.PrimaryKeyConstraint("visit_id", "instance_id")
     )
 
-domain_schema_table = sa.Table("domain_schema", FIA.metadata,
+domain_schema_table = sa.Table("domain_schema", Entity.metadata,
     sa.Column("domain_id", sa.Integer, sa.ForeignKey("domain.id"),
               nullable=False),
     sa.Column("schema_id", sa.Integer, sa.ForeignKey("schema.id"),
@@ -244,7 +119,7 @@ domain_schema_table = sa.Table("domain_schema", FIA.metadata,
 # Data
 # -----------------------------------------------------------------------------
 
-class Keyword(FIA):
+class Keyword(Entity):
     """
     """
     __tablename__ = "keyword"
@@ -264,7 +139,7 @@ class Keyword(FIA):
         sa.UniqueConstraint("instance_id", "title"),
         {})
 
-class Instance(FIA):
+class Instance(Entity):
     """
     TODO, the title doesn't really make much sense in our situation, making
     it optional for now...
@@ -287,7 +162,7 @@ class Instance(FIA):
     modify_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now,
                             onupdate=datetime.now)
 
-class Binary(FIA):
+class Binary(Entity):
     """
     """
     __tablename__ = "binary"
@@ -308,7 +183,7 @@ class Binary(FIA):
 
     value = sa.Column(sa.BLOB, nullable=False)
 
-class Datetime(FIA):
+class Datetime(Entity):
     """
     """
     __tablename__ = "datetime"
@@ -330,7 +205,7 @@ class Datetime(FIA):
 sa.Index("datetime_attribute_value", Datetime.attribute_id, Datetime.value)
 
 
-class Integer(FIA):
+class Integer(Entity):
     """
     """
     __tablename__ ="integer"
@@ -351,7 +226,7 @@ class Integer(FIA):
 
 sa.Index("integer_attribute_value", Integer.attribute_id, Integer.value)
 
-class Real(FIA):
+class Real(Entity):
     """
     """
     __tablename__ ="real"
@@ -368,11 +243,11 @@ class Real(FIA):
 
     attribute = orm.relation("Attribute", uselist=False)
 
-    value = sa.Column(sa.Integer, nullable=False)
+    value = sa.Column(sa.Float, nullable=False)
 
 sa.Index("real_attribute_value", Real.attribute_id, Real.value)
 
-class Object(FIA):
+class Object(Entity):
     """
     """
     __tablename__ ="object"
@@ -397,7 +272,7 @@ class Object(FIA):
 
 sa.Index("object_attribute_value", Object.attribute_id, Object.value)
 
-class String(FIA):
+class String(Entity):
     """
     """
     __tablename__ ="string"
@@ -423,13 +298,13 @@ sa.Index("string_attribute_value", String.attribute_id, String.value)
 # -----------------------------------------------------------------------------
 
 # Joining table for base class representation
-hierarchy_table = sa.Table("hierarchy", FIA.metadata,
+hierarchy_table = sa.Table("hierarchy", Entity.metadata,
     sa.Column("parent_id", sa.ForeignKey("specification.id"), nullable=False),
     sa.Column("child_id", sa.ForeignKey("specification.id"), nullable=False),
     sa.PrimaryKeyConstraint("parent_id", "child_id")
     )
 
-class Specification(FIA):
+class Specification(Entity):
     """
     Specification entity for class names
     """
@@ -473,7 +348,7 @@ class Specification(FIA):
     modify_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now,
                             onupdate=datetime.now)
 
-class Invariant(FIA):
+class Invariant(Entity):
     """
     """
     __tablename__ = "invariant"
@@ -485,7 +360,7 @@ class Invariant(FIA):
 
     name = sa.Column(sa.Unicode, nullable=False)
 
-class Schema(FIA):
+class Schema(Entity):
     """
     """
     __tablename__ = "schema"
@@ -507,7 +382,7 @@ class Schema(FIA):
         sa.UniqueConstraint("specification_id", "create_date"),
         {})
 
-class Attribute(FIA):
+class Attribute(Entity):
     """
     This is a special table in that it serves as a joining table between fields
     and schemata, but with extra meta data associated with the join.
@@ -535,7 +410,7 @@ class Attribute(FIA):
         {}
         )
 
-class Field(FIA):
+class Field(Entity):
     """
     A field details entries. Note that this module is not tied to anything
     as it can be reused by an attribute, etc. Note that if the attribute using
@@ -559,8 +434,6 @@ class Field(FIA):
     type_id = sa.Column(sa.Integer, sa.ForeignKey("type.id"), nullable=False)
 
     type = orm.relation("Type", uselist=False)
-
-    directive = orm.relation("Directive", uselist=False)
 
     # Can be used to enforce a class type as a valid value
     schema_id = sa.Column(sa.Integer, sa.ForeignKey("schema.id"))
@@ -593,36 +466,27 @@ class Field(FIA):
     # URL template for values (this applies mostly to virtual classes)
     url = sa.Column(sa.Unicode)
 
+    # OMFG these need to go away
+    directive_widget = sa.Column(sa.Unicode)
+
+    directive_omitted = sa.Column(sa.Boolean)
+
+    directive_no_ommit = sa.Column(sa.Unicode)
+
+    directive_mode = sa.Column(sa.Unicode)
+
+    directive_before = sa.Column(sa.Unicode)
+
+    directive_after = sa.Column(sa.Unicode)
+
+    directive_read = sa.Column(sa.Unicode)
+
+    directive_write = sa.Column(sa.Unicode)
+    # /END GO AWAY
+
     create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
 
-class Directive(FIA):
-    """
-    For plone.directives.form compatibility
-    """
-    __tablename__ = "directive"
-
-    id = sa.Column(sa.Integer, primary_key=True)
-
-    field_id = sa.Column(sa.Integer, sa.ForeignKey("field.id"),
-                         nullable=False)
-
-    widget = sa.Column(sa.Unicode)
-
-    omitted = sa.Column(sa.Boolean)
-
-    no_ommit = sa.Column(sa.Unicode)
-
-    mode = sa.Column(sa.Unicode)
-
-    order_before = sa.Column(sa.Unicode)
-
-    order_after = sa.Column(sa.Unicode)
-
-    read_permission = sa.Column(sa.Unicode)
-
-    write_persmission = sa.Column(sa.Unicode)
-
-class Type(FIA):
+class Type(Entity):
     """
     """
     __tablename__ = "type"

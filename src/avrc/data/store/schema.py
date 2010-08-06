@@ -8,6 +8,7 @@ from zope.component import adapts
 from zope.component import getUtility
 from zope.interface import implements
 from zope.interface.interface import InterfaceClass
+from zope.interface import Interface
 from zope.interface import alsoProvides
 import zope.schema
 from zope.i18nmessageid import MessageFactory
@@ -102,6 +103,18 @@ class VocabularySchema(object):
     def __int__(self, vocabulary):
         """
         """
+
+
+def _organize_driectives(directives):
+    """
+    Helper method to organize directives into:
+    name: (key, value)
+    """
+#    result = {}
+#
+#    for key, value in directives.items():
+#
+#
 
 class MutableSchema(object):
     """
@@ -232,8 +245,8 @@ class MutableSchema(object):
         for name, field_obj in self.__attributes__.items():
             if field_obj.__class__ not in supported_types_vocabulary:
                 continue
-                #Session.rollback()
-                #raise Exception("Not supported: %s" % str(field_obj.__class__))
+                Session.rollback()
+                raise Exception("Not supported: %s" % str(field_obj.__class__))
 
             term_obj = supported_types_vocabulary.getTerm(field_obj.__class__)
 
@@ -252,15 +265,45 @@ class MutableSchema(object):
                     )
                 )
 
+            if hasattr(field_obj, "schema"):
+                # TODO link to versioned schema. said schema must extend
+                # IVersionedSchema?
+                pass
+
+
             schema_rslt.attributes.append(attrs[name])
 
         for key, item in self.__directives__.items():
             if key not in supported_directives_vocabulary:
                 continue
 
-            if key is WIDGETS_KEY:
-                for name, module in item.items():
-                    self._apply_direcitve(attrs[name], key, module)
+            try:
+                if key is OMITTED_KEY:
+                    for interface, name, value in item:
+                        # Interface is ignored since it's just going to the base
+                        attrs[name].field.directive_omitted = value is "true"
+                elif key is WIDGETS_KEY:
+                    for name, module in item.items():
+                        attrs[name].field.directive_widget = unicode(module)
+                elif key is MODES_KEY:
+                    for interface, name, value in item:
+                        attrs[name].field.directive_mode = unicode(value)
+                elif key is ORDER_KEY:
+                    for name, order, target in item:
+                        if order is "before":
+                            attrs[name].field.directive_before = value
+                        elif order is "after":
+                            attrs[name].field.directive_after = value
+                        else:
+                            raise Exception("WTF")
+                elif key is READ_PERMISSIONS_KEY:
+                    for name, value in item.items():
+                        attrs[name].field.directive_read = unicode(value)
+                elif key is WRITE_PERMISSIONS_KEY:
+                    for name, value in item.items():
+                        attrs[name].field.directive_write = unicode(value)
+            except KeyError:
+                continue
 
 
         Session.add(schema_rslt)
@@ -332,6 +375,13 @@ class MutableSchema(object):
             return None
 
         attrs = {}
+        directives = {}
+        omitted = []
+        widgets = {}
+        modes = []
+        order = []
+        read = {}
+        write = {}
 
         for attribute_rslt in schema_rslt.attributes:
             token = str(attribute_rslt.field.type.title)
@@ -342,13 +392,50 @@ class MutableSchema(object):
                 required=attribute_rslt.field.is_required
                 )
 
+            name = str(attribute_rslt.name)
+
+            if attribute_rslt.field.directive_omitted is not None:
+                value = attribute_rslt.field.directive_omitted and "true" or "false"
+                omitted.append(tuple([Interface, name, value]))
+            elif attribute_rslt.field.directive_widget is not None:
+                widgets[name] = str(attribute_rslt.field.directive_widget)
+            if attribute_rslt.field.directive_mode is not None:
+                value = str(attribute_rslt.field.directive_mode)
+                modes.append(tuple([Interface, name, value]))
+            if attribute_rslt.field.directive_before is not None:
+                value = str(attribute_rslt.field.directive_before)
+                order.append(tuple([name, "before", value]))
+            if attribute_rslt.field.directive_after is not None:
+                value = str(attribute_rslt.field.directive_after)
+                order.append(tuple([name, "after", value]))
+            elif attribute_rslt.field.directive_read is not None:
+                read[name] = str(attribute_rslt.field.directive_read)
+            elif attribute_rslt.field.directive_write is not None:
+                write[name] = str(attribute_rslt.field.directive_write)
+
         klass = InterfaceClass(
             name=schema_rslt.specification.module,
             __doc__=schema_rslt.specification.documentation,
             __module__=virtual.__name__,
-            bases=(interfaces.IMutableSchema,),
+            bases=tuple([interfaces.IMutableSchema]),
             attrs=attrs,
             )
+
+        if len(omitted) > 0:
+            directives[OMITTED_KEY] = omitted
+        if len(widgets) > 0:
+            directives[WIDGETS_KEY] = widgets
+        if len(modes) > 0:
+            directives[MODES_KEY] = modes
+        if len(order) > 0:
+            directives[ORDER_KEY] = order
+        if len(read) > 0:
+            directives[READ_PERMISSIONS_KEY] = read
+        if len(write) > 0:
+            directives[WRITE_PERMISSIONS_KEY] = write
+
+        if len(directives) > 0:
+            klass.setTaggedValue(TEMP_KEY, directives)
 
         return klass
 

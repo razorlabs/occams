@@ -89,6 +89,7 @@ class IAnnotatedInterface(Interface):
         )
 
     form.mode(date='hidden')
+    form.write_permission(date="cmf.ModifyPortalContent")
     date = zope.schema.Date(
         title=u"DATE",
         description=u"DATE"

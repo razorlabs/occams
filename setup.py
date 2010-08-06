@@ -31,9 +31,9 @@ setup(
     install_requires=[
         'setuptools',
         # --- Database
-        # Use the latest version instead of the built-in one
         "pysqlite",
         "SQLAlchemy>=0.5.8,<0.5.99",
+        "z3c.saconfig",
         # --- Helper modules
         "plone.app.dexterity"
     ],
