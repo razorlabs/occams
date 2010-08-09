@@ -116,6 +116,29 @@ def _organize_driectives(directives):
 #
 #
 
+class SchemaManager(object):
+    """
+    """
+    def get(self, key):
+        """
+        """
+        title = unicode(key)
+        
+        version = version is not None and int(version) or None
+        Session = getUtility(interfaces.ISessionFactory)()
+
+        schema_q = Session.query(model.Schema)\
+                      .join(model.Specification)\
+                      .filter_by(title=title)
+
+        if version is not None:
+            converted = datetime.fromtimestamp(version)
+            schema_q = schema_q.filter_by(create_date=converted)
+
+        schema_rslt = schema_q.first()
+        
+        return Schema(schema_rslt)
+
 class MutableSchema(object):
     """
     This module is in charge of controlling the actual properties of the

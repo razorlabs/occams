@@ -27,13 +27,13 @@ class IBase(Interface):
 
 class Error(Exception):
     """Base class for all errors in this package"""
-    
+
 class DatatoreError(Error):
     """Base class for datastore-related errors"""
-    
+
 class SchemaError(Error):
     """Base class for schama-related errors"""
-    
+
 class UndefinedSchemaError(Error):
     """Raised when trying to access a schema that is not in the datastore"""
 
@@ -45,6 +45,15 @@ class IManager(IBase):
     """
     Base class for all managers
     """
+    
+    def keys():
+        """
+        Returns a listing of the object keys being managed by this manager.
+        """
+
+    def has(key):
+        """
+        """
 
     def get(key):
         """
@@ -57,17 +66,7 @@ class IManager(IBase):
         Adds or modifies the target into the manager
         """
 
-#    def add(target):
-#        """
-#        Adds the target to the manager
-#        """
-#
-#    def modify(target):
-#        """
-#        Updates the original object the the target's properties
-#        """
-
-    def expire(target):
+    def retire(target):
         """
         Expire's the contained target. This means that it's information remains,
         only it's not visible anymore. The reason this functionality is useful
@@ -75,42 +74,42 @@ class IManager(IBase):
         side-effects.
         """
 
-    def remove(target):
+    def purge(target):
         """
         Completely removes the target and all data associated with it from the
         data store.
         """
 
-    def list():
-        """
-        Returns a listing of the objects being managed by this manager.
-        """
-
-class IDatastore(IBase, IContained):
+class IDatastore(IManager, IContained):
     """
     Represents a datastore instance that can be added to a site.
     """
-
-    pii_dsn = schema.TextLine(
-        title=_(u"Personally Identifiable Information Data Source Name"),
-        description=_(u"The Data Source Name (DSN) for database that will "
-                      u"contain information regarded as Personally "
-                      u"Identifiable Information (PII). "
-                      u"This is a feature that is required for clinical "
-                      u"studies. If none is specified, the FIA DSN will be "
-                      u"used. Note that it is up to the vendor using this "
-                      u"library to take proper measures in making sure that "
-                      u"the data source is secure. "
-                      u"If unspecified, the FIA DSB will be used."),
-        required=False
+    
+    dsn = schema.TextLine(
+        title=_(u"Something cool about dsns"),
+        description=_("Something descripting about dsns")
         )
 
-    fia_dsn = schema.TextLine(
-        title=_(u"Freedom of Information Act Data Source Name"),
-        description=_(u"The Data Source Name (DSN) for the database that will "
-                      u"contain information that can be disclosed to trusted "
-                      u"parties.")
-        )
+#    pii_dsn = schema.TextLine(
+#        title=_(u"Personally Identifiable Information Data Source Name"),
+#        description=_(u"The Data Source Name (DSN) for database that will "
+#                      u"contain information regarded as Personally "
+#                      u"Identifiable Information (PII). "
+#                      u"This is a feature that is required for clinical "
+#                      u"studies. If none is specified, the FIA DSN will be "
+#                      u"used. Note that it is up to the vendor using this "
+#                      u"library to take proper measures in making sure that "
+#                      u"the data source is secure. "
+#                      u"If unspecified, the FIA DSB will be used."),
+#        required=False
+#        )
+#
+#    fia_dsn = schema.TextLine(
+#        title=_(u"Freedom of Information Act Data Source Name"),
+#        description=_(u"The Data Source Name (DSN) for the database that will "
+#                      u"contain information that can be disclosed to trusted "
+#                      u"parties.")
+#        )
 
 class ISessionFactory(IBase):
     """
@@ -162,56 +161,37 @@ class IDomainManager(IManager):
 
 class IMutableSchema(IBase):
     """
+    This is used when the schemata are going to be modified.
     """
 
-    __module__ = schema.DottedName(
-        title=_(u"Namespace"),
-        description=_(u"The fully qualified name of the package")
-        )
-    
-class IVersionedInterface(IBase):
-    """
-    """
-    
-    __version__ = Attribute(_(u"The version for this Interface"))
-
-class IVesion(IBase):
+class IVesionable(IBase):
     """
     """
 
-    # TODO: check base interface to see if this is already provided
-    __version__ = schema.TextLine(
-        title=_(u""),
-        description=_(u"")
-        )
-
-class IAttribute(IBase):
-    """
-    """
+    __version__ = Attribute(_(u"This will be used to keep track of the "
+                              u"data store schema as they evolve"))
 
 class IInstance(IBase):
     """
     """
 
-# -----------------------------------------------------------------------------
-# MARKER INTERFACES
-# -----------------------------------------------------------------------------
+class IKeyedItem(IBase):
+    """
+    """
+        
+    __key__ = Attribute(_(u"A way to distinguish this item in the data store"))
 
-class IPII(IBase):
+class IFormable(IBase):
     """
-    Marker interface for information that will be regarded as Personally
-    Identifiable Information for objects that are stored. This information
-    should be kept "Internal" to the client product in order to protect the
-    privacy of it's subjects.
+    Represents a schema that contains detailed information for display in a
+    form.
     """
-
-class IFIA(IBase):
-    """
-    Marker interface for information that can be publicly accessible to parties
-    that give permissions to. This information should be completely devoid of
-    personally identifiable information, such information should be kept
-    internal using a separate module implementing the IPII interface.
-    """
+    
+    __title__ = Attribute(_(u"A way to represent the name of in the form"))
+    
+    __description__ = Attribute(_(u"A way to represent the description."))
+    
+    __dependants__ = Attribute(_(u"Dependant schemata"))
 
 # -----------------------------------------------------------------------------
 # REFERENCES
@@ -251,7 +231,7 @@ class IReference(IBase):
 
 class IDomain(IBase):
     """
-    TESTING: supposed to offert the domain functionality
+    TESTING: supposed to offer the domain functionality
     """
 
     title = schema.TextLine(
@@ -342,68 +322,4 @@ class IQuery(IBase):
             ),
         required=False,
         )
-
-# -----------------------------------------------------------------------------
-# PERSONAL INFORMATION INTERFACES
-# -----------------------------------------------------------------------------
-
-class IContact(IPII):
-    """
-    Represents conntact information that can apply to a reference.
-    """
-
-    phone = schema.TextLine(
-        title=_(u"Phone Number")
-        )
-
-    line_1 = schema.TextLine(
-        title=_(u"Line 1")
-        )
-
-    line_2 = schema.TextLine(
-        title=_(u"Line 2")
-        )
-
-    city = schema.TextLine(
-        title=_(u"City")
-        )
-
-    state = schema.Choice(
-        title=_(u"State"),
-        vocabulary="states"
-        )
-
-    zip = schema.Int(
-        title=_(u"ZIP Code")
-        )
-
-class IName(IPII):
-    """
-    Represents a name than can apply to a reference.
-    """
-
-    first = schema.TextLine(
-        title=_(u"First Name")
-        )
-
-    middle = schema.TextLine(
-        title=_(u"Middle Name"),
-        )
-
-    last = schema.TextLine(
-        title=_(u"Last Name")
-        )
-
-    sur = schema.TextLine(
-        title=_(u"Surname")
-        )
-
-
-class IDemographic(IPII):
-    """
-    Represents demographic information about a reference
-    """
-
-    birthdate = schema.Date(
-        title=_(u"Birth Date")
-        )
+    

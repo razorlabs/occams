@@ -45,17 +45,16 @@ class DatastoreDomainManager(object):
     def __init__(self, engine):
         self.datastore = engine
         
-    def get(self, id):
+    def get(self, key):
         """ 
         """
-        obj = None
         Session = getUtility(interfaces.ISessionFactory)()
-        rslt = Session.query(model.Domain).filter_by(title=id).first()
+
+        domain_rslt = Session.query(model.Domain)\
+                      .filter_by(title=key)\
+                      .first()
         
-        if rslt is not None:
-            obj = Domain(title=rslt.title)
-            
-        return obj
+        return Domain.copy(domain_rslt) 
     
     def add(self, source):
         """

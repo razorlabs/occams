@@ -37,63 +37,42 @@ class Datastore(object):
     __name__ = None
     __parent__ = None
 
-    fia_dsn = u""
-    pii_dsn = u""
+    title = None
+    dsn = None
 
-    _pii_engine = None
-    _fia_engine = None
-
-    store = {}
-
-    def __init__(self, fia_dsn, pii_dsn=None):
+    def __init__(self, title, dsn):
         """
         """
-        self.fia_dsn = fia_dsn
-        self.pii_dsn = pii_dsn is None and fia_dsn or pii_dsn
-
-        self.schemata = schema.SchemaManager()
-        self.protocols = protocol.ProtocolManager()
-
+        self.title = title
+        self.dsn = dsn
 
     @property
-    def binds(self):
-        """
-        Set up the table-to-engine bindings, this will allow the session
-        to handle multiple engines in a session
-        """
-        binds = {}
-        binds.update(dict.fromkeys(model.FIA.metadata.sorted_tables,
-                                   self._fia_engine))
-        binds.update(dict.fromkeys(model.PII.metadata.sorted_tables,
-                                   self._pii_engine))
-        return binds
+    def schemata(self):
+        return schema.SchemaManager()
 
-    def _setup(self):
+    @property
+    def protocols(self):
+        return protocol.ProtocolManager()
+    
+    def has(self, key):
         """
-        Performs data base back-end setup.
         """
-        self._fia_engine = sa.create_engine(self.fia_dsn, echo=_ECHO_ENABLED)
-
-        if self.fia_dsn == self.pii_dsn:
-            self._pii_engine = self._fia_engine
-        else:
-            self._pii_engine = sa.create_engine(self.pii_dsn, echo=_ECHO_ENABLED)
-
-        model.setup_fia(self._fia_engine)
-        model.setup_pii(self._pii_engine)
-
-    def _unsetup(self):
+    
+    def get(self, key):
         """
-        Cleans up any data base configurations.
         """
-        # Apparently SQLAlchemy doesn't need clean up...
+        
+    def keys(self):
+        """
+        """
+        raise NotImplementedError("This method is not implemented")
 
-    def put(self, visit, obj):
+    def put(self, target):
         """
         Store the object into the database based on it's interface
-        TODO: Needs tuples/choices/lists and vocabularies...
+        TODO: Needs choices and lists/tuples/sets
         """
-        provides = list(providedBy(obj))
+        provides = list(target.__provides__)
         Session = getUtility(interfaces.ISessionFactory)()
 
         if len(provides) > 1:
@@ -127,7 +106,7 @@ class Datastore(object):
                              .first()
 
             value_rslt = None
-            value_raw = getattr(obj, name)
+            value_raw = getattr(target, name)
 
             if attribute_rslt.type.title in (u"binary",):
                 # TODO: unclear how binary values are going to come in
@@ -152,48 +131,6 @@ class Datastore(object):
             Session.add(value_rslt)
 
         Session.commit()
-
-    def add(self, obj):
-        """
-        """
-        if isinstance(schema.Schema, obj):
-            pass
-        elif isinstance(protocol.Domain, obj):
-            pass
-        else:
-            # doesn't appear to be a major construct, check it's interface and
-            # see we have a schema for it in the DB, if so, this is and
-            # instance obj
-            raise Exception("WTF")
-
-    def get_domain(self, title):
-        """
-        """
-        Session = getUtility(interfaces.ISessionFactory)()
-
-        domain_rslt = Session.query(model.Domain)\
-                      .filter_by(title=title)\
-                      .first()
-
-        return protocol.Domain(domain_rslt)
-
-    def get_schema(self, title, version=None):
-        """
-        """
-        title = unicode(title)
-        version = version is not None and int(version) or None
-        Session = getUtility(interfaces.ISessionFactory)()
-
-        schema_q = Session.query(model.Schema)\
-                      .join(model.Specification)\
-                      .filter_by(title=title)
-
-        if version is not None:
-            converted = datetime.fromtimestamp(version)
-            schema_q = schema_q.filter_by(create_date=converted)
-
-        schema_rslt = schema_q.first()
-        return schema.Schema(schema_rslt)
 
 DatastoreFactory = Factory(
     Datastore,
@@ -268,22 +205,21 @@ def handleDatastoreAdded(datastore, event):
     when it is added to a site.
     This method will setup all metadata needed for the engine to fully
     offer it's services.
-    """
-    datastore._setup()
+    """    
+    engine = sa.create_engine(datastore.dsn, echo=True)
 
     # Set autocommit true so that components create their own sessions.
-    SessionUtility = SessionFactory(autocommit=True, binds=datastore.binds)
     sm = getSiteManager(datastore)
-    sm.registerUtility(SessionUtility, provided=interfaces.ISessionFactory)
+    sm.registerUtility(SessionFactory(bind=engine), 
+                       provided=interfaces.ISessionFactory)
 
     setupSupportedTypes()
 
 @adapter(interfaces.IDatastore, IObjectRemovedEvent)
-def handleDatastoreRemoved(engine, event):
+def handleDatastoreRemoved(datastore, event):
     """
     Triggered when a new DataStore instance is removed from a container
     """
-    engine._unsetup()
-    sm = getSiteManager(engine)
+    sm = getSiteManager(datastore)
     sm.registerUtlity(None, provided=interfaces.ISessionFactory)
 
