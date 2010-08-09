@@ -45,7 +45,7 @@ class IManager(IBase):
     """
     Base class for all managers
     """
-    
+
     def keys():
         """
         Returns a listing of the object keys being managed by this manager.
@@ -61,12 +61,13 @@ class IManager(IBase):
         value.
         """
 
-    def put(target):
+    def purge(key):
         """
-        Adds or modifies the target into the manager
+        Completely removes the target and all data associated with it from the
+        data store.
         """
 
-    def retire(target):
+    def retire(key):
         """
         Expire's the contained target. This means that it's information remains,
         only it's not visible anymore. The reason this functionality is useful
@@ -74,54 +75,9 @@ class IManager(IBase):
         side-effects.
         """
 
-    def purge(target):
+    def put(target):
         """
-        Completely removes the target and all data associated with it from the
-        data store.
-        """
-
-class IDatastore(IManager, IContained):
-    """
-    Represents a datastore instance that can be added to a site.
-    """
-    
-    dsn = schema.TextLine(
-        title=_(u"Something cool about dsns"),
-        description=_("Something descripting about dsns")
-        )
-
-#    pii_dsn = schema.TextLine(
-#        title=_(u"Personally Identifiable Information Data Source Name"),
-#        description=_(u"The Data Source Name (DSN) for database that will "
-#                      u"contain information regarded as Personally "
-#                      u"Identifiable Information (PII). "
-#                      u"This is a feature that is required for clinical "
-#                      u"studies. If none is specified, the FIA DSN will be "
-#                      u"used. Note that it is up to the vendor using this "
-#                      u"library to take proper measures in making sure that "
-#                      u"the data source is secure. "
-#                      u"If unspecified, the FIA DSB will be used."),
-#        required=False
-#        )
-#
-#    fia_dsn = schema.TextLine(
-#        title=_(u"Freedom of Information Act Data Source Name"),
-#        description=_(u"The Data Source Name (DSN) for the database that will "
-#                      u"contain information that can be disclosed to trusted "
-#                      u"parties.")
-#        )
-
-class ISessionFactory(IBase):
-    """
-    Used for implementing our own SQLAlchemy session. The reason for using our
-    own Interface instead of a third party's such as z3c.saconfig is because
-    we need more control over our sesession (e.g. need multiple engines
-    per Session as opposed to the single engine allowed by z3c.saconfig"
-    """
-
-    def __call__():
-        """
-        Returns the generated SQLAlchemy Session
+        Adds or modifies the target into the manager
         """
 
 class IStorageManager(IManager):
@@ -164,7 +120,35 @@ class IMutableSchema(IBase):
     This is used when the schemata are going to be modified.
     """
 
-class IVesionable(IBase):
+class IDatastore(IManager, IContained):
+    """
+    Represents a datastore instance that can be added to a site.
+    """
+
+    title = schema.TextLine(
+        title=_(u"The name of the data store"),
+        description=_(u""),
+        unique=True)
+
+    dsn = schema.TextLine(
+        title=_(u"Something cool about dsns"),
+        description=_("Something descripting about dsns")
+        )
+
+class ISessionFactory(IBase):
+    """
+    Used for implementing our own SQLAlchemy session. The reason for using our
+    own Interface instead of a third party's such as z3c.saconfig is because
+    we need more control over our sesession (e.g. need multiple engines
+    per Session as opposed to the single engine allowed by z3c.saconfig"
+    """
+
+    def __call__():
+        """
+        Returns the generated SQLAlchemy Session
+        """
+
+class IVersionable(IBase):
     """
     """
 
@@ -175,10 +159,14 @@ class IInstance(IBase):
     """
     """
 
-class IKeyedItem(IBase):
+    __schema__ = Attribute(_(u"The specific schema this is an instance of "
+                             u"including the medata/version/etc"
+                             ))
+
+class IKey(IBase):
     """
     """
-        
+
     __key__ = Attribute(_(u"A way to distinguish this item in the data store"))
 
 class IFormable(IBase):
@@ -186,11 +174,11 @@ class IFormable(IBase):
     Represents a schema that contains detailed information for display in a
     form.
     """
-    
+
     __title__ = Attribute(_(u"A way to represent the name of in the form"))
-    
+
     __description__ = Attribute(_(u"A way to represent the description."))
-    
+
     __dependants__ = Attribute(_(u"Dependant schemata"))
 
 # -----------------------------------------------------------------------------
@@ -322,4 +310,3 @@ class IQuery(IBase):
             ),
         required=False,
         )
-    

@@ -53,23 +53,29 @@ class Datastore(object):
     @property
     def protocols(self):
         return protocol.ProtocolManager()
-    
+
     def has(self, key):
         """
+        This will check the data store if a particular instance exists.
         """
-    
+
     def get(self, key):
         """
+        This will retrieve a single an object from the data store based on
+        it's key.
         """
-        
+
     def keys(self):
         """
+        Key's should be known... or can they?
         """
         raise NotImplementedError("This method is not implemented")
 
     def put(self, target):
         """
-        Store the object into the database based on it's interface
+        Store the object into the database based on it's interface. The
+        provided interface in the objects needs to have some sort of versioning
+        metadata
         TODO: Needs choices and lists/tuples/sets
         """
         provides = list(target.__provides__)
@@ -81,15 +87,22 @@ class Datastore(object):
         if len(provides) < 1:
             raise Exception("Object does not provide an interface.")
 
+        if not interfaces.IVersionable.providedBy(target):
+            raise Exception("Can't enter un-versionable thing into data store")
+
+        if not interfaces.IFormable.providedBy(target):
+            raise Exception("This isn't going to work with he data store")
+
         provided = provides.pop()
+
+        # I'm a little confused here
+
         schema_obj = interfaces.ISchema(provided)
 
-        #
-        # TODO: VERSIONING>!!>!>!
-        #
         schema_rslt = Session.query(model.Schema)\
+                      .filter_by(create_date=schema_obj.__version__)\
                       .join(model.Specification)\
-                      .filter_by(title=schema_obj.title)\
+                      .filter_by(module=schema_obj.__class__.__name__)\
                       .first()
 
         instance_rslt = model.Instance()
@@ -131,6 +144,14 @@ class Datastore(object):
             Session.add(value_rslt)
 
         Session.commit()
+
+    def purge(self, key):
+        """
+        """
+
+    def retire(self, key):
+        """
+        """
 
 DatastoreFactory = Factory(
     Datastore,
@@ -205,12 +226,14 @@ def handleDatastoreAdded(datastore, event):
     when it is added to a site.
     This method will setup all metadata needed for the engine to fully
     offer it's services.
-    """    
+    """
     engine = sa.create_engine(datastore.dsn, echo=True)
+
+    model.setup(engine)
 
     # Set autocommit true so that components create their own sessions.
     sm = getSiteManager(datastore)
-    sm.registerUtility(SessionFactory(bind=engine), 
+    sm.registerUtility(SessionFactory(bind=engine),
                        provided=interfaces.ISessionFactory)
 
     setupSupportedTypes()
