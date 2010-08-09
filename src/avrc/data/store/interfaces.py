@@ -128,7 +128,7 @@ class IDatastore(IManager, IContained):
     title = schema.TextLine(
         title=_(u"The name of the data store"),
         description=_(u""),
-        unique=True)
+        )
 
     dsn = schema.TextLine(
         title=_(u"Something cool about dsns"),
