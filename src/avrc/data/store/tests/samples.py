@@ -58,7 +58,7 @@ class IAnnotatedInterface(Interface):
         )
     
     form.omitted('integer')
-    integer = zope.schema.Int(
+    ommitme = zope.schema.Int(
         title=u"OMITME",
         description=u"PLEASE"
         )

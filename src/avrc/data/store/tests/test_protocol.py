@@ -22,22 +22,12 @@ class TestCase(ptc.PloneTestCase):
         def setUp(cls):
             fiveconfigure.debug_mode = True
             zcml.load_config('configure.zcml', avrc.data.store)
-            fiveconfigure.debug_mode = False            
+            fiveconfigure.debug_mode = False
 
         @classmethod
         def tearDown(cls):
             pass
-        
-    def setUp(self):
-        print
-        print "ZAH?"
-        print
-        
-    def tearDown(self):
-        print
-        print "ZAH..."
-        print
-    
+
     def test_implementation(self):
         """
         Tests if the data store implementation has fully objected the interface
@@ -45,20 +35,20 @@ class TestCase(ptc.PloneTestCase):
         """
         interface = interfaces.IProtocolManager
         cls = protocol.DataStoreDomain
-        
+
         self.assertTrue(interface.implementedBy(cls), "Not implemented")
         self.assertTrue(verify.verifyClass(interface, cls))
-    
+
     def test_adapter(self):
         """
         Maker sure we can extract a domain manager out of the engine
         """
-    
+
     def test_add(self):
         """
         """
         self.fail("TODO")
-        
+
     def test_remove(self):
         self.fail("TODO")
 

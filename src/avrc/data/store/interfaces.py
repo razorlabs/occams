@@ -148,13 +148,6 @@ class ISessionFactory(IBase):
         Returns the generated SQLAlchemy Session
         """
 
-class IVersionable(IBase):
-    """
-    """
-
-    __version__ = Attribute(_(u"This will be used to keep track of the "
-                              u"data store schema as they evolve"))
-
 class IInstance(IBase):
     """
     """
@@ -169,6 +162,13 @@ class IKey(IBase):
 
     __key__ = Attribute(_(u"A way to distinguish this item in the data store"))
 
+class IVersionable(IBase):
+    """
+    """
+
+    __version__ = Attribute(_(u"This will be used to keep track of the "
+                              u"data store schema as they evolve"))
+
 class IFormable(IBase):
     """
     Represents a schema that contains detailed information for display in a
@@ -180,6 +180,11 @@ class IFormable(IBase):
     __description__ = Attribute(_(u"A way to represent the description."))
 
     __dependants__ = Attribute(_(u"Dependant schemata"))
+
+class ISchema(IVersionable, IFormable):
+    """
+    Huzzah
+    """
 
 # -----------------------------------------------------------------------------
 # REFERENCES

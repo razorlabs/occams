@@ -6,7 +6,7 @@
   <includeDependencies package="." />
 
   <!-- Handle when a Site adds an engine -->
-  <subscriber handler=".datastore.handleDatastoreAdded" />
+  <subscriber handler=".datastore.handleDatastoreCreated" />
   <subscriber handler=".datastore.handleDatastoreRemoved" />
 
   <!-- Vocabularies -->

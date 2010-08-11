@@ -23,7 +23,7 @@ from avrc.data.store import model
 import samples
 
 DSN = "sqlite:///:memory:"
-ECHO = True
+ECHO = False
 
 class TestCase(ptc.PloneTestCase):
     class layer(PloneSite):

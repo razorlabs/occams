@@ -3,7 +3,9 @@ This module is in charge of handling the
 the datastore instances through the use of Object events to keep track of
 multiple instances across sites.
 """
-from datetime import datetime
+import logging
+from datetime import datetime, date, time
+from collections import deque as queue
 
 import zope.schema
 from zope.component import createObject
@@ -14,7 +16,7 @@ from zope.component.factory import Factory
 from zope.interface import implements
 from zope.interface import providedBy
 from zope.i18nmessageid import MessageFactory
-from zope.lifecycleevent import IObjectAddedEvent
+from zope.lifecycleevent import IObjectCreatedEvent
 from zope.lifecycleevent import IObjectRemovedEvent
 
 import sqlalchemy as sa
@@ -22,10 +24,9 @@ from sqlalchemy import orm
 
 from avrc.data.store import model
 from avrc.data.store import interfaces
-from avrc.data.store import schema
-from avrc.data.store import protocol
 
 _ = MessageFactory(__name__)
+log = logging.getLogger(__name__)
 
 _ECHO_ENABLED = True
 
@@ -34,8 +35,7 @@ class Datastore(object):
     """
     implements(interfaces.IDatastore)
 
-    __name__ = None
-    __parent__ = None
+    __name__ = __parent__ = None
 
     title = None
     dsn = None
@@ -48,11 +48,11 @@ class Datastore(object):
 
     @property
     def schemata(self):
-        return schema.SchemaManager()
+        return interfaces.ISchemaManager(self)
 
     @property
     def protocols(self):
-        return protocol.ProtocolManager()
+        return interfaces.IProtocolManager(self)
 
     def has(self, key):
         """
@@ -65,6 +65,7 @@ class Datastore(object):
         it's key.
         """
 
+
     def keys(self):
         """
         Key's should be known... or can they?
@@ -76,81 +77,85 @@ class Datastore(object):
         Store the object into the database based on it's interface. The
         provided interface in the objects needs to have some sort of versioning
         metadata
-        TODO: Needs choices and lists/tuples/sets
         """
-        provides = list(target.__provides__)
+        types = getUtility(zope.schema.interfaces.IVocabularyFactory,
+                           name="avrc.data.store.SupportedTypes"
+                           )()
         Session = getUtility(interfaces.ISessionFactory)()
 
-        if len(provides) > 1:
-            raise Exception("Only one interface at a time supported.")
+        # (parent object, corresponding parent db entry, value)
+        to_visit = [(None, None, target)]
 
-        if len(provides) < 1:
-            raise Exception("Object does not provide an interface.")
+        primitive_types = (int, str, float, bool, date, time, datetime,)
 
-        if not interfaces.IVersionable.providedBy(target):
-            raise Exception("Can't enter un-versionable thing into data store")
+        # Do a breadth-first pre-order traversal insertion
+        while len(to_visit) > 0:
+            (parent_obj, instance_rslt, value) = to_visit.popleft()
 
-        if not interfaces.IFormable.providedBy(target):
-            raise Exception("This isn't going to work with he data store")
+            # An object, add it's properties to the traversal queue
+            if not isinstance(value, primitive_types):
+                if not interfaces.ISchema.providedBy(value):
+                    raise Exception("This object is not going to work out")
 
-        provided = provides.pop()
+                try:
+                    (schema_obj,) = list(value.__provides__)
+                except ValueError as e:
+                    raise Exception("Object has multiple inheritance: %s" % e)
 
-        # I'm a little confused here
+                schema_rslt = Session.query(model.Schema)\
+                              .filter_by(create_date=target.__version__)\
+                              .join(model.Specification)\
+                              .filter_by(module=schema_obj.__class__.__name__)\
+                              .first()
 
-        schema_obj = interfaces.ISchema(provided)
+                instance_rslt = model.Instance(schema=schema_rslt)
 
-        schema_rslt = Session.query(model.Schema)\
-                      .filter_by(create_date=schema_obj.__version__)\
-                      .join(model.Specification)\
-                      .filter_by(module=schema_obj.__class__.__name__)\
-                      .first()
+                for name, field_obj in zope.schema.getFieldsInOrder(schema_obj):
+                    child = getattr(value, name)
+                    to_visit.append((value, instance_rslt, child,))
 
-        instance_rslt = model.Instance()
-        instance_rslt.schema = schema_rslt
-
-        Session.add(instance_rslt)
-
-        for name in zope.schema.getFieldNamesInOrder(provided):
-            name = unicode(name)
-            attribute_rslt = Session.query(model.Attribute)\
-                             .filter_by(name=name)\
-                             .join(model.Schema)\
-                             .filter_by(id=schema_rslt.id)\
-                             .first()
-
-            value_rslt = None
-            value_raw = getattr(target, name)
-
-            if attribute_rslt.type.title in (u"binary",):
-                # TODO: unclear how binary values are going to come in
-                value_rslt = model.Binary(value=value_raw)
-            elif attribute_rslt.type.title in (u"date", u"time", u"datetime"):
-                value_rslt = model.Datetime(value=value_raw)
-            elif attribute_rslt.type.title in (u"integer",):
-                value_rslt = model.Integer(value=value_raw)
-            elif attribute_rslt.type.title in (u"object",):
-                value_rslt = model.Object()
-                value_rslt.instance = self.put(None, value_raw)
-            elif attribute_rslt.type.title in (u"real",):
-                value_rslt = model.Real(value=value_raw)
-            elif attribute_rslt.type.title in (u"text", u"string"):
-                value_rslt = model.String(value=value_raw)
             else:
-                raise Exception("Type %s unsupported."  % repr(provided[name]))
 
-            value_rslt.attribute = attribute_rslt
-            value_rslt.instance = instance_rslt
+                attribute_rslt = Session.query(model.Attribute)\
+                                 .filter_by(name=unicode(name))\
+                                 .join(instance_rslt.schema)\
+                                 .first()
 
-            Session.add(value_rslt)
+                type_name = attribute_rslt.type.title
+
+                if type_name in (u"binary",):
+                    Field = model.Binary
+                elif type_name in (u"date", u"time", u"datetime"):
+                    Field = model.Datetime
+                elif type_name in (u"integer",):
+                    Field = model.Integer
+                elif type_name in (u"object",):
+                    Field = model.Object
+                elif type_name in (u"real",):
+                    Field = model.Real
+                elif type_name in (u"text", u"string"):
+                    Field = model.String
+                else:
+                    raise Exception("Type %s unsupported."  % type_name)
+
+                value_rslt = Field(
+                    instance=instance_rslt,
+                    attribute=attribute_rslt,
+                    value=value
+                    )
+
+                Session.add(value_rslt)
 
         Session.commit()
 
     def purge(self, key):
         """
+        By fire, be
         """
 
     def retire(self, key):
         """
+        Keeping you around
         """
 
 DatastoreFactory = Factory(
@@ -219,8 +224,8 @@ def setupSupportedTypes():
     Session.add_all(rslt)
     Session.commit()
 
-@adapter(interfaces.IDatastore, IObjectAddedEvent)
-def handleDatastoreAdded(datastore, event):
+@adapter(interfaces.IDatastore, IObjectCreatedEvent)
+def handleDatastoreCreated(datastore, event):
     """
     Triggered when a new DataStore instance is added to a container (i.e.
     when it is added to a site.

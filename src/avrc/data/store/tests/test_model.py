@@ -4,7 +4,6 @@ import sqlalchemy as sa
 from sqlalchemy import orm
 
 from avrc.data.store import model
-import etc
 
 # For the sake of testings, let's control when objects are flushed to the db
 Session = orm.scoped_session(orm.sessionmaker(
@@ -15,7 +14,8 @@ Session = orm.scoped_session(orm.sessionmaker(
     ))
 
 dsn = "sqlite:///:memory:"
-Session.configure(bind=sa.create_engine(dsn, echo=etc.SA_ECHO))
+echo = False
+Session.configure(bind=sa.create_engine(dsn, echo=echo))
 
 model.setup(Session.bind)
 

@@ -4,8 +4,10 @@ Responsible for schemata, attributes, and vocabularies
 Additionally, we support plone.directives.form
 """
 
+from zope.component import adapter
 from zope.component import adapts
 from zope.component import getUtility
+import zope.interface
 from zope.interface import implements
 from zope.interface.interface import InterfaceClass
 from zope.interface import Interface
@@ -78,6 +80,13 @@ def SupportedDirectivesVocabularyFactory(context=None):
 alsoProvides(SupportedDirectivesVocabularyFactory,
              zope.schema.interfaces.IVocabularyFactory)
 
+@adapter(interfaces.IMutableSchema)
+#@provides(zope.interface.interfaces.IInterface)
+def MutableSchemaInterface(ms):
+    """
+    Possibly somehow convert a mutable schema to zope interface
+    """
+
 class VocabularyManager(object):
     """
     """
@@ -104,26 +113,20 @@ class VocabularySchema(object):
         """
         """
 
-
-def _organize_driectives(directives):
-    """
-    Helper method to organize directives into:
-    name: (key, value)
-    """
-#    result = {}
-#
-#    for key, value in directives.items():
-#
-#
-
 class SchemaManager(object):
     """
     """
+    adapts(interfaces.IDatastore)
+    implements(interfaces.ISchemaManager)
+
+    def __init__(self, datastore):
+        self._datastore = datastore
+
     def get(self, key):
         """
         """
         title = unicode(key)
-        
+
         version = version is not None and int(version) or None
         Session = getUtility(interfaces.ISessionFactory)()
 
@@ -136,8 +139,28 @@ class SchemaManager(object):
             schema_q = schema_q.filter_by(create_date=converted)
 
         schema_rslt = schema_q.first()
-        
+
         return Schema(schema_rslt)
+
+    def has(self, key):
+        """
+        """
+
+    def keys(self):
+        """
+        """
+
+    def put(self, target):
+        """
+        """
+
+    def purge(self, key):
+        """
+        """
+
+    def retire(self, key):
+        """
+        """
 
 class MutableSchema(object):
     """

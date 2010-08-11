@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 import os
 
 setup(
-    name='avrc.data.store',
+    name="avrc.data.store",
     version="0.1",
     description="Provides storage solution for sparse clinical study data",
     long_description=open("README.txt").read() + "\n" +
@@ -18,18 +18,18 @@ setup(
       "Topic :: Scientific/Engineering :: Medical Science Apps.",
       "Topic :: Utilities",
       ],
-    keywords='',
-    author='Viral Evolution Group',
-    author_email='monkeybusiness@ucsd.edu',
-    url='http://datam0nk3y.org/P01svn/plone4_eggs/avrc.data.store',
-    license='GPL',
-    packages=find_packages('src', exclude=['ez_setup']),
-    package_dir = {'':'src'},
-    namespace_packages=['avrc', 'avrc.data'],
+    keywords="",
+    author="Viral Evolution Group",
+    author_email="monkeybusiness@ucsd.edu",
+    url="http://datam0nk3y.org/P01svn/plone4_eggs/avrc.data.store",
+    license="GPL",
+    packages=find_packages("src", exclude=["ez_setup"]),
+    package_dir = {"":"src"},
+    namespace_packages=["avrc", "avrc.data"],
     include_package_data=True,
     zip_safe=False,
     install_requires=[
-        'setuptools',
+        "setuptools",
         # --- Database
         "pysqlite",
         "SQLAlchemy>=0.5.8,<0.5.99",
