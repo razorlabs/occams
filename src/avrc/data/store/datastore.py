@@ -9,13 +9,19 @@ from collections import deque as queue
 
 import zope.schema
 from zope.component import createObject
+from zope.component import provideUtility
 from zope.component import getUtility
+from zope.component import queryUtility
 from zope.component import adapter
 from zope.component import getSiteManager
+from zope.component.interfaces import IFactory
 from zope.component.factory import Factory
 from zope.interface import implements
 from zope.interface import providedBy
+from zope.interface import implementedBy
 from zope.i18nmessageid import MessageFactory
+from zope.event import notify
+from zope.lifecycleevent import ObjectCreatedEvent
 from zope.lifecycleevent import IObjectCreatedEvent
 from zope.lifecycleevent import IObjectRemovedEvent
 
@@ -30,139 +36,16 @@ log = logging.getLogger(__name__)
 
 _ECHO_ENABLED = True
 
-class Datastore(object):
+def session_name_format(datastore):
+    return "%s:session" % str(datastore)
+
+def named_session(datastore):
     """
     """
-    implements(interfaces.IDatastore)
+    Session = queryUtility(interfaces.ISessionFactory,
+                           name=session_name_format(datastore))
 
-    __name__ = __parent__ = None
-
-    title = None
-    dsn = None
-
-    def __init__(self, title, dsn):
-        """
-        """
-        self.title = title
-        self.dsn = dsn
-
-    @property
-    def schemata(self):
-        return interfaces.ISchemaManager(self)
-
-    @property
-    def protocols(self):
-        return interfaces.IProtocolManager(self)
-
-    def has(self, key):
-        """
-        This will check the data store if a particular instance exists.
-        """
-
-    def get(self, key):
-        """
-        This will retrieve a single an object from the data store based on
-        it's key.
-        """
-
-
-    def keys(self):
-        """
-        Key's should be known... or can they?
-        """
-        raise NotImplementedError("This method is not implemented")
-
-    def put(self, target):
-        """
-        Store the object into the database based on it's interface. The
-        provided interface in the objects needs to have some sort of versioning
-        metadata
-        """
-        types = getUtility(zope.schema.interfaces.IVocabularyFactory,
-                           name="avrc.data.store.SupportedTypes"
-                           )()
-        Session = getUtility(interfaces.ISessionFactory)()
-
-        # (parent object, corresponding parent db entry, value)
-        to_visit = [(None, None, target)]
-
-        primitive_types = (int, str, float, bool, date, time, datetime,)
-
-        # Do a breadth-first pre-order traversal insertion
-        while len(to_visit) > 0:
-            (parent_obj, instance_rslt, value) = to_visit.popleft()
-
-            # An object, add it's properties to the traversal queue
-            if not isinstance(value, primitive_types):
-                if not interfaces.ISchema.providedBy(value):
-                    raise Exception("This object is not going to work out")
-
-                try:
-                    (schema_obj,) = list(value.__provides__)
-                except ValueError as e:
-                    raise Exception("Object has multiple inheritance: %s" % e)
-
-                schema_rslt = Session.query(model.Schema)\
-                              .filter_by(create_date=target.__version__)\
-                              .join(model.Specification)\
-                              .filter_by(module=schema_obj.__class__.__name__)\
-                              .first()
-
-                instance_rslt = model.Instance(schema=schema_rslt)
-
-                for name, field_obj in zope.schema.getFieldsInOrder(schema_obj):
-                    child = getattr(value, name)
-                    to_visit.append((value, instance_rslt, child,))
-
-            else:
-
-                attribute_rslt = Session.query(model.Attribute)\
-                                 .filter_by(name=unicode(name))\
-                                 .join(instance_rslt.schema)\
-                                 .first()
-
-                type_name = attribute_rslt.type.title
-
-                if type_name in (u"binary",):
-                    Field = model.Binary
-                elif type_name in (u"date", u"time", u"datetime"):
-                    Field = model.Datetime
-                elif type_name in (u"integer",):
-                    Field = model.Integer
-                elif type_name in (u"object",):
-                    Field = model.Object
-                elif type_name in (u"real",):
-                    Field = model.Real
-                elif type_name in (u"text", u"string"):
-                    Field = model.String
-                else:
-                    raise Exception("Type %s unsupported."  % type_name)
-
-                value_rslt = Field(
-                    instance=instance_rslt,
-                    attribute=attribute_rslt,
-                    value=value
-                    )
-
-                Session.add(value_rslt)
-
-        Session.commit()
-
-    def purge(self, key):
-        """
-        By fire, be
-        """
-
-    def retire(self, key):
-        """
-        Keeping you around
-        """
-
-DatastoreFactory = Factory(
-    Datastore,
-    title=_(u"Data store factory"),
-    description=_(u"Does stuff")
-    )
+    return Session
 
 class SessionFactory(object):
     """
@@ -172,6 +55,8 @@ class SessionFactory(object):
     """
 
     implements(interfaces.ISessionFactory)
+
+    __name__ = __parent__ = None
 
     def __init__(self,
                  autocommit=False,
@@ -205,13 +90,14 @@ class SessionFactory(object):
 
         return Session
 
-def setupSupportedTypes():
+def setup_types(datastore):
     """
     This method should be used when setting up the supported types for a
     Datastore content type being added to a folder in the zope site.
     """
     rslt = []
-    Session = getUtility(interfaces.ISessionFactory)()
+    Session = named_session(datastore)
+    session = Session()
     types_factory = getUtility(zope.schema.interfaces.IVocabularyFactory,
                                name="avrc.data.store.SupportedTypes")
 
@@ -221,8 +107,8 @@ def setupSupportedTypes():
             description=unicode(getattr(t.value, "__doc__", None)),
             ))
 
-    Session.add_all(rslt)
-    Session.commit()
+    session.add_all(rslt)
+    session.commit()
 
 @adapter(interfaces.IDatastore, IObjectCreatedEvent)
 def handleDatastoreCreated(datastore, event):
@@ -232,16 +118,21 @@ def handleDatastoreCreated(datastore, event):
     This method will setup all metadata needed for the engine to fully
     offer it's services.
     """
-    engine = sa.create_engine(datastore.dsn, echo=True)
+    Session = SessionFactory(bind=sa.create_engine(datastore.dsn, echo=True))
 
-    model.setup(engine)
+    provideUtility(Session,
+                   provides=interfaces.ISessionFactory,
+                   name=session_name_format(datastore))
 
-    # Set autocommit true so that components create their own sessions.
-    sm = getSiteManager(datastore)
-    sm.registerUtility(SessionFactory(bind=engine),
-                       provided=interfaces.ISessionFactory)
+    session = Session()
+    model.setup(session.bind)
+    setup_types(datastore)
 
-    setupSupportedTypes()
+    #
+    # TODO: local site utility functionality
+    #
+#    # Set autocommit true so that components create their own sessions.
+#    sm = getSiteManager(datastore)
 
 @adapter(interfaces.IDatastore, IObjectRemovedEvent)
 def handleDatastoreRemoved(datastore, event):
@@ -251,3 +142,146 @@ def handleDatastoreRemoved(datastore, event):
     sm = getSiteManager(datastore)
     sm.registerUtlity(None, provided=interfaces.ISessionFactory)
 
+class Datastore(object):
+    """
+    """
+    implements(interfaces.IDatastore)
+
+    __name__ = __parent__ = None
+
+    title = None
+    dsn = None
+
+    def __init__(self, title, dsn):
+        """
+        """
+        self.title = title
+        self.dsn = dsn
+
+        notify(ObjectCreatedEvent(self))
+
+    @property
+    def schemata(self):
+        return interfaces.ISchemaManager(self)
+
+    @property
+    def protocols(self):
+        return interfaces.IProtocolManager(self)
+
+    def has(self, key):
+        """
+        This will check the data store if a particular instance exists.
+        """
+
+    def get(self, key):
+        """
+        This will retrieve a single an object from the data store based on
+        it's key.
+        """
+
+    def keys(self):
+        """
+        Key's should be known... or can they?
+        """
+        raise NotImplementedError("This method is not implemented")
+
+    def put(self, target):
+        """
+        Store the object into the database based on it's interface. The
+        provided interface in the objects needs to have some sort of versioning
+        metadata
+        """
+        types = getUtility(zope.schema.interfaces.IVocabularyFactory,
+                           name="avrc.data.store.SupportedTypes"
+                           )()
+        Session = named_session(self)
+        session = Session()
+
+        # (parent object, corresponding parent db entry, value)
+        to_visit = queue([(None, None, target)])
+
+        primitive_types = (int, str, float, bool, date, time, datetime,)
+
+        # Do a breadth-first pre-order traversal insertion
+        while len(to_visit) > 0:
+            (parent_obj, instance_rslt, value) = to_visit.popleft()
+
+            # An object, add it's properties to the traversal queue
+            if not isinstance(value, primitive_types):
+#                if not interfaces.ISchema.providedBy(value):
+#                    raise Exception("This object is not going to work out")
+
+                print
+                print
+                print value
+                print
+                print
+
+                try:
+                    (schema_obj,) = list(providedBy(value))
+                except ValueError as e:
+                    raise Exception("Object has multiple inheritance: %s" % e)
+
+                schema_rslt = session.query(model.Schema)\
+                              .filter_by(create_date=schema_obj.__version__)\
+                              .join(model.Specification)\
+                              .filter_by(module=schema_obj.__name__)\
+                              .first()
+
+                instance_rslt = model.Instance(schema=schema_rslt)
+
+                for name, field_obj in zope.schema.getFieldsInOrder(schema_obj):
+                    child = getattr(value, name)
+                    to_visit.append((value, instance_rslt, child,))
+
+            else:
+
+                attribute_rslt = session.query(model.Attribute)\
+                                 .filter_by(name=unicode(name))\
+                                 .join(instance_rslt.schema)\
+                                 .first()
+
+                type_name = attribute_rslt.type.title
+
+                if type_name in (u"binary",):
+                    Field = model.Binary
+                elif type_name in (u"date", u"time", u"datetime"):
+                    Field = model.Datetime
+                elif type_name in (u"integer",):
+                    Field = model.Integer
+                elif type_name in (u"object",):
+                    Field = model.Object
+                elif type_name in (u"real",):
+                    Field = model.Real
+                elif type_name in (u"text", u"string"):
+                    Field = model.String
+                else:
+                    raise Exception("Type %s unsupported."  % type_name)
+
+                value_rslt = Field(
+                    instance=instance_rslt,
+                    attribute=attribute_rslt,
+                    value=value
+                    )
+
+                session.add(value_rslt)
+
+        session.commit()
+
+    def purge(self, key):
+        """
+        By fire, be
+        """
+
+    def retire(self, key):
+        """
+        Keeping you around
+        """
+
+    def __str__(self):
+        return "<Datastore '%s'>" % self.title
+
+DatastoreFactory = Factory(
+    Datastore,
+    title = _(u"Data store factory")
+    )

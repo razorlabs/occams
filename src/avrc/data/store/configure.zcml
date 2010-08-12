@@ -9,20 +9,21 @@
   <subscriber handler=".datastore.handleDatastoreCreated" />
   <subscriber handler=".datastore.handleDatastoreRemoved" />
 
+  <utility
+      name="avrc.data.store.Datastore"
+      component=".datastore.DatastoreFactory"
+      />
+
+  <utility name="avrc.data.store.Domain" component=".protocol.DomainFactory" />
+
   <!-- Vocabularies -->
   <utility
       name="avrc.data.store.SupportedTypes"
       component=".schema.SupportedTypesVocabularyFactory"
       />
 
-  <utility
-      name="avrc.data.store.Datastore"
-      component=".datastore.DatastoreFactory"
-      />
-
   <!-- Domains -->
-
-  <utility name="avrc.data.store.Domain" component=".protocol.DomainFactory" />
+  <adapter factory=".schema.DatastoreSchemaManager" />
 
   <!-- Data -->
   <!-- Nothing written yet -->

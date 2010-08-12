@@ -22,6 +22,9 @@ import avrc.data.store
 from avrc.data.store import interfaces
 from avrc.data.store import datastore
 from avrc.data.store import model
+from avrc.data.store.datastore import named_session
+
+from avrc.data.store.tests import samples
 
 class TestCase(ptc.PloneTestCase):
     class layer(PloneSite):
@@ -64,36 +67,49 @@ class TestCase(ptc.PloneTestCase):
 
         self.assertNotEqual(sm1, sm2, u"Site managers must be different.")
 
-        sm1[u"ds"] = datastore.Datastore(title=u"ds", dsn=u"sqlite:///:memory:")
-        sm2[u"ds"] = datastore.Datastore(title=u"ds", dsn=u"sqlite:///:memory:")
-
-        self.assertTrue(u"ds" in sm1, u"No datastore found.")
-        self.assertTrue(u"ds" in sm2, u"No datastore found.")
+        sm1.registerUtility(component=datastore.Datastore(
+                                  title=u"ds1",
+                                  dsn=u"sqlite:///:memory:"),
+                            provided=interfaces.IDatastore)
+        sm2.registerUtility(component=datastore.Datastore(
+                                  title=u"ds2",
+                                  dsn=u"sqlite:///:memory:"),
+                            provided=interfaces.IDatastore)
 
         setSite(site1)
-        SessionFactory = getUtility(interfaces.ISessionFactory)
-        Session = SessionFactory()
+        ds1 = getUtility(interfaces.IDatastore)
 
-        Session.add(model.Type(title=u"FOO"))
-        Session.commit()
+        setSite(site2)
+        ds2 = getUtility(interfaces.IDatastore)
 
-        p = Session.query(model.Type).filter_by(title=u"FOO").first()
+        self.assertNotEqual(ds1, ds2)
+
+        setSite(site1)
+        ds = getUtility(interfaces.IDatastore)
+        Session = named_session(ds)
+        session = Session()
+
+        session.add(model.Type(title=u"FOO"))
+        session.commit()
+
+        p = session.query(model.Type).filter_by(title=u"FOO").first()
         self.assertTrue(p is not None, "No person found in first database")
 
-        p = Session.query(model.Type).filter_by(first=u"BAR").first()
+        p = session.query(model.Type).filter_by(title=u"BAR").first()
         self.assertTrue(p is None, "Databases engines are mixed up.")
 
         setSite(site2)
-        SessionFactory = getUtility(interfaces.ISessionFactory)
-        Session = SessionFactory()
+        ds = getUtility(interfaces.IDatastore)
+        Session = named_session(ds)
+        session = Session()
 
-        Session.add(Session.add(model.Type(title=u"BAR")))
-        Session.commit()
+        session.add(model.Type(title=u"BAR"))
+        session.commit()
 
-        p = Session.query(model.Type).filter_by(title=u"FOO").first()
+        p = session.query(model.Type).filter_by(title=u"BAR").first()
         self.assertTrue(p is not None, "No person found in first database")
 
-        p = Session.query(model.Type).filter_by(title=u"BAR").first()
+        p = session.query(model.Type).filter_by(title=u"FOO").first()
         self.assertTrue(p is None, "Databases engines are mixed up.")
 
     def test_add_instance(self):
@@ -102,11 +118,28 @@ class TestCase(ptc.PloneTestCase):
         """
         ds = createObject("avrc.data.store.Datastore",
                           title=u"DSi",
-                          dsn=u"sqlite://:memory:")
+                          dsn=u"sqlite:///:memory:")
 
-        self.fail(u";asdfjka;lsdfkjas;lfjas;lfj")
+        Session = named_session(ds)
 
+        sm = ds.schemata
 
+        sm.import_(samples.IStandaloneInterface)
+        sm.import_(samples.ISimple)
+        sm.import_(samples.IAnnotatedInterface)
+
+        iface = sm.get(samples.IStandaloneInterface.__name__)
+
+        obj = sm.spawn(iface,
+            foo=u"Hello World!",
+            bar=u"Really\n\n\nlong",
+            baz=123
+            )
+
+        # This, this is what I've been working for
+        ds.put(obj)
+
+        self.fail("OMG")
 
 def test_suite():
     return unittest.defaultTestLoader.loadTestsFromName(__name__)

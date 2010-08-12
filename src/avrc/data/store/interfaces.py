@@ -29,13 +29,13 @@ class Error(Exception):
     """Base class for all errors in this package"""
 
 class DatatoreError(Error):
-    """Base class for datastore-related errors"""
+    """Base class for data store-related errors"""
 
 class SchemaError(Error):
-    """Base class for schama-related errors"""
+    """Base class for schema-related errors"""
 
 class UndefinedSchemaError(Error):
-    """Raised when trying to access a schema that is not in the datastore"""
+    """Raised when trying to access a schema that is not in the data store"""
 
 # -----------------------------------------------------------------------------
 # API CONTRACT INTERFACES
@@ -135,7 +135,7 @@ class IDatastore(IManager, IContained):
         description=_("Something descripting about dsns")
         )
 
-class ISessionFactory(IBase):
+class ISessionFactory(IBase, IContained):
     """
     Used for implementing our own SQLAlchemy session. The reason for using our
     own Interface instead of a third party's such as z3c.saconfig is because

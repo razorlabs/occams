@@ -226,6 +226,35 @@ class Integer(Entity):
 
 sa.Index("integer_attribute_value", Integer.attribute_id, Integer.value)
 
+class Range(Entity):
+    """
+    Built-in type to represent min/max values (only integers)
+    """
+    __tablename__ = "range"
+
+    instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
+                            nullable=False,
+                            primary_key=True)
+
+    instance = orm.relation("Instance", uselist=False)
+
+    attribute_id = sa.Column(sa.Integer, sa.ForeignKey("attribute.id"),
+                            nullable=False,
+                            primary_key=True)
+
+    attribute = orm.relation("Attribute", uselist=False)
+
+    value_min = sa.Column(sa.Integer, nullable=False)
+
+    value_max = sa.Column(sa.Integer, nullable=False)
+
+    def _get_value(self):
+        return self._some_attr
+    def _set_value(self, value):
+        (self.value_min, self.value_max) = value
+
+    value = orm.synonym('_value', descriptor=property(_get_value, _set_value))
+
 class Real(Entity):
     """
     """
@@ -322,7 +351,10 @@ class Specification(Entity):
                                        ]
                          )
 
-    # The unique module name for this spec. Doesn't necessarily have to
+    # The unique module name for this spec.
+    #
+    # TODO: graceful recovery for duplicate name schemata?
+    #
     module = sa.Column(sa.Unicode, nullable=False, unique=True)
 
     # Enforce  documentation so we know what the heck people are making...
