@@ -118,7 +118,7 @@ class TestCase(ptc.PloneTestCase):
         """
         ds = createObject("avrc.data.store.Datastore",
                           title=u"DSi",
-                          dsn=u"sqlite:///:memory:")
+                          dsn=u"sqlite:///test.db")
 
         Session = named_session(ds)
 

@@ -178,6 +178,8 @@ class Datastore(object):
         This will retrieve a single an object from the data store based on
         it's key.
         """
+        # I will now attempt to create anti-matter
+        
 
     def keys(self):
         """
@@ -198,24 +200,18 @@ class Datastore(object):
         session = Session()
 
         # (parent object, corresponding parent db entry, value)
-        to_visit = queue([(None, None, target)])
+        to_visit = queue([(None, None, None, target)])
 
-        primitive_types = (int, str, float, bool, date, time, datetime,)
+        primitive_types = (int, str, unicode, float, bool, date, time, datetime,)
 
         # Do a breadth-first pre-order traversal insertion
         while len(to_visit) > 0:
-            (parent_obj, instance_rslt, value) = to_visit.popleft()
+            (parent_obj, instance_rslt, attr_name, value) = to_visit.popleft()
 
             # An object, add it's properties to the traversal queue
             if not isinstance(value, primitive_types):
 #                if not interfaces.ISchema.providedBy(value):
 #                    raise Exception("This object is not going to work out")
-
-                print
-                print
-                print value
-                print
-                print
 
                 try:
                     (schema_obj,) = list(providedBy(value))
@@ -232,16 +228,17 @@ class Datastore(object):
 
                 for name, field_obj in zope.schema.getFieldsInOrder(schema_obj):
                     child = getattr(value, name)
-                    to_visit.append((value, instance_rslt, child,))
+                    to_visit.append((value, instance_rslt, name, child,))
 
             else:
 
                 attribute_rslt = session.query(model.Attribute)\
-                                 .filter_by(name=unicode(name))\
-                                 .join(instance_rslt.schema)\
+                                 .filter_by(name=unicode(attr_name))\
+                                 .join(model.Schema)\
+                                 .filter_by(id=instance_rslt.schema.id)\
                                  .first()
 
-                type_name = attribute_rslt.type.title
+                type_name = attribute_rslt.field.type.title
 
                 if type_name in (u"binary",):
                     Field = model.Binary
