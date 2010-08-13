@@ -258,8 +258,10 @@ class Datastore(object):
                     Field = model.Real
                 elif type_name in (u"text", u"string"):
                     Field = model.String
+                elif type_name in (u"selection"):
+                    Field = model.Selection
                 else:
-                    raise Exception("Type %s unsupported."  % type_name)
+                    raise Exception("Type '%s' unsupported."  % type_name)
 
                 value_rslt = Field(
                     instance=instance_rslt,

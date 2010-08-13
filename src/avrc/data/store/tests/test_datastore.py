@@ -120,8 +120,6 @@ class TestCase(ptc.PloneTestCase):
                           title=u"DSi",
                           dsn=u"sqlite:///test.db")
 
-        Session = named_session(ds)
-
         sm = ds.schemata
 
         sm.import_(samples.IStandaloneInterface)
@@ -148,11 +146,17 @@ class TestCase(ptc.PloneTestCase):
                           title=u"DSi",
                           dsn=u"sqlite:///test.db")
 
-        Session = named_session(ds)
-
         sm = ds.schemata
 
         sm.import_(samples.IChoicedInterface)
+
+        iface = sm.get(samples.IChoicedInterface.__name__)
+
+        obj = sm.spawn(iface, choice=u"foo")
+
+        ds.put(obj)
+
+        self.fail("OMG")
 
 def test_suite():
     return unittest.defaultTestLoader.loadTestsFromName(__name__)

@@ -15,6 +15,7 @@ from zope.interface import Interface
 from zope.interface import alsoProvides
 from zope.interface import directlyProvides
 import zope.schema
+from zope.schema.vocabulary import SimpleVocabulary
 from zope.schema.fieldproperty import FieldProperty
 from zope.i18nmessageid import MessageFactory
 
@@ -41,7 +42,7 @@ _ = MessageFactory(__name__)
 virtual = dynamic.create(".".join([__name__, "virtual"]))
 
 supported_types_vocabulary = \
-    zope.schema.vocabulary.SimpleVocabulary.fromItems([
+    SimpleVocabulary.fromItems([
         ("integer", zope.schema.Int),
         ("string", zope.schema.TextLine),
         ("text", zope.schema.Text),
@@ -58,7 +59,7 @@ supported_types_vocabulary = \
         ])
 
 supported_directives_vocabulary = \
-    zope.schema.vocabulary.SimpleVocabulary.fromValues([
+    SimpleVocabulary.fromValues([
         OMITTED_KEY,
         WIDGETS_KEY,
         MODES_KEY,
@@ -177,11 +178,25 @@ class DatastoreSchemaManager(object):
         for attribute_rslt in schema_rslt.attributes:
             token = str(attribute_rslt.field.type.title)
             field = supported_types_vocabulary.getTermByToken(token).value
-            attrs[attribute_rslt.name] = field(
+
+            kwargs = dict(
                 title=attribute_rslt.field.title,
                 description=attribute_rslt.field.description,
                 required=attribute_rslt.field.is_required
                 )
+
+            if zope.schema.interfaces.IChoice.implementedBy(field):
+                terms = []
+                for term_rslt in attribute_rslt.field.vocabulary.terms:
+                    terms.append(SimpleVocabulary.createTerm(
+                        term_rslt.value,
+                        str(term_rslt.token),
+                        term_rslt.title,
+                        ))
+
+                kwargs["vocabulary"] = SimpleVocabulary(terms=terms)
+
+            attrs[attribute_rslt.name] = field(**kwargs)
 
             name = str(attribute_rslt.name)
 
@@ -327,9 +342,25 @@ class DatastoreSchemaManager(object):
                     )
                 )
 
-            
+            if zope.schema.interfaces.IChoice.providedBy(field_obj):
+                vocabulary_obj = field_obj.vocabulary
+                # TODO: need a better name for this
+                vocabulary_rslt = model.Vocabulary(title="blablah")
 
-            if hasattr(field_obj, "schema"):
+                for i, term_obj in enumerate(vocabulary_obj, start=1):
+                    term_rslt = model.Term(
+                        title=term_obj is not None and unicode(term_obj.title) or None,
+                        token=unicode(term_obj.token),
+                        order=i
+                        )
+
+                    term_rslt.value = term_obj.value
+
+                    vocabulary_rslt.terms.append(term_rslt)
+
+                attrs[name].field.vocabulary = vocabulary_rslt
+
+            if zope.schema.interfaces.IObject.providedBy(field_obj):
                 # TODO link to versioned schema.
                 raise NotImplementedError("Don't supported nested objects yet")
 

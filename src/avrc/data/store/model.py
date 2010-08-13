@@ -571,8 +571,15 @@ class Vocabulary(Entity):
 
     title = sa.Column(sa.Unicode, nullable=False, index=True)
 
+    terms = orm.relation("Term", secondary=vocabulary_term_table)
+
+def get(value, default=None):
+    return value is not None and value or default
+
 class Term(Entity):
     """
+    The way this is implemented could possibly override the whole cocept of
+    EAV itself, but we'll see after some testing...
     """
     __tablename__ = "term"
 
@@ -582,6 +589,39 @@ class Term(Entity):
 
     token = sa.Column(sa.Unicode, nullable=False, index=True)
 
-    value = sa.Column(sa.Unicode, nullable=False, index=True)
+    # OMG this again...
+    value_str = sa.Column(sa.Unicode)
+
+    value_int = sa.Column(sa.Integer)
+
+    value_real = sa.Column(sa.Float)
+
+#    value_object = sa.Column(sa.Integer)
+
+    value_range_low = sa.Column(sa.Integer)
+
+    value_range_high = sa.Column(sa.Integer)
 
     order = sa.Column(sa.Integer, nullable=False, default=1)
+
+    @property
+    def value(self):
+        value = get(self.value_int) or \
+                get(self.value_real) or \
+                get(self.value_str)
+
+        if value is None:
+            raise Exception("TERM ITEM NOT FOUND")
+
+        return value
+
+    @value.setter
+    def value(self, value):
+        if isinstance(value, int):
+            self.value_int = value
+        elif isinstance(value, float):
+            self.value_real = value
+        elif isinstance(value, (str, unicode)):
+            self.value_str = unicode(value)
+        else:
+            raise Exception("Unable to determine type: %s"  % value)
