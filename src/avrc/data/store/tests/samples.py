@@ -12,18 +12,18 @@ class IStandaloneInterface(Interface):
     """
     This is very simple stanalone interface.
     """
-    
+
     foo = zope.schema.TextLine(
-        title=u"Foo", 
+        title=u"Foo",
         description=u"Something about foo.",
         required=True
         )
-    
+
     bar = zope.schema.Text(
         title=u"Bar",
         description=u"Something about bar."
         )
-    
+
     baz = zope.schema.Int(
         title=u"Baz",
         description=u"Something about baz."
@@ -38,7 +38,7 @@ class IComposedInterface(Interface):
         title=u"INTEGER",
         description=u"INTEGERDESC"
         )
-    
+
     object = zope.schema.Object(
         title=u"OBJECT",
         description=u"OBJECTDESC",
@@ -56,7 +56,7 @@ class IAnnotatedInterface(Interface):
         title=u"INTEGER",
         description=u"INTEGERDESC"
         )
-    
+
     form.omitted('integer')
     ommitme = zope.schema.Int(
         title=u"OMITME",
@@ -95,15 +95,13 @@ class IAnnotatedInterface(Interface):
         description=u"DATE"
         )
 
-class IContainsListInterface(Interface):
+class IChoicedInterface(Interface):
     """
     This simply tests that a vocabulary
     """
-    
-    list = zope.schema.List(
-        title=u"LIST",
-        description=u"LIST",
-        value_type=zope.schema.Choice(
+
+    choice = zope.schema.Choice(
             title=u"LISTCHOICE",
-            values=('foo', 'bar', 'go' 'away', 'plz',))
+            values=('foo', 'bar', 'go' 'away', 'plz',)
         )
+

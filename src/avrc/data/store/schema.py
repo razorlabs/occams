@@ -13,6 +13,7 @@ from zope.interface import implements
 from zope.interface.interface import InterfaceClass
 from zope.interface import Interface
 from zope.interface import alsoProvides
+from zope.interface import directlyProvides
 import zope.schema
 from zope.schema.fieldproperty import FieldProperty
 from zope.i18nmessageid import MessageFactory
@@ -51,6 +52,9 @@ supported_types_vocabulary = \
         ("datetime", zope.schema.Datetime),
         ("time", zope.schema.Time),
         ("object", zope.schema.Object),
+        ("selection", zope.schema.Choice),
+        #TODO
+#        ("range", zope.schema.Object),
         ])
 
 supported_directives_vocabulary = \
@@ -124,8 +128,8 @@ class VocabularySchema(object):
 
 class Instance(object):
     """
+    Empty object that will be used as the instance of a virtual schema.
     """
-    pass
 
 
 class DatastoreSchemaManager(object):
@@ -295,12 +299,18 @@ class DatastoreSchemaManager(object):
 
         # Now add/remove in all the changed fields
         for name, field_obj in schema.__attributes__.items():
-            if field_obj.__class__ not in supported_types_vocabulary:
-                continue
-                session.rollback()
-                raise Exception("Not supported: %s" % str(field_obj.__class__))
+            type_obj = field_obj
+            is_repeatable = False
 
-            term_obj = supported_types_vocabulary.getTerm(field_obj.__class__)
+            if isinstance(field_obj, zope.schema.List):
+                type_obj = field_obj.value_type
+                is_repeatable = True
+
+            if type_obj.__class__ not in supported_types_vocabulary:
+                session.rollback()
+                raise Exception("Not supported: %s" % str(type_obj.__class__))
+
+            term_obj = supported_types_vocabulary.getTerm(type_obj.__class__)
 
             type_rslt = session.query(model.Type)\
                         .filter_by(title=unicode(term_obj.token))\
@@ -313,15 +323,15 @@ class DatastoreSchemaManager(object):
                     title=unicode(field_obj.title),
                     description=unicode(field_obj.description),
                     type=type_rslt,
-                    is_required=field_obj.required,
+                    is_required=is_repeatable,
                     )
                 )
 
-            if hasattr(field_obj, "schema"):
-                # TODO link to versioned schema. said schema must extend
-                # IVersionedSchema?
-                pass
+            
 
+            if hasattr(field_obj, "schema"):
+                # TODO link to versioned schema.
+                raise NotImplementedError("Don't supported nested objects yet")
 
             schema_rslt.attributes.append(attrs[name])
 
@@ -422,7 +432,7 @@ class DatastoreSchemaManager(object):
             raise Exception("This will not be found")
 
         obj = Instance()
-        alsoProvides(obj, iface)
+        directlyProvides(obj, iface)
 
         for name in zope.schema.getFieldNamesInOrder(iface):
             setattr(obj, name, FieldProperty(iface[name]))

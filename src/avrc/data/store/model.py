@@ -255,6 +255,10 @@ class Range(Entity):
 
     value = orm.synonym('_value', descriptor=property(_get_value, _set_value))
 
+sa.Index("range_attribute_value_min", Range.attribute_id, Range.value_min)
+sa.Index("range_attribute_value_max", Range.attribute_id, Range.value_max)
+sa.Index("range_attribute_value", Range.value_min, Range.value_max)
+
 class Real(Entity):
     """
     """
@@ -275,6 +279,28 @@ class Real(Entity):
     value = sa.Column(sa.Float, nullable=False)
 
 sa.Index("real_attribute_value", Real.attribute_id, Real.value)
+
+class Selection(Entity):
+    """
+    This type is simply a reference into a vocabulary list
+    """
+    __tablename__ ="selection"
+
+    instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
+                            nullable=False,
+                            primary_key=True)
+
+    instance = orm.relation("Instance", uselist=False)
+
+    attribute_id = sa.Column(sa.Integer, sa.ForeignKey("attribute.id"),
+                            nullable=False,
+                            primary_key=True)
+
+    attribute = orm.relation("Attribute", uselist=False)
+
+    value = sa.Column(sa.Integer, sa.ForeignKey("term.id"), nullable=False)
+
+sa.Index("selection_attribute_value", Real.attribute_id, Real.value)
 
 class Object(Entity):
     """
@@ -472,9 +498,9 @@ class Field(Entity):
 
     schema = orm.relation("Schema", uselist=False)
 
-#    vocabulary_id = sa.Column(sa.Integer, sa.ForeignKey("vocabulary.id"))
-#
-#    vocabulary = orm.relation("Vocabulary")
+    vocabulary_id = sa.Column(sa.Integer, sa.ForeignKey("vocabulary.id"))
+
+    vocabulary = orm.relation("Vocabulary")
 
     # Should be added to the application's search form? Only if this applies...
     is_searchable = sa.Column(sa.Boolean, nullable=False, default=False)
@@ -483,7 +509,7 @@ class Field(Entity):
 
     is_inline_image = sa.Column(sa.Boolean)
 
-    is_repeatable = sa.Column(sa.Boolean)
+    is_repeatable = sa.Column(sa.Boolean, nullable=False, default=False)
 
     # Min/max depending on the type
     minimum = sa.Column(sa.Integer)
@@ -528,3 +554,34 @@ class Type(Entity):
     title = sa.Column(sa.Unicode, nullable=False, unique=True)
 
     description = sa.Column(sa.Text)
+
+vocabulary_term_table = sa.Table("vocabulary_term", Entity.metadata,
+    sa.Column("vocabulary_id", sa.Integer, sa.ForeignKey("vocabulary.id"),
+              nullable=False, primary_key=True),
+    sa.Column("term_id", sa.Integer, sa.ForeignKey("term.id"),
+              nullable=False, primary_key=True),
+    )
+
+class Vocabulary(Entity):
+    """
+    """
+    __tablename__ = "vocabulary"
+
+    id = sa.Column(sa.Integer, primary_key=True)
+
+    title = sa.Column(sa.Unicode, nullable=False, index=True)
+
+class Term(Entity):
+    """
+    """
+    __tablename__ = "term"
+
+    id = sa.Column(sa.Integer, primary_key=True)
+
+    title = sa.Column(sa.Unicode)
+
+    token = sa.Column(sa.Unicode, nullable=False, index=True)
+
+    value = sa.Column(sa.Unicode, nullable=False, index=True)
+
+    order = sa.Column(sa.Integer, nullable=False, default=1)

@@ -156,6 +156,8 @@ class IInstance(IBase):
                              u"including the medata/version/etc"
                              ))
 
+    __id__ = Attribute(_(u""))
+
 class IKey(IBase):
     """
     """
@@ -185,6 +187,12 @@ class ISchema(IVersionable, IFormable):
     """
     Huzzah
     """
+
+class IRange(IBase, schema.interfaces.IField):
+
+    low = schema.Int(title=u"The low")
+
+    high = schema.Int(title=u"The hight")
 
 # -----------------------------------------------------------------------------
 # REFERENCES

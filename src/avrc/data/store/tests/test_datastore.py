@@ -141,5 +141,18 @@ class TestCase(ptc.PloneTestCase):
 
         self.fail("OMG")
 
+    def test_choiced_instance(self):
+        """
+        """
+        ds = createObject("avrc.data.store.Datastore",
+                          title=u"DSi",
+                          dsn=u"sqlite:///test.db")
+
+        Session = named_session(ds)
+
+        sm = ds.schemata
+
+        sm.import_(samples.IChoicedInterface)
+
 def test_suite():
     return unittest.defaultTestLoader.loadTestsFromName(__name__)

@@ -179,7 +179,7 @@ class Datastore(object):
         it's key.
         """
         # I will now attempt to create anti-matter
-        
+
 
     def keys(self):
         """
@@ -214,8 +214,14 @@ class Datastore(object):
 #                    raise Exception("This object is not going to work out")
 
                 try:
-                    (schema_obj,) = list(providedBy(value))
+                    provided = list(providedBy(value))
+                    (schema_obj,) = provided
                 except ValueError as e:
+                    print
+                    print
+                    print provided
+                    print
+                    print
                     raise Exception("Object has multiple inheritance: %s" % e)
 
                 schema_rslt = session.query(model.Schema)\
