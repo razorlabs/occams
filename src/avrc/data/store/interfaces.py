@@ -4,7 +4,7 @@ Contains specification as to how data will be stored and managed.
 
 from zope.interface import Interface, Attribute
 
-from zope import schema
+import zope.schema
 from zope.i18nmessageid import MessageFactory
 
 from zope.app.container.interfaces import IContained
@@ -53,6 +53,7 @@ class IManager(IBase):
 
     def has(key):
         """
+        Will check if the specified item is in the data store.
         """
 
     def get(key):
@@ -80,34 +81,9 @@ class IManager(IBase):
         Adds or modifies the target into the manager
         """
 
-class IStorageManager(IManager):
-    """
-    Marker interface for managing data objects.
-    """
-
-class IEnrollmentManager(IManager):
-    """
-    Marker interface for managing enrollments
-    """
-
 class ISchemaManager(IManager):
     """
     Marker interface for managing schemas
-    """
-
-class IKeywordManager(IManager):
-    """
-    Marker interface for managing keyword associations with objects
-    """
-
-class IAttributeManager(IManager):
-    """
-    Marker interface for managing attributes
-    """
-
-class IVocabularyManager(IManager):
-    """
-    Marker interface for managing vocabularies
     """
 
 class IDomainManager(IManager):
@@ -125,12 +101,12 @@ class IDatastore(IManager, IContained):
     Represents a datastore instance that can be added to a site.
     """
 
-    title = schema.TextLine(
+    title = zope.schema.TextLine(
         title=_(u"The name of the data store"),
         description=_(u""),
         )
 
-    dsn = schema.TextLine(
+    dsn = zope.schema.TextLine(
         title=_(u"Something cool about dsns"),
         description=_("Something descripting about dsns")
         )
@@ -188,46 +164,14 @@ class ISchema(IVersionable, IFormable):
     Huzzah
     """
 
-class IRange(IBase, schema.interfaces.IField):
+class IRange(IBase, zope.schema.interfaces.ITuple):
 
-    low = schema.Int(title=u"The low")
+    low = zope.schema.Int(title=u"The low")
 
-    high = schema.Int(title=u"The hight")
-
-# -----------------------------------------------------------------------------
-# REFERENCES
-# -----------------------------------------------------------------------------
-
-class ISubject(IBase):
-    """
-    A subject that that will be associated with attributes. This will also
-    serve as a way for both Internal and Accessible data to communicate
-    about a subject.
-    """
-
-    id = schema.Int(
-        title=_(u"Identification Number"),
-        description=_(u"")
-        )
-
-class IReference(IBase):
-    """
-    An reference identifier for a subject. This object is intended for legacy
-    identifiers from previous systems.
-    """
-
-    name = schema.TextLine(
-        title=_(u"Name"),
-        description=_(u"The name of the reference.")
-        )
-
-    number = schema.TextLine(
-        title=_(u"Number"),
-        description=_("The number given to the subject under the reference.")
-        )
+    high = zope.schema.Int(title=u"The high")
 
 # -----------------------------------------------------------------------------
-# LIBRARY INTERFACES
+# MISC INTERFACES
 # -----------------------------------------------------------------------------
 
 class IDomain(IBase):
@@ -235,7 +179,7 @@ class IDomain(IBase):
     TESTING: supposed to offer the domain functionality
     """
 
-    title = schema.TextLine(
+    title = zope.schema.TextLine(
         title=_(u"Title")
         )
 
@@ -250,9 +194,9 @@ class IReportable(IBase):
 
 class IField(IBase):
 
-    min = schema.Int(title=u"Minimum Value")
+    min = zope.schema.Int(title=u"Minimum Value")
 
-    max = schema.Int(title=u"Maximum Value")
+    max = zope.schema.Int(title=u"Maximum Value")
 
 # -----------------------------------------------------------------------------
 # QUERYING
@@ -261,7 +205,7 @@ class IField(IBase):
 class IQueryLine(IBase):
     """
     """
-    value = schema.TextLine(
+    value = zope.schema.TextLine(
         title=_(u"Search"),
         )
 
@@ -271,37 +215,37 @@ class IQuery(IBase):
     STILL IN PLANNING STAGES
     """
 
-    contains = schema.List(
+    contains = zope.schema.List(
         title=_(u"Phrases"),
         description=_(u"Contains any of the listed terms."),
-        value_type=schema.TextLine(title=_(u"Phrase")),
+        value_type=zope.schema.TextLine(title=_(u"Phrase")),
         required=False,
         )
 
-    some = schema.List(
+    some = zope.schema.List(
         title=_(u"Some Phrases"),
         description=_("Contains one or more of the listed terms."),
         min_length=1,
         max_length=3,
-        value_type=schema.TextLine(title=_(u"Phrase")),
+        value_type=zope.schema.TextLine(title=_(u"Phrase")),
         required=False,
         )
 
-    ignore = schema.List(
+    ignore = zope.schema.List(
         title=_(u"Do not include"),
         description=_(u"Do not include the listed terms."),
-        value_type=schema.TextLine(title=_(u"Phrase")),
+        value_type=zope.schema.TextLine(title=_(u"Phrase")),
         required=False,
         )
 
-    domain = schema.List(
+    domain = zope.schema.List(
         title=_(u"Domain search"),
         description=_(u"Search within a domain only."),
-        value_type=schema.TextLine(title=_(u"Phrase")),
+        value_type=zope.schema.TextLine(title=_(u"Phrase")),
         required=False,
         )
 
-    date = schema.Choice(
+    date = zope.schema.Choice(
         title=_(u"Date"),
         description=_(u"How recent is the entry?"),
         values=(_(u"anytime"),
@@ -312,14 +256,14 @@ class IQuery(IBase):
         required=False
         )
 
-    range = schema.List(
+    range = zope.schema.List(
         title=_(u"Numeric ranges"),
         description=_(u"Contains the listed value ranges"),
-        value_type=schema.Tuple(
+        value_type=zope.schema.Tuple(
             title=u"Range",
             min_length=2,
             max_length=2,
-            value_type=schema.Float(title=_(u"Value")),
+            value_type=zope.schema.Float(title=_(u"Value")),
             ),
         required=False,
         )

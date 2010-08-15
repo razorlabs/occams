@@ -282,7 +282,11 @@ sa.Index("real_attribute_value", Real.attribute_id, Real.value)
 
 class Selection(Entity):
     """
-    This type is simply a reference into a vocabulary list
+    This type is simply a reference into a vocabulary list. This seriously
+    needs to be re-thought. Because if and entire network sonsists of lists,
+    then the entire purpose of the EAV is circumvented. The reason, though
+    this is needed is because we need to keep track of the selection made
+    in order to keep track of a history.
     """
     __tablename__ ="selection"
 

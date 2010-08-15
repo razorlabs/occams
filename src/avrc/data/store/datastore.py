@@ -217,11 +217,6 @@ class Datastore(object):
                     provided = list(providedBy(value))
                     (schema_obj,) = provided
                 except ValueError as e:
-                    print
-                    print
-                    print provided
-                    print
-                    print
                     raise Exception("Object has multiple inheritance: %s" % e)
 
                 schema_rslt = session.query(model.Schema)\

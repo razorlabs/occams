@@ -94,6 +94,21 @@ def version(schema):
     """
     return None
 
+class Range(zope.schema.Tuple):
+    implements(interfaces.IRange)
+            
+    def _validate(self, value):
+        """
+        """
+        super(Range, self)._validate(value) 
+        
+        try:
+            (low, high) = value
+        except ValueError as e:
+            raise Exception("Range value is invalid: %s" % e)        
+        
+#classImplements(Range, interfaces.IRange)
+
 @adapter(interfaces.IMutableSchema)
 #@provides(zope.interface.interfaces.IInterface)
 def MutableSchemaInterface(ms):
