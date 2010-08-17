@@ -1,25 +1,19 @@
 """
-Contains specification as to how data will be stored and managed.
+Exposes specification for the components that will make up the data store
+package.
+
+Note that not all of the functionality will currently be in place, but this
+is a good area to specify all the components that would be nice to have in
+the long term.
 """
 
-from zope.interface import Interface, Attribute
-
-import zope.schema
-from zope.i18nmessageid import MessageFactory
-
 from zope.app.container.interfaces import IContained
+from zope.interface import Interface
+from zope.interface import  Attribute
+from zope.i18nmessageid import MessageFactory
+import zope.schema
 
 _ = MessageFactory(__name__)
-
-# -----------------------------------------------------------------------------
-# BASE INTERFACES
-# -----------------------------------------------------------------------------
-
-class IBase(Interface):
-    """
-    Convenience marker interface to serve as a base class for all interfaces
-    of this package.
-    """
 
 # -----------------------------------------------------------------------------
 # ERRORS
@@ -38,34 +32,60 @@ class UndefinedSchemaError(Error):
     """Raised when trying to access a schema that is not in the data store"""
 
 # -----------------------------------------------------------------------------
-# API CONTRACT INTERFACES
+# API CONTRACTS
 # -----------------------------------------------------------------------------
 
-class IManager(IBase):
+class IComponent(Interface):
     """
-    Base class for all managers
+    Base interface for the components of this package.
+    """
+
+class IManager(IComponent):
+    """
+    Specification for management components, that is, components that are in
+    charge of a particular class of data. Note that a manager is simply a
+    utility into to the data store, therefore creating multiple instances
+    of a manager should have no effect on the objects being managed as they
+    are still being pulled from the same source.
     """
 
     def keys():
         """
-        Returns a listing of the object keys being managed by this manager.
+        Generates a collection of the keys for the objects the component is
+        managing.
+
+        Returns:
+            A listing of the object keys being managed by this manager.
         """
 
     def has(key):
         """
-        Will check if the specified item is in the data store.
+        Checks if the component is managing the item.
+
+        Arguments:
+            key: an item that can be used to find the component in the manager.
+
+        Returns:
+            True if the manager is in control of the item.
         """
 
     def get(key):
         """
-        Return an object contained by the manager based on it's identification
-        value.
+        Arguments:
+            key: an item that can be used to find the component in the manager.
+        Returns:
+            An object maintained by the manger. None if not found.
         """
 
     def purge(key):
         """
         Completely removes the target and all data associated with it from the
         data store.
+
+        Arguments:
+            key: an item that can be used to find the component in the manager.
+        Returns:
+            N\A
         """
 
     def retire(key):
@@ -74,16 +94,26 @@ class IManager(IBase):
         only it's not visible anymore. The reason this functionality is useful
         is so that data can be 'brought back' if expiring caused undesired
         side-effects.
+
+        Arguments:
+            key: an item that can be used to find the component in the manager.
+        Returns:
+            N\A
         """
 
     def put(target):
         """
         Adds or modifies the target into the manager
+
+        Arguments:
+            target: an object that will be added to this component's manager.
+        Returns:
+            N\A
         """
 
 class ISchemaManager(IManager):
     """
-    Marker interface for managing schemas
+    Marker interface for managing schemata.
     """
 
 class IDomainManager(IManager):
@@ -91,27 +121,30 @@ class IDomainManager(IManager):
     Marker interface for managing domains
     """
 
-class IMutableSchema(IBase):
+class IDatastore(IManager, IContained):
+    """
+    Represents a data store utility that can be added to a site. It is in
+    charge of managing the entire network of data that will be created from
+    schemata, etc.
+    """
+
+    title = zope.schema.TextLine(
+        title=_(u"Title"),
+        description=_(u"A human readable title for this data store."),
+        )
+
+    dsn = zope.schema.URI(
+        title=_(u"Data Source Name"),
+        description=_(u"URL to the location of database to use for physical "
+                       "storage.")
+        )
+
+class IMutableSchema(IComponent):
     """
     This is used when the schemata are going to be modified.
     """
 
-class IDatastore(IManager, IContained):
-    """
-    Represents a datastore instance that can be added to a site.
-    """
-
-    title = zope.schema.TextLine(
-        title=_(u"The name of the data store"),
-        description=_(u""),
-        )
-
-    dsn = zope.schema.TextLine(
-        title=_(u"Something cool about dsns"),
-        description=_("Something descripting about dsns")
-        )
-
-class ISessionFactory(IBase, IContained):
+class ISessionFactory(IComponent, IContained):
     """
     Used for implementing our own SQLAlchemy session. The reason for using our
     own Interface instead of a third party's such as z3c.saconfig is because
@@ -124,7 +157,7 @@ class ISessionFactory(IBase, IContained):
         Returns the generated SQLAlchemy Session
         """
 
-class IInstance(IBase):
+class IInstance(IComponent):
     """
     """
 
@@ -134,20 +167,20 @@ class IInstance(IBase):
 
     __id__ = Attribute(_(u""))
 
-class IKey(IBase):
+class IKey(IComponent):
     """
     """
 
     __key__ = Attribute(_(u"A way to distinguish this item in the data store"))
 
-class IVersionable(IBase):
+class IVersionable(IComponent):
     """
     """
 
     __version__ = Attribute(_(u"This will be used to keep track of the "
                               u"data store schema as they evolve"))
 
-class IFormable(IBase):
+class IFormable(IComponent):
     """
     Represents a schema that contains detailed information for display in a
     form.
@@ -164,26 +197,13 @@ class ISchema(IVersionable, IFormable):
     Huzzah
     """
 
-class IRange(IBase, zope.schema.interfaces.ITuple):
+class IRange(IComponent, zope.schema.interfaces.ITuple):
 
     low = zope.schema.Int(title=u"The low")
 
     high = zope.schema.Int(title=u"The high")
 
-# -----------------------------------------------------------------------------
-# MISC INTERFACES
-# -----------------------------------------------------------------------------
-
-class IDomain(IBase):
-    """
-    TESTING: supposed to offer the domain functionality
-    """
-
-    title = zope.schema.TextLine(
-        title=_(u"Title")
-        )
-
-class IReportable(IBase):
+class IReportable(IComponent):
     """
     Interface for generatged schema Promises to do some form of reporting
     """
@@ -192,24 +212,14 @@ class IReportable(IBase):
         """
         """
 
-class IField(IBase):
-
-    min = zope.schema.Int(title=u"Minimum Value")
-
-    max = zope.schema.Int(title=u"Maximum Value")
-
-# -----------------------------------------------------------------------------
-# QUERYING
-# -----------------------------------------------------------------------------
-
-class IQueryLine(IBase):
+class IQueryLine(IComponent):
     """
     """
     value = zope.schema.TextLine(
         title=_(u"Search"),
         )
 
-class IQuery(IBase):
+class IQuery(IComponent):
     """
     Querying contract.
     STILL IN PLANNING STAGES

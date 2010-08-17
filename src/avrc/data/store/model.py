@@ -8,7 +8,7 @@ The reason for this is so that these models can be reused differently
 in a separate script/application  if need be. Though, importing this module
 can also result in circumventing the entire purpose of the package as well...
 Thus, because the are not implementations of the the interfaces, they can
-be used freely in the utility implementations instead. 
+be used freely in the utility implementations instead.
 
 More information on EAV/CR:
 http://www.ncbi.nlm.nih.gov/pmc/articles/PMC61391/
@@ -17,8 +17,8 @@ Note that the models defined in this module are mapped to a database.
 Therefore, great care should be taken when updating this file, as it may
 cause live systems to fall out of sync.
 
-TODO:
-    * Casdate update/deletes
+TODO: (mmartinez)
+    * Cascade update/deletes
 """
 
 from datetime import datetime
@@ -35,10 +35,10 @@ def setup(engine):
     This method will setup the database models using the specified engine bind.
     This is simply a convenience method for creating the database tables as
     well as keeping this module self-contained
-    
-    Args:
+
+    Arguments:
         engine: A sqlalchemy engine object.
-        
+
     Returns:
         N\A
     """
@@ -54,10 +54,10 @@ class Keyword(Model):
     be shorthand alternate names or actual 'official' synonyms. The main
     purpose of this table is simply to make it more convenient for searching
     for instances with specific names.
-    
+
     Note: keyword title uniqueness is not enforced, therefore multiple
           instances may have similar keywords.
-    
+
     Attributes:
         id: (int) machine generated id number
         instance_id: (int) reference to the instance this keyword belongs to
@@ -75,13 +75,13 @@ class Keyword(Model):
     instance = orm.relation("Instance", uselist=False)
 
     title = sa.Column(sa.Unicode, nullable=False, index=True)
-    
+
     is_synonym = sa.Column(sa.Boolean, nullable=False, default=True)
 
 class Instance(Model):
     """
     A bona fide instance of a schema.
-    
+
     Attributes:
         id: (int) machine generated id number
         schema_id: (int) reference to the schema this is an instance of
@@ -104,7 +104,7 @@ class Instance(Model):
     schema = orm.relation("Schema", uselist=False)
 
     title = sa.Column(sa.Unicode, nullable=False, unique=True)
-    
+
     keywords = orm.relation("Keyword")
 
     description = sa.Column(sa.Unicode)
@@ -117,10 +117,10 @@ class Instance(Model):
 class Binary(Model):
     """
     A binary EAV value.
-    
+
     TODO: it's a bit unclear how this object will be used, extensions might be
           a little naive (perhaps store MIME types instead?)
-    
+
     Attributes:
         instnace_id: (int) a reference to the instance
         instance: (Instance) relation to the target instance
@@ -151,7 +151,7 @@ class Binary(Model):
 class Datetime(Model):
     """
     A datetime EAV value.
-    
+
     Attributes:
         instnace_id: (int) a reference to the instance
         instance: (Instance) relation to the target instance
@@ -182,7 +182,7 @@ sa.Index("datetime_attribute_value", Datetime.attribute_id, Datetime.value)
 class Integer(Model):
     """
     A integer EAV value.
-    
+
     Attributes:
         instnace_id: (int) a reference to the instance
         instance: (Instance) relation to the target instance
@@ -213,10 +213,10 @@ sa.Index("integer_attribute_value", Integer.attribute_id, Integer.value)
 class Range(Model):
     """
     A range EAV value.
-    
+
     This model object is a built-in as a convenience feature for integer
     range values. Only integers are supported currently.
-    
+
     Attributes:
         instnace_id: (int) a reference to the instance
         instance: (Instance) relation to the target instance
@@ -224,7 +224,7 @@ class Range(Model):
             (for validation purposes)
         attribute: (Attribute) relation to the target attribute
         value_min: (int) the low value
-        value_max: (int) the high value 
+        value_max: (int) the high value
         value: (int) the range tuple being stored
     """
     __tablename__ = "range"
@@ -247,7 +247,7 @@ class Range(Model):
 
     def _get_value(self):
         return (self.value_low, self.value_high)
-    
+
     def _set_value(self, value):
         (self.value_low, self.value_high) = value
 
@@ -261,7 +261,7 @@ sa.Index("range_attribute_value", Range.value_min, Range.value_max)
 class Real(Model):
     """
     A real EAV value.
-    
+
     Attributes:
         instnace_id: (int) a reference to the instance
         instance: (Instance) relation to the target instance
@@ -292,13 +292,13 @@ sa.Index("real_attribute_value", Real.attribute_id, Real.value)
 class Selection(Model):
     """
     A selection EAV value (into a vocabulary of choices)
-    
+
     This type is simply a reference into a vocabulary list. This seriously
     needs to be re-thought, because if and entire network consists of lists,
     then the entire purpose of the EAV is circumvented. The reason, though
     this is needed is because we need to keep track of the selection made
     in order to keep track of a history.
-    
+
     Attributes:
         instnace_id: (int) a reference to the instance
         instance: (Instance) relation to the target instance
@@ -329,7 +329,7 @@ sa.Index("selection_attribute_value", Real.attribute_id, Real.value)
 class Object(Model):
     """
     An object EAV value.
-    
+
     Attributes:
         instnace_id: (int) a reference to the instance
         instance: (Instance) relation to the target instance
@@ -366,9 +366,9 @@ sa.Index("object_attribute_value", Object.attribute_id, Object.value)
 class String(Model):
     """
     A string EAV value.
-    
+
     Note that this model handles strings up to 1,024 characters
-    
+
     Attributes:
         instnace_id: (int) a reference to the instance
         instance: (Instance) relation to the target instance
@@ -411,7 +411,7 @@ class Specification(Model):
     """
     Specification entity for class names. This is an independent model that
     keeps track of the name spaces for the available classes.
-        
+
     Attributes:
         id: (int) machine generated id number
         bases: (list) list of bases classes this specification extends
@@ -468,12 +468,12 @@ class Schema(Model):
     """
     The model where versioning takes place. This model uses a specification
     to define a version for it. Once this model is created, attributes and
-    invariants can be associated with in order to represent a state of the 
+    invariants can be associated with in order to represent a state of the
     schemata at a point in time.
-    
+
     Note: the (specification, create_date) tuple is used as the unique
         version value.
-    
+
     Attribute:
         id: (int) machine generated id number
         specification_id: (int) a reference to the specification this creates
@@ -506,7 +506,7 @@ class Schema(Model):
 class Invariant(Model):
     """
     An invariant definition for a class.
-    
+
     Attributes:
         id: (int) machine generated id number
         schema_id: (int) a reference to the schema this invariant is for
@@ -525,10 +525,10 @@ class Invariant(Model):
 class Attribute(Model):
     """
     An attribute declaration.
-    
+
     This is a special table in that it serves as a joining table between fields
     and schemata, but with extra meta data associated with the join.
-    
+
     Attributes:
         id: (int) machine generated id number
         schema_id: (int) a reference to the schema this attribute belongs to
@@ -539,7 +539,7 @@ class Attribute(Model):
         order: (int) the order in which the attribute appears in the schema
         create_date: (datetime) the date this model instance was created
         modified_date: (datetime) the date this model instance was modified
-        
+
     """
     __tablename__ = "attribute"
 
@@ -568,7 +568,7 @@ class Field(Model):
     should be used as well as useful constraint/validation meta data. Every
     time an attribute must define a new field (or removed for that matter),
     the source schema should be "versioned".
-    
+
     Attributes:
         id: (int) machine generated id number
         title: (str) human readable title (for forms)
@@ -579,10 +579,10 @@ class Field(Model):
         schema_id: (int) a reference to a schema (only applicable for object
             types) and used for enforcing the schema type for an object.
         schema: (Schema) a relation to the schema enforcement
-        vocabulary_id: (int) a reference to a vocabulary of possible answer 
+        vocabulary_id: (int) a reference to a vocabulary of possible answer
             choices
-        vocabulary: (Vocabulary) a relation to the vocabulary 
-        is_searchable: (bool) True if the attribute should be added to 
+        vocabulary: (Vocabulary) a relation to the vocabulary
+        is_searchable: (bool) True if the attribute should be added to
             the appliations search form. (Only if applicable)
         is_required: (bool) True if required value in a form display
         is_inline_image: (bool) ?!!? see paper...
@@ -659,17 +659,17 @@ class Field(Model):
     directive_write = sa.Column(sa.Unicode)
 
     create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
-    
+
     modify_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now,
                             onupdate=datetime.now)
 
 class Type(Model):
     """
     Represents a supported type.
-    
-    TODO: if more database vendors supported ENUM, this model would be 
+
+    TODO: if more database vendors supported ENUM, this model would be
         unnesessary.
-    
+
     Attributes:
         id: (int) machine generated id number
         title: (str) the human-reable name of this type
@@ -694,7 +694,7 @@ vocabulary_term_table = sa.Table("vocabulary_term", Model.metadata,
 class Vocabulary(Model):
     """
     A vocabulary.
-    
+
     Attributes:
         id: (int) machine generated id number
         title: (str) the human-reable name of this vocabulary
@@ -706,7 +706,7 @@ class Vocabulary(Model):
     id = sa.Column(sa.Integer, primary_key=True)
 
     title = sa.Column(sa.Unicode, nullable=False, index=True)
-    
+
     description = sa.Column(sa.Unicode)
 
     terms = orm.relation("Term", secondary=vocabulary_term_table)
@@ -714,10 +714,10 @@ class Vocabulary(Model):
 class Term(Model):
     """
     An indivudal term for a vocabulary.
-    
+
     Note: The way this is implemented could possibly override the whole concept
     of EAV itself, but we'll see after some testing...
-    
+
     Attributes:
         id: (int) machine generated id number
         title: (str) the human-reable name of term
@@ -771,8 +771,8 @@ class Term(Model):
             self.value_str = unicode(value)
         else:
             raise Exception("Unable to determine type: %s"  % value)
-        
-        
+
+
 # -----------------------------------------------------------------------------
 # Visit
 # TODO: the following models are probably going to be obsolete when this
