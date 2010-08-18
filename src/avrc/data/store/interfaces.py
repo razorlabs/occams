@@ -133,7 +133,7 @@ class IManager(IComponent):
         Arguments:
             target: an object that will be added to this component's manager.
         Returns:
-            N\A
+            A key to the newly stored target
         Raises:
             TODO: needs to raise something if put fails.
         """
@@ -158,12 +158,13 @@ class IDatastore(IManager, IContained):
     title = zope.schema.TextLine(
         title=_(u"Title"),
         description=_(u"A human readable title for this data store."),
+        required=True
         )
 
     dsn = zope.schema.TextLine(
         title=_(u"Data Source Name"),
-        description=_(u"URL to the location of database to use for physical "
-                       "storage.")
+        description=_(u"URL of the database to use for physical storage."),
+        required=True
         )
 
 class IMutableSchema(IComponent):
@@ -199,7 +200,7 @@ class IKey(IComponent):
     """
     """
 
-    __key__ = Attribute(_(u"A way to distinguish this item in the data store"))
+    value = Attribute(_(u"A way to distinguish this item in the data store"))
 
 class IVersionable(IComponent):
     """

@@ -6,17 +6,13 @@ from time import time as currenttime
 from datetime import datetime, date, time
 import logging
 
-from zope.component import createObject
 from zope.component import provideUtility
 from zope.component import getUtility
 from zope.component import queryUtility
 from zope.component import adapter
-from zope.component import getSiteManager
-from zope.component.interfaces import IFactory
 from zope.component.factory import Factory
 from zope.interface import implements
 from zope.interface import providedBy
-from zope.interface import implementedBy
 from zope.i18nmessageid import MessageFactory
 from zope.event import notify
 from zope.lifecycleevent import ObjectCreatedEvent
@@ -40,63 +36,36 @@ _ECHO_ENABLED = False
 _DS_FMT = u"<Datastore '%s'>"
 
 def session_name_format(datastore):
+    """
+    Helper method to format a session name corresponding to the data store.
+    
+    Arguments:
+        datastore: (object) an object implementing IDatastore
+    Returns:
+        A string to use as the session utility name.
+    """
     return "%s:session" % str(datastore)
 
 def named_session(datastore):
     """
+    Evaluates the session being used by the given data store.
+    
+    Arguments:
+        datastore: (object) an object implementing IDatastore
+    Returns:
+        A sqlalchemy Session factory.
     """
-    Session = queryUtility(interfaces.ISessionFactory,
-                           name=session_name_format(datastore))
-
-    return Session
-
-class SessionFactory(object):
-    """
-    @see avrc.data.store.interfaces.ISessionFactory
-    TODO: This module might have some issue with nested Sessions... this might
-    need to be fixed on a per request basis. (using scoped_session maybe?)
-    """
-
-    implements(interfaces.ISessionFactory)
-
-    __name__ = __parent__ = None
-
-    def __init__(self,
-                 autocommit=False,
-                 autoflush=True,
-                 twophase=False,
-                 bind=None,
-                 binds=None):
-        """
-        Our ISessionFactory implementation takes an extra parameter which
-        will be the database bindings.
-        """
-        self.autocommit = autocommit
-        self.autoflush = autoflush
-        self.twophase = twophase
-        self.binds = binds
-        self.bind = bind
-
-    def __call__(self):
-        """
-        Creates the Session object and binds it to the appropriate databases.
-        @see: avrc.data.store.interfaces.ISessionFactory#__call__
-        """
-
-        Session  = orm.scoped_session(orm.sessionmaker(
-            autocommit=self.autocommit,
-            autoflush=self.autoflush,
-            twophase=self.twophase
-            ))
-
-        Session.configure(bind=self.bind, binds=self.binds)
-
-        return Session
+    return queryUtility(interfaces.ISessionFactory,
+                        name=session_name_format(datastore))
 
 def setup_types(datastore):
     """
-    This method should be used when setting up the supported types for a
-    Datastore content type being added to a folder in the zope site.
+    Helper method to setup up built-in supported types.
+    
+    Arguments:
+        datastore: (object) an object implementing IDatastore
+    Returns:
+        N/A
     """
     rslt = []
     Session = named_session(datastore)
@@ -117,9 +86,14 @@ def setup_types(datastore):
 def handleDatastoreCreated(datastore, event):
     """
     Triggered when a new DataStore instance is added to a container (i.e.
-    when it is added to a site.
-    This method will setup all metadata needed for the engine to fully
-    offer it's services.
+    when it is added to a site. Essentially, it setups up the database
+    back-end.
+    
+    Arguments:
+        datastore: (object) the newly created object implementing IDatastore
+        event: (object) the event object
+    Returns:
+        N/A
     """
     Session = SessionFactory(bind=sa.create_engine(datastore.dsn,
                                                    echo=_ECHO_ENABLED))
@@ -132,19 +106,61 @@ def handleDatastoreCreated(datastore, event):
     model.setup(session.bind)
     setup_types(datastore)
 
-    #
-    # TODO: local site utility functionality
-    #
-#    # Set autocommit true so that components create their own sessions.
-#    sm = getSiteManager(datastore)
-
 @adapter(interfaces.IDatastore, IObjectRemovedEvent)
 def handleDatastoreRemoved(datastore, event):
     """
     Triggered when a new DataStore instance is removed from a container
+    
+    Arguments:
+        datastore: (object) the removed object implementing IDatastore
+        event: (object) the event object
+    Returns:
+        N/A
     """
-    sm = getSiteManager(datastore)
-    sm.registerUtlity(None, provided=interfaces.ISessionFactory)
+    provideUtility(None, 
+                   provided=interfaces.ISessionFactory,
+                   name=session_name_format(datastore))
+
+class SessionFactory(object):
+    implements(interfaces.ISessionFactory)
+    
+    __doc__ = interfaces.ISessionFactory.__doc__
+
+    __name__ = None
+    
+    __parent__ = None
+
+    def __init__(self,
+                 autocommit=False,
+                 autoflush=True,
+                 twophase=False,
+                 bind=None,
+                 binds=None):
+        """
+        Our ISessionFactory implementation takes an extra parameter which
+        will be the database bindings.
+        
+        TODO: (mmartinez) Perhaps make an adapter to extend the functionality
+            of z3c.saconfig?
+        """
+        self.autocommit = autocommit
+        self.autoflush = autoflush
+        self.twophase = twophase
+        self.binds = binds
+        self.bind = bind
+
+    def __call__(self):
+        Session  = orm.scoped_session(orm.sessionmaker(
+            autocommit=self.autocommit,
+            autoflush=self.autoflush,
+            twophase=self.twophase
+            ))
+        
+        Session.configure(bind=self.bind, binds=self.binds)
+        
+        return Session
+    
+    __call__.__doc__ = interfaces.ISessionFactory["__call__"].__doc__
 
 class Datastore(object):
     implements(interfaces.IDatastore)
@@ -189,21 +205,23 @@ class Datastore(object):
         """A protocol manager utility"""
         return interfaces.IProtocolManager(self)
 
+    def keys(self):
+        # This method will remain unimplemented as it doesn't really make sense
+        # to return every single key in the data store.
+        pass
+
+    keys.__doc__ = interfaces.IDatastore["keys"].__doc__
+
     def has(self, key):
         pass
 
     has.__doc__ = interfaces.IDatastore["has"].__doc__
 
+
     def get(self, key):
         pass
     
-
     get.__doc__ = interfaces.IDatastore["get"].__doc__
-
-    def keys(self):
-        raise NotImplementedError("This method is not implemented")
-
-    keys.__doc__ = interfaces.IDatastore["keys"].__doc__
 
     def put(self, target):
         types = getUtility(zope.schema.interfaces.IVocabularyFactory,

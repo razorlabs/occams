@@ -134,8 +134,9 @@ class TestCase(ptc.PloneTestCase):
             baz=123
             )
 
-        # This, this is what I've been working for
-        ds.put(obj)
+        key = ds.put(obj)
+        
+        ds.get("avrc.data.store.schema.virtual.IStandaloneInterface")
 
         self.fail("OMG")
 
