@@ -116,9 +116,9 @@ class TestCase(ptc.PloneTestCase):
         """
         Tests that data store is able to successfully add an object instance
         """
-        ds = createObject("avrc.data.store.Datastore",
-                          title=u"DSi",
-                          dsn=u"sqlite:///test.db")
+        #dsn = u"sqlite:///test.db"
+        dsn = u"sqlite:///:memory:"
+        ds = createObject("avrc.data.store.Datastore", title=u"my ds", dsn=dsn)
 
         sm = ds.schemata
 
@@ -142,9 +142,9 @@ class TestCase(ptc.PloneTestCase):
     def test_choiced_instance(self):
         """
         """
-        ds = createObject("avrc.data.store.Datastore",
-                          title=u"DSi",
-                          dsn=u"sqlite:///test.db")
+        #dsn = u"sqlite:///test.db"
+        dsn = u"sqlite:///:memory:"
+        ds = createObject("avrc.data.store.Datastore", title=u"my ds", dsn=dsn)
 
         sm = ds.schemata
 

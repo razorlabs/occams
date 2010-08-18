@@ -90,7 +90,9 @@ class Instance(Model):
         title: (str) a title for the instance. If none is suplied, the
             client application should generate one.
         keywords: (list) a relation list of Keywords
-        description: (str) an optional description of the instance
+        description: (str) a  description of the instance
+        is_active: (bool) if the instnace is marked as inactive, it should
+            not display in any form of reporting.
         create_date: (datetime) the date this model instance was created
         modified_date: (datetime) the date this model instance was modified
     """
@@ -107,7 +109,9 @@ class Instance(Model):
 
     keywords = orm.relation("Keyword")
 
-    description = sa.Column(sa.Unicode)
+    description = sa.Column(sa.Unicode, nullable=False)
+
+    is_active = sa.Column(sa.Boolean, nullable=False, default=True)
 
     create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
 
@@ -254,9 +258,9 @@ class Range(Model):
     value = orm.synonym('_value', descriptor=property(_get_value, _set_value))
 
 # Optimization for lookup
-sa.Index("range_attribute_value_min", Range.attribute_id, Range.value_min)
-sa.Index("range_attribute_value_max", Range.attribute_id, Range.value_max)
-sa.Index("range_attribute_value", Range.value_min, Range.value_max)
+sa.Index("range_attribute_value_low", Range.attribute_id, Range.value_low)
+sa.Index("range_attribute_value_high", Range.attribute_id, Range.value_high)
+sa.Index("range_attribute_value", Range.value_low, Range.value_high)
 
 class Real(Model):
     """
@@ -724,6 +728,7 @@ class Term(Model):
         token: (str) a one-to-one mapping token for the value
         value_*: the currently implemented way for the term value that seriously
             needs some reworking.
+        value: (object) the value for this term
         description: (str) an optional description
         terms: (list) the list of terms for this vocabulary
     """
@@ -747,8 +752,7 @@ class Term(Model):
 
     order = sa.Column(sa.Integer, nullable=False, default=1)
 
-    @property
-    def value(self):
+    def _get_value(self):
         """Determines the correct value and returns it"""
         value = self.value_int is not None and self.value_int or \
                 self.value_real is not None and self.value_real or \
@@ -760,8 +764,7 @@ class Term(Model):
 
         return value
 
-    @value.setter
-    def value(self, value):
+    def _set_value(self, value):
         """Sets the value to the paramter's value"""
         if isinstance(value, int):
             self.value_int = value
@@ -772,6 +775,7 @@ class Term(Model):
         else:
             raise Exception("Unable to determine type: %s"  % value)
 
+    value = property(_get_value, _set_value, None, "The value stored")
 
 # -----------------------------------------------------------------------------
 # Visit

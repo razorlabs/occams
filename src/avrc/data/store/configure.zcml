@@ -5,6 +5,8 @@
 
   <includeDependencies package="." />
 
+  <adapter factory=".schema.DatastoreSchemaManager" />
+
   <!-- Handle when a Site adds an engine -->
   <subscriber handler=".datastore.handleDatastoreCreated" />
   <subscriber handler=".datastore.handleDatastoreRemoved" />
@@ -14,18 +16,10 @@
       component=".datastore.DatastoreFactory"
       />
 
-  <utility name="avrc.data.store.Domain" component=".protocol.DomainFactory" />
-
-  <!-- Vocabularies -->
   <utility
       name="avrc.data.store.SupportedTypes"
-      component=".schema.SupportedTypesVocabularyFactory"
+      component=".types.supported_types_vocabulary"
+      provides="zope.schema.interfaces.IVocabularyFactory"
       />
-
-  <!-- Domains -->
-  <adapter factory=".schema.DatastoreSchemaManager" />
-
-  <!-- Data -->
-  <!-- Nothing written yet -->
 
 </configure>

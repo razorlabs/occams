@@ -38,25 +38,8 @@ from avrc.data.store.datastore import named_session
 
 _ = MessageFactory(__name__)
 
-# Stored schemata will be summoned from the nether with a virtual name space
+# The generated schemata of the datas tore will be contained here
 virtual = dynamic.create(".".join([__name__, "virtual"]))
-
-supported_types_vocabulary = \
-    SimpleVocabulary.fromItems([
-        ("integer", zope.schema.Int),
-        ("string", zope.schema.TextLine),
-        ("text", zope.schema.Text),
-        ("binary", zope.schema.Bytes),
-        ("boolean", zope.schema.Bool),
-        ("real", zope.schema.Decimal),
-        ("date", zope.schema.Date),
-        ("datetime", zope.schema.Datetime),
-        ("time", zope.schema.Time),
-        ("object", zope.schema.Object),
-        ("selection", zope.schema.Choice),
-        #TODO
-#        ("range", zope.schema.Object),
-        ])
 
 supported_directives_vocabulary = \
     SimpleVocabulary.fromValues([
@@ -68,25 +51,11 @@ supported_directives_vocabulary = \
         WRITE_PERMISSIONS_KEY
         ])
 
-def SupportedTypesVocabularyFactory(context=None):
-    """
-    Convenience factory for getting the supported types vocabulary
-    This is used for auto-generating meta data into the data store once it
-    is added into a site.
-    """
-    return supported_types_vocabulary
+class SupportedDirectivesVocabularyFactory(object):
+    implements(zope.schema.interfaces.IVocabularyFactory)
 
-alsoProvides(SupportedTypesVocabularyFactory,
-             zope.schema.interfaces.IVocabularyFactory)
-
-def SupportedDirectivesVocabularyFactory(context=None):
-    """
-    Convenience method for getting the supported directives.
-    """
-    return supported_directives_vocabulary
-
-alsoProvides(SupportedDirectivesVocabularyFactory,
-             zope.schema.interfaces.IVocabularyFactory)
+    def __call__(self, context=None):
+        return supported_directives_vocabulary
 
 def version(schema):
     """
@@ -94,19 +63,6 @@ def version(schema):
     """
     return None
 
-class Range(zope.schema.Tuple):
-    implements(interfaces.IRange)
-            
-    def _validate(self, value):
-        """
-        """
-        super(Range, self)._validate(value) 
-        
-        try:
-            (low, high) = value
-        except ValueError as e:
-            raise Exception("Range value is invalid: %s" % e)        
-        
 #classImplements(Range, interfaces.IRange)
 
 @adapter(interfaces.IMutableSchema)
@@ -167,6 +123,10 @@ class DatastoreSchemaManager(object):
         (name, version) = key
         name = unicode(name)
 
+        types_factory = getUtility(zope.schema.interfaces.IVocabularyFactory,
+                                   name="avrc.data.store.SupportedTypes")
+        types = types_factory()
+
         Session = named_session(self._datastore)
         session = Session()
 
@@ -192,7 +152,8 @@ class DatastoreSchemaManager(object):
 
         for attribute_rslt in schema_rslt.attributes:
             token = str(attribute_rslt.field.type.title)
-            field = supported_types_vocabulary.getTermByToken(token).value
+
+            field = types.getTermByToken(token).value
 
             kwargs = dict(
                 title=attribute_rslt.field.title,
@@ -286,6 +247,11 @@ class DatastoreSchemaManager(object):
         Saves the target interface into the manager.
         """
         schema = target
+
+        types_factory = getUtility(zope.schema.interfaces.IVocabularyFactory,
+                                   name="avrc.data.store.SupportedTypes")
+        types = types_factory()
+
         Session = named_session(self._datastore)
         session = Session()
 
@@ -336,11 +302,11 @@ class DatastoreSchemaManager(object):
                 type_obj = field_obj.value_type
                 is_repeatable = True
 
-            if type_obj.__class__ not in supported_types_vocabulary:
+            if type_obj.__class__ not in types:
                 session.rollback()
                 raise Exception("Not supported: %s" % str(type_obj.__class__))
 
-            term_obj = supported_types_vocabulary.getTerm(type_obj.__class__)
+            term_obj = types.getTerm(type_obj.__class__)
 
             type_rslt = session.query(model.Type)\
                         .filter_by(title=unicode(term_obj.token))\

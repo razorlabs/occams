@@ -1,13 +1,11 @@
 """
-This module is in charge of handling the
-the datastore instances through the use of Object events to keep track of
-multiple instances across sites.
+Datastore implementation module as supporting utilities.
 """
-import logging
-from datetime import datetime, date, time
 from collections import deque as queue
+from time import time as currenttime
+from datetime import datetime, date, time
+import logging
 
-import zope.schema
 from zope.component import createObject
 from zope.component import provideUtility
 from zope.component import getUtility
@@ -24,6 +22,8 @@ from zope.event import notify
 from zope.lifecycleevent import ObjectCreatedEvent
 from zope.lifecycleevent import IObjectCreatedEvent
 from zope.lifecycleevent import IObjectRemovedEvent
+import zope.schema
+from zope.schema.fieldproperty import FieldProperty
 
 import sqlalchemy as sa
 from sqlalchemy import orm
@@ -32,9 +32,12 @@ from avrc.data.store import model
 from avrc.data.store import interfaces
 
 _ = MessageFactory(__name__)
+
 log = logging.getLogger(__name__)
 
-_ECHO_ENABLED = True
+_ECHO_ENABLED = False
+
+_DS_FMT = u"<Datastore '%s'>"
 
 def session_name_format(datastore):
     return "%s:session" % str(datastore)
@@ -118,7 +121,8 @@ def handleDatastoreCreated(datastore, event):
     This method will setup all metadata needed for the engine to fully
     offer it's services.
     """
-    Session = SessionFactory(bind=sa.create_engine(datastore.dsn, echo=True))
+    Session = SessionFactory(bind=sa.create_engine(datastore.dsn,
+                                                   echo=_ECHO_ENABLED))
 
     provideUtility(Session,
                    provides=interfaces.ISessionFactory,
@@ -143,56 +147,65 @@ def handleDatastoreRemoved(datastore, event):
     sm.registerUtlity(None, provided=interfaces.ISessionFactory)
 
 class Datastore(object):
-    """
-    """
     implements(interfaces.IDatastore)
 
-    __name__ = __parent__ = None
+    __doc__ = interfaces.IDatastore.__doc__
 
-    title = None
-    dsn = None
+    __name__ = None
+
+    __parent__ = None
+
+    title = FieldProperty(interfaces.IDatastore["title"])
+
+    dsn = FieldProperty(interfaces.IDatastore["dsn"])
 
     def __init__(self, title, dsn):
         """
+        Instantiates the data store implementation. Also notifies listeners
+        that this object has been created.
+
+        Arguments:
+            title: (str) the name of this data store instance
+            dsn: (str) the URI to the data base
         """
         self.title = title
         self.dsn = dsn
 
         notify(ObjectCreatedEvent(self))
 
+    def __str__(self):
+        """
+        String representation of this instance
+        """
+        return _DS_FMT % self.title
+
     @property
     def schemata(self):
+        """A schema manager utility"""
         return interfaces.ISchemaManager(self)
 
     @property
     def protocols(self):
+        """A protocol manager utility"""
         return interfaces.IProtocolManager(self)
 
     def has(self, key):
-        """
-        This will check the data store if a particular instance exists.
-        """
+        pass
+
+    has.__doc__ = interfaces.IDatastore["has"].__doc__
 
     def get(self, key):
-        """
-        This will retrieve a single an object from the data store based on
-        it's key.
-        """
-        # I will now attempt to create anti-matter
+        pass
+    
 
+    get.__doc__ = interfaces.IDatastore["get"].__doc__
 
     def keys(self):
-        """
-        Key's should be known... or can they?
-        """
         raise NotImplementedError("This method is not implemented")
 
+    keys.__doc__ = interfaces.IDatastore["keys"].__doc__
+
     def put(self, target):
-        """
-        Store the object into the database based on it's interface. The
-        provided interface in the objects needs to have some sort of versioning
-        metadata
-        """
         types = getUtility(zope.schema.interfaces.IVocabularyFactory,
                            name="avrc.data.store.SupportedTypes"
                            )()
@@ -204,7 +217,8 @@ class Datastore(object):
 
         primitive_types = (int, str, unicode, float, bool, date, time, datetime,)
 
-        # Do a breadth-first pre-order traversal insertion
+        # Breadth-first pre-order traversal insertion (to keep everything
+        # within a single transaction)
         while len(to_visit) > 0:
             (parent_obj, instance_rslt, attr_name, value) = to_visit.popleft()
 
@@ -225,7 +239,12 @@ class Datastore(object):
                               .filter_by(module=schema_obj.__name__)\
                               .first()
 
-                instance_rslt = model.Instance(schema=schema_rslt)
+                instance_rslt = model.Instance(
+                    schema=schema_rslt,
+                    title=u"%s-%d" % (schema_rslt.specification.module,
+                                      currenttime()),
+                    description=u"Some gibberish"
+                    )
 
                 for name, field_obj in zope.schema.getFieldsInOrder(schema_obj):
                     child = getattr(value, name)
@@ -268,20 +287,26 @@ class Datastore(object):
 
         session.commit()
 
+    put.__doc__ = interfaces.IDatastore["put"].__doc__
+
     def purge(self, key):
-        """
-        By fire, be
-        """
+        pass
+
+    purge.__doc__ = interfaces.IDatastore["purge"].__doc__
 
     def retire(self, key):
-        """
-        Keeping you around
-        """
+        pass
 
-    def __str__(self):
-        return "<Datastore '%s'>" % self.title
+    retire.__doc__ = interfaces.IDatastore["retire"].__doc__
+
+    def restore(self, key):
+        pass
+
+    restore.__doc__ = interfaces.IDatastore["restore"].__doc__
 
 DatastoreFactory = Factory(
     Datastore,
-    title = _(u"Data store factory")
+    title=_(u"Datastore implementation factory."),
+    description=_(u"Creates an instance of a datastore implementation object. "
+                   "Also notifies listeners of this creation.")
     )

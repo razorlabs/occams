@@ -14,11 +14,17 @@ class DatastoreQuerySearch(object):
     Still not sure how this is going to work
     """
     adapts(interfaces.IDatastore, interfaces.IQuery)
-    
+
     def __init__(self, datastore, query):
         """
         """
-        self._datastore = datastore 
+        self._datastore = datastore
         self._query = query
-        
+
         raise NotImplementedError(u"This library is not yet operational.")
+
+
+class SearchByID(object):
+    """
+    """
+    implements(interfaces.IQuery)

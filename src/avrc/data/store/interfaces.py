@@ -40,6 +40,21 @@ class IComponent(Interface):
     Base interface for the components of this package.
     """
 
+class IRange(IComponent, zope.schema.interfaces.ITuple):
+    """
+    A custom schema type in order to support built-in range values.
+    """
+
+    low = zope.schema.Int(
+        title=_(u"Low Value"),
+        required=True
+        )
+
+    high = zope.schema.Int(
+        title=_(u"High Value"),
+        required=True
+        )
+
 class IManager(IComponent):
     """
     Specification for management components, that is, components that are in
@@ -85,12 +100,12 @@ class IManager(IComponent):
         Arguments:
             key: an item that can be used to find the component in the manager.
         Returns:
-            N\A
+            The purged object, None otherwise (nothing to purge)
         """
 
     def retire(key):
         """
-        Expire's the contained target. This means that it's information remains,
+        Retires the contained target. This means that it's information remains,
         only it's not visible anymore. The reason this functionality is useful
         is so that data can be 'brought back' if expiring caused undesired
         side-effects.
@@ -98,7 +113,17 @@ class IManager(IComponent):
         Arguments:
             key: an item that can be used to find the component in the manager.
         Returns:
-            N\A
+            The retired object, None otherwise (nothing to retired)
+        """
+
+    def restore(key):
+        """
+        Attempts to restore a previously retired object via its key handle.
+
+        Arguments:
+            key: an item that can be used to find the component in the manager.
+        Returns:
+            The restored object, None otherwise (nothing to restore)
         """
 
     def put(target):
@@ -109,6 +134,8 @@ class IManager(IComponent):
             target: an object that will be added to this component's manager.
         Returns:
             N\A
+        Raises:
+            TODO: needs to raise something if put fails.
         """
 
 class ISchemaManager(IManager):
@@ -133,7 +160,7 @@ class IDatastore(IManager, IContained):
         description=_(u"A human readable title for this data store."),
         )
 
-    dsn = zope.schema.URI(
+    dsn = zope.schema.TextLine(
         title=_(u"Data Source Name"),
         description=_(u"URL to the location of database to use for physical "
                        "storage.")
@@ -141,14 +168,15 @@ class IDatastore(IManager, IContained):
 
 class IMutableSchema(IComponent):
     """
-    This is used when the schemata are going to be modified.
+    A delta container for schema changes. It will be used for the schema
+    manager to know what has changed and to version the schema accordingly.
     """
 
 class ISessionFactory(IComponent, IContained):
     """
     Used for implementing our own SQLAlchemy session. The reason for using our
     own Interface instead of a third party's such as z3c.saconfig is because
-    we need more control over our sesession (e.g. need multiple engines
+    we need more control over our session (e.g. need multiple engines
     per Session as opposed to the single engine allowed by z3c.saconfig"
     """
 
@@ -194,18 +222,12 @@ class IFormable(IComponent):
 
 class ISchema(IVersionable, IFormable):
     """
-    Huzzah
+    Marker interface for a schema maintained by the data store.
     """
-
-class IRange(IComponent, zope.schema.interfaces.ITuple):
-
-    low = zope.schema.Int(title=u"The low")
-
-    high = zope.schema.Int(title=u"The high")
 
 class IReportable(IComponent):
     """
-    Interface for generatged schema Promises to do some form of reporting
+    Promises to do some form of reporting.
     """
 
     def report():
@@ -214,15 +236,16 @@ class IReportable(IComponent):
 
 class IQueryLine(IComponent):
     """
+    A simple query to the data store.
     """
     value = zope.schema.TextLine(
         title=_(u"Search"),
+        required=True
         )
 
 class IQuery(IComponent):
     """
     Querying contract.
-    STILL IN PLANNING STAGES
     """
 
     contains = zope.schema.List(
