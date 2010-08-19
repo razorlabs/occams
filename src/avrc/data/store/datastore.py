@@ -57,19 +57,7 @@ def named_session(datastore):
         A sqlalchemy Session factory.
     """
 
-    import zope.interface
-    sm = getSiteManager(datastore)
-    print
-    print
-    print
-    print list(sm.getUtilitiesFor(zope.interface.Interface))
-
-    print
-    print
-    print
-
-    return sm.queryUtility(interfaces.ISessionFactory,
-                           name=session_name_format(datastore))
+    return datastore.getSession()
 
 def setup_types(datastore):
     """
@@ -118,7 +106,7 @@ def handleDatastoreCreated(datastore, event):
 
     model.setup(Session.bind)
     setup_types(datastore)
-    
+
 
 @adapter(interfaces.IDatastore, IObjectRemovedEvent)
 def handleDatastoreRemoved(datastore, event):
@@ -216,9 +204,9 @@ class Datastore(object):
 
     def getSession(self):
         sm = getSiteManager(self)
-        session = sm.queryUtility(interfaces.ISessionFactory, session_name_format(self)) 
+        session = sm.queryUtility(interfaces.ISessionFactory, session_name_format(self))
         if session is not None:
-            return sm.queryUtility(interfaces.ISessionFactory, session_name_format(self)) 
+            return sm.queryUtility(interfaces.ISessionFactory, session_name_format(self))
         else:
             Session = SessionFactory(bind=sa.create_engine(self.dsn,
                                                    echo=_ECHO_ENABLED))
@@ -227,7 +215,7 @@ class Datastore(object):
                        interfaces.ISessionFactory,
                        session_name_format(self))
         return  sm.queryUtility(interfaces.ISessionFactory, session_name_format(self))
-    
+
     @property
     def schemata(self):
         """A schema manager utility"""

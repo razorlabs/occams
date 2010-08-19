@@ -113,6 +113,9 @@ class DatastoreSchemaManager(object):
     def __init__(self, datastore):
         self._datastore = datastore
 
+    def getChildren(self):
+        pass
+
     def get(self, key):
         """
         key = module name, or (module name, version) tuple
@@ -246,7 +249,7 @@ class DatastoreSchemaManager(object):
         """
         Saves the target interface into the manager.
         """
-        schema = target
+        schema_obj = target
 
         types_factory = getUtility(zope.schema.interfaces.IVocabularyFactory,
                                    name="avrc.data.store.SupportedTypes")
@@ -256,29 +259,36 @@ class DatastoreSchemaManager(object):
         session = Session()
 
         spec_rslt = session.query(model.Specification)\
-                    .filter_by(module=schema.__module__)\
+                    .filter_by(module=schema_obj.__module__)\
                     .first()
 
         # Create a spec if one doesn't already exist
         if spec_rslt is None:
             spec_rslt = model.Specification(
-                module=schema.__module__,
-                documentation=schema.__documentation__
+                module=schema_obj.__module__,
+                documentation=schema_obj.__documentation__
                 )
+
+            for base_obj in schema_obj.__bases__:
+                base_rslt = session.query(model.Specification)\
+                            .filter_by(module=base_obj.__module__)\
+                            .first()
+
+                spec_rslt.bases.append(base_rslt)
 
         schema_rslt = model.Schema(specification=spec_rslt)
 
-        # Need toe old schema (if any) to copy over unchanged fields
+        # Need toe old schema_obj (if any) to copy over unchanged fields
         schema_old_rslt = session.query(model.Schema)\
-                          .filter_by(create_date=schema.__version__)\
+                          .filter_by(create_date=schema_obj.__version__)\
                           .join(model.Specification)\
-                          .filter_by(module=schema.__module__)\
+                          .filter_by(module=schema_obj.__module__)\
                           .first()
 
         if schema_old_rslt is not None:
             for attribute_rslt in schema_old_rslt.attributes:
                 # Copy unchanged properties from the last version
-                if attribute_rslt.name not in schema.__attributes__:
+                if attribute_rslt.name not in schema_obj.__attributes__:
                     schema_rslt.attributes.append(model.Attribute(
                         name=attribute_rslt.name,
                         order=attribute_rslt.order,
@@ -286,7 +296,7 @@ class DatastoreSchemaManager(object):
                         ))
 
             for invariant_rslt in schema_old_rslt.invariants:
-                if invariant_rslt.name not in schema.__invariants__:
+                if invariant_rslt.name not in schema_obj.__invariants__:
                     schema_rslt.invariants.append(model.Invariant(
                         name=invariant_rslt.name
                         ))
@@ -294,7 +304,7 @@ class DatastoreSchemaManager(object):
         attrs = {}
 
         # Now add/remove in all the changed fields
-        for name, field_obj in schema.__attributes__.items():
+        for name, field_obj in schema_obj.__attributes__.items():
             type_obj = field_obj
             is_repeatable = False
 
@@ -342,12 +352,12 @@ class DatastoreSchemaManager(object):
                 attrs[name].field.vocabulary = vocabulary_rslt
 
             if zope.schema.interfaces.IObject.providedBy(field_obj):
-                # TODO link to versioned schema.
+                # TODO link to versioned schema_obj.
                 raise NotImplementedError("Don't supported nested objects yet")
 
             schema_rslt.attributes.append(attrs[name])
 
-        for key, item in schema.__directives__.items():
+        for key, item in schema_obj.__directives__.items():
             if key not in supported_directives_vocabulary:
                 continue
 
@@ -382,8 +392,8 @@ class DatastoreSchemaManager(object):
 
         session.add(schema_rslt)
         session.commit()
-        schema.__attributes__ = {}
-        schema.__invariants__.clear()
+        schema_obj.__attributes__ = {}
+        schema_obj.__invariants__.clear()
 
     def purge(self, key):
         """
@@ -420,10 +430,12 @@ class DatastoreSchemaManager(object):
         """
         Imports the target interface into the manager.
         """
-        schema_obj = MutableSchema(module=unicode(iface.__name__),
-                         documentation=unicode(iface.__doc__),
-                         directives=iface.queryTaggedValue(TEMP_KEY)
-                         )
+        schema_obj = MutableSchema(
+            bases=list(iface.getBases()),
+            module=unicode(iface.__name__),
+            documentation=unicode(iface.__doc__),
+            directives=iface.queryTaggedValue(TEMP_KEY)
+            )
 
         for name, field in zope.schema.getFieldsInOrder(iface):
             schema_obj[unicode(name)] = field
@@ -465,6 +477,8 @@ class MutableSchema(object):
 
     __version__ = None
 
+    __bases__ = None
+
     __module__ = None
 
     __documentation__ = None
@@ -477,12 +491,14 @@ class MutableSchema(object):
 
     def __init__(self,
                  module,
+                 bases=None,
                  documentation=None,
                  directives=None,
                  version=None):
         """
         Constructor
         """
+        self.__bases__ = bases
         self.__module__ = unicode(module)
         self.__documentation__ = unicode(documentation)
         self.__version__ = version

@@ -26,6 +26,8 @@ class Domain(object):
 
     consent_date = FieldProperty(interfaces.IDomain["consent_date"])
 
+    schemata = FieldProperty(interfaces.IDomain["schemata"])
+
     def __init__(self, code, title, consent_date):
         self.code = code
         self.title = title
@@ -65,17 +67,23 @@ class DatastoreDomainManager(object):
     def put(self, source):
         Session = named_session(self._datastore)
         session = Session()
+        is_new = False
 
         domain_rslt = session.query(model.Domain)\
                       .filter_by(title=source.title)\
                       .first()
 
         if domain_rslt is None:
-            domain_rslt = model.Domain()
-            session.add(domain_rslt)
+            domain_rslt = model.Domain(code=source.code)
+            is_new = True
 
         # won't update the code
         domain_rslt.title = source.title
+        domain_rslt.consent_date = source.consent_date
+
+        if is_new:
+            session.add(domain_rslt)
+
         session.commit()
 
     put.__doc__ = interfaces.IDomainManager["put"].__doc__

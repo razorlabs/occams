@@ -219,7 +219,7 @@ class IFormable(IComponent):
 
     __description__ = Attribute(_(u"A way to represent the description."))
 
-    __dependants__ = Attribute(_(u"Dependant schemata"))
+    __dependents__ = Attribute(_(u"Dependent schemata"))
 
 class ISchema(IVersionable, IFormable):
     """
