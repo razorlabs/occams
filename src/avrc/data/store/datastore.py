@@ -118,6 +118,7 @@ def handleDatastoreCreated(datastore, event):
 
     model.setup(Session.bind)
     setup_types(datastore)
+    
 
 @adapter(interfaces.IDatastore, IObjectRemovedEvent)
 def handleDatastoreRemoved(datastore, event):
@@ -135,7 +136,9 @@ def handleDatastoreRemoved(datastore, event):
                    interfaces.ISessionFactory,
                    session_name_format(datastore))
 
-class SessionFactory(object):
+from persistent import Persistent
+
+class SessionFactory(Persistent):
     implements(interfaces.ISessionFactory)
 
     __doc__ = interfaces.ISessionFactory.__doc__
@@ -162,6 +165,7 @@ class SessionFactory(object):
         self.twophase = twophase
         self.binds = binds
         self.bind = bind
+        super(Persistent, self).__init__()
 
     def __call__(self):
         Session  = orm.scoped_session(orm.sessionmaker(
@@ -171,7 +175,8 @@ class SessionFactory(object):
             ))
 
         Session.configure(bind=self.bind, binds=self.binds)
-
+        if Session is None:
+            raise Exception('wtf??')
         return Session
 
     __call__.__doc__ = interfaces.ISessionFactory["__call__"].__doc__
@@ -209,6 +214,20 @@ class Datastore(object):
         """
         return _DS_FMT % self.title
 
+    def getSession(self):
+        sm = getSiteManager(self)
+        session = sm.queryUtility(interfaces.ISessionFactory, session_name_format(self)) 
+        if session is not None:
+            return sm.queryUtility(interfaces.ISessionFactory, session_name_format(self)) 
+        else:
+            Session = SessionFactory(bind=sa.create_engine(self.dsn,
+                                                   echo=_ECHO_ENABLED))
+
+            sm.registerUtility(Session,
+                       interfaces.ISessionFactory,
+                       session_name_format(self))
+        return  sm.queryUtility(interfaces.ISessionFactory, session_name_format(self))
+    
     @property
     def schemata(self):
         """A schema manager utility"""
