@@ -778,16 +778,12 @@ class Term(Model):
     value = property(_get_value, _set_value, None, "The value stored")
 
 # -----------------------------------------------------------------------------
-# Visit
-# TODO: the following models are probably going to be obsolete when this
-#       package is completed. The reason they were developed in the first
-#       place is to help connect keep track of AVRC-specific components
-#       with the EAV\CR model, but then these can just as easily be done
-#       as associations.
+# Domains and Subjects
 # -----------------------------------------------------------------------------
 
 class Curator(Model):
     """
+    A person curating the data (i.e. manager)
     """
     __tablename__ = "curator"
 
@@ -795,45 +791,44 @@ class Curator(Model):
 
 class Subject(Model):
     """
+    We keep track of subjects here and reference them throughout the datbase
+    using an internal identifier.
+
+    Attributes:
+        id: (int) machine generated id number
+        uid: (int) an external reference number
     """
     __tablename__ = "subject"
 
     id = sa.Column(sa.Integer, primary_key=True)
 
-    uid = sa.Column(sa.Integer, nullable=False, unique=True)
-
-class Domain(Model):
-    """
-    """
-    __tablename__ = "domain"
-
-    id = sa.Column(sa.Integer, primary_key=True)
-
-    title = sa.Column(sa.Unicode, nullable=False, unique=True)
-
-
-class Protocol(Model):
-    """
-    TODO: incomplete
-    """
-    __tablename__ = "protocol"
-
-    id = sa.Column(sa.Integer, primary_key=True)
-
-    domain_id = sa.Column(sa.Integer, sa.ForeignKey("domain.id"),
-                          nullable=False)
+    uid = sa.Column(sa.Integer, nullable=False, index=True)
 
 class Enrollment(Model):
     """
+    Links a Subject to a Domain.
+
+    Attributes:
+        id: (int) machine generated id
+        domain_id: (int) reference to the domain table of the enrollment
+        domain: (Domain) relation to the Domain object
+        subject_id: (int) referene to the subject that is being enrolled
+        subject: (Subject) relation to the Subject object
+        start_date: (date) date that the subject was enrolled
+        consent_date: (date) date the the subject updated their consent (not
+            necessarily the start date)
+        stop_date: (date) date the subject ended enrollment
+        create_date: (datetime) date object is create
+        modify_date: (datetime) date object is modified
     """
     __tablename__ = "enrollment"
 
     id = sa.Column(sa.Integer, primary_key=True)
 
-    protocol_id = sa.Column(sa.Integer, sa.ForeignKey("protocol.id"),
+    domain_id = sa.Column(sa.Integer, sa.ForeignKey("domain.id"),
                             nullable=False)
 
-    protocol = orm.relation("Protocol", uselist=False)
+    domain = orm.relation("Domain", uselist=False)
 
     subject_id = sa.Column(sa.Integer, sa.ForeignKey("subject.id"),
                            nullable=False)
@@ -842,38 +837,136 @@ class Enrollment(Model):
 
     start_date = sa.Column(sa.Date, nullable=False)
 
+    consent_date = sa.Column(sa.Date, nullable=False)
+
     stop_date = sa.Column(sa.Date)
 
     create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
 
+    create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
+
+    modify_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now,
+                            onupdate=datetime.now)
+
     __table_args__ = (
-        sa.UniqueConstraint("protocol_id", "subject_id", "start_date"),
+        sa.UniqueConstraint("domain_id", "subject_id", "start_date"),
         {})
+
+visit_protocol_table = sa.Table("visit_protocol", Model.metadata,
+    sa.Column("visit_id", sa.ForeignKey("visit.id"), nullable=False,
+              primary_key=True),
+    sa.Column("protocol_id", sa.ForeignKey("protocol.id"), nullable=False,
+              primary_key=True),
+    )
+
+visit_enrollment_table = sa.Table("visit_enrollment", Model.metadata,
+    sa.Column("visit_id", sa.ForeignKey("visit.id"), nullable=False,
+              primary_key=True),
+    sa.Column("enrollment_id", sa.ForeignKey("enrollment.id"), nullable=False,
+              primary_key=True),
+    )
 
 class Visit(Model):
     """
+    Attributes:
+        id: (int) machine generated id
+        enrollments: (list) relation list to Enrollments that indicate the
+            domains this visit is associated with
+        protocols: (list) relation list to Protocols that indicate the progress
+            of the visit
+        visit_date: (date) the date the visit occured
+
     """
     __tablename__ = "visit"
 
     id = sa.Column(sa.Integer, primary_key=True)
 
-    enrollement_id = sa.Column(sa.Integer, sa.ForeignKey(Enrollment.id),
-                               nullable=False)
+    enrollements = orm.relation("Enrollment", secondary=visit_enrollment_table)
 
-    enrollement = orm.relation("Enrollment", uselist=False)
+    protocols = orm.relation("Protocol", secondary=visit_protocol_table)
 
     visit_date = sa.Column(sa.Date, nullable=False)
 
 visit_instance_table = sa.Table("visit_instance", Model.metadata,
-    sa.Column("visit_id", sa.ForeignKey("visit.id"), nullable=False),
-    sa.Column("instance_id", sa.ForeignKey("instance.id"), nullable=False),
-    sa.PrimaryKeyConstraint("visit_id", "instance_id")
+    sa.Column("visit_id", sa.ForeignKey("visit.id"), nullable=False,
+              primary_key=True),
+    sa.Column("instance_id", sa.ForeignKey("instance.id"), nullable=False,
+              primary_key=True),
     )
 
 domain_schema_table = sa.Table("domain_schema", Model.metadata,
     sa.Column("domain_id", sa.Integer, sa.ForeignKey("domain.id"),
-              nullable=False),
+              nullable=False, primary_key=True),
     sa.Column("schema_id", sa.Integer, sa.ForeignKey("schema.id"),
-              nullable=False),
-    sa.PrimaryKeyConstraint("domain_id", "schema_id")
+              nullable=False, primary_key=True)
     )
+
+class Domain(Model):
+    """
+    Attributes:
+        id: (int) machine generated id number
+        code: (unicode) the domain's short hand code (indexed)
+        title: (unicode) the domains' human readble title (unique)
+        consent_date: (date) the date of the new consent
+        schemata: (list) available schemata
+    """
+    __tablename__ = "domain"
+
+    id = sa.Column(sa.Integer, primary_key=True)
+
+    code = sa.Column(sa.Unicode, nullable=False, index=True)
+
+    title = sa.Column(sa.Unicode, nullable=False, unique=True)
+
+    consent_date = sa.Column(sa.Date, nullable=False)
+
+    create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
+
+    modify_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now,
+                            onupdate=datetime.now)
+
+    schemata = orm.relation("Schema", secondary=domain_schema_table)
+
+protocol_schema_table = sa.Table("protocol_schema", Model.metadata,
+    sa.Column("protocol_id", sa.Integer, sa.ForeignKey("protocol.id"),
+              nullable=False, primary_key=True),
+    sa.Column("schema_id", sa.Integer, sa.ForeignKey("schema.id"),
+              nullable=False, primary_key=True)
+    )
+
+class Protocol(Model):
+    """
+    Required schemata for a particular cycle in a domain.
+    s
+    Attributes:
+        id: (int) machine generated id number
+        domain_id: (int) reference to domain this protocol belongs to
+        domain: (Domain) relation to Domain object
+        schemata: (list) Schema objects that are required
+        cycle: (int) week number
+        threshold: (int) future-proof field for exempting cycles
+        is_active: (bool) if set, indicates the entry is in active use
+        create_date: (datetime) date object is create
+        modify_date: (datetime) date object is modified
+    """
+    __tablename__ = "protocol"
+
+    id = sa.Column(sa.Integer, primary_key=True)
+
+    domain_id = sa.Column(sa.Integer, sa.ForeignKey("domain.id"),
+                          nullable=False)
+
+    domain = orm.relation("Domain", uselist=False)
+
+    schemata = orm.relation("Schema", secondary=protocol_schema_table)
+
+    cycle = sa.Column(sa.Integer, nullable=False)
+
+    threshold = sa.Column(sa.Integer)
+
+    is_active = sa.Column(sa.Boolean, nullable=False, default=True)
+
+    create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
+
+    modify_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now,
+                            onupdate=datetime.now)

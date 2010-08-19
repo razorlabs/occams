@@ -6,6 +6,7 @@
   <includeDependencies package="." />
 
   <adapter factory=".schema.DatastoreSchemaManager" />
+  <adapter factory=".domain.DatastoreDomainManager" />
 
   <!-- Handle when a Site adds an engine -->
   <subscriber handler=".datastore.handleDatastoreCreated" />

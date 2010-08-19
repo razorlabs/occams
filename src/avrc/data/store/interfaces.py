@@ -226,6 +226,22 @@ class ISchema(IVersionable, IFormable):
     Marker interface for a schema maintained by the data store.
     """
 
+class IDomain(IComponent):
+    """
+    """
+
+    code = zope.schema.TextLine(title=_(u"Code"))
+
+    title = zope.schema.TextLine(title=_(u"Title"))
+
+    consent_date = zope.schema.Date(title=_(u"Date of consent"))
+
+
+class Protocol(IComponent):
+    """
+    """
+
+
 class IReportable(IComponent):
     """
     Promises to do some form of reporting.

@@ -6,6 +6,7 @@ from time import time as currenttime
 from datetime import datetime, date, time
 import logging
 
+from zope.component import getSiteManager
 from zope.component import provideUtility
 from zope.component import getUtility
 from zope.component import queryUtility
@@ -55,8 +56,20 @@ def named_session(datastore):
     Returns:
         A sqlalchemy Session factory.
     """
-    return queryUtility(interfaces.ISessionFactory,
-                        name=session_name_format(datastore))
+
+    import zope.interface
+    sm = getSiteManager(datastore)
+    print
+    print
+    print
+    print list(sm.getUtilitiesFor(zope.interface.Interface))
+
+    print
+    print
+    print
+
+    return sm.queryUtility(interfaces.ISessionFactory,
+                           name=session_name_format(datastore))
 
 def setup_types(datastore):
     """
@@ -98,12 +111,12 @@ def handleDatastoreCreated(datastore, event):
     Session = SessionFactory(bind=sa.create_engine(datastore.dsn,
                                                    echo=_ECHO_ENABLED))
 
-    provideUtility(Session,
-                   provides=interfaces.ISessionFactory,
-                   name=session_name_format(datastore))
+    sm = getSiteManager(datastore)
+    sm.registerUtility(Session,
+                       interfaces.ISessionFactory,
+                       session_name_format(datastore))
 
-    session = Session()
-    model.setup(session.bind)
+    model.setup(Session.bind)
     setup_types(datastore)
 
 @adapter(interfaces.IDatastore, IObjectRemovedEvent)
@@ -117,9 +130,10 @@ def handleDatastoreRemoved(datastore, event):
     Returns:
         N/A
     """
+    # TODO do ti for the site
     provideUtility(None,
-                   provided=interfaces.ISessionFactory,
-                   name=session_name_format(datastore))
+                   interfaces.ISessionFactory,
+                   session_name_format(datastore))
 
 class SessionFactory(object):
     implements(interfaces.ISessionFactory)
@@ -201,9 +215,9 @@ class Datastore(object):
         return interfaces.ISchemaManager(self)
 
     @property
-    def protocols(self):
+    def domains(self):
         """A protocol manager utility"""
-        return interfaces.IProtocolManager(self)
+        return interfaces.IDomainManager(self)
 
     def keys(self):
         # This method will remain unimplemented as it doesn't really make sense
