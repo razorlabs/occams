@@ -802,6 +802,8 @@ class Subject(Model):
 
     id = sa.Column(sa.Integer, primary_key=True)
 
+    zid = sa.Column(sa.Integer, nullable=False, unique=True)
+
     uid = sa.Column(sa.Integer, nullable=False, index=True)
 
 class Enrollment(Model):
@@ -824,6 +826,8 @@ class Enrollment(Model):
     __tablename__ = "enrollment"
 
     id = sa.Column(sa.Integer, primary_key=True)
+
+    zid = sa.Column(sa.Integer, nullable=False, unique=True)
 
     domain_id = sa.Column(sa.Integer, sa.ForeignKey("domain.id"),
                             nullable=False)
@@ -880,6 +884,8 @@ class Visit(Model):
     __tablename__ = "visit"
 
     id = sa.Column(sa.Integer, primary_key=True)
+    
+    zid = sa.Column(sa.Integer, nullable=False, unique=True)
 
     enrollements = orm.relation("Enrollment", secondary=visit_enrollment_table)
 
@@ -913,6 +919,8 @@ class Domain(Model):
     __tablename__ = "domain"
 
     id = sa.Column(sa.Integer, primary_key=True)
+
+    zid = sa.Column(sa.Integer, nullable=False, unique=True)
 
     code = sa.Column(sa.Unicode, nullable=False, index=True)
 
@@ -952,6 +960,8 @@ class Protocol(Model):
     __tablename__ = "protocol"
 
     id = sa.Column(sa.Integer, primary_key=True)
+
+    zid = sa.Column(sa.Integer, nullable=False, unique=True)
 
     domain_id = sa.Column(sa.Integer, sa.ForeignKey("domain.id"),
                           nullable=False)

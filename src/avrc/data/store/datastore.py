@@ -226,6 +226,26 @@ class Datastore(object):
         """A protocol manager utility"""
         return interfaces.IDomainManager(self)
 
+    @property
+    def subjects(self):
+        """A protocol manager utility"""
+        return interfaces.ISubjectManager(self)
+
+    @property
+    def protocols(self):
+        """A protocol manager utility"""
+        return interfaces.IProtocolManager(self)
+
+    @property
+    def enrollments(self):
+        """A protocol manager utility"""
+        return interfaces.IEnrollmentManager(self)
+
+    @property
+    def visits(self):
+        """A protocol manager utility"""
+        return interfaces.IVisitManager(self)
+    
     def keys(self):
         # This method will remain unimplemented as it doesn't really make sense
         # to return every single key in the data store.
@@ -503,3 +523,7 @@ DatastoreFactory = Factory(
     description=_(u"Creates an instance of a datastore implementation object. "
                    "Also notifies listeners of this creation.")
     )
+
+
+
+

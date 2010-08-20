@@ -11,7 +11,7 @@ from zope.i18nmessageid import MessageFactory
 from avrc.data.store import interfaces
 from avrc.data.store import model
 from avrc.data.store.datastore import named_session
-
+from avrc.data.store._utils import DatastoreConventionalManager
 
 _ = MessageFactory(__name__)
 
@@ -38,7 +38,7 @@ DomainFactory = Factory(
     title=_(u"Create a domain instance"),
     )
 
-class DatastoreDomainManager(object):
+class DatastoreDomainManager(DatastoreConventionalManager):
     adapts(interfaces.IDatastore)
     implements(interfaces.IDomainManager)
 
@@ -46,39 +46,72 @@ class DatastoreDomainManager(object):
 
     def __init__(self, datastore):
         self._datastore = datastore
+        self._model = model.Domain
+        self._type = Domain
 
-    def has(self, key):
-        pass
+    def putProperties(self, rslt, source):
+        """
+        Add the items from the source to ds
+        """
+        rslt.zid = source.zid
+        rslt.title = source.title 
+        rslt.code = source.code
+        rslt.consent_date = source.consent_date
+        return rslt
+    
+class Protocol(object):
+    implements(interfaces.IProtocol)
 
-    has.__doc__ = interfaces.IDomainManager["has"].__doc__
+    __doc__ = interfaces.IProtocol.__doc__
 
-    def get(self, key):
-        Session = named_session(self._datastore)
-        session = Session()
+    cycle = FieldProperty(interfaces.IProtocol["cycle"])
 
-        domain_rslt = session.query(model.Domain)\
-                      .filter_by(title=key)\
-                      .first()
+    domain_title = FieldProperty(interfaces.IProtocol["domain_title"])
+    
+    threshold = FieldProperty(interfaces.IProtocol["threshold"])
 
-        return Domain(title=domain_rslt.title)
+    is_active = FieldProperty(interfaces.IProtocol["is_active"])
 
-    get.__doc__ = interfaces.IDomainManager["get"].__doc__
+    def __init__(self, cycle, domain_title, threshold=None, is_active=True):
+        self.cycle = cycle
+        self.domain_title = domain_title
+        self.threshold = threshold
+        self.is_active = is_active
+
+ProtocolFactory = Factory(
+    Protocol,
+    title=_(u"Create a protocol instance"),
+    )
+
+class DatastoreProtocolManager(DatastoreConventionalManager):
+    adapts(interfaces.IDatastore)
+    implements(interfaces.IProtocolManager)
+
+    __doc__ = interfaces.IProtocolManager.__doc__
+
+    def __init__(self, datastore):
+        self._datastore = datastore
+        self._model = model.Protocol
+        self._type = Protocol
 
     def put(self, source):
         Session = named_session(self._datastore)
         session = Session()
         is_new = False
 
-        domain_rslt = session.query(model.Domain)\
-                      .filter_by(title=source.title)\
+        rslt = session.query(self._model)\
+                      .filter_by(zid=source.zid)\
                       .first()
 
-        if domain_rslt is None:
-            domain_rslt = model.Domain(code=source.code)
-            is_new = True
-
+        domain = session.query(model.Domain)\
+                      .filter_by(zid=source.domain_zid)\
+                      .first()
+        if rslt is None:
+            rslt = self._model(domain=domain, zid=source.zid, cycle=source.cycle, threshold=source.threshold, is_active=source.is_active)
+            session.add(rslt)
+        else:
         # won't update the code
-        domain_rslt.title = source.title
+            rslt = self.putProperties(rslt, source, session)
         domain_rslt.consent_date = source.consent_date
 
         if is_new:
@@ -86,34 +119,13 @@ class DatastoreDomainManager(object):
 
         session.commit()
 
-    put.__doc__ = interfaces.IDomainManager["put"].__doc__
-
-    def retire(self, source):
-        pass
-
-    retire.__doc__ = interfaces.IDomainManager["retire"].__doc__
-
-    def restore(self, key):
-        pass
-
-    restore.__doc__ = interfaces.IDomainManager["restore"].__doc__
-
-    def purge(self, source):
-        Session = getUtility(interfaces.ISessionFactory)()
-        rslt = Session.query(model.Domain).filter_by(title=source.title)
-        if rslt is not None:
-            Session.remove(rslt)
-        Session.commit()
-
-    purge.__doc__ = interfaces.IDomainManager["purge"].__doc__
-
-    def keys(self):
-        listing = []
-        Session = getUtility(interfaces.ISessionFactory)()
-
-        for rslt in Session.query(model.Domain).all():
-            listing.append(Domain(title=rslt.title))
-
-        return listing
-
-    keys.__doc__ = interfaces.IDomainManager["keys"].__doc__
+    def putProperties(self, rslt, source):
+        """
+        Add the items from the source to ds
+        """
+        rslt.cycle = source.cycle
+#        rslt.schemata.append(;lasdkfjas;lfj;saldfja;sldjfsa;ldjf;saldfjsa;fhsa)
+        rslt.threshold = source.threshold
+        rslt.is_active = source.is_active
+        return rslt
+    

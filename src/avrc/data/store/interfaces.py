@@ -143,10 +143,6 @@ class ISchemaManager(IManager):
     Marker interface for managing schemata.
     """
 
-class IDomainManager(IManager):
-    """
-    Marker interface for managing domains
-    """
 
 class IDatastore(IManager, IContained):
     """
@@ -236,12 +232,37 @@ class IDomain(IComponent):
 
     consent_date = zope.schema.Date(title=_(u"Date of consent"))
 
-
-class Protocol(IComponent):
+class IProtocol(IComponent):
     """
     """
+    cycle = zope.schema.Int(title=_(u"Protocol Cycle"))
+
+    domain_title = zope.schema.TextLine(title=_(u"Domain Title"))
+
+    threshold = zope.schema.Int(title=_(u"Cycle Threshold"))
+
+    is_active = zope.schema.Bool(title=_(u"Active?"))
 
 
+class IVisit(IComponent):
+    """
+    """
+    visit_date = zope.schema.Date(title=_(u"Visit Date"))
+
+class IEnrollment(IComponent):
+    """
+    """
+    start_date = zope.schema.Date(title=_(u"Initial Date of Consent"))
+
+    consent_date = zope.schema.Date(title=_(u"Latest Date of Consent"))
+
+    stop_date = zope.schema.Date(title=_(u"End Date"))
+
+class ISubject(IComponent):
+    """
+    """
+    uid = zope.schema.Int(title=_("OUR Number"))
+    
 class IReportable(IComponent):
     """
     Promises to do some form of reporting.
@@ -317,3 +338,36 @@ class IQuery(IComponent):
             ),
         required=False,
         )
+class IConventionalManager(IManager):
+    """
+    Marker interface for managing domains
+    """
+#    datastore = zope.schema.Object(title=u"Datastore",
+#                                   schema=IDatastore)
+#    _type = zope.schema.Object(title=u"Type",
+#                               value_type=IManager)
+    
+class IDomainManager(IManager):
+    """
+    Marker interface for managing domains
+    """
+    
+class ISubjectManager(IManager):
+    """
+    Marker interface for managing subjects
+    """
+    
+class IProtocolManager(IManager):
+    """
+    Marker interface for managing protocols
+    """
+
+class IEnrollmentManager(IManager):
+    """
+    Marker interface for managing enrollments
+    """
+
+class IVisitManager(IManager):
+    """
+    Marker interface for managing protocols
+    """
