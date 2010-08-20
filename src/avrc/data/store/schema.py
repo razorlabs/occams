@@ -81,7 +81,7 @@ class DatastoreSchemaManager(object):
         """
         Retrieves the classes that inherit from the specified base.
 
-        TODO: support versioning?
+        TODO: (mmartinez) support versioning?
 
         Arguments:
             base: (object) base interface to find all the children for
@@ -136,30 +136,47 @@ class DatastoreSchemaManager(object):
         Retrives all the children of the base class. Note this does not include
         all the intermediate bases (i.e. it just returns the leaf nodes)
         """
-        # TODO: (mmartinez) CHANGE!!
-        return self.get_descendants(ibase)
+        Session = named_session(self._datastore)
+        session  = Session()
 
-#iterativePostorder(rootNode)
-#  nodeStack.push(rootNode)
-#  while (! nodeStack.empty())
-#    currNode = nodeStack.peek()
-#    if ((currNode.left != null) and (currNode.left.visited == false))
-#      nodeStack.push(currNode.left)
-#    else
-#      if ((currNode.right != null) and (currNode.right.visited == false))
-#        nodeStack.push(currNode.right)
-#      else
-#        print currNode.value
-#        currNode.visited := true
-#        nodeStack.pop()
+        names = queue([])
 
+        if not isinstance(ibase, (str, unicode)):
+            if not ibase.extends(interfaces.Schema):
+                raise Exception("base class does not extend datastore's base.")
+            ibase_name = unicode(ibase.__name__)
+        else:
+            ibase_name = unicode(ibase)
+
+
+        spec_rslt = session.query(model.Specification)\
+                    .filter_by(name=ibase_name)\
+                    .first()
+
+        if spec_rslt is None:
+            raise Exception("%s isn't in the data store" % ibase)
+
+        to_visit = queue([spec_rslt])
+
+        # Breadth-first pre-order traversal of all children
+        while len(to_visit) > 0:
+            spec_rslt = to_visit.popleft()
+
+            if spec_rslt.children:
+                for child in spec_rslt.children:
+                    to_visit.append(child)
+            else:
+                # Only append if it's a leaf node (as opposed to descendants)
+                names.append(spec_rslt.name)
+
+        return [self.get(name) for name in names]
 
     def get(self, key):
         #
         # TODO: (mmartinez) Unable to retrieve versioned bases...
         # TODO: (mmartinez) Keep in mind that if getting many objects that
-        #    share a common ancestor, this method might be innefficient unless
-        #    dynamic programminng heuristics are employed.
+        #    share a common ancestor, this method might be inefficient unless
+        #    dynamic programming heuristics are employed.
         #
         if isinstance(key, (str, unicode)):
             key  = (key, None)
@@ -185,11 +202,6 @@ class DatastoreSchemaManager(object):
             schema_q = schema_q.order_by(model.Schema.create_date.desc())
 
         schema_rslt = schema_q.first()
-
-#        to_visit = [schema_rslt]
-#
-#        while to_visit:
-#            schema_rslt = to_visit[-1]
 
         bases = []
         attrs = {}
@@ -488,71 +500,3 @@ class DatastoreSchemaManager(object):
             obj.__dict__[name].__set__(obj, kw.get(name))
 
         return obj
-#
-#class MutableSchema(object):
-#    """
-#    This module is in charge of controlling the actual properties of the
-#    target module. It's sole purpose is for writing, not retrieving properties.
-#
-#    Behaves like a delta of the last version and this version.
-#    """
-#
-#    implements(interfaces.IMutableSchema)
-#
-#    __version__ = None
-#
-#    __bases__ = None
-#
-#    __name__ = None
-#
-#    __documentation__ = None
-#
-#    __attributes__ = None
-#
-#    __directives__ = None
-#
-#    __invariants__ = None
-#
-#    def __init__(self,
-#                 name,
-#                 bases=None,
-#                 documentation=None,
-#                 directives=None,
-#                 version=None):
-#        """
-#        Constructor
-#        """
-#        self.__bases__ = bases
-#        self.__name__ = unicode(name)
-#        self.__documentation__ = unicode(documentation)
-#        self.__version__ = version
-#        self.__attributes__ = {}
-#        self.__directives__ = directives or {}
-#        self.__invariants__ = set([])
-#
-#    def add_invariant(self, name):
-#        """
-#        """
-#        self.__invariants__.add(unicode(name))
-#
-#    def remove_invariant(self, name):
-#        """
-#        """
-#        try:
-#            self.__invariants__.remove(unicode(name))
-#        except KeyError:
-#            pass
-#
-#    def __setitem__(self, name, field_obj):
-#        """
-#        @param key: the name of the property to change
-#        @param value: the zope schema value to set for the property, None to
-#                      remove the property
-#        """
-#        if isinstance(field_obj, zope.schema.Object):
-#            exists = MutableSchema.has_interface(field_obj.schema.__name__,
-#                                                 version=None)
-#            if not exists:
-#                raise interfaces.UndefinedSchemaError()
-#
-#        self.__attributes__[unicode(name)] = field_obj
