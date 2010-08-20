@@ -21,6 +21,8 @@ class DatastoreConventionalManager(object):
         self._datastore = datastore
         self._model = model
         self._type = type
+        Session = named_session(self._datastore)
+        self._session = Session()
         
     def has(self, key):
         pass
@@ -34,10 +36,8 @@ class DatastoreConventionalManager(object):
         raise NotImplementedError("Subclasses must implement putProperties")
 
     def get(self, key):
-        Session = named_session(self._datastore)
-        session = Session()
 
-        rslt = session.query(self._model)\
+        rslt = self._session.query(self._model)\
                       .filter_by(zid=key)\
                       .first()
         newObj = createObject(self._type)
@@ -48,20 +48,19 @@ class DatastoreConventionalManager(object):
     get.__doc__ = interfaces.IConventionalManager["get"].__doc__
 
     def put(self, source):
-        Session = named_session(self._datastore)
-        session = Session()
 
-        rslt = session.query(self._model)\
+
+        rslt = self._session.query(self._model)\
                       .filter_by(zid=source.zid)\
                       .first()
 
         if rslt is None:
             rslt = self._model(zid=source.zid)
-            session.add(rslt)
+            self._session.add(rslt)
 
         # won't update the code
         rslt = self.putProperties(rslt, source)
-        session.commit()
+        self._session.commit()
 
     put.__doc__ = interfaces.IConventionalManager["put"].__doc__
 
@@ -76,23 +75,21 @@ class DatastoreConventionalManager(object):
     restore.__doc__ = interfaces.IConventionalManager["restore"].__doc__
 
     def purge(self, source):
-        Session = getUtility(interfaces.ISessionFactory)
-        session = Session()
-        rslt = session.query(self._model)\
+
+        rslt = self._session.query(self._model)\
                       .filter_by(zid=source.zid)\
                       .first()
         
         if rslt is not None:
-            session.remove(rslt)
-        session.commit()
+            self._session.remove(rslt)
+        self._session.commit()
 
     purge.__doc__ = interfaces.IConventionalManager["purge"].__doc__
 
     def keys(self):
         listing = []
-        Session = getUtility(interfaces.ISessionFactory)()
 
-        for rslt in Session.query(self._model).all():
+        for rslt in self._session.query(self._model).all():
             newObj = createObject(self._type)
             newObj = self.putProperties(newObj, rslt)
             listing.append(newObj)

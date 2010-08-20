@@ -41,7 +41,8 @@ class DatastoreSubjectManager(DatastoreConventionalManager):
         self._datastore = datastore
         self._model = model.Subject
         self._type = Subject
-        
+        Session = named_session(self._datastore)
+        self._session = Session()
     def putProperties(self, rslt, source):
         """
         Add the items from the source to ds
@@ -80,30 +81,29 @@ class DatastoreEnrollmentManager(DatastoreConventionalManager):
         self._datastore = datastore
         self._model = model.Enrollment
         self._type = Enrollment
-
+        Session = named_session(self._datastore)
+        self._session = Session()
 
 
     def put(self, source):
-        Session = named_session(self._datastore)
-        session = Session()
 
-        rslt = session.query(self._model)\
+        rslt = self._session.query(self._model)\
                       .filter_by(zid=source.zid)\
                       .first()
 
-        domain = session.query(model.Domain)\
+        domain = self._session.query(model.Domain)\
                       .filter_by(zid=source.domain_zid)\
                       .first()
-        subject =  session.query(model.Subject)\
+        subject =  self._session.query(model.Subject)\
                       .filter_by(zid = source.subject_zid)\
                       .first()
         if rslt is None:
             rslt = self._model(zid=source.zid, domain=domain, domain_id=domain.id, subject=subject, subject_id=subject.id, start_date=source.start_date, consent_date=source.consent_date)
-            session.add(rslt)
+            self._session.add(rslt)
         else:
         # won't update the code
-            rslt = self.putProperties(rslt, source, session)
-        session.commit()
+            rslt = self.putProperties(rslt, source)
+        self._session.commit()
 
     def putProperties(self, rslt, source):
         """
@@ -142,14 +142,24 @@ class DatastoreVisitManager(DatastoreConventionalManager):
         self._datastore = datastore
         self._model = model.Visit
         self._type = Visit
-       
+        Session = named_session(self._datastore)
+        self._session = Session()
+        
     def putProperties(self, rslt, source):
         """
         Add the items from the source to ds
         """
         rslt.visit_date = source.visit_date
-#        rslt.enrollments.extend(source.enrollments)
-#        rslt.protocols.extend(source.protocols)
+        for enrollment_zid in source.enrollment_zids:
+            rslt.enrollments.append(self._session.query(model.Enrollment)\
+                      .filter_by(zid=enrollment_zid)\
+                      .first())
+
+        for protocol_zid in source.protocol_zids:
+            rslt.protocols.append(self._session.query(model.Protocol)\
+                      .filter_by(zid=protocol_zid)\
+                      .first())
+
 
 
 

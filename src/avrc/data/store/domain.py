@@ -19,14 +19,14 @@ class Domain(object):
     implements(interfaces.IDomain)
 
     __doc__ = interfaces.IDomain.__doc__
-
-    code = FieldProperty(interfaces.IDomain["code"])
-
-    title = FieldProperty(interfaces.IDomain["title"])
-
-    consent_date = FieldProperty(interfaces.IDomain["consent_date"])
-
-    schemata = FieldProperty(interfaces.IDomain["schemata"])
+#
+#    code = FieldProperty(interfaces.IDomain["code"])
+#
+#    title = FieldProperty(interfaces.IDomain["title"])
+#
+#    consent_date = FieldProperty(interfaces.IDomain["consent_date"])
+#
+#    schemata = FieldProperty(interfaces.IDomain["schemata"])
 
     def __init__(self, code, title, consent_date):
         self.code = code
@@ -48,7 +48,9 @@ class DatastoreDomainManager(DatastoreConventionalManager):
         self._datastore = datastore
         self._model = model.Domain
         self._type = Domain
-
+        Session = named_session(self._datastore)
+        self._session = Session()
+        
     def putProperties(self, rslt, source):
         """
         Add the items from the source to ds
@@ -93,7 +95,9 @@ class DatastoreProtocolManager(DatastoreConventionalManager):
         self._datastore = datastore
         self._model = model.Protocol
         self._type = Protocol
-
+        Session = named_session(self._datastore)
+        self._session = Session()
+        
     def put(self, source):
         Session = named_session(self._datastore)
         session = Session()
@@ -112,10 +116,6 @@ class DatastoreProtocolManager(DatastoreConventionalManager):
         else:
         # won't update the code
             rslt = self.putProperties(rslt, source, session)
-        domain_rslt.consent_date = source.consent_date
-
-        if is_new:
-            session.add(domain_rslt)
 
         session.commit()
 

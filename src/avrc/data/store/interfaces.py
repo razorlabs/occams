@@ -232,6 +232,7 @@ class IDomain(IComponent):
 
     consent_date = zope.schema.Date(title=_(u"Date of consent"))
 
+
 class IProtocol(IComponent):
     """
     """

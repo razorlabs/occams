@@ -887,7 +887,7 @@ class Visit(Model):
     
     zid = sa.Column(sa.Integer, nullable=False, unique=True)
 
-    enrollements = orm.relation("Enrollment", secondary=visit_enrollment_table)
+    enrollments = orm.relation("Enrollment", secondary=visit_enrollment_table)
 
     protocols = orm.relation("Protocol", secondary=visit_protocol_table)
 
