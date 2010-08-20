@@ -66,17 +66,19 @@ class Protocol(object):
 
     __doc__ = interfaces.IProtocol.__doc__
 
+    zid = FieldProperty(interfaces.IProtocol["zid"])
+
     cycle = FieldProperty(interfaces.IProtocol["cycle"])
 
-    domain_title = FieldProperty(interfaces.IProtocol["domain_title"])
+    domain_zid = FieldProperty(interfaces.IProtocol["domain_zid"])
 
     threshold = FieldProperty(interfaces.IProtocol["threshold"])
 
     is_active = FieldProperty(interfaces.IProtocol["is_active"])
 
-    def __init__(self, cycle, domain_title, threshold=None, is_active=True):
+    def __init__(self, cycle, domain_zid, threshold=None, is_active=True):
         self.cycle = cycle
-        self.domain_title = domain_title
+        self.domain_zid = domain_zid
         self.threshold = threshold
         self.is_active = is_active
 

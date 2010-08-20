@@ -817,6 +817,8 @@ class Subject(Model):
 
     uid = sa.Column(sa.Integer, nullable=False, index=True)
 
+    nurse_email = sa.Column(sa.Unicode)
+
 class Enrollment(Model):
     """
     Links a Subject to a Domain.

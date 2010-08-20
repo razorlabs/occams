@@ -222,6 +222,7 @@ class IKey(IComponent):
 class IDomain(IComponent):
     """
     """
+    zid = zope.schema.Int(title=_(u"Domain Zope IntId"))
 
     code = zope.schema.TextLine(title=_(u"Code"))
 
@@ -233,9 +234,11 @@ class IDomain(IComponent):
 class IProtocol(IComponent):
     """
     """
+    zid = zope.schema.Int(title=_(u"Protocol Zope IntId"))
+
     cycle = zope.schema.Int(title=_(u"Protocol Cycle"))
 
-    domain_title = zope.schema.TextLine(title=_(u"Domain Title"))
+    domain_zid = zope.schema.Int(title=_(u"Domain Zope IntId"))
 
     threshold = zope.schema.Int(title=_(u"Cycle Threshold"))
 
@@ -245,11 +248,26 @@ class IProtocol(IComponent):
 class IVisit(IComponent):
     """
     """
+    zid = zope.schema.Int(title=_(u"Visit Zope IntId"))
+
     visit_date = zope.schema.Date(title=_(u"Visit Date"))
+
+    enrollment_zids = zope.schema.List(title=_(u"Enrollment Zope IntIds"),
+                                       value_type=zope.schema.Int(title=_(u"Zope Id"))
+                                       )
+    protocol_zids = zope.schema.List(title=_(u"Protocol Zope IntIds"),
+                                       value_type=zope.schema.Int(title=_(u"Zope Id"))
+                                       )
 
 class IEnrollment(IComponent):
     """
     """
+    zid = zope.schema.Int(title=_(u"Enrollment Zope IntId"))
+
+    subject_zid = zope.schema.Int(title=_(u"Enrolled Subject Zope IntId"))
+
+    domain_zid = zope.schema.Int(title=_(u"Enrolled Domain Zope IntId"))
+
     start_date = zope.schema.Date(title=_(u"Initial Date of Consent"))
 
     consent_date = zope.schema.Date(title=_(u"Latest Date of Consent"))
@@ -260,6 +278,11 @@ class ISubject(IComponent):
     """
     """
     uid = zope.schema.Int(title=_("OUR Number"))
+    
+    zid = zope.schema.Int(title=_("Subject Zope IntId"))
+
+    nurse_email = zope.schema.TextLine(title=_("Subject's Primary Nurse"))
+
 
 class IReportable(IComponent):
     """

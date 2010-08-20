@@ -20,9 +20,12 @@ class Subject(object):
 
     __doc__ = interfaces.ISubject.__doc__
 
+    zid = FieldProperty(interfaces.ISubject["zid"])
     uid = FieldProperty(interfaces.ISubject["uid"])
+    nurse_email = FieldProperty(interfaces.ISubject["nurse_email"])
 
-    def __init__(self, uid):
+    def __init__(self, zid, uid):
+        self.zid = zid
         self.uid = uid
 
 SubjectFactory = Factory(
@@ -43,12 +46,14 @@ class DatastoreSubjectManager(DatastoreConventionalManager):
         self._type = Subject
         Session = named_session(self._datastore)
         self._session = Session()
+        
     def putProperties(self, rslt, source):
         """
         Add the items from the source to ds
         """
         rslt.uid = source.uid 
-        
+        rslt.nurse_email = source.nurse_email
+
 class Enrollment(object):
     implements(interfaces.IEnrollment)
 
