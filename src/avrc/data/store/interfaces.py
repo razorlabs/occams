@@ -198,14 +198,14 @@ class IKey(IComponent):
 
     value = Attribute(_(u"A way to distinguish this item in the data store"))
 
-class IVersionable(IComponent):
+class Versionable(Interface):
     """
     """
 
     __version__ = Attribute(_(u"This will be used to keep track of the "
                               u"data store schema as they evolve"))
 
-class IFormable(IComponent):
+class Formable(Interface):
     """
     Represents a schema that contains detailed information for display in a
     form.
@@ -217,7 +217,7 @@ class IFormable(IComponent):
 
     __dependents__ = Attribute(_(u"Dependent schemata"))
 
-class ISchema(IVersionable, IFormable):
+class Schema(Versionable, Formable):
     """
     Marker interface for a schema maintained by the data store.
     """
@@ -263,7 +263,7 @@ class ISubject(IComponent):
     """
     """
     uid = zope.schema.Int(title=_("OUR Number"))
-    
+
 class IReportable(IComponent):
     """
     Promises to do some form of reporting.
@@ -347,17 +347,17 @@ class IConventionalManager(IManager):
 #                                   schema=IDatastore)
 #    _type = zope.schema.Object(title=u"Type",
 #                               value_type=IManager)
-    
+
 class IDomainManager(IManager):
     """
     Marker interface for managing domains
     """
-    
+
 class ISubjectManager(IManager):
     """
     Marker interface for managing subjects
     """
-    
+
 class IProtocolManager(IManager):
     """
     Marker interface for managing protocols

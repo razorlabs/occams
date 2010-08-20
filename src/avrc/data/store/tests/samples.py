@@ -105,3 +105,20 @@ class IChoicedInterface(Interface):
             values=('foo', 'bar', 'go' 'away', 'plz',)
         )
 
+class IGrandfather(Interface):
+    pass
+
+class IFather(IGrandfather):
+    pass
+
+class IUncle(IGrandfather):
+    pass
+
+class IAunt(IGrandfather):
+    pass
+
+class IBrother(IFather):
+    pass
+
+class ISister(IFather):
+    pass

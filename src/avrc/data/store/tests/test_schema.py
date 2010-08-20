@@ -121,6 +121,10 @@ class TestCase(ptc.PloneTestCase):
 #        print
 #        print
 
+    def test_inheritance(self):
+        """
+        """
+
 
     def test_versioning(self):
         """

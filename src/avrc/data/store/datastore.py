@@ -325,12 +325,12 @@ class Datastore(object):
                 schema_rslt = session.query(model.Schema)\
                               .filter_by(create_date=schema_obj.__version__)\
                               .join(model.Specification)\
-                              .filter_by(module=schema_obj.__name__)\
+                              .filter_by(name=schema_obj.__name__)\
                               .first()
 
                 instance_rslt = model.Instance(
                     schema=schema_rslt,
-                    title=u"%s-%d" % (schema_rslt.specification.module,
+                    title=u"%s-%d" % (schema_rslt.specification.name,
                                       currenttime()),
                     description=u"Some gibberish"
                     )
@@ -409,12 +409,12 @@ class Datastore(object):
                 schema_rslt = session.query(model.Schema)\
                               .filter_by(create_date=schema_obj.__version__)\
                               .join(model.Specification)\
-                              .filter_by(module=schema_obj.__name__)\
+                              .filter_by(name=schema_obj.__name__)\
                               .first()
 
                 instance_rslt = model.Instance(
                     schema=schema_rslt,
-                    title=u"%s-%d" % (schema_rslt.specification.module,
+                    title=u"%s-%d" % (schema_rslt.specification.name,
                                       currenttime()),
                     description=u"Some gibberish"
                     )

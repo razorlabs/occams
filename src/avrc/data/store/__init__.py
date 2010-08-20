@@ -1,5 +1,1 @@
-
-
-def initialize(context):
-    """
-    """
+from avrc.data.store.interfaces import Schema

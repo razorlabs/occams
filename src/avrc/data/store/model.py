@@ -419,6 +419,8 @@ class Specification(Model):
     Attributes:
         id: (int) machine generated id number
         bases: (list) list of bases classes this specification extends
+        children: (list) a convenience attribute to also allow the retrieval
+            of child classes
         name: (str) the module name of the specification. It must be unique,
             client code should have a graceful way for duplicate names (perhaps
             append an instance number?)
@@ -449,7 +451,16 @@ class Specification(Model):
                                        ]
                          )
 
-    module = sa.Column(sa.Unicode, nullable=False, unique=True)
+    children = orm.relation("Specification",
+                            secondary=hierarchy_table,
+                            primaryjoin=(id == hierarchy_table.c.parent_id),
+                            secondaryjoin=(id == hierarchy_table.c.child_id),
+                            foreign_keys=[hierarchy_table.c.child_id,
+                                          hierarchy_table.c.parent_id,
+                                          ]
+                            )
+
+    name = sa.Column(sa.Unicode, nullable=False, unique=True)
 
     documentation = sa.Column(sa.Unicode, nullable=False)
 

@@ -27,8 +27,8 @@ class Domain(object):
 #    consent_date = FieldProperty(interfaces.IDomain["consent_date"])
 #
 #    schemata = FieldProperty(interfaces.IDomain["schemata"])
-
-    def __init__(self, code, title, consent_date):
+ 
+     def __init__(self, code, title, consent_date):
         self.code = code
         self.title = title
         self.consent_date = consent_date

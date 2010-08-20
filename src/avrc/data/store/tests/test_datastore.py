@@ -135,7 +135,7 @@ class TestCase(ptc.PloneTestCase):
             )
 
         key = ds.put(obj)
-        
+
         ds.get("avrc.data.store.schema.virtual.IStandaloneInterface")
 
         self.fail("OMG")
@@ -158,6 +158,34 @@ class TestCase(ptc.PloneTestCase):
         ds.put(obj)
 
         self.fail("OMG")
+
+    def test_inheritance(self):
+        """
+        """
+        dsn = u"sqlite:///test.db"
+        #dsn = u"sqlite:///:memory:"
+        ds = createObject("avrc.data.store.Datastore", title=u"blah", dsn=dsn)
+        sm = ds.schemata
+
+        sm.import_(samples.IGrandfather)
+        sm.import_(samples.IFather)
+        sm.import_(samples.IUncle)
+        sm.import_(samples.IAunt)
+        sm.import_(samples.IBrother)
+        sm.import_(samples.ISister)
+
+        iface = sm.get(samples.IGrandfather.__name__)
+
+        descendants = sm.get_descendants(iface)
+
+        print
+        print
+        for descendant in descendants:
+            print str(descendant) + " " + str(descendant.getBases())
+        print
+        print
+
+        self.fail("Inheritance test complete")
 
 def test_suite():
     return unittest.defaultTestLoader.loadTestsFromName(__name__)

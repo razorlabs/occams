@@ -4,15 +4,15 @@ Responsible for schemata, attributes, and vocabularies
 Additionally, we support plone.directives.form
 """
 import itertools
+from collections import deque as queue
 
 from zope.component import adapter
 from zope.component import adapts
 from zope.component import getUtility
 import zope.interface
+from zope.interface import Interface
 from zope.interface import implements
 from zope.interface.interface import InterfaceClass
-from zope.interface import Interface
-from zope.interface import alsoProvides
 from zope.interface import directlyProvides
 import zope.schema
 from zope.schema.vocabulary import SimpleVocabulary
@@ -103,7 +103,6 @@ class Instance(object):
     Empty object that will be used as the instance of a virtual schema.
     """
 
-
 class DatastoreSchemaManager(object):
     """
     """
@@ -113,16 +112,60 @@ class DatastoreSchemaManager(object):
     def __init__(self, datastore):
         self._datastore = datastore
 
-    def getChildren(self):
-        pass
+    def get_descendants(self, base):
+        """
+        Retrieves the classes that inherit from the specified base.
+
+        TODO: support versioning?
+
+        Arguments:
+            base: (object) base interface to find all the children for
+        Returns:
+            list of interfaces that extend the specified base
+        """
+        Session = named_session(self._datastore)
+        session  = Session()
+
+        names = queue([])
+
+        spec_rslt = session.query(model.Specification)\
+                    .filter_by(name = unicode(base.__name__))\
+                    .first()
+
+        to_visit = queue([spec_rslt])
+
+        # Breadth-first pre-order traversal of all children
+        while len(to_visit) > 0:
+            spec_rslt = to_visit.popleft()
+
+            if spec_rslt.children:
+                for child in spec_rslt.children:
+                    to_visit.append(child)
+
+            names.append(spec_rslt.name)
+
+
+        descendants = []
+
+        # We don't want the root
+        names.popleft()
+
+        for name in names:
+            descendants.append(self.get(name))
+
+        return descendants
 
     def get(self, key):
-        """
-        key = module name, or (module name, version) tuple
-        """
-        if isinstance(key, str):
+        #
+        # TODO: (mmartinez) Unable to retrieve versioned bases...
+        # TODO: (mmartinez) Keep in mind that if getting many objects that
+        #    share a common ancestor, this method might be innefficient unless
+        #    dynamic programminng heuristics are employed.
+        #
+        if isinstance(key, (str, unicode)):
             key  = (key, None)
 
+        #key = module name, or (module name, version) tuple
         (name, version) = key
         name = unicode(name)
 
@@ -135,7 +178,7 @@ class DatastoreSchemaManager(object):
 
         schema_q = session.query(model.Schema)\
                       .join(model.Specification)\
-                      .filter_by(module=name)
+                      .filter_by(name=name)
 
         if version is not None:
             schema_q = schema_q.filter_by(create_date=version)
@@ -144,6 +187,9 @@ class DatastoreSchemaManager(object):
 
         schema_rslt = schema_q.first()
 
+
+
+        bases = []
         attrs = {}
         directives = {}
         omitted = []
@@ -180,7 +226,10 @@ class DatastoreSchemaManager(object):
             name = str(attribute_rslt.name)
 
             if attribute_rslt.field.directive_omitted is not None:
-                value = attribute_rslt.field.directive_omitted and "true" or "false"
+                if attribute_rslt.field.directive_omitted:
+                    value = "true"
+                else:
+                    value= "false"
                 omitted.append(tuple([Interface, name, value]))
             elif attribute_rslt.field.directive_widget is not None:
                 widgets[name] = str(attribute_rslt.field.directive_widget)
@@ -199,10 +248,10 @@ class DatastoreSchemaManager(object):
                 write[name] = str(attribute_rslt.field.directive_write)
 
         iface = InterfaceClass(
-            name=schema_rslt.specification.module,
+            name=schema_rslt.specification.name,
             __doc__=schema_rslt.specification.documentation,
             __module__=virtual.__name__,
-            bases=tuple([interfaces.ISchema]),
+            bases=(interfaces.ISchema,),
             attrs=attrs,
             )
 
@@ -233,7 +282,7 @@ class DatastoreSchemaManager(object):
         Session = named_session(self._datastore)
         session = Session()
         name = unicode(key)
-        num = session.query(model.Specification).filter_by(module=name).count()
+        num = session.query(model.Specification).filter_by(name=name).count()
         return num > 0
 
     def keys(self):
@@ -242,7 +291,7 @@ class DatastoreSchemaManager(object):
         """
         Session = named_session(self._datastore)
         session = Session()
-        keys = session.query(model.Specification.module).all()
+        keys = session.query(model.Specification.name).all()
         return list(itertools.chain.from_iterable(keys))
 
     def put(self, target):
@@ -259,19 +308,19 @@ class DatastoreSchemaManager(object):
         session = Session()
 
         spec_rslt = session.query(model.Specification)\
-                    .filter_by(module=schema_obj.__module__)\
+                    .filter_by(name=schema_obj.__name__)\
                     .first()
 
         # Create a spec if one doesn't already exist
         if spec_rslt is None:
             spec_rslt = model.Specification(
-                module=schema_obj.__module__,
+                name=schema_obj.__name__,
                 documentation=schema_obj.__documentation__
                 )
 
             for base_obj in schema_obj.__bases__:
                 base_rslt = session.query(model.Specification)\
-                            .filter_by(module=base_obj.__module__)\
+                            .filter_by(name=base_obj.__name__)\
                             .first()
 
                 spec_rslt.bases.append(base_rslt)
@@ -282,7 +331,7 @@ class DatastoreSchemaManager(object):
         schema_old_rslt = session.query(model.Schema)\
                           .filter_by(create_date=schema_obj.__version__)\
                           .join(model.Specification)\
-                          .filter_by(module=schema_obj.__module__)\
+                          .filter_by(name=schema_obj.__class__.__name__)\
                           .first()
 
         if schema_old_rslt is not None:
@@ -340,7 +389,7 @@ class DatastoreSchemaManager(object):
 
                 for i, term_obj in enumerate(vocabulary_obj, start=1):
                     term_rslt = model.Term(
-                        title=term_obj is not None and unicode(term_obj.title) or None,
+                        title=term_obj and unicode(term_obj.title) or None,
                         token=unicode(term_obj.token),
                         order=i
                         )
@@ -364,7 +413,7 @@ class DatastoreSchemaManager(object):
             try:
                 if key is OMITTED_KEY:
                     for interface, name, value in item:
-                        # Interface is ignored since it's just going to the base
+                        # VirtualSchema is ignored since it's just going to the base
                         attrs[name].field.directive_omitted = value is "true"
                 elif key is WIDGETS_KEY:
                     for name, module in item.items():
@@ -432,7 +481,7 @@ class DatastoreSchemaManager(object):
         """
         schema_obj = MutableSchema(
             bases=list(iface.getBases()),
-            module=unicode(iface.__name__),
+            name=unicode(iface.__name__),
             documentation=unicode(iface.__doc__),
             directives=iface.queryTaggedValue(TEMP_KEY)
             )
@@ -465,6 +514,9 @@ class DatastoreSchemaManager(object):
         return obj
 
 
+
+
+
 class MutableSchema(object):
     """
     This module is in charge of controlling the actual properties of the
@@ -479,7 +531,7 @@ class MutableSchema(object):
 
     __bases__ = None
 
-    __module__ = None
+    __name__ = None
 
     __documentation__ = None
 
@@ -490,7 +542,7 @@ class MutableSchema(object):
     __invariants__ = None
 
     def __init__(self,
-                 module,
+                 name,
                  bases=None,
                  documentation=None,
                  directives=None,
@@ -499,7 +551,7 @@ class MutableSchema(object):
         Constructor
         """
         self.__bases__ = bases
-        self.__module__ = unicode(module)
+        self.__name__ = unicode(name)
         self.__documentation__ = unicode(documentation)
         self.__version__ = version
         self.__attributes__ = {}
