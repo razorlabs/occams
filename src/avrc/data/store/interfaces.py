@@ -190,12 +190,6 @@ class IDatastore(IManager, IContained):
         required=True
         )
 
-class IMutableSchema(IComponent):
-    """
-    A delta container for schema changes. It will be used for the schema
-    manager to know what has changed and to version the schema accordingly.
-    """
-
 class ISessionFactory(IComponent, IContained):
     """
     Used for implementing our own SQLAlchemy session. The reason for using our
@@ -342,7 +336,7 @@ class IQuery(IComponent):
             ),
         required=False,
         )
-    
+
 class IConventionalManager(IManager):
     """
     Marker interface for managing domains

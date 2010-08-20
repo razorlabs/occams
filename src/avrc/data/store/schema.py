@@ -63,41 +63,6 @@ def version(schema):
     """
     return None
 
-#classImplements(Range, interfaces.IRange)
-
-@adapter(interfaces.IMutableSchema)
-#@provides(zope.interface.interfaces.IInterface)
-def MutableSchemaInterface(ms):
-    """
-    Possibly somehow convert a mutable schema to zope interface
-    """
-
-class VocabularyManager(object):
-    """
-    """
-    implements(interfaces.ISchemaManager)
-
-    def __init__(self):
-        """
-        """
-
-    def put(self, source):
-        """
-        """
-        for term in source:
-            pass
-
-class VocabularySchema(object):
-    """
-    I don't know what this does yet, just skeching
-    """
-    adapts(zope.schema.interfaces.IVocabulary)
-    implements(interfaces.ISchemaManager)
-
-    def __int__(self, vocabulary):
-        """
-        """
-
 class Instance(object):
     """
     Empty object that will be used as the instance of a virtual schema.
@@ -112,7 +77,7 @@ class DatastoreSchemaManager(object):
     def __init__(self, datastore):
         self._datastore = datastore
 
-    def get_descendants(self, base):
+    def get_descendants(self, ibase):
         """
         Retrieves the classes that inherit from the specified base.
 
@@ -128,15 +93,20 @@ class DatastoreSchemaManager(object):
 
         names = queue([])
 
-        if isinstance(base, Interface):
-            target = unicode(base.__name__)
+        if not isinstance(ibase, (str, unicode)):
+            if not ibase.extends(interfaces.Schema):
+                raise Exception("base class does not extend datastore's base.")
+            ibase_name = unicode(ibase.__name__)
         else:
-            target = unicode(base)
+            ibase_name = unicode(ibase)
 
 
         spec_rslt = session.query(model.Specification)\
-                    .filter_by(name=target)\
+                    .filter_by(name=ibase_name)\
                     .first()
+
+        if spec_rslt is None:
+            raise Exception("%s isn't in the data store" % ibase)
 
         to_visit = queue([spec_rslt])
 
@@ -161,13 +131,13 @@ class DatastoreSchemaManager(object):
 
         return descendants
 
-    def get_children(self, base):
+    def get_children(self, ibase):
         """
         Retrives all the children of the base class. Note this does not include
         all the intermediate bases (i.e. it just returns the leaf nodes)
         """
         # TODO: (mmartinez) CHANGE!!
-        return self.get_descendants(base)
+        return self.get_descendants(ibase)
 
 #iterativePostorder(rootNode)
 #  nodeStack.push(rootNode)
@@ -283,7 +253,7 @@ class DatastoreSchemaManager(object):
             name=schema_rslt.specification.name,
             __doc__=schema_rslt.specification.documentation,
             __module__=virtual.__name__,
-            bases=(interfaces.ISchema,),
+            bases=(interfaces.Schema,),
             attrs=attrs,
             )
 
@@ -330,7 +300,10 @@ class DatastoreSchemaManager(object):
         """
         Saves the target interface into the manager.
         """
-        schema_obj = target
+        iface = target
+
+        if not iface.extends(interfaces.Schema):
+            raise Exception("%s must extend %s " % (iface, interfaces.Schema))
 
         types_factory = getUtility(zope.schema.interfaces.IVocabularyFactory,
                                    name="avrc.data.store.SupportedTypes")
@@ -340,58 +313,37 @@ class DatastoreSchemaManager(object):
         session = Session()
 
         spec_rslt = session.query(model.Specification)\
-                    .filter_by(name=schema_obj.__name__)\
+                    .filter_by(name=iface.__name__)\
                     .first()
 
         # Create a spec if one doesn't already exist
         if spec_rslt is None:
             spec_rslt = model.Specification(
-                name=schema_obj.__name__,
-                documentation=schema_obj.__documentation__
+                name=unicode(iface.__name__),
+                documentation=(iface.__doc__)
                 )
 
-            for base_obj in schema_obj.__bases__:
-                base_rslt = session.query(model.Specification)\
-                            .filter_by(name=base_obj.__name__)\
-                            .first()
-                print
-                print
-                print schema_obj.__name__
-                print str(base_obj.__name__) + " " + str(base_obj.__bases__)
-                print
-                print
-                print
-                spec_rslt.bases.append(base_rslt)
+
+            for ibase in iface.__bases__:
+                # only associate with interfaces that are also marked as part
+                # of the data store schemata
+                if ibase.extends(interfaces.Schema):
+                    base_rslt = session.query(model.Specification)\
+                                .filter_by(name=unicode(ibase.__name__))\
+                                .first()
+
+                    if base_rslt is None:
+                        raise Exception("%s extends a base (%s) interface that is "
+                                        "not in the datastore" % (iface, ibase))
+
+                    spec_rslt.bases.append(base_rslt)
 
         schema_rslt = model.Schema(specification=spec_rslt)
-
-        # Need toe old schema_obj (if any) to copy over unchanged fields
-        schema_old_rslt = session.query(model.Schema)\
-                          .filter_by(create_date=schema_obj.__version__)\
-                          .join(model.Specification)\
-                          .filter_by(name=schema_obj.__class__.__name__)\
-                          .first()
-
-        if schema_old_rslt is not None:
-            for attribute_rslt in schema_old_rslt.attributes:
-                # Copy unchanged properties from the last version
-                if attribute_rslt.name not in schema_obj.__attributes__:
-                    schema_rslt.attributes.append(model.Attribute(
-                        name=attribute_rslt.name,
-                        order=attribute_rslt.order,
-                        field=attribute_rslt.field
-                        ))
-
-            for invariant_rslt in schema_old_rslt.invariants:
-                if invariant_rslt.name not in schema_obj.__invariants__:
-                    schema_rslt.invariants.append(model.Invariant(
-                        name=invariant_rslt.name
-                        ))
 
         attrs = {}
 
         # Now add/remove in all the changed fields
-        for name, field_obj in schema_obj.__attributes__.items():
+        for name, field_obj in zope.schema.getFieldsInOrder(iface):
             type_obj = field_obj
             is_repeatable = False
 
@@ -444,43 +396,46 @@ class DatastoreSchemaManager(object):
 
             schema_rslt.attributes.append(attrs[name])
 
-        for key, item in schema_obj.__directives__.items():
-            if key not in supported_directives_vocabulary:
-                continue
+        tags = iface.queryTaggedValue(TEMP_KEY, {})
 
-            try:
-                if key is OMITTED_KEY:
-                    for interface, name, value in item:
-                        # VirtualSchema is ignored since it's just going to the base
-                        attrs[name].field.directive_omitted = value is "true"
-                elif key is WIDGETS_KEY:
-                    for name, module in item.items():
-                        attrs[name].field.directive_widget = unicode(module)
-                elif key is MODES_KEY:
-                    for interface, name, value in item:
-                        attrs[name].field.directive_mode = unicode(value)
-                elif key is ORDER_KEY:
-                    for name, order, target in item:
-                        if order is "before":
-                            attrs[name].field.directive_before = value
-                        elif order is "after":
-                            attrs[name].field.directive_after = value
-                        else:
-                            raise Exception("WTF")
-                elif key is READ_PERMISSIONS_KEY:
-                    for name, value in item.items():
-                        attrs[name].field.directive_read = unicode(value)
-                elif key is WRITE_PERMISSIONS_KEY:
-                    for name, value in item.items():
-                        attrs[name].field.directive_write = unicode(value)
-            except KeyError:
-                continue
+        if tags:
+            for key, item in tags.items():
+                if key not in supported_directives_vocabulary:
+                    continue
+
+                try:
+                    if key is OMITTED_KEY:
+                        for interface, name, value in item:
+                            attrs[name].field.directive_omitted = value is "true"
+                    elif key is WIDGETS_KEY:
+                        for name, module in item.items():
+                            attrs[name].field.directive_widget = unicode(module)
+                    elif key is MODES_KEY:
+                        for interface, name, value in item:
+                            attrs[name].field.directive_mode = unicode(value)
+                    elif key is ORDER_KEY:
+                        for name, order, target in item:
+                            if order is "before":
+                                attrs[name].field.directive_before = value
+                            elif order is "after":
+                                attrs[name].field.directive_after = value
+                            else:
+                                raise Exception("WTF")
+                    elif key is READ_PERMISSIONS_KEY:
+                        for name, value in item.items():
+                            attrs[name].field.directive_read = unicode(value)
+                    elif key is WRITE_PERMISSIONS_KEY:
+                        for name, value in item.items():
+                            attrs[name].field.directive_write = unicode(value)
+                except KeyError:
+                    continue
 
 
         session.add(schema_rslt)
         session.commit()
-        schema_obj.__attributes__ = {}
-        schema_obj.__invariants__.clear()
+
+        iface.__version__ = schema_rslt.create_date
+        return iface
 
     def purge(self, key):
         """
@@ -512,23 +467,6 @@ class DatastoreSchemaManager(object):
         """
         raise Exception("Can't retire schemata")
 
-
-    def import_(self, iface):
-        """
-        Imports the target interface into the manager.
-        """
-        schema_obj = MutableSchema(
-            bases=list(iface.getBases()),
-            name=unicode(iface.__name__),
-            documentation=unicode(iface.__doc__),
-            directives=iface.queryTaggedValue(TEMP_KEY)
-            )
-
-        for name, field in zope.schema.getFieldsInOrder(iface):
-            schema_obj[unicode(name)] = field
-
-        self.put(schema_obj)
-
     def spawn(self, target, **kw):
         """
         Generates an object that implements this schema
@@ -539,7 +477,7 @@ class DatastoreSchemaManager(object):
         else:
             iface = target
 
-        if not iface.extends(interfaces.ISchema):
+        if not iface.extends(interfaces.Schema):
             raise Exception("This will not be found")
 
         obj = Instance()
@@ -550,75 +488,71 @@ class DatastoreSchemaManager(object):
             obj.__dict__[name].__set__(obj, kw.get(name))
 
         return obj
-
-
-
-
-
-class MutableSchema(object):
-    """
-    This module is in charge of controlling the actual properties of the
-    target module. It's sole purpose is for writing, not retrieving properties.
-
-    Behaves like a delta of the last version and this version.
-    """
-
-    implements(interfaces.IMutableSchema)
-
-    __version__ = None
-
-    __bases__ = None
-
-    __name__ = None
-
-    __documentation__ = None
-
-    __attributes__ = None
-
-    __directives__ = None
-
-    __invariants__ = None
-
-    def __init__(self,
-                 name,
-                 bases=None,
-                 documentation=None,
-                 directives=None,
-                 version=None):
-        """
-        Constructor
-        """
-        self.__bases__ = bases
-        self.__name__ = unicode(name)
-        self.__documentation__ = unicode(documentation)
-        self.__version__ = version
-        self.__attributes__ = {}
-        self.__directives__ = directives or {}
-        self.__invariants__ = set([])
-
-    def add_invariant(self, name):
-        """
-        """
-        self.__invariants__.add(unicode(name))
-
-    def remove_invariant(self, name):
-        """
-        """
-        try:
-            self.__invariants__.remove(unicode(name))
-        except KeyError:
-            pass
-
-    def __setitem__(self, name, field_obj):
-        """
-        @param key: the name of the property to change
-        @param value: the zope schema value to set for the property, None to
-                      remove the property
-        """
-        if isinstance(field_obj, zope.schema.Object):
-            exists = MutableSchema.has_interface(field_obj.schema.__name__,
-                                                 version=None)
-            if not exists:
-                raise interfaces.UndefinedSchemaError()
-
-        self.__attributes__[unicode(name)] = field_obj
+#
+#class MutableSchema(object):
+#    """
+#    This module is in charge of controlling the actual properties of the
+#    target module. It's sole purpose is for writing, not retrieving properties.
+#
+#    Behaves like a delta of the last version and this version.
+#    """
+#
+#    implements(interfaces.IMutableSchema)
+#
+#    __version__ = None
+#
+#    __bases__ = None
+#
+#    __name__ = None
+#
+#    __documentation__ = None
+#
+#    __attributes__ = None
+#
+#    __directives__ = None
+#
+#    __invariants__ = None
+#
+#    def __init__(self,
+#                 name,
+#                 bases=None,
+#                 documentation=None,
+#                 directives=None,
+#                 version=None):
+#        """
+#        Constructor
+#        """
+#        self.__bases__ = bases
+#        self.__name__ = unicode(name)
+#        self.__documentation__ = unicode(documentation)
+#        self.__version__ = version
+#        self.__attributes__ = {}
+#        self.__directives__ = directives or {}
+#        self.__invariants__ = set([])
+#
+#    def add_invariant(self, name):
+#        """
+#        """
+#        self.__invariants__.add(unicode(name))
+#
+#    def remove_invariant(self, name):
+#        """
+#        """
+#        try:
+#            self.__invariants__.remove(unicode(name))
+#        except KeyError:
+#            pass
+#
+#    def __setitem__(self, name, field_obj):
+#        """
+#        @param key: the name of the property to change
+#        @param value: the zope schema value to set for the property, None to
+#                      remove the property
+#        """
+#        if isinstance(field_obj, zope.schema.Object):
+#            exists = MutableSchema.has_interface(field_obj.schema.__name__,
+#                                                 version=None)
+#            if not exists:
+#                raise interfaces.UndefinedSchemaError()
+#
+#        self.__attributes__[unicode(name)] = field_obj

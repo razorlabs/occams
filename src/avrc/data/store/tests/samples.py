@@ -1,14 +1,18 @@
 import zope.schema
 from zope.interface import Interface
 from plone.directives import form
+from avrc.data.store import Schema
 
-class ISimple(Interface):
+class INotImportant(Interface):
+    pass
+
+class ISimple(Schema, INotImportant):
     """
     OBJECT SCHEMAZ
     """
     foo = zope.schema.TextLine(title=u"FOO")
 
-class IStandaloneInterface(Interface):
+class IStandaloneInterface(Schema):
     """
     This is very simple stanalone interface.
     """
@@ -29,7 +33,7 @@ class IStandaloneInterface(Interface):
         description=u"Something about baz."
         )
 
-class IComposedInterface(Interface):
+class IComposedInterface(Schema):
     """
     This class contains annotations which SHOULD be saved as well...
     """
@@ -45,7 +49,7 @@ class IComposedInterface(Interface):
         schema=ISimple
         )
 
-class IAnnotatedInterface(Interface):
+class IAnnotatedInterface(Schema):
     """
     This is a dummy schema to test if the schema manger can properly import it.
     Also this class contains annotations which SHOULD be saved as well...
@@ -95,7 +99,7 @@ class IAnnotatedInterface(Interface):
         description=u"DATE"
         )
 
-class IChoicedInterface(Interface):
+class IChoicedInterface(Schema):
     """
     This simply tests that a vocabulary
     """
@@ -105,7 +109,7 @@ class IChoicedInterface(Interface):
             values=('foo', 'bar', 'go' 'away', 'plz',)
         )
 
-class IGrandfather(Interface):
+class IGrandfather(Schema):
     pass
 
 class IFather(IGrandfather):

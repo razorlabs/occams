@@ -122,9 +122,9 @@ class TestCase(ptc.PloneTestCase):
 
         sm = ds.schemata
 
-        sm.import_(samples.IStandaloneInterface)
-        sm.import_(samples.ISimple)
-        sm.import_(samples.IAnnotatedInterface)
+        sm.put(samples.IStandaloneInterface)
+        sm.put(samples.ISimple)
+        sm.put(samples.IAnnotatedInterface)
 
         iface = sm.get(samples.IStandaloneInterface.__name__)
 
@@ -149,7 +149,7 @@ class TestCase(ptc.PloneTestCase):
 
         sm = ds.schemata
 
-        sm.import_(samples.IChoicedInterface)
+        sm.put(samples.IChoicedInterface)
 
         iface = sm.get(samples.IChoicedInterface.__name__)
 
@@ -167,12 +167,12 @@ class TestCase(ptc.PloneTestCase):
         ds = createObject("avrc.data.store.Datastore", title=u"blah", dsn=dsn)
         sm = ds.schemata
 
-        sm.import_(samples.IGrandfather)
-        sm.import_(samples.IFather)
-        sm.import_(samples.IUncle)
-        sm.import_(samples.IAunt)
-        sm.import_(samples.IBrother)
-        sm.import_(samples.ISister)
+        sm.put(samples.IGrandfather)
+        sm.put(samples.IFather)
+        sm.put(samples.IUncle)
+        sm.put(samples.IAunt)
+        sm.put(samples.IBrother)
+        sm.put(samples.ISister)
 
         iface = sm.get(samples.IGrandfather.__name__)
 
