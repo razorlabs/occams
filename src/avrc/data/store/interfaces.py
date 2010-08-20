@@ -32,6 +32,34 @@ class UndefinedSchemaError(Error):
     """Raised when trying to access a schema that is not in the data store"""
 
 # -----------------------------------------------------------------------------
+#
+# -----------------------------------------------------------------------------
+
+class Versionable(Interface):
+    """
+    """
+
+    __version__ = Attribute(_(u"This will be used to keep track of the "
+                              u"data store schema as they evolve"))
+
+class Formable(Interface):
+    """
+    Represents a schema that contains detailed information for display in a
+    form.
+    """
+
+    __title__ = Attribute(_(u"A way to represent the name of in the form"))
+
+    __description__ = Attribute(_(u"A way to represent the description."))
+
+    __dependents__ = Attribute(_(u"Dependent schemata"))
+
+class Schema(Versionable, Formable):
+    """
+    Marker interface for a schema maintained by the data store.
+    """
+
+# -----------------------------------------------------------------------------
 # API CONTRACTS
 # -----------------------------------------------------------------------------
 
@@ -143,7 +171,6 @@ class ISchemaManager(IManager):
     Marker interface for managing schemata.
     """
 
-
 class IDatastore(IManager, IContained):
     """
     Represents a data store utility that can be added to a site. It is in
@@ -197,30 +224,6 @@ class IKey(IComponent):
     """
 
     value = Attribute(_(u"A way to distinguish this item in the data store"))
-
-class Versionable(Interface):
-    """
-    """
-
-    __version__ = Attribute(_(u"This will be used to keep track of the "
-                              u"data store schema as they evolve"))
-
-class Formable(Interface):
-    """
-    Represents a schema that contains detailed information for display in a
-    form.
-    """
-
-    __title__ = Attribute(_(u"A way to represent the name of in the form"))
-
-    __description__ = Attribute(_(u"A way to represent the description."))
-
-    __dependents__ = Attribute(_(u"Dependent schemata"))
-
-class Schema(Versionable, Formable):
-    """
-    Marker interface for a schema maintained by the data store.
-    """
 
 class IDomain(IComponent):
     """
@@ -339,6 +342,7 @@ class IQuery(IComponent):
             ),
         required=False,
         )
+    
 class IConventionalManager(IManager):
     """
     Marker interface for managing domains
