@@ -128,8 +128,14 @@ class DatastoreSchemaManager(object):
 
         names = queue([])
 
+        if isinstance(base, Interface):
+            target = unicode(base.__name__)
+        else:
+            target = unicode(base)
+
+
         spec_rslt = session.query(model.Specification)\
-                    .filter_by(name = unicode(base.__name__))\
+                    .filter_by(name=target)\
                     .first()
 
         to_visit = queue([spec_rslt])
@@ -154,6 +160,29 @@ class DatastoreSchemaManager(object):
             descendants.append(self.get(name))
 
         return descendants
+
+    def get_children(self, base):
+        """
+        Retrives all the children of the base class. Note this does not include
+        all the intermediate bases (i.e. it just returns the leaf nodes)
+        """
+        # TODO: (mmartinez) CHANGE!!
+        return self.get_descendants(base)
+
+#iterativePostorder(rootNode)
+#  nodeStack.push(rootNode)
+#  while (! nodeStack.empty())
+#    currNode = nodeStack.peek()
+#    if ((currNode.left != null) and (currNode.left.visited == false))
+#      nodeStack.push(currNode.left)
+#    else
+#      if ((currNode.right != null) and (currNode.right.visited == false))
+#        nodeStack.push(currNode.right)
+#      else
+#        print currNode.value
+#        currNode.visited := true
+#        nodeStack.pop()
+
 
     def get(self, key):
         #
@@ -187,7 +216,10 @@ class DatastoreSchemaManager(object):
 
         schema_rslt = schema_q.first()
 
-
+#        to_visit = [schema_rslt]
+#
+#        while to_visit:
+#            schema_rslt = to_visit[-1]
 
         bases = []
         attrs = {}
@@ -322,7 +354,13 @@ class DatastoreSchemaManager(object):
                 base_rslt = session.query(model.Specification)\
                             .filter_by(name=base_obj.__name__)\
                             .first()
-
+                print
+                print
+                print schema_obj.__name__
+                print str(base_obj.__name__) + " " + str(base_obj.__bases__)
+                print
+                print
+                print
                 spec_rslt.bases.append(base_rslt)
 
         schema_rslt = model.Schema(specification=spec_rslt)

@@ -27,8 +27,8 @@ class Domain(object):
 #    consent_date = FieldProperty(interfaces.IDomain["consent_date"])
 #
 #    schemata = FieldProperty(interfaces.IDomain["schemata"])
- 
-     def __init__(self, code, title, consent_date):
+
+    def __init__(self, code, title, consent_date):
         self.code = code
         self.title = title
         self.consent_date = consent_date
@@ -50,17 +50,17 @@ class DatastoreDomainManager(DatastoreConventionalManager):
         self._type = Domain
         Session = named_session(self._datastore)
         self._session = Session()
-        
+
     def putProperties(self, rslt, source):
         """
         Add the items from the source to ds
         """
         rslt.zid = source.zid
-        rslt.title = source.title 
+        rslt.title = source.title
         rslt.code = source.code
         rslt.consent_date = source.consent_date
         return rslt
-    
+
 class Protocol(object):
     implements(interfaces.IProtocol)
 
@@ -69,7 +69,7 @@ class Protocol(object):
     cycle = FieldProperty(interfaces.IProtocol["cycle"])
 
     domain_title = FieldProperty(interfaces.IProtocol["domain_title"])
-    
+
     threshold = FieldProperty(interfaces.IProtocol["threshold"])
 
     is_active = FieldProperty(interfaces.IProtocol["is_active"])
@@ -97,7 +97,7 @@ class DatastoreProtocolManager(DatastoreConventionalManager):
         self._type = Protocol
         Session = named_session(self._datastore)
         self._session = Session()
-        
+
     def put(self, source):
         Session = named_session(self._datastore)
         session = Session()
@@ -128,4 +128,3 @@ class DatastoreProtocolManager(DatastoreConventionalManager):
         rslt.threshold = source.threshold
         rslt.is_active = source.is_active
         return rslt
-    
