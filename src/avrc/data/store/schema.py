@@ -39,7 +39,7 @@ from avrc.data.store.datastore import named_session
 _ = MessageFactory(__name__)
 
 # The generated schemata of the datas tore will be contained here
-virtual = dynamic.create(".".join([__name__, "virtual"]))
+virtual = dynamic.create("avrc.data.store.schema.virtual")
 
 supported_directives_vocabulary = \
     SimpleVocabulary.fromValues([
@@ -269,6 +269,7 @@ class DatastoreSchemaManager(object):
             attrs=attrs,
             )
 
+        setattr(virtual, iface.__name__, iface)
         setattr(iface, "__version__", schema_rslt.create_date)
 
         if len(omitted) > 0:

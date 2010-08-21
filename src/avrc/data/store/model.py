@@ -897,7 +897,7 @@ class Visit(Model):
     __tablename__ = "visit"
 
     id = sa.Column(sa.Integer, primary_key=True)
-    
+
     zid = sa.Column(sa.Integer, nullable=False, unique=True)
 
     enrollments = orm.relation("Enrollment", secondary=visit_enrollment_table)
