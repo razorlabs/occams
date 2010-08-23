@@ -44,6 +44,8 @@ class IComponent(Interface):
 
 class Versionable(IComponent):
     """
+    TODO/NOTE: We should just implement these as class directives in order
+        prevent interface property pollution.
     """
 
     __version__ = Attribute(_(u"This will be used to keep track of the "
@@ -53,6 +55,9 @@ class Formable(IComponent, form.Schema ):
     """
     Represents a schema that contains detailed information for display in a
     form.
+
+    TODO/NOTE: We should just implement these as class directives in order
+        prevent interface property pollution.
     """
 
     __title__ = Attribute(_(u"A way to represent the name of in the form"))
