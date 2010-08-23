@@ -401,11 +401,7 @@ class Datastore(object):
 #                if not interfaces.Schema.providedBy(value):
 #                    raise Exception("This object is not going to work out")
 
-                try:
-                    provided = list(providedBy(value))
-                    (schema_obj,) = provided
-                except ValueError as e:
-                    raise Exception("Object has multiple inheritance: %s" % e)
+                schema_obj = list(providedBy(value))[0]
 
                 schema_rslt = session.query(model.Schema)\
                               .filter_by(create_date=schema_obj.__version__)\
@@ -419,6 +415,10 @@ class Datastore(object):
                                       currenttime()),
                     description=u""
                     )
+
+                session.flush()
+
+                value.__id__ = instance_rslt.id
 
                 for name, field_obj in zope.schema.getFieldsInOrder(schema_obj):
                     child = getattr(value, name)
@@ -461,9 +461,7 @@ class Datastore(object):
 
         session.commit()
 
-        value.__id__ = value_rslt.id
-
-        return value
+        return target
 
     put.__doc__ = interfaces.IDatastore["put"].__doc__
 
@@ -525,7 +523,7 @@ class Datastore(object):
     def spawn(self, target, **kw):
         if isinstance(target, (str, unicode)):
             iface = self.schemata.get(target)
-        elif iface.extends(interfaces.Schema):
+        elif target.extends(interfaces.Schema):
             iface = target
         else:
             raise Exception("This will not be found")

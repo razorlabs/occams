@@ -71,6 +71,23 @@ def version(iface):
     else:
         raise Exception("%s doesn't extend %s", (iface, interfaces.Schema))
 
+class DependencyGenerator(object):
+    """
+    """
+
+    def __init__(self, manager, imain, names):
+        self.imain = imain
+        self.manager = manager
+        self.names = names
+
+    def __iter__(self):
+        """
+        TODO: can't handle versioning yet
+        """
+        for name in self.names:
+            yield self.manager.get(name)
+
+
 class DatastoreSchemaManager(object):
     adapts(interfaces.IDatastore)
     implements(interfaces.ISchemaManager)
@@ -302,6 +319,7 @@ class DatastoreSchemaManager(object):
             setattr(iface, "__title__", schema_rslt.specification.title)
             setattr(iface, "__description__", schema_rslt.specification.description)
             setattr(iface, "__version__", schema_rslt.create_date)
+            setattr(iface, "__dependents__", DependencyGenerator(self, iface, [s.name for s in schema_rslt.specification.includes]))
 
             if len(omitted) > 0:
                 directives[OMITTED_KEY] = omitted
@@ -364,8 +382,8 @@ class DatastoreSchemaManager(object):
             spec_rslt = model.Specification(
                 name=unicode(iface.__name__),
                 documentation=unicode(iface.__doc__),
-                title=unicode(iface.__title__),
-                description=unicode(iface.__description__)
+                title=unicode(getattr(iface, "__title__", None)),
+                description=unicode(getattr(iface, "__description__", None))
                 )
 
             for ibase in iface.__bases__:
@@ -382,7 +400,18 @@ class DatastoreSchemaManager(object):
 
                     spec_rslt.bases.append(base_rslt)
 
+
         schema_rslt = model.Schema(specification=spec_rslt)
+
+        for idependent in getattr(iface, "__dependents__", []):
+            #
+            # TODO: versioning
+            #
+            dependent_rslt = session.query(model.Specification)\
+                          .filter_by(name=unicode(idependent.__name__))\
+                          .first()
+
+            schema_rslt.specification.includes.append(dependent_rslt)
 
         attrs = {}
 
@@ -406,7 +435,7 @@ class DatastoreSchemaManager(object):
                         .first()
 
             attrs[name] = model.Attribute(
-                name=name,
+                name=unicode(name),
                 order=field_obj.order,
                 field=model.Field(
                     title=unicode(field_obj.title),

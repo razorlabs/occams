@@ -406,9 +406,15 @@ sa.Index("string_attribute_value", String.attribute_id, String.value)
 
 # Joining table for base class representation
 hierarchy_table = sa.Table("hierarchy", Model.metadata,
-    sa.Column("parent_id", sa.ForeignKey("specification.id"), nullable=False),
-    sa.Column("child_id", sa.ForeignKey("specification.id"), nullable=False),
-    sa.PrimaryKeyConstraint("parent_id", "child_id")
+    sa.Column("parent_id", sa.ForeignKey("specification.id"), nullable=False, primary_key=True),
+    sa.Column("child_id", sa.ForeignKey("specification.id"), nullable=False, primary_key=True),
+    )
+
+# A hackish way to include additional schemata when a 'main' schemata is
+# requested.
+include_table = sa.Table("include", Model.metadata,
+    sa.Column("main_id", sa.ForeignKey("specification.id"), nullable=False, primary_key=True),
+    sa.Column("include_id", sa.ForeignKey("specification.id"), nullable=False, primary_key=True),
     )
 
 class Specification(Model):
@@ -457,6 +463,15 @@ class Specification(Model):
                             secondaryjoin=(id == hierarchy_table.c.child_id),
                             foreign_keys=[hierarchy_table.c.child_id,
                                           hierarchy_table.c.parent_id,
+                                          ]
+                            )
+
+    includes = orm.relation("Specification",
+                            secondary=include_table,
+                            primaryjoin=(id == include_table.c.main_id),
+                            secondaryjoin=(id == include_table.c.include_id),
+                            foreign_keys=[include_table.c.main_id,
+                                          include_table.c.include_id,
                                           ]
                             )
 

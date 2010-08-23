@@ -1,5 +1,6 @@
 import zope.schema
 from zope.interface import Interface
+from zope.interface import Attribute
 from plone.directives import form
 from avrc.data.store import Schema
 
@@ -10,7 +11,6 @@ class ISimple(Schema, INotImportant):
     """
     OBJECT SCHEMAZ
     """
-    foo = zope.schema.TextLine(title=u"FOO")
 
 class IStandaloneInterface(Schema):
     """
@@ -32,6 +32,15 @@ class IStandaloneInterface(Schema):
         title=u"Baz",
         description=u"Something about baz."
         )
+
+class IDependentInterface(Schema):
+    """
+    as;dlfjasd;fjfasd;fsad
+    """
+
+
+
+setattr(IDependentInterface, "__dependents__", (ISimple, IStandaloneInterface,))
 
 class IComposedInterface(Schema):
     """

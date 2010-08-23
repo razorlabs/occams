@@ -128,7 +128,7 @@ class TestCase(ptc.PloneTestCase):
 
         iface = sm.get(samples.IStandaloneInterface.__name__)
 
-        obj = sm.spawn(iface,
+        obj = ds.spawn(iface,
             foo=u"Hello World!",
             bar=u"Really\n\n\nlong",
             baz=123
@@ -153,9 +153,32 @@ class TestCase(ptc.PloneTestCase):
 
         iface = sm.get(samples.IChoicedInterface.__name__)
 
-        obj = sm.spawn(iface, choice=u"foo")
+        obj = ds.spawn(iface, choice=u"foo")
 
         ds.put(obj)
+
+        self.fail("OMG")
+
+
+    def test_dependents(self):
+        """
+        """
+        #dsn = u"sqlite:///test.db"
+        dsn = u"sqlite:///:memory:"
+        ds = createObject("avrc.data.store.Datastore", title=u"my ds", dsn=dsn)
+
+        sm = ds.schemata
+
+        sm.put(samples.ISimple)
+        sm.put(samples.IStandaloneInterface)
+        sm.put(samples.IDependentInterface)
+
+        iface = sm.get(samples.IDependentInterface.__name__)
+
+        for dependent in iface.__dependents__:
+            print dependent
+
+        #ds.put(obj)
 
         self.fail("OMG")
 
