@@ -6,15 +6,13 @@ Additionally, we support plone.directives.form
 import itertools
 from collections import deque as queue
 
-from zope.component import adapter
 from zope.component import adapts
 from zope.component import getUtility
-import zope.interface
 from zope.interface import Interface
 from zope.interface import implements
 from zope.interface.interface import InterfaceClass
-from zope.interface import directlyProvides
 import zope.schema
+from zope.schema.interfaces import IVocabulary
 from zope.schema.vocabulary import SimpleVocabulary
 from zope.schema.fieldproperty import FieldProperty
 from zope.i18nmessageid import MessageFactory
@@ -35,59 +33,57 @@ from plone.autoform.interfaces import WRITE_PERMISSIONS_KEY
 from avrc.data.store import interfaces
 from avrc.data.store import model
 from avrc.data.store.datastore import named_session
+from avrc.data.store.datastore import Instance
 
 _ = MessageFactory(__name__)
 
-# The generated schemata of the datas tore will be contained here
+#
+# The generated schemata of the data store will be contained here
+#
 virtual = dynamic.create("avrc.data.store.schema.virtual")
 
-supported_directives_vocabulary = \
-    SimpleVocabulary.fromValues([
-        OMITTED_KEY,
-        WIDGETS_KEY,
-        MODES_KEY,
-        ORDER_KEY,
-        READ_PERMISSIONS_KEY,
-        WRITE_PERMISSIONS_KEY
-        ])
+#
+# Helper vocabulary for directives
+#
+supported_directives_vocabulary = SimpleVocabulary.fromValues([
+    OMITTED_KEY,
+    WIDGETS_KEY,
+    MODES_KEY,
+    ORDER_KEY,
+    READ_PERMISSIONS_KEY,
+    WRITE_PERMISSIONS_KEY
+    ])
 
-class SupportedDirectivesVocabularyFactory(object):
-    implements(zope.schema.interfaces.IVocabularyFactory)
+def version(iface):
+    """
+    Helper method to get the interface's version.
 
-    def __call__(self, context=None):
-        return supported_directives_vocabulary
-
-def version(schema):
+    Arguments:
+        iface: (class) an interface class that must extend the Schema marker
+            interface
+    Returns:
+        interface version object
+    Raises:
+        Exception
     """
-    returns the version of the schema
-    """
-    return None
-
-class Instance(object):
-    """
-    Empty object that will be used as the instance of a virtual schema.
-    """
+    if iface.extends(interfaces.Schema):
+        return iface.__version__
+    else:
+        raise Exception("%s doesn't extend %s", (iface, interfaces.Schema))
 
 class DatastoreSchemaManager(object):
-    """
-    """
     adapts(interfaces.IDatastore)
     implements(interfaces.ISchemaManager)
+
+    __doc__ = interfaces.ISchemaManager.__doc__
 
     def __init__(self, datastore):
         self._datastore = datastore
 
     def get_descendants(self, ibase):
-        """
-        Retrieves the classes that inherit from the specified base.
-
-        TODO: (mmartinez) support versioning?
-
-        Arguments:
-            base: (object) base interface to find all the children for
-        Returns:
-            list of interfaces that extend the specified base
-        """
+        #
+        #  TODO: (mmartinez) support versioning?
+        #
         Session = named_session(self._datastore)
         session  = Session()
 
@@ -131,11 +127,10 @@ class DatastoreSchemaManager(object):
 
         return descendants
 
+    get_descendants.__doc__ = \
+        interfaces.ISchemaManager["get_descendants"].__doc__
+
     def get_children(self, ibase):
-        """
-        Retrives all the children of the base class. Note this does not include
-        all the intermediate bases (i.e. it just returns the leaf nodes)
-        """
         Session = named_session(self._datastore)
         session  = Session()
 
@@ -147,7 +142,6 @@ class DatastoreSchemaManager(object):
             ibase_name = unicode(ibase.__name__)
         else:
             ibase_name = unicode(ibase)
-
 
         spec_rslt = session.query(model.Specification)\
                     .filter_by(name=ibase_name)\
@@ -171,23 +165,24 @@ class DatastoreSchemaManager(object):
 
         return [self.get(name) for name in names]
 
+    get_children.__doc__ = interfaces.ISchemaManager["get_children"].__doc__
+
     def get(self, key):
         #
-        # TODO: (mmartinez) Unable to retrieve versioned bases...
+        # TODO: (mmartinez) Unable to retrieve versioned bases (sort of, it
+        #    currently retieves the highest version up to the version of
+        #     the retrieved interface
         # TODO: (mmartinez) Keep in mind that if getting many objects that
         #    share a common ancestor, this method might be inefficient unless
         #    dynamic programming heuristics are employed.
         #
         if isinstance(key, (str, unicode)):
-            key  = (key, None)
+            key = (key, None)
 
-        #key = module name, or (module name, version) tuple
         (name, version) = key
         name = unicode(name)
 
-        types_factory = getUtility(zope.schema.interfaces.IVocabularyFactory,
-                                   name="avrc.data.store.SupportedTypes")
-        types = types_factory()
+        types = getUtility(IVocabulary, "avrc.data.store.Types")
 
         Session = named_session(self._datastore)
         session = Session()
@@ -203,130 +198,163 @@ class DatastoreSchemaManager(object):
 
         schema_rslt = schema_q.first()
 
-        bases = []
-        attrs = {}
-        directives = {}
-        omitted = []
-        widgets = {}
-        modes = []
-        order = []
-        read = {}
-        write = {}
+        if schema_rslt is None:
+            raise Exception("Schema Manager doesn't have %s" % name)
 
-        for attribute_rslt in schema_rslt.attributes:
-            token = str(attribute_rslt.field.type.title)
+        visited = {}
 
-            field = types.getTermByToken(token).value
+        to_visit = [schema_rslt]
 
-            kwargs = dict(
-                title=attribute_rslt.field.title,
-                description=attribute_rslt.field.description,
-                required=attribute_rslt.field.is_required
+        # accomplished via depth-first post-order traversal (iterative)
+        while to_visit:
+            schema_rslt= to_visit[-1]
+            children_visited = True
+
+            for ibase_rslt in schema_rslt.specification.bases:
+                if not ibase_rslt.name in visited:
+                    base_q = session.query(model.Schema)\
+                                .filter_by(specification=ibase_rslt)
+
+                    if version:
+                        base_q = base_q.filter(model.Schema.create_date <= version)
+
+                    base_q = base_q.order_by(model.Schema.create_date.desc())
+                    base_rslt = base_q.first()
+
+                    children_visited = False
+                    to_visit.append(base_rslt)
+
+            if not children_visited:
+                continue
+
+            bases = []
+            attrs = {}
+            directives = {}
+            omitted = []
+            widgets = {}
+            modes = []
+            order = []
+            read = {}
+            write = {}
+
+            for attribute_rslt in schema_rslt.attributes:
+                token = str(attribute_rslt.field.type.title)
+
+                field = types.getTermByToken(token).value
+
+                kwargs = dict(
+                    title=attribute_rslt.field.title,
+                    description=attribute_rslt.field.description,
+                    required=attribute_rslt.field.is_required
+                    )
+
+                if zope.schema.interfaces.IChoice.implementedBy(field):
+                    terms = []
+                    for term_rslt in attribute_rslt.field.vocabulary.terms:
+                        terms.append(SimpleVocabulary.createTerm(
+                            term_rslt.value,
+                            str(term_rslt.token),
+                            term_rslt.title,
+                            ))
+
+                    kwargs["vocabulary"] = SimpleVocabulary(terms=terms)
+
+                attrs[attribute_rslt.name] = field(**kwargs)
+
+                name = str(attribute_rslt.name)
+
+                if attribute_rslt.field.directive_omitted is not None:
+                    if attribute_rslt.field.directive_omitted:
+                        value = "true"
+                    else:
+                        value= "false"
+                    omitted.append(tuple([Interface, name, value]))
+                elif attribute_rslt.field.directive_widget is not None:
+                    widgets[name] = str(attribute_rslt.field.directive_widget)
+                if attribute_rslt.field.directive_mode is not None:
+                    value = str(attribute_rslt.field.directive_mode)
+                    modes.append(tuple([Interface, name, value]))
+                if attribute_rslt.field.directive_before is not None:
+                    value = str(attribute_rslt.field.directive_before)
+                    order.append(tuple([name, "before", value]))
+                if attribute_rslt.field.directive_after is not None:
+                    value = str(attribute_rslt.field.directive_after)
+                    order.append(tuple([name, "after", value]))
+                elif attribute_rslt.field.directive_read is not None:
+                    read[name] = str(attribute_rslt.field.directive_read)
+                elif attribute_rslt.field.directive_write is not None:
+                    write[name] = str(attribute_rslt.field.directive_write)
+
+            bases = [visited[ibase_rslt.name] for ibase_rslt in schema_rslt.specification.bases]
+
+            if not bases:
+                bases = [interfaces.Schema]
+
+            iface = InterfaceClass(
+                name=schema_rslt.specification.name,
+                __doc__=schema_rslt.specification.documentation,
+                __module__=virtual.__name__,
+                bases=bases,
+                attrs=attrs,
                 )
 
-            if zope.schema.interfaces.IChoice.implementedBy(field):
-                terms = []
-                for term_rslt in attribute_rslt.field.vocabulary.terms:
-                    terms.append(SimpleVocabulary.createTerm(
-                        term_rslt.value,
-                        str(term_rslt.token),
-                        term_rslt.title,
-                        ))
+            setattr(virtual, iface.__name__, iface)
+            setattr(iface, "__version__", schema_rslt.create_date)
 
-                kwargs["vocabulary"] = SimpleVocabulary(terms=terms)
+            if len(omitted) > 0:
+                directives[OMITTED_KEY] = omitted
+            if len(widgets) > 0:
+                directives[WIDGETS_KEY] = widgets
+            if len(modes) > 0:
+                directives[MODES_KEY] = modes
+            if len(order) > 0:
+                directives[ORDER_KEY] = order
+            if len(read) > 0:
+                directives[READ_PERMISSIONS_KEY] = read
+            if len(write) > 0:
+                directives[WRITE_PERMISSIONS_KEY] = write
 
-            attrs[attribute_rslt.name] = field(**kwargs)
+            if len(directives) > 0:
+                iface.setTaggedValue(TEMP_KEY, directives)
 
-            name = str(attribute_rslt.name)
-
-            if attribute_rslt.field.directive_omitted is not None:
-                if attribute_rslt.field.directive_omitted:
-                    value = "true"
-                else:
-                    value= "false"
-                omitted.append(tuple([Interface, name, value]))
-            elif attribute_rslt.field.directive_widget is not None:
-                widgets[name] = str(attribute_rslt.field.directive_widget)
-            if attribute_rslt.field.directive_mode is not None:
-                value = str(attribute_rslt.field.directive_mode)
-                modes.append(tuple([Interface, name, value]))
-            if attribute_rslt.field.directive_before is not None:
-                value = str(attribute_rslt.field.directive_before)
-                order.append(tuple([name, "before", value]))
-            if attribute_rslt.field.directive_after is not None:
-                value = str(attribute_rslt.field.directive_after)
-                order.append(tuple([name, "after", value]))
-            elif attribute_rslt.field.directive_read is not None:
-                read[name] = str(attribute_rslt.field.directive_read)
-            elif attribute_rslt.field.directive_write is not None:
-                write[name] = str(attribute_rslt.field.directive_write)
-
-        iface = InterfaceClass(
-            name=schema_rslt.specification.name,
-            __doc__=schema_rslt.specification.documentation,
-            __module__=virtual.__name__,
-            bases=(interfaces.Schema,),
-            attrs=attrs,
-            )
-
-        setattr(virtual, iface.__name__, iface)
-        setattr(iface, "__version__", schema_rslt.create_date)
-
-        if len(omitted) > 0:
-            directives[OMITTED_KEY] = omitted
-        if len(widgets) > 0:
-            directives[WIDGETS_KEY] = widgets
-        if len(modes) > 0:
-            directives[MODES_KEY] = modes
-        if len(order) > 0:
-            directives[ORDER_KEY] = order
-        if len(read) > 0:
-            directives[READ_PERMISSIONS_KEY] = read
-        if len(write) > 0:
-            directives[WRITE_PERMISSIONS_KEY] = write
-
-        if len(directives) > 0:
-            iface.setTaggedValue(TEMP_KEY, directives)
+            visited[schema_rslt.specification.name] = iface
+            to_visit.pop()
 
         return iface
 
+    get.__doc__ = interfaces.ISchemaManager["get"].__doc__
+
     def has(self, key):
-        """
-        Checks if the module name (key) exists
-        """
         Session = named_session(self._datastore)
         session = Session()
         name = unicode(key)
         num = session.query(model.Specification).filter_by(name=name).count()
         return num > 0
 
+    has.__doc__ = interfaces.ISchemaManager["has"].__doc__
+
     def keys(self):
-        """
-        Returns a listing of the module names (with interface?)
-        """
         Session = named_session(self._datastore)
         session = Session()
         keys = session.query(model.Specification.name).all()
         return list(itertools.chain.from_iterable(keys))
 
+    keys.__doc__ = interfaces.ISchemaManager["keys"].__doc__
+
     def put(self, target):
-        """
-        Saves the target interface into the manager.
-        """
         iface = target
 
         if not iface.extends(interfaces.Schema):
             raise Exception("%s must extend %s " % (iface, interfaces.Schema))
 
-        types_factory = getUtility(zope.schema.interfaces.IVocabularyFactory,
-                                   name="avrc.data.store.SupportedTypes")
-        types = types_factory()
+        types = getUtility(IVocabulary, "avrc.data.store.Types")
+        directives = getUtility(IVocabulary, "avrc.data.store.Directives")
 
         Session = named_session(self._datastore)
         session = Session()
 
         spec_rslt = session.query(model.Specification)\
-                    .filter_by(name=iface.__name__)\
+                    .filter_by(name=unicode(iface.__name__))\
                     .first()
 
         # Create a spec if one doesn't already exist
@@ -335,7 +363,6 @@ class DatastoreSchemaManager(object):
                 name=unicode(iface.__name__),
                 documentation=(iface.__doc__)
                 )
-
 
             for ibase in iface.__bases__:
                 # only associate with interfaces that are also marked as part
@@ -388,7 +415,7 @@ class DatastoreSchemaManager(object):
             if zope.schema.interfaces.IChoice.providedBy(field_obj):
                 vocabulary_obj = field_obj.vocabulary
                 # TODO: need a better name for this
-                vocabulary_rslt = model.Vocabulary(title="blablah")
+                vocabulary_rslt = model.Vocabulary(title=u"")
 
                 for i, term_obj in enumerate(vocabulary_obj, start=1):
                     term_rslt = model.Term(
@@ -409,13 +436,10 @@ class DatastoreSchemaManager(object):
 
             schema_rslt.attributes.append(attrs[name])
 
-        tags = iface.queryTaggedValue(TEMP_KEY, {})
+        tags = iface.queryTaggedValue(TEMP_KEY, {}) or {}
 
-        if tags:
-            for key, item in tags.items():
-                if key not in supported_directives_vocabulary:
-                    continue
-
+        for key, item in tags.items():
+            if key in directives:
                 try:
                     if key is OMITTED_KEY:
                         for interface, name, value in item:
@@ -433,7 +457,7 @@ class DatastoreSchemaManager(object):
                             elif order is "after":
                                 attrs[name].field.directive_after = value
                             else:
-                                raise Exception("WTF")
+                                raise Exception("order %s is not supported" % order)
                     elif key is READ_PERMISSIONS_KEY:
                         for name, value in item.items():
                             attrs[name].field.directive_read = unicode(value)
@@ -443,17 +467,15 @@ class DatastoreSchemaManager(object):
                 except KeyError:
                     continue
 
-
         session.add(schema_rslt)
         session.commit()
 
         iface.__version__ = schema_rslt.create_date
         return iface
 
+    put.__doc__ = interfaces.ISchemaManager["put"].__doc__
+
     def purge(self, key):
-        """
-        Removes the interface from the manager (completely)
-        """
         Session = named_session(self._datastore)
         session = Session()
 
@@ -473,31 +495,11 @@ class DatastoreSchemaManager(object):
         session.remove(schema_rslt)
         session.commit()
 
+    purge.__doc__ = interfaces.ISchemaManager["purge"].__doc__
+
     def retire(self, key):
-        """
-        Will fail, schema managers cannot be "retired".
-        TODO: why?
-        """
+        # Will fail, schema managers cannot be "retired".
+        # TODO: why?
         raise Exception("Can't retire schemata")
 
-    def spawn(self, target, **kw):
-        """
-        Generates an object that implements this schema
-        """
-
-        if isinstance(target, str):
-            iface = self.get(target)
-        else:
-            iface = target
-
-        if not iface.extends(interfaces.Schema):
-            raise Exception("This will not be found")
-
-        obj = Instance()
-        directlyProvides(obj, iface)
-
-        for name in zope.schema.getFieldNamesInOrder(iface):
-            setattr(obj, name, FieldProperty(iface[name]))
-            obj.__dict__[name].__set__(obj, kw.get(name))
-
-        return obj
+    retire.__doc__ = interfaces.ISchemaManager["retire"].__doc__

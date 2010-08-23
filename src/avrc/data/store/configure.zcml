@@ -6,12 +6,13 @@
   <includeDependencies package="." />
 
   <adapter factory=".schema.DatastoreSchemaManager" />
-  
+
   <adapter factory=".domain.DatastoreDomainManager" />
   <adapter factory=".subject.DatastoreSubjectManager" />
   <adapter factory=".subject.DatastoreVisitManager" />
   <adapter factory=".domain.DatastoreProtocolManager" />
   <adapter factory=".subject.DatastoreEnrollmentManager" />
+
   <!-- Handle when a Site adds an engine -->
   <subscriber handler=".datastore.handleDatastoreCreated" />
   <subscriber handler=".datastore.handleDatastoreRemoved" />
@@ -22,9 +23,16 @@
       />
 
   <utility
-      name="avrc.data.store.SupportedTypes"
+      name="avrc.data.store.Types"
       component=".types.supported_types_vocabulary"
-      provides="zope.schema.interfaces.IVocabularyFactory"
+      provides="zope.schema.interfaces.IVocabulary"
       />
+
+  <utility
+      name="avrc.data.store.Directives"
+      component=".schema.supported_directives_vocabulary"
+      provides="zope.schema.interfaces.IVocabulary"
+      />
+
 
 </configure>

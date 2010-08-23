@@ -112,13 +112,16 @@ class IChoicedInterface(Schema):
 class IGrandfather(Schema):
     pass
 
-class IFather(IGrandfather):
+class IGrandmother(Schema):
     pass
 
-class IUncle(IGrandfather):
+class IFather(IGrandfather, IGrandmother):
     pass
 
-class IAunt(IGrandfather):
+class IUncle(IGrandfather, IGrandmother):
+    pass
+
+class IAunt(IGrandfather, IGrandmother):
     pass
 
 class IBrother(IFather):

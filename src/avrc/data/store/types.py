@@ -9,6 +9,8 @@ from avrc.data.store import interfaces
 class Range(zope.schema.Tuple):
     implements(interfaces.IRange)
 
+    __doc__ = interfaces.IRange.__doc__
+
     def _validate(self, value):
         """
         """
@@ -19,20 +21,17 @@ class Range(zope.schema.Tuple):
         except ValueError as e:
             raise Exception("Range value is invalid: %s" % e)
 
-def supported_types_vocabulary(context=None):
-    """
-    """
-    return SimpleVocabulary.fromItems([
-        ("integer", zope.schema.Int),
-        ("string", zope.schema.TextLine),
-        ("text", zope.schema.Text),
-        ("binary", zope.schema.Bytes),
-        ("boolean", zope.schema.Bool),
-        ("real", zope.schema.Decimal),
-        ("date", zope.schema.Date),
-        ("datetime", zope.schema.Datetime),
-        ("time", zope.schema.Time),
-        ("object", zope.schema.Object),
-        ("selection", zope.schema.Choice),
-        ("range", Range),
-        ])
+supported_types_vocabulary = SimpleVocabulary.fromItems([
+    ("integer", zope.schema.Int),
+    ("string", zope.schema.TextLine),
+    ("text", zope.schema.Text),
+    ("binary", zope.schema.Bytes),
+    ("boolean", zope.schema.Bool),
+    ("real", zope.schema.Decimal),
+    ("date", zope.schema.Date),
+    ("datetime", zope.schema.Datetime),
+    ("time", zope.schema.Time),
+    ("object", zope.schema.Object),
+    ("selection", zope.schema.Choice),
+    ("range", Range),
+    ])

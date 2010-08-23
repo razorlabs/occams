@@ -168,20 +168,27 @@ class TestCase(ptc.PloneTestCase):
         sm = ds.schemata
 
         sm.put(samples.IGrandfather)
+        sm.put(samples.IGrandmother)
         sm.put(samples.IFather)
         sm.put(samples.IUncle)
         sm.put(samples.IAunt)
         sm.put(samples.IBrother)
         sm.put(samples.ISister)
 
+        print
+        print
+        print
+        print
         iface = sm.get(samples.IGrandfather.__name__)
-
         descendants = sm.get_descendants(iface)
 
-        print
-        print
+        print str(iface) + " " + str(iface.getBases())
+        print "descendants:"
         for descendant in descendants:
             print str(descendant) + " " + str(descendant.getBases())
+        print
+        print
+        print
         print
         print
 

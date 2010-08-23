@@ -14,12 +14,14 @@ from zope.component import adapter
 from zope.component.factory import Factory
 from zope.interface import implements
 from zope.interface import providedBy
+from zope.interface import directlyProvides
 from zope.i18nmessageid import MessageFactory
 from zope.event import notify
 from zope.lifecycleevent import ObjectCreatedEvent
 from zope.lifecycleevent import IObjectCreatedEvent
 from zope.lifecycleevent import IObjectRemovedEvent
 import zope.schema
+from zope.schema.interfaces import IVocabulary
 from zope.schema.fieldproperty import FieldProperty
 
 import sqlalchemy as sa
@@ -71,10 +73,10 @@ def setup_types(datastore):
     rslt = []
     Session = named_session(datastore)
     session = Session()
-    types_factory = getUtility(zope.schema.interfaces.IVocabularyFactory,
-                               name="avrc.data.store.SupportedTypes")
+    types = getUtility(zope.schema.interfaces.IVocabulary,
+                       "avrc.data.store.Types")
 
-    for t in list(types_factory()):
+    for t in list(types):
         rslt.append(model.Type(
             title=unicode(t.token),
             description=unicode(getattr(t.value, "__doc__", None)),
@@ -169,6 +171,17 @@ class SessionFactory(Persistent):
 
     __call__.__doc__ = interfaces.ISessionFactory["__call__"].__doc__
 
+class Instance(object):
+    implements(interfaces.IInstance)
+
+    __doc__ = interfaces.IInstance.__doc__
+
+    __id__ = None
+
+    title = None
+
+    description = None
+
 class Datastore(object):
     implements(interfaces.IDatastore)
 
@@ -245,7 +258,7 @@ class Datastore(object):
     def visits(self):
         """A protocol manager utility"""
         return interfaces.IVisitManager(self)
-    
+
     def keys(self):
         # This method will remain unimplemented as it doesn't really make sense
         # to return every single key in the data store.
@@ -261,7 +274,7 @@ class Datastore(object):
         if isinstance(key, (str, unicode)):
             key = str(key)
         elif interfaces.IInstance.providedBy(key):
-            key = key.__dsid__
+            key = key.__id__
         else:
             raise Exception("The object specified cannot be evaluated into "
                             "a object to search for")
@@ -274,19 +287,25 @@ class Datastore(object):
 
     has.__doc__ = interfaces.IDatastore["has"].__doc__
 
-
     def get(self, key):
+        # Since the object doesn't have any dependencies on it's data, we're
+        # just going to do another Breadth-first traversal
+        #
+        # TODO: (mmartinez) get by title as well, currently only works
+        #    by id....
+        #
+        # TODO: (mmartinez) objects come back without their interfaces currently
+        #
+
         # we're going to use the object as the key (or it's 'name')
-        types = getUtility(zope.schema.interfaces.IVocabularyFactory,
-                           name="avrc.data.store.SupportedTypes"
-                           )()
+        types = getUtility(IVocabulary, "avrc.data.store.Types")
         Session = named_session(self)
         session = Session()
 
         if isinstance(key, (str, unicode)):
             key = str(key)
         elif interfaces.IInstance.providedBy(key):
-            key = key.__dsid__
+            key = key.__id__
         else:
             raise Exception("The object specified cannot be evaluated into "
                             "a object to search for")
@@ -298,94 +317,76 @@ class Datastore(object):
         if instance_rslt is None:
             return None
 
-
-
-
-        # (parent object, corresponding parent db entry, value)
-        to_visit = queue([(None, None, None, target)])
+        # (parent object, parent db entry, prop name, value)
+        to_visit = queue([(Instance(), instance_rslt, None, None)])
 
         primitive_types = (int, str, unicode, float, bool, date, time, datetime,)
 
-        # Breadth-first pre-order traversal insertion (to keep everything
-        # within a single transaction)
         while len(to_visit) > 0:
             (parent_obj, instance_rslt, attr_name, value) = to_visit.popleft()
 
-            # An object, add it's properties to the traversal queue
-            if not isinstance(value, primitive_types):
-#                if not interfaces.ISchema.providedBy(value):
-#                    raise Exception("This object is not going to work out")
-
-                try:
-                    provided = list(providedBy(value))
-                    (schema_obj,) = provided
-                except ValueError as e:
-                    raise Exception("Object has multiple inheritance: %s" % e)
-
-                schema_rslt = session.query(model.Schema)\
-                              .filter_by(create_date=schema_obj.__version__)\
-                              .join(model.Specification)\
-                              .filter_by(name=schema_obj.__name__)\
-                              .first()
-
-                instance_rslt = model.Instance(
-                    schema=schema_rslt,
-                    title=u"%s-%d" % (schema_rslt.specification.name,
-                                      currenttime()),
-                    description=u"Some gibberish"
-                    )
-
-                for name, field_obj in zope.schema.getFieldsInOrder(schema_obj):
-                    child = getattr(value, name)
-                    to_visit.append((value, instance_rslt, name, child,))
-
-            else:
-
-                attribute_rslt = session.query(model.Attribute)\
-                                 .filter_by(name=unicode(attr_name))\
-                                 .join(model.Schema)\
-                                 .filter_by(id=instance_rslt.schema.id)\
-                                 .first()
+            for attribute_rslt in instance_rslt.schema.attributes:
 
                 type_name = attribute_rslt.field.type.title
 
-                if type_name in (u"binary",):
-                    Field = model.Binary
-                elif type_name in (u"date", u"time", u"datetime"):
-                    Field = model.Datetime
-                elif type_name in (u"integer",):
-                    Field = model.Integer
-                elif type_name in (u"object",):
-                    Field = model.Object
-                elif type_name in (u"real",):
-                    Field = model.Real
-                elif type_name in (u"text", u"string"):
-                    Field = model.String
-                elif type_name in (u"selection"):
-                    Field = model.Selection
+                if type_name in (u"object"):
+                    schema_rslt = session.query(model.Schema)\
+                                  .filter_by(create_date=schema_obj.__version__)\
+                                  .join(model.Specification)\
+                                  .filter_by(name=schema_obj.__name__)\
+                                  .first()
+
+                    instance_rslt = model.Instance(
+                        schema=schema_rslt,
+                        title=u"%s-%d" % (schema_rslt.specification.name,
+                                          currenttime()),
+                        description=u"Some gibberish"
+                        )
+
+                    for name, field_obj in zope.schema.getFieldsInOrder(schema_obj):
+                        child = getattr(value, name)
+                        to_visit.append((value, instance_rslt, name, child,))
                 else:
-                    raise Exception("Type '%s' unsupported."  % type_name)
 
-                value_rslt = Field(
-                    instance=instance_rslt,
-                    attribute=attribute_rslt,
-                    value=value
-                    )
+                    if type_name in (u"binary",):
+                        Model = model.Binary
+                    elif type_name in (u"date", u"time", u"datetime"):
+                        Model = model.Datetime
+                    elif type_name in (u"integer",):
+                        Model = model.Integer
+                    elif type_name in (u"real",):
+                        Model = model.Real
+                    elif type_name in (u"text", u"string"):
+                        Model = model.String
+                    elif type_name in (u"selection"):
+                        Model = model.Selection
+                    else:
+                        raise Exception("Type '%s' unsupported."  % type_name)
 
-                session.add(value_rslt)
+                    values_rslt = session.query(Model)\
+                                    .filter_by(instance=instance_rslt)\
+                                    .filter_by(attribute=attribute_rslt)\
+                                    .all()
 
-        session.commit()
+                    # TODO: add in list functionality
+#                    setattr(parent_obj, attr_name
+                    value_rslt = Field(
+                        instance=instance_rslt,
+                        attribute=attribute_rslt,
+                        value=value
+                        )
+
+        return None
 
     get.__doc__ = interfaces.IDatastore["get"].__doc__
 
     def put(self, target):
-        types = getUtility(zope.schema.interfaces.IVocabularyFactory,
-                           name="avrc.data.store.SupportedTypes"
-                           )()
+        types = getUtility(IVocabulary, "avrc.data.store.Types")
         Session = named_session(self)
         session = Session()
 
-        # (parent object, corresponding parent db entry, value)
+        # (parent object, corresponding db entry, prop name, raw value)
+        # in this case, the target isn't assign to or contained in anything.
         to_visit = queue([(None, None, None, target)])
 
         primitive_types = (int, str, unicode, float, bool, date, time, datetime,)
@@ -393,11 +394,11 @@ class Datastore(object):
         # Breadth-first pre-order traversal insertion (to keep everything
         # within a single transaction)
         while len(to_visit) > 0:
-            (parent_obj, instance_rslt, attr_name, value) = to_visit.popleft()
+            (parent_obj, parent_rslt, attr_name, value) = to_visit.popleft()
 
             # An object, add it's properties to the traversal queue
             if not isinstance(value, primitive_types):
-#                if not interfaces.ISchema.providedBy(value):
+#                if not interfaces.Schema.providedBy(value):
 #                    raise Exception("This object is not going to work out")
 
                 try:
@@ -416,7 +417,7 @@ class Datastore(object):
                     schema=schema_rslt,
                     title=u"%s-%d" % (schema_rslt.specification.name,
                                       currenttime()),
-                    description=u"Some gibberish"
+                    description=u""
                     )
 
                 for name, field_obj in zope.schema.getFieldsInOrder(schema_obj):
@@ -428,7 +429,7 @@ class Datastore(object):
                 attribute_rslt = session.query(model.Attribute)\
                                  .filter_by(name=unicode(attr_name))\
                                  .join(model.Schema)\
-                                 .filter_by(id=instance_rslt.schema.id)\
+                                 .filter_by(id=parent_rslt.schema.id)\
                                  .first()
 
                 type_name = attribute_rslt.field.type.title
@@ -451,7 +452,7 @@ class Datastore(object):
                     raise Exception("Type '%s' unsupported."  % type_name)
 
                 value_rslt = Field(
-                    instance=instance_rslt,
+                    instance=parent_rslt,
                     attribute=attribute_rslt,
                     value=value
                     )
@@ -459,6 +460,10 @@ class Datastore(object):
                 session.add(value_rslt)
 
         session.commit()
+
+        value.__id__ = value_rslt.id
+
+        return value
 
     put.__doc__ = interfaces.IDatastore["put"].__doc__
 
@@ -475,7 +480,7 @@ class Datastore(object):
         if isinstance(key, (str, unicode)):
             key = str(key)
         elif interfaces.IInstance.providedBy(key):
-            key = key.__dsid__
+            key = key.__id__
         else:
             raise Exception("The object specified cannot be evaluated into "
                             "a object to search for")
@@ -500,7 +505,7 @@ class Datastore(object):
         if isinstance(key, (str, unicode)):
             key = str(key)
         elif interfaces.IInstance.providedBy(key):
-            key = key.__dsid__
+            key = key.__id__
         else:
             raise Exception("The object specified cannot be evaluated into "
                             "a object to search for")
@@ -517,13 +522,28 @@ class Datastore(object):
 
     restore.__doc__ = interfaces.IDatastore["restore"].__doc__
 
+    def spawn(self, target, **kw):
+        if isinstance(target, (str, unicode)):
+            iface = self.schemata.get(target)
+        elif iface.extends(interfaces.Schema):
+            iface = target
+        else:
+            raise Exception("This will not be found")
+
+        obj = Instance()
+        directlyProvides(obj, iface)
+
+        for name in zope.schema.getFieldNamesInOrder(iface):
+            setattr(obj, name, FieldProperty(iface[name]))
+            obj.__dict__[name].__set__(obj, kw.get(name))
+
+        return obj
+
+    spawn.__doc__ = interfaces.IDatastore["spawn"].__doc__
+
 DatastoreFactory = Factory(
     Datastore,
     title=_(u"Datastore implementation factory."),
     description=_(u"Creates an instance of a datastore implementation object. "
                    "Also notifies listeners of this creation.")
     )
-
-
-
-

@@ -32,17 +32,22 @@ class UndefinedSchemaError(Error):
     """Raised when trying to access a schema that is not in the data store"""
 
 # -----------------------------------------------------------------------------
-#
+# API
 # -----------------------------------------------------------------------------
 
-class Versionable(Interface):
+class IComponent(Interface):
+    """
+    Base interface for the components of this package.
+    """
+
+class Versionable(IComponent):
     """
     """
 
     __version__ = Attribute(_(u"This will be used to keep track of the "
                               u"data store schema as they evolve"))
 
-class Formable(Interface):
+class Formable(IComponent):
     """
     Represents a schema that contains detailed information for display in a
     form.
@@ -57,15 +62,6 @@ class Formable(Interface):
 class Schema(Versionable, Formable):
     """
     Marker interface for a schema maintained by the data store.
-    """
-
-# -----------------------------------------------------------------------------
-# API CONTRACTS
-# -----------------------------------------------------------------------------
-
-class IComponent(Interface):
-    """
-    Base interface for the components of this package.
     """
 
 class IRange(IComponent, zope.schema.interfaces.ITuple):
@@ -171,6 +167,27 @@ class ISchemaManager(IManager):
     Marker interface for managing schemata.
     """
 
+    def get_descendants(iface):
+        """
+        Retrieves the classes that inherit from the specified base.
+
+        Arguments:
+            iface: (object) base interface to find all the descendants for
+        Returns:
+            list of interfaces that extend the specified base
+        """
+
+    def get_children(iface):
+        """
+        Retrieves all the children of the base class. Note this does not include
+        all the intermediate bases (i.e. it just returns the leaf nodes)
+
+        Arguments:
+            iface: (object) base interface to find all the children for
+        Returns:
+            list of interfaces that extend the specified base
+        """
+
 class IDatastore(IManager, IContained):
     """
     Represents a data store utility that can be added to a site. It is in
@@ -190,6 +207,11 @@ class IDatastore(IManager, IContained):
         required=True
         )
 
+    def spawn(iface, **kw):
+        """
+        Generates an object that implements the specified schema
+        """
+
 class ISessionFactory(IComponent, IContained):
     """
     Used for implementing our own SQLAlchemy session. The reason for using our
@@ -205,16 +227,21 @@ class ISessionFactory(IComponent, IContained):
 
 class IInstance(IComponent):
     """
+    Empty object that will be used as the instance of a virtual schema.
     """
 
-    __schema__ = Attribute(_(u"The specific schema this is an instance of "
-                             u"including the medata/version/etc"
-                             ))
+    __id__ = Attribute(_(u"The INTERNAL id of the instance. Tampering or "
+                         u"accessing this id outside of this package is "
+                         u"highly not recommended"))
 
-    __id__ = Attribute(_(u""))
+    title = Attribute(_(u"The instance's database-unique name"))
+
+    description = Attribute(_("A description for the object"))
 
 class IKey(IComponent):
     """
+    Ideally, this interface should be used to somehow manage identifiers for
+    the managers. But, in it's current state this interface is unused...
     """
 
     value = Attribute(_(u"A way to distinguish this item in the data store"))
