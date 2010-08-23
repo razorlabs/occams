@@ -13,6 +13,8 @@ from zope.interface import  Attribute
 from zope.i18nmessageid import MessageFactory
 import zope.schema
 
+from plone.directives import form, dexterity
+
 _ = MessageFactory(__name__)
 
 # -----------------------------------------------------------------------------
@@ -47,7 +49,7 @@ class Versionable(IComponent):
     __version__ = Attribute(_(u"This will be used to keep track of the "
                               u"data store schema as they evolve"))
 
-class Formable(IComponent):
+class Formable(IComponent, form.Schema, ):
     """
     Represents a schema that contains detailed information for display in a
     form.
@@ -267,9 +269,9 @@ class IProtocol(IComponent):
 
     domain_zid = zope.schema.Int(title=_(u"Domain Zope IntId"))
 
-    threshold = zope.schema.Int(title=_(u"Cycle Threshold"))
+    threshold = zope.schema.Int(title=_(u"Cycle Threshold"), required=False)
 
-    is_active = zope.schema.Bool(title=_(u"Active?"))
+    is_active = zope.schema.Bool(title=_(u"Active?"), required=False)
 
 
 class IVisit(IComponent):

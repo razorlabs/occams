@@ -299,6 +299,8 @@ class DatastoreSchemaManager(object):
                 )
 
             setattr(virtual, iface.__name__, iface)
+            setattr(iface, "__title__", schema_rslt.specification.title)
+            setattr(iface, "__description__", schema_rslt.specification.description)
             setattr(iface, "__version__", schema_rslt.create_date)
 
             if len(omitted) > 0:
@@ -361,7 +363,9 @@ class DatastoreSchemaManager(object):
         if spec_rslt is None:
             spec_rslt = model.Specification(
                 name=unicode(iface.__name__),
-                documentation=(iface.__doc__)
+                documentation=unicode(iface.__doc__),
+                title=unicode(iface.__title__),
+                description=unicode(iface.__description__)
                 )
 
             for ibase in iface.__bases__:
