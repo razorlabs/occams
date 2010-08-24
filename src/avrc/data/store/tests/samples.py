@@ -58,11 +58,17 @@ class IComposedInterface(Schema):
         schema=ISimple
         )
 
+from plone.app.z3cform.wysiwyg import WysiwygFieldWidget
+
 class IAnnotatedInterface(Schema):
     """
     This is a dummy schema to test if the schema manger can properly import it.
     Also this class contains annotations which SHOULD be saved as well...
     """
+
+    form.fieldset('results',
+        label=u'Physical Exam Results',
+        fields=['integer'])
 
     form.mode(integer='hidden')
     integer = zope.schema.Int(
@@ -70,13 +76,13 @@ class IAnnotatedInterface(Schema):
         description=u"INTEGERDESC"
         )
 
-    form.omitted('integer')
+    form.omitted('ommitme')
     ommitme = zope.schema.Int(
         title=u"OMITME",
         description=u"PLEASE"
         )
 
-    form.widget(text='plone.app.z3cform.wysiwyg.WysiwygFieldWidget',)
+    form.widget(text=WysiwygFieldWidget)
     text = zope.schema.Text(
         title=u"TEXT",
         description=u"TEXTDESC",

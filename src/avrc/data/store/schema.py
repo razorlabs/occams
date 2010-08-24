@@ -428,7 +428,7 @@ class DatastoreSchemaManager(object):
     def get_child_name_term(self, key):
         # NOTE: (dmote) We only need a small chunk of the schema when producing
         # a list of the schema
-        
+
         if isinstance(key, (str, unicode)):
             key = (key, None)
 
@@ -453,8 +453,8 @@ class DatastoreSchemaManager(object):
             raise Exception("Schema Manager doesn't have %s" % name)
 
         return SimpleTerm(
-            title=schema_rslt.specification.title, 
-            token=str(schema_rslt.specification.name), 
+            title=schema_rslt.specification.title,
+            token=str(schema_rslt.specification.name),
             value=schema_rslt.specification.name)
 
     def has(self, key):
@@ -590,7 +590,13 @@ class DatastoreSchemaManager(object):
 
             schema_rslt.attributes.append(attrs[name])
 
-        tags = iface.queryTaggedValue(TEMP_KEY, {}) or {}
+        tags = iface.queryTaggedValue(TEMP_KEY)
+
+        if tags is None:
+            tags = {}
+
+            for tag in iface.getTaggedValueTags():
+                tags[tag] = iface.getTaggedValue(tag)
 
         for key, item in tags.items():
             if key in directives:

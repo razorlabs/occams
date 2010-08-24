@@ -1,4 +1,4 @@
-
+from pprint import pprint
 import unittest
 
 from zope.testing import doctestunit
@@ -149,15 +149,16 @@ class TestCase(ptc.PloneTestCase):
 
         sm.put(samples.IAnnotatedInterface)
 
-        iface = sm.get(samples.IAnnotatedInterface.__name__)
         from pprint import pprint
-        print
-        print
+
+        for tag in samples.IAnnotatedInterface.getTaggedValueTags():
+            print tag
+            pprint(samples.IAnnotatedInterface.getTaggedValue(tag))
+
+        iface = sm.get(samples.IAnnotatedInterface.__name__)
+
         pprint(samples.IAnnotatedInterface.queryTaggedValue('__form_directive_values__'))
         pprint(iface.queryTaggedValue('__form_directive_values__'))
-        print
-        print
-        print
 
 
         self.fail("OMG")

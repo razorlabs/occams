@@ -113,13 +113,9 @@ class TestCase(ptc.PloneTestCase):
         klass = schema.MutableSchema.get_interface(itest.__name__)
 
         from pprint import pprint
-#        print
-#        print
+
         pprint(itest.queryTaggedValue('__form_directive_values__'))
         pprint(klass.queryTaggedValue('__form_directive_values__'))
-#        print
-#        print
-#        print
 
     def test_inheritance(self):
         """
