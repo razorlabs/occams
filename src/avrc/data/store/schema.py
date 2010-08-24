@@ -274,8 +274,27 @@ class DatastoreSchemaManager(object):
                     description=attribute_rslt.field.description,
                     required=attribute_rslt.field.is_required,
                     readonly=attribute_rslt.field.is_readonly,
-                    default=attribute_rslt.field.default
                     )
+
+                if attribute_rslt.field.default is not None:
+                    default_raw = attribute_rslt.field.default
+                    if Field is zope.schema.Int:
+                        default = int(default_raw)
+                    elif Field is zope.schema.Float:
+                        default = float(default_raw)
+                    elif Field is zope.schema.Bool:
+                        default= bool(default_raw)
+                    elif Field in (zope.schema.Text, zope.schema.TextLine):
+                        default = default_raw
+                    elif Field is zope.schema.Date:
+                        raise NotImplementedError("Date defaults unimplemented")
+                    elif Field is zope.schema.Datetime:
+                        raise NotImplementedError("Date defaults unimplemented")
+                    else:
+                        raise NotImplementedError("%s default unimplemented"
+                                                  % Field)
+
+                    kwargs["default"] = default
 
                 if zope.schema.interfaces.IChoice.implementedBy(Field):
                     terms = []
