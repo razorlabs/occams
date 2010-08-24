@@ -371,6 +371,73 @@ class DatastoreSchemaManager(object):
 
     get.__doc__ = interfaces.ISchemaManager["get"].__doc__
 
+    def get_children_names(self, ibase):
+        Session = named_session(self._datastore)
+        session  = Session()
+
+        names = queue([])
+
+        if not isinstance(ibase, (str, unicode)):
+            if not ibase.extends(interfaces.Schema):
+                raise Exception("base class does not extend datastore's base.")
+            ibase_name = unicode(ibase.__name__)
+        else:
+            ibase_name = unicode(ibase)
+
+        spec_rslt = session.query(model.Specification)\
+                    .filter_by(name=ibase_name)\
+                    .first()
+
+        if spec_rslt is None:
+            raise Exception("%s isn't in the data store" % ibase)
+
+        to_visit = queue([spec_rslt])
+
+        # Breadth-first pre-order traversal of all children
+        while len(to_visit) > 0:
+            spec_rslt = to_visit.popleft()
+
+            if spec_rslt.children:
+                for child in spec_rslt.children:
+                    to_visit.append(child)
+            else:
+                # Only append if it's a leaf node (as opposed to descendants)
+                names.append(spec_rslt.name)
+
+        return [self.get_child_name_term(name) for name in names]
+
+    def get_child_name_term(self, key):
+        # NOTE: (dmote) We only need a small chunk of the schema when producing
+        # a list of the schema
+        
+        if isinstance(key, (str, unicode)):
+            key = (key, None)
+
+        (name, version) = key
+        name = unicode(name)
+
+        Session = named_session(self._datastore)
+        session = Session()
+
+        schema_q = session.query(model.Schema)\
+                      .join(model.Specification)\
+                      .filter_by(name=name)
+
+        if version is not None:
+            schema_q = schema_q.filter_by(create_date=version)
+        else:
+            schema_q = schema_q.order_by(model.Schema.create_date.desc())
+
+        schema_rslt = schema_q.first()
+
+        if schema_rslt is None:
+            raise Exception("Schema Manager doesn't have %s" % name)
+
+        return SimpleTerm(
+            title=schema_rslt.specification.title, 
+            token=str(schema_rslt.specification.name), 
+            value=schema_rslt.specification.name)
+
     def has(self, key):
         Session = named_session(self._datastore)
         session = Session()
