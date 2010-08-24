@@ -27,7 +27,7 @@ supported_types_vocabulary = SimpleVocabulary.fromItems([
     ("text", zope.schema.Text),
     ("binary", zope.schema.Bytes),
     ("boolean", zope.schema.Bool),
-    ("real", zope.schema.Decimal),
+    ("real", zope.schema.Float),
     ("date", zope.schema.Date),
     ("datetime", zope.schema.Datetime),
     ("time", zope.schema.Time),

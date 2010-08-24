@@ -242,7 +242,8 @@ class DatastoreSchemaManager(object):
                                 .filter_by(specification=ibase_rslt)
 
                     if version:
-                        base_q = base_q.filter(model.Schema.create_date <= version)
+                        base_q = base_q\
+                                    .filter(model.Schema.create_date <= version)
 
                     base_q = base_q.order_by(model.Schema.create_date.desc())
                     base_rslt = base_q.first()
@@ -264,17 +265,19 @@ class DatastoreSchemaManager(object):
             write = {}
 
             for attribute_rslt in schema_rslt.attributes:
-                token = str(attribute_rslt.field.type.title)
-
-                field = types.getTermByToken(token).value
+                type_name = str(attribute_rslt.field.type.title)
+                Field = types.getTermByToken(type_name).value
+                vocabulary = None
 
                 kwargs = dict(
                     title=attribute_rslt.field.title,
                     description=attribute_rslt.field.description,
-                    required=attribute_rslt.field.is_required
+                    required=attribute_rslt.field.is_required,
+                    readonly=attribute_rslt.field.is_readonly,
+                    default=attribute_rslt.field.default
                     )
 
-                if zope.schema.interfaces.IChoice.implementedBy(field):
+                if zope.schema.interfaces.IChoice.implementedBy(Field):
                     terms = []
 
                     for term_rslt in attribute_rslt.field.vocabulary.terms:
@@ -284,10 +287,21 @@ class DatastoreSchemaManager(object):
                             title=term_rslt.title,
                             ))
 
-                    kwargs["vocabulary"] = SimpleVocabulary(terms=terms)
+                    vocabulary = SimpleVocabulary(terms=terms)
 
                 name = str(attribute_rslt.name)
-                attrs[name] = field(**kwargs)
+
+                if attribute_rslt.field.is_list:
+                    subkw = {}
+                    # For choices...
+                    if vocabulary:
+                        subkw["vocabulary"] = vocabulary
+                    kwargs["value_type"] = Field(**subkw)
+                    attrs[name] = zope.schema.List(**kwargs)
+                else:
+                    if vocabulary:
+                        kwargs["vocabulary"] = vocabulary
+                    attrs[name] = Field(**kwargs)
 
                 if attribute_rslt.field.directive_omitted is not None:
                     if attribute_rslt.field.directive_omitted:
@@ -311,7 +325,7 @@ class DatastoreSchemaManager(object):
                 elif attribute_rslt.field.directive_write is not None:
                     write[name] = str(attribute_rslt.field.directive_write)
 
-            bases = [visited[ibase_rslt.name] for ibase_rslt in schema_rslt.specification.bases]
+            bases = [visited[b.name] for b in schema_rslt.specification.bases]
 
             if not bases:
                 bases = [interfaces.Schema]
@@ -325,10 +339,14 @@ class DatastoreSchemaManager(object):
                 )
 
             setattr(virtual, iface.__name__, iface)
-            setattr(iface, "__title__", schema_rslt.specification.title)
-            setattr(iface, "__description__", schema_rslt.specification.description)
             setattr(iface, "__version__", schema_rslt.create_date)
-            setattr(iface, "__dependents__", DependencyGenerator(self, iface, [s.name for s in schema_rslt.specification.includes]))
+            setattr(iface, "__title__", schema_rslt.specification.title)
+            description = schema_rslt.specification.description
+            setattr(iface, "__description__", description)
+            include_names = [s.name for s in schema_rslt.specification.includes]
+            generator = DependencyGenerator(self, iface, include_names)
+            setattr(iface, "__dependents__", generator)
+            setattr(iface, "__is_tabable__", False)
 
             if len(omitted) > 0:
                 directives[OMITTED_KEY] = omitted
@@ -392,8 +410,11 @@ class DatastoreSchemaManager(object):
                 name=unicode(iface.__name__),
                 documentation=unicode(iface.__doc__),
                 title=unicode(getattr(iface, "__title__", None)),
-                description=unicode(getattr(iface, "__description__", None))
+                description=unicode(getattr(iface, "__description__", None)),
                 )
+
+            if hasattr(iface, "__is_tabable__"):
+                spec_rslt.is_tabable = getattr(iface, "__is_tabable__")
 
             for ibase in iface.__bases__:
                 # only associate with interfaces that are also marked as part
@@ -404,8 +425,9 @@ class DatastoreSchemaManager(object):
                                 .first()
 
                     if base_rslt is None:
-                        raise Exception("%s extends a base (%s) interface that is "
-                                        "not in the datastore" % (iface, ibase))
+                        raise Exception("%s extends a base (%s) interface that "
+                                        "is  not in the data store"
+                                        % (iface, ibase))
 
                     spec_rslt.bases.append(base_rslt)
 
@@ -426,21 +448,21 @@ class DatastoreSchemaManager(object):
 
         # Now add/remove in all the changed fields
         for name, field_obj in zope.schema.getFieldsInOrder(iface):
-            type_obj = field_obj
-            is_repeatable = False
+            list_type_obj = field_obj
+            is_list = zope.schema.interfaces.ICollection.providedBy(field_obj)
 
-            if isinstance(field_obj, zope.schema.List):
-                type_obj = field_obj.value_type
-                is_repeatable = True
+            if is_list:
+                list_type_obj = field_obj.value_type
 
-            if type_obj.__class__ not in types:
+            if list_type_obj.__class__ not in types:
                 session.rollback()
-                raise Exception("%s defines a field that is not supported: %s" % (iface, type_obj.__class__))
+                raise Exception("%s defines a field that is not supported: %s"
+                                % (iface, list_type_obj.__class__))
 
-            term_obj = types.getTerm(type_obj.__class__)
+            type_name = types.getTerm(list_type_obj.__class__).token
 
             type_rslt = session.query(model.Type)\
-                        .filter_by(title=unicode(term_obj.token))\
+                        .filter_by(title=unicode(type_name))\
                         .first()
 
             attrs[name] = model.Attribute(
@@ -449,13 +471,16 @@ class DatastoreSchemaManager(object):
                 field=model.Field(
                     title=unicode(field_obj.title),
                     description=unicode(field_obj.description),
+                    is_readonly=field_obj.readonly,
                     type=type_rslt,
-                    is_required=is_repeatable,
+                    is_list=is_list,
+                    is_required=field_obj.required,
+                    default=field_obj.default and unicode(field_obj.default) or None
                     )
                 )
 
-            if zope.schema.interfaces.IChoice.providedBy(field_obj):
-                vocabulary_obj = field_obj.vocabulary
+            if zope.schema.interfaces.IChoice.providedBy(list_type_obj):
+                vocabulary_obj = list_type_obj.vocabulary
                 # TODO: need a better name for this
                 vocabulary_rslt = model.Vocabulary(title=u"")
 
@@ -500,7 +525,8 @@ class DatastoreSchemaManager(object):
                             elif order is "after":
                                 attrs[name].field.directive_after = value
                             else:
-                                raise Exception("order %s is not supported" % order)
+                                raise Exception("order %s is not supported"
+                                                % order)
                     elif key is READ_PERMISSIONS_KEY:
                         for name, value in item.items():
                             attrs[name].field.directive_read = unicode(value)

@@ -340,7 +340,7 @@ class Datastore(object):
                         schema=schema_rslt,
                         title=u"%s-%d" % (schema_rslt.specification.name,
                                           currenttime()),
-                        description=u"Some gibberish"
+                        description=u""
                         )
 
                     for name, field_obj in zope.schema.getFieldsInOrder(schema_obj):

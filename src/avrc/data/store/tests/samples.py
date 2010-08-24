@@ -20,25 +20,25 @@ class IStandaloneInterface(Schema):
     foo = zope.schema.TextLine(
         title=u"Foo",
         description=u"Something about foo.",
-        required=True
+        required=False
         )
 
     bar = zope.schema.Text(
         title=u"Bar",
-        description=u"Something about bar."
+        description=u"Something about bar.",
+        default=u"Something\nReally Long"
         )
 
     baz = zope.schema.Int(
         title=u"Baz",
-        description=u"Something about baz."
+        description=u"Something about baz.",
+        default=420
         )
 
 class IDependentInterface(Schema):
     """
     as;dlfjasd;fjfasd;fsad
     """
-
-
 
 setattr(IDependentInterface, "__dependents__", (ISimple, IStandaloneInterface,))
 
@@ -76,7 +76,6 @@ class IAnnotatedInterface(Schema):
         description=u"PLEASE"
         )
 
-    form.read_permission(list="zope2.View")
     form.widget(text='plone.app.z3cform.wysiwyg.WysiwygFieldWidget',)
     text = zope.schema.Text(
         title=u"TEXT",
@@ -116,6 +115,21 @@ class IChoicedInterface(Schema):
     choice = zope.schema.Choice(
             title=u"LISTCHOICE",
             values=('foo', 'bar', 'go' 'away', 'plz',)
+        )
+
+class IListInterface(Schema):
+    """
+    A schema that contains lists.
+    """
+
+    int_list = zope.schema.List(
+        title=u"Int List",
+        value_type=zope.schema.Int(title=u"Int")
+        )
+
+    choice_list = zope.schema.List(
+        title=u"Choice List",
+        value_type=zope.schema.Choice(values=["foo", "bar", "baz"])
         )
 
 class IGrandfather(Schema):

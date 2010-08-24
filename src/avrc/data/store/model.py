@@ -483,6 +483,8 @@ class Specification(Model):
 
     description = sa.Column(sa.Text)
 
+    is_tabable = sa.Column(sa.Boolean, nullable=False, default=False)
+
     is_association = sa.Column(sa.Boolean, nullable=False, default=False)
 
     is_virtual = sa.Column(sa.Boolean, nullable=False, default=False)
@@ -616,7 +618,7 @@ class Field(Model):
             the appliations search form. (Only if applicable)
         is_required: (bool) True if required value in a form display
         is_inline_image: (bool) ?!!? see paper...
-        is_repeatble: (bool) only applicable for associations. see paper...
+        is_repeatable: (bool) only applicable for associations. see paper...
         minimum: (int) depending on the context, this attribute may be
             used for storing the mininum length of a string, size of an int,
             or number of instances, etc.
@@ -653,6 +655,12 @@ class Field(Model):
     vocabulary_id = sa.Column(sa.Integer, sa.ForeignKey("vocabulary.id"))
 
     vocabulary = orm.relation("Vocabulary")
+
+    default = sa.Column(sa.Unicode)
+
+    is_list = sa.Column(sa.Boolean, nullable=False, default=False)
+
+    is_readonly = sa.Column(sa.Boolean, nullable=False, default=False)
 
     is_searchable = sa.Column(sa.Boolean, nullable=False, default=False)
 

@@ -217,5 +217,17 @@ class TestCase(ptc.PloneTestCase):
 
         self.fail("Inheritance test complete")
 
+    def test_list_schemata(self):
+        dsn = u"sqlite:///test.db"
+        #dsn = u"sqlite:///:memory:"
+        ds = createObject("avrc.data.store.Datastore", title=u"blah", dsn=dsn)
+        sm = ds.schemata
+
+        sm.put(samples.IListInterface)
+
+        iface = sm.get(samples.IListInterface.__name__)
+
+        self.fail("List interface test complete")
+
 def test_suite():
     return unittest.defaultTestLoader.loadTestsFromName(__name__)
