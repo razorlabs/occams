@@ -389,7 +389,8 @@ class Datastore(object):
         # in this case, the target isn't assign to or contained in anything.
         to_visit = queue([(None, None, None, target)])
 
-        primitive_types = (int, str, unicode, float, bool, date, time, datetime,)
+#        primitive_types = (int, str, unicode, float, bool, date, time,
+#                           datetime, list)
 
         # Breadth-first pre-order traversal insertion (to keep everything
         # within a single transaction)
@@ -397,7 +398,7 @@ class Datastore(object):
             (parent_obj, parent_rslt, attr_name, value) = to_visit.popleft()
 
             # An object, add it's properties to the traversal queue
-            if not isinstance(value, primitive_types):
+            if interfaces.IInstance.providedBy(value):
 #                if not interfaces.Schema.providedBy(value):
 #                    raise Exception("This object is not going to work out")
 
@@ -451,13 +452,17 @@ class Datastore(object):
                 else:
                     raise Exception("Type '%s' unsupported."  % type_name)
 
-                value_rslt = Field(
-                    instance=parent_rslt,
-                    attribute=attribute_rslt,
-                    value=value
-                    )
+                if not attribute_rslt.field.is_list:
+                    value = [value]
 
-                session.add(value_rslt)
+                for v in value:
+                    value_rslt = Field(
+                        instance=parent_rslt,
+                        attribute=attribute_rslt,
+                        value=v
+                        )
+
+                    session.add(value_rslt)
 
         session.commit()
 

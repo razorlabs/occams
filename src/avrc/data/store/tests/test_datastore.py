@@ -140,6 +140,28 @@ class TestCase(ptc.PloneTestCase):
 
         self.fail("OMG")
 
+    def test_directives(self):
+        dsn = u"sqlite:///test.db"
+        #dsn = u"sqlite:///:memory:"
+        ds = createObject("avrc.data.store.Datastore", title=u"my ds", dsn=dsn)
+
+        sm = ds.schemata
+
+        sm.put(samples.IAnnotatedInterface)
+
+        iface = sm.get(samples.IAnnotatedInterface.__name__)
+        from pprint import pprint
+        print
+        print
+        pprint(samples.IAnnotatedInterface.queryTaggedValue('__form_directive_values__'))
+        pprint(iface.queryTaggedValue('__form_directive_values__'))
+        print
+        print
+        print
+
+
+        self.fail("OMG")
+
     def test_choiced_instance(self):
         """
         """
