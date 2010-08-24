@@ -14,6 +14,7 @@ from zope.interface.interface import InterfaceClass
 import zope.schema
 from zope.schema.interfaces import IVocabulary
 from zope.schema.vocabulary import SimpleVocabulary
+from zope.schema.vocabulary import SimpleTerm
 from zope.schema.fieldproperty import FieldProperty
 from zope.i18nmessageid import MessageFactory
 
@@ -73,9 +74,18 @@ def version(iface):
 
 class DependencyGenerator(object):
     """
+    The purpose of this class is to attempt to 'lighten' the load of using
+    interfaces throughout the client application, since dependent interfaces
+    will only be used when generating forms and not checking objects.
     """
 
     def __init__(self, manager, imain, names):
+        """
+        Arguments:
+            imain: the interface this generator is contained in
+            manager: the manager that is using this generator
+            names: the names of the dependent interfaces
+        """
         self.imain = imain
         self.manager = manager
         self.names = names
@@ -86,7 +96,6 @@ class DependencyGenerator(object):
         """
         for name in self.names:
             yield self.manager.get(name)
-
 
 class DatastoreSchemaManager(object):
     adapts(interfaces.IDatastore)
@@ -267,11 +276,12 @@ class DatastoreSchemaManager(object):
 
                 if zope.schema.interfaces.IChoice.implementedBy(field):
                     terms = []
+
                     for term_rslt in attribute_rslt.field.vocabulary.terms:
-                        terms.append(SimpleVocabulary.createTerm(
-                            term_rslt.value,
-                            str(term_rslt.token),
-                            term_rslt.title,
+                        terms.append(SimpleTerm(
+                            value=term_rslt.value,
+                            token=str(term_rslt.token),
+                            title=term_rslt.title,
                             ))
 
                     kwargs["vocabulary"] = SimpleVocabulary(terms=terms)
@@ -426,7 +436,7 @@ class DatastoreSchemaManager(object):
 
             if type_obj.__class__ not in types:
                 session.rollback()
-                raise Exception("Not supported: %s" % str(type_obj.__class__))
+                raise Exception("%s defines a field that is not supported: %s" % (iface, type_obj.__class__))
 
             term_obj = types.getTerm(type_obj.__class__)
 
@@ -451,8 +461,9 @@ class DatastoreSchemaManager(object):
                 vocabulary_rslt = model.Vocabulary(title=u"")
 
                 for i, term_obj in enumerate(vocabulary_obj, start=1):
+
                     term_rslt = model.Term(
-                        title=term_obj and unicode(term_obj.title) or None,
+                        title=term_obj.title and unicode(term_obj.title) or None,
                         token=unicode(term_obj.token),
                         order=i
                         )

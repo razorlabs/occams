@@ -785,6 +785,9 @@ class Term(Model):
                 self.value_str is not None and self.value_str or \
                 None
 
+        if self.value_range_low and self.value_range_high:
+            value = (self.value_range_low, self.value_range_high)
+
         if value is None:
             raise Exception("TERM ITEM NOT FOUND")
 
@@ -798,6 +801,8 @@ class Term(Model):
             self.value_real = value
         elif isinstance(value, (str, unicode)):
             self.value_str = unicode(value)
+        elif isinstance(value, tuple) and len(tuple) == 2:
+            (self.value_range_low, self.value_range_high) = value
         else:
             raise Exception("Unable to determine type: %s"  % value)
 

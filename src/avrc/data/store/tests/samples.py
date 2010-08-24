@@ -96,7 +96,7 @@ class IAnnotatedInterface(Schema):
         )
 
     form.write_permission(decimal="cmf.ModifyPortalContent")
-    decimal = zope.schema.Decimal(
+    decimal = zope.schema.Float(
         title=u"DECIMAL",
         description=u"DECIMALDESC"
         )
