@@ -286,9 +286,8 @@ class DatastoreSchemaManager(object):
 
                     kwargs["vocabulary"] = SimpleVocabulary(terms=terms)
 
-                attrs[attribute_rslt.name] = field(**kwargs)
-
                 name = str(attribute_rslt.name)
+                attrs[name] = field(**kwargs)
 
                 if attribute_rslt.field.directive_omitted is not None:
                     if attribute_rslt.field.directive_omitted:
