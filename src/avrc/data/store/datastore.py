@@ -178,9 +178,14 @@ class Instance(object):
 
     __id__ = None
 
+    __schema__ = None
+
     title = None
 
     description = None
+
+    def __str__(self):
+        return "<%s, implements %s>" % (self.title, self.__schema__)
 
 class Datastore(object):
     implements(interfaces.IDatastore)
@@ -525,6 +530,8 @@ class Datastore(object):
 
         obj = Instance()
         directlyProvides(obj, iface)
+
+        setattr(obj, "__schema__", iface)
 
         for name in zope.schema.getFieldNamesInOrder(iface):
             setattr(obj, name, FieldProperty(iface[name]))
