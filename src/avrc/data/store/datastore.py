@@ -348,7 +348,7 @@ class Datastore(object):
                     Model = model.Binary
                 elif type_name in (u"date", u"time", u"datetime"):
                     Model = model.Datetime
-                elif type_name in (u"integer",):
+                elif type_name in (u"integer", u"boolean"):
                     Model = model.Integer
                 elif type_name in (u"real",):
                     Model = model.Real

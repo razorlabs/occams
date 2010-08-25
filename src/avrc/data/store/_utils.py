@@ -40,7 +40,7 @@ class DatastoreConventionalManager(object):
         rslt = self._session.query(self._model)\
                       .filter_by(zid=key)\
                       .first()
-        newObj = createObject(self._type)
+        newObj = self._type()
         newObj = self.putProperties(newObj, rslt)
         
         return newObj

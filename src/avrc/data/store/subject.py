@@ -165,6 +165,15 @@ class DatastoreVisitManager(DatastoreConventionalManager):
                       .filter_by(zid=protocol_zid)\
                       .first())
 
-
+    def add_instance(self, obj_or_list):
+        "??!?"
+        print
+        print
+        print
+        print obj_or_list
+        print
+        print
+        print
+        
 
 

@@ -911,6 +911,13 @@ visit_enrollment_table = sa.Table("visit_enrollment", Model.metadata,
               primary_key=True),
     )
 
+visit_instance_table = sa.Table("visit_instance", Model.metadata,
+    sa.Column("visit_id", sa.ForeignKey("visit.id"), nullable=False,
+              primary_key=True),
+    sa.Column("instance_id", sa.ForeignKey("instance.id"), nullable=False,
+              primary_key=True),
+    )
+
 class Visit(Model):
     """
     Attributes:
@@ -931,15 +938,10 @@ class Visit(Model):
     enrollments = orm.relation("Enrollment", secondary=visit_enrollment_table)
 
     protocols = orm.relation("Protocol", secondary=visit_protocol_table)
+    
+    instances = orm.relation("Instance", secondary=visit_instance_table)
 
     visit_date = sa.Column(sa.Date, nullable=False)
-
-visit_instance_table = sa.Table("visit_instance", Model.metadata,
-    sa.Column("visit_id", sa.ForeignKey("visit.id"), nullable=False,
-              primary_key=True),
-    sa.Column("instance_id", sa.ForeignKey("instance.id"), nullable=False,
-              primary_key=True),
-    )
 
 domain_schema_table = sa.Table("domain_schema", Model.metadata,
     sa.Column("domain_id", sa.Integer, sa.ForeignKey("domain.id"),
