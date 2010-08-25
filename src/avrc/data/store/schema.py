@@ -352,7 +352,7 @@ class DatastoreSchemaManager(object):
                 bases = [interfaces.Schema]
 
             iface = InterfaceClass(
-                name=schema_rslt.specification.name,
+                name=str(schema_rslt.specification.name),
                 __doc__=schema_rslt.specification.documentation,
                 __module__=virtual.__name__,
                 bases=bases,
