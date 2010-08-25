@@ -317,10 +317,11 @@ class Datastore(object):
         if instance_rslt is None:
             return None
 
-        # (parent object, parent db entry, prop name, value)
-        to_visit = queue([(Instance(), instance_rslt, None, None)])
+        instance_obj = Instance()
+        setattr(instance_obj, "__id__", instance_rslt.id)
 
-        primitive_types = (int, str, unicode, float, bool, date, time, datetime,)
+        # (parent object, parent db entry, prop name, value)
+        to_visit = queue([(instance_obj, instance_rslt, None, None)])
 
         while len(to_visit) > 0:
             (parent_obj, instance_rslt, attr_name, value) = to_visit.popleft()
@@ -329,54 +330,43 @@ class Datastore(object):
 
                 type_name = attribute_rslt.field.type.title
 
-                if type_name in (u"object"):
-                    schema_rslt = session.query(model.Schema)\
-                                  .filter_by(create_date=schema_obj.__version__)\
-                                  .join(model.Specification)\
-                                  .filter_by(name=schema_obj.__name__)\
-                                  .first()
-
-                    instance_rslt = model.Instance(
-                        schema=schema_rslt,
-                        title=u"%s-%d" % (schema_rslt.specification.name,
-                                          currenttime()),
-                        description=u""
-                        )
-
-                    for name, field_obj in zope.schema.getFieldsInOrder(schema_obj):
-                        child = getattr(value, name)
-                        to_visit.append((value, instance_rslt, name, child,))
+                if type_name in (u"binary",):
+                    Model = model.Binary
+                elif type_name in (u"date", u"time", u"datetime"):
+                    Model = model.Datetime
+                elif type_name in (u"integer",):
+                    Model = model.Integer
+                elif type_name in (u"real",):
+                    Model = model.Real
+                elif type_name in (u"object",):
+                    Model = model.Object
+                elif type_name in (u"text", u"string"):
+                    Model = model.String
+                elif type_name in (u"selection"):
+                    Model = model.Selection
                 else:
+                    raise Exception("Type '%s' unsupported."  % type_name)
 
-                    if type_name in (u"binary",):
-                        Model = model.Binary
-                    elif type_name in (u"date", u"time", u"datetime"):
-                        Model = model.Datetime
-                    elif type_name in (u"integer",):
-                        Model = model.Integer
-                    elif type_name in (u"real",):
-                        Model = model.Real
-                    elif type_name in (u"text", u"string"):
-                        Model = model.String
-                    elif type_name in (u"selection"):
-                        Model = model.Selection
+                value_q = session.query(Model)\
+                                .filter_by(instance=instance_rslt)\
+                                .filter_by(attribute=attribute_rslt)\
+
+                if type_name in (u"object",):
+                    raise Exception("Using nested objects, not supported yet...")
+                    instance_obj = Instance()
+                    # TOD fix this...
+                    setattr(instance_obj, "__id__", None)
+                    setattr(parent_obj, str(attribute_rslt.name), instance_obj)
+                    #to_visit.append((object_rslt.value, instance_obj, None, None,))
+                else:
+                    if attribute_rslt.field.is_list:
+                        value = [v.value for v in value_q.all()]
                     else:
-                        raise Exception("Type '%s' unsupported."  % type_name)
+                        value = value_q.first()
 
-                    values_rslt = session.query(Model)\
-                                    .filter_by(instance=instance_rslt)\
-                                    .filter_by(attribute=attribute_rslt)\
-                                    .all()
+                    setattr(parent_obj, str(attribute_rslt.name), value)
 
-                    # TODO: add in list functionality
-#                    setattr(parent_obj, attr_name
-                    value_rslt = Field(
-                        instance=instance_rslt,
-                        attribute=attribute_rslt,
-                        value=value
-                        )
-
-        return None
+        return instance_obj
 
     get.__doc__ = interfaces.IDatastore["get"].__doc__
 
