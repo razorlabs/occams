@@ -185,7 +185,7 @@ class Instance(object):
     description = None
 
     def __str__(self):
-        return "<%s, implements %s>" % (self.title, self.__schema__)
+        return "<Instnace: '%s'; implements '%s'>" % (self.title, self.__schema__)
 
 class Datastore(object):
     implements(interfaces.IDatastore)
