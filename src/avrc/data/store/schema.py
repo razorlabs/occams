@@ -286,7 +286,7 @@ class DatastoreSchemaManager(object):
                         default= bool(default_raw)
                     elif Field in (zope.schema.Text, zope.schema.TextLine):
                         default = default_raw
-                    elif Field in zope.schema.Choice:
+                    elif Field is zope.schema.Choice:
                         default = str(default_raw)
                     elif Field is zope.schema.Date:
                         raise NotImplementedError("Date defaults unimplemented")
