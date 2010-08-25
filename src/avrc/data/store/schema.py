@@ -202,8 +202,8 @@ class DatastoreSchemaManager(object):
         #    share a common ancestor, this method might be inefficient unless
         #    dynamic programming heuristics are employed.
         #
-        if isinstance(key, (str, unicode)):
-            key = (key, None)
+        if isinstance(key, (str, unicode,)):
+            key = (key, None,)
 
         (name, version) = key
         name = unicode(name)
@@ -218,7 +218,7 @@ class DatastoreSchemaManager(object):
                       .filter_by(name=name)
 
         if version is not None:
-            schema_q = schema_q.filter_by(create_date=version)
+            schema_q = schema_q.filter(model.Schema.create_date==version)
         else:
             schema_q = schema_q.order_by(model.Schema.create_date.desc())
 

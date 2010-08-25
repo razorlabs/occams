@@ -307,23 +307,32 @@ class Datastore(object):
         Session = named_session(self)
         session = Session()
 
+        searchkw = {}
         if isinstance(key, (str, unicode)):
-            key = str(key)
+            searchkw = dict(title=str(key))
+        elif isinstance(key, (int, long)):
+            searchkw = dict(id=int(key))
         elif interfaces.IInstance.providedBy(key):
+            searchkw = dict(id=int(key.__id__))
             key = key.__id__
         else:
             raise Exception("The object specified cannot be evaluated into "
                             "a object to search for")
 
         instance_rslt = session.query(model.Instance)\
-                        .filter_by(id=key)\
+                        .filter_by(**searchkw)\
                         .first()
 
         if instance_rslt is None:
             return None
 
-        instance_obj = Instance()
+
+        key = (instance_rslt.schema.specification.name, instance_rslt.schema.create_date,)
+        iface = self.schemata.get(key)
+        instance_obj = self.spawn(iface)
         setattr(instance_obj, "__id__", instance_rslt.id)
+        setattr(instance_obj, "title", instance_rslt.title)
+        setattr(instance_obj, "__schema__", iface)
 
         # (parent object, parent db entry, prop name, value)
         to_visit = queue([(instance_obj, instance_rslt, None, None)])
@@ -364,10 +373,15 @@ class Datastore(object):
                     setattr(parent_obj, str(attribute_rslt.name), instance_obj)
                     #to_visit.append((object_rslt.value, instance_obj, None, None,))
                 else:
+                    # Sanity check: if there are no values in the data store,
+                    # this 'should' result in an empty list OR a None value
+                    # which is OK.
                     if attribute_rslt.field.is_list:
                         value = [v.value for v in value_q.all()]
                     else:
-                        value = value_q.first()
+                        value_rslt = value_q.first()
+                        value = value_rslt and value_rslt.value or None
+                        
 
                     setattr(parent_obj, str(attribute_rslt.name), value)
 
@@ -391,6 +405,10 @@ class Datastore(object):
         # within a single transaction)
         while len(to_visit) > 0:
             (parent_obj, parent_rslt, attr_name, value) = to_visit.popleft()
+            
+            # we don't want NULL/NIL/None value in the datastore
+            if value is None:
+                continue
 
             # An object, add it's properties to the traversal queue
             if interfaces.IInstance.providedBy(value):
@@ -412,9 +430,11 @@ class Datastore(object):
                     description=u""
                     )
 
+                # Doesn't do anything... (we need an id!!)
                 session.flush()
-
-                value.__id__ = instance_rslt.id
+                
+                setattr(value, "__id__", instance_rslt.id)
+                value.title = instance_rslt.title
 
                 for name, field_obj in zope.schema.getFieldsInOrder(schema_obj):
                     child = getattr(value, name)
@@ -432,6 +452,8 @@ class Datastore(object):
 
                 if type_name in (u"binary",):
                     Field = model.Binary
+                elif type_name in (u"boolean"):
+                    Field = model.Integer
                 elif type_name in (u"date", u"time", u"datetime"):
                     Field = model.Datetime
                 elif type_name in (u"integer",):
