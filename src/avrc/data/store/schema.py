@@ -382,8 +382,8 @@ class DatastoreSchemaManager(object):
             if len(write) > 0:
                 directives[WRITE_PERMISSIONS_KEY] = write
 
-            if len(directives) > 0:
-                iface.setTaggedValue(TEMP_KEY, directives)
+            for key, item in directives.items():
+                iface.setTaggedValue(key, item)
 
             visited[schema_rslt.specification.name] = iface
             to_visit.pop()
