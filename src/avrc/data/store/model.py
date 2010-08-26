@@ -135,7 +135,7 @@ class Binary(Model):
         value: (binary) the physical value being stored
     """
     __tablename__ = "binary"
-    
+
     id = sa.Column(sa.Integer, primary_key=True)
 
     instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
@@ -165,7 +165,7 @@ class Datetime(Model):
         value: (datetime) the physical value being stored
     """
     __tablename__ = "datetime"
-    
+
     id = sa.Column(sa.Integer, primary_key=True)
 
     instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
@@ -232,7 +232,7 @@ class Range(Model):
         value: (int) the range tuple being stored
     """
     __tablename__ = "range"
-    
+
     id = sa.Column(sa.Integer, primary_key=True)
 
     instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
@@ -275,7 +275,7 @@ class Real(Model):
         value: (int) the physical value being stored
     """
     __tablename__ ="real"
-    
+
     id = sa.Column(sa.Integer, primary_key=True)
 
     instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
@@ -312,7 +312,7 @@ class Selection(Model):
         value: (int) a reference to the vocabulary item
     """
     __tablename__ ="selection"
-    
+
     id = sa.Column(sa.Integer, primary_key=True)
 
     instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
@@ -325,7 +325,10 @@ class Selection(Model):
 
     attribute = orm.relation("Attribute", uselist=False)
 
-    value = sa.Column(sa.Integer, sa.ForeignKey("term.id"), nullable=False)
+    term_id = sa.Column("value", sa.Integer, sa.ForeignKey("term.id"),
+                        nullable=False)
+
+    value = orm.relation("Term", uselist=False)
 
 # Optimization for lookup
 sa.Index("selection_attribute_value", Real.attribute_id, Real.value)
@@ -345,7 +348,7 @@ class Object(Model):
             (seems to make more sense for associations?)
     """
     __tablename__ ="object"
-    
+
     id = sa.Column(sa.Integer, primary_key=True)
 
     instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
@@ -382,7 +385,7 @@ class String(Model):
         value: (str) the physical value being stored
     """
     __tablename__ ="string"
-    
+
     id = sa.Column(sa.Integer, primary_key=True)
 
     instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
@@ -938,7 +941,7 @@ class Visit(Model):
     enrollments = orm.relation("Enrollment", secondary=visit_enrollment_table)
 
     protocols = orm.relation("Protocol", secondary=visit_protocol_table)
-    
+
     instances = orm.relation("Instance", secondary=visit_instance_table)
 
     visit_date = sa.Column(sa.Date, nullable=False)

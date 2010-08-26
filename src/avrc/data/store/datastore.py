@@ -185,7 +185,8 @@ class Instance(object):
     description = None
 
     def __str__(self):
-        return "<Instnace: '%s'; implements '%s'>" % (self.title, self.__schema__)
+        return "<Instance: '%s'; implements: '%s'>" \
+                % (self.title, self.__schema__.__name__)
 
 class Datastore(object):
     implements(interfaces.IDatastore)
@@ -313,8 +314,10 @@ class Datastore(object):
         elif isinstance(key, (int, long)):
             searchkw = dict(id=int(key))
         elif interfaces.IInstance.providedBy(key):
-            searchkw = dict(id=int(key.__id__))
-            key = key.__id__
+            if key.__id__:
+                searchkw = dict(id=int(key.__id__))
+            else:
+                searchkw = dict(title=key.title)
         else:
             raise Exception("The object specified cannot be evaluated into "
                             "a object to search for")
@@ -327,7 +330,9 @@ class Datastore(object):
             return None
 
 
-        key = (instance_rslt.schema.specification.name, instance_rslt.schema.create_date,)
+        key = (instance_rslt.schema.specification.name,
+               instance_rslt.schema.create_date,)
+
         iface = self.schemata.get(key)
         instance_obj = self.spawn(iface)
         setattr(instance_obj, "__id__", instance_rslt.id)
@@ -377,11 +382,20 @@ class Datastore(object):
                     # this 'should' result in an empty list OR a None value
                     # which is OK.
                     if attribute_rslt.field.is_list:
-                        value = [v.value for v in value_q.all()]
+                        # a little more processing for selections...
+                        if type_name == u"selection":
+                            # it's a term relation, relations also have a field
+                            # named value...
+                            value = [v.value.value for v in value_q.all()]
+                        else:
+                            value = [v.value for v in value_q.all()]
                     else:
                         value_rslt = value_q.first()
-                        value = value_rslt and value_rslt.value or None
-                        
+                        # a little more processing for selections...
+                        if type_name == u"selection":
+                            value = value_rslt and value_rslt.value.value or None
+                        else:
+                            value = value_rslt and value_rslt.value or None
 
                     setattr(parent_obj, str(attribute_rslt.name), value)
 
@@ -394,6 +408,8 @@ class Datastore(object):
         Session = named_session(self)
         session = Session()
 
+        is_update = False
+
         # (parent object, corresponding db entry, prop name, raw value)
         # in this case, the target isn't assign to or contained in anything.
         to_visit = queue([(None, None, None, target)])
@@ -405,7 +421,7 @@ class Datastore(object):
         # within a single transaction)
         while len(to_visit) > 0:
             (parent_obj, parent_rslt, attr_name, value) = to_visit.popleft()
-            
+
             # we don't want NULL/NIL/None value in the datastore
             if value is None:
                 continue
@@ -417,24 +433,28 @@ class Datastore(object):
 
                 schema_obj = list(providedBy(value))[0]
 
-                schema_rslt = session.query(model.Schema)\
-                              .filter_by(create_date=schema_obj.__version__)\
-                              .join(model.Specification)\
-                              .filter_by(name=schema_obj.__name__)\
-                              .first()
+                if value.title:
+                    instance_rslt = session.query(model.Instance)\
+                                    .filter_by(title=value.title)\
+                                    .first()
+                    is_update = True
+                else:
+                    schema_rslt = session.query(model.Schema)\
+                                  .filter_by(create_date=schema_obj.__version__)\
+                                  .join(model.Specification)\
+                                  .filter_by(name=schema_obj.__name__)\
+                                  .first()
 
-                instance_rslt = model.Instance(
-                    schema=schema_rslt,
-                    title=u"%s-%d" % (schema_rslt.specification.name,
-                                      currenttime()),
-                    description=u""
-                    )
+                    instance_rslt = model.Instance(
+                        schema=schema_rslt,
+                        title=u"%s-%d" % (schema_rslt.specification.name,
+                                          currenttime()),
+                        description=u""
+                        )
 
-                # Doesn't do anything... (we need an id!!)
-                session.flush()
-                
-                setattr(value, "__id__", instance_rslt.id)
-                value.title = instance_rslt.title
+                    value.title = instance_rslt.title
+                    setattr(value, "__id__", instance_rslt.id)
+
 
                 for name, field_obj in zope.schema.getFieldsInOrder(schema_obj):
                     child = getattr(value, name)
@@ -451,29 +471,45 @@ class Datastore(object):
                 type_name = attribute_rslt.field.type.title
 
                 if type_name in (u"binary",):
-                    Field = model.Binary
-                elif type_name in (u"boolean"):
-                    Field = model.Integer
-                elif type_name in (u"date", u"time", u"datetime"):
-                    Field = model.Datetime
-                elif type_name in (u"integer",):
-                    Field = model.Integer
+                    Model = model.Binary
+                elif type_name in (u"date", u"time", u"datetime",):
+                    Model = model.Datetime
+                elif type_name in (u"integer", u"boolean"):
+                    Model = model.Integer
                 elif type_name in (u"object",):
-                    Field = model.Object
+                    Model = model.Object
                 elif type_name in (u"real",):
-                    Field = model.Real
-                elif type_name in (u"text", u"string"):
-                    Field = model.String
-                elif type_name in (u"selection"):
-                    Field = model.Selection
+                    Model = model.Real
+                elif type_name in (u"text", u"string",):
+                    Model = model.String
+                elif type_name in (u"selection", ):
+                    Model = model.Selection
                 else:
                     raise Exception("Type '%s' unsupported."  % type_name)
 
                 if not attribute_rslt.field.is_list:
                     value = [value]
 
+                # selections are actually just references to a term
+                if type_name == u"selection":
+                    rslt_values = []
+                    for term_rslt in attribute_rslt.field.vocabulary.terms:
+                        if term_rslt.token in value:
+                            rslt_values.append(term_rslt)
+
+                    value = rslt_values
+
+                if is_update:
+                    # need to delete, because lists make this very difficult to update
+                    existing_rslt = session.query(Model)\
+                                    .filter_by(instance=parent_rslt)\
+                                    .filter_by(attribute=attribute_rslt)\
+                                    .filter(Model.value.in_(value))\
+                                    .all()
+
                 for v in value:
-                    value_rslt = Field(
+
+                    value_rslt = Model(
                         instance=parent_rslt,
                         attribute=attribute_rslt,
                         value=v
@@ -557,7 +593,7 @@ class Datastore(object):
 
         for name in zope.schema.getFieldNamesInOrder(iface):
             setattr(obj, name, FieldProperty(iface[name]))
-            
+
             if name in kw:
                 obj.__dict__[name].__set__(obj, kw.get(name))
 

@@ -250,6 +250,22 @@ class TestCase(ptc.PloneTestCase):
 
         iface = sm.get(samples.IListInterface.__name__)
 
+        obj = ds.put(ds.spawn(iface, int_list=[1,5,10], choice_list=["foo", "baz"]))
+
+        print
+        print
+        print obj
+        print
+        print
+
+        gotten = ds.get(obj)
+
+        print
+        print
+        print gotten.__dict__
+        print
+        print
+
         self.fail("List interface test complete")
 
 def test_suite():
