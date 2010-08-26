@@ -30,6 +30,8 @@ from plone.autoform.interfaces import MODES_KEY
 from plone.autoform.interfaces import ORDER_KEY
 from plone.autoform.interfaces import READ_PERMISSIONS_KEY
 from plone.autoform.interfaces import WRITE_PERMISSIONS_KEY
+from plone.supermodel.interfaces import FIELDSETS_KEY
+from plone.supermodel.model import Fieldset
 
 from avrc.data.store import interfaces
 from avrc.data.store import model
@@ -40,6 +42,9 @@ _ = MessageFactory(__name__)
 
 #
 # The generated schemata of the data store will be contained here
+# TODO: (mmartinez) it would probably be a good idea to integrate with
+#    alter-ego fully and create the interface factory so we stop getting
+#    different (but same, technically) interface objects
 #
 virtual = dynamic.create("avrc.data.store.schema.virtual")
 
@@ -52,7 +57,8 @@ supported_directives_vocabulary = SimpleVocabulary.fromValues([
     MODES_KEY,
     ORDER_KEY,
     READ_PERMISSIONS_KEY,
-    WRITE_PERMISSIONS_KEY
+    WRITE_PERMISSIONS_KEY,
+    FIELDSETS_KEY
     ])
 
 def version(iface):
@@ -382,6 +388,18 @@ class DatastoreSchemaManager(object):
             if len(write) > 0:
                 directives[WRITE_PERMISSIONS_KEY] = write
 
+            for fieldset_rslt in schema_rslt.fieldsets:
+                if FIELDSETS_KEY not in directives:
+                    directives[FIELDSETS_KEY] = []
+
+                directives[FIELDSETS_KEY].append(Fieldset(
+                    __name__=str(fieldset_rslt.name),
+                    label=fieldset_rslt.label,
+                    description=fieldset_rslt.description,
+                    fields=[str(f.name) for f in fieldset_rslt.fields]
+                    ))
+
+
             for key, item in directives.items():
                 iface.setTaggedValue(key, item)
 
@@ -553,6 +571,11 @@ class DatastoreSchemaManager(object):
                         .filter_by(title=unicode(type_name))\
                         .first()
 
+            if field_obj.default:
+                default_value =unicode(field_obj.default)
+            else:
+                default_value = None
+
             attrs[name] = model.Attribute(
                 name=unicode(name),
                 order=field_obj.order,
@@ -563,7 +586,7 @@ class DatastoreSchemaManager(object):
                     type=type_rslt,
                     is_list=is_list,
                     is_required=field_obj.required,
-                    default=field_obj.default and unicode(field_obj.default) or None
+                    default=default_value
                     )
                 )
 
@@ -627,7 +650,25 @@ class DatastoreSchemaManager(object):
                     elif key is WRITE_PERMISSIONS_KEY:
                         for name, value in item.items():
                             attrs[name].field.directive_write = unicode(value)
+                    elif key is FIELDSETS_KEY:
+                        for fieldset_obj in item:
+                            fieldset_rslt = model.Fieldset(
+                                name=unicode(fieldset_obj.__name__),
+                                label=unicode(fieldset_obj.label),
+                                description=unicode(fieldset_obj.description),
+                                )
+
+                            for field_name in fieldset_obj.fields:
+                                fieldset_rslt.fields.append(model.FieldsetItem(
+                                    name=unicode(field_name)
+                                    ))
+
+                            schema_rslt.fieldsets.append(fieldset_rslt)
+
+
                 except KeyError:
+                    # this will occur IF we don't actually have an attribute
+                    # for the directive.
                     continue
 
         session.add(schema_rslt)

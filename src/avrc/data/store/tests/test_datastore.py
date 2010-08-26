@@ -151,14 +151,22 @@ class TestCase(ptc.PloneTestCase):
 
         from pprint import pprint
 
+        print
+        print "Original"
         for tag in samples.IAnnotatedInterface.getTaggedValueTags():
             print tag
             pprint(samples.IAnnotatedInterface.getTaggedValue(tag))
 
+
+        pprint(samples.IAnnotatedInterface.getTaggedValue("__form_directive_values__")["plone.supermodel.fieldsets"][0].__dict__)
+
         iface = sm.get(samples.IAnnotatedInterface.__name__)
 
-        pprint(samples.IAnnotatedInterface.queryTaggedValue('__form_directive_values__'))
-        pprint(iface.queryTaggedValue('__form_directive_values__'))
+        print
+        print "Generated"
+        for tag in iface.getTaggedValueTags():
+            print tag
+            pprint(iface.getTaggedValue(tag))
 
 
         self.fail("OMG")
@@ -248,10 +256,10 @@ class TestCase(ptc.PloneTestCase):
         iface = sm.get(isource.__name__)
 
         spawned = ds.spawn(iface,
-            foo=u"Before update",
-            bar=u"This is text before\nwe update",
-            baz=123,
-            joe=["jello", "apples"]
+#            foo=u"Before update",
+#            bar=u"This is text before\nwe update",
+#            baz=123,
+#            joe=["jello", "apples"]
             )
 
         print

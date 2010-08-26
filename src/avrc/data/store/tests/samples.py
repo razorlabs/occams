@@ -76,7 +76,7 @@ class IAnnotatedInterface(Schema):
 
     form.fieldset('results',
         label=u'Physical Exam Results',
-        fields=['integer'])
+        fields=['integer', 'text'])
 
     form.mode(integer='hidden')
     integer = zope.schema.Int(
@@ -145,11 +145,6 @@ class IListInterface(Schema):
         title=u"Choice List",
         value_type=zope.schema.Choice(values=["foo", "bar", "baz"])
         )
-
-class IFieldsetInterface(Schema):
-    """
-    An interface with fieldsets.
-    """
 
 
 class IGrandfather(Schema):

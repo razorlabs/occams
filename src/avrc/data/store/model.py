@@ -409,15 +409,19 @@ sa.Index("string_attribute_value", String.attribute_id, String.value)
 
 # Joining table for base class representation
 hierarchy_table = sa.Table("hierarchy", Model.metadata,
-    sa.Column("parent_id", sa.ForeignKey("specification.id"), nullable=False, primary_key=True),
-    sa.Column("child_id", sa.ForeignKey("specification.id"), nullable=False, primary_key=True),
+    sa.Column("parent_id", sa.ForeignKey("specification.id"), nullable=False,
+              primary_key=True),
+    sa.Column("child_id", sa.ForeignKey("specification.id"), nullable=False,
+              primary_key=True),
     )
 
 # A hackish way to include additional schemata when a 'main' schemata is
 # requested.
 include_table = sa.Table("include", Model.metadata,
-    sa.Column("main_id", sa.ForeignKey("specification.id"), nullable=False, primary_key=True),
-    sa.Column("include_id", sa.ForeignKey("specification.id"), nullable=False, primary_key=True),
+    sa.Column("main_id", sa.ForeignKey("specification.id"), nullable=False,
+              primary_key=True),
+    sa.Column("include_id", sa.ForeignKey("specification.id"), nullable=False,
+              primary_key=True),
     )
 
 class Specification(Model):
@@ -499,6 +503,45 @@ class Specification(Model):
     modify_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now,
                             onupdate=datetime.now)
 
+fieldset_fieldsetitem_table = sa.Table("fieldset_fieldsetitem", Model.metadata,
+    sa.Column("fieldset_id", sa.ForeignKey("fieldset.id"), nullable=False,
+              primary_key=True),
+    sa.Column("item_id", sa.ForeignKey("fieldsetitem.id"), nullable=False,
+              primary_key=True),
+    )
+
+class FieldsetItem(Model):
+    """
+    """
+    __tablename__ = "fieldsetitem"
+
+    id = sa.Column(sa.Integer, primary_key=True)
+
+    name = sa.Column(sa.Unicode, nullable=False)
+
+
+class Fieldset(Model):
+    """
+    """
+    __tablename__ = "fieldset"
+
+    id = sa.Column(sa.Integer, primary_key=True)
+
+    name = sa.Column(sa.Unicode, nullable=False)
+
+    label = sa.Column(sa.Unicode, nullable=False)
+
+    description = sa.Column(sa.Unicode)
+
+    fields = orm.relation("FieldsetItem", secondary=fieldset_fieldsetitem_table)
+
+schema_fieldset_table = sa.Table("schema_fieldset", Model.metadata,
+    sa.Column("schema_id", sa.ForeignKey("schema.id"), nullable=False,
+              primary_key=True),
+    sa.Column("fieldset_id", sa.ForeignKey("fieldset.id"), nullable=False,
+              primary_key=True),
+    )
+
 class Schema(Model):
     """
     The model where versioning takes place. This model uses a specification
@@ -531,6 +574,8 @@ class Schema(Model):
     attributes = orm.relation("Attribute", order_by="Attribute.order")
 
     invariants = orm.relation("Invariant")
+
+    fieldsets = orm.relation("Fieldset", secondary=schema_fieldset_table)
 
     create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
 
