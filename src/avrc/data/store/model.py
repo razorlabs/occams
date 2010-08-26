@@ -135,16 +135,16 @@ class Binary(Model):
         value: (binary) the physical value being stored
     """
     __tablename__ = "binary"
+    
+    id = sa.Column(sa.Integer, primary_key=True)
 
     instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
-                            nullable=False,
-                            primary_key=True)
+                            nullable=False)
 
     instance = orm.relation("Instance", uselist=False)
 
     attribute_id = sa.Column(sa.Integer, sa.ForeignKey("attribute.id"),
-                            nullable=False,
-                            primary_key=True)
+                            nullable=False)
 
     attribute = orm.relation("Attribute", uselist=False)
 
@@ -165,16 +165,16 @@ class Datetime(Model):
         value: (datetime) the physical value being stored
     """
     __tablename__ = "datetime"
+    
+    id = sa.Column(sa.Integer, primary_key=True)
 
     instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
-                            nullable=False,
-                            primary_key=True)
+                            nullable=False)
 
     instance = orm.relation("Instance", uselist=False)
 
     attribute_id = sa.Column(sa.Integer, sa.ForeignKey("attribute.id"),
-                            nullable=False,
-                            primary_key=True)
+                            nullable=False)
 
     attribute = orm.relation("Attribute", uselist=False)
 
@@ -197,15 +197,15 @@ class Integer(Model):
     """
     __tablename__ ="integer"
 
+    id = sa.Column(sa.Integer, primary_key=True)
+
     instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
-                            nullable=False,
-                            primary_key=True)
+                            nullable=False)
 
     instance = orm.relation("Instance", uselist=False)
 
     attribute_id = sa.Column(sa.Integer, sa.ForeignKey("attribute.id"),
-                            nullable=False,
-                            primary_key=True)
+                            nullable=False)
 
     attribute = orm.relation("Attribute", uselist=False)
 
@@ -232,16 +232,16 @@ class Range(Model):
         value: (int) the range tuple being stored
     """
     __tablename__ = "range"
+    
+    id = sa.Column(sa.Integer, primary_key=True)
 
     instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
-                            nullable=False,
-                            primary_key=True)
+                            nullable=False)
 
     instance = orm.relation("Instance", uselist=False)
 
     attribute_id = sa.Column(sa.Integer, sa.ForeignKey("attribute.id"),
-                            nullable=False,
-                            primary_key=True)
+                            nullable=False)
 
     attribute = orm.relation("Attribute", uselist=False)
 
@@ -275,16 +275,16 @@ class Real(Model):
         value: (int) the physical value being stored
     """
     __tablename__ ="real"
+    
+    id = sa.Column(sa.Integer, primary_key=True)
 
     instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
-                            nullable=False,
-                            primary_key=True)
+                            nullable=False)
 
     instance = orm.relation("Instance", uselist=False)
 
     attribute_id = sa.Column(sa.Integer, sa.ForeignKey("attribute.id"),
-                            nullable=False,
-                            primary_key=True)
+                            nullable=False)
 
     attribute = orm.relation("Attribute", uselist=False)
 
@@ -312,16 +312,16 @@ class Selection(Model):
         value: (int) a reference to the vocabulary item
     """
     __tablename__ ="selection"
+    
+    id = sa.Column(sa.Integer, primary_key=True)
 
     instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
-                            nullable=False,
-                            primary_key=True)
+                            nullable=False)
 
     instance = orm.relation("Instance", uselist=False)
 
     attribute_id = sa.Column(sa.Integer, sa.ForeignKey("attribute.id"),
-                            nullable=False,
-                            primary_key=True)
+                            nullable=False)
 
     attribute = orm.relation("Attribute", uselist=False)
 
@@ -345,18 +345,18 @@ class Object(Model):
             (seems to make more sense for associations?)
     """
     __tablename__ ="object"
+    
+    id = sa.Column(sa.Integer, primary_key=True)
 
     instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
-                            nullable=False,
-                            primary_key=True)
+                            nullable=False)
 
     instance = orm.relation("Instance",
                             primaryjoin="Instance.id == Object.instance_id",
                             uselist=False)
 
     attribute_id = sa.Column(sa.Integer, sa.ForeignKey("attribute.id"),
-                            nullable=False,
-                            primary_key=True)
+                            nullable=False)
 
     attribute = orm.relation("Attribute", uselist=False)
 
@@ -382,16 +382,16 @@ class String(Model):
         value: (str) the physical value being stored
     """
     __tablename__ ="string"
+    
+    id = sa.Column(sa.Integer, primary_key=True)
 
     instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
-                            nullable=False,
-                            primary_key=True)
+                            nullable=False)
 
     instance = orm.relation("Instance", uselist=False)
 
     attribute_id = sa.Column(sa.Integer, sa.ForeignKey("attribute.id"),
-                            nullable=False,
-                            primary_key=True)
+                            nullable=False)
 
     attribute = orm.relation("Attribute", uselist=False)
 

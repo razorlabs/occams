@@ -557,7 +557,9 @@ class Datastore(object):
 
         for name in zope.schema.getFieldNamesInOrder(iface):
             setattr(obj, name, FieldProperty(iface[name]))
-            obj.__dict__[name].__set__(obj, kw.get(name))
+            
+            if name in kw:
+                obj.__dict__[name].__set__(obj, kw.get(name))
 
         return obj
 

@@ -165,15 +165,49 @@ class DatastoreVisitManager(DatastoreConventionalManager):
                       .filter_by(zid=protocol_zid)\
                       .first())
 
-    def add_instance(self, obj_or_list):
-        "??!?"
-        print
-        print
-        print
-        print obj_or_list
-        print
-        print
-        print
-        
 
+    def getEnteredData(self, visit):
+        """
+        Get all of the data entered for a visit
+        """
+        instances_rslt = self._session.query(model.Instance)\
+                                      .join(self._model.instances)\
+                                      .filter(self._model.zid==visit.zid)\
+                                      .all()            
+        if not instances_rslt:
+            return []
+
+        objects = []
+        for instance_rslt in instances_rslt:
+            objects.append(self._datastore.get(instance_rslt.title))
+        return objects
+
+    def getEnteredDataOfType(self, visit, type):
+        """
+        Get all of the data entered for a visit
+        """
+        instance_rslt = self._session.query(model.Instance)\
+                                      .join(self._model.instances)\
+                                      .filter(self._model.zid==visit.zid)\
+                                      .join(model.Schema)\
+                                      .join(model.Specification)\
+                                      .filter_by(name=type)\
+                                      .first()
+        if not instance_rslt:
+            return None                              
+        return self._datastore.get(instance_rslt.title)
+
+    def add_instances(self, visit, obj_or_list):
+        "??!?"
+        visit_rslt = self._session.query(self._model)\
+                                  .filter_by(zid=visit.zid)\
+                                  .first()
+            
+        for obj in obj_or_list:
+            obj_rslt = self._session.query(model.Instance)\
+                                    .filter_by(title=obj.title)\
+                                    .first()     
+            visit_rslt.instances.append(obj_rslt)
+ 
+        self._session.commit()
 
