@@ -597,15 +597,22 @@ class Datastore(object):
         elif target.extends(interfaces.Schema):
             iface = target
         else:
-            raise Exception("This will not be found")
+            raise Exception("%s will not be found" % iface)
 
         obj = Instance()
         directlyProvides(obj, iface)
 
         setattr(obj, "__schema__", iface)
 
-        for name in zope.schema.getFieldNamesInOrder(iface):
+        for name, field_obj in zope.schema.getFieldsInOrder(iface):
             setattr(obj, name, FieldProperty(iface[name]))
+
+            if field_obj.__class__ is zope.schema.Datetime:
+                value = kw.get(name, datetime.now())
+            elif field_obj.__class__ is zope.schema.Date:
+                value = value.get(name, date.today())
+            else:
+                value = kw.get(name)
 
             if name in kw:
                 obj.__dict__[name].__set__(obj, kw.get(name))
