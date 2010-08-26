@@ -222,7 +222,7 @@ class TestCase(ptc.PloneTestCase):
         sm.put(samples.ISister)
 
         print
-        
+
         iface = sm.get(samples.IGrandfather.__name__)
         descendants = sm.get_descendants(iface)
 
@@ -234,7 +234,7 @@ class TestCase(ptc.PloneTestCase):
         print
 
         self.fail("Inheritance test complete")
-        
+
     def test_update_data(self):
         dsn = u"sqlite:///test.db"
         #dsn = u"sqlite:///:memory:"
@@ -255,6 +255,7 @@ class TestCase(ptc.PloneTestCase):
             )
 
         print
+        print
         print "spawned"
         print spawned.__dict__
 
@@ -269,14 +270,18 @@ class TestCase(ptc.PloneTestCase):
         print
         print "gotten"
         print gotten.__dict__
-        
-        obj.foo = u"After update",
-        obj.bar = u"Now let's see it\nthis actually worked",
-        obj.baz = 987,
-        obj.joe = ["apple", "bananas"]
-        obj = ds.put(obj)
-        
+
+        obj.foo = u"After update"
+        obj.bar = u"Now let's see it\nthis actually worked"
+        obj.baz = 987
+        obj.joe = ["apples", "bananas"]
         print
+        print "modified"
+        print obj.__dict__
+
+        obj = ds.put(obj)
+        print
+        print "putted"
         print obj.__dict__
         print
 

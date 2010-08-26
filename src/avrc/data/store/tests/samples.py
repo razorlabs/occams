@@ -34,7 +34,7 @@ class IStandaloneInterface(Schema):
         description=u"Something about baz.",
         default=420
         )
-    
+
     joe = zope.schema.List(
         title=u"Joe",
         description=u"A little hard",
@@ -145,6 +145,12 @@ class IListInterface(Schema):
         title=u"Choice List",
         value_type=zope.schema.Choice(values=["foo", "bar", "baz"])
         )
+
+class IFieldsetInterface(Schema):
+    """
+    An interface with fieldsets.
+    """
+
 
 class IGrandfather(Schema):
     pass

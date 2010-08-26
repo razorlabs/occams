@@ -455,16 +455,10 @@ class Datastore(object):
                     value.title = instance_rslt.title
                     setattr(value, "__id__", instance_rslt.id)
 
-
                 for name, field_obj in zope.schema.getFieldsInOrder(schema_obj):
-                    print
-                    print
-                    print repr(name)
-                    print value.__dict__[name].__get__(value, None)
-                    print
-                    print
-                    child = value.__dict__[name].__get__(value, None)
-#                    child = getattr(value, name)
+                    # don't do getattr as this will potentially get the
+                    # FieldProperty object (if present)
+                    child = value.__dict__[name]
                     to_visit.append((value, instance_rslt, name, child,))
 
             else:
@@ -494,6 +488,8 @@ class Datastore(object):
                 else:
                     raise Exception("Type '%s' unsupported."  % type_name)
 
+                # convert to list (for convenience in iterating rather than
+                # checking)
                 if not attribute_rslt.field.is_list:
                     value = [value]
 
@@ -506,23 +502,33 @@ class Datastore(object):
 
                     value = rslt_values
 
-                if is_update:
-                    # need to delete, because lists make this very difficult to update
-                    existing_rslt = session.query(Model)\
-                                    .filter_by(instance=parent_rslt)\
-                                    .filter_by(attribute=attribute_rslt)\
-                                    .filter(Model.value.in_(value))\
-                                    .all()
+                # delete the whole list, too complicated to update for now
+                if is_update and attribute_rslt.field.is_list:
+                    list_rslt = session.query(Model)\
+                                .filter_by(instance=parent_rslt)\
+                                .filter_by(attribute=attribute_rslt)\
+                                .all()
+
+                    for item_rslt in list_rslt:
+                        session.delete(item_rslt)
 
                 for v in value:
+                    value_rslt = None
 
-                    value_rslt = Model(
-                        instance=parent_rslt,
-                        attribute=attribute_rslt,
-                        value=v
-                        )
+                    if is_update and not attribute_rslt.field.is_list:
+                        value_rslt = session.query(Model)\
+                                        .filter_by(instance=parent_rslt)\
+                                        .filter_by(attribute=attribute_rslt)\
+                                        .first()
 
-                    session.add(value_rslt)
+                    if value_rslt is None or attribute_rslt.field.is_list:
+                        session.add(Model(
+                            instance=parent_rslt,
+                            attribute=attribute_rslt,
+                            value=v
+                            ))
+                    else:
+                        value_rslt.value = v
 
         session.commit()
 
