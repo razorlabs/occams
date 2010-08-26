@@ -194,7 +194,7 @@ class DatastoreVisitManager(DatastoreConventionalManager):
                                       .filter_by(name=type)\
                                       .first()
         if not instance_rslt:
-            return None                              
+            return None                         
         return self._datastore.get(instance_rslt.title)
 
     def add_instances(self, visit, obj_or_list):

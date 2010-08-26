@@ -451,6 +451,9 @@ class Datastore(object):
                                           currenttime()),
                         description=u""
                         )
+                    
+                    session.add(instance_rslt)
+                    session.flush()
 
                     value.title = instance_rslt.title
                     setattr(value, "__id__", instance_rslt.id)
