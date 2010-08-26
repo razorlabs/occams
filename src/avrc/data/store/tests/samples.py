@@ -34,6 +34,14 @@ class IStandaloneInterface(Schema):
         description=u"Something about baz.",
         default=420
         )
+    
+    joe = zope.schema.List(
+        title=u"Joe",
+        description=u"A little hard",
+        value_type=zope.schema.Choice(
+            values=["apples", "bananas", "strawberries", "jello"]
+            )
+        )
 
 class IDependentInterface(Schema):
     """

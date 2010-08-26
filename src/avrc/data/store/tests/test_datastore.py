@@ -222,9 +222,7 @@ class TestCase(ptc.PloneTestCase):
         sm.put(samples.ISister)
 
         print
-        print
-        print
-        print
+        
         iface = sm.get(samples.IGrandfather.__name__)
         descendants = sm.get_descendants(iface)
 
@@ -232,13 +230,58 @@ class TestCase(ptc.PloneTestCase):
         print "descendants:"
         for descendant in descendants:
             print str(descendant) + " " + str(descendant.getBases())
-        print
-        print
-        print
-        print
+
         print
 
         self.fail("Inheritance test complete")
+        
+    def test_update_data(self):
+        dsn = u"sqlite:///test.db"
+        #dsn = u"sqlite:///:memory:"
+        ds = createObject("avrc.data.store.Datastore", title=u"blah", dsn=dsn)
+        sm = ds.schemata
+
+        isource = samples.IStandaloneInterface
+
+        sm.put(isource)
+
+        iface = sm.get(isource.__name__)
+
+        spawned = ds.spawn(iface,
+            foo=u"Before update",
+            bar=u"This is text before\nwe update",
+            baz=123,
+            joe=["jello", "apples"]
+            )
+
+        print
+        print "spawned"
+        print spawned.__dict__
+
+        obj = ds.put(spawned)
+
+        print
+        print "putted"
+        print obj.__dict__
+
+        gotten = ds.get(obj)
+
+        print
+        print "gotten"
+        print gotten.__dict__
+        
+        obj.foo = u"After update",
+        obj.bar = u"Now let's see it\nthis actually worked",
+        obj.baz = 987,
+        obj.joe = ["apple", "bananas"]
+        obj = ds.put(obj)
+        
+        print
+        print obj.__dict__
+        print
+
+        self.fail("List interface test complete")
+
 
     def test_list_schemata(self):
         dsn = u"sqlite:///test.db"

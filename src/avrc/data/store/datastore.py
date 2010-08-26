@@ -457,7 +457,14 @@ class Datastore(object):
 
 
                 for name, field_obj in zope.schema.getFieldsInOrder(schema_obj):
-                    child = getattr(value, name)
+                    print
+                    print
+                    print repr(name)
+                    print value.__dict__[name].__get__(value, None)
+                    print
+                    print
+                    child = value.__dict__[name].__get__(value, None)
+#                    child = getattr(value, name)
                     to_visit.append((value, instance_rslt, name, child,))
 
             else:
