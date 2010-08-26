@@ -458,11 +458,11 @@ class Datastore(object):
                 for name, field_obj in zope.schema.getFieldsInOrder(schema_obj):
                     # don't do getattr as this will potentially get the
                     # FieldProperty object (if present)
-                    child = value.__dict__[name]
+                    child = getattr(value, name, None)
                     to_visit.append((value, instance_rslt, name, child,))
 
             else:
-
+                
                 attribute_rslt = session.query(model.Attribute)\
                                  .filter_by(name=unicode(attr_name))\
                                  .join(model.Schema)\
@@ -605,17 +605,18 @@ class Datastore(object):
         setattr(obj, "__schema__", iface)
 
         for name, field_obj in zope.schema.getFieldsInOrder(iface):
-            setattr(obj, name, FieldProperty(iface[name]))
+#            setattr(obj, name, FieldProperty(field_obj))
+            setattr(obj, name, None)
 
             if field_obj.__class__ is zope.schema.Datetime:
                 value = kw.get(name, datetime.now())
             elif field_obj.__class__ is zope.schema.Date:
-                value = value.get(name, date.today())
+                value = kw.get(name, date.today())
             else:
                 value = kw.get(name)
 
             if name in kw:
-                obj.__dict__[name].__set__(obj, kw.get(name))
+                obj.__dict__[name] = value
 
         return obj
 
