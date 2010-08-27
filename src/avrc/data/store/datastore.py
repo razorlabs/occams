@@ -500,7 +500,7 @@ class Datastore(object):
                 if type_name == u"selection":
                     rslt_values = []
                     for term_rslt in attribute_rslt.field.vocabulary.terms:
-                        if term_rslt.token in value:
+                        if term_rslt.value in value:
                             rslt_values.append(term_rslt)
 
                     value = rslt_values
