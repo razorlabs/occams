@@ -399,7 +399,6 @@ class DatastoreSchemaManager(object):
                     fields=[str(f.name) for f in fieldset_rslt.fields]
                     ))
 
-
             for key, item in directives.items():
                 iface.setTaggedValue(key, item)
 
