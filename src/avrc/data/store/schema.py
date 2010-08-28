@@ -651,10 +651,15 @@ class DatastoreSchemaManager(object):
                             attrs[name].field.directive_write = unicode(value)
                     elif key is FIELDSETS_KEY:
                         for fieldset_obj in item:
+                            if fieldset_obj.description:
+                                description = unicode(fieldset_obj.description)
+                            else:
+                                description = None
+
                             fieldset_rslt = model.Fieldset(
                                 name=unicode(fieldset_obj.__name__),
                                 label=unicode(fieldset_obj.label),
-                                description=unicode(fieldset_obj.description),
+                                description=description
                                 )
 
                             for field_name in fieldset_obj.fields:
