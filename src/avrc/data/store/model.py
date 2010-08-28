@@ -876,6 +876,13 @@ class Curator(Model):
 
     id = sa.Column(sa.Integer, primary_key=True)
 
+subject_instance_table = sa.Table("subject_instance", Model.metadata,
+    sa.Column("subject_id", sa.ForeignKey("subject.id"), nullable=False,
+              primary_key=True),
+    sa.Column("instance_id", sa.ForeignKey("instance.id"), nullable=False,
+              primary_key=True),
+    )
+
 class Subject(Model):
     """
     We keep track of subjects here and reference them throughout the datbase
@@ -894,6 +901,8 @@ class Subject(Model):
     uid = sa.Column(sa.Integer, nullable=False, index=True)
 
     nurse_email = sa.Column(sa.Unicode)
+
+    instances = orm.relation("Instance", secondary=subject_instance_table)
 
 class Enrollment(Model):
     """
