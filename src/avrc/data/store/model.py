@@ -918,6 +918,8 @@ class Enrollment(Model):
         consent_date: (date) date the the subject updated their consent (not
             necessarily the start date)
         stop_date: (date) date the subject ended enrollment
+        eid: (str) a special index number to keep track of custom identifiers
+            for the enrollment itself
         create_date: (datetime) date object is create
         modify_date: (datetime) date object is modified
     """
@@ -942,6 +944,8 @@ class Enrollment(Model):
     consent_date = sa.Column(sa.Date, nullable=False)
 
     stop_date = sa.Column(sa.Date)
+
+    eid = sa.Column(sa.Unicode, index=True)
 
     create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
 
