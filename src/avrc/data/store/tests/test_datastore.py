@@ -238,8 +238,6 @@ class TestCase(ptc.PloneTestCase):
         sm.put(samples.IBrother)
         sm.put(samples.ISister)
 
-        print
-
         iface = sm.get(samples.IGrandfather.__name__)
         descendants = sm.get_descendants(iface)
 
@@ -271,20 +269,16 @@ class TestCase(ptc.PloneTestCase):
 #            joe=["jello", "apples"]
             )
 
-        print
-        print
         print "spawned"
         print spawned.__dict__
 
         obj = ds.put(spawned)
 
-        print
         print "putted"
         print obj.__dict__
 
         gotten = ds.get(obj)
 
-        print
         print "gotten"
         print gotten.__dict__
 
@@ -292,15 +286,12 @@ class TestCase(ptc.PloneTestCase):
         obj.bar = u"Now let's see it\nthis actually worked"
         obj.baz = 987
         obj.joe = ["apples", "bananas"]
-        print
         print "modified"
         print obj.__dict__
 
         obj = ds.put(obj)
-        print
         print "putted"
         print obj.__dict__
-        print
 
         self.fail("List interface test complete")
 
@@ -317,21 +308,29 @@ class TestCase(ptc.PloneTestCase):
 
         obj = ds.put(ds.spawn(iface, int_list=[1,5,10], choice_list=["foo", "baz"]))
 
-        print
-        print
         print obj
-        print
-        print
-
         gotten = ds.get(obj)
-
-        print
-        print
         print gotten.__dict__
-        print
-        print
 
         self.fail("List interface test complete")
+
+    def test_search(self):
+        """
+        """
+        dsn = u"sqlite:///test.db"
+        #dsn = u"sqlite:///:memory:"
+        ds = createObject("avrc.data.store.Datastore", title=u"blah", dsn=dsn)
+
+        ds.schema.put(samples.IStandaloneInterface)
+
+        # just get everything
+        results_obj = ds.search.by_base(4, 10)
+
+        print
+        print results_obj
+        print
+
+        self.fail("Search Complete")
 
 def test_suite():
     return unittest.defaultTestLoader.loadTestsFromName(__name__)

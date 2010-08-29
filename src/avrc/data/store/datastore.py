@@ -236,6 +236,13 @@ class Datastore(object):
         return  sm.queryUtility(interfaces.ISessionFactory, session_name_format(self))
 
     @property
+    def search(self):
+        """
+        """
+        from avrc.data.store.search import SearchMonkey
+        return SearchMonkey(self)
+
+    @property
     def schemata(self):
         """A schema manager utility"""
         return interfaces.ISchemaManager(self)
