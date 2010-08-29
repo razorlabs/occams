@@ -23,7 +23,7 @@ from zope.lifecycleevent import IObjectRemovedEvent
 import zope.schema
 from zope.schema.interfaces import IVocabulary
 from zope.schema.fieldproperty import FieldProperty
-
+import zope.interface
 import sqlalchemy as sa
 from sqlalchemy import orm
 
@@ -605,7 +605,7 @@ class Datastore(object):
         elif target.extends(zope.interface.Interface):
             iface = target
         else:
-            raise Exception("%s will not be found" % iface)
+            raise Exception("%s will not be found" % target)
 
         obj = Instance()
         directlyProvides(obj, iface)

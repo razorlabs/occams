@@ -31,7 +31,6 @@ setup(
     install_requires=[
         "setuptools",
         # --- Database
-        "pysqlite",
         "SQLAlchemy>=0.5.8,<0.5.99",
         "z3c.saconfig",
         # --- Helper modules

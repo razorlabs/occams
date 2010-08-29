@@ -51,8 +51,26 @@ class DatastoreSubjectManager(DatastoreConventionalManager):
         """
         Add the items from the source to ds
         """
+        rslt.zid = source.zid
         rslt.uid = source.uid
         rslt.nurse_email = source.nurse_email
+
+    def getEnteredDataOfType(self, subject, type):
+        """
+        Get all of the data entered for a visit
+        """
+        instance_rslt = self._session.query(model.Instance)\
+                                      .join(self._model.instances)\
+                                      .filter(self._model.zid==subject.zid)\
+                                      .join(model.Schema)\
+                                      .join(model.Specification)\
+                                      .filter_by(name=type)\
+                                      .first()
+        if not instance_rslt:
+            return None
+        return self._datastore.get(instance_rslt.title)
+
+
 
     def add_instances(self, subject, obj_or_list):
         "??!?"
