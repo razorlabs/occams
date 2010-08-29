@@ -265,6 +265,11 @@ class Datastore(object):
         """A protocol manager utility"""
         return interfaces.IVisitManager(self)
 
+    @property
+    def specimen(self):
+        """A specimen manager utility"""
+        return interfaces.ISpecimenManager(self)
+
     def keys(self):
         # This method will remain unimplemented as it doesn't really make sense
         # to return every single key in the data store.
@@ -451,7 +456,7 @@ class Datastore(object):
                                           currenttime()),
                         description=u""
                         )
-                    
+
                     session.add(instance_rslt)
                     session.flush()
 
@@ -465,7 +470,7 @@ class Datastore(object):
                     to_visit.append((value, instance_rslt, name, child,))
 
             else:
-                
+
                 attribute_rslt = session.query(model.Attribute)\
                                  .filter_by(name=unicode(attr_name))\
                                  .join(model.Schema)\
@@ -597,7 +602,7 @@ class Datastore(object):
     def spawn(self, target, **kw):
         if isinstance(target, (str, unicode)):
             iface = self.schemata.get(target)
-        elif target.extends(interfaces.Schema):
+        elif target.extends(zope.interface.Interface):
             iface = target
         else:
             raise Exception("%s will not be found" % iface)

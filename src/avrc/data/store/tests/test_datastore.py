@@ -46,6 +46,15 @@ class TestCase(ptc.PloneTestCase):
         self.assertTrue(verify.verifyClass(interfaces.IDatastore,
                                            datastore.Datastore))
 
+    def test_build(self):
+        """
+        Passes if the database gets built.
+        """
+        dsn = u"sqlite:///:memory:"
+        ds = createObject("avrc.data.store.Datastore", title=u"my ds", dsn=dsn)
+
+        self.assertTrue(ds is not None)
+
     def test_multi_site(self):
         """
         Test that the DataStore is able to handle being added to multiple sites

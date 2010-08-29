@@ -429,3 +429,135 @@ class IVisitManager(IManager):
     """
     Marker interface for managing protocols
     """
+
+class ISpecimenManager(IManager):
+    """
+    Marker interface for managing specimen
+    """
+
+    def list(start=None, num=None):
+        """
+        """
+
+class ISpecimen(IComponent):
+    """
+    Mostly copied from aeh forms. Tons of work to do still.
+    """
+
+    state = zope.schema.TextLine(
+        title=_(u"State"),
+        )
+
+    datetime_collected = zope.schema.Datetime(
+        title=_(u"Date & Time Collected"),
+        required=False,
+        )
+
+    specimen_type = zope.schema.TextLine(
+        title=_(u"Specimen Type"),
+        )
+
+    destination = zope.schema.TextLine(
+        title=_(u"Destination"),
+        )
+
+    tubes = zope.schema.Int(
+        title=_(u"How many tubes?"),
+        required=False,
+        )
+
+    tube_type = zope.schema.TextLine(
+        title=_(u"Tube Type"),
+        )
+
+    notes = zope.schema.Text(
+        title=_(u"Notes"),
+        required=False,
+        )
+
+class IAliquot(IComponent):
+    """
+    Mostly copied from aeh forms. Tons of work to do still.
+    """
+
+    type = zope.schema.TextLine(
+        title=_(u"Type"),
+        )
+
+    state = zope.schema.TextLine(
+        title=_(u"State"),
+        required=False
+        )
+
+    volume = zope.schema.Float(
+        title=u"Volume (in ml.)",
+        required=False,
+        )
+
+    cell_amount = zope.schema.Float(
+        title=_(u"Number of cells"),
+        description=_(u"measured in 10,000 increments"),
+        required=False,
+        )
+
+    store_date = zope.schema.Date(
+        title=_(u"Store Date"),
+        required=False
+        )
+
+    freezer = zope.schema.TextLine(
+        title=_(u"Freezer"),
+        required=False,
+        )
+
+    rack = zope.schema.TextLine(
+        title=_(u"Rack"),
+        required=False,
+        )
+
+    box = zope.schema.TextLine(
+        title=_(u"Box"),
+        required=False,
+        )
+
+    storage_site = zope.schema.TextLine(
+        title=_(u"Storage Site"),
+        required=False
+        )
+
+    thawed_num = zope.schema.Int(
+        title=_(u"Number of times thawed."),
+        required=False,
+        )
+
+    analysis_status = zope.schema.TextLine(
+        title=_(u"Sent for analysis?"),
+        required=False
+        )
+
+    sent_date = zope.schema.Date(
+        title=_(u"Date sent"),
+        required=False
+        )
+
+    storage_site = zope.schema.TextLine(
+        title=_(u"Enter the site where aliquot was sent"),
+        required=False
+        )
+
+    sent_name = zope.schema.TextLine(
+        title=_(u"Please enter the name of the person the aliquot was sent to "
+                u"OR the name of the person who placed the sample "
+                u"on hold:"),
+        required=False,
+        )
+
+    notes = zope.schema.Text(
+        title=_(u"Notes on this aliquot (if any):"),
+        required=False
+        )
+
+    hla = zope.schema.Bool(
+        title=_(u"hla."),
+        required=False,
+        )
