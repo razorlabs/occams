@@ -98,8 +98,13 @@ def handleDatastoreCreated(datastore, event):
     Returns:
         N/A
     """
-    Session = SessionFactory(bind=sa.create_engine(datastore.dsn,
-                                                   echo=_ECHO_ENABLED, pool_size=100, max_overflow=10))
+    if str(datastore.dsn).find('sqlite') > -1:
+        Session = SessionFactory(bind=sa.create_engine(datastore.dsn,
+                                           echo=_ECHO_ENABLED))
+    else:
+        Session = SessionFactory(bind=sa.create_engine(datastore.dsn,
+                                           echo=_ECHO_ENABLED, pool_size=100, max_overflow=10))
+
 
     sm = getSiteManager(datastore)
     sm.registerUtility(Session,
@@ -227,9 +232,12 @@ class Datastore(object):
         if session is not None:
             return sm.queryUtility(interfaces.ISessionFactory, session_name_format(self))
         else:
-            Session = SessionFactory(bind=sa.create_engine(self.dsn,
+            if str(self.dsn).find('sqlite') > -1:
+                Session = SessionFactory(bind=sa.create_engine(self.dsn,
+                                                   echo=_ECHO_ENABLED))
+            else:
+                Session = SessionFactory(bind=sa.create_engine(self.dsn,
                                                    echo=_ECHO_ENABLED, pool_size=100, max_overflow=10))
-
             sm.registerUtility(Session,
                        interfaces.ISessionFactory,
                        session_name_format(self))
