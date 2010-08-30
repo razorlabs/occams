@@ -447,12 +447,22 @@ class ISpecimen(IComponent):
     """
     Mostly copied from aeh forms. Tons of work to do still.
     """
+    dsid = zope.schema.Int(title=_(u"Data Store Id"), required=False, readonly=True)
+
+    subject_zid = zope.schema.Int(title=_(u"Enrolled Subject Zope IntId"))
+
+    protocol_zid = zope.schema.Int(title=_(u"Protocol's Zope IntId"))
 
     state = zope.schema.TextLine(
         title=_(u"State"),
         )
 
-    datetime_collected = zope.schema.Datetime(
+    date_collected = zope.schema.Date(
+        title=_(u"Date & Time Collected"),
+        required=False,
+        )
+    
+    time_collected = zope.schema.Date(
         title=_(u"Date & Time Collected"),
         required=False,
         )

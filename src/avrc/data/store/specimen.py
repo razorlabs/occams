@@ -20,6 +20,17 @@ class Specimen(object):
 
     __doc__ = interfaces.ISpecimen.__doc__
 
+    subject_zid = FieldProperty(interfaces.ISpecimen['subject_zid'])
+    protocol_zid = FieldProperty(interfaces.ISpecimen['protocol_zid'])
+    state = FieldProperty(interfaces.ISpecimen['state'])
+    date_collected = FieldProperty(interfaces.ISpecimen['date_collected'])
+    time_collected = FieldProperty(interfaces.ISpecimen['time_collected'])
+    specimen_type = FieldProperty(interfaces.ISpecimen['specimen_type'])
+    destination = FieldProperty(interfaces.ISpecimen['destination'])
+    tubes = FieldProperty(interfaces.ISpecimen['tubes'])
+    tube_type = FieldProperty(interfaces.ISpecimen['tube_type'])
+    notes = FieldProperty(interfaces.ISpecimen['notes'])
+
 #    zid = FieldProperty(interfaces.ISubject["zid"])
 #
 #    def __init__(self, zid, uid):
@@ -43,8 +54,66 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
         """
         Add the items from the source to ds
         """
-#        rslt.uid = source.uid
-#        rslt.nurse_email = source.nurse_email
+#        rslt.schemata.append(;lasdkfjas;lfj;saldfja;sldjfsa;ldjf;saldfjsa;fhsa)
+
+
+
+    def put(self, source):
+
+#        rslt = self._session.query(self._model)\
+#                      .filter_by(zid=source.zid)\
+#                      .first()
+        
+                # because the visit is for a single patient, it doesn't really matter
+        session = self._session
+        Specimen = self._model
+                
+        # which enrollment we get the subject from.
+        subject_rslt = session.query(model.Subject)\
+                        .filter_by(zid=source.subject_zid)\
+                        .first()
+
+        protocol_rslt = session.query(model.Protocol)\
+                        .filter_by(zid=source.protocol_zid)\
+                        .first()
+        
+        # Find the 'vocabulary' objects for the database relation
+        keywords = ("state", "tube_type", "destination", "specimen_type")
+        rslt = {}
+        
+        for keyword in keywords:
+
+            if hasattr(source, keyword):
+                rslt[keyword] = session.query(model.SpecimenAliquotTerm)\
+                                .filter_by(vocabulary_name=unicode(keyword),
+                                           value=unicode(getattr(source, keyword))
+                                           )\
+                                .first()
+            else:
+                rslt[keyword] = None
+    
+        specimen_rslt = Specimen(
+            subject=subject_rslt,
+            protocol=protocol_rslt,
+            state=rslt["state"],
+            collect_date=source.date_collected,
+            collect_time=source.time_collected,
+            type=rslt["specimen_type"],
+            destination=rslt["destination"],
+            tubes=source.tubes,
+            tube_type=rslt["tube_type"],
+            notes=source.notes
+            )
+
+        session.add(specimen_rslt)
+        session.flush()
+        session.commit()
+        
+        #
+        # Need to mutate source somehow with a unique site-wide identifier
+        #
+        source.dsid = specimen_rslt.id
+        return source
 
 class Enrollment(object):
     implements(interfaces.IEnrollment)
