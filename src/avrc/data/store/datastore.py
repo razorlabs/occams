@@ -99,7 +99,7 @@ def handleDatastoreCreated(datastore, event):
         N/A
     """
     Session = SessionFactory(bind=sa.create_engine(datastore.dsn,
-                                                   echo=_ECHO_ENABLED))
+                                                   echo=_ECHO_ENABLED, pool_size=100, max_overflow=10))
 
     sm = getSiteManager(datastore)
     sm.registerUtility(Session,
@@ -228,7 +228,7 @@ class Datastore(object):
             return sm.queryUtility(interfaces.ISessionFactory, session_name_format(self))
         else:
             Session = SessionFactory(bind=sa.create_engine(self.dsn,
-                                                   echo=_ECHO_ENABLED))
+                                                   echo=_ECHO_ENABLED, pool_size=100, max_overflow=10))
 
             sm.registerUtility(Session,
                        interfaces.ISessionFactory,
@@ -546,7 +546,8 @@ class Datastore(object):
                         value_rslt.value = v
 
         session.commit()
-
+        session.close()
+        
         return target
 
     put.__doc__ = interfaces.IDatastore["put"].__doc__
