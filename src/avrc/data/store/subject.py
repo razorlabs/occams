@@ -23,10 +23,12 @@ class Subject(object):
     zid = FieldProperty(interfaces.ISubject["zid"])
     uid = FieldProperty(interfaces.ISubject["uid"])
     nurse_email = FieldProperty(interfaces.ISubject["nurse_email"])
+    aeh = FieldProperty(interfaces.ISubject["aeh"])
 
-    def __init__(self, zid, uid):
+    def __init__(self, zid, uid, aeh=None):
         self.zid = zid
         self.uid = uid
+        self.aeh = aeh
 
 SubjectFactory = Factory(
     Subject,
@@ -54,6 +56,7 @@ class DatastoreSubjectManager(DatastoreConventionalManager):
         rslt.zid = source.zid
         rslt.uid = source.uid
         rslt.nurse_email = source.nurse_email
+        rslt.aeh = source.aeh
 
     def getEnteredDataOfType(self, subject, type):
         """
@@ -96,6 +99,8 @@ class Enrollment(object):
     consent_date = FieldProperty(interfaces.IEnrollment["consent_date"])
 
     stop_date = FieldProperty(interfaces.IEnrollment["stop_date"])
+
+    eid = FieldProperty(interfaces.IEnrollment["eid"])
 
     def __init__(self, start_date, consent_date=None):
         self.start_date = start_date

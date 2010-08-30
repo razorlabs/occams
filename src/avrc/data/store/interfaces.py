@@ -311,6 +311,8 @@ class IEnrollment(IComponent):
 
     stop_date = zope.schema.Date(title=_(u"End Date"))
 
+    eid = zope.schema.TextLine(title=_(u"Enrollment Identifier"))
+
 class ISubject(IComponent):
     """
     """
@@ -319,6 +321,8 @@ class ISubject(IComponent):
     nurse_email = zope.schema.TextLine(title=_(u"Nurse's email"))
 
     uid = zope.schema.Int(title=_("OUR Number"))
+
+    aeh = zope.schema.TextLine(title=_("Legacy AEH number"), required=False)
 
 class IReportable(IComponent):
     """

@@ -902,6 +902,8 @@ class Subject(Model):
 
     nurse_email = sa.Column(sa.Unicode)
 
+    aeh = sa.Column(sa.Unicode, index=True)
+
     instances = orm.relation("Instance", secondary=subject_instance_table)
 
 class Enrollment(Model):
