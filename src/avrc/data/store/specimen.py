@@ -95,11 +95,11 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
                 subject=subject_rslt,
                 protocol=protocol_rslt,
                 type=rslt["specimen_type"],
-                destination=rslt["destination"],
                 )
 
             session.add(specimen_rslt)
-            
+        
+        specimen_rslt.destination = rslt["destination"],
         specimen_rslt.state = rslt["state"]
         specimen_rslt.collect_date = source.date_collected
         specimen_rslt.collect_time = source.time_collected
