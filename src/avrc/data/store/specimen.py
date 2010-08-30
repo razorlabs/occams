@@ -59,30 +59,14 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
 
 
     def put(self, source):
-
-#        rslt = self._session.query(self._model)\
-#                      .filter_by(zid=source.zid)\
-#                      .first()
-        
-                # because the visit is for a single patient, it doesn't really matter
         session = self._session
         Specimen = self._model
-                
-        # which enrollment we get the subject from.
-        subject_rslt = session.query(model.Subject)\
-                        .filter_by(zid=source.subject_zid)\
-                        .first()
-
-        protocol_rslt = session.query(model.Protocol)\
-                        .filter_by(zid=source.protocol_zid)\
-                        .first()
-        
+                        
         # Find the 'vocabulary' objects for the database relation
         keywords = ("state", "tube_type", "destination", "specimen_type")
         rslt = {}
         
         for keyword in keywords:
-
             if hasattr(source, keyword):
                 rslt[keyword] = session.query(model.SpecimenAliquotTerm)\
                                 .filter_by(vocabulary_name=unicode(keyword),
@@ -92,27 +76,42 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
             else:
                 rslt[keyword] = None
     
-        specimen_rslt = Specimen(
-            subject=subject_rslt,
-            protocol=protocol_rslt,
-            state=rslt["state"],
-            collect_date=source.date_collected,
-            collect_time=source.time_collected,
-            type=rslt["specimen_type"],
-            destination=rslt["destination"],
-            tubes=source.tubes,
-            tube_type=rslt["tube_type"],
-            notes=source.notes
-            )
+        if source.dsid is not None:
+            specimen_rslt = session.query(Specimen)\
+                            .filter_by(id=source.dsid)\
+                            .first()
+        else:
+            # which enrollment we get the subject from.
+            subject_rslt = session.query(model.Subject)\
+                            .filter_by(zid=source.subject_zid)\
+                            .first()
+    
+            protocol_rslt = session.query(model.Protocol)\
+                            .filter_by(zid=source.protocol_zid)\
+                            .first()
+            
+            # specimen is not already in the data base, we need to create one
+            specimen_rslt = Specimen(
+                subject=subject_rslt,
+                protocol=protocol_rslt,
+                type=rslt["specimen_type"],
+                destination=rslt["destination"],
+                )
 
-        session.add(specimen_rslt)
-        session.flush()
+            session.add(specimen_rslt)
+            
+        specimen_rslt.state = rslt["state"]
+        specimen_rslt.collect_date = source.date_collected
+        specimen_rslt.collect_time = source.time_collected
+        specimen_rslt.tubes = source.tubes
+        specimen_rslt.tube_type = rslt["tube_type"]
+        specimen_rslt.notes = source.notes
+        
         session.commit()
         
-        #
-        # Need to mutate source somehow with a unique site-wide identifier
-        #
-        source.dsid = specimen_rslt.id
+        if not source.dsid:
+            source.dsid = specimen_rslt.id
+            
         return source
 
 class Enrollment(object):
