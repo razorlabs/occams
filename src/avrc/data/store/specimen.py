@@ -20,6 +20,7 @@ class Specimen(object):
 
     __doc__ = interfaces.ISpecimen.__doc__
 
+    dsid = FieldProperty(interfaces.ISpecimen['dsid'])
     subject_zid = FieldProperty(interfaces.ISpecimen['subject_zid'])
     protocol_zid = FieldProperty(interfaces.ISpecimen['protocol_zid'])
     state = FieldProperty(interfaces.ISpecimen['state'])
@@ -56,11 +57,34 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
         """
 #        rslt.schemata.append(;lasdkfjas;lfj;saldfja;sldjfsa;ldjf;saldfjsa;fhsa)
 
-
+    def get(self, key):
+        session = self._session
+        SpecimenModel = self._model
+        
+        specimen_rslt = session.query(SpecimenModel)\
+                        .filter_by(id=int(key))\
+                        .first()
+        
+        if not specimen_rslt:
+            return None
+        
+        specimen_obj = Specimen()
+        specimen_obj.dsid = specimen_rslt.dsid
+        specimen_obj.subject_zid = specimen_rslt.subject.zid
+        specimen_obj.protocol_zid = specimen_rslt.protocol.zid
+        specimen_obj.state = specimen_rslt.state.value
+        specimen_obj.date_collected = specimen_rslt.collect_date
+        specimen_obj.time_collected = specimen_rslt.collect_time
+        specimen_obj.specimen_type = specimen_rslt.type.value
+        specimen_obj.destination = specimen_rslt.destination.value
+        specimen_obj.tubes = specimen_rslt.tubes
+        specimen_obj.tube_type = specimen_rslt.tube_type.value
+        specimen_obj.notes = specimen_rslt.notes
+        return specimen_obj
 
     def put(self, source):
         session = self._session
-        Specimen = self._model
+        SpecimenModel = self._model
                         
         # Find the 'vocabulary' objects for the database relation
         keywords = ("state", "tube_type", "destination", "specimen_type")
@@ -91,7 +115,7 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
                             .first()
             
             # specimen is not already in the data base, we need to create one
-            specimen_rslt = Specimen(
+            specimen_rslt = SpecimenModel(
                 subject=subject_rslt,
                 protocol=protocol_rslt,
                 type=rslt["specimen_type"],
