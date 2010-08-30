@@ -69,7 +69,7 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
             return None
         
         specimen_obj = Specimen()
-        specimen_obj.dsid = specimen_rslt.dsid
+        specimen_obj.dsid = specimen_rslt.id
         specimen_obj.subject_zid = specimen_rslt.subject.zid
         specimen_obj.protocol_zid = specimen_rslt.protocol.zid
         specimen_obj.state = specimen_rslt.state.value
