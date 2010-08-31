@@ -500,7 +500,7 @@ class Datastore(object):
                     Model = model.Datetime
                 elif type_name in (u"boolean",):
                     Model = model.Integer
-                    if not attribute_rslt.field.is_list:
+                    if attribute_rslt.field.is_list:
                         value = map(int, value)
                     else:
                         value = int(value)
