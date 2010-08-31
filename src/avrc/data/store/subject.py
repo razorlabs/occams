@@ -146,6 +146,7 @@ class DatastoreEnrollmentManager(DatastoreConventionalManager):
         # won't update the code
             rslt = self.putProperties(rslt, source)
         self._session.commit()
+        return source
 
     def putProperties(self, rslt, source):
         """

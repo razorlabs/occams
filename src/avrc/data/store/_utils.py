@@ -49,7 +49,6 @@ class DatastoreConventionalManager(object):
 
     def put(self, source):
 
-
         rslt = self._session.query(self._model)\
                       .filter_by(zid=source.zid)\
                       .first()
@@ -61,6 +60,7 @@ class DatastoreConventionalManager(object):
         # won't update the code
         rslt = self.putProperties(rslt, source)
         self._session.commit()
+        return source
 
     put.__doc__ = interfaces.IConventionalManager["put"].__doc__
 
