@@ -498,7 +498,13 @@ class Datastore(object):
                     Model = model.Binary
                 elif type_name in (u"date", u"time", u"datetime",):
                     Model = model.Datetime
-                elif type_name in (u"integer", u"boolean"):
+                elif type_name in (u"boolean",):
+                    Model = model.Integer
+                    if not attribute_rslt.field.is_list:
+                        value = map(int, value)
+                    else:
+                        value = int(value)
+                elif type_name in (u"integer",):
                     Model = model.Integer
                 elif type_name in (u"object",):
                     Model = model.Object
@@ -555,7 +561,7 @@ class Datastore(object):
 
         session.commit()
         session.close()
-        
+
         return target
 
     put.__doc__ = interfaces.IDatastore["put"].__doc__
