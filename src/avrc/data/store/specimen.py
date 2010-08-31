@@ -101,7 +101,7 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
                 rslt[keyword] = None
     
         if source.dsid is not None:
-            specimen_rslt = session.query(Specimen)\
+            specimen_rslt = session.query(SpecimenModel)\
                             .filter_by(id=source.dsid)\
                             .first()
         else:
@@ -123,7 +123,7 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
 
             session.add(specimen_rslt)
         
-        specimen_rslt.destination = rslt["destination"],
+        specimen_rslt.destination = rslt["destination"]
         specimen_rslt.state = rslt["state"]
         specimen_rslt.collect_date = source.date_collected
         specimen_rslt.collect_time = source.time_collected
