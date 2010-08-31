@@ -17,6 +17,16 @@ class SearchMonkey(object):
         """
         """
         self._datastore = datastore
+        self._query = None
+
+    def query(self, iface, version=None):
+
+        return self
+
+    def filter_by(self, **kw):
+
+        return self
+
 
     def by_base(self, offset, length, iface=None):
         """
@@ -64,6 +74,3 @@ class SearchMonkey(object):
 
         return object_list
 
-class SpecializedSearch(object):
-    """
-    """
