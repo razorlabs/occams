@@ -13,6 +13,7 @@
   <adapter factory=".domain.DatastoreProtocolManager" />
   <adapter factory=".subject.DatastoreEnrollmentManager" />
   <adapter factory=".specimen.DatastoreSpecimenManager" />
+  <adapter factory=".specimen.DatastoreSpecimenAliquotManager" />
 
   <!-- Handle when a Site adds an engine -->
   <subscriber handler=".datastore.handleDatastoreCreated" />
