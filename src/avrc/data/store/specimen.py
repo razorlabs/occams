@@ -51,6 +51,21 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
         """
 #        rslt.schemata.append(;lasdkfjas;lfj;saldfja;sldjfsa;ldjf;saldfjsa;fhsa)
 
+    def _rslt_to_obj(self, rslt):
+        specimen_obj = Specimen()
+        specimen_obj.dsid = rslt.id
+        specimen_obj.subject_zid = rslt.subject.zid
+        specimen_obj.protocol_zid = rslt.protocol.zid
+        specimen_obj.state = rslt.state.value
+        specimen_obj.date_collected = rslt.collect_date
+        specimen_obj.time_collected = rslt.collect_time
+        specimen_obj.specimen_type = rslt.type.value
+        specimen_obj.destination = rslt.destination.value
+        specimen_obj.tubes = rslt.tubes
+        specimen_obj.tube_type = rslt.tube_type.value
+        specimen_obj.notes = rslt.notes
+        return specimen_obj
+    
     def get(self, key):
         session = self._session
         SpecimenModel = self._model
@@ -59,22 +74,21 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
                         .filter_by(id=int(key))\
                         .first()
 
-        if not specimen_rslt:
-            return None
+        return specimen_rslt and self._rslt_to_obj(specimen_rslt) or None
+    
+    def list_by_state(self, state):
+        """
+        """
+        session = self._session
+        SpecimenModel = self._model
 
-        specimen_obj = Specimen()
-        specimen_obj.dsid = specimen_rslt.id
-        specimen_obj.subject_zid = specimen_rslt.subject.zid
-        specimen_obj.protocol_zid = specimen_rslt.protocol.zid
-        specimen_obj.state = specimen_rslt.state.value
-        specimen_obj.date_collected = specimen_rslt.collect_date
-        specimen_obj.time_collected = specimen_rslt.collect_time
-        specimen_obj.specimen_type = specimen_rslt.type.value
-        specimen_obj.destination = specimen_rslt.destination.value
-        specimen_obj.tubes = specimen_rslt.tubes
-        specimen_obj.tube_type = specimen_rslt.tube_type.value
-        specimen_obj.notes = specimen_rslt.notes
-        return specimen_obj
+        specimen_rslt = session.query(SpecimenModel)\
+                        .join(SpecimenModel.state)\
+                        .filter_by(value=unicode(state))\
+                        .all()
+
+        return [self._rslt_to_obj(r) for r in specimen_rslt]
+
 
     def put(self, source):
 
@@ -132,9 +146,10 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
             source.dsid = specimen_rslt.id
 
         return source
-
+    
     def aliquot(self, key):
         return interfaces.IAliquotManager(self._datastore, self.get(key))
+
 
 class Aliquot(object):
     implements(interfaces.IAliquot)
@@ -232,17 +247,17 @@ class DatastoreSpecimenAliquotManager(object):
     def get(self, aliquot_obj):
         pass
 
-    def keys():
+    def keys(self):
         pass
 
-    def has(key):
+    def has(self, key):
         pass
 
-    def purge(key):
+    def purge(self, key):
         pass
 
-    def retire(key):
+    def retire(self, key):
         pass
 
-    def restore(key):
+    def restore(self, key):
         pass
