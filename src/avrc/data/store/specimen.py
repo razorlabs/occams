@@ -133,6 +133,9 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
 
         return source
 
+    def aliquot(self, key):
+        return interfaces.IAliquotManager(self._datastore, self.get(key))
+
 class Aliquot(object):
     implements(interfaces.IAliquot)
 
