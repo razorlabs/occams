@@ -449,11 +449,25 @@ class ISpecimenManager(IManager):
         """
         """
 
+class IAliquotManager(IManager):
+    """
+    Marker interface for managing specimen
+    """
+
+    def list(start=None, num=None):
+        """
+        """
+
 class ISpecimen(IComponent):
     """
     Mostly copied from aeh forms. Tons of work to do still.
     """
-    dsid = zope.schema.Int(title=_(u"Data Store Id"), required=False, readonly=True)
+
+    dsid = zope.schema.Int(
+        title=_(u"Data Store Id"),
+        required=False,
+        readonly=True
+        )
 
     subject_zid = zope.schema.Int(title=_(u"Enrolled Subject Zope IntId"))
 
@@ -500,6 +514,12 @@ class IAliquot(IComponent):
     Mostly copied from aeh forms. Tons of work to do still.
     """
 
+    dsid = zope.schema.Int(
+        title=_(u"Data Store Id"),
+        required=False,
+        readonly=True
+        )
+
     type = zope.schema.TextLine(
         title=_(u"Type"),
         )
@@ -540,11 +560,6 @@ class IAliquot(IComponent):
         required=False,
         )
 
-    storage_site = zope.schema.TextLine(
-        title=_(u"Storage Site"),
-        required=False
-        )
-
     thawed_num = zope.schema.Int(
         title=_(u"Number of times thawed."),
         required=False,
@@ -577,7 +592,8 @@ class IAliquot(IComponent):
         required=False
         )
 
-    hla = zope.schema.Bool(
-        title=_(u"hla."),
+    special_instruction = zope.schema.TextLine(
+        title=_(u"Special"),
+        description=u"",
         required=False,
         )

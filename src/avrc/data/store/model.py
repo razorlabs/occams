@@ -44,6 +44,8 @@ def setup(engine):
     """
     Model.metadata.create_all(bind=engine, checkfirst=True)
 
+#    sa.DDL("", on="postgres")
+
 # -----------------------------------------------------------------------------
 # Value Storage
 # -----------------------------------------------------------------------------
@@ -1322,6 +1324,18 @@ class Aliquot(Model):
     sent_name = sa.Column(sa.Unicode)
 
     notes = sa.Column(sa.Unicode)
+
+    special_instruction_id = sa.Column(sa.Integer,
+                              sa.ForeignKey("specimen_aliquot_term.id"),
+                              nullable=False
+                              )
+
+    special_instruction = orm.relation("SpecimenAliquotTerm",
+                                uselist=False,
+                                primaryjoin=\
+                                    special_instruction_id == SpecimenAliquotTerm.id
+                                )
+
 
     is_active = sa.Column(sa.Boolean, nullable=False, default=True, index=True)
 

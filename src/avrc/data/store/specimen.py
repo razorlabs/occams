@@ -2,9 +2,7 @@
 Contains how to: specimen and aliquot
 """
 from zope.component import adapts
-from zope.component import getUtility
 from zope.schema.fieldproperty import FieldProperty
-from zope.component.factory import Factory
 from zope.interface import implements
 from zope.i18nmessageid import MessageFactory
 
@@ -33,7 +31,6 @@ class Specimen(object):
     tubes = FieldProperty(interfaces.ISpecimen['tubes'])
     tube_type = FieldProperty(interfaces.ISpecimen['tube_type'])
     notes = FieldProperty(interfaces.ISpecimen['notes'])
-
 
 class DatastoreSpecimenManager(DatastoreConventionalManager):
     adapts(interfaces.IDatastore)
@@ -136,3 +133,97 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
 
         return source
 
+class Aliquot(object):
+    implements(interfaces.IAliquot)
+
+    __doc__ = interfaces.IAliquot.__doc__
+
+    dsid = FieldProperty(interfaces.IAliquot["dsid"])
+    type = FieldProperty(interfaces.IAliquot["type"])
+    state = FieldProperty(interfaces.IAliquot["state"])
+    volume = FieldProperty(interfaces.IAliquot["volume"])
+    cell_amount = FieldProperty(interfaces.IAliquot["cell_amount"])
+    store_date = FieldProperty(interfaces.IAliquot["store_date"])
+    freezer = FieldProperty(interfaces.IAliquot["freezer"])
+    rack = FieldProperty(interfaces.IAliquot["rack"])
+    box = FieldProperty(interfaces.IAliquot["box"])
+    storage_site = FieldProperty(interfaces.IAliquot["storage_site"])
+    thawed_num = FieldProperty(interfaces.IAliquot["thawed_num"])
+    analysis_status = FieldProperty(interfaces.IAliquot["analysis_status"])
+    sent_date = FieldProperty(interfaces.IAliquot["sent_date"])
+    sent_name = FieldProperty(interfaces.IAliquot["sent_name"])
+    notes = FieldProperty(interfaces.IAliquot["notes"])
+    special_instruction = FieldProperty(interfaces.IAliquot["special_instruction"])
+
+class DatastoreSpecimenAliquotManager(object):
+    """
+    """
+    adapts(interfaces.IDatastore, interfaces.ISpecimen)
+    implements(interfaces.IAliquotManager)
+
+    def __init__(self, datastore_obj, specimen_obj):
+        """
+        """
+        self._datastore_obj = datastore_obj
+        self._specimen_obj = specimen_obj
+
+    def list(self):
+        Session = named_session(self._datastore_obj)
+        session = Session()
+
+        # Find the specimen first and from there get the aliquot results
+        # to create objects
+        specimen_rslt = session.query(model.Specimen)\
+                        .filter_by(id=self._specimen_obj.dsid,
+                                   is_active=True)\
+                        .first()
+
+        aliquot_list = []
+
+        for aliquot_rslt in specimen_rslt.aliquot:
+            aliquot_obj = Aliquot()
+            aliquot_obj.dsid = aliquot_rslt.id
+            aliquot_obj.type = aliquot_rslt.type.value
+            aliquot_obj.state = aliquot_rslt.state.value
+            aliquot_obj.volume = aliquot_rslt.volume
+            aliquot_obj.cell_amount = aliquot_rslt.cell_amount
+            aliquot_obj.store_date = aliquot_rslt.store_date
+            aliquot_obj.freezer = aliquot_rslt.freezer
+            aliquot_obj.rack = aliquot_rslt.rack
+            aliquot_obj.box = aliquot_rslt.box
+            aliquot_obj.storage_site = aliquot_rslt.storage_site.value
+            aliquot_obj.thawed_num = aliquot_rslt.thawed_num
+            aliquot_obj.analysis_status = aliquot_rslt.analysis_status.value
+            aliquot_obj.sent_date = aliquot_rslt.sent_date
+            aliquot_obj.sent_name = aliquot_rslt.sent_name
+            aliquot_obj.notes = aliquot_rslt.notes
+            aliquot_obj.special_instruction = aliquot_rslt.special_instruction.value
+
+            aliquot_list.append(aliquot_obj)
+
+        return aliquot_list
+
+
+    def put(self, aliquot_obj):
+        pass
+
+    def get(self, aliquot_obj):
+        pass
+
+    def keys():
+        pass
+
+    def has(key):
+        pass
+
+    def purge(key):
+        pass
+
+    def retire(key):
+        pass
+
+    def restore(key):
+        pass
+
+    def put(target):
+        pass
