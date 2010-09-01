@@ -153,10 +153,13 @@ class Aliquot(object):
     sent_date = FieldProperty(interfaces.IAliquot["sent_date"])
     sent_name = FieldProperty(interfaces.IAliquot["sent_name"])
     notes = FieldProperty(interfaces.IAliquot["notes"])
-    special_instruction = FieldProperty(interfaces.IAliquot["special_instruction"])
+    special_instruction = \
+        FieldProperty(interfaces.IAliquot["special_instruction"])
 
 class DatastoreSpecimenAliquotManager(object):
     """
+    A specialized manager for aliquot using the context of a specimen in a
+    data store.
     """
     adapts(interfaces.IDatastore, interfaces.ISpecimen)
     implements(interfaces.IAliquotManager)
@@ -166,6 +169,46 @@ class DatastoreSpecimenAliquotManager(object):
         """
         self._datastore_obj = datastore_obj
         self._specimen_obj = specimen_obj
+
+    def _rslt_to_obj(self, rslt):
+        aliquot_obj = Aliquot()
+        aliquot_obj.dsid = rslt.id
+        aliquot_obj.type = rslt.type.value
+        aliquot_obj.state = rslt.state.value
+        aliquot_obj.volume = rslt.volume
+        aliquot_obj.cell_amount = rslt.cell_amount
+        aliquot_obj.store_date = rslt.store_date
+        aliquot_obj.freezer = rslt.freezer
+        aliquot_obj.rack = rslt.rack
+        aliquot_obj.box = rslt.box
+        aliquot_obj.storage_site = rslt.storage_site.value
+        aliquot_obj.thawed_num = rslt.thawed_num
+        aliquot_obj.analysis_status = rslt.analysis_status.value
+        aliquot_obj.sent_date = rslt.sent_date
+        aliquot_obj.sent_name = rslt.sent_name
+        aliquot_obj.notes = rslt.notes
+        aliquot_obj.special_instruction = \
+            rslt.special_instruction.value
+
+        return aliquot_obj
+
+    def list_by_state(self, state):
+        """
+        """
+        Session = named_session(self._datastore_obj)
+        session = Session()
+
+        aliquot_rslt = session.query(model.Aliquot)\
+                        .join(model.Specimen)\
+                        .filter(model.Specimen.id == self._specimen_obj.dsid)\
+                        .join(model.SpecimenAliquotTerm)\
+                        .filter_by(vocabulary_name=u"type",
+                                   value=unicode(state),
+                                   is_active=True)\
+                        .all()
+
+        return [self._rslt_to_obj(r) for r in aliquot_rslt]
+
 
     def list(self):
         Session = named_session(self._datastore_obj)
@@ -178,31 +221,7 @@ class DatastoreSpecimenAliquotManager(object):
                                    is_active=True)\
                         .first()
 
-        aliquot_list = []
-
-        for aliquot_rslt in specimen_rslt.aliquot:
-            aliquot_obj = Aliquot()
-            aliquot_obj.dsid = aliquot_rslt.id
-            aliquot_obj.type = aliquot_rslt.type.value
-            aliquot_obj.state = aliquot_rslt.state.value
-            aliquot_obj.volume = aliquot_rslt.volume
-            aliquot_obj.cell_amount = aliquot_rslt.cell_amount
-            aliquot_obj.store_date = aliquot_rslt.store_date
-            aliquot_obj.freezer = aliquot_rslt.freezer
-            aliquot_obj.rack = aliquot_rslt.rack
-            aliquot_obj.box = aliquot_rslt.box
-            aliquot_obj.storage_site = aliquot_rslt.storage_site.value
-            aliquot_obj.thawed_num = aliquot_rslt.thawed_num
-            aliquot_obj.analysis_status = aliquot_rslt.analysis_status.value
-            aliquot_obj.sent_date = aliquot_rslt.sent_date
-            aliquot_obj.sent_name = aliquot_rslt.sent_name
-            aliquot_obj.notes = aliquot_rslt.notes
-            aliquot_obj.special_instruction = aliquot_rslt.special_instruction.value
-
-            aliquot_list.append(aliquot_obj)
-
-        return aliquot_list
-
+        return [self._rslt_to_obj(r) for r in specimen_rslt.aliquot]
 
     def put(self, aliquot_obj):
         pass
@@ -223,7 +242,4 @@ class DatastoreSpecimenAliquotManager(object):
         pass
 
     def restore(key):
-        pass
-
-    def put(target):
         pass
