@@ -27,8 +27,12 @@ import zope.interface
 import sqlalchemy as sa
 from sqlalchemy import orm
 
+from z3c.saconfig import named_scoped_session
+
 from avrc.data.store import model
 from avrc.data.store import interfaces
+
+import transaction
 
 _ = MessageFactory(__name__)
 
@@ -58,8 +62,9 @@ def named_session(datastore):
     Returns:
         A sqlalchemy Session factory.
     """
-
-    return datastore.getSession()
+    return named_scoped_session(datastore.session_name)
+#
+#    return datastore.getSession()
 
 def setup_types(datastore):
     """
@@ -73,6 +78,7 @@ def setup_types(datastore):
     rslt = []
     Session = named_session(datastore)
     session = Session()
+
     types = getUtility(zope.schema.interfaces.IVocabulary,
                        "avrc.data.store.Types")
 
@@ -83,7 +89,7 @@ def setup_types(datastore):
             ))
 
     session.add_all(rslt)
-    session.commit()
+    transaction.commit()
 
 @adapter(interfaces.IDatastore, IObjectCreatedEvent)
 def handleDatastoreCreated(datastore, event):
@@ -98,20 +104,23 @@ def handleDatastoreCreated(datastore, event):
     Returns:
         N/A
     """
-    if str(datastore.dsn).find('sqlite') > -1:
-        Session = SessionFactory(bind=sa.create_engine(datastore.dsn,
-                                           echo=_ECHO_ENABLED))
-    else:
-        Session = SessionFactory(bind=sa.create_engine(datastore.dsn,
-                                           echo=_ECHO_ENABLED, pool_size=100, max_overflow=10))
-
-
-    sm = getSiteManager(datastore)
-    sm.registerUtility(Session,
-                       interfaces.ISessionFactory,
-                       session_name_format(datastore))
-
-    model.setup(Session.bind)
+#    if str(datastore.dsn).find('sqlite') > -1:
+#        Session = SessionFactory(bind=sa.create_engine(datastore.dsn,
+#                                           echo=_ECHO_ENABLED))
+#    else:
+#        Session = SessionFactory(bind=sa.create_engine(datastore.dsn,
+#                                           echo=_ECHO_ENABLED, pool_size=100, max_overflow=10))
+#
+#
+#    sm = getSiteManager(datastore)
+#    sm.registerUtility(Session,
+#                       interfaces.ISessionFactory,
+#                       session_name_format(datastore))
+#    Session =
+#    session = Session()
+    model.setup(named_session(datastore).bind)
+#    session.close()
+#
     setup_types(datastore)
 
 
@@ -131,50 +140,50 @@ def handleDatastoreRemoved(datastore, event):
                    interfaces.ISessionFactory,
                    session_name_format(datastore))
 
-from persistent import Persistent
-
-class SessionFactory(Persistent):
-    implements(interfaces.ISessionFactory)
-
-    __doc__ = interfaces.ISessionFactory.__doc__
-
-    __name__ = None
-
-    __parent__ = None
-
-    def __init__(self,
-                 autocommit=False,
-                 autoflush=True,
-                 twophase=False,
-                 bind=None,
-                 binds=None):
-        """
-        Our ISessionFactory implementation takes an extra parameter which
-        will be the database bindings.
-
-        TODO: (mmartinez) Perhaps make an adapter to extend the functionality
-            of z3c.saconfig?
-        """
-        self.autocommit = autocommit
-        self.autoflush = autoflush
-        self.twophase = twophase
-        self.binds = binds
-        self.bind = bind
-        super(Persistent, self).__init__()
-
-    def __call__(self):
-        Session  = orm.scoped_session(orm.sessionmaker(
-            autocommit=self.autocommit,
-            autoflush=self.autoflush,
-            twophase=self.twophase
-            ))
-
-        Session.configure(bind=self.bind, binds=self.binds)
-        if Session is None:
-            raise Exception('wtf??')
-        return Session
-
-    __call__.__doc__ = interfaces.ISessionFactory["__call__"].__doc__
+#from persistent import Persistent
+#
+#class SessionFactory(Persistent):
+#    implements(interfaces.ISessionFactory)
+#
+#    __doc__ = interfaces.ISessionFactory.__doc__
+#
+#    __name__ = None
+#
+#    __parent__ = None
+#
+#    def __init__(self,
+#                 autocommit=False,
+#                 autoflush=True,
+#                 twophase=False,
+#                 bind=None,
+#                 binds=None):
+#        """
+#        Our ISessionFactory implementation takes an extra parameter which
+#        will be the database bindings.
+#
+#        TODO: (mmartinez) Perhaps make an adapter to extend the functionality
+#            of z3c.saconfig?
+#        """
+#        self.autocommit = autocommit
+#        self.autoflush = autoflush
+#        self.twophase = twophase
+#        self.binds = binds
+#        self.bind = bind
+#        super(Persistent, self).__init__()
+#
+#    def __call__(self):
+#        Session  = orm.scoped_session(orm.sessionmaker(
+#            autocommit=self.autocommit,
+#            autoflush=self.autoflush,
+#            twophase=self.twophase
+#            ))
+#
+#        Session.configure(bind=self.bind, binds=self.binds)
+#        if Session is None:
+#            raise Exception('wtf??')
+#        return Session
+#
+#    __call__.__doc__ = interfaces.ISessionFactory["__call__"].__doc__
 
 class Instance(object):
     implements(interfaces.IInstance)
@@ -206,7 +215,9 @@ class Datastore(object):
 
     dsn = FieldProperty(interfaces.IDatastore["dsn"])
 
-    def __init__(self, title, dsn):
+    session_name = FieldProperty(interfaces.IDatastore["session_name"])
+
+    def __init__(self, title, dsn=None, session_name=None):
         """
         Instantiates the data store implementation. Also notifies listeners
         that this object has been created.
@@ -217,6 +228,7 @@ class Datastore(object):
         """
         self.title = title
         self.dsn = dsn
+        self.session_name = session_name
 
         notify(ObjectCreatedEvent(self))
 
@@ -226,22 +238,22 @@ class Datastore(object):
         """
         return _DS_FMT % self.title
 
-    def getSession(self):
-        sm = getSiteManager(self)
-        session = sm.queryUtility(interfaces.ISessionFactory, session_name_format(self))
-        if session is not None:
-            return sm.queryUtility(interfaces.ISessionFactory, session_name_format(self))
-        else:
-            if str(self.dsn).find('sqlite') > -1:
-                Session = SessionFactory(bind=sa.create_engine(self.dsn,
-                                                   echo=_ECHO_ENABLED))
-            else:
-                Session = SessionFactory(bind=sa.create_engine(self.dsn,
-                                                   echo=_ECHO_ENABLED, pool_size=100, max_overflow=10))
-            sm.registerUtility(Session,
-                       interfaces.ISessionFactory,
-                       session_name_format(self))
-        return  sm.queryUtility(interfaces.ISessionFactory, session_name_format(self))
+#    def getSession(self):
+#        sm = getSiteManager(self)
+#        session = sm.queryUtility(interfaces.ISessionFactory, session_name_format(self))
+#        if session is not None:
+#            return sm.queryUtility(interfaces.ISessionFactory, session_name_format(self))
+#        else:
+#            if str(self.dsn).find('sqlite') > -1:
+#                Session = SessionFactory(bind=sa.create_engine(self.dsn,
+#                                                   echo=_ECHO_ENABLED))
+#            else:
+#                Session = SessionFactory(bind=sa.create_engine(self.dsn,
+#                                                   echo=_ECHO_ENABLED, pool_size=100, max_overflow=10))
+#            sm.registerUtility(Session,
+#                       interfaces.ISessionFactory,
+#                       session_name_format(self))
+#        return  sm.queryUtility(interfaces.ISessionFactory, session_name_format(self))
 
     @property
     def search(self):
@@ -559,8 +571,7 @@ class Datastore(object):
                     else:
                         value_rslt.value = v
 
-        session.commit()
-        session.close()
+        transaction.commit()
 
         return target
 

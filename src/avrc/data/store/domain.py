@@ -15,6 +15,8 @@ from avrc.data.store._utils import DatastoreConventionalManager
 
 _ = MessageFactory(__name__)
 
+import transaction
+
 class Domain(object):
     implements(interfaces.IDomain)
 
@@ -103,6 +105,7 @@ class DatastoreProtocolManager(DatastoreConventionalManager):
     def put(self, source):
         Session = named_session(self._datastore)
         session = Session()
+
         is_new = False
 
         rslt = session.query(self._model)\
@@ -119,7 +122,7 @@ class DatastoreProtocolManager(DatastoreConventionalManager):
         # won't update the code
             rslt = self.putProperties(rslt, source, session)
 
-        session.commit()
+        transaction.commit()
 
     def putProperties(self, rslt, source):
         """

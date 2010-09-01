@@ -12,6 +12,7 @@ from avrc.data.store import interfaces
 from avrc.data.store import model
 from avrc.data.store.datastore import named_session
 
+import transaction
 
 _ = MessageFactory(__name__)
 
@@ -77,6 +78,7 @@ class DatastoreSubjectManager(DatastoreConventionalManager):
 
     def add_instances(self, subject, obj_or_list):
         "??!?"
+
         subject_rslt = self._session.query(self._model)\
                                   .filter_by(zid=subject.zid)\
                                   .first()
@@ -87,7 +89,7 @@ class DatastoreSubjectManager(DatastoreConventionalManager):
                                     .first()
             subject_rslt.instances.append(obj_rslt)
 
-        self._session.commit()
+        transaction.commit()
 
 class Enrollment(object):
     implements(interfaces.IEnrollment)
@@ -145,7 +147,7 @@ class DatastoreEnrollmentManager(DatastoreConventionalManager):
         else:
         # won't update the code
             rslt = self.putProperties(rslt, source)
-        self._session.commit()
+        transaction.commit()
         return source
 
     def putProperties(self, rslt, source):
@@ -237,6 +239,7 @@ class DatastoreVisitManager(DatastoreConventionalManager):
 
     def add_instances(self, visit, obj_or_list):
         "??!?"
+
         visit_rslt = self._session.query(self._model)\
                                   .filter_by(zid=visit.zid)\
                                   .first()
@@ -247,5 +250,5 @@ class DatastoreVisitManager(DatastoreConventionalManager):
                                     .first()
             visit_rslt.instances.append(obj_rslt)
 
-        self._session.commit()
+        transaction.commit()
 

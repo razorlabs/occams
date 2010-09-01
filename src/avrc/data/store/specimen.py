@@ -13,6 +13,8 @@ from avrc.data.store import interfaces
 from avrc.data.store import model
 from avrc.data.store.datastore import named_session
 
+import transaction
+
 _ = MessageFactory(__name__)
 
 class Specimen(object):
@@ -55,14 +57,14 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
     def get(self, key):
         session = self._session
         SpecimenModel = self._model
-        
+
         specimen_rslt = session.query(SpecimenModel)\
                         .filter_by(id=int(key))\
                         .first()
-        
+
         if not specimen_rslt:
             return None
-        
+
         specimen_obj = Specimen()
         specimen_obj.dsid = specimen_rslt.id
         specimen_obj.subject_zid = specimen_rslt.subject.zid
@@ -78,13 +80,14 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
         return specimen_obj
 
     def put(self, source):
+
         session = self._session
         SpecimenModel = self._model
-                        
+
         # Find the 'vocabulary' objects for the database relation
         keywords = ("state", "tube_type", "destination", "specimen_type")
         rslt = {}
-        
+
         for keyword in keywords:
             if hasattr(source, keyword):
                 rslt[keyword] = session.query(model.SpecimenAliquotTerm)\
@@ -94,7 +97,7 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
                                 .first()
             else:
                 rslt[keyword] = None
-    
+
         if source.dsid is not None:
             specimen_rslt = session.query(SpecimenModel)\
                             .filter_by(id=source.dsid)\
@@ -104,11 +107,11 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
             subject_rslt = session.query(model.Subject)\
                             .filter_by(zid=source.subject_zid)\
                             .first()
-    
+
             protocol_rslt = session.query(model.Protocol)\
                             .filter_by(zid=source.protocol_zid)\
                             .first()
-            
+
             # specimen is not already in the data base, we need to create one
             specimen_rslt = SpecimenModel(
                 subject=subject_rslt,
@@ -117,7 +120,7 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
                 )
 
             session.add(specimen_rslt)
-        
+
         specimen_rslt.destination = rslt["destination"]
         specimen_rslt.state = rslt["state"]
         specimen_rslt.collect_date = source.date_collected
@@ -125,12 +128,11 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
         specimen_rslt.tubes = source.tubes
         specimen_rslt.tube_type = rslt["tube_type"]
         specimen_rslt.notes = source.notes
-        
-        session.commit()
-        
+
+        transaction.commit()
+
         if not source.dsid:
             source.dsid = specimen_rslt.id
-            
+
         return source
-        
-        
+

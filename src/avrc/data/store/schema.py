@@ -38,6 +38,8 @@ from avrc.data.store import model
 from avrc.data.store.datastore import named_session
 from avrc.data.store.datastore import Instance
 
+import transaction
+
 _ = MessageFactory(__name__)
 
 #
@@ -505,6 +507,7 @@ class DatastoreSchemaManager(object):
         Session = named_session(self._datastore)
         session = Session()
 
+
         spec_rslt = session.query(model.Specification)\
                     .filter_by(name=unicode(iface.__name__))\
                     .first()
@@ -676,7 +679,7 @@ class DatastoreSchemaManager(object):
                     continue
 
         session.add(schema_rslt)
-        session.commit()
+        transaction.commit()
 
         iface.__version__ = schema_rslt.create_date
         return iface
@@ -686,6 +689,7 @@ class DatastoreSchemaManager(object):
     def purge(self, key):
         Session = named_session(self._datastore)
         session = Session()
+
 
         num_instances = session.query(model.Instance)\
                         .join(model.Schema.specification)\
@@ -701,7 +705,7 @@ class DatastoreSchemaManager(object):
                       .first()
 
         session.remove(schema_rslt)
-        session.commit()
+        transaction.commit()
 
     purge.__doc__ = interfaces.ISchemaManager["purge"].__doc__
 

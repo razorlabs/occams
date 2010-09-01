@@ -211,7 +211,13 @@ class IDatastore(IManager, IContained):
     dsn = zope.schema.TextLine(
         title=_(u"Data Source Name"),
         description=_(u"URL of the database to use for physical storage."),
-        required=True
+        required=False
+        )
+
+    session_name = zope.schema.TextLine(
+        title=_(u"Session Utility Name"),
+        description=_(u"A z3c.saconfig session to use. (Overrides DSN)"),
+        required=False
         )
 
     def spawn(iface, **kw):
@@ -461,7 +467,7 @@ class ISpecimen(IComponent):
         title=_(u"Date & Time Collected"),
         required=False,
         )
-    
+
     time_collected = zope.schema.Date(
         title=_(u"Date & Time Collected"),
         required=False,
