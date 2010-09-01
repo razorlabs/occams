@@ -342,14 +342,14 @@ class Datastore(object):
 
         searchkw = {}
         if isinstance(key, (str, unicode)):
-            searchkw = dict(title=str(key))
+            searchkw = dict(title=unicode(key))
         elif isinstance(key, (int, long)):
             searchkw = dict(id=int(key))
         elif interfaces.IInstance.providedBy(key):
             if key.__id__:
                 searchkw = dict(id=int(key.__id__))
             else:
-                searchkw = dict(title=key.title)
+                searchkw = dict(title=unicode(key.title))
         else:
             raise Exception("The object specified cannot be evaluated into "
                             "a object to search for")
@@ -368,7 +368,7 @@ class Datastore(object):
         iface = self.schemata.get(key)
         instance_obj = self.spawn(iface)
         setattr(instance_obj, "__id__", instance_rslt.id)
-        setattr(instance_obj, "title", instance_rslt.title)
+        setattr(instance_obj, "title", str(instance_rslt.title))
         setattr(instance_obj, "__schema__", iface)
 
         # (parent object, parent db entry, prop name, value)
