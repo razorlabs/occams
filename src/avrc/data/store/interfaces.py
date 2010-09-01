@@ -468,7 +468,7 @@ class ISpecimen(IComponent):
         required=False,
         )
 
-    time_collected = zope.schema.Date(
+    time_collected = zope.schema.Time(
         title=_(u"Date & Time Collected"),
         required=False,
         )
