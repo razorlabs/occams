@@ -517,13 +517,11 @@ class IAliquot(IComponent):
     dsid = zope.schema.Int(
         title=_(u"Data Store Id"),
         required=False,
-        readonly=True
         )
     
     specimen_dsid = zope.schema.Int(
         title=_(u"Data Store Specimen Id"),
         required=False,
-        readonly=True
         )
     type = zope.schema.TextLine(
         title=_(u"Type"),

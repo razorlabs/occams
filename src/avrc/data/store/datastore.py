@@ -297,6 +297,11 @@ class Datastore(object):
         """A specimen manager utility"""
         return interfaces.ISpecimenManager(self)
 
+    @property
+    def aliquot(self):
+        """A specimen manager utility"""
+        return interfaces.IAliquotManager(self)
+
     def keys(self):
         # This method will remain unimplemented as it doesn't really make sense
         # to return every single key in the data store.

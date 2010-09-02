@@ -48,6 +48,12 @@ class Specimen(object):
         obj.notes = rslt.notes
         return obj
 
+
+
+
+
+
+
 class DatastoreSpecimenManager(DatastoreConventionalManager):
     adapts(interfaces.IDatastore)
     implements(interfaces.ISpecimenManager)
@@ -228,97 +234,60 @@ class Aliquot(object):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-class DatastoreSpecimenAliquotManager(object):
-    """
-    A specialized manager for aliquot using the context of a specimen in a
-    data store.
-    """
-    adapts(interfaces.IDatastore, interfaces.ISpecimen)
+class DatastoreAliquotManager(DatastoreConventionalManager):
+    adapts(interfaces.IDatastore)
     implements(interfaces.IAliquotManager)
 
-    def __init__(self, datastore_obj, specimen_obj):
+    __doc__ = interfaces.IAliquotManager.__doc__
+
+    def __init__(self, datastore):
+        self._datastore = datastore
+        self._model = model.Aliquot
+        self._type = Aliquot
+        Session = named_session(self._datastore)
+        self._session = Session()
+
+    def putProperties(self, rslt, source):
         """
+        Add the items from the source to ds
         """
-        self._datastore_obj = datastore_obj
-        self._specimen_obj = specimen_obj
-
-    def list_by_state(self, state):
-        """
-        """
-        Session = named_session(self._datastore_obj)
-        session = Session()
-
-        aliquot_q = session.query(model.Aliquot)\
-                    .filter_by(is_active=True)\
-                    .join(model.Aliquot.state)\
-                    .filter_by(value=unicode(state))\
-                    .join(model.Specimen)\
-                    .filter(model.Specimen.id == self._specimen_obj.dsid)
-
-        # not doing by date because we already have the specimen we'd like
-        # to know more about. (unless aliquot are created at separate times?)
-#        if before_date:
-#            exp_q = model.Aliquot.collect_date <= before_date
-#            aliquot_q = aliquot_q.filter_by(exp_q)
-#
-#        if after_date:
-#            exp_q = model.Aliquot.collect_date >= after_date
-#            aliquot_q = aliquot_q.filter_by(exp_q)
-
-        return [Aliquot.from_rslt(r) for r in aliquot_q.all()]
-
-    def list(self):
-        Session = named_session(self._datastore_obj)
-        session = Session()
-
-        # Find the specimen first and from there get the aliquot results
-        # to create objects
-        specimen_rslt = session.query(model.Specimen)\
-                        .filter_by(id=self._specimen_obj.dsid,
-                                   is_active=True)\
-                        .first()
-
-        return [Aliquot.from_rslt(r) for r in specimen_rslt.aliquot]
+#        rslt.schemata.append(;lasdkfjas;lfj;saldfja;sldjfsa;ldjf;saldfjsa;fhsa)
 
     def get(self, key):
-        Session = named_session(self._datastore_obj)
-        session = Session()
+        session = self._session
+        AliquotModel = self._model
 
-        aliquot_rslt = session.query(model.Aliquot)\
-                        .filter_by(specimen_id=self._specimen_obj.dsid,
-                                   is_active=True,
-                                   id=int(key))\
+        aliquot_rslt = session.query(AliquotModel)\
+                        .filter_by(id=int(key))\
                         .first()
 
         return aliquot_rslt and Aliquot.from_rslt(aliquot_rslt) or None
 
+    def list_by_state(self, state):
+        """
+        """
+        session = self._session
+        AliquotModel = self._model
+
+        sepecimen_q = session.query(AliquotModel)\
+                        .join(AliquotModel.state)\
+                        .filter_by(value=unicode(state))
+
+        return [Aliquot.from_rslt(r) for r in sepecimen_q.all()]
+
     def put(self, source):
-        Session = named_session(self._datastore_obj)
-        session = Session()
-        aliquot_obj = source
+
+        session = self._session
+        AliquotModel = self._model
 
         # Find the 'vocabulary' objects for the database relation
-        keywords = ("state", "analysis_status", "storage_site", "type",
-                    "special_instruction")
+        keywords = ("state", "type", "storage_site", "analysis_status", "special_instruction")
+
         rslt = {}
 
         for keyword in keywords:
+            
             value = getattr(source, keyword, None)
-
             if value:
                 rslt[keyword] = session.query(model.SpecimenAliquotTerm)\
                                 .filter_by(vocabulary_name=unicode(keyword),
@@ -327,45 +296,49 @@ class DatastoreSpecimenAliquotManager(object):
                                 .first()
             else:
                 rslt[keyword] = None
-
-        if aliquot_obj.dsid is not None:
-            aliquot_rslt = session.query(model.Aliquot)\
-                            .filter_by(id=aliquot_obj.dsid)\
+        if source.dsid is not None:
+            aliquot_rslt = session.query(AliquotModel)\
+                            .filter_by(id=source.dsid)\
                             .first()
         else:
+            # which enrollment we get the subject from.
             specimen_rslt = session.query(model.Specimen)\
-                            .filter_by(id=self._specimen_obj.dsid)\
+                            .filter_by(id=source.specimen_dsid)\
                             .first()
 
             # specimen is not already in the data base, we need to create one
-            aliquot_rslt = model.Aliquot(
-                specimen_id=self._specimen_obj.dsid,
+            aliquot_rslt = AliquotModel(
+                specimen=specimen_rslt,
                 type=rslt["type"],
                 )
 
-            session.add(specimen_rslt)
+            session.add(aliquot_rslt)
 
-        aliquot_rslt.volume = aliquot_obj.volume
-        aliquot_rslt.cell_amount = aliquot_obj.cell_amount
-        aliquot_rslt.state = rslt["state"]
-        aliquot_rslt.store_date = aliquot_obj.storage_date
-        aliquot_rslt.freezer = aliquot_obj.freezer
-        aliquot_rslt.rack = aliquot_obj.rack
-        aliquot_rslt.box = aliquot_obj.box
+        aliquot_rslt.analysis_status =  rslt["state"]
+        aliquot_rslt.sent_date = source.sent_date
+        aliquot_rslt.sent_name = source.sent_name
+        aliquot_rslt.special_instruction = rslt["special_instruction"]
+
         aliquot_rslt.storage_site = rslt["storage_site"]
-        aliquot_rslt.thawed_num = aliquot_obj.thawed_num
-        aliquot_rslt.analysis_status = rslt["analysis_status"]
-        aliquot_rslt.sent_date = aliquot_obj.sent_date
-        aliquot_rslt.sent_name = aliquot_obj.sent_name
-        aliquot_rslt.notes = aliquot_obj.notes
-        aliquot_rslt.special_instruction = rslt["special_instrction"]
+        aliquot_rslt.state = rslt["state"]
+        aliquot_rslt.volume = source.volume
+        aliquot_rslt.cell_amount = source.cell_amount
+        aliquot_rslt.store_date = source.store_date
+        aliquot_rslt.freezer = source.freezer
+        aliquot_rslt.rack = source.rack
+        aliquot_rslt.box = source.box
+        aliquot_rslt.thawed_num = source.thawed_num
+        aliquot_rslt.notes = source.notes
 
         transaction.commit()
 
-        if not aliquot_obj.dsid:
-            aliquot_obj.dsid = aliquot_rslt.id
+        if not source.dsid:
+            source.dsid = aliquot_rslt.id
+        return source
 
-        return aliquot_obj
+#
+#    def aliquot(self, key):
+#        return interfaces.IAliquotManager(self._datastore, self.get(key))
 
     def keys(self):
         raise NotImplementedError()
@@ -385,34 +358,189 @@ class DatastoreSpecimenAliquotManager(object):
         # easy
         raise NotImplementedError()
 
-def get_all_aliquot_by_state(datastore_obj,
-                             state):
-    """
-    get all the aliquot (regardless of specimen) that are of a current state
-    """
-    Session = named_session(datastore_obj)
-    session = Session()
 
-    obj_list = []
 
-    aliquot_q = session.query(model.Aliquot)\
-                .filter_by(is_active=True)\
-                .join(model.Aliquot.state)\
-                .filter_by(value=unicode(state))
-#    if before_date:
-#        exp_q = model.Specimen.collect_date <= before_date
-#        aliquot_q = aliquot_q.filter(exp_q)
+
+
+
 #
-#    if after_date:
-#        exp_q = model.Specimen.collect_date >= after_date
-#        aliquot_q = aliquot_q.filter(exp_q)
-
-#    for aliquot_rslt in aliquot_q.all():
-#        # slight optimization
-#        if aliquot_rslt.specimen.id in specimen_cache:
-#            specimen_obj = Specimen.from_rslt(aliquot_rslt.specimen)
+#
+#
+#
+#
+#
+#
+#class DatastoreSpecimenAliquotManager(object):
+#    """
+#    A specialized manager for aliquot using the context of a specimen in a
+#    data store.
+#    """
+#    adapts(interfaces.IDatastore, interfaces.ISpecimen)
+#    implements(interfaces.IAliquotManager)
+#
+#    def __init__(self, datastore_obj, specimen_obj):
+#        """
+#        """
+#        self._datastore_obj = datastore_obj
+#        self._specimen_obj = specimen_obj
+#
+#    def list_by_state(self, state):
+#        """
+#        """
+#        Session = named_session(self._datastore_obj)
+#        session = Session()
+#
+#        aliquot_q = session.query(model.Aliquot)\
+#                    .filter_by(is_active=True)\
+#                    .join(model.Aliquot.state)\
+#                    .filter_by(value=unicode(state))\
+#                    .join(model.Specimen)\
+#                    .filter(model.Specimen.id == self._specimen_obj.dsid)
+#
+#        # not doing by date because we already have the specimen we'd like
+#        # to know more about. (unless aliquot are created at separate times?)
+##        if before_date:
+##            exp_q = model.Aliquot.collect_date <= before_date
+##            aliquot_q = aliquot_q.filter_by(exp_q)
+##
+##        if after_date:
+##            exp_q = model.Aliquot.collect_date >= after_date
+##            aliquot_q = aliquot_q.filter_by(exp_q)
+#
+#        return [Aliquot.from_rslt(r) for r in aliquot_q.all()]
+#
+#    def list(self):
+#        Session = named_session(self._datastore_obj)
+#        session = Session()
+#
+#        # Find the specimen first and from there get the aliquot results
+#        # to create objects
+#        specimen_rslt = session.query(model.Specimen)\
+#                        .filter_by(id=self._specimen_obj.dsid,
+#                                   is_active=True)\
+#                        .first()
+#
+#        return [Aliquot.from_rslt(r) for r in specimen_rslt.aliquot]
+#
+#    def get(self, key):
+#        Session = named_session(self._datastore_obj)
+#        session = Session()
+#
+#        aliquot_rslt = session.query(model.Aliquot)\
+#                        .filter_by(specimen_id=self._specimen_obj.dsid,
+#                                   is_active=True,
+#                                   id=int(key))\
+#                        .first()
+#
+#        return aliquot_rslt and Aliquot.from_rslt(aliquot_rslt) or None
+#
+#    def put(self, source):
+#        Session = named_session(self._datastore_obj)
+#        session = Session()
+#        aliquot_obj = source
+#
+#        # Find the 'vocabulary' objects for the database relation
+#        keywords = ("state", "analysis_status", "storage_site", "type",
+#                    "special_instruction")
+#        rslt = {}
+#
+#        for keyword in keywords:
+#            value = getattr(source, keyword, None)
+#
+#            if value:
+#                rslt[keyword] = session.query(model.SpecimenAliquotTerm)\
+#                                .filter_by(vocabulary_name=unicode(keyword),
+#                                           value=unicode(value)
+#                                           )\
+#                                .first()
+#            else:
+#                rslt[keyword] = None
+#
+#        if aliquot_obj.dsid is not None:
+#            aliquot_rslt = session.query(model.Aliquot)\
+#                            .filter_by(id=aliquot_obj.dsid)\
+#                            .first()
 #        else:
-#            specimen_obj = specimen_cache[aliquot_rslt.specimen.id]
-
-    # [(v, k) for (k, v) in d.iteritems()]
-    return [Aliquot.from_rslt(r) for r in specimen_rslt]
+#            specimen_rslt = session.query(model.Specimen)\
+#                            .filter_by(id=self._specimen_obj.dsid)\
+#                            .first()
+#
+#            # specimen is not already in the data base, we need to create one
+#            aliquot_rslt = model.Aliquot(
+#                specimen_id=self._specimen_obj.dsid,
+#                type=rslt["type"],
+#                )
+#
+#            session.add(specimen_rslt)
+#
+#        aliquot_rslt.volume = aliquot_obj.volume
+#        aliquot_rslt.cell_amount = aliquot_obj.cell_amount
+#        aliquot_rslt.state = rslt["state"]
+#        aliquot_rslt.store_date = aliquot_obj.storage_date
+#        aliquot_rslt.freezer = aliquot_obj.freezer
+#        aliquot_rslt.rack = aliquot_obj.rack
+#        aliquot_rslt.box = aliquot_obj.box
+#        aliquot_rslt.storage_site = rslt["storage_site"]
+#        aliquot_rslt.thawed_num = aliquot_obj.thawed_num
+#        aliquot_rslt.analysis_status = rslt["analysis_status"]
+#        aliquot_rslt.sent_date = aliquot_obj.sent_date
+#        aliquot_rslt.sent_name = aliquot_obj.sent_name
+#        aliquot_rslt.notes = aliquot_obj.notes
+#        aliquot_rslt.special_instruction = rslt["special_instrction"]
+#
+#        transaction.commit()
+#
+#        if not aliquot_obj.dsid:
+#            aliquot_obj.dsid = aliquot_rslt.id
+#
+#        return aliquot_obj
+#
+#    def keys(self):
+#        raise NotImplementedError()
+#
+#    def has(self, key):
+#        raise NotImplementedError()
+#
+#    def purge(self, key):
+#        # easy
+#        raise NotImplementedError()
+#
+#    def retire(self, key):
+#        # easy
+#        raise NotImplementedError()
+#
+#    def restore(self, key):
+#        # easy
+#        raise NotImplementedError()
+#
+#def get_all_aliquot_by_state(datastore_obj,
+#                             state):
+#    """
+#    get all the aliquot (regardless of specimen) that are of a current state
+#    """
+#    Session = named_session(datastore_obj)
+#    session = Session()
+#
+#    obj_list = []
+#
+#    aliquot_q = session.query(model.Aliquot)\
+#                .filter_by(is_active=True)\
+#                .join(model.Aliquot.state)\
+#                .filter_by(value=unicode(state))
+##    if before_date:
+##        exp_q = model.Specimen.collect_date <= before_date
+##        aliquot_q = aliquot_q.filter(exp_q)
+##
+##    if after_date:
+##        exp_q = model.Specimen.collect_date >= after_date
+##        aliquot_q = aliquot_q.filter(exp_q)
+#
+##    for aliquot_rslt in aliquot_q.all():
+##        # slight optimization
+##        if aliquot_rslt.specimen.id in specimen_cache:
+##            specimen_obj = Specimen.from_rslt(aliquot_rslt.specimen)
+##        else:
+##            specimen_obj = specimen_cache[aliquot_rslt.specimen.id]
+#
+#    # [(v, k) for (k, v) in d.iteritems()]
+#    return [Aliquot.from_rslt(r) for r in specimen_rslt]
