@@ -89,11 +89,11 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
 
         if before_date:
             exp_q = SpecimenModel.collect_date <= before_date
-            sepecimen_q = sepecimen_q.filter_by(exp_q)
+            sepecimen_q = sepecimen_q.filter(exp_q)
 
         if after_date:
             exp_q = SpecimenModel.collect_date >= after_date
-            sepecimen_q = sepecimen_q.filter_by(exp_q)
+            sepecimen_q = sepecimen_q.filter(exp_q)
 
         return [Specimen.from_rslt(r) for r in sepecimen_q.all()]
 
