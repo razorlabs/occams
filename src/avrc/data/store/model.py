@@ -1263,6 +1263,8 @@ class Aliquot(Model):
     specimen_id = sa.Column(sa.Integer, sa.ForeignKey("specimen.id"),
                             nullable=False)
 
+    specimen = orm.relation("Specimen", uselist=False)
+
     type_id = sa.Column(sa.Integer,
                               sa.ForeignKey("specimen_aliquot_term.id"),
                               nullable=False

@@ -183,6 +183,7 @@ class Aliquot(object):
     __doc__ = interfaces.IAliquot.__doc__
 
     dsid = FieldProperty(interfaces.IAliquot["dsid"])
+    specimen_dsid = FieldProperty(interfaces.IAliquot["specimen_dsid"])
     type = FieldProperty(interfaces.IAliquot["type"])
     state = FieldProperty(interfaces.IAliquot["state"])
     volume = FieldProperty(interfaces.IAliquot["volume"])
@@ -204,6 +205,7 @@ class Aliquot(object):
     def from_rslt(cls, rslt):
         obj = cls()
         obj.dsid = rslt.id
+        obj.specimen_dsid = rslt.specimen.id
         obj.type = rslt.type.value
         obj.state = rslt.state.value
         obj.volume = rslt.volume
@@ -222,6 +224,23 @@ class Aliquot(object):
             rslt.special_instruction.value
 
         return obj
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 class DatastoreSpecimenAliquotManager(object):
     """
@@ -366,44 +385,34 @@ class DatastoreSpecimenAliquotManager(object):
         # easy
         raise NotImplementedError()
 
-#def get_all_aliquot_by_state(datastore_obj,
-#                             state,
-#                             before_date=None,
-#                             after_date=None):
-#    """
-#    get all the aliquot (regardless of specimen) that are of a current state
-#    """
-#    Session = named_session(datastore_obj)
-#    session = Session()
-#
-#    obj_list = []
-#
-#    aliquot_q = session.query(model.Aliquot)\
-#                .filter_by(is_active=True)\
-#                .join(model.Aliquot.state)\
-#                .filter_by(value=unicode(state))\
-#                .join(model.Specimen)\
-#
+def get_all_aliquot_by_state(datastore_obj,
+                             state):
+    """
+    get all the aliquot (regardless of specimen) that are of a current state
+    """
+    Session = named_session(datastore_obj)
+    session = Session()
+
+    obj_list = []
+
+    aliquot_q = session.query(model.Aliquot)\
+                .filter_by(is_active=True)\
+                .join(model.Aliquot.state)\
+                .filter_by(value=unicode(state))
 #    if before_date:
 #        exp_q = model.Specimen.collect_date <= before_date
-#        aliquot_q = aliquot_q.filter_by(exp_q)
+#        aliquot_q = aliquot_q.filter(exp_q)
 #
 #    if after_date:
 #        exp_q = model.Specimen.collect_date >= after_date
-#        aliquot_q = aliquot_q.filter_by(exp_q)
-#
-#    specimen_cache = {}
-#
-#    specimen_aliquot_lists = {}
-#
+#        aliquot_q = aliquot_q.filter(exp_q)
+
 #    for aliquot_rslt in aliquot_q.all():
 #        # slight optimization
 #        if aliquot_rslt.specimen.id in specimen_cache:
 #            specimen_obj = Specimen.from_rslt(aliquot_rslt.specimen)
 #        else:
 #            specimen_obj = specimen_cache[aliquot_rslt.specimen.id]
-#
-#
-#
-#    # [(v, k) for (k, v) in d.iteritems()]
-#    return [Aliquot.from_rslt(r) for r in specimen_rslt.aliquot]
+
+    # [(v, k) for (k, v) in d.iteritems()]
+    return [Aliquot.from_rslt(r) for r in specimen_rslt]
