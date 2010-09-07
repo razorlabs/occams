@@ -1222,6 +1222,13 @@ class Specimen(Model):
         sa.UniqueConstraint("subject_id", "protocol_id", "type"),
         {})
 
+sa.Index("specimen_subject_id", Specimen.subject_id)
+sa.Index("specimen_protocol_id", Specimen.protocol_id)
+sa.Index("specimen_state_id", Specimen.state_id)
+sa.Index("specimen_type_id", Specimen.type_id)
+sa.Index("specimen_destination_id", Specimen.destination_id)
+sa.Index("specimen_tube_type_id", Specimen.tupe_type_id)
+
 class AliquotHistory(Model):
     """
     Keeps track of aliquot state history.
@@ -1345,3 +1352,11 @@ class Aliquot(Model):
 
     modify_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now,
                             onupdate=datetime.now)
+
+
+sa.Index("aliquot_specimen_id", Aliquot.specimen_id)
+sa.Index("aliquot_type_id", Aliquot.type_id)
+sa.Index("aliquot_state_id", Aliquot.state_id)
+sa.Index("aliquot_storage_site_id", Aliquot.storage_site_id)
+sa.Index("aliquot_analysis_status_id", Aliquot.analysis_status_id)
+sa.Index("aliquot_special_instruction_id", Aliquot.special_instruction_id)
