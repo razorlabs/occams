@@ -263,17 +263,22 @@ class DatastoreAliquotManager(DatastoreConventionalManager):
 
         return aliquot_rslt and Aliquot.from_rslt(aliquot_rslt) or None
 
-    def list_by_state(self, state):
+    def list_by_state(self, state, our_id=None):
         """
         """
         session = self._session
         AliquotModel = self._model
 
-        sepecimen_q = session.query(AliquotModel)\
+        specimen_q = session.query(AliquotModel)\
                         .join(AliquotModel.state)\
                         .filter_by(value=unicode(state))
 
-        return [Aliquot.from_rslt(r) for r in sepecimen_q.all()]
+        if our_id:
+            specimen_q = specimen_q.join(AliquotModel.specimen)\
+                            .join(model.Specimen.subject)\
+                            .filter_by(uid=our_id)
+
+        return [Aliquot.from_rslt(r) for r in specimen_q.all()]
 
     def put(self, source):
 
