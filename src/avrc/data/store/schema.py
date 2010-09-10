@@ -653,7 +653,7 @@ class DatastoreSchemaManager(object):
                         for name, value in item.items():
                             attrs[name].field.directive_write = unicode(value)
                     elif key is FIELDSETS_KEY:
-                        for fieldset_obj in item:
+                        for i, fieldset_obj in enumerate(item, start=1):
                             if fieldset_obj.description:
                                 description = unicode(fieldset_obj.description)
                             else:
@@ -662,12 +662,14 @@ class DatastoreSchemaManager(object):
                             fieldset_rslt = model.Fieldset(
                                 name=unicode(fieldset_obj.__name__),
                                 label=unicode(fieldset_obj.label),
-                                description=description
+                                description=description,
+                                order=i
                                 )
 
-                            for field_name in fieldset_obj.fields:
+                            for j, field_name in enumerate(fieldset_obj.fields, start=1):
                                 fieldset_rslt.fields.append(model.FieldsetItem(
-                                    name=unicode(field_name)
+                                    name=unicode(field_name),
+                                    order=j
                                     ))
 
                             schema_rslt.fieldsets.append(fieldset_rslt)

@@ -161,6 +161,45 @@ class DatastoreEnrollmentManager(DatastoreConventionalManager):
 
         return rslt
 
+    def get_objects_by_eid(self, eid, iface=None):
+        """
+        Utility method for retrieving objects based on the enrollment and
+        (optionally) based on when it was collected.
+        """
+        session = self._session
+
+        search_q = session.query(model.Instance.id)\
+                .join(model.visit_instance_table)\
+                .join(model.Visit)\
+                .join(model.Visit.enrollments)\
+                .filter_by(eid=unicode(eid))\
+
+        if iface is not None:
+            iface_name = ""
+            iface_version = None
+
+            if isinstance(iface, (str, unicode)):
+                if len(iface):
+                    iface_name = unicode(iface)
+                else:
+                    raise Exception("Empty schema name specified for search")
+            elif iface.extends(interfaces.Schema):
+                iface_name = iface.__name__
+                iface_version = iface.__version__
+            else:
+                raise Exception("Invalid schema for search: %s" % iface)
+
+            search_q = search_q.join(model.Schema)\
+                        .join(model.Specification)\
+                        .filter(model.Specification.name == iface_name)
+
+            if iface_version:
+                exp_q = model.Schema.create_date == iface_version
+                search_q = search_q.filter(exp_q)
+
+        rows = search_q.all()
+
+        return [self._datastore.get(row.id) for row in rows]
 
 class Visit(object):
     implements(interfaces.IVisit)

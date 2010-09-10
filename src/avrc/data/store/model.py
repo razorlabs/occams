@@ -521,6 +521,8 @@ class FieldsetItem(Model):
 
     name = sa.Column(sa.Unicode, nullable=False)
 
+    order = sa.Column(sa.Integer, nullable=False, default=1)
+
 
 class Fieldset(Model):
     """
@@ -535,7 +537,11 @@ class Fieldset(Model):
 
     description = sa.Column(sa.Unicode)
 
-    fields = orm.relation("FieldsetItem", secondary=fieldset_fieldsetitem_table)
+    order = sa.Column(sa.Integer, nullable=False, default=1)
+
+    fields = orm.relation("FieldsetItem",
+                          secondary=fieldset_fieldsetitem_table,
+                          order_by="FieldsetItem.order")
 
 schema_fieldset_table = sa.Table("schema_fieldset", Model.metadata,
     sa.Column("schema_id", sa.ForeignKey("schema.id"), nullable=False,
@@ -577,7 +583,9 @@ class Schema(Model):
 
     invariants = orm.relation("Invariant")
 
-    fieldsets = orm.relation("Fieldset", secondary=schema_fieldset_table)
+    fieldsets = orm.relation("Fieldset",
+                             secondary=schema_fieldset_table,
+                             order_by="Fieldset.order")
 
     create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
 

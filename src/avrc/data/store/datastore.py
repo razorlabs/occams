@@ -83,13 +83,19 @@ def setup_types(datastore):
                        "avrc.data.store.Types")
 
     for t in list(types):
-        rslt.append(model.Type(
-            title=unicode(t.token),
-            description=unicode(getattr(t.value, "__doc__", None)),
-            ))
+        num = session.query(model.Type)\
+                .filter_by(title=unicode(t.token))\
+                .count()
 
-    session.add_all(rslt)
-    transaction.commit()
+        if not num:
+            rslt.append(model.Type(
+                title=unicode(t.token),
+                description=unicode(getattr(t.value, "__doc__", None)),
+                ))
+
+    if rslt:
+        session.add_all(rslt)
+        transaction.commit()
 
 @adapter(interfaces.IDatastore, IObjectCreatedEvent)
 def handleDatastoreCreated(datastore, event):
@@ -407,6 +413,8 @@ class Datastore(object):
                                 .filter_by(instance=instance_rslt)\
                                 .filter_by(attribute=attribute_rslt)\
 
+                value = None
+
                 if type_name in (u"object",):
                     raise Exception("Using nested objects, not supported yet...")
                     instance_obj = Instance()
@@ -428,11 +436,16 @@ class Datastore(object):
                             value = [v.value for v in value_q.all()]
                     else:
                         value_rslt = value_q.first()
-                        # a little more processing for selections...
-                        if type_name == u"selection":
-                            value = value_rslt and value_rslt.value.value or None
-                        else:
-                            value = value_rslt and value_rslt.value or None
+
+                        if value_rslt:
+                            # a little more processing for selections...
+                            if type_name == u"selection":
+                                value = value_rslt.value.value
+                            else:
+                                #
+                                # TODO need to typecast if necessary
+                                #
+                                value = value_rslt.value
 
                     setattr(parent_obj, str(attribute_rslt.name), value)
 
@@ -672,5 +685,5 @@ DatastoreFactory = Factory(
     Datastore,
     title=_(u"Datastore implementation factory."),
     description=_(u"Creates an instance of a datastore implementation object. "
-                   "Also notifies listeners of this creation.")
+                  u"Also notifies listeners of this creation.")
     )

@@ -3,7 +3,7 @@
     xmlns:five="http://namespaces.zope.org/five"
     i18n_domain="avrc.data.store">
 
-  <includeDependencies package="." />
+  <!--<includeDependencies package="." />-->
 
   <adapter factory=".schema.DatastoreSchemaManager" />
 
