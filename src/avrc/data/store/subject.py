@@ -134,15 +134,18 @@ class DatastoreEnrollmentManager(DatastoreConventionalManager):
         rslt = self._session.query(self._model)\
                       .filter_by(zid=source.zid)\
                       .first()
-
-        domain = self._session.query(model.Domain)\
-                      .filter_by(zid=source.domain_zid)\
-                      .first()
-        subject =  self._session.query(model.Subject)\
-                      .filter_by(zid = source.subject_zid)\
-                      .first()
         if rslt is None:
+            domain = self._session.query(model.Domain)\
+                          .filter_by(zid=source.domain_zid)\
+                          .first()
+            subject =  self._session.query(model.Subject)\
+                          .filter_by(zid = source.subject_zid)\
+                          .first()
             rslt = self._model(zid=source.zid, domain=domain, domain_id=domain.id, subject=subject, subject_id=subject.id, start_date=source.start_date, consent_date=source.consent_date)
+            
+            if hasattr(source, 'eid') and source.eid is not None:
+                rslt.eid = source.eid
+            
             self._session.add(rslt)
         else:
         # won't update the code
@@ -155,10 +158,12 @@ class DatastoreEnrollmentManager(DatastoreConventionalManager):
         Add the items from the source to ds
         """
 #        rslt.schemata.append(;lasdkfjas;lfj;saldfja;sldjfsa;ldjf;saldfjsa;fhsa)
+
         rslt.start_date = source.start_date
         rslt.consent_date = source.consent_date
         rslt.stop_date = source.stop_date
-
+        if hasattr(source, 'eid') and source.eid is not None:
+            rslt.eid = source.eid
         return rslt
 
     def get_objects_by_eid(self, eid, iface=None):
