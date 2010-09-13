@@ -317,7 +317,7 @@ class IEnrollment(IComponent):
 
     stop_date = zope.schema.Date(title=_(u"End Date"))
 
-    eid = zope.schema.TextLine(title=_(u"Enrollment Identifier"))
+    eid = zope.schema.TextLine(title=_(u"Enrollment Identifier"), required=False)
 
 class ISubject(IComponent):
     """
