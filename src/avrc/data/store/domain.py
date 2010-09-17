@@ -120,7 +120,7 @@ class DatastoreProtocolManager(DatastoreConventionalManager):
             session.add(rslt)
         else:
         # won't update the code
-            rslt = self.putProperties(rslt, source, session)
+            rslt = self.putProperties(rslt, source)
 
         transaction.commit()
 
