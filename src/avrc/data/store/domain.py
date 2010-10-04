@@ -1,20 +1,17 @@
 """ Contains how to: domain and protoco
 """
+import transaction
 from zope.component import adapts
 from zope.component import getUtility
 from zope.schema.fieldproperty import FieldProperty
 from zope.component.factory import Factory
 from zope.interface import implements
-from zope.i18nmessageid import MessageFactory
 
 from avrc.data.store import interfaces
 from avrc.data.store import model
+from avrc.data.store import MessageFactory as _
 from avrc.data.store.datastore import named_session
 from avrc.data.store._utils import DatastoreConventionalManager
-
-_ = MessageFactory(__name__)
-
-import transaction
 
 class Domain(object):
     implements(interfaces.IDomain)

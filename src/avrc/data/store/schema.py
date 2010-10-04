@@ -4,6 +4,7 @@
 import itertools
 from collections import deque as queue
 
+import transaction
 from zope.component import adapts
 from zope.component import getUtility
 from zope.interface import Interface
@@ -14,7 +15,6 @@ from zope.schema.interfaces import IVocabulary
 from zope.schema.vocabulary import SimpleVocabulary
 from zope.schema.vocabulary import SimpleTerm
 from zope.schema.fieldproperty import FieldProperty
-from zope.i18nmessageid import MessageFactory
 
 from plone.alterego import dynamic
 
@@ -35,10 +35,6 @@ from avrc.data.store import interfaces
 from avrc.data.store import model
 from avrc.data.store.datastore import named_session
 from avrc.data.store.datastore import Instance
-
-import transaction
-
-_ = MessageFactory(__name__)
 
 #
 # The generated schemata of the data store will be contained here

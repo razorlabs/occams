@@ -14,7 +14,6 @@ from zope.component.factory import Factory
 from zope.interface import implements
 from zope.interface import providedBy
 from zope.interface import directlyProvides
-from zope.i18nmessageid import MessageFactory
 from zope.event import notify
 from zope.lifecycleevent import ObjectCreatedEvent
 from zope.lifecycleevent import IObjectCreatedEvent
@@ -28,12 +27,11 @@ from sqlalchemy import orm
 
 from z3c.saconfig import named_scoped_session
 
+from avrc.data.store import MessageFactory as _
 from avrc.data.store import model
 from avrc.data.store import interfaces
 
 import transaction
-
-_ = MessageFactory(__name__)
 
 log = logging.getLogger(__name__)
 

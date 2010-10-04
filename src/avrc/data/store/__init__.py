@@ -1,7 +1,7 @@
 """ Data store primary classes and modules
 """
 
-import zope.i18nmessageid.MessageFactory
+import zope.i18nmessageid
 
 __all__ = [
     "MessageFactory",

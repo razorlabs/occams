@@ -5,14 +5,11 @@ import transaction
 from zope.component import adapts
 from zope.schema.fieldproperty import FieldProperty
 from zope.interface import implements
-from zope.i18nmessageid import MessageFactory
 
 from avrc.data.store._utils import DatastoreConventionalManager
 from avrc.data.store import interfaces
 from avrc.data.store import model
 from avrc.data.store.datastore import named_session
-
-_ = MessageFactory(__name__)
 
 class Specimen(object):
     implements(interfaces.ISpecimen)

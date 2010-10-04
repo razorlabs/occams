@@ -9,12 +9,11 @@
 from zope.app.container.interfaces import IContained
 from zope.interface import Interface
 from zope.interface import  Attribute
-from zope.i18nmessageid import MessageFactory
 import zope.schema
 
 from plone.directives import form
 
-_ = MessageFactory(__name__)
+from avrc.data.store import MessageFactory as _
 
 # -----------------------------------------------------------------------------
 # ERRORS
