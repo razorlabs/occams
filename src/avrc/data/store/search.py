@@ -1,5 +1,4 @@
-"""
-This is where the querying functionality is going to live.
+""" This is where the querying functionality is going to live.
 """
 from collections import deque as queue
 from zope.component import getUtility
@@ -29,10 +28,8 @@ class SearchMonkey(object):
 
 
     def by_base(self, offset, length, iface=None):
-        """
-        Find all object in the data store that extend the specified base
-
-        TODO: versioning not supported
+        """ Find all object in the data store that extend the specified base
+            TODO: versioning not supported
         """
         object_list = []
 

@@ -30,11 +30,9 @@ setup(
     zip_safe=False,
     install_requires=[
         "setuptools",
-        # --- Database
-        "SQLAlchemy>=0.5.8,<0.5.99",
-        "z3c.saconfig",
-        # --- Helper modules
-        "plone.app.dexterity"
+        "z3c.autoinclude",              # <includeDependencies>
+        "SQLAlchemy>=0.5.8,<0.5.99",    # SQLAlchemy, don't support >0.6 yet
+        "z3c.saconfig",                 # zope session/engine utilities
     ],
     entry_points="""
     # -*- Entry points: -*-

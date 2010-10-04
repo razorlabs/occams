@@ -1,5 +1,4 @@
-"""
-Contains how to: domain and protocol
+""" Contains how to: domain and protoco
 """
 from zope.component import adapts
 from zope.component import getUtility
@@ -54,9 +53,7 @@ class DatastoreDomainManager(DatastoreConventionalManager):
         self._session = Session()
 
     def putProperties(self, rslt, source):
-        """
-        Add the items from the source to ds
-        """
+        """ Add the items from the source to ds """
         rslt.zid = source.zid
         rslt.title = source.title
         rslt.code = source.code
@@ -125,11 +122,8 @@ class DatastoreProtocolManager(DatastoreConventionalManager):
         transaction.commit()
 
     def putProperties(self, rslt, source):
-        """
-        Add the items from the source to ds
-        """
+        """ Add the items from the source to ds """
         rslt.cycle = source.cycle
-#        rslt.schemata.append(;lasdkfjas;lfj;saldfja;sldjfsa;ldjf;saldfjsa;fhsa)
         rslt.threshold = source.threshold
         rslt.is_active = source.is_active
         return rslt

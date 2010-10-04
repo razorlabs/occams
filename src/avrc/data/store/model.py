@@ -1,24 +1,23 @@
-"""
-Data Definition Library
+""" Data Definition Library
 
-The entities defined within this module are the foundation for the EAV/CR
-framework implementation for use in the data store utility. Not that these
-table definitions are independent of the interfaces defined by this package.
-The reason for this is so that these models can be reused differently
-in a separate script/application  if need be. Though, importing this module
-can also result in circumventing the entire purpose of the package as well...
-Thus, because the are not implementations of the the interfaces, they can
-be used freely in the utility implementations instead.
+    The entities defined within this module are the foundation for the EAV/CR
+    framework implementation for use in the data store utility. Not that these
+    table definitions are independent of the interfaces defined by this package.
+    The reason for this is so that these models can be reused differently
+    in a separate script/application  if need be. Though, importing this module
+    can also result in circumventing the entire purpose of the package as well.
+    Thus, because the are not implementations of the the interfaces, they can
+    be used freely in the utility implementations instead.
 
-More information on EAV/CR:
-http://www.ncbi.nlm.nih.gov/pmc/articles/PMC61391/
+    More information on EAV/CR:
+    http://www.ncbi.nlm.nih.gov/pmc/articles/PMC61391/
 
-Note that the models defined in this module are mapped to a database.
-Therefore, great care should be taken when updating this file, as it may
-cause live systems to fall out of sync.
+    Note that the models defined in this module are mapped to a database.
+    Therefore, great care should be taken when updating this file, as it may
+    cause live systems to fall out of sync.
 
-TODO: (mmartinez)
-    * Cascade update/deletes
+    TODO: (mmartinez)
+        * Cascade update/deletes
 """
 
 from datetime import datetime
@@ -31,16 +30,15 @@ from sqlalchemy.ext.declarative import declarative_base
 Model = declarative_base()
 
 def setup(engine):
-    """
-    This method will setup the database models using the specified engine bind.
-    This is simply a convenience method for creating the database tables as
-    well as keeping this module self-contained
+    """ This method will setup the database models using the specified engine
+        bind. This is simply a convenience method for creating the database
+        tables as well as keeping this module self-contained
 
-    Arguments:
-        engine: A sqlalchemy engine object.
+        Arguments:
+            engine: A sqlalchemy engine object.
 
-    Returns:
-        N\A
+        Returns:
+            N\A
     """
     Model.metadata.create_all(bind=engine, checkfirst=True)
 
@@ -51,21 +49,20 @@ def setup(engine):
 # -----------------------------------------------------------------------------
 
 class Keyword(Model):
-    """
-    Used to associate multiple titles for an entity instance. The titles can
-    be shorthand alternate names or actual 'official' synonyms. The main
-    purpose of this table is simply to make it more convenient for searching
-    for instances with specific names.
+    """ Used to associate multiple titles for an entity instance. The titles can
+        be shorthand alternate names or actual 'official' synonyms. The main
+        purpose of this table is simply to make it more convenient for searching
+        for instances with specific names.
 
-    Note: keyword title uniqueness is not enforced, therefore multiple
-          instances may have similar keywords.
+        Note: keyword title uniqueness is not enforced, therefore multiple
+              instances may have similar keywords.
 
-    Attributes:
-        id: (int) machine generated id number
-        instance_id: (int) reference to the instance this keyword belongs to
-        instance: (Instance) relation object to the Instnace model
-        title: (str) alternate title or synonym.
-        is_synonym: (bool) Flag indicating the type of keyword
+        Attributes:
+            id: (int) machine generated id number
+            instance_id: (int) reference to the instance this keyword belongs to
+            instance: (Instance) relation object to the Instnace model
+            title: (str) alternate title or synonym.
+            is_synonym: (bool) Flag indicating the type of keyword
     """
     __tablename__ = "keyword"
 
@@ -81,22 +78,21 @@ class Keyword(Model):
     is_synonym = sa.Column(sa.Boolean, nullable=False, default=True)
 
 class Instance(Model):
-    """
-    A bona fide instance of a schema.
+    """ A bona fide instance of a schema.
 
-    Attributes:
-        id: (int) machine generated id number
-        schema_id: (int) reference to the schema this is an instance of
-            (for verification/lookup purposes)
-        schema: (Schema) relation object to the Schema model
-        title: (str) a title for the instance. If none is suplied, the
-            client application should generate one.
-        keywords: (list) a relation list of Keywords
-        description: (str) a  description of the instance
-        is_active: (bool) if the instnace is marked as inactive, it should
-            not display in any form of reporting.
-        create_date: (datetime) the date this model instance was created
-        modified_date: (datetime) the date this model instance was modified
+        Attributes:
+            id: (int) machine generated id number
+            schema_id: (int) reference to the schema this is an instance of
+                (for verification/lookup purposes)
+            schema: (Schema) relation object to the Schema model
+            title: (str) a title for the instance. If none is suplied, the
+                client application should generate one.
+            keywords: (list) a relation list of Keywords
+            description: (str) a  description of the instance
+            is_active: (bool) if the instnace is marked as inactive, it should
+                not display in any form of reporting.
+            create_date: (datetime) the date this model instance was created
+            modified_date: (datetime) the date this model instance was modified
     """
     __tablename__ = "instance"
 
@@ -121,20 +117,19 @@ class Instance(Model):
                             onupdate=datetime.now)
 
 class Binary(Model):
-    """
-    A binary EAV value.
+    """ A binary EAV value.
 
-    TODO: it's a bit unclear how this object will be used, extensions might be
-          a little naive (perhaps store MIME types instead?)
+        TODO: it's a bit unclear how this object will be used, extensions might
+              be a little naive (perhaps store MIME types instead?)
 
-    Attributes:
-        instnace_id: (int) a reference to the instance
-        instance: (Instance) relation to the target instance
-        attribute_id: (int) a reference to the attribute this value is for
-            (for validation purposes)
-        attribute: (Attribute) relation to the target attribute
-        extension: (str) the extension of the file being stored
-        value: (binary) the physical value being stored
+        Attributes:
+            instnace_id: (int) a reference to the instance
+            instance: (Instance) relation to the target instance
+            attribute_id: (int) a reference to the attribute this value is for
+                (for validation purposes)
+            attribute: (Attribute) relation to the target attribute
+            extension: (str) the extension of the file being stored
+            value: (binary) the physical value being stored
     """
     __tablename__ = "binary"
 
@@ -155,16 +150,15 @@ class Binary(Model):
     value = sa.Column(sa.BLOB, nullable=False)
 
 class Datetime(Model):
-    """
-    A datetime EAV value.
+    """ A datetime EAV value.
 
-    Attributes:
-        instnace_id: (int) a reference to the instance
-        instance: (Instance) relation to the target instance
-        attribute_id: (int) a reference to the attribute this value is for
-            (for validation purposes)
-        attribute: (Attribute) relation to the target attribute
-        value: (datetime) the physical value being stored
+        Attributes:
+            instnace_id: (int) a reference to the instance
+            instance: (Instance) relation to the target instance
+            attribute_id: (int) a reference to the attribute this value is for
+                (for validation purposes)
+            attribute: (Attribute) relation to the target attribute
+            value: (datetime) the physical value being stored
     """
     __tablename__ = "datetime"
 
@@ -186,16 +180,15 @@ class Datetime(Model):
 sa.Index("datetime_attribute_value", Datetime.attribute_id, Datetime.value)
 
 class Integer(Model):
-    """
-    A integer EAV value.
+    """ A integer EAV value.
 
-    Attributes:
-        instnace_id: (int) a reference to the instance
-        instance: (Instance) relation to the target instance
-        attribute_id: (int) a reference to the attribute this value is for
-            (for validation purposes)
-        attribute: (Attribute) relation to the target attribute
-        value: (int) the physical value being stored
+        Attributes:
+            instnace_id: (int) a reference to the instance
+            instance: (Instance) relation to the target instance
+            attribute_id: (int) a reference to the attribute this value is for
+                (for validation purposes)
+            attribute: (Attribute) relation to the target attribute
+            value: (int) the physical value being stored
     """
     __tablename__ ="integer"
 
@@ -217,21 +210,20 @@ class Integer(Model):
 sa.Index("integer_attribute_value", Integer.attribute_id, Integer.value)
 
 class Range(Model):
-    """
-    A range EAV value.
+    """ A range EAV value.
 
-    This model object is a built-in as a convenience feature for integer
-    range values. Only integers are supported currently.
+        This model object is a built-in as a convenience feature for integer
+        range values. Only integers are supported currently.
 
-    Attributes:
-        instnace_id: (int) a reference to the instance
-        instance: (Instance) relation to the target instance
-        attribute_id: (int) a reference to the attribute this value is for
-            (for validation purposes)
-        attribute: (Attribute) relation to the target attribute
-        value_min: (int) the low value
-        value_max: (int) the high value
-        value: (int) the range tuple being stored
+        Attributes:
+            instnace_id: (int) a reference to the instance
+            instance: (Instance) relation to the target instance
+            attribute_id: (int) a reference to the attribute this value is for
+                (for validation purposes)
+            attribute: (Attribute) relation to the target attribute
+            value_min: (int) the low value
+            value_max: (int) the high value
+            value: (int) the range tuple being stored
     """
     __tablename__ = "range"
 
@@ -265,16 +257,15 @@ sa.Index("range_attribute_value_high", Range.attribute_id, Range.value_high)
 sa.Index("range_attribute_value", Range.value_low, Range.value_high)
 
 class Real(Model):
-    """
-    A real EAV value.
+    """ A real EAV value.
 
-    Attributes:
-        instnace_id: (int) a reference to the instance
-        instance: (Instance) relation to the target instance
-        attribute_id: (int) a reference to the attribute this value is for
-            (for validation purposes)
-        attribute: (Attribute) relation to the target attribute
-        value: (int) the physical value being stored
+        Attributes:
+            instnace_id: (int) a reference to the instance
+            instance: (Instance) relation to the target instance
+            attribute_id: (int) a reference to the attribute this value is for
+                (for validation purposes)
+            attribute: (Attribute) relation to the target attribute
+            value: (int) the physical value being stored
     """
     __tablename__ ="real"
 
@@ -296,22 +287,21 @@ class Real(Model):
 sa.Index("real_attribute_value", Real.attribute_id, Real.value)
 
 class Selection(Model):
-    """
-    A selection EAV value (into a vocabulary of choices)
+    """ A selection EAV value (into a vocabulary of choices)
 
-    This type is simply a reference into a vocabulary list. This seriously
-    needs to be re-thought, because if and entire network consists of lists,
-    then the entire purpose of the EAV is circumvented. The reason, though
-    this is needed is because we need to keep track of the selection made
-    in order to keep track of a history.
+        This type is simply a reference into a vocabulary list. This seriously
+        needs to be re-thought, because if and entire network consists of lists,
+        then the entire purpose of the EAV is circumvented. The reason, though
+        this is needed is because we need to keep track of the selection made
+        in order to keep track of a history.
 
-    Attributes:
-        instnace_id: (int) a reference to the instance
-        instance: (Instance) relation to the target instance
-        attribute_id: (int) a reference to the attribute this value is for
-            (for validation purposes)
-        attribute: (Attribute) relation to the target attribute
-        value: (int) a reference to the vocabulary item
+        Attributes:
+            instnace_id: (int) a reference to the instance
+            instance: (Instance) relation to the target instance
+            attribute_id: (int) a reference to the attribute this value is for
+                (for validation purposes)
+            attribute: (Attribute) relation to the target attribute
+            value: (int) a reference to the vocabulary item
     """
     __tablename__ ="selection"
 
@@ -336,18 +326,17 @@ class Selection(Model):
 sa.Index("selection_attribute_value", Real.attribute_id, Real.value)
 
 class Object(Model):
-    """
-    An object EAV value.
+    """ An object EAV value.
 
-    Attributes:
-        instnace_id: (int) a reference to the instance
-        instance: (Instance) relation to the target instance
-        attribute_id: (int) a reference to the attribute this value is for
-            (for validation purposes)
-        attribute: (Attribute) relation to the target attribute
-        value: (int) a reference to an Instance
-        order: (int) for list of objects, this can be used for ordering them
-            (seems to make more sense for associations?)
+        Attributes:
+            instnace_id: (int) a reference to the instance
+            instance: (Instance) relation to the target instance
+            attribute_id: (int) a reference to the attribute this value is for
+                (for validation purposes)
+            attribute: (Attribute) relation to the target attribute
+            value: (int) a reference to an Instance
+            order: (int) for list of objects, this can be used for ordering them
+                (seems to make more sense for associations?)
     """
     __tablename__ ="object"
 
@@ -373,18 +362,17 @@ class Object(Model):
 sa.Index("object_attribute_value", Object.attribute_id, Object.value)
 
 class String(Model):
-    """
-    A string EAV value.
+    """ A string EAV value.
 
-    Note that this model handles strings up to 1,024 characters
+        Note that this model handles strings up to 1,024 characters
 
-    Attributes:
-        instnace_id: (int) a reference to the instance
-        instance: (Instance) relation to the target instance
-        attribute_id: (int) a reference to the attribute this value is for
-            (for validation purposes)
-        attribute: (Attribute) relation to the target attribute
-        value: (str) the physical value being stored
+        Attributes:
+            instnace_id: (int) a reference to the instance
+            instance: (Instance) relation to the target instance
+            attribute_id: (int) a reference to the attribute this value is for
+                (for validation purposes)
+            attribute: (Attribute) relation to the target attribute
+            value: (str) the physical value being stored
     """
     __tablename__ ="string"
 
@@ -427,31 +415,30 @@ include_table = sa.Table("include", Model.metadata,
     )
 
 class Specification(Model):
-    """
-    Specification entity for class names. This is an independent model that
-    keeps track of the name spaces for the available classes.
+    """ Specification entity for class names. This is an independent model that
+        keeps track of the name spaces for the available classes.
 
-    Attributes:
-        id: (int) machine generated id number
-        bases: (list) list of bases classes this specification extends
-        children: (list) a convenience attribute to also allow the retrieval
-            of child classes
-        name: (str) the module name of the specification. It must be unique,
-            client code should have a graceful way for duplicate names (perhaps
-            append an instance number?)
-        documentation: (str) documentation for the specification. this attribute
-            is required, as it would be extremely useful to know what types of
-            classes are being used in the data store.
-        title: (str) the human-readable title of the class
-        description: (str) the human-readable instructions for the class
-        is_association: (bool) is the specification an association class?
-        is_virtual: (bool) is the specification an virtual class? (i.e. a class
-            without an instance, such as a medline)
-        is_eav: (bool) is the specification EAV-only? If false, and entry
-            should have a corresponding traditional table. (Currently
-            unsupported)
-        create_date: (datetime) the date this model instance was created
-        modified_date: (datetime) the date this model instance was modified
+        Attributes:
+            id: (int) machine generated id number
+            bases: (list) list of bases classes this specification extends
+            children: (list) a convenience attribute to also allow the retrieval
+                of child classes
+            name: (str) the module name of the specification. It must be unique,
+                client code should have a graceful way for duplicate names
+                (perhaps append an instance number?)
+            documentation: (str) documentation for the specification. this
+                attribute is required, as it would be extremely useful to know
+                what types of classes are being used in the data store.
+            title: (str) the human-readable title of the class
+            description: (str) the human-readable instructions for the class
+            is_association: (bool) is the specification an association class?
+            is_virtual: (bool) is the specification an virtual class? (i.e. a
+                class without an instance, such as a medline)
+            is_eav: (bool) is the specification EAV-only? If false, and entry
+                should have a corresponding traditional table. (Currently
+                unsupported)
+            create_date: (datetime) the date this model instance was created
+            modified_date: (datetime) the date this model instance was modified
     """
     __tablename__ = "specification"
 
@@ -551,24 +538,23 @@ schema_fieldset_table = sa.Table("schema_fieldset", Model.metadata,
     )
 
 class Schema(Model):
-    """
-    The model where versioning takes place. This model uses a specification
-    to define a version for it. Once this model is created, attributes and
-    invariants can be associated with in order to represent a state of the
-    schemata at a point in time.
+    """ The model where versioning takes place. This model uses a specification
+        to define a version for it. Once this model is created, attributes and
+        invariants can be associated with in order to represent a state of the
+        schemata at a point in time.
 
-    Note: the (specification, create_date) tuple is used as the unique
-        version value.
+        Note: the (specification, create_date) tuple is used as the unique
+            version value.
 
-    Attribute:
-        id: (int) machine generated id number
-        specification_id: (int) a reference to the specification this creates
-            a versioned schema for.
-        specification: (Specification) a relation to the specification model
-        attributes: (list) a list of Attributes for this schema
-        invariants: (list) a list of Invariants for this schema
-        create_date: (datetime) the date this model instance was created
-        modified_date: (datetime) the date this model instance was modified
+        Attribute:
+            id: (int) machine generated id number
+            specification_id: (int) a reference to the specification this
+                creates a versioned schema for.
+            specification: (Specification) a relation to the specification model
+            attributes: (list) a list of Attributes for this schema
+            invariants: (list) a list of Invariants for this schema
+            create_date: (datetime) the date this model instance was created
+            modified_date: (datetime) the date this model instance was modified
     """
     __tablename__ = "schema"
 
@@ -594,13 +580,12 @@ class Schema(Model):
         {})
 
 class Invariant(Model):
-    """
-    An invariant definition for a class.
+    """ An invariant definition for a class.
 
-    Attributes:
-        id: (int) machine generated id number
-        schema_id: (int) a reference to the schema this invariant is for
-        name: (str) the name of the invariant. Should not contain spaces.
+        Attributes:
+            id: (int) machine generated id number
+            schema_id: (int) a reference to the schema this invariant is for
+            name: (str) the name of the invariant. Should not contain spaces.
     """
     __tablename__ = "invariant"
 
@@ -613,22 +598,21 @@ class Invariant(Model):
 
 
 class Attribute(Model):
-    """
-    An attribute declaration.
+    """ An attribute declaration.
 
-    This is a special table in that it serves as a joining table between fields
-    and schemata, but with extra meta data associated with the join.
+        This is a special table in that it serves as a joining table between
+        fields and schemata, but with extra meta data associated with the join.
 
-    Attributes:
-        id: (int) machine generated id number
-        schema_id: (int) a reference to the schema this attribute belongs to
-        field_id: (int) a reference to the field that contains metadata about
-            this attribute.
-        field: (Field) a relation to the field
-        name: (str) the name of the attribute (i.e. the property name)
-        order: (int) the order in which the attribute appears in the schema
-        create_date: (datetime) the date this model instance was created
-        modified_date: (datetime) the date this model instance was modified
+        Attributes:
+            id: (int) machine generated id number
+            schema_id: (int) a reference to the schema this attribute belongs to
+            field_id: (int) a reference to the field that contains metadata
+                about this attribute.
+            field: (Field) a relation to the field
+            name: (str) the name of the attribute (i.e. the property name)
+            order: (int) the order in which the attribute appears in the schema
+            create_date: (datetime) the date this model instance was created
+            modified_date: (datetime) the date this model instance was modified
 
     """
     __tablename__ = "attribute"
@@ -653,43 +637,42 @@ class Attribute(Model):
         {})
 
 class Field(Model):
-    """
-    Attribute display metadata (i.e. Field). Describes how the attribute
-    should be used as well as useful constraint/validation meta data. Every
-    time an attribute must define a new field (or removed for that matter),
-    the source schema should be "versioned".
+    """ Attribute display metadata (i.e. Field). Describes how the attribute
+        should be used as well as useful constraint/validation meta data. Every
+        time an attribute must define a new field (or removed for that matter),
+        the source schema should be "versioned".
 
-    Attributes:
-        id: (int) machine generated id number
-        title: (str) human readable title (for forms)
-        description: (str) human readable description (for forms)
-        documentation: (str) comments about this field
-        type_id: (int) a reference to the type for this field.
-        type: (Type) a relation to the type
-        schema_id: (int) a reference to a schema (only applicable for object
-            types) and used for enforcing the schema type for an object.
-        schema: (Schema) a relation to the schema enforcement
-        vocabulary_id: (int) a reference to a vocabulary of possible answer
-            choices
-        vocabulary: (Vocabulary) a relation to the vocabulary
-        is_searchable: (bool) True if the attribute should be added to
-            the appliations search form. (Only if applicable)
-        is_required: (bool) True if required value in a form display
-        is_inline_image: (bool) ?!!? see paper...
-        is_repeatable: (bool) only applicable for associations. see paper...
-        minimum: (int) depending on the context, this attribute may be
-            used for storing the mininum length of a string, size of an int,
-            or number of instances, etc.
-        maximum: (int) depending on the context, this attribute may be
-            used for storing the maximum length of a string, size of an int,
-            or number of instances, etc.
-        width: (int) display widget parameter for width
-        height: (int) display widget parameter for height
-        url: (str) a url query string for virtual classes.
-        directive_*: these are inteded for direct use in plone.directives...
-            TODO: these need to go away somehow....
-        create_date: (datetime) the date this model instance was created
-        modified_date: (datetime) the date this model instance was modified
+        Attributes:
+            id: (int) machine generated id number
+            title: (str) human readable title (for forms)
+            description: (str) human readable description (for forms)
+            documentation: (str) comments about this field
+            type_id: (int) a reference to the type for this field.
+            type: (Type) a relation to the type
+            schema_id: (int) a reference to a schema (only applicable for object
+                types) and used for enforcing the schema type for an object.
+            schema: (Schema) a relation to the schema enforcement
+            vocabulary_id: (int) a reference to a vocabulary of possible answer
+                choices
+            vocabulary: (Vocabulary) a relation to the vocabulary
+            is_searchable: (bool) True if the attribute should be added to
+                the appliations search form. (Only if applicable)
+            is_required: (bool) True if required value in a form display
+            is_inline_image: (bool) ?!!? see paper...
+            is_repeatable: (bool) only applicable for associations. see paper...
+            minimum: (int) depending on the context, this attribute may be
+                used for storing the mininum length of a string, size of an int,
+                or number of instances, etc.
+            maximum: (int) depending on the context, this attribute may be
+                used for storing the maximum length of a string, size of an int,
+                or number of instances, etc.
+            width: (int) display widget parameter for width
+            height: (int) display widget parameter for height
+            url: (str) a url query string for virtual classes.
+            directive_*: these are inteded for direct use in plone.directives...
+                TODO: these need to go away somehow....
+            create_date: (datetime) the date this model instance was created
+            modified_date: (datetime) the date this model instance was modified
     """
 
     __tablename__ = "field"
@@ -760,16 +743,15 @@ class Field(Model):
                             onupdate=datetime.now)
 
 class Type(Model):
-    """
-    Represents a supported type.
+    """ Represents a supported type.
 
-    TODO: if more database vendors supported ENUM, this model would be
-        unnesessary.
+        TODO: if more database vendors supported ENUM, this model would be
+            unnesessary.
 
-    Attributes:
-        id: (int) machine generated id number
-        title: (str) the human-reable name of this type
-        description: (str) an optional description
+        Attributes:
+            id: (int) machine generated id number
+            title: (str) the human-reable name of this type
+            description: (str) an optional description
     """
     __tablename__ = "type"
 
@@ -788,14 +770,13 @@ vocabulary_term_table = sa.Table("vocabulary_term", Model.metadata,
     )
 
 class Vocabulary(Model):
-    """
-    A vocabulary.
+    """ A vocabulary.
 
-    Attributes:
-        id: (int) machine generated id number
-        title: (str) the human-reable name of this vocabulary
-        description: (str) an optional description
-        terms: (list) the list of terms for this vocabulary
+        Attributes:
+            id: (int) machine generated id number
+            title: (str) the human-reable name of this vocabulary
+            description: (str) an optional description
+            terms: (list) the list of terms for this vocabulary
     """
     __tablename__ = "vocabulary"
 
@@ -808,21 +789,20 @@ class Vocabulary(Model):
     terms = orm.relation("Term", secondary=vocabulary_term_table)
 
 class Term(Model):
-    """
-    An indivudal term for a vocabulary.
+    """ An indivudal term for a vocabulary.
 
-    Note: The way this is implemented could possibly override the whole concept
-    of EAV itself, but we'll see after some testing...
+        Note: The way this is implemented could possibly override the whole
+            concept of EAV itself, but we'll see after some testing...
 
-    Attributes:
-        id: (int) machine generated id number
-        title: (str) the human-reable name of term
-        token: (str) a one-to-one mapping token for the value
-        value_*: the currently implemented way for the term value that seriously
-            needs some reworking.
-        value: (object) the value for this term
-        description: (str) an optional description
-        terms: (list) the list of terms for this vocabulary
+        Attributes:
+            id: (int) machine generated id number
+            title: (str) the human-reable name of term
+            token: (str) a one-to-one mapping token for the value
+            value_*: the currently implemented way for the term value that
+                seriously needs some reworking.
+            value: (object) the value for this term
+            description: (str) an optional description
+            terms: (list) the list of terms for this vocabulary
     """
     __tablename__ = "term"
 
@@ -879,9 +859,7 @@ class Term(Model):
 # -----------------------------------------------------------------------------
 
 class Curator(Model):
-    """
-    A person curating the data (i.e. manager)
-    """
+    """ A person curating the data (i.e. manager) """
     __tablename__ = "curator"
 
     id = sa.Column(sa.Integer, primary_key=True)
@@ -894,13 +872,12 @@ subject_instance_table = sa.Table("subject_instance", Model.metadata,
     )
 
 class Subject(Model):
-    """
-    We keep track of subjects here and reference them throughout the datbase
-    using an internal identifier.
+    """ We keep track of subjects here and reference them throughout the
+        database using an internal identifier.
 
-    Attributes:
-        id: (int) machine generated id number
-        uid: (int) an external reference number
+        Attributes:
+            id: (int) machine generated id number
+            uid: (int) an external reference number
     """
     __tablename__ = "subject"
 
@@ -917,23 +894,22 @@ class Subject(Model):
     instances = orm.relation("Instance", secondary=subject_instance_table)
 
 class Enrollment(Model):
-    """
-    Links a Subject to a Domain.
+    """ Links a Subject to a Domain.
 
-    Attributes:
-        id: (int) machine generated id
-        domain_id: (int) reference to the domain table of the enrollment
-        domain: (Domain) relation to the Domain object
-        subject_id: (int) referene to the subject that is being enrolled
-        subject: (Subject) relation to the Subject object
-        start_date: (date) date that the subject was enrolled
-        consent_date: (date) date the the subject updated their consent (not
-            necessarily the start date)
-        stop_date: (date) date the subject ended enrollment
-        eid: (str) a special index number to keep track of custom identifiers
-            for the enrollment itself
-        create_date: (datetime) date object is create
-        modify_date: (datetime) date object is modified
+        Attributes:
+            id: (int) machine generated id
+            domain_id: (int) reference to the domain table of the enrollment
+            domain: (Domain) relation to the Domain object
+            subject_id: (int) referene to the subject that is being enrolled
+            subject: (Subject) relation to the Subject object
+            start_date: (date) date that the subject was enrolled
+            consent_date: (date) date the the subject updated their consent (not
+                necessarily the start date)
+            stop_date: (date) date the subject ended enrollment
+            eid: (str) a special index number to keep track of custom
+                identifiers for the enrollment itself
+            create_date: (datetime) date object is create
+            modify_date: (datetime) date object is modified
     """
     __tablename__ = "enrollment"
 
@@ -990,15 +966,14 @@ visit_instance_table = sa.Table("visit_instance", Model.metadata,
     )
 
 class Visit(Model):
-    """
-    Attributes:
-        id: (int) machine generated id
-        enrollments: (list) relation list to Enrollments that indicate the
-            domains this visit is associated with
-        protocols: (list) relation list to Protocols that indicate the progress
-            of the visit
-        visit_date: (date) the date the visit occured
-
+    """ Attributes:
+            id: (int) machine generated id
+            enrollments: (list) relation list to Enrollments that indicate the
+                domains this visit is associated with
+            protocols: (list) relation list to Protocols that indicate the
+                progress
+                of the visit
+            visit_date: (date) the date the visit occured
     """
     __tablename__ = "visit"
 
@@ -1022,13 +997,12 @@ domain_schema_table = sa.Table("domain_schema", Model.metadata,
     )
 
 class Domain(Model):
-    """
-    Attributes:
-        id: (int) machine generated id number
-        code: (unicode) the domain's short hand code (indexed)
-        title: (unicode) the domains' human readble title (unique)
-        consent_date: (date) the date of the new consent
-        schemata: (list) available schemata
+    """ Attributes:
+            id: (int) machine generated id number
+            code: (unicode) the domain's short hand code (indexed)
+            title: (unicode) the domains' human readble title (unique)
+            consent_date: (date) the date of the new consent
+            schemata: (list) available schemata
     """
     __tablename__ = "domain"
 
@@ -1057,19 +1031,18 @@ protocol_schema_table = sa.Table("protocol_schema", Model.metadata,
     )
 
 class Protocol(Model):
-    """
-    Required schemata for a particular cycle in a domain.
-    s
-    Attributes:
-        id: (int) machine generated id number
-        domain_id: (int) reference to domain this protocol belongs to
-        domain: (Domain) relation to Domain object
-        schemata: (list) Schema objects that are required
-        cycle: (int) week number
-        threshold: (int) future-proof field for exempting cycles
-        is_active: (bool) if set, indicates the entry is in active use
-        create_date: (datetime) date object is create
-        modify_date: (datetime) date object is modified
+    """ Required schemata for a particular cycle in a domain.
+
+        Attributes:
+            id: (int) machine generated id number
+            domain_id: (int) reference to domain this protocol belongs to
+            domain: (Domain) relation to Domain object
+            schemata: (list) Schema objects that are required
+            cycle: (int) week number
+            threshold: (int) future-proof field for exempting cycles
+            is_active: (bool) if set, indicates the entry is in active use
+            create_date: (datetime) date object is create
+            modify_date: (datetime) date object is modified
     """
     __tablename__ = "protocol"
 
@@ -1131,28 +1104,30 @@ class SpecimenAliquotTerm(Model):
         {})
 
 class Specimen(Model):
-    """
-    Speccialized table for specimen data. Note that only one specimen can be
-    drawn from a patient/protocol/type.
+    """ Speccialized table for specimen data. Note that only one specimen can be
+        drawn from a patient/protocol/type.
 
-    Attributes:
-        id: (int) machine generated primary key
-        subject_id: (int) reference to the subject this specimen was drawn from
-        subject: (object) the relation to the subject
-        protocol_id: (int) reference to the protocol this specimen was drawn for
-        protocol: (object) the relation to the protocol
-        state: (str) current state of the specimen
-        collect_date: (datetime) the date/time said specimen was collected
-        type: (str) the type of specimen
-        destination: (str) the destination of where the specimen is sent to.
-        tubes: (int) number of tubes collected (optional, if applicable)
-        volume_per_tube: (int) volume of each tube (optional, if applicable)
-        notes: (str) optinal notes that can be entered by users (optional)
-        aliquot: (list) convenience relation to the aliquot parts generated
-            from this speciemen
-        is_active: (bool) internal marker to indicate this entry is being used.
-        create_date: (datetime) internal metadata of when entry was created
-        modify_date: (datetime) internal metadata of when entry was modified
+        Attributes:
+            id: (int) machine generated primary key
+            subject_id: (int) reference to the subject this specimen was
+                drawn from
+            subject: (object) the relation to the subject
+            protocol_id: (int) reference to the protocol this specimen was
+                drawn for
+            protocol: (object) the relation to the protocol
+            state: (str) current state of the specimen
+            collect_date: (datetime) the date/time said specimen was collected
+            type: (str) the type of specimen
+            destination: (str) the destination of where the specimen is sent to.
+            tubes: (int) number of tubes collected (optional, if applicable)
+            volume_per_tube: (int) volume of each tube (optional, if applicable)
+            notes: (str) optinal notes that can be entered by users (optional)
+            aliquot: (list) convenience relation to the aliquot parts generated
+                from this speciemen
+            is_active: (bool) internal marker to indicate this entry is
+                being used.
+            create_date: (datetime) internal metadata of when entry was created
+            modify_date: (datetime) internal metadata of when entry was modified
     """
     __tablename__ = "specimen"
 
@@ -1238,9 +1213,7 @@ sa.Index("specimen_destination_id", Specimen.destination_id)
 sa.Index("specimen_tube_type_id", Specimen.tupe_type_id)
 
 class AliquotHistory(Model):
-    """
-    Keeps track of aliquot state history.
-    """
+    """ Keeps track of aliquot state history. """
     __tablename__ = "aliquot_history"
 
     id = sa.Column(sa.Integer, primary_key=True)
@@ -1264,12 +1237,11 @@ class AliquotHistory(Model):
     to = sa.Column(sa.Unicode, nullable=False)
 
 class Aliquot(Model):
-    """
-    Specialized table for aliquot parts generated from a specimen.
+    """ Specialized table for aliquot parts generated from a specimen.
 
-    Attributes:
-        id: (int) machine generated primary key
-        specimen_id: (int) the specimen this aliquot was generated from
+        Attributes:
+            id: (int) machine generated primary key
+            specimen_id: (int) the specimen this aliquot was generated from
     """
     __tablename__ = "aliquot"
 

@@ -12,8 +12,7 @@ class Range(zope.schema.Tuple):
     __doc__ = interfaces.IRange.__doc__
 
     def _validate(self, value):
-        """
-        """
+        """ """
         super(Range, self)._validate(value)
 
         try:

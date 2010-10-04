@@ -1,7 +1,5 @@
-"""
-Responsible for schemata, attributes, and vocabularies
-
-Additionally, we support plone.directives.form
+""" Responsible for schemata, attributes, and vocabularies
+    Additionally, we support plone.directives.form
 """
 import itertools
 from collections import deque as queue
@@ -64,16 +62,15 @@ supported_directives_vocabulary = SimpleVocabulary.fromValues([
     ])
 
 def version(iface):
-    """
-    Helper method to get the interface's version.
+    """ Helper method to get the interface's version.
 
-    Arguments:
-        iface: (class) an interface class that must extend the Schema marker
-            interface
-    Returns:
-        interface version object
-    Raises:
-        Exception
+        Arguments:
+            iface: (class) an interface class that must extend the Schema marker
+                interface
+        Returns:
+            interface version object
+        Raises:
+            Exception
     """
     if iface.extends(interfaces.Schema):
         return iface.__version__
@@ -81,27 +78,23 @@ def version(iface):
         raise Exception("%s doesn't extend %s", (iface, interfaces.Schema))
 
 class DependencyGenerator(object):
-    """
-    The purpose of this class is to attempt to 'lighten' the load of using
-    interfaces throughout the client application, since dependent interfaces
-    will only be used when generating forms and not checking objects.
+    """ The purpose of this class is to attempt to 'lighten' the load of using
+        interfaces throughout the client application, since dependent interfaces
+        will only be used when generating forms and not checking objects.
     """
 
     def __init__(self, manager, imain, names):
-        """
-        Arguments:
-            imain: the interface this generator is contained in
-            manager: the manager that is using this generator
-            names: the names of the dependent interfaces
+        """ Arguments:
+                imain: the interface this generator is contained in
+                manager: the manager that is using this generator
+                names: the names of the dependent interfaces
         """
         self.imain = imain
         self.manager = manager
         self.names = names
 
     def __iter__(self):
-        """
-        TODO: can't handle versioning yet
-        """
+        """ TODO: can't handle versioning yet """
         for name in self.names:
             yield self.manager.get(name)
 
@@ -291,7 +284,7 @@ class DatastoreSchemaManager(object):
                     elif Field is zope.schema.Float:
                         default = float(default_raw)
                     elif Field is zope.schema.Bool:
-                        default= bool(default_raw)
+                        default = str(default_raw) == "True"
                     elif Field in (zope.schema.Text, zope.schema.TextLine):
                         default = default_raw
                     elif Field is zope.schema.Choice:

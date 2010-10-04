@@ -1,18 +1,14 @@
-
-from zope.component import adapts
-from zope.component import createObject
-from zope.component import getUtility
-from zope.interface import implements
-
-from avrc.data.store.datastore import named_session
-from avrc.data.store.model import *
-from avrc.data.store import interfaces
-
+"""
+"""
 import transaction
 
+from zope.interface import implements
+from zope.component import createObject
+
+from avrc.data.store.datastore import named_session
+from avrc.data.store import interfaces
+
 class DatastoreConventionalManager(object):
-    """
-    """
 #    implements(interfaces.IDatastoreConventionalManager)
 #    datastore = None
 #    _type = None

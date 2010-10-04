@@ -1,5 +1,4 @@
-"""
-Datastore implementation module as supporting utilities.
+""" Datastore implementation module as supporting utilities.
 """
 from collections import deque as queue
 from time import time as currenttime
@@ -43,37 +42,34 @@ _ECHO_ENABLED = False
 _DS_FMT = u"<Datastore '%s'>"
 
 def session_name_format(datastore):
-    """
-    Helper method to format a session name corresponding to the data store.
+    """ Helper method to format a session name corresponding to the data store.
 
-    Arguments:
-        datastore: (object) an object implementing IDatastore
-    Returns:
-        A string to use as the session utility name.
+        Arguments:
+            datastore: (object) an object implementing IDatastore
+        Returns:
+            A string to use as the session utility name.
     """
     return "%s:session" % str(datastore)
 
 def named_session(datastore):
-    """
-    Evaluates the session being used by the given data store.
+    """ Evaluates the session being used by the given data store.
 
-    Arguments:
-        datastore: (object) an object implementing IDatastore
-    Returns:
-        A sqlalchemy Session factory.
+        Arguments:
+            datastore: (object) an object implementing IDatastore
+        Returns:
+            A sqlalchemy Session factory.
     """
     return named_scoped_session(datastore.session_name)
 #
 #    return datastore.getSession()
 
 def setup_types(datastore):
-    """
-    Helper method to setup up built-in supported types.
+    """ Helper method to setup up built-in supported types.
 
-    Arguments:
-        datastore: (object) an object implementing IDatastore
-    Returns:
-        N/A
+        Arguments:
+            datastore: (object) an object implementing IDatastore
+        Returns:
+            N/A
     """
     rslt = []
     Session = named_session(datastore)
@@ -99,16 +95,15 @@ def setup_types(datastore):
 
 @adapter(interfaces.IDatastore, IObjectCreatedEvent)
 def handleDatastoreCreated(datastore, event):
-    """
-    Triggered when a new DataStore instance is added to a container (i.e.
-    when it is added to a site. Essentially, it setups up the database
-    back-end.
+    """ Triggered when a new DataStore instance is added to a container (i.e.
+        when it is added to a site. Essentially, it setups up the database
+        back-end.
 
-    Arguments:
-        datastore: (object) the newly created object implementing IDatastore
-        event: (object) the event object
-    Returns:
-        N/A
+        Arguments:
+            datastore: (object) the newly created object implementing IDatastore
+            event: (object) the event object
+        Returns:
+            N/A
     """
 #    if str(datastore.dsn).find('sqlite') > -1:
 #        Session = SessionFactory(bind=sa.create_engine(datastore.dsn,
@@ -132,14 +127,13 @@ def handleDatastoreCreated(datastore, event):
 
 @adapter(interfaces.IDatastore, IObjectRemovedEvent)
 def handleDatastoreRemoved(datastore, event):
-    """
-    Triggered when a new DataStore instance is removed from a container
+    """ Triggered when a new DataStore instance is removed from a container
 
-    Arguments:
-        datastore: (object) the removed object implementing IDatastore
-        event: (object) the event object
-    Returns:
-        N/A
+        Arguments:
+            datastore: (object) the removed object implementing IDatastore
+            event: (object) the event object
+        Returns:
+            N/A
     """
     # TODO do ti for the site
     provideUtility(None,
@@ -224,13 +218,12 @@ class Datastore(object):
     session_name = FieldProperty(interfaces.IDatastore["session_name"])
 
     def __init__(self, title, dsn=None, session_name=None):
-        """
-        Instantiates the data store implementation. Also notifies listeners
-        that this object has been created.
+        """ Instantiates the data store implementation. Also notifies listeners
+            that this object has been created.
 
-        Arguments:
-            title: (str) the name of this data store instance
-            dsn: (str) the URI to the data base
+            Arguments:
+                title: (str) the name of this data store instance
+                dsn: (str) the URI to the data base
         """
         self.title = title
         self.dsn = dsn
@@ -239,9 +232,7 @@ class Datastore(object):
         notify(ObjectCreatedEvent(self))
 
     def __str__(self):
-        """
-        String representation of this instance
-        """
+        """ String representation of this instance """
         return _DS_FMT % self.title
 
 #    def getSession(self):
@@ -263,49 +254,48 @@ class Datastore(object):
 
     @property
     def search(self):
-        """
-        """
+        """ """
         from avrc.data.store.search import SearchMonkey
         return SearchMonkey(self)
 
     @property
     def schemata(self):
-        """A schema manager utility"""
+        """ A schema manager utility """
         return interfaces.ISchemaManager(self)
 
     @property
     def domains(self):
-        """A protocol manager utility"""
+        """ A protocol manager utility """
         return interfaces.IDomainManager(self)
 
     @property
     def subjects(self):
-        """A protocol manager utility"""
+        """ A protocol manager utility """
         return interfaces.ISubjectManager(self)
 
     @property
     def protocols(self):
-        """A protocol manager utility"""
+        """ A protocol manager utility """
         return interfaces.IProtocolManager(self)
 
     @property
     def enrollments(self):
-        """A protocol manager utility"""
+        """ A protocol manager utility """
         return interfaces.IEnrollmentManager(self)
 
     @property
     def visits(self):
-        """A protocol manager utility"""
+        """ A protocol manager utility """
         return interfaces.IVisitManager(self)
 
     @property
     def specimen(self):
-        """A specimen manager utility"""
+        """ A specimen manager utility """
         return interfaces.ISpecimenManager(self)
 
     @property
     def aliquot(self):
-        """A specimen manager utility"""
+        """ A specimen manager utility """
         return interfaces.IAliquotManager(self)
 
     def keys(self):

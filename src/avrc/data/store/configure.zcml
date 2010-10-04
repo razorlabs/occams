@@ -1,9 +1,11 @@
 <configure
     xmlns="http://namespaces.zope.org/zope"
-    xmlns:five="http://namespaces.zope.org/five"
     i18n_domain="avrc.data.store">
 
-  <!--<includeDependencies package="." />-->
+  <!-- We need this in case we're using this package as a standalone module -->
+  <include package="z3c.autoinclude" file="meta.zcml" />
+
+  <includeDependencies package="." />
 
   <adapter factory=".schema.DatastoreSchemaManager" />
 
@@ -35,6 +37,5 @@
       component=".schema.supported_directives_vocabulary"
       provides="zope.schema.interfaces.IVocabulary"
       />
-
 
 </configure>

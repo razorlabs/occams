@@ -1,6 +1,7 @@
+""" Contains how to: domain and protocol
 """
-Contains how to: domain and protocol
-"""
+import transaction
+
 from zope.component import adapts
 from zope.component import getUtility
 from zope.schema.fieldproperty import FieldProperty
@@ -8,11 +9,10 @@ from zope.component.factory import Factory
 from zope.interface import implements
 from zope.i18nmessageid import MessageFactory
 
+from avrc.data.store._utils import DatastoreConventionalManager
 from avrc.data.store import interfaces
 from avrc.data.store import model
 from avrc.data.store.datastore import named_session
-
-import transaction
 
 _ = MessageFactory(__name__)
 
@@ -36,7 +36,6 @@ SubjectFactory = Factory(
     title=_(u"Create a subject instance"),
     )
 
-from avrc.data.store._utils import DatastoreConventionalManager
 class DatastoreSubjectManager(DatastoreConventionalManager):
     adapts(interfaces.IDatastore)
     implements(interfaces.ISubjectManager)
@@ -51,18 +50,14 @@ class DatastoreSubjectManager(DatastoreConventionalManager):
         self._session = Session()
 
     def putProperties(self, rslt, source):
-        """
-        Add the items from the source to ds
-        """
+        """ Add the items from the source to ds """
         rslt.zid = source.zid
         rslt.uid = source.uid
         rslt.nurse_email = source.nurse_email
         rslt.aeh = source.aeh
 
     def getEnteredDataOfType(self, subject, type):
-        """
-        Get all of the data entered for a visit
-        """
+        """ Get all of the data entered for a visit """
         instance_rslt = self._session.query(model.Instance)\
                                       .join(self._model.instances)\
                                       .filter(self._model.zid==subject.zid)\
@@ -77,7 +72,7 @@ class DatastoreSubjectManager(DatastoreConventionalManager):
 
 
     def add_instances(self, subject, obj_or_list):
-        "??!?"
+        """ ??!? """
 
         subject_rslt = self._session.query(self._model)\
                                   .filter_by(zid=subject.zid)\
@@ -142,10 +137,10 @@ class DatastoreEnrollmentManager(DatastoreConventionalManager):
                           .filter_by(zid = source.subject_zid)\
                           .first()
             rslt = self._model(zid=source.zid, domain=domain, domain_id=domain.id, subject=subject, subject_id=subject.id, start_date=source.start_date, consent_date=source.consent_date)
-            
+
             if hasattr(source, 'eid') and source.eid is not None:
                 rslt.eid = source.eid
-            
+
             self._session.add(rslt)
         else:
         # won't update the code
@@ -154,10 +149,7 @@ class DatastoreEnrollmentManager(DatastoreConventionalManager):
         return source
 
     def putProperties(self, rslt, source):
-        """
-        Add the items from the source to ds
-        """
-#        rslt.schemata.append(;lasdkfjas;lfj;saldfja;sldjfsa;ldjf;saldfjsa;fhsa)
+        """ Add the items from the source to ds """
 
         rslt.start_date = source.start_date
         rslt.consent_date = source.consent_date
@@ -167,9 +159,8 @@ class DatastoreEnrollmentManager(DatastoreConventionalManager):
         return rslt
 
     def get_objects_by_eid(self, eid, iface=None):
-        """
-        Utility method for retrieving objects based on the enrollment and
-        (optionally) based on when it was collected.
+        """ Utility method for retrieving objects based on the enrollment and
+            (optionally) based on when it was collected.
         """
         session = self._session
 
@@ -235,9 +226,7 @@ class DatastoreVisitManager(DatastoreConventionalManager):
         self._session = Session()
 
     def putProperties(self, rslt, source):
-        """
-        Add the items from the source to ds
-        """
+        """ Add the items from the source to ds """
         rslt.visit_date = source.visit_date
         for enrollment_zid in source.enrollment_zids:
             rslt.enrollments.append(self._session.query(model.Enrollment)\
@@ -249,11 +238,8 @@ class DatastoreVisitManager(DatastoreConventionalManager):
                       .filter_by(zid=protocol_zid)\
                       .first())
 
-
     def getEnteredData(self, visit):
-        """
-        Get all of the data entered for a visit
-        """
+        """ Get all of the data entered for a visit """
         instances_rslt = self._session.query(model.Instance)\
                                       .join(self._model.instances)\
                                       .filter(self._model.zid==visit.zid)\
@@ -267,9 +253,7 @@ class DatastoreVisitManager(DatastoreConventionalManager):
         return objects
 
     def getEnteredDataOfType(self, visit, type):
-        """
-        Get all of the data entered for a visit
-        """
+        """ Get all of the data entered for a visit """
         instance_rslt = self._session.query(model.Instance)\
                                       .join(self._model.instances)\
                                       .filter(self._model.zid==visit.zid)\
@@ -282,7 +266,7 @@ class DatastoreVisitManager(DatastoreConventionalManager):
         return self._datastore.get(instance_rslt.title)
 
     def add_instances(self, visit, obj_or_list):
-        "??!?"
+        """ ??!? """
 
         visit_rslt = self._session.query(self._model)\
                                   .filter_by(zid=visit.zid)\
@@ -295,4 +279,3 @@ class DatastoreVisitManager(DatastoreConventionalManager):
             visit_rslt.instances.append(obj_rslt)
 
         transaction.commit()
-
