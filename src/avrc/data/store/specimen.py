@@ -1,15 +1,19 @@
-""" Contains how to: specimen and aliquot
 """
-import transaction
-
+Contains how to: specimen and aliquot
+"""
 from zope.component import adapts
 from zope.schema.fieldproperty import FieldProperty
 from zope.interface import implements
+from zope.i18nmessageid import MessageFactory
 
 from avrc.data.store._utils import DatastoreConventionalManager
 from avrc.data.store import interfaces
 from avrc.data.store import model
 from avrc.data.store.datastore import named_session
+
+import transaction
+
+_ = MessageFactory(__name__)
 
 class Specimen(object):
     implements(interfaces.ISpecimen)
@@ -44,6 +48,12 @@ class Specimen(object):
         obj.notes = rslt.notes
         return obj
 
+
+
+
+
+
+
 class DatastoreSpecimenManager(DatastoreConventionalManager):
     adapts(interfaces.IDatastore)
     implements(interfaces.ISpecimenManager)
@@ -58,7 +68,10 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
         self._session = Session()
 
     def putProperties(self, rslt, source):
-        """ Add the items from the source to ds """
+        """
+        Add the items from the source to ds
+        """
+#        rslt.schemata.append(;lasdkfjas;lfj;saldfja;sldjfsa;ldjf;saldfjsa;fhsa)
 
     def get(self, key):
         session = self._session
@@ -71,41 +84,79 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
         return specimen_rslt and Specimen.from_rslt(specimen_rslt) or None
 
     def list_by_state(self, state, before_date=None, after_date=None):
-        """ """
+        """
+        """
         session = self._session
         SpecimenModel = self._model
 
-        sepecimen_q = session.query(SpecimenModel)\
+        specimen_q = session.query(SpecimenModel)\
                         .join(SpecimenModel.state)\
-                        .filter_by(value=unicode(state))\
+                        .filter_by(value=unicode(state))
 
         if before_date:
             exp_q = SpecimenModel.collect_date <= before_date
-            sepecimen_q = sepecimen_q.filter(exp_q)
+            specimen_q = specimen_q.filter(exp_q)
 
         if after_date:
             exp_q = SpecimenModel.collect_date >= after_date
-            sepecimen_q = sepecimen_q.filter(exp_q)
+            specimen_q = specimen_q.filter(exp_q)
+            
+        specimen_q = specimen_q.order_by(SpecimenModel.id.desc())
 
-        return [Specimen.from_rslt(r) for r in sepecimen_q.all()]
+        return [Specimen.from_rslt(r) for r in specimen_q.all()]
 
-    def put(self, source):
-
+    def list_specimen_by_group(self, protocol_zid=None, subject_zid=None, state=None, specimen_type=None):
+        """
+        """
         session = self._session
         SpecimenModel = self._model
+        SubjectModel = model.Subject
+        ProtocolModel = model.Protocol
+        specimen_q = session.query(SpecimenModel)                        
+                            
+        if state:
+            specimen_q = specimen_q\
+                        .join(SpecimenModel.state)\
+                        .filter_by(value=unicode(state))
 
+        if specimen_type:
+            specimen_q = specimen_q\
+                        .join(SpecimenModel.type)\
+                        .filter_by(value=unicode(specimen_type))
+                            
+        if protocol_zid:
+            specimen_q = specimen_q\
+                            .join(ProtocolModel)\
+                            .filter(ProtocolModel.zid==protocol_zid)
+            
+        if subject_zid:
+            specimen_q = specimen_q\
+                            .join(SubjectModel)\
+                            .filter(SubjectModel.zid==subject_zid)
+
+                                                    
+        specimen_q = specimen_q.order_by(SpecimenModel.id.desc())
+
+        return [Specimen.from_rslt(r) for r in specimen_q.all()]
+
+
+    def put(self, source):
+    
+        session = self._session
+        SpecimenModel = self._model
+    
         # Find the 'vocabulary' objects for the database relation
         keywords = {"state": u"specimen_state",
                     "tube_type": u"specimen_tube_type",
                     "destination": u"specimen_destination",
                     "specimen_type": u"specimen_type"
                     }
-
+    
         rslt = {}
-
+    
         for attr_name, vocab_name in keywords.items():
             value = getattr(source, attr_name, None)
-
+    
             if value:
                 rslt[vocab_name] = session.query(model.SpecimenAliquotTerm)\
                                 .filter_by(vocabulary_name=vocab_name,
@@ -114,7 +165,7 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
                                 .first()
             else:
                 rslt[vocab_name] = None
-
+    
         if source.dsid is not None:
             specimen_rslt = session.query(SpecimenModel)\
                             .filter_by(id=source.dsid)\
@@ -124,20 +175,20 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
             subject_rslt = session.query(model.Subject)\
                             .filter_by(zid=source.subject_zid)\
                             .first()
-
+    
             protocol_rslt = session.query(model.Protocol)\
                             .filter_by(zid=source.protocol_zid)\
                             .first()
-
+    
             # specimen is not already in the data base, we need to create one
             specimen_rslt = SpecimenModel(
                 subject=subject_rslt,
                 protocol=protocol_rslt,
                 type=rslt["specimen_type"],
                 )
-
+    
             session.add(specimen_rslt)
-
+    
         specimen_rslt.destination = rslt["specimen_destination"]
         specimen_rslt.state = rslt["specimen_state"]
         specimen_rslt.collect_date = source.date_collected
@@ -145,12 +196,12 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
         specimen_rslt.tubes = source.tubes
         specimen_rslt.tube_type = rslt["specimen_tube_type"]
         specimen_rslt.notes = source.notes
-
+    
         transaction.commit()
-
+    
         if not source.dsid:
             source.dsid = specimen_rslt.id
-
+    
         return source
 
     def aliquot(self, key):
@@ -222,6 +273,9 @@ class Aliquot(object):
 
         return obj
 
+
+
+
 class DatastoreAliquotManager(DatastoreConventionalManager):
     adapts(interfaces.IDatastore)
     implements(interfaces.IAliquotManager)
@@ -236,8 +290,10 @@ class DatastoreAliquotManager(DatastoreConventionalManager):
         self._session = Session()
 
     def putProperties(self, rslt, source):
-        """ Add the items from the source to ds """
-
+        """
+        Add the items from the source to ds
+        """
+        
     def get(self, key):
         session = self._session
         AliquotModel = self._model
@@ -249,26 +305,70 @@ class DatastoreAliquotManager(DatastoreConventionalManager):
         return aliquot_rslt and Aliquot.from_rslt(aliquot_rslt) or None
 
     def list_by_state(self, state, our_id=None):
-        """ """
+        """
+        """
         session = self._session
         AliquotModel = self._model
 
-        specimen_q = session.query(AliquotModel)\
+        aliquot_q = session.query(AliquotModel)\
                         .join(AliquotModel.state)\
                         .filter_by(value=unicode(state))
 
         if our_id:
-            specimen_q = specimen_q.join(AliquotModel.specimen)\
+            aliquot_q = aliquot_q\
+                            .join(AliquotModel.specimen)\
                             .join(model.Specimen.subject)\
                             .filter_by(uid=our_id)
 
-        return [Aliquot.from_rslt(r) for r in specimen_q.all()]
+        aliquot_q = aliquot_q.order_by(AliquotModel.id.desc())
+        
+        return [Aliquot.from_rslt(r) for r in aliquot_q.all()]
+
+
+    def list_aliquot_by_group(self, protocol_zid=None, subject_zid=None, state=None):
+        """
+        """
+        session = self._session
+        AliquotModel = self._model
+        SpecimenModel = model.Specimen
+        SubjectModel = model.Subject
+        ProtocolModel = model.Protocol
+        aliquot_q = session.query(AliquotModel)                        
+                            
+        if state:
+            aliquot_q = aliquot_q\
+                        .join(AliquotModel.state)\
+                        .filter_by(value=unicode(state))
+                            
+        if protocol_zid or subject_zid:
+            
+            aliquot_q = aliquot_q\
+                            .join(SpecimenModel)
+                            
+            if protocol_zid:
+                aliquot_q = aliquot_q\
+                                .join(ProtocolModel)\
+                                .filter(ProtocolModel.zid==protocol_zid)
+                
+            if subject_zid:
+                aliquot_q = aliquot_q\
+                                .join(SubjectModel)\
+                                .filter(SubjectModel.zid==subject_zid)
+
+                                                    
+        aliquot_q = aliquot_q.order_by(AliquotModel.id.desc())
+
+        return [Aliquot.from_rslt(r) for r in aliquot_q.all()]
+
+
+
+
 
     def put(self, source):
 
         session = self._session
         AliquotModel = self._model
-
+        
         # Find the 'vocabulary' objects for the database relation
         keywords = {"state": u"aliquot_state",
                     "type": u"aliquot_type",
@@ -276,11 +376,11 @@ class DatastoreAliquotManager(DatastoreConventionalManager):
                     "analysis_status": u"aliquot_analysis_status",
                     "special_instruction": u"aliquot_special_instruction",
                     }
-
+        
         rslt = {}
-
+        
         for attr_name, vocab_name in keywords.items():
-
+        
             value = getattr(source, attr_name, None)
             if value:
                 rslt[vocab_name] = session.query(model.SpecimenAliquotTerm)\
@@ -290,7 +390,7 @@ class DatastoreAliquotManager(DatastoreConventionalManager):
                                 .first()
             else:
                 rslt[vocab_name] = None
-
+        
         if source.dsid is not None:
             aliquot_rslt = session.query(AliquotModel)\
                             .filter_by(id=source.dsid)\
@@ -300,20 +400,20 @@ class DatastoreAliquotManager(DatastoreConventionalManager):
             specimen_rslt = session.query(model.Specimen)\
                             .filter_by(id=source.specimen_dsid)\
                             .first()
-
+        
             # specimen is not already in the data base, we need to create one
             aliquot_rslt = AliquotModel(
                 specimen=specimen_rslt,
                 type=rslt["aliquot_type"],
                 )
-
+        
             session.add(aliquot_rslt)
-
+        
         aliquot_rslt.analysis_status =  rslt["aliquot_state"]
         aliquot_rslt.sent_date = source.sent_date
         aliquot_rslt.sent_name = source.sent_name
         aliquot_rslt.special_instruction = rslt["aliquot_special_instruction"]
-
+        
         aliquot_rslt.storage_site = rslt["aliquot_storage_site"]
         aliquot_rslt.state = rslt["aliquot_state"]
         aliquot_rslt.volume = source.volume
@@ -324,14 +424,12 @@ class DatastoreAliquotManager(DatastoreConventionalManager):
         aliquot_rslt.box = source.box
         aliquot_rslt.thawed_num = source.thawed_num
         aliquot_rslt.notes = source.notes
-
+        
         transaction.commit()
-
+        
         if not source.dsid:
             source.dsid = aliquot_rslt.id
         return source
-
-#
 #    def aliquot(self, key):
 #        return interfaces.IAliquotManager(self._datastore, self.get(key))
 
