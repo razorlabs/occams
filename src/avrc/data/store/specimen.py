@@ -89,19 +89,55 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
         session = self._session
         SpecimenModel = self._model
 
-        sepecimen_q = session.query(SpecimenModel)\
+        specimen_q = session.query(SpecimenModel)\
                         .join(SpecimenModel.state)\
-                        .filter_by(value=unicode(state))\
+                        .filter_by(value=unicode(state))
 
         if before_date:
             exp_q = SpecimenModel.collect_date <= before_date
-            sepecimen_q = sepecimen_q.filter(exp_q)
+            specimen_q = specimen_q.filter(exp_q)
 
         if after_date:
             exp_q = SpecimenModel.collect_date >= after_date
-            sepecimen_q = sepecimen_q.filter(exp_q)
+            specimen_q = specimen_q.filter(exp_q)
+            
+        specimen_q = specimen_q.order_by(SpecimenModel.id.desc())
 
-        return [Specimen.from_rslt(r) for r in sepecimen_q.all()]
+        return [Specimen.from_rslt(r) for r in specimen_q.all()]
+
+    def list_specimen_by_group(self, protocol_zid=None, subject_zid=None, state=None, specimen_type=None):
+        """
+        """
+        session = self._session
+        SpecimenModel = self._model
+        SubjectModel = model.Subject
+        ProtocolModel = model.Protocol
+        specimen_q = session.query(SpecimenModel)                        
+                            
+        if state:
+            specimen_q = specimen_q\
+                        .join(SpecimenModel.state)\
+                        .filter_by(value=unicode(state))
+
+        if specimen_type:
+            specimen_q = specimen_q\
+                        .join(SpecimenModel.type)\
+                        .filter_by(value=unicode(specimen_type))
+                            
+        if protocol_zid:
+            specimen_q = specimen_q\
+                            .join(ProtocolModel)\
+                            .filter(ProtocolModel.zid==protocol_zid)
+            
+        if subject_zid:
+            specimen_q = specimen_q\
+                            .join(SubjectModel)\
+                            .filter(SubjectModel.zid==subject_zid)
+
+                                                    
+        specimen_q = specimen_q.order_by(SpecimenModel.id.desc())
+
+        return [Specimen.from_rslt(r) for r in specimen_q.all()]
 
     def put(self, source):
 
@@ -251,8 +287,7 @@ class DatastoreAliquotManager(DatastoreConventionalManager):
         """
         Add the items from the source to ds
         """
-#        rslt.schemata.append(;lasdkfjas;lfj;saldfja;sldjfsa;ldjf;saldfjsa;fhsa)
-
+        
     def get(self, key):
         session = self._session
         AliquotModel = self._model
@@ -269,16 +304,59 @@ class DatastoreAliquotManager(DatastoreConventionalManager):
         session = self._session
         AliquotModel = self._model
 
-        specimen_q = session.query(AliquotModel)\
+        aliquot_q = session.query(AliquotModel)\
                         .join(AliquotModel.state)\
                         .filter_by(value=unicode(state))
 
         if our_id:
-            specimen_q = specimen_q.join(AliquotModel.specimen)\
+            aliquot_q = aliquot_q\
+                            .join(AliquotModel.specimen)\
                             .join(model.Specimen.subject)\
                             .filter_by(uid=our_id)
 
-        return [Aliquot.from_rslt(r) for r in specimen_q.all()]
+        aliquot_q = aliquot_q.order_by(AliquotModel.id.desc())
+        
+        return [Aliquot.from_rslt(r) for r in aliquot_q.all()]
+
+
+    def list_aliquot_by_group(self, protocol_zid=None, subject_zid=None, state=None):
+        """
+        """
+        session = self._session
+        AliquotModel = self._model
+        SpecimenModel = model.Specimen
+        SubjectModel = model.Subject
+        ProtocolModel = model.Protocol
+        aliquot_q = session.query(AliquotModel)                        
+                            
+        if state:
+            aliquot_q = aliquot_q\
+                        .join(AliquotModel.state)\
+                        .filter_by(value=unicode(state))
+                            
+        if protocol_zid or subject_zid:
+            
+            aliquot_q = aliquot_q\
+                            .join(SpecimenModel)
+                            
+            if protocol_zid:
+                aliquot_q = aliquot_q\
+                                .join(ProtocolModel)\
+                                .filter(ProtocolModel.zid==protocol_zid)
+                
+            if subject_zid:
+                aliquot_q = aliquot_q\
+                                .join(SubjectModel)\
+                                .filter(SubjectModel.zid==subject_zid)
+
+                                                    
+        aliquot_q = aliquot_q.order_by(AliquotModel.id.desc())
+
+        return [Aliquot.from_rslt(r) for r in aliquot_q.all()]
+
+
+
+
 
     def put(self, source):
 
