@@ -1,6 +1,7 @@
 """ This is where the querying functionality is going to live.
 """
 from collections import deque as queue
+
 from zope.component import getUtility
 from zope.component import adapts
 from zope.interface import implements
