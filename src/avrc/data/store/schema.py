@@ -44,19 +44,6 @@ from avrc.data.store.datastore import Instance
 #
 virtual = dynamic.create("avrc.data.store.schema.virtual")
 
-#
-# Helper vocabulary for directives
-#
-supported_directives_vocabulary = SimpleVocabulary.fromValues([
-    OMITTED_KEY,
-    WIDGETS_KEY,
-    MODES_KEY,
-    ORDER_KEY,
-    READ_PERMISSIONS_KEY,
-    WRITE_PERMISSIONS_KEY,
-    FIELDSETS_KEY
-    ])
-
 def version(iface):
     """ Helper method to get the interface's version.
 
@@ -72,6 +59,51 @@ def version(iface):
         return iface.__version__
     else:
         raise Exception("%s doesn't extend %s", (iface, interfaces.Schema))
+
+class Range(zope.schema.Tuple):
+    implements(interfaces.IRange)
+
+    __doc__ = interfaces.IRange.__doc__
+
+    def _validate(self, value):
+        """ """
+        super(Range, self)._validate(value)
+
+        try:
+            (low, high) = value
+        except ValueError as e:
+            raise Exception("Range value is invalid: %s" % e)
+
+#
+# Helper vocabulary for directives
+#
+supported_directives_vocabulary = SimpleVocabulary.fromValues([
+    OMITTED_KEY,
+    WIDGETS_KEY,
+    MODES_KEY,
+    ORDER_KEY,
+    READ_PERMISSIONS_KEY,
+    WRITE_PERMISSIONS_KEY,
+    FIELDSETS_KEY
+    ])
+
+#
+# Supported types
+#
+supported_types_vocabulary = SimpleVocabulary.fromItems([
+    ("integer", zope.schema.Int),
+    ("string", zope.schema.TextLine),
+    ("text", zope.schema.Text),
+    ("binary", zope.schema.Bytes),
+    ("boolean", zope.schema.Bool),
+    ("real", zope.schema.Float),
+    ("date", zope.schema.Date),
+    ("datetime", zope.schema.Datetime),
+    ("time", zope.schema.Time),
+    ("object", zope.schema.Object),
+    ("selection", zope.schema.Choice),
+    ("range", Range),
+    ])
 
 class DependencyGenerator(object):
     """ The purpose of this class is to attempt to 'lighten' the load of using

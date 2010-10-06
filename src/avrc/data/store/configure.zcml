@@ -28,7 +28,7 @@
 
   <utility
       name="avrc.data.store.Types"
-      component=".types.supported_types_vocabulary"
+      component=".schema.supported_types_vocabulary"
       provides="zope.schema.interfaces.IVocabulary"
       />
 
