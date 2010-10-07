@@ -134,7 +134,15 @@ class DatastoreEnrollmentManager(DatastoreConventionalManager):
             subject =  self._session.query(model.Subject)\
                           .filter_by(zid = source.subject_zid)\
                           .first()
-            rslt = self._model(zid=source.zid, domain=domain, domain_id=domain.id, subject=subject, subject_id=subject.id, start_date=source.start_date, consent_date=source.consent_date)
+            rslt = self._model(
+                zid=source.zid,
+                domain=domain,
+                domain_id=domain.id,
+                subject=subject,
+                subject_id=subject.id,
+                start_date=source.start_date,
+                consent_date=source.consent_date
+                )
 
             if hasattr(source, 'eid') and source.eid is not None:
                 rslt.eid = source.eid

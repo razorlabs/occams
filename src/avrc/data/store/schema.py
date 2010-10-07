@@ -687,9 +687,9 @@ class DatastoreSchemaManager(object):
                                 order=i
                                 )
 
-                            for j, field_name in enumerate(fieldset_obj.fields, start=1):
+                            for j, name in enumerate(fieldset_obj.fields, 1):
                                 fieldset_rslt.fields.append(model.FieldsetItem(
-                                    name=unicode(field_name),
+                                    name=unicode(name),
                                     order=j
                                     ))
 
