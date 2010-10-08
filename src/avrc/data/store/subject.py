@@ -208,10 +208,13 @@ class Visit(object):
 
     __doc__ = interfaces.IVisit.__doc__
 
-    visit_date = FieldProperty(interfaces.IVisit["visit_date"])
+    zid = FieldProperty(interfaces.IVisit["zid"])
 
-    def __init__(self, visit_date):
-        self.visit_date = visit_date
+    enrollment_zids = FieldProperty(interfaces.IVisit["enrollment_zids"])
+
+    protocol_zids = FieldProperty(interfaces.IVisit["protocol_zids"])
+
+    visit_date = FieldProperty(interfaces.IVisit["visit_date"])
 
 VisitFactory = Factory(
     Visit,
