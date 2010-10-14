@@ -2,10 +2,13 @@
     xmlns="http://namespaces.zope.org/zope"
     i18n_domain="avrc.data.store">
 
+  <!-- Loading autoinclude BREAKS zopepy for some reason, this may be dangerous
+       because the dependent packages aren't being loaded...
+   -->
   <!-- We need this in case we're using this package as a standalone module -->
-  <include package="z3c.autoinclude" file="meta.zcml" />
+  <!--<include package="z3c.autoinclude" file="meta.zcml" />-->
 
-  <includeDependencies package="." />
+  <!--<includeDependencies package="." />-->
 
   <adapter factory=".schema.DatastoreSchemaManager" />
 
