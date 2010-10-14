@@ -4,7 +4,7 @@ import os
 
 setup(
     name="avrc.data.store",
-    version="0.1",
+    version="0.2",
     description="Provides storage solution for sparse clinical study data",
     long_description=open("README.txt").read() + "\n" +
                      open(os.path.join("docs", "HISTORY.txt")).read(),
@@ -32,14 +32,14 @@ setup(
     #       Plone.
     install_requires=[
         "setuptools",
-        # configuration
+        ### configuration
         "z3c.autoinclude",              # <includeDependencies>
-#        # schemata
-#        "plone.alterego",              # virtual name spaces
-#        "plone.autoform",              # form directives
-#        "plone.directives.form",       # dexterity-style z3c form support
-#        "plone.supermodel",            # form directives
-        # sql
+        ### schemata
+        "plone.alterego",              # virtual name spaces
+        "plone.autoform",              # form directives
+        "plone.directives.form",       # dexterity-style z3c form support
+        "plone.supermodel",            # form directives
+        ### sql
         "SQLAlchemy>=0.5.8,<0.5.99",    # SQLAlchemy, don't support >0.6 yet
         "z3c.saconfig",                 # zope session/engine utilities
 #        # Zope 2

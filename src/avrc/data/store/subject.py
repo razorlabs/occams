@@ -3,7 +3,6 @@
 import transaction
 
 from zope.component import adapts
-from zope.component import getUtility
 from zope.schema.fieldproperty import FieldProperty
 from zope.component.factory import Factory
 from zope.interface import implements
@@ -288,3 +287,20 @@ class DatastoreVisitManager(DatastoreConventionalManager):
             visit_rslt.instances.append(obj_rslt)
 
         transaction.commit()
+
+class Protocol(object):
+    implements(interfaces.IProtocol)
+
+    zid = FieldProperty(interfaces.IProtocol['zid'])
+    cycle = FieldProperty(interfaces.IProtocol['cycle'])
+    domain_zid = FieldProperty(interfaces.IProtocol['domain_zid'])
+    threshold = FieldProperty(interfaces.IProtocol['threshold'])
+    is_active = FieldProperty(interfaces.IProtocol['is_active'])
+
+class Domain(object):
+    implements(interfaces.IDomain)
+
+    zid = FieldProperty(interfaces.IDomain['zid'])
+    code = FieldProperty(interfaces.IDomain['code'])
+    title = FieldProperty(interfaces.IDomain['title'])
+    consent_date = FieldProperty(interfaces.IDomain['consent_date'])
