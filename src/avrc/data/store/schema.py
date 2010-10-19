@@ -14,7 +14,6 @@ import zope.schema
 from zope.schema.interfaces import IVocabulary
 from zope.schema.vocabulary import SimpleVocabulary
 from zope.schema.vocabulary import SimpleTerm
-from zope.schema.fieldproperty import FieldProperty
 
 from plone.alterego import dynamic
 
@@ -34,7 +33,6 @@ from plone.supermodel.model import Fieldset
 from avrc.data.store import interfaces
 from avrc.data.store import model
 from avrc.data.store.datastore import named_session
-from avrc.data.store.datastore import Instance
 
 #
 # The generated schemata of the data store will be contained here

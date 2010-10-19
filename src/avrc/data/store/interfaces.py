@@ -6,10 +6,9 @@
     the long term.
 """
 
-from zope.app.container.interfaces import IContained
-from zope.interface import Interface
-from zope.interface import  Attribute
+import zope.interface
 import zope.schema
+from zope.location.interfaces import IContained
 
 from plone.directives import form
 
@@ -35,7 +34,7 @@ class UndefinedSchemaError(Error):
 # API
 # -----------------------------------------------------------------------------
 
-class IComponent(Interface):
+class IComponent(zope.interface.Interface):
     """ Base interface for the components of this package. """
 
 class Versionable(IComponent):
@@ -43,8 +42,9 @@ class Versionable(IComponent):
                    prevent interface property pollution.
     """
 
-    __version__ = Attribute(_(u"This will be used to keep track of the "
-                              u"data store schema as they evolve"))
+    __version__ = zope.interface.Attribute(
+        _(u"This will be used to keep track of the "
+          u"data store schema as they evolve"))
 
 class Formable(IComponent, form.Schema ):
     """ Represents a schema that contains detailed information for display in a
@@ -54,11 +54,14 @@ class Formable(IComponent, form.Schema ):
             prevent interface property pollution.
     """
 
-    __title__ = Attribute(_(u"A way to represent the name of in the form"))
+    __title__ = zope.interface.Attribute(
+        _(u"A way to represent the name of in the form"))
 
-    __description__ = Attribute(_(u"A way to represent the description."))
+    __description__ = zope.interface.Attribute(
+        _(u"A way to represent the description."))
 
-    __dependents__ = Attribute(_(u"Dependent schemata"))
+    __dependents__ = zope.interface.Attribute(
+        _(u"Dependent schemata"))
 
 class Schema(Versionable, Formable):
     """ Marker interface for a schema maintained by the data store. """
@@ -222,20 +225,22 @@ class ISessionFactory(IComponent, IContained):
 class IInstance(IComponent):
     """ Empty object that will be used as the instance of a virtual schema. """
 
-    __id__ = Attribute(_(u"The INTERNAL id of the instance. Tampering or "
-                         u"accessing this id outside of this package is "
-                         u"highly not recommended"))
+    __id__ = zope.interface.Attribute(
+        _(u"The INTERNAL id of the instance. Tampering or "
+          u"accessing this id outside of this package is "
+          u"highly not recommended"))
 
-    title = Attribute(_(u"The instance's database-unique name"))
+    title = zope.interface.Attribute(_(u"The instance's database-unique name"))
 
-    description = Attribute(_("A description for the object"))
+    description = zope.interface.Attribute(_("A description for the object"))
 
 class IKey(IComponent):
     """ Ideally, this interface should be used to somehow manage identifiers for
         the managers. But, in it's current state this interface is unused...
     """
 
-    value = Attribute(_(u"A way to distinguish this item in the data store"))
+    value = zope.interface.Attribute(
+        _(u"A way to distinguish this item in the data store"))
 
 class IDomain(IComponent):
     """ """

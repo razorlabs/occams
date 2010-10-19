@@ -1,7 +1,7 @@
-from pprint import pprint
 import unittest
 
-from zope.testing import doctestunit
+from pprint import pprint
+
 from zope.component import testing
 from Testing import ZopeTestCase as ztc
 

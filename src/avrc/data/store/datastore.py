@@ -2,13 +2,11 @@
 """
 from collections import deque as queue
 from time import time as currenttime
-from datetime import datetime, date, time
+from datetime import datetime, date
 import logging
 
-from zope.component import getSiteManager
 from zope.component import provideUtility
 from zope.component import getUtility
-from zope.component import queryUtility
 from zope.component import adapter
 from zope.component.factory import Factory
 from zope.interface import implements
@@ -22,8 +20,6 @@ import zope.schema
 from zope.schema.interfaces import IVocabulary
 from zope.schema.fieldproperty import FieldProperty
 import zope.interface
-import sqlalchemy as sa
-from sqlalchemy import orm
 
 from z3c.saconfig import named_scoped_session
 

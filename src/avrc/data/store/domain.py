@@ -1,8 +1,7 @@
-""" Contains how to: domain and protoco
+""" Contains how to: domain and protocol
 """
 import transaction
 from zope.component import adapts
-from zope.component import getUtility
 from zope.schema.fieldproperty import FieldProperty
 from zope.component.factory import Factory
 from zope.interface import implements
