@@ -481,7 +481,7 @@ class Datastore(object):
 
                     instance_rslt = model.Instance(
                         schema=schema_rslt,
-                        title=u"%s-%d" % (schema_rslt.specification.name,
+                        title=u"%s-%f" % (schema_rslt.specification.name,
                                           currenttime()),
                         description=u""
                         )
