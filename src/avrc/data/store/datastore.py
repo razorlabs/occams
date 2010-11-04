@@ -31,7 +31,7 @@ class Datastore(object):
     # hidden session name, don't want anyone messing with it
     _session = FieldProperty(interfaces.IDatastore["session"])
 
-    def __init__(self, session=None, **kw):
+    def __init__(self, session=u"", **kw):
         """ Instantiates the data store implementation. Also notifies listeners
             that this object has been created.
 
