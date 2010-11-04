@@ -32,7 +32,6 @@ from plone.supermodel.model import Fieldset
 
 from avrc.data.store import interfaces
 from avrc.data.store import model
-from avrc.data.store.datastore import named_session
 
 #
 # The generated schemata of the data store will be contained here
@@ -137,7 +136,7 @@ class DatastoreSchemaManager(object):
         #
         #  TODO: (mmartinez) support versioning?
         #
-        Session = named_session(self._datastore)
+        Session = self._datastore.getScopedSession()
         session  = Session()
 
         names = queue([])
@@ -184,7 +183,7 @@ class DatastoreSchemaManager(object):
         interfaces.ISchemaManager["get_descendants"].__doc__
 
     def get_children(self, ibase):
-        Session = named_session(self._datastore)
+        Session = self._datastore.getScopedSession()
         session  = Session()
 
         names = queue([])
@@ -237,7 +236,7 @@ class DatastoreSchemaManager(object):
 
         types = getUtility(IVocabulary, "avrc.data.store.Types")
 
-        Session = named_session(self._datastore)
+        Session = self._datastore.getScopedSession()
         session = Session()
 
         schema_q = session.query(model.Schema)\
@@ -431,7 +430,7 @@ class DatastoreSchemaManager(object):
     get.__doc__ = interfaces.ISchemaManager["get"].__doc__
 
     def get_children_names(self, ibase):
-        Session = named_session(self._datastore)
+        Session = self._datastore.getScopedSession()
         session  = Session()
 
         names = queue([])
@@ -475,7 +474,7 @@ class DatastoreSchemaManager(object):
         (name, version) = key
         name = unicode(name)
 
-        Session = named_session(self._datastore)
+        Session = self._datastore.getScopedSession()
         session = Session()
 
         schema_q = session.query(model.Schema)\
@@ -498,7 +497,7 @@ class DatastoreSchemaManager(object):
             value=schema_rslt.specification.name)
 
     def has(self, key):
-        Session = named_session(self._datastore)
+        Session = self._datastore.getScopedSession()
         session = Session()
         name = unicode(key)
         num = session.query(model.Specification).filter_by(name=name).count()
@@ -507,7 +506,7 @@ class DatastoreSchemaManager(object):
     has.__doc__ = interfaces.ISchemaManager["has"].__doc__
 
     def keys(self):
-        Session = named_session(self._datastore)
+        Session = self._datastore.getScopedSession()
         session = Session()
         keys = session.query(model.Specification.name).all()
         return list(itertools.chain.from_iterable(keys))
@@ -523,7 +522,7 @@ class DatastoreSchemaManager(object):
         types = getUtility(IVocabulary, "avrc.data.store.Types")
         directives = getUtility(IVocabulary, "avrc.data.store.Directives")
 
-        Session = named_session(self._datastore)
+        Session = self._datastore.getScopedSession()
         session = Session()
 
 
@@ -708,7 +707,7 @@ class DatastoreSchemaManager(object):
     put.__doc__ = interfaces.ISchemaManager["put"].__doc__
 
     def purge(self, key):
-        Session = named_session(self._datastore)
+        Session = self._datastore.getScopedSession()
         session = Session()
 
 

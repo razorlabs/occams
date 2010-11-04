@@ -182,45 +182,64 @@ class ISchemaManager(IManager):
                 list of interfaces that extend the specified base
         """
 
-class IDatastore(IManager, IContained):
+class IDatastore(IManager):
     """ Represents a data store utility that can be added to a site. It is in
         charge of managing the entire network of data that will be created from
-        schemata, etc.
+        schemata, etc. It achieves this by using registered helper utilities
+        that it adapts into called "managers".
     """
 
-    title = zope.schema.TextLine(
-        title=_(u"Title"),
-        description=_(u"A human readable title for this data store."),
+    session = zope.schema.TextLine(
+        title=_(u"Session Utility Name"),
+        description=_(u"The name of the z3c.saconfig session to use."),
         required=True
         )
 
-    dsn = zope.schema.TextLine(
-        title=_(u"Data Source Name"),
-        description=_(u"URL of the database to use for physical storage."),
-        required=False
-        )
-
-    session_name = zope.schema.TextLine(
-        title=_(u"Session Utility Name"),
-        description=_(u"A z3c.saconfig session to use. (Overrides DSN)"),
-        required=False
-        )
-
     def spawn(iface, **kw):
-        """
-        Generates an object that implements the specified schema
+        """ Generates an object that implements the specified schema
         """
 
-class ISessionFactory(IComponent, IContained):
-    """ Used for implementing our own SQLAlchemy session. The reason for using
-        our own Interface instead of a third party's such as z3c.saconfig is
-        because we need more control over our session (e.g. need multiple
-        engines per Session as opposed to the single engine allowed by
-        z3c.saconfig"
-    """
+    def getManager(imanager):
+        """ Get the specified management utility assigned to this datastore.
 
-    def __call__():
-        """ Returns the generated SQLAlchemy Session """
+            Arguments:
+                imanager: (object) zope interface specification of the utility
+                    to retrieve
+            Returns:
+                A management utility that implements the request specification
+        """
+
+    def getAliquotManager():
+        """
+        """
+
+    def getSpecimenManager():
+        """
+        """
+
+    def getDomainManager():
+        """
+        """
+
+    def getEnrollmentManager():
+        """
+        """
+
+    def getProtocolManager():
+        """
+        """
+
+    def getSchemaManager():
+        """
+        """
+
+    def getSubjectManager():
+        """
+        """
+
+    def getVisitManager():
+        """
+        """
 
 class IInstance(IComponent):
     """ Empty object that will be used as the instance of a virtual schema. """

@@ -2,9 +2,12 @@
     xmlns="http://namespaces.zope.org/zope"
     i18n_domain="avrc.data.store">
 
-  <!-- Load the zope component directives, that's all we really need -->
+  <!-- Load the Zope component directives, that's all we really need from
+       the component architecture. Everything else that is used in this 
+       module is loaded as a package.
+    -->
   <include package="zope.component" file="meta.zcml"/>
-
+  
   <adapter factory=".schema.DatastoreSchemaManager" />
   <adapter factory=".domain.DatastoreDomainManager" />
   <adapter factory=".subject.DatastoreSubjectManager" />
@@ -13,10 +16,6 @@
   <adapter factory=".subject.DatastoreEnrollmentManager" />
   <adapter factory=".specimen.DatastoreSpecimenManager" />
   <adapter factory=".specimen.DatastoreAliquotManager" />
-
-  <!-- Handle when a Site adds an engine -->
-  <subscriber handler=".datastore.handleDatastoreCreated" />
-  <subscriber handler=".datastore.handleDatastoreRemoved" />
 
   <utility
       name="avrc.data.store.Datastore"

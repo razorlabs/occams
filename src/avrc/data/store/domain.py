@@ -6,10 +6,9 @@ from zope.schema.fieldproperty import FieldProperty
 from zope.component.factory import Factory
 from zope.interface import implements
 
+from avrc.data.store import MessageFactory as _
 from avrc.data.store import interfaces
 from avrc.data.store import model
-from avrc.data.store import MessageFactory as _
-from avrc.data.store.datastore import named_session
 from avrc.data.store._utils import DatastoreConventionalManager
 
 class Domain(object):
@@ -45,8 +44,6 @@ class DatastoreDomainManager(DatastoreConventionalManager):
         self._datastore = datastore
         self._model = model.Domain
         self._type = Domain
-        Session = named_session(self._datastore)
-        self._session = Session()
 
     def putProperties(self, rslt, source):
         """ Add the items from the source to ds """
@@ -92,11 +89,9 @@ class DatastoreProtocolManager(DatastoreConventionalManager):
         self._datastore = datastore
         self._model = model.Protocol
         self._type = Protocol
-        Session = named_session(self._datastore)
-        self._session = Session()
 
     def put(self, source):
-        Session = named_session(self._datastore)
+        Session = self._datastore.getScopedSession()
         session = Session()
 
         is_new = False

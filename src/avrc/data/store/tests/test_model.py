@@ -9,8 +9,7 @@ from avrc.data.store import model
 Session = orm.scoped_session(orm.sessionmaker(
     autoflush=False,
     autocommit=False,
-    # doesn't work in sqlite =\
-#    twophase=True
+    twophase=True
     ))
 
 dsn = "sqlite:///:memory:"

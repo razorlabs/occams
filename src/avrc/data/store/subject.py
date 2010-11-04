@@ -11,7 +11,6 @@ from avrc.data.store._utils import DatastoreConventionalManager
 from avrc.data.store import interfaces
 from avrc.data.store import model
 from avrc.data.store import MessageFactory as _
-from avrc.data.store.datastore import named_session
 
 class Subject(object):
     implements(interfaces.ISubject)
@@ -43,8 +42,6 @@ class DatastoreSubjectManager(DatastoreConventionalManager):
         self._datastore = datastore
         self._model = model.Subject
         self._type = Subject
-        Session = named_session(self._datastore)
-        self._session = Session()
 
     def putProperties(self, rslt, source):
         """ Add the items from the source to ds """
@@ -55,7 +52,9 @@ class DatastoreSubjectManager(DatastoreConventionalManager):
 
     def getEnteredDataOfType(self, subject, type):
         """ Get all of the data entered for a visit """
-        instance_rslt = self._session.query(model.Instance)\
+        Session = self._datastore.getScopedSession()
+        session = Session()
+        instance_rslt = session.query(model.Instance)\
                                       .join(self._model.instances)\
                                       .filter(self._model.zid==subject.zid)\
                                       .join(model.Schema)\
@@ -70,13 +69,14 @@ class DatastoreSubjectManager(DatastoreConventionalManager):
 
     def add_instances(self, subject, obj_or_list):
         """ ??!? """
-
-        subject_rslt = self._session.query(self._model)\
+        Session = self._datastore.getScopedSession()
+        session = Session()
+        subject_rslt = session.query(self._model)\
                                   .filter_by(zid=subject.zid)\
                                   .first()
 
         for obj in obj_or_list:
-            obj_rslt = self._session.query(model.Instance)\
+            obj_rslt = session.query(model.Instance)\
                                     .filter_by(title=obj.title)\
                                     .first()
             subject_rslt.instances.append(obj_rslt)
@@ -117,20 +117,19 @@ class DatastoreEnrollmentManager(DatastoreConventionalManager):
         self._datastore = datastore
         self._model = model.Enrollment
         self._type = Enrollment
-        Session = named_session(self._datastore)
-        self._session = Session()
 
 
     def put(self, source):
-
-        rslt = self._session.query(self._model)\
+        Session = self._datastore.getScopedSession()
+        session = Session()
+        rslt = session.query(self._model)\
                       .filter_by(zid=source.zid)\
                       .first()
         if rslt is None:
-            domain = self._session.query(model.Domain)\
+            domain = session.query(model.Domain)\
                           .filter_by(zid=source.domain_zid)\
                           .first()
-            subject =  self._session.query(model.Subject)\
+            subject =  session.query(model.Subject)\
                           .filter_by(zid = source.subject_zid)\
                           .first()
             rslt = self._model(
@@ -146,7 +145,7 @@ class DatastoreEnrollmentManager(DatastoreConventionalManager):
             if hasattr(source, 'eid') and source.eid is not None:
                 rslt.eid = source.eid
 
-            self._session.add(rslt)
+            session.add(rslt)
         else:
         # won't update the code
             rslt = self.putProperties(rslt, source)
@@ -167,7 +166,8 @@ class DatastoreEnrollmentManager(DatastoreConventionalManager):
         """ Utility method for retrieving objects based on the enrollment and
             (optionally) based on when it was collected.
         """
-        session = self._session
+        Session = self._datastore.getScopedSession()
+        session = Session()
 
         search_q = session.query(model.Instance.id)\
                 .join(model.visit_instance_table)\
@@ -230,25 +230,28 @@ class DatastoreVisitManager(DatastoreConventionalManager):
         self._datastore = datastore
         self._model = model.Visit
         self._type = Visit
-        Session = named_session(self._datastore)
-        self._session = Session()
+
 
     def putProperties(self, rslt, source):
         """ Add the items from the source to ds """
+        Session = self._datastore.getScopedSession()
+        session = Session()
         rslt.visit_date = source.visit_date
         for enrollment_zid in source.enrollment_zids:
-            rslt.enrollments.append(self._session.query(model.Enrollment)\
+            rslt.enrollments.append(session.query(model.Enrollment)\
                       .filter_by(zid=enrollment_zid)\
                       .first())
 
         for protocol_zid in source.protocol_zids:
-            rslt.protocols.append(self._session.query(model.Protocol)\
+            rslt.protocols.append(session.query(model.Protocol)\
                       .filter_by(zid=protocol_zid)\
                       .first())
 
     def getEnteredData(self, visit):
         """ Get all of the data entered for a visit """
-        instances_rslt = self._session.query(model.Instance)\
+        Session = self._datastore.getScopedSession()
+        session = Session()
+        instances_rslt = session.query(model.Instance)\
                                       .join(self._model.instances)\
                                       .filter(self._model.zid==visit.zid)\
                                       .all()
@@ -262,7 +265,9 @@ class DatastoreVisitManager(DatastoreConventionalManager):
 
     def getEnteredDataOfType(self, visit, type):
         """ Get all of the data entered for a visit """
-        instance_rslt = self._session.query(model.Instance)\
+        Session = self._datastore.getScopedSession()
+        session = Session()
+        instance_rslt = session.query(model.Instance)\
                                       .join(self._model.instances)\
                                       .filter(self._model.zid==visit.zid)\
                                       .join(model.Schema)\
@@ -275,13 +280,14 @@ class DatastoreVisitManager(DatastoreConventionalManager):
 
     def add_instances(self, visit, obj_or_list):
         """ ??!? """
-
-        visit_rslt = self._session.query(self._model)\
+        Session = self._datastore.getScopedSession()
+        session = Session()
+        visit_rslt = session.query(self._model)\
                                   .filter_by(zid=visit.zid)\
                                   .first()
 
         for obj in obj_or_list:
-            obj_rslt = self._session.query(model.Instance)\
+            obj_rslt = session.query(model.Instance)\
                                     .filter_by(title=obj.title)\
                                     .first()
             visit_rslt.instances.append(obj_rslt)

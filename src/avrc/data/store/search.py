@@ -34,7 +34,7 @@ class SearchMonkey(object):
         """
         object_list = []
 
-        Session = named_session(self._datastore)
+        Session = self._datastore.getScopedSessio()
         session = Session()
 
         version = None

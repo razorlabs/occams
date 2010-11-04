@@ -11,7 +11,6 @@ from zope.interface import implements
 from avrc.data.store._utils import DatastoreConventionalManager
 from avrc.data.store import interfaces
 from avrc.data.store import model
-from avrc.data.store.datastore import named_session
 
 class Specimen(object):
     implements(interfaces.ISpecimen)
@@ -56,14 +55,13 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
         self._datastore = datastore
         self._model = model.Specimen
         self._type = Specimen
-        Session = named_session(self._datastore)
-        self._session = Session()
 
     def putProperties(self, rslt, source):
         """ Add the items from the source to ds """
 
     def get(self, key):
-        session = self._session
+        Session = self._datastore.getScopedSession()
+        session = Session()
         SpecimenModel = self._model
 
         specimen_rslt = session.query(SpecimenModel)\
@@ -81,7 +79,8 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
             Returns:
                 SimpleVocabulary object
         """
-        session = self._session
+        Session = self._datastore.getScopedSession()
+        session = Session()
 
         term_list = []
         term_q = session.query(model.SpecimenAliquotTerm)\
@@ -96,9 +95,25 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
 
         return SimpleVocabulary(term_list)
 
+    def setupVocabulary(self, vocabularies):
+        Session = self._datastore.getScopedSession()
+        session = Session()
+
+        for vocabulary_name, vocabulary_obj in vocabularies.items():
+            for term_obj in vocabulary_obj:
+                session.add(model.SpecimenAliquotTerm(
+                    vocabulary_name=unicode(vocabulary_name),
+                    title=term_obj.title and unicode(term_obj.title) or None,
+                    token=unicode(term_obj.token),
+                    value=unicode(term_obj.value)
+                    ))
+
+        transaction.commit()
+
     def list_by_state(self, state, before_date=None, after_date=None):
         """ """
-        session = self._session
+        Session = self._datastore.getScopedSession()
+        session = Session()
         SpecimenModel = self._model
 
         specimen_q = session.query(SpecimenModel)\
@@ -123,7 +138,8 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
                                state=None,
                                specimen_type=None):
         """ """
-        session = self._session
+        Session = self._datastore.getScopedSession()
+        session = Session()
         SpecimenModel = self._model
         SubjectModel = model.Subject
         ProtocolModel = model.Protocol
@@ -156,7 +172,8 @@ class DatastoreSpecimenManager(DatastoreConventionalManager):
 
     def put(self, source):
 
-        session = self._session
+        Session = self._datastore.getScopedSession()
+        session = Session()
         SpecimenModel = self._model
 
         # Find the 'vocabulary' objects for the database relation
@@ -295,14 +312,13 @@ class DatastoreAliquotManager(DatastoreConventionalManager):
         self._datastore = datastore
         self._model = model.Aliquot
         self._type = Aliquot
-        Session = named_session(self._datastore)
-        self._session = Session()
 
     def putProperties(self, rslt, source):
         """ Add the items from the source to ds """
 
     def get(self, key):
-        session = self._session
+        Session = self._datastore.getScopedSession()
+        session = Session()
         AliquotModel = self._model
 
         aliquot_rslt = session.query(AliquotModel)\
@@ -313,7 +329,8 @@ class DatastoreAliquotManager(DatastoreConventionalManager):
 
     def list_by_state(self, state, our_id=None):
         """ """
-        session = self._session
+        Session = self._datastore.getScopedSession()
+        session = Session()
         AliquotModel = self._model
 
         aliquot_q = session.query(AliquotModel)\
@@ -335,7 +352,8 @@ class DatastoreAliquotManager(DatastoreConventionalManager):
                               subject_zid=None,
                               state=None):
         """ """
-        session = self._session
+        Session = self._datastore.getScopedSession()
+        session = Session()
         AliquotModel = self._model
         SpecimenModel = model.Specimen
         SubjectModel = model.Subject
@@ -369,7 +387,8 @@ class DatastoreAliquotManager(DatastoreConventionalManager):
 
     def put(self, source):
 
-        session = self._session
+        Session = self._datastore.getScopedSession()
+        session = Session()
         AliquotModel = self._model
 
         # Find the 'vocabulary' objects for the database relation

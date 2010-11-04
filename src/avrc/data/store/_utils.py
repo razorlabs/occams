@@ -2,10 +2,8 @@
 """
 import transaction
 
-from zope.interface import implements
 from zope.component import createObject
 
-from avrc.data.store.datastore import named_session
 from avrc.data.store import interfaces
 
 class DatastoreConventionalManager(object):
@@ -19,8 +17,6 @@ class DatastoreConventionalManager(object):
         self._datastore = datastore
         self._model = model
         self._type = type
-        Session = named_session(self._datastore)
-        self._session = Session()
 
     def has(self, key):
         pass
@@ -34,8 +30,9 @@ class DatastoreConventionalManager(object):
         raise NotImplementedError("Subclasses must implement putProperties")
 
     def get(self, key):
-
-        rslt = self._session.query(self._model)\
+        Session = self._datastore.getScopedSession()
+        session = Session()
+        rslt = session.query(self._model)\
                       .filter_by(zid=key)\
                       .first()
         newObj = self._type()
@@ -46,14 +43,15 @@ class DatastoreConventionalManager(object):
     get.__doc__ = interfaces.IConventionalManager["get"].__doc__
 
     def put(self, source):
-
-        rslt = self._session.query(self._model)\
+        Session = self._datastore.getScopedSession()
+        session = Session()
+        rslt = session.query(self._model)\
                       .filter_by(zid=source.zid)\
                       .first()
 
         if rslt is None:
             rslt = self._model(zid=source.zid)
-            self._session.add(rslt)
+            session.add(rslt)
 
         # won't update the code
         rslt = self.putProperties(rslt, source)
@@ -73,21 +71,23 @@ class DatastoreConventionalManager(object):
     restore.__doc__ = interfaces.IConventionalManager["restore"].__doc__
 
     def purge(self, source):
-
-        rslt = self._session.query(self._model)\
+        Session = self._datastore.getScopedSession()
+        session = Session()
+        rslt = session.query(self._model)\
                       .filter_by(zid=source.zid)\
                       .first()
 
         if rslt is not None:
-            self._session.remove(rslt)
+            session.remove(rslt)
         transaction.commit()
 
     purge.__doc__ = interfaces.IConventionalManager["purge"].__doc__
 
     def keys(self):
         listing = []
-
-        for rslt in self._session.query(self._model).all():
+        Session = self._datastore.getScopedSession()
+        session = Session()
+        for rslt in session.query(self._model).all():
             newObj = createObject(self._type)
             newObj = self.putProperties(newObj, rslt)
             listing.append(newObj)

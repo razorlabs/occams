@@ -1,141 +1,57 @@
 import unittest
 
-from pprint import pprint
+import transaction
+import zope.component.testing
+from zope.configuration import xmlconfig
+from zope.interface.verify import verifyClass
 
-from zope.component import testing
-from Testing import ZopeTestCase as ztc
-
-from Products.Five import zcml
-from Products.Five import fiveconfigure
-from Products.PloneTestCase import PloneTestCase as ptc
-from Products.PloneTestCase.layer import PloneSite
-ptc.setupPloneSite()
-
-from zope.app.folder import rootFolder
-from zope.app.component.site import SiteManagerContainer, LocalSiteManager
-from zope.app.component.site import setSite
-from zope.component import createObject
-from zope.component import getUtility
-from zope.interface import verify
+from z3c.saconfig import EngineFactory
+from z3c.saconfig import GloballyScopedSession
+from z3c.saconfig.interfaces import IEngineFactory
+from z3c.saconfig.interfaces import IScopedSession
 
 import avrc.data.store
 from avrc.data.store import interfaces
 from avrc.data.store import datastore
-from avrc.data.store import model
-from avrc.data.store.datastore import named_session
 
-from avrc.data.store.tests import samples
+from avrc.data.store.tests import testing
 
-class TestCase(ptc.PloneTestCase):
-    class layer(PloneSite):
-        @classmethod
-        def setUp(cls):
-            fiveconfigure.debug_mode = True
-            zcml.load_config('configure.zcml', avrc.data.store)
-            fiveconfigure.debug_mode = False
+class TestCase(unittest.TestCase):
 
-        @classmethod
-        def tearDown(cls):
-            pass
+    def setUp(self):
+        zope.component.testing.setUp(self)
+        engine_factory = EngineFactory(u"sqlite:///:memory:")
+        ScopedSession = GloballyScopedSession()
+        zope.component.provideUtility(engine_factory, provides=IEngineFactory)
+        zope.component.provideUtility(ScopedSession, provides=IScopedSession)
+
+        xmlconfig.file(u"configure.zcml", avrc.data.store)
+
+    def tearDown(self):
+        zope.component.testing.tearDown(self)
+
+class DatastoreTestCase(TestCase):
 
     def test_implementation(self):
+        """ Tests if the data store implementation has fully objected the
+            interface contract.
         """
-        Tests if the data store implementation has fully objected the interface
-        contract
-        """
-        self.assertTrue(verify.verifyClass(interfaces.IDatastore,
-                                           datastore.Datastore))
-
-    def test_build(self):
-        """
-        Passes if the database gets built.
-        """
-        dsn = u"sqlite:///:memory:"
-        ds = createObject("avrc.data.store.Datastore", title=u"my ds", dsn=dsn)
-
-        self.assertTrue(ds is not None)
-
-    def test_multi_site(self):
-        """
-        Test that the DataStore is able to handle being added to multiple sites
-        without mixing the underlying database engines and session.
-        """
-
-        root = rootFolder()
-
-        root[u"site1"] = site1 = SiteManagerContainer()
-        root[u"site2"] = site2 = SiteManagerContainer()
-
-        self.assertNotEqual(site1, site2, u"Site containers must be different.")
-
-        site1.setSiteManager(LocalSiteManager(site1))
-        site2.setSiteManager(LocalSiteManager(site2))
-
-        sm1 = site1.getSiteManager()
-        sm2 = site2.getSiteManager()
-
-        self.assertNotEqual(sm1, sm2, u"Site managers must be different.")
-
-        sm1.registerUtility(component=datastore.Datastore(
-                                  title=u"ds1",
-                                  dsn=u"sqlite:///:memory:"),
-                            provided=interfaces.IDatastore)
-        sm2.registerUtility(component=datastore.Datastore(
-                                  title=u"ds2",
-                                  dsn=u"sqlite:///:memory:"),
-                            provided=interfaces.IDatastore)
-
-        setSite(site1)
-        ds1 = getUtility(interfaces.IDatastore)
-
-        setSite(site2)
-        ds2 = getUtility(interfaces.IDatastore)
-
-        self.assertNotEqual(ds1, ds2)
-
-        setSite(site1)
-        ds = getUtility(interfaces.IDatastore)
-        Session = named_session(ds)
-        session = Session()
-
-        session.add(model.Type(title=u"FOO"))
-        session.commit()
-
-        p = session.query(model.Type).filter_by(title=u"FOO").first()
-        self.assertTrue(p is not None, "No person found in first database")
-
-        p = session.query(model.Type).filter_by(title=u"BAR").first()
-        self.assertTrue(p is None, "Databases engines are mixed up.")
-
-        setSite(site2)
-        ds = getUtility(interfaces.IDatastore)
-        Session = named_session(ds)
-        session = Session()
-
-        session.add(model.Type(title=u"BAR"))
-        session.commit()
-
-        p = session.query(model.Type).filter_by(title=u"BAR").first()
-        self.assertTrue(p is not None, "No person found in first database")
-
-        p = session.query(model.Type).filter_by(title=u"FOO").first()
-        self.assertTrue(p is None, "Databases engines are mixed up.")
+        iface = interfaces.IDatastore
+        impl = datastore.Datastore
+        self.assertTrue(verifyClass(iface, impl))
 
     def test_add_instance(self):
+        """ Tests that data store is able to successfully add an object instance
         """
-        Tests that data store is able to successfully add an object instance
-        """
-        #dsn = u"sqlite:///test.db"
-        dsn = u"sqlite:///:memory:"
-        ds = createObject("avrc.data.store.Datastore", title=u"my ds", dsn=dsn)
+        ds = datastore.Datastore(session=u"")
 
-        sm = ds.schemata
+        sm = ds.getSchemaManager()
 
-        sm.put(samples.IStandaloneInterface)
-        sm.put(samples.ISimple)
-        sm.put(samples.IAnnotatedInterface)
+        sm.put(testing.IStandaloneInterface)
+        sm.put(testing.ISimple)
+        sm.put(testing.IAnnotatedInterface)
 
-        iface = sm.get(samples.IStandaloneInterface.__name__)
+        iface = sm.get(testing.IStandaloneInterface.__name__)
 
         obj = ds.spawn(iface,
             foo=u"Hello World!",
@@ -147,51 +63,16 @@ class TestCase(ptc.PloneTestCase):
 
         ds.get("avrc.data.store.schema.virtual.IStandaloneInterface")
 
-        self.fail("OMG")
-
-    def test_directives(self):
-        dsn = u"sqlite:///test.db"
-        #dsn = u"sqlite:///:memory:"
-        ds = createObject("avrc.data.store.Datastore", title=u"my ds", dsn=dsn)
-
-        sm = ds.schemata
-
-        sm.put(samples.IAnnotatedInterface)
-
-        from pprint import pprint
-
-        print
-        print "Original"
-        for tag in samples.IAnnotatedInterface.getTaggedValueTags():
-            print tag
-            pprint(samples.IAnnotatedInterface.getTaggedValue(tag))
-
-
-        pprint(samples.IAnnotatedInterface.getTaggedValue("__form_directive_values__")["plone.supermodel.fieldsets"][0].__dict__)
-
-        iface = sm.get(samples.IAnnotatedInterface.__name__)
-
-        print
-        print "Generated"
-        for tag in iface.getTaggedValueTags():
-            print tag
-            pprint(iface.getTaggedValue(tag))
-
-
-        self.fail("OMG")
-
     def test_choiced_instance(self):
         """
         """
-        #dsn = u"sqlite:///test.db"
-        dsn = u"sqlite:///:memory:"
-        ds = createObject("avrc.data.store.Datastore", title=u"my ds", dsn=dsn)
+        ds = datastore.Datastore(session=u"")
 
         sm = ds.schemata
 
-        sm.put(samples.IChoicedInterface)
+        sm.put(testing.IChoicedInterface)
 
-        iface = sm.get(samples.IChoicedInterface.__name__)
+        iface = sm.get(testing.IChoicedInterface.__name__)
 
         obj = ds.spawn(iface, choice=u"foo")
 
@@ -199,64 +80,11 @@ class TestCase(ptc.PloneTestCase):
 
         self.fail("OMG")
 
-
-    def test_dependents(self):
-        """
-        """
-        #dsn = u"sqlite:///test.db"
-        dsn = u"sqlite:///:memory:"
-        ds = createObject("avrc.data.store.Datastore", title=u"my ds", dsn=dsn)
-
-        sm = ds.schemata
-
-        sm.put(samples.ISimple)
-        sm.put(samples.IStandaloneInterface)
-        sm.put(samples.IDependentInterface)
-
-        iface = sm.get(samples.IDependentInterface.__name__)
-
-        for dependent in iface.__dependents__:
-            print dependent
-
-        #ds.put(obj)
-
-        self.fail("OMG")
-
-    def test_inheritance(self):
-        """
-        """
-        dsn = u"sqlite:///test.db"
-        #dsn = u"sqlite:///:memory:"
-        ds = createObject("avrc.data.store.Datastore", title=u"blah", dsn=dsn)
-        sm = ds.schemata
-
-        sm.put(samples.IGrandfather)
-        sm.put(samples.IGrandmother)
-        sm.put(samples.IFather)
-        sm.put(samples.IUncle)
-        sm.put(samples.IAunt)
-        sm.put(samples.IBrother)
-        sm.put(samples.ISister)
-
-        iface = sm.get(samples.IGrandfather.__name__)
-        descendants = sm.get_descendants(iface)
-
-        print str(iface) + " " + str(iface.getBases())
-        print "descendants:"
-        for descendant in descendants:
-            print str(descendant) + " " + str(descendant.getBases())
-
-        print
-
-        self.fail("Inheritance test complete")
-
     def test_update_data(self):
-        dsn = u"sqlite:///test.db"
-        #dsn = u"sqlite:///:memory:"
-        ds = createObject("avrc.data.store.Datastore", title=u"blah", dsn=dsn)
+        ds = datastore.Datastore(session=u"")
         sm = ds.schemata
 
-        isource = samples.IStandaloneInterface
+        isource = testing.IStandaloneInterface
 
         sm.put(isource)
 
@@ -295,16 +123,13 @@ class TestCase(ptc.PloneTestCase):
 
         self.fail("List interface test complete")
 
-
     def test_list_schemata(self):
-        dsn = u"sqlite:///test.db"
-        #dsn = u"sqlite:///:memory:"
-        ds = createObject("avrc.data.store.Datastore", title=u"blah", dsn=dsn)
+        ds = datastore.Datastore(session=u"")
         sm = ds.schemata
 
-        sm.put(samples.IListInterface)
+        sm.put(testing.IListInterface)
 
-        iface = sm.get(samples.IListInterface.__name__)
+        iface = sm.get(testing.IListInterface.__name__)
 
         obj = ds.put(ds.spawn(iface, int_list=[1,5,10], choice_list=["foo", "baz"]))
 
@@ -313,24 +138,6 @@ class TestCase(ptc.PloneTestCase):
         print gotten.__dict__
 
         self.fail("List interface test complete")
-
-    def test_search(self):
-        """
-        """
-        dsn = u"sqlite:///test.db"
-        #dsn = u"sqlite:///:memory:"
-        ds = createObject("avrc.data.store.Datastore", title=u"blah", dsn=dsn)
-
-        ds.schema.put(samples.IStandaloneInterface)
-
-        # just get everything
-        results_obj = ds.search.by_base(4, 10)
-
-        print
-        print results_obj
-        print
-
-        self.fail("Search Complete")
 
 def test_suite():
     return unittest.defaultTestLoader.loadTestsFromName(__name__)

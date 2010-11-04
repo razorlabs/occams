@@ -1,296 +1,150 @@
-""" Datastore implementation module as supporting utilities.
+""" Datastore implementation module and supporting utilities.
 """
 from collections import deque as queue
 from time import time as currenttime
-from datetime import datetime, date
-import logging
+from datetime import date
+from datetime import datetime
 
-from zope.component import provideUtility
+import transaction
 from zope.component import getUtility
-from zope.component import adapter
 from zope.component.factory import Factory
+from zope.deprecation import deprecate
+import zope.interface
 from zope.interface import implements
 from zope.interface import providedBy
 from zope.interface import directlyProvides
-from zope.event import notify
-from zope.lifecycleevent import ObjectCreatedEvent
-from zope.lifecycleevent import IObjectCreatedEvent
-from zope.lifecycleevent import IObjectRemovedEvent
 import zope.schema
-from zope.schema.interfaces import IVocabulary
 from zope.schema.fieldproperty import FieldProperty
-import zope.interface
 
-from z3c.saconfig import named_scoped_session
+import z3c.saconfig
 
 from avrc.data.store import MessageFactory as _
-from avrc.data.store import model
+from avrc.data.store import Logger as log
 from avrc.data.store import interfaces
-
-import transaction
-
-log = logging.getLogger(__name__)
-
-_ECHO_ENABLED = False
-
-_DS_FMT = u"<Datastore '%s'>"
-
-def session_name_format(datastore):
-    """ Helper method to format a session name corresponding to the data store.
-
-        Arguments:
-            datastore: (object) an object implementing IDatastore
-        Returns:
-            A string to use as the session utility name.
-    """
-    return "%s:session" % str(datastore)
-
-def named_session(datastore):
-    """ Evaluates the session being used by the given data store.
-
-        Arguments:
-            datastore: (object) an object implementing IDatastore
-        Returns:
-            A sqlalchemy Session factory.
-    """
-    return named_scoped_session(datastore.session_name)
-#
-#    return datastore.getSession()
-
-def setup_types(datastore):
-    """ Helper method to setup up built-in supported types.
-
-        Arguments:
-            datastore: (object) an object implementing IDatastore
-        Returns:
-            N/A
-    """
-    rslt = []
-    Session = named_session(datastore)
-    session = Session()
-
-    types = getUtility(zope.schema.interfaces.IVocabulary,
-                       "avrc.data.store.Types")
-
-    for t in list(types):
-        num = session.query(model.Type)\
-                .filter_by(title=unicode(t.token))\
-                .count()
-
-        if not num:
-            rslt.append(model.Type(
-                title=unicode(t.token),
-                description=unicode(getattr(t.value, "__doc__", None)),
-                ))
-
-    if rslt:
-        session.add_all(rslt)
-        transaction.commit()
-
-@adapter(interfaces.IDatastore, IObjectCreatedEvent)
-def handleDatastoreCreated(datastore, event):
-    """ Triggered when a new DataStore instance is added to a container (i.e.
-        when it is added to a site. Essentially, it setups up the database
-        back-end.
-
-        Arguments:
-            datastore: (object) the newly created object implementing IDatastore
-            event: (object) the event object
-        Returns:
-            N/A
-    """
-#    if str(datastore.dsn).find('sqlite') > -1:
-#        Session = SessionFactory(bind=sa.create_engine(datastore.dsn,
-#                                           echo=_ECHO_ENABLED))
-#    else:
-#        Session = SessionFactory(bind=sa.create_engine(datastore.dsn,
-#                                           echo=_ECHO_ENABLED, pool_size=100, max_overflow=10))
-#
-#
-#    sm = getSiteManager(datastore)
-#    sm.registerUtility(Session,
-#                       interfaces.ISessionFactory,
-#                       session_name_format(datastore))
-#    Session =
-#    session = Session()
-    model.setup(named_session(datastore).bind)
-#    session.close()
-#
-    setup_types(datastore)
-
-
-@adapter(interfaces.IDatastore, IObjectRemovedEvent)
-def handleDatastoreRemoved(datastore, event):
-    """ Triggered when a new DataStore instance is removed from a container
-
-        Arguments:
-            datastore: (object) the removed object implementing IDatastore
-            event: (object) the event object
-        Returns:
-            N/A
-    """
-    # TODO do ti for the site
-    provideUtility(None,
-                   interfaces.ISessionFactory,
-                   session_name_format(datastore))
-
-#from persistent import Persistent
-#
-#class SessionFactory(Persistent):
-#    implements(interfaces.ISessionFactory)
-#
-#    __doc__ = interfaces.ISessionFactory.__doc__
-#
-#    __name__ = None
-#
-#    __parent__ = None
-#
-#    def __init__(self,
-#                 autocommit=False,
-#                 autoflush=True,
-#                 twophase=False,
-#                 bind=None,
-#                 binds=None):
-#        """
-#        Our ISessionFactory implementation takes an extra parameter which
-#        will be the database bindings.
-#
-#        TODO: (mmartinez) Perhaps make an adapter to extend the functionality
-#            of z3c.saconfig?
-#        """
-#        self.autocommit = autocommit
-#        self.autoflush = autoflush
-#        self.twophase = twophase
-#        self.binds = binds
-#        self.bind = bind
-#        super(Persistent, self).__init__()
-#
-#    def __call__(self):
-#        Session  = orm.scoped_session(orm.sessionmaker(
-#            autocommit=self.autocommit,
-#            autoflush=self.autoflush,
-#            twophase=self.twophase
-#            ))
-#
-#        Session.configure(bind=self.bind, binds=self.binds)
-#        if Session is None:
-#            raise Exception('wtf??')
-#        return Session
-#
-#    __call__.__doc__ = interfaces.ISessionFactory["__call__"].__doc__
-
-class Instance(object):
-    implements(interfaces.IInstance)
-
-    __doc__ = interfaces.IInstance.__doc__
-
-    __id__ = None
-
-    __schema__ = None
-
-    title = None
-
-    description = None
-
-    def __str__(self):
-        return "<Instance: '%s'; implements: '%s'>" \
-                % (self.title, self.__schema__.__name__)
+from avrc.data.store import model
 
 class Datastore(object):
     implements(interfaces.IDatastore)
 
     __doc__ = interfaces.IDatastore.__doc__
 
-    __name__ = None
+    # hidden session name, don't want anyone messing with it
+    _session = FieldProperty(interfaces.IDatastore["session"])
 
-    __parent__ = None
-
-    title = FieldProperty(interfaces.IDatastore["title"])
-
-    dsn = FieldProperty(interfaces.IDatastore["dsn"])
-
-    session_name = FieldProperty(interfaces.IDatastore["session_name"])
-
-    def __init__(self, title, dsn=None, session_name=None):
+    def __init__(self, session=None, **kw):
         """ Instantiates the data store implementation. Also notifies listeners
             that this object has been created.
 
             Arguments:
-                title: (str) the name of this data store instance
                 dsn: (str) the URI to the data base
         """
-        self.title = title
-        self.dsn = dsn
-        self.session_name = session_name
+        if "session_name" in kw:
+            # for legacy support
+            session = kw["session_name"]
 
-        notify(ObjectCreatedEvent(self))
+        self._session = session
+        model.setup(self.getScopedSession().bind)
+        setup_types(self)
 
     def __str__(self):
         """ String representation of this instance """
-        return _DS_FMT % self.title
+        return u"<Datastore('%s')>" % self._session
 
-#    def getSession(self):
-#        sm = getSiteManager(self)
-#        session = sm.queryUtility(interfaces.ISessionFactory, session_name_format(self))
-#        if session is not None:
-#            return sm.queryUtility(interfaces.ISessionFactory, session_name_format(self))
-#        else:
-#            if str(self.dsn).find('sqlite') > -1:
-#                Session = SessionFactory(bind=sa.create_engine(self.dsn,
-#                                                   echo=_ECHO_ENABLED))
-#            else:
-#                Session = SessionFactory(bind=sa.create_engine(self.dsn,
-#                                                   echo=_ECHO_ENABLED, pool_size=100, max_overflow=10))
-#            sm.registerUtility(Session,
-#                       interfaces.ISessionFactory,
-#                       session_name_format(self))
-#        return  sm.queryUtility(interfaces.ISessionFactory, session_name_format(self))
+    def getScopedSession(self):
+        return z3c.saconfig.named_scoped_session(self._session)
+
+    def getManager(self, iface):
+        return iface(self)
+
+    getManager.__doc__ = interfaces.IDatastore["getManager"].__doc__
+
+    def getAliquotManager(self):
+        return self.getManager(interfaces.IAliquotManager)
+
+    getAliquotManager.__doc__ = \
+        interfaces.IDatastore["getAliquotManager"].__doc__
+
+    def getSpecimenManager(self):
+        return self.getManager(interfaces.ISpecimenManager)
+
+    getSpecimenManager.__doc__ = \
+        interfaces.IDatastore["getSpecimenManager"].__doc__
+
+    def getDomainManager(self):
+        return self.getManager(interfaces.IDomainManager)
+
+    getDomainManager.__doc__ = \
+        interfaces.IDatastore["getDomainManager"].__doc__
+
+    def getEnrollmentManager(self):
+        return self.getManager(interfaces.IEnrollmentManager)
+
+    getDomainManager.__doc__ = \
+        interfaces.IDatastore["getDomainManager"].__doc__
+
+    def getProtocolManager(self):
+        return self.getManager(interfaces.IProtocolManager)
+
+    getProtocolManager.__doc__ = \
+        interfaces.IDatastore["getProtocolManager"].__doc__
+
+    def getSchemaManager(self):
+        return self.getManager(interfaces.ISchemaManager)
+
+    getSchemaManager.__doc__ = \
+        interfaces.IDatastore["getSchemaManager"].__doc__
+
+    def getSubjectManager(self):
+        return self.getManager(interfaces.ISubjectManager)
+
+    getSubjectManager.__doc__ = \
+        interfaces.IDatastore["getSubjectManager"].__doc__
+
+    def getVisitManager(self):
+        return self.getManager(interfaces.IVisitManager)
+
+    getVisitManager.__doc__ = \
+        interfaces.IDatastore["getVisitManager"].__doc__
 
     @property
-    def search(self):
-        """ """
-        from avrc.data.store.search import SearchMonkey
-        return SearchMonkey(self)
-
-    @property
+    @deprecate("Use getSchemaManager() instead of schemata")
     def schemata(self):
-        """ A schema manager utility """
-        return interfaces.ISchemaManager(self)
+        return self.getSchemaManager()
 
     @property
+    @deprecate("Use getDomainManager() instead of domains")
     def domains(self):
-        """ A protocol manager utility """
-        return interfaces.IDomainManager(self)
+        return self.getDomainManager()
 
     @property
+    @deprecate("Use getSubjectManager() instead of subjects")
     def subjects(self):
-        """ A protocol manager utility """
-        return interfaces.ISubjectManager(self)
+        return self.getSubjectManager()
 
     @property
+    @deprecate("Use getProtocolManager() instead of protocols")
     def protocols(self):
-        """ A protocol manager utility """
-        return interfaces.IProtocolManager(self)
+        return self.getProtocolManager()
 
     @property
+    @deprecate("Use getEnrollmentManager() instead of enrollments")
     def enrollments(self):
-        """ A protocol manager utility """
-        return interfaces.IEnrollmentManager(self)
+        return self.getEnrollmentManager()
 
     @property
+    @deprecate("Use getVisitManager() instead of visits")
     def visits(self):
-        """ A protocol manager utility """
-        return interfaces.IVisitManager(self)
+        return self.getVisitManager()
 
     @property
+    @deprecate("Use getSpecimenManager() instead of specimen")
     def specimen(self):
-        """ A specimen manager utility """
-        return interfaces.ISpecimenManager(self)
+        return self.getSpecimenManager()
 
     @property
+    @deprecate("Use getAliquotManager() instead of aliquot")
     def aliquot(self):
-        """ A specimen manager utility """
-        return interfaces.IAliquotManager(self)
+        return self.getAliquotManager()
 
     def keys(self):
         # This method will remain unimplemented as it doesn't really make sense
@@ -300,10 +154,10 @@ class Datastore(object):
     keys.__doc__ = interfaces.IDatastore["keys"].__doc__
 
     def has(self, key):
-        # we're going to use the object as the key (or it's 'name')
-        Session = named_session(self)
+        Session = self.getScopedSession()
         session = Session()
 
+        # we're going to use the object as the key (or it's 'name')
         if isinstance(key, (str, unicode)):
             key = str(key)
         elif interfaces.IInstance.providedBy(key):
@@ -331,8 +185,7 @@ class Datastore(object):
         #
 
         # we're going to use the object as the key (or it's 'name')
-        types = getUtility(IVocabulary, "avrc.data.store.Types")
-        Session = named_session(self)
+        Session = self.getScopedSession()
         session = Session()
 
         searchkw = {}
@@ -400,12 +253,8 @@ class Datastore(object):
                 value = None
 
                 if type_name in (u"object",):
+                    # TODO fix this...
                     raise Exception("Using nested objects, not supported yet...")
-                    instance_obj = Instance()
-                    # TOD fix this...
-                    setattr(instance_obj, "__id__", None)
-                    setattr(parent_obj, str(attribute_rslt.name), instance_obj)
-                    #to_visit.append((object_rslt.value, instance_obj, None, None,))
                 else:
                     # Sanity check: if there are no values in the data store,
                     # this 'should' result in an empty list OR a None value
@@ -438,8 +287,7 @@ class Datastore(object):
     get.__doc__ = interfaces.IDatastore["get"].__doc__
 
     def put(self, target):
-        types = getUtility(IVocabulary, "avrc.data.store.Types")
-        Session = named_session(self)
+        Session = self.getScopedSession()
         session = Session()
 
         is_update = False
@@ -447,9 +295,6 @@ class Datastore(object):
         # (parent object, corresponding db entry, prop name, raw value)
         # in this case, the target isn't assign to or contained in anything.
         to_visit = queue([(None, None, None, target)])
-
-#        primitive_types = (int, str, unicode, float, bool, date, time,
-#                           datetime, list)
 
         # Breadth-first pre-order traversal insertion (to keep everything
         # within a single transaction)
@@ -586,7 +431,7 @@ class Datastore(object):
 
     def retire(self, key):
         # we're going to use the object as the key (or it's 'name')
-        Session = named_session(self)
+        Session = self.getScopedSession()
         session = Session()
 
         if isinstance(key, (str, unicode)):
@@ -611,7 +456,7 @@ class Datastore(object):
 
     def restore(self, key):
         # we're going to use the object as the key (or it's 'name')
-        Session = named_session(self)
+        Session = self.getScopedSession()
         session = Session()
 
         if isinstance(key, (str, unicode)):
@@ -637,31 +482,9 @@ class Datastore(object):
     def spawn(self, target, **kw):
         if isinstance(target, (str, unicode)):
             iface = self.schemata.get(target)
-        elif target.extends(zope.interface.Interface):
-            iface = target
         else:
-            raise Exception("%s will not be found" % target)
-
-        obj = Instance()
-        directlyProvides(obj, iface)
-
-        setattr(obj, "__schema__", iface)
-
-        for name, field_obj in zope.schema.getFieldsInOrder(iface):
-#            setattr(obj, name, FieldProperty(field_obj))
-            setattr(obj, name, None)
-
-            if field_obj.__class__ is zope.schema.Datetime:
-                value = kw.get(name, datetime.now())
-            elif field_obj.__class__ is zope.schema.Date:
-                value = kw.get(name, date.today())
-            else:
-                value = kw.get(name)
-
-            if name in kw:
-                obj.__dict__[name] = value
-
-        return obj
+            iface = target
+        return spawnObject(iface, **kw)
 
     spawn.__doc__ = interfaces.IDatastore["spawn"].__doc__
 
@@ -671,3 +494,86 @@ DatastoreFactory = Factory(
     description=_(u"Creates an instance of a datastore implementation object. "
                   u"Also notifies listeners of this creation.")
     )
+
+@deprecate("Use datastore's getScopedSession() instead of named_session()")
+def named_session(datastore):
+    """ Evaluates the session being used by the given data store.
+
+        Arguments:
+            datastore: (object) an object implementing IDatastore
+        Returns:
+            A sqlalchemy Session factory.
+    """
+    return datastore.getScopedSession()
+
+def spawnObject(iface, **kw):
+    """ Spawns "anonymous" objects from interface specifications.
+
+        Arguments:
+            iface: (object) a zope Interface or child class
+            **kw: (dict) additional arguments for the instantiated object
+    """
+    if not iface.extends(zope.interface.Interface):
+        raise Exception("%s will not be found" % iface)
+
+    class Instance(object):
+        implements(interfaces.IInstance)
+        __id__ = None
+        __schema__ = None
+        title = None
+        description = None
+
+        def __str__(self):
+            return u"<Instance: '%s'; implements: '%s'>" \
+                    % (self.title, self.__schema__.__name__)
+
+    obj = Instance()
+    directlyProvides(obj, iface)
+
+    setattr(obj, "__schema__", iface)
+
+    for name, field_obj in zope.schema.getFieldsInOrder(iface):
+        # TODO: figure out how to use FieldProperty with this
+        setattr(obj, name, None)
+
+        if field_obj.__class__ is zope.schema.Datetime:
+            value = kw.get(name, datetime.now())
+        elif field_obj.__class__ is zope.schema.Date:
+            value = kw.get(name, date.today())
+        else:
+            value = kw.get(name)
+
+        if name in kw:
+            obj.__dict__[name] = value
+
+    return obj
+
+def setup_types(datastore):
+    """ Helper method to setup up built-in supported types.
+
+        Arguments:
+            datastore: (object) an object implementing IDatastore
+        Returns:
+            N/A
+    """
+    rslt = []
+    Session = named_session(datastore)
+    session = Session()
+
+    types = getUtility(zope.schema.interfaces.IVocabulary,
+                       "avrc.data.store.Types")
+
+    for t in list(types):
+        num = session.query(model.Type)\
+                .filter_by(title=unicode(t.token))\
+                .count()
+
+        if not num:
+            rslt.append(model.Type(
+                title=unicode(t.token),
+                description=unicode(getattr(t.value, "__doc__", None)),
+                ))
+
+    if rslt:
+        session.add_all(rslt)
+        transaction.commit()

@@ -1,17 +1,21 @@
 """ Data store primary classes and modules
 """
 
-# Used as a central point for i18n translations
+import logging
 import zope.i18nmessageid
+
+# Used as a central point for i18n translations
 MessageFactory = zope.i18nmessageid.MessageFactory(__name__)
 
+# Central logging utility
+Logger = logging.getLogger(__name__)
+
+#
+# We declare exposed functionality here, after everything has been initialized
+#
+    
 # For defining data store virtual schemata
 from avrc.data.store.interfaces import Schema
 
 # Custom type
-from avrc.data.store.schema import Range
-
-__all__ = [
-    "Range",
-    "Schema",
-    ]
+from avrc.data.store.schema import Range    

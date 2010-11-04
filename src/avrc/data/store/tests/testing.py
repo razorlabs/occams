@@ -1,21 +1,16 @@
 import zope.schema
-from zope.interface import Interface
-from zope.interface import Attribute
+import zope.interface
 from plone.directives import form
 from avrc.data.store import Schema
 
-class INotImportant(Interface):
+class INotImportant(zope.interface.Interface):
     pass
 
 class ISimple(Schema, INotImportant):
-    """
-    OBJECT SCHEMAZ
-    """
+    """ OBJECT SCHEMAZ """
 
 class IStandaloneInterface(Schema):
-    """
-    This is very simple stanalone interface.
-    """
+    """ This is very simple stanalone interface. """
 
     foo = zope.schema.TextLine(
         title=u"Foo",
@@ -44,16 +39,12 @@ class IStandaloneInterface(Schema):
         )
 
 class IDependentInterface(Schema):
-    """
-    as;dlfjasd;fjfasd;fsad
-    """
+    """ as;dlfjasd;fjfasd;fsad """
 
 setattr(IDependentInterface, "__dependents__", (ISimple, IStandaloneInterface,))
 
 class IComposedInterface(Schema):
-    """
-    This class contains annotations which SHOULD be saved as well...
-    """
+    """ This class contains annotations which SHOULD be saved as well... """
 
     integer = zope.schema.Int(
         title=u"INTEGER",
@@ -66,37 +57,35 @@ class IComposedInterface(Schema):
         schema=ISimple
         )
 
-from plone.app.z3cform.wysiwyg import WysiwygFieldWidget
-
 class IAnnotatedInterface(Schema):
-    """
-    This is a dummy schema to test if the schema manger can properly import it.
-    Also this class contains annotations which SHOULD be saved as well...
+    """ This is a dummy schema to test if the schema manger can properly
+        import it. Also this class contains annotations which SHOULD be
+        saved as well...
     """
 
-    form.fieldset('results',
-        label=u'Physical Exam Results',
-        fields=['integer', 'text'])
+    form.fieldset("results",
+        label=u"Physical Exam Results",
+        fields=["integer", "text"])
 
-    form.mode(integer='hidden')
+    form.mode(integer="hidden")
     integer = zope.schema.Int(
         title=u"INTEGER",
         description=u"INTEGERDESC"
         )
 
-    form.omitted('ommitme')
+    form.omitted("ommitme")
     ommitme = zope.schema.Int(
         title=u"OMITME",
         description=u"PLEASE"
         )
 
-    form.widget(text=WysiwygFieldWidget)
+    form.widget(text="plone.app.z3cform.wysiwyg.WysiwygFieldWidget")
     text = zope.schema.Text(
         title=u"TEXT",
         description=u"TEXTDESC",
         )
 
-    form.order_before(string='text')
+    form.order_before(string="text")
     string = zope.schema.TextLine(
         title=u"STRING",
         description=u"STRINGDESC"
@@ -114,7 +103,7 @@ class IAnnotatedInterface(Schema):
         description=u"DECIMALDESC"
         )
 
-    form.mode(date='hidden')
+    form.mode(date="hidden")
     form.write_permission(date="cmf.ModifyPortalContent")
     date = zope.schema.Date(
         title=u"DATE",
@@ -122,19 +111,15 @@ class IAnnotatedInterface(Schema):
         )
 
 class IChoicedInterface(Schema):
-    """
-    This simply tests that a vocabulary
-    """
+    """ This simply tests that a vocabulary """
 
     choice = zope.schema.Choice(
             title=u"LISTCHOICE",
-            values=('foo', 'bar', 'go' 'away', 'plz',)
+            values=("foo", "bar", "go" "away", "plz",)
         )
 
 class IListInterface(Schema):
-    """
-    A schema that contains lists.
-    """
+    """ A schema that contains lists. """
 
     int_list = zope.schema.List(
         title=u"Int List",
@@ -145,7 +130,6 @@ class IListInterface(Schema):
         title=u"Choice List",
         value_type=zope.schema.Choice(values=["foo", "bar", "baz"])
         )
-
 
 class IGrandfather(Schema):
     pass
