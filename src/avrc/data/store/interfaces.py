@@ -241,6 +241,14 @@ class IDatastore(IManager):
         """
         """
 
+    def getDrugManager():
+        """
+        """
+
+    def getMedicationManager():
+        """
+        """
+
 class IInstance(IComponent):
     """ Empty object that will be used as the instance of a virtual schema. """
 
@@ -570,3 +578,54 @@ class IAliquot(IComponent):
         description=u"",
         required=False,
         )
+
+
+class IMedication(IComponent):
+    """ Content-type for adding current medications to a patient.
+    """
+
+    dsid = zope.schema.Int(title=_(u'Datastore ID'))
+
+    subject_dsid = zope.schema.Iterable(title=_(u'Datastore Subject ID'))
+
+    visit_dsid = zope.schema.Iterable(title=_(u'Datastore Visit ID'))
+
+    drug_code = zope.schema.TextLine(
+        title=_(u'Drug Code'),
+        required=True
+        )
+
+    start_date = zope.schema.Date(
+        title=_(u'Date Started'),
+        description=_(u'Date the patient started taking the drug.'),
+        required=True
+        )
+
+    stop_date = zope.schema.Date(
+        title=_(u'Date Stopped'),
+        description=_(u'Date the patient stopped taking the drug.'),
+        required=False
+        )
+    notes = zope.schema.Text(
+        title=_(u"Notes (if any):"),
+        required=False
+        )
+
+class IDrugManager(IManager):
+    """
+    """
+
+    def import_(drug_list):
+        """
+        """
+
+    def getCodesVocabulary():
+        """
+        """
+
+
+class IMedicationManager(IManager):
+    """
+    """
+
+

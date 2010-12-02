@@ -3,11 +3,11 @@
     i18n_domain="avrc.data.store">
 
   <!-- Load the Zope component directives, that's all we really need from
-       the component architecture. Everything else that is used in this 
+       the component architecture. Everything else that is used in this
        module is loaded as a package.
     -->
   <include package="zope.component" file="meta.zcml"/>
-  
+
   <adapter factory=".schema.DatastoreSchemaManager" />
   <adapter factory=".domain.DatastoreDomainManager" />
   <adapter factory=".subject.DatastoreSubjectManager" />
@@ -16,6 +16,8 @@
   <adapter factory=".subject.DatastoreEnrollmentManager" />
   <adapter factory=".specimen.DatastoreSpecimenManager" />
   <adapter factory=".specimen.DatastoreAliquotManager" />
+  <adapter factory=".medication.DatastoreDrugManager" />
+  <adapter factory=".medication.DatastoreMedicationManager" />
 
   <utility
       name="avrc.data.store.Datastore"

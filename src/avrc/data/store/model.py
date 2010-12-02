@@ -42,8 +42,6 @@ def setup(engine):
     """
     Model.metadata.create_all(bind=engine, checkfirst=True)
 
-#    sa.DDL("", on="postgres")
-
 # -----------------------------------------------------------------------------
 # Value Storage
 # -----------------------------------------------------------------------------
@@ -64,14 +62,14 @@ class Keyword(Model):
             title: (str) alternate title or synonym.
             is_synonym: (bool) Flag indicating the type of keyword
     """
-    __tablename__ = "keyword"
+    __tablename__ = 'keyword'
 
     id = sa.Column(sa.Integer, primary_key=True)
 
-    instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
+    instance_id = sa.Column(sa.Integer, sa.ForeignKey('instance.id'),
                             nullable=False)
 
-    instance = orm.relation("Instance", uselist=False)
+    instance = orm.relation('Instance', uselist=False)
 
     title = sa.Column(sa.Unicode, nullable=False, index=True)
 
@@ -94,18 +92,18 @@ class Instance(Model):
             create_date: (datetime) the date this model instance was created
             modified_date: (datetime) the date this model instance was modified
     """
-    __tablename__ = "instance"
+    __tablename__ = 'instance'
 
     id = sa.Column(sa.Integer, primary_key=True)
 
-    schema_id = sa.Column(sa.Integer, sa.ForeignKey("schema.id"),
+    schema_id = sa.Column(sa.Integer, sa.ForeignKey('schema.id'),
                           nullable=False)
 
-    schema = orm.relation("Schema", uselist=False)
+    schema = orm.relation('Schema', uselist=False)
 
     title = sa.Column(sa.Unicode, nullable=False, unique=True)
 
-    keywords = orm.relation("Keyword")
+    keywords = orm.relation('Keyword')
 
     description = sa.Column(sa.Unicode, nullable=False)
 
@@ -131,19 +129,19 @@ class Binary(Model):
             extension: (str) the extension of the file being stored
             value: (binary) the physical value being stored
     """
-    __tablename__ = "binary"
+    __tablename__ = 'binary'
 
     id = sa.Column(sa.Integer, primary_key=True)
 
-    instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
+    instance_id = sa.Column(sa.Integer, sa.ForeignKey('instance.id'),
                             nullable=False)
 
-    instance = orm.relation("Instance", uselist=False)
+    instance = orm.relation('Instance', uselist=False)
 
-    attribute_id = sa.Column(sa.Integer, sa.ForeignKey("attribute.id"),
+    attribute_id = sa.Column(sa.Integer, sa.ForeignKey('attribute.id'),
                             nullable=False)
 
-    attribute = orm.relation("Attribute", uselist=False)
+    attribute = orm.relation('Attribute', uselist=False)
 
     extension = sa.Column(sa.Unicode)
 
@@ -160,24 +158,24 @@ class Datetime(Model):
             attribute: (Attribute) relation to the target attribute
             value: (datetime) the physical value being stored
     """
-    __tablename__ = "datetime"
+    __tablename__ = 'datetime'
 
     id = sa.Column(sa.Integer, primary_key=True)
 
-    instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
+    instance_id = sa.Column(sa.Integer, sa.ForeignKey('instance.id'),
                             nullable=False)
 
-    instance = orm.relation("Instance", uselist=False)
+    instance = orm.relation('Instance', uselist=False)
 
-    attribute_id = sa.Column(sa.Integer, sa.ForeignKey("attribute.id"),
+    attribute_id = sa.Column(sa.Integer, sa.ForeignKey('attribute.id'),
                             nullable=False)
 
-    attribute = orm.relation("Attribute", uselist=False)
+    attribute = orm.relation('Attribute', uselist=False)
 
     value = sa.Column(sa.DateTime, nullable=False)
 
 # Optimization for lookup
-sa.Index("datetime_attribute_value", Datetime.attribute_id, Datetime.value)
+sa.Index('datetime_attribute_value', Datetime.attribute_id, Datetime.value)
 
 class Integer(Model):
     """ A integer EAV value.
@@ -190,24 +188,24 @@ class Integer(Model):
             attribute: (Attribute) relation to the target attribute
             value: (int) the physical value being stored
     """
-    __tablename__ ="integer"
+    __tablename__ ='integer'
 
     id = sa.Column(sa.Integer, primary_key=True)
 
-    instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
+    instance_id = sa.Column(sa.Integer, sa.ForeignKey('instance.id'),
                             nullable=False)
 
-    instance = orm.relation("Instance", uselist=False)
+    instance = orm.relation('Instance', uselist=False)
 
-    attribute_id = sa.Column(sa.Integer, sa.ForeignKey("attribute.id"),
+    attribute_id = sa.Column(sa.Integer, sa.ForeignKey('attribute.id'),
                             nullable=False)
 
-    attribute = orm.relation("Attribute", uselist=False)
+    attribute = orm.relation('Attribute', uselist=False)
 
     value = sa.Column(sa.Integer, nullable=False)
 
 # Optimization for lookup
-sa.Index("integer_attribute_value", Integer.attribute_id, Integer.value)
+sa.Index('integer_attribute_value', Integer.attribute_id, Integer.value)
 
 class Range(Model):
     """ A range EAV value.
@@ -225,19 +223,19 @@ class Range(Model):
             value_max: (int) the high value
             value: (int) the range tuple being stored
     """
-    __tablename__ = "range"
+    __tablename__ = 'range'
 
     id = sa.Column(sa.Integer, primary_key=True)
 
-    instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
+    instance_id = sa.Column(sa.Integer, sa.ForeignKey('instance.id'),
                             nullable=False)
 
-    instance = orm.relation("Instance", uselist=False)
+    instance = orm.relation('Instance', uselist=False)
 
-    attribute_id = sa.Column(sa.Integer, sa.ForeignKey("attribute.id"),
+    attribute_id = sa.Column(sa.Integer, sa.ForeignKey('attribute.id'),
                             nullable=False)
 
-    attribute = orm.relation("Attribute", uselist=False)
+    attribute = orm.relation('Attribute', uselist=False)
 
     value_low = sa.Column(sa.Integer, nullable=False)
 
@@ -252,9 +250,9 @@ class Range(Model):
     value = orm.synonym('_value', descriptor=property(_get_value, _set_value))
 
 # Optimization for lookup
-sa.Index("range_attribute_value_low", Range.attribute_id, Range.value_low)
-sa.Index("range_attribute_value_high", Range.attribute_id, Range.value_high)
-sa.Index("range_attribute_value", Range.value_low, Range.value_high)
+sa.Index('range_attribute_value_low', Range.attribute_id, Range.value_low)
+sa.Index('range_attribute_value_high', Range.attribute_id, Range.value_high)
+sa.Index('range_attribute_value', Range.value_low, Range.value_high)
 
 class Real(Model):
     """ A real EAV value.
@@ -267,24 +265,24 @@ class Real(Model):
             attribute: (Attribute) relation to the target attribute
             value: (int) the physical value being stored
     """
-    __tablename__ ="real"
+    __tablename__ ='real'
 
     id = sa.Column(sa.Integer, primary_key=True)
 
-    instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
+    instance_id = sa.Column(sa.Integer, sa.ForeignKey('instance.id'),
                             nullable=False)
 
-    instance = orm.relation("Instance", uselist=False)
+    instance = orm.relation('Instance', uselist=False)
 
-    attribute_id = sa.Column(sa.Integer, sa.ForeignKey("attribute.id"),
+    attribute_id = sa.Column(sa.Integer, sa.ForeignKey('attribute.id'),
                             nullable=False)
 
-    attribute = orm.relation("Attribute", uselist=False)
+    attribute = orm.relation('Attribute', uselist=False)
 
     value = sa.Column(sa.Float, nullable=False)
 
 # Optimization for lookup
-sa.Index("real_attribute_value", Real.attribute_id, Real.value)
+sa.Index('real_attribute_value', Real.attribute_id, Real.value)
 
 class Selection(Model):
     """ A selection EAV value (into a vocabulary of choices)
@@ -303,27 +301,27 @@ class Selection(Model):
             attribute: (Attribute) relation to the target attribute
             value: (int) a reference to the vocabulary item
     """
-    __tablename__ ="selection"
+    __tablename__ ='selection'
 
     id = sa.Column(sa.Integer, primary_key=True)
 
-    instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
+    instance_id = sa.Column(sa.Integer, sa.ForeignKey('instance.id'),
                             nullable=False)
 
-    instance = orm.relation("Instance", uselist=False)
+    instance = orm.relation('Instance', uselist=False)
 
-    attribute_id = sa.Column(sa.Integer, sa.ForeignKey("attribute.id"),
+    attribute_id = sa.Column(sa.Integer, sa.ForeignKey('attribute.id'),
                             nullable=False)
 
-    attribute = orm.relation("Attribute", uselist=False)
+    attribute = orm.relation('Attribute', uselist=False)
 
-    term_id = sa.Column("value", sa.Integer, sa.ForeignKey("term.id"),
+    term_id = sa.Column('value', sa.Integer, sa.ForeignKey('term.id'),
                         nullable=False)
 
-    value = orm.relation("Term", uselist=False)
+    value = orm.relation('Term', uselist=False)
 
 # Optimization for lookup
-sa.Index("selection_attribute_value", Real.attribute_id, Real.value)
+sa.Index('selection_attribute_value', Real.attribute_id, Real.value)
 
 class Object(Model):
     """ An object EAV value.
@@ -338,28 +336,28 @@ class Object(Model):
             order: (int) for list of objects, this can be used for ordering them
                 (seems to make more sense for associations?)
     """
-    __tablename__ ="object"
+    __tablename__ ='object'
 
     id = sa.Column(sa.Integer, primary_key=True)
 
-    instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
+    instance_id = sa.Column(sa.Integer, sa.ForeignKey('instance.id'),
                             nullable=False)
 
-    instance = orm.relation("Instance",
-                            primaryjoin="Instance.id == Object.instance_id",
+    instance = orm.relation('Instance',
+                            primaryjoin='Instance.id == Object.instance_id',
                             uselist=False)
 
-    attribute_id = sa.Column(sa.Integer, sa.ForeignKey("attribute.id"),
+    attribute_id = sa.Column(sa.Integer, sa.ForeignKey('attribute.id'),
                             nullable=False)
 
-    attribute = orm.relation("Attribute", uselist=False)
+    attribute = orm.relation('Attribute', uselist=False)
 
-    value = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),)
+    value = sa.Column(sa.Integer, sa.ForeignKey('instance.id'),)
 
     order = sa.Column(sa.Integer, nullable=False, default=1)
 
 # Optimization for lookup
-sa.Index("object_attribute_value", Object.attribute_id, Object.value)
+sa.Index('object_attribute_value', Object.attribute_id, Object.value)
 
 class String(Model):
     """ A string EAV value.
@@ -374,43 +372,43 @@ class String(Model):
             attribute: (Attribute) relation to the target attribute
             value: (str) the physical value being stored
     """
-    __tablename__ ="string"
+    __tablename__ ='string'
 
     id = sa.Column(sa.Integer, primary_key=True)
 
-    instance_id = sa.Column(sa.Integer, sa.ForeignKey("instance.id"),
+    instance_id = sa.Column(sa.Integer, sa.ForeignKey('instance.id'),
                             nullable=False)
 
-    instance = orm.relation("Instance", uselist=False)
+    instance = orm.relation('Instance', uselist=False)
 
-    attribute_id = sa.Column(sa.Integer, sa.ForeignKey("attribute.id"),
+    attribute_id = sa.Column(sa.Integer, sa.ForeignKey('attribute.id'),
                             nullable=False)
 
-    attribute = orm.relation("Attribute", uselist=False)
+    attribute = orm.relation('Attribute', uselist=False)
 
     value = sa.Column(sa.Unicode, nullable=False)
 
 # Optimization for lookup
-sa.Index("string_attribute_value", String.attribute_id, String.value)
+sa.Index('string_attribute_value', String.attribute_id, String.value)
 
 # -----------------------------------------------------------------------------
 # Metadata specifications
 # -----------------------------------------------------------------------------
 
 # Joining table for base class representation
-hierarchy_table = sa.Table("hierarchy", Model.metadata,
-    sa.Column("parent_id", sa.ForeignKey("specification.id"), nullable=False,
+hierarchy_table = sa.Table('hierarchy', Model.metadata,
+    sa.Column('parent_id', sa.ForeignKey('specification.id'), nullable=False,
               primary_key=True),
-    sa.Column("child_id", sa.ForeignKey("specification.id"), nullable=False,
+    sa.Column('child_id', sa.ForeignKey('specification.id'), nullable=False,
               primary_key=True),
     )
 
 # A hackish way to include additional schemata when a 'main' schemata is
 # requested.
-include_table = sa.Table("include", Model.metadata,
-    sa.Column("main_id", sa.ForeignKey("specification.id"), nullable=False,
+include_table = sa.Table('include', Model.metadata,
+    sa.Column('main_id', sa.ForeignKey('specification.id'), nullable=False,
               primary_key=True),
-    sa.Column("include_id", sa.ForeignKey("specification.id"), nullable=False,
+    sa.Column('include_id', sa.ForeignKey('specification.id'), nullable=False,
               primary_key=True),
     )
 
@@ -440,11 +438,11 @@ class Specification(Model):
             create_date: (datetime) the date this model instance was created
             modified_date: (datetime) the date this model instance was modified
     """
-    __tablename__ = "specification"
+    __tablename__ = 'specification'
 
     id = sa.Column(sa.Integer, primary_key=True)
 
-    bases = orm.relation("Specification",
+    bases = orm.relation('Specification',
                          secondary=hierarchy_table,
                          primaryjoin=(id == hierarchy_table.c.child_id),
                          secondaryjoin=(id == hierarchy_table.c.parent_id),
@@ -453,7 +451,7 @@ class Specification(Model):
                                        ]
                          )
 
-    children = orm.relation("Specification",
+    children = orm.relation('Specification',
                             secondary=hierarchy_table,
                             primaryjoin=(id == hierarchy_table.c.parent_id),
                             secondaryjoin=(id == hierarchy_table.c.child_id),
@@ -462,7 +460,7 @@ class Specification(Model):
                                           ]
                             )
 
-    includes = orm.relation("Specification",
+    includes = orm.relation('Specification',
                             secondary=include_table,
                             primaryjoin=(id == include_table.c.main_id),
                             secondaryjoin=(id == include_table.c.include_id),
@@ -492,17 +490,17 @@ class Specification(Model):
     modify_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now,
                             onupdate=datetime.now)
 
-fieldset_fieldsetitem_table = sa.Table("fieldset_fieldsetitem", Model.metadata,
-    sa.Column("fieldset_id", sa.ForeignKey("fieldset.id"), nullable=False,
+fieldset_fieldsetitem_table = sa.Table('fieldset_fieldsetitem', Model.metadata,
+    sa.Column('fieldset_id', sa.ForeignKey('fieldset.id'), nullable=False,
               primary_key=True),
-    sa.Column("item_id", sa.ForeignKey("fieldsetitem.id"), nullable=False,
+    sa.Column('item_id', sa.ForeignKey('fieldsetitem.id'), nullable=False,
               primary_key=True),
     )
 
 class FieldsetItem(Model):
     """
     """
-    __tablename__ = "fieldsetitem"
+    __tablename__ = 'fieldsetitem'
 
     id = sa.Column(sa.Integer, primary_key=True)
 
@@ -514,7 +512,7 @@ class FieldsetItem(Model):
 class Fieldset(Model):
     """
     """
-    __tablename__ = "fieldset"
+    __tablename__ = 'fieldset'
 
     id = sa.Column(sa.Integer, primary_key=True)
 
@@ -526,14 +524,14 @@ class Fieldset(Model):
 
     order = sa.Column(sa.Integer, nullable=False, default=1)
 
-    fields = orm.relation("FieldsetItem",
+    fields = orm.relation('FieldsetItem',
                           secondary=fieldset_fieldsetitem_table,
-                          order_by="FieldsetItem.order")
+                          order_by='FieldsetItem.order')
 
-schema_fieldset_table = sa.Table("schema_fieldset", Model.metadata,
-    sa.Column("schema_id", sa.ForeignKey("schema.id"), nullable=False,
+schema_fieldset_table = sa.Table('schema_fieldset', Model.metadata,
+    sa.Column('schema_id', sa.ForeignKey('schema.id'), nullable=False,
               primary_key=True),
-    sa.Column("fieldset_id", sa.ForeignKey("fieldset.id"), nullable=False,
+    sa.Column('fieldset_id', sa.ForeignKey('fieldset.id'), nullable=False,
               primary_key=True),
     )
 
@@ -556,27 +554,27 @@ class Schema(Model):
             create_date: (datetime) the date this model instance was created
             modified_date: (datetime) the date this model instance was modified
     """
-    __tablename__ = "schema"
+    __tablename__ = 'schema'
 
     id = sa.Column(sa.Integer, primary_key=True)
 
-    specification_id = sa.Column(sa.Integer, sa.ForeignKey("specification.id"),
+    specification_id = sa.Column(sa.Integer, sa.ForeignKey('specification.id'),
                                  nullable=False)
 
-    specification = orm.relation("Specification", uselist=False)
+    specification = orm.relation('Specification', uselist=False)
 
-    attributes = orm.relation("Attribute", order_by="Attribute.order")
+    attributes = orm.relation('Attribute', order_by='Attribute.order')
 
-    invariants = orm.relation("Invariant")
+    invariants = orm.relation('Invariant')
 
-    fieldsets = orm.relation("Fieldset",
+    fieldsets = orm.relation('Fieldset',
                              secondary=schema_fieldset_table,
-                             order_by="Fieldset.order")
+                             order_by='Fieldset.order')
 
     create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
 
     __table_args = (
-        sa.UniqueConstraint("specification_id", "create_date"),
+        sa.UniqueConstraint('specification_id', 'create_date'),
         {})
 
 class Invariant(Model):
@@ -587,11 +585,11 @@ class Invariant(Model):
             schema_id: (int) a reference to the schema this invariant is for
             name: (str) the name of the invariant. Should not contain spaces.
     """
-    __tablename__ = "invariant"
+    __tablename__ = 'invariant'
 
     id = sa.Column(sa.Integer, primary_key=True)
 
-    schema_id = sa.Column(sa.Integer, sa.ForeignKey("schema.id"),
+    schema_id = sa.Column(sa.Integer, sa.ForeignKey('schema.id'),
                           nullable=False)
 
     name = sa.Column(sa.Unicode, nullable=False)
@@ -615,16 +613,16 @@ class Attribute(Model):
             modified_date: (datetime) the date this model instance was modified
 
     """
-    __tablename__ = "attribute"
+    __tablename__ = 'attribute'
 
     id = sa.Column(sa.Integer, primary_key=True)
 
-    schema_id = sa.Column(sa.Integer, sa.ForeignKey("schema.id"),
+    schema_id = sa.Column(sa.Integer, sa.ForeignKey('schema.id'),
                           nullable=False)
 
-    field_id = sa.Column(sa.Integer, sa.ForeignKey("field.id"), nullable=False)
+    field_id = sa.Column(sa.Integer, sa.ForeignKey('field.id'), nullable=False)
 
-    field = orm.relation("Field", uselist=False)
+    field = orm.relation('Field', uselist=False)
 
     name = sa.Column(sa.Unicode, nullable=False)
 
@@ -633,14 +631,14 @@ class Attribute(Model):
     create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
 
     __table_args__ = (
-        sa.UniqueConstraint("schema_id", "name"),
+        sa.UniqueConstraint('schema_id', 'name'),
         {})
 
 class Field(Model):
     """ Attribute display metadata (i.e. Field). Describes how the attribute
         should be used as well as useful constraint/validation meta data. Every
         time an attribute must define a new field (or removed for that matter),
-        the source schema should be "versioned".
+        the source schema should be 'versioned'.
 
         Attributes:
             id: (int) machine generated id number
@@ -675,7 +673,7 @@ class Field(Model):
             modified_date: (datetime) the date this model instance was modified
     """
 
-    __tablename__ = "field"
+    __tablename__ = 'field'
 
     id = sa.Column(sa.Integer, primary_key=True)
 
@@ -685,17 +683,17 @@ class Field(Model):
 
     documentation = sa.Column(sa.Unicode)
 
-    type_id = sa.Column(sa.Integer, sa.ForeignKey("type.id"), nullable=False)
+    type_id = sa.Column(sa.Integer, sa.ForeignKey('type.id'), nullable=False)
 
-    type = orm.relation("Type", uselist=False)
+    type = orm.relation('Type', uselist=False)
 
-    schema_id = sa.Column(sa.Integer, sa.ForeignKey("schema.id"))
+    schema_id = sa.Column(sa.Integer, sa.ForeignKey('schema.id'))
 
-    schema = orm.relation("Schema", uselist=False)
+    schema = orm.relation('Schema', uselist=False)
 
-    vocabulary_id = sa.Column(sa.Integer, sa.ForeignKey("vocabulary.id"))
+    vocabulary_id = sa.Column(sa.Integer, sa.ForeignKey('vocabulary.id'))
 
-    vocabulary = orm.relation("Vocabulary")
+    vocabulary = orm.relation('Vocabulary')
 
     default = sa.Column(sa.Unicode)
 
@@ -753,7 +751,7 @@ class Type(Model):
             title: (str) the human-reable name of this type
             description: (str) an optional description
     """
-    __tablename__ = "type"
+    __tablename__ = 'type'
 
     id = sa.Column(sa.Integer, primary_key=True)
 
@@ -762,10 +760,10 @@ class Type(Model):
     description = sa.Column(sa.Text)
 
 # Joining table for vocabulary terms
-vocabulary_term_table = sa.Table("vocabulary_term", Model.metadata,
-    sa.Column("vocabulary_id", sa.Integer, sa.ForeignKey("vocabulary.id"),
+vocabulary_term_table = sa.Table('vocabulary_term', Model.metadata,
+    sa.Column('vocabulary_id', sa.Integer, sa.ForeignKey('vocabulary.id'),
               nullable=False, primary_key=True),
-    sa.Column("term_id", sa.Integer, sa.ForeignKey("term.id"),
+    sa.Column('term_id', sa.Integer, sa.ForeignKey('term.id'),
               nullable=False, primary_key=True),
     )
 
@@ -778,7 +776,7 @@ class Vocabulary(Model):
             description: (str) an optional description
             terms: (list) the list of terms for this vocabulary
     """
-    __tablename__ = "vocabulary"
+    __tablename__ = 'vocabulary'
 
     id = sa.Column(sa.Integer, primary_key=True)
 
@@ -786,7 +784,7 @@ class Vocabulary(Model):
 
     description = sa.Column(sa.Unicode)
 
-    terms = orm.relation("Term", secondary=vocabulary_term_table)
+    terms = orm.relation('Term', secondary=vocabulary_term_table)
 
 class Term(Model):
     """ An indivudal term for a vocabulary.
@@ -804,7 +802,7 @@ class Term(Model):
             description: (str) an optional description
             terms: (list) the list of terms for this vocabulary
     """
-    __tablename__ = "term"
+    __tablename__ = 'term'
 
     id = sa.Column(sa.Integer, primary_key=True)
 
@@ -835,7 +833,7 @@ class Term(Model):
             value = (self.value_range_low, self.value_range_high)
 
         if value is None:
-            raise Exception("TERM ITEM NOT FOUND")
+            raise Exception('TERM ITEM NOT FOUND')
 
         return value
 
@@ -850,9 +848,9 @@ class Term(Model):
         elif isinstance(value, tuple) and len(tuple) == 2:
             (self.value_range_low, self.value_range_high) = value
         else:
-            raise Exception("Unable to determine type: %s"  % value)
+            raise Exception('Unable to determine type: %s'  % value)
 
-    value = property(_get_value, _set_value, None, "The value stored")
+    value = property(_get_value, _set_value, None, 'The value stored')
 
 # -----------------------------------------------------------------------------
 # Domains and Subjects
@@ -860,14 +858,14 @@ class Term(Model):
 
 class Curator(Model):
     """ A person curating the data (i.e. manager) """
-    __tablename__ = "curator"
+    __tablename__ = 'curator'
 
     id = sa.Column(sa.Integer, primary_key=True)
 
-subject_instance_table = sa.Table("subject_instance", Model.metadata,
-    sa.Column("subject_id", sa.ForeignKey("subject.id"), nullable=False,
+subject_instance_table = sa.Table('subject_instance', Model.metadata,
+    sa.Column('subject_id', sa.ForeignKey('subject.id'), nullable=False,
               primary_key=True),
-    sa.Column("instance_id", sa.ForeignKey("instance.id"), nullable=False,
+    sa.Column('instance_id', sa.ForeignKey('instance.id'), nullable=False,
               primary_key=True),
     )
 
@@ -879,7 +877,7 @@ class Subject(Model):
             id: (int) machine generated id number
             uid: (int) an external reference number
     """
-    __tablename__ = "subject"
+    __tablename__ = 'subject'
 
     id = sa.Column(sa.Integer, primary_key=True)
 
@@ -891,7 +889,7 @@ class Subject(Model):
 
     aeh = sa.Column(sa.Unicode, index=True)
 
-    instances = orm.relation("Instance", secondary=subject_instance_table)
+    instances = orm.relation('Instance', secondary=subject_instance_table)
 
 class Enrollment(Model):
     """ Links a Subject to a Domain.
@@ -911,21 +909,21 @@ class Enrollment(Model):
             create_date: (datetime) date object is create
             modify_date: (datetime) date object is modified
     """
-    __tablename__ = "enrollment"
+    __tablename__ = 'enrollment'
 
     id = sa.Column(sa.Integer, primary_key=True)
 
     zid = sa.Column(sa.Integer, nullable=False, unique=True)
 
-    domain_id = sa.Column(sa.Integer, sa.ForeignKey("domain.id"),
+    domain_id = sa.Column(sa.Integer, sa.ForeignKey('domain.id'),
                             nullable=False)
 
-    domain = orm.relation("Domain", uselist=False)
+    domain = orm.relation('Domain', uselist=False)
 
-    subject_id = sa.Column(sa.Integer, sa.ForeignKey("subject.id"),
+    subject_id = sa.Column(sa.Integer, sa.ForeignKey('subject.id'),
                            nullable=False)
 
-    subject = orm.relation("Subject", uselist=False)
+    subject = orm.relation('Subject', uselist=False)
 
     start_date = sa.Column(sa.Date, nullable=False)
 
@@ -941,27 +939,27 @@ class Enrollment(Model):
                             onupdate=datetime.now)
 
     __table_args__ = (
-        sa.UniqueConstraint("domain_id", "subject_id", "start_date"),
+        sa.UniqueConstraint('domain_id', 'subject_id', 'start_date'),
         {})
 
-visit_protocol_table = sa.Table("visit_protocol", Model.metadata,
-    sa.Column("visit_id", sa.ForeignKey("visit.id"), nullable=False,
+visit_protocol_table = sa.Table('visit_protocol', Model.metadata,
+    sa.Column('visit_id', sa.ForeignKey('visit.id'), nullable=False,
               primary_key=True),
-    sa.Column("protocol_id", sa.ForeignKey("protocol.id"), nullable=False,
-              primary_key=True),
-    )
-
-visit_enrollment_table = sa.Table("visit_enrollment", Model.metadata,
-    sa.Column("visit_id", sa.ForeignKey("visit.id"), nullable=False,
-              primary_key=True),
-    sa.Column("enrollment_id", sa.ForeignKey("enrollment.id"), nullable=False,
+    sa.Column('protocol_id', sa.ForeignKey('protocol.id'), nullable=False,
               primary_key=True),
     )
 
-visit_instance_table = sa.Table("visit_instance", Model.metadata,
-    sa.Column("visit_id", sa.ForeignKey("visit.id"), nullable=False,
+visit_enrollment_table = sa.Table('visit_enrollment', Model.metadata,
+    sa.Column('visit_id', sa.ForeignKey('visit.id'), nullable=False,
               primary_key=True),
-    sa.Column("instance_id", sa.ForeignKey("instance.id"), nullable=False,
+    sa.Column('enrollment_id', sa.ForeignKey('enrollment.id'), nullable=False,
+              primary_key=True),
+    )
+
+visit_instance_table = sa.Table('visit_instance', Model.metadata,
+    sa.Column('visit_id', sa.ForeignKey('visit.id'), nullable=False,
+              primary_key=True),
+    sa.Column('instance_id', sa.ForeignKey('instance.id'), nullable=False,
               primary_key=True),
     )
 
@@ -975,24 +973,24 @@ class Visit(Model):
                 of the visit
             visit_date: (date) the date the visit occured
     """
-    __tablename__ = "visit"
+    __tablename__ = 'visit'
 
     id = sa.Column(sa.Integer, primary_key=True)
 
     zid = sa.Column(sa.Integer, nullable=False, unique=True)
 
-    enrollments = orm.relation("Enrollment", secondary=visit_enrollment_table)
+    enrollments = orm.relation('Enrollment', secondary=visit_enrollment_table)
 
-    protocols = orm.relation("Protocol", secondary=visit_protocol_table)
+    protocols = orm.relation('Protocol', secondary=visit_protocol_table)
 
-    instances = orm.relation("Instance", secondary=visit_instance_table)
+    instances = orm.relation('Instance', secondary=visit_instance_table)
 
     visit_date = sa.Column(sa.Date, nullable=False)
 
-domain_schema_table = sa.Table("domain_schema", Model.metadata,
-    sa.Column("domain_id", sa.Integer, sa.ForeignKey("domain.id"),
+domain_schema_table = sa.Table('domain_schema', Model.metadata,
+    sa.Column('domain_id', sa.Integer, sa.ForeignKey('domain.id'),
               nullable=False, primary_key=True),
-    sa.Column("schema_id", sa.Integer, sa.ForeignKey("schema.id"),
+    sa.Column('schema_id', sa.Integer, sa.ForeignKey('schema.id'),
               nullable=False, primary_key=True)
     )
 
@@ -1004,7 +1002,7 @@ class Domain(Model):
             consent_date: (date) the date of the new consent
             schemata: (list) available schemata
     """
-    __tablename__ = "domain"
+    __tablename__ = 'domain'
 
     id = sa.Column(sa.Integer, primary_key=True)
 
@@ -1021,12 +1019,12 @@ class Domain(Model):
     modify_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now,
                             onupdate=datetime.now)
 
-    schemata = orm.relation("Schema", secondary=domain_schema_table)
+    schemata = orm.relation('Schema', secondary=domain_schema_table)
 
-protocol_schema_table = sa.Table("protocol_schema", Model.metadata,
-    sa.Column("protocol_id", sa.Integer, sa.ForeignKey("protocol.id"),
+protocol_schema_table = sa.Table('protocol_schema', Model.metadata,
+    sa.Column('protocol_id', sa.Integer, sa.ForeignKey('protocol.id'),
               nullable=False, primary_key=True),
-    sa.Column("schema_id", sa.Integer, sa.ForeignKey("schema.id"),
+    sa.Column('schema_id', sa.Integer, sa.ForeignKey('schema.id'),
               nullable=False, primary_key=True)
     )
 
@@ -1044,18 +1042,18 @@ class Protocol(Model):
             create_date: (datetime) date object is create
             modify_date: (datetime) date object is modified
     """
-    __tablename__ = "protocol"
+    __tablename__ = 'protocol'
 
     id = sa.Column(sa.Integer, primary_key=True)
 
     zid = sa.Column(sa.Integer, nullable=False, unique=True)
 
-    domain_id = sa.Column(sa.Integer, sa.ForeignKey("domain.id"),
+    domain_id = sa.Column(sa.Integer, sa.ForeignKey('domain.id'),
                           nullable=False)
 
-    domain = orm.relation("Domain", uselist=False)
+    domain = orm.relation('Domain', uselist=False)
 
-    schemata = orm.relation("Schema", secondary=protocol_schema_table)
+    schemata = orm.relation('Schema', secondary=protocol_schema_table)
 
     cycle = sa.Column(sa.Integer, nullable=False)
 
@@ -1080,7 +1078,7 @@ class SpecimenAliquotTerm(Model):
     """
     . . .
     """
-    __tablename__ = "specimen_aliquot_term"
+    __tablename__ = 'specimen_aliquot_term'
 
     id = sa.Column(sa.Integer, primary_key=True)
 
@@ -1100,7 +1098,7 @@ class SpecimenAliquotTerm(Model):
                             onupdate=datetime.now)
 
     __table_args = (
-        sa.UniqueConstraint("vocabulary_name", "token", "value"),
+        sa.UniqueConstraint('vocabulary_name', 'token', 'value'),
         {})
 
 class Specimen(Model):
@@ -1129,26 +1127,26 @@ class Specimen(Model):
             create_date: (datetime) internal metadata of when entry was created
             modify_date: (datetime) internal metadata of when entry was modified
     """
-    __tablename__ = "specimen"
+    __tablename__ = 'specimen'
 
     id = sa.Column(sa.Integer, primary_key=True)
 
-    subject_id = sa.Column(sa.Integer, sa.ForeignKey("subject.id"),
+    subject_id = sa.Column(sa.Integer, sa.ForeignKey('subject.id'),
                            nullable=False)
 
-    subject = orm.relation("Subject", uselist=False)
+    subject = orm.relation('Subject', uselist=False)
 
-    protocol_id = sa.Column(sa.Integer, sa.ForeignKey("protocol.id"),
+    protocol_id = sa.Column(sa.Integer, sa.ForeignKey('protocol.id'),
                             nullable=False)
 
-    protocol = orm.relation("Protocol", uselist=False)
+    protocol = orm.relation('Protocol', uselist=False)
 
     state_id = sa.Column(sa.Integer,
-                              sa.ForeignKey("specimen_aliquot_term.id"),
+                              sa.ForeignKey('specimen_aliquot_term.id'),
                               nullable=False
                               )
 
-    state = orm.relation("SpecimenAliquotTerm",
+    state = orm.relation('SpecimenAliquotTerm',
                          uselist=False,
                          primaryjoin=state_id == SpecimenAliquotTerm.id
                          )
@@ -1158,21 +1156,21 @@ class Specimen(Model):
     collect_time = sa.Column(sa.Time)
 
     type_id = sa.Column(sa.Integer,
-                              sa.ForeignKey("specimen_aliquot_term.id"),
+                              sa.ForeignKey('specimen_aliquot_term.id'),
                               nullable=False
                               )
 
-    type = orm.relation("SpecimenAliquotTerm",
+    type = orm.relation('SpecimenAliquotTerm',
                         uselist=False,
                         primaryjoin=type_id == SpecimenAliquotTerm.id
                         )
 
     destination_id = sa.Column(sa.Integer,
-                              sa.ForeignKey("specimen_aliquot_term.id"),
+                              sa.ForeignKey('specimen_aliquot_term.id'),
                               nullable=False
                               )
 
-    destination = orm.relation("SpecimenAliquotTerm",
+    destination = orm.relation('SpecimenAliquotTerm',
                                uselist=False,
                                primaryjoin=
                                 destination_id == SpecimenAliquotTerm.id
@@ -1181,18 +1179,18 @@ class Specimen(Model):
     tubes = sa.Column(sa.Integer)
 
     tupe_type_id = sa.Column(sa.Integer,
-                              sa.ForeignKey("specimen_aliquot_term.id"),
+                              sa.ForeignKey('specimen_aliquot_term.id'),
                               nullable=False
                               )
 
-    tube_type = orm.relation("SpecimenAliquotTerm",
+    tube_type = orm.relation('SpecimenAliquotTerm',
                              uselist=False,
                              primaryjoin=tupe_type_id == SpecimenAliquotTerm.id
                              )
 
     notes = sa.Column(sa.Unicode)
 
-    aliquot = orm.relation("Aliquot")
+    aliquot = orm.relation('Aliquot')
 
     is_active = sa.Column(sa.Boolean, nullable=False, default=True, index=True)
 
@@ -1202,31 +1200,31 @@ class Specimen(Model):
                             onupdate=datetime.now)
 
     __table_args = (
-        sa.UniqueConstraint("subject_id", "protocol_id", "type"),
+        sa.UniqueConstraint('subject_id', 'protocol_id', 'type'),
         {})
 
-sa.Index("specimen_subject_id", Specimen.subject_id)
-sa.Index("specimen_protocol_id", Specimen.protocol_id)
-sa.Index("specimen_state_id", Specimen.state_id)
-sa.Index("specimen_type_id", Specimen.type_id)
-sa.Index("specimen_destination_id", Specimen.destination_id)
-sa.Index("specimen_tube_type_id", Specimen.tupe_type_id)
+sa.Index('specimen_subject_id', Specimen.subject_id)
+sa.Index('specimen_protocol_id', Specimen.protocol_id)
+sa.Index('specimen_state_id', Specimen.state_id)
+sa.Index('specimen_type_id', Specimen.type_id)
+sa.Index('specimen_destination_id', Specimen.destination_id)
+sa.Index('specimen_tube_type_id', Specimen.tupe_type_id)
 
 class AliquotHistory(Model):
     """ Keeps track of aliquot state history. """
-    __tablename__ = "aliquot_history"
+    __tablename__ = 'aliquot_history'
 
     id = sa.Column(sa.Integer, primary_key=True)
 
-    aliquot_id = sa.Column(sa.Integer, sa.ForeignKey("aliquot.id"),
+    aliquot_id = sa.Column(sa.Integer, sa.ForeignKey('aliquot.id'),
                            nullable=False)
 
     state_id = sa.Column(sa.Integer,
-                              sa.ForeignKey("specimen_aliquot_term.id"),
+                              sa.ForeignKey('specimen_aliquot_term.id'),
                               nullable=False
                               )
 
-    state = orm.relation("SpecimenAliquotTerm",
+    state = orm.relation('SpecimenAliquotTerm',
                          uselist=False,
                          primaryjoin=state_id == SpecimenAliquotTerm.id
                          )
@@ -1243,21 +1241,21 @@ class Aliquot(Model):
             id: (int) machine generated primary key
             specimen_id: (int) the specimen this aliquot was generated from
     """
-    __tablename__ = "aliquot"
+    __tablename__ = 'aliquot'
 
     id = sa.Column(sa.Integer, primary_key=True)
 
-    specimen_id = sa.Column(sa.Integer, sa.ForeignKey("specimen.id"),
+    specimen_id = sa.Column(sa.Integer, sa.ForeignKey('specimen.id'),
                             nullable=False)
 
-    specimen = orm.relation("Specimen", uselist=False)
+    specimen = orm.relation('Specimen', uselist=False)
 
     type_id = sa.Column(sa.Integer,
-                              sa.ForeignKey("specimen_aliquot_term.id"),
+                              sa.ForeignKey('specimen_aliquot_term.id'),
                               nullable=False
                               )
 
-    type = orm.relation("SpecimenAliquotTerm",
+    type = orm.relation('SpecimenAliquotTerm',
                         uselist=False,
                         primaryjoin=type_id == SpecimenAliquotTerm.id
                         )
@@ -1267,11 +1265,11 @@ class Aliquot(Model):
     cell_amount = sa.Column(sa.Float)
 
     state_id = sa.Column(sa.Integer,
-                              sa.ForeignKey("specimen_aliquot_term.id"),
+                              sa.ForeignKey('specimen_aliquot_term.id'),
                               nullable=False
                               )
 
-    state = orm.relation("SpecimenAliquotTerm",
+    state = orm.relation('SpecimenAliquotTerm',
                          uselist=False,
                          primaryjoin=state_id == SpecimenAliquotTerm.id
                          )
@@ -1285,11 +1283,11 @@ class Aliquot(Model):
     box = sa.Column(sa.Unicode)
 
     storage_site_id = sa.Column(sa.Integer,
-                              sa.ForeignKey("specimen_aliquot_term.id"),
+                              sa.ForeignKey('specimen_aliquot_term.id'),
                               nullable=False
                               )
 
-    storage_site = orm.relation("SpecimenAliquotTerm",
+    storage_site = orm.relation('SpecimenAliquotTerm',
                                 uselist=False,
                                 primaryjoin=\
                                     storage_site_id == SpecimenAliquotTerm.id
@@ -1298,11 +1296,11 @@ class Aliquot(Model):
     thawed_num = sa.Column(sa.Integer)
 
     analysis_status_id = sa.Column(sa.Integer,
-                              sa.ForeignKey("specimen_aliquot_term.id"),
+                              sa.ForeignKey('specimen_aliquot_term.id'),
                               nullable=False
                               )
 
-    analysis_status = orm.relation("SpecimenAliquotTerm",
+    analysis_status = orm.relation('SpecimenAliquotTerm',
                                    uselist=False,
                                    primaryjoin=\
                                     analysis_status_id == SpecimenAliquotTerm.id
@@ -1315,11 +1313,11 @@ class Aliquot(Model):
     notes = sa.Column(sa.Unicode)
 
     special_instruction_id = sa.Column(sa.Integer,
-                              sa.ForeignKey("specimen_aliquot_term.id"),
+                              sa.ForeignKey('specimen_aliquot_term.id'),
                               nullable=False
                               )
 
-    special_instruction = orm.relation("SpecimenAliquotTerm",
+    special_instruction = orm.relation('SpecimenAliquotTerm',
                                 uselist=False,
                                 primaryjoin=\
                                     special_instruction_id == SpecimenAliquotTerm.id
@@ -1334,9 +1332,236 @@ class Aliquot(Model):
                             onupdate=datetime.now)
 
 
-sa.Index("aliquot_specimen_id", Aliquot.specimen_id)
-sa.Index("aliquot_type_id", Aliquot.type_id)
-sa.Index("aliquot_state_id", Aliquot.state_id)
-sa.Index("aliquot_storage_site_id", Aliquot.storage_site_id)
-sa.Index("aliquot_analysis_status_id", Aliquot.analysis_status_id)
-sa.Index("aliquot_special_instruction_id", Aliquot.special_instruction_id)
+sa.Index('aliquot_specimen_id', Aliquot.specimen_id)
+sa.Index('aliquot_type_id', Aliquot.type_id)
+sa.Index('aliquot_state_id', Aliquot.state_id)
+sa.Index('aliquot_storage_site_id', Aliquot.storage_site_id)
+sa.Index('aliquot_analysis_status_id', Aliquot.analysis_status_id)
+sa.Index('aliquot_special_instruction_id', Aliquot.special_instruction_id)
+
+
+class Drug(Model):
+    """ A known drug.
+    """
+
+    __tablename__ = 'drug'
+
+    id = sa.Column(sa.Integer, primary_key=True)
+
+    code = sa.Column(sa.Unicode, nullable=False, unique=True)
+
+    recommended_dose = sa.Column(sa.Float)
+
+    category_id = sa.Column(
+        sa.Integer,
+        sa.ForeignKey('drug_category.id'),
+        nullable=False,
+        index=True
+        )
+
+    category = orm.relation('DrugCategory', uselist=False)
+
+    status_id = sa.Column(
+        sa.Integer,
+        sa.ForeignKey('drug_status.id'),
+        nullable=False,
+        index=True
+        )
+
+    status = orm.relation('DrugStatus', uselist=False)
+
+    names = orm.relation(
+        'DrugName',
+        primaryjoin='and_(Drug.id==DrugName.drug_id, DrugName.is_active==True)',
+        order_by='desc(DrugName.value)'
+        )
+
+    is_active = sa.Column(sa.Boolean, nullable=False, default=True, index=True)
+
+    create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
+
+    modify_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now,
+                            onupdate=datetime.now)
+
+
+class DrugName(Model):
+    """ Child table of drug.
+        This will contain known names of the drug.
+    """
+
+    __tablename__ = 'drug_name'
+
+    id = sa.Column(sa.Integer, primary_key=True)
+
+    drug_id = sa.Column(
+        sa.Integer,
+        sa.ForeignKey('drug.id'),
+        nullable=False,
+        index=True
+        )
+
+    drug = orm.relation('Drug', uselist=False)
+
+    value = sa.Column(sa.Unicode, nullable=False, index=True)
+
+    is_active = sa.Column(sa.Boolean, nullable=False, default=True, index=True)
+
+    create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
+
+    modify_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now,
+                            onupdate=datetime.now)
+
+
+class DrugCategory(Model):
+    """ A lookup table for drug category values.
+        These will be assigned to a specific drug.
+    """
+
+    __tablename__ = 'drug_category'
+
+    id = sa.Column(sa.Integer, primary_key=True)
+
+    value = sa.Column(sa.Unicode, nullable=False, index=True)
+
+    is_active = sa.Column(sa.Boolean, nullable=False, default=True, index=True)
+
+    create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
+
+    modify_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now,
+                            onupdate=datetime.now)
+
+
+class DrugStatus(Model):
+    """ A lookup table for drug statuses.
+    """
+
+    __tablename__ = 'drug_status'
+
+    id = sa.Column(sa.Integer, primary_key=True)
+
+    value = sa.Column(sa.Unicode, nullable=False, index=True)
+
+    is_active = sa.Column(sa.Boolean, nullable=False, default=True, index=True)
+
+    create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
+
+    modify_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now,
+                            onupdate=datetime.now)
+
+
+class Medication(Model):
+    """ A period of time in which the subject is taking a drug.
+    """
+
+    __tablename__ = 'medication'
+
+    id = sa.Column(sa.Integer, primary_key=True)
+
+    subject_id = sa.Column(
+        sa.Integer,
+        sa.ForeignKey('subject.id'),
+        nullable=False,
+        index=True
+        )
+
+    subject = orm.relation('Subject', uselist=False)
+
+    visit_id = sa.Column(
+        sa.Integer,
+        sa.ForeignKey('visit.id'),
+        index=True
+        )
+
+    visit = orm.relation('Visit', uselist=False)
+
+    drug_id = sa.Column(
+        sa.Integer,
+        sa.ForeignKey('drug.id'),
+        nullable=False,
+        index=True
+        )
+
+    drug = orm.relation('Drug', uselist=False)
+
+    start_date = sa.Column(sa.Date, nullable=False)
+
+    stop_date = sa.Column(sa.Date)
+
+    dose = sa.Column(sa.Float)
+
+    notes = sa.Column(sa.Unicode)
+
+    is_active = sa.Column(sa.Boolean, nullable=False, default=True, index=True)
+
+    create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
+
+    modify_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now,
+                            onupdate=datetime.now)
+
+
+class Symptom(Model):
+    """
+    """
+
+    __tablename__ = 'symptom'
+
+    id = sa.Column(sa.Integer, primary_key=True)
+
+    is_active = sa.Column(sa.Boolean, nullable=False, default=True, index=True)
+
+    create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
+
+    modify_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now,
+                            onupdate=datetime.now)
+
+
+# Joining table for partner to EAV entries
+partner_instance = sa.Table('partner_instance', Model.metadata,
+    sa.Column('partner_id', sa.Integer, sa.ForeignKey('partner.id'),
+              nullable=False, primary_key=True),
+    sa.Column('instance_id', sa.Integer, sa.ForeignKey('instance.id'),
+              nullable=False, primary_key=True)
+    )
+
+
+class Partner(Model):
+    """ An annotation table for the number of partners a subject has.
+
+        Attributes:
+            id: (int) database id
+            subject_id: (int) the subject id reference of which the entry
+                is a partner of
+            subject: (obj) the object representation of the subject
+            enrolled_subject_id: (int) the id reference of the subject this
+                entry represents (if available)
+            enrolled_subject_id: (obj) the object representation of the parter
+                as a subject
+    """
+
+    __tablename__ = 'partner'
+
+    id = sa.Column(sa.Integer, primary_key=True)
+
+    subject_id = sa.Column(
+        sa.Integer,
+        sa.ForeignKey('subject.id'),
+        nullable=False,
+        index=True
+        )
+
+    subject = orm.relation('Subject', uselist=False)
+
+    enrolled_subject_id = sa.Column(
+        sa.Integer,
+        sa.ForeignKey('subject.id'),
+        index=True
+        )
+
+    enrolled_subject = orm.relation('Subject', uselist=False)
+
+    is_active = sa.Column(sa.Boolean, nullable=False, default=True, index=True)
+
+    create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
+
+    modify_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now,
+                            onupdate=datetime.now)
