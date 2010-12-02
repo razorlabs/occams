@@ -1549,7 +1549,11 @@ class Partner(Model):
         index=True
         )
 
-    subject = orm.relation('Subject', uselist=False)
+    subject = orm.relation(
+        'Subject',
+        uselist=False,
+        primaryjoin='Partner.subject_id == Subject.id'
+        )
 
     enrolled_subject_id = sa.Column(
         sa.Integer,
@@ -1557,7 +1561,11 @@ class Partner(Model):
         index=True
         )
 
-    enrolled_subject = orm.relation('Subject', uselist=False)
+    enrolled_subject = orm.relation(
+        'Subject',
+        uselist=False,
+        primaryjoin='Partner.enrolled_subject_id == Subject.id'
+        )
 
     is_active = sa.Column(sa.Boolean, nullable=False, default=True, index=True)
 
