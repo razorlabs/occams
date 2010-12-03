@@ -25,21 +25,23 @@ class Medication(object):
     implements(IMedication)
 
     dsid = FieldProperty(IMedication['dsid'])
-    subject_dsid = FieldProperty(IMedication['subject_dsid'])
-    visit_dsid = FieldProperty(IMedication['visit_dsid'])
+    subject_zid = FieldProperty(IMedication['subject_zid'])
+    visit_zid = FieldProperty(IMedication['visit_zid'])
     drug_code = FieldProperty(IMedication['drug_code'])
     start_date = FieldProperty(IMedication['start_date'])
     stop_date = FieldProperty(IMedication['stop_date'])
+    notes = FieldProperty(IMedication['notes'])
 
     @classmethod
     def from_rslt(cls, rslt):
         obj = Medication()
         obj.dsid = rslt.id
-        obj.subject_dsid = rslt.subject.id
-        obj.visit_dsid = rslt.visit.id
+        obj.subject_zid = rslt.subject.zid
+        obj.visit_zid = rslt.visit.zid
         obj.drug_code = rslt.drug.code
         obj.start_date = rslt.start_date
         obj.stop_date = rslt.stop_date
+        obj.notes = rslt.notes
         return obj
 
 
@@ -162,7 +164,8 @@ class DatastoreDrugManager(object):
     def keys(self):
         raise NotImplementedError
 
-
+from sqlalchemy.sql import and_
+from sqlalchemy.sql import or_
 class DatastoreMedicationManager(object):
     """ See `IMedicationManager`
     """
@@ -173,7 +176,7 @@ class DatastoreMedicationManager(object):
         self._datastore = datastore
 
 
-    def listByRecordedVisit(self, visit):
+    def listByVisit(self, visit, subject):
         """
         """
         Session = self._datastore.getScopedSession()
@@ -181,8 +184,14 @@ class DatastoreMedicationManager(object):
 
         medication_q = session.query(model.Medication) \
             .filter_by(is_active=True) \
-            .join(model.Medication.visit) \
-            .filter_by(zid=visit.zid)
+            .filter(and_(model.Medication.start_date < visit.visit_date,
+                         or_(model.Medication.stop_date == None,
+                             model.Medication.stop_date >= visit.visit_date
+                             )
+                         )
+                    ) \
+            .join(model.Medication.subject) \
+            .filter_by(zid=subject.zid)
 
         medication_q = medication_q.order_by(model.Medication.start_date)
 
@@ -235,7 +244,17 @@ class DatastoreMedicationManager(object):
                            is_active=True) \
                 .first()
 
+            subject_rslt = session.query(model.Subject) \
+                .filter_by(zid=source.subject_zid) \
+                .first()
+
+            visit_rslt = session.query(model.Visit) \
+                .filter_by(zid=source.visit_zid) \
+                .first()
+
             medication_rslt = model.Medication()
+            medication_rslt.subject = subject_rslt
+            medication_rslt.visit = visit_rslt
             medication_rslt.drug = drug_rslt
             medication_rslt.start_date = source.start_date
 

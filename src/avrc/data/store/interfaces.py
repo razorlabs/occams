@@ -584,11 +584,11 @@ class IMedication(IComponent):
     """ Content-type for adding current medications to a patient.
     """
 
-    dsid = zope.schema.Int(title=_(u'Datastore ID'))
+    dsid = zope.schema.Int(title=_(u'Datastore ID'), required=False)
 
-    subject_dsid = zope.schema.Iterable(title=_(u'Datastore Subject ID'))
+    subject_zid = zope.schema.Int(title=_(u'Zope Subject Object ID'))
 
-    visit_dsid = zope.schema.Iterable(title=_(u'Datastore Visit ID'))
+    visit_zid = zope.schema.Int(title=_(u'Zope Visit Object ID'))
 
     drug_code = zope.schema.TextLine(
         title=_(u'Drug Code'),

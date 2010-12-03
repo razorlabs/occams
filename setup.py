@@ -56,6 +56,7 @@ setup(
         "plone.supermodel",             # Form directives
         ### sql
         "SQLAlchemy",                   # SQLAlchemy, don't support >0.6 yet
+        "sqlalchemy-migrate",
         "transaction",                  # Zope-style transaction integration
         "z3c.saconfig",                 # Name SQLalchemy utilities
         ],
