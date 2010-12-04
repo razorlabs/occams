@@ -249,6 +249,10 @@ class IDatastore(IManager):
         """
         """
 
+    def getPartnerManager():
+        """
+        """
+
 class IInstance(IComponent):
     """ Empty object that will be used as the instance of a virtual schema. """
 
@@ -611,6 +615,7 @@ class IMedication(IComponent):
         required=False
         )
 
+
 class IDrugManager(IManager):
     """
     """
@@ -618,6 +623,7 @@ class IDrugManager(IManager):
     def import_(drug_list):
         """
         """
+
 
     def getCodesVocabulary():
         """
@@ -629,3 +635,19 @@ class IMedicationManager(IManager):
     """
 
 
+class IPartnerManager(IManager):
+    """
+    """
+
+
+class IPartner(IComponent):
+    """
+    """
+
+    zid = zope.schema.Int(title=_(u'Zope Object ID'))
+
+    subject_zid = zope.schema.Int(title=_(u'Subject Object ID'))
+
+    enrolled_subject_zid = zope.schema.Int(title=_(u'Enrolled Subject Object ID'))
+
+    visit_zid = zope.schema.Int(title=_(u'Recorded Visit Zope ID'))

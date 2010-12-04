@@ -1567,6 +1567,17 @@ class Partner(Model):
         primaryjoin='Partner.enrolled_subject_id == Subject.id'
         )
 
+    visit_id = sa.Column(
+        sa.Integer,
+        sa.ForeignKey('visit.id'),
+        nullable=False,
+        index=True
+        )
+
+    visit = orm.relation('Visit')
+
+    instances = orm.relation('Instance', secondary=subject_instance_table)
+
     is_active = sa.Column(sa.Boolean, nullable=False, default=True, index=True)
 
     create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
