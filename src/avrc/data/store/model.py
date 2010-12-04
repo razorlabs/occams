@@ -1516,7 +1516,7 @@ class Symptom(Model):
 
 
 # Joining table for partner to EAV entries
-partner_instance = sa.Table('partner_instance', Model.metadata,
+partner_instance_table = sa.Table('partner_instance', Model.metadata,
     sa.Column('partner_id', sa.Integer, sa.ForeignKey('partner.id'),
               nullable=False, primary_key=True),
     sa.Column('instance_id', sa.Integer, sa.ForeignKey('instance.id'),
@@ -1541,6 +1541,8 @@ class Partner(Model):
     __tablename__ = 'partner'
 
     id = sa.Column(sa.Integer, primary_key=True)
+
+    zid = sa.Column(sa.Integer, unique=True, nullable=False)
 
     subject_id = sa.Column(
         sa.Integer,
@@ -1567,16 +1569,13 @@ class Partner(Model):
         primaryjoin='Partner.enrolled_subject_id == Subject.id'
         )
 
-    visit_id = sa.Column(
-        sa.Integer,
-        sa.ForeignKey('visit.id'),
+    visit_date = sa.Column(
+        sa.Date,
         nullable=False,
         index=True
         )
 
-    visit = orm.relation('Visit')
-
-    instances = orm.relation('Instance', secondary=subject_instance_table)
+    instances = orm.relation('Instance', secondary=partner_instance_table)
 
     is_active = sa.Column(sa.Boolean, nullable=False, default=True, index=True)
 

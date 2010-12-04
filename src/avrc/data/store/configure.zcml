@@ -18,6 +18,7 @@
   <adapter factory=".specimen.DatastoreAliquotManager" />
   <adapter factory=".medication.DatastoreDrugManager" />
   <adapter factory=".medication.DatastoreMedicationManager" />
+  <adapter factory=".partner.DatastorePartnerManager" />
 
   <utility
       name="avrc.data.store.Datastore"

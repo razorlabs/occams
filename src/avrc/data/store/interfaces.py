@@ -650,4 +650,4 @@ class IPartner(IComponent):
 
     enrolled_subject_zid = zope.schema.Int(title=_(u'Enrolled Subject Object ID'))
 
-    visit_zid = zope.schema.Int(title=_(u'Recorded Visit Zope ID'))
+    visit_date = zope.schema.Date(title=_(u'Recorded Visit Date'))

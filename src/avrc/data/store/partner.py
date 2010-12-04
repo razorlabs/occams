@@ -24,7 +24,7 @@ class Partner(object):
 
     enrolled_subject_zid = FieldProperty(IPartner["enrolled_subject_zid"])
 
-    visit_zid = FieldProperty(IPartner["visit_zid"])
+    visit_date = FieldProperty(IPartner["visit_date"])
 
 
 class DatastorePartnerManager(DatastoreConventionalManager):
@@ -41,13 +41,36 @@ class DatastorePartnerManager(DatastoreConventionalManager):
             )
 
 
-    def putProperties(self, rslt, source):
-        """ Add the items from the source to Datastore
-        """
-        rslt.zid = source.zid
-        rslt.subject_zid = source.subject_zid
-        rslt.enrolled_subject_zid = source.enrolled_subject_zid
-        rslt.visit_zid = source.visit_zid
+    def put(self, source):
+        Session = self._datastore.getScopedSession()
+        session = Session()
+
+        partner_rslt = session.query(self._model)\
+            .filter_by(zid=source.zid)\
+            .first()
+
+        subject_rslt = session.query(model.Subject)\
+            .filter_by(zid=source.subject_zid)\
+            .first()
+
+        enrolled_subject_rslt = session.query(model.Subject)\
+            .filter_by(zid=source.enrolled_subject_zid)\
+            .first()
+
+        if not partner_rslt:
+            rslt = self._model()
+            rslt.zid = source.zid
+            rslt.subject = subject_rslt
+            rslt.enrolled_subject = enrolled_subject_rslt
+            rslt.visit_date = source.visit_date
+            session.add(rslt)
+        else:
+            rslt.subject = subject_rslt
+            rslt.enrolled_subject = enrolled_subject_rslt
+            rslt.visit_date = source.visit_date
+
+        transaction.commit()
+        return source
 
 
     def getEnteredDataOfType(self, partner, schema_name):

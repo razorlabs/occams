@@ -119,6 +119,12 @@ class Datastore(object):
         interfaces.IDatastore["getMedicationManager"].__doc__
 
 
+    def getPartnerManager(self):
+        return self.getManager(interfaces.IPartnerManager)
+
+    getPartnerManager.__doc__ = \
+        interfaces.IDatastore["getPartnerManager"].__doc__
+
 
     @property
     @deprecate("Use getSchemaManager() instead of schemata")
