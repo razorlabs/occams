@@ -1561,8 +1561,6 @@ class Symptom(Model):
 
     type = orm.relation('SymptomType', uselist=False)
 
-    is_present = sa.Column(sa.Boolean, nullable=False, index=True)
-
     symptom_status_id = sa.Column(
         sa.Integer,
         sa.ForeignKey('symptom_status.id'),
