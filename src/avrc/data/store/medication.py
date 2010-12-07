@@ -9,6 +9,9 @@ from zope.schema.vocabulary import SimpleTerm
 from zope.schema.vocabulary import SimpleVocabulary
 from zope.interface import implements
 
+from sqlalchemy.sql import and_
+from sqlalchemy.sql import or_
+
 from avrc.data.store.interfaces import IDatastore
 from avrc.data.store.interfaces import IDrugManager
 from avrc.data.store.interfaces import IMedication
@@ -26,7 +29,6 @@ class Medication(object):
 
     dsid = FieldProperty(IMedication['dsid'])
     subject_zid = FieldProperty(IMedication['subject_zid'])
-    visit_zid = FieldProperty(IMedication['visit_zid'])
     drug_code = FieldProperty(IMedication['drug_code'])
     start_date = FieldProperty(IMedication['start_date'])
     stop_date = FieldProperty(IMedication['stop_date'])
@@ -37,7 +39,6 @@ class Medication(object):
         obj = Medication()
         obj.dsid = rslt.id
         obj.subject_zid = rslt.subject.zid
-        obj.visit_zid = rslt.visit.zid
         obj.drug_code = rslt.drug.code
         obj.start_date = rslt.start_date
         obj.stop_date = rslt.stop_date
@@ -164,8 +165,7 @@ class DatastoreDrugManager(object):
     def keys(self):
         raise NotImplementedError
 
-from sqlalchemy.sql import and_
-from sqlalchemy.sql import or_
+
 class DatastoreMedicationManager(object):
     """ See `IMedicationManager`
     """

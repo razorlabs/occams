@@ -1352,7 +1352,7 @@ class Drug(Model):
 
     recommended_dose = sa.Column(sa.Float)
 
-    category_id = sa.Column(
+    drug_category_id = sa.Column(
         sa.Integer,
         sa.ForeignKey('drug_category.id'),
         nullable=False,
@@ -1361,7 +1361,7 @@ class Drug(Model):
 
     category = orm.relation('DrugCategory', uselist=False)
 
-    status_id = sa.Column(
+    drug_status_id = sa.Column(
         sa.Integer,
         sa.ForeignKey('drug_status.id'),
         nullable=False,
@@ -1499,6 +1499,42 @@ class Medication(Model):
                             onupdate=datetime.now)
 
 
+class SymptomType(Model):
+    """
+    """
+
+    __tablename__ = 'symptom_type'
+
+    id = sa.Column(sa.Integer, primary_key=True)
+
+    value = sa.Column(sa.Unicode, nullable=False, index=True)
+
+    is_active = sa.Column(sa.Boolean, nullable=False, default=True, index=True)
+
+    create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
+
+    modify_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now,
+                            onupdate=datetime.now)
+
+
+class SymptomStatus(Model):
+    """
+    """
+
+    __tablename__ = 'symptom_status'
+
+    id = sa.Column(sa.Integer, primary_key=True)
+
+    value = sa.Column(sa.Unicode, nullable=False, index=True)
+
+    is_active = sa.Column(sa.Boolean, nullable=False, default=True, index=True)
+
+    create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
+
+    modify_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now,
+                            onupdate=datetime.now)
+
+
 class Symptom(Model):
     """
     """
@@ -1506,6 +1542,41 @@ class Symptom(Model):
     __tablename__ = 'symptom'
 
     id = sa.Column(sa.Integer, primary_key=True)
+
+    subject_id = sa.Column(
+        sa.Integer,
+        sa.ForeignKey('subject.id'),
+        nullable=False,
+        index=True
+        )
+
+    subject = orm.relation('Subject', uselist=False)
+
+    symptom_type_id = sa.Column(
+        sa.Integer,
+        sa.ForeignKey('symptom_type.id'),
+        nullable=False,
+        index=True
+        )
+
+    type = orm.relation('SymptomType', uselist=False)
+
+    is_present = sa.Column(sa.Boolean, nullable=False, index=True)
+
+    symptom_status_id = sa.Column(
+        sa.Integer,
+        sa.ForeignKey('symptom_status.id'),
+        nullable=False,
+        index=True
+        )
+
+    status = orm.relation('SymptomStatus', uselist=False)
+
+    start_date = sa.Column(sa.Date, nullable=False)
+
+    stop_date = sa.Column(sa.Date)
+
+    notes = sa.Column(sa.Unicode)
 
     is_active = sa.Column(sa.Boolean, nullable=False, default=True, index=True)
 

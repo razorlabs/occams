@@ -592,8 +592,6 @@ class IMedication(IComponent):
 
     subject_zid = zope.schema.Int(title=_(u'Zope Subject Object ID'))
 
-    visit_zid = zope.schema.Int(title=_(u'Zope Visit Object ID'))
-
     drug_code = zope.schema.TextLine(
         title=_(u'Drug Code'),
         required=True
@@ -634,6 +632,15 @@ class IMedicationManager(IManager):
     """
     """
 
+    def listByVisit(visit, subject):
+        """
+        """
+
+
+    def listBySubject(subject):
+        """
+        """
+
 
 class IPartnerManager(IManager):
     """
@@ -651,3 +658,78 @@ class IPartner(IComponent):
     enrolled_subject_zid = zope.schema.Int(title=_(u'Enrolled Subject Object ID'))
 
     visit_date = zope.schema.Date(title=_(u'Recorded Visit Date'))
+
+
+class ISymptom(IComponent):
+    """ Content-type for adding current medications to a patient.
+    """
+
+    dsid = zope.schema.Int(title=_(u'Datastore ID'), required=False)
+
+    subject_zid = zope.schema.Int(title=_(u'Zope Subject Object ID'))
+
+    type = zope.schema.TextLine(
+        title=_(u'Type'),
+        required=True
+        )
+
+    is_present = zope.schema.Bool(
+        title=_(u'Present?'),
+        required=True,
+        )
+
+    status = zope.schema.TextLine(
+        title=_(u'Status'),
+        required=True
+        )
+
+    start_date = zope.schema.Date(
+        title=_(u'Date Started'),
+        description=_(u'Date the patient started taking the drug.'),
+        required=True
+        )
+
+    stop_date = zope.schema.Date(
+        title=_(u'Date Stopped'),
+        description=_(u'Date the patient stopped taking the drug.'),
+        required=False
+        )
+    notes = zope.schema.Text(
+        title=_(u"Notes (if any):"),
+        required=False
+        )
+
+
+class ISymptomManager(IManager):
+    """
+    """
+
+    def importTypes(symptom_types):
+        """ The symptom types aren't a a type yet (unlike, say `Drug`), so
+            they don't need their own manager.
+        """
+
+    def importStatuses(symptom_statuses):
+        """ The symptom types aren't a a type yet (unlike, say `Drug`), so
+            they don't need their own manager.
+        """
+
+
+    def getTypesVocabulary():
+        """
+        """
+
+    def getStatusVocabulary():
+        """
+        """
+
+
+    def listByVisit(visit, subject):
+        """
+        """
+
+
+    def listBySubject(subject):
+        """
+        """
+
