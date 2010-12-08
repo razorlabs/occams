@@ -29,6 +29,7 @@ class Symptom(object):
     subject_zid = FieldProperty(ISymptom['subject_zid'])
     type = FieldProperty(ISymptom['type'])
     type_other = FieldProperty(ISymptom['type_other'])
+    is_attended = FieldProperty(ISymptom['is_attended'])
     start_date = FieldProperty(ISymptom['start_date'])
     stop_date = FieldProperty(ISymptom['stop_date'])
     notes = FieldProperty(ISymptom['notes'])
@@ -40,6 +41,7 @@ class Symptom(object):
         obj.subject_zid = rslt.subject.zid
         obj.type = rslt.type.value
         obj.type_other = rslt.type_other
+        obj.is_attended = rslt.is_attended
         obj.start_date = rslt.start_date
         obj.stop_date = rslt.stop_date
         obj.notes = rslt.notes
@@ -169,6 +171,7 @@ class DatastoreSymptomManager(object):
 
             session.add(symptom_rslt)
 
+        symptom_rslt.is_attended = source.is_attended
         symptom_rslt.stop_date = source.stop_date
         symptom_rslt.notes = source.notes
 

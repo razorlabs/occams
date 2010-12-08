@@ -682,6 +682,11 @@ class ISymptom(IComponent):
         required=False,
         )
 
+    is_attended = zope.schema.Bool(
+        title=_(u'Subject seeked medical attention.'),
+        required=True,
+        )
+
     start_date = zope.schema.Date(
         title=_(u'Date Started'),
         description=_(u'Date the patient started taking the drug.'),
