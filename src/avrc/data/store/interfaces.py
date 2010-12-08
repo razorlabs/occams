@@ -249,6 +249,10 @@ class IDatastore(IManager):
         """
         """
 
+    def getSymptomManager():
+        """
+        """
+
     def getPartnerManager():
         """
         """
@@ -673,14 +677,9 @@ class ISymptom(IComponent):
         required=True
         )
 
-    is_present = zope.schema.Bool(
-        title=_(u'Present?'),
-        required=True,
-        )
-
-    status = zope.schema.TextLine(
-        title=_(u'Status'),
-        required=True
+    type_other = zope.schema.TextLine(
+        title=_(u'Other'),
+        required=False,
         )
 
     start_date = zope.schema.Date(
@@ -709,17 +708,8 @@ class ISymptomManager(IManager):
             they don't need their own manager.
         """
 
-    def importStatuses(symptom_statuses):
-        """ The symptom types aren't a a type yet (unlike, say `Drug`), so
-            they don't need their own manager.
-        """
-
 
     def getTypesVocabulary():
-        """
-        """
-
-    def getStatusVocabulary():
         """
         """
 

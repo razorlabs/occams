@@ -151,7 +151,21 @@ class DatastoreDrugManager(object):
 
 
     def retire(self, source):
-        raise NotImplementedError
+        Session = self._datastore.getScopedSession()
+        session = Session()
+
+        if source.dsid is not None:
+            medication_rslt = session.query(model.Medication) \
+                .filter_by(id=source.dsid) \
+                .first()
+
+        if not medication_rslt:
+            return None
+
+        medication_rslt.is_active = False
+        transaction.commit()
+
+        return source
 
 
     def restore(self, key):

@@ -118,12 +118,19 @@ class Datastore(object):
     getMedicationManager.__doc__ = \
         interfaces.IDatastore["getMedicationManager"].__doc__
 
+    def getSymptomManager(self):
+        return self.getManager(interfaces.ISymptomManager)
+
+    getSymptomManager.__doc__ = \
+        interfaces.IDatastore["getSymptomManager"].__doc__
 
     def getPartnerManager(self):
         return self.getManager(interfaces.IPartnerManager)
 
     getPartnerManager.__doc__ = \
         interfaces.IDatastore["getPartnerManager"].__doc__
+
+
 
 
     @property

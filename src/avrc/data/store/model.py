@@ -1517,24 +1517,6 @@ class SymptomType(Model):
                             onupdate=datetime.now)
 
 
-class SymptomStatus(Model):
-    """
-    """
-
-    __tablename__ = 'symptom_status'
-
-    id = sa.Column(sa.Integer, primary_key=True)
-
-    value = sa.Column(sa.Unicode, nullable=False, index=True)
-
-    is_active = sa.Column(sa.Boolean, nullable=False, default=True, index=True)
-
-    create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
-
-    modify_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now,
-                            onupdate=datetime.now)
-
-
 class Symptom(Model):
     """
     """
@@ -1561,14 +1543,7 @@ class Symptom(Model):
 
     type = orm.relation('SymptomType', uselist=False)
 
-    symptom_status_id = sa.Column(
-        sa.Integer,
-        sa.ForeignKey('symptom_status.id'),
-        nullable=False,
-        index=True
-        )
-
-    status = orm.relation('SymptomStatus', uselist=False)
+    type_other = sa.Column(sa.Unicode)
 
     start_date = sa.Column(sa.Date, nullable=False)
 

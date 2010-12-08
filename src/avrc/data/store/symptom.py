@@ -28,7 +28,7 @@ class Symptom(object):
     dsid = FieldProperty(ISymptom['dsid'])
     subject_zid = FieldProperty(ISymptom['subject_zid'])
     type = FieldProperty(ISymptom['type'])
-    status = FieldProperty(ISymptom['status'])
+    type_other = FieldProperty(ISymptom['type_other'])
     start_date = FieldProperty(ISymptom['start_date'])
     stop_date = FieldProperty(ISymptom['stop_date'])
     notes = FieldProperty(ISymptom['notes'])
@@ -38,8 +38,8 @@ class Symptom(object):
         obj = Symptom()
         obj.dsid = rslt.id
         obj.subject_zid = rslt.subject.zid
-        obj.type = rslt.type.zid
-        obj.status = rslt.drug.status
+        obj.type = rslt.type.value
+        obj.type_other = rslt.type_other
         obj.start_date = rslt.start_date
         obj.stop_date = rslt.stop_date
         obj.notes = rslt.notes
@@ -75,25 +75,6 @@ class DatastoreSymptomManager(object):
         transaction.commit()
 
 
-    def importStatuses(self, symptom_statuses):
-        """
-        """
-        Session = self._datastore.getScopedSession()
-        session = Session()
-
-        for name in symptom_statuses:
-            status_rslt = session.query(model.SymptomStatus) \
-                .filter_by(value=name) \
-                .first()
-
-            if not status_rslt:
-                status_rslt = model.SymptomStatus()
-                status_rslt.value = name
-                session.add(status_rslt)
-
-        transaction.commit()
-
-
     def getTypesVocabulary(self):
         """ See `ISytmptomManager.getTypesVocabulary`
         """
@@ -104,20 +85,6 @@ class DatastoreSymptomManager(object):
             .filter_by(is_active=True)
 
         term_list = [t.value for t in symptom_type_q.all()]
-
-        return SimpleVocabulary.fromValues(term_list)
-
-
-    def getStatusVocabulary(self):
-        """
-        """
-        Session = self._datastore.getScopedSession()
-        session = Session()
-
-        symptom_status_q = session.query(model.SymptomStatus) \
-            .filter_by(is_active=True)
-
-        term_list = [t.value for t in symptom_status_q.all()]
 
         return SimpleVocabulary.fromValues(term_list)
 
@@ -160,7 +127,6 @@ class DatastoreSymptomManager(object):
         return [Symptom.from_rslt(r) for r in symptom_q.all()]
 
 
-
     def get(self, key):
         """ See `IDrugManager.get`
         """
@@ -186,8 +152,8 @@ class DatastoreSymptomManager(object):
                 .filter_by(id=source.dsid) \
                 .first()
         else:
-            drug_rslt = session.query(model.Drug) \
-                .filter_by(code=source.drug_code,
+            symptom_type_rslt = session.query(model.SymptomType) \
+                .filter_by(value=source.type,
                            is_active=True) \
                 .first()
 
@@ -195,14 +161,10 @@ class DatastoreSymptomManager(object):
                 .filter_by(zid=source.subject_zid) \
                 .first()
 
-            visit_rslt = session.query(model.Visit) \
-                .filter_by(zid=source.visit_zid) \
-                .first()
-
             symptom_rslt = model.Symptom()
             symptom_rslt.subject = subject_rslt
-            symptom_rslt.visit = visit_rslt
-            symptom_rslt.drug = drug_rslt
+            symptom_rslt.type = symptom_type_rslt
+            symptom_rslt.type_other = source.type_other
             symptom_rslt.start_date = source.start_date
 
             session.add(symptom_rslt)
@@ -223,7 +185,21 @@ class DatastoreSymptomManager(object):
 
 
     def retire(self, source):
-        raise NotImplementedError
+        Session = self._datastore.getScopedSession()
+        session = Session()
+
+        if source.dsid is not None:
+            symptom_rslt = session.query(model.Symptom) \
+                .filter_by(id=source.dsid) \
+                .first()
+
+        if not symptom_rslt:
+            return None
+
+        symptom_rslt.is_active = False
+        transaction.commit()
+
+        return source
 
 
     def restore(self, key):
