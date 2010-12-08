@@ -151,21 +151,7 @@ class DatastoreDrugManager(object):
 
 
     def retire(self, source):
-        Session = self._datastore.getScopedSession()
-        session = Session()
-
-        if source.dsid is not None:
-            medication_rslt = session.query(model.Medication) \
-                .filter_by(id=source.dsid) \
-                .first()
-
-        if not medication_rslt:
-            return None
-
-        medication_rslt.is_active = False
-        transaction.commit()
-
-        return source
+        raise NotImplementedError
 
 
     def restore(self, key):
@@ -262,13 +248,8 @@ class DatastoreMedicationManager(object):
                 .filter_by(zid=source.subject_zid) \
                 .first()
 
-            visit_rslt = session.query(model.Visit) \
-                .filter_by(zid=source.visit_zid) \
-                .first()
-
             medication_rslt = model.Medication()
             medication_rslt.subject = subject_rslt
-            medication_rslt.visit = visit_rslt
             medication_rslt.drug = drug_rslt
             medication_rslt.start_date = source.start_date
 
@@ -290,7 +271,21 @@ class DatastoreMedicationManager(object):
 
 
     def retire(self, source):
-        raise NotImplementedError
+        Session = self._datastore.getScopedSession()
+        session = Session()
+
+        if source.dsid is not None:
+            medication_rslt = session.query(model.Medication) \
+                .filter_by(id=source.dsid) \
+                .first()
+
+        if not medication_rslt:
+            return None
+
+        medication_rslt.is_active = False
+        transaction.commit()
+
+        return source
 
 
     def restore(self, key):
