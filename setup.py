@@ -3,63 +3,64 @@ from setuptools import find_packages
 import os
 
 def read(*rnames):
-    """ Returns the contents of the path relative to this setup file. Note that
-        each argument represents a directory within another directory.
-        (e.g. ["foo", "bar", "baz.txt"] is evaluated as "foo/bar/baz.txt)
+    """ Returns the contents of the path relative to this setup file.
     """
-    return open(os.path.join(os.path.dirname(__file__), *rnames)).read()
+    with open(os.path.join(os.path.dirname(__file__), *rnames)) as stream:
+        contents = stream.read()
+    return contents
+
 
 setup(
-    name="avrc.data.store",
-    version="0.1.1",
-    description="Provides storage solution for sparse clinical study data.",
-    long_description=read("README.txt") + "\n" + read("docs", "HISTORY.txt"),
+    name='avrc.data.store',
+    version=read('src', 'avrc', 'data', 'store', 'version.txt'),
+    description='Provides storage solution for sparse clinical study data.',
+    long_description=read('README.txt') + '\n' + read('docs', 'HISTORY.txt'),
     classifiers=[
-        "Development Status :: 4 - Beta"
-        "Framework :: Zope3",
-        "Intended Audience :: Developers"
-        "Operating System :: OS Independent"
-        "Programming Language :: Python",
-        "Topic :: Database",
-        "Topic :: Scientific/Engineering :: Bio-Informatics",
-        "Topic :: Scientific/Engineering :: Information Analysis",
-        "Topic :: Scientific/Engineering :: Medical Science Apps.",
-        "Topic :: Software Development :: Libraries",
-        "Topic :: Utilities",
+        'Development Status :: 4 - Beta'
+        'Framework :: Zope3',
+        'Intended Audience :: Developers'
+        'Operating System :: OS Independent'
+        'Programming Language :: Python',
+        'Topic :: Database',
+        'Topic :: Scientific/Engineering :: Bio-Informatics',
+        'Topic :: Scientific/Engineering :: Information Analysis',
+        'Topic :: Scientific/Engineering :: Medical Science Apps.',
+        'Topic :: Software Development :: Libraries',
+        'Topic :: Utilities',
         ],
-    keywords="AVRC datastore database eav clinical sqlalchemy relational",
-    author="UCSD AntiViral Research Center",
-    author_email="avrcdata@ucsd.edu",
-    url="http://datam0nk3y.org/P01svn/plone4_eggs/avrc.data.store/trunk",
-    license="GPL",
-    packages=find_packages("src", exclude=["ez_setup"]),
-    package_dir={"":"src"},
-    namespace_packages=["avrc", "avrc.data"],
+    keywords='AVRC datastore database eav clinical sqlalchemy relational',
+    author='UCSD AntiViral Research Center',
+    author_email='avrcdata@ucsd.edu',
+    url='http://datam0nk3y.org/P01svn/plone4_eggs/avrc.data.store/trunk',
+    license='GPL',
+    packages=find_packages('src', exclude=['ez_setup']),
+    package_dir={'':'src'},
+    namespace_packages=['avrc', 'avrc.data'],
     include_package_data=True,
     zip_safe=False,
     # Dependency packages, we leave the exact version requirements to buildout,
     # although with time, we'll start adding version restrictions if issues
     # arise
     install_requires=[
-        "setuptools",
+        'setuptools',
         ### Zope 2
-        "zope.component",               # Adapters/utilities
-        "zope.configuration",           # For command-line usage (loads hooks)
-        "zope.deprecation",             # Deprecate unused libraries
-        "zope.i18nmessageid",           # Internationalization
-        "zope.interface",               # Specifications
-        "zope.schema",                  # Specification data types
+        'zope.component',               # Adapters/utilities
+        'zope.configuration',           # For command-line usage (loads hooks)
+        'zope.deprecation',             # Deprecate unused libraries
+        'zope.i18nmessageid',           # Internationalization
+        'zope.interface',               # Specifications
+        'zope.schema',                  # Specification data types
         ### schemata
-        "plone.alterego",               # Virtual name spaces
-        "plone.autoform",               # Form directives
-        "plone.directives.form",        # Dexterity-style z3c form support
-        "plone.supermodel",             # Form directives
+        'plone.alterego',               # Virtual name spaces
+        'plone.autoform',               # Form directives
+        'plone.directives.form',        # Dexterity-style z3c form support
+        'plone.supermodel',             # Form directives
         ### sql
-        "SQLAlchemy",                   # SQLAlchemy, don't support >0.6 yet
-        "sqlalchemy-migrate",
-        "transaction",                  # Zope-style transaction integration
-        "z3c.saconfig",                 # Name SQLalchemy utilities
+        'SQLAlchemy',                   # SQLAlchemy, don't support >0.6 yet
+        'sqlalchemy-migrate',
+        'transaction',                  # Zope-style transaction integration
+        'z3c.saconfig',                 # Name SQLalchemy utilities
         ],
-    extras_require=dict(test=["zope.testing"]),
-    test_suite="avrc.data.store.tests",
+    extras_require=dict(test=['zope.testing']),
+    test_suite='avrc.data.store.tests',
     )
