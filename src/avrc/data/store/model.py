@@ -1373,7 +1373,7 @@ class Drug(Model):
     names = orm.relation(
         'DrugName',
         primaryjoin='and_(Drug.id==DrugName.drug_id, DrugName.is_active==True)',
-        order_by='desc(DrugName.value)'
+        order_by='desc(DrugName.order)'
         )
 
     is_active = sa.Column(sa.Boolean, nullable=False, default=True, index=True)
@@ -1403,6 +1403,8 @@ class DrugName(Model):
     drug = orm.relation('Drug', uselist=False)
 
     value = sa.Column(sa.Unicode, nullable=False, index=True)
+
+    order = sa.Column(sa.Integer, nullable=False)
 
     is_active = sa.Column(sa.Boolean, nullable=False, default=True, index=True)
 

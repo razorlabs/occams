@@ -74,6 +74,8 @@ class DatastoreDrugManager(object):
         Session = self._datastore.getScopedSession()
         session = Session()
 
+        code_counter = dict()
+
         for code, dose, category, status, name in drug_list:
             category_rslt = session.query(model.DrugCategory) \
                 .filter_by(value=category) \
@@ -98,6 +100,8 @@ class DatastoreDrugManager(object):
                 .first()
 
             if not drug_rslt:
+                code_counter[code] = 0
+
                 drug_rslt = model.Drug()
                 drug_rslt.code = code
                 drug_rslt.category = category_rslt
@@ -110,8 +114,11 @@ class DatastoreDrugManager(object):
                 .first()
 
             if not name_rslt:
+                code_counter[code] += 1
+
                 name_rslt = model.DrugName()
                 name_rslt.value = name
+                name_rslt.order = code_counter[code]
                 drug_rslt.names.append(name_rslt)
 
             transaction.commit()
@@ -126,7 +133,8 @@ class DatastoreDrugManager(object):
         term_list = []
 
         drug_q = session.query(model.Drug) \
-            .filter_by(is_active=True)
+            .filter_by(is_active=True) \
+            .order_by(model.Drug.code)
 
         for drug_rslt in drug_q.all():
             term_list.append(SimpleTerm(
