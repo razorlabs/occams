@@ -65,6 +65,7 @@ class DatastorePartnerManager(DatastoreConventionalManager):
             rslt.visit_date = source.visit_date
             session.add(rslt)
         else:
+            rslt = partner_rslt
             rslt.subject = subject_rslt
             rslt.enrolled_subject = enrolled_subject_rslt
             rslt.visit_date = source.visit_date
