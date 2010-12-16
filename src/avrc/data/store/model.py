@@ -1547,7 +1547,7 @@ class Symptom(Model):
 
     type_other = sa.Column(sa.Unicode)
 
-    is_attended = sa.Column(sa.Boolean, nullable=False)
+    is_attended = sa.Column(sa.Boolean)
 
     start_date = sa.Column(sa.Date, nullable=False)
 
