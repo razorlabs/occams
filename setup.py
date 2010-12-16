@@ -1,20 +1,15 @@
-from setuptools import setup
 from setuptools import find_packages
-import os
+from setuptools import setup
 
-def read(*rnames):
-    """ Returns the contents of the path relative to this setup file.
-    """
-    with open(os.path.join(os.path.dirname(__file__), *rnames)) as stream:
-        contents = stream.read()
-    return contents
+
+# Working release version
+version = '0.1.3'
 
 
 setup(
     name='avrc.data.store',
-    version=read('src', 'avrc', 'data', 'store', 'version.txt'),
+    version=version,
     description='Provides storage solution for sparse clinical study data.',
-    long_description=read('README.txt') + '\n' + read('docs', 'HISTORY.txt'),
     classifiers=[
         'Development Status :: 4 - Beta'
         'Framework :: Zope3',
