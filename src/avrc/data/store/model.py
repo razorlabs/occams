@@ -938,7 +938,7 @@ class Enrollment(Model):
 
     stop_date = sa.Column(sa.Date)
 
-    instances = orm.relation('Instance', secondary=subject_instance_table)
+    instances = orm.relation('Instance', secondary=enrollment_instance_table)
 
     eid = sa.Column(sa.Unicode, index=True)
 
