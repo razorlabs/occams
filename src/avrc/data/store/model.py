@@ -891,6 +891,13 @@ class Subject(Model):
 
     instances = orm.relation('Instance', secondary=subject_instance_table)
 
+enrollment_instance_table = sa.Table('enrollment_instance', Model.metadata,
+    sa.Column('enrollment_id', sa.ForeignKey('enrollment.id'), nullable=False,
+              primary_key=True),
+    sa.Column('instance_id', sa.ForeignKey('instance.id'), nullable=False,
+              primary_key=True),
+    )
+
 class Enrollment(Model):
     """ Links a Subject to a Domain.
 
@@ -930,6 +937,8 @@ class Enrollment(Model):
     consent_date = sa.Column(sa.Date, nullable=False)
 
     stop_date = sa.Column(sa.Date)
+
+    instances = orm.relation('Instance', secondary=subject_instance_table)
 
     eid = sa.Column(sa.Unicode, index=True)
 
