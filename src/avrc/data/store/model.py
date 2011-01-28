@@ -620,6 +620,8 @@ class Attribute(Model):
     schema_id = sa.Column(sa.Integer, sa.ForeignKey('schema.id'),
                           nullable=False)
 
+    schema = orm.relation('Schema', uselist=False)
+
     field_id = sa.Column(sa.Integer, sa.ForeignKey('field.id'), nullable=False)
 
     field = orm.relation('Field', uselist=False)
@@ -676,6 +678,8 @@ class Field(Model):
     __tablename__ = 'field'
 
     id = sa.Column(sa.Integer, primary_key=True)
+
+    attribute = orm.relation('Attribute', uselist=False)
 
     title = sa.Column(sa.Unicode, nullable=False)
 
