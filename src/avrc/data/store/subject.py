@@ -202,6 +202,39 @@ class DatastoreEnrollmentManager(DatastoreConventionalManager):
 
         return [self._datastore.get(row.id) for row in rows]
 
+    def getEnteredDataOfType(self, enrollment, type):
+        """ Get all of the data entered for a visit """
+        Session = self._datastore.getScopedSession()
+        session = Session()
+        instance_rslt = session.query(model.Instance)\
+                                      .join(self._model.instances)\
+                                      .filter(self._model.zid==enrollment.zid)\
+                                      .join(model.Schema)\
+                                      .join(model.Specification)\
+                                      .filter_by(name=type)\
+                                      .first()
+        if not instance_rslt:
+            return None
+        return self._datastore.get(instance_rslt.title)
+
+
+    def add_instances(self, enrollment, obj_or_list):
+        """ ??!? """
+        Session = self._datastore.getScopedSession()
+        session = Session()
+        subject_rslt = session.query(self._model)\
+                                  .filter_by(zid=enrollment.zid)\
+                                  .first()
+
+        for obj in obj_or_list:
+            obj_rslt = session.query(model.Instance)\
+                                    .filter_by(title=obj.title)\
+                                    .first()
+            subject_rslt.instances.append(obj_rslt)
+
+        transaction.commit()
+
+
 class Visit(object):
     implements(interfaces.IVisit)
 
