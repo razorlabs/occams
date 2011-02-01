@@ -222,7 +222,7 @@ class DatastoreEnrollmentManager(DatastoreConventionalManager):
         """ ??!? """
         Session = self._datastore.getScopedSession()
         session = Session()
-        subject_rslt = session.query(self._model)\
+        enrollment_rslt = session.query(self._model)\
                                   .filter_by(zid=enrollment.zid)\
                                   .first()
 
@@ -230,7 +230,7 @@ class DatastoreEnrollmentManager(DatastoreConventionalManager):
             obj_rslt = session.query(model.Instance)\
                                     .filter_by(title=obj.title)\
                                     .first()
-            subject_rslt.instances.append(obj_rslt)
+            enrollment_rslt.instances.append(obj_rslt)
 
         transaction.commit()
 
