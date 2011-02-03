@@ -151,6 +151,28 @@ class AbstractEAVContainerManager(AbstractDatastoreManager):
 
         return tuple(names)
 
+    def getEnteredDataCount(self, context, klass_name=None, state=None):
+        """
+        """
+        Session = self._datastore.getScopedSession()
+
+        schema_query = Session.query(model.Instance)\
+            .join(self._model.instances)\
+            .filter(self._model.zid == context.zid)\
+
+        if state:
+            schema_query = schema_query \
+                .join(model.State)\
+                .filter_by(name=state)
+
+        if klass_name:
+            schema_query = schema_query \
+                .join(model.Schema)\
+                .join(model.Specification)\
+                .filter_by(name=klass_name)
+
+        return schema_query.count()
+
 
     def getEnteredDataOfType(self, context, type):
         """ Get all of the data entered for a context
