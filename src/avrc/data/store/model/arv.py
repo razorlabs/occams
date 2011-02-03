@@ -1,4 +1,4 @@
-""" Anti-Retroviral Medication Library
+""" Anti-Retroviral Medication Models
 """
 
 from datetime import datetime

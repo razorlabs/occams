@@ -1,4 +1,4 @@
-""" Entity-Attribute-Value with Class-Relationships Library
+""" Entity-Attribute-Value with Class-Relationships Models
 
     The entities defined within this module are the foundation for the EAV/CR
     framework implementation for use in the data store utility. Not that these

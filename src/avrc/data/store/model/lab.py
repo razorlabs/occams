@@ -1,4 +1,4 @@
-""" Lab Library (Specimen and Aliquot)
+""" Lab Models
 """
 
 from datetime import datetime

@@ -1,4 +1,4 @@
-""" Clinical Library (Domains and Subjects)
+""" Clinical Models
 """
 
 from datetime import datetime

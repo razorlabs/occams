@@ -1,4 +1,4 @@
-""" Symptom Library
+""" Symptom Models
 """
 from datetime import datetime
 

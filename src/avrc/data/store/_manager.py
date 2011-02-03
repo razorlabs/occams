@@ -7,6 +7,8 @@ from zope.component import createObject
 from avrc.data.store import model
 
 class AbstractDatastoreManager(object):
+    """ Base class for all manager types.
+    """
 
     def __init__(self, datastore):
         self._datastore = datastore

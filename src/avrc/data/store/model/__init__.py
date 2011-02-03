@@ -25,12 +25,12 @@ from avrc.data.store.model.symptom import *
 def setup(engine):
     """ Sets up the database tables.
 
-    This method will setup the database models using the specified engine
-    bind. This is simply a convenience method for creating the database
-    tables as well as keeping this module self-contained.
+        This method will setup the database models using the specified engine
+        bind. This is simply a convenience method for creating the database
+        tables as well as keeping this module self-contained.
 
-    Arguments:
-        ``engine``: An SQLAlchemy engine object.
+        Arguments:
+            ``engine``: An SQLAlchemy engine object.
     """
 
     Model.metadata.create_all(bind=engine, checkfirst=True)
