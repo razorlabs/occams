@@ -9,6 +9,7 @@ import transaction
 from zope.component import getUtility
 from zope.component.factory import Factory
 from zope.deprecation import deprecate
+from zope.deprecation import deprecated
 import zope.interface
 from zope.interface import implements
 from zope.interface import providedBy
@@ -253,6 +254,10 @@ class Datastore(object):
 
             for attribute_rslt in instance_rslt.schema.attributes:
 
+                # Worflow state is deprecated and should be ignored
+                if attribute_rslt.name == u'state':
+                    continue
+
                 type_name = attribute_rslt.field.type.title
 
                 if type_name in (u'binary',):
@@ -328,6 +333,10 @@ class Datastore(object):
 
             # we don't want NULL/NIL/None value in the datastore
             if value is None:
+                continue
+
+            # Worflow state is deprecated and should be ignored
+            if attr_name == u'state':
                 continue
 
             # An object, add it's properties to the traversal queue
@@ -567,6 +576,9 @@ def spawnObject(iface, **kw):
 
         def getState(self):
             return self.__state__
+
+        # Note: DO NOT USE THIS, this is for backwards compatibility
+        state = property(getState, setState)
 
         def __str__(self):
             return u'<Instance: \'%s\'; implements: \'%s\'>' \
