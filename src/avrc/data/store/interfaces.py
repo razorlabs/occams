@@ -313,7 +313,7 @@ class IProtocol(IComponent):
     """ """
     zid = zope.schema.Int(title=_(u'Protocol Zope IntId'))
 
-    cycle = zope.schema.Int(title=_(u'Protocol Cycle'))
+    cycle = zope.schema.Int(title=_(u'Protocol Cycle'), required=False)
 
     domain_zid = zope.schema.Int(title=_(u'Domain Zope IntId'))
 
