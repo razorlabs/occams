@@ -11,25 +11,25 @@ class AbstractDatastoreManager(object):
     def __init__(self, datastore):
         self._datastore = datastore
 
-    def keys():
+    def keys(self):
         raise NotImplementedError
 
-    def has(key):
+    def has(self, key):
         raise NotImplementedError
 
-    def get(key):
+    def get(self, key):
         raise NotImplementedError
 
-    def purge(key):
+    def purge(self, key):
         raise NotImplementedError
 
-    def retire(key):
+    def retire(self,key):
         raise NotImplementedError
 
-    def restore(key):
+    def restore(self, key):
         raise NotImplementedError
 
-    def put(target):
+    def put(self, target):
         raise NotImplementedError
 
 
@@ -99,7 +99,7 @@ class AbstractDatastoreConventionalManager(AbstractDatastoreManager):
         return listing
 
 
-class AbstractEAVContainerManager(AbstractDatastoreManager):
+class AbstractEAVContainerManager(AbstractDatastoreConventionalManager):
     """
     """
 
