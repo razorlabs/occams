@@ -8,17 +8,17 @@
     -->
   <include package="zope.component" file="meta.zcml"/>
 
-  <adapter factory=".schema.DatastoreSchemaManager" />
-  <adapter factory=".domain.DatastoreDomainManager" />
-  <adapter factory=".subject.DatastoreSubjectManager" />
-  <adapter factory=".subject.DatastoreVisitManager" />
   <adapter factory=".domain.DatastoreProtocolManager" />
-  <adapter factory=".subject.DatastoreEnrollmentManager" />
-  <adapter factory=".specimen.DatastoreSpecimenManager" />
-  <adapter factory=".specimen.DatastoreAliquotManager" />
+  <adapter factory=".domain.DatastoreDomainManager" />
   <adapter factory=".medication.DatastoreDrugManager" />
   <adapter factory=".medication.DatastoreMedicationManager" />
-  <adapter factory=".partner.DatastorePartnerManager" />
+  <adapter factory=".schema.DatastoreSchemaManager" />
+  <adapter factory=".specimen.DatastoreSpecimenManager" />
+  <adapter factory=".specimen.DatastoreAliquotManager" />
+  <adapter factory=".subject.DatastoreSubjectManager" />
+  <adapter factory=".subject.DatastoreVisitManager" />
+  <adapter factory=".subject.DatastorePartnerManager" />
+  <adapter factory=".subject.DatastoreEnrollmentManager" />
   <adapter factory=".symptom.DatastoreSymptomManager" />
 
   <utility

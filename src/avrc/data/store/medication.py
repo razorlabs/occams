@@ -12,6 +12,7 @@ from zope.interface import implements
 from sqlalchemy.sql import and_
 from sqlalchemy.sql import or_
 
+from avrc.data.store._manager import AbstractDatastoreManager
 from avrc.data.store.interfaces import IDatastore
 from avrc.data.store.interfaces import IDrugManager
 from avrc.data.store.interfaces import IMedication
@@ -46,16 +47,13 @@ class Medication(object):
         return obj
 
 
-class DatastoreDrugManager(object):
+class DatastoreDrugManager(AbstractDatastoreManager):
     """ See `IDrugManager`
 
         TODO: Needs full implementation...
     """
     adapts(IDatastore)
     implements(IDrugManager)
-
-    def __init__(self, datastore):
-        self._datastore = datastore
 
 
     def import_(self, drug_list):
@@ -72,30 +70,29 @@ class DatastoreDrugManager(object):
             See `IDrugManager.import_`
         """
         Session = self._datastore.getScopedSession()
-        session = Session()
 
         code_counter = dict()
 
         for code, dose, category, status, name in drug_list:
-            category_rslt = session.query(model.DrugCategory) \
+            category_rslt = Session.query(model.DrugCategory) \
                 .filter_by(value=category) \
                 .first()
 
             if not category_rslt:
                 category_rslt = model.DrugCategory()
                 category_rslt.value = category
-                session.add(category_rslt)
+                Session.add(category_rslt)
 
-            status_rslt = session.query(model.DrugStatus) \
+            status_rslt = Session.query(model.DrugStatus) \
                 .filter_by(value=status) \
                 .first()
 
             if not status_rslt:
                 status_rslt = model.DrugStatus()
                 status_rslt.value = status
-                session.add(status_rslt)
+                Session.add(status_rslt)
 
-            drug_rslt = session.query(model.Drug) \
+            drug_rslt = Session.query(model.Drug) \
                 .filter_by(code=code) \
                 .first()
 
@@ -107,9 +104,9 @@ class DatastoreDrugManager(object):
                 drug_rslt.category = category_rslt
                 drug_rslt.status = status_rslt
                 drug_rslt.dose = dose
-                session.add(drug_rslt)
+                Session.add(drug_rslt)
 
-            name_rslt = session.query(model.DrugName) \
+            name_rslt = Session.query(model.DrugName) \
                 .filter_by(drug=drug_rslt, value=name) \
                 .first()
 
@@ -128,11 +125,10 @@ class DatastoreDrugManager(object):
         """ See `IDrugManager.getCodesVocabulary`
         """
         Session = self._datastore.getScopedSession()
-        session = Session()
 
         term_list = []
 
-        drug_q = session.query(model.Drug) \
+        drug_q = Session.query(model.Drug) \
             .filter_by(is_active=True) \
             .order_by(model.Drug.code)
 
@@ -146,51 +142,19 @@ class DatastoreDrugManager(object):
         return SimpleVocabulary(term_list)
 
 
-    def get(self, key):
-        raise NotImplementedError
-
-
-    def put(self, source):
-        raise NotImplementedError
-
-
-    def has(self, key):
-        raise NotImplementedError
-
-
-    def retire(self, source):
-        raise NotImplementedError
-
-
-    def restore(self, key):
-        raise NotImplementedError
-
-
-    def purge(self, source):
-        raise NotImplementedError
-
-
-    def keys(self):
-        raise NotImplementedError
-
-
-class DatastoreMedicationManager(object):
+class DatastoreMedicationManager(AbstractDatastoreManager):
     """ See `IMedicationManager`
     """
     adapts(IDatastore)
     implements(IMedicationManager)
-
-    def __init__(self, datastore):
-        self._datastore = datastore
 
 
     def listByVisit(self, visit, subject):
         """
         """
         Session = self._datastore.getScopedSession()
-        session = Session()
 
-        medication_q = session.query(model.Medication) \
+        medication_q = Session.query(model.Medication) \
             .filter_by(is_active=True) \
             .filter(and_(model.Medication.start_date < visit.visit_date,
                          or_(model.Medication.stop_date == None,
@@ -210,9 +174,8 @@ class DatastoreMedicationManager(object):
         """
         """
         Session = self._datastore.getScopedSession()
-        session = Session()
 
-        medication_q = session.query(model.Medication) \
+        medication_q = Session.query(model.Medication) \
             .filter_by(is_active=True) \
             .join(model.Medication.subject) \
             .filter_by(zid=subject.zid)
@@ -226,9 +189,8 @@ class DatastoreMedicationManager(object):
         """ See `IDrugManager.get`
         """
         Session = self._datastore.getScopedSession()
-        session = Session()
 
-        result = session.query(model.Medication)\
+        result = Session.query(model.Medication)\
             .filter_by(id=int(key), is_active=True)\
             .first()
 
@@ -240,19 +202,18 @@ class DatastoreMedicationManager(object):
         """
 
         Session = self._datastore.getScopedSession()
-        session = Session()
 
         if source.dsid is not None:
-            medication_rslt = session.query(model.Medication) \
+            medication_rslt = Session.query(model.Medication) \
                 .filter_by(id=source.dsid) \
                 .first()
         else:
-            drug_rslt = session.query(model.Drug) \
+            drug_rslt = Session.query(model.Drug) \
                 .filter_by(code=source.drug_code,
                            is_active=True) \
                 .first()
 
-            subject_rslt = session.query(model.Subject) \
+            subject_rslt = Session.query(model.Subject) \
                 .filter_by(zid=source.subject_zid) \
                 .first()
 
@@ -261,7 +222,7 @@ class DatastoreMedicationManager(object):
             medication_rslt.drug = drug_rslt
             medication_rslt.start_date = source.start_date
 
-            session.add(medication_rslt)
+            Session.add(medication_rslt)
 
         medication_rslt.stop_date = source.stop_date
         medication_rslt.notes = source.notes
@@ -280,10 +241,9 @@ class DatastoreMedicationManager(object):
 
     def retire(self, source):
         Session = self._datastore.getScopedSession()
-        session = Session()
 
         if source.dsid is not None:
-            medication_rslt = session.query(model.Medication) \
+            medication_rslt = Session.query(model.Medication) \
                 .filter_by(id=source.dsid) \
                 .first()
 
@@ -294,15 +254,3 @@ class DatastoreMedicationManager(object):
         transaction.commit()
 
         return source
-
-
-    def restore(self, key):
-        raise NotImplementedError
-
-
-    def purge(self, source):
-        raise NotImplementedError
-
-
-    def keys(self):
-        raise NotImplementedError

@@ -11,6 +11,7 @@ from zope.interface import implements
 from sqlalchemy.sql import and_
 from sqlalchemy.sql import or_
 
+from avrc.data.store._manager import AbstractDatastoreManager
 from avrc.data.store.interfaces import IDatastore
 from avrc.data.store.interfaces import ISymptom
 from avrc.data.store.interfaces import ISymptomManager
@@ -48,31 +49,27 @@ class Symptom(object):
         return obj
 
 
-class DatastoreSymptomManager(object):
+class DatastoreSymptomManager(AbstractDatastoreManager):
     """ See `ISymptomManager`
     """
     adapts(IDatastore)
     implements(ISymptomManager)
-
-    def __init__(self, datastore):
-        self._datastore = datastore
 
 
     def importTypes(self, symptom_types):
         """ See `ISymptomManager.importTypes`
         """
         Session = self._datastore.getScopedSession()
-        session = Session()
 
         for name in symptom_types:
-            type_rslt = session.query(model.SymptomType) \
+            type_rslt = Session.query(model.SymptomType) \
                 .filter_by(value=name) \
                 .first()
 
             if not type_rslt:
                 type_rslt = model.SymptomType()
                 type_rslt.value = name
-                session.add(type_rslt)
+                Session.add(type_rslt)
 
         transaction.commit()
 
@@ -81,9 +78,8 @@ class DatastoreSymptomManager(object):
         """ See `ISytmptomManager.getTypesVocabulary`
         """
         Session = self._datastore.getScopedSession()
-        session = Session()
 
-        symptom_type_q = session.query(model.SymptomType) \
+        symptom_type_q = Session.query(model.SymptomType) \
             .filter_by(is_active=True)
 
         term_list = [t.value for t in symptom_type_q.all()]
@@ -95,9 +91,8 @@ class DatastoreSymptomManager(object):
         """
         """
         Session = self._datastore.getScopedSession()
-        session = Session()
 
-        symptom_q = session.query(model.Symptom) \
+        symptom_q = Session.query(model.Symptom) \
             .filter_by(is_active=True) \
             .filter(and_(model.Symptom.start_date < visit.visit_date,
                          or_(model.Symptom.stop_date == None,
@@ -117,9 +112,8 @@ class DatastoreSymptomManager(object):
         """
         """
         Session = self._datastore.getScopedSession()
-        session = Session()
 
-        symptom_q = session.query(model.Symptom) \
+        symptom_q = Session.query(model.Symptom) \
             .filter_by(is_active=True) \
             .join(model.Symptom.subject) \
             .filter_by(zid=subject.zid)
@@ -133,9 +127,8 @@ class DatastoreSymptomManager(object):
         """ See `IDrugManager.get`
         """
         Session = self._datastore.getScopedSession()
-        session = Session()
 
-        result = session.query(model.Symptom)\
+        result = Session.query(model.Symptom)\
             .filter_by(id=int(key), is_active=True)\
             .first()
 
@@ -147,19 +140,18 @@ class DatastoreSymptomManager(object):
         """
 
         Session = self._datastore.getScopedSession()
-        session = Session()
 
         if source.dsid is not None:
-            symptom_rslt = session.query(model.Symptom) \
+            symptom_rslt = Session.query(model.Symptom) \
                 .filter_by(id=source.dsid) \
                 .first()
         else:
-            symptom_type_rslt = session.query(model.SymptomType) \
+            symptom_type_rslt = Session.query(model.SymptomType) \
                 .filter_by(value=source.type,
                            is_active=True) \
                 .first()
 
-            subject_rslt = session.query(model.Subject) \
+            subject_rslt = Session.query(model.Subject) \
                 .filter_by(zid=source.subject_zid) \
                 .first()
 
@@ -169,7 +161,7 @@ class DatastoreSymptomManager(object):
             symptom_rslt.type_other = source.type_other
             symptom_rslt.start_date = source.start_date
 
-            session.add(symptom_rslt)
+            Session.add(symptom_rslt)
 
         symptom_rslt.is_attended = source.is_attended
         symptom_rslt.stop_date = source.stop_date
@@ -183,16 +175,11 @@ class DatastoreSymptomManager(object):
         return source
 
 
-    def has(self, key):
-        raise NotImplementedError
-
-
     def retire(self, source):
         Session = self._datastore.getScopedSession()
-        session = Session()
 
         if source.dsid is not None:
-            symptom_rslt = session.query(model.Symptom) \
+            symptom_rslt = Session.query(model.Symptom) \
                 .filter_by(id=source.dsid) \
                 .first()
 
@@ -203,15 +190,3 @@ class DatastoreSymptomManager(object):
         transaction.commit()
 
         return source
-
-
-    def restore(self, key):
-        raise NotImplementedError
-
-
-    def purge(self, source):
-        raise NotImplementedError
-
-
-    def keys(self):
-        raise NotImplementedError

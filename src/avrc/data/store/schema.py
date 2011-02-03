@@ -30,6 +30,7 @@ from plone.autoform.interfaces import WRITE_PERMISSIONS_KEY
 from plone.supermodel.interfaces import FIELDSETS_KEY
 from plone.supermodel.model import Fieldset
 
+from avrc.data.store._manager import AbstractDatastoreManager
 from avrc.data.store import interfaces
 from avrc.data.store import model
 
@@ -123,21 +124,18 @@ class DependencyGenerator(object):
         for name in self.names:
             yield self.manager.get(name)
 
-class DatastoreSchemaManager(object):
+class DatastoreSchemaManager(AbstractDatastoreManager):
     adapts(interfaces.IDatastore)
     implements(interfaces.ISchemaManager)
 
     __doc__ = interfaces.ISchemaManager.__doc__
 
-    def __init__(self, datastore):
-        self._datastore = datastore
 
     def get_descendants(self, ibase):
         #
         #  TODO: (mmartinez) support versioning?
         #
         Session = self._datastore.getScopedSession()
-        session  = Session()
 
         names = queue([])
 
@@ -149,7 +147,7 @@ class DatastoreSchemaManager(object):
             ibase_name = unicode(ibase)
 
 
-        spec_rslt = session.query(model.Specification)\
+        spec_rslt = Session.query(model.Specification)\
                     .filter_by(name=ibase_name)\
                     .first()
 
@@ -184,7 +182,6 @@ class DatastoreSchemaManager(object):
 
     def get_children(self, ibase):
         Session = self._datastore.getScopedSession()
-        session  = Session()
 
         names = queue([])
 
@@ -195,7 +192,7 @@ class DatastoreSchemaManager(object):
         else:
             ibase_name = unicode(ibase)
 
-        spec_rslt = session.query(model.Specification)\
+        spec_rslt = Session.query(model.Specification)\
                     .filter_by(name=ibase_name)\
                     .first()
 
@@ -237,9 +234,8 @@ class DatastoreSchemaManager(object):
         types = getUtility(IVocabulary, "avrc.data.store.Types")
 
         Session = self._datastore.getScopedSession()
-        session = Session()
 
-        schema_q = session.query(model.Schema)\
+        schema_q = Session.query(model.Schema)\
                       .join(model.Specification)\
                       .filter_by(name=name)
 
@@ -264,7 +260,7 @@ class DatastoreSchemaManager(object):
 
             for ibase_rslt in schema_rslt.specification.bases:
                 if not ibase_rslt.name in visited:
-                    base_q = session.query(model.Schema)\
+                    base_q = Session.query(model.Schema)\
                                 .filter_by(specification=ibase_rslt)
 
                     if version:
@@ -431,7 +427,6 @@ class DatastoreSchemaManager(object):
 
     def get_children_names(self, ibase):
         Session = self._datastore.getScopedSession()
-        session  = Session()
 
         names = queue([])
 
@@ -442,7 +437,7 @@ class DatastoreSchemaManager(object):
         else:
             ibase_name = unicode(ibase)
 
-        spec_rslt = session.query(model.Specification)\
+        spec_rslt = Session.query(model.Specification)\
                     .filter_by(name=ibase_name)\
                     .first()
 
@@ -475,9 +470,8 @@ class DatastoreSchemaManager(object):
         name = unicode(name)
 
         Session = self._datastore.getScopedSession()
-        session = Session()
 
-        schema_q = session.query(model.Schema)\
+        schema_q = Session.query(model.Schema)\
                       .join(model.Specification)\
                       .filter_by(name=name)
 
@@ -498,17 +492,15 @@ class DatastoreSchemaManager(object):
 
     def has(self, key):
         Session = self._datastore.getScopedSession()
-        session = Session()
         name = unicode(key)
-        num = session.query(model.Specification).filter_by(name=name).count()
+        num = Session.query(model.Specification).filter_by(name=name).count()
         return num > 0
 
     has.__doc__ = interfaces.ISchemaManager["has"].__doc__
 
     def keys(self):
         Session = self._datastore.getScopedSession()
-        session = Session()
-        keys = session.query(model.Specification.name).all()
+        keys = Session.query(model.Specification.name).all()
         return list(itertools.chain.from_iterable(keys))
 
     keys.__doc__ = interfaces.ISchemaManager["keys"].__doc__
@@ -523,10 +515,9 @@ class DatastoreSchemaManager(object):
         directives = getUtility(IVocabulary, "avrc.data.store.Directives")
 
         Session = self._datastore.getScopedSession()
-        session = Session()
 
 
-        spec_rslt = session.query(model.Specification)\
+        spec_rslt = Session.query(model.Specification)\
                     .filter_by(name=unicode(iface.__name__))\
                     .first()
 
@@ -546,7 +537,7 @@ class DatastoreSchemaManager(object):
                 # only associate with interfaces that are also marked as part
                 # of the data store schemata
                 if ibase.extends(interfaces.Schema):
-                    base_rslt = session.query(model.Specification)\
+                    base_rslt = Session.query(model.Specification)\
                                 .filter_by(name=unicode(ibase.__name__))\
                                 .first()
 
@@ -564,7 +555,7 @@ class DatastoreSchemaManager(object):
             #
             # TODO: versioning
             #
-            dependent_rslt = session.query(model.Specification)\
+            dependent_rslt = Session.query(model.Specification)\
                           .filter_by(name=unicode(idependent.__name__))\
                           .first()
 
@@ -581,13 +572,13 @@ class DatastoreSchemaManager(object):
                 list_type_obj = field_obj.value_type
 
             if list_type_obj.__class__ not in types:
-                session.rollback()
+                Session.rollback()
                 raise Exception("%s defines a field that is not supported: %s"
                                 % (iface, list_type_obj.__class__))
 
             type_name = types.getTerm(list_type_obj.__class__).token
 
-            type_rslt = session.query(model.Type)\
+            type_rslt = Session.query(model.Type)\
                         .filter_by(title=unicode(type_name))\
                         .first()
 
@@ -698,7 +689,7 @@ class DatastoreSchemaManager(object):
                     # for the directive.
                     continue
 
-        session.add(schema_rslt)
+        Session.add(schema_rslt)
         transaction.commit()
 
         iface.__version__ = schema_rslt.create_date
@@ -708,10 +699,9 @@ class DatastoreSchemaManager(object):
 
     def purge(self, key):
         Session = self._datastore.getScopedSession()
-        session = Session()
 
 
-        num_instances = session.query(model.Instance)\
+        num_instances = Session.query(model.Instance)\
                         .join(model.Schema.specification)\
                         .filter_by(module=self._module)\
                         .count()
@@ -719,12 +709,12 @@ class DatastoreSchemaManager(object):
         if num_instances > 0:
             raise Exception("There is already data stored for %s" % self._module)
 
-        schema_rslt = session.query(model.Schema)\
+        schema_rslt = Session.query(model.Schema)\
                       .join(model.Specification)\
                       .filter_by(module=self._module)\
                       .first()
 
-        session.remove(schema_rslt)
+        Session.remove(schema_rslt)
         transaction.commit()
 
     purge.__doc__ = interfaces.ISchemaManager["purge"].__doc__

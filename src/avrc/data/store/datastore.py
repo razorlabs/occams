@@ -29,18 +29,18 @@ class Datastore(object):
     __doc__ = interfaces.IDatastore.__doc__
 
     # hidden session name, don't want anyone messing with it
-    _session = FieldProperty(interfaces.IDatastore["session"])
+    _session = FieldProperty(interfaces.IDatastore['session'])
 
-    def __init__(self, session=u"", **kw):
+    def __init__(self, session=u'', **kw):
         """ Instantiates the data store implementation. Also notifies listeners
             that this object has been created.
 
             Arguments:
                 dsn: (str) the URI to the data base
         """
-        if "session_name" in kw:
+        if 'session_name' in kw:
             # for legacy support
-            session = kw["session_name"]
+            session = kw['session_name']
 
         self._session = session
         model.setup(self.getScopedSession().bind)
@@ -48,7 +48,7 @@ class Datastore(object):
 
     def __str__(self):
         """ String representation of this instance """
-        return u"<Datastore('%s')>" % self._session
+        return u'<Datastore(\'%s\')>' % self._session
 
     def getScopedSession(self):
         return z3c.saconfig.named_scoped_session(self._session)
@@ -56,120 +56,120 @@ class Datastore(object):
     def getManager(self, iface):
         return iface(self)
 
-    getManager.__doc__ = interfaces.IDatastore["getManager"].__doc__
+    getManager.__doc__ = interfaces.IDatastore['getManager'].__doc__
 
     def getAliquotManager(self):
         return self.getManager(interfaces.IAliquotManager)
 
     getAliquotManager.__doc__ = \
-        interfaces.IDatastore["getAliquotManager"].__doc__
+        interfaces.IDatastore['getAliquotManager'].__doc__
 
     def getSpecimenManager(self):
         return self.getManager(interfaces.ISpecimenManager)
 
     getSpecimenManager.__doc__ = \
-        interfaces.IDatastore["getSpecimenManager"].__doc__
+        interfaces.IDatastore['getSpecimenManager'].__doc__
 
     def getDomainManager(self):
         return self.getManager(interfaces.IDomainManager)
 
     getDomainManager.__doc__ = \
-        interfaces.IDatastore["getDomainManager"].__doc__
+        interfaces.IDatastore['getDomainManager'].__doc__
 
     def getEnrollmentManager(self):
         return self.getManager(interfaces.IEnrollmentManager)
 
     getDomainManager.__doc__ = \
-        interfaces.IDatastore["getDomainManager"].__doc__
+        interfaces.IDatastore['getDomainManager'].__doc__
 
     def getProtocolManager(self):
         return self.getManager(interfaces.IProtocolManager)
 
     getProtocolManager.__doc__ = \
-        interfaces.IDatastore["getProtocolManager"].__doc__
+        interfaces.IDatastore['getProtocolManager'].__doc__
 
     def getSchemaManager(self):
         return self.getManager(interfaces.ISchemaManager)
 
     getSchemaManager.__doc__ = \
-        interfaces.IDatastore["getSchemaManager"].__doc__
+        interfaces.IDatastore['getSchemaManager'].__doc__
 
     def getSubjectManager(self):
         return self.getManager(interfaces.ISubjectManager)
 
     getSubjectManager.__doc__ = \
-        interfaces.IDatastore["getSubjectManager"].__doc__
+        interfaces.IDatastore['getSubjectManager'].__doc__
 
     def getVisitManager(self):
         return self.getManager(interfaces.IVisitManager)
 
     getVisitManager.__doc__ = \
-        interfaces.IDatastore["getVisitManager"].__doc__
+        interfaces.IDatastore['getVisitManager'].__doc__
 
     def getDrugManager(self):
         return self.getManager(interfaces.IDrugManager)
 
     getDrugManager.__doc__ = \
-        interfaces.IDatastore["getDrugManager"].__doc__
+        interfaces.IDatastore['getDrugManager'].__doc__
 
     def getMedicationManager(self):
         return self.getManager(interfaces.IMedicationManager)
 
     getMedicationManager.__doc__ = \
-        interfaces.IDatastore["getMedicationManager"].__doc__
+        interfaces.IDatastore['getMedicationManager'].__doc__
 
     def getSymptomManager(self):
         return self.getManager(interfaces.ISymptomManager)
 
     getSymptomManager.__doc__ = \
-        interfaces.IDatastore["getSymptomManager"].__doc__
+        interfaces.IDatastore['getSymptomManager'].__doc__
 
     def getPartnerManager(self):
         return self.getManager(interfaces.IPartnerManager)
 
     getPartnerManager.__doc__ = \
-        interfaces.IDatastore["getPartnerManager"].__doc__
+        interfaces.IDatastore['getPartnerManager'].__doc__
 
 
 
 
     @property
-    @deprecate("Use getSchemaManager() instead of schemata")
+    @deprecate('Use getSchemaManager() instead of schemata')
     def schemata(self):
         return self.getSchemaManager()
 
     @property
-    @deprecate("Use getDomainManager() instead of domains")
+    @deprecate('Use getDomainManager() instead of domains')
     def domains(self):
         return self.getDomainManager()
 
     @property
-    @deprecate("Use getSubjectManager() instead of subjects")
+    @deprecate('Use getSubjectManager() instead of subjects')
     def subjects(self):
         return self.getSubjectManager()
 
     @property
-    @deprecate("Use getProtocolManager() instead of protocols")
+    @deprecate('Use getProtocolManager() instead of protocols')
     def protocols(self):
         return self.getProtocolManager()
 
     @property
-    @deprecate("Use getEnrollmentManager() instead of enrollments")
+    @deprecate('Use getEnrollmentManager() instead of enrollments')
     def enrollments(self):
         return self.getEnrollmentManager()
 
     @property
-    @deprecate("Use getVisitManager() instead of visits")
+    @deprecate('Use getVisitManager() instead of visits')
     def visits(self):
         return self.getVisitManager()
 
     @property
-    @deprecate("Use getSpecimenManager() instead of specimen")
+    @deprecate('Use getSpecimenManager() instead of specimen')
     def specimen(self):
         return self.getSpecimenManager()
 
     @property
-    @deprecate("Use getAliquotManager() instead of aliquot")
+    @deprecate('Use getAliquotManager() instead of aliquot')
     def aliquot(self):
         return self.getAliquotManager()
 
@@ -178,11 +178,10 @@ class Datastore(object):
         # to return every single key in the data store.
         pass
 
-    keys.__doc__ = interfaces.IDatastore["keys"].__doc__
+    keys.__doc__ = interfaces.IDatastore['keys'].__doc__
 
     def has(self, key):
         Session = self.getScopedSession()
-        session = Session()
 
         # we're going to use the object as the key (or it's 'name')
         if isinstance(key, (str, unicode)):
@@ -190,16 +189,16 @@ class Datastore(object):
         elif interfaces.IInstance.providedBy(key):
             key = key.__id__
         else:
-            raise Exception("The object specified cannot be evaluated into "
-                            "a object to search for")
+            raise Exception('The object specified cannot be evaluated into '
+                            'a object to search for')
 
-        instance_rslt = session.query(model.Instance)\
-                        .filter_by(id=key)\
-                        .first()
+        instance_rslt = Session.query(model.Instance)\
+            .filter_by(id=key)\
+            .first()
 
         return instance_rslt is not None
 
-    has.__doc__ = interfaces.IDatastore["has"].__doc__
+    has.__doc__ = interfaces.IDatastore['has'].__doc__
 
     def get(self, key):
         # Since the object doesn't have any dependencies on it's data, we're
@@ -213,7 +212,6 @@ class Datastore(object):
 
         # we're going to use the object as the key (or it's 'name')
         Session = self.getScopedSession()
-        session = Session()
 
         searchkw = {}
         if isinstance(key, (str, unicode)):
@@ -226,12 +224,12 @@ class Datastore(object):
             else:
                 searchkw = dict(title=unicode(key.title))
         else:
-            raise Exception("The object specified cannot be evaluated into "
-                            "a object to search for")
+            raise Exception('The object specified cannot be evaluated into '
+                            'a object to search for')
 
-        instance_rslt = session.query(model.Instance)\
-                        .filter_by(**searchkw)\
-                        .first()
+        instance_rslt = Session.query(model.Instance)\
+            .filter_by(**searchkw)\
+            .first()
 
         if instance_rslt is None:
             return None
@@ -242,9 +240,10 @@ class Datastore(object):
 
         iface = self.schemata.get(key)
         instance_obj = self.spawn(iface)
-        setattr(instance_obj, "__id__", instance_rslt.id)
-        setattr(instance_obj, "title", str(instance_rslt.title))
-        setattr(instance_obj, "__schema__", iface)
+        setattr(instance_obj, '__id__', instance_rslt.id)
+        setattr(instance_obj, 'title', str(instance_rslt.title))
+        setattr(instance_obj, '__schema__', iface)
+        setattr(instance_obj, '__state__', instance_rslt.state.name)
 
         # (parent object, parent db entry, prop name, value)
         to_visit = queue([(instance_obj, instance_rslt, None, None)])
@@ -256,39 +255,39 @@ class Datastore(object):
 
                 type_name = attribute_rslt.field.type.title
 
-                if type_name in (u"binary",):
+                if type_name in (u'binary',):
                     Model = model.Binary
-                elif type_name in (u"date", u"time", u"datetime"):
+                elif type_name in (u'date', u'time', u'datetime'):
                     Model = model.Datetime
-                elif type_name in (u"integer", u"boolean"):
+                elif type_name in (u'integer', u'boolean'):
                     Model = model.Integer
-                elif type_name in (u"real",):
+                elif type_name in (u'real',):
                     Model = model.Real
-                elif type_name in (u"object",):
+                elif type_name in (u'object',):
                     Model = model.Object
-                elif type_name in (u"text", u"string"):
+                elif type_name in (u'text', u'string'):
                     Model = model.String
-                elif type_name in (u"selection"):
+                elif type_name in (u'selection'):
                     Model = model.Selection
                 else:
-                    raise Exception("Type '%s' unsupported."  % type_name)
+                    raise Exception('Type \'%s\' unsupported.'  % type_name)
 
-                value_q = session.query(Model)\
-                                .filter_by(instance=instance_rslt)\
-                                .filter_by(attribute=attribute_rslt)\
+                value_q = Session.query(Model)\
+                    .filter_by(instance=instance_rslt)\
+                    .filter_by(attribute=attribute_rslt)\
 
                 value = None
 
-                if type_name in (u"object",):
+                if type_name in (u'object',):
                     # TODO fix this...
-                    raise Exception("Using nested objects, not supported yet...")
+                    raise Exception('Using nested objects, not supported yet...')
                 else:
                     # Sanity check: if there are no values in the data store,
                     # this 'should' result in an empty list OR a None value
                     # which is OK.
                     if attribute_rslt.field.is_list:
                         # a little more processing for selections...
-                        if type_name == u"selection":
+                        if type_name == u'selection':
                             # it's a term relation, relations also have a field
                             # named value...
                             value = [v.value.value for v in value_q.all()]
@@ -299,7 +298,7 @@ class Datastore(object):
 
                         if value_rslt:
                             # a little more processing for selections...
-                            if type_name == u"selection":
+                            if type_name == u'selection':
                                 value = value_rslt.value.value
                             else:
                                 #
@@ -311,11 +310,10 @@ class Datastore(object):
 
         return instance_obj
 
-    get.__doc__ = interfaces.IDatastore["get"].__doc__
+    get.__doc__ = interfaces.IDatastore['get'].__doc__
 
     def put(self, target):
         Session = self.getScopedSession()
-        session = Session()
 
         is_update = False
 
@@ -335,34 +333,47 @@ class Datastore(object):
             # An object, add it's properties to the traversal queue
             if interfaces.IInstance.providedBy(value):
 #                if not interfaces.Schema.providedBy(value):
-#                    raise Exception("This object is not going to work out")
+#                    raise Exception('This object is not going to work out')
 
                 schema_obj = list(providedBy(value))[0]
 
+                state_query = Session.query(model.State)
+
+                if value.getState() is None:
+                    state_query = state_query.filter_by(is_default=True)
+                else:
+                    state_query = state_query.filter_by(name=value.getState())
+
+                state_rslt = state_query.first()
+
                 if value.title:
-                    instance_rslt = session.query(model.Instance)\
-                                    .filter_by(title=value.title)\
-                                    .first()
+                    instance_rslt = Session.query(model.Instance)\
+                        .filter_by(title=value.title)\
+                        .first()
+                    instance_rslt.state = state_rslt
                     is_update = True
                 else:
-                    schema_rslt = session.query(model.Schema)\
-                                  .filter_by(create_date=schema_obj.__version__)\
-                                  .join(model.Specification)\
-                                  .filter_by(name=schema_obj.__name__)\
-                                  .first()
+                    schema_rslt = Session.query(model.Schema)\
+                        .filter_by(create_date=schema_obj.__version__)\
+                        .join(model.Specification)\
+                        .filter_by(name=schema_obj.__name__)\
+                        .first()
+
+
 
                     instance_rslt = model.Instance(
                         schema=schema_rslt,
-                        title=u"%s-%f" % (schema_rslt.specification.name,
+                        title=u'%s-%f' % (schema_rslt.specification.name,
                                           currenttime()),
-                        description=u""
+                        description=u'',
+                        state=state_rslt
                         )
 
-                    session.add(instance_rslt)
-                    session.flush()
+                    Session.add(instance_rslt)
+                    Session.flush()
 
                     value.title = instance_rslt.title
-                    setattr(value, "__id__", instance_rslt.id)
+                    setattr(value, '__id__', instance_rslt.id)
 
                 for name, field_obj in zope.schema.getFieldsInOrder(schema_obj):
                     # don't do getattr as this will potentially get the
@@ -372,36 +383,36 @@ class Datastore(object):
 
             else:
 
-                attribute_rslt = session.query(model.Attribute)\
-                                 .filter_by(name=unicode(attr_name))\
-                                 .join(model.Schema)\
-                                 .filter_by(id=parent_rslt.schema.id)\
-                                 .first()
+                attribute_rslt = Session.query(model.Attribute)\
+                     .filter_by(name=unicode(attr_name))\
+                     .join(model.Schema)\
+                     .filter_by(id=parent_rslt.schema.id)\
+                     .first()
 
                 type_name = attribute_rslt.field.type.title
 
-                if type_name in (u"binary",):
+                if type_name in (u'binary',):
                     Model = model.Binary
-                elif type_name in (u"date", u"time", u"datetime",):
+                elif type_name in (u'date', u'time', u'datetime',):
                     Model = model.Datetime
-                elif type_name in (u"boolean",):
+                elif type_name in (u'boolean',):
                     Model = model.Integer
                     if attribute_rslt.field.is_list:
                         value = map(int, value)
                     else:
                         value = int(value)
-                elif type_name in (u"integer",):
+                elif type_name in (u'integer',):
                     Model = model.Integer
-                elif type_name in (u"object",):
+                elif type_name in (u'object',):
                     Model = model.Object
-                elif type_name in (u"real",):
+                elif type_name in (u'real',):
                     Model = model.Real
-                elif type_name in (u"text", u"string",):
+                elif type_name in (u'text', u'string',):
                     Model = model.String
-                elif type_name in (u"selection", ):
+                elif type_name in (u'selection', ):
                     Model = model.Selection
                 else:
-                    raise Exception("Type '%s' unsupported."  % type_name)
+                    raise Exception('Type \'%s\' unsupported.'  % type_name)
 
                 # convert to list (for convenience in iterating rather than
                 # checking)
@@ -409,7 +420,7 @@ class Datastore(object):
                     value = [value]
 
                 # selections are actually just references to a term
-                if type_name == u"selection":
+                if type_name == u'selection':
                     rslt_values = []
                     for term_rslt in attribute_rslt.field.vocabulary.terms:
                         if term_rslt.value in value:
@@ -419,25 +430,25 @@ class Datastore(object):
 
                 # delete the whole list, too complicated to update for now
                 if is_update and attribute_rslt.field.is_list:
-                    list_rslt = session.query(Model)\
-                                .filter_by(instance=parent_rslt)\
-                                .filter_by(attribute=attribute_rslt)\
-                                .all()
+                    list_rslt = Session.query(Model)\
+                        .filter_by(instance=parent_rslt)\
+                        .filter_by(attribute=attribute_rslt)\
+                        .all()
 
                     for item_rslt in list_rslt:
-                        session.delete(item_rslt)
+                        Session.delete(item_rslt)
 
                 for v in value:
                     value_rslt = None
 
                     if is_update and not attribute_rslt.field.is_list:
-                        value_rslt = session.query(Model)\
-                                        .filter_by(instance=parent_rslt)\
-                                        .filter_by(attribute=attribute_rslt)\
-                                        .first()
+                        value_rslt = Session.query(Model)\
+                            .filter_by(instance=parent_rslt)\
+                            .filter_by(attribute=attribute_rslt)\
+                            .first()
 
                     if value_rslt is None or attribute_rslt.field.is_list:
-                        session.add(Model(
+                        Session.add(Model(
                             instance=parent_rslt,
                             attribute=attribute_rslt,
                             value=v
@@ -449,62 +460,60 @@ class Datastore(object):
 
         return target
 
-    put.__doc__ = interfaces.IDatastore["put"].__doc__
+    put.__doc__ = interfaces.IDatastore['put'].__doc__
 
     def purge(self, key):
         raise NotImplementedError()
 
-    purge.__doc__ = interfaces.IDatastore["purge"].__doc__
+    purge.__doc__ = interfaces.IDatastore['purge'].__doc__
 
     def retire(self, key):
         # we're going to use the object as the key (or it's 'name')
         Session = self.getScopedSession()
-        session = Session()
 
         if isinstance(key, (str, unicode)):
             key = str(key)
         elif interfaces.IInstance.providedBy(key):
             key = key.__id__
         else:
-            raise Exception("The object specified cannot be evaluated into "
-                            "a object to search for")
+            raise Exception('The object specified cannot be evaluated into '
+                            'a object to search for')
 
-        instance_rslt = session.query(model.Instance)\
-                        .filter_by(id=key)\
-                        .first()
+        instance_rslt = Session.query(model.Instance)\
+            .filter_by(id=key)\
+            .first()
 
         if instance_rslt:
             instance_rslt.is_active = False
-            session.flush()
+            Session.flush()
 
         return instance_rslt is not None
 
-    retire.__doc__ = interfaces.IDatastore["retire"].__doc__
+    retire.__doc__ = interfaces.IDatastore['retire'].__doc__
 
     def restore(self, key):
         # we're going to use the object as the key (or it's 'name')
         Session = self.getScopedSession()
-        session = Session()
 
         if isinstance(key, (str, unicode)):
             key = str(key)
         elif interfaces.IInstance.providedBy(key):
             key = key.__id__
         else:
-            raise Exception("The object specified cannot be evaluated into "
-                            "a object to search for")
+            raise Exception('The object specified cannot be evaluated into '
+                            'a object to search for')
 
-        instance_rslt = session.query(model.Instance)\
-                        .filter_by(id=key)\
-                        .first()
+        instance_rslt = Session.query(model.Instance)\
+            .filter_by(id=key)\
+            .first()
 
         if instance_rslt:
             instance_rslt.is_active = True
-            session.flush()
+            Session.flush()
 
         return instance_rslt is not None
 
-    restore.__doc__ = interfaces.IDatastore["restore"].__doc__
+    restore.__doc__ = interfaces.IDatastore['restore'].__doc__
 
     def spawn(self, target, **kw):
         if isinstance(target, (str, unicode)):
@@ -513,16 +522,16 @@ class Datastore(object):
             iface = target
         return spawnObject(iface, **kw)
 
-    spawn.__doc__ = interfaces.IDatastore["spawn"].__doc__
+    spawn.__doc__ = interfaces.IDatastore['spawn'].__doc__
 
 DatastoreFactory = Factory(
     Datastore,
-    title=_(u"Datastore implementation factory."),
-    description=_(u"Creates an instance of a datastore implementation object. "
-                  u"Also notifies listeners of this creation.")
+    title=_(u'Datastore implementation factory.'),
+    description=_(u'Creates an instance of a datastore implementation object. '
+                  u'Also notifies listeners of this creation.')
     )
 
-@deprecate("Use datastore's getScopedSession() instead of named_session()")
+@deprecate('Use datastore\'s getScopedSession() instead of named_session()')
 def named_session(datastore):
     """ Evaluates the session being used by the given data store.
 
@@ -534,30 +543,39 @@ def named_session(datastore):
     return datastore.getScopedSession()
 
 def spawnObject(iface, **kw):
-    """ Spawns "anonymous" objects from interface specifications.
+    """ Spawns 'anonymous' objects from interface specifications.
 
         Arguments:
             iface: (object) a zope Interface or child class
             **kw: (dict) additional arguments for the instantiated object
     """
     if not iface.extends(zope.interface.Interface):
-        raise Exception("%s will not be found" % iface)
+        raise Exception('%s will not be found' % iface)
 
     class Instance(object):
         implements(interfaces.IInstance)
+
         __id__ = None
         __schema__ = None
+        __state__ = None
+
         title = None
         description = None
 
+        def setState(self, state):
+            self.__state__ = unicode(state)
+
+        def getState(self):
+            return self.__state__
+
         def __str__(self):
-            return u"<Instance: '%s'; implements: '%s'>" \
+            return u'<Instance: \'%s\'; implements: \'%s\'>' \
                     % (self.title, self.__schema__.__name__)
 
     obj = Instance()
     directlyProvides(obj, iface)
 
-    setattr(obj, "__schema__", iface)
+    setattr(obj, '__schema__', iface)
 
     for name, field_obj in zope.schema.getFieldsInOrder(iface):
         # TODO: figure out how to use FieldProperty with this
@@ -584,23 +602,41 @@ def setup_types(datastore):
             N/A
     """
     rslt = []
-    Session = named_session(datastore)
-    session = Session()
+    Session = datastore.getScopedSession()
 
     types = getUtility(zope.schema.interfaces.IVocabulary,
-                       "avrc.data.store.Types")
+                       'avrc.data.store.Types')
 
     for t in list(types):
-        num = session.query(model.Type)\
-                .filter_by(title=unicode(t.token))\
-                .count()
+        num = Session.query(model.Type)\
+            .filter_by(title=unicode(t.token))\
+            .count()
 
         if not num:
             rslt.append(model.Type(
                 title=unicode(t.token),
-                description=unicode(getattr(t.value, "__doc__", None)),
+                description=unicode(getattr(t.value, '__doc__', None)),
                 ))
 
     if rslt:
-        session.add_all(rslt)
+        Session.add_all(rslt)
+        transaction.commit()
+
+def setup_states(datastore, state_vocabulary, default):
+    """
+    """
+    Session = datastore.getScopedSession()
+
+    states = []
+
+    for term in list(state_vocabulary):
+        name = unicode(term.token)
+        title = term.title and unicode(term.title) or name
+        is_default = name == default
+
+        if Session.query(model.State).filter_by(name=name).count() < 1:
+            states.append(model.State(name=name, title=title, is_default=is_default))
+
+    if states:
+        Session.add_all(states)
         transaction.commit()
