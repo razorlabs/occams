@@ -287,6 +287,10 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
             write = {}
 
             for attribute_rslt in schema_rslt.attributes:
+
+                if attribute_rslt.name == u'state':
+                    continue
+
                 type_name = str(attribute_rslt.field.type.title)
                 Field = types.getTermByToken(type_name).value
                 vocabulary = None
@@ -565,6 +569,10 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
 
         # Now add/remove in all the changed fields
         for name, field_obj in zope.schema.getFieldsInOrder(iface):
+
+            if name == u'state':
+                continue
+
             list_type_obj = field_obj
             is_list = zope.schema.interfaces.ICollection.providedBy(field_obj)
 
