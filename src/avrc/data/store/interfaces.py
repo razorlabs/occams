@@ -319,7 +319,7 @@ class IProtocol(IComponent):
 
     threshold = zope.schema.Int(title=_(u'Cycle Threshold'), required=False)
 
-    is_active = zope.schema.Bool(title=_(u'Active?'), required=False)
+    is_active = zope.schema.Bool(title=_(u'Active?'), required=False, default=True)
 
 
 class IVisit(IComponent):

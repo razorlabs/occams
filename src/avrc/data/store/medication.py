@@ -13,6 +13,7 @@ from sqlalchemy.sql import and_
 from sqlalchemy.sql import or_
 
 from avrc.data.store._manager import AbstractDatastoreManager
+from avrc.data.store._item import AbstractItem
 from avrc.data.store.interfaces import IDatastore
 from avrc.data.store.interfaces import IDrugManager
 from avrc.data.store.interfaces import IMedication
@@ -23,7 +24,7 @@ from avrc.data.store import model
 log = logging.getLogger(__name__)
 
 
-class Medication(object):
+class Medication(AbstractItem):
     """ See `IMedication`
     """
     implements(IMedication)

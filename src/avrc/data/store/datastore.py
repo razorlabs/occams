@@ -239,7 +239,7 @@ class Datastore(object):
         key = (instance_rslt.schema.specification.name,
                instance_rslt.schema.create_date,)
 
-        iface = self.schemata.get(key)
+        iface = self.getSchemaManager().get(key)
         instance_obj = self.spawn(iface)
         setattr(instance_obj, '__id__', instance_rslt.id)
         setattr(instance_obj, 'title', str(instance_rslt.title))
@@ -526,7 +526,7 @@ class Datastore(object):
 
     def spawn(self, target, **kw):
         if isinstance(target, (str, unicode)):
-            iface = self.schemata.get(target)
+            iface = self.getSchemaManager().get(target)
         else:
             iface = target
         return spawnObject(iface, **kw)

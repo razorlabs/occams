@@ -9,13 +9,15 @@ from zope.schema.vocabulary import SimpleVocabulary
 from zope.interface import implements
 
 from avrc.data.store._manager import AbstractDatastoreConventionalManager
+from avrc.data.store._item import AbstractItem
 from avrc.data.store import interfaces
 from avrc.data.store import model
 
-class Specimen(object):
+class Specimen(AbstractItem):
+    """ See `ISpecimen`
+    """
     implements(interfaces.ISpecimen)
 
-    __doc__ = interfaces.ISpecimen.__doc__
 
     dsid = FieldProperty(interfaces.ISpecimen['dsid'])
     subject_zid = FieldProperty(interfaces.ISpecimen['subject_zid'])
@@ -47,9 +49,10 @@ class Specimen(object):
 
 
 class Aliquot(object):
+    """ See `IAliquot`
+    """
     implements(interfaces.IAliquot)
 
-    __doc__ = interfaces.IAliquot.__doc__
 
     dsid = FieldProperty(interfaces.IAliquot["dsid"])
     specimen_dsid = FieldProperty(interfaces.IAliquot["specimen_dsid"])

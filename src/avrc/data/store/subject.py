@@ -1,12 +1,12 @@
 """ Contains how to: domain and protocol
 """
-import transaction
 
 from zope.component import adapts
 from zope.schema.fieldproperty import FieldProperty
 from zope.interface import implements
 
 from avrc.data.store._manager import AbstractEAVContainerManager
+from avrc.data.store._item import AbstractItem
 from avrc.data.store.interfaces import Schema
 from avrc.data.store.interfaces import IDatastore
 from avrc.data.store.interfaces import ISubject
@@ -21,73 +21,48 @@ from avrc.data.store import model
 from avrc.data.store import MessageFactory as _
 
 
-class Subject(object):
+class Subject(AbstractItem):
     """ See `ISubject`
     """
     implements(ISubject)
 
     zid = FieldProperty(ISubject['zid'])
-
     uid = FieldProperty(ISubject['uid'])
-
     nurse_email = FieldProperty(ISubject['nurse_email'])
-
     aeh = FieldProperty(ISubject['aeh'])
-
     our = FieldProperty(ISubject['our'])
 
-    def __init__(self, zid, uid, aeh=None, our=None):
-        self.zid = zid
-        self.uid = uid
-        self.aeh = aeh
-        self.our = our
 
-
-class Partner(object):
+class Partner(AbstractItem):
     """ See `IPartner`
     """
     implements(IPartner)
 
     zid = FieldProperty(IPartner['zid'])
-
     subject_zid = FieldProperty(IPartner['subject_zid'])
-
     enrolled_subject_zid = FieldProperty(IPartner['enrolled_subject_zid'])
-
     visit_date = FieldProperty(IPartner['visit_date'])
 
 
-class Enrollment(object):
+class Enrollment(AbstractItem):
     """ See `IEnrollment`
     """
     implements(IEnrollment)
 
     start_date = FieldProperty(IEnrollment['start_date'])
-
     consent_date = FieldProperty(IEnrollment['consent_date'])
-
     stop_date = FieldProperty(IEnrollment['stop_date'])
-
     eid = FieldProperty(IEnrollment['eid'])
 
-    def __init__(self, start_date, consent_date=None):
-        self.start_date = start_date
-        if consent_date is None:
-            consent_date = start_date
-        self.consent_date = consent_date
 
-
-class Visit(object):
+class Visit(AbstractItem):
     """ See `IVisit`
     """
     implements(IVisit)
 
     zid = FieldProperty(IVisit['zid'])
-
     enrollment_zids = FieldProperty(IVisit['enrollment_zids'])
-
     protocol_zids = FieldProperty(IVisit['protocol_zids'])
-
     visit_date = FieldProperty(IVisit['visit_date'])
 
 
@@ -116,37 +91,21 @@ class DatastorePartnerManager(AbstractEAVContainerManager):
     _model = model.Partner
     _type = Partner
 
-
-    def put(self, source):
+    def putProperties(self, rslt, source):
         Session = self._datastore.getScopedSession()
 
-        partner_rslt = Session.query(self._model)\
-            .filter_by(zid=source.zid)\
-            .first()
-
-        subject_rslt = Session.query(model.Subject)\
+        subject = Session.query(model.Subject)\
             .filter_by(zid=source.subject_zid)\
             .first()
 
-        enrolled_subject_rslt = Session.query(model.Subject)\
+        enrolled_subject = Session.query(model.Subject)\
             .filter_by(zid=source.enrolled_subject_zid)\
             .first()
 
-        if not partner_rslt:
-            rslt = self._model()
-            rslt.zid = source.zid
-            rslt.subject = subject_rslt
-            rslt.enrolled_subject = enrolled_subject_rslt
-            rslt.visit_date = source.visit_date
-            Session.add(rslt)
-        else:
-            rslt = partner_rslt
-            rslt.subject = subject_rslt
-            rslt.enrolled_subject = enrolled_subject_rslt
-            rslt.visit_date = source.visit_date
-
-        transaction.commit()
-        return source
+        rslt.zid = source.zid
+        rslt.subject = subject
+        rslt.enrollment_subject = enrolled_subject
+        rslt.visit_date = source.visit_date
 
 
 class DatastoreEnrollmentManager(AbstractEAVContainerManager):
@@ -156,49 +115,24 @@ class DatastoreEnrollmentManager(AbstractEAVContainerManager):
     _model = model.Enrollment
     _type = Enrollment
 
-
-    def put(self, source):
-        Session = self._datastore.getScopedSession()
-        rslt = Session.query(self._model)\
-                      .filter_by(zid=source.zid)\
-                      .first()
-        if rslt is None:
-            domain = Session.query(model.Domain)\
-                          .filter_by(zid=source.domain_zid)\
-                          .first()
-            subject =  Session.query(model.Subject)\
-                          .filter_by(zid = source.subject_zid)\
-                          .first()
-            rslt = self._model(
-                zid=source.zid,
-                domain=domain,
-                domain_id=domain.id,
-                subject=subject,
-                subject_id=subject.id,
-                start_date=source.start_date,
-                consent_date=source.consent_date
-                )
-
-            if hasattr(source, 'eid') and source.eid is not None:
-                rslt.eid = source.eid
-
-            Session.add(rslt)
-        else:
-        # won't update the code
-            rslt = self.putProperties(rslt, source)
-        transaction.commit()
-        return source
-
-
     def putProperties(self, rslt, source):
         """ Add the items from the source to ds """
+        Session = self._datastore.getScopedSession()
 
+        domain = Session.query(model.Domain)\
+                      .filter_by(zid=source.domain_zid)\
+                      .first()
+
+        subject =  Session.query(model.Subject)\
+                      .filter_by(zid = source.subject_zid)\
+                      .first()
+
+        rslt.subject = subject
+        rslt.domain = domain
         rslt.start_date = source.start_date
         rslt.consent_date = source.consent_date
         rslt.stop_date = source.stop_date
-        if hasattr(source, 'eid') and source.eid is not None:
-            rslt.eid = source.eid
-        return rslt
+        rslt.eid = getattr(source, 'eid', None)
 
 
     def get_objects_by_eid(self, eid, iface=None):
@@ -248,16 +182,17 @@ class DatastoreVisitManager(AbstractEAVContainerManager):
     _model = model.Visit
     _type = Visit
 
-
     def putProperties(self, rslt, source):
         """ Add the items from the source to ds """
         Session = self._datastore.getScopedSession()
 
+        subject =  Session.query(model.Subject)\
+                      .filter_by(zid = source.subject_zid)\
+                      .first()
+
+        rslt.zid = source.zid
+        rslt.subject = subject
         rslt.visit_date = source.visit_date
-        for enrollment_zid in source.enrollment_zids:
-            rslt.enrollments.append(Session.query(model.Enrollment)\
-                      .filter_by(zid=enrollment_zid)\
-                      .first())
 
         for protocol_zid in source.protocol_zids:
             rslt.protocols.append(Session.query(model.Protocol)\

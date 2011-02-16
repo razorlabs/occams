@@ -12,6 +12,7 @@ from sqlalchemy.sql import and_
 from sqlalchemy.sql import or_
 
 from avrc.data.store._manager import AbstractDatastoreManager
+from avrc.data.store._item import AbstractItem
 from avrc.data.store.interfaces import IDatastore
 from avrc.data.store.interfaces import ISymptom
 from avrc.data.store.interfaces import ISymptomManager
@@ -21,7 +22,7 @@ from avrc.data.store import model
 log = logging.getLogger(__name__)
 
 
-class Symptom(object):
+class Symptom(AbstractItem):
     """ See `ISymptom`
     """
     implements(ISymptom)
