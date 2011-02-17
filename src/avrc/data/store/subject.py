@@ -49,6 +49,7 @@ class Enrollment(AbstractItem):
     """
     implements(IEnrollment)
 
+    subject_zid = FieldProperty(IVisit['subject_zid'])
     start_date = FieldProperty(IEnrollment['start_date'])
     consent_date = FieldProperty(IEnrollment['consent_date'])
     stop_date = FieldProperty(IEnrollment['stop_date'])
@@ -61,7 +62,7 @@ class Visit(AbstractItem):
     implements(IVisit)
 
     zid = FieldProperty(IVisit['zid'])
-    enrollment_zids = FieldProperty(IVisit['enrollment_zids'])
+    subject_zid = FieldProperty(IVisit['subject_zid'])
     protocol_zids = FieldProperty(IVisit['protocol_zids'])
     visit_date = FieldProperty(IVisit['visit_date'])
 

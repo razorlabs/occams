@@ -326,10 +326,7 @@ class IVisit(IComponent):
     """ """
     zid = zope.schema.Int(title=_(u'Visit Zope IntId'))
 
-    enrollment_zids = zope.schema.List(
-       title=_(u'???'),
-       value_type=zope.schema.Int(title=_(u'???'))
-       )
+    subject_zid = zope.schema.Int(title=_(u'Enrolled Subject Zope IntId'))
 
     protocol_zids = zope.schema.List(
        title=_(u'???'),
