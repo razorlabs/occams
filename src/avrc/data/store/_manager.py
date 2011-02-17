@@ -81,6 +81,17 @@ class AbstractDatastoreConventionalManager(AbstractDatastoreManager):
         return source
 
 
+    def retire(self, source):
+        """ See `IConventionalManager.retire`
+        """
+        Session = self._datastore.getScopedSession()
+        rslt = Session.query(self._model).filter_by(zid=source.zid).first()
+        if rslt is not None:
+            rslt.is_active = False
+            Session.flush()
+        transaction.commit()
+
+
     def purge(self, source):
         """ See `IConventionalManager.purge`
         """
@@ -95,7 +106,8 @@ class AbstractDatastoreConventionalManager(AbstractDatastoreManager):
         """ See `IConventionalManager.keys`
         """
         Session = self._datastore.getScopedSession()
-        return [zid for zid in Session.query(self._model.zid).all()]
+        query = Session.query(self._model.zid).filter_by(is_active=True)
+        return [zid for zid in query.all()]
 
 
 class AbstractEAVContainerManager(AbstractDatastoreConventionalManager):
