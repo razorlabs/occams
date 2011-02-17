@@ -188,8 +188,8 @@ class DatastoreVisitManager(AbstractEAVContainerManager):
         Session = self._datastore.getScopedSession()
 
         subject =  Session.query(model.Subject)\
-                      .filter_by(zid = source.subject_zid)\
-                      .first()
+          .filter_by(zid=source.subject_zid)\
+          .first()
 
         rslt.zid = source.zid
         rslt.subject = subject
@@ -197,5 +197,5 @@ class DatastoreVisitManager(AbstractEAVContainerManager):
 
         for protocol_zid in source.protocol_zids:
             rslt.protocols.append(Session.query(model.Protocol)\
-                      .filter_by(zid=protocol_zid)\
-                      .first())
+                .filter_by(zid=protocol_zid)\
+                .first())

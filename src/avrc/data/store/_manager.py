@@ -71,12 +71,17 @@ class AbstractDatastoreConventionalManager(AbstractDatastoreManager):
 
         if entry is None:
             entry = self._model(zid=source.zid)
-            Session.add(entry)
 
         # TODO: (mmartinez) This method should be able to figure it out as
         # opposed to having each class define their mapping. It all depends
         # on proper Interface setup.
         self.putProperties(entry, source)
+
+        if not entry.id:
+            Session.add(entry)
+        else:
+            Session.flush()
+
         transaction.commit()
         return source
 
