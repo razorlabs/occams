@@ -142,11 +142,17 @@ class DatastoreEnrollmentManager(AbstractEAVContainerManager):
         """
         Session = self._datastore.getScopedSession()
 
+        enrollment = Session.query(model.Enrollment).filter_by(eid=unicode(eid)).first()
+
         search_q = Session.query(model.Instance.id)\
                 .join(model.visit_instance_table)\
                 .join(model.Visit)\
-                .join(model.Visit.enrollments)\
-                .filter_by(eid=unicode(eid))\
+                .filter(model.Visit.subject == enrollment.subject)\
+                .filter(model.Visit.visit_date >= enrollment.start_date)
+
+        if enrollment.stop_date is not None:
+                search_q = search_q\
+                    .filter(model.Visit.visit_date <= enrollment.stop_date)
 
         if iface is not None:
             iface_name = ''

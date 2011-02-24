@@ -213,15 +213,21 @@ class AbstractEAVContainerManager(AbstractDatastoreConventionalManager):
         """ Associates EAV values to a context.
         """
         Session = self._datastore.getScopedSession()
-        result = Session.query(self._model).filter_by(zid=context.zid).first()
+
 
         if not isinstance(values, (list, tuple)):
             values = [values]
 
         for value in values:
+            self._datastore.put(value)
+
+        result = Session.query(self._model).filter_by(zid=context.zid).first()
+
+        for value in values:
             instance = Session.query(model.Instance)\
                 .filter_by(title=value.title)\
                 .first()
+
             result.instances.append(instance)
 
         transaction.commit()
