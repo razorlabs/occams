@@ -70,6 +70,8 @@ class Subject(Model):
 
     our = sa.Column(sa.Unicode, unique=True)
 
+    enrollments = orm.relation('Enrollment')
+
     instances = orm.relation('Instance', secondary=subject_instance_table)
 
     is_active = sa.Column(sa.Boolean, nullable=False, default=True, index=True)

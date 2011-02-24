@@ -5,6 +5,9 @@ from zope.component import adapts
 from zope.schema.fieldproperty import FieldProperty
 from zope.interface import implements
 
+import sqlalchemy as sa
+from sqlalchemy import orm
+
 from avrc.data.store._manager import AbstractEAVContainerManager
 from avrc.data.store._item import AbstractItem
 from avrc.data.store.interfaces import Schema
@@ -142,17 +145,16 @@ class DatastoreEnrollmentManager(AbstractEAVContainerManager):
         """
         Session = self._datastore.getScopedSession()
 
-        enrollment = Session.query(model.Enrollment).filter_by(eid=unicode(eid)).first()
-
-        search_q = Session.query(model.Instance.id)\
-                .join(model.visit_instance_table)\
-                .join(model.Visit)\
-                .filter(model.Visit.subject == enrollment.subject)\
-                .filter(model.Visit.visit_date >= enrollment.start_date)
-
-        if enrollment.stop_date is not None:
-                search_q = search_q\
-                    .filter(model.Visit.visit_date <= enrollment.stop_date)
+        search_q = Session.query(model.Instance.id) \
+            .select_from(orm.join(model.Visit, model.Instance, 'instances'))\
+            .join(model.Visit.subject) \
+            .join(model.Enrollment) \
+            .filter(model.Enrollment.eid == unicode(eid)) \
+            .filter(model.Visit.visit_date >= model.Enrollment.start_date) \
+            .filter(sa.or_(
+                model.Enrollment.stop_date == None,
+                model.Visit.visit_date <= model.Enrollment.stop_date
+                ))
 
         if iface is not None:
             iface_name = ''
@@ -177,9 +179,7 @@ class DatastoreEnrollmentManager(AbstractEAVContainerManager):
                 exp_q = model.Schema.create_date == iface_version
                 search_q = search_q.filter(exp_q)
 
-        rows = search_q.all()
-
-        return [self._datastore.get(row.id) for row in rows]
+        return [self._datastore.get(id) for (id,) in search_q.all()]
 
 
 class DatastoreVisitManager(AbstractEAVContainerManager):
