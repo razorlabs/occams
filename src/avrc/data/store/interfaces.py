@@ -198,12 +198,6 @@ class IDatastore(IManager):
         that it adapts into called 'managers'.
     """
 
-    session = zope.schema.TextLine(
-        title=_(u'Session Utility Name'),
-        description=_(u'The name of the z3c.saconfig session to use.'),
-        required=True
-        )
-
     def spawn(iface, **kw):
         """ Generates an object that implements the specified schema
         """
@@ -271,7 +265,7 @@ class IDatastoreFactory(IComponent):
     """
 
     def __call__(session):
-        """
+        """ The session to use.
         """
 
 
