@@ -145,7 +145,7 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
 
         names = queue([])
 
-        if not isinstance(ibase, (str, unicode)):
+        if not isinstance(ibase, basestring):
             if not ibase.extends(Schema):
                 raise Exception("base class does not extend datastore's base.")
             ibase_name = unicode(ibase.__name__)
@@ -191,7 +191,7 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
 
         names = queue([])
 
-        if not isinstance(ibase, (str, unicode)):
+        if not isinstance(ibase, basestring):
             if not ibase.extends(Schema):
                 raise Exception("base class does not extend datastore's base.")
             ibase_name = unicode(ibase.__name__)
@@ -231,7 +231,7 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
         #    share a common ancestor, this method might be inefficient unless
         #    dynamic programming heuristics are employed.
         #
-        if isinstance(key, (str, unicode,)):
+        if isinstance(key, basestring):
             key = (key, None,)
 
         (name, version) = key
@@ -440,7 +440,7 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
 
         names = queue([])
 
-        if not isinstance(ibase, (str, unicode)):
+        if not isinstance(ibase, basestring):
             if not ibase.extends(Schema):
                 raise Exception("base class does not extend datastore's base.")
             ibase_name = unicode(ibase.__name__)
@@ -473,7 +473,7 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
         # NOTE: (dmote) We only need a small chunk of the schema when producing
         # a list of the schema
 
-        if isinstance(key, (str, unicode)):
+        if isinstance(key, basestring):
             key = (key, None)
 
         (name, version) = key

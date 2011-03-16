@@ -477,7 +477,7 @@ class Term(Model):
             self.value_int = value
         elif isinstance(value, float):
             self.value_real = value
-        elif isinstance(value, (str, unicode)):
+        elif isinstance(value, basestring):
             self.value_str = unicode(value)
         elif isinstance(value, tuple) and len(tuple) == 2:
             (self.value_range_low, self.value_range_high) = value

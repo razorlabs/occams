@@ -160,7 +160,7 @@ class Datastore(object):
         Session = self.getScopedSession()
 
         # we're going to use the object as the key (or it's 'name')
-        if isinstance(key, (str, unicode)):
+        if isinstance(key, basestring):
             key = str(key)
         elif interfaces.IInstance.providedBy(key):
             key = key.__id__
@@ -189,7 +189,7 @@ class Datastore(object):
         Session = self.getScopedSession()
 
         searchkw = {}
-        if isinstance(key, (str, unicode)):
+        if isinstance(key, basestring):
             searchkw = dict(title=unicode(key))
         elif isinstance(key, (int, long)):
             searchkw = dict(id=int(key))
@@ -451,7 +451,7 @@ class Datastore(object):
         # we're going to use the object as the key (or it's 'name')
         Session = self.getScopedSession()
 
-        if isinstance(key, (str, unicode)):
+        if isinstance(key, basestring):
             key = str(key)
         elif interfaces.IInstance.providedBy(key):
             key = key.__id__
@@ -474,7 +474,7 @@ class Datastore(object):
         # we're going to use the object as the key (or it's 'name')
         Session = self.getScopedSession()
 
-        if isinstance(key, (str, unicode)):
+        if isinstance(key, basestring):
             key = str(key)
         elif interfaces.IInstance.providedBy(key):
             key = key.__id__
@@ -494,7 +494,7 @@ class Datastore(object):
 
 
     def spawn(self, target, **kw):
-        if isinstance(target, (str, unicode)):
+        if isinstance(target, basestring):
             iface = self.getSchemaManager().get(target)
         else:
             iface = target

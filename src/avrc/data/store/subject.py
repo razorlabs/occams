@@ -160,7 +160,7 @@ class DatastoreEnrollmentManager(AbstractEAVContainerManager):
             iface_name = ''
             iface_version = None
 
-            if isinstance(iface, (str, unicode)):
+            if isinstance(iface, basestring):
                 if len(iface):
                     iface_name = unicode(iface)
                 else:
