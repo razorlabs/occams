@@ -5,13 +5,14 @@ from time import time as currenttime
 from datetime import date
 from datetime import datetime
 
-import transaction
 from zope.component import getUtility
 from zope.component.factory import Factory
+
 from zope.deprecation import deprecate
 from zope.deprecation import deprecated
 import zope.interface
 from zope.interface import implements
+from zope.interface import classProvides
 from zope.interface import providedBy
 from zope.interface import directlyProvides
 import zope.schema
@@ -24,114 +25,81 @@ from avrc.data.store import Logger as log
 from avrc.data.store import interfaces
 from avrc.data.store import model
 
+
 class Datastore(object):
+    """ Datastore Implementation
+        See `IDatastore`
+        See `IDatastoreFactory`
+    """
+    classProvides(interfaces.IDatastoreFactory)
     implements(interfaces.IDatastore)
 
-    __doc__ = interfaces.IDatastore.__doc__
-
-    # hidden session name, don't want anyone messing with it
-    _session = FieldProperty(interfaces.IDatastore['session'])
-
-    def __init__(self, session=u'', **kw):
-        """ Instantiates the data store implementation. Also notifies listeners
-            that this object has been created.
-
-            Arguments:
-                dsn: (str) the URI to the data base
-        """
-        if 'session_name' in kw:
-            # for legacy support
-            session = kw['session_name']
-
+    def __init__(self, session):
         self._session = session
         model.setup(self.getScopedSession().bind)
         setup_types(self)
 
+
     def __str__(self):
-        """ String representation of this instance """
-        return u'<Datastore(\'%s\')>' % self._session
+        """ String representation of this instance
+        """
+        return u'<Datastore Session(\'%s\')>' % str(self._session)
+
 
     def getScopedSession(self):
         return z3c.saconfig.named_scoped_session(self._session)
 
+
     def getManager(self, iface):
         return iface(self)
 
-    getManager.__doc__ = interfaces.IDatastore['getManager'].__doc__
 
     def getAliquotManager(self):
         return self.getManager(interfaces.IAliquotManager)
 
-    getAliquotManager.__doc__ = \
-        interfaces.IDatastore['getAliquotManager'].__doc__
 
     def getSpecimenManager(self):
         return self.getManager(interfaces.ISpecimenManager)
 
-    getSpecimenManager.__doc__ = \
-        interfaces.IDatastore['getSpecimenManager'].__doc__
 
     def getDomainManager(self):
         return self.getManager(interfaces.IDomainManager)
 
-    getDomainManager.__doc__ = \
-        interfaces.IDatastore['getDomainManager'].__doc__
 
     def getEnrollmentManager(self):
         return self.getManager(interfaces.IEnrollmentManager)
 
-    getDomainManager.__doc__ = \
-        interfaces.IDatastore['getDomainManager'].__doc__
 
     def getProtocolManager(self):
         return self.getManager(interfaces.IProtocolManager)
 
-    getProtocolManager.__doc__ = \
-        interfaces.IDatastore['getProtocolManager'].__doc__
 
     def getSchemaManager(self):
         return self.getManager(interfaces.ISchemaManager)
 
-    getSchemaManager.__doc__ = \
-        interfaces.IDatastore['getSchemaManager'].__doc__
 
     def getSubjectManager(self):
         return self.getManager(interfaces.ISubjectManager)
 
-    getSubjectManager.__doc__ = \
-        interfaces.IDatastore['getSubjectManager'].__doc__
 
     def getVisitManager(self):
         return self.getManager(interfaces.IVisitManager)
 
-    getVisitManager.__doc__ = \
-        interfaces.IDatastore['getVisitManager'].__doc__
 
     def getDrugManager(self):
         return self.getManager(interfaces.IDrugManager)
 
-    getDrugManager.__doc__ = \
-        interfaces.IDatastore['getDrugManager'].__doc__
 
     def getMedicationManager(self):
         return self.getManager(interfaces.IMedicationManager)
 
-    getMedicationManager.__doc__ = \
-        interfaces.IDatastore['getMedicationManager'].__doc__
 
     def getSymptomManager(self):
         return self.getManager(interfaces.ISymptomManager)
 
-    getSymptomManager.__doc__ = \
-        interfaces.IDatastore['getSymptomManager'].__doc__
 
     def getPartnerManager(self):
         return self.getManager(interfaces.IPartnerManager)
-
-    getPartnerManager.__doc__ = \
-        interfaces.IDatastore['getPartnerManager'].__doc__
-
-
 
 
     @property
@@ -139,47 +107,54 @@ class Datastore(object):
     def schemata(self):
         return self.getSchemaManager()
 
+
     @property
     @deprecate('Use getDomainManager() instead of domains')
     def domains(self):
         return self.getDomainManager()
+
 
     @property
     @deprecate('Use getSubjectManager() instead of subjects')
     def subjects(self):
         return self.getSubjectManager()
 
+
     @property
     @deprecate('Use getProtocolManager() instead of protocols')
     def protocols(self):
         return self.getProtocolManager()
+
 
     @property
     @deprecate('Use getEnrollmentManager() instead of enrollments')
     def enrollments(self):
         return self.getEnrollmentManager()
 
+
     @property
     @deprecate('Use getVisitManager() instead of visits')
     def visits(self):
         return self.getVisitManager()
+
 
     @property
     @deprecate('Use getSpecimenManager() instead of specimen')
     def specimen(self):
         return self.getSpecimenManager()
 
+
     @property
     @deprecate('Use getAliquotManager() instead of aliquot')
     def aliquot(self):
         return self.getAliquotManager()
+
 
     def keys(self):
         # This method will remain unimplemented as it doesn't really make sense
         # to return every single key in the data store.
         pass
 
-    keys.__doc__ = interfaces.IDatastore['keys'].__doc__
 
     def has(self, key):
         Session = self.getScopedSession()
@@ -199,7 +174,6 @@ class Datastore(object):
 
         return instance_rslt is not None
 
-    has.__doc__ = interfaces.IDatastore['has'].__doc__
 
     def get(self, key):
         # Since the object doesn't have any dependencies on it's data, we're
@@ -315,7 +289,6 @@ class Datastore(object):
 
         return instance_obj
 
-    get.__doc__ = interfaces.IDatastore['get'].__doc__
 
     def put(self, target):
         Session = self.getScopedSession()
@@ -465,16 +438,14 @@ class Datastore(object):
                     else:
                         value_rslt.value = v
 
-        transaction.commit()
+        Session.flush()
 
         return target
 
-    put.__doc__ = interfaces.IDatastore['put'].__doc__
 
     def purge(self, key):
         raise NotImplementedError()
 
-    purge.__doc__ = interfaces.IDatastore['purge'].__doc__
 
     def retire(self, key):
         # we're going to use the object as the key (or it's 'name')
@@ -498,7 +469,6 @@ class Datastore(object):
 
         return instance_rslt is not None
 
-    retire.__doc__ = interfaces.IDatastore['retire'].__doc__
 
     def restore(self, key):
         # we're going to use the object as the key (or it's 'name')
@@ -522,7 +492,6 @@ class Datastore(object):
 
         return instance_rslt is not None
 
-    restore.__doc__ = interfaces.IDatastore['restore'].__doc__
 
     def spawn(self, target, **kw):
         if isinstance(target, (str, unicode)):
@@ -531,7 +500,7 @@ class Datastore(object):
             iface = target
         return spawnObject(iface, **kw)
 
-    spawn.__doc__ = interfaces.IDatastore['spawn'].__doc__
+
 
 DatastoreFactory = Factory(
     Datastore,
@@ -540,16 +509,6 @@ DatastoreFactory = Factory(
                   u'Also notifies listeners of this creation.')
     )
 
-@deprecate('Use datastore\'s getScopedSession() instead of named_session()')
-def named_session(datastore):
-    """ Evaluates the session being used by the given data store.
-
-        Arguments:
-            datastore: (object) an object implementing IDatastore
-        Returns:
-            A sqlalchemy Session factory.
-    """
-    return datastore.getScopedSession()
 
 def spawnObject(iface, **kw):
     """ Spawns 'anonymous' objects from interface specifications.
@@ -632,7 +591,7 @@ def setup_types(datastore):
 
     if rslt:
         Session.add_all(rslt)
-        transaction.commit()
+        Session.flush()
 
 def setup_states(datastore, state_vocabulary, default):
     """
@@ -651,4 +610,4 @@ def setup_states(datastore, state_vocabulary, default):
 
     if states:
         Session.add_all(states)
-        transaction.commit()
+        Session.flush()

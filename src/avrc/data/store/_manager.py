@@ -1,7 +1,6 @@
 """ Defines several useful manager base classes.
 """
 
-import transaction
 from zope.deprecation import deprecate
 
 from avrc.data.store import model
@@ -82,7 +81,7 @@ class AbstractDatastoreConventionalManager(AbstractDatastoreManager):
         else:
             Session.flush()
 
-        transaction.commit()
+        Session.flush()
         return source
 
 
@@ -94,7 +93,7 @@ class AbstractDatastoreConventionalManager(AbstractDatastoreManager):
         if rslt is not None:
             rslt.is_active = False
             Session.flush()
-        transaction.commit()
+        Session.flush()
 
 
     def purge(self, source):
@@ -104,7 +103,7 @@ class AbstractDatastoreConventionalManager(AbstractDatastoreManager):
         rslt = Session.query(self._model).filter_by(zid=source.zid).first()
         if rslt is not None:
             Session.remove(rslt)
-        transaction.commit()
+        Session.flush()
 
 
     def keys(self):
@@ -230,7 +229,7 @@ class AbstractEAVContainerManager(AbstractDatastoreConventionalManager):
 
             result.instances.append(instance)
 
-        transaction.commit()
+        Session.flush()
 
     @deprecate('add_instances() is deprecated, use addInstances()')
     def add_instances(self, context, obj_or_list):

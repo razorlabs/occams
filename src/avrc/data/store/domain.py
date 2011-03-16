@@ -1,6 +1,7 @@
 """ Contains how to: domain and protocol
 """
 from zope.component import adapts
+
 from zope.schema.fieldproperty import FieldProperty
 from zope.interface import implements
 

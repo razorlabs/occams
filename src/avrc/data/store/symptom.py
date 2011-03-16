@@ -2,7 +2,6 @@
 """
 import logging
 
-import transaction
 from zope.component import adapts
 from zope.schema.fieldproperty import FieldProperty
 from zope.schema.vocabulary import SimpleVocabulary
@@ -72,7 +71,8 @@ class DatastoreSymptomManager(AbstractDatastoreManager):
                 type_rslt.value = name
                 Session.add(type_rslt)
 
-        transaction.commit()
+
+        Session.flush()
 
 
     def getTypesVocabulary(self):
@@ -168,7 +168,7 @@ class DatastoreSymptomManager(AbstractDatastoreManager):
         symptom_rslt.stop_date = source.stop_date
         symptom_rslt.notes = source.notes
 
-        transaction.commit()
+        Session.flush()
 
         if not source.dsid:
             source.dsid = symptom_rslt.id
@@ -188,6 +188,6 @@ class DatastoreSymptomManager(AbstractDatastoreManager):
             return None
 
         symptom_rslt.is_active = False
-        transaction.commit()
+        Session.flush()
 
         return source

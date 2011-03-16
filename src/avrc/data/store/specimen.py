@@ -1,6 +1,5 @@
 """ Contains how to: specimen and aliquot
 """
-import transaction
 
 from zope.component import adapts
 from zope.schema.fieldproperty import FieldProperty
@@ -153,7 +152,7 @@ class DatastoreSpecimenManager(AbstractDatastoreConventionalManager):
                     value=unicode(term_obj.value)
                     ))
 
-        transaction.commit()
+        Session.flush()
 
     def list_by_state(self, state, before_date=None, after_date=None):
         """ """
@@ -270,7 +269,7 @@ class DatastoreSpecimenManager(AbstractDatastoreConventionalManager):
         specimen_rslt.tube_type = rslt["specimen_tube_type"]
         specimen_rslt.notes = source.notes
 
-        transaction.commit()
+        Session.flush()
 
         if not source.dsid:
             source.dsid = specimen_rslt.id
@@ -420,8 +419,9 @@ class DatastoreAliquotManager(AbstractDatastoreConventionalManager):
         aliquot_rslt.thawed_num = source.thawed_num
         aliquot_rslt.notes = source.notes
 
-        transaction.commit()
+        Session.flush()
 
         if not source.dsid:
             source.dsid = aliquot_rslt.id
+
         return source

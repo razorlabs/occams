@@ -2,7 +2,6 @@
 """
 import logging
 
-import transaction
 from zope.component import adapts
 from zope.schema.fieldproperty import FieldProperty
 from zope.schema.vocabulary import SimpleTerm
@@ -119,7 +118,7 @@ class DatastoreDrugManager(AbstractDatastoreManager):
                 name_rslt.order = code_counter[code]
                 drug_rslt.names.append(name_rslt)
 
-            transaction.commit()
+            Session.flush()
 
 
     def getCodesVocabulary(self):
@@ -228,7 +227,7 @@ class DatastoreMedicationManager(AbstractDatastoreManager):
         medication_rslt.stop_date = source.stop_date
         medication_rslt.notes = source.notes
 
-        transaction.commit()
+        Session.flush()
 
         if not source.dsid:
             source.dsid = medication_rslt.id
@@ -252,6 +251,6 @@ class DatastoreMedicationManager(AbstractDatastoreManager):
             return None
 
         medication_rslt.is_active = False
-        transaction.commit()
+        Session.flush()
 
         return source

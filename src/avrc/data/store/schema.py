@@ -4,11 +4,11 @@
 import itertools
 from collections import deque as queue
 
-import transaction
 from zope.component import adapts
 from zope.component import getUtility
 from zope.interface import Interface
 from zope.interface import implements
+from zope.interface import classProvides
 from zope.interface.interface import InterfaceClass
 import zope.schema
 from zope.schema.interfaces import IVocabulary
@@ -27,11 +27,16 @@ from plone.autoform.interfaces import MODES_KEY
 from plone.autoform.interfaces import ORDER_KEY
 from plone.autoform.interfaces import READ_PERMISSIONS_KEY
 from plone.autoform.interfaces import WRITE_PERMISSIONS_KEY
+
 from plone.supermodel.interfaces import FIELDSETS_KEY
 from plone.supermodel.model import Fieldset
 
 from avrc.data.store._manager import AbstractDatastoreManager
-from avrc.data.store import interfaces
+from avrc.data.store.interfaces import IDatastore
+from avrc.data.store.interfaces import IManagerFactory
+from avrc.data.store.interfaces import ISchemaManager
+from avrc.data.store.interfaces import IRange
+from avrc.data.store.interfaces import Schema
 from avrc.data.store import model
 
 #
@@ -53,15 +58,15 @@ def version(iface):
         Raises:
             Exception
     """
-    if iface.extends(interfaces.Schema):
+    if iface.extends(Schema):
         return iface.__version__
     else:
-        raise Exception("%s doesn't extend %s", (iface, interfaces.Schema))
+        raise Exception("%s doesn't extend %s", (iface, Schema))
 
 class Range(zope.schema.Tuple):
-    implements(interfaces.IRange)
+    implements(IRange)
 
-    __doc__ = interfaces.IRange.__doc__
+    __doc__ = IRange.__doc__
 
     def _validate(self, value):
         """ """
@@ -125,10 +130,11 @@ class DependencyGenerator(object):
             yield self.manager.get(name)
 
 class DatastoreSchemaManager(AbstractDatastoreManager):
-    adapts(interfaces.IDatastore)
-    implements(interfaces.ISchemaManager)
+    adapts(IDatastore)
+    implements(ISchemaManager)
+    classProvides(IManagerFactory)
 
-    __doc__ = interfaces.ISchemaManager.__doc__
+    __doc__ = ISchemaManager.__doc__
 
 
     def get_descendants(self, ibase):
@@ -140,7 +146,7 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
         names = queue([])
 
         if not isinstance(ibase, (str, unicode)):
-            if not ibase.extends(interfaces.Schema):
+            if not ibase.extends(Schema):
                 raise Exception("base class does not extend datastore's base.")
             ibase_name = unicode(ibase.__name__)
         else:
@@ -178,7 +184,7 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
         return descendants
 
     get_descendants.__doc__ = \
-        interfaces.ISchemaManager["get_descendants"].__doc__
+        ISchemaManager["get_descendants"].__doc__
 
     def get_children(self, ibase):
         Session = self._datastore.getScopedSession()
@@ -186,7 +192,7 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
         names = queue([])
 
         if not isinstance(ibase, (str, unicode)):
-            if not ibase.extends(interfaces.Schema):
+            if not ibase.extends(Schema):
                 raise Exception("base class does not extend datastore's base.")
             ibase_name = unicode(ibase.__name__)
         else:
@@ -214,7 +220,7 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
 
         return [self.get(name) for name in names]
 
-    get_children.__doc__ = interfaces.ISchemaManager["get_children"].__doc__
+    get_children.__doc__ = ISchemaManager["get_children"].__doc__
 
     def get(self, key):
         #
@@ -324,7 +330,7 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
 
                     kwargs["default"] = default
 
-                if zope.schema.interfaces.IChoice.implementedBy(Field):
+                if zope.schema.IChoice.implementedBy(Field):
                     terms = []
 
                     for term_rslt in attribute_rslt.field.vocabulary.terms:
@@ -375,7 +381,7 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
             bases = [visited[b.name] for b in schema_rslt.specification.bases]
 
             if not bases:
-                bases = [interfaces.Schema]
+                bases = [Schema]
 
             iface = InterfaceClass(
                 name=str(schema_rslt.specification.name),
@@ -427,7 +433,7 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
 
         return iface
 
-    get.__doc__ = interfaces.ISchemaManager["get"].__doc__
+    get.__doc__ = ISchemaManager["get"].__doc__
 
     def get_children_names(self, ibase):
         Session = self._datastore.getScopedSession()
@@ -435,7 +441,7 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
         names = queue([])
 
         if not isinstance(ibase, (str, unicode)):
-            if not ibase.extends(interfaces.Schema):
+            if not ibase.extends(Schema):
                 raise Exception("base class does not extend datastore's base.")
             ibase_name = unicode(ibase.__name__)
         else:
@@ -500,20 +506,20 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
         num = Session.query(model.Specification).filter_by(name=name).count()
         return num > 0
 
-    has.__doc__ = interfaces.ISchemaManager["has"].__doc__
+    has.__doc__ = ISchemaManager["has"].__doc__
 
     def keys(self):
         Session = self._datastore.getScopedSession()
         keys = Session.query(model.Specification.name).all()
         return list(itertools.chain.from_iterable(keys))
 
-    keys.__doc__ = interfaces.ISchemaManager["keys"].__doc__
+    keys.__doc__ = ISchemaManager["keys"].__doc__
 
     def put(self, target):
         iface = target
 
-        if not iface.extends(interfaces.Schema):
-            raise Exception("%s must extend %s " % (iface, interfaces.Schema))
+        if not iface.extends(Schema):
+            raise Exception("%s must extend %s " % (iface, Schema))
 
         types = getUtility(IVocabulary, "avrc.data.store.Types")
         directives = getUtility(IVocabulary, "avrc.data.store.Directives")
@@ -540,7 +546,7 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
             for ibase in iface.__bases__:
                 # only associate with interfaces that are also marked as part
                 # of the data store schemata
-                if ibase.extends(interfaces.Schema):
+                if ibase.extends(Schema):
                     base_rslt = Session.query(model.Specification)\
                                 .filter_by(name=unicode(ibase.__name__))\
                                 .first()
@@ -698,12 +704,12 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
                     continue
 
         Session.add(schema_rslt)
-        transaction.commit()
+        Session.flush()
 
         iface.__version__ = schema_rslt.create_date
         return iface
 
-    put.__doc__ = interfaces.ISchemaManager["put"].__doc__
+    put.__doc__ = ISchemaManager["put"].__doc__
 
     def purge(self, key):
         Session = self._datastore.getScopedSession()
@@ -723,13 +729,13 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
                       .first()
 
         Session.remove(schema_rslt)
-        transaction.commit()
+        Session.flush()
 
-    purge.__doc__ = interfaces.ISchemaManager["purge"].__doc__
+    purge.__doc__ = ISchemaManager["purge"].__doc__
 
     def retire(self, key):
         # Will fail, schema managers cannot be "retired".
         # TODO: why?
         raise Exception("Can't retire schemata")
 
-    retire.__doc__ = interfaces.ISchemaManager["retire"].__doc__
+    retire.__doc__ = ISchemaManager["retire"].__doc__

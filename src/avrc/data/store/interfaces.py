@@ -159,6 +159,15 @@ class IManager(IComponent):
                 TODO: needs to raise something if put fails.
         """
 
+class IManagerFactory(IComponent):
+    """
+    """
+
+    def __call__(self, datastore):
+        """
+        """
+
+
 class ISchemaManager(IManager):
     """ Marker interface for managing schemata. """
 
@@ -256,6 +265,16 @@ class IDatastore(IManager):
     def getPartnerManager():
         """
         """
+
+class IDatastoreFactory(IComponent):
+    """ How to instantiate a datastore
+    """
+
+    def __call__(session):
+        """
+        """
+
+
 
 class IInstance(IComponent):
     """ Empty object that will be used as the instance of a virtual schema.

@@ -13,9 +13,10 @@ Logger = logging.getLogger(__name__)
 #
 # We declare exposed functionality here, after everything has been initialized
 #
-    
+
+from avrc.data.store.datastore import Datastore
+
+
 # For defining data store virtual schemata
 from avrc.data.store.interfaces import Schema
 
-# Custom type
-from avrc.data.store.schema import Range    
