@@ -330,7 +330,7 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
 
                     kwargs["default"] = default
 
-                if zope.schema.IChoice.implementedBy(Field):
+                if zope.schema.interfaces.IChoice.implementedBy(Field):
                     terms = []
 
                     for term_rslt in attribute_rslt.field.vocabulary.terms:
