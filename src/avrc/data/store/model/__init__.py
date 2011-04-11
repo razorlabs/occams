@@ -5,9 +5,9 @@
           which is the initial release code. Some entities are starting to
           be migrated to the DS-1 specification which specifies that all
           new tables should have a create/modify/remove columns for dates
-          as well as user ids that invoked the data. Since there is no
+          as well as user id numbers that invoked the data. Since there is no
           user system currently in place the user columns will be ignored.
-          The date colums, on the other hand, will be updated. remove_date is
+          The date columns, on the other hand, will be updated. remove_date is
           the new is_active column.
 
 """
@@ -33,7 +33,8 @@ from avrc.data.store.model.symptom import *
 import avrc.data.store.upgrades
 
 
-__version__ = 004
+# Migrate version of the database model
+__migrate__ = 004
 
 
 metadata = Model.metadata
@@ -57,8 +58,14 @@ def install(engine):
     """
 
     Model.metadata.create_all(bind=engine, checkfirst=True)
+    sync(engine)
 
-    version = __version__
+
+def sync(engine):
+    """ Synchronizes the version of the current model to the live database
+        model.
+    """
+    version = __migrate__
     repository = avrc.data.store.upgrades.__path__[0]
     url = str(engine.url)
 
