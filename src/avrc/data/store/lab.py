@@ -1,4 +1,4 @@
-""" Contains how to: specimen and aliquot
+""" Lab content and utilities.
 """
 
 from zope.component import adapts
@@ -11,6 +11,7 @@ from avrc.data.store._manager import AbstractDatastoreConventionalManager
 from avrc.data.store._item import AbstractItem
 from avrc.data.store import interfaces
 from avrc.data.store import model
+
 
 class Specimen(AbstractItem):
     """ See `ISpecimen`
@@ -200,12 +201,12 @@ class DatastoreSpecimenManager(AbstractDatastoreConventionalManager):
         if protocol_zid:
             specimen_q = specimen_q\
                             .join(ProtocolModel)\
-                            .filter(ProtocolModel.zid==protocol_zid)
+                            .filter(ProtocolModel.zid == protocol_zid)
 
         if subject_zid:
             specimen_q = specimen_q\
                             .join(SubjectModel)\
-                            .filter(SubjectModel.zid==subject_zid)
+                            .filter(SubjectModel.zid == subject_zid)
 
 
         specimen_q = specimen_q.order_by(SpecimenModel.id.desc())
@@ -347,12 +348,12 @@ class DatastoreAliquotManager(AbstractDatastoreConventionalManager):
             if protocol_zid:
                 aliquot_q = aliquot_q\
                                 .join(ProtocolModel)\
-                                .filter(ProtocolModel.zid==protocol_zid)
+                                .filter(ProtocolModel.zid == protocol_zid)
 
             if subject_zid:
                 aliquot_q = aliquot_q\
                                 .join(SubjectModel)\
-                                .filter(SubjectModel.zid==subject_zid)
+                                .filter(SubjectModel.zid == subject_zid)
 
 
         aliquot_q = aliquot_q.order_by(AliquotModel.id.desc())
@@ -404,7 +405,7 @@ class DatastoreAliquotManager(AbstractDatastoreConventionalManager):
 
             Session.add(aliquot_rslt)
 
-        aliquot_rslt.analysis_status =  rslt["aliquot_state"]
+        aliquot_rslt.analysis_status = rslt["aliquot_state"]
         aliquot_rslt.sent_date = source.sent_date
         aliquot_rslt.sent_name = source.sent_name
         aliquot_rslt.special_instruction = rslt["aliquot_special_instruction"]

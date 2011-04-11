@@ -17,9 +17,6 @@ from zope.schema.vocabulary import SimpleTerm
 
 from plone.alterego import dynamic
 
-# Placing all directives under dexterity's namespace
-from plone.directives.form.schema import TEMP_KEY
-
 # Necessary keys for directives
 from plone.autoform.interfaces import OMITTED_KEY
 from plone.autoform.interfaces import WIDGETS_KEY
@@ -35,9 +32,9 @@ from avrc.data.store._manager import AbstractDatastoreManager
 from avrc.data.store.interfaces import IDatastore
 from avrc.data.store.interfaces import IManagerFactory
 from avrc.data.store.interfaces import ISchemaManager
-from avrc.data.store.interfaces import IRange
 from avrc.data.store.interfaces import Schema
 from avrc.data.store import model
+
 
 #
 # The generated schemata of the data store will be contained here
@@ -45,7 +42,43 @@ from avrc.data.store import model
 #    alter-ego fully and create the interface factory so we stop getting
 #    different (but same, technically) interface objects
 #
-virtual = dynamic.create("avrc.data.store.schema.virtual")
+virtual = dynamic.create('avrc.data.store.schema.virtual')
+
+#
+# Helper vocabulary for directives
+#
+supported_directives_vocabulary = SimpleVocabulary.fromValues([
+    OMITTED_KEY,
+    WIDGETS_KEY,
+    MODES_KEY,
+    ORDER_KEY,
+    READ_PERMISSIONS_KEY,
+    WRITE_PERMISSIONS_KEY,
+    FIELDSETS_KEY
+    ])
+
+
+#
+# Supported types
+#
+supported_types_vocabulary = SimpleVocabulary.fromItems([
+    ('integer', zope.schema.Int),
+    ('string', zope.schema.TextLine),
+    ('text', zope.schema.Text),
+    ('boolean', zope.schema.Bool),
+    ('real', zope.schema.Float),
+    ('date', zope.schema.Date),
+    ('datetime', zope.schema.Datetime),
+    ('time', zope.schema.Time),
+    ])
+
+python_zope_map = {
+    int: zope.schema.Int,
+    str: zope.schema.TextLine,
+    unicode: zope.schema.TextLine,
+    bool: zope.schema.Bool,
+    float: zope.schema.Float,
+    }
 
 def version(iface):
     """ Helper method to get the interface's version.
@@ -61,52 +94,8 @@ def version(iface):
     if iface.extends(Schema):
         return iface.__version__
     else:
-        raise Exception("%s doesn't extend %s", (iface, Schema))
+        raise Exception('%s doesn\'t extend %s', (iface, Schema))
 
-class Range(zope.schema.Tuple):
-    implements(IRange)
-
-    __doc__ = IRange.__doc__
-
-    def _validate(self, value):
-        """ """
-        super(Range, self)._validate(value)
-
-        try:
-            (low, high) = value
-        except ValueError as e:
-            raise Exception("Range value is invalid: %s" % e)
-
-#
-# Helper vocabulary for directives
-#
-supported_directives_vocabulary = SimpleVocabulary.fromValues([
-    OMITTED_KEY,
-    WIDGETS_KEY,
-    MODES_KEY,
-    ORDER_KEY,
-    READ_PERMISSIONS_KEY,
-    WRITE_PERMISSIONS_KEY,
-    FIELDSETS_KEY
-    ])
-
-#
-# Supported types
-#
-supported_types_vocabulary = SimpleVocabulary.fromItems([
-    ("integer", zope.schema.Int),
-    ("string", zope.schema.TextLine),
-    ("text", zope.schema.Text),
-    ("binary", zope.schema.Bytes),
-    ("boolean", zope.schema.Bool),
-    ("real", zope.schema.Float),
-    ("date", zope.schema.Date),
-    ("datetime", zope.schema.Datetime),
-    ("time", zope.schema.Time),
-    ("object", zope.schema.Object),
-    ("selection", zope.schema.Choice),
-    ("range", Range),
-    ])
 
 class DependencyGenerator(object):
     """ The purpose of this class is to attempt to 'lighten' the load of using
@@ -124,17 +113,16 @@ class DependencyGenerator(object):
         self.manager = manager
         self.names = names
 
+
     def __iter__(self):
         """ TODO: can't handle versioning yet """
         for name in self.names:
             yield self.manager.get(name)
 
 class DatastoreSchemaManager(AbstractDatastoreManager):
-    adapts(IDatastore)
     implements(ISchemaManager)
     classProvides(IManagerFactory)
-
-    __doc__ = ISchemaManager.__doc__
+    adapts(IDatastore)
 
 
     def get_descendants(self, ibase):
@@ -147,7 +135,7 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
 
         if not isinstance(ibase, basestring):
             if not ibase.extends(Schema):
-                raise Exception("base class does not extend datastore's base.")
+                raise Exception('base class does not extend datastore\'s base.')
             ibase_name = unicode(ibase.__name__)
         else:
             ibase_name = unicode(ibase)
@@ -158,7 +146,7 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
                     .first()
 
         if spec_rslt is None:
-            raise Exception("%s isn't in the data store" % ibase)
+            raise Exception('%s isn\'t in the data store' % ibase)
 
         to_visit = queue([spec_rslt])
 
@@ -183,8 +171,6 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
 
         return descendants
 
-    get_descendants.__doc__ = \
-        ISchemaManager["get_descendants"].__doc__
 
     def get_children(self, ibase):
         Session = self._datastore.getScopedSession()
@@ -193,7 +179,7 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
 
         if not isinstance(ibase, basestring):
             if not ibase.extends(Schema):
-                raise Exception("base class does not extend datastore's base.")
+                raise Exception('base class does not extend datastore\'s base.')
             ibase_name = unicode(ibase.__name__)
         else:
             ibase_name = unicode(ibase)
@@ -203,7 +189,7 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
                     .first()
 
         if spec_rslt is None:
-            raise Exception("%s isn't in the data store" % ibase)
+            raise Exception('%s isn\'t in the data store' % ibase)
 
         to_visit = queue([spec_rslt])
 
@@ -220,7 +206,6 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
 
         return [self.get(name) for name in names]
 
-    get_children.__doc__ = ISchemaManager["get_children"].__doc__
 
     def get(self, key):
         #
@@ -234,44 +219,46 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
         if isinstance(key, basestring):
             key = (key, None,)
 
-        (name, version) = key
-        name = unicode(name)
-
-        types = getUtility(IVocabulary, "avrc.data.store.Types")
-
         Session = self._datastore.getScopedSession()
 
-        schema_q = Session.query(model.Schema)\
-                      .join(model.Specification)\
-                      .filter_by(name=name)
+        (name, version) = key
+
+        types = supported_types_vocabulary
+
+        schema_query = Session.query(model.Schema)\
+          .join(model.Specification)\
+          .filter_by(name=name)
 
         if version is not None:
-            schema_q = schema_q.filter(model.Schema.create_date==version)
+            schema_query = schema_query\
+                .filter(model.Schema.create_date == version)
         else:
-            schema_q = schema_q.order_by(model.Schema.create_date.desc())
+            schema_query = schema_query\
+                .order_by(model.Schema.create_date.desc())
 
-        schema_rslt = schema_q.first()
+        schema_rslt = schema_query.first()
 
         if schema_rslt is None:
-            raise Exception("Schema Manager doesn't have %s" % name)
+            raise Exception('Schema Manager doesn\'t have %s' % name)
 
-        visited = {}
+        visited = dict()
 
         to_visit = [schema_rslt]
 
-        # accomplished via depth-first post-order traversal (iterative)
+        # Accomplished via depth-first post-order traversal (iterative)
         while to_visit:
-            schema_rslt= to_visit[-1]
+            schema_rslt = to_visit[-1]
             children_visited = True
 
+            # Process the base classes first
             for ibase_rslt in schema_rslt.specification.bases:
                 if not ibase_rslt.name in visited:
                     base_q = Session.query(model.Schema)\
-                                .filter_by(specification=ibase_rslt)
+                        .filter_by(specification=ibase_rslt)
 
                     if version:
                         base_q = base_q\
-                                    .filter(model.Schema.create_date <= version)
+                            .filter(model.Schema.create_date <= version)
 
                     base_q = base_q.order_by(model.Schema.create_date.desc())
                     base_rslt = base_q.first()
@@ -283,22 +270,26 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
                 continue
 
             bases = []
-            attrs = {}
-            directives = {}
+            attrs = dict()
+            directives = dict()
             omitted = []
-            widgets = {}
+            widgets = dict()
             modes = []
             order = []
-            read = {}
-            write = {}
+            read = dict()
+            write = dict()
 
+            # Build the zope schema fields
             for attribute_rslt in schema_rslt.attributes:
 
                 if attribute_rslt.name == u'state':
                     continue
 
                 type_name = str(attribute_rslt.field.type.title)
-                Field = types.getTermByToken(type_name).value
+
+                # Process the field as the given EAV type
+                FieldType = types.getTermByToken(type_name).value
+
                 vocabulary = None
 
                 kwargs = dict(
@@ -309,58 +300,59 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
                     )
 
                 if attribute_rslt.field.default is not None:
-                    default_raw = attribute_rslt.field.default
-                    if Field is zope.schema.Int:
-                        default = int(default_raw)
-                    elif Field is zope.schema.Float:
-                        default = float(default_raw)
-                    elif Field is zope.schema.Bool:
-                        default = str(default_raw) == "True"
-                    elif Field in (zope.schema.Text, zope.schema.TextLine):
-                        default = default_raw
-                    elif Field is zope.schema.Choice:
-                        default = str(default_raw)
-                    elif Field is zope.schema.Date:
-                        raise NotImplementedError("Date defaults unimplemented")
-                    elif Field is zope.schema.Datetime:
-                        raise NotImplementedError("Date defaults unimplemented")
+                    if hasattr(FieldType, 'fromUnicode'):
+                        default_raw = attribute_rslt.field.default
+                        default = FieldType().fromUnicode(default_raw)
                     else:
-                        raise NotImplementedError("%s default unimplemented"
-                                                  % Field)
+                        message = '%s default values  not implemented'
+                        raise NotImplementedError(message % type_name)
 
-                    kwargs["default"] = default
+                    kwargs['default'] = default
 
-                if zope.schema.interfaces.IChoice.implementedBy(Field):
+                if attribute_rslt.field.choices:
                     terms = []
 
-                    for term_rslt in attribute_rslt.field.vocabulary.terms:
+                    for choice_rslt in attribute_rslt.field.choices:
+                        if hasattr(FieldType, 'fromUnicode'):
+                            value_raw = choice_rslt.value
+                            value = FieldType().fromUnicode(value_raw)
+                        else:
+                            message = '%s choice values  not implemented'
+                            raise NotImplementedError(message % type_name)
+
                         terms.append(SimpleTerm(
-                            value=term_rslt.value,
-                            token=str(term_rslt.token),
-                            title=term_rslt.title,
+                            token=str(choice_rslt.name),
+                            title=choice_rslt.title,
+                            value=value,
                             ))
 
                     vocabulary = SimpleVocabulary(terms=terms)
 
                 name = str(attribute_rslt.name)
 
+                # Now assign the field as something Zope understands
+                if attribute_rslt.field.choices:
+                    Field = zope.schema.Choice
+                else:
+                    Field = FieldType
+
                 if attribute_rslt.field.is_list:
                     subkw = {}
-                    # For choices...
                     if vocabulary:
-                        subkw["vocabulary"] = vocabulary
-                    kwargs["value_type"] = Field(**subkw)
+                        subkw['vocabulary'] = vocabulary
+                    kwargs['value_type'] = Field(**subkw)
                     attrs[name] = zope.schema.List(**kwargs)
                 else:
                     if vocabulary:
-                        kwargs["vocabulary"] = vocabulary
+                        kwargs['vocabulary'] = vocabulary
                     attrs[name] = Field(**kwargs)
 
+                # Process Plone directives
                 if attribute_rslt.field.directive_omitted is not None:
                     if attribute_rslt.field.directive_omitted:
-                        value = "true"
+                        value = 'true'
                     else:
-                        value= "false"
+                        value = 'false'
                     omitted.append(tuple([Interface, name, value]))
                 elif attribute_rslt.field.directive_widget is not None:
                     widgets[name] = str(attribute_rslt.field.directive_widget)
@@ -369,10 +361,10 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
                     modes.append(tuple([Interface, name, value]))
                 if attribute_rslt.field.directive_before is not None:
                     value = str(attribute_rslt.field.directive_before)
-                    order.append(tuple([name, "before", value]))
+                    order.append(tuple([name, 'before', value]))
                 if attribute_rslt.field.directive_after is not None:
                     value = str(attribute_rslt.field.directive_after)
-                    order.append(tuple([name, "after", value]))
+                    order.append(tuple([name, 'after', value]))
                 elif attribute_rslt.field.directive_read is not None:
                     read[name] = str(attribute_rslt.field.directive_read)
                 elif attribute_rslt.field.directive_write is not None:
@@ -392,14 +384,14 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
                 )
 
             setattr(virtual, iface.__name__, iface)
-            setattr(iface, "__version__", schema_rslt.create_date)
-            setattr(iface, "__title__", schema_rslt.specification.title)
+            setattr(iface, '__version__', schema_rslt.create_date)
+            setattr(iface, '__title__', schema_rslt.specification.title)
             description = schema_rslt.specification.description
-            setattr(iface, "__description__", description)
+            setattr(iface, '__description__', description)
             include_names = [s.name for s in schema_rslt.specification.includes]
             generator = DependencyGenerator(self, iface, include_names)
-            setattr(iface, "__dependents__", generator)
-            setattr(iface, "__is_tabable__", False)
+            setattr(iface, '__dependents__', generator)
+            setattr(iface, '__is_tabable__', False)
 
             if len(omitted) > 0:
                 directives[OMITTED_KEY] = omitted
@@ -433,7 +425,6 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
 
         return iface
 
-    get.__doc__ = ISchemaManager["get"].__doc__
 
     def get_children_names(self, ibase):
         Session = self._datastore.getScopedSession()
@@ -442,7 +433,7 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
 
         if not isinstance(ibase, basestring):
             if not ibase.extends(Schema):
-                raise Exception("base class does not extend datastore's base.")
+                raise Exception('base class does not extend datastore\'s base.')
             ibase_name = unicode(ibase.__name__)
         else:
             ibase_name = unicode(ibase)
@@ -452,7 +443,7 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
                     .first()
 
         if spec_rslt is None:
-            raise Exception("%s isn't in the data store" % ibase)
+            raise Exception('%s isn\'t in the data store' % ibase)
 
         to_visit = queue([spec_rslt])
 
@@ -468,6 +459,7 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
                 names.append(spec_rslt.name)
 
         return [self.get_child_name_term(name) for name in names]
+
 
     def get_child_name_term(self, key):
         # NOTE: (dmote) We only need a small chunk of the schema when producing
@@ -493,12 +485,13 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
         schema_rslt = schema_q.first()
 
         if schema_rslt is None:
-            raise Exception("Schema Manager doesn't have %s" % name)
+            raise Exception('Schema Manager doesn\'t have %s' % name)
 
         return SimpleTerm(
             title=schema_rslt.specification.title,
             token=str(schema_rslt.specification.name),
             value=schema_rslt.specification.name)
+
 
     def has(self, key):
         Session = self._datastore.getScopedSession()
@@ -506,141 +499,147 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
         num = Session.query(model.Specification).filter_by(name=name).count()
         return num > 0
 
-    has.__doc__ = ISchemaManager["has"].__doc__
 
     def keys(self):
         Session = self._datastore.getScopedSession()
         keys = Session.query(model.Specification.name).all()
         return list(itertools.chain.from_iterable(keys))
 
-    keys.__doc__ = ISchemaManager["keys"].__doc__
 
     def put(self, target):
         iface = target
 
         if not iface.extends(Schema):
-            raise Exception("%s must extend %s " % (iface, Schema))
+            raise Exception('%s must extend %s ' % (iface, Schema))
 
-        types = getUtility(IVocabulary, "avrc.data.store.Types")
-        directives = getUtility(IVocabulary, "avrc.data.store.Directives")
+        types = supported_types_vocabulary
+        directives = supported_directives_vocabulary
 
         Session = self._datastore.getScopedSession()
 
-
         spec_rslt = Session.query(model.Specification)\
-                    .filter_by(name=unicode(iface.__name__))\
-                    .first()
+            .filter_by(name=unicode(iface.__name__))\
+            .first()
 
         # Create a spec if one doesn't already exist
         if spec_rslt is None:
             spec_rslt = model.Specification(
                 name=unicode(iface.__name__),
                 documentation=unicode(iface.__doc__),
-                title=unicode(getattr(iface, "__title__", None)),
-                description=unicode(getattr(iface, "__description__", None)),
+                title=unicode(getattr(iface, '__title__', None)),
+                description=unicode(getattr(iface, '__description__', None)),
                 )
 
-            if hasattr(iface, "__is_tabable__"):
-                spec_rslt.is_tabable = getattr(iface, "__is_tabable__")
+            if hasattr(iface, '__is_tabable__'):
+                spec_rslt.is_tabable = getattr(iface, '__is_tabable__')
 
+            # Handle base classes
             for ibase in iface.__bases__:
                 # only associate with interfaces that are also marked as part
                 # of the data store schemata
                 if ibase.extends(Schema):
                     base_rslt = Session.query(model.Specification)\
-                                .filter_by(name=unicode(ibase.__name__))\
-                                .first()
+                        .filter_by(name=unicode(ibase.__name__))\
+                        .first()
 
                     if base_rslt is None:
-                        raise Exception("%s extends a base (%s) interface that "
-                                        "is  not in the data store"
-                                        % (iface, ibase))
+                        raise Exception(
+                            '%s extends a base (%s) interface that is  not in '
+                            'the data store' % (iface, ibase)
+                            )
 
                     spec_rslt.bases.append(base_rslt)
 
-
         schema_rslt = model.Schema(specification=spec_rslt)
 
-        for idependent in getattr(iface, "__dependents__", []):
+        for idependent in getattr(iface, '__dependents__', []):
             #
             # TODO: versioning
             #
             dependent_rslt = Session.query(model.Specification)\
-                          .filter_by(name=unicode(idependent.__name__))\
-                          .first()
+                .filter_by(name=unicode(idependent.__name__))\
+                .first()
 
             schema_rslt.specification.includes.append(dependent_rslt)
 
         attrs = {}
 
         # Now add/remove in all the changed fields
-        for name, field_obj in zope.schema.getFieldsInOrder(iface):
+        for field_name, field_obj in zope.schema.getFieldsInOrder(iface):
 
-            if name == u'state':
+            if field_name == u'state':
                 continue
 
-            list_type_obj = field_obj
+            if zope.schema.interfaces.IObject.providedBy(field_obj):
+                # TODO link to versioned schema_obj.
+                raise NotImplementedError('Don\'t supported nested objects yet')
+
+            type_obj = field_obj
+
             is_list = zope.schema.interfaces.ICollection.providedBy(field_obj)
 
             if is_list:
-                list_type_obj = field_obj.value_type
+                type_obj = field_obj.value_type
 
-            if list_type_obj.__class__ not in types:
-                Session.rollback()
-                raise Exception("%s defines a field that is not supported: %s"
-                                % (iface, list_type_obj.__class__))
+            is_choice = zope.schema.interfaces.IChoice.providedBy(type_obj)
 
-            type_name = types.getTerm(list_type_obj.__class__).token
+            if is_choice:
+                type_ = None
+                for term in type_obj.vocabulary:
+                    term_type = type(term.value)
+                    if type_ is None or term_type == type_:
+                        type_ = term_type
+                    elif type_ != term_type:
+                        raise Exception('All choice values must be same type')
+
+                type_class = python_zope_map[type_]
+            else:
+                type_class = type_obj.__class__
+
+            if type_class not in types:
+                raise Exception(
+                    '%s defines a field that is not supported: %s'
+                    % (iface, type_class)
+                    )
+
+            type_name = types.getTerm(type_class).token
 
             type_rslt = Session.query(model.Type)\
-                        .filter_by(title=unicode(type_name))\
-                        .first()
+                .filter_by(title=unicode(type_name))\
+                .first()
 
-            if field_obj.default:
-                default_value =unicode(field_obj.default)
+            if field_obj.default is not None:
+                default = unicode(field_obj.default)
             else:
-                default_value = None
+                default = None
 
-            attrs[name] = model.Attribute(
-                name=unicode(name),
+            attrs[field_name] = model.Attribute(
+                name=unicode(field_name),
                 order=field_obj.order,
                 field=model.Field(
                     title=unicode(field_obj.title),
-                    description=unicode(field_obj.description),
+                    description=field_obj.description,
                     is_readonly=field_obj.readonly,
                     type=type_rslt,
                     is_list=is_list,
                     is_required=field_obj.required,
-                    default=default_value
+                    default=default
                     )
                 )
 
-            if zope.schema.interfaces.IChoice.providedBy(list_type_obj):
-                vocabulary_obj = list_type_obj.vocabulary
-                # TODO: need a better name for this
-                vocabulary_rslt = model.Vocabulary(title=u"")
-
-                for i, term_obj in enumerate(vocabulary_obj, start=1):
-
-                    term_rslt = model.Term(
-                        title=term_obj.title and unicode(term_obj.title) or None,
-                        token=unicode(term_obj.token),
+            if is_choice:
+                for i, term_obj in enumerate(type_obj.vocabulary, start=1):
+                    attrs[field_name].field.choices.append(model.Choice(
+                        name=term_obj.token,
+                        title=term_obj.title,
+                        value=unicode(term_obj.value),
                         order=i
-                        )
+                        ))
 
-                    term_rslt.value = term_obj.value
+            schema_rslt.attributes.append(attrs[field_name])
 
-                    vocabulary_rslt.terms.append(term_rslt)
-
-                attrs[name].field.vocabulary = vocabulary_rslt
-
-            if zope.schema.interfaces.IObject.providedBy(field_obj):
-                # TODO link to versioned schema_obj.
-                raise NotImplementedError("Don't supported nested objects yet")
-
-            schema_rslt.attributes.append(attrs[name])
-
-        tags = iface.queryTaggedValue(TEMP_KEY)
+        # The directives may have been loaded by plone, check that first
+        tags = iface.queryTaggedValue('__form_directive_values__')
 
         if tags is None:
             tags = {}
@@ -652,29 +651,29 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
             if key in directives:
                 try:
                     if key is OMITTED_KEY:
-                        for interface, name, value in item:
-                            attrs[name].field.directive_omitted = value is "true"
+                        for interface, field_name, value in item:
+                            attrs[field_name].field.directive_omitted = value is 'true'
                     elif key is WIDGETS_KEY:
-                        for name, module in item.items():
-                            attrs[name].field.directive_widget = unicode(module)
+                        for field_name, module in item.items():
+                            attrs[field_name].field.directive_widget = unicode(module)
                     elif key is MODES_KEY:
-                        for interface, name, value in item:
-                            attrs[name].field.directive_mode = unicode(value)
+                        for interface, field_name, value in item:
+                            attrs[field_name].field.directive_mode = unicode(value)
                     elif key is ORDER_KEY:
-                        for name, order, target in item:
-                            if order is "before":
-                                attrs[name].field.directive_before = value
-                            elif order is "after":
-                                attrs[name].field.directive_after = value
+                        for field_name, order, target in item:
+                            if order is 'before':
+                                attrs[field_name].field.directive_before = value
+                            elif order is 'after':
+                                attrs[field_name].field.directive_after = value
                             else:
-                                raise Exception("order %s is not supported"
+                                raise Exception('order %s is not supported'
                                                 % order)
                     elif key is READ_PERMISSIONS_KEY:
-                        for name, value in item.items():
-                            attrs[name].field.directive_read = unicode(value)
+                        for field_name, value in item.items():
+                            attrs[field_name].field.directive_read = unicode(value)
                     elif key is WRITE_PERMISSIONS_KEY:
-                        for name, value in item.items():
-                            attrs[name].field.directive_write = unicode(value)
+                        for field_name, value in item.items():
+                            attrs[field_name].field.directive_write = unicode(value)
                     elif key is FIELDSETS_KEY:
                         for i, fieldset_obj in enumerate(item, start=1):
                             if fieldset_obj.description:
@@ -689,16 +688,15 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
                                 order=i
                                 )
 
-                            for j, name in enumerate(fieldset_obj.fields, 1):
+                            for j, field_name in enumerate(fieldset_obj.fields, 1):
                                 fieldset_rslt.fields.append(model.FieldsetItem(
-                                    name=unicode(name),
+                                    name=unicode(field_name),
                                     order=j
                                     ))
 
                             schema_rslt.fieldsets.append(fieldset_rslt)
 
-
-                except KeyError:
+                except KeyError as e:
                     # this will occur IF we don't actually have an attribute
                     # for the directive.
                     continue
@@ -709,7 +707,6 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
         iface.__version__ = schema_rslt.create_date
         return iface
 
-    put.__doc__ = ISchemaManager["put"].__doc__
 
     def purge(self, key):
         Session = self._datastore.getScopedSession()
@@ -721,7 +718,7 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
                         .count()
 
         if num_instances > 0:
-            raise Exception("There is already data stored for %s" % self._module)
+            raise Exception('There is already data stored for %s' % self._module)
 
         schema_rslt = Session.query(model.Schema)\
                       .join(model.Specification)\
@@ -731,11 +728,8 @@ class DatastoreSchemaManager(AbstractDatastoreManager):
         Session.remove(schema_rslt)
         Session.flush()
 
-    purge.__doc__ = ISchemaManager["purge"].__doc__
 
     def retire(self, key):
-        # Will fail, schema managers cannot be "retired".
+        # Will fail, schema managers cannot be 'retired'.
         # TODO: why?
-        raise Exception("Can't retire schemata")
-
-    retire.__doc__ = ISchemaManager["retire"].__doc__
+        raise Exception('Can\'t retire schemata')

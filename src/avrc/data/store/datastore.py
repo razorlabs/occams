@@ -9,21 +9,57 @@ from zope.component import getUtility
 from zope.component.factory import Factory
 
 from zope.deprecation import deprecate
-from zope.deprecation import deprecated
 import zope.interface
 from zope.interface import implements
 from zope.interface import classProvides
 from zope.interface import providedBy
 from zope.interface import directlyProvides
 import zope.schema
-from zope.schema.fieldproperty import FieldProperty
 
 import z3c.saconfig
+
+import sqlalchemy.types
+from sqlalchemy.sql.expression import cast
 
 from avrc.data.store import MessageFactory as _
 from avrc.data.store import Logger as log
 from avrc.data.store import interfaces
 from avrc.data.store import model
+
+
+
+# Where the types are stored
+name_model_map = dict(
+    integer=model.Integer,
+    string=model.String,
+    text=model.String,
+    boolean=model.Integer,
+    real=model.Real,
+    date=model.Datetime,
+    datetime=model.Datetime,
+    time=model.Datetime
+    )
+
+# What the types are cast to when queried
+name_dbtype_map = dict(
+    integer=sqlalchemy.types.Integer,
+    string=sqlalchemy.types.Unicode,
+    text=sqlalchemy.types.UnicodeText,
+    boolean=sqlalchemy.types.Boolean,
+    real=sqlalchemy.types.Float,
+    date=sqlalchemy.types.Date,
+    datetime=sqlalchemy.types.DateTime,
+    time=sqlalchemy.types.Time,
+    )
+
+# What the types are cast to when stored
+name_coalesce_map = dict(
+    integer=int,
+    string=unicode,
+    text=unicode,
+    boolean=int,
+    real=float,
+    )
 
 
 class Datastore(object):
@@ -168,11 +204,7 @@ class Datastore(object):
             raise Exception('The object specified cannot be evaluated into '
                             'a object to search for')
 
-        instance_rslt = Session.query(model.Instance)\
-            .filter_by(id=key)\
-            .first()
-
-        return instance_rslt is not None
+        return 0 < Session.query(model.Instance).filter_by(id=key).count()
 
 
     def get(self, key):
@@ -188,36 +220,29 @@ class Datastore(object):
         # we're going to use the object as the key (or it's 'name')
         Session = self.getScopedSession()
 
-        searchkw = {}
-        if isinstance(key, basestring):
-            searchkw = dict(title=unicode(key))
-        elif isinstance(key, (int, long)):
-            searchkw = dict(id=int(key))
-        elif interfaces.IInstance.providedBy(key):
-            if key.__id__:
-                searchkw = dict(id=int(key.__id__))
-            else:
-                searchkw = dict(title=unicode(key.title))
-        else:
-            raise Exception('The object specified cannot be evaluated into '
-                            'a object to search for')
+        filter = None
 
-        instance_rslt = Session.query(model.Instance)\
-            .filter_by(**searchkw)\
-            .first()
+        if isinstance(key, basestring):
+            filter = dict(title=key)
+        elif isinstance(key, (int, long)):
+            filter = dict(id=key)
+        else:
+            raise Exception('The item \'%s\' cannot be searched for.' % key)
+
+        instance_rslt = Session.query(model.Instance).filter_by(**filter).first()
 
         if instance_rslt is None:
             return None
 
-
         key = (instance_rslt.schema.specification.name,
-               instance_rslt.schema.create_date,)
+               instance_rslt.schema.create_date)
 
-        iface = self.getSchemaManager().get(key)
-        instance_obj = self.spawn(iface)
+        schema = self.getSchemaManager().get(key)
+        instance_obj = self.spawn(schema)
+
         setattr(instance_obj, '__id__', instance_rslt.id)
         setattr(instance_obj, 'title', str(instance_rslt.title))
-        setattr(instance_obj, '__schema__', iface)
+        setattr(instance_obj, '__schema__', schema)
         setattr(instance_obj, '__state__', instance_rslt.state.name)
 
         # (parent object, parent db entry, prop name, value)
@@ -234,66 +259,38 @@ class Datastore(object):
 
                 type_name = attribute_rslt.field.type.title
 
-                if type_name in (u'binary',):
-                    Model = model.Binary
-                elif type_name in (u'date', u'time', u'datetime'):
-                    Model = model.Datetime
-                elif type_name in (u'integer', u'boolean'):
-                    Model = model.Integer
-                elif type_name in (u'real',):
-                    Model = model.Real
-                elif type_name in (u'object',):
-                    Model = model.Object
-                elif type_name in (u'text', u'string'):
-                    Model = model.String
-                elif type_name in (u'selection'):
-                    Model = model.Selection
-                else:
-                    raise Exception('Type \'%s\' unsupported.'  % type_name)
+                if type_name in (u'object',):
+                    raise Exception('Using nested objects, not supported yet...')
+                elif type_name not in name_model_map:
+                    raise Exception('Type \'%s\' unsupported.' % type_name)
 
-                value_q = Session.query(Model)\
+                Model = name_model_map[type_name]
+                column = cast(Model.value, name_dbtype_map[type_name])
+
+                value_rslt = Session.query(column)\
                     .filter_by(instance=instance_rslt)\
                     .filter_by(attribute=attribute_rslt)\
+                    .all()
 
-                value = None
-
-                if type_name in (u'object',):
-                    # TODO fix this...
-                    raise Exception('Using nested objects, not supported yet...')
+                if value_rslt is None:
+                    value = None
                 else:
-                    # Sanity check: if there are no values in the data store,
-                    # this 'should' result in an empty list OR a None value
-                    # which is OK.
-                    if attribute_rslt.field.is_list:
-                        # a little more processing for selections...
-                        if type_name == u'selection':
-                            # it's a term relation, relations also have a field
-                            # named value...
-                            value = [v.value.value for v in value_q.all()]
-                        else:
-                            value = [v.value for v in value_q.all()]
+                    value = [v for (v,) in value_rslt]
+
+                    if len(value) <= 0:
+                        value = None
                     else:
-                        value_rslt = value_q.first()
+                        if not attribute_rslt.field.is_list:
+                            value = value.pop()
 
-                        if value_rslt:
-                            # a little more processing for selections...
-                            if type_name == u'selection':
-                                value = value_rslt.value.value
-                            else:
-                                #
-                                # TODO need to typecast if necessary
-                                #
-                                value = value_rslt.value
 
-                    setattr(parent_obj, str(attribute_rslt.name), value)
+                setattr(parent_obj, str(attribute_rslt.name), value)
 
         return instance_obj
 
 
     def put(self, target):
         Session = self.getScopedSession()
-
-        is_update = False
 
         # (parent object, corresponding db entry, prop name, raw value)
         # in this case, the target isn't assign to or contained in anything.
@@ -304,18 +301,12 @@ class Datastore(object):
         while len(to_visit) > 0:
             (parent_obj, parent_rslt, attr_name, value) = to_visit.popleft()
 
-            # we don't want NULL/NIL/None value in the datastore
-            if value is None:
-                continue
-
             # Worflow state is deprecated and should be ignored
             if attr_name == u'state':
                 continue
 
-            # An object, add it's properties to the traversal queue
+            # We have an object, add it's properties to the traversal queue
             if interfaces.IInstance.providedBy(value):
-#                if not interfaces.Schema.providedBy(value):
-#                    raise Exception('This object is not going to work out')
 
                 schema_obj = list(providedBy(value))[0]
 
@@ -333,15 +324,12 @@ class Datastore(object):
                         .filter_by(title=value.title)\
                         .first()
                     instance_rslt.state = state_rslt
-                    is_update = True
                 else:
                     schema_rslt = Session.query(model.Schema)\
                         .filter_by(create_date=schema_obj.__version__)\
                         .join(model.Specification)\
                         .filter_by(name=schema_obj.__name__)\
                         .first()
-
-
 
                     instance_rslt = model.Instance(
                         schema=schema_rslt,
@@ -358,11 +346,10 @@ class Datastore(object):
                     setattr(value, '__id__', instance_rslt.id)
 
                 for name, field_obj in zope.schema.getFieldsInOrder(schema_obj):
-                    # don't do getattr as this will potentially get the
-                    # FieldProperty object (if present)
                     child = getattr(value, name, None)
                     to_visit.append((value, instance_rslt, name, child,))
 
+            # Process an individual attribute
             else:
 
                 attribute_rslt = Session.query(model.Attribute)\
@@ -373,72 +360,62 @@ class Datastore(object):
 
                 type_name = attribute_rslt.field.type.title
 
-                if type_name in (u'binary',):
-                    Model = model.Binary
-                elif type_name in (u'date', u'time', u'datetime',):
-                    Model = model.Datetime
-                elif type_name in (u'boolean',):
-                    Model = model.Integer
-                    if attribute_rslt.field.is_list:
-                        value = map(int, value)
-                    else:
-                        value = int(value)
-                elif type_name in (u'integer',):
-                    Model = model.Integer
-                elif type_name in (u'object',):
-                    Model = model.Object
-                elif type_name in (u'real',):
-                    Model = model.Real
-                elif type_name in (u'text', u'string',):
-                    Model = model.String
-                elif type_name in (u'selection', ):
-                    Model = model.Selection
+                if type_name not in name_model_map:
+                    raise Exception('Type \'%s\' unsupported.' % type_name)
+
+                Model = name_model_map[type_name]
+
+                choice_values = dict()
+
+                # We'll need a reverse dictionary of possible choices
+                for choice_rslt in attribute_rslt.field.choices:
+                    choice_values[choice_rslt.value] = choice_rslt
+
+                value_query = Session.query(Model) \
+                    .filter_by(instance=parent_rslt) \
+                    .filter_by(attribute=attribute_rslt) \
+
+                if attribute_rslt.field.is_list:
+                    # Remove any existing values that are not in the new set
+                    for value_rslt in value_query.all():
+                        if value is None or value_rslt.value not in value:
+                            Session.delete(value_rslt)
+
+                    if value is not None:
+                        for v in value:
+                            if type_name in name_coalesce_map:
+                                v = name_coalesce_map[type_name](v)
+
+                            if attribute_rslt.field.is_list:
+                                Session.add(Model(
+                                    instance=parent_rslt,
+                                    attribute=attribute_rslt,
+                                    choice=choice_values.get(v),
+                                    value=v
+                                    ))
                 else:
-                    raise Exception('Type \'%s\' unsupported.'  % type_name)
+                    value_rslt = value_query.first()
 
-                # convert to list (for convenience in iterating rather than
-                # checking)
-                if not attribute_rslt.field.is_list:
-                    value = [value]
-
-                # selections are actually just references to a term
-                if type_name == u'selection':
-                    rslt_values = []
-                    for term_rslt in attribute_rslt.field.vocabulary.terms:
-                        if term_rslt.value in value:
-                            rslt_values.append(term_rslt)
-
-                    value = rslt_values
-
-                # delete the whole list, too complicated to update for now
-                if is_update and attribute_rslt.field.is_list:
-                    list_rslt = Session.query(Model)\
-                        .filter_by(instance=parent_rslt)\
-                        .filter_by(attribute=attribute_rslt)\
-                        .all()
-
-                    for item_rslt in list_rslt:
-                        Session.delete(item_rslt)
-
-                for v in value:
-                    value_rslt = None
-
-                    if is_update and not attribute_rslt.field.is_list:
-                        value_rslt = Session.query(Model)\
-                            .filter_by(instance=parent_rslt)\
-                            .filter_by(attribute=attribute_rslt)\
-                            .first()
-
-                    if value_rslt is None or attribute_rslt.field.is_list:
-                        Session.add(Model(
-                            instance=parent_rslt,
-                            attribute=attribute_rslt,
-                            value=v
-                            ))
+                    if value is None:
+                        if value_rslt is not None:
+                            Session.delete(value_rslt)
                     else:
-                        value_rslt.value = v
+                        if value_rslt is None:
+                            value_rslt = Model(
+                                instance=parent_rslt,
+                                attribute=attribute_rslt
+                                )
 
-        Session.flush()
+                        if type_name in name_coalesce_map:
+                            value = name_coalesce_map[type_name](value)
+
+                        value_rslt.choice = choice_values.get(value)
+                        value_rslt.value = value
+
+                        if value_rslt.id is None:
+                            Session.add(value_rslt)
+
+            Session.flush()
 
         return target
 

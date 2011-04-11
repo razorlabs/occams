@@ -3,10 +3,25 @@
 
 from datetime import datetime
 
-import sqlalchemy as sa
-from sqlalchemy import orm
+from sqlalchemy.schema import Column
+from sqlalchemy.schema import ForeignKey
+from sqlalchemy.schema import UniqueConstraint
+from sqlalchemy.types import Boolean
+from sqlalchemy.types import Date
+from sqlalchemy.types import DateTime
+from sqlalchemy.types import Float
+from sqlalchemy.types import Integer
+from sqlalchemy.types import Time
+from sqlalchemy.types import Unicode
+
+from sqlalchemy.orm import relation as Relationship
 
 from avrc.data.store.model import Model
+from avrc.data.store.model.clinical import Protocol
+from avrc.data.store.model.clinical import Subject
+
+
+__all__ = ('SpecimenAliquotTerm', 'Specimen', 'Aliquot', 'AliquotHistory',)
 
 
 class SpecimenAliquotTerm(Model):
@@ -15,25 +30,29 @@ class SpecimenAliquotTerm(Model):
     """
     __tablename__ = 'specimen_aliquot_term'
 
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = Column(Integer, primary_key=True)
 
-    vocabulary_name = sa.Column(sa.Unicode, nullable=False, index=True)
+    vocabulary_name = Column(Unicode, nullable=False, index=True)
 
-    title = sa.Column(sa.Unicode)
+    title = Column(Unicode)
 
-    token = sa.Column(sa.Unicode, nullable=False)
+    token = Column(Unicode, nullable=False)
 
-    value = sa.Column(sa.Unicode, nullable=False)
+    value = Column(Unicode, nullable=False)
 
-    is_active = sa.Column(sa.Boolean, nullable=False, default=True, index=True)
+    is_active = Column(Boolean, nullable=False, default=True, index=True)
 
-    create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
+    create_date = Column(DateTime, nullable=False, default=datetime.now)
 
-    modify_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now,
-                            onupdate=datetime.now)
+    modify_date = Column(
+        DateTime,
+        nullable=False,
+        default=datetime.now,
+        onupdate=datetime.now
+        )
 
     __table_args = (
-        sa.UniqueConstraint('vocabulary_name', 'token', 'value'),
+        UniqueConstraint('vocabulary_name', 'token', 'value'),
         {})
 
 
@@ -65,77 +84,92 @@ class Specimen(Model):
     """
     __tablename__ = 'specimen'
 
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = Column(Integer, primary_key=True)
 
-    subject_id = sa.Column(sa.ForeignKey('subject.id'), nullable=False)
+    subject_id = Column(
+        ForeignKey(Subject.id, ondelete='CASCADE'),
+        nullable=False,
+        index=True
+        )
 
-    subject = orm.relation('Subject', uselist=False)
+    subject = Relationship('Subject')
 
-    protocol_id = sa.Column(sa.ForeignKey('protocol.id'), nullable=False)
+    protocol_id = Column(
+        ForeignKey(Protocol.id, ondelete='CASCADE'),
+        nullable=False,
+        index=True
+        )
 
-    protocol = orm.relation('Protocol', uselist=False)
+    protocol = Relationship('Protocol')
 
-    state_id = sa.Column(sa.ForeignKey('specimen_aliquot_term.id'), nullable=False)
+    state_id = Column(
+        ForeignKey(SpecimenAliquotTerm.id, ondelete='CASCADE'),
+        nullable=False,
+        index=True
+        )
 
-    state = orm.relation('SpecimenAliquotTerm', uselist=False, primaryjoin=state_id == SpecimenAliquotTerm.id)
+    state = Relationship(
+        'SpecimenAliquotTerm',
+        primaryjoin=state_id == SpecimenAliquotTerm.id
+        )
 
-    collect_date = sa.Column(sa.Date)
+    collect_date = Column(Date)
 
-    collect_time = sa.Column(sa.Time)
+    collect_time = Column(Time)
 
-    type_id = sa.Column(sa.ForeignKey('specimen_aliquot_term.id'), nullable=False)
+    type_id = Column(
+        ForeignKey(SpecimenAliquotTerm.id, ondelete='CASCADE'),
+        nullable=False,
+        index=True
+        )
 
-    type = orm.relation('SpecimenAliquotTerm', uselist=False, primaryjoin=type_id == SpecimenAliquotTerm.id)
+    type = Relationship(
+        'SpecimenAliquotTerm',
+        primaryjoin=type_id == SpecimenAliquotTerm.id
+        )
 
-    destination_id = sa.Column(sa.ForeignKey('specimen_aliquot_term.id'), nullable=False)
+    destination_id = Column(
+        ForeignKey(SpecimenAliquotTerm.id, ondelete='CASCADE'),
+        nullable=False,
+        index=True
+        )
 
-    destination = orm.relation('SpecimenAliquotTerm', uselist=False, primaryjoin=destination_id == SpecimenAliquotTerm.id)
+    destination = Relationship(
+        'SpecimenAliquotTerm',
+        primaryjoin=destination_id == SpecimenAliquotTerm.id
+        )
 
-    tubes = sa.Column(sa.Integer)
+    tubes = Column(Integer)
 
-    tupe_type_id = sa.Column(sa.ForeignKey('specimen_aliquot_term.id'), nullable=False)
+    tupe_type_id = Column(
+        ForeignKey(SpecimenAliquotTerm.id, ondelete='CASCADE'),
+        nullable=False,
+        index=True
+        )
 
-    tube_type = orm.relation('SpecimenAliquotTerm', uselist=False, primaryjoin=tupe_type_id == SpecimenAliquotTerm.id)
+    tube_type = Relationship(
+         'SpecimenAliquotTerm',
+         primaryjoin=tupe_type_id == SpecimenAliquotTerm.id
+         )
 
-    notes = sa.Column(sa.Unicode)
+    notes = Column(Unicode)
 
-    aliquot = orm.relation('Aliquot')
+    aliquot = Relationship('Aliquot')
 
-    is_active = sa.Column(sa.Boolean, nullable=False, default=True, index=True)
+    is_active = Column(Boolean, nullable=False, default=True, index=True)
 
-    create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
+    create_date = Column(DateTime, nullable=False, default=datetime.now)
 
-    modify_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now,
-                            onupdate=datetime.now)
+    modify_date = Column(
+        DateTime,
+        nullable=False,
+        default=datetime.now,
+        onupdate=datetime.now
+        )
 
     __table_args = (
-        sa.UniqueConstraint('subject_id', 'protocol_id', 'type'),
+        UniqueConstraint('subject_id', 'protocol_id', 'type'),
         {})
-
-
-sa.Index('specimen_subject_id', Specimen.subject_id)
-sa.Index('specimen_protocol_id', Specimen.protocol_id)
-sa.Index('specimen_state_id', Specimen.state_id)
-sa.Index('specimen_type_id', Specimen.type_id)
-sa.Index('specimen_destination_id', Specimen.destination_id)
-sa.Index('specimen_tube_type_id', Specimen.tupe_type_id)
-
-
-class AliquotHistory(Model):
-    """ Keeps track of aliquot state history. """
-    __tablename__ = 'aliquot_history'
-
-    id = sa.Column(sa.Integer, primary_key=True)
-
-    aliquot_id = sa.Column(sa.ForeignKey('aliquot.id'), nullable=False)
-
-    state_id = sa.Column(sa.ForeignKey('specimen_aliquot_term.id'), nullable=False)
-
-    state = orm.relation('SpecimenAliquotTerm', uselist=False, primaryjoin=state_id == SpecimenAliquotTerm.id)
-
-    action_date = sa.Column(sa.DateTime, nullable=False)
-
-    to = sa.Column(sa.Unicode, nullable=False)
 
 
 class Aliquot(Model):
@@ -147,63 +181,129 @@ class Aliquot(Model):
     """
     __tablename__ = 'aliquot'
 
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = Column(Integer, primary_key=True)
 
-    specimen_id = sa.Column(sa.ForeignKey('specimen.id'), nullable=False)
+    specimen_id = Column(
+        ForeignKey(Specimen.id, ondelete='CASCADE'),
+        nullable=False,
+        index=True,
+        )
 
-    specimen = orm.relation('Specimen', uselist=False)
+    specimen = Relationship('Specimen')
 
-    type_id = sa.Column(sa.ForeignKey('specimen_aliquot_term.id'), nullable=False)
+    type_id = Column(
+        ForeignKey(SpecimenAliquotTerm.id, ondelete='CASCADE'),
+        nullable=False,
+        index=True
+        )
 
-    type = orm.relation('SpecimenAliquotTerm', uselist=False, primaryjoin=type_id == SpecimenAliquotTerm.id)
+    type = Relationship(
+        'SpecimenAliquotTerm',
+        primaryjoin=type_id == SpecimenAliquotTerm.id
+        )
 
-    volume = sa.Column(sa.Float)
+    volume = Column(Float)
 
-    cell_amount = sa.Column(sa.Float)
+    cell_amount = Column(Float)
 
-    state_id = sa.Column(sa.ForeignKey('specimen_aliquot_term.id'), nullable=False)
+    state_id = Column(
+        ForeignKey(SpecimenAliquotTerm.id, ondelete='CASCADE'),
+        nullable=False,
+        index=True
+        )
 
-    state = orm.relation('SpecimenAliquotTerm', uselist=False, primaryjoin=state_id  == SpecimenAliquotTerm.id)
+    state = Relationship(
+        'SpecimenAliquotTerm',
+        primaryjoin=state_id == SpecimenAliquotTerm.id
+        )
 
-    store_date = sa.Column(sa.Date)
+    store_date = Column(Date)
 
-    freezer = sa.Column(sa.Unicode)
+    freezer = Column(Unicode)
 
-    rack = sa.Column(sa.Unicode)
+    rack = Column(Unicode)
 
-    box = sa.Column(sa.Unicode)
+    box = Column(Unicode)
 
-    storage_site_id = sa.Column(sa.ForeignKey('specimen_aliquot_term.id'), nullable=False)
+    storage_site_id = Column(
+        ForeignKey(SpecimenAliquotTerm.id, ondelete='CASCADE'),
+        nullable=False,
+        index=True
+        )
 
-    storage_site = orm.relation('SpecimenAliquotTerm', uselist=False, primaryjoin=storage_site_id  == SpecimenAliquotTerm.id)
+    storage_site = Relationship(
+        'SpecimenAliquotTerm',
+        primaryjoin=storage_site_id == SpecimenAliquotTerm.id
+        )
 
-    thawed_num = sa.Column(sa.Integer)
+    thawed_num = Column(Integer)
 
-    analysis_status_id = sa.Column(sa.ForeignKey('specimen_aliquot_term.id'), nullable=False)
+    analysis_status_id = Column(
+        ForeignKey(SpecimenAliquotTerm.id, ondelete='CASCADE'),
+        nullable=False,
+        index=True
+        )
 
-    analysis_status = orm.relation('SpecimenAliquotTerm', uselist=False, primaryjoin=analysis_status_id == SpecimenAliquotTerm.id,)
+    analysis_status = Relationship(
+        'SpecimenAliquotTerm',
+        primaryjoin=analysis_status_id == SpecimenAliquotTerm.id,
+        )
 
-    sent_date = sa.Column(sa.Date)
+    sent_date = Column(Date)
 
-    sent_name = sa.Column(sa.Unicode)
+    sent_name = Column(Unicode)
 
-    notes = sa.Column(sa.Unicode)
+    notes = Column(Unicode)
 
-    special_instruction_id = sa.Column(sa.ForeignKey('specimen_aliquot_term.id'), nullable=False)
+    special_instruction_id = Column(
+        ForeignKey(SpecimenAliquotTerm.id, ondelete='CASCADE'),
+        nullable=False,
+        index=True
+        )
 
-    special_instruction = orm.relation('SpecimenAliquotTerm', uselist=False, primaryjoin=special_instruction_id  == SpecimenAliquotTerm.id)
+    special_instruction = Relationship(
+        'SpecimenAliquotTerm',
+        primaryjoin=special_instruction_id == SpecimenAliquotTerm.id
+        )
 
-    is_active = sa.Column(sa.Boolean, nullable=False, default=True, index=True)
+    is_active = Column(Boolean, nullable=False, default=True, index=True)
 
-    create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
+    create_date = Column(DateTime, nullable=False, default=datetime.now)
 
-    modify_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now,
-                            onupdate=datetime.now)
+    modify_date = Column(
+        DateTime,
+        nullable=False,
+        default=datetime.now,
+        onupdate=datetime.now
+        )
 
 
-sa.Index('aliquot_specimen_id', Aliquot.specimen_id)
-sa.Index('aliquot_type_id', Aliquot.type_id)
-sa.Index('aliquot_state_id', Aliquot.state_id)
-sa.Index('aliquot_storage_site_id', Aliquot.storage_site_id)
-sa.Index('aliquot_analysis_status_id', Aliquot.analysis_status_id)
-sa.Index('aliquot_special_instruction_id', Aliquot.special_instruction_id)
+class AliquotHistory(Model):
+    """ Keeps track of aliquot state history.
+    """
+
+    __tablename__ = 'aliquot_history'
+
+    id = Column(Integer, primary_key=True)
+
+    aliquot_id = Column(
+        ForeignKey(Aliquot.id, ondelete='CASCADE'),
+        nullable=False,
+        index=True
+        )
+
+    state_id = Column(
+        ForeignKey(SpecimenAliquotTerm.id, ondelete='CASCADE'),
+        nullable=False,
+        index=True
+        )
+
+    state = Relationship(
+        'SpecimenAliquotTerm',
+        primaryjoin=state_id == SpecimenAliquotTerm.id
+        )
+
+    action_date = Column(DateTime, nullable=False)
+
+    to = Column(Unicode, nullable=False)
+

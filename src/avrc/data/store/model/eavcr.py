@@ -14,47 +14,83 @@
 
     Currently a combincation of both form and object definitions, which will
     be refactored later.
+
 """
 
 from datetime import datetime
 
-import sqlalchemy as sa
-from sqlalchemy import orm
+from sqlalchemy.schema import Column
+from sqlalchemy.schema import ForeignKey
+from sqlalchemy.schema import Table
+from sqlalchemy.schema import Index
+from sqlalchemy.schema import UniqueConstraint
+from sqlalchemy.schema import PrimaryKeyConstraint
+from sqlalchemy.types import Boolean
+from sqlalchemy.types import DateTime as SADateTime
+from sqlalchemy.types import Float
+from sqlalchemy.types import Integer as SAInteger
+from sqlalchemy.types import String as SAString
+from sqlalchemy.types import Unicode
+from sqlalchemy.types import UnicodeText
+from sqlalchemy.types import Text
+
+from sqlalchemy.orm import relation as Relationship
 
 from avrc.data.store.model import Model
 
+now = datetime.now
 
-fieldset_fieldsetitem_table = sa.Table('fieldset_fieldsetitem', Model.metadata,
-    sa.Column('fieldset_id', sa.ForeignKey('fieldset.id'),  primary_key=True),
-    sa.Column('item_id', sa.ForeignKey('fieldsetitem.id'),  primary_key=True),
+
+__all__ = (
+    'fieldset_fieldsetitem_table',
+    'hierarchy_table',
+    'include_table',
+    'schema_fieldset_table',
+    'Type',
+    'Specification',
+    'Schema',
+    'Invariant',
+    'Field',
+    'Choice',
+    'Attribute',
+    'FieldsetItem',
+    'Fieldset',
+    'State',
+    'Instance',
+    'Keyword',
+    'Datetime',
+    'Integer',
+    'Real',
+    'Object',
+    'String',
     )
 
+
+fieldset_fieldsetitem_table = Table('fieldset_fieldsetitem', Model.metadata,
+    Column('fieldset_id', ForeignKey('fieldset.id', ondelete='CASCADE')),
+    Column('item_id', ForeignKey('fieldsetitem.id', ondelete='CASCADE')),
+    PrimaryKeyConstraint('fieldset_id', 'item_id')
+    )
 
 # Joining table for base class representation
-hierarchy_table = sa.Table('hierarchy', Model.metadata,
-    sa.Column('parent_id', sa.ForeignKey('specification.id'),  primary_key=True),
-    sa.Column('child_id', sa.ForeignKey('specification.id'),  primary_key=True),
+hierarchy_table = Table('hierarchy', Model.metadata,
+    Column('parent_id', ForeignKey('specification.id', ondelete='CASCADE')),
+    Column('child_id', ForeignKey('specification.id', ondelete='CASCADE')),
+    PrimaryKeyConstraint('parent_id', 'child_id')
     )
-
 
 # A hackish way to include additional schemata when a 'main' schemata is
 # requested.
-include_table = sa.Table('include', Model.metadata,
-    sa.Column('main_id', sa.ForeignKey('specification.id'), primary_key=True),
-    sa.Column('include_id', sa.ForeignKey('specification.id'), primary_key=True),
+include_table = Table('include', Model.metadata,
+    Column('main_id', ForeignKey('specification.id', ondelete='CASCADE')),
+    Column('include_id', ForeignKey('specification.id', ondelete='CASCADE')),
+    PrimaryKeyConstraint('main_id', 'include_id')
     )
 
-
-schema_fieldset_table = sa.Table('schema_fieldset', Model.metadata,
-    sa.Column('schema_id', sa.ForeignKey('schema.id'),  primary_key=True),
-    sa.Column('fieldset_id', sa.ForeignKey('fieldset.id'), primary_key=True),
-    )
-
-
-# Joining table for vocabulary terms
-vocabulary_term_table = sa.Table('vocabulary_term', Model.metadata,
-    sa.Column('vocabulary_id', sa.ForeignKey('vocabulary.id'), primary_key=True),
-    sa.Column('term_id', sa.ForeignKey('term.id'), primary_key=True),
+schema_fieldset_table = Table('schema_fieldset', Model.metadata,
+    Column('schema_id', ForeignKey('schema.id', ondelete='CASCADE')),
+    Column('fieldset_id', ForeignKey('fieldset.id', ondelete='CASCADE')),
+    PrimaryKeyConstraint('schema_id', 'fieldset_id')
     )
 
 
@@ -71,11 +107,11 @@ class Type(Model):
     """
     __tablename__ = 'type'
 
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = Column(SAInteger, primary_key=True)
 
-    title = sa.Column(sa.Unicode, nullable=False, unique=True)
+    title = Column(Unicode, nullable=False, unique=True)
 
-    description = sa.Column(sa.Text)
+    description = Column(Text)
 
 
 class Specification(Model):
@@ -106,55 +142,56 @@ class Specification(Model):
     """
     __tablename__ = 'specification'
 
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = Column(SAInteger, primary_key=True)
 
-    bases = orm.relation('Specification',
-                         secondary=hierarchy_table,
-                         primaryjoin=(id == hierarchy_table.c.child_id),
-                         secondaryjoin=(id == hierarchy_table.c.parent_id),
-                         foreign_keys=[hierarchy_table.c.parent_id,
-                                       hierarchy_table.c.child_id,
-                                       ]
-                         )
+    bases = Relationship(
+        'Specification',
+        secondary=hierarchy_table,
+        primaryjoin=(id == hierarchy_table.c.child_id),
+        secondaryjoin=(id == hierarchy_table.c.parent_id),
+        foreign_keys=[hierarchy_table.c.parent_id, hierarchy_table.c.child_id, ]
+        )
 
-    children = orm.relation('Specification',
-                            secondary=hierarchy_table,
-                            primaryjoin=(id == hierarchy_table.c.parent_id),
-                            secondaryjoin=(id == hierarchy_table.c.child_id),
-                            foreign_keys=[hierarchy_table.c.child_id,
-                                          hierarchy_table.c.parent_id,
-                                          ]
-                            )
+    children = Relationship(
+        'Specification',
+        secondary=hierarchy_table,
+        primaryjoin=(id == hierarchy_table.c.parent_id),
+        secondaryjoin=(id == hierarchy_table.c.child_id),
+        foreign_keys=[hierarchy_table.c.child_id, hierarchy_table.c.parent_id, ]
+        )
 
-    includes = orm.relation('Specification',
-                            secondary=include_table,
-                            primaryjoin=(id == include_table.c.main_id),
-                            secondaryjoin=(id == include_table.c.include_id),
-                            foreign_keys=[include_table.c.main_id,
-                                          include_table.c.include_id,
-                                          ]
-                            )
+    includes = Relationship(
+        'Specification',
+        secondary=include_table,
+        primaryjoin=(id == include_table.c.main_id),
+        secondaryjoin=(id == include_table.c.include_id),
+        foreign_keys=[include_table.c.main_id, include_table.c.include_id, ]
+        )
 
-    name = sa.Column(sa.Unicode, nullable=False, unique=True)
+    name = Column(Unicode, nullable=False, unique=True)
 
-    documentation = sa.Column(sa.Unicode, nullable=False)
+    documentation = Column(Unicode, nullable=False)
 
-    title = sa.Column(sa.Unicode)
+    title = Column(Unicode)
 
-    description = sa.Column(sa.Text)
+    description = Column(Text)
 
-    is_tabable = sa.Column(sa.Boolean, nullable=False, default=False)
+    is_tabable = Column(Boolean, nullable=False, default=False)
 
-    is_association = sa.Column(sa.Boolean, nullable=False, default=False)
+    is_association = Column(Boolean, nullable=False, default=False)
 
-    is_virtual = sa.Column(sa.Boolean, nullable=False, default=False)
+    is_virtual = Column(Boolean, nullable=False, default=False)
 
-    is_eav = sa.Column(sa.Boolean, nullable=False, default=False)
+    is_eav = Column(Boolean, nullable=False, default=False)
 
-    create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
+    create_date = Column(SADateTime, nullable=False, default=now)
 
-    modify_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now,
-                            onupdate=datetime.now)
+    modify_date = Column(
+        SADateTime,
+        nullable=False,
+        default=now,
+        onupdate=now
+        )
 
 
 class Schema(Model):
@@ -178,24 +215,30 @@ class Schema(Model):
     """
     __tablename__ = 'schema'
 
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = Column(SAInteger, primary_key=True)
 
-    specification_id = sa.Column(sa.ForeignKey('specification.id'), nullable=False)
+    specification_id = Column(
+        ForeignKey(Specification.id, ondelete='CASCADE'),
+        nullable=False,
+        index=True
+        )
 
-    specification = orm.relation('Specification', uselist=False)
+    specification = Relationship('Specification')
 
-    attributes = orm.relation('Attribute', order_by='Attribute.order')
+    attributes = Relationship('Attribute', order_by='Attribute.order')
 
-    invariants = orm.relation('Invariant')
+    invariants = Relationship('Invariant')
 
-    fieldsets = orm.relation('Fieldset',
-                             secondary=schema_fieldset_table,
-                             order_by='Fieldset.order')
+    fieldsets = Relationship(
+        'Fieldset',
+        secondary=schema_fieldset_table,
+        order_by='Fieldset.order'
+        )
 
-    create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
+    create_date = Column(SADateTime, nullable=False, default=now)
 
     __table_args = (
-        sa.UniqueConstraint('specification_id', 'create_date'),
+        UniqueConstraint('specification_id', 'create_date'),
         {})
 
 
@@ -209,84 +252,15 @@ class Invariant(Model):
     """
     __tablename__ = 'invariant'
 
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = Column(SAInteger, primary_key=True)
 
-    schema_id = sa.Column(sa.ForeignKey('schema.id'), nullable=False)
+    schema_id = Column(
+        ForeignKey(Schema.id, ondelete='CASCADE'),
+        nullable=False,
+        index=True
+        )
 
-    name = sa.Column(sa.Unicode, nullable=False)
-
-
-class Attribute(Model):
-    """ An attribute declaration.
-
-        This is a special table in that it serves as a joining table between
-        fields and schemata, but with extra meta data associated with the join.
-
-        Attributes:
-            id: (int) machine generated id number
-            schema_id: (int) a reference to the schema this attribute belongs to
-            field_id: (int) a reference to the field that contains metadata
-                about this attribute.
-            field: (Field) a relation to the field
-            name: (str) the name of the attribute (i.e. the property name)
-            order: (int) the order in which the attribute appears in the schema
-            create_date: (datetime) the date this model instance was created
-            modified_date: (datetime) the date this model instance was modified
-
-    """
-    __tablename__ = 'attribute'
-
-    id = sa.Column(sa.Integer, primary_key=True)
-
-    schema_id = sa.Column(sa.ForeignKey('schema.id'), nullable=False)
-
-    schema = orm.relation('Schema', uselist=False)
-
-    field_id = sa.Column(sa.ForeignKey('field.id'), nullable=False)
-
-    field = orm.relation('Field', uselist=False)
-
-    name = sa.Column(sa.Unicode, nullable=False)
-
-    order = sa.Column(sa.Integer, nullable=False, default=1)
-
-    create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
-
-    __table_args__ = (
-        sa.UniqueConstraint('schema_id', 'name'),
-        {})
-
-
-class FieldsetItem(Model):
-    """
-    """
-    __tablename__ = 'fieldsetitem'
-
-    id = sa.Column(sa.Integer, primary_key=True)
-
-    name = sa.Column(sa.Unicode, nullable=False)
-
-    order = sa.Column(sa.Integer, nullable=False, default=1)
-
-
-class Fieldset(Model):
-    """
-    """
-    __tablename__ = 'fieldset'
-
-    id = sa.Column(sa.Integer, primary_key=True)
-
-    name = sa.Column(sa.Unicode, nullable=False)
-
-    label = sa.Column(sa.Unicode, nullable=False)
-
-    description = sa.Column(sa.Unicode)
-
-    order = sa.Column(sa.Integer, nullable=False, default=1)
-
-    fields = orm.relation('FieldsetItem',
-                          secondary=fieldset_fieldsetitem_table,
-                          order_by='FieldsetItem.order')
+    name = Column(Unicode, nullable=False)
 
 
 class Field(Model):
@@ -305,9 +279,6 @@ class Field(Model):
             schema_id: (int) a reference to a schema (only applicable for object
                 types) and used for enforcing the schema type for an object.
             schema: (Schema) a relation to the schema enforcement
-            vocabulary_id: (int) a reference to a vocabulary of possible answer
-                choices
-            vocabulary: (Vocabulary) a relation to the vocabulary
             is_searchable: (bool) True if the attribute should be added to
                 the appliations search form. (Only if applicable)
             is_required: (bool) True if required value in a form display
@@ -330,190 +301,209 @@ class Field(Model):
 
     __tablename__ = 'field'
 
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = Column(SAInteger, primary_key=True)
 
-    attribute = orm.relation('Attribute', uselist=False)
+    # TODO: (mmartinez) uselist!?!
+    attribute = Relationship('Attribute', uselist=False)
 
-    title = sa.Column(sa.Unicode, nullable=False)
+    title = Column(Unicode, nullable=False)
 
-    description = sa.Column(sa.Unicode)
+    description = Column(Unicode)
 
-    documentation = sa.Column(sa.Unicode)
+    documentation = Column(Unicode)
 
-    type_id = sa.Column(sa.ForeignKey('type.id'), nullable=False)
+    type_id = Column(
+        ForeignKey(Type.id, ondelete='CASCADE'),
+        nullable=False,
+        index=True
+        )
 
-    type = orm.relation('Type', uselist=False)
+    type = Relationship('Type')
 
-    schema_id = sa.Column(sa.ForeignKey('schema.id'))
+    schema_id = Column(ForeignKey(Schema.id, ondelete='SET NULL'), index=True)
 
-    schema = orm.relation('Schema', uselist=False)
+    schema = Relationship('Schema')
 
-    vocabulary_id = sa.Column(sa.ForeignKey('vocabulary.id'))
+    choices = Relationship('Choice')
 
-    vocabulary = orm.relation('Vocabulary')
+    default = Column(Unicode)
 
-    default = sa.Column(sa.Unicode)
+    is_list = Column(Boolean, nullable=False, default=False)
 
-    is_list = sa.Column(sa.Boolean, nullable=False, default=False)
+    is_readonly = Column(Boolean, nullable=False, default=False)
 
-    is_readonly = sa.Column(sa.Boolean, nullable=False, default=False)
+    is_searchable = Column(Boolean, nullable=False, default=False)
 
-    is_searchable = sa.Column(sa.Boolean, nullable=False, default=False)
+    is_required = Column(Boolean, nullable=False, default=False)
 
-    is_required = sa.Column(sa.Boolean, nullable=False, default=False)
+    is_inline_image = Column(Boolean)
 
-    is_inline_image = sa.Column(sa.Boolean)
+    is_repeatable = Column(Boolean, nullable=False, default=False)
 
-    is_repeatable = sa.Column(sa.Boolean, nullable=False, default=False)
+    minimum = Column(SAInteger)
 
-    minimum = sa.Column(sa.Integer)
+    maximum = Column(SAInteger)
 
-    maximum = sa.Column(sa.Integer)
+    width = Column(SAInteger)
 
-    width = sa.Column(sa.Integer)
+    height = Column(SAInteger)
 
-    height = sa.Column(sa.Integer)
+    url = Column(Unicode)
 
-    url = sa.Column(sa.Unicode)
+    directive_widget = Column(Unicode)
 
-    directive_widget = sa.Column(sa.Unicode)
+    directive_omitted = Column(Boolean)
 
-    directive_omitted = sa.Column(sa.Boolean)
+    directive_no_ommit = Column(Unicode)
 
-    directive_no_ommit = sa.Column(sa.Unicode)
+    directive_mode = Column(Unicode)
 
-    directive_mode = sa.Column(sa.Unicode)
+    directive_before = Column(Unicode)
 
-    directive_before = sa.Column(sa.Unicode)
+    directive_after = Column(Unicode)
 
-    directive_after = sa.Column(sa.Unicode)
+    directive_read = Column(Unicode)
 
-    directive_read = sa.Column(sa.Unicode)
+    directive_write = Column(Unicode)
 
-    directive_write = sa.Column(sa.Unicode)
+    create_date = Column(SADateTime, nullable=False, default=now)
 
-    create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
-
-    modify_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now,
-                            onupdate=datetime.now)
+    modify_date = Column(SADateTime, nullable=False, default=now, onupdate=now)
 
 
-class Vocabulary(Model):
-    """ A vocabulary.
+class Choice(Model):
+    """ Field choice constraint table.
+        Specification: DS-1
+
+        Contains a list of choice terms that a particular field/attribute
+        is allowed to be set to.
+
+        TODO: (mmartinez) rename to attribute_id when field is renamed.
+    """
+
+    __tablename__ = 'choice'
+
+    id = Column('id', SAInteger, primary_key=True)
+
+    field_id = Column(
+        ForeignKey(Field.id, ondelete='CASCADE'),
+        nullable=False,
+        index=True
+        )
+
+    field = Relationship('Field')
+
+    name = Column(SAString, nullable=False)
+
+    title = Column(Unicode, nullable=False)
+
+    description = Column(UnicodeText)
+
+    value = Column(Unicode, nullable=False)
+
+    order = Column(SAInteger, nullable=False)
+
+    create_date = Column(SADateTime, nullable=False, default=now)
+
+    create_user_id = Column(SAInteger)
+
+    modify_date = Column(SADateTime, nullable=False, default=now, onupdate=now)
+
+    modify_user_id = Column(SAInteger)
+
+    remove_date = Column(SADateTime, index=True)
+
+    remove_user_id = Column(SAInteger)
+
+    __table_args__ = (
+        UniqueConstraint('field_id', 'name', name='choice_field_id_name'),
+        UniqueConstraint('field_id', 'value', name='choice_field_id_value'),
+        UniqueConstraint('field_id', 'order', name='choice_field_id_order'),
+        {}
+        )
+
+
+class Attribute(Model):
+    """ An attribute declaration.
+
+        This is a special table in that it serves as a joining table between
+        fields and schemata, but with extra meta data associated with the join.
 
         Attributes:
             id: (int) machine generated id number
-            title: (str) the human-reable name of this vocabulary
-            description: (str) an optional description
-            terms: (list) the list of terms for this vocabulary
+            schema_id: (int) a reference to the schema this attribute belongs to
+            field_id: (int) a reference to the field that contains metadata
+                about this attribute.
+            field: (Field) a relation to the field
+            name: (str) the name of the attribute (i.e. the property name)
+            order: (int) the order in which the attribute appears in the schema
+            create_date: (datetime) the date this model instance was created
+            modified_date: (datetime) the date this model instance was modified
+
     """
-    __tablename__ = 'vocabulary'
+    __tablename__ = 'attribute'
 
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = Column(SAInteger, primary_key=True)
 
-    title = sa.Column(sa.Unicode, nullable=False, index=True)
+    schema_id = Column(
+        ForeignKey(Schema.id, ondelete='CASCADE'),
+        nullable=False,
+        index=True
+        )
 
-    description = sa.Column(sa.Unicode)
+    schema = Relationship('Schema')
 
-    terms = orm.relation('Term',
-                         secondary=vocabulary_term_table,
-                         order_by='Term.order')
+    field_id = Column(
+        ForeignKey(Field.id, ondelete='CASCADE'),
+        nullable=False,
+        index=True
+        )
+
+    field = Relationship('Field')
+
+    name = Column(Unicode, nullable=False)
+
+    order = Column(SAInteger, nullable=False, default=1)
+
+    create_date = Column(SADateTime, nullable=False, default=now)
+
+    __table_args__ = (
+        UniqueConstraint('schema_id', 'name'),
+        {})
 
 
-class Term(Model):
-    """ An indivudal term for a vocabulary.
-
-        Note: The way this is implemented could possibly override the whole
-            concept of EAV itself, but we'll see after some testing...
-
-        Attributes:
-            id: (int) machine generated id number
-            title: (str) the human-reable name of term
-            token: (str) a one-to-one mapping token for the value
-            value_*: the currently implemented way for the term value that
-                seriously needs some reworking.
-            value: (object) the value for this term
-            description: (str) an optional description
-            terms: (list) the list of terms for this vocabulary
+class FieldsetItem(Model):
     """
-    __tablename__ = 'term'
-
-    id = sa.Column(sa.Integer, primary_key=True)
-
-    title = sa.Column(sa.Unicode)
-
-    token = sa.Column(sa.Unicode, nullable=False, index=True)
-
-    value_str = sa.Column(sa.Unicode)
-
-    value_int = sa.Column(sa.Integer)
-
-    value_real = sa.Column(sa.Float)
-
-    value_range_low = sa.Column(sa.Integer)
-
-    value_range_high = sa.Column(sa.Integer)
-
-    order = sa.Column(sa.Integer, nullable=False, default=1)
-
-    def _get_value(self):
-        """Determines the correct value and returns it"""
-        value = self.value_int is not None and self.value_int or \
-                self.value_real is not None and self.value_real or \
-                self.value_str is not None and self.value_str or \
-                None
-
-        if self.value_range_low and self.value_range_high:
-            value = (self.value_range_low, self.value_range_high)
-
-        if value is None:
-            raise Exception('TERM ITEM NOT FOUND')
-
-        return value
-
-    def _set_value(self, value):
-        """Sets the value to the paramter's value"""
-        if isinstance(value, int):
-            self.value_int = value
-        elif isinstance(value, float):
-            self.value_real = value
-        elif isinstance(value, basestring):
-            self.value_str = unicode(value)
-        elif isinstance(value, tuple) and len(tuple) == 2:
-            (self.value_range_low, self.value_range_high) = value
-        else:
-            raise Exception('Unable to determine type: %s'  % value)
-
-    value = property(_get_value, _set_value, None, 'The value stored')
-
-
-class Keyword(Model):
-    """ Used to associate multiple titles for an entity instance. The titles can
-        be shorthand alternate names or actual 'official' synonyms. The main
-        purpose of this table is simply to make it more convenient for searching
-        for instances with specific names.
-
-        Note: keyword title uniqueness is not enforced, therefore multiple
-              instances may have similar keywords.
-
-        Attributes:
-            id: (int) machine generated id number
-            instance_id: (int) reference to the instance this keyword belongs to
-            instance: (Instance) relation object to the Instnace model
-            title: (str) alternate title or synonym.
-            is_synonym: (bool) Flag indicating the type of keyword
     """
-    __tablename__ = 'keyword'
+    __tablename__ = 'fieldsetitem'
 
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = Column(SAInteger, primary_key=True)
 
-    instance_id = sa.Column(sa.ForeignKey('instance.id'), nullable=False)
+    name = Column(Unicode, nullable=False)
 
-    instance = orm.relation('Instance', uselist=False)
+    order = Column(SAInteger, nullable=False, default=1)
 
-    title = sa.Column(sa.Unicode, nullable=False, index=True)
 
-    is_synonym = sa.Column(sa.Boolean, nullable=False, default=True)
+class Fieldset(Model):
+    """
+    """
+    __tablename__ = 'fieldset'
+
+    id = Column(SAInteger, primary_key=True)
+
+    name = Column(Unicode, nullable=False)
+
+    label = Column(Unicode, nullable=False)
+
+    description = Column(Unicode)
+
+    order = Column(SAInteger, nullable=False, default=1)
+
+    fields = Relationship(
+        'FieldsetItem',
+        secondary=fieldset_fieldsetitem_table,
+        order_by='FieldsetItem.order'
+        )
 
 
 class State(Model):
@@ -522,22 +512,26 @@ class State(Model):
 
     __tablename__ = 'state'
 
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = Column(SAInteger, primary_key=True)
 
-    name = sa.Column(sa.Unicode, nullable=False, unique=True)
+    name = Column(Unicode, nullable=False, unique=True)
 
-    title = sa.Column(sa.Unicode, nullable=False)
+    title = Column(Unicode, nullable=False)
 
-    description = sa.Column(sa.Unicode)
+    description = Column(Unicode)
 
-    is_default = sa.Column(sa.Boolean, nullable=False, default=False, index=True)
+    is_default = Column(Boolean, nullable=False, default=False, index=True)
 
-    is_active = sa.Column(sa.Boolean, nullable=False, default=True, index=True)
+    is_active = Column(Boolean, nullable=False, default=True, index=True)
 
-    create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
+    create_date = Column(SADateTime, nullable=False, default=now)
 
-    modify_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now,
-                            onupdate=datetime.now)
+    modify_date = Column(
+        SADateTime,
+        nullable=False,
+        default=now,
+        onupdate=now
+        )
 
 
 class Instance(Model):
@@ -559,28 +553,73 @@ class Instance(Model):
     """
     __tablename__ = 'instance'
 
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = Column(SAInteger, primary_key=True)
 
-    schema_id = sa.Column(sa.ForeignKey('schema.id'), nullable=False)
+    schema_id = Column(
+        ForeignKey(Schema.id, ondelete='CASCADE'),
+        nullable=False,
+        index=True
+        )
 
-    schema = orm.relation('Schema', uselist=False)
+    schema = Relationship('Schema')
 
-    title = sa.Column(sa.Unicode, nullable=False, unique=True)
+    title = Column(Unicode, nullable=False, unique=True)
 
-    keywords = orm.relation('Keyword')
+    keywords = Relationship('Keyword')
 
-    description = sa.Column(sa.Unicode, nullable=False)
+    description = Column(Unicode, nullable=False)
 
-    state_id = sa.Column(sa.ForeignKey('state.id'), nullable=False, index=True)
+    state_id = Column(
+        ForeignKey(State.id, ondelete='CASCADE'),
+        nullable=False,
+        index=True
+        )
 
-    state = orm.relation('State', uselist=False)
+    state = Relationship('State')
 
-    is_active = sa.Column(sa.Boolean, nullable=False, default=True, index=True)
+    is_active = Column(Boolean, nullable=False, default=True, index=True)
 
-    create_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
+    create_date = Column(SADateTime, nullable=False, default=now)
 
-    modify_date = sa.Column(sa.DateTime, nullable=False, default=datetime.now,
-                            onupdate=datetime.now)
+    modify_date = Column(
+        SADateTime,
+        nullable=False,
+        default=now,
+        onupdate=now
+        )
+
+
+class Keyword(Model):
+    """ Used to associate multiple titles for an entity instance. The titles can
+        be shorthand alternate names or actual 'official' synonyms. The main
+        purpose of this table is simply to make it more convenient for searching
+        for instances with specific names.
+
+        Note: keyword title uniqueness is not enforced, therefore multiple
+              instances may have similar keywords.
+
+        Attributes:
+            id: (int) machine generated id number
+            instance_id: (int) reference to the instance this keyword belongs to
+            instance: (Instance) relation object to the Instnace model
+            title: (str) alternate title or synonym.
+            is_synonym: (bool) Flag indicating the type of keyword
+    """
+    __tablename__ = 'keyword'
+
+    id = Column(SAInteger, primary_key=True)
+
+    instance_id = Column(
+        ForeignKey(Instance.id, ondelete='CASCADE'),
+        nullable=False,
+        index=True
+        )
+
+    instance = Relationship('Instance')
+
+    title = Column(Unicode, nullable=False, index=True)
+
+    is_synonym = Column(Boolean, nullable=False, default=True)
 
 
 class Datetime(Model):
@@ -596,21 +635,28 @@ class Datetime(Model):
     """
     __tablename__ = 'datetime'
 
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = Column(SAInteger, primary_key=True)
 
-    instance_id = sa.Column(sa.ForeignKey('instance.id'), nullable=False)
+    instance_id = Column(
+        ForeignKey(Instance.id, ondelete='CASCADE'),
+        nullable=False,
+        index=True
+        )
 
-    instance = orm.relation('Instance', uselist=False)
+    instance = Relationship('Instance')
 
-    attribute_id = sa.Column(sa.ForeignKey('attribute.id'), nullable=False)
+    attribute_id = Column(
+        ForeignKey(Attribute.id, ondelete='CASCADE'),
+        nullable=False
+        )
 
-    attribute = orm.relation('Attribute', uselist=False)
+    attribute = Relationship('Attribute')
 
-    value = sa.Column(sa.DateTime, nullable=False)
+    value = Column(SADateTime, nullable=False)
 
 
 # Optimization for lookup
-sa.Index('datetime_attribute_value', Datetime.attribute_id, Datetime.value)
+Index('datetime_attribute_value', Datetime.attribute_id, Datetime.value)
 
 
 class Integer(Model):
@@ -624,70 +670,34 @@ class Integer(Model):
             attribute: (Attribute) relation to the target attribute
             value: (int) the physical value being stored
     """
-    __tablename__ ='integer'
+    __tablename__ = 'integer'
 
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = Column(SAInteger, primary_key=True)
 
-    instance_id = sa.Column(sa.ForeignKey('instance.id'), nullable=False)
+    instance_id = Column(
+        ForeignKey(Instance.id, ondelete='CASCADE'),
+        nullable=False,
+        index=True
+        )
 
-    instance = orm.relation('Instance', uselist=False)
+    instance = Relationship('Instance')
 
-    attribute_id = sa.Column(sa.ForeignKey('attribute.id'), nullable=False)
+    attribute_id = Column(
+        ForeignKey(Attribute.id, ondelete='CASCADE'),
+        nullable=False
+        )
 
-    attribute = orm.relation('Attribute', uselist=False)
+    attribute = Relationship('Attribute')
 
-    value = sa.Column(sa.Integer, nullable=False)
+    choice_id = Column(ForeignKey(Choice.id, ondelete='CASCADE'), index=True)
 
+    choice = Relationship('Choice')
 
-# Optimization for lookup
-sa.Index('integer_attribute_value', Integer.attribute_id, Integer.value)
-
-
-class Range(Model):
-    """ A range EAV value.
-
-        This model object is a built-in as a convenience feature for integer
-        range values. Only integers are supported currently.
-
-        Attributes:
-            instnace_id: (int) a reference to the instance
-            instance: (Instance) relation to the target instance
-            attribute_id: (int) a reference to the attribute this value is for
-                (for validation purposes)
-            attribute: (Attribute) relation to the target attribute
-            value_min: (int) the low value
-            value_max: (int) the high value
-            value: (int) the range tuple being stored
-    """
-    __tablename__ = 'range'
-
-    id = sa.Column(sa.Integer, primary_key=True)
-
-    instance_id = sa.Column(sa.ForeignKey('instance.id'), nullable=False)
-
-    instance = orm.relation('Instance', uselist=False)
-
-    attribute_id = sa.Column(sa.ForeignKey('attribute.id'), nullable=False)
-
-    attribute = orm.relation('Attribute', uselist=False)
-
-    value_low = sa.Column(sa.Integer, nullable=False)
-
-    value_high = sa.Column(sa.Integer, nullable=False)
-
-    def _get_value(self):
-        return (self.value_low, self.value_high)
-
-    def _set_value(self, value):
-        (self.value_low, self.value_high) = value
-
-    value = orm.synonym('_value', descriptor=property(_get_value, _set_value))
+    value = Column(SAInteger, nullable=False)
 
 
 # Optimization for lookup
-sa.Index('range_attribute_value_low', Range.attribute_id, Range.value_low)
-sa.Index('range_attribute_value_high', Range.attribute_id, Range.value_high)
-sa.Index('range_attribute_value', Range.value_low, Range.value_high)
+Index('integer_attribute_value', Integer.attribute_id, Integer.value)
 
 
 class Real(Model):
@@ -701,61 +711,34 @@ class Real(Model):
             attribute: (Attribute) relation to the target attribute
             value: (int) the physical value being stored
     """
-    __tablename__ ='real'
+    __tablename__ = 'real'
 
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = Column(SAInteger, primary_key=True)
 
-    instance_id = sa.Column(sa.ForeignKey('instance.id'), nullable=False)
+    instance_id = Column(
+        ForeignKey(Instance.id, ondelete='CASCADE'),
+        nullable=False,
+        index=True
+        )
 
-    instance = orm.relation('Instance', uselist=False)
+    instance = Relationship('Instance')
 
-    attribute_id = sa.Column(sa.ForeignKey('attribute.id'), nullable=False)
+    attribute_id = Column(
+        ForeignKey(Attribute.id, ondelete='CASCADE'),
+        nullable=False
+        )
 
-    attribute = orm.relation('Attribute', uselist=False)
+    attribute = Relationship('Attribute')
 
-    value = sa.Column(sa.Float, nullable=False)
+    choice_id = Column(ForeignKey(Choice.id, ondelete='CASCADE'), index=True)
 
+    choice = Relationship('Choice')
 
-# Optimization for lookup
-sa.Index('real_attribute_value', Real.attribute_id, Real.value)
-
-
-class Selection(Model):
-    """ A selection EAV value (into a vocabulary of choices)
-
-        This type is simply a reference into a vocabulary list. This seriously
-        needs to be re-thought, because if and entire network consists of lists,
-        then the entire purpose of the EAV is circumvented. The reason, though
-        this is needed is because we need to keep track of the selection made
-        in order to keep track of a history.
-
-        Attributes:
-            instnace_id: (int) a reference to the instance
-            instance: (Instance) relation to the target instance
-            attribute_id: (int) a reference to the attribute this value is for
-                (for validation purposes)
-            attribute: (Attribute) relation to the target attribute
-            value: (int) a reference to the vocabulary item
-    """
-    __tablename__ ='selection'
-
-    id = sa.Column(sa.Integer, primary_key=True)
-
-    instance_id = sa.Column(sa.ForeignKey('instance.id'), nullable=False)
-
-    instance = orm.relation('Instance', uselist=False)
-
-    attribute_id = sa.Column(sa.ForeignKey('attribute.id'), nullable=False)
-
-    attribute = orm.relation('Attribute', uselist=False)
-
-    term_id = sa.Column('value', sa.ForeignKey('term.id'), nullable=False)
-
-    value = orm.relation('Term', uselist=False)
+    value = Column(Float, nullable=False)
 
 
 # Optimization for lookup
-sa.Index('selection_attribute_value', Real.attribute_id, Real.value)
+Index('real_attribute_value', Real.attribute_id, Real.value)
 
 
 class Object(Model):
@@ -771,27 +754,42 @@ class Object(Model):
             order: (int) for list of objects, this can be used for ordering them
                 (seems to make more sense for associations?)
     """
-    __tablename__ ='object'
+    __tablename__ = 'object'
 
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = Column(SAInteger, primary_key=True)
 
-    instance_id = sa.Column(sa.ForeignKey('instance.id'), nullable=False)
 
-    instance = orm.relation('Instance',
-                            primaryjoin='Instance.id == Object.instance_id',
-                            uselist=False)
+    instance_id = Column(
+        ForeignKey(Instance.id, ondelete='CASCADE'),
+        nullable=False,
+        index=True
+        )
 
-    attribute_id = sa.Column(sa.ForeignKey('attribute.id'), nullable=False)
+    instance = Relationship(
+        'Instance',
+        primaryjoin='Instance.id == Object.instance_id',
+        uselist=False
+        )
 
-    attribute = orm.relation('Attribute', uselist=False)
+    attribute_id = Column(
+        ForeignKey(Attribute.id, ondelete='CASCADE'),
+        nullable=False
+        )
 
-    value = sa.Column(sa.ForeignKey('instance.id'),)
+    attribute = Relationship('Attribute')
 
-    order = sa.Column(sa.Integer, nullable=False, default=1)
+    choice_id = Column(ForeignKey(Choice.id, ondelete='CASCADE'), index=True)
+
+    choice = Relationship('Choice')
+
+    # TODO: (mmartinez) make nullable=False
+    value = Column(ForeignKey(Instance.id, ondelete='CASCADE'),)
+
+    order = Column(SAInteger, nullable=False, default=1)
 
 
 # Optimization for lookup
-sa.Index('object_attribute_value', Object.attribute_id, Object.value)
+Index('object_attribute_value', Object.attribute_id, Object.value)
 
 
 class String(Model):
@@ -807,20 +805,31 @@ class String(Model):
             attribute: (Attribute) relation to the target attribute
             value: (str) the physical value being stored
     """
-    __tablename__ ='string'
+    __tablename__ = 'string'
 
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = Column(SAInteger, primary_key=True)
 
-    instance_id = sa.Column(sa.ForeignKey('instance.id'), nullable=False)
+    instance_id = Column(
+        ForeignKey(Instance.id, ondelete='CASCADE'),
+        nullable=False,
+        index=True
+        )
 
-    instance = orm.relation('Instance', uselist=False)
+    instance = Relationship('Instance')
 
-    attribute_id = sa.Column(sa.ForeignKey('attribute.id'), nullable=False)
+    attribute_id = Column(
+        ForeignKey(Attribute.id, ondelete='CASCADE'),
+        nullable=False
+        )
 
-    attribute = orm.relation('Attribute', uselist=False)
+    attribute = Relationship('Attribute')
 
-    value = sa.Column(sa.Unicode, nullable=False)
+    choice_id = Column(ForeignKey(Choice.id, ondelete='CASCADE'), index=True)
+
+    choice = Relationship('Choice')
+
+    value = Column(Unicode, nullable=False)
 
 
 # Optimization for lookup
-sa.Index('string_attribute_value', String.attribute_id, String.value)
+Index('string_attribute_value', String.attribute_id, String.value)

@@ -1,4 +1,4 @@
-""" Contains how to: domain and protocol
+""" Clinical object and utilities.
 """
 
 from zope.component import adapts
@@ -8,10 +8,9 @@ from zope.interface import implements
 import sqlalchemy as sa
 from sqlalchemy import orm
 
-from avrc.data.store._manager import AbstractEAVContainerManager
-from avrc.data.store._item import AbstractItem
-from avrc.data.store.interfaces import Schema
+from avrc.data.store import MessageFactory as _
 from avrc.data.store.interfaces import IDatastore
+from avrc.data.store.interfaces import Schema
 from avrc.data.store.interfaces import ISubject
 from avrc.data.store.interfaces import IPartner
 from avrc.data.store.interfaces import IEnrollment
@@ -20,8 +19,14 @@ from avrc.data.store.interfaces import IPartnerManager
 from avrc.data.store.interfaces import ISubjectManager
 from avrc.data.store.interfaces import IEnrollmentManager
 from avrc.data.store.interfaces import IVisitManager
+from avrc.data.store.interfaces import IDomain
+from avrc.data.store.interfaces import IDomainManager
+from avrc.data.store.interfaces import IProtocol
+from avrc.data.store.interfaces import IProtocolManager
 from avrc.data.store import model
-from avrc.data.store import MessageFactory as _
+from avrc.data.store._item import AbstractItem
+from avrc.data.store._manager import AbstractDatastoreConventionalManager
+from avrc.data.store._manager import AbstractEAVContainerManager
 
 
 class Subject(AbstractItem):
@@ -68,6 +73,29 @@ class Visit(AbstractItem):
     subject_zid = FieldProperty(IVisit['subject_zid'])
     protocol_zids = FieldProperty(IVisit['protocol_zids'])
     visit_date = FieldProperty(IVisit['visit_date'])
+
+
+class Domain(AbstractItem):
+    """ See `IDomain`
+    """
+    implements(IDomain)
+
+    zid = FieldProperty(IDomain['zid'])
+    code = FieldProperty(IDomain['code'])
+    title = FieldProperty(IDomain['title'])
+    consent_date = FieldProperty(IDomain['consent_date'])
+
+
+class Protocol(AbstractItem):
+    """ See `IProtocol`
+    """
+    implements(IProtocol)
+
+    zid = FieldProperty(IProtocol['zid'])
+    cycle = FieldProperty(IProtocol['cycle'])
+    domain_zid = FieldProperty(IProtocol['domain_zid'])
+    threshold = FieldProperty(IProtocol['threshold'])
+    is_active = FieldProperty(IProtocol['is_active'])
 
 
 class DatastoreSubjectManager(AbstractEAVContainerManager):
@@ -127,8 +155,8 @@ class DatastoreEnrollmentManager(AbstractEAVContainerManager):
                       .filter_by(zid=source.domain_zid)\
                       .first()
 
-        subject =  Session.query(model.Subject)\
-                      .filter_by(zid = source.subject_zid)\
+        subject = Session.query(model.Subject)\
+                      .filter_by(zid=source.subject_zid)\
                       .first()
 
         rslt.subject = subject
@@ -193,7 +221,7 @@ class DatastoreVisitManager(AbstractEAVContainerManager):
         """ Add the items from the source to ds """
         Session = self._datastore.getScopedSession()
 
-        subject =  Session.query(model.Subject)\
+        subject = Session.query(model.Subject)\
           .filter_by(zid=source.subject_zid)\
           .first()
 
@@ -205,3 +233,41 @@ class DatastoreVisitManager(AbstractEAVContainerManager):
             rslt.protocols.append(Session.query(model.Protocol)\
                 .filter_by(zid=protocol_zid)\
                 .first())
+
+
+class DatastoreDomainManager(AbstractDatastoreConventionalManager):
+    adapts(IDatastore)
+    implements(IDomainManager)
+
+    _model = model.Domain
+    _type = Domain
+
+    def putProperties(self, rslt, source):
+        """ Add the items from the source to ds """
+        rslt.zid = source.zid
+        rslt.title = source.title
+        rslt.code = source.code
+        rslt.consent_date = source.consent_date
+        return rslt
+
+
+class DatastoreProtocolManager(AbstractDatastoreConventionalManager):
+    adapts(IDatastore)
+    implements(IProtocolManager)
+
+    _model = model.Protocol
+    _type = Protocol
+
+    def putProperties(self, rslt, source):
+        """ Add the items from the source to ds """
+        Session = self._datastore.getScopedSession()
+
+        domain = Session.query(model.Domain)\
+            .filter_by(zid=source.domain_zid)\
+            .first()
+
+        rslt.zid = source.zid
+        rslt.domain = domain
+        rslt.cycle = source.cycle
+        rslt.threshold = source.threshold
+        rslt.is_active = source.is_active

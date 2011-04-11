@@ -8,9 +8,7 @@
 
 import zope.interface
 import zope.schema
-from zope.location.interfaces import IContained
-
-from plone.directives import form
+import plone.directives.form
 
 from avrc.data.store import MessageFactory as _
 
@@ -19,16 +17,19 @@ from avrc.data.store import MessageFactory as _
 # -----------------------------------------------------------------------------
 
 class Error(Exception):
-    """Base class for all errors in this package """
+    """ Base class for all errors in this package """
 
 class DatatoreError(Error):
-    """Base class for data store-related errors """
+    """ Base class for data store-related errors """
 
 class SchemaError(Error):
-    """Base class for schema-related errors """
+    """ Base class for schema-related errors """
 
 class UndefinedSchemaError(Error):
-    """Raised when trying to access a schema that is not in the data store """
+    """ Raised when trying to access a schema that is not in the data store """
+
+class DatabaseMigrationError(Error):
+    """ Error while migrating database version. """
 
 # -----------------------------------------------------------------------------
 # API
@@ -46,7 +47,7 @@ class Versionable(IComponent):
         _(u'This will be used to keep track of the '
           u'data store schema as they evolve'))
 
-class Formable(IComponent, form.Schema ):
+class Formable(plone.directives.form.Schema):
     """ Represents a schema that contains detailed information for display in a
         form.
 
@@ -65,19 +66,6 @@ class Formable(IComponent, form.Schema ):
 
 class Schema(Versionable, Formable):
     """ Marker interface for a schema maintained by the data store. """
-
-class IRange(IComponent, zope.schema.interfaces.ITuple):
-    """ A custom schema type in order to support built-in range values. """
-
-    low = zope.schema.Int(
-        title=_(u'Low Value'),
-        required=True
-        )
-
-    high = zope.schema.Int(
-        title=_(u'High Value'),
-        required=True
-        )
 
 class IManager(IComponent):
     """ Specification for management components, that is, components that are in
@@ -267,8 +255,6 @@ class IDatastoreFactory(IComponent):
     def __call__(session):
         """ The session to use.
         """
-
-
 
 class IInstance(IComponent):
     """ Empty object that will be used as the instance of a virtual schema.

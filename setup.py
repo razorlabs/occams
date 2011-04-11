@@ -3,7 +3,7 @@ from setuptools import setup
 
 
 # Working release version
-version = '0.2.2'
+version = '0.3.0'
 
 
 setup(
@@ -39,23 +39,25 @@ setup(
     install_requires=[
         'setuptools',
         ### Zope 2
-        'zope.component',               # Adapters/utilities
-        'zope.deprecation',             # Deprecate unused libraries
-        'zope.i18nmessageid',           # Internationalization
-        'zope.interface',               # Specifications
-        'zope.schema',                  # Specification data types
+        'zope.component', # Adapters/utilities
+        'zope.deprecation', # Deprecate unused libraries
+        'zope.i18nmessageid', # Internationalization
+        'zope.interface', # Specifications
+        'zope.schema', # Specification data types
         ### schemata
         # These will be moved into a 'forms' package in the future
-        'plone.alterego',               # Virtual name spaces
-        'plone.autoform',               # Form directives
-        'plone.supermodel',             # Form directives
-        'plone.directives.form',
+        'plone.alterego', # Virtual name spaces
+        'plone.autoform', # Form directives
+        'plone.supermodel', # Form directives
+        'z3c.form',
         ### sql
-        'SQLAlchemy',                   # SQLAlchemy, don't support >0.6 yet
-        'z3c.saconfig',                 # for database connectivity until
+        'sqlalchemy-migrate',
+        'sqlalchemy', # SQLAlchemy, don't support >0.6 yet
+        'z3c.saconfig', # for database connectivity until
                                         # we can figure out local utilities
         ],
     extras_require=dict(
+        postgresql=['psycopg2'],
         test=['zope.testing'],
         ),
     test_suite='avrc.data.store.tests',
