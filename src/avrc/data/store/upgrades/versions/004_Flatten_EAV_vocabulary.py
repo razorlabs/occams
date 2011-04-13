@@ -2,9 +2,10 @@ from datetime import datetime
 from sqlalchemy import *
 from migrate import *
 
-now = datetime.now
-
 metadata = MetaData()
+
+PY_NOW = datetime.now
+SQL_NOW = text('CURRENT_TIMESTAMP')
 
 #
 # The new choice table, follows DS-1 specification as closely as possible.
@@ -24,9 +25,9 @@ choice_table = Table('choice', metadata,
     Column('description', UnicodeText),
     Column('value', Unicode, nullable=False),
     Column('order', Integer, nullable=False),
-    Column('create_date', DateTime, nullable=False, default=now),
+    Column('create_date', DateTime, nullable=False, default=SQL_NOW),
     Column('create_user_id', Integer),
-    Column('modify_date', DateTime, nullable=False, default=now, onupdate=now),
+    Column('modify_date', DateTime, nullable=False, default=SQL_NOW, onupdate=PY_NOW),
     Column('modify_user_id', Integer),
     Column('remove_date', DateTime, index=True),
     Column('remove_user_id', Integer),
@@ -42,7 +43,7 @@ vocabulary_term_table = Table('vocabulary_term', metadata,
     Column('vocabulary_id', Integer,
            ForeignKey('vocabulary.id', ondelete='CASCADE')),
     Column('term_id', Integer, ForeignKey('term.id', ondelete='CASCADE')),
-    PrimaryKeyConstraint('vocabulary_id','term_id')
+    PrimaryKeyConstraint('vocabulary_id', 'term_id')
     )
 
 #

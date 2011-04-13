@@ -25,6 +25,8 @@ from sqlalchemy.schema import Table
 from sqlalchemy.schema import Index
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.schema import PrimaryKeyConstraint
+from sqlalchemy import text
+
 from sqlalchemy.types import Boolean
 from sqlalchemy.types import DateTime as SADateTime
 from sqlalchemy.types import Float
@@ -38,8 +40,8 @@ from sqlalchemy.orm import relation as Relationship
 
 from avrc.data.store.model import Model
 
-now = datetime.now
-
+PY_NOW = now
+SQL_NOW = text('CURRENT_TIMESTAMP')
 
 __all__ = (
     'fieldset_fieldsetitem_table',
@@ -184,14 +186,9 @@ class Specification(Model):
 
     is_eav = Column(Boolean, nullable=False, default=False)
 
-    create_date = Column(SADateTime, nullable=False, default=now)
+    create_date = Column(SADateTime, nullable=False, default=PY_NOW)
 
-    modify_date = Column(
-        SADateTime,
-        nullable=False,
-        default=now,
-        onupdate=now
-        )
+    modify_date = Column(SADateTime, nullable=False, default=PY_NOW, onupdate=PY_NOW)
 
 
 class Schema(Model):
@@ -235,7 +232,7 @@ class Schema(Model):
         order_by='Fieldset.order'
         )
 
-    create_date = Column(SADateTime, nullable=False, default=now)
+    create_date = Column(SADateTime, nullable=False, default=PY_NOW)
 
     __table_args = (
         UniqueConstraint('specification_id', 'create_date'),
@@ -366,9 +363,9 @@ class Field(Model):
 
     directive_write = Column(Unicode)
 
-    create_date = Column(SADateTime, nullable=False, default=now)
+    create_date = Column(SADateTime, nullable=False, default=PY_NOW)
 
-    modify_date = Column(SADateTime, nullable=False, default=now, onupdate=now)
+    modify_date = Column(SADateTime, nullable=False, default=PY_NOW, onupdate=PY_NOW)
 
 
 class Choice(Model):
@@ -403,11 +400,11 @@ class Choice(Model):
 
     order = Column(SAInteger, nullable=False)
 
-    create_date = Column(SADateTime, nullable=False, default=now)
+    create_date = Column(SADateTime, nullable=False, server_default=SQL_NOW)
 
     create_user_id = Column(SAInteger)
 
-    modify_date = Column(SADateTime, nullable=False, default=now, onupdate=now)
+    modify_date = Column(SADateTime, nullable=False, server_default=SQL_NOW, onupdate=PY_NOW)
 
     modify_user_id = Column(SAInteger)
 
@@ -465,7 +462,7 @@ class Attribute(Model):
 
     order = Column(SAInteger, nullable=False, default=1)
 
-    create_date = Column(SADateTime, nullable=False, default=now)
+    create_date = Column(SADateTime, nullable=False, default=PY_NOW)
 
     __table_args__ = (
         UniqueConstraint('schema_id', 'name'),
@@ -524,13 +521,13 @@ class State(Model):
 
     is_active = Column(Boolean, nullable=False, default=True, index=True)
 
-    create_date = Column(SADateTime, nullable=False, default=now)
+    create_date = Column(SADateTime, nullable=False, default=PY_NOW)
 
     modify_date = Column(
         SADateTime,
         nullable=False,
-        default=now,
-        onupdate=now
+        default=PY_NOW,
+        onupdate=PY_NOW
         )
 
 
@@ -579,13 +576,13 @@ class Instance(Model):
 
     is_active = Column(Boolean, nullable=False, default=True, index=True)
 
-    create_date = Column(SADateTime, nullable=False, default=now)
+    create_date = Column(SADateTime, nullable=False, default=PY_NOW)
 
     modify_date = Column(
         SADateTime,
         nullable=False,
-        default=now,
-        onupdate=now
+        default=PY_NOW,
+        onupdate=PY_NOW
         )
 
 
