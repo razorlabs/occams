@@ -40,7 +40,7 @@ from sqlalchemy.orm import relation as Relationship
 
 from avrc.data.store.model import Model
 
-PY_NOW = now
+PY_NOW = datetime.now
 SQL_NOW = text('CURRENT_TIMESTAMP')
 
 __all__ = (
