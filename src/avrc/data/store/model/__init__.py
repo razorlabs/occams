@@ -34,7 +34,7 @@ import avrc.data.store.upgrades
 
 
 # Migrate version of the database model
-__migrate__ = 004
+__migrate__ = 4
 
 
 metadata = Model.metadata
