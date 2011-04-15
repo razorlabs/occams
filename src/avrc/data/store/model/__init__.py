@@ -74,7 +74,7 @@ def sync(engine):
     except DatabaseAlreadyControlledError:
         current_version = int(migrate.versioning.api.db_version(url, repository))
 
-        if current_version > version:
+        if version > current_version:
             migrate.versioning.api.upgrade(url, repository, version)
-        elif current_version < version:
+        elif version < current_version:
             migrate.versioning.api.downgrade(url.repository, version)
