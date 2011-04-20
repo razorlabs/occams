@@ -12,12 +12,16 @@
 
 """
 
+import os.path
+
+from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 
 from zope.deprecation import deprecate
 
 import migrate.versioning.api
 from migrate.versioning.exceptions import DatabaseAlreadyControlledError
+from migrate.versioning.exceptions import DatabaseNotControlledError
 
 
 # Base class for declarative syntax on our models
@@ -33,11 +37,16 @@ from avrc.data.store.model.symptom import *
 import avrc.data.store.upgrades
 
 
-# Migrate version of the database model
-__migrate__ = 4
-
-
 metadata = Model.metadata
+
+
+type_names = (
+    u'integer',
+    u'string', u'text' ,
+    u'boolean',
+    u'real',
+    u'date', u'datetime', u'time',
+    )
 
 
 @deprecate('model(engine) has been deprecated, use install(engine)')
@@ -56,25 +65,60 @@ def install(engine):
         Arguments:
             ``engine``: An SQLAlchemy engine object.
     """
+    url = str(engine.url)
+    repository = os.path.dirname(avrc.data.store.upgrades.__file__)
 
-    Model.metadata.create_all(bind=engine, checkfirst=True)
-    sync(engine)
+    try:
+        migrate.versioning.api.db_version(url, repository)
+    except DatabaseNotControlledError:
+        Model.metadata.create_all(engine)
+
+        for type_name in type_names:
+            engine.execute(Type.__table__.insert().values(title=type_name))
+
+        # Since it's a fresh install, start at repository version
+        version = migrate.versioning.api.version(repository)
+        migrate.versioning.api.version_control(url, repository, version)
+
+
+def legacy(engine):
+    """ Helper method for the sole purpose of putting a legacy database under
+        version control. Once under version control, sync may be called.
+    """
+    url = str(engine.url)
+    repository = os.path.dirname(avrc.data.store.upgrades.__file__)
+
+    try:
+        migrate.versioning.api.version_control(url, repository)
+    except DatabaseAlreadyControlledError:
+        pass
 
 
 def sync(engine):
     """ Synchronizes the version of the current model to the live database
         model.
+        
+        This method assumes that the database has already been previously
+        installed. Since there was not version control previously, if the 
+        database is not tagged then it will assume version 0 and try to
+        upgrade.
     """
-    version = __migrate__
-    repository = avrc.data.store.upgrades.__path__[0]
     url = str(engine.url)
+    repository = os.path.dirname(avrc.data.store.upgrades.__file__)
+    repository_version = migrate.versioning.api.version(repository)
+    live_version = None
 
     try:
-        migrate.versioning.api.version_control(url, repository, version)
+        migrate.versioning.api.version_control(url, repository)
+        live_version = 0
     except DatabaseAlreadyControlledError:
         live_version = int(migrate.versioning.api.db_version(url, repository))
 
-        if version > live_version:
-            migrate.versioning.api.upgrade(url, repository, version)
-        elif version < live_version:
-            migrate.versioning.api.downgrade(url, repository, version)
+    if live_version != repository_version:
+        action = None
+        if repository_version > live_version:
+            action = migrate.versioning.api.upgrade
+        elif repository_version < live_version:
+            action = migrate.versioning.api.downgrade
+
+        action(url, repository, repository_version)

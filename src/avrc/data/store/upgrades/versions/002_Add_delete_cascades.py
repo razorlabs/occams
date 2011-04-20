@@ -17,146 +17,146 @@ def upgrade(migrate_engine):
     tables = metadata.tables
 
     ## "aliquot"
-    fk([tables['aliquot'].c.specimen_id], [tables['specimen'].c.id], ondelete=CASCADE)
-    fk([tables['aliquot'].c.analysis_status_id], [tables['specimen_aliquot_term'].c.id], ondelete=CASCADE)
-    fk([tables['aliquot'].c.special_instruction_id], [tables['specimen_aliquot_term'].c.id], ondelete=CASCADE)
-    fk([tables['aliquot'].c.state_id], [tables['specimen_aliquot_term'].c.id], ondelete=CASCADE)
-    fk([tables['aliquot'].c.storage_site_id], [tables['specimen_aliquot_term'].c.id], ondelete=CASCADE)
-    fk([tables['aliquot'].c.type_id], [tables['specimen_aliquot_term'].c.id], ondelete=CASCADE)
+    fk(['specimen_id'], ['specimen.id'], name='aliquot_specimen_id_fkey', table=tables['aliquot'], ondelete=CASCADE)
+    fk(['analysis_status_id'], ['specimen_aliquot_term.id'], name='aliquot_analysis_status_id_fkey', table=tables['aliquot'], ondelete=CASCADE)
+    fk(['special_instruction_id'], ['specimen_aliquot_term.id'], name='aliquot_special_instruction_id_fkey', table=tables['aliquot'], ondelete=CASCADE)
+    fk(['state_id'], ['specimen_aliquot_term.id'], name='aliquot_state_id_fkey', table=tables['aliquot'], ondelete=CASCADE)
+    fk(['storage_site_id'], ['specimen_aliquot_term.id'], name='aliquot_storage_site_id_fkey', table=tables['aliquot'], ondelete=CASCADE)
+    fk(['type_id'], ['specimen_aliquot_term.id'], name='aliquot_type_id_fkey', table=tables['aliquot'], ondelete=CASCADE)
 
     ## "aliquot_history"
-    fk([tables['aliquot_history'].c.aliquot_id], [tables['aliquot'].c.id], ondelete=CASCADE)
-    fk([tables['aliquot_history'].c.state_id], [tables['specimen_aliquot_term'].c.id], ondelete=CASCADE)
+    fk(['aliquot_id'], ['aliquot.id'], name='aliquot_history_aliquot_id_fkey', table=tables['aliquot_history'], ondelete=CASCADE)
+    fk(['state_id'], ['specimen_aliquot_term.id'], name='aliquot_history_state_id_fkey', table=tables['aliquot_history'], ondelete=CASCADE)
 
     ## "attribute"
-    fk([tables['attribute'].c.field_id], [tables['field'].c.id], ondelete=CASCADE)
-    fk([tables['attribute'].c.schema_id], [tables['schema'].c.id], ondelete=CASCADE)
+    fk(['field_id'], ['field.id'], name='attribute_field_id_fkey', table=tables['attribute'], ondelete=CASCADE)
+    fk(['schema_id'], ['schema.id'], name='attribute_schema_id_fkey', table=tables['attribute'], ondelete=CASCADE)
 
     ## "datetime"
-    fk([tables['datetime'].c.attribute_id], [tables['attribute'].c.id], ondelete=CASCADE)
-    fk([tables['datetime'].c.instance_id], [tables['instance'].c.id], ondelete=CASCADE)
+    fk(['attribute_id'], ['attribute.id'], name='datetime_attribute_id_fkey', table=tables['datetime'], ondelete=CASCADE)
+    fk(['instance_id'], ['instance.id'], name='datetime_instance_id_fkey', table=tables['datetime'], ondelete=CASCADE)
 
     ## "domain"
     # No references
 
     ## "domain_schema"
-    fk([tables['domain_schema'].c.domain_id], [tables['domain'].c.id], ondelete=CASCADE)
-    fk([tables['domain_schema'].c.schema_id], [tables['schema'].c.id], ondelete=CASCADE)
+    fk(['domain_id'], ['domain.id'], name='domain_schema_domain_id_fkey', table=tables['domain_schema'], ondelete=CASCADE)
+    fk(['schema_id'], ['schema.id'], name='domain_schema_schema_id_fkey', table=tables['domain_schema'], ondelete=CASCADE)
 
     ## "drug"
-    fk([tables['drug'].c.drug_category_id], [tables['drug_category'].c.id], ondelete=CASCADE)
-    fk([tables['drug'].c.drug_status_id], [tables['drug_status'].c.id], ondelete=CASCADE)
+    fk(['drug_category_id'], ['drug_category.id'], name='drug_drug_category_id_fkey', table=tables['drug'], ondelete=CASCADE)
+    fk(['drug_status_id'], ['drug_status.id'], name='drug_drug_status_id_fkey', table=tables['drug'], ondelete=CASCADE)
 
     ## "drug_category"
     # No references
 
     ## "drug_name"
-    fk([tables['drug_name'].c.drug_id], [tables['drug'].c.id], ondelete=CASCADE)
+    fk(['drug_id'], ['drug.id'], name='drug_name_drug_id_fkey', table=tables['drug_name'], ondelete=CASCADE)
 
     ## "drug_status"
     # No references
 
     ## "enrollment"
-    fk([tables['enrollment'].c.domain_id], [tables['domain'].c.id], ondelete=CASCADE)
-    fk([tables['enrollment'].c.subject_id], [tables['subject'].c.id], ondelete=CASCADE)
+    fk(['domain_id'], ['domain.id'], name='enrollment_domain_id_fkey', table=tables['enrollment'], ondelete=CASCADE)
+    fk(['subject_id'], ['subject.id'], name='enrollment_subject_id_fkey', table=tables['enrollment'], ondelete=CASCADE)
 
     ## "enrollment_instance"
-    fk([tables['enrollment_instance'].c.enrollment_id], [tables['enrollment'].c.id], ondelete=RESTRICT)
-    fk([tables['enrollment_instance'].c.instance_id], [tables['instance'].c.id], ondelete=CASCADE)
+    fk(['enrollment_id'], ['enrollment.id'], name='enrollment_instance_enrollment_id_fkey', table=tables['enrollment_instance'], ondelete=RESTRICT)
+    fk(['instance_id'], ['instance.id'], name='enrollment_instance_instance_id_fkey', table=tables['enrollment_instance'], ondelete=CASCADE)
 
     ## "field"
-    fk([tables['field'].c.schema_id], [tables['schema'].c.id], ondelete=SET_NULL)
-    fk([tables['field'].c.type_id], [tables['type'].c.id], ondelete=CASCADE)
-    fk([tables['field'].c.vocabulary_id], [tables['vocabulary'].c.id], ondelete=SET_NULL)
+    fk(['schema_id'], ['schema.id'], name='field_schema_id_fkey', table=tables['field'], ondelete=SET_NULL)
+    fk(['type_id'], ['type.id'], name='field_type_id_fkey', table=tables['field'], ondelete=CASCADE)
+    fk(['vocabulary_id'], ['vocabulary.id'], name='field_vocabulary_id_fkey', table=tables['field'], ondelete=SET_NULL)
 
     ## "fieldset"
     # No references
 
     ## "fieldset_fieldsetitem"
-    fk([tables['fieldset_fieldsetitem'].c.fieldset_id], [tables['fieldset'].c.id], ondelete=CASCADE)
-    fk([tables['fieldset_fieldsetitem'].c.item_id], [tables['fieldsetitem'].c.id], ondelete=CASCADE)
+    fk(['fieldset_id'], ['fieldset.id'], name='fieldset_fieldsetitem_fieldset_id_fkey', table=tables['fieldset_fieldsetitem'], ondelete=CASCADE)
+    fk(['item_id'], ['fieldsetitem.id'], name='fieldset_fieldsetitem_item_id_fkey', table=tables['fieldset_fieldsetitem'], ondelete=CASCADE)
 
     ## "fieldsetitem"
     # No references
 
     ## "hierarchy"
-    fk([tables['hierarchy'].c.child_id], [tables['specification'].c.id], ondelete=CASCADE)
-    fk([tables['hierarchy'].c.parent_id], [tables['specification'].c.id], ondelete=CASCADE)
+    fk(['child_id'], ['specification.id'], name='hierarchy_child_id_fkey', table=tables['hierarchy'], ondelete=CASCADE)
+    fk(['parent_id'], ['specification.id'], name='hierarchy_parent_id_fkey', table=tables['hierarchy'], ondelete=CASCADE)
 
     ## "include"
-    fk([tables['include'].c.include_id], [tables['specification'].c.id], ondelete=CASCADE)
-    fk([tables['include'].c.main_id], [tables['specification'].c.id], ondelete=CASCADE)
+    fk(['include_id'], ['specification.id'], name='include_include_id_fkey', table=tables['include'], ondelete=CASCADE)
+    fk(['main_id'], ['specification.id'], name='include_main_id_fkey', table=tables['include'], ondelete=CASCADE)
 
     ## "instance"
-    fk([tables['instance'].c.schema_id], [tables['schema'].c.id], ondelete=CASCADE)
-    fk([tables['instance'].c.state_id], [tables['state'].c.id], ondelete=CASCADE)
+    fk(['schema_id'], ['schema.id'], name='instance_schema_id_fkey', table=tables['instance'], ondelete=CASCADE)
+    fk(['state_id'], ['state.id'], name='instance_state_id_fkey', table=tables['instance'], ondelete=CASCADE)
 
     ## "integer"
-    fk([tables['integer'].c.instance_id], [tables['instance'].c.id], ondelete=CASCADE)
-    fk([tables['integer'].c.attribute_id], [tables['attribute'].c.id], ondelete=CASCADE)
+    fk(['instance_id'], ['instance.id'], name='integer_instance_id_fkey', table=tables['integer'], ondelete=CASCADE)
+    fk(['attribute_id'], ['attribute.id'], name='integer_attribute_id_fkey', table=tables['integer'], ondelete=CASCADE)
 
     ## "invariant"
-    fk([tables['invariant'].c.schema_id], [tables['schema'].c.id], ondelete=CASCADE)
+    fk(['schema_id'], ['schema.id'], name='invariant_schema_id_fkey', table=tables['invariant'], ondelete=CASCADE)
 
     ## "keyword"
-    fk([tables['keyword'].c.instance_id], [tables['instance'].c.id], ondelete=CASCADE)
+    fk(['instance_id'], ['instance.id'], name='keyword_instance_id_fkey', table=tables['keyword'], ondelete=CASCADE)
 
     ## "medication"
-    fk([tables['medication'].c.drug_id], [tables['drug'].c.id], ondelete=CASCADE)
-    fk([tables['medication'].c.subject_id], [tables['subject'].c.id], ondelete=CASCADE)
-    fk([tables['medication'].c.visit_id], [tables['visit'].c.id], ondelete=SET_NULL)
+    fk(['drug_id'], ['drug.id'], name='medication_drug_id_fkey', table=tables['medication'], ondelete=CASCADE)
+    fk(['subject_id'], ['subject.id'], name='medication_subject_id_fkey', table=tables['medication'], ondelete=CASCADE)
+    fk(['visit_id'], ['visit.id'], name='medication_visit_id_fkey', table=tables['medication'], ondelete=SET_NULL)
 
     ## "object"
-    fk([tables['object'].c.attribute_id], [tables['attribute'].c.id], ondelete=CASCADE)
-    fk([tables['object'].c.instance_id], [tables['instance'].c.id], ondelete=CASCADE)
-    fk([tables['object'].c.value], [tables['instance'].c.id], ondelete=CASCADE)
+    fk(['attribute_id'], ['attribute.id'], name='object_attribute_id_fkey', table=tables['object'], ondelete=CASCADE)
+    fk(['instance_id'], ['instance.id'], name='object_instance_id_fkey', table=tables['object'], ondelete=CASCADE)
+    fk(['value'], ['instance.id'], name='object_instance_id_fkey', table=tables['object'], ondelete=CASCADE)
 
     ## "partner"
-    fk([tables['partner'].c.subject_id], [tables['subject'].c.id], ondelete=CASCADE)
-    fk([tables['partner'].c.enrolled_subject_id], [tables['subject'].c.id], ondelete=SET_NULL)
+    fk(['subject_id'], ['subject.id'], name='partner_subject_id_fkey', table=tables['partner'], ondelete=CASCADE)
+    fk(['enrolled_subject_id'], ['subject.id'], name='partner_subject_id_fkey', table=tables['partner'], ondelete=SET_NULL)
 
     ## "partner_instance"
-    fk([tables['partner_instance'].c.partner_id], [tables['partner'].c.id], ondelete=RESTRICT)
-    fk([tables['partner_instance'].c.instance_id], [tables['instance'].c.id], ondelete=CASCADE)
+    fk(['partner_id'], ['partner.id'], name='partner_instance_partner_id_fkey', table=tables['partner_instance'], ondelete=RESTRICT)
+    fk(['instance_id'], ['instance.id'], name='partner_instance_instance_id_fkey', table=tables['partner_instance'], ondelete=CASCADE)
 
     ## "protocol"
-    fk([tables['protocol'].c.domain_id], [tables['domain'].c.id], ondelete=CASCADE)
+    fk(['domain_id'], ['domain.id'], name='protocol_domain_id_fkey', table=tables['protocol'], ondelete=CASCADE)
 
     ## "protocol_schema"
-    fk([tables['protocol_schema'].c.protocol_id], [tables['protocol'].c.id], ondelete=CASCADE)
-    fk([tables['protocol_schema'].c.schema_id], [tables['schema'].c.id], ondelete=CASCADE)
+    fk(['protocol_id'], ['protocol.id'], name='protocol_schema_protocol_id_fkey', table=tables['protocol_schema'], ondelete=CASCADE)
+    fk(['schema_id'], ['schema.id'], name='protocol_schema_schema_id_fkey', table=tables['protocol_schema'], ondelete=CASCADE)
 
     ## "range"
-    fk([tables['range'].c.attribute_id], [tables['attribute'].c.id], ondelete=CASCADE)
-    fk([tables['range'].c.instance_id], [tables['instance'].c.id], ondelete=CASCADE)
+    fk(['attribute_id'], ['attribute.id'], name='range_attribute_id_fkey', table=tables['range'], ondelete=CASCADE)
+    fk(['instance_id'], ['instance.id'], name='range_instance_id_fkey', table=tables['range'], ondelete=CASCADE)
 
     ## "real"
-    fk([tables['real'].c.attribute_id], [tables['attribute'].c.id], ondelete=CASCADE)
-    fk([tables['real'].c.instance_id], [tables['instance'].c.id], ondelete=CASCADE)
+    fk(['attribute_id'], ['attribute.id'], name='real_attribute_id_fkey', table=tables['real'], ondelete=CASCADE)
+    fk(['instance_id'], ['instance.id'], name='real_instance_id_fkey', table=tables['real'], ondelete=CASCADE)
 
     ## "schema"
-    fk([tables['schema'].c.specification_id], [tables['specification'].c.id], ondelete=CASCADE)
+    fk(['specification_id'], ['specification.id'], name='schema_specification_id_fkey', table=tables['schema'], ondelete=CASCADE)
 
     ## "schema_fieldset"
-    fk([tables['schema_fieldset'].c.fieldset_id], [tables['fieldset'].c.id], ondelete=CASCADE)
-    fk([tables['schema_fieldset'].c.schema_id], [tables['schema'].c.id], ondelete=CASCADE)
+    fk(['fieldset_id'], ['fieldset.id'], name='schema_fieldset_fieldset_id_fkey', table=tables['schema_fieldset'], ondelete=CASCADE)
+    fk(['schema_id'], ['schema.id'], name='schema_fieldset_schema_id_fkey', table=tables['schema_fieldset'], ondelete=CASCADE)
 
     ## "selection"
-    fk([tables['selection'].c.attribute_id], [tables['attribute'].c.id], ondelete=CASCADE)
-    fk([tables['selection'].c.instance_id], [tables['instance'].c.id], ondelete=CASCADE)
-    fk([tables['selection'].c.value], [tables['term'].c.id], ondelete=CASCADE)
+    fk(['attribute_id'], ['attribute.id'], name='selection_attribute_id_fkey', table=tables['selection'], ondelete=CASCADE)
+    fk(['instance_id'], ['instance.id'], name='selection_instance_id_fkey', table=tables['selection'], ondelete=CASCADE)
+    fk(['value'], ['term.id'], name='selection_value_fkey', table=tables['selection'], ondelete=CASCADE)
 
     ## "specification"
     # No references
 
     ## "specimen"
-    fk([tables['specimen'].c.protocol_id], [tables['protocol'].c.id], ondelete=CASCADE)
-    fk([tables['specimen'].c.destination_id], [tables['specimen_aliquot_term'].c.id], ondelete=CASCADE)
-    fk([tables['specimen'].c.state_id], [tables['specimen_aliquot_term'].c.id], ondelete=CASCADE)
+    fk(['protocol_id'], ['protocol.id'], name='specimen_protocol_id_fkey', table=tables['specimen'], ondelete=CASCADE)
+    fk(['destination_id'], ['specimen_aliquot_term.id'], name='specimen_destination_id_fkey', table=tables['specimen'], ondelete=CASCADE)
+    fk(['state_id'], ['specimen_aliquot_term.id'], name='specimen_state_id_fkey', table=tables['specimen'], ondelete=CASCADE)
     # The mispelling is intentional, it's actually mispelled in the model too
-    fk([tables['specimen'].c.tupe_type_id], [tables['specimen_aliquot_term'].c.id], ondelete=CASCADE)
-    fk([tables['specimen'].c.type_id], [tables['specimen_aliquot_term'].c.id], ondelete=CASCADE)
-    fk([tables['specimen'].c.subject_id], [tables['subject'].c.id], ondelete=CASCADE)
+    fk(['tupe_type_id'], ['specimen_aliquot_term.id'], name='specimen_tupe_type_id_fkey', table=tables['specimen'], ondelete=CASCADE)
+    fk(['type_id'], ['specimen_aliquot_term.id'], name='specimen_type_id_fkey', table=tables['specimen'], ondelete=CASCADE)
+    fk(['subject_id'], ['subject.id'], name='specimen_subject_id_fkey', table=tables['specimen'], ondelete=CASCADE)
 
     ## "specimen_aliquot_term"
     # No references
@@ -165,19 +165,19 @@ def upgrade(migrate_engine):
     # No references
 
     ## "string"
-    fk([tables['string'].c.attribute_id], [tables['attribute'].c.id], ondelete=CASCADE)
-    fk([tables['string'].c.instance_id], [tables['instance'].c.id], ondelete=CASCADE)
+    fk(['attribute_id'], ['attribute.id'], name='string_attribute_id_fkey', table=tables['string'], ondelete=CASCADE)
+    fk(['instance_id'], ['instance.id'], name='string_instance_id_fkey', table=tables['string'], ondelete=CASCADE)
 
     ## "subject"
     # No references
 
     ## "subject_instance"
-    fk([tables['subject_instance'].c.subject_id], [tables['subject'].c.id], ondelete=RESTRICT)
-    fk([tables['subject_instance'].c.instance_id], [tables['instance'].c.id], ondelete=CASCADE)
+    fk(['subject_id'], ['subject.id'], name='subject_instance_subject_id_fkey', table=tables['subject_instance'], ondelete=RESTRICT)
+    fk(['instance_id'], ['instance.id'], name='subject_instance_instance_id_fkey', table=tables['subject_instance'], ondelete=CASCADE)
 
     ## "symptom"
-    fk([tables['symptom'].c.subject_id], [tables['subject'].c.id], ondelete=CASCADE)
-    fk([tables['symptom'].c.symptom_type_id], [tables['symptom_type'].c.id], ondelete=CASCADE)
+    fk(['subject_id'], ['subject.id'], name='symptom_subject_id_fkey', table=tables['symptom'], ondelete=CASCADE)
+    fk(['symptom_type_id'], ['symptom_type.id'], name='symptom_symptom_type_id_fkey', table=tables['symptom'], ondelete=CASCADE)
 
     ## "symptom_type"
     # No references
@@ -189,22 +189,22 @@ def upgrade(migrate_engine):
     # No references
 
     ## "visit"
-    fk([tables['visit'].c.subject_id], [tables['subject'].c.id], ondelete=CASCADE)
+    fk(['subject_id'], ['subject.id'], name='visit_subject_id_fkey', table=tables['visit'], ondelete=CASCADE)
 
     ## "visit_instance"
-    fk([tables['visit_instance'].c.instance_id], [tables['instance'].c.id], ondelete=RESTRICT)
-    fk([tables['visit_instance'].c.visit_id], [tables['visit'].c.id], ondelete=CASCADE)
+    fk(['instance_id'], ['instance.id'], name='visit_instance_instance_id_fkey', table=tables['visit_instance'], ondelete=RESTRICT)
+    fk(['visit_id'], ['visit.id'], name='visit_instance_visit_id_fkey', table=tables['visit_instance'], ondelete=CASCADE)
 
     ## "visit_protocol"
-    fk([tables['visit_protocol'].c.protocol_id], [tables['protocol'].c.id], ondelete=CASCADE)
-    fk([tables['visit_protocol'].c.visit_id], [tables['visit'].c.id], ondelete=CASCADE)
+    fk(['protocol_id'], ['protocol.id'], name='visit_protocol_protocol_id_fkey', table=tables['visit_protocol'], ondelete=CASCADE)
+    fk(['visit_id'], ['visit.id'], name='visit_protocol_visit_id_fkey', table=tables['visit_protocol'], ondelete=CASCADE)
 
     ## "vocabulary"
     # No references
 
     ## "vocabulary_term"
-    fk([tables['vocabulary_term'].c.term_id], [tables['term'].c.id], ondelete=CASCADE)
-    fk([tables['vocabulary_term'].c.vocabulary_id], [tables['vocabulary'].c.id], ondelete=CASCADE)
+    fk(['term_id'], ['term.id'], name='vocabulary_term_term_id_fkey', table=tables['vocabulary_term'], ondelete=CASCADE)
+    fk(['vocabulary_id'], ['vocabulary.id'], name='vocabulary_term_vocabulary_id_fkey', table=tables['vocabulary_term'], ondelete=CASCADE)
 
 
 def downgrade(migrate_engine):
@@ -212,146 +212,146 @@ def downgrade(migrate_engine):
     tables = metadata.tables
 
     ## "aliquot"
-    fk([tables['aliquot'].c.specimen_id], [tables['specimen'].c.id],)
-    fk([tables['aliquot'].c.analysis_status_id], [tables['specimen_aliquot_term'].c.id],)
-    fk([tables['aliquot'].c.special_instruction_id], [tables['specimen_aliquot_term'].c.id],)
-    fk([tables['aliquot'].c.state_id], [tables['specimen_aliquot_term'].c.id],)
-    fk([tables['aliquot'].c.storage_site_id], [tables['specimen_aliquot_term'].c.id],)
-    fk([tables['aliquot'].c.type_id], [tables['specimen_aliquot_term'].c.id],)
+    fk(['specimen_id'], ['specimen.id'], name='aliquot_specimen_id_fkey', table=tables['aliquot'],)
+    fk(['analysis_status_id'], ['specimen_aliquot_term.id'], name='aliquot_analysis_status_id_fkey', table=tables['aliquot'],)
+    fk(['special_instruction_id'], ['specimen_aliquot_term.id'], name='aliquot_special_instruction_id_fkey', table=tables['aliquot'],)
+    fk(['state_id'], ['specimen_aliquot_term.id'], name='aliquot_state_id_fkey', table=tables['aliquot'],)
+    fk(['storage_site_id'], ['specimen_aliquot_term.id'], name='aliquot_storage_site_id_fkey', table=tables['aliquot'],)
+    fk(['type_id'], ['specimen_aliquot_term.id'], name='aliquot_type_id_fkey', table=tables['aliquot'],)
 
     ## "aliquot_history"
-    fk([tables['aliquot_history'].c.aliquot_id], [tables['aliquot'].c.id],)
-    fk([tables['aliquot_history'].c.state_id], [tables['specimen_aliquot_term'].c.id],)
+    fk(['aliquot_id'], ['aliquot.id'], name='aliquot_history_aliquot_id_fkey', table=tables['aliquot_history'],)
+    fk(['state_id'], ['specimen_aliquot_term.id'], name='aliquot_history_state_id_fkey', table=tables['aliquot_history'],)
 
     ## "attribute"
-    fk([tables['attribute'].c.field_id], [tables['field'].c.id],)
-    fk([tables['attribute'].c.schema_id], [tables['schema'].c.id],)
+    fk(['field_id'], ['field.id'], name='attribute_field_id_fkey', table=tables['attribute'],)
+    fk(['schema_id'], ['schema.id'], name='attribute_schema_id_fkey', table=tables['attribute'],)
 
     ## "datetime"
-    fk([tables['datetime'].c.attribute_id], [tables['attribute'].c.id],)
-    fk([tables['datetime'].c.instance_id], [tables['instance'].c.id],)
+    fk(['attribute_id'], ['attribute.id'], name='datetime_attribute_id_fkey', table=tables['datetime'],)
+    fk(['instance_id'], ['instance.id'], name='datetime_instance_id_fkey', table=tables['datetime'],)
 
     ## "domain"
     # No references
 
     ## "domain_schema"
-    fk([tables['domain_schema'].c.domain_id], [tables['domain'].c.id],)
-    fk([tables['domain_schema'].c.schema_id], [tables['schema'].c.id],)
+    fk(['domain_id'], ['domain.id'], name='domain_schema_domain_id_fkey', table=tables['domain_schema'],)
+    fk(['schema_id'], ['schema.id'], name='domain_schema_schema_id_fkey', table=tables['domain_schema'],)
 
     ## "drug"
-    fk([tables['drug'].c.drug_category_id], [tables['drug_category'].c.id],)
-    fk([tables['drug'].c.drug_status_id], [tables['drug_status'].c.id],)
+    fk(['drug_category_id'], ['drug_category.id'], name='drug_drug_category_id_fkey', table=tables['drug'],)
+    fk(['drug_status_id'], ['drug_status.id'], name='drug_drug_status_id_fkey', table=tables['drug'],)
 
     ## "drug_category"
     # No references
 
     ## "drug_name"
-    fk([tables['drug_name'].c.drug_id], [tables['drug'].c.id],)
+    fk(['drug_id'], ['drug.id'], name='drug_name_drug_id_fkey', table=tables['drug_name'],)
 
     ## "drug_status"
     # No references
 
     ## "enrollment"
-    fk([tables['enrollment'].c.domain_id], [tables['domain'].c.id],)
-    fk([tables['enrollment'].c.subject_id], [tables['subject'].c.id],)
+    fk(['domain_id'], ['domain.id'], name='enrollment_domain_id_fkey', table=tables['enrollment'],)
+    fk(['subject_id'], ['subject.id'], name='enrollment_subject_id_fkey', table=tables['enrollment'],)
 
     ## "enrollment_instance"
-    fk([tables['enrollment_instance'].c.enrollment_id], [tables['enrollment'].c.id],)
-    fk([tables['enrollment_instance'].c.instance_id], [tables['instance'].c.id],)
+    fk(['enrollment_id'], ['enrollment.id'], name='enrollment_instance_enrollment_id_fkey', table=tables['enrollment_instance'],)
+    fk(['instance_id'], ['instance.id'], name='enrollment_instance_instance_id_fkey', table=tables['enrollment_instance'],)
 
     ## "field"
-    fk([tables['field'].c.schema_id], [tables['schema'].c.id],)
-    fk([tables['field'].c.type_id], [tables['type'].c.id],)
-    fk([tables['field'].c.vocabulary_id], [tables['vocabulary'].c.id],)
+    fk(['schema_id'], ['schema.id'], name='field_schema_id_fkey', table=tables['field'],)
+    fk(['type_id'], ['type.id'], name='field_type_id_fkey', table=tables['field'],)
+    fk(['vocabulary_id'], ['vocabulary.id'], name='field_vocabulary_id_fkey', table=tables['field'],)
 
     ## "fieldset"
     # No references
 
     ## "fieldset_fieldsetitem"
-    fk([tables['fieldset_fieldsetitem'].c.fieldset_id], [tables['fieldset'].c.id],)
-    fk([tables['fieldset_fieldsetitem'].c.item_id], [tables['fieldsetitem'].c.id],)
+    fk(['fieldset_id'], ['fieldset.id'], name='fieldset_fieldsetitem_fieldset_id_fkey', table=tables['fieldset_fieldsetitem'],)
+    fk(['item_id'], ['fieldsetitem.id'], name='fieldset_fieldsetitem_item_id_fkey', table=tables['fieldset_fieldsetitem'],)
 
     ## "fieldsetitem"
     # No references
 
     ## "hierarchy"
-    fk([tables['hierarchy'].c.child_id], [tables['specification'].c.id],)
-    fk([tables['hierarchy'].c.parent_id], [tables['specification'].c.id],)
+    fk(['child_id'], ['specification.id'], name='hierarchy_child_id_fkey', table=tables['hierarchy'],)
+    fk(['parent_id'], ['specification.id'], name='hierarchy_parent_id_fkey', table=tables['hierarchy'],)
 
     ## "include"
-    fk([tables['include'].c.include_id], [tables['specification'].c.id],)
-    fk([tables['include'].c.main_id], [tables['specification'].c.id],)
+    fk(['include_id'], ['specification.id'], name='include_include_id_fkey', table=tables['include'],)
+    fk(['main_id'], ['specification.id'], name='include_main_id_fkey', table=tables['include'],)
 
     ## "instance"
-    fk([tables['instance'].c.schema_id], [tables['schema'].c.id],)
-    fk([tables['instance'].c.state_id], [tables['state'].c.id],)
+    fk(['schema_id'], ['schema.id'], name='instance_schema_id_fkey', table=tables['instance'],)
+    fk(['state_id'], ['state.id'], name='instance_state_id_fkey', table=tables['instance'],)
 
     ## "integer"
-    fk([tables['integer'].c.instance_id], [tables['instance'].c.id],)
-    fk([tables['integer'].c.attribute_id], [tables['attribute'].c.id],)
+    fk(['instance_id'], ['instance.id'], name='integer_instance_id_fkey', table=tables['integer'],)
+    fk(['attribute_id'], ['attribute.id'], name='integer_attribute_id_fkey', table=tables['integer'],)
 
     ## "invariant"
-    fk([tables['invariant'].c.schema_id], [tables['schema'].c.id],)
+    fk(['schema_id'], ['schema.id'], name='invariant_schema_id_fkey', table=tables['invariant'],)
 
     ## "keyword"
-    fk([tables['keyword'].c.instance_id], [tables['instance'].c.id],)
+    fk(['instance_id'], ['instance.id'], name='keyword_instance_id_fkey', table=tables['keyword'],)
 
     ## "medication"
-    fk([tables['medication'].c.drug_id], [tables['drug'].c.id],)
-    fk([tables['medication'].c.subject_id], [tables['subject'].c.id],)
-    fk([tables['medication'].c.visit_id], [tables['visit'].c.id],)
+    fk(['drug_id'], ['drug.id'], name='medication_drug_id_fkey', table=tables['medication'],)
+    fk(['subject_id'], ['subject.id'], name='medication_subject_id_fkey', table=tables['medication'],)
+    fk(['visit_id'], ['visit.id'], name='medication_visit_id_fkey', table=tables['medication'],)
 
     ## "object"
-    fk([tables['object'].c.attribute_id], [tables['attribute'].c.id],)
-    fk([tables['object'].c.instance_id], [tables['instance'].c.id],)
-    fk([tables['object'].c.value], [tables['instance'].c.id],)
+    fk(['attribute_id'], ['attribute.id'], name='object_attribute_id_fkey', table=tables['object'],)
+    fk(['instance_id'], ['instance.id'], name='object_instance_id_fkey', table=tables['object'],)
+    fk(['value'], ['instance.id'], name='object_instance_id_fkey', table=tables['object'],)
 
     ## "partner"
-    fk([tables['partner'].c.subject_id], [tables['subject'].c.id],)
-    fk([tables['partner'].c.enrolled_subject_id], [tables['subject'].c.id],)
+    fk(['subject_id'], ['subject.id'], name='partner_subject_id_fkey', table=tables['partner'],)
+    fk(['enrolled_subject_id'], ['subject.id'], name='partner_subject_id_fkey', table=tables['partner'],)
 
     ## "partner_instance"
-    fk([tables['partner_instance'].c.partner_id], [tables['partner'].c.id],)
-    fk([tables['partner_instance'].c.instance_id], [tables['instance'].c.id],)
+    fk(['partner_id'], ['partner.id'], name='partner_instance_partner_id_fkey', table=tables['partner_instance'],)
+    fk(['instance_id'], ['instance.id'], name='partner_instance_instance_id_fkey', table=tables['partner_instance'],)
 
     ## "protocol"
-    fk([tables['protocol'].c.domain_id], [tables['domain'].c.id],)
+    fk(['domain_id'], ['domain.id'], name='protocol_domain_id_fkey', table=tables['protocol'],)
 
     ## "protocol_schema"
-    fk([tables['protocol_schema'].c.protocol_id], [tables['protocol'].c.id],)
-    fk([tables['protocol_schema'].c.schema_id], [tables['schema'].c.id],)
+    fk(['protocol_id'], ['protocol.id'], name='protocol_schema_protocol_id_fkey', table=tables['protocol_schema'],)
+    fk(['schema_id'], ['schema.id'], name='protocol_schema_schema_id_fkey', table=tables['protocol_schema'],)
 
     ## "range"
-    fk([tables['range'].c.attribute_id], [tables['attribute'].c.id],)
-    fk([tables['range'].c.instance_id], [tables['instance'].c.id],)
+    fk(['attribute_id'], ['attribute.id'], name='range_attribute_id_fkey', table=tables['range'],)
+    fk(['instance_id'], ['instance.id'], name='range_instance_id_fkey', table=tables['range'],)
 
     ## "real"
-    fk([tables['real'].c.attribute_id], [tables['attribute'].c.id],)
-    fk([tables['real'].c.instance_id], [tables['instance'].c.id],)
+    fk(['attribute_id'], ['attribute.id'], name='real_attribute_id_fkey', table=tables['real'],)
+    fk(['instance_id'], ['instance.id'], name='real_instance_id_fkey', table=tables['real'],)
 
     ## "schema"
-    fk([tables['schema'].c.specification_id], [tables['specification'].c.id],)
+    fk(['specification_id'], ['specification.id'], name='schema_specification_id_fkey', table=tables['schema'],)
 
     ## "schema_fieldset"
-    fk([tables['schema_fieldset'].c.fieldset_id], [tables['fieldset'].c.id],)
-    fk([tables['schema_fieldset'].c.schema_id], [tables['schema'].c.id],)
+    fk(['fieldset_id'], ['fieldset.id'], name='schema_fieldset_fieldset_id_fkey', table=tables['schema_fieldset'],)
+    fk(['schema_id'], ['schema.id'], name='schema_fieldset_schema_id_fkey', table=tables['schema_fieldset'],)
 
     ## "selection"
-    fk([tables['selection'].c.attribute_id], [tables['attribute'].c.id],)
-    fk([tables['selection'].c.instance_id], [tables['instance'].c.id],)
-    fk([tables['selection'].c.value], [tables['term'].c.id],)
+    fk(['attribute_id'], ['attribute.id'], name='selection_attribute_id_fkey', table=tables['selection'],)
+    fk(['instance_id'], ['instance.id'], name='selection_instance_id_fkey', table=tables['selection'],)
+    fk(['value'], ['term.id'], name='selection_value_fkey', table=tables['selection'],)
 
     ## "specification"
     # No references
 
     ## "specimen"
-    fk([tables['specimen'].c.protocol_id], [tables['protocol'].c.id],)
-    fk([tables['specimen'].c.destination_id], [tables['specimen_aliquot_term'].c.id],)
-    fk([tables['specimen'].c.state_id], [tables['specimen_aliquot_term'].c.id],)
+    fk(['protocol_id'], ['protocol.id'], name='specimen_protocol_id_fkey', table=tables['specimen'],)
+    fk(['destination_id'], ['specimen_aliquot_term.id'], name='specimen_destination_id_fkey', table=tables['specimen'],)
+    fk(['state_id'], ['specimen_aliquot_term.id'], name='specimen_state_id_fkey', table=tables['specimen'],)
     # The mispelling is intentional, it's actually mispelled in the model too
-    fk([tables['specimen'].c.tupe_type_id], [tables['specimen_aliquot_term'].c.id],)
-    fk([tables['specimen'].c.type_id], [tables['specimen_aliquot_term'].c.id],)
-    fk([tables['specimen'].c.subject_id], [tables['subject'].c.id],)
+    fk(['tupe_type_id'], ['specimen_aliquot_term.id'], name='specimen_tupe_type_id_fkey', table=tables['specimen'],)
+    fk(['type_id'], ['specimen_aliquot_term.id'], name='specimen_type_id_fkey', table=tables['specimen'],)
+    fk(['subject_id'], ['subject.id'], name='specimen_subject_id_fkey', table=tables['specimen'],)
 
     ## "specimen_aliquot_term"
     # No references
@@ -360,19 +360,19 @@ def downgrade(migrate_engine):
     # No references
 
     ## "string"
-    fk([tables['string'].c.attribute_id], [tables['attribute'].c.id],)
-    fk([tables['string'].c.instance_id], [tables['instance'].c.id],)
+    fk(['attribute_id'], ['attribute.id'], name='string_attribute_id_fkey', table=tables['string'],)
+    fk(['instance_id'], ['instance.id'], name='string_instance_id_fkey', table=tables['string'],)
 
     ## "subject"
     # No references
 
     ## "subject_instance"
-    fk([tables['subject_instance'].c.instance_id], [tables['instance'].c.id],)
-    fk([tables['subject_instance'].c.subject_id], [tables['subject'].c.id],)
+    fk(['subject_id'], ['subject.id'], name='subject_instance_subject_id_fkey', table=tables['subject_instance'],)
+    fk(['instance_id'], ['instance.id'], name='subject_instance_instance_id_fkey', table=tables['subject_instance'],)
 
     ## "symptom"
-    fk([tables['symptom'].c.subject_id], [tables['subject'].c.id],)
-    fk([tables['symptom'].c.symptom_type_id], [tables['symptom_type'].c.id],)
+    fk(['subject_id'], ['subject.id'], name='symptom_subject_id_fkey', table=tables['symptom'],)
+    fk(['symptom_type_id'], ['symptom_type.id'], name='symptom_symptom_type_id_fkey', table=tables['symptom'],)
 
     ## "symptom_type"
     # No references
@@ -384,19 +384,20 @@ def downgrade(migrate_engine):
     # No references
 
     ## "visit"
-    fk([tables['visit'].c.subject_id], [tables['subject'].c.id],)
+    fk(['subject_id'], ['subject.id'], name='visit_subject_id_fkey', table=tables['visit'],)
 
     ## "visit_instance"
-    fk([tables['visit_instance'].c.instance_id], [tables['instance'].c.id],)
-    fk([tables['visit_instance'].c.visit_id], [tables['visit'].c.id],)
+    fk(['instance_id'], ['instance.id'], name='visit_instance_instance_id_fkey', table=tables['visit_instance'],)
+    fk(['visit_id'], ['visit.id'], name='visit_instance_visit_id_fkey', table=tables['visit_instance'],)
 
     ## "visit_protocol"
-    fk([tables['visit_protocol'].c.protocol_id], [tables['protocol'].c.id],)
-    fk([tables['visit_protocol'].c.visit_id], [tables['visit'].c.id],)
+    fk(['protocol_id'], ['protocol.id'], name='visit_protocol_protocol_id_fkey', table=tables['visit_protocol'],)
+    fk(['visit_id'], ['visit.id'], name='visit_protocol_visit_id_fkey', table=tables['visit_protocol'],)
 
     ## "vocabulary"
     # No references
 
     ## "vocabulary_term"
-    fk([tables['vocabulary_term'].c.term_id], [tables['term'].c.id],)
-    fk([tables['vocabulary_term'].c.vocabulary_id], [tables['vocabulary'].c.id],)
+    fk(['term_id'], ['term.id'], name='vocabulary_term_term_id_fkey', table=tables['vocabulary_term'],)
+    fk(['vocabulary_id'], ['vocabulary.id'], name='vocabulary_term_vocabulary_id_fkey', table=tables['vocabulary_term'],)
+

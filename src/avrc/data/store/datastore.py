@@ -72,8 +72,7 @@ class Datastore(object):
 
     def __init__(self, session):
         self._session = session
-        model.setup(self.getScopedSession().bind)
-        setup_types(self)
+        model.install(self.getScopedSession().bind)
 
 
     def __str__(self):
@@ -540,35 +539,6 @@ def spawnObject(iface, **kw):
             obj.__dict__[name] = value
 
     return obj
-
-def setup_types(datastore):
-    """ Helper method to setup up built-in supported types.
-
-        Arguments:
-            datastore: (object) an object implementing IDatastore
-        Returns:
-            N/A
-    """
-    rslt = []
-    Session = datastore.getScopedSession()
-
-    types = getUtility(zope.schema.interfaces.IVocabulary,
-                       'avrc.data.store.Types')
-
-    for t in list(types):
-        num = Session.query(model.Type)\
-            .filter_by(title=unicode(t.token))\
-            .count()
-
-        if not num:
-            rslt.append(model.Type(
-                title=unicode(t.token),
-                description=unicode(getattr(t.value, '__doc__', None)),
-                ))
-
-    if rslt:
-        Session.add_all(rslt)
-        Session.flush()
 
 def setup_states(datastore, state_vocabulary, default):
     """

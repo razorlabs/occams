@@ -2,100 +2,9 @@ from datetime import datetime
 from sqlalchemy import *
 from migrate import *
 
-metadata = MetaData()
-
 PY_NOW = datetime.now
 SQL_NOW = text('CURRENT_TIMESTAMP')
 
-#
-# The new choice table, follows DS-1 specification as closely as possible.
-# field_id will be migrated to attribute_id at a later time since we cannot
-# do a full upgrade to DS-1.
-#
-choice_table = Table('choice', metadata,
-    Column('id', Integer, primary_key=True),
-    Column('field_id',
-        Integer,
-        ForeignKey('field.id', ondelete='CASCADE'),
-        nullable=False,
-        index=True
-        ),
-    Column('name', String, nullable=False),
-    Column('title', Unicode, nullable=False),
-    Column('description', UnicodeText),
-    Column('value', Unicode, nullable=False),
-    Column('order', Integer, nullable=False),
-    Column('create_date', DateTime, nullable=False, default=SQL_NOW),
-    Column('create_user_id', Integer),
-    Column('modify_date', DateTime, nullable=False, default=SQL_NOW, onupdate=PY_NOW),
-    Column('modify_user_id', Integer),
-    Column('remove_date', DateTime, index=True),
-    Column('remove_user_id', Integer),
-    UniqueConstraint('field_id', 'name', name='choice_field_id_name'),
-    UniqueConstraint('field_id', 'value', name='choice_field_id_value'),
-    UniqueConstraint('field_id', 'order', name='choice_field_id_order'),
-    )
-
-#
-# The old vocabulary/term joining table, for downgrade purposes
-#
-vocabulary_term_table = Table('vocabulary_term', metadata,
-    Column('vocabulary_id', Integer,
-           ForeignKey('vocabulary.id', ondelete='CASCADE')),
-    Column('term_id', Integer, ForeignKey('term.id', ondelete='CASCADE')),
-    PrimaryKeyConstraint('vocabulary_id', 'term_id')
-    )
-
-#
-# The old vocabulary table, for downgrade purposes
-#
-vocabulary_table = Table('vocabulary', metadata,
-    Column('id', Integer, primary_key=True),
-    Column('title', Unicode, nullable=False, index=True),
-    Column('description', Unicode),
-    )
-
-#
-# The old term table, for downgrade purposes
-#
-term_table = Table('term', metadata,
-    Column('id', Integer, primary_key=True),
-    Column('title', Unicode),
-    Column('token', Unicode, nullable=False, index=True),
-    Column('value_str', Unicode),
-    Column('value_int', Integer),
-    Column('value_real', Float),
-    Column('value_range_low', Integer),
-    Column('value_range_high', Integer),
-    Column('order', Integer, nullable=False, default=1),
-    )
-
-#
-# The old selection table, for downgrade purposes
-#
-selection_table = Table('selection', metadata,
-    Column('id', Integer, primary_key=True),
-    Column(
-        'instance_id',
-        Integer,
-        ForeignKey('instance.id', ondelete='CASCADE'),
-        nullable=False,
-        index=True
-        ),
-    Column(
-       'attribute_id',
-       Integer,
-       ForeignKey('attribute.id', ondelete='CASCADE'),
-       nullable=False
-       ),
-    Column('value', Integer, ForeignKey('term.id'), nullable=False),
-    )
-
-selection_index = Index(
-    'selection_attribute_value',
-    selection_table.c.attribute_id,
-    selection_table.c.value
-    )
 
 #
 # The EAV value tables to be updated with the new choice_id property (DS-1)
@@ -115,16 +24,46 @@ def upgrade(migrate_engine):
         the id value (creation order, because DS-0 doesn't specify
         create/modify data on some tables).
     """
-    metadata.bind = migrate_engine
-    metadata.reflect(only=['field', 'type'] + value_table_names)
+    metadata = MetaData(bind=migrate_engine)
+
+    metadata.reflect(only=['field', 'type', 'term', 'vocabulary_term', 'vocabulary', 'selection'] + value_table_names)
+
+    # Can't figure out an elegant way to put this in the global space...
+    choice_table = Table('choice', metadata,
+        Column('id', Integer, primary_key=True),
+        Column('field_id',
+            Integer,
+            ForeignKey('field.id', ondelete='CASCADE'),
+            nullable=False,
+            index=True
+            ),
+        Column('name', String, nullable=False),
+        Column('title', Unicode, nullable=False),
+        Column('description', UnicodeText),
+        Column('value', Unicode, nullable=False),
+        Column('order', Integer, nullable=False),
+        Column('create_date', DateTime, nullable=False, default=SQL_NOW),
+        Column('create_user_id', Integer),
+        Column('modify_date', DateTime, nullable=False, default=SQL_NOW, onupdate=PY_NOW),
+        Column('modify_user_id', Integer),
+        Column('remove_date', DateTime, index=True),
+        Column('remove_user_id', Integer),
+        UniqueConstraint('field_id', 'name', name='choice_field_id_name'),
+        UniqueConstraint('field_id', 'value', name='choice_field_id_value'),
+        UniqueConstraint('field_id', 'order', name='choice_field_id_order'),
+        )
+
+
+    choice_table.create()
 
     field_table = metadata.tables['field']
     selection_table = metadata.tables['selection']
     string_table = metadata.tables['string']
     type_table = metadata.tables['type']
+    term_table = metadata.tables['term']
+    vocabulary_term_table = metadata.tables['vocabulary_term']
+    vocabulary_table = metadata.tables['vocabulary']
 
-    choice_table.drop(checkfirst=True)
-    choice_table.create()
 
     # Add the choice attribute to EAV value tables
     for name in value_table_names:
@@ -134,7 +73,9 @@ def upgrade(migrate_engine):
             ForeignKey('choice.id', ondelete='CASCADE'),
             )
 
-        choice_column.create(metadata.tables[name], 'ix_%s_choice_id' % name)
+        choice_column.create(metadata.tables[name])
+        index_name = 'ix_%s_choice_id' % name
+        Index(index_name, choice_column)
 
     connection = migrate_engine.connect()
 
@@ -219,16 +160,80 @@ def upgrade(migrate_engine):
 
 
 def downgrade(migrate_engine):
-    metadata.bind = migrate_engine
-    metadata.reflect(only=['field', 'type'] + value_table_names)
-    field_table = metadata.tables['field']
-    string_table = metadata.tables['string']
-    type_table = metadata.tables['type']
+    metadata = MetaData(bind=migrate_engine)
+    metadata.reflect(only=['field', 'type', 'choice'] + value_table_names)
+
+    #
+    # The old vocabulary/term joining table, for downgrade purposes
+    #
+    vocabulary_term_table = Table('vocabulary_term', metadata,
+        Column('vocabulary_id', Integer,
+               ForeignKey('vocabulary.id', ondelete='CASCADE')),
+        Column('term_id', Integer, ForeignKey('term.id', ondelete='CASCADE')),
+        PrimaryKeyConstraint('vocabulary_id', 'term_id')
+        )
+
+    #
+    # The old vocabulary table, for downgrade purposes
+    #
+    vocabulary_table = Table('vocabulary', metadata,
+        Column('id', Integer, primary_key=True),
+        Column('title', Unicode, nullable=False, index=True),
+        Column('description', Unicode),
+        )
+
+    #
+    # The old term table, for downgrade purposes
+    #
+    term_table = Table('term', metadata,
+        Column('id', Integer, primary_key=True),
+        Column('title', Unicode),
+        Column('token', Unicode, nullable=False, index=True),
+        Column('value_str', Unicode),
+        Column('value_int', Integer),
+        Column('value_real', Float),
+        Column('value_range_low', Integer),
+        Column('value_range_high', Integer),
+        Column('order', Integer, nullable=False, default=1),
+        )
+
+    #
+    # The old selection table, for downgrade purposes
+    #
+    selection_table = Table('selection', metadata,
+        Column('id', Integer, primary_key=True),
+        Column(
+            'instance_id',
+            Integer,
+            ForeignKey('instance.id', ondelete='CASCADE'),
+            nullable=False,
+            index=True
+            ),
+        Column(
+           'attribute_id',
+           Integer,
+           ForeignKey('attribute.id', ondelete='CASCADE'),
+           nullable=False
+           ),
+        Column('value', Integer, ForeignKey('term.id'), nullable=False),
+        )
+
+    Index(
+        'selection_attribute_value',
+        selection_table.c.attribute_id,
+        selection_table.c.value
+        )
 
     vocabulary_table.create()
     term_table.create()
     vocabulary_term_table.create()
     selection_table.create()
+
+    field_table = metadata.tables['field']
+    string_table = metadata.tables['string']
+    type_table = metadata.tables['type']
+    choice_table = metadata.tables['choice']
+
 
     # Add the column back to the field
 
@@ -238,7 +243,8 @@ def downgrade(migrate_engine):
         ForeignKey('vocabulary.id'),
         )
 
-    vocabulary_id_column.create(field_table, index_name='ix_field_vobulary_id')
+    vocabulary_id_column.create(field_table)
+    Index('ix_field_vobulary_id', vocabulary_id_column)
 
     connection = migrate_engine.connect()
 
