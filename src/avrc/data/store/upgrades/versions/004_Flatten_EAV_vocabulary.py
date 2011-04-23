@@ -37,20 +37,17 @@ def upgrade(migrate_engine):
             nullable=False,
             index=True
             ),
-        Column('name', String, nullable=False),
+        Column('name', String, nullable=False, index=True),
         Column('title', Unicode, nullable=False),
         Column('description', UnicodeText),
-        Column('value', Unicode, nullable=False),
-        Column('order', Integer, nullable=False),
-        Column('create_date', DateTime, nullable=False, default=SQL_NOW),
+        Column('value', Unicode, nullable=False, index=True),
+        Column('order', Integer, nullable=False, index=True),
+        Column('create_date', DateTime, nullable=False, server_default=SQL_NOW),
         Column('create_user_id', Integer),
-        Column('modify_date', DateTime, nullable=False, default=SQL_NOW, onupdate=PY_NOW),
+        Column('modify_date', DateTime, nullable=False, server_default=SQL_NOW, onupdate=PY_NOW),
         Column('modify_user_id', Integer),
         Column('remove_date', DateTime, index=True),
         Column('remove_user_id', Integer),
-        UniqueConstraint('field_id', 'name', name='choice_field_id_name'),
-        UniqueConstraint('field_id', 'value', name='choice_field_id_value'),
-        UniqueConstraint('field_id', 'order', name='choice_field_id_order'),
         )
 
 

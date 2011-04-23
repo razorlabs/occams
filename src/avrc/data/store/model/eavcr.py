@@ -390,15 +390,15 @@ class Choice(Model):
 
     field = Relationship('Field')
 
-    name = Column(SAString, nullable=False)
+    name = Column(SAString, nullable=False, index=True)
 
     title = Column(Unicode, nullable=False)
 
     description = Column(UnicodeText)
 
-    value = Column(Unicode, nullable=False)
+    value = Column(Unicode, nullable=False, index=True)
 
-    order = Column(SAInteger, nullable=False)
+    order = Column(SAInteger, nullable=False, index=True)
 
     create_date = Column(SADateTime, nullable=False, server_default=SQL_NOW)
 
@@ -411,13 +411,6 @@ class Choice(Model):
     remove_date = Column(SADateTime, index=True)
 
     remove_user_id = Column(SAInteger)
-
-    __table_args__ = (
-        UniqueConstraint('field_id', 'name', name='choice_field_id_name'),
-        UniqueConstraint('field_id', 'value', name='choice_field_id_value'),
-        UniqueConstraint('field_id', 'order', name='choice_field_id_order'),
-        {}
-        )
 
 
 class Attribute(Model):
