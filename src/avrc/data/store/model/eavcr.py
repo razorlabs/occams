@@ -33,7 +33,6 @@ from sqlalchemy.types import Float
 from sqlalchemy.types import Integer as SAInteger
 from sqlalchemy.types import String as SAString
 from sqlalchemy.types import Unicode
-from sqlalchemy.types import UnicodeText
 from sqlalchemy.types import Text
 
 from sqlalchemy.orm import relation as Relationship
@@ -394,7 +393,7 @@ class Choice(Model):
 
     title = Column(Unicode, nullable=False)
 
-    description = Column(UnicodeText)
+    description = Column(Unicode)
 
     value = Column(Unicode, nullable=False, index=True)
 

@@ -39,7 +39,7 @@ def upgrade(migrate_engine):
             ),
         Column('name', String, nullable=False, index=True),
         Column('title', Unicode, nullable=False),
-        Column('description', UnicodeText),
+        Column('description', Unicode),
         Column('value', Unicode, nullable=False, index=True),
         Column('order', Integer, nullable=False, index=True),
         Column('create_date', DateTime, nullable=False, server_default=SQL_NOW),
