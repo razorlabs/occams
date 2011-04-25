@@ -20,8 +20,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from zope.deprecation import deprecate
 
 import migrate.versioning.api
-from migrate.versioning.exceptions import DatabaseAlreadyControlledError
-from migrate.versioning.exceptions import DatabaseNotControlledError
+from migrate.exceptions import DatabaseAlreadyControlledError
+from migrate.exceptions import DatabaseNotControlledError
 
 
 # Base class for declarative syntax on our models
