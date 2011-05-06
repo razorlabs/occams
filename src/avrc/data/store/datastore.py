@@ -379,6 +379,11 @@ class Datastore(object):
                     for value_rslt in value_query.all():
                         if value is None or value_rslt.value not in value:
                             Session.delete(value_rslt)
+                        elif value is not None and value_rslt.value in value:
+                            # 3.1 Fix: also remove items from the new list
+                            # if they already exist in the database.
+                            # That way we're only working with new data.
+                            value.remove(value_rslt.value)
 
                     if value is not None:
                         for v in value:
