@@ -156,6 +156,12 @@ class Specimen(Model):
 
     aliquot = Relationship('Aliquot')
 
+    create_name = Column(Unicode(255))
+
+    modify_name = Column(Unicode(255))
+
+    study_cycle_label = Column(Unicode(255))
+
     is_active = Column(Boolean, nullable=False, default=True, index=True)
 
     create_date = Column(DateTime, nullable=False, default=datetime.now)
@@ -265,6 +271,10 @@ class Aliquot(Model):
         'SpecimenAliquotTerm',
         primaryjoin=special_instruction_id == SpecimenAliquotTerm.id
         )
+
+    create_name = Column(Unicode(255))
+
+    modify_name = Column(Unicode(255))
 
     is_active = Column(Boolean, nullable=False, default=True, index=True)
 
