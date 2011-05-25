@@ -259,6 +259,17 @@ class Aliquot(Model):
 
     sent_name = Column(Unicode)
 
+    sent_site_id = Column(
+        ForeignKey(SpecimenAliquotTerm.id, ondelete='CASCADE'),
+        nullable=False,
+        index=True
+        )
+
+    sent_site = Relationship(
+        'SpecimenAliquotTerm',
+        primaryjoin=(sent_site_id == SpecimenAliquotTerm.id)
+        )
+
     notes = Column(Unicode)
 
     special_instruction_id = Column(

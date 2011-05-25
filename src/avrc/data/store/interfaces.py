@@ -595,6 +595,11 @@ class IAliquot(IComponent):
         required=False,
         )
 
+    sent_site = zope.schema.TextLine(
+        title=_(u'Where was this sent to?'),
+        required=False
+        )
+
     notes = zope.schema.Text(
         title=_(u'Notes on this aliquot (if any):'),
         required=False
