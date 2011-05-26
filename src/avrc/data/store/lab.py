@@ -88,7 +88,10 @@ class Aliquot(object):
         obj.box = rslt.box
         obj.storage_site = rslt.storage_site.value
         obj.thawed_num = rslt.thawed_num
-        obj.analysis_status = rslt.analysis_status.value
+	if rslt.analysis_status is not None:
+        	obj.analysis_status = rslt.analysis_status.value
+        else:
+		obj.analysis_status = None
         obj.sent_date = rslt.sent_date
         obj.sent_name = rslt.sent_name
         obj.notes = rslt.notes
@@ -405,7 +408,7 @@ class DatastoreAliquotManager(AbstractDatastoreConventionalManager):
 
             Session.add(aliquot_rslt)
 
-        aliquot_rslt.analysis_status = rslt["aliquot_state"]
+        aliquot_rslt.analysis_status = rslt["aliquot_analysis_status"]
         aliquot_rslt.sent_date = source.sent_date
         aliquot_rslt.sent_name = source.sent_name
         aliquot_rslt.special_instruction = rslt["aliquot_special_instruction"]

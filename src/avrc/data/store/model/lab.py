@@ -246,7 +246,6 @@ class Aliquot(Model):
 
     analysis_status_id = Column(
         ForeignKey(SpecimenAliquotTerm.id, ondelete='CASCADE'),
-        nullable=False,
         index=True
         )
 
