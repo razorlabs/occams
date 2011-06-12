@@ -20,17 +20,18 @@ from sqlalchemy.ext.declarative import declarative_base
 from zope.deprecation import deprecate
 
 import migrate.versioning.api
-from migrate.exceptions import DatabaseAlreadyControlledError
-from migrate.exceptions import DatabaseNotControlledError
-
-
+try:
+    from migrate.versioning.exceptions import DatabaseAlreadyControlledError
+    from migrate.versioning.exceptions import DatabaseNotControlledError
+except ImportError:
+    from migrate.exceptions import DatabaseAlreadyControlledError
+    from migrate.exceptions import DatabaseNotControlledError
 # Base class for declarative syntax on our models
 Model = declarative_base()
 
 # To avoid circular dependencies, import models after base has been defined
 from avrc.data.store.model.clinical import *
 from avrc.data.store.model.eavcr import *
-from avrc.data.store.model.lab import *
 from avrc.data.store.model.medication import *
 from avrc.data.store.model.symptom import *
 

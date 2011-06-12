@@ -89,12 +89,6 @@ class Datastore(object):
         return iface(self)
 
 
-    def getAliquotManager(self):
-        return self.getManager(interfaces.IAliquotManager)
-
-
-    def getSpecimenManager(self):
-        return self.getManager(interfaces.ISpecimenManager)
 
 
     def getDomainManager(self):
@@ -171,18 +165,6 @@ class Datastore(object):
     @deprecate('Use getVisitManager() instead of visits')
     def visits(self):
         return self.getVisitManager()
-
-
-    @property
-    @deprecate('Use getSpecimenManager() instead of specimen')
-    def specimen(self):
-        return self.getSpecimenManager()
-
-
-    @property
-    @deprecate('Use getAliquotManager() instead of aliquot')
-    def aliquot(self):
-        return self.getAliquotManager()
 
 
     def keys(self):

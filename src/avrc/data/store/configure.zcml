@@ -18,9 +18,6 @@
   <adapter factory=".medication.DatastoreDrugManager" />
   <adapter factory=".medication.DatastoreMedicationManager" />
 
-  <adapter factory=".lab.DatastoreSpecimenManager" />
-  <adapter factory=".lab.DatastoreAliquotManager" />
-  
   <adapter factory=".schema.DatastoreSchemaManager" />
   
   <adapter factory=".symptom.DatastoreSymptomManager" />
