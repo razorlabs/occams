@@ -4,32 +4,37 @@
 from zope.component import adapts
 from zope.schema.fieldproperty import FieldProperty
 from zope.interface import implements
+from zope.interface import classProvides
 
 import sqlalchemy as sa
 from sqlalchemy import orm
 
-from avrc.data.store import MessageFactory as _
-from avrc.data.store.interfaces import IDatastore
-from avrc.data.store.interfaces import Schema
-from avrc.data.store.interfaces import ISubject
-from avrc.data.store.interfaces import IPartner
-from avrc.data.store.interfaces import IEnrollment
-from avrc.data.store.interfaces import IVisit
-from avrc.data.store.interfaces import IPartnerManager
-from avrc.data.store.interfaces import ISubjectManager
-from avrc.data.store.interfaces import IEnrollmentManager
-from avrc.data.store.interfaces import IVisitManager
-from avrc.data.store.interfaces import IDomain
-from avrc.data.store.interfaces import IDomainManager
-from avrc.data.store.interfaces import IProtocol
-from avrc.data.store.interfaces import IProtocolManager
-from avrc.data.store import model
-from avrc.data.store._item import AbstractItem
-from avrc.data.store._manager import AbstractDatastoreConventionalManager
-from avrc.data.store._manager import AbstractEAVContainerManager
+from avrc.data.store.directives import Schema
+from avrc.data.store.storage import Item
+from avrc.data.store.ext.clinical.manager import ConventionalManager
+from avrc.data.store.ext.clinical.manager import EAVContainerManager
+from avrc.data.store.interfaces import IDataStore
 
 
-class Subject(AbstractItem):
+from avrc.data.store.interfaces import IDataStoreExtension
+from avrc.data.store.ext.clinical.interfaces import ISubject
+from avrc.data.store.ext.clinical.interfaces import IPartner
+from avrc.data.store.ext.clinical.interfaces import IEnrollment
+from avrc.data.store.ext.clinical.interfaces import IVisit
+from avrc.data.store.ext.clinical.interfaces import IPartnerManager
+from avrc.data.store.ext.clinical.interfaces import ISubjectManager
+from avrc.data.store.ext.clinical.interfaces import IEnrollmentManager
+from avrc.data.store.ext.clinical.interfaces import IVisitManager
+from avrc.data.store.ext.clinical.interfaces import IDomain
+from avrc.data.store.ext.clinical.interfaces import IDomainManager
+from avrc.data.store.ext.clinical.interfaces import IProtocol
+from avrc.data.store.ext.clinical.interfaces import IProtocolManager
+
+from avrc.data.store.ext.clinical import model
+
+
+
+class Subject(Item):
     """ See `ISubject`
     """
     implements(ISubject)
@@ -41,7 +46,7 @@ class Subject(AbstractItem):
     our = FieldProperty(ISubject['our'])
 
 
-class Partner(AbstractItem):
+class Partner(Item):
     """ See `IPartner`
     """
     implements(IPartner)
@@ -52,7 +57,7 @@ class Partner(AbstractItem):
     visit_date = FieldProperty(IPartner['visit_date'])
 
 
-class Enrollment(AbstractItem):
+class Enrollment(Item):
     """ See `IEnrollment`
     """
     implements(IEnrollment)
@@ -64,7 +69,7 @@ class Enrollment(AbstractItem):
     eid = FieldProperty(IEnrollment['eid'])
 
 
-class Visit(AbstractItem):
+class Visit(Item):
     """ See `IVisit`
     """
     implements(IVisit)
@@ -75,7 +80,7 @@ class Visit(AbstractItem):
     visit_date = FieldProperty(IVisit['visit_date'])
 
 
-class Domain(AbstractItem):
+class Domain(Item):
     """ See `IDomain`
     """
     implements(IDomain)
@@ -86,7 +91,7 @@ class Domain(AbstractItem):
     consent_date = FieldProperty(IDomain['consent_date'])
 
 
-class Protocol(AbstractItem):
+class Protocol(Item):
     """ See `IProtocol`
     """
     implements(IProtocol)
@@ -98,9 +103,11 @@ class Protocol(AbstractItem):
     is_active = FieldProperty(IProtocol['is_active'])
 
 
-class DatastoreSubjectManager(AbstractEAVContainerManager):
-    adapts(IDatastore)
+class SubjectManager(EAVContainerManager):
+    classProvides(IDataStoreExtension)
+    adapts(IDataStore)
     implements(ISubjectManager)
+
 
     _model = model.Subject
     _type = Subject
@@ -114,18 +121,19 @@ class DatastoreSubjectManager(AbstractEAVContainerManager):
         rslt.our = source.our
 
 
-class DatastorePartnerManager(AbstractEAVContainerManager):
+class PartnerManager(EAVContainerManager):
     """ See `IPartnerManager`
     """
-    adapts(IDatastore)
+    classProvides(IDataStoreExtension)
+    adapts(IDataStore)
     implements(IPartnerManager)
+
 
     _model = model.Partner
     _type = Partner
 
     def putProperties(self, rslt, source):
-        Session = self._datastore.getScopedSession()
-
+        Session = self.datastore.session
         subject = Session.query(model.Subject)\
             .filter_by(zid=source.subject_zid)\
             .first()
@@ -140,16 +148,18 @@ class DatastorePartnerManager(AbstractEAVContainerManager):
         rslt.visit_date = source.visit_date
 
 
-class DatastoreEnrollmentManager(AbstractEAVContainerManager):
-    adapts(IDatastore)
+class EnrollmentManager(EAVContainerManager):
+    classProvides(IDataStoreExtension)
+    adapts(IDataStore)
     implements(IEnrollmentManager)
+
 
     _model = model.Enrollment
     _type = Enrollment
 
     def putProperties(self, rslt, source):
         """ Add the items from the source to ds """
-        Session = self._datastore.getScopedSession()
+        Session = self.datastore.session
 
         domain = Session.query(model.Domain)\
                       .filter_by(zid=source.domain_zid)\
@@ -171,7 +181,7 @@ class DatastoreEnrollmentManager(AbstractEAVContainerManager):
         """ Utility method for retrieving objects based on the enrollment and
             (optionally) based on when it was collected.
         """
-        Session = self._datastore.getScopedSession()
+        Session = self.datastore.session
 
         search_q = Session.query(model.Instance.id) \
             .select_from(orm.join(model.Visit, model.Instance, 'instances'))\
@@ -207,19 +217,21 @@ class DatastoreEnrollmentManager(AbstractEAVContainerManager):
                 exp_q = model.Schema.create_date == iface_version
                 search_q = search_q.filter(exp_q)
 
-        return [self._datastore.get(id) for (id,) in search_q.all()]
+        return [self.datastore.get(name) for (name,) in search_q.all()]
 
 
-class DatastoreVisitManager(AbstractEAVContainerManager):
-    adapts(IDatastore)
+class VisitManager(EAVContainerManager):
+    classProvides(IDataStoreExtension)
+    adapts(IDataStore)
     implements(IVisitManager)
+
 
     _model = model.Visit
     _type = Visit
 
     def putProperties(self, rslt, source):
         """ Add the items from the source to ds """
-        Session = self._datastore.getScopedSession()
+        Session = self.datastore.session
 
         subject = Session.query(model.Subject)\
           .filter_by(zid=source.subject_zid)\
@@ -235,9 +247,11 @@ class DatastoreVisitManager(AbstractEAVContainerManager):
                 .first())
 
 
-class DatastoreDomainManager(AbstractDatastoreConventionalManager):
-    adapts(IDatastore)
+class DomainManager(ConventionalManager):
+    classProvides(IDataStoreExtension)
+    adapts(IDataStore)
     implements(IDomainManager)
+
 
     _model = model.Domain
     _type = Domain
@@ -251,8 +265,9 @@ class DatastoreDomainManager(AbstractDatastoreConventionalManager):
         return rslt
 
 
-class DatastoreProtocolManager(AbstractDatastoreConventionalManager):
-    adapts(IDatastore)
+class ProtocolManager(ConventionalManager):
+    classProvides(IDataStoreExtension)
+    adapts(IDataStore)
     implements(IProtocolManager)
 
     _model = model.Protocol
@@ -260,14 +275,13 @@ class DatastoreProtocolManager(AbstractDatastoreConventionalManager):
 
     def putProperties(self, rslt, source):
         """ Add the items from the source to ds """
-        Session = self._datastore.getScopedSession()
-
-        domain = Session.query(model.Domain)\
+        session = self.datastore.session
+        domain = session.query(model.Domain)\
             .filter_by(zid=source.domain_zid)\
             .first()
-
         rslt.zid = source.zid
         rslt.domain = domain
         rslt.cycle = source.cycle
         rslt.threshold = source.threshold
         rslt.is_active = source.is_active
+        return rslt

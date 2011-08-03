@@ -3,13 +3,13 @@ from setuptools import setup
 
 
 # Working release version
-version = '0.3.3'
+version = '0.4.0'
 
 
 setup(
     name='avrc.data.store',
     version=version,
-    description='Provides storage solution for sparse clinical study data.',
+    description='Provides storage solution for sparse data.',
     classifiers=[
         'Development Status :: 4 - Beta'
         'Framework :: Zope3',
@@ -23,8 +23,8 @@ setup(
         'Topic :: Software Development :: Libraries',
         'Topic :: Utilities',
         ],
-    keywords='AVRC BEAST datastore database eav clinical sqlalchemy relational',
-    author='BEAST Core Development Team',
+    keywords='AVRC BEAST datastore database eav sqlalchemy relational clinical',
+    author='The BEAST Core Development Team',
     author_email='beast@ucsd.edu',
     url='http://datam0nk3y.org/P01svn/plone4_eggs/avrc.data.store/trunk',
     license='GPL',
@@ -33,32 +33,25 @@ setup(
     namespace_packages=['avrc', 'avrc.data'],
     include_package_data=True,
     zip_safe=False,
-    # Dependency packages, we leave the exact version requirements to buildout,
-    # although with time, we'll start adding version restrictions if issues
-    # arise
     install_requires=[
         'setuptools',
         ### Zope 2
-        'zope.component', # Adapters/utilities
-        'zope.deprecation', # Deprecate unused libraries
+        'zope.component', # adapter/utility registration
+        'zope.configuration', # ZCML support 
+        'zope.deprecation', # Deprecation warnings
         'zope.i18nmessageid', # Internationalization
-        'zope.interface', # Specifications
-        'zope.schema', # Specification data types
-        ### schemata
-        # These will be moved into a 'forms' package in the future
-        'plone.alterego', # Virtual name spaces
-        'plone.autoform', # Form directives
-        'plone.supermodel', # Form directives
-        'z3c.form',
-        ### sql
-        'sqlalchemy-migrate',
-        'sqlalchemy', # SQLAlchemy, don't support >0.6 yet
-        'z3c.saconfig', # for database connectivity until
-                                        # we can figure out local utilities
+        'zope.interface', # Component specifications
+        'zope.schema', # Component property specifications
+        ### Interface directives
+        'martian',
+        ### SQL
+        'SQLAlchemy>=0.6.7,<0.6.99', # Backbone of this utility
+        'sqlalchemy-migrate>=0.6.1,<0.6.99', # Database schema upgrades
         ],
     extras_require=dict(
         postgresql=['psycopg2'],
         test=['zope.testing'],
         ),
+    tests_require=['zope.testing'],
     test_suite='avrc.data.store.tests',
     )

@@ -1,8 +1,7 @@
 """ Clinical Models
 """
 
-from datetime import datetime
-
+from sqlalchemy import text
 from sqlalchemy.schema import Column
 from sqlalchemy.schema import ForeignKey
 from sqlalchemy.schema import Table
@@ -34,6 +33,9 @@ __all__ = (
     'Visit',
     )
 
+
+NOW = text('CURRENT_TIMESTAMP')
+
 #
 # Joining tables
 #
@@ -61,25 +63,25 @@ visit_protocol_table = Table('visit_protocol', Model.metadata,
 
 subject_instance_table = Table('subject_instance', Model.metadata,
     Column('subject_id', ForeignKey('subject.id', ondelete='RESTRICT')),
-    Column('instance_id', ForeignKey('instance.id', ondelete='CASCADE')),
+    Column('instance_id', ForeignKey('entity.id', ondelete='CASCADE')),
     PrimaryKeyConstraint('subject_id', 'instance_id')
     )
 
 partner_instance_table = Table('partner_instance', Model.metadata,
     Column('partner_id', ForeignKey('partner.id', ondelete='RESTRICT')),
-    Column('instance_id', ForeignKey('instance.id', ondelete='CASCADE')),
+    Column('instance_id', ForeignKey('entity.id', ondelete='CASCADE')),
     PrimaryKeyConstraint('partner_id', 'instance_id')
     )
 
 enrollment_instance_table = Table('enrollment_instance', Model.metadata,
     Column('enrollment_id', ForeignKey('enrollment.id', ondelete='RESTRICT')),
-    Column('instance_id', ForeignKey('instance.id', ondelete='CASCADE')),
+    Column('instance_id', ForeignKey('entity.id', ondelete='CASCADE')),
     PrimaryKeyConstraint('enrollment_id', 'instance_id')
     )
 
 visit_instance_table = Table('visit_instance', Model.metadata,
     Column('visit_id', ForeignKey('visit.id', ondelete='RESTRICT')),
-    Column('instance_id', ForeignKey('instance.id', ondelete='CASCADE')),
+    Column('instance_id', ForeignKey('entity.id', ondelete='CASCADE')),
     PrimaryKeyConstraint('visit_id', 'instance_id')
     )
 
@@ -112,20 +114,15 @@ class Subject(Model):
     enrollments = Relationship('Enrollment')
 
     instances = Relationship(
-        'Instance',
+        'Entity',
         secondary=subject_instance_table,
         )
 
     is_active = Column(Boolean, nullable=False, default=True, index=True)
 
-    create_date = Column(DateTime, nullable=False, default=datetime.now)
+    create_date = Column(DateTime, nullable=False, default=NOW)
 
-    modify_date = Column(
-        DateTime,
-        nullable=False,
-        default=datetime.now,
-        onupdate=datetime.now
-        )
+    modify_date = Column(DateTime, nullable=False, default=NOW, onupdate=NOW)
 
 
 class Partner(Model):
@@ -172,20 +169,15 @@ class Partner(Model):
     visit_date = Column(Date, nullable=False, index=True)
 
     instances = Relationship(
-        'Instance',
+        'Entity',
         secondary=partner_instance_table,
         )
 
     is_active = Column(Boolean, nullable=False, default=True, index=True)
 
-    create_date = Column(DateTime, nullable=False, default=datetime.now)
+    create_date = Column(DateTime, nullable=False, default=NOW)
 
-    modify_date = Column(
-        DateTime,
-        nullable=False,
-        default=datetime.now,
-        onupdate=datetime.now
-        )
+    modify_date = Column(DateTime, nullable=False, default=NOW, onupdate=NOW)
 
 
 class Domain(Model):
@@ -212,14 +204,9 @@ class Domain(Model):
 
     is_active = Column(Boolean, nullable=False, default=True, index=True)
 
-    create_date = Column(DateTime, nullable=False, default=datetime.now)
+    create_date = Column(DateTime, nullable=False, default=NOW)
 
-    modify_date = Column(
-        DateTime,
-        nullable=False,
-        default=datetime.now,
-        onupdate=datetime.now
-        )
+    modify_date = Column(DateTime, nullable=False, default=NOW, onupdate=NOW)
 
 
 class Protocol(Model):
@@ -261,14 +248,9 @@ class Protocol(Model):
 
     is_active = Column(Boolean, nullable=False, default=True, index=True)
 
-    create_date = Column(DateTime, nullable=False, default=datetime.now)
+    create_date = Column(DateTime, nullable=False, default=NOW)
 
-    modify_date = Column(
-        DateTime,
-        nullable=False,
-        default=datetime.now,
-        onupdate=datetime.now
-        )
+    modify_date = Column(DateTime, nullable=False, default=NOW, onupdate=NOW)
 
 
 class Enrollment(Model):
@@ -318,7 +300,7 @@ class Enrollment(Model):
     stop_date = Column(Date)
 
     instances = Relationship(
-        'Instance',
+        'Entity',
         secondary=enrollment_instance_table
         )
 
@@ -326,14 +308,9 @@ class Enrollment(Model):
 
     is_active = Column(Boolean, nullable=False, default=True, index=True)
 
-    create_date = Column(DateTime, nullable=False, default=datetime.now)
+    create_date = Column(DateTime, nullable=False, default=NOW)
 
-    modify_date = Column(
-        DateTime,
-        nullable=False,
-        default=datetime.now,
-        onupdate=datetime.now
-        )
+    modify_date = Column(DateTime, nullable=False, default=NOW, onupdate=NOW)
 
     __table_args__ = (
         UniqueConstraint('domain_id', 'subject_id', 'start_date'),
@@ -366,17 +343,12 @@ class Visit(Model):
 
     protocols = Relationship('Protocol', secondary=visit_protocol_table)
 
-    instances = Relationship('Instance', secondary=visit_instance_table)
+    instances = Relationship('Entity', secondary=visit_instance_table)
 
     visit_date = Column(Date, nullable=False)
 
     is_active = Column(Boolean, nullable=False, default=True, index=True)
 
-    create_date = Column(DateTime, nullable=False, default=datetime.now)
+    create_date = Column(DateTime, nullable=False, default=NOW)
 
-    modify_date = Column(
-        DateTime,
-        nullable=False,
-        default=datetime.now,
-        onupdate=datetime.now
-        )
+    modify_date = Column(DateTime, nullable=False, default=NOW, onupdate=NOW)

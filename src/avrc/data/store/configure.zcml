@@ -1,42 +1,23 @@
-<configure
-    xmlns="http://namespaces.zope.org/zope"
-    i18n_domain="avrc.data.store">
+<configure xmlns="http://namespaces.zope.org/zope" i18n_domain="avrc.data.store">
 
-  <!-- Load the Zope component directives, that's all we really need from
-       the component architecture. Everything else that is used in this
-       module is loaded as a package.
-    -->
-  <include package="zope.component" file="meta.zcml"/>
+  <include package="zope.component" file="meta.zcml" />
 
-  <adapter factory=".clinical.DatastoreProtocolManager" />
-  <adapter factory=".clinical.DatastoreDomainManager" />
-  <adapter factory=".clinical.DatastoreSubjectManager" />
-  <adapter factory=".clinical.DatastoreVisitManager" />
-  <adapter factory=".clinical.DatastorePartnerManager" />
-  <adapter factory=".clinical.DatastoreEnrollmentManager" />
+  <adapter factory=".datastore.DataStore" />
   
-  <adapter factory=".medication.DatastoreDrugManager" />
-  <adapter factory=".medication.DatastoreMedicationManager" />
-
-  <adapter factory=".schema.DatastoreSchemaManager" />
+  <adapter factory=".schema.SchemaManager" />
+  <adapter factory=".schema.FieldManager" />
+  <adapter factory=".schema.HierarchyInspector" />
   
-  <adapter factory=".symptom.DatastoreSymptomManager" />
+  <adapter factory=".storage.EntityManager" />
+  <adapter factory=".storage.ValueManager" />
 
-  <utility
-      name="avrc.data.store.Datastore"
-      component=".datastore.DatastoreFactory"
-      />
+  <utility  
+    name="avrc.data.store.Types"  
+    component=".interfaces.typesVocabulary"
+    provides="zope.schema.interfaces.IVocabulary"
+    />
 
-  <utility
-      name="avrc.data.store.Types"
-      component=".schema.supported_types_vocabulary"
-      provides="zope.schema.interfaces.IVocabulary"
-      />
-
-  <utility
-      name="avrc.data.store.Directives"
-      component=".schema.supported_directives_vocabulary"
-      provides="zope.schema.interfaces.IVocabulary"
-      />
+  <!-- Components that will soon be moved out to their own projects. -->
+  <include package="avrc.data.store.ext.clinical" />
 
 </configure>

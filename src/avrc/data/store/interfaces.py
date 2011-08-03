@@ -1,280 +1,462 @@
-""" Exposes specification for the components that will make up the data store
-    package.
+""" 
+Specification of services provided by this plug-in.
 
-    Note that not all of the functionality will currently be in place, but this
-    is a good area to specify all the components that would be nice to have in
-    the long term.
+This system employs a database framework known as 
+`Entity-Attribute-Value with Schema-Relationships Models` or simply `EAV`_ for
+short.
+
+.. _EAV: http://www.ncbi.nlm.nih.gov/pmc/articles/PMC61391/
 """
 
 import zope.interface
 import zope.schema
-import plone.directives.form
+from zope.schema.interfaces import IVocabulary
+from zope.schema.vocabulary import SimpleVocabulary
 
 from avrc.data.store import MessageFactory as _
 
-# -----------------------------------------------------------------------------
-# ERRORS
-# -----------------------------------------------------------------------------
 
-class Error(Exception):
-    """ Base class for all errors in this package """
+nameZopeMap = dict(
+    boolean=zope.schema.Bool,
+    decimal=zope.schema.Decimal,
+    integer=zope.schema.Int,
+    date=zope.schema.Date,
+    datetime=zope.schema.Datetime,
+    string=zope.schema.TextLine,
+    text=zope.schema.Text,
+    object=zope.schema.Object,
+    )
 
-class DatatoreError(Error):
-    """ Base class for data store-related errors """
+# Fixed type vocabulary
+typesVocabulary = SimpleVocabulary.fromItems(nameZopeMap.items(), IVocabulary)
 
-class SchemaError(Error):
-    """ Base class for schema-related errors """
 
-class UndefinedSchemaError(Error):
-    """ Raised when trying to access a schema that is not in the data store """
 
-class DatabaseMigrationError(Error):
-    """ Error while migrating database version. """
 
-# -----------------------------------------------------------------------------
-# API
-# -----------------------------------------------------------------------------
-
-class IComponent(zope.interface.Interface):
-    """ Base interface for the components of this package. """
-
-class Versionable(IComponent):
-    """ TODO/NOTE: We should just implement these as class directives in order
-                   prevent interface property pollution.
+class DataStoreError(Exception):
+    """ 
+    Base class for data store-related errors 
     """
 
-    __version__ = zope.interface.Attribute(
-        _(u'This will be used to keep track of the '
-          u'data store schema as they evolve'))
 
-class Formable(plone.directives.form.Schema):
-    """ Represents a schema that contains detailed information for display in a
-        form.
-
-        TODO/NOTE: We should just implement these as class directives in order
-            prevent interface property pollution.
+class SchemaError(DataStoreError):
+    """ 
+    Base class for schema-related errors 
     """
 
-    __title__ = zope.interface.Attribute(
-        _(u'A way to represent the name of in the form'))
 
-    __description__ = zope.interface.Attribute(
-        _(u'A way to represent the description.'))
-
-    __dependents__ = zope.interface.Attribute(
-        _(u'Dependent schemata'))
-
-class Schema(Versionable, Formable):
-    """ Marker interface for a schema maintained by the data store. """
-
-class IManager(IComponent):
-    """ Specification for management components, that is, components that are in
-        charge of a particular class of data. Note that a manager is simply a
-        utility into to the data store, therefore creating multiple instances
-        of a manager should have no effect on the objects being managed as they
-        are still being pulled from the same source.
+class FieldError(SchemaError):
+    """
+    Base class for field-related errors
     """
 
-    def keys():
-        """ Generates a collection of the keys for the objects the component is
-            managing.
 
-            Returns:
-                A listing of the object keys being managed by this manager.
-        """
-
-    def has(key):
-        """ Checks if the component is managing the item.
-
-            Arguments:
-                key: an item that can be used to find the component in
-                    the manager.
-
-            Returns:
-                True if the manager is in control of the item.
-        """
-
-    def get(key):
-        """ Arguments:
-                key: an item that can be used to find the component in
-                    the manager.
-            Returns:
-                An object maintained by the manger. None if not found.
-        """
-
-    def purge(key):
-        """ Completely removes the target and all data associated with it
-            from the data store.
-
-            Arguments:
-                key: an item that can be used to find the component in
-                    the manager.
-            Returns:
-                The purged object, None otherwise (nothing to purge)
-        """
-
-    def retire(key):
-        """ Retires the contained target. This means that it's information
-            remains, only it's not visible anymore. The reason this
-            functionality is useful is so that data can be 'brought back'
-            if expiring caused undesired side-effects.
-
-            Arguments:
-                key: an item that can be used to find the component in
-                    the manager.
-            Returns:
-                The retired object, None otherwise (nothing to retired)
-        """
-
-    def restore(key):
-        """ Attempts to restore a previously retired object via its key handle.
-
-            Arguments:
-                key: an item that can be used to find the component in
-                    the manager.
-            Returns:
-                The restored object, None otherwise (nothing to restore)
-        """
-
-    def put(target):
-        """ Adds or modifies the target into the manager
-
-            Arguments:
-                target: an object that will be added to this component's manager.
-            Returns:
-                A key to the newly stored target
-            Raises:
-                TODO: needs to raise something if put fails.
-        """
-
-class IManagerFactory(IComponent):
-    """
+class EntityError(DataStoreError):
+    """ Base class for entity-related errors
     """
 
-    def __call__(self, datastore):
-        """
-        """
 
-
-class ISchemaManager(IManager):
-    """ Marker interface for managing schemata. """
-
-    def get_descendants(iface):
-        """ Retrieves the classes that inherit from the specified base.
-
-            Arguments:
-                iface: (object) base interface to find all the descendants for
-            Returns:
-                list of interfaces that extend the specified base
-        """
-
-    def get_children(iface):
-        """ Retrieves all the children of the base class. Note this does
-            not include all the intermediate bases (i.e. it just returns the
-            leaf nodes)
-
-            Arguments:
-                iface: (object) base interface to find all the children for
-            Returns:
-                list of interfaces that extend the specified base
-        """
-
-class IDatastore(IManager):
-    """ Represents a data store utility that can be added to a site. It is in
-        charge of managing the entire network of data that will be created from
-        schemata, etc. It achieves this by using registered helper utilities
-        that it adapts into called 'managers'.
+class PropertyError(EntityError):
+    """ 
+    Base class for property-related errors (value)
     """
 
-    def spawn(iface, **kw):
-        """ Generates an object that implements the specified schema
-        """
 
-    def getManager(imanager):
-        """ Get the specified management utility assigned to this datastore.
-
-            Arguments:
-                imanager: (object) zope interface specification of the utility
-                    to retrieve
-            Returns:
-                A management utility that implements the request specification
-        """
-
-    def getAliquotManager():
-        """
-        """
-
-    def getSpecimenManager():
-        """
-        """
-
-    def getDomainManager():
-        """
-        """
-
-    def getEnrollmentManager():
-        """
-        """
-
-    def getProtocolManager():
-        """
-        """
-
-    def getSchemaManager():
-        """
-        """
-
-    def getSubjectManager():
-        """
-        """
-
-    def getVisitManager():
-        """
-        """
-
-    def getDrugManager():
-        """
-        """
-
-    def getMedicationManager():
-        """
-        """
-
-    def getSymptomManager():
-        """
-        """
-
-    def getPartnerManager():
-        """
-        """
-
-class IDatastoreFactory(IComponent):
-    """ How to instantiate a datastore
+class NotCompatibleError(SchemaError):
+    """ 
+    The schema doesn't subclass ``avrc.data.store.directives.Schema`` 
     """
 
-    def __call__(session):
-        """ The session to use.
-        """
 
-class IInstance(IComponent):
-    """ Empty object that will be used as the instance of a virtual schema.
+class MultipleBasesError(SchemaError):
+    """ The schema has multiple base classes
+    """
+
+
+class TypeNotSupportedError(FieldError):
+    """ 
+    The type specified for a field is not part of the vocabulary of 
+    supported types.
+    """
+
+
+class ChoiceTypeNotSpecifiedError(FieldError):
+    """ 
+    The type specified for the choiced field is unsupported.
+    """
+
+
+class PropertyNotDefinedError(PropertyError):
+    """ 
+    An entity's schema does not have the property specified.
+    """
+
+
+class InvalidObjectError(EntityError):
+    """ 
+    An object does not provide `IInstance`
+    """
+
+
+
+
+class IDataStoreComponent(zope.interface.Interface):
+    """ 
+    Marker interface for components of this package. 
+    """
+
+
+class IEntry(IDataStoreComponent):
+    """ 
+    An object that can be stored in a database.
+    """
+
+    id = zope.schema.Int(
+        title=_(u'Database ID'),
+        description=_(
+            u'This value is auto-generated by the database and assigned to '
+            u'the item. It should not be modified, otherwise risking '
+            u'altered database behavior.'
+            ),
+        readonly=True
+        )
+
+
+class IDescribeable(IDataStoreComponent):
+    """
+    A human-readable object.
+    """
+
+    name = zope.schema.BytesLine(
+        title=_(u'Internal name.'),
+        description=_(
+            u'This value is usually an ASCII label to be used for '
+            u'easy reference of the item. When naming an item, lowercase '
+            u'alphanumeric characters or hyphens. The name should also be '
+            u'unique within a container.'
+            )
+        )
+
+    title = zope.schema.TextLine(
+        title=_(u'Human readable name'),
+        )
+
+    description = zope.schema.Text(
+        title=_(u'Description/Prompt')
+        )
+
+
+class IModifiable(IDataStoreComponent):
+    """ 
+    An object with modification metadata.
+    """
+
+    create_date = zope.schema.Datetime(
+        title=_(u'Date Created'),
+        readonly=True,
+        )
+
+    modify_date = zope.schema.Datetime(
+        title=_(u'Date Modified'),
+        readonly=True,
+        )
+
+    remove_date = zope.schema.Datetime(
+        title=_(u'Date Removed'),
+        readonly=True,
+        required=False,
+        )
+
+
+class IDataBaseItem(IEntry, IDescribeable, IModifiable):
+    """ 
+    An object that originates from database.
+    """
+
+
+class IHistoryItem(IDataBaseItem):
+    """ 
+    An extension of a database item. Entries of this type are non-unique
+    (i.e. the `name` is non-unique) and so a new entry is committed to the
+    database for each modification of the object, unless otherwise specified
+    by management-utility parameters. When this occurs, the previous
+    named entry is decommissioned and a new entry is created.
+    Thus, each `create_date` and `remove_date` pair now denotes a point in 
+    time for an entry with `name`.
+    
+    Repurposed standard `IDataBaseItem` attributes:
+        ``name`` 
+            Internally, the name is the lifespan of the object. This means
+            that there will be multiple entries in the database for
+            the object with the given name, and so the timestamps
+            will be able to indicate it's lifecycle.
+        ``create_date``
+            The date when the named entry came into existence.
+        ``modify_date``
+            Used if changes are ammended to and active named entry (as
+            opposed expanding the named entry's history).
+        ``remove_date``
+            The date when the named entry was decommissioned. A value of
+            None denotes that the entry is still active.
+    """
+
+
+class ISchema(IHistoryItem):
+    """ 
+    An object that describes how an EAV schema is generated.
+    Typically, an EAV schema represents a group of attributes that represent
+    a meaningful data set. (e.g. contact details, name, test result.)
+    Resulting schema objects can then be used to produce forms such as
+    Zope-style interfaces.
+    """
+
+    sub_schemata = zope.schema.Iterable(
+        title=_(u'Sub Schemata'),
+        description=_(u'Listing of schemata that subclass the Zope-style interface.'),
+        )
+
+    storage = zope.schema.Choice(
+        title=_(u'Storage method'),
+        description=_(
+            u'How the generated objects will be stored. Storage methods are: '
+            u'eav - individual values are stored in a type-sharded set of tables; '
+            u'resource - the object exists in an external service, such as MedLine; '
+            u'table - the object is stored in a conventional SQL table;'
+            ),
+        values=sorted(['resource', 'eav', 'table']),
+        default='eav',
+        )
+
+    is_association = zope.schema.Bool(
+        title=_(u'Is the schema an association?'),
+        description=_(
+            u'If set and True, the schema is an defines an association for '
+            u'multiple schemata.'
+            ),
+        required=False,
+        )
+
+    is_inline = zope.schema.Bool(
+        title=_(u'Is the resulting object inline?'),
+        description=_(
+            u'If set and True, the schema should be rendered inline to other '
+            u'container schemata. '
+            ),
+        required=False,
+        )
+
+
+# Needs to be defined here, because it's type refers to itself.
+ISchema.base_schema = zope.schema.Object(
+    title=_(u'Base schema'),
+    description=_(
+        u'A base schema for this schema to extend, thus emulating OO-concepts.'
+        ),
+    schema=ISchema,
+    required=False,
+    )
+
+
+class IAttribute(IHistoryItem):
+    """ 
+    An object that describes how an EAV attribute is generated.
+    Typically, an attribute is a meaningful property in the class data set. 
+    (e.g. user.firstname, user.lastname, contact.address, etc..)
+    Note that if the attribute's type is an object, an object_class must
+    be specified as well as a flag setting whether the object is to be
+    rendered inline.
+    Resulting attribute objects can then be used to produce forms such as
+    Zope-style schema field.
+    
+    TODO: Currently there is no way of constraining list length.
+    """
+
+    schema = zope.schema.Object(
+        title=_(u'Schema'),
+        description=_(u'The schema that this attribute belongs to'),
+        schema=ISchema,
+        )
+
+    type = zope.schema.Choice(
+        title=_(u'Type'),
+        values=sorted(nameZopeMap.keys()),
+        )
+
+    choices = zope.schema.Iterable(
+        title=_(u'Acceptable answer choices of type IChoice.')
+        )
+
+    is_collection = zope.schema.Bool(
+        title=_(u'Is the attribute a collection?'),
+        default=False,
+        )
+
+    is_readonly = zope.schema.Bool(
+        title=_(u'Is the attribute a read-only?'),
+        default=False
+        )
+
+    is_required = zope.schema.Bool(
+        title=_(u'Is the attribute a required field?'),
+        default=False,
+        )
+
+    is_inline_object = zope.schema.Bool(
+        title=_(u'Is the attribute form rendered inline?'),
+        description=_(
+            u'Only applies to attributes of type "object". '
+            u'If True, overrides `ISchema.is_inline`. '
+            ),
+        required=False,
+        )
+
+    object_schema = zope.schema.Object(
+        title=_(u'The object\'s schema'),
+        description=_(u'Only applies to attributes of type "object". '),
+        schema=ISchema,
+        required=False
+        )
+
+    url_template = zope.schema.URI(
+        title=_(u'URI template'),
+        description=_(
+            u'Only applies to attributes of type "object" that are a resource.'
+            ),
+        required=False
+        )
+
+    min = zope.schema.Int(
+        title=_(u'Minimum value'),
+        description=u'Minimum length or value (depending on type)',
+        required=False,
+        )
+
+    max = zope.schema.Int(
+        title=_(u'Maximum value'),
+        description=u'Maximum length or value (depending on type)',
+        required=False
+        )
+
+    default = zope.schema.TextLine(
+        title=_(u'Default value'),
+        description=u' (Coerced on add)',
+        required=False,
+        )
+
+    validator = zope.schema.TextLine(
+        title=_(u'Validation regular expressions'),
+        description=_(
+            u'Use Perl-derivative regular expression to validate the attribute value.'
+            ),
+        required=False,
+        )
+
+    widget = zope.schema.DottedName(
+        title=_(u'Widget namespace.'),
+        description=_(u'Client library name space for rendering.'),
+        required=False
+        )
+
+    order = zope.schema.Int(
+        title=_(u'Display Order')
+        )
+
+
+class IChoice(IDataBaseItem):
+    """ 
+    Possible value constraints for an attribute.
+    Note objects of this type are not versioned, as they are merely an
+    extension of the IAttribute objects. So if the choice constraints
+    are to be modified, a new version of the IAttribute object
+    should be created.
+    """
+
+    attribute = zope.schema.Object(
+        title=_(u'Attribute'),
+        description=_(u'The attribute that will be constrained.'),
+        schema=IAttribute
+        )
+
+    value = zope.schema.TextLine(
+        title=_(u'Value'),
+        description=_(u'The value will be coerced when stored.')
+        )
+
+    order = zope.schema.Int(
+        title=_(u'Display Order')
+        )
+
+
+class IEntity(IHistoryItem):
+    """ 
+    An object that describes how an EAV object is generated.
+    Note that work flow states may be assigned to class entities.
+    """
+
+    schema = zope.schema.Object(
+        title=_(u'Object Schema'),
+        description=_(u'The scheme the object will provide once generated.'),
+        schema=ISchema
+        )
+
+
+class IValue(IHistoryItem):
+    """ 
+    An object that records values assigned to an EAV Entity.
+    """
+
+    entity = zope.schema.Object(
+        title=_(u'Entity'),
+        schema=IEntity
+        )
+
+    attribute = zope.schema.Object(
+        title=_(u'Property'),
+        schema=IAttribute
+        )
+
+    choice = zope.schema.Object(
+        title=_('Choice'),
+        description=_(
+            u'Used for book keeping purposes as to where the value was '
+            u'assigned from.'
+            ),
+        schema=IChoice,
+        required=False
+        )
+
+    value = zope.schema.Field(
+        title=_(u'Assigned Value'),
+        )
+
+
+
+
+class IInstance(IDataStoreComponent):
+    """ 
+    An object derived from EAV entries. Objects of this type are effectively
+    stripped from their database references and are simply Python objects.
     """
 
     __id__ = zope.interface.Attribute(_(
         u'The INTERNAL id of the instance. Tampering or accessing this id '
         u'outside of this package is highly not recommended'))
 
+
     __schema__ = zope.interface.Attribute(_(
         u'The schema the created object will represent'
         ))
+
 
     __state__ = zope.interface.Attribute(_(
         u'The workflow state of the created object.'
         ))
 
+
     title = zope.interface.Attribute(_(
         u'The instance\'s database-unique name'
         ))
+
 
     description = zope.interface.Attribute(_(
         u'A description for the object'
@@ -285,314 +467,330 @@ class IInstance(IComponent):
         """
         """
 
+
     def getState():
         """
         """
 
-class IKey(IComponent):
-    """ Ideally, this interface should be used to somehow manage identifiers for
-        the managers. But, in it's current state this interface is unused...
-    """
 
-    value = zope.interface.Attribute(
-        _(u'A way to distinguish this item in the data store'))
 
-class IDomain(IComponent):
-    """ """
-    zid = zope.schema.Int(title=_(u'Domain Zope IntId'))
+class IManager(IDataStoreComponent):
+    """ 
+    Specification for management components, that is, components that are in
+    charge of a particular class of data. Note that a manager is simply a
+    utility into to the data store, therefore creating multiple instances
+    of a manager should have no effect on the objects being managed as they
+    are still being pulled from the same source.
 
-    code = zope.schema.TextLine(title=_(u'Code'))
-
-    title = zope.schema.TextLine(title=_(u'Title'))
-
-    consent_date = zope.schema.Date(title=_(u'Date of consent'))
-
-
-class IProtocol(IComponent):
-    """ """
-    zid = zope.schema.Int(title=_(u'Protocol Zope IntId'))
-
-    cycle = zope.schema.Int(title=_(u'Protocol Cycle'), required=False)
-
-    domain_zid = zope.schema.Int(title=_(u'Domain Zope IntId'))
-
-    threshold = zope.schema.Int(title=_(u'Cycle Threshold'), required=False)
-
-    is_active = zope.schema.Bool(title=_(u'Active?'), required=False, default=True)
-
-
-class IVisit(IComponent):
-    """ """
-    zid = zope.schema.Int(title=_(u'Visit Zope IntId'))
-
-    subject_zid = zope.schema.Int(title=_(u'Enrolled Subject Zope IntId'))
-
-    protocol_zids = zope.schema.List(
-       title=_(u'???'),
-       value_type=zope.schema.Int(title=_(u'???'))
-       )
-
-    visit_date = zope.schema.Date(title=_(u'Visit Date'))
-
-class IEnrollment(IComponent):
-    """ """
-    zid = zope.schema.Int(title=_(u'Enrollment Zope IntId'))
-
-    subject_zid = zope.schema.Int(title=_(u'Enrolled Subject Zope IntId'))
-
-    domain_zid = zope.schema.Int(title=_(u'Enrolled Domain Zope IntId'))
-
-    start_date = zope.schema.Date(title=_(u'Initial Date of Consent'))
-
-    consent_date = zope.schema.Date(title=_(u'Latest Date of Consent'))
-
-    stop_date = zope.schema.Date(title=_(u'End Date'))
-
-    eid = zope.schema.TextLine(title=_(u'Enrollment Identifier'), required=False)
-
-class ISubject(IComponent):
-    """ """
-    zid = zope.schema.Int(title=_('Zope\'s ID'))
-
-    nurse_email = zope.schema.TextLine(title=_(u'Nurse\'s email'))
-
-    uid = zope.schema.Int(title=_('Encoded OUR Number (deprecated)'))
-
-    our = zope.schema.TextLine(title=_('OUR Number'))
-
-    aeh = zope.schema.TextLine(title=_('Legacy AEH number'), required=False)
-
-class IReportable(IComponent):
-    """ Promises to do some form of reporting. """
-
-    def report():
-        """ """
-
-class IQueryLine(IComponent):
-    """ A simple query to the data store. """
-
-    value = zope.schema.TextLine(
-        title=_(u'Search'),
-        required=True
-        )
-
-class IQuery(IComponent):
-    """ Querying contract. """
-
-    contains = zope.schema.List(
-        title=_(u'Phrases'),
-        description=_(u'Contains any of the listed terms.'),
-        value_type=zope.schema.TextLine(title=_(u'Phrase')),
-        required=False,
-        )
-
-    some = zope.schema.List(
-        title=_(u'Some Phrases'),
-        description=_('Contains one or more of the listed terms.'),
-        min_length=1,
-        max_length=3,
-        value_type=zope.schema.TextLine(title=_(u'Phrase')),
-        required=False,
-        )
-
-    ignore = zope.schema.List(
-        title=_(u'Do not include'),
-        description=_(u'Do not include the listed terms.'),
-        value_type=zope.schema.TextLine(title=_(u'Phrase')),
-        required=False,
-        )
-
-    domain = zope.schema.List(
-        title=_(u'Domain search'),
-        description=_(u'Search within a domain only.'),
-        value_type=zope.schema.TextLine(title=_(u'Phrase')),
-        required=False,
-        )
-
-    date = zope.schema.Choice(
-        title=_(u'Date'),
-        description=_(u'How recent is the entry?'),
-        values=(_(u'anytime'),
-                _(u'past 24 hours'),
-                _(u'past week'),
-                _(u'past month'),
-                _(u'past year')),
-        required=False
-        )
-
-    range = zope.schema.List(
-        title=_(u'Numeric ranges'),
-        description=_(u'Contains the listed value ranges'),
-        value_type=zope.schema.Tuple(
-            title=u'Range',
-            min_length=2,
-            max_length=2,
-            value_type=zope.schema.Float(title=_(u'Value')),
-            ),
-        required=False,
-        )
-
-class IConventionalManager(IManager):
-    """ Marker interface for managing domains """
-
-#    datastore = zope.schema.Object(title=u'Datastore',
-#                                   schema=IDatastore)
-#    _type = zope.schema.Object(title=u'Type',
-#                               value_type=IManager)
-
-class IDomainManager(IManager):
-    """ Marker interface for managing domains """
-
-class ISubjectManager(IManager):
-    """ Marker interface for managing subjects """
-
-class IProtocolManager(IManager):
-    """ Marker interface for managing protocols """
-
-class IEnrollmentManager(IManager):
-    """ Marker interface for managing enrollments """
-
-class IVisitManager(IManager):
-    """ Marker interface for managing protocols """
-
-
-class IMedication(IComponent):
-    """ Content-type for adding current medications to a patient.
-    """
-
-    dsid = zope.schema.Int(title=_(u'Datastore ID'), required=False)
-
-    subject_zid = zope.schema.Int(title=_(u'Zope Subject Object ID'))
-
-    drug_code = zope.schema.TextLine(
-        title=_(u'Drug Code'),
-        required=True
-        )
-
-    start_date = zope.schema.Date(
-        title=_(u'Date Started'),
-        description=_(u'Date the patient started taking the drug.'),
-        required=True
-        )
-
-    stop_date = zope.schema.Date(
-        title=_(u'Date Stopped'),
-        description=_(u'Date the patient stopped taking the drug.'),
-        required=False
-        )
-    notes = zope.schema.Text(
-        title=_(u'Notes (if any):'),
-        required=False
-        )
-
-
-class IDrugManager(IManager):
-    """
-    """
-
-    def import_(drug_list):
-        """
-        """
-
-
-    def getCodesVocabulary():
-        """
-        """
-
-
-class IMedicationManager(IManager):
-    """
-    """
-
-    def listByVisit(visit, subject):
-        """
-        """
-
-
-    def listBySubject(subject):
-        """
-        """
-
-
-class IPartnerManager(IManager):
-    """
+    Note that ``on`` and ``ever`` arguments are mutually exclusive for
+    methods taking them as parameters.
     """
 
 
-class IPartner(IComponent):
+    def keys(on=None, ever=False):
+        """ 
+        Generates a collection of the keys for the objects the component is
+        managing.
+
+        Arguments
+            ``on``
+                (Optional) Only checks data active "on" the time specified.
+            ``ever``
+                (Optional) If set, covers all items "ever" active.
+
+        Returns
+            A listing of the object keys being managed by this manager.
+        """
+
+    def lifecycles(key):
+        """ 
+        Generates the available versions for key.
+    
+        Arguments
+            ``key`` 
+                The name of the item.
+                
+        Returns
+            A list of tuples (create, remove) of the specified key
+        """
+
+
+    def has(key, on=None, ever=False):
+        """ 
+        Checks if the component is managing the item.
+
+        Arguments
+            ``key`` 
+                The name of the item.
+            ``on``
+                (Optional) Only checks data active "on" the time specified.
+            ``ever``
+                (Optional) If set, covers all items "ever" active.
+                 
+        Returns
+            True if the manager is in control of the item.
+        """
+
+
+    def purge(key, on=None, ever=False):
+        """ 
+        Completely removes the target and all data associated with it
+        from the data store.
+
+        Arguments
+            ``key`` 
+                The name of the item.
+            ``on``
+                (Optional) Only checks data active "on" the time specified.
+            ``ever``
+                (Optional) If set, covers all items "ever" active.
+                
+        Returns
+            The number of items purged from the data store. (This does
+            not include all related items).
+        """
+
+
+    def retire(key):
+        """ 
+        Retires the contained item. This means that it's information
+        remains, only it's not visible anymore. The reason this
+        functionality is useful is so that data can be 'brought back'
+        if expiring caused undesired side-effects. Note that this
+        method only works with currently active items.
+
+        Arguments
+            ``key`` 
+                The name of the item.
+                
+        Returns
+            True if successfully retired.
+        """
+
+
+    def restore(key):
+        """ 
+        Restores a previously retired item. Only works on the most recently
+        retired item.
+
+        Arguments
+            ``key``
+                The name of the item.
+                
+        Returns
+            The restored object, None otherwise (nothing to restore). In
+            cases where the item being restored is still active, the item
+            will still be returned, unmodified.
+        """
+
+
+    def get(key, on=None):
+        """ 
+        Retrieve an item in the manager.
+    
+        Arguments
+            ``key`` 
+                The name of the item.
+            ``on``
+                (Optional) Only checks data active "on" the time specified.
+
+        Returns
+            An object maintained by the manger. None if not found.
+        """
+
+
+    def put(key, item):
+        """ 
+        Adds the item to the manager. If there is already an item with
+        the same name, then the already existing item is retired and
+        the new item is added as the currently active item for the name.
+
+
+        Arguments
+            ``key``
+                The name of the item.
+            ``item``
+                The item to be stored in the manager.
+                
+        Returns
+            A key to the newly stored item
+        """
+
+
+class ISchemaManager(IManager):
+    """ 
+    Marker interface for utilities that manage schemata metadata.
+    """
+
+
+class IFieldManager(IManager):
+    """ 
+    Marker interface for utilities that manage field metadata.
+    """
+
+
+class IEntityManager(IManager):
+    """ 
+    Marker interface for utilities that manage entity metadata.
+    """
+
+
+class IValueManager(IManager):
+    """ 
+    Marker interface for utilities that manage value metadata.
+    """
+
+
+class ISchemaManagerFactory(IDataStoreComponent):
+    """ 
+    Produces a manager that is able to use database schema descriptions
+    to produce Zope-style Interfaces/Schemata.
+    """
+
+    def __call__(session):
+        """ 
+        Manager call signature.
+        
+        Arguments
+            ``session``
+                A database session to use for retrieval of entry information. 
+        """
+
+
+class IFieldManagerFactory(IDataStoreComponent):
+    """ 
+    Produces a manager that is able to use database attribute descriptions
+    to produce Zope-style Fields.
+    """
+
+    def __call__(schema):
+        """
+        Manager call signature.
+        
+        Arguments
+            ``schema``
+                An object that provides `ISchema`, to know which fields
+                to retrieve.
+        """
+
+
+class IEntityManagerFactory(IDataStoreComponent):
+    """ 
+    Produces a manager that is able to use database entry descriptions
+    to produce an object that provides a Zope-style interface that is
+    also stored in the database.
+    """
+
+    def __call__(session):
+        """ 
+        Manager call signature.
+            
+        Arguments
+            ``session``
+                A database session to use for retrieval of entry information. 
+        """
+
+
+class IValueManagerFactory(IDataStoreComponent):
+    """ 
+    Produces a manager that is able to use database value descriptions to 
+    produce the values assigned to an object.
+    """
+
+    def __call__(entity):
+        """ 
+        Manager call signature.
+        
+        Arguments
+            ``entity``
+                An object that provides `IEntity`, to know which assignments
+                to retrieve.
+        """
+
+
+class IHierarchy(IDataStoreComponent):
+    """ 
+    Offers functionality on inspecting a the hierarchy of a schema
+    description.
+    """
+
+    def getChildren(key, on=None):
+        """ 
+        Return the Zope-style interfaces of all the children (leaf nodes)
+        in the hierarchy of the specified name.
+        
+        Arguments
+            ``key``
+                The name of the parent schema.
+            ``on``
+                (Optional) Only checks data active "on" the time specified.
+        """
+
+
+    def getChildrenNames(key, on=None):
+        """ 
+        Return the names of all the children (leaf nodes)
+        in the hierarchy of the specified name.
+        
+        Arguments
+            ``key``
+                The name of the parent schema.
+            ``on``
+                (Optional) Only checks data active "on" the time specified.
+        """
+
+class IHierarchyFactory(IDataStoreComponent):
+    """ 
+    Produces an object that is able to inspect the hierarchy of schemata.
+    """
+
+    def __call__(session):
+        """ 
+        Produces a hierarchy inspector.
+    
+        Arguments
+            ``session``
+                A database session to use for retrieval of entry information.
+        """
+
+
+class IDataStore(IDataStoreComponent):
+    """ 
+    Represents a data store utility that can be added to a site. It is in
+    charge of managing the entire network of data that will be created from
+    schemata, etc. It achieves this by using registered helper utilities
+    that it adapts into called 'managers'.
+    """
+
+
+class IDatastore(zope.interface.Interface):
+    """ 
+    Legacy DataStore specification.
+    Deprecated in favor of ``IDataStore``
+    """
+
+
+class IDataStoreFactory(IDataStoreComponent):
+    """ 
+    How to instantiate a DataStore
+    """
+
+    def __call__(session):
+        """ The session to use.
+        """
+
+class IDataStoreExtension(IDataStoreComponent):
+    """
+    A factory specification for legacy systems that still depend on a 
+    DataStore object as a utility.
+    """
+
+    def __call__(datastore):
+        """ 
+        The ``DataStore`` to use.
+        """
+
+
+class ISchemaFormat(IDataStoreComponent):
     """
     """
-
-    zid = zope.schema.Int(title=_(u'Zope Object ID'))
-
-    subject_zid = zope.schema.Int(title=_(u'Subject Object ID'))
-
-    enrolled_subject_zid = zope.schema.Int(title=_(u'Enrolled Subject Object ID'))
-
-    visit_date = zope.schema.Date(title=_(u'Recorded Visit Date'))
-
-
-class ISymptom(IComponent):
-    """ Content-type for adding current medications to a patient.
-    """
-
-    dsid = zope.schema.Int(title=_(u'Datastore ID'), required=False)
-
-    subject_zid = zope.schema.Int(title=_(u'Zope Subject Object ID'))
-
-    type = zope.schema.TextLine(
-        title=_(u'Type'),
-        required=True
-        )
-
-    type_other = zope.schema.TextLine(
-        title=_(u'Other'),
-        required=False,
-        )
-
-    is_attended = zope.schema.Bool(
-        title=_(u'Subject seeked medical attention.'),
-        required=False,
-        )
-
-    start_date = zope.schema.Date(
-        title=_(u'Date Started'),
-        description=_(u'Date the patient started taking the drug.'),
-        required=True
-        )
-
-    stop_date = zope.schema.Date(
-        title=_(u'Date Stopped'),
-        description=_(u'Date the patient stopped taking the drug.'),
-        required=False
-        )
-    notes = zope.schema.Text(
-        title=_(u'Notes (if any):'),
-        required=False
-        )
-
-
-class ISymptomManager(IManager):
-    """
-    """
-
-    def importTypes(symptom_types):
-        """ The symptom types aren't a a type yet (unlike, say `Drug`), so
-            they don't need their own manager.
-        """
-
-
-    def getTypesVocabulary():
-        """
-        """
-
-
-    def listByVisit(visit, subject):
-        """
-        """
-
-
-    def listBySubject(subject):
-        """
-        """
-
