@@ -25,8 +25,7 @@ Change Log
         will be further pursued in the coming versions of DataStore.
      
 - Extensions
-    - Clinical-based components moved to their own extension package found
-        in ``avrc.data.store.ext``
+    - Clinical-based components moved to their own packages.
         
 - Form
     - New form paradigm adopted: fieldsets are considered inline objects (

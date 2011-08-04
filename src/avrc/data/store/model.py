@@ -456,6 +456,3 @@ class Assignment(Model, _History):
     __mapper_args__ = dict(
         primary_key=[assignment_table.c.entity_id, assignment_table.c.attribute_id]
         )
-
-# TODO: (mmartinez) remove in the future
-from avrc.data.store.ext.clinical.model import *
