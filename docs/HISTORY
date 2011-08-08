@@ -19,10 +19,10 @@ Change Log
     - Removed dependency on ``z3c.saconfig``
     - Manager specifications updated with time-based parameters (for history)
     - Removed dependencies on zope/plone UI-specific components such as
-        ``z3c.form``, ``plone.dexterity``, ``plone.autoform`` etc. The reason for this 
-        change is to  make DataStore it's own stand-alone utility that can be 
-        used command line or as a plug-in in to other frameworks. This approach
-        will be further pursued in the coming versions of DataStore.
+        ``z3c.form``, ``plone.dexterity``, ``plone.autoform`` etc. The reason 
+        for this change is to  make DataStore it's own stand-alone utility that 
+        can be used command line or as a plug-in in to other frameworks. This 
+        approach will be further pursued in the coming versions of DataStore.
      
 - Extensions
     - Clinical-based components moved to their own packages.
