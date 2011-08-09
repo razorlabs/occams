@@ -35,18 +35,24 @@ setup(
     zip_safe=False,
     install_requires=[
         'setuptools',
-        ### Zope 2
-        'zope.component', # adapter/utility registration
-        'zope.configuration', # ZCML support 
-        'zope.deprecation', # Deprecation warnings
-        'zope.i18nmessageid', # Internationalization
-        'zope.interface', # Component specifications
-        'zope.schema', # Component property specifications
-        ### Interface directives
+
+        # ZOPE component functionality
+        'zope.component',
+        'zope.configuration',
+        'zope.deprecation',
+        'zope.i18nmessageid',
+
+        # Component specification/documentation
+        'zope.interface',
+        'zope.schema',
+
+        # Interface directives for schemata
         'martian',
-        ### SQL
-        'SQLAlchemy>=0.6.7,<0.6.99', # Backbone of this utility
-        'sqlalchemy-migrate>=0.6.1,<0.6.99', # Database schema upgrades
+
+        # ORM utilities and upgrade tools
+        'SQLAlchemy>=0.6.7,<0.6.99',
+        'sqlalchemy-migrate>=0.6.1,<0.6.99',
+
         ],
     extras_require=dict(
         postgresql=['psycopg2'],
