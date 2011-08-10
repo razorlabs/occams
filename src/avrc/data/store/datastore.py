@@ -6,7 +6,11 @@ from zope.component import adapts
 from zope.interface import implements
 from zope.interface import classProvides
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import scoped_session
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.scoping import ScopedSession
+
 
 from avrc.data.store.interfaces import IDataStoreFactory
 from avrc.data.store.interfaces import IDataStore
@@ -34,6 +38,14 @@ class DataStore(object):
         self.storage = EntityManager(session)
         self.schemata = SchemaManager(session)
 
+    @classmethod
+    def create(cls, url):
+        """ Convenience method for creating instances factory-style
+        """
+        engine = create_engine(url)
+        session = scoped_session(sessionmaker(engine))
+        instance = cls(session)
+        return instance
 
     def __str__(self):
         class_ = self.__class__.__name__
