@@ -17,7 +17,7 @@ from sqlalchemy.orm import object_session
 from sqlalchemy.orm.scoping import ScopedSession
 
 from avrc.data.store import directives
-from avrc.data.store import model
+from avrc.data.store import model as dsmodel
 from avrc.data.store.interfaces import IInstance
 from avrc.data.store.interfaces import IEntity
 from avrc.data.store.interfaces import IEntityManager
@@ -31,14 +31,14 @@ from avrc.data.store.schema import SchemaManager
 
 # Where the types are stored
 nameModelMap = dict(
-    integer=model.ValueInteger,
-    boolean=model.ValueInteger,
-    string=model.ValueString,
-    text=model.ValueString,
-    decimal=model.ValueDecimal,
-    date=model.ValueDatetime,
-    datetime=model.ValueDatetime,
-    object=model.ValueObject,
+    integer=dsmodel.ValueInteger,
+    boolean=dsmodel.ValueInteger,
+    string=dsmodel.ValueString,
+    text=dsmodel.ValueString,
+    decimal=dsmodel.ValueDecimal,
+    date=dsmodel.ValueDatetime,
+    datetime=dsmodel.ValueDatetime,
+    object=dsmodel.ValueObject,
     )
 
 # What the types are cast to when queried
@@ -54,11 +54,11 @@ nameSqlMap = dict(
     )
 
 valueModels = (
-    model.ValueDatetime,
-    model.ValueDecimal,
-    model.ValueInteger,
-    model.ValueObject,
-    model.ValueString
+    dsmodel.ValueDatetime,
+    dsmodel.ValueDecimal,
+    dsmodel.ValueInteger,
+    dsmodel.ValueObject,
+    dsmodel.ValueString
     )
 
 
@@ -145,9 +145,9 @@ class EntityManager(object):
 
     def keys(self, on=None, ever=False):
         session = self.session
-        query = session.query(model.Entity.name)
+        query = session.query(dsmodel.Entity.name)
         if not ever:
-            query = query.filter(model.Entity.asOf(on))
+            query = query.filter(dsmodel.Entity.asOf(on))
         result = [key for (key,) in query.all()]
         return result
 
@@ -155,11 +155,11 @@ class EntityManager(object):
     def lifecycles(self, key):
         session = self.session
         query = (
-            session.query(model.Entity.create_date.label('event_date'))
+            session.query(dsmodel.Entity.create_date.label('event_date'))
             .union(
-                session.query(model.Entity.remove_date),
-                session.query(model.Assignment.create_date),
-                session.query(model.Assignment.remove_date),
+                session.query(dsmodel.Entity.remove_date),
+                session.query(dsmodel.Assignment.create_date),
+                session.query(dsmodel.Assignment.remove_date),
                 )
             .order_by('event_date ASC')
             )
@@ -169,18 +169,18 @@ class EntityManager(object):
 
     def has(self, key, on=None, ever=False):
         session = self.session
-        query = session.query(model.Entity).filter_by(name=key)
+        query = session.query(dsmodel.Entity).filter_by(name=key)
         if not ever:
-            query = query.filter(model.Entity.asOf(on))
+            query = query.filter(dsmodel.Entity.asOf(on))
         result = query.count()
         return result
 
 
     def purge(self, key, on=None, ever=False):
         session = self.session
-        query = session.query(model.Entity).filter_by(name=key)
+        query = session.query(dsmodel.Entity).filter_by(name=key)
         if not ever:
-            query = query.filter(model.Entity.asOf(on))
+            query = query.filter(dsmodel.Entity.asOf(on))
         result = query.delete('fetch')
         return  result
 
@@ -188,24 +188,24 @@ class EntityManager(object):
     def retire(self, key):
         session = self.session
         query = (
-            session.query(model.Entity)
+            session.query(dsmodel.Entity)
             .filter_by(name=key)
-            .filter(model.Entity.asOf(None))
+            .filter(dsmodel.Entity.asOf(None))
             )
-        result = query.update(dict(remove_date=model.NOW), 'fetch')
+        result = query.update(dict(remove_date=dsmodel.NOW), 'fetch')
         return result
 
 
     def restore(self, key):
         session = self.session
         query = (
-            session.query(model.Entity)
-            .filter(None != model.Entity.remove_date)
-            .filter(model.Entity.id == (
-                session.query(model.Entity.id)
+            session.query(dsmodel.Entity)
+            .filter(None != dsmodel.Entity.remove_date)
+            .filter(dsmodel.Entity.id == (
+                session.query(dsmodel.Entity.id)
                 .filter_by(name=key)
                 .order_by(
-                    model.Entity.create_date.desc()
+                    dsmodel.Entity.create_date.desc()
                     )
                 .limit(1)
                 .as_scalar()
@@ -218,9 +218,9 @@ class EntityManager(object):
     def get(self, key, on=None):
         session = self.session
         query = (
-            session.query(model.Entity)
+            session.query(dsmodel.Entity)
             .filter_by(name=key)
-            .filter(model.Entity.asOf(on))
+            .filter(dsmodel.Entity.asOf(on))
             )
         entity = query.first()
 
@@ -248,7 +248,7 @@ class EntityManager(object):
         session = self.session
         state = item.getState()
         filter = state is None and dict(is_default=True) or dict(name=state)
-        state = session.query(model.State).filter_by(**filter).first()
+        state = session.query(dsmodel.State).filter_by(**filter).first()
         return state
 
 
@@ -263,7 +263,7 @@ class EntityManager(object):
 
         state = item.getState()
         filter = state is None and dict(is_default=True) or dict(name=state)
-        state = session.query(model.State).filter_by(**filter).first()
+        state = session.query(dsmodel.State).filter_by(**filter).first()
 
         iface = item.__schema__
         schema_id = directives.__id__.bind().get(iface)
@@ -276,7 +276,7 @@ class EntityManager(object):
             is_new = False
             self.retire(name)
 
-        entity = model.Entity(schema_id=schema_id, name=name, title=title, state=state)
+        entity = dsmodel.Entity(schema_id=schema_id, name=name, title=title, state=state)
         session.add(entity)
         session.flush()
 
@@ -318,11 +318,11 @@ class ValueManager(object):
     def keys(self, on=None, ever=False):
         session = self.session
         query = (
-            session.query(model.Assignment)
+            session.query(dsmodel.Assignment)
             .filter_by(entity=self.entity)
             )
         if not ever:
-            query = query.filter(model.Assignment.asOf(on))
+            query = query.filter(dsmodel.Assignment.asOf(on))
         result = [entry.attribute.name for entry in query.all()]
         return result
 
@@ -330,13 +330,13 @@ class ValueManager(object):
     def lifecycles(self, key):
         session = self.session
         query = (
-            session.query(model.Assignment.create_date.label('event_date'))
+            session.query(dsmodel.Assignment.create_date.label('event_date'))
             .filter_by(entity=self.entity)
-            .filter(model.Assignment.attribute.has(name=key))
+            .filter(dsmodel.Assignment.attribute.has(name=key))
             .union(
-                session.query(model.Assignment.remove_date)
+                session.query(dsmodel.Assignment.remove_date)
                 .filter_by(entity=self.entity)
-                .filter(model.Assignment.attribute.has(name=key))
+                .filter(dsmodel.Assignment.attribute.has(name=key))
                 )
             .order_by('event_date ASC')
             )
@@ -347,12 +347,12 @@ class ValueManager(object):
     def has(self, key, on=None, ever=False):
         session = self.session
         query = (
-            session.query(model.Assignment)
+            session.query(dsmodel.Assignment)
             .filter_by(entity=self.entity)
             )
-        query = query.filter(model.Assignment.attribute.has(name=key))
+        query = query.filter(dsmodel.Assignment.attribute.has(name=key))
         if not ever:
-            query = query.filter(model.Assignment.asOf(on))
+            query = query.filter(dsmodel.Assignment.asOf(on))
         result = query.count()
         return result
 
@@ -362,24 +362,24 @@ class ValueManager(object):
         session = self.session
         result = 0
         query = (
-            session.query(model.Assignment)
+            session.query(dsmodel.Assignment)
             .filter_by(entity=self.entity)
-            .filter(model.Assignment.attribute.has(name=key))
+            .filter(dsmodel.Assignment.attribute.has(name=key))
             )
         if not ever:
-            query = query.filter(model.Assignment.asOf(on))
+            query = query.filter(dsmodel.Assignment.asOf(on))
         assignment = query.first()
         if assignment is not None:
             attribute = assignment.attribute
             type = attribute.type
-            value_model = nameModelMap[type]
+            value_dsmodel = nameModelMap[type]
             query = (
-                session.query(value_model)
+                session.query(value_dsmodel)
                 .filter_by(entity=self.entity)
                 .filter_by(attribute=attribute)
                 )
             if not ever:
-                query = query.filter(value_model.asOf(on))
+                query = query.filter(value_dsmodel.asOf(on))
             result = query.delete('fetch')
         return result
 
@@ -388,23 +388,23 @@ class ValueManager(object):
         session = self.session
         result = 0
         query = (
-            session.query(model.Assignment)
+            session.query(dsmodel.Assignment)
             .filter_by(entity=self.entity)
-            .filter(model.Assignment.attribute.has(name=key))
-            .filter(model.Assignment.asOf(None))
+            .filter(dsmodel.Assignment.attribute.has(name=key))
+            .filter(dsmodel.Assignment.asOf(None))
             )
         assignment = query.first()
         if assignment is not None:
             attribute = assignment.attribute
             type = attribute.type
-            value_model = nameModelMap[type]
+            value_dsmodel = nameModelMap[type]
             query = (
-                session.query(value_model)
+                session.query(value_dsmodel)
                 .filter_by(entity=self.entity)
                 .filter_by(attribute=attribute)
-                .filter(value_model.asOf(None))
+                .filter(value_dsmodel.asOf(None))
                 )
-            result = query.update(dict(remove_date=model.NOW), 'fetch')
+            result = query.update(dict(remove_date=dsmodel.NOW), 'fetch')
         return result
 
 
@@ -412,23 +412,23 @@ class ValueManager(object):
         session = self.session
         result = 0
         query = (
-            session.query(model.Assignment)
+            session.query(dsmodel.Assignment)
             .filter_by(entity=self.entity)
-            .filter(model.Assignment.attribute.has(name=key))
+            .filter(dsmodel.Assignment.attribute.has(name=key))
             .order_by('remove_date DESC NULLS FIRST')
             )
         assignment = query.first()
         if assignment is not None and assignment.remove_date is not None:
             attribute = assignment.attribute
             type = attribute.type
-            value_model = nameModelMap[type]
+            value_dsmodel = nameModelMap[type]
             # This particular query matches by removal date, as there can be
             # many of the same removal date (lists)
             query = (
-                session.query(value_model)
+                session.query(value_dsmodel)
                 .filter_by(entity=self.entity)
                 .filter_by(attribute=attribute)
-                .filter(assignment.remove_date == value_model.remove_date)
+                .filter(assignment.remove_date == value_dsmodel.remove_date)
                 )
             result = query.update(dict(remove_date=None), 'fetch')
         return result
@@ -438,20 +438,20 @@ class ValueManager(object):
         session = self.session
         result = None
         query = (
-            session.query(model.Assignment)
+            session.query(dsmodel.Assignment)
             .filter_by(entity=self.entity)
-            .filter(model.Assignment.attribute.has(name=key))
-            .filter(model.Assignment.asOf(on))
+            .filter(dsmodel.Assignment.attribute.has(name=key))
+            .filter(dsmodel.Assignment.asOf(on))
             )
         assignment = query.first()
         if assignment is not None:
             result = list()
-            value_model = nameModelMap[assignment.attribute.type]
+            value_dsmodel = nameModelMap[assignment.attribute.type]
             query = (
-                session.query(value_model)
+                session.query(value_dsmodel)
                 .filter_by(entity=self.entity)
                 .filter_by(attribute=assignment.attribute)
-                .filter(value_model.asOf(on))
+                .filter(value_dsmodel.asOf(on))
                 )
             entries = query.all()
             for entry in entries:
@@ -480,9 +480,9 @@ class ValueManager(object):
 
         if isinstance(key, basestring):
             query = (
-                session.query(model.Attribute)
+                session.query(dsmodel.Attribute)
                 .filter_by(name=key, schema=entity.schema)
-                .filter(model.Attribute.asOf(None))
+                .filter(dsmodel.Attribute.asOf(None))
                 )
             attribute = query.first()
         else:
@@ -492,10 +492,10 @@ class ValueManager(object):
         if attribute is None:
             raise PropertyNotDefinedError
 
-        value_model = nameModelMap[attribute.type]
+        value_dsmodel = nameModelMap[attribute.type]
 
         query = (
-            session.query(value_model)
+            session.query(value_dsmodel)
             .filter_by(entity=entity, attribute=attribute, remove_date=None)
             )
 
@@ -503,7 +503,7 @@ class ValueManager(object):
         for entry in query.all():
             if item:
                 if entry.value not in item:
-                    entry.remove_date = model.NOW
+                    entry.remove_date = dsmodel.NOW
                 else:
                     item.remove(entry.value)
 
@@ -511,7 +511,7 @@ class ValueManager(object):
             if value is not None:
                 # Find the choice it came from before the value is converted
                 query = (
-                    session.query(model.Choice)
+                    session.query(dsmodel.Choice)
                     .filter_by(attribute=attribute, value=unicode(value))
                     )
                 choice = query.first()
@@ -520,7 +520,7 @@ class ValueManager(object):
                     value = entity_manager.put(getattr(value, '__name__', None), value)
                 elif 'boolean' == attribute.type:
                     value = int(value)
-                entry = value_model(
+                entry = value_dsmodel(
                     entity=entity,
                     attribute=attribute,
                     choice=choice,
