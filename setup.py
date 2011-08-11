@@ -46,6 +46,9 @@ setup(
         'zope.interface',
         'zope.schema',
 
+        # Batching support
+        'z3c.batching',
+
         # Interface directives for schemata
         'martian',
 
