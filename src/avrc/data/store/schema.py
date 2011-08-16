@@ -220,13 +220,12 @@ class SchemaManager(object):
         if 1 < len(item.__bases__):
             raise MultipleBasesError
         elif 1 == len(item.__bases__) and directives.Schema != item.__bases__[0]:
-            base = item.__bases__[0]
             # Actually, since we're adding to the top of the stack, we should
             # techinally just be getting the most recent version of the
             # base schema.
             query = (
                 session.query(model.Schema)
-                .filter(key == model.Schema.name)
+                .filter(item.__bases__[0].__name__ == model.Schema.name)
                 .filter(model.Schema.asOf(None))
                 )
             base_schema = query.first()
