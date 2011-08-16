@@ -54,6 +54,8 @@ Defects
     The current min/max attributes only apply to values such as 
     integers/strings. 
     
+8/15/11 (mmartinez) Base schema not being imported 
+    
        
 --------------------------------------------------------------------------------   
 Tasks
