@@ -120,15 +120,8 @@ def ObjectFactory(iface, **kwargs):
     result.__schema__ = iface
 
     for field_name, field in zope.schema.getFieldsInOrder(iface):
-        if isinstance(field, zope.schema.Datetime):
-            default = datetime.now()
-        elif isinstance(field, zope.schema.Date):
-            default = date.today()
-        else:
-            default = None
-
         # TODO: figure out how to use FieldProperty with this
-        result.__dict__[field_name] = kwargs.get(field_name, default)
+        result.__dict__[field_name] = kwargs.get(field_name)
 
     return result
 
