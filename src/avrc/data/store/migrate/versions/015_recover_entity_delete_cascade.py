@@ -17,7 +17,7 @@ def upgrade(migrate_engine):
     # (so far only decimal doesn't need correction)
     for name in ('integer', 'string', 'datetime', 'object'):
         value_table = Table(name, metadata, autoload=True)
-        fk_name = '%s_entity_id_fk' % name
+        fk_name = '%s_entity_id_fkey' % name
         fk(['entity_id'], ['entity.id'],
            name=fk_name, table=value_table, ondelete='CASCADE')
 
@@ -28,5 +28,5 @@ def downgrade(migrate_engine):
 
     for name in ('integer', 'string', 'datetime', 'object'):
         value_table = Table(name, metadata, autoload=True)
-        fk_name = '%s_entity_id_fk' % name
+        fk_name = '%s_entity_id_fkey' % name
         fk(['entity_id'], ['entity.id'], name=fk_name, table=value_table)
