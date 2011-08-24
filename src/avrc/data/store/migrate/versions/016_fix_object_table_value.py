@@ -21,7 +21,7 @@ def upgrade(migrate_engine):
     value_table.c.value.alter(nullable=False)
 
     fk([value_table.c.entity_id], [entity_table.c.id],
-       name='object_entity_id_fkey', ondelete='RESTRICT')
+       name='object_entity_id_fkey', ondelete='CASCADE')
 
     fk([value_table.c.value], [entity_table.c.id],
        name='object_value_fkey', ondelete='CASCADE')

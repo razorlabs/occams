@@ -291,6 +291,15 @@ class Entity(Model, _AutoNamed, _Entry, _Describeable, _Editable, _History):
 
     state = Relationship('State')
 
+    # Private reference to child objects so that they can be removed in a 
+    # cascading fashion by the ORM (otherwise they'll be left as orphaned 
+    # entries.  
+    _value_objects = Relationship(
+        'ValueObject',
+        primaryjoin='(Entity.id == ValueObject.entity_id)',
+        cascade='all,delete-orphan',
+        )
+
     __table_args__ = (
         CheckConstraint(TIMELINE_CHECK_SQL, (TIMELINE_NAME_FMT % 'entity')),
         dict(),
@@ -389,23 +398,6 @@ class ValueDecimal(Model, _ValueBaseMixin):
     __valuetype__ = Numeric
 
 
-class ValueObject(Model, _ValueBaseMixin):
-    """ 
-    An object EAV value.
-    """
-
-    __tablename__ = 'object'
-    __valuetype__ = ForeignKey(Entity.id, ondelete='CASCADE')
-
-
-    @declared_attr
-    def value_object(cls):
-        return Relationship(
-            'Entity',
-            primaryjoin='(%s.value == Entity.id)' % cls.__name__
-            )
-
-
 class ValueString(Model, _ValueBaseMixin):
     """ 
     A string EAV value.
@@ -414,6 +406,23 @@ class ValueString(Model, _ValueBaseMixin):
     __tablename__ = 'string'
     __valuetype__ = Unicode
 
+
+class ValueObject(Model, _ValueBaseMixin):
+    """ 
+    An object EAV value.
+    """
+
+    __tablename__ = 'object'
+    __valuetype__ = ForeignKey(Entity.id, ondelete='CASCADE')
+
+    # NOTE: If there are shared objects, THEY WILL BE REMOVED AS WELL...
+    @declared_attr
+    def value_object(cls):
+        return Relationship(
+            'Entity',
+            primaryjoin='(%s.value == Entity.id)' % cls.__name__,
+            cascade='all,delete-orphan'
+            )
 
 
 def _buildAssignmentTable():
