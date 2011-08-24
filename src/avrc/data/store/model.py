@@ -421,6 +421,7 @@ class ValueObject(Model, _ValueBaseMixin):
         return Relationship(
             'Entity',
             primaryjoin='(%s.value == Entity.id)' % cls.__name__,
+            single_parent=True,
             cascade='all,delete-orphan'
             )
 
