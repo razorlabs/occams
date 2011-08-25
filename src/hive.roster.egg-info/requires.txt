@@ -1,4 +1,0 @@
-setuptools
-z3c.saconfig
-SQLAlchemy
-sqlalchemy-migrate
