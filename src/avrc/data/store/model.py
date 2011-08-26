@@ -297,7 +297,6 @@ class Entity(Model, _AutoNamed, _Entry, _Describeable, _Editable, _History):
     _value_objects = Relationship(
         'ValueObject',
         primaryjoin='(Entity.id == ValueObject.entity_id)',
-        cascade='all,delete-orphan',
         )
 
     __table_args__ = (
@@ -421,8 +420,6 @@ class ValueObject(Model, _ValueBaseMixin):
         return Relationship(
             'Entity',
             primaryjoin='(%s.value == Entity.id)' % cls.__name__,
-            single_parent=True,
-            cascade='all,delete-orphan'
             )
 
 
