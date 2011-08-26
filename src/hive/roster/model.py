@@ -2,6 +2,7 @@ from zope.interface import implements
 
 from sqlalchemy.schema import Column
 from sqlalchemy.schema import ForeignKey
+from sqlalchemy.schema import Sequence
 from sqlalchemy.types import Boolean
 from sqlalchemy.types import DateTime
 from sqlalchemy.types import Integer
@@ -39,9 +40,9 @@ class Identifier(Model):
 
     __tablename__ = 'identifier'
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, Sequence('identifier_id_pk_seq'), primary_key=True)
 
-    origin_id = Column(Integer, ForeignKey(Site.id), nullable=False)
+    origin_id = Column(ForeignKey(Site.id), nullable=False)
 
     origin = Relationship('Site')
 
