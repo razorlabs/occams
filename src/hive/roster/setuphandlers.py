@@ -15,9 +15,8 @@ def importVarious(context):
     """ 
     GenericSetup conventional handle for importing miscellaneous steps.
     """
-    if context.readDataFile('default.txt') is None:
+    if context.readDataFile('hive-roster.txt') is None:
         return
-
     portal = context.getSite()
     setupSQLDatabase(portal)
 
