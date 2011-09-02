@@ -36,8 +36,12 @@ setup(
         'SQLAlchemy',
         'sqlalchemy-migrate'
     ],
+    extras_require=dict(
+        test=['zope.testing']
+        ),
     entry_points="""
     [z3c.autoinclude.plugin]
     target = plone
     """,
+    test_suite='hive.roster.tests',
     )

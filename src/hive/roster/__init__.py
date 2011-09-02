@@ -9,4 +9,4 @@ MessageFactory = zope.i18nmessageid.MessageFactory(__name__)
 
 Session = named_scoped_session('hive.roster.Session')
 
-from hive.roster.factory import OURNumberFactory
+from hive.roster.factory import OurNumberFactory

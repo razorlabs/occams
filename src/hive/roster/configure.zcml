@@ -24,6 +24,6 @@
   <!-- Upgrade support for existing installations -->    
   <include package=".upgrades" />  
 
-  <utility provides=".interfaces.IRegistry"  component=".OURNumberFactory" />
+  <utility provides=".interfaces.IRegistry"  component=".OurNumberFactory" />
 
 </configure>
