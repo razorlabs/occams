@@ -1,0 +1,19 @@
+# OSX-specfic
+.DS_Store
+
+# Python-specific
+*.pyo
+*.egg
+*.egg-info*
+*PKG-INFO
+
+# Buildout-specific
+.installed.cfg
+parts
+develop-eggs
+bin
+eggs
+downloads
+lib
+build
+dist
