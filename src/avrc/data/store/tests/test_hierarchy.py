@@ -1,10 +1,10 @@
 
-import unittest
+import unittest2 as unittest
 
 from avrc.data.store import model
 from avrc.data.store.schema import HierarchyInspector
 
-from avrc.data.store.tests.layers import DataBaseLayer
+from avrc.data.store.testing import DATABASE_LAYER
 
 
 def createSchema(name, base=None):
@@ -16,11 +16,11 @@ class HierarchyTestCase(unittest.TestCase):
     Verifies hierarchy listings of Zope schemata.
     """
 
-    layer = DataBaseLayer
+    layer = DATABASE_LAYER
 
 
     def setUp(self):
-        session = self.layer.session
+        session = self.session = self.layer['session']
 
         animal = createSchema('Animal')
 
@@ -51,7 +51,6 @@ class HierarchyTestCase(unittest.TestCase):
 
         self.hierarchy = HierarchyInspector(session)
 
-
     def tearDown(self):
         self.hierarchy = None
 
@@ -78,6 +77,3 @@ class HierarchyTestCase(unittest.TestCase):
 
         names = hierarchy.getChildrenNames('Animal')
         self.assertEqual(12, len(names))
-
-def test_suite():
-    return unittest.defaultTestLoader.loadTestsFromName(__name__)

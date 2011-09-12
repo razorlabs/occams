@@ -1,5 +1,5 @@
 
-import unittest
+import unittest2 as unittest
 from datetime import datetime
 
 from zope.interface.interface import InterfaceClass
@@ -16,7 +16,7 @@ from avrc.data.store.interfaces import NotCompatibleError
 from avrc.data.store.interfaces import MultipleBasesError
 from avrc.data.store.schema import SchemaManager
 
-from avrc.data.store.tests.layers import DataBaseLayer
+from avrc.data.store.testing import DATABASE_LAYER
 
 
 time1 = datetime.now()
@@ -35,11 +35,11 @@ class SchemaManagerTestCase(unittest.TestCase):
     """
 
 
-    layer = DataBaseLayer
+    layer = DATABASE_LAYER
 
 
     def setUp(self):
-        session = self.layer.session
+        session = self.session = self.layer['session']
 
         # Verify versioning
         session.add_all([
@@ -80,7 +80,7 @@ class SchemaManagerTestCase(unittest.TestCase):
 
 
     def test_model(self):
-        session = self.layer.session
+        session = self.session
         schema = model.Schema(name='Sample')
         session.add(schema)
         self.assertRaises(sqlalchemy.exc.IntegrityError, session.flush)
@@ -392,6 +392,3 @@ class SchemaManagerTestCase(unittest.TestCase):
         self.assertEqual(entry_3.create_date,
                          directives.version.bind().get(item))
 
-
-def test_suite():
-    return unittest.defaultTestLoader.loadTestsFromName(__name__)
