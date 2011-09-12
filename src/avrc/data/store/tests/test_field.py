@@ -1,5 +1,5 @@
 
-import unittest
+import unittest2 as unittest
 from datetime import datetime
 
 from zope.interface.verify import verifyClass
@@ -17,7 +17,7 @@ from avrc.data.store.interfaces import IFieldManagerFactory
 from avrc.data.store.interfaces import TypeNotSupportedError
 from avrc.data.store.schema import FieldManager
 
-from avrc.data.store.tests.layers import DataBaseLayer
+from avrc.data.store.testing import DATABASE_LAYER
 
 
 time1 = datetime.now()
@@ -31,12 +31,12 @@ class FieldManagementTestCase(unittest.TestCase):
     Verifies DataStore compatibility with Zope-style fields  
     """
 
-    layer = DataBaseLayer
+    layer = DATABASE_LAYER
 
 
     def setUp(self):
 
-        session = self.layer.session
+        self.session = self.layer['session']
 
         schema = model.Schema(
             name='Sample',
@@ -45,7 +45,7 @@ class FieldManagementTestCase(unittest.TestCase):
             modify_date=time1,
             )
 
-        session.add_all([
+        self.session.add_all([
             schema,
 
             model.Schema(
@@ -100,7 +100,7 @@ class FieldManagementTestCase(unittest.TestCase):
                 ),
             ])
 
-        session.flush()
+        self.session.flush()
 
         self.manager = FieldManager(schema)
 
@@ -115,7 +115,7 @@ class FieldManagementTestCase(unittest.TestCase):
 
 
     def test_model(self):
-        session = self.layer.session
+        session = self.session
 
         attribute = model.Attribute(name='foo')
         session.add(attribute)
@@ -435,7 +435,3 @@ class FieldManagementTestCase(unittest.TestCase):
         self.assertEqual(entry_3.description, item.description)
         self.assertEqual(entry_3.create_date, directives.version.bind().get(item))
         self.assertEqual(5, len(entry_3.choices))
-
-
-def test_suite():
-    return unittest.defaultTestLoader.loadTestsFromName(__name__)

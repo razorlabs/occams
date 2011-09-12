@@ -1,6 +1,6 @@
 
 import datetime
-import unittest
+import unittest2 as unittest
 
 from zope.interface.interface import InterfaceClass
 import zope.schema
@@ -111,7 +111,3 @@ class FieldDirectivesTestCase(unittest.TestCase):
         value = 'avrc.data.store.NonExistentWidget'
         directive.set(field, value)
         self.assertEqual(value, directive.bind().get(field))
-
-
-def test_suite():
-    return unittest.defaultTestLoader.loadTestsFromName(__name__)

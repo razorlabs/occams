@@ -1,5 +1,5 @@
 
-import unittest
+import unittest2 as unittest
 import decimal
 import datetime
 
@@ -8,7 +8,7 @@ from avrc.data.store.storage import ValueManager
 from avrc.data.store.storage import ObjectFactory
 from avrc.data.store.schema import SchemaManager
 
-from avrc.data.store.tests.layers import DataBaseLayer
+from avrc.data.store.testing import DATABASE_LAYER
 
 
 class TypeTestCase(unittest.TestCase):
@@ -17,11 +17,11 @@ class TypeTestCase(unittest.TestCase):
     counterparts).
     """
 
-    layer = DataBaseLayer
+    layer = DATABASE_LAYER
 
 
     def setUp(self):
-        session = self.layer.session
+        session = self.session = self.layer['session']
         self.schema = model.Schema(name='Sample', title=u'Sample Schema')
         self.entity = model.Entity(schema=self.schema, name='foobar', title=u'FooBar')
         session.add(self.entity)
@@ -419,7 +419,3 @@ class TypeTestCase(unittest.TestCase):
     def test_object_choice(self):
         pass
         # No object choices in this release
-
-
-def test_suite():
-    return unittest.defaultTestLoader.loadTestsFromName(__name__)
