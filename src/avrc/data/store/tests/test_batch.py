@@ -1,5 +1,5 @@
 
-import unittest
+import unittest2 as unittest
 
 from zope.interface.verify import verifyClass
 
@@ -11,7 +11,7 @@ from avrc.data.store import model
 from avrc.data.store.batch import SqlBatch
 from avrc.data.store.batch import SqlBatches
 
-from avrc.data.store.tests.layers import DataBaseLayer
+from avrc.data.store.testing import DATABASE_LAYER
 
 
 class BatchingTestCase(unittest.TestCase):
@@ -19,11 +19,11 @@ class BatchingTestCase(unittest.TestCase):
     Verifies DataStore Entity storage
     """
 
-    layer = DataBaseLayer
+    layer = DATABASE_LAYER
 
     def setUp(self):
-        session = self.layer.session
-        session.add_all([
+        self.session = self.layer['session']
+        self.session.add_all([
             model.Schema(name='Bar', title=u'Doesn\'t matter'), # 0
             model.Schema(name='Baz', title=u'Doesn\'t matter'), # 1
             model.Schema(name='Caz', title=u'Doesn\'t matter'), # 2
@@ -31,7 +31,7 @@ class BatchingTestCase(unittest.TestCase):
             model.Schema(name='Jaz', title=u'Doesn\'t matter'), # 4
             model.Schema(name='Raz', title=u'Doesn\'t matter'), # 5
             ])
-        session.flush()
+        self.session.flush()
 
 
     def test_implementation(self):
@@ -40,7 +40,7 @@ class BatchingTestCase(unittest.TestCase):
 
 
     def test_first_element(self):
-        session = self.layer.session
+        session = self.session
         query = session.query(model.Schema).order_by(model.Schema.name)
         batch = SqlBatch(query)
         (id, item) = batch.firstElement
@@ -49,7 +49,7 @@ class BatchingTestCase(unittest.TestCase):
 
 
     def test_last_element(self):
-        session = self.layer.session
+        session = self.session
         query = session.query(model.Schema).order_by(model.Schema.name)
         batch = SqlBatch(query)
         (id, item) = batch.firstElement
@@ -58,7 +58,7 @@ class BatchingTestCase(unittest.TestCase):
 
 
     def test_getitem(self):
-        session = self.layer.session
+        session = self.session
         query = session.query(model.Schema).order_by(model.Schema.name)
         batch = SqlBatch(query)
         (id, item) = batch[3]
@@ -68,14 +68,14 @@ class BatchingTestCase(unittest.TestCase):
 
 
     def test_len(self):
-        session = self.layer.session
+        session = self.session
         query = session.query(model.Schema).order_by(model.Schema.name)
         batch = SqlBatch(query)
         self.assertTrue(len(batch), 6)
 
 
     def test_contains(self):
-        session = self.layer.session
+        session = self.session
         query = session.query(model.Schema).order_by(model.Schema.name)
         batch = SqlBatch(query)
         item = session.query(model.Schema).filter_by(name='Bar').first()
@@ -86,7 +86,7 @@ class BatchingTestCase(unittest.TestCase):
 
 
     def test_getslice_(self):
-        session = self.layer.session
+        session = self.session
         query = session.query(model.Schema).order_by(model.Schema.name)
         batch = SqlBatch(query)
         generator = batch[2:4]
@@ -96,7 +96,7 @@ class BatchingTestCase(unittest.TestCase):
 
 
     def test_eq(self):
-        session = self.layer.session
+        session = self.session
         query = session.query(model.Schema)
         batch = SqlBatch(query)
         other = SqlBatch(query)
@@ -107,7 +107,3 @@ class BatchingTestCase(unittest.TestCase):
         self.assertNotEqual(batch, other)
         other = SqlBatch(query, size=1000)
         self.assertNotEqual(batch, other)
-
-
-def test_suite():
-    return unittest.defaultTestLoader.loadTestsFromName(__name__)

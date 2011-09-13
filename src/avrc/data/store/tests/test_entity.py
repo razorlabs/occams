@@ -1,5 +1,5 @@
 
-import unittest
+import unittest2 as unittest
 from datetime import datetime
 
 from zope.interface.verify import verifyClass
@@ -12,7 +12,7 @@ from avrc.data.store.storage import EntityManager
 from avrc.data.store.storage import ObjectFactory
 from avrc.data.store.schema import SchemaManager
 
-from avrc.data.store.tests.layers import DataBaseLayer
+from avrc.data.store.testing import DATABASE_LAYER
 
 
 time1 = datetime.now()
@@ -25,16 +25,16 @@ class EntityManagerTestCase(unittest.TestCase):
     Verifies DataStore Entity storage
     """
 
-    layer = DataBaseLayer
+    layer = DATABASE_LAYER
 
 
     def setUp(self):
-        session = self.layer.session
+        self.session = self.layer['session']
 
         schema = model.Schema(name='Foo', title=u'Type Foo', create_date=time1)
-        session.add(schema)
+        self.session.add(schema)
 
-        session.add_all([
+        self.session.add_all([
             model.Entity(
                 schema=schema,
                 name='Foo', title=u'This is foo',
@@ -79,14 +79,16 @@ class EntityManagerTestCase(unittest.TestCase):
                 ),
             ])
 
-        session.flush()
+        self.session.flush()
 
         self.schema = schema
-        self.iface = SchemaManager(session).get(schema.name, on=schema.create_date)
-        self.manager = EntityManager(session)
+        self.iface = SchemaManager(self.session).get(schema.name, on=schema.create_date)
+        self.manager = EntityManager(self.session)
 
 
     def tearDown(self):
+        self.schema = None
+        self.iface = None
         self.manager = None
 
 
@@ -302,7 +304,3 @@ class EntityManagerTestCase(unittest.TestCase):
         item = ObjectFactory(iface)
         manager.put(item.__name__, item)
 
-
-
-def test_suite():
-    return unittest.defaultTestLoader.loadTestsFromName(__name__)

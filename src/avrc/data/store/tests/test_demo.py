@@ -1,11 +1,11 @@
 
-import unittest
+import unittest2 as unittest
 
 from zope.interface.interface import InterfaceClass
 
 import zope.schema
 
-from avrc.data.store.tests.layers import DataBaseLayer
+from avrc.data.store.testing import DATABASE_LAYER
 
 from avrc.data.store import directives
 from avrc.data.store import model
@@ -22,12 +22,10 @@ class DemoTestCase(unittest.TestCase):
     A real-world usage case scenario
     """
 
-
-    layer = DataBaseLayer
-
+    layer = DATABASE_LAYER
 
     def test_demo(self):
-        session = self.layer.session
+        session = self.layer['session']
 
         ### 1. First we need a schema
 

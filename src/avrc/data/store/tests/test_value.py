@@ -1,5 +1,5 @@
 
-import unittest
+import unittest2 as unittest
 from datetime import datetime
 
 from zope.interface.verify import verifyClass
@@ -13,7 +13,7 @@ from avrc.data.store.storage import ValueManager
 from avrc.data.store.storage import SchemaManager
 from avrc.data.store.storage import ObjectFactory
 
-from avrc.data.store.tests.layers import DataBaseLayer
+from avrc.data.store.testing import DATABASE_LAYER
 
 
 time1 = datetime.now()
@@ -28,11 +28,11 @@ class ValueManagerTestCase(unittest.TestCase):
     """
 
 
-    layer = DataBaseLayer
+    layer = DATABASE_LAYER
 
 
     def setUp(self):
-        session = self.layer.session
+        session = self.session = self.layer['session']
         schema = model.Schema(name='Schema', title=u'Test Schema')
         entity = model.Entity(schema=schema, name='Sample', title=u'Sample')
         # We're not versioning attributes, only data in this test case
@@ -134,6 +134,11 @@ class ValueManagerTestCase(unittest.TestCase):
 
 
     def tearDown(self):
+        self.entity = None
+        self.foo_attr = None
+        self.bar_attr = None
+        self.baz_attr = None
+        self.liz_attr = None
         self.manager = None
 
 
@@ -381,6 +386,3 @@ class ValueManagerTestCase(unittest.TestCase):
         self.assertEqual(None, entry_3.remove_date)
         self.assertTrue(entry_2.create_date <= entry_3.create_date)
 
-
-def test_suite():
-    return unittest.defaultTestLoader.loadTestsFromName(__name__)

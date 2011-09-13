@@ -59,7 +59,7 @@ setup(
         ],
     extras_require=dict(
         postgresql=['psycopg2'],
-        test=['zope.testing'],
+        test=['plone.testing'],
         ),
     tests_require=['zope.testing'],
     test_suite='avrc.data.store.tests',
