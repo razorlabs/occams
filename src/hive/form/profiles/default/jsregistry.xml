@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<object name="portal_javascripts">
+  <!-- No javascript in this release
+  <javascript 
+      id="++resource++hive.form/dragdrop.js" 
+      cacheable="True" 
+      compression="none" 
+      cookable="True"
+      enabled="True" 
+      expression=""
+      inline="False"
+      />
+  -->
+</object>

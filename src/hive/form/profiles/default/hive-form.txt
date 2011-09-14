@@ -1,0 +1,2 @@
+This file is checked for in Python-implemented setup handlers to check if
+the add-on is already installed.
