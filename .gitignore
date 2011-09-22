@@ -1,3 +1,7 @@
+# Ignore Eclipse files
+.project
+.pydevproject
+
 # OSX-specfic
 .DS_Store
 
