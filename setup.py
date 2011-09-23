@@ -37,13 +37,14 @@ setup(
         'setuptools',
 
         # Component specification/documentation
+        'zope.i18nmessageid'
         'zope.interface',
         'zope.schema',
 
         # Plone-specific entry points
         'five.grok',
         'plone.dexterity',
-        
+
         # ORM utilities and upgrade tools
         'SQLAlchemy',
         'sqlalchemy-migrate',
@@ -57,4 +58,8 @@ setup(
         ),
     tests_require=['zope.testing'],
     test_suite='hive.form',
+    entry_points="""
+    [z3c.autoinclude.plugin]
+    target = plone
+    """,
     )
