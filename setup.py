@@ -37,7 +37,7 @@ setup(
         'setuptools',
 
         # Component specification/documentation
-        'zope.i18nmessageid'
+        'zope.i18nmessageid',
         'zope.interface',
         'zope.schema',
 
