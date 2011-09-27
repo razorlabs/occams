@@ -1,21 +1,89 @@
-# OSX-specfic
-.DS_Store
+# GIT Ignore Files
+# Portions of this file were borrowed from:
+#   * http://help.github.com/ignore-files/
+#   * https://github.com/github/gitignore/
+###############################################################################
 
-# Python-specific
-*.pyc
-*.pyo
+##### Windows Files
+Desktop.ini
+ehthumbs.db
+Thumbs.db
+
+##### OSX Files
+._*
+.DS_Store?
+Icon?
+.Spotlight-V100
+.Trashes
+
+##### Linux Files
+.*
+!.gitignore
+*~
+.directory
+
+##### Eclipse Project Files
+*.pydevproject
+.project
+.metadata
+bin/**
+tmp/**
+tmp/**/*
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.classpath
+.settings/
+.loadpath
+
+# External tool builders
+.externalToolBuilders/
+
+# Locally stored "Eclipse launch configurations"
+*.launch
+
+# CDT-specific
+.cproject
+
+# PDT-specific
+.buildpath
+
+##### VIM Files
+.*.sw[a-z]
+*.un~
+Session.vim
+
+##### SVN Files (Legacy Junk)
+.svn
+
+##### Python Distribution Files
+*.py[co]
 *.egg
 *.egg-info*
 *PKG-INFO
 
-# Buildout-specific
+##### Buildout / Unit test / Coverage Reports
+.coverage
 .installed.cfg
-parts
-develop-eggs
+.mr.developer.cfg
+.tox
 bin
-eggs
-downloads
-lib
 build
+coverage.xml
 dist
+develop-eggs
+downloads
+eggs
+htmlcov
+lib
+parts
+sdist
+var
 
+##### Translations
+*.mo
+
+##### Installer Logs
+pip-log.txt
