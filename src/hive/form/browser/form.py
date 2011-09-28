@@ -44,6 +44,7 @@ class Preview(form.Form):
         return field.Fields(self.form)
 
     def publishTraverse(self, request, name):
+        self.Title = 'asdfsafsadf';
         if self.itemName is None:
             self.itemName = str(name)
             return self
