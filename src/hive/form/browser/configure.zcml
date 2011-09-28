@@ -9,7 +9,7 @@
       for="hive.form.interfaces.IRepository"
       name="view"
       class=".repository.FormListingPage"
-      permission="cmf.ManagePortal"
+      permission="cmf.ManagePortal" 
       />
 
 </configure>
