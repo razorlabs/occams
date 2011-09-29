@@ -8,8 +8,11 @@ from five import grok
 from plone.directives import form
 
 from avrc.data.store.interfaces import ISchema
+from avrc.data.store.interfaces import IDataStore
+from avrc.data.store import directives as ds
 
 from hive.form.interfaces import IRepository
+
 
 class Preview(form.Form):
     """
@@ -25,22 +28,23 @@ class Preview(form.Form):
 
     # Set by ``publishTraverse``
     itemName = None
+    datastore = None
+    form = None
 
     @property
     def label(self):
-        #TODO: should be form's title
-        return 'Foo'
+        return ds.title.bind().get(self.form)
 
     @property
     def description(self):
-        #TODO: should be form's description
-        return 'Description'
+        return ds.description.bind().get(self.form)
 
     @property
     def fields(self):
-        return field.Fields()
+        return field.Fields(self.form)
 
     def publishTraverse(self, request, name):
+        self.Title = 'asdfsafsadf';
         if self.itemName is None:
             self.itemName = str(name)
             return self
@@ -49,13 +53,14 @@ class Preview(form.Form):
 
     def update(self):
         self.request.set('disable_border', True)
-        return super(Preview, self).update()
+        self.setupForm()
+        super(Preview, self).update()
 
-#    def render(self):
-#        from avrc.data.store import model
-#        from avrc.data.store.interfaces import IDataStore
-#        datastore = IDataStore(self.context)
-#        session = datastore.session
-#        schema = session.query(model.Schema).filter(model.Schema.asOf(None)).filter_by(name=self.itemName).first()
-#        return "YOU ARE TRYING TO RENDER: %s" % schema.name
+    def setupForm(self):
+        if self.datastore is None:
+            self.datastore = IDataStore(self.context)
+
+        self.form = self.datastore.schemata.get(self.itemName)
+
+
 

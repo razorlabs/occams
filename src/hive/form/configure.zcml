@@ -20,7 +20,7 @@
       provides="Products.GenericSetup.interfaces.EXTENSION"
       />
 
-  <!-- Load upgrade step ZCML diretives -->
+  <!-- Load upgrade step ZCML directives -->
   <include package=".upgrades" />
 
 </configure>

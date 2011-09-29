@@ -15,7 +15,7 @@ from avrc.data.store import model
 
 from hive.form.interfaces import IRepository
 from hive.form.interfaces import IFormSummary
-from hive.form import MessageFactory as _ 
+from hive.form import MessageFactory as _
 
 
 class FormEditForm(crud.EditForm):
