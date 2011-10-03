@@ -1,13 +1,15 @@
-import unittest
+import unittest2 as unittest
 
 from hive.roster.factory import isValidOurNumber
-
+from hive.roster.testing import TEST_LAYER
 
 class OurNumberTestCase(unittest.TestCase):
     """
     Checks that valid OUR numbers are being produced.
     """
 
+    layer = TEST_LAYER
+    
     def test_validator(self):
         invalid_numbers = (
             # ambiguous characters
