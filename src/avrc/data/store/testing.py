@@ -9,7 +9,7 @@ from sqlalchemy.orm import scoped_session
 from avrc.data.store import model
 from plone.testing import Layer
 
-CONFIG_URL = 'postgresql://test@localhost/eavcr_test'
+CONFIG_URL = 'sqlite:///:memory:'
 CONFIG_ECHO = False
 
 
