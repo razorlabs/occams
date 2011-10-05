@@ -240,7 +240,6 @@ put
 get
     Retrieve an object.
 
-
 ------------------
 Self-Certification
 ------------------
@@ -258,5 +257,3 @@ Self-Certification
     [ ] Installs and uninstalls cleanly
 
     [ ] Code structure follows best practice
-
-
