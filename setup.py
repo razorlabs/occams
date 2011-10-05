@@ -21,9 +21,9 @@ setup(
         'Topic :: Utilities',
         ],
     keywords='HIVe BEAST database roster clinical sqlalchemy',
-    author='The BEAST Core Development Team',
+    author='BEAST Core Development Team',
     author_email='beast@ucsd.edu',
-    url='http://datam0nk3y.org/P01svn/plone4_eggs/avrc.data.store/trunk',
+    url='https://github.com/beastcore/hive.roster',
     license='GPL',
     packages=find_packages('src', exclude=['ez_setup']),
     package_dir={'':'src'},
@@ -32,16 +32,17 @@ setup(
     zip_safe=False,
     install_requires=[
         'setuptools',
-        'z3c.saconfig',
         'SQLAlchemy',
-        'sqlalchemy-migrate'
-    ],
+        'sqlalchemy-migrate',
+        'z3c.saconfig',
+        ],
     extras_require=dict(
-        test=['zope.testing']
+        postgresql=['psycopg2'],
+        test=['plone.testing'],
         ),
+
     entry_points="""
     [z3c.autoinclude.plugin]
     target = plone
     """,
-    test_suite='hive.roster.tests',
     )
