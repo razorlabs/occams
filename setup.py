@@ -26,7 +26,7 @@ setup(
     keywords='AVRC BEAST datastore database eav sqlalchemy relational clinical',
     author='BEAST Core Development Team',
     author_email='beast@ucsd.edu',
-    url='http://datam0nk3y.org/P01svn/plone4_eggs/avrc.data.store/trunk',
+    url='https://github.com/beastcore/avrc.data.store',
     license='GPL',
     packages=find_packages('src', exclude=['ez_setup']),
     package_dir={'':'src'},
