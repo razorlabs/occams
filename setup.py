@@ -36,6 +36,9 @@ setup(
     install_requires=[
         'setuptools',
         'plone.app.dexterity',
+        'SQLAlchemy',
+        'zc3.saconfig',
+
         'avrc.data.store',
         ],
     extras_require=dict(

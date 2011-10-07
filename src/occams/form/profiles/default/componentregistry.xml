@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<componentregistry>
+  <utilities>
+    <!-- Registers a local SQLALchemy session -->
+    <utility 
+      interface="z3c.saconfig.ISiteScopedSession"
+      factory="occams.form.database.SiteScopedSession"
+      />
+  </utilities>
+</componentregistry>
