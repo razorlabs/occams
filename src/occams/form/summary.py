@@ -6,12 +6,12 @@ from five import grok
 from avrc.data.store import model
 from avrc.data.store.interfaces import ISchema
 
-from hive.form.interfaces import IFormSummary
+from occams.form.interfaces import IFormSummary
 
 class DataStoreSchemaSummary(grok.Adapter):
     grok.implements(IFormSummary)
     grok.context(ISchema)
-    
+
     #TODO: need to use datastore's methods for completeness
 
     _fieldCount = None

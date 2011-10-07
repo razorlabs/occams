@@ -11,7 +11,7 @@ from avrc.data.store.interfaces import ISchema
 from avrc.data.store.interfaces import IDataStore
 from avrc.data.store import directives as ds
 
-from hive.form.interfaces import IRepository
+from occams.form.interfaces import IRepository
 
 
 class Preview(form.Form):

@@ -3,7 +3,7 @@
     xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
     xmlns:grok="http://namespaces.zope.org/grok"
     xmlns:i18n="http://namespaces.zope.org/i18n"
-    i18n_domain="hive.form">
+    i18n_domain="occams.form">
 
   <includeDependencies package="." />
 
@@ -15,7 +15,7 @@
   <genericsetup:registerProfile
       name="default"
       directory="profiles/default"
-      title="HIVe: Form Services"
+      title="OCCAMS: Form Services"
       description="UI tools for managing forms"
       provides="Products.GenericSetup.interfaces.EXTENSION"
       />

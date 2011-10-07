@@ -2,7 +2,7 @@
 <object name="portal_javascripts">
   <!-- No javascript in this release
   <javascript 
-      id="++resource++hive.form/dragdrop.js" 
+      id="++resource++occams.form/dragdrop.js" 
       cacheable="True" 
       compression="none" 
       cookable="True"

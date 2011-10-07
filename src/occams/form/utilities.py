@@ -1,7 +1,7 @@
 from five import grok
 from avrc.data.store import DataStore
 from avrc.data.store.interfaces import IDataStore
-from hive.form.interfaces import IRepository
+from occams.form.interfaces import IRepository
 
 @grok.adapter(IRepository)
 @grok.implementer(IDataStore)

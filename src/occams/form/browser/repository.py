@@ -13,9 +13,9 @@ from avrc.data.store.interfaces import ISchema
 from avrc.data.store.interfaces import IDataStore
 from avrc.data.store import model
 
-from hive.form.interfaces import IRepository
-from hive.form.interfaces import IFormSummary
-from hive.form import MessageFactory as _
+from occams.form.interfaces import IRepository
+from occams.form.interfaces import IFormSummary
+from occams.form import MessageFactory as _
 
 
 class FormEditForm(crud.EditForm):

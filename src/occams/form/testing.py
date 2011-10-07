@@ -8,27 +8,27 @@ from zope.configuration import xmlconfig
 from avrc.data.store.testing import DATABASE_LAYER
 
 
-class HiveFormSandBoxLayer(PloneSandboxLayer):
+class OccamsFormSandBoxLayer(PloneSandboxLayer):
 
     defaultBases = (DATABASE_LAYER,)
 
     def setUpZope(self, app, configurationContext):
         # Load ZCML
-        import hive.form as package
+        import occams.form as package
         xmlconfig.file('configure.zcml', package, context=configurationContext)
 
     def setUpPloneSite(self, portal):
-        applyProfile(portal, 'hive.form:default')
+        applyProfile(portal, 'occams.form:default')
 
 
-HIVE_FORM_FIXTURE = HiveFormSandBoxLayer()
+OCCAMS_FORM_FIXTURE = OccamsFormSandBoxLayer()
 
-HIVE_FORM_INTEGRATION_TESTING = IntegrationTesting(
-    bases=(HIVE_FORM_FIXTURE,),
-    name='hive.form:Integration'
+OCCAMS_FORM_INTEGRATION_TESTING = IntegrationTesting(
+    bases=(OCCAMS_FORM_FIXTURE,),
+    name='occams.form:Integration'
     )
 
-HIVE_FORM_FUNCTIONAL_TESTING = FunctionalTesting(
-    bases=(HIVE_FORM_FIXTURE,),
-    name='hive.form:Functional'
+OCCAMS_FORM_FUNCTIONAL_TESTING = FunctionalTesting(
+    bases=(OCCAMS_FORM_FIXTURE,),
+    name='occams.form:Functional'
     )

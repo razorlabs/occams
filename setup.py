@@ -7,9 +7,9 @@ version = '0.4.0'
 
 
 setup(
-    name='hive.form',
+    name='occams.form',
     version=version,
-    description='A tool for managing DataStore forms in Plone',
+    description='A tool for managing dynamic forms in Plone.',
     classifiers=[
         'Development Status :: 4 - Beta'
         'Framework :: Zope3',
@@ -23,14 +23,14 @@ setup(
         'Topic :: Software Development :: Libraries',
         'Topic :: Utilities',
         ],
-    keywords='AVRC BEAST datastore database eav sqlalchemy relational clinical',
+    keywords='OCCAMS datastore database eav sqlalchemy relational clinical',
     author='BEAST Core Development Team',
     author_email='beast@ucsd.edu',
-    url='https://github.com/beastcore/hive.form',
+    url='https://github.com/beastcore/occams.form',
     license='GPL',
     packages=find_packages('src', exclude=['ez_setup']),
     package_dir={'':'src'},
-    namespace_packages=['hive'],
+    namespace_packages=['occams'],
     include_package_data=True,
     zip_safe=False,
     install_requires=[
@@ -42,8 +42,6 @@ setup(
         postgresql=['psycopg2'],
         test=['plone.app.testing'],
         ),
-    tests_require=['plone.app.testing'],
-    test_suite='hive.form.tests',
     entry_points="""
     [z3c.autoinclude.plugin]
     target = plone

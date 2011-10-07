@@ -2,30 +2,30 @@
 <object 
     xmlns:i18n="http://xml.zope.org/namespaces/i18n"
     meta_type="Dexterity FTI"
-    i18n:domain="hive.form.repository"
-    name="hive.form.repository">
+    i18n:domain="occams.form.repository"
+    name="occams.form.repository">
 
   <!-- Human-readable metadata -->
   <property name="title" i18n:translate="title">Form Repository</property>
   <property name="description" i18n:translate="description">
-    Provides tools to manage forms.
+    Provides an entry point for accessing DataStore schemata.
   </property>
 
   <!-- Content settings -->
-  <property name="content_icon">++resource++hive.form/images/database.png</property>
+  <property name="content_icon">++resource++occams.form/images/database.png</property>
   <!-- Applications must specificy this as an addable type -->
-  <property name="global_allow">False</property>
+  <property name="global_allow">True</property>
   <property name="filter_content_types">True</property>  
   <property name="allowed_content_types">
     <!-- 
         No sub-content allowed since we're only using this as a stub for
-        accessing EAV forms.
+        accessing DataStore schemata.
     -->
   </property>
   <property name="allow_discussion">False</property>
 
   <!-- Content type specification -->
-  <property name="schema">hive.form.interfaces.IRepository</property> 
+  <property name="schema">occams.form.interfaces.IRepository</property> 
 
   <!-- Content type implementation (use generic Plone type) -->
   <property name="klass">plone.dexterity.content.Item</property>

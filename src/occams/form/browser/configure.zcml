@@ -2,11 +2,11 @@
     xmlns="http://namespaces.zope.org/zope"
     xmlns:i18n="http://namespaces.zope.org/i18n"
     xmlns:browser="http://namespaces.zope.org/browser"
-    i18n_domain="hive.form">
+    i18n_domain="occams.form">
 
   <!-- No grokkers exist for crud forms, so we do it in ZCML -->
   <browser:page
-      for="hive.form.interfaces.IRepository"
+      for="occams.form.interfaces.IRepository"
       name="view"
       class=".repository.FormListingPage"
       permission="cmf.ManagePortal" 

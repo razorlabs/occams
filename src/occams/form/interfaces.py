@@ -5,7 +5,7 @@ Specification of services provided by this plug-in.
 import zope.interface
 import zope.schema
 
-from hive.form import MessageFactory as _
+from occams.form import MessageFactory as _
 
 
 class IFormSummary(zope.interface.Interface):

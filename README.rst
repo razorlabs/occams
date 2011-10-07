@@ -1,8 +1,29 @@
-==================
-HIVe Form Services
-==================
+===========
+OCCAMS Form
+===========
 
-A tool for managing DataStore forms in Plone.
+A tool for managing dynamic forms in Plone.
+
+
+---------
+Rationale
+---------
+
+As part of the OCCAMS suite of components, a method for accessing and managing
+forms through the web is needed for patient data.
+
+
+--------------
+Implementation
+--------------
+
+
+DataStore
++++++++++
+
+OCCAMS Form uses DataStore as its foundation and provides a user interface for
+intercting with forms through the web.
+
 
 ----------
 Disclaimer
