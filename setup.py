@@ -9,7 +9,7 @@ version = '0.4.0'
 setup(
     name='hive.form',
     version=version,
-    description='Provides UI tools for management of EAV-type forms',
+    description='A tool for managing DataStore forms in Plone',
     classifiers=[
         'Development Status :: 4 - Beta'
         'Framework :: Zope3',
@@ -24,9 +24,9 @@ setup(
         'Topic :: Utilities',
         ],
     keywords='AVRC BEAST datastore database eav sqlalchemy relational clinical',
-    author='The BEAST Core Development Team',
+    author='BEAST Core Development Team',
     author_email='beast@ucsd.edu',
-    url='http://datam0nk3y.org/P01svn/plone4_eggs/hive.form/trunk',
+    url='https://github.com/beastcore/hive.form',
     license='GPL',
     packages=find_packages('src', exclude=['ez_setup']),
     package_dir={'':'src'},
@@ -35,29 +35,15 @@ setup(
     zip_safe=False,
     install_requires=[
         'setuptools',
-
-        # Component specification/documentation
-        'zope.i18nmessageid',
-        'zope.interface',
-        'zope.schema',
-
-        # Plone-specific entry points
-        'five.grok',
-        'plone.dexterity',
-
-        # ORM utilities and upgrade tools
-        'SQLAlchemy',
-        'sqlalchemy-migrate',
-
-        # Custom add-on dependencies
-        # EAV tools
+        'plone.app.dexterity',
         'avrc.data.store',
         ],
     extras_require=dict(
-        test=['zope.testing'],
+        postgresql=['psycopg2'],
+        test=['plone.app.testing'],
         ),
-    tests_require=['zope.testing'],
-    test_suite='hive.form',
+    tests_require=['plone.app.testing'],
+    test_suite='hive.form.tests',
     entry_points="""
     [z3c.autoinclude.plugin]
     target = plone
