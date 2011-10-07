@@ -5,6 +5,12 @@
     <utility 
       interface="z3c.saconfig.ISiteScopedSession"
       factory="occams.form.database.SiteScopedSession"
+      name="occams.form.FiaSession"
+      />
+    <utility 
+      interface="z3c.saconfig.ISiteScopedSession"
+      factory="occams.form.database.SiteScopedSession"
+      name="occams.form.PhiSession"
       />
   </utilities>
 </componentregistry>
