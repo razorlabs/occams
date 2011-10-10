@@ -1,3 +1,7 @@
+"""
+Unit testing resources
+"""
+
 from plone.app.testing import PloneSandboxLayer
 from plone.app.testing import applyProfile
 from plone.app.testing import IntegrationTesting
@@ -25,10 +29,10 @@ OCCAMS_FORM_FIXTURE = OccamsFormSandBoxLayer()
 
 OCCAMS_FORM_INTEGRATION_TESTING = IntegrationTesting(
     bases=(OCCAMS_FORM_FIXTURE,),
-    name='occams.form:Integration'
+    name='OccamsForm:Integration'
     )
 
 OCCAMS_FORM_FUNCTIONAL_TESTING = FunctionalTesting(
     bases=(OCCAMS_FORM_FIXTURE,),
-    name='occams.form:Functional'
+    name='OccamsForm:Functional'
     )

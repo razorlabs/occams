@@ -1,18 +1,18 @@
+
 from zope.publisher.interfaces import IPublishTraverse
 from zExceptions import NotFound
-
-from z3c.form import field
 
 from five import grok
 from plone.directives import form
 
 from avrc.data.store.interfaces import IDataStore
-from avrc.data.store import directives as ds
+from avrc.data.store import directives as datastore
 
 from occams.form.interfaces import IRepository
+from occams.form.browser.render import convertSchemaToForm
 
 
-class Preview(form.Form):
+class Preview(form.SchemaForm):
     """
     Displays a preview the form.
     This view should have no button handlers since it's only a preview of
@@ -23,39 +23,39 @@ class Preview(form.Form):
     grok.name('form')
 
     ignoreContext = True
+    enable_form_tabbing = False
 
-    # Set by ``publishTraverse``
-    itemName = None
-    datastore = None
-    form = None
+    # Passed in URL
+    _formName = None
+    _version = None
+
+    # Generated values from parameters
+    _form = None
 
     @property
     def label(self):
-        return ds.title.bind().get(self.form)
+        return datastore.title.bind().get(self._form)
 
     @property
     def description(self):
-        return ds.description.bind().get(self.form)
+        return datastore.description.bind().get(self._form)
 
     @property
-    def fields(self):
-        return field.Fields(self.form)
+    def schema(self):
+        return self._form
 
     def publishTraverse(self, request, name):
-        self.Title = 'asdfsafsadf';
-        if self.itemName is None:
-            self.itemName = str(name)
+        if self._formName is None:
+            self._formName = str(name)
             return self
         else:
             raise NotFound()
 
     def update(self):
         self.request.set('disable_border', True)
-        self.setupForm()
+        self._setupForm()
         super(Preview, self).update()
 
-    def setupForm(self):
-        if self.datastore is None:
-            self.datastore = IDataStore(self.context)
-
-        self.form = self.datastore.schemata.get(self.itemName)
+    def _setupForm(self):
+        datastoreForm = IDataStore(self.context).schemata.get(self._formName)
+        self._form = convertSchemaToForm(datastoreForm)

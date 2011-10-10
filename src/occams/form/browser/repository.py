@@ -5,8 +5,6 @@ from z3c.form import field
 from plone.z3cform import layout
 from plone.z3cform.crud import crud
 
-from z3c.saconfig.interfaces import IScopedSession
-
 from avrc.data.store.interfaces import IDataStore
 from avrc.data.store import model
 
@@ -37,7 +35,7 @@ class FormListing(crud.CrudForm):
         """
         Return a listing of all the forms.
         """
-        datastore = IDataStore(IScopedSession(self.context))
+        datastore = IDataStore(self.context)
         session = datastore.session
         query = (
             session.query(model.Schema)

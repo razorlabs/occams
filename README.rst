@@ -12,17 +12,32 @@ Rationale
 As part of the OCCAMS suite of components, a method for accessing and managing
 forms through the web is needed for patient data.
 
+-----
+Goals
+-----
+
+Some goals of this product:
+
+    * Handle form entry
+    * Facilitate form manipulation
+    * Show form statistics (usage, # instances, % entered, states)
+    * Form importing/exporting
 
 --------------
 Implementation
 --------------
-
 
 DataStore
 +++++++++
 
 OCCAMS Form uses DataStore as its foundation and provides a user interface for
 intercting with forms through the web.
+
+
+PostgreSQL
+++++++++++
+
+Currently we only support PostgreSQL
 
 ------------
 Installation
@@ -54,7 +69,7 @@ via buildout::
         xmlns="http://namespaces.zope.org/zope"
         xmlns:db="http://namespaces.zope.org/db">
       <include package="z3c.saconfig" file="meta.zcml" />
-      <db:engine name="YOUR.OWN.ENGINE" url="sqlite://:memory:" />
+      <db:engine name="YOUR.OWN.ENGINE" url="postgresql://...." />
       <db:session name="YOUR.OWN.SESSION" engine="YOUR.OWN.ENGINE" />
     </configure>
     

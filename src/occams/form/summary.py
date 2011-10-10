@@ -1,3 +1,7 @@
+"""
+Form summary tools
+"""
+
 from sqlalchemy.orm import object_session
 from sqlalchemy import func
 
