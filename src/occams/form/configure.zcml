@@ -15,8 +15,8 @@
   <genericsetup:registerProfile
       name="default"
       directory="profiles/default"
-      title="OCCAMS: Form Services"
-      description="UI tools for managing forms"
+      title="OCCAMS Form Tools"
+      description="UI tools for managing dynamic forms"
       provides="Products.GenericSetup.interfaces.EXTENSION"
       />
 
