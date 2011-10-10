@@ -5,8 +5,19 @@ from zope.schema.vocabulary import SimpleVocabulary
 
 from five import grok
 from z3c.saconfig.interfaces import IScopedSession
+from z3c.saconfig import named_scoped_session
 
 from occams.form import MessageFactory as _
+from occams.form.interfaces import IRepository
+
+
+@grok.adapter(IRepository)
+@grok.implementer(IScopedSession)
+def getRespositorySession(context):
+    """
+    Retrieves the session specified by the repository
+    """
+    return named_scoped_session(context.session)
 
 
 class AvailableSessions(grok.GlobalUtility):
@@ -21,9 +32,5 @@ class AvailableSessions(grok.GlobalUtility):
 
     def __call__(self, context):
         registered = getUtilitiesFor(IScopedSession)
-        # Prepend None because Plone will choose the first value as the
-        # default if the field is required (which is REALLY bad IMHO because
-        # the user will then cruise through the defaults without
-        # even consciously deciding which value they actually want)
         names = [name for name, utility in registered]
         return SimpleVocabulary.fromValues(names)
