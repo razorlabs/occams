@@ -37,7 +37,7 @@ setup(
         'setuptools',
         'plone.app.dexterity',
         'SQLAlchemy',
-        'zc3.saconfig',
+        'z3c.saconfig',
 
         'avrc.data.store',
         ],
