@@ -8,7 +8,7 @@
   <!-- Human-readable metadata -->
   <property name="title" i18n:translate="title">Form Repository</property>
   <property name="description" i18n:translate="description">
-    Provides an entry point for accessing DataStore schemata.
+    Provides an entry point for accessing form schemata.
   </property>
 
   <!-- Content settings -->
