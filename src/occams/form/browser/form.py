@@ -1,23 +1,16 @@
 from zope.publisher.interfaces import IPublishTraverse
 from zExceptions import NotFound
 
-from z3c.form import button
 from z3c.form import field
 
 from five import grok
 from plone.directives import form
 
-from avrc.data.store.interfaces import ISchema
 from avrc.data.store.interfaces import IDataStore
 from avrc.data.store import directives as ds
 
 from occams.form.interfaces import IRepository
 
-
-#@form.validator(field=IRepository['session'])
-#def validateRepositorySession(value):
-#    if value is None:
-#        raise ValidationError('Please select a database session.')
 
 class Preview(form.Form):
     """
@@ -66,6 +59,3 @@ class Preview(form.Form):
             self.datastore = IDataStore(self.context)
 
         self.form = self.datastore.schemata.get(self.itemName)
-
-
-

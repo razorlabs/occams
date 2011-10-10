@@ -6,6 +6,13 @@
 
   <!-- Some z3c.form tools are not grokkable, so we register them here -->
   
+  <!-- 
+    Enable prompt for widgets even if they are required, to prevent the users
+    from cruising through the form without consciously deciding which value 
+    they actually want     
+    Example at:
+    http://packages.python.org/z3c.form/browser/select.html#explicit-selection-prompt
+   -->
   <adapter factory=".widget.AllowPrompt" name="prompt" />
   
   <browser:page

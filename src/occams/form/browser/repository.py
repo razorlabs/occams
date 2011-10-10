@@ -1,21 +1,16 @@
 import os
 
-import zope.schema
-from five import grok
-
-from z3c.form import button
 from z3c.form import field
 
 from plone.z3cform import layout
 from plone.z3cform.crud import crud
 
-from avrc.data.store.interfaces import ISchema
+from z3c.saconfig.interfaces import IScopedSession
+
 from avrc.data.store.interfaces import IDataStore
 from avrc.data.store import model
 
-from occams.form.interfaces import IRepository
 from occams.form.interfaces import IFormSummary
-from occams.form import MessageFactory as _
 
 
 class FormEditForm(crud.EditForm):
@@ -25,6 +20,7 @@ class FormEditForm(crud.EditForm):
     label = None
     buttons = crud.EditForm.buttons.copy()
     handlers = crud.EditForm.handlers.copy()
+
 
 class FormListing(crud.CrudForm):
     """
@@ -41,7 +37,7 @@ class FormListing(crud.CrudForm):
         """
         Return a listing of all the forms.
         """
-        datastore = IDataStore(self.context)
+        datastore = IDataStore(IScopedSession(self.context))
         session = datastore.session
         query = (
             session.query(model.Schema)
@@ -69,4 +65,3 @@ class FormListingPage(layout.FormWrapper):
     @property
     def label(self):
         return self.context.Title()
-
