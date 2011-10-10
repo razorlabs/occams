@@ -4,7 +4,10 @@
     xmlns:browser="http://namespaces.zope.org/browser"
     i18n_domain="occams.form">
 
-  <!-- No grokkers exist for crud forms, so we do it in ZCML -->
+  <!-- Some z3c.form tools are not grokkable, so we register them here -->
+  
+  <adapter factory=".widget.AllowPrompt" name="prompt" />
+  
   <browser:page
       for="occams.form.interfaces.IRepository"
       name="view"

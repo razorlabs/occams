@@ -35,7 +35,7 @@ class IFormSummary(zope.interface.Interface):
 
     currentVersion = zope.schema.Date(
         title=_(u'Version'),
-        description=_(u'Curent version number'),
+        description=_(u'Current version number'),
         readonly=True,
         )
 
@@ -53,30 +53,15 @@ class IRepository(zope.interface.Interface):
     form EAV tables from ``avrc.data.store.DataStore``
     """
 
-    vendor = zope.schema.Choice(
-        title=_(u'Database Vendor'),
-        values=[None, 'mysql', 'postgresql', 'sqlite']
-        )
-
-    user = zope.schema.BytesLine(
-        title=_(u'User'),
+    session = zope.schema.Choice(
+        title=_(u'Database Session'),
         description=_(
-            u'A user with sufficient priviligies to access and '
-            u'modify database content. The user must also have privileges '
-            u'to create database tables. See vendor documentation for '
-            u'proper user and privilege setup.'
+            u'Select from one of the registered database sessions '
+            u'to use as the form repository. Note this will install all '
+            u'SQL tables necessary for managing forms. '
+            u'See product documentation to ensure there are no name collisions.'
             ),
+        vocabulary=u'occams.form.AvailableSessions',
+        required=True,
+        default=None,
         )
-
-    password = zope.schema.Password(
-        title=_(u'Password')
-        )
-
-    host = zope.schema.BytesLine(
-        title=_(u'Host Name')
-        )
-
-    database = zope.schema.BytesLine(
-        title=_(u'Database Name')
-        )
-

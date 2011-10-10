@@ -14,6 +14,11 @@ from avrc.data.store import directives as ds
 from occams.form.interfaces import IRepository
 
 
+#@form.validator(field=IRepository['session'])
+#def validateRepositorySession(value):
+#    if value is None:
+#        raise ValidationError('Please select a database session.')
+
 class Preview(form.Form):
     """
     Displays a preview the form.
