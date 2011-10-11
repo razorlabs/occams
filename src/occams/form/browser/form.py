@@ -1,4 +1,4 @@
-
+from zope.interface import implements
 from zope.publisher.interfaces import IPublishTraverse
 from zExceptions import NotFound
 
@@ -57,5 +57,6 @@ class Preview(form.SchemaForm):
         super(Preview, self).update()
 
     def _setupForm(self):
-        datastoreForm = IDataStore(self.context).schemata.get(self._formName)
-        self._form = convertSchemaToForm(datastoreForm)
+        if self._form is None:
+            datastoreForm = IDataStore(self.context).schemata.get(self._formName)
+            self._form = convertSchemaToForm(datastoreForm)
