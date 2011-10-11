@@ -28,7 +28,8 @@
   <property name="schema">occams.form.interfaces.IRepository</property> 
 
   <!-- Content type implementation (use generic Plone type) -->
-  <property name="klass">plone.dexterity.content.Item</property>
+  <!-- We use Container because technically it's a container of virtual data -->
+  <property name="klass">plone.dexterity.content.Container</property>
 
   <property name="add_permission">cmf.AddPortalContent</property>
  
