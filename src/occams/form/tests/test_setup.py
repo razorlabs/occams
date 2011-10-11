@@ -12,3 +12,8 @@ class TestSetup(unittest.TestCase):
         portal = self.layer['portal']
         quickinstaller = getToolByName(portal, 'portal_quickinstaller')
         self.assertTrue(quickinstaller.isProductInstalled('occams.form'))
+
+    def test_dexterity_installed(self):
+        portal = self.layer['portal']
+        quickinstaller = getToolByName(portal, 'portal_quickinstaller')
+        self.assertTrue(quickinstaller.isProductInstalled('plone.app.dexterity'))
