@@ -1,3 +1,7 @@
+"""
+Tools for rendering a form (since subforms aren't well supported)
+"""
+
 from copy import copy
 
 from zope.interface.interface import InterfaceClass
@@ -13,6 +17,9 @@ from avrc.data.store import directives as datastore
 
 
 def convertSchemaToForm(schema):
+    """
+    Converts a DataStore form to a Dexterity Form
+    """
     if datastore.Schema not in schema.getBases():
         bases = [convertSchemaToForm(base) for base in schema.getBases()]
     else:
