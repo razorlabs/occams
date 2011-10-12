@@ -47,6 +47,8 @@ class IFormSummary(zope.interface.Interface):
         )
 
 
+from grokcore.component.interfaces import IContext
+
 class IRepository(zope.interface.Interface):
     """
     Form repository entry point.

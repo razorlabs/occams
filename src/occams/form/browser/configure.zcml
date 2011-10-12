@@ -5,12 +5,19 @@
     i18n_domain="occams.form">
       
   <!-- Crud forms aren't grokkable, so register the page here -->
-  
+  <!--
+   <browser:page
+      for="occams.form.interfaces.IRepository"
+      name="view"
+      class=".form.ListingContext"
+      permission="cmf.ManagePortal" 
+      />
+      
   <browser:page
       for="occams.form.interfaces.IRepository"
       name="view"
-      class=".repository.ListingPage"
+      class=".form.ListingPage"
       permission="cmf.ManagePortal" 
-      />
+      /> -->
 
 </configure>
