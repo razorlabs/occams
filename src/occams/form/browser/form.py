@@ -1,5 +1,8 @@
+import os
 from copy import copy
 
+from OFS.SimpleItem import SimpleItem
+from zope.interface import Interface
 from zope.interface.interface import InterfaceClass
 import zope.schema
 from zope.publisher.interfaces import IPublishTraverse
@@ -10,24 +13,183 @@ from plone.directives import form
 from plone.directives.form.schema import FIELDSETS_KEY
 from plone.directives.form.schema import WIDGETS_KEY
 from plone.supermodel.model import Fieldset
+from plone.z3cform import layout
+from plone.z3cform.crud import crud
 from z3c.form import field
 
 from avrc.data.store.interfaces import IDataStore
 from avrc.data.store.interfaces import ISchema
 from avrc.data.store import directives as datastore
+from avrc.data.store import model
 
 from occams.form.interfaces import IOccamsBrowserView
+from occams.form.interfaces import IRepository
+from occams.form.interfaces import IFormSummary
 
+from zope.publisher.interfaces.http import IHTTPRequest
+
+
+# TODO: Print # of forms
 # TODO: PDF view
 # Expand drop down widgets
 
-def convertSchemaToForm(schema):
+
+class ISchemaContext(Interface):
+    pass
+
+
+class SchemaContext(SimpleItem):
+    grok.implements(ISchemaContext)
+
+    _schema = None
+
+    def __init__(self, schema):
+        self._schema = schema
+        self.Title = schema.title
+
+    @property
+    def schema(self):
+        return self._schema
+
+
+
+class RepositoryContext(grok.MultiAdapter):
+    grok.adapts(IRepository, IHTTPRequest)
+    grok.implements(IPublishTraverse)
+
+    def __init__(self, context, request):
+        self.context = context
+        self.request = request
+
+    def publishTraverse(self, request, name):
+        if name == 'view':
+            view = ListingPage(self.context, request)
+        else:
+            datastore = IDataStore(self.context)
+            session = datastore.session
+
+            query = (
+                session.query(model.Schema)
+                .filter(model.Schema.name == name)
+                .filter(model.Schema.asOf(None))
+                .order_by(model.Schema.name.asc())
+                )
+
+            schema = query.first()
+
+            if schema is None:
+                raise NotFound
+            else:
+                schemaContext = SchemaContext(schema).__of__(self.context)
+                view = Preview(schemaContext, request)
+
+        return view
+
+
+class ListingEditForm(crud.EditForm):
     """
-    Converts a DataStore form to a Dexterity Form
+    Custom form edit form.
+    """
+    label = None
+    buttons = crud.EditForm.buttons.copy()
+    handlers = crud.EditForm.handlers.copy()
+
+
+class Listing(crud.CrudForm):
+    """
+    Lists the forms in the repository.
+    No add form is needed as that will be a separate view.
+    See ``configure.zcml`` for directive configuration.
+    """
+
+    addform_factory = crud.NullForm
+    editform_factory = ListingEditForm
+    view_schema = field.Fields(IFormSummary)
+
+    def get_items(self):
+        """
+        Return a listing of all the forms.
+        """
+        datastore = IDataStore(self.context)
+        session = datastore.session
+        query = (
+            session.query(model.Schema)
+            .filter(model.Schema.asOf(None))
+            .order_by(model.Schema.name.asc())
+            )
+        items = [(str(schema.name), IFormSummary(schema)) for schema in query.all()]
+        return items
+
+    def link(self, item, field):
+        """
+        Renders a link to the form view
+        """
+        if field == 'title':
+            return os.path.join(self.context.absolute_url(), item.context.name)
+
+
+class ListingPage(layout.FormWrapper):
+    """
+    Form wrapper so it can be rendered with a Plone layout and dynamic title.
+    """
+    grok.implements(IOccamsBrowserView)
+
+    form = Listing
+
+    @property
+    def label(self):
+        return self.context.title
+
+    @property
+    def description(self):
+        return self.context.description
+
+
+class Preview(form.SchemaForm):
+    """
+    Displays a preview the form.
+    This view should have no button handlers since it's only a preview of
+    what the form will look like to a user. 
+    
+    TODO: Currently suffers from (http://dev.plone.org/plone/ticket/10699)
+    """
+    grok.implements(IOccamsBrowserView)
+    grok.context(ISchemaContext)
+    grok.require('occams.form.ViewForm')
+
+    ignoreContext = True
+    enable_form_tabbing = False
+
+    @property
+    def label(self):
+        return self.context.schema.title
+
+    @property
+    def description(self):
+        return self.context.schema.description
+
+    @property
+    def schema(self):
+        return self._form
+
+    def update(self):
+        self.request.set('disable_border', True)
+        self._setupForm()
+        super(Preview, self).update()
+
+    def _setupForm(self):
+        name = self.context.schema.name
+        datastoreForm = IDataStore(self.context.getParentNode()).schemata.get(name)
+        self._form = _convertSchemaToForm(datastoreForm)
+
+
+def _convertSchemaToForm(schema):
+    """
+    Helper method that converts a DataStore form to a Dexterity Form
     (since subforms aren't well supported)
     """
     if datastore.Schema not in schema.getBases():
-        bases = [convertSchemaToForm(base) for base in schema.getBases()]
+        bases = [_convertSchemaToForm(base) for base in schema.getBases()]
     else:
         bases = [form.Schema]
 
@@ -91,235 +253,3 @@ def convertSchemaToForm(schema):
     datastore.version.set(ploneForm, datastore.version.bind().get(schema))
 
     return ploneForm
-
-
-from zope.interface import Interface
-
-class ISchemaContext(Interface):
-    pass
-
-class Preview(form.SchemaForm):
-    """
-    Displays a preview the form.
-    This view should have no button handlers since it's only a preview of
-    what the form will look like to a user. 
-    
-    TODO: Currently suffers from (http://dev.plone.org/plone/ticket/10699)
-    """
-#    grok.implements(IPublishTraverse, IOccamsBrowserView)
-    grok.implements(IOccamsBrowserView)
-    grok.context(ISchemaContext)
-    grok.require('occams.form.ViewForm')
-
-    ignoreContext = True
-    enable_form_tabbing = False
-
-    # Passed in URL
-    _formName = None
-    _version = None
-
-    # Generated values from parameters
-    _form = None
-
-    @property
-    def label(self):
-        return datastore.title.bind().get(self._form)
-
-    @property
-    def description(self):
-        return datastore.description.bind().get(self._form)
-
-    @property
-    def schema(self):
-        return self._form
-
-#    def publishTraverse(self, request, name):
-#        import pdb; pdb.set_trace()
-#        if self._formName is None:
-#            self._formName = str(name)
-#            return self
-#        else:
-#            raise NotFound()
-
-    def update(self):
-        self.request.set('disable_border', True)
-        self._setupForm()
-        super(Preview, self).update()
-
-    def _setupForm(self):
-        if self._form is None:
-            datastoreForm = IDataStore(self.context).schemata.get(self._formName)
-            self._form = convertSchemaToForm(datastoreForm)
-            self.__name__ = self.label
-
-
-
-import os
-
-from plone.z3cform import layout
-from plone.z3cform.crud import crud
-from z3c.form import field
-
-from avrc.data.store import model
-
-from occams.form.interfaces import IFormSummary
-
-
-# TODO: Print # of forms
-
-class ListingEditForm(crud.EditForm):
-    """
-    Custom form edit form.
-    """
-    label = None
-    buttons = crud.EditForm.buttons.copy()
-    handlers = crud.EditForm.handlers.copy()
-
-
-class Listing(crud.CrudForm):
-    """
-    Lists the forms in the repository.
-    No add form is needed as that will be a separate view.
-    See ``configure.zcml`` for directive configuration.
-    """
-
-    addform_factory = crud.NullForm
-    editform_factory = ListingEditForm
-    view_schema = field.Fields(IFormSummary)
-
-    def get_items(self):
-        """
-        Return a listing of all the forms.
-        """
-        datastore = IDataStore(self.context)
-        session = datastore.session
-        query = (
-            session.query(model.Schema)
-            .filter(model.Schema.asOf(None))
-            .order_by(model.Schema.name.asc())
-            )
-        items = [(str(schema.name), IFormSummary(schema)) for schema in query.all()]
-        return items
-
-    def link(self, item, field):
-        """
-        Renders a link to the form view
-        """
-        if field == 'title':
-            return os.path.join(self.context.absolute_url(), item.context.name)
-
-class ListingPage(layout.FormWrapper):
-    """
-    Form wrapper so it can be rendered with a Plone layout and dynamic title.
-    """
-    grok.implements(IOccamsBrowserView)
-
-    form = Listing
-
-    @property
-    def label(self):
-        return self.context.title
-
-    @property
-    def description(self):
-        return self.context.description
-
-
-
-from OFS.SimpleItem import SimpleItem
-
-
-from zope.publisher.interfaces import IPublishTraverse
-from zExceptions import NotFound
-
-from avrc.data.store.interfaces import ISchema
-
-class SchemaContext(SimpleItem):
-    grok.implements(ISchemaContext)
-
-    _schema = None
-
-
-    def getSchema(self):
-        return self._schema
-
-from zope.traversing.interfaces import ITraversable
-
-from occams.form.interfaces import IRepository
-
-
-#from occams.form.browser.traverser import Traverser
-from zope.publisher.interfaces.http import IHTTPRequest
-from zope.publisher.interfaces.browser import IBrowserPublisher
-
-class RepositoryContext(grok.MultiAdapter):
-    grok.adapts(IRepository, IHTTPRequest)
-    grok.implements(IBrowserPublisher)
-
-    def __init__(self, context, request):
-        self.context = context
-        self.request = request
-
-    def browserDefault(self, request):
-        import pdb; pdb.set_trace()
-        print 'adfadsfasdfas'
-
-    def publishTraverse(self, request, name):
-        import pdb; pdb.set_trace()
-        return ListingPage(self.context, request)
-
-
-
-#class Viewlets(SimpleItem):
-#    """ Expose arbitary viewlets to traversing by name.
-#
-#    Exposes viewlets to templates by names.
-#
-#    Example how to render plone.logo viewlet in arbitary template code point::
-#
-#        <div tal:content="context/@@viewlets/plone.logo" />
-#
-#    """
-#
-#    ...
-
-
-
-
-#
-#        viewlet = self.setupViewletByName(name)
-#        if viewlet is None:
-#            active_layers = [ str(x) for x in self.request.__provides__.__iro__ ]
-#            active_layers = tuple(active_layers)
-#            raise ViewletNotFoundException("Viewlet does not exist by name %s for the active theme layer set %s. Probably theme interface not registered in plone.browserlayers. Try reinstalling the theme." % (name, str(active_layers)))
-#
-#        viewlet.update()
-#        return viewlet.render()
-#
-#    def publishTraverse(self, request, name):
-#        """ 1. Try to find a content type whose name matches the next URL path element.
-#            2. Look up its schema.
-#            3. Return a schema context (an acquisition-aware wrapper of the schema).
-#        """
-#        import pdb; pdb.set_trace()
-#        if name is not None and name != 'index_html':
-#            schema = None
-#
-#            if schema is None:
-#                raise NotFound
-#
-#            view = SchemaContext(schema, request).__of__(self.context)
-#
-#        else:
-#            view = ListingPage(self.context, request).__of__(self.context)
-#        return view
-#        try:
-#            fti = getUtility(IDexterityFTI, name=name)
-#        except ComponentLookupError:
-#            raise NotFound
-#
-#        schema = fti.lookupSchema()
-#        schema_context = TypeSchemaContext(schema, request, name=name, title=fti.title).__of__(self)
-#        schema_context.fti = fti
-#        schema_context.schemaName = u''
-#        return schema_context
