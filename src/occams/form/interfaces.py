@@ -4,6 +4,11 @@ import zope.schema
 from occams.form import MessageFactory as _
 
 
+class IOccamsBrowserView(zope.interface.Interface):
+    """
+    Marker inteface for views of this plugin
+    """
+
 class IFormSummary(zope.interface.Interface):
     """
     Form summary for listing purposes.

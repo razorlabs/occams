@@ -3,22 +3,13 @@
     xmlns:i18n="http://namespaces.zope.org/i18n"
     xmlns:browser="http://namespaces.zope.org/browser"
     i18n_domain="occams.form">
-
-  <!-- Some z3c.form tools are not grokkable, so we register them here -->
-  
-  <!-- 
-    Enable prompt for widgets even if they are required, to prevent the users
-    from cruising through the form without consciously deciding which value 
-    they actually want     
-    Example at:
-    http://packages.python.org/z3c.form/browser/select.html#explicit-selection-prompt
-   -->
-  <adapter factory=".widget.AllowPrompt" name="prompt" />
+      
+  <!-- Crud forms aren't grokkable, so register the page here -->
   
   <browser:page
       for="occams.form.interfaces.IRepository"
       name="view"
-      class=".repository.FormListingPage"
+      class=".repository.ListingPage"
       permission="cmf.ManagePortal" 
       />
 

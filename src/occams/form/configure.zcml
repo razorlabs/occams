@@ -6,11 +6,12 @@
     i18n_domain="occams.form">
 
   <includeDependencies package="." />
+  
+  <include file="permissions.zcml" />
+  <include package=".browser" />
+  <include package=".upgrades" />
 
   <grok:grok package="." exclude="upgrades" />
-
-  <!-- Load browser ZCML directives -->
-  <include package=".browser" />
   
   <genericsetup:registerProfile
       name="default"
@@ -19,8 +20,5 @@
       description="UI tools for managing dynamic forms"
       provides="Products.GenericSetup.interfaces.EXTENSION"
       />
-
-  <!-- Load upgrade step ZCML directives -->
-  <include package=".upgrades" />
 
 </configure>

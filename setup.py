@@ -35,9 +35,14 @@ setup(
     zip_safe=False,
     install_requires=[
         'setuptools',
+        'five.grok',
         'plone.app.dexterity',
+        'plone.directives.form',
+        'plone.directives.dexterity',
+        'plone.z3cform',
         'SQLAlchemy',
         'z3c.saconfig',
+        'z3c.form',
 
         'avrc.data.store',
         ],

@@ -10,8 +10,9 @@ from avrc.data.store import model
 
 from occams.form.interfaces import IFormSummary
 
+# TODO: Print # of forms
 
-class FormEditForm(crud.EditForm):
+class ListingEditForm(crud.EditForm):
     """
     Custom form edit form.
     """
@@ -20,7 +21,7 @@ class FormEditForm(crud.EditForm):
     handlers = crud.EditForm.handlers.copy()
 
 
-class FormListing(crud.CrudForm):
+class Listing(crud.CrudForm):
     """
     Lists the forms in the repository.
     No add form is needed as that will be a separate view.
@@ -28,7 +29,7 @@ class FormListing(crud.CrudForm):
     """
 
     addform_factory = crud.NullForm
-    editform_factory = FormEditForm
+    editform_factory = ListingEditForm
     view_schema = field.Fields(IFormSummary)
 
     def get_items(self):
@@ -53,12 +54,12 @@ class FormListing(crud.CrudForm):
             return os.path.join(self.context.absolute_url(), 'form', item.context.name)
 
 
-class FormListingPage(layout.FormWrapper):
+class ListingPage(layout.FormWrapper):
     """
     Form wrapper so it can be rendered with a Plone layout and dynamic title.
     """
 
-    form = FormListing
+    form = Listing
 
     @property
     def label(self):
