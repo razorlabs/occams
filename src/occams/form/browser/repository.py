@@ -1,9 +1,8 @@
 import os
 
-from z3c.form import field
-
 from plone.z3cform import layout
 from plone.z3cform.crud import crud
+from z3c.form import field
 
 from avrc.data.store.interfaces import IDataStore
 from avrc.data.store import model
