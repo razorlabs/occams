@@ -54,10 +54,10 @@
   <!-- Actions -->
   <action title="View" action_id="view" category="object" condition_expr=""
     url_expr="string:${object_url}/" visible="True">
-    <permission value="avrc: View an Institute" />
+    <permission value="OCCAMS: View Repository" />
   </action>
   <action title="Edit" action_id="edit" category="object" condition_expr=""
     url_expr="string:${object_url}/edit" visible="True">
-    <permission value="avrc: Modify an Institute" />
+    <permission value="OCCAMS: Modify Repository" />
   </action>
 </object>

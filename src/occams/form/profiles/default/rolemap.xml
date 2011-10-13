@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<rolemap>
+  <permissions>
+  
+    <!-- <permission name="avrc: View an Institute" acquire="True">
+        <role name="Manager"/>
+    </permission> -->
+
+  </permissions>
+</rolemap>
