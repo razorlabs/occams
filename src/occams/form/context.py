@@ -11,6 +11,9 @@ class SchemaContext(SimpleItem):
 
     def __init__(self, schema):
         self._schema = schema
+        self.__name__ = schema.name
+        self.id = schema.name
+        self.title = schema.title
         self.Title = schema.title
 
     @property
