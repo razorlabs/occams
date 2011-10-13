@@ -3,8 +3,6 @@ from copy import copy
 
 from zope.interface.interface import InterfaceClass
 import zope.schema
-from zope.publisher.interfaces import IPublishTraverse
-from zExceptions import NotFound
 
 from five import grok
 from plone.directives import form
@@ -13,7 +11,6 @@ from plone.directives.form.schema import WIDGETS_KEY
 from plone.supermodel.model import Fieldset
 from plone.z3cform import layout
 from plone.z3cform.crud import crud
-from Products.statusmessages.interfaces import IStatusMessage
 from z3c.form import field
 
 from avrc.data.store.interfaces import IDataStore
@@ -28,14 +25,14 @@ from occams.form.interfaces import IRepository
 from occams.form.interfaces import ISchemaContext
 from occams.form.interfaces import IFormSummary
 
-from zope.publisher.interfaces.http import IHTTPRequest
-
 
 # TODO: Print # of forms
 # TODO: PDF view
 
+from occams.form.traverse import Traverser
 
-class RepositoryContext(grok.MultiAdapter):
+
+class RepositoryTraverse(Traverser):
     """
     This is a special adapter that overrides IRepository's ability to traverse
     and instead allows for a wild card search of a possible child. If ``view``
@@ -46,44 +43,30 @@ class RepositoryContext(grok.MultiAdapter):
     then all dynamic forms would need to be explicitly prepended with a
     ``@@view`` which is not desirable (e.g. myrepo/@@view/AForm.
     """
-    grok.adapts(IRepository, IHTTPRequest)
-    grok.implements(IPublishTraverse)
+    grok.context(IRepository)
 
-    def __init__(self, context, request):
-        self.context = context
-        self.request = request
+    def traverse(self, name):
+        datastore = IDataStore(self.context)
+        session = datastore.session
+        item = None
 
-    def publishTraverse(self, request, name):
+        log.debug(u'Traversing to form "%s"' % name)
 
-        if name != 'view':
-            datastore = IDataStore(self.context)
-            session = datastore.session
+        query = (
+            session.query(model.Schema)
+            .filter(model.Schema.name == name)
+            .filter(model.Schema.asOf(None))
+            .order_by(model.Schema.name.asc())
+            )
 
-            log.debug(u'Traversing to form "%s"' % name)
+        schema = query.first()
 
-            query = (
-                session.query(model.Schema)
-                .filter(model.Schema.name == name)
-                .filter(model.Schema.asOf(None))
-                .order_by(model.Schema.name.asc())
-                )
+        # TODO it would be nice to determine the views view some
+        # utility as opposed to hard coding the next view
+        if schema is not None:
+            item = SchemaContext(schema)
 
-            schema = query.first()
-
-            if schema is None:
-                log.debug(u'Traversing failed, did not find "%s"' % name)
-                raise NotFound(self.context, name, request)
-
-            # TODO it would be nice to determine the views view some
-            # utility as opposed to hard coding the next view
-
-            item = SchemaContext(schema).__of__(self.context)
-            view = Preview(item, request)
-        else:
-            item = self.context
-            view = ListingPage(self.context, request)
-
-        return view
+        return item
 
 
 class ListingEditForm(crud.EditForm):
@@ -132,7 +115,7 @@ class ListingPage(layout.FormWrapper):
     """
     Form wrapper so it can be rendered with a Plone layout and dynamic title.
     """
-    grok.implements(IOccamsBrowserView, IPublishTraverse)
+    grok.implements(IOccamsBrowserView)
 
     form = Listing
 
@@ -144,15 +127,15 @@ class ListingPage(layout.FormWrapper):
     def description(self):
         return self.context.description
 
-
 class Preview(form.SchemaForm):
     """
     Displays a preview the form.
     This view should have no button handlers since it's only a preview of
     what the form will look like to a user. 
     """
-#    grok.implements(IOccamsBrowserView)
+    grok.implements(IOccamsBrowserView)
     grok.context(ISchemaContext)
+    grok.name('index')
     grok.require('occams.form.ViewForm')
 
     ignoreContext = True

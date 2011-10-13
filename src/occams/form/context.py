@@ -1,18 +1,17 @@
-from OFS.SimpleItem import SimpleItem
+
 from five import grok
 
 from occams.form.interfaces import ISchemaContext
 
 
-class SchemaContext(SimpleItem):
+class SchemaContext(grok.Model):
     grok.implements(ISchemaContext)
 
     _schema = None
 
     def __init__(self, schema):
+        super(SchemaContext, self).__init__(schema.name)
         self._schema = schema
-        self.__name__ = schema.name
-        self.id = schema.name
         self.title = schema.title
         self.Title = schema.title
 

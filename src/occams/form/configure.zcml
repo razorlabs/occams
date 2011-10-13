@@ -8,8 +8,13 @@
   <includeDependencies package="." />
   
   <include file="permissions.zcml" />
-  <include package=".upgrades" />
   
+  <!-- Execute the configure.zcml for the following packages -->
+  <include package=".upgrades" />
+  <include package=".browser" />
+  
+  <!-- grok this package except ``upgrades`` since it contains scripts -->
+  <grok:grok package=".traverse" />
   <grok:grok package="." exclude="upgrades" />
   
   <genericsetup:registerProfile
