@@ -1,12 +1,9 @@
 import os
 from copy import copy
 
-from OFS.SimpleItem import SimpleItem
-from zope.interface import Interface
 from zope.interface.interface import InterfaceClass
 import zope.schema
 from zope.publisher.interfaces import IPublishTraverse
-from zExceptions import NotFound
 
 from five import grok
 from plone.directives import form
@@ -15,15 +12,19 @@ from plone.directives.form.schema import WIDGETS_KEY
 from plone.supermodel.model import Fieldset
 from plone.z3cform import layout
 from plone.z3cform.crud import crud
+from Products.statusmessages.interfaces import IStatusMessage
 from z3c.form import field
 
 from avrc.data.store.interfaces import IDataStore
-from avrc.data.store.interfaces import ISchema
 from avrc.data.store import directives as datastore
 from avrc.data.store import model
 
+from occams.form import MessageFactory as _
+from occams.form import Logger as log
+from occams.form.context import SchemaContext
 from occams.form.interfaces import IOccamsBrowserView
 from occams.form.interfaces import IRepository
+from occams.form.interfaces import ISchemaContext
 from occams.form.interfaces import IFormSummary
 
 from zope.publisher.interfaces.http import IHTTPRequest
@@ -31,26 +32,6 @@ from zope.publisher.interfaces.http import IHTTPRequest
 
 # TODO: Print # of forms
 # TODO: PDF view
-# Expand drop down widgets
-
-
-class ISchemaContext(Interface):
-    pass
-
-
-class SchemaContext(SimpleItem):
-    grok.implements(ISchemaContext)
-
-    _schema = None
-
-    def __init__(self, schema):
-        self._schema = schema
-        self.Title = schema.title
-
-    @property
-    def schema(self):
-        return self._schema
-
 
 
 class RepositoryContext(grok.MultiAdapter):
@@ -62,26 +43,28 @@ class RepositoryContext(grok.MultiAdapter):
         self.request = request
 
     def publishTraverse(self, request, name):
-        if name == 'view':
+        datastore = IDataStore(self.context)
+        session = datastore.session
+
+        log.debug(u'Looking for %s' % name)
+
+        query = (
+            session.query(model.Schema)
+            .filter(model.Schema.name == name)
+            .filter(model.Schema.asOf(None))
+            .order_by(model.Schema.name.asc())
+            )
+
+        schema = query.first()
+
+        if schema is None:
+            if name != 'view':
+                message = _(u'Cannot find form named "%s"' % name)
+                IStatusMessage(self.request).addStatusMessage(message, 'error')
             view = ListingPage(self.context, request)
         else:
-            datastore = IDataStore(self.context)
-            session = datastore.session
-
-            query = (
-                session.query(model.Schema)
-                .filter(model.Schema.name == name)
-                .filter(model.Schema.asOf(None))
-                .order_by(model.Schema.name.asc())
-                )
-
-            schema = query.first()
-
-            if schema is None:
-                raise NotFound
-            else:
-                schemaContext = SchemaContext(schema).__of__(self.context)
-                view = Preview(schemaContext, request)
+            schemaContext = SchemaContext(schema).__of__(self.context)
+            view = Preview(schemaContext, request)
 
         return view
 
@@ -150,8 +133,6 @@ class Preview(form.SchemaForm):
     Displays a preview the form.
     This view should have no button handlers since it's only a preview of
     what the form will look like to a user. 
-    
-    TODO: Currently suffers from (http://dev.plone.org/plone/ticket/10699)
     """
     grok.implements(IOccamsBrowserView)
     grok.context(ISchemaContext)

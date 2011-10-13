@@ -1,6 +1,9 @@
 import zope.interface
 import zope.schema
 
+from avrc.data.store.interfaces import ISchema
+from avrc.data.store.interfaces import IAttribute
+
 from occams.form import MessageFactory as _
 
 
@@ -47,9 +50,13 @@ class IFormSummary(zope.interface.Interface):
         )
 
 
-from grokcore.component.interfaces import IContext
+class IContext(zope.interface.Interface):
+    """
+    A context that is traversable
+    """
 
-class IRepository(zope.interface.Interface):
+
+class IRepository(IContext):
     """
     Form repository entry point.
     Objects of this type offer services for managing forms as well as
@@ -67,4 +74,16 @@ class IRepository(zope.interface.Interface):
         vocabulary=u'occams.form.AvailableSessions',
         required=True,
         default=None,
+        )
+
+
+class ISchemaContext(IContext):
+    """
+    A wrapper context for DataStore schemata so they are traversable
+    """
+
+    schema = zope.schema.Object(
+        title=_(u'The schema this context wraps'),
+        schema=ISchema,
+        readonly=True
         )

@@ -44,7 +44,6 @@ setup(
         'z3c.saconfig',
         'z3c.form',
 
-#        'beast.traverser',
         'avrc.data.store',
         ],
     extras_require=dict(

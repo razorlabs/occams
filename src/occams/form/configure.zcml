@@ -8,9 +8,9 @@
   <includeDependencies package="." />
   
   <include file="permissions.zcml" />
-  
+  <include package=".browser" />
   <include package=".upgrades" />
-
+  
   <grok:grok package="." exclude="upgrades" />
   
   <genericsetup:registerProfile
