@@ -4,6 +4,7 @@ from copy import copy
 from zope.interface.interface import InterfaceClass
 import zope.schema
 from zope.publisher.interfaces import IPublishTraverse
+from zExceptions import NotFound
 
 from five import grok
 from plone.directives import form
@@ -35,6 +36,16 @@ from zope.publisher.interfaces.http import IHTTPRequest
 
 
 class RepositoryContext(grok.MultiAdapter):
+    """
+    This is a special adapter that overrides IRepository's ability to traverse
+    and instead allows for a wild card search of a possible child. If ``view``
+    is passed then normal behavior resumes, otherwise any other value is 
+    queried for in the database for a possible form.
+    
+    The reason we do it this way is because if we made this class a view,
+    then all dynamic forms would need to be explicitly prepended with a
+    ``@@view`` which is not desirable (e.g. myrepo/@@view/AForm.
+    """
     grok.adapts(IRepository, IHTTPRequest)
     grok.implements(IPublishTraverse)
 
@@ -43,28 +54,34 @@ class RepositoryContext(grok.MultiAdapter):
         self.request = request
 
     def publishTraverse(self, request, name):
-        datastore = IDataStore(self.context)
-        session = datastore.session
 
-        log.debug(u'Looking for %s' % name)
+        if name != 'view':
+            datastore = IDataStore(self.context)
+            session = datastore.session
 
-        query = (
-            session.query(model.Schema)
-            .filter(model.Schema.name == name)
-            .filter(model.Schema.asOf(None))
-            .order_by(model.Schema.name.asc())
-            )
+            log.debug(u'Traversing to form "%s"' % name)
 
-        schema = query.first()
+            query = (
+                session.query(model.Schema)
+                .filter(model.Schema.name == name)
+                .filter(model.Schema.asOf(None))
+                .order_by(model.Schema.name.asc())
+                )
 
-        if schema is None:
-            if name != 'view':
-                message = _(u'Cannot find form named "%s"' % name)
-                IStatusMessage(self.request).addStatusMessage(message, 'error')
-            view = ListingPage(self.context, request)
+            schema = query.first()
+
+            if schema is None:
+                log.debug(u'Traversing failed, did not find "%s"' % name)
+                raise NotFound(self.context, name, request)
+
+            # TODO it would be nice to determine the views view some
+            # utility as opposed to hard coding the next view
+
+            item = SchemaContext(schema).__of__(self.context)
+            view = Preview(item, request)
         else:
-            schemaContext = SchemaContext(schema).__of__(self.context)
-            view = Preview(schemaContext, request)
+            item = self.context
+            view = ListingPage(self.context, request)
 
         return view
 
@@ -115,7 +132,7 @@ class ListingPage(layout.FormWrapper):
     """
     Form wrapper so it can be rendered with a Plone layout and dynamic title.
     """
-    grok.implements(IOccamsBrowserView)
+    grok.implements(IOccamsBrowserView, IPublishTraverse)
 
     form = Listing
 
@@ -134,7 +151,7 @@ class Preview(form.SchemaForm):
     This view should have no button handlers since it's only a preview of
     what the form will look like to a user. 
     """
-    grok.implements(IOccamsBrowserView)
+#    grok.implements(IOccamsBrowserView)
     grok.context(ISchemaContext)
     grok.require('occams.form.ViewForm')
 
