@@ -27,7 +27,6 @@ from occams.form.interfaces import IFormSummary
 
 
 # TODO: Print # of forms
-# TODO: PDF view
 
 class RepositoryTraverse(beast.traverser.Traverser):
     grok.context(IRepository)
@@ -143,25 +142,26 @@ class Preview(form.SchemaForm):
     def _setupForm(self):
         repository = self.context.getParentNode()
         datastoreForm = IDataStore(repository).schemata.get(self.context.item.name)
-        self._form = _convertSchemaToForm(datastoreForm)
+        self._form = _formRender(datastoreForm)
 
+# Should technically be some sort of adapter
+fieldWidgetMap = {
+    zope.schema.Choice: 'z3c.form.browser.radio.RadioFieldWidget',
+    zope.schema.List: 'z3c.form.browser.checkbox.CheckBoxFieldWidget',
+    zope.schema.Text: 'occams.form.browser.widget.TextAreaFieldWidget',
+    }
 
-def _convertSchemaToForm(schema):
+def _formRender(sourceForm):
     """
     Helper method that converts a DataStore form to a Dexterity Form
     (since subforms aren't well supported)
     """
-    if datastore.Schema not in schema.getBases():
-        bases = [_convertSchemaToForm(base) for base in schema.getBases()]
-    else:
-        bases = [form.Schema]
-
     directives = {FIELDSETS_KEY: [], WIDGETS_KEY: dict()}
     widgets = dict()
     fields = dict()
     order = 0
 
-    for name, attribute in zope.schema.getFieldsInOrder(schema):
+    for name, attribute in zope.schema.getFieldsInOrder(sourceForm):
         queue = list()
         if isinstance(attribute, zope.schema.Object):
             fieldset = Fieldset(
@@ -178,21 +178,10 @@ def _convertSchemaToForm(schema):
 
         for field in queue:
             order += 1
-            widget = datastore.widget.bind().get(field)
+            widget = fieldWidgetMap.get(field.__class__)
 
-            # TODO: there has to be some way to set these in the zcml...
-            if isinstance(field, zope.schema.Choice):
-                widget = 'z3c.form.browser.radio.RadioFieldWidget'
-            elif isinstance(field, zope.schema.List):
-                widget = 'z3c.form.browser.checkbox.CheckBoxFieldWidget'
-            elif isinstance(field, zope.schema.Text):
-                widget = 'occams.form.browser.widget.TextAreaFieldWidget'
-            elif widget is not None and 'z3c' not in widget:
-                # use custom ones, but this will be deprecated...
-                pass
-            else:
-                # get rid of anything else
-                widget = None
+            if widget is None:
+                widget = datastore.widget.bind().get(field)
 
             if widget is not None:
                 directives[WIDGETS_KEY][field.__name__] = widget
@@ -201,18 +190,10 @@ def _convertSchemaToForm(schema):
             field.order = order
             fields[field.__name__] = field
 
-    ploneForm = InterfaceClass(
-        __doc__=schema.__doc__,
-        name=schema.__name__,
-        bases=bases,
-        attrs=fields,
-        )
+    # We're only rendering so it's not necessary to get the hierarchy
+    ploneForm = InterfaceClass(name=sourceForm.__name__, bases=[form.Schema], attrs=fields)
 
     for key, item in directives.items():
         ploneForm.setTaggedValue(key, item)
-
-    datastore.title.set(ploneForm, datastore.title.bind().get(schema))
-    datastore.description.set(ploneForm, datastore.title.bind().get(schema))
-    datastore.version.set(ploneForm, datastore.version.bind().get(schema))
 
     return ploneForm
