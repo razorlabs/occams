@@ -16,9 +16,7 @@ from z3c.form import field
 from avrc.data.store.interfaces import IDataStore
 from avrc.data.store import directives as datastore
 from avrc.data.store import model
-
 import beast.traverser
-
 from occams.form import MessageFactory as _
 from occams.form import Logger as log
 from occams.form.context import SchemaContext
@@ -32,16 +30,6 @@ from occams.form.interfaces import IFormSummary
 # TODO: PDF view
 
 class RepositoryTraverse(beast.traverser.Traverser):
-    """
-    This is a special adapter that overrides IRepository's ability to traverse
-    and instead allows for a wild card search of a possible child. If ``view``
-    is passed then normal behavior resumes, otherwise any other value is 
-    queried for in the database for a possible form.
-    
-    The reason we do it this way is because if we made this class a view,
-    then all dynamic forms would need to be explicitly prepended with a
-    ``@@view`` which is not desirable (e.g. myrepo/@@view/AForm.
-    """
     grok.context(IRepository)
 
     def traverse(self, name):
