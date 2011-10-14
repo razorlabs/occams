@@ -32,9 +32,9 @@ setup(
     zip_safe=False,
     install_requires=[
         'setuptools',
-        'SQLAlchemy>=0.6.7,<0.6.99',
-        'sqlalchemy-migrate>=0.6.1,<0.6.99',
-        'z3c.saconfig==0.13',
+        'SQLAlchemy',
+        'sqlalchemy-migrate',
+        'z3c.saconfig',
         ],
     extras_require=dict(
         postgresql=['psycopg2'],
