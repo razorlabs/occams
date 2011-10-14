@@ -1,8 +1,7 @@
 import zope.interface
 import zope.schema
 
-from avrc.data.store.interfaces import ISchema
-from avrc.data.store.interfaces import IAttribute
+from avrc.data.store.interfaces import IDataBaseItem
 
 from occams.form import MessageFactory as _
 
@@ -50,13 +49,7 @@ class IFormSummary(zope.interface.Interface):
         )
 
 
-class IContext(zope.interface.Interface):
-    """
-    A context that is traversable
-    """
-
-
-class IRepository(IContext):
+class IRepository(zope.interface.Interface):
     """
     Form repository entry point.
     Objects of this type offer services for managing forms as well as
@@ -77,13 +70,21 @@ class IRepository(IContext):
         )
 
 
-class ISchemaContext(IContext):
+class IDataBaseItemContext(zope.interface.Interface):
     """
     A wrapper context for DataStore schemata so they are traversable
     """
 
-    schema = zope.schema.Object(
+    item = zope.schema.Object(
         title=_(u'The schema this context wraps'),
-        schema=ISchema,
+        schema=IDataBaseItem,
         readonly=True
         )
+
+
+class ISchemaContext(IDataBaseItemContext):
+    pass
+
+class IFieldContext(IDataBaseItemContext):
+    pass
+

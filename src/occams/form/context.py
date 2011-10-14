@@ -1,20 +1,25 @@
 
 from five import grok
 
+from occams.form.interfaces import IDataBaseItemContext
 from occams.form.interfaces import ISchemaContext
 
 
-class SchemaContext(grok.Model):
-    grok.implements(ISchemaContext)
+class DataBaseItemContext(grok.Model):
+    grok.implements(IDataBaseItemContext)
 
-    _schema = None
+    _item = None
 
-    def __init__(self, schema):
-        super(SchemaContext, self).__init__(schema.name)
-        self._schema = schema
-        self.title = schema.title
-        self.Title = schema.title
+    def __init__(self, item):
+        super(DataBaseItemContext, self).__init__(item.name)
+        self._item = item
+        self.title = item.title
+        self.Title = item.title
 
     @property
-    def schema(self):
-        return self._schema
+    def item(self):
+        return self._item
+
+
+class SchemaContext(DataBaseItemContext):
+    grok.implements(ISchemaContext)

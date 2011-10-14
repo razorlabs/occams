@@ -17,6 +17,8 @@ from avrc.data.store.interfaces import IDataStore
 from avrc.data.store import directives as datastore
 from avrc.data.store import model
 
+import beast.traverser
+
 from occams.form import MessageFactory as _
 from occams.form import Logger as log
 from occams.form.context import SchemaContext
@@ -29,10 +31,7 @@ from occams.form.interfaces import IFormSummary
 # TODO: Print # of forms
 # TODO: PDF view
 
-from occams.form.traverse import Traverser
-
-
-class RepositoryTraverse(Traverser):
+class RepositoryTraverse(beast.traverser.Traverser):
     """
     This is a special adapter that overrides IRepository's ability to traverse
     and instead allows for a wild card search of a possible child. If ``view``
@@ -48,7 +47,6 @@ class RepositoryTraverse(Traverser):
     def traverse(self, name):
         datastore = IDataStore(self.context)
         session = datastore.session
-        item = None
 
         log.debug(u'Traversing to form "%s"' % name)
 
@@ -61,12 +59,8 @@ class RepositoryTraverse(Traverser):
 
         schema = query.first()
 
-        # TODO it would be nice to determine the views view some
-        # utility as opposed to hard coding the next view
         if schema is not None:
-            item = SchemaContext(schema)
-
-        return item
+            return SchemaContext(schema)
 
 
 class ListingEditForm(crud.EditForm):
@@ -143,11 +137,11 @@ class Preview(form.SchemaForm):
 
     @property
     def label(self):
-        return self.context.schema.title
+        return self.context.item.title
 
     @property
     def description(self):
-        return self.context.schema.description
+        return self.context.item.description
 
     @property
     def schema(self):
@@ -159,8 +153,8 @@ class Preview(form.SchemaForm):
         super(Preview, self).update()
 
     def _setupForm(self):
-        name = self.context.schema.name
-        datastoreForm = IDataStore(self.context.getParentNode()).schemata.get(name)
+        repository = self.context.getParentNode()
+        datastoreForm = IDataStore(repository).schemata.get(self.context.item.name)
         self._form = _convertSchemaToForm(datastoreForm)
 
 
