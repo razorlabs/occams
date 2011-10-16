@@ -36,6 +36,7 @@ setup(
     install_requires=[
         'setuptools',
         'five.grok',
+        'grokcore.traverser',
         'plone.app.dexterity',
         'plone.directives.form',
         'plone.directives.dexterity',
@@ -44,7 +45,6 @@ setup(
         'z3c.saconfig',
         'z3c.form',
 
-        'beast.traverser',
         'avrc.data.store',
         ],
     extras_require=dict(

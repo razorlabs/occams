@@ -14,7 +14,6 @@ class DataBaseItemContext(grok.Model):
         super(DataBaseItemContext, self).__init__(item.name)
         self._item = item
         self.title = item.title
-        self.Title = item.title
 
     @property
     def item(self):

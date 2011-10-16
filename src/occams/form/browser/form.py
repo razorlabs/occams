@@ -5,6 +5,7 @@ from zope.interface.interface import InterfaceClass
 import zope.schema
 
 from five import grok
+from grokcore.traverser import Traverser
 from plone.directives import form
 from plone.directives.form.schema import FIELDSETS_KEY
 from plone.directives.form.schema import WIDGETS_KEY
@@ -16,7 +17,7 @@ from z3c.form import field
 from avrc.data.store.interfaces import IDataStore
 from avrc.data.store import directives as datastore
 from avrc.data.store import model
-import beast.traverser
+
 from occams.form import MessageFactory as _
 from occams.form import Logger as log
 from occams.form.context import SchemaContext
@@ -28,7 +29,7 @@ from occams.form.interfaces import IFormSummary
 
 # TODO: Print # of forms
 
-class RepositoryTraverse(beast.traverser.Traverser):
+class RepositoryTraverse(Traverser):
     grok.context(IRepository)
 
     def traverse(self, name):
@@ -47,7 +48,7 @@ class RepositoryTraverse(beast.traverser.Traverser):
         schema = query.first()
 
         if schema is not None:
-            return SchemaContext(schema)
+            return SchemaContext(schema).__of__(self.context)
 
 
 class ListingEditForm(crud.EditForm):
