@@ -5,7 +5,6 @@ from zope.interface.interface import InterfaceClass
 import zope.schema
 
 from five import grok
-from grokcore.traverser import Traverser
 from plone.directives import form
 from plone.directives.form.schema import FIELDSETS_KEY
 from plone.directives.form.schema import WIDGETS_KEY
@@ -20,36 +19,12 @@ from avrc.data.store import model
 
 from occams.form import MessageFactory as _
 from occams.form import Logger as log
-from occams.form.context import SchemaContext
 from occams.form.interfaces import IOccamsBrowserView
-from occams.form.interfaces import IRepository
 from occams.form.interfaces import ISchemaContext
 from occams.form.interfaces import IFormSummary
 
 
 # TODO: Print # of forms
-
-class RepositoryTraverse(Traverser):
-    grok.context(IRepository)
-
-    def traverse(self, name):
-        datastore = IDataStore(self.context)
-        session = datastore.session
-
-        log.debug(u'Traversing to form "%s"' % name)
-
-        query = (
-            session.query(model.Schema)
-            .filter(model.Schema.name == name)
-            .filter(model.Schema.asOf(None))
-            .order_by(model.Schema.name.asc())
-            )
-
-        schema = query.first()
-
-        if schema is not None:
-            return SchemaContext(schema).__of__(self.context)
-
 
 class ListingEditForm(crud.EditForm):
     """
@@ -60,7 +35,7 @@ class ListingEditForm(crud.EditForm):
     handlers = crud.EditForm.handlers.copy()
 
 
-class Listing(crud.CrudForm):
+class SummaryListingForm(crud.CrudForm):
     """
     Lists the forms in the repository.
     No add form is needed as that will be a separate view.
@@ -93,13 +68,13 @@ class Listing(crud.CrudForm):
             return os.path.join(self.context.absolute_url(), item.context.name)
 
 
-class ListingPage(layout.FormWrapper):
+class SummaryListing(layout.FormWrapper):
     """
     Form wrapper so it can be rendered with a Plone layout and dynamic title.
     """
     grok.implements(IOccamsBrowserView)
 
-    form = Listing
+    form = SummaryListingForm
 
     @property
     def label(self):
@@ -109,7 +84,8 @@ class ListingPage(layout.FormWrapper):
     def description(self):
         return self.context.description
 
-class Preview(form.SchemaForm):
+
+class PreviewForm(form.SchemaForm):
     """
     Displays a preview the form.
     This view should have no button handlers since it's only a preview of
@@ -117,7 +93,7 @@ class Preview(form.SchemaForm):
     """
     grok.implements(IOccamsBrowserView)
     grok.context(ISchemaContext)
-    grok.name('index')
+    grok.name('preview')
     grok.require('occams.form.ViewForm')
 
     ignoreContext = True
@@ -138,12 +114,38 @@ class Preview(form.SchemaForm):
     def update(self):
         self.request.set('disable_border', True)
         self._setupForm()
-        super(Preview, self).update()
+        super(PreviewForm, self).update()
 
     def _setupForm(self):
         repository = self.context.getParentNode()
         datastoreForm = IDataStore(repository).schemata.get(self.context.item.name)
         self._form = _formRender(datastoreForm)
+
+
+class Usage(grok.View):
+    grok.implements(IOccamsBrowserView)
+    grok.context(ISchemaContext)
+    grok.name('index')
+    grok.require('occams.form.ViewForm')
+
+    def update(self):
+        self.request.set('disable_border', True)
+        super(Usage, self).update()
+
+    def render(self):
+        return 'Form statistics for %s' % self.context.item.name
+
+
+class EditForm(form.Form):
+    grok.implements(IOccamsBrowserView)
+    grok.context(ISchemaContext)
+    grok.name('edit')
+    grok.require('occams.form.ModifyForm')
+
+    def update(self):
+        self.request.set('disable_border', True)
+        super(EditForm, self).update()
+
 
 # Should technically be some sort of adapter
 fieldWidgetMap = {
@@ -151,6 +153,7 @@ fieldWidgetMap = {
     zope.schema.List: 'z3c.form.browser.checkbox.CheckBoxFieldWidget',
     zope.schema.Text: 'occams.form.browser.widget.TextAreaFieldWidget',
     }
+
 
 def _formRender(sourceForm):
     """
@@ -192,7 +195,11 @@ def _formRender(sourceForm):
             fields[field.__name__] = field
 
     # We're only rendering so it's not necessary to get the hierarchy
-    ploneForm = InterfaceClass(name=sourceForm.__name__, bases=[form.Schema], attrs=fields)
+    ploneForm = InterfaceClass(
+        name=sourceForm.__name__,
+        bases=[form.Schema],
+        attrs=fields
+        )
 
     for key, item in directives.items():
         ploneForm.setTaggedValue(key, item)
