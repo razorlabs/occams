@@ -18,7 +18,6 @@ from avrc.data.store import directives as datastore
 from avrc.data.store import model
 
 from occams.form import MessageFactory as _
-from occams.form import Logger as log
 from occams.form.interfaces import IOccamsBrowserView
 from occams.form.interfaces import ISchemaContext
 from occams.form.interfaces import IFormSummary
@@ -132,15 +131,16 @@ class Usage(grok.View):
         self.request.set('disable_border', True)
         super(Usage, self).update()
 
-    def render(self):
-        return 'Form statistics for %s' % self.context.item.name
-
 
 class EditForm(form.Form):
     grok.implements(IOccamsBrowserView)
     grok.context(ISchemaContext)
     grok.name('edit')
     grok.require('occams.form.ModifyForm')
+
+    @property
+    def label(self):
+        return 'Edit: %s' % self.context.item.title
 
     def update(self):
         self.request.set('disable_border', True)

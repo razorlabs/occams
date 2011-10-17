@@ -10,7 +10,7 @@
   <metal:content-core fill-slot="content-core">
     <metal:content-core define-macro="content-core">
     
-        Usage statistics for <span tal:content="context/item/name">Form</span>
+        Data listing for <span tal:content="context/item/name">Form</span>
     
     </metal:content-core>
   </metal:content-core>

@@ -1,6 +1,8 @@
 import zope.interface
 import zope.schema
 
+from grokcore.component.interfaces import IContext
+
 from avrc.data.store.interfaces import IDataBaseItem
 
 from occams.form import MessageFactory as _
@@ -70,7 +72,7 @@ class IRepository(zope.interface.Interface):
         )
 
 
-class IDataBaseItemContext(zope.interface.Interface):
+class IDataBaseItemContext(IContext):
     """
     A wrapper context for DataStore schemata so they are traversable
     """
@@ -85,6 +87,11 @@ class IDataBaseItemContext(zope.interface.Interface):
 class ISchemaContext(IDataBaseItemContext):
     pass
 
-class IFieldContext(IDataBaseItemContext):
+
+class IEntityContext(IDataBaseItemContext):
+    pass
+
+
+class IAttributeContext(IDataBaseItemContext):
     pass
 
