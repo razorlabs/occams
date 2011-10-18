@@ -1,0 +1,45 @@
+<html 
+    xmlns="http://www.w3.org/1999/xhtml"
+    xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+    xmlns:metal="http://xml.zope.org/namespaces/metal"
+    xmlns:tal="http://xml.zope.org/namespaces/tal"
+    metal:use-macro="context/main_template/macros/master"
+    xml:lang="en"
+    lang="en"
+    i18n:domain="occams.form">
+  <metal:content-core fill-slot="content-core">
+    <metal:content-core define-macro="content-core">
+    
+        <script src="++resource++codemirror/lib/codemirror.js"></script>
+        <link href="++resource++codemirror/lib/codemirror.css" rel="stylesheet" />
+        <script src="++resource++codemirror/mode/xmlpure/xmlpure.js"></script>
+        <link href="++resource++codemirror/theme/default.css" rel="stylesheet" />
+                
+        <style type="text/css">
+          #content pre {
+            background: inherit;
+            color: inherit;
+            font-family: inherit;
+            padding: inherit;
+            overflow-x: inherit;
+            font-size: inherit;
+            margin-bottom: inherit;
+            line-height: inherit;
+            }
+        </style>
+                        
+        <textarea id="code" tal:content="context/source">Show me the sauce!</textarea>
+  
+    
+        <script>
+            var source = document.getElementById('code');
+            var options = {
+                value: source.value,
+                lineNumbers: true,
+                }
+            var myCodeMirror = CodeMirror.fromTextArea(source, options);
+        </script>
+    
+    </metal:content-core>
+  </metal:content-core>
+</html>

@@ -2,33 +2,31 @@
 <object 
     xmlns:i18n="http://xml.zope.org/namespaces/i18n"
     meta_type="Dexterity FTI"
-    i18n:domain="occams.form.repository"
-    name="occams.form.repository">
+    i18n:domain="occams.form.changeset"
+    name="occams.form.changeset">
 
   <!-- Human-readable metadata -->
-  <property name="title" i18n:translate="title">Form Repository</property>
+  <property name="title" i18n:translate="title">Form Changeset</property>
   <property name="description" i18n:translate="description">
-    Provides an entry point for accessing form schemata.
+    Allows form changes to happen before they are sent to the database.
   </property>
 
   <!-- Content settings -->
-  <property name="content_icon">++resource++occams.form/images/database.png</property>
+  <property name="content_icon">++resource++occams.form/images/page_edit.png</property>
   <!-- Applications must specificy this as an addable type -->
   <property name="global_allow">True</property>
   <property name="filter_content_types">True</property>  
-  <property name="allowed_content_types">
-    <element value="occams.form.changeset" />
-  </property>
-  <property name="allow_discussion">False</property>
+  <property name="allowed_content_types" />
+  <property name="allow_discussion">True</property>
 
   <!-- Content type specification -->
-  <property name="schema">occams.form.interfaces.IRepository</property> 
+  <property name="schema">occams.form.interfaces.IChangeset</property> 
 
   <!-- Content type implementation (use generic Plone type) -->
   <!-- We use Container because technically it's a container of virtual data -->
-  <property name="klass">plone.dexterity.content.Container</property>
+  <property name="klass">plone.dexterity.content.Item</property>
 
-  <property name="add_permission">occams.form.CreateRepository</property>
+  <property name="add_permission">occams.form.ModifyForm</property>
  
   <property name="behaviors">
     <element value="plone.app.content.interfaces.INameFromTitle" />
@@ -51,10 +49,10 @@
   <!-- Actions -->
   <action title="View" action_id="view" category="object" condition_expr=""
     url_expr="string:${object_url}/" visible="True">
-    <permission value="OCCAMS: View Repository" />
+    <permission value="OCCAMS: View Form" />
   </action>
   <action title="Edit" action_id="edit" category="object" condition_expr=""
     url_expr="string:${object_url}/edit" visible="True">
-    <permission value="OCCAMS: Modify Repository" />
+    <permission value="OCCAMS: Modify Form" />
   </action>
 </object>

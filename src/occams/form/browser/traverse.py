@@ -71,6 +71,9 @@ class RepositoryTraverse(Traverser):
     grok.context(IRepository)
 
     def traverse(self, name):
+        if '-' in name or name in self.context:
+            return
+
         datastore = IDataStore(self.context)
         session = datastore.session
         newContext = None
@@ -99,6 +102,9 @@ class SchemaTraverse(Traverser):
     grok.context(ISchemaContext)
 
     def traverse(self, name):
+        if '-' in name or name in self.context:
+            return
+
         schema = self.context.item
         session = object_session(schema)
         newContext = None

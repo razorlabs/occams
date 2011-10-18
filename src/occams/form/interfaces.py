@@ -2,18 +2,27 @@ import zope.interface
 import zope.schema
 
 from grokcore.component.interfaces import IContext
+from plone.directives import form
+from z3c.form.interfaces import IAddForm
+from z3c.form.interfaces import IEditForm
 
 from avrc.data.store.interfaces import IDataBaseItem
 
 from occams.form import MessageFactory as _
 
+class IOccamsFormComponent(zope.interface.Interface):
+    """
+    Marker interfaces for interfaces of this plug-in
+    """
 
-class IOccamsBrowserView(zope.interface.Interface):
+
+class IOccamsBrowserView(IOccamsFormComponent):
     """
     Marker inteface for views of this plugin
     """
 
-class IFormSummary(zope.interface.Interface):
+
+class IFormSummary(IOccamsFormComponent):
     """
     Form summary for listing purposes.
     """
@@ -51,7 +60,39 @@ class IFormSummary(zope.interface.Interface):
         )
 
 
-class IRepository(zope.interface.Interface):
+class IDataBaseItemContext(IOccamsFormComponent, IContext):
+    """
+    A wrapper context for DataStore entries so they are traversable. 
+    This allows a wrapped entry to comply with the Acquisition machinery
+    in Plone.
+    """
+
+    item = zope.schema.Object(
+        title=_(u'The schema this context wraps'),
+        schema=IDataBaseItem,
+        readonly=True
+        )
+
+
+class ISchemaContext(IDataBaseItemContext):
+    """
+    Context for DataStore Schema wrapper.
+    """
+
+
+class IEntityContext(IDataBaseItemContext):
+    """
+    Context for DataStore Entity wrapper.
+    """
+
+
+class IAttributeContext(IDataBaseItemContext):
+    """
+    Context for DatataStore Attribute wrapper.
+    """
+
+
+class IRepository(IOccamsFormComponent, form.Schema):
     """
     Form repository entry point.
     Objects of this type offer services for managing forms as well as
@@ -72,26 +113,22 @@ class IRepository(zope.interface.Interface):
         )
 
 
-class IDataBaseItemContext(IContext):
+class IChangeset(IOccamsFormComponent, form.Schema):
     """
-    A wrapper context for DataStore schemata so they are traversable
+    Changes to a form before they are sent to DataStore.
+    This allows a workflow process to the used for updating forms.
     """
 
-    item = zope.schema.Object(
-        title=_(u'The schema this context wraps'),
-        schema=IDataBaseItem,
-        readonly=True
+    form.omitted('formName')
+    form.no_omit(IAddForm, 'formName')
+    formName = zope.schema.Choice(
+        title=_(u'Form'),
+        description=_(u'The form to be modified'),
+        vocabulary=u'occams.form.Forms'
         )
 
-
-class ISchemaContext(IDataBaseItemContext):
-    pass
-
-
-class IEntityContext(IDataBaseItemContext):
-    pass
-
-
-class IAttributeContext(IDataBaseItemContext):
-    pass
-
+    form.omitted(IAddForm, 'source')
+    source = zope.schema.Text(
+        title=_(u'Form Source'),
+        description=_(u'Save changes to a form before committing'),
+        )

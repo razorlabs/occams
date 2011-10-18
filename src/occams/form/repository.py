@@ -74,7 +74,7 @@ def _configureRepositoryDataStore(repository):
     migrate.install(datastore.session.bind)
 
 
-class AvailableSessions(grok.GlobalUtility):
+class AvailableSessionsVocabularyFactory(grok.GlobalUtility):
     """
     Builds a vocabulary containing the Plone instance's registered 
     ``z3c.saconfig`` sessions.

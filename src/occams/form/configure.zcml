@@ -1,5 +1,6 @@
 <configure 
     xmlns="http://namespaces.zope.org/zope"
+    xmlns:browser="http://namespaces.zope.org/browser"
     xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
     xmlns:grok="http://namespaces.zope.org/grok"
     xmlns:i18n="http://namespaces.zope.org/i18n"
@@ -15,6 +16,8 @@
   <!-- Execute the configure.zcml for the following packages -->
   <include package=".browser" />
   <include package=".upgrades" />
+  
+  <browser:resourceDirectory name="codemirror" directory="codemirror" /> 
   
   <!-- grok this package except ``upgrades`` since it contains scripts -->
   <grok:grok package="." exclude="upgrades" />
