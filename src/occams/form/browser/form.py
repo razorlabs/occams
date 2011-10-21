@@ -81,6 +81,10 @@ class Listing(crud.CrudForm):
         query = (
             session.query(model.Schema)
             .filter(model.Schema.asOf(None))
+            .filter(~model.Schema.id.in_(
+                session.query(model.Schema.base_schema_id)
+                .filter(model.Schema.base_schema_id != None)
+                ))
             .order_by(model.Schema.name.asc())
             )
         items = [(str(schema.name), IFormSummary(schema)) for schema in query.all()]
