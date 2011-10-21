@@ -12,6 +12,7 @@ from plone.directives.form.schema import WIDGETS_KEY
 from plone.supermodel.model import Fieldset
 from plone.z3cform import layout
 from plone.z3cform.crud import crud
+from z3c.form import button
 from z3c.form import field
 
 from avrc.data.store.interfaces import IDataStore
@@ -50,14 +51,14 @@ class RepositoryTraverse(Traverser):
         if schema is not None:
             return SchemaContext(schema).__of__(self.context)
 
-
 class ListingEditForm(crud.EditForm):
     """
     Custom form edit form.
     """
     label = None
-    buttons = crud.EditForm.buttons.copy()
-    handlers = crud.EditForm.handlers.copy()
+
+    # No buttons for this release
+    buttons = button.Buttons()
 
 
 class Listing(crud.CrudForm):
