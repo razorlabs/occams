@@ -10,11 +10,11 @@ from plone.app.testing import FunctionalTesting
 from zope.configuration import xmlconfig
 
 from avrc.data.store.testing import DATABASE_LAYER
-
+from plone.app.testing import PLONE_FIXTURE
 
 class OccamsFormSandBoxLayer(PloneSandboxLayer):
 
-    defaultBases = (DATABASE_LAYER,)
+    defaultBases = (PLONE_FIXTURE, DATABASE_LAYER,)
 
     def setUpZope(self, app, configurationContext):
         # Load ZCML

@@ -37,7 +37,7 @@ setup(
         'setuptools',
         'five.grok',
         'grokcore.traverser',
-        'plone.app.dexterity',
+        'plone.app.dexterity [grok]',
         'plone.directives.form',
         'plone.directives.dexterity',
         'plone.z3cform',
