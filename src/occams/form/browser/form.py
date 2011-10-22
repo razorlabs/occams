@@ -81,9 +81,18 @@ class Listing(crud.CrudForm):
         query = (
             session.query(model.Schema)
             .filter(model.Schema.asOf(None))
+            # filter out non-leaf nodes
             .filter(~model.Schema.id.in_(
                 session.query(model.Schema.base_schema_id)
                 .filter(model.Schema.base_schema_id != None)
+                ))
+            # filter out schemata being used as sub-objects
+            # TODO: this might be a problem when we start using "master forms" 
+            # which use regular forms as sub-forms. One thing that might 
+            # help is some sort of flag column in the schema table.
+            .filter(~model.Schema.id.in_(
+                session.query(model.Entity.schema_id)
+                .join((model.ValueObject, (model.ValueObject.value == model.Entity.id)))
                 ))
             .order_by(model.Schema.name.asc())
             )
