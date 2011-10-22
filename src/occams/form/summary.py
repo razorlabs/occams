@@ -23,6 +23,9 @@ class DataStoreSchemaSummary(grok.Adapter):
     _createdOn = None
     _currentVersion = None
 
+    def __init__(self, context):
+        super(DataStoreSchemaSummary, self).__init__(context)
+
     @property
     def title(self):
         return self.context.title
@@ -30,13 +33,23 @@ class DataStoreSchemaSummary(grok.Adapter):
     @property
     def fieldCount(self):
         if self._fieldCount is None:
+            count = 0
             session = object_session(self.context)
             query = (
                 session.query(model.Attribute)
                 .filter(model.Attribute.schema.has(name=self.context.name))
-                .filter(model.Attribute.asOf(self.context.create_date))
+                .filter(model.Attribute.asOf(None))
                 )
-            self._fieldCount = query.count()
+
+            # Count the number of fields in sub forms, but don't include
+            # the object reference field itself
+            for attribute in query.filter_by(type='object').all():
+                count += IFormSummary(attribute.object_schema).fieldCount
+
+            # Sum the rest of the attributes
+            count += query.filter(model.Attribute.type != 'object').count()
+
+            self._fieldCount = count
         return self._fieldCount
 
     @property
@@ -59,6 +72,7 @@ class DataStoreSchemaSummary(grok.Adapter):
                     .filter(model.Attribute.remove_date != None)
                     )
                 )
+            import pdb; pdb.set_trace()
             self._revisionCount = query.count()
         return self._revisionCount
 
