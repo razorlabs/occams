@@ -1,6 +1,7 @@
 import os
 from copy import copy
 
+from zope.component import getUtility
 from zope.interface.interface import InterfaceClass
 import zope.schema
 
@@ -26,6 +27,7 @@ from occams.form.interfaces import IOccamsBrowserView
 from occams.form.interfaces import IRepository
 from occams.form.interfaces import ISchemaContext
 from occams.form.interfaces import IFormSummary
+from occams.form.interfaces import IFormSummaryGenerator
 
 
 # TODO: Print # of forms
@@ -77,26 +79,9 @@ class Listing(crud.CrudForm):
         Return a listing of all the forms.
         """
         datastore = IDataStore(self.context)
-        session = datastore.session
-        query = (
-            session.query(model.Schema)
-            .filter(model.Schema.asOf(None))
-            # filter out non-leaf nodes
-            .filter(~model.Schema.id.in_(
-                session.query(model.Schema.base_schema_id)
-                .filter(model.Schema.base_schema_id != None)
-                ))
-            # filter out schemata being used as sub-objects
-            # TODO: this might be a problem when we start using "master forms" 
-            # which use regular forms as sub-forms. One thing that might 
-            # help is some sort of flag column in the schema table.
-            .filter(~model.Schema.id.in_(
-                session.query(model.Entity.schema_id)
-                .join((model.ValueObject, (model.ValueObject.value == model.Entity.id)))
-                ))
-            .order_by(model.Schema.name.asc())
-            )
-        items = [(str(schema.name), IFormSummary(schema)) for schema in query.all()]
+        generator = getUtility(IFormSummaryGenerator)
+        listing = generator.getItems(datastore.session)
+        items = [(summary.name, summary) for summary in listing]
         return items
 
     def link(self, item, field):
@@ -104,7 +89,7 @@ class Listing(crud.CrudForm):
         Renders a link to the form view
         """
         if field == 'title':
-            return os.path.join(self.context.absolute_url(), item.context.name)
+            return os.path.join(self.context.absolute_url(), item.name)
 
 
 class ListingPage(layout.FormWrapper):

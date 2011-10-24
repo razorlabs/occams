@@ -16,6 +16,12 @@ class IFormSummary(zope.interface.Interface):
     Form summary for listing purposes.
     """
 
+    name = zope.schema.ASCIILine(
+        title=_(u'Name'),
+        description=_(u'Machine name'),
+        readonly=True
+        )
+
     title = zope.schema.TextLine(
         title=_(u'Title'),
         description=_(u'Human-readable title'),
@@ -47,6 +53,17 @@ class IFormSummary(zope.interface.Interface):
         description=_(u'The date the form was created'),
         readonly=True,
         )
+
+
+class IFormSummaryGenerator(zope.interface.Interface):
+    """
+    Generator of ``IFormSummary`` results from a database
+    """
+
+    def getItems(session):
+        """
+        Returns a full listing of ``IFormSummary`` objects in the context
+        """
 
 
 class IRepository(zope.interface.Interface):
