@@ -72,7 +72,7 @@ class Listing(crud.CrudForm):
 
     addform_factory = crud.NullForm
     editform_factory = ListingEditForm
-    view_schema = field.Fields(IFormSummary)
+    view_schema = field.Fields(IFormSummary).omit('name')
 
     def get_items(self):
         """
