@@ -1,6 +1,7 @@
 import os
 from copy import copy
 
+from zope.component import getUtility
 from zope.interface.interface import InterfaceClass
 import zope.schema
 
@@ -11,6 +12,8 @@ from plone.directives.form.schema import WIDGETS_KEY
 from plone.supermodel.model import Fieldset
 from plone.z3cform import layout
 from plone.z3cform.crud import crud
+from Products.Five.browser.pagetemplatefile import ViewPageTemplateFile
+from z3c.form import button
 from z3c.form import field
 
 from avrc.data.store.interfaces import IDataStore
@@ -21,6 +24,7 @@ from occams.form import MessageFactory as _
 from occams.form.interfaces import IOccamsBrowserView
 from occams.form.interfaces import ISchemaContext
 from occams.form.interfaces import IFormSummary
+from occams.form.interfaces import IFormSummaryGenerator
 
 
 # TODO: Print # of forms
@@ -30,8 +34,9 @@ class ListingEditForm(crud.EditForm):
     Custom form edit form.
     """
     label = None
-    buttons = crud.EditForm.buttons.copy()
-    handlers = crud.EditForm.handlers.copy()
+
+    # No buttons for this release
+    buttons = button.Buttons()
 
 
 class SummaryListingForm(crud.CrudForm):
@@ -43,28 +48,31 @@ class SummaryListingForm(crud.CrudForm):
 
     addform_factory = crud.NullForm
     editform_factory = ListingEditForm
-    view_schema = field.Fields(IFormSummary)
+
+    # don't use changes count, apparently it's too confusing for users
+    view_schema = field.Fields(IFormSummary).omit('name', 'changeCount')
+
+    _items = None
 
     def get_items(self):
         """
         Return a listing of all the forms.
         """
-        datastore = IDataStore(self.context)
-        session = datastore.session
-        query = (
-            session.query(model.Schema)
-            .filter(model.Schema.asOf(None))
-            .order_by(model.Schema.name.asc())
-            )
-        items = [(str(schema.name), IFormSummary(schema)) for schema in query.all()]
-        return items
+        # Plone seems to call this method more than once, so make sure
+        # we return an already generated listing.
+        if self._items is None:
+            datastore = IDataStore(self.context)
+            generator = getUtility(IFormSummaryGenerator)
+            listing = generator.getItems(datastore.session)
+            self._items = [(summary.name, summary) for summary in listing]
+        return self._items
 
     def link(self, item, field):
         """
         Renders a link to the form view
         """
         if field == 'title':
-            return os.path.join(self.context.absolute_url(), item.context.name)
+            return os.path.join(self.context.absolute_url(), item.name)
 
 
 class SummaryListing(layout.FormWrapper):
@@ -74,6 +82,9 @@ class SummaryListing(layout.FormWrapper):
     grok.implements(IOccamsBrowserView)
 
     form = SummaryListingForm
+
+    # http://plone.org/documentation/manual/plone-community-developer-documentation/forms/z3c.form#customizing-form-template
+    index = ViewPageTemplateFile('form_templates/listingpage.pt')
 
     @property
     def label(self):
@@ -88,7 +99,7 @@ class PreviewForm(form.SchemaForm):
     """
     Displays a preview the form.
     This view should have no button handlers since it's only a preview of
-    what the form will look like to a user. 
+    what the form will look like to a user.
     """
     grok.implements(IOccamsBrowserView)
     grok.context(ISchemaContext)

@@ -7,7 +7,8 @@
     i18n_domain="occams.form">
 
   <include package="plone.app.dexterity" />
-  
+  <include package="avrc.data.store" />
+
   <!-- Import via five.grok, do this before grokking the product -->
   <grok:grok package="grokcore.traverser" />
   
