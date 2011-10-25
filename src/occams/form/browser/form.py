@@ -73,7 +73,9 @@ class Listing(crud.CrudForm):
 
     addform_factory = crud.NullForm
     editform_factory = ListingEditForm
-    view_schema = field.Fields(IFormSummary).omit('name')
+
+    # don't use changes count, apparently it's too confusing for users
+    view_schema = field.Fields(IFormSummary).omit('name', 'changeCount')
 
     _items = None
 
