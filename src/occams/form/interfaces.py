@@ -16,6 +16,12 @@ class IFormSummary(zope.interface.Interface):
     Form summary for listing purposes.
     """
 
+    name = zope.schema.ASCIILine(
+        title=_(u'Name'),
+        description=_(u'Machine name'),
+        readonly=True
+        )
+
     title = zope.schema.TextLine(
         title=_(u'Title'),
         description=_(u'Human-readable title'),
@@ -23,7 +29,7 @@ class IFormSummary(zope.interface.Interface):
         )
 
     fieldCount = zope.schema.Int(
-        title=_(u'# Fields'),
+        title=_(u'Fields'),
         description=_(
             u'Number of fields in the form, not including subform fields.'
             ),
@@ -31,14 +37,20 @@ class IFormSummary(zope.interface.Interface):
         )
 
     revisionCount = zope.schema.Int(
-        title=_(u'# Revisions'),
-        description=_(u'Number of times the form has been revised'),
+        title=_(u'Revisions'),
+        description=_(u'Number of times the form has been published'),
+        readonly=True,
+        )
+
+    changeCount = zope.schema.Int(
+        title=_(u'Changes'),
+        description=_(u'Number of times the form has been modified'),
         readonly=True,
         )
 
     currentVersion = zope.schema.Date(
-        title=_(u'Version'),
-        description=_(u'Current version number'),
+        title=_(u'Current'),
+        description=_(u'Current revision'),
         readonly=True,
         )
 
@@ -47,6 +59,17 @@ class IFormSummary(zope.interface.Interface):
         description=_(u'The date the form was created'),
         readonly=True,
         )
+
+
+class IFormSummaryGenerator(zope.interface.Interface):
+    """
+    Generator of ``IFormSummary`` results from a database
+    """
+
+    def getItems(session):
+        """
+        Returns a full listing of ``IFormSummary`` objects in the context
+        """
 
 
 class IRepository(zope.interface.Interface):
