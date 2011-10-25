@@ -84,7 +84,7 @@ class SummaryListing(layout.FormWrapper):
     form = SummaryListingForm
 
     # http://plone.org/documentation/manual/plone-community-developer-documentation/forms/z3c.form#customizing-form-template
-    index = ViewPageTemplateFile('form_templates/listingpage.pt')
+    index = ViewPageTemplateFile('form_templates/listing.pt')
 
     @property
     def label(self):
