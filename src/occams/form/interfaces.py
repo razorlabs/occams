@@ -3,8 +3,7 @@ import zope.schema
 
 from grokcore.component.interfaces import IContext
 from plone.directives import form
-from z3c.form.interfaces import IAddForm
-from z3c.form.interfaces import IEditForm
+import z3c.form.interfaces
 
 from avrc.data.store.interfaces import IDataBaseItem
 
@@ -143,15 +142,19 @@ class IChangeset(IOccamsFormComponent, form.Schema):
     """
 
     form.omitted('formName')
-    form.no_omit(IAddForm, 'formName')
+    form.no_omit(z3c.form.interfaces.IAddForm, 'formName')
     formName = zope.schema.Choice(
         title=_(u'Form'),
         description=_(u'The form to be modified'),
         vocabulary=u'occams.form.Forms'
         )
 
-    form.omitted(IAddForm, 'source')
-    source = zope.schema.Text(
+    form.omitted(z3c.form.interfaces.IAddForm, 'source')
+    form.widget(source='occams.form.browser.widget.XmlFieldWidget')
+    source = zope.schema.SourceText(
         title=_(u'Form Source'),
         description=_(u'Save changes to a form before committing'),
         )
+
+class IXmlWidget(z3c.form.interfaces.ITextAreaWidget):
+    pass

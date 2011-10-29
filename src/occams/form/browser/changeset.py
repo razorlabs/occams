@@ -18,7 +18,7 @@ class Edit(dexterity.EditForm):
     grok.implements(IOccamsBrowserView)
 
 
-class View(grok.View):
-    grok.context(IChangeset)
-    grok.implements(IOccamsBrowserView)
+#class View(grok.View):
+#    grok.context(IChangeset)
+#    grok.implements(IOccamsBrowserView)
 

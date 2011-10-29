@@ -6,20 +6,24 @@
     xmlns:i18n="http://namespaces.zope.org/i18n"
     i18n_domain="occams.form">
 
+  <!-- Explicitly load external packages so we don't get ambiguous errors -->
   <include package="plone.app.dexterity" />
   <include package="avrc.data.store" />
 
-  <!-- Import via five.grok, do this before grokking the product -->
+  <!-- 
+    Import traversing machinery via five.grok instead of including it.
+    Loading it via include will trigger Zope 3 incompatibility issues. We also
+    need to do this before grokking our own package so that the traverser
+    directives in this package are properly registered. 
+    -->
   <grok:grok package="grokcore.traverser" />
   
   <include file="permissions.zcml" />
   
-  <!-- Execute the configure.zcml for the following packages -->
+  <!-- Load ZCML for the following packages -->
   <include package=".browser" />
   <include package=".upgrades" />
-  
-  <browser:resourceDirectory name="codemirror" directory="codemirror" /> 
-  
+   
   <!-- grok this package except ``upgrades`` since it contains scripts -->
   <grok:grok package="." exclude="upgrades" />
   

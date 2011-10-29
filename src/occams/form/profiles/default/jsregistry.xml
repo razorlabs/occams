@@ -1,8 +1,10 @@
 <?xml version="1.0"?>
 <object name="portal_javascripts">
-  <!-- No javascript in this release
+
+  <!-- Ace editor javascript code -->
+
   <javascript 
-      id="++resource++occams.form/dragdrop.js" 
+      id="++resource++occams.form/ace/ace.js" 
       cacheable="True" 
       compression="none" 
       cookable="True"
@@ -10,5 +12,47 @@
       expression=""
       inline="False"
       />
-  -->
+      
+  <javascript 
+      id="++resource++occams.form/ace/mode-xml.js" 
+      cacheable="True" 
+      compression="none" 
+      cookable="True"
+      enabled="True" 
+      expression=""
+      inline="False"
+      />
+      
+  <javascript 
+      id="++resource++occams.form/ace/theme-twilight.js" 
+      cacheable="True" 
+      compression="none" 
+      cookable="True"
+      enabled="True" 
+      expression=""
+      inline="False"
+      />
+      
+  <javascript 
+      id="++resource++occams.form/ace/ace.js" 
+      cacheable="True" 
+      compression="none" 
+      cookable="True"
+      enabled="True" 
+      expression=""
+      inline="False"
+      />
+      
+  <!-- Package javascript source -->
+      
+  <javascript 
+      id="++resource++occams.form/scripts/xml-field.js" 
+      cacheable="True" 
+      compression="none" 
+      cookable="True"
+      enabled="True" 
+      expression=""
+      inline="False"
+      />
+      
 </object>
