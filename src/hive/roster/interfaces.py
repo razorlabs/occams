@@ -1,6 +1,10 @@
 from zope.interface import Interface
 import zope.schema
 from hive.roster import MessageFactory as _
+from hive.roster.base36 import base36decode
+
+# Begin at the highest number that satisfies our specification
+START_ID = base36decode('222222')
 
 
 class Error(Exception):

@@ -1,16 +1,16 @@
 import unittest2 as unittest
 
 from hive.roster.factory import isValidOurNumber
-from hive.roster.testing import TEST_LAYER
+from hive.roster.testing import OCCAMS_ROSTER_INTEGRATION_TESTING
 
-class OurNumberTestCase(unittest.TestCase):
+class TestFactory(unittest.TestCase):
     """
     Checks that valid OUR numbers are being produced.
     """
 
-    layer = TEST_LAYER
-    
-    def test_validator(self):
+    layer = OCCAMS_ROSTER_INTEGRATION_TESTING
+
+    def testValidator(self):
         invalid_numbers = (
             # ambiguous characters
             '222-22l',
@@ -43,4 +43,3 @@ class OurNumberTestCase(unittest.TestCase):
 
         for number in valid_numbers:
             self.assertTrue(isValidOurNumber(number))
-

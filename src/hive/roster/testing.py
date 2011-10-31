@@ -1,39 +1,65 @@
 """ 
 Application layers
 """
-from plone.testing import Layer
-        
-TEST_LAYER = Layer(name='hive.roster:testlayer')
 
-# class DataBaseLayer(Layer):
-#     """ 
-#     DataBase application layer for tests.
-#     """
+from zope.configuration import xmlconfig
+from zope.component import provideUtility
 
-#     def setUp(self):
-#         """ 
-#         Creates the database structures.
-#         """
-#         engine = create_engine(CONFIG_URL, echo=CONFIG_ECHO)
-#         model.Model.metadata.create_all(engine, checkfirst=True)
-#         factory = sessionmaker(engine, autoflush=False, autocommit=False)
-#         self['session'] = scoped_session(factory)
+from plone.app.testing import PloneSandboxLayer
+from plone.app.testing import applyProfile
+from plone.app.testing import PLONE_FIXTURE
+from plone.app.testing import IntegrationTesting
+from plone.app.testing import FunctionalTesting
 
-#     def tearDown(self):
-#         """ 
-#         Destroys the database structures.
-#         """
-#         model.Model.metadata.drop_all(self['session'].bind, checkfirst=True)
-#         self['session'].close()
-#         del self['session']
+from z3c.saconfig.utility import EngineFactory
+from z3c.saconfig.utility import GloballyScopedSession
+from z3c.saconfig import named_scoped_session
 
-#     def testSetUp(self):
-#         self['session'].rollback()
+from hive.roster import model
 
-#     def testTearDown(self):
-#         """ 
-#         Cancels the transaction after each test case method.
-#         """
-#         self['session'].rollback()
-        
-# DATABASE_LAYER = DataBaseLayer()
+
+def clearModelData():
+    """
+    Helper method to clear model data that might have been created through
+    transaction commits.
+    """
+    session = named_scoped_session('hive.roster.Session')
+    session.query(model.Site).delete()
+    session.query(model.Identifier).delete()
+    session.commit()
+
+
+class OccamsRosterLayer(PloneSandboxLayer):
+
+    defaultBases = (PLONE_FIXTURE,)
+
+    def setUpZope(self, app, configurationContext):
+        # Load ZCML
+        import hive.roster as package
+        xmlconfig.file('configure.zcml', package, context=configurationContext)
+
+        sessions = (
+            (u'hive.roster.Session', 'test.RosterEngine', 'sqlite:///:memory:'),
+            )
+
+        for (sessionName, engineName, uri) in sessions:
+            engineUtility = EngineFactory(uri)
+            provideUtility(engineUtility, name=engineName)
+            sessionUtility = GloballyScopedSession(engine=engineName)
+            provideUtility(sessionUtility, name=sessionName)
+
+    def setUpPloneSite(self, portal):
+        applyProfile(portal, 'hive.roster:default')
+
+
+OCCAMS_ROSTER_FIXTURE = OccamsRosterLayer()
+
+OCCAMS_ROSTER_INTEGRATION_TESTING = IntegrationTesting(
+    bases=(OCCAMS_ROSTER_FIXTURE,),
+    name='OccamsRoster:Integration'
+    )
+
+OCCAMS_ROSTER_FUNCTIONAL_TESTING = FunctionalTesting(
+    bases=(OCCAMS_ROSTER_FIXTURE,),
+    name='OccamsRoster:Functional'
+    )

@@ -4,11 +4,7 @@ from sqlalchemy import text
 import hive.roster.upgrades.migrate as repository
 from hive.roster import Session
 from hive.roster import model
-from hive.roster.base36 import base36decode
-
-
-# Begin at the highest number that satisfies our specification
-_IDSTART = base36decode('222222')
+from hive.roster.interfaces import START_ID
 
 
 def importVarious(context):
@@ -53,15 +49,13 @@ def setupPostgreSql():
     """
     engine = Session.bind
     # Check to see if the sequence starts at 222-222, otherwise reset it
-    last_value_query = text('SELECT last_value FROM identifier_id_pk_seq')
-    (last_value,) = engine.execute(last_value_query).fetchone()
+    lastValueQuery = text('SELECT last_value FROM identifier_id_pk_seq')
+    (lastValue,) = engine.execute(lastValueQuery).fetchone()
 
-    if last_value < _IDSTART:
+    if lastValue < START_ID:
         # Alter the sequence to begin at 222-222
-        alter_ddl = DDL(
-            'ALTER SEQUENCE identifier_id_pk_seq RESTART WITH %d' % _IDSTART
-            )
-        alter_ddl.execute(bind=engine)
+        queryTemplate = 'ALTER SEQUENCE identifier_id_pk_seq RESTART WITH %d'
+        DDL(queryTemplate % START_ID).execute(bind=engine)
 
 
 def setupSqlite():
@@ -70,20 +64,23 @@ def setupSqlite():
     primary key index (this number is deleted afterwards)
     """
     engine = Session.bind
-    identifier = (
-        Session.query(model.Identifier)
-        .order_by(model.Identifier.id.desc())
-        .first()
-        )
+    engine.echo = True
+    identifierTableName = model.Identifier.__tablename__
+    siteTableName = model.Site.__tablename__
+    lastValueQuery = text('SELECT MAX(id) FROM %s' % identifierTableName)
+    (lastValue,) = engine.execute(lastValueQuery).fetchone()
+    siteIdQuery = text('SELECT MIN(id) FROM %s' % siteTableName)
+    (siteId,) = engine.execute(siteIdQuery).fetchone()
 
-    if identifier is None or identifier.id < _IDSTART:
-        # One before the number we ACTUALLY want to start at
-        stub = _IDSTART - 1
-        site = Session.query(model.Site).order_by(model.Site.id.asc()).first()
-        identifier = model.Identifier(id=stub, origin=site, is_active=False)
-        # Temporarily add the new identifier
-        Session.add(identifier)
-        Session.flush()
-        # Now remove it
-        Session.delete(identifier)
-        Session.flush()
+    if lastValue < START_ID:
+        # Start before the one we actually want, so sequence picks up the next one
+        startId = START_ID - 1
+        queryTemplate = (
+            'INSERT INTO %s (id, origin_id, is_active, create_date, modify_date) '
+            'VALUES (%d, %d, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) '
+            )
+        DDL(queryTemplate % (identifierTableName, startId, siteId)).execute(bind=engine)
+
+        # Now delete the entry so we can start fresh
+        queryTemplate = 'DELETE FROM %s WHERE id = %d'
+        DDL(queryTemplate % (identifierTableName, startId)).execute(bind=engine)
