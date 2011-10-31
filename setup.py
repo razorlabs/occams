@@ -38,7 +38,7 @@ setup(
         ],
     extras_require=dict(
         postgresql=['psycopg2'],
-        test=['plone.testing'],
+        test=['plone.app.testing'],
         ),
 
     entry_points="""
