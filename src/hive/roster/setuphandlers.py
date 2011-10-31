@@ -64,7 +64,6 @@ def setupSqlite():
     primary key index (this number is deleted afterwards)
     """
     engine = Session.bind
-    engine.echo = True
     identifierTableName = model.Identifier.__tablename__
     siteTableName = model.Site.__tablename__
     lastValueQuery = text('SELECT MAX(id) FROM %s' % identifierTableName)
