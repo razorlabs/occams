@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 import os
 
-version = '0.4.2'
+version = '0.4.3'
 
 setup(
     name='hive.roster',
@@ -38,7 +38,7 @@ setup(
         ],
     extras_require=dict(
         postgresql=['psycopg2'],
-        test=['plone.testing'],
+        test=['plone.app.testing'],
         ),
 
     entry_points="""

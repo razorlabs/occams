@@ -12,9 +12,11 @@ from sqlalchemy.orm import relation as Relationship
 from sqlalchemy.ext.declarative import synonym_for
 from sqlalchemy.ext.declarative import declarative_base
 
+from hive.roster.base36 import base36encode
 from hive.roster.interfaces import ISite
 from hive.roster.interfaces import IIdentifier
-from hive.roster.base36 import base36encode
+from hive.roster.interfaces import START_ID
+
 
 NOW = text('CURRENT_TIMESTAMP')
 
@@ -40,7 +42,7 @@ class Identifier(Model):
 
     __tablename__ = 'identifier'
 
-    id = Column(Integer, Sequence('identifier_id_pk_seq'), primary_key=True)
+    id = Column(Integer, Sequence('identifier_id_pk_seq', start=START_ID), primary_key=True)
 
     origin_id = Column(ForeignKey(Site.id), nullable=False)
 
@@ -56,6 +58,11 @@ class Identifier(Model):
     create_date = Column(DateTime, nullable=False, default=NOW)
 
     modify_date = Column(DateTime, nullable=False, default=NOW, onupdate=NOW)
+
+    __table_args__ = (
+        None,
+        dict(sqlite_autoincrement=True),
+        )
 
     def __str__(self):
         encoded = base36encode(self.id)
