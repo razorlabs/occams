@@ -9,8 +9,8 @@
   <browser:page
       for="occams.form.interfaces.IRepository"
       name="view"
-      class=".form.SummaryListing"
+      class=".form.Listing"
       permission="cmf.ManagePortal" 
       />
-
+      
 </configure>

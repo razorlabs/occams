@@ -3,5 +3,6 @@
   <version>001</version>
   <dependencies>
     <dependency>profile-plone.app.dexterity:default</dependency>
+    <dependency>profile-plone.app.jquerytools:default</dependency>
   </dependencies>
 </metadata>

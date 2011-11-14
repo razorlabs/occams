@@ -30,8 +30,8 @@
   <property name="add_permission">occams.form.CreateRepository</property>
  
   <property name="behaviors">
-    <element value="plone.app.content.interfaces.INameFromTitle" />
     <element value="plone.app.dexterity.behaviors.metadata.IDublinCore"/>
+    <element value="plone.app.content.interfaces.INameFromTitle" />
   </property>
 
   <!-- View information -->

@@ -7,6 +7,9 @@ from occams.form.interfaces import IRepository
 from occams.form.interfaces import IOccamsBrowserView
 
 
+# NOTE: view is declared via ZCML
+
+
 class Add(dexterity.AddForm):
     grok.name('occams.form.repository')
     grok.implements(IOccamsBrowserView)
@@ -15,9 +18,3 @@ class Add(dexterity.AddForm):
 class Edit(dexterity.EditForm):
     grok.context(IRepository)
     grok.implements(IOccamsBrowserView)
-
-
-#class View(grok.View):
-#    grok.context(IChangeset)
-#    grok.implements(IOccamsBrowserView)
-

@@ -88,7 +88,7 @@ class RepositoryTraverse(Traverser):
         item = query.first()
 
         if item is not None:
-            log.info('Traversing to %s (%s)' % (item.name, item.__class__.__name__))
+            log.info('Traversing from \'%s\' to \'%s\'' % (self.context.id, item.name))
             newContext = IContext(item).__of__(self.context)
 
         return newContext
@@ -134,7 +134,7 @@ class SchemaTraverse(Traverser):
             item = query.first()
 
         if item is not None:
-            log.info('Traversing to %s (%s)' % (item.name, item.__class__.__name__))
+            log.info('Traversing from \'%s\' to \'%s\'' % (self.context.item.name, item.name))
             newContext = IContext(item).__of__(self.context)
 
         return newContext

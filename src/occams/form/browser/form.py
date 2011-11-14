@@ -1,4 +1,4 @@
-import os
+import os.path
 from copy import copy
 
 from zope.component import getUtility
@@ -12,7 +12,6 @@ from plone.directives.form.schema import WIDGETS_KEY
 from plone.supermodel.model import Fieldset
 from plone.z3cform import layout
 from plone.z3cform.crud import crud
-from Products.Five.browser.pagetemplatefile import ViewPageTemplateFile
 from z3c.form import button
 from z3c.form import field
 
@@ -26,8 +25,6 @@ from occams.form.interfaces import ISchemaContext
 from occams.form.interfaces import IFormSummary
 from occams.form.interfaces import IFormSummaryGenerator
 
-
-# TODO: Print # of forms
 
 class ListingEditForm(crud.EditForm):
     """
@@ -75,16 +72,13 @@ class SummaryListingForm(crud.CrudForm):
             return os.path.join(self.context.absolute_url(), item.name)
 
 
-class SummaryListing(layout.FormWrapper):
+class Listing(layout.FormWrapper):
     """
     Form wrapper so it can be rendered with a Plone layout and dynamic title.
     """
     grok.implements(IOccamsBrowserView)
 
     form = SummaryListingForm
-
-    # http://plone.org/documentation/manual/plone-community-developer-documentation/forms/z3c.form#customizing-form-template
-    index = ViewPageTemplateFile('form_templates/listing.pt')
 
     @property
     def label(self):
@@ -95,7 +89,23 @@ class SummaryListing(layout.FormWrapper):
         return self.context.description
 
 
-class PreviewForm(form.SchemaForm):
+class View(grok.View):
+    """
+    Default form view. 
+    Displays usage reports about the target form.
+    TODO: This needs some work and should be fully implemented when this
+        product can display data.
+    """
+    grok.implements(IOccamsBrowserView)
+    grok.context(ISchemaContext)
+    grok.name('index')
+    grok.require('occams.form.ViewForm')
+
+    def render(self):
+        self.response.redirect(os.path.join(self.context.absolute_url(), '@@edit'))
+
+
+class Edit(form.SchemaForm):
     """
     Displays a preview the form.
     This view should have no button handlers since it's only a preview of
@@ -103,11 +113,14 @@ class PreviewForm(form.SchemaForm):
     """
     grok.implements(IOccamsBrowserView)
     grok.context(ISchemaContext)
-    grok.name('preview')
-    grok.require('occams.form.ViewForm')
+    grok.name('edit')
+    grok.require('occams.form.ModifyForm')
 
     ignoreContext = True
     enable_form_tabbing = False
+
+    # The form we're going to edit 
+    _form = None
 
     @property
     def label(self):
@@ -124,38 +137,18 @@ class PreviewForm(form.SchemaForm):
     def update(self):
         self.request.set('disable_border', True)
         self._setupForm()
-        super(PreviewForm, self).update()
+        super(Edit, self).update()
+
+    def updateWidgets(self):
+        super(Edit, self).updateWidgets()
+        # Disable fields since we're not actually entering data
+        for widget in self.widgets.values():
+            widget.disabled = 'disabled'
 
     def _setupForm(self):
         repository = self.context.getParentNode()
         datastoreForm = IDataStore(repository).schemata.get(self.context.item.name)
         self._form = _formRender(datastoreForm)
-
-
-class Usage(grok.View):
-    grok.implements(IOccamsBrowserView)
-    grok.context(ISchemaContext)
-    grok.name('index')
-    grok.require('occams.form.ViewForm')
-
-    def update(self):
-        self.request.set('disable_border', True)
-        super(Usage, self).update()
-
-
-class EditForm(form.Form):
-    grok.implements(IOccamsBrowserView)
-    grok.context(ISchemaContext)
-    grok.name('edit')
-    grok.require('occams.form.ModifyForm')
-
-    @property
-    def label(self):
-        return 'Edit: %s' % self.context.item.title
-
-    def update(self):
-        self.request.set('disable_border', True)
-        super(EditForm, self).update()
 
 
 # Should technically be some sort of adapter
