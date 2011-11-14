@@ -3,7 +3,6 @@ import zope.schema
 
 from grokcore.component.interfaces import IContext
 from plone.directives import form
-import z3c.form.interfaces
 
 from avrc.data.store.interfaces import IDataBaseItem
 
@@ -133,28 +132,3 @@ class IRepository(IOccamsFormComponent, form.Schema):
         required=True,
         default=None,
         )
-
-
-class IChangeset(IOccamsFormComponent, form.Schema):
-    """
-    Changes to a form before they are sent to DataStore.
-    This allows a workflow process to the used for updating forms.
-    """
-
-    form.omitted('formName')
-    form.no_omit(z3c.form.interfaces.IAddForm, 'formName')
-    formName = zope.schema.Choice(
-        title=_(u'Form'),
-        description=_(u'The form to be modified'),
-        vocabulary=u'occams.form.Forms'
-        )
-
-    form.omitted(z3c.form.interfaces.IAddForm, 'source')
-    form.widget(source='occams.form.browser.widget.XmlFieldWidget')
-    source = zope.schema.SourceText(
-        title=_(u'Form Source'),
-        description=_(u'Save changes to a form before committing'),
-        )
-
-class IXmlWidget(z3c.form.interfaces.ITextAreaWidget):
-    pass
