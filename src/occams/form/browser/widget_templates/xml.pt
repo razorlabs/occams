@@ -1,4 +1,0 @@
-<div id=""  class="" tal:attributes="id view/id; class view/klass">  
-  <textarea name=""  tal:attributes="name view/name;" tal:content="view/value"></textarea>
-  <div id="editor"></div>  
-</div>
