@@ -1,28 +1,21 @@
 import os.path
-from copy import copy
 
 from zope.component import getUtility
-from zope.interface.interface import InterfaceClass
+from zope.interface import implements
 import zope.schema
 
-from five import grok
-from plone.directives import form
-from plone.directives.form.schema import FIELDSETS_KEY
-from plone.directives.form.schema import WIDGETS_KEY
-from plone.supermodel.model import Fieldset
 from plone.z3cform import layout
 from plone.z3cform.crud import crud
-from z3c.form import button
-from z3c.form import field
-from z3c.form import group
+import z3c.form.button
+import z3c.form.field
+import z3c.form.group
+
 
 from avrc.data.store.interfaces import IDataStore
 from avrc.data.store import directives as datastore
-from avrc.data.store import model
 
 from occams.form import MessageFactory as _
 from occams.form.interfaces import IOccamsBrowserView
-from occams.form.interfaces import ISchemaContext
 from occams.form.interfaces import IFormSummary
 from occams.form.interfaces import IFormSummaryGenerator
 
@@ -34,7 +27,7 @@ class ListingEditForm(crud.EditForm):
     label = None
 
     # No buttons for this release
-    buttons = button.Buttons()
+    buttons = z3c.form.button.Buttons()
 
 
 class SummaryListingForm(crud.CrudForm):
@@ -48,7 +41,7 @@ class SummaryListingForm(crud.CrudForm):
     editform_factory = ListingEditForm
 
     # don't use changes count, apparently it's too confusing for users
-    view_schema = field.Fields(IFormSummary).omit('name', 'changeCount')
+    view_schema = z3c.form.field.Fields(IFormSummary).omit('name', 'changeCount')
 
     _items = None
 
@@ -70,14 +63,15 @@ class SummaryListingForm(crud.CrudForm):
         Renders a link to the form view
         """
         if field == 'title':
-            return os.path.join(self.context.absolute_url(), item.name)
+            # Redirect to the editor for now, until we can get some stats
+            return os.path.join(self.context.absolute_url(), item.name, '@@edit')
 
 
 class Listing(layout.FormWrapper):
     """
     Form wrapper so it can be rendered with a Plone layout and dynamic title.
     """
-    grok.implements(IOccamsBrowserView)
+    implements(IOccamsBrowserView)
 
     form = SummaryListingForm
 
@@ -90,82 +84,30 @@ class Listing(layout.FormWrapper):
         return self.context.description
 
 
-class View(grok.View):
-    """
-    Default form view. 
-    Displays usage reports about the target form.
-    TODO: This needs some work and should be fully implemented when this
-        product can display data.
-    """
-    grok.implements(IOccamsBrowserView)
-    grok.context(ISchemaContext)
-    grok.name('index')
-    grok.require('occams.form.ViewForm')
-
-    def render(self):
-        self.response.redirect(os.path.join(self.context.absolute_url(), '@@edit'))
-
-
-class Preview(form.SchemaForm):
-    """
-    asl;dfjas;lfjas;ldfa
-    """
-    grok.implements(IOccamsBrowserView)
-    grok.context(ISchemaContext)
-    grok.name('preview')
-    grok.require('occams.form.ModifyForm')
-
-    ignoreContext = True
-    enable_form_tabbing = False
-
-    # The form we're going to edit 
-    _form = None
-
-    @property
-    def label(self):
-        return self.context.item.title
-
-    @property
-    def description(self):
-        return self.context.item.description
-
-    @property
-    def schema(self):
-        return self._form
-
-    def update(self):
-        self.request.set('disable_border', True)
-        self._setupForm()
-        super(Preview, self).update()
+class DisabledGroup(z3c.form.group.Group):
 
     def updateWidgets(self):
-        super(Preview, self).updateWidgets()
+        super(DisabledGroup, self).updateWidgets()
+
         # Disable fields since we're not actually entering data
         for widget in self.widgets.values():
             widget.disabled = 'disabled'
 
-    def _setupForm(self):
-        repository = self.context.getParentNode()
-        datastoreForm = IDataStore(repository).schemata.get(self.context.item.name)
-        self._form = _formRender(datastoreForm)
-
-
-class Edit(form.SchemaForm):
+class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.Form):
     """
     Displays a preview the form.
-    This view should have no button handlers since it's only a preview of
-    what the form will look like to a user.
     """
-    grok.implements(IOccamsBrowserView)
-    grok.context(ISchemaContext)
-    grok.name('edit')
-    grok.require('occams.form.ModifyForm')
+    implements(IOccamsBrowserView)
 
     ignoreContext = True
+    ignoreRequest = True
     enable_form_tabbing = False
 
-    # The form we're going to edit 
-    _form = None
+    # DataStore attributes
+    _attributes = dict()
+
+    # Rendered subforms
+    _subforms = dict()
 
     @property
     def label(self):
@@ -175,82 +117,49 @@ class Edit(form.SchemaForm):
     def description(self):
         return self.context.item.description
 
-    @property
-    def schema(self):
-        return self._form
-
-    def update(self):
-        self.request.set('disable_border', True)
-        self._setupForm()
-        super(Edit, self).update()
+#    @property
+#    def prefix(self):
+#        return str(self.context.item.name)
 
     def updateWidgets(self):
-        super(Edit, self).updateWidgets()
+        super(SchemaEditForm, self).updateWidgets()
+
+        fieldWidgetMap = {
+            zope.schema.Choice: 'z3c.form.browser.radio.RadioFieldWidget',
+            zope.schema.List: 'z3c.form.browser.checkbox.CheckBoxFieldWidget',
+            zope.schema.Text: 'occams.form.browser.widget.TextAreaFieldWidget',
+            }
+
         # Disable fields since we're not actually entering data
         for widget in self.widgets.values():
             widget.disabled = 'disabled'
 
-    def _setupForm(self):
+
+    def update(self):
+        self.request.set('disable_border', True)
+        self._updateHelper()
+        super(SchemaEditForm, self).update()
+
+    def _updateHelper(self):
         repository = self.context.getParentNode()
-        datastoreForm = IDataStore(repository).schemata.get(self.context.item.name)
-        self._form = _formRender(datastoreForm)
+        schema = IDataStore(repository).schemata.get(self.context.item.name, None)
+
+        fields = []
+        groups = []
+
+        for name, field in zope.schema.getFieldsInOrder(schema):
+            if isinstance(field, zope.schema.Object):
+                group = DisabledGroup(None, self.request, self)
+                group.label = field.title
+                group.description = field.description
+                group.prefix = name
+                group.fields = z3c.form.field.Fields(field.schema)
+                groups.append(group)
+            else:
+                fields.append(field)
+
+        self.groups = tuple(groups)
+        self.fields = z3c.form.field.Fields(*fields)
 
 
-# Should technically be some sort of adapter
-fieldWidgetMap = {
-    zope.schema.Choice: 'z3c.form.browser.radio.RadioFieldWidget',
-    zope.schema.List: 'z3c.form.browser.checkbox.CheckBoxFieldWidget',
-    zope.schema.Text: 'occams.form.browser.widget.TextAreaFieldWidget',
-    }
-
-
-def _formRender(sourceForm):
-    """
-    Helper method that converts a DataStore form to a Dexterity Form
-    (since subforms aren't well supported)
-    """
-    directives = {FIELDSETS_KEY: [], WIDGETS_KEY: dict()}
-    widgets = dict()
-    fields = dict()
-    order = 0
-
-    for name, attribute in zope.schema.getFieldsInOrder(sourceForm):
-        queue = list()
-        if isinstance(attribute, zope.schema.Object):
-            fieldset = Fieldset(
-                __name__=attribute.__name__,
-                label=attribute.title,
-                description=attribute.description,
-                fields=zope.schema.getFieldNamesInOrder(attribute.schema)
-                )
-            directives[FIELDSETS_KEY].append(fieldset)
-            for subname, subfield in zope.schema.getFieldsInOrder(attribute.schema):
-                queue.append(copy(subfield))
-        else:
-            queue.append(copy(attribute))
-
-        for field in queue:
-            order += 1
-            widget = fieldWidgetMap.get(field.__class__)
-
-            if widget is None:
-                widget = datastore.widget.bind().get(field)
-
-            if widget is not None:
-                directives[WIDGETS_KEY][field.__name__] = widget
-                widgets[field.__name__] = widget
-
-            field.order = order
-            fields[field.__name__] = field
-
-    # We're only rendering so it's not necessary to get the hierarchy
-    ploneForm = InterfaceClass(
-        name=sourceForm.__name__,
-        bases=[form.Schema],
-        attrs=fields
-        )
-
-    for key, item in directives.items():
-        ploneForm.setTaggedValue(key, item)
-
-    return ploneForm
+Edit = layout.wrap_form(SchemaEditForm)

@@ -1,74 +1,48 @@
-<html xmlns="http://www.w3.org/1999/xhtml"
-      xmlns:i18n="http://xml.zope.org/namespaces/i18n"
-      xmlns:metal="http://xml.zope.org/namespaces/metal"
-      xmlns:tal="http://xml.zope.org/namespaces/tal"
-      metal:use-macro="context/main_template/macros/master"
-      xml:lang="en"
-      lang="en"
-      i18n:domain="occams.form">
-  <metal:content-core fill-slot="content-core">
-    <metal:content-core define-macro="content-core">
-    
-      <div id="occams-form-editor">
-        
-        <!-- Metadata about the form -->
-        <div id="occams-form-metadata-section">
-            <h2>Metadata</h2>
-            <label>Current Version</label>
-            <select class="versions">
-              <option value="2011-11-01">2011-11-01</option>
-            </select>
-        </div>
-        
-        <metal:form metal:use-macro="context/@@ploneform-macros/form">
-        
-          <!-- The actual form's field in an unordered list format -->
-          <div id="occams-form-fields-section">
-            <h2>Fields</h2>
-            
-              <ul id="occams-form-fields">
-              
-                <li class="occams-form-field">
-                  <metal:field-slot metal:fill-slot="field">                   
-                    <div class="occams-form-field-metadata">
-                      <div class="occams-form-field-name" tal:replace="widget/field/__name__">Field Name</div>
-                      <div class="occams-form-field-version">2010-08-13</div>
-                    </div>
-                    <div class="occams-form-field-widget">
-                      <metal:field metal:use-macro="context/@@ploneform-macros/field"/>
-                    </div>
-                    <div class="occams-form-field-navigation">
-                      <ul>
-                        <li><a href="delete.html" class="delete">Delete</a></li>
-                        <li><a href="edit.html" class="edit">Edit</a></li>
-                      </ul>
-                    </div>
-                  </metal:field-slot>
-                </li>
-                
-              </ul>
-          </div>
-        
-        </metal:form>
-        
-        <!-- Field types -->
-        <div id="occams-form-types-section">
-          <h2>Types</h2>
-          <ul id="occams-form-types">
-            <li class="boolean">Boolean</li>
-            <li class="date">Date</li>
-            <li class="datetime">Datetime</li>
-            <li class="decimal">Decimal</li>
-            <li class="integer">Integer</li>
-            <li class="object">Subform</li>
-            <li class="string">Text</li>
-            <li class="text">Text Box</li>
-          </ul>
-        </div>
-        
+
+
+<!-- Metadata about the form -->
+<div id="occams-form-metadata-section">
+    <h2>Metadata</h2>
+    <label>Current Version</label>
+    <select class="versions">
+      <option value="2011-11-01">2011-11-01</option>
+    </select>
+</div>
+
+<metal:form metal:use-macro="context/@@ploneform-macros/form">
+  <metal:field-slot metal:fill-slot="field">     
+    <div>              
+      <div class="occams-form-field-metadata">
+        <div class="occams-form-field-name" tal:replace="widget/field/__name__">Field Name</div>
+        <div class="occams-form-field-version">2010-08-13</div>
       </div>
-      
-    </metal:content-core>
-  </metal:content-core>
-</html>
+      <div class="occams-form-field-widget">
+        <metal:field metal:use-macro="context/@@ploneform-macros/field"/>
+      </div>
+      <div class="occams-form-field-navigation">
+        <ul>
+          <li><a href="delete.html" class="delete">Delete</a></li>
+          <li><a href="edit.html" class="edit">Edit</a></li>
+        </ul>
+      </div>
+    </div>
+  </metal:field-slot>
+</metal:form>
+
+<!-- Field types -->
+  <div id="occams-form-types-section">
+    <h2>Types</h2>
+    <ul id="occams-form-types">
+      <li class="boolean">Boolean</li>
+      <li class="date">Date</li>
+      <li class="datetime">Datetime</li>
+      <li class="decimal">Decimal</li>
+      <li class="integer">Integer</li>
+      <li class="object">Subform</li>
+      <li class="string">Text</li>
+      <li class="text">Text Box</li>
+    </ul>
+  </div>
+  
+</div>
 

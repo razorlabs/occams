@@ -13,4 +13,11 @@
       permission="cmf.ManagePortal" 
       />
       
+  <browser:page
+      for="occams.form.interfaces.ISchemaContext"
+      name="edit"
+      class=".form.Edit"
+      permission="occams.form.ModifyForm" 
+      />
+      
 </configure>
