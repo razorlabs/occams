@@ -20,36 +20,36 @@
             </select>
         </div>
         
-<!--         <metal:form metal:use-macro="context/@@ploneform-macros/form"> -->
+        <metal:form metal:use-macro="context/@@ploneform-macros/form">
         
-        <!-- The actual form's field in an unordered list format -->
-        <div id="occams-form-fields-section">
-          <h2>Fields</h2>
-          
-            <ul id="occams-form-fields">
+          <!-- The actual form's field in an unordered list format -->
+          <div id="occams-form-fields-section">
+            <h2>Fields</h2>
             
-              <li class="occams-form-field">
-                <metal:field-slot metal:fill-slot="field">                   
-                  <div class="occams-form-field-metadata">
-                    <div class="occams-form-field-name" tal:replace="widget/field/__name__">Field Name</div>
-                    <div class="occams-form-field-version">2010-08-13</div>
-                  </div>
-                  <div class="occams-form-field-widget">
-                    <metal:field metal:use-macro="context/@@ploneform-macros/field"/>
-                  </div>
-                  <div class="occams-form-field-navigation">
-                    <ul>
-                      <li><a href="delete.html" class="delete">Delete</a></li>
-                      <li><a href="edit.html" class="edit">Edit</a></li>
-                    </ul>
-                  </div>
-                </metal:field-slot>
-              </li>
+              <ul id="occams-form-fields">
               
-            </ul>
-        </div>
+                <li class="occams-form-field">
+                  <metal:field-slot metal:fill-slot="field">                   
+                    <div class="occams-form-field-metadata">
+                      <div class="occams-form-field-name" tal:replace="widget/field/__name__">Field Name</div>
+                      <div class="occams-form-field-version">2010-08-13</div>
+                    </div>
+                    <div class="occams-form-field-widget">
+                      <metal:field metal:use-macro="context/@@ploneform-macros/field"/>
+                    </div>
+                    <div class="occams-form-field-navigation">
+                      <ul>
+                        <li><a href="delete.html" class="delete">Delete</a></li>
+                        <li><a href="edit.html" class="edit">Edit</a></li>
+                      </ul>
+                    </div>
+                  </metal:field-slot>
+                </li>
+                
+              </ul>
+          </div>
         
-        <!-- </metal:form> -->
+        </metal:form>
         
         <!-- Field types -->
         <div id="occams-form-types-section">

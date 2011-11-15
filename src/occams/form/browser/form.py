@@ -14,6 +14,7 @@ from plone.z3cform import layout
 from plone.z3cform.crud import crud
 from z3c.form import button
 from z3c.form import field
+from z3c.form import group
 
 from avrc.data.store.interfaces import IDataStore
 from avrc.data.store import directives as datastore
@@ -103,6 +104,50 @@ class View(grok.View):
 
     def render(self):
         self.response.redirect(os.path.join(self.context.absolute_url(), '@@edit'))
+
+
+class Preview(form.SchemaForm):
+    """
+    asl;dfjas;lfjas;ldfa
+    """
+    grok.implements(IOccamsBrowserView)
+    grok.context(ISchemaContext)
+    grok.name('preview')
+    grok.require('occams.form.ModifyForm')
+
+    ignoreContext = True
+    enable_form_tabbing = False
+
+    # The form we're going to edit 
+    _form = None
+
+    @property
+    def label(self):
+        return self.context.item.title
+
+    @property
+    def description(self):
+        return self.context.item.description
+
+    @property
+    def schema(self):
+        return self._form
+
+    def update(self):
+        self.request.set('disable_border', True)
+        self._setupForm()
+        super(Preview, self).update()
+
+    def updateWidgets(self):
+        super(Preview, self).updateWidgets()
+        # Disable fields since we're not actually entering data
+        for widget in self.widgets.values():
+            widget.disabled = 'disabled'
+
+    def _setupForm(self):
+        repository = self.context.getParentNode()
+        datastoreForm = IDataStore(repository).schemata.get(self.context.item.name)
+        self._form = _formRender(datastoreForm)
 
 
 class Edit(form.SchemaForm):
