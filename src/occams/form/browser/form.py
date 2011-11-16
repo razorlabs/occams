@@ -10,15 +10,17 @@ import z3c.form.button
 import z3c.form.field
 import z3c.form.group
 
+from z3c.form.browser.radio import RadioFieldWidget
+from z3c.form.browser.checkbox import CheckBoxFieldWidget
 
 from avrc.data.store.interfaces import IDataStore
 from avrc.data.store import directives as datastore
 
 from occams.form import MessageFactory as _
+from occams.form.browser.widget import TextAreaFieldWidget
 from occams.form.interfaces import IOccamsBrowserView
 from occams.form.interfaces import IFormSummary
 from occams.form.interfaces import IFormSummaryGenerator
-
 
 class ListingEditForm(crud.EditForm):
     """
@@ -84,15 +86,6 @@ class Listing(layout.FormWrapper):
         return self.context.description
 
 
-class DisabledGroup(z3c.form.group.Group):
-
-    def updateWidgets(self):
-        super(DisabledGroup, self).updateWidgets()
-
-        # Disable fields since we're not actually entering data
-        for widget in self.widgets.values():
-            widget.disabled = 'disabled'
-
 class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.Form):
     """
     Displays a preview the form.
@@ -103,12 +96,6 @@ class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.Form):
     ignoreRequest = True
     enable_form_tabbing = False
 
-    # DataStore attributes
-    _attributes = dict()
-
-    # Rendered subforms
-    _subforms = dict()
-
     @property
     def label(self):
         return self.context.item.title
@@ -117,23 +104,15 @@ class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.Form):
     def description(self):
         return self.context.item.description
 
-#    @property
-#    def prefix(self):
-#        return str(self.context.item.name)
+    @property
+    def prefix(self):
+        return str(self.context.item.name)
 
     def updateWidgets(self):
         super(SchemaEditForm, self).updateWidgets()
-
-        fieldWidgetMap = {
-            zope.schema.Choice: 'z3c.form.browser.radio.RadioFieldWidget',
-            zope.schema.List: 'z3c.form.browser.checkbox.CheckBoxFieldWidget',
-            zope.schema.Text: 'occams.form.browser.widget.TextAreaFieldWidget',
-            }
-
         # Disable fields since we're not actually entering data
         for widget in self.widgets.values():
             widget.disabled = 'disabled'
-
 
     def update(self):
         self.request.set('disable_border', True)
@@ -141,12 +120,24 @@ class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.Form):
         super(SchemaEditForm, self).update()
 
     def _updateHelper(self):
+        """
+        Helper method for updating the fields/groups to render
+        """
         repository = self.context.getParentNode()
         schema = IDataStore(repository).schemata.get(self.context.item.name, None)
 
         fields = []
         groups = []
 
+        # We need a custom class for rendering disabled groups
+        class DisabledGroup(z3c.form.group.Group):
+            def updateWidgets(self):
+                super(DisabledGroup, self).updateWidgets()
+                # Disable fields since we're not actually entering data
+                for widget in self.widgets.values():
+                    widget.disabled = 'disabled'
+
+        # Update each field/group
         for name, field in zope.schema.getFieldsInOrder(schema):
             if isinstance(field, zope.schema.Object):
                 group = DisabledGroup(None, self.request, self)
@@ -160,6 +151,26 @@ class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.Form):
 
         self.groups = tuple(groups)
         self.fields = z3c.form.field.Fields(*fields)
+
+        # Override the complex widgets with some simple checkbox/radio ones
+        self._overrideWidgets(self.fields)
+        for group in self.groups:
+            self._overrideWidgets(group.fields)
+
+    def _overrideWidgets(self, fields):
+        """
+        Helper method for overriding the form widgets with our own custom ones.
+        """
+        fieldWidgetMap = {
+            zope.schema.Choice: RadioFieldWidget,
+            zope.schema.List: CheckBoxFieldWidget,
+            zope.schema.Text: TextAreaFieldWidget,
+            }
+
+        for field in fields.values():
+            fieldType = field.field.__class__
+            if fieldType in fieldWidgetMap:
+                field.widgetFactory = fieldWidgetMap.get(fieldType)
 
 
 Edit = layout.wrap_form(SchemaEditForm)
