@@ -1,5 +1,6 @@
 import os.path
 
+from zope.app.pagetemplate.viewpagetemplatefile import ViewPageTemplateFile
 from zope.component import getUtility
 from zope.interface import implements
 import zope.schema
@@ -89,12 +90,21 @@ class Listing(layout.FormWrapper):
 class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.Form):
     """
     Displays a preview the form.
+    
+    A note on sub-objects: There currently seems to be too many caveats
+    surrounding object widgets (see ``z3c.form.object``). Given that, we
+    will be using z3c group forms to represent sub objects.
     """
     implements(IOccamsBrowserView)
 
     ignoreContext = True
     ignoreRequest = True
+
     enable_form_tabbing = False
+
+    template = ViewPageTemplateFile('form_templates/edit.pt')
+
+    groups = ()
 
     @property
     def label(self):
@@ -108,12 +118,6 @@ class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.Form):
     def prefix(self):
         return str(self.context.item.name)
 
-    def updateWidgets(self):
-        super(SchemaEditForm, self).updateWidgets()
-        # Disable fields since we're not actually entering data
-        for widget in self.widgets.values():
-            widget.disabled = 'disabled'
-
     def update(self):
         self.request.set('disable_border', True)
         self._updateHelper()
@@ -124,9 +128,9 @@ class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.Form):
         Helper method for updating the fields/groups to render
         """
         repository = self.context.getParentNode()
-        schema = IDataStore(repository).schemata.get(self.context.item.name, None)
+        form = IDataStore(repository).schemata.get(self.context.item.name, None)
 
-        fields = []
+        defaultNames = []
         groups = []
 
         # We need a custom class for rendering disabled groups
@@ -138,7 +142,8 @@ class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.Form):
                     widget.disabled = 'disabled'
 
         # Update each field/group
-        for name, field in zope.schema.getFieldsInOrder(schema):
+        for name, field in zope.schema.getFieldsInOrder(form):
+            # Put each sub-object form in a group
             if isinstance(field, zope.schema.Object):
                 group = DisabledGroup(None, self.request, self)
                 group.label = field.title
@@ -147,13 +152,16 @@ class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.Form):
                 group.fields = z3c.form.field.Fields(field.schema)
                 groups.append(group)
             else:
-                fields.append(field)
+                defaultNames.append(name)
 
+        defaultGroup = DisabledGroup(None, self.request, self)
+        defaultGroup.label = '(Default)'
+        defaultGroup.fields = z3c.form.field.Fields(form).select(*defaultNames)
+
+        groups.insert(0, defaultGroup)
         self.groups = tuple(groups)
-        self.fields = z3c.form.field.Fields(*fields)
 
         # Override the complex widgets with some simple checkbox/radio ones
-        self._overrideWidgets(self.fields)
         for group in self.groups:
             self._overrideWidgets(group.fields)
 

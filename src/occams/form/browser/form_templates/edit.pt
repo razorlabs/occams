@@ -9,40 +9,66 @@
     </select>
 </div>
 
-<metal:form metal:use-macro="context/@@ploneform-macros/form">
-  <metal:field-slot metal:fill-slot="field">     
-    <div>              
-      <div class="occams-form-field-metadata">
-        <div class="occams-form-field-name" tal:replace="widget/field/__name__">Field Name</div>
-        <div class="occams-form-field-version">2010-08-13</div>
-      </div>
-      <div class="occams-form-field-widget">
-        <metal:field metal:use-macro="context/@@ploneform-macros/field"/>
-      </div>
-      <div class="occams-form-field-navigation">
-        <ul>
-          <li><a href="delete.html" class="delete">Delete</a></li>
-          <li><a href="edit.html" class="edit">Edit</a></li>
-        </ul>
-      </div>
-    </div>
-  </metal:field-slot>
-</metal:form>
-
 <!-- Field types -->
-  <div id="occams-form-types-section">
-    <h2>Types</h2>
-    <ul id="occams-form-types">
-      <li class="boolean">Boolean</li>
-      <li class="date">Date</li>
-      <li class="datetime">Datetime</li>
-      <li class="decimal">Decimal</li>
-      <li class="integer">Integer</li>
-      <li class="object">Subform</li>
-      <li class="string">Text</li>
-      <li class="text">Text Box</li>
-    </ul>
-  </div>
-  
+<div id="occams-form-types-section">
+  <h2>Types</h2>
+  <ul id="occams-form-types">
+    <li class="boolean">Boolean</li>
+    <li class="date">Date</li>
+    <li class="datetime">Datetime</li>
+    <li class="decimal">Decimal</li>
+    <li class="integer">Integer</li>
+    <li class="object">Subform</li>
+    <li class="string">Text</li>
+    <li class="text">Text Box</li>
+  </ul>
 </div>
+
+<metal:form metal:use-macro="context/@@ploneform-macros/titlelessform">
+  <metal:fields-slot metal:fill-slot="fields">
+
+    <tal:block tal:repeat="group groups">
+      <fieldset
+          tal:define="fieldset_name repeat/group/index"
+          tal:attributes="id string:fieldset-${fieldset_name};
+                          class string:kssattr-fieldset-${fieldset_name}">
+
+        <legend tal:define="form_name group/label"
+                tal:condition="form_name"
+                tal:attributes="id string:fieldsetlegend-${repeat/group/index}"
+                tal:content="form_name">Form name</legend>
+
+        <p i18n:translate=""
+           tal:define="group_description group/description|nothing"
+           tal:condition="group_description"
+           tal:content="structure group_description">
+            Description
+        </p>
+
+        <tal:block define="view nocall:group">
+          <tal:widgets repeat="widget view/widgets/values">
+            <div>              
+              <div class="occams-form-field-metadata">
+                <div class="occams-form-field-name" tal:replace="widget/field/__name__">Field Name</div>
+                <div class="occams-form-field-version">2010-08-13</div>
+              </div>
+              <div class="occams-form-field-widget">
+                <tal:widget tal:replace="structure widget/@@ploneform-render-widget"/>
+              </div>
+              <div class="occams-form-field-navigation">
+                <ul>
+                  <li><a href="delete.html" class="delete">Delete</a></li>
+                  <li><a href="edit.html" class="edit">Edit</a></li>
+                </ul>
+              </div>
+            </div>                    
+          </tal:widgets>
+        </tal:block>
+        
+      </fieldset>
+    </tal:block>
+
+  </metal:fields-slot>
+</metal:form>
+  
 
