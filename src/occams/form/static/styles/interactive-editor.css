@@ -1,5 +1,5 @@
 /**
- *
+ * Interactive editor style directives.
  */
 
 /******************************************************************************/
@@ -17,27 +17,67 @@
     -webkit-user-select: none;
 }
 
-#occams-form-editor h2
+/******************************************************************************/
+/** ACTIONS **/
+/******************************************************************************/
+
+ ul.occams-form-element-actions
 {
-    font-size: 0.9em;
+    list-style: none;
+    margin: 0 !important;
+    overflow: hidden;
+    padding: 0;
 }
+
+.occams-form-element-actions li
+{
+    padding: 0.3em 0.5em;
+    float: left;
+}
+
+.occams-form-element-actions a
+{
+    display: block;
+    height: 16px;
+    text-indent: -1999px;
+    width: 16px;
+}
+
+.occams-form-element-actions .edit
+{
+    background: url(++resource++occams.form/images/pencil.png);
+    
+}
+
+.occams-form-element-actions .delete
+{
+    background: url(++resource++occams.form/images/delete.png);
+}
+
 
 /******************************************************************************/
 /** METADATA **/
 /******************************************************************************/
 
-#occams-form-metadata-section
+/** TODO **/
+
+/******************************************************************************/
+/** SUBFORMS **/
+/******************************************************************************/
+
+.occams-form-subform
 {
-	text-align: right;
-	padding: 1% 31% 1% 1%;
+	border: 1px solid #BFBFB0;
+	background: #FFFFE3;
 }
 
-
-#occams-form-metadata-section h2,
-#occams-form-fields-section h2
+.occams-form-subform-metadata
 {
-	display: none;
+	background: #996;
+	color: #fff;
+	font-weight: bold;
 }
+
 
 /******************************************************************************/
 /** FIELDS **/
@@ -56,15 +96,10 @@
     padding: 0;
 }
 
-#occams-form-fields li.occams-form-field
-{
-    list-style: none;
-    margin: 1em 0;
-}
-
 .occams-form-field
 {
 	background: #eee;
+	margin: 1em 0;
 	overflow: hidden;
 	position: relative;
 }
@@ -94,50 +129,9 @@
     float: right;
 }
 
-
 .occams-form-field-widget
 {
 	padding: 0.4em 10em 0.4em 0.4em;
-}
-
-.occams-form-field-navigation
-{
-    position: absolute;
-    right: 0.5em;
-    top: 50%;
-}
-
-.occams-form-field-navigation ul
-{
-	list-style: none;
-	margin: 0;
-	overflow: hidden;
-	padding: 0;
-}
-
-.occams-form-field-navigation li
-{
-    padding: 0.3em 0.5em;
-    float: left;
-}
-
-.occams-form-field-navigation a
-{
-    display: block;
-    height: 16px;
-    text-indent: -1999px;
-    width: 16px;
-}
-
-.occams-form-field-navigation .edit
-{
-    background: url(++resource++occams.form/images/pencil.png);
-    
-}
-
-.occams-form-field-navigation .delete
-{
-    background: url(++resource++occams.form/images/delete.png);
 }
 
 /******************************************************************************/

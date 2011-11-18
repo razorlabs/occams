@@ -4,6 +4,7 @@ from zope.app.pagetemplate.viewpagetemplatefile import ViewPageTemplateFile
 from zope.component import getUtility
 from zope.interface import implements
 import zope.schema
+from zope.schema.interfaces import IVocabulary
 
 from plone.z3cform import layout
 from plone.z3cform.crud import crud
@@ -17,11 +18,13 @@ from z3c.form.browser.checkbox import CheckBoxFieldWidget
 from avrc.data.store.interfaces import IDataStore
 from avrc.data.store import directives as datastore
 
+
 from occams.form import MessageFactory as _
 from occams.form.browser.widget import TextAreaFieldWidget
 from occams.form.interfaces import IOccamsBrowserView
 from occams.form.interfaces import IFormSummary
 from occams.form.interfaces import IFormSummaryGenerator
+
 
 class ListingEditForm(crud.EditForm):
     """
@@ -118,6 +121,13 @@ class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.Form):
     def prefix(self):
         return str(self.context.item.name)
 
+    def types(self):
+        """
+        Template helper for types
+        """
+        types = getUtility(IVocabulary, 'avrc.data.store.Types')
+        return types
+
     def update(self):
         self.request.set('disable_border', True)
         self._updateHelper()
@@ -181,4 +191,11 @@ class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.Form):
                 field.widgetFactory = fieldWidgetMap.get(fieldType)
 
 
-Edit = layout.wrap_form(SchemaEditForm)
+class Edit(layout.FormWrapper):
+    """
+    """
+
+    form = SchemaEditForm
+
+    def label(self):
+        return u'Edit: %s (%s)' % (self.context.item.title, self.context.item.name)

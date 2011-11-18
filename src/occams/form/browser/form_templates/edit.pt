@@ -1,74 +1,89 @@
-
-
-<!-- Metadata about the form -->
-<div id="occams-form-metadata-section">
-    <h2>Metadata</h2>
-    <label>Current Version</label>
-    <select class="versions">
-      <option value="2011-11-01">2011-11-01</option>
-    </select>
-</div>
-
-<!-- Field types -->
-<div id="occams-form-types-section">
-  <h2>Types</h2>
-  <ul id="occams-form-types">
-    <li class="boolean">Boolean</li>
-    <li class="date">Date</li>
-    <li class="datetime">Datetime</li>
-    <li class="decimal">Decimal</li>
-    <li class="integer">Integer</li>
-    <li class="object">Subform</li>
-    <li class="string">Text</li>
-    <li class="text">Text Box</li>
-  </ul>
-</div>
-
-<metal:form metal:use-macro="context/@@ploneform-macros/titlelessform">
-  <metal:fields-slot metal:fill-slot="fields">
-
-    <tal:block tal:repeat="group groups">
-      <fieldset
-          tal:define="fieldset_name repeat/group/index"
-          tal:attributes="id string:fieldset-${fieldset_name};
-                          class string:kssattr-fieldset-${fieldset_name}">
-
-        <legend tal:define="form_name group/label"
-                tal:condition="form_name"
-                tal:attributes="id string:fieldsetlegend-${repeat/group/index}"
-                tal:content="form_name">Form name</legend>
-
-        <p i18n:translate=""
-           tal:define="group_description group/description|nothing"
-           tal:condition="group_description"
-           tal:content="structure group_description">
-            Description
-        </p>
-
-        <tal:block define="view nocall:group">
-          <tal:widgets repeat="widget view/widgets/values">
-            <div>              
-              <div class="occams-form-field-metadata">
-                <div class="occams-form-field-name" tal:replace="widget/field/__name__">Field Name</div>
-                <div class="occams-form-field-version">2010-08-13</div>
-              </div>
-              <div class="occams-form-field-widget">
-                <tal:widget tal:replace="structure widget/@@ploneform-render-widget"/>
-              </div>
-              <div class="occams-form-field-navigation">
-                <ul>
-                  <li><a href="delete.html" class="delete">Delete</a></li>
-                  <li><a href="edit.html" class="edit">Edit</a></li>
-                </ul>
-              </div>
-            </div>                    
-          </tal:widgets>
-        </tal:block>
-        
-      </fieldset>
-    </tal:block>
-
-  </metal:fields-slot>
-</metal:form>
+<div id="occams-form-editor">
+  <metal:form metal:use-macro="context/@@ploneform-macros/form">
   
-
+    <metal:title-slot metal:fill-slot="title">
+      <div>
+        Label edit will go here...
+      </div>
+    </metal:title-slot>
+    
+    <metal:description-slot metal:fill-slot="description">
+      <div>
+        Description edit will go here...
+      </div>
+    </metal:description-slot>
+    
+    <metal:formtop-slot metal:fill-slot="formtop">
+      <!-- TODO: version selector -->
+        
+      <!-- Field types -->
+      <div id="occams-form-types">
+        <ul>
+          <tal:block tal:repeat="type_ view/types">
+            <li class="" tal:attributes="class type_/token" tal:content="type_/title">Type</li>
+          </tal:block>
+        </ul>
+      </div>
+    </metal:formtop-slot>
+  
+    <metal:fields-slot metal:fill-slot="fields">
+      <div id="occams-form-fields">
+        <tal:block tal:repeat="group groups">
+          <div class="occams-form-subform">
+            <tal:block 
+                define="
+                    title   group/label;
+                    version string: 2011-05-01
+                ">
+                <div class="occams-form-metadata">
+                  <div class="occams-form-title" tal:content="title">Title</div>
+                  <div class="occams-form-version" tal:content="version">Version</div>
+                  <div class="occams-form-controls">
+                    <ul>
+                      <li><a href="edit.html" class="occams-form-edit">Edit</a></li>
+                      <li><a href="delete.html" class="occams-form-delete">Delete</a></li>
+                    </ul>
+                  </div>
+                </div>
+            </tal:block>
+            <div 
+                class="occams-form-element-description"
+                tal:define="group_description group/description|nothing"
+                tal:condition="group_description"
+                tal:content="structure group_description">
+              Description
+            </div>
+            <tal:widgets repeat="widget group/widgets/values">
+              <div class="occams-form-field">
+                <tal:block define="
+                    title   widget/field/__name__;
+                    version string: 2011-05-01
+                    ">
+                  <tal:comment tal:replace="nothing">
+                    It would be nice to replace the block below with a macro
+                    re-using the code from above, unfortunately TAL makes
+                    it next to fucking impossible to do it...
+                  </tal:comment>
+                  <div class="occams-form-metadata">
+                    <div class="occams-form-title" tal:content="title">Title</div>
+                    <div class="occams-form-version" tal:content="version">Version</div>
+                    <div class="occams-form-controls">
+                      <ul>
+                        <li><a href="edit.html" class="occams-form-edit">Edit</a></li>
+                        <li><a href="delete.html" class="occams-form-delete">Delete</a></li>
+                      </ul>
+                    </div>
+                  </div>
+                </tal:block>
+                <div class="occams-form-widget">
+                  <tal:widget tal:replace="structure widget/@@ploneform-render-widget"/>
+                </div>
+              </div>                    
+            </tal:widgets>
+          </div>
+        </tal:block>
+      </div>
+    </metal:fields-slot>
+    
+  </metal:form>
+</div>

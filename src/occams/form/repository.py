@@ -2,9 +2,6 @@
 Repository tools
 """
 
-from zope.component import getUtilitiesFor
-from zope.schema.interfaces import IVocabularyFactory
-from zope.schema.vocabulary import SimpleVocabulary
 from zope.lifecycleevent import IObjectAddedEvent
 from zope.lifecycleevent import IObjectModifiedEvent
 
@@ -72,19 +69,3 @@ def _configureRepositoryDataStore(repository):
 
     log.info(MSG_INSALLING % msg_params)
     migrate.install(datastore.session.bind)
-
-
-class AvailableSessionsVocabularyFactory(grok.GlobalUtility):
-    """
-    Builds a vocabulary containing the Plone instance's registered 
-    ``z3c.saconfig`` sessions.
-    """
-    grok.name(u'occams.form.AvailableSessions')
-    grok.title(_(u'Available Sessions'))
-    grok.description(_(u'A listing of registered z3c.saconfig sessions.'))
-    grok.implements(IVocabularyFactory)
-
-    def __call__(self, context):
-        registered = getUtilitiesFor(IScopedSession)
-        names = [name for name, utility in registered]
-        return SimpleVocabulary.fromValues(names)

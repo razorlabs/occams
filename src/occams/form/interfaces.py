@@ -8,6 +8,7 @@ from avrc.data.store.interfaces import IDataBaseItem
 
 from occams.form import MessageFactory as _
 
+
 class IOccamsFormComponent(zope.interface.Interface):
     """
     Marker interfaces for interfaces of this plug-in
