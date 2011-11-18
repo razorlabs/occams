@@ -12,25 +12,24 @@ import zope.interface
 import zope.schema
 from zope.schema.interfaces import IVocabulary
 from zope.schema.vocabulary import SimpleVocabulary
+from zope.schema.vocabulary import SimpleTerm
 
 from avrc.data.store import MessageFactory as _
 
 
-nameZopeMap = dict(
-    boolean=zope.schema.Bool,
-    decimal=zope.schema.Decimal,
-    integer=zope.schema.Int,
-    date=zope.schema.Date,
-    datetime=zope.schema.Datetime,
-    string=zope.schema.TextLine,
-    text=zope.schema.Text,
-    object=zope.schema.Object,
-    )
-
 # Fixed type vocabulary
-typesVocabulary = SimpleVocabulary.fromItems(nameZopeMap.items(), IVocabulary)
-
-
+typesVocabulary = SimpleVocabulary([
+        SimpleTerm(value=zope.schema.Bool, token='boolean', title='Boolean'),
+        SimpleTerm(value=zope.schema.Decimal, token='decimal', title='Decimal'),
+        SimpleTerm(value=zope.schema.Int, token='integer', title='Integer'),
+        SimpleTerm(value=zope.schema.Date, token='date', title='Date'),
+        SimpleTerm(value=zope.schema.Datetime, token='datetime', title='Datetime'),
+        SimpleTerm(value=zope.schema.TextLine, token='string', title='String'),
+        SimpleTerm(value=zope.schema.Text, token='text', title='Text'),
+        SimpleTerm(value=zope.schema.Object, token='object', title='Object'),
+    ],
+    IVocabulary
+    )
 
 
 class DataStoreError(Exception):
