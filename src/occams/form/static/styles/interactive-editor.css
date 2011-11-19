@@ -1,27 +1,70 @@
 /**
  * Interactive editor style directives.
+ *
+ * Conventions in this file:
+ *  - Containers only define widths and top/bottom padding/margin
+ *
+ * Themes used:
+ *  - http://colorschemedesigner.com/#1T11T3xw0w0w0
+ *  - 
+ *
  */
 
-/******************************************************************************/
-/** EDITOR **/
-/******************************************************************************/
+/*******************************************************************************
+ * EDITOR
+ ******************************************************************************/
 
 #occams-form-editor
 {
 	cursor: default;
-	font: 100%;
-	max-width: 1200px;
 	overflow: hidden;
 	width: 100%;
     -moz-user-select: none;
     -webkit-user-select: none;
 }
 
-/******************************************************************************/
-/** ACTIONS **/
-/******************************************************************************/
 
- ul.occams-form-element-actions
+
+/*******************************************************************************
+ * METADATA
+ * Set up the 
+ ******************************************************************************/
+
+.occams-form-metadata
+{
+    border-bottom: 1px solid #efefef;
+    color: #666;
+    font-size: 85%;
+    font-weight: bold;
+    overflow: hidden;
+    padding: 0.1em 1em;
+}
+
+.occams-form-metadata:hover
+{
+    cursor: move;
+}
+
+.occams-form-title
+{
+    float: left;
+}
+
+.occams-form-version
+{
+    float: right;
+}
+
+.occams-form-controls
+{
+    float: right;
+}
+
+/*******************************************************************************
+ * CONTROLS
+ ******************************************************************************/
+
+.occams-form-controls ul
 {
     list-style: none;
     margin: 0 !important;
@@ -29,187 +72,194 @@
     padding: 0;
 }
 
-.occams-form-element-actions li
+.occams-form-controls li
 {
-    padding: 0.3em 0.5em;
     float: left;
+    margin: 0 !important;
+    padding: 0.3em 0.5em;
 }
 
-.occams-form-element-actions a
+.occams-form-controls a
 {
+    border: inherit !important;
     display: block;
     height: 16px;
     text-indent: -1999px;
     width: 16px;
 }
 
-.occams-form-element-actions .edit
+.occams-form-controls .occams-form-edit
 {
     background: url(++resource++occams.form/images/pencil.png);
     
 }
 
-.occams-form-element-actions .delete
+.occams-form-controls .occams-form-delete
 {
     background: url(++resource++occams.form/images/delete.png);
 }
 
 
-/******************************************************************************/
-/** METADATA **/
-/******************************************************************************/
+/*******************************************************************************
+ * MAIN FORM
+ ******************************************************************************/
 
-/** TODO **/
+#occams-form-container
+{
+	float: left;
+	width: 70%;
+}
 
-/******************************************************************************/
-/** SUBFORMS **/
-/******************************************************************************/
+
+#occams-form-sidebar
+{
+	float: right;
+	width: 30%;
+}
+
+/*******************************************************************************
+ * SUBFORMS
+ ******************************************************************************/
+
+#occams-form-subforms
+{
+	padding-right: 1em;
+}
 
 .occams-form-subform
 {
-	border: 1px solid #BFBFB0;
 	background: #FFFFE3;
+	margin: 1em 0;
 }
 
-.occams-form-subform-metadata
+.occams-form-subform .occams-form-metadata
 {
-	background: #996;
-	color: #fff;
-	font-weight: bold;
+	background: #BFBFB0;
 }
 
-
-/******************************************************************************/
-/** FIELDS **/
-/******************************************************************************/
-
-#occams-form-fields-section
+.occams-form-subform .occams-form-metadata:hover
 {
-	width: 70%;
-	float: left;
+    background: #A6A64A;
+    color: #fff;
 }
 
-#occams-form-fields
+/*******************************************************************************
+ * FIELDS
+ ******************************************************************************/
+
+.occams-form-fields
 {
-    list-style: none;
-    margin: 2%;
-    padding: 0;
+  padding: 0 1em 1em 1em;
 }
 
 .occams-form-field
 {
-	background: #eee;
-	margin: 1em 0;
+	background: #EEE;
+	margin-top: 1em;
 	overflow: hidden;
 	position: relative;
 }
 
-.occams-form-field:hover
+.occams-form-field .occams-form-metadata
 {
-    background: #ddd;
-    cursor: move;
+    background: #DDD;
 }
 
-.occams-form-field-metadata
+.occams-form-field .occams-form-metadata:hover
 {
-	background: #aaa;
-	border-bottom: 1px solid #999;
-	font-size: 0.7em;
-	overflow: hidden;
-	padding: 0.3em 1em;
+    background: #999;
+    color: #FFF;
 }
 
-.occams-form-field-name
+.occams-form-widget
 {
-    float: left;
+	padding: 0.8em;
 }
 
-.occams-form-field-version
+/*******************************************************************************
+ * TYPES
+ ******************************************************************************/
+
+#occams-form-types h3
 {
-    float: right;
+	background-color: #999;
+	color: #fff;
 }
 
-.occams-form-field-widget
+#occams-form-types ul
 {
-	padding: 0.4em 10em 0.4em 0.4em;
-}
-
-/******************************************************************************/
-/** TYPES **/
-/******************************************************************************/
-
-#occams-form-types-section
-{
-    background: #eee;
-    float: right;
-    width: 30%;
-}
-
-#occams-form-types-section h2
-{
-	background: #aaa;
-	border-bottom: 1px solid #999;
-	margin: 2% 2% 0 2%;
-	padding: 0.4em 0.4em 0.4em 1em;
-}
-
-#occams-form-types-section ul
-{
-	background: #ccc;
+	background: #eee;
 	border-top: 1px solid #bbb;
 	list-style: none;
 	margin: 0 2% 2% 2%;
-	padding: 0 0 0.3em 0;
+	max-width: 300px;
 }
 
-#occams-form-types-section li
+#occams-form-types li
 {
-	background: #bbb 1% 50% no-repeat;
-    margin: 2%;
+	background-color: #ddd;
+    margin: 0.5em;
     padding: 0.4em 0.4em 0.4em 2em;
 }
 
-#occams-form-types-section li:hover
+#occams-form-types li:hover
 {
+	background-color: #666;
+	color: #fff;
     cursor: move;
 }
 
-#occams-form-types .boolean
+.boolean,
+.date,
+.datetime,
+.decimal,
+.integer,
+.object,
+.string,
+.text
+{
+	background-position: 1% 50%;
+	background-repeat: no-repeat;
+	padding-left: 2em;
+}
+
+
+.boolean
 {
     background-image: url(++resource++occams.form/images/tick.png) ;
 }
 
-#occams-form-types .date
+.date
 {
     background-image: url(++resource++occams.form/images/calendar.png) ;
 }
 
-#occams-form-types .datetime
+.datetime
 {
     background-image: url(++resource++occams.form/images/time.png) ;
 }
 
-#occams-form-types .decimal
+.decimal
 {
     background-image: url(++resource++occams.form/images/calculator.png) ;
 }
 
-#occams-form-types .integer
+.integer
 {
     background-image: url(++resource++occams.form/images/calculator.png) ;
 }
 
-#occams-form-types .object
+.object
 {
     background-image: url(++resource++occams.form/images/table.png) ;
 }
 
-#occams-form-types .string
+.string
 {
 	background-image: url(++resource++occams.form/images/textfield.png) ;
 }
 
-#occams-form-types .text
+.text
 {
     background-image: url(++resource++occams.form/images/page_white_text.png) ;
 }

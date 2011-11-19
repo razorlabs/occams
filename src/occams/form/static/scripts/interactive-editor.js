@@ -2,27 +2,25 @@
     'use strict';
     
     $(document).ready(function(){
-        
-        $('#occams-form-fields').sortable({
+        $('#occams-form-subforms').sortable({
             axis: 'y',
-            containment: '#occams-form-fields',
+            containment: 'parent',
+            forcePlaceholderSize: true,
+            // intersect won't work for sub-forms since they can be huge
+            opacity: 0.6,
+        });
+        
+        $('.occams-form-fields').sortable({
+            axis: 'y',
+            connectWith: '.occams-form-fields',
             forcePlaceholderSize: true,
             tolerance: 'intersect',
             opacity: 0.6,
         });
         
-        $("#occams-form-fields").droppable({
-            accept: '#occams-form-types li',
-            drop: function(event, ui) { 
-                console.log('dropped');
-                console.log(event);
-                console.log(ui);
-                console.log($(this))
-            }
-          });
         
-        $('#occams-form-types > li').draggable({
-            containment: '#occams-form-editor',
+        $('#occams-form-types > ul > li').draggable({
+//            containment: '#occams-form-editor',
             cursor: 'move',
             helper: 'clone',
             revert: true,
@@ -45,4 +43,5 @@
         });
         
     });
+
 })(jQuery);

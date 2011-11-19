@@ -133,6 +133,10 @@ class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.Form):
         self._updateHelper()
         super(SchemaEditForm, self).update()
 
+    @property
+    def macros(self):
+        return self.index.macros
+
     def _updateHelper(self):
         """
         Helper method for updating the fields/groups to render
