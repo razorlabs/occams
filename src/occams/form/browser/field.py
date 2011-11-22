@@ -1,20 +1,66 @@
-from five import grok
-from plone.directives import form
+import z3c.form.form
+import z3c.form.button
+import z3c.form.field
 
+from zope.interface import Interface
+from zope.interface import implements
+import zope.schema
+
+from occams.form import MessageFactory as _
 from occams.form.interfaces import IOccamsBrowserView
-from occams.form.interfaces import IAttributeContext
 
 
-class EditForm(form.Form):
-    grok.implements(IOccamsBrowserView)
-    grok.context(IAttributeContext)
-    grok.name('edit')
-    grok.require('occams.form.ModifyForm')
+class IField(Interface):
+
+    name = zope.schema.ASCIILine(
+        title=_(u'Variable Name'),
+        readonly=True,
+        )
+
+    title = zope.schema.TextLine(
+        title=_(u'Label')
+        )
+
+    description = zope.schema.Text(
+        title=_(u'Description'),
+        required=False,
+        )
+
+    is_required = zope.schema.Bool(
+        title=_(u'Required?'),
+        default=False,
+        )
+
+    is_collection = zope.schema.Bool(
+        title=_(u'Multiple?'),
+        default=False,
+        )
+
+
+class Edit(z3c.form.form.Form):
+    implements(IOccamsBrowserView)
+
+    ignoreContext = True
+    ignoreRequest = True
+
+    fields = z3c.form.field.Fields(IField)
 
     @property
     def label(self):
-        return 'Edit: %s' % self.context.item.title
+        return 'Edit: %s' % self.context.item.name
 
     def update(self):
         self.request.set('disable_border', True)
-        super(EditForm, self).update()
+        self._updateHelper()
+        super(Edit, self).update()
+
+    def _updateHelper(self):
+        return
+
+    @z3c.form.button.buttonAndHandler(_(u'Save'), name='save')
+    def save(self):
+        return
+
+    @z3c.form.button.buttonAndHandler(_(u'Cancel'), name='cancel')
+    def cancel(self):
+        return

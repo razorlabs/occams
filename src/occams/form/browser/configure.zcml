@@ -20,4 +20,11 @@
       permission="occams.form.ModifyForm" 
       />
       
+  <browser:page
+      for="occams.form.interfaces.IAttributeContext"
+      name="edit"
+      class=".field.Edit"
+      permission="occams.form.ModifyForm" 
+      />
+      
 </configure>

@@ -4,11 +4,15 @@ Repository tools
 
 from zope.lifecycleevent import IObjectAddedEvent
 from zope.lifecycleevent import IObjectModifiedEvent
+from zope.schema.interfaces import IVocabularyFactory
+from zope.schema.vocabulary import SimpleVocabulary
+from zope.schema.vocabulary import SimpleTerm
 
 from five import grok
 from z3c.saconfig import named_scoped_session
 from z3c.saconfig.interfaces import IScopedSession
 
+from avrc.data.store import model
 from avrc.data.store.upgrades import migrate
 from avrc.data.store.interfaces import IDataStore
 
@@ -69,3 +73,26 @@ def _configureRepositoryDataStore(repository):
 
     log.info(MSG_INSALLING % msg_params)
     migrate.install(datastore.session.bind)
+
+
+class FormsVocabularyFactory(grok.GlobalUtility):
+    """
+    Builds a vocabulary containing all the form names in the context
+    """
+    grok.name(u'occams.form.Forms')
+    grok.title(_(u'Forms'))
+    grok.description(_(u'A list of forms in the current context'))
+    grok.implements(IVocabularyFactory)
+
+    def __call__(self, context):
+        if not IRepository.providedBy(context):
+            raise Exception(_(u'Can only calculate forms for a repository'))
+        datastore = IDataStore(context)
+        session = datastore.session
+        query = (
+            session.query(model.Schema)
+            .filter(model.Schema.asOf(None))
+            .order_by(model.Schema.title)
+            )
+        terms = [SimpleTerm(s.name, title=s.title) for s in query.all()]
+        return SimpleVocabulary(terms=terms)

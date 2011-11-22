@@ -18,12 +18,12 @@ from z3c.form.browser.checkbox import CheckBoxFieldWidget
 from avrc.data.store.interfaces import IDataStore
 from avrc.data.store import directives as datastore
 
-
 from occams.form import MessageFactory as _
 from occams.form.browser.widget import TextAreaFieldWidget
 from occams.form.interfaces import IOccamsBrowserView
 from occams.form.interfaces import IFormSummary
 from occams.form.interfaces import IFormSummaryGenerator
+from occams.form.interfaces import typesVocabulary
 
 
 class ListingEditForm(crud.EditForm):
@@ -107,6 +107,7 @@ class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.Form):
 
     template = ViewPageTemplateFile('form_templates/edit.pt')
 
+    fields = None
     groups = ()
 
     @property
@@ -125,17 +126,70 @@ class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.Form):
         """
         Template helper for types
         """
-        types = getUtility(IVocabulary, 'avrc.data.store.Types')
-        return types
+        return typesVocabulary
+
+    def _fieldOrGroupName(self, field):
+        if isinstance(field, z3c.form.group.Group):
+            fieldName = field.prefix
+        else:
+            fieldName = field.__name__
+        return fieldName
+
+    def editUrl(self, field):
+        """
+        Template helper for the edit URL of a field or group
+        """
+        fieldName = self._fieldOrGroupName(field)
+        return os.path.join(self.context.absolute_url(), fieldName, '@@edit')
+
+    def deleteUrl(self, field):
+        """
+        Template helper for the delete URL of a field or group
+        """
+        fieldName = self._fieldOrGroupName(field)
+        return os.path.join(self.context.absolute_url(), fieldName, '@@delete')
+
+    def fieldType(self, field):
+        """
+        Template helper for retrieving the type of a field or group
+        """
+        if isinstance(field, z3c.form.group.Group):
+            type_ = 'object'
+        else:
+            type_ = datastore.type.bind().get(field)
+            if type_ is None:
+                type_ = typesVocabulary.getTerm(field.__class__).token
+        return type_
+
+    def fieldVersion(self, field):
+        """
+        Template helper for retrieving the version of a field or group
+        """
+        if isinstance(field, z3c.form.group.Group):
+            versionRaw = datastore.version.bind().get(field._field)
+        else:
+            versionRaw = datastore.version.bind().get(field)
+        version = None
+        if versionRaw is not None:
+            version = versionRaw.strftime('%Y-%m-%d')
+        return version
 
     def update(self):
+        """
+        Sets up the form for rendering.
+        """
         self.request.set('disable_border', True)
         self._updateHelper()
         super(SchemaEditForm, self).update()
 
-    @property
-    def macros(self):
-        return self.index.macros
+    def updateWidgets(self):
+        """
+        Configure widgets, we'll mostly be disabling to prevent data entry.
+        """
+        super(SchemaEditForm, self).updateWidgets()
+        # Disable fields since we're not actually entering data
+        for widget in self.widgets.values():
+            widget.disabled = 'disabled'
 
     def _updateHelper(self):
         """
@@ -149,6 +203,9 @@ class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.Form):
 
         # We need a custom class for rendering disabled groups
         class DisabledGroup(z3c.form.group.Group):
+
+            _field = None
+
             def updateWidgets(self):
                 super(DisabledGroup, self).updateWidgets()
                 # Disable fields since we're not actually entering data
@@ -163,19 +220,17 @@ class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.Form):
                 group.label = field.title
                 group.description = field.description
                 group.prefix = name
+                group._field = field
                 group.fields = z3c.form.field.Fields(field.schema)
                 groups.append(group)
             else:
                 defaultNames.append(name)
 
-        defaultGroup = DisabledGroup(None, self.request, self)
-        defaultGroup.label = '(Default)'
-        defaultGroup.fields = z3c.form.field.Fields(form).select(*defaultNames)
-
-        groups.insert(0, defaultGroup)
+        self.fields = z3c.form.field.Fields(form).select(*defaultNames)
         self.groups = tuple(groups)
 
         # Override the complex widgets with some simple checkbox/radio ones
+        self._overrideWidgets(self.fields)
         for group in self.groups:
             self._overrideWidgets(group.fields)
 
@@ -193,6 +248,10 @@ class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.Form):
             fieldType = field.field.__class__
             if fieldType in fieldWidgetMap:
                 field.widgetFactory = fieldWidgetMap.get(fieldType)
+
+    @z3c.form.button.buttonAndHandler(_(u'Finalize Changes'), name='save')
+    def save(self):
+        return
 
 
 class Edit(layout.FormWrapper):

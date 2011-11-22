@@ -6,7 +6,7 @@
  *
  * Themes used:
  *  - http://colorschemedesigner.com/#1T11T3xw0w0w0
- *  - 
+ *  - http://colorschemedesigner.com/#3z11TsOsOK-K-
  *
  */
 
@@ -118,26 +118,33 @@
 }
 
 /*******************************************************************************
- * SUBFORMS
+ * FIELDSETS
  ******************************************************************************/
 
-#occams-form-subforms
+#occams-form-default-fieldset,
+#occams-form-fieldsets
 {
 	padding-right: 1em;
 }
 
-.occams-form-subform
+#occams-form-default-fieldset,
+.occams-form-fieldset
 {
-	background: #FFFFE3;
 	margin: 1em 0;
 }
 
-.occams-form-subform .occams-form-metadata
+#occams-form-default-fieldset,
+.occams-form-fieldset
+{
+    background: #FFFFE3;
+}
+
+.occams-form-fieldset .occams-form-metadata
 {
 	background: #BFBFB0;
 }
 
-.occams-form-subform .occams-form-metadata:hover
+.occams-form-fieldset .occams-form-metadata:hover
 {
     background: #A6A64A;
     color: #fff;

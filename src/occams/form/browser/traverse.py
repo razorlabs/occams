@@ -96,42 +96,39 @@ class RepositoryTraverse(Traverser):
 
 class SchemaTraverse(Traverser):
     """
-    Traverses through a ``IRepository`` to get an 
-    ``ISchemaContext`` or a ``IEntityContext``
+    Traverses through a ``ISchemContext`` to get an 
+    ``IAttributeContext`` or a ``IEntityContext``
     """
     grok.context(ISchemaContext)
 
-    def traverse(self, name):
-        if '-' in name or name in self.context:
-            return
-
+    def _findIn(self, klass, name):
         schema = self.context.item
         session = object_session(schema)
+
+        query = (
+            session.query(klass)
+            .filter(klass.schema.has(name=schema.name))
+            .filter(klass.name == name)
+            # TODO: this REALLY needs to work....
+            .filter(klass.asOf(None))
+            .order_by(klass.name.asc())
+            )
+
+        return query.first()
+
+    def traverse(self, name):
+        # Don't check containment, transient objects can't act as folders
+        if '-' in name:
+            return
+
         newContext = None
 
         # Try to find an attribute first
-
-        query = (
-            session.query(model.Attribute)
-            .filter(model.Attribute.schema.has(name=schema.name))
-            .filter(model.Attribute.name == name)
-            .filter(model.Attribute.asOf(schema.create_date))
-            .order_by(model.Attribute.name.asc())
-            )
-
-        item = query.first()
+        item = self._findIn(model.Attribute, name)
 
         if item is None:
             # The attribute wasn't found, try to check if it's a data entry
-            query = (
-                session.query(model.Entity)
-                .filter(model.Entity.schema.has(name=schema.name))
-                .filter(model.Entity.name == name)
-                .filter(model.Entity.asOf(schema.create_date))
-                .order_by(model.Entity.name.asc())
-                )
-
-            item = query.first()
+            item = self._findIn(model.Entity, name)
 
         if item is not None:
             log.info('Traversing from \'%s\' to \'%s\'' % (self.context.item.name, item.name))

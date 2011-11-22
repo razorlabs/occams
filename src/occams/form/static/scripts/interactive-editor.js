@@ -2,7 +2,7 @@
     'use strict';
     
     $(document).ready(function(){
-        $('#occams-form-subforms').sortable({
+        $('#occams-form-fieldsets').sortable({
             axis: 'y',
             containment: 'parent',
             forcePlaceholderSize: true,
@@ -20,7 +20,7 @@
         
         
         $('#occams-form-types > ul > li').draggable({
-//            containment: '#occams-form-editor',
+            containment: '#occams-form-editor',
             cursor: 'move',
             helper: 'clone',
             revert: true,
@@ -29,17 +29,40 @@
                 $(ui.helper).width( $(this).width() );
             },
         });
+
         
-        $('.occams-form-field-navigation .delete').click(function(event){
+        $('.occams-form-fieldset > .occams-form-metadata .occams-form-edit').click(function(event){
             event.preventDefault();
+            console.log('fieldset modified')
         });
         
-        $('.occams-form-field-navigation .edit').click(function(event){
+        $('.occams-form-fieldset > .occams-form-metadata .occams-form-delete').click(function(event){
             event.preventDefault();
-            var parent = $(this).parents('.occams-form-field');
-            parent.find('.occams-form-field-widget').hide('slow');
-            parent.find('.occams-form-field-navigation').hide('slow');
+            console.log('fieldset deleted');
+        });
+        
+        $('.occams-form-field .occams-form-edit').click(function(event){
+            event.preventDefault();
+
+            var fieldElement = $(this).parents('.occams-form-field');
+            var widgetElement = fieldElement.find('.occams-form-widget');
+            console.log($(this));
+            console.log('adfasfasfsad');
+            console.log(fieldElement);
+            console.log('wtf??');
+            console.log(widgetElement);
+            widgetElement.load($(this).attr('href') + ' #form')
             
+        });
+        
+        $('.occams-form-field .occams-form-delete').click(function(event){
+            event.preventDefault();
+            $.ajax({
+                url: '/Plone/testing/fia-forms-1/LumbarPuncture/test_source/@@test',
+                success: function (data){
+                    console.log(data);
+                },
+            })
         });
         
     });

@@ -35,6 +35,7 @@ setup(
     zip_safe=False,
     install_requires=[
         'setuptools',
+        'collective.beaker',
         'five.grok',
         'grokcore.traverser',
         'plone.app.dexterity [grok]',

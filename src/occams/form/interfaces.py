@@ -1,5 +1,7 @@
 import zope.interface
 import zope.schema
+from zope.schema.vocabulary import SimpleTerm
+from zope.schema.vocabulary import SimpleVocabulary
 
 from grokcore.component.interfaces import IContext
 from plone.directives import form
@@ -7,6 +9,19 @@ from plone.directives import form
 from avrc.data.store.interfaces import IDataBaseItem
 
 from occams.form import MessageFactory as _
+
+
+typesVocabulary = SimpleVocabulary(terms=[
+        SimpleTerm(value=zope.schema.Bool, token='boolean', title=_(u'Boolean')),
+        SimpleTerm(value=zope.schema.Decimal, token='decimal', title=_(u'Decimal')),
+        SimpleTerm(value=zope.schema.Int, token='integer', title=_(u'Integer')),
+        SimpleTerm(value=zope.schema.Date, token='date', title=_(u'Date')),
+        SimpleTerm(value=zope.schema.Datetime, token='datetime', title=_(u'Date and Time')),
+        SimpleTerm(value=zope.schema.TextLine, token='string', title=_(u'Text')),
+        SimpleTerm(value=zope.schema.Text, token='text', title=_(u'Paragraph')),
+
+        SimpleTerm(value=zope.schema.Object, token='object', title=_(u'Field Set')),
+    ])
 
 
 class IOccamsFormComponent(zope.interface.Interface):

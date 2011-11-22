@@ -23,7 +23,7 @@
           <h3>Supported Types</h3>
           <ul>
             <tal:block tal:repeat="type_ view/types">
-              <li class="" tal:attributes="class type_/token" tal:content="type_/token">Type</li>
+              <li class="" tal:attributes="class type_/token" tal:content="type_/title">Type</li>
             </tal:block>
           </ul>
         </div>
@@ -32,22 +32,55 @@
     
     <metal:fields-slot metal:fill-slot="fields">
       <div id="occams-form-container">
-        <div id="occams-form-subforms">
-          <tal:block tal:repeat="group groups">
-            <div class="occams-form-subform">
-              <tal:block 
-                  define="
-                      title   group/label;
-                      version string: 2011-05-01;
-                      type_   string: object
-                  ">
+        <!-- The form's fields -->
+        <div id="occams-form-default-fieldset">
+          <div class="occams-form-fields">
+            <tal:widgets repeat="widget view/widgets/values">
+              <div class="occams-form-field">
+                <tal:block define="
+                    edit_url      python: view.editUrl(widget.field);
+                    delete_url    python: view.deleteUrl(widget.field);
+                    title         widget/field/__name__;
+                    type_         python: view.fieldType(widget.field);
+                    version       python: view.fieldVersion(widget.field);
+                    ">
                   <div class="occams-form-metadata">
-                    <div class="occams-form-title object" tal:content="title">Title</div>
+                    <div class="" tal:attributes="class string: occams-form-title ${type_}" tal:content="title">Title</div>
                     <div class="occams-form-version" tal:content="version">Version</div>
                     <div class="occams-form-controls">
                       <ul>
-                        <li><a href="edit.html" class="occams-form-edit">Edit</a></li>
-                        <li><a href="delete.html" class="occams-form-delete">Delete</a></li>
+                        <li><a href="" class="occams-form-edit" tal:attributes="href edit_url">Edit</a></li>
+                        <li><a href="" class="occams-form-delete" tal:attributes="href delete_url">Delete</a></li>
+                      </ul>
+                    </div>
+                  </div>
+                </tal:block>
+                <div class="occams-form-widget">
+                  <tal:widget tal:replace="structure widget/@@ploneform-render-widget"/>
+                </div>
+              </div>                    
+            </tal:widgets>
+          </div>        
+        </div>
+        <!-- The form's fieldsets -->
+        <div id="occams-form-fieldsets">
+          <tal:block tal:repeat="group groups">
+            <div class="occams-form-fieldset">
+              <tal:block 
+                  define="
+                      edit_url      python: view.editUrl(group);
+                      delete_url    python: view.deleteUrl(group);
+                      title         string: ${group/label} (${group/prefix});
+                      type_         python: view.fieldType(group);
+                      version       python: view.fieldVersion(group);
+                  ">
+                  <div class="occams-form-metadata">
+                    <div class="" tal:attributes="class string: occams-form-title ${type_}" tal:content="title">Title</div>
+                    <div class="occams-form-version" tal:content="version">Version</div>
+                    <div class="occams-form-controls">
+                      <ul>
+                        <li><a href="" class="occams-form-edit" tal:attributes="href edit_url">Edit</a></li>
+                        <li><a href="" class="occams-form-delete" tal:attributes="href delete_url">Delete</a></li>
                       </ul>
                     </div>
                   </div>
@@ -63,17 +96,19 @@
                 <tal:widgets repeat="widget group/widgets/values">
                   <div class="occams-form-field">
                     <tal:block define="
-                        title   widget/field/__name__;
-                        version string: 2011-05-01;
-                        type_   string: string
+                          edit_url      python: view.editUrl(widget.field);
+                          delete_url    python: view.deleteUrl(widget.field);
+                          title         widget/field/__name__;
+                          type_         python: view.fieldType(widget.field);
+                          version       python: view.fieldVersion(widget.field);
                         ">
                       <div class="occams-form-metadata">
-                        <div class="occams-form-title string" tal:content="title">Title</div>
+                        <div class="" tal:attributes="class string: occams-form-title ${type_}" tal:content="title">Title</div>
                         <div class="occams-form-version" tal:content="version">Version</div>
                         <div class="occams-form-controls">
                           <ul>
-                            <li><a href="edit.html" class="occams-form-edit">Edit</a></li>
-                            <li><a href="delete.html" class="occams-form-delete">Delete</a></li>
+                            <li><a href="" class="occams-form-edit" tal:attributes="href edit_url">Edit</a></li>
+                            <li><a href="" class="occams-form-delete" tal:attributes="href delete_url">Delete</a></li>
                           </ul>
                         </div>
                       </div>
