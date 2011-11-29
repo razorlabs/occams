@@ -15,6 +15,8 @@ import z3c.form.group
 from z3c.form.browser.radio import RadioFieldWidget
 from z3c.form.browser.checkbox import CheckBoxFieldWidget
 
+from collective.beaker.interfaces import ISession
+
 from avrc.data.store.interfaces import IDataStore
 from avrc.data.store import directives as datastore
 
@@ -179,6 +181,7 @@ class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.Form):
         Sets up the form for rendering.
         """
         self.request.set('disable_border', True)
+        self._initSession()
         self._updateHelper()
         super(SchemaEditForm, self).update()
 
@@ -190,6 +193,19 @@ class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.Form):
         # Disable fields since we're not actually entering data
         for widget in self.widgets.values():
             widget.disabled = 'disabled'
+
+    def _initSession(self):
+        """
+        Helper method to initialize session for to hold form changes before
+        being committed.
+        """
+        browserSession = ISession(self.request)
+        formName = self.context.item.name
+
+        # Create a persistent dictionary to save changes if there isn't one
+        if formName not in browserSession:
+            browserSession[self.context.item.name] = dict()
+            browserSession.save()
 
     def _updateHelper(self):
         """
@@ -249,13 +265,27 @@ class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.Form):
             if fieldType in fieldWidgetMap:
                 field.widgetFactory = fieldWidgetMap.get(fieldType)
 
-    @z3c.form.button.buttonAndHandler(_(u'Finalize Changes'), name='save')
+    @z3c.form.button.buttonAndHandler(_('Cancel'), name='cancel')
+    def cancel(self):
+        """
+        Cancels form changes.
+        """
+        # Delete the item in the session, leaving everything else intact
+        browserSession = ISession(self.request)
+        del browserSession[self.context.item.name]
+        browserSession.save()
+
+    @z3c.form.button.buttonAndHandler(_(u'Save'), name='save')
     def save(self):
+        """
+        Save the form changes
+        """
+        # This is going to be huge
         return
 
 
 class Edit(layout.FormWrapper):
-    """
+    """ Form wrapper for Z3C so that we can change the title.
     """
 
     form = SchemaEditForm

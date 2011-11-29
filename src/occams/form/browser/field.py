@@ -17,11 +17,11 @@ class IField(Interface):
         readonly=True,
         )
 
-    title = zope.schema.TextLine(
+    title_ = zope.schema.TextLine(
         title=_(u'Label')
         )
 
-    description = zope.schema.Text(
+    description_ = zope.schema.Text(
         title=_(u'Description'),
         required=False,
         )
@@ -37,8 +37,10 @@ class IField(Interface):
         )
 
 
-class Edit(z3c.form.form.Form):
+class Edit(z3c.form.form.EditForm):
     implements(IOccamsBrowserView)
+
+    z3c.form.form.extends(z3c.form.form.EditForm)
 
     ignoreContext = True
     ignoreRequest = True
@@ -49,18 +51,16 @@ class Edit(z3c.form.form.Form):
     def label(self):
         return 'Edit: %s' % self.context.item.name
 
+    def getContent(self):
+        return 'foo'
+
     def update(self):
         self.request.set('disable_border', True)
-        self._updateHelper()
+        # Reorder the buttons to something (hopefully) less confusing
+        self.buttons = self.buttons.select('cancel', 'apply')
         super(Edit, self).update()
 
-    def _updateHelper(self):
-        return
-
-    @z3c.form.button.buttonAndHandler(_(u'Save'), name='save')
-    def save(self):
-        return
-
     @z3c.form.button.buttonAndHandler(_(u'Cancel'), name='cancel')
-    def cancel(self):
-        return
+    def cancel(self, action):
+        raise NotImplementedError('This is not yet implemented for non-ajax scenarios.')
+
