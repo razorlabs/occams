@@ -10,6 +10,7 @@ from avrc.data.store.interfaces import IDataBaseItem
 
 from occams.form import MessageFactory as _
 
+SESSION_KEY = 'occams.form'
 
 typesVocabulary = SimpleVocabulary(terms=[
         SimpleTerm(value=zope.schema.Bool, token='boolean', title=_(u'Boolean')),
@@ -34,6 +35,44 @@ class IOccamsBrowserView(IOccamsFormComponent):
     """
     Marker inteface for views of this plugin
     """
+
+
+class IEditableField(IOccamsFormComponent):
+    """
+    The human-friendly form for edidting a field.
+    """
+
+    name = zope.schema.ASCIILine(
+        title=_(u'Variable Name'),
+        description=_(
+            u'Internal variable name, this value cannot be changed once it is '
+            u'created.'
+            ),
+        readonly=True,
+        )
+
+    title = zope.schema.TextLine(
+        title=_(u'Label'),
+        description=_(u'The prompt for the user.'),
+        )
+
+    description = zope.schema.Text(
+        title=_(u'Description'),
+        description=_(u'A short description about what this field is for.'),
+        required=False,
+        )
+
+    is_required = zope.schema.Bool(
+        title=_(u'Required?'),
+        description=_(u'If selected, the user will be required to enter a value.'),
+        default=False,
+        )
+
+    is_collection = zope.schema.Bool(
+        title=_(u'Multiple?'),
+        description=_(u'If selected, the user may enter more than one value.'),
+        default=False,
+        )
 
 
 class IFormSummary(IOccamsFormComponent):

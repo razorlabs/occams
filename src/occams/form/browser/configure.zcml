@@ -19,6 +19,13 @@
       class=".form.Edit"
       permission="occams.form.ModifyForm" 
       />
+
+  <browser:page
+      for="occams.form.interfaces.IAttributeContext"
+      name="view"
+      class=".field.View"
+      permission="occams.form.ModifyForm" 
+      />
       
   <browser:page
       for="occams.form.interfaces.IAttributeContext"

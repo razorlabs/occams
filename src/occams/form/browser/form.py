@@ -4,7 +4,6 @@ from zope.app.pagetemplate.viewpagetemplatefile import ViewPageTemplateFile
 from zope.component import getUtility
 from zope.interface import implements
 import zope.schema
-from zope.schema.interfaces import IVocabulary
 
 from plone.z3cform import layout
 from plone.z3cform.crud import crud
@@ -12,20 +11,19 @@ import z3c.form.button
 import z3c.form.field
 import z3c.form.group
 
-from z3c.form.browser.radio import RadioFieldWidget
-from z3c.form.browser.checkbox import CheckBoxFieldWidget
-
 from collective.beaker.interfaces import ISession
 
 from avrc.data.store.interfaces import IDataStore
 from avrc.data.store import directives as datastore
 
 from occams.form import MessageFactory as _
-from occams.form.browser.widget import TextAreaFieldWidget
+from occams.form.serialize import serializeForm
+from occams.form.interfaces import SESSION_KEY
 from occams.form.interfaces import IOccamsBrowserView
 from occams.form.interfaces import IFormSummary
 from occams.form.interfaces import IFormSummaryGenerator
 from occams.form.interfaces import typesVocabulary
+from occams.form.browser.widget import fieldWidgetMap
 
 
 class ListingEditForm(crud.EditForm):
@@ -92,7 +90,26 @@ class Listing(layout.FormWrapper):
         return self.context.description
 
 
-class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.Form):
+# We need a custom class for rendering disabled groups
+class SchemaEditGroup(z3c.form.group.Group):
+
+    _field = None
+
+    def updateWidgets(self):
+        """
+        Configure widgets, we'll mostly be disabling to prevent data entry.
+        """
+        for field in self.fields.values():
+            fieldType = field.field.__class__
+            if fieldType in fieldWidgetMap:
+                field.widgetFactory = fieldWidgetMap.get(fieldType)
+        super(SchemaEditGroup, self).updateWidgets()
+        # Disable fields since we're not actually entering data
+        for widget in self.widgets.values():
+            widget.disabled = 'disabled'
+
+
+class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.EditForm):
     """
     Displays a preview the form.
     
@@ -109,8 +126,46 @@ class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.Form):
 
     template = ViewPageTemplateFile('form_templates/edit.pt')
 
-    fields = None
+    fields = z3c.form.field.Fields()
     groups = ()
+
+    def __init__(self, context, request):
+        super(SchemaEditForm, self).__init__(context, request)
+        self.request.set('disable_border', True)
+
+        repository = self.context.getParentNode()
+        formName = self.context.item.name
+        formVersion = None
+        form = IDataStore(repository).schemata.get(formName, formVersion)
+
+        browserSession = ISession(self.request)
+        browserSession.setdefault(SESSION_KEY, dict())
+        browserSession[SESSION_KEY] = serializeForm(form)
+        browserSession.save()
+
+        defaultGroup = SchemaEditGroup(None, self.request, self)
+        defaultGroup.label = datastore.title.bind().get(form)
+        defaultGroup.description = datastore.description.bind().get(form)
+        defaultGroup.prefix = str(formName)
+        defaultGroup.fields = z3c.form.field.Fields()
+
+        groups = [defaultGroup]
+
+        # Update each field/group
+        for name, field in zope.schema.getFieldsInOrder(form):
+            # Put each sub-object form in a group
+            if isinstance(field, zope.schema.Object):
+                fieldset = SchemaEditGroup(None, self.request, self)
+                fieldset.label = field.title
+                fieldset.description = field.description
+                fieldset.prefix = name
+                fieldset._field = field
+                fieldset.fields = z3c.form.field.Fields(field.schema)
+                groups.append(fieldset)
+            else:
+                defaultGroup.fields += z3c.form.field.Fields(field)
+
+        self.groups = groups
 
     @property
     def label(self):
@@ -167,8 +222,10 @@ class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.Form):
         """
         Template helper for retrieving the version of a field or group
         """
+        versionRaw = None
         if isinstance(field, z3c.form.group.Group):
-            versionRaw = datastore.version.bind().get(field._field)
+            if field._field is not None:
+                versionRaw = datastore.version.bind().get(field._field)
         else:
             versionRaw = datastore.version.bind().get(field)
         version = None
@@ -176,97 +233,8 @@ class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.Form):
             version = versionRaw.strftime('%Y-%m-%d')
         return version
 
-    def update(self):
-        """
-        Sets up the form for rendering.
-        """
-        self.request.set('disable_border', True)
-        self._initSession()
-        self._updateHelper()
-        super(SchemaEditForm, self).update()
-
-    def updateWidgets(self):
-        """
-        Configure widgets, we'll mostly be disabling to prevent data entry.
-        """
-        super(SchemaEditForm, self).updateWidgets()
-        # Disable fields since we're not actually entering data
-        for widget in self.widgets.values():
-            widget.disabled = 'disabled'
-
-    def _initSession(self):
-        """
-        Helper method to initialize session for to hold form changes before
-        being committed.
-        """
-        browserSession = ISession(self.request)
-        formName = self.context.item.name
-
-        # Create a persistent dictionary to save changes if there isn't one
-        if formName not in browserSession:
-            browserSession[self.context.item.name] = dict()
-            browserSession.save()
-
-    def _updateHelper(self):
-        """
-        Helper method for updating the fields/groups to render
-        """
-        repository = self.context.getParentNode()
-        form = IDataStore(repository).schemata.get(self.context.item.name, None)
-
-        defaultNames = []
-        groups = []
-
-        # We need a custom class for rendering disabled groups
-        class DisabledGroup(z3c.form.group.Group):
-
-            _field = None
-
-            def updateWidgets(self):
-                super(DisabledGroup, self).updateWidgets()
-                # Disable fields since we're not actually entering data
-                for widget in self.widgets.values():
-                    widget.disabled = 'disabled'
-
-        # Update each field/group
-        for name, field in zope.schema.getFieldsInOrder(form):
-            # Put each sub-object form in a group
-            if isinstance(field, zope.schema.Object):
-                group = DisabledGroup(None, self.request, self)
-                group.label = field.title
-                group.description = field.description
-                group.prefix = name
-                group._field = field
-                group.fields = z3c.form.field.Fields(field.schema)
-                groups.append(group)
-            else:
-                defaultNames.append(name)
-
-        self.fields = z3c.form.field.Fields(form).select(*defaultNames)
-        self.groups = tuple(groups)
-
-        # Override the complex widgets with some simple checkbox/radio ones
-        self._overrideWidgets(self.fields)
-        for group in self.groups:
-            self._overrideWidgets(group.fields)
-
-    def _overrideWidgets(self, fields):
-        """
-        Helper method for overriding the form widgets with our own custom ones.
-        """
-        fieldWidgetMap = {
-            zope.schema.Choice: RadioFieldWidget,
-            zope.schema.List: CheckBoxFieldWidget,
-            zope.schema.Text: TextAreaFieldWidget,
-            }
-
-        for field in fields.values():
-            fieldType = field.field.__class__
-            if fieldType in fieldWidgetMap:
-                field.widgetFactory = fieldWidgetMap.get(fieldType)
-
     @z3c.form.button.buttonAndHandler(_('Cancel'), name='cancel')
-    def cancel(self):
+    def handleCancel(self):
         """
         Cancels form changes.
         """
@@ -275,8 +243,8 @@ class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.Form):
         del browserSession[self.context.item.name]
         browserSession.save()
 
-    @z3c.form.button.buttonAndHandler(_(u'Save'), name='save')
-    def save(self):
+    @z3c.form.button.buttonAndHandler(_(u'Complete'), name='complete')
+    def handleComplete(self):
         """
         Save the form changes
         """
@@ -285,7 +253,8 @@ class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.Form):
 
 
 class Edit(layout.FormWrapper):
-    """ Form wrapper for Z3C so that we can change the title.
+    """ 
+    Form wrapper for Z3C so that we can change the title.
     """
 
     form = SchemaEditForm

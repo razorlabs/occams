@@ -7,7 +7,7 @@
     i18n_domain="occams.form">
 
   <!-- Explicitly load external packages so we don't get ambiguous errors -->
-  <include package="plone.app.dexterity" />
+  <include package="plone.app.z3cform" />
   <include package="avrc.data.store" />
 
   <!-- 

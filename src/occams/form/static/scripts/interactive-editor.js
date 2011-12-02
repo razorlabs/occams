@@ -71,7 +71,7 @@
     
     var onFieldEditFormLoad = function(){
         var trigger = $(this);
-        trigger.find('.formControls input[name*="save"]').click(onFieldEditFormSave);
+        trigger.find('.formControls input[name*="apply"]').click(onFieldEditFormSave);
         trigger.find('.formControls input[name*="cancel"]').click(onFieldEditFormCancel);
     };
     
@@ -81,8 +81,8 @@
         var widget = trigger.parents('.occams-form-field').find('.occams-form-widget');
         var form = $(trigger.attr('form'));
         var url = form.attr('action') + ' #form'
-        var data = form.serializeArray()
-        data.push({name: 'form.buttons.save', value: 'Apply'});
+        var data = form.serializeArray();
+        data.push({name: 'form.buttons.apply', value: 'Apply'});
         widget.load(url, data, onFieldEditFormLoad);
     };
     
