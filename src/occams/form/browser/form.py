@@ -91,6 +91,10 @@ class Listing(layout.FormWrapper):
 
 
 class DisabledFieldsMixin(object):
+    """
+    Helper mixin for rendering custom disabled widgets. 
+    Specify first in the inheritance list.
+    """
 
     def updateWidgets(self):
         """
