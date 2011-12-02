@@ -32,10 +32,12 @@
         // to a form
         $('#occams-form-types > ul > li').draggable({
             containment: '#occams-form-editor',
+            connectToSortable: '.occams-form-fields',
             cursor: 'move',
             helper: 'clone',
-            revert: true,
+            revert: 'invalid',
             start: onTypeDragStart,
+            zIndex: 9001,
         });
 
         // Register handlers for edit/delete fieldsets
@@ -49,7 +51,6 @@
     
     var onTypeDragStart = function(event, ui) {
         var trigger = $(this);
-        console.log(trigger.width());
         $(ui.helper).width( trigger.width() );
     };
     
