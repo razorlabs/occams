@@ -90,10 +90,7 @@ class Listing(layout.FormWrapper):
         return self.context.description
 
 
-# We need a custom class for rendering disabled groups
-class SchemaEditGroup(z3c.form.group.Group):
-
-    _field = None
+class DisabledFieldsMixin(object):
 
     def updateWidgets(self):
         """
@@ -103,13 +100,19 @@ class SchemaEditGroup(z3c.form.group.Group):
             fieldType = field.field.__class__
             if fieldType in fieldWidgetMap:
                 field.widgetFactory = fieldWidgetMap.get(fieldType)
-        super(SchemaEditGroup, self).updateWidgets()
+        super(DisabledFieldsMixin, self).updateWidgets()
         # Disable fields since we're not actually entering data
         for widget in self.widgets.values():
             widget.disabled = 'disabled'
 
 
-class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.EditForm):
+# We need a custom class for rendering disabled groups
+class SchemaEditGroup(DisabledFieldsMixin, z3c.form.group.Group):
+
+    _field = None
+
+
+class SchemaEditForm(DisabledFieldsMixin, z3c.form.group.GroupForm, z3c.form.form.EditForm):
     """
     Displays a preview the form.
     
@@ -143,13 +146,8 @@ class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.EditForm):
         browserSession[SESSION_KEY] = serializeForm(form)
         browserSession.save()
 
-        defaultGroup = SchemaEditGroup(None, self.request, self)
-        defaultGroup.label = datastore.title.bind().get(form)
-        defaultGroup.description = datastore.description.bind().get(form)
-        defaultGroup.prefix = str(formName)
-        defaultGroup.fields = z3c.form.field.Fields()
-
-        groups = [defaultGroup]
+        groups = []
+        defaultFieldNames = []
 
         # Update each field/group
         for name, field in zope.schema.getFieldsInOrder(form):
@@ -163,8 +161,9 @@ class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.EditForm):
                 fieldset.fields = z3c.form.field.Fields(field.schema)
                 groups.append(fieldset)
             else:
-                defaultGroup.fields += z3c.form.field.Fields(field)
+                defaultFieldNames.append(name)
 
+        self.fields = z3c.form.field.Fields(form).select(*defaultFieldNames)
         self.groups = groups
 
     @property
@@ -185,26 +184,32 @@ class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.EditForm):
         """
         return typesVocabulary
 
-    def _fieldOrGroupName(self, field):
-        if isinstance(field, z3c.form.group.Group):
-            fieldName = field.prefix
+    def _pathItems(self, item):
+        if isinstance(item, z3c.form.group.Group):
+            formName = item._field.schema.getName()
+            fieldName = item.prefix
         else:
-            fieldName = field.__name__
-        return fieldName
+            formName = item.interface.getName()
+            fieldName = item.__name__
+        return (formName, fieldName)
+
+    @property
+    def parentUrl(self):
+        return self.context.getParentNode().absolute_url()
 
     def editUrl(self, field):
         """
         Template helper for the edit URL of a field or group
         """
-        fieldName = self._fieldOrGroupName(field)
-        return os.path.join(self.context.absolute_url(), fieldName, '@@edit')
+        (formName, fieldName) = self._pathItems(field)
+        return os.path.join(self.parentUrl, formName, fieldName, '@@edit')
 
     def deleteUrl(self, field):
         """
         Template helper for the delete URL of a field or group
         """
-        fieldName = self._fieldOrGroupName(field)
-        return os.path.join(self.context.absolute_url(), fieldName, '@@delete')
+        (formName, fieldName) = self._pathItems(field)
+        return os.path.join(self.parentUrl, formName, fieldName, '@@delete')
 
     def fieldType(self, field):
         """

@@ -8,6 +8,7 @@ from zope.schema.vocabulary import SimpleTerm
 import z3c.form.form
 import z3c.form.button
 import z3c.form.field
+from z3c.form.interfaces import INPUT_MODE
 
 from collective.beaker.interfaces import ISession
 
@@ -97,19 +98,27 @@ class View(FieldFormMixin, z3c.form.form.Form):
         for widget in self.widgets.values():
             widget.disabled = 'disabled'
 
+
 class Add(FieldFormMixin, z3c.form.form.AddForm):
     implements(IOccamsBrowserView)
+
 
 class Order(object):
     pass
 
+
 class Remove(object):
     pass
+
 
 class Edit(FieldFormMixin, z3c.form.form.EditForm):
     implements(IOccamsBrowserView)
 
-    fields = z3c.form.field.Fields(IEditableField)
+    # Render the name as input (readonly by default renders as VIEW)
+    fields = (
+        z3c.form.field.Fields(IEditableField, mode=INPUT_MODE).select('name') +
+        z3c.form.field.Fields(IEditableField).omit('name')
+        )
 
     @property
     def label(self):
