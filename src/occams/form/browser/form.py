@@ -106,10 +106,26 @@ class DisabledFieldsMixin(object):
             widget.disabled = 'disabled'
 
 
-# We need a custom class for rendering disabled groups
 class SchemaEditGroup(DisabledFieldsMixin, z3c.form.group.Group):
+    """
+    A generic group for fields that of type Object to represent as a fieldset.
+    """
 
-    _field = None
+    @property
+    def prefix(self):
+        return self.context.__name__
+
+    @property
+    def label(self):
+        return self.context.title
+
+    @property
+    def description(self):
+        return self.context.description
+
+    @property
+    def fields(self):
+        return z3c.form.field.Fields(self.context.schema)
 
 
 class SchemaEditForm(DisabledFieldsMixin, z3c.form.group.GroupForm, z3c.form.form.EditForm):
@@ -132,40 +148,6 @@ class SchemaEditForm(DisabledFieldsMixin, z3c.form.group.GroupForm, z3c.form.for
     fields = z3c.form.field.Fields()
     groups = ()
 
-    def __init__(self, context, request):
-        super(SchemaEditForm, self).__init__(context, request)
-        self.request.set('disable_border', True)
-
-        repository = self.context.getParentNode()
-        formName = self.context.item.name
-        formVersion = None
-        form = IDataStore(repository).schemata.get(formName, formVersion)
-
-        browserSession = ISession(self.request)
-        browserSession.setdefault(SESSION_KEY, dict())
-        browserSession[SESSION_KEY] = serializeForm(form)
-        browserSession.save()
-
-        groups = []
-        defaultFieldNames = []
-
-        # Update each field/group
-        for name, field in zope.schema.getFieldsInOrder(form):
-            # Put each sub-object form in a group
-            if isinstance(field, zope.schema.Object):
-                fieldset = SchemaEditGroup(None, self.request, self)
-                fieldset.label = field.title
-                fieldset.description = field.description
-                fieldset.prefix = name
-                fieldset._field = field
-                fieldset.fields = z3c.form.field.Fields(field.schema)
-                groups.append(fieldset)
-            else:
-                defaultFieldNames.append(name)
-
-        self.fields = z3c.form.field.Fields(form).select(*defaultFieldNames)
-        self.groups = groups
-
     @property
     def label(self):
         return self.context.item.title
@@ -178,6 +160,43 @@ class SchemaEditForm(DisabledFieldsMixin, z3c.form.group.GroupForm, z3c.form.for
     def prefix(self):
         return str(self.context.item.name)
 
+    @property
+    def parentUrl(self):
+        return self.context.getParentNode().absolute_url()
+
+    def __init__(self, context, request):
+        super(SchemaEditForm, self).__init__(context, request)
+        self.request.set('disable_border', True)
+
+        repository = self.context.getParentNode()
+        formName = self.context.item.name
+        formVersion = None
+
+        # TODO: It might be useful to load the form else where and simply
+        # use the session data to render the current progress. The reason
+        # this might be necessary is because in the future the form
+        # might be loaded from a "Change Request" queue and not from DS
+        # directly.
+        form = IDataStore(repository).schemata.get(formName, formVersion)
+        browserSession = ISession(self.request)
+        browserSession.setdefault(SESSION_KEY, dict())
+        browserSession[SESSION_KEY] = serializeForm(form)
+        browserSession.save()
+
+        groups = []
+        defaultFieldNames = []
+
+        # Update each field/group
+        for name, field in zope.schema.getFieldsInOrder(form):
+            # Put each sub-object form in a group
+            if isinstance(field, zope.schema.Object):
+                groups.append(SchemaEditGroup(field, self.request, self))
+            else:
+                defaultFieldNames.append(name)
+
+        self.fields = z3c.form.field.Fields(form).select(*defaultFieldNames)
+        self.groups = groups
+
     def types(self):
         """
         Template helper for types
@@ -186,16 +205,12 @@ class SchemaEditForm(DisabledFieldsMixin, z3c.form.group.GroupForm, z3c.form.for
 
     def _pathItems(self, item):
         if isinstance(item, z3c.form.group.Group):
-            formName = item._field.schema.getName()
+            formName = item.context.schema.getName()
             fieldName = item.prefix
         else:
             formName = item.interface.getName()
             fieldName = item.__name__
         return (formName, fieldName)
-
-    @property
-    def parentUrl(self):
-        return self.context.getParentNode().absolute_url()
 
     def editUrl(self, field):
         """
@@ -227,13 +242,11 @@ class SchemaEditForm(DisabledFieldsMixin, z3c.form.group.GroupForm, z3c.form.for
         """
         Template helper for retrieving the version of a field or group
         """
-        versionRaw = None
+        version = None
         if isinstance(field, z3c.form.group.Group):
-            if field._field is not None:
-                versionRaw = datastore.version.bind().get(field._field)
+            versionRaw = datastore.version.bind().get(field.context)
         else:
             versionRaw = datastore.version.bind().get(field)
-        version = None
         if versionRaw is not None:
             version = versionRaw.strftime('%Y-%m-%d')
         return version

@@ -115,10 +115,7 @@ class Edit(FieldFormMixin, z3c.form.form.EditForm):
     implements(IOccamsBrowserView)
 
     # Render the name as input (readonly by default renders as VIEW)
-    fields = (
-        z3c.form.field.Fields(IEditableField, mode=INPUT_MODE).select('name') +
-        z3c.form.field.Fields(IEditableField).omit('name')
-        )
+    fields = z3c.form.field.Fields(IEditableField)
 
     @property
     def label(self):
