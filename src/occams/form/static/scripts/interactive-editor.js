@@ -14,6 +14,7 @@
         // can get rather huge and so it will look weird.
         $('#occams-form-fieldsets').sortable({
             axis: 'y',
+            items: '.occams-form-fieldset:not(:first)',
             containment: 'parent',
             forcePlaceholderSize: true,
             opacity: 0.6,
@@ -66,6 +67,9 @@
         event.preventDefault();
         var trigger = $(this);
         var widget = trigger.parents('.occams-form-field').find('.occams-form-widget');
+        // It's really bad form to use the ID because it will be injected into
+        // the page multiple times, meaning there will be multiple #form elements.
+        // This is the only way I could ge this to work though.
         var url = trigger.attr('href') + ' #form';
         widget.load(url, onFieldEditFormLoad);
     };

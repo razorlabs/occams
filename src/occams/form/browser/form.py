@@ -20,6 +20,7 @@ from occams.form import MessageFactory as _
 from occams.form.serialize import serializeForm
 from occams.form.interfaces import SESSION_KEY
 from occams.form.interfaces import IOccamsBrowserView
+from occams.form.interfaces import IEditableForm
 from occams.form.interfaces import IFormSummary
 from occams.form.interfaces import IFormSummaryGenerator
 from occams.form.interfaces import typesVocabulary
@@ -115,24 +116,94 @@ class SchemaEditGroup(DisabledFieldsMixin, z3c.form.group.Group):
     A generic group for fields that of type Object to represent as a fieldset.
     """
 
+    fieldInParent = None
+
     @property
     def prefix(self):
-        return self.context.__name__
+        return str(self.context.getName())
 
     @property
     def label(self):
-        return self.context.title
+        return self.fieldInParent is not None and self.fieldInParent.title or None
 
     @property
     def description(self):
-        return self.context.description
+        return self.fieldInParent is not None and self.fieldInParent.description or None
 
     @property
-    def fields(self):
-        return z3c.form.field.Fields(self.context.schema)
+    def parentUrl(self):
+        return self.parentForm.context.getParentNode().absolute_url()
+
+    def __init__(self, context, request, parentForm, fieldInParent=None):
+        super(SchemaEditGroup, self).__init__(context, request, parentForm)
+        self.fieldInParent = fieldInParent
+
+        if self.fieldInParent is not None:
+            fields = z3c.form.field.Fields(self.context)
+        else:
+            names = []
+            for name, field in zope.schema.getFieldsInOrder(self.context):
+                if not isinstance(field, zope.schema.Object):
+                    names.append(name)
+            fields = z3c.form.field.Fields(self.context).select(*names)
+
+        # The fields NEED to be available before rendering otherwise the
+        # widget overrides will not apply
+        self.fields = fields
+
+    def _pathItems(self, field):
+        if field is None:
+            formName = self.context.getName()
+            fieldName = self.fieldInParent is not None and self.fieldInParent.__name__ or ''
+        else:
+            formName = field.interface.getName()
+            fieldName = field.__name__
+        return (formName, fieldName)
+
+    def editUrl(self, field=None):
+        """
+        Template helper for the edit URL of a field or group
+        """
+        (formName, fieldName) = self._pathItems(field)
+        return os.path.join(self.parentUrl, formName, fieldName, '@@edit')
+
+    def deleteUrl(self, field=None):
+        """
+        Template helper for the delete URL of a field or group
+        """
+        (formName, fieldName) = self._pathItems(field)
+        return os.path.join(self.parentUrl, formName, fieldName, '@@delete')
+
+    def type(self, field=None):
+        """
+        Template helper for retrieving the type of a field or group
+        """
+        if field is None:
+            type_ = 'object'
+        else:
+            type_ = datastore.type.bind().get(field)
+            if type_ is None:
+                type_ = typesVocabulary.getTerm(field.__class__).token
+        return type_
+
+    def version(self, field=None):
+        """
+        Template helper for retrieving the version of a field or group
+        """
+        version = None
+        if field is None:
+            if self.fieldInParent is not None:
+                versionRaw = datastore.version.bind().get(self.fieldInParent)
+            else:
+                versionRaw = None
+        else:
+            versionRaw = datastore.version.bind().get(field)
+        if versionRaw is not None:
+            version = versionRaw.strftime('%Y-%m-%d')
+        return version
 
 
-class SchemaEditForm(DisabledFieldsMixin, z3c.form.group.GroupForm, z3c.form.form.EditForm):
+class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.EditForm):
     """
     Displays a preview the form.
     
@@ -149,29 +220,30 @@ class SchemaEditForm(DisabledFieldsMixin, z3c.form.group.GroupForm, z3c.form.for
 
     template = ViewPageTemplateFile('form_templates/edit.pt')
 
-    fields = z3c.form.field.Fields()
+    # The form's metadata properties
+    fields = z3c.form.field.Fields(IEditableForm).omit('name')
+
+    # The form's fields, initialized in the constructor 
     groups = ()
 
     @property
-    def label(self):
-        return self.context.item.title
-
-    @property
-    def description(self):
-        return self.context.item.description
-
-    @property
     def prefix(self):
-        return str(self.context.item.name)
-
-    @property
-    def parentUrl(self):
-        return self.context.getParentNode().absolute_url()
+        return 'occams-form-master'
 
     def __init__(self, context, request):
         super(SchemaEditForm, self).__init__(context, request)
         self.request.set('disable_border', True)
 
+    def getContent(self):
+        return ISession(self.request)[SESSION_KEY]
+
+    def types(self):
+        """
+        Template helper for types
+        """
+        return typesVocabulary
+
+    def updateWidgets(self):
         repository = self.context.getParentNode()
         formName = self.context.item.name
         formVersion = None
@@ -187,73 +259,16 @@ class SchemaEditForm(DisabledFieldsMixin, z3c.form.group.GroupForm, z3c.form.for
         browserSession[SESSION_KEY] = serializeForm(form)
         browserSession.save()
 
-        groups = []
-        defaultFieldNames = []
+        groups = [SchemaEditGroup(form, self.request, self, None)]
 
         # Update each field/group
         for name, field in zope.schema.getFieldsInOrder(form):
             # Put each sub-object form in a group
             if isinstance(field, zope.schema.Object):
-                groups.append(SchemaEditGroup(field, self.request, self))
-            else:
-                defaultFieldNames.append(name)
+                groups.append(SchemaEditGroup(field.schema, self.request, self, field))
 
-        self.fields = z3c.form.field.Fields(form).select(*defaultFieldNames)
         self.groups = groups
-
-    def types(self):
-        """
-        Template helper for types
-        """
-        return typesVocabulary
-
-    def _pathItems(self, item):
-        if isinstance(item, z3c.form.group.Group):
-            formName = item.context.schema.getName()
-            fieldName = item.prefix
-        else:
-            formName = item.interface.getName()
-            fieldName = item.__name__
-        return (formName, fieldName)
-
-    def editUrl(self, field):
-        """
-        Template helper for the edit URL of a field or group
-        """
-        (formName, fieldName) = self._pathItems(field)
-        return os.path.join(self.parentUrl, formName, fieldName, '@@edit')
-
-    def deleteUrl(self, field):
-        """
-        Template helper for the delete URL of a field or group
-        """
-        (formName, fieldName) = self._pathItems(field)
-        return os.path.join(self.parentUrl, formName, fieldName, '@@delete')
-
-    def fieldType(self, field):
-        """
-        Template helper for retrieving the type of a field or group
-        """
-        if isinstance(field, z3c.form.group.Group):
-            type_ = 'object'
-        else:
-            type_ = datastore.type.bind().get(field)
-            if type_ is None:
-                type_ = typesVocabulary.getTerm(field.__class__).token
-        return type_
-
-    def fieldVersion(self, field):
-        """
-        Template helper for retrieving the version of a field or group
-        """
-        version = None
-        if isinstance(field, z3c.form.group.Group):
-            versionRaw = datastore.version.bind().get(field.context)
-        else:
-            versionRaw = datastore.version.bind().get(field)
-        if versionRaw is not None:
-            version = versionRaw.strftime('%Y-%m-%d')
-        return version
+        super(SchemaEditForm, self).updateWidgets()
 
     @z3c.form.button.buttonAndHandler(_('Cancel'), name='cancel')
     def handleCancel(self):
@@ -283,3 +298,4 @@ class Edit(layout.FormWrapper):
 
     def label(self):
         return u'Edit: %s (%s)' % (self.context.item.title, self.context.item.name)
+

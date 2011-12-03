@@ -45,9 +45,11 @@ class FieldFormMixin(object):
 class View(FieldFormMixin, z3c.form.form.Form):
     implements(IOccamsBrowserView)
 
-    def __init__(self, context, request):
-        super(View, self).__init__(context, request)
+    @property
+    def label(self):
+        return self.context.item.name
 
+    def updateWidgets(self):
         field = self.getContent()
         factory = typesVocabulary.getTermByToken(field['type']).value
         options = dict()
@@ -85,16 +87,13 @@ class View(FieldFormMixin, z3c.form.form.Form):
 
         self.fields = z3c.form.field.Fields(result)
 
-    @property
-    def label(self):
-        return self.context.item.name
-
-    def updateWidgets(self):
         for field in self.fields.values():
             fieldType = field.field.__class__
             if fieldType in fieldWidgetMap:
                 field.widgetFactory = fieldWidgetMap.get(fieldType)
+
         super(View, self).updateWidgets()
+
         for widget in self.widgets.values():
             widget.disabled = 'disabled'
 

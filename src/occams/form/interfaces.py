@@ -37,6 +37,32 @@ class IOccamsBrowserView(IOccamsFormComponent):
     """
 
 
+class IEditableForm(IOccamsFormComponent):
+    """
+    The human-friendly form for edidting a field.
+    """
+
+    name = zope.schema.ASCIILine(
+        title=_(u'Class Name'),
+        description=_(
+            u'Internal variable name, this value cannot be changed once it is '
+            u'created.'
+            ),
+        readonly=True,
+        )
+
+    title = zope.schema.TextLine(
+        title=_(u'Title'),
+        description=_(u'The displayed name of the form.'),
+        )
+
+    description = zope.schema.Text(
+        title=_(u'Description'),
+        description=_(u'A short description about what the form is for.'),
+        required=False,
+        )
+
+
 class IEditableField(IOccamsFormComponent):
     """
     The human-friendly form for edidting a field.

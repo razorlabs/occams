@@ -45,6 +45,7 @@ The structure is as follows::
 import zope.schema
 
 from avrc.data.store import directives as datastore
+from avrc.data.store.interfaces import typesVocabulary
 
 
 def serializeForm(form):
@@ -97,12 +98,16 @@ def serializeField(field):
     """
     Serializes an individual field
     """
+    type_ = datastore.type.bind().get(field)
+    if type_ is None:
+        type_ = typesVocabulary.getTerm(field.__class__).token
+
     result = dict(
                 name=field.__name__,
                 title=field.title,
                 description=field.description,
                 version=datastore.version.bind().get(field),
-                type=datastore.type.bind().get(field),
+                type=type_,
                 choices=dict(),
                 is_required=field.required,
                 is_collection=isinstance(field, zope.schema.List),

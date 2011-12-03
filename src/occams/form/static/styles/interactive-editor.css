@@ -13,6 +13,7 @@
 /*******************************************************************************
  * EDITOR
  ******************************************************************************/
+
 #occams-form-editor {
 	cursor: default;
 	overflow: hidden;
@@ -96,6 +97,8 @@
 /*******************************************************************************
  * MAIN FORM
  ******************************************************************************/
+
+
 #occams-form-container {
 	float: left;
 	width: 70%;
@@ -104,6 +107,12 @@
 #occams-form-sidebar {
 	float: right;
 	width: 30%;
+}
+
+#occams-form-master > .formControls {
+	border-top: 1px dotted #CCC;
+	clear: both;
+	padding: 1em 0;
 }
 
 /*******************************************************************************
@@ -163,6 +172,8 @@
 #occams-form-types h3 {
 	background-color: #999;
 	color: #fff;
+    margin: 0 2% 0 2%;
+	max-width: 300px;
 }
 
 #occams-form-types ul {
