@@ -18,13 +18,10 @@
 	cursor: default;
 	overflow: hidden;
 	width: 100%;
-	-moz-user-select: none;
-	-webkit-user-select: none;
 }
 
 /*******************************************************************************
- * MISCALLANEOUS
- * Set up the 
+ * PLONE OVERRIDES
  ******************************************************************************/
 
 /* Re-style Plone's error messages to stand out a little more */
@@ -34,9 +31,22 @@
 }
 
 /*******************************************************************************
- * METADATA
- * Set up the 
+ * JQUERY OVERRIDES
  ******************************************************************************/
+ 
+.ui-sortable-placeholder { 
+	border: 0.2em dotted red; 
+	visibility: visible !important;  
+}
+    
+.ui-sortable-placeholder * { 
+	visibility: hidden; 
+}
+
+/*******************************************************************************
+ * METADATA 
+ ******************************************************************************/
+ 
 .occams-form-metadata {
 	border-bottom: 1px solid #efefef;
 	color: #666;
@@ -65,6 +75,7 @@
 /*******************************************************************************
  * CONTROLS
  ******************************************************************************/
+ 
 .occams-form-controls ul {
 	list-style: none;
 	margin: 0 !important;
@@ -98,8 +109,7 @@
  * MAIN FORM
  ******************************************************************************/
 
-
-#occams-form-container {
+#occams-form-mainbar {
 	float: left;
 	width: 70%;
 }
@@ -107,6 +117,11 @@
 #occams-form-sidebar {
 	float: right;
 	width: 30%;
+}
+
+#occams-form-inputs,
+#occams-form-fieldsets {
+	margin-right: 1em;
 }
 
 #occams-form-master > .formControls {
@@ -118,16 +133,9 @@
 /*******************************************************************************
  * FIELDSETS
  ******************************************************************************/
-#occams-form-default-fieldset,#occams-form-fieldsets {
-	padding-right: 1em;
-}
 
-#occams-form-default-fieldset,.occams-form-fieldset {
-	margin: 1em 0;
-}
-
-#occams-form-default-fieldset,.occams-form-fieldset {
-	background: #FFFFE3;
+.occams-form-fieldset {
+    margin: 1em 0;
 }
 
 .occams-form-fieldset .occams-form-metadata {
@@ -142,15 +150,20 @@
 /*******************************************************************************
  * FIELDS
  ******************************************************************************/
+
 .occams-form-fields {
-	padding: 0 1em 1em 1em;
+	background: #FFFFE3;
+	padding: 1em;
 }
 
 .occams-form-field {
-	background: #EEE;
-	margin-top: 1em;
+	margin-bottom: 1em;
 	overflow: hidden;
 	position: relative;
+}
+
+.occams-form-field:last-child {
+	margin-bottom: 0;
 }
 
 .occams-form-field .occams-form-metadata {
@@ -163,12 +176,14 @@
 }
 
 .occams-form-widget {
+	background: #EEE;
 	padding: 0.8em;
 }
 
 /*******************************************************************************
  * TYPES
  ******************************************************************************/
+ 
 #occams-form-types h3 {
 	background-color: #999;
 	color: #fff;
@@ -231,6 +246,5 @@
 }
 
 .text {
-	background-image:
-		url(++resource++occams.form/images/page_white_text.png);
+	background-image: url(++resource++occams.form/images/page_white_text.png);
 }

@@ -9,6 +9,9 @@
      */
     var main = function() {
         
+        // Disable text selection, because it's annoying when dragging/dropping
+        $('#occams-form-editor').disableSelection();
+        
         // Configure fieldsets as sortable within the editor, note that using
         // 'intersect' as a tolerance won't work here because the forms
         // can get rather huge and so it will look weird.
@@ -31,7 +34,7 @@
         
         // Configure types as draggable, this is how the user will add new fields
         // to a form
-        $('#occams-form-types > ul > li').draggable({
+        $('#occams-form-basic-types li').draggable({
             containment: '#occams-form-editor',
             connectToSortable: '.occams-form-fields',
             cursor: 'move',
@@ -40,6 +43,8 @@
             start: onTypeDragStart,
             zIndex: 9001,
         });
+        
+        // TODO: can't do fieldsets for some reason
 
         // Register handlers for edit/delete fieldsets
         $('.occams-form-fieldset > .occams-form-metadata .occams-form-edit').click(onFieldsetEditStart);
@@ -67,11 +72,16 @@
         event.preventDefault();
         var trigger = $(this);
         var widget = trigger.parents('.occams-form-field').find('.occams-form-widget');
+        var widgetPreview = widget.find('.field');
+        widget.append('<div class="inline-editor"></div>')
+        var widgetEditor = widget.find('.inline-editor');
+        
         // It's really bad form to use the ID because it will be injected into
         // the page multiple times, meaning there will be multiple #form elements.
         // This is the only way I could ge this to work though.
         var url = trigger.attr('href') + ' #form';
-        widget.load(url, onFieldEditFormLoad);
+        widgetPreview.css({display: 'none'});
+        widgetEditor.load(url, onFieldEditFormLoad);
     };
     
     var onFieldEditFormLoad = function(){
@@ -91,20 +101,28 @@
         widget.load(url, data, onFieldEditFormLoad);
     };
     
-    var onFieldEditFormCancel = function(event) {;
+    var onFieldEditFormCancel = function(event) {
         event.preventDefault();
         var trigger = $(this);
-        console.log('cancel');
+        var widget = trigger.parents('.occams-form-field').find('.occams-form-widget');
+        var widgetPreview = widget.find('.field');
+        var widgetEditor = widget.find('.inline-editor');
+        
+        widgetPreview.css({display: 'block'});
+        widgetEditor.remove();
     };
     
     var onFieldDeleteStart = function(event) {
         event.preventDefault();
-        $.ajax({
-            url: '/Plone/testing/fia-forms-1/LumbarPuncture/test_source/@@test',
-            success: function (data){
-                console.log(data);
-            },
-        });
+        var trigger = $(this);
+        var editor = trigger.parents('.occams-form-field')
+        editor.remove();
+//        $.ajax({
+//            url: '/Plone/testing/fia-forms-1/LumbarPuncture/test_source/@@test',
+//            success: function (data){
+//                console.log(data);
+//            },
+//        });
     };
     
     $(document).ready(main);

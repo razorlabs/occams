@@ -120,7 +120,7 @@ class SchemaEditGroup(DisabledFieldsMixin, z3c.form.group.Group):
 
     @property
     def prefix(self):
-        return str(self.context.getName())
+        return self.fieldInParent is not None and self.fieldInParent.__name__ or ''
 
     @property
     def label(self):
@@ -235,7 +235,11 @@ class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.EditForm):
         self.request.set('disable_border', True)
 
     def getContent(self):
-        return ISession(self.request)[SESSION_KEY]
+        return dict(
+            name=self.context.item.name,
+            title=self.context.item.title,
+            description=self.context.item.description,
+            )
 
     def types(self):
         """

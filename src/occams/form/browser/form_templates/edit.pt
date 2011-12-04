@@ -8,22 +8,22 @@
         <!-- Field types -->
         <div id="occams-form-types">
           <h3>Basic Types</h3>
-          <ul>
+          <ul id="occams-form-basic-types">
             <tal:block tal:repeat="type_ view/types">
               <li class="" tal:attributes="class type_/token" tal:content="type_/title" tal:condition="python: type_.token != 'object'">Type</li>
             </tal:block>
           </ul>
           <h3>Other</h3>
-          <ul>
+          <ul id="occams-form-other-types">
               <li class="object">FieldSet</li>
           </ul>
         </div>
       </div>
       
-      <div id="occams-form-container">
-      
+      <div id="occams-form-mainbar">
+        
         <!-- The form's metadata fields -->
-        <div id="occams-form-input">
+        <div id="occams-form-inputs">
           <metal:define define-macro="widget_rendering">
               <tal:widgets repeat="widget view/widgets/values">
                   <metal:field-slot define-slot="field">
@@ -43,7 +43,7 @@
                   define="
                       edit_url      python: group.editUrl();
                       delete_url    python: group.deleteUrl();
-                      title         string: ${group/label} (${group/prefix});
+                      title         string: ${group/label} (${group/prefix} : ${group/context/getName});
                       type_         python: group.type();
                       version       python: group.version();
                       render        not: repeat/group/start;
@@ -72,7 +72,7 @@
                     <tal:block define="
                           edit_url      python: group.editUrl(widget.field);
                           delete_url    python: group.deleteUrl(widget.field);
-                          title         widget/field/__name__;
+                          title         python: widget.field.__name__ + ' : ' + group.type(widget.field);
                           type_         python: group.type(widget.field);
                           version       python: group.version(widget.field);
                           render        python: True;
@@ -98,6 +98,7 @@
           </tal:block>
         </div>
       </div>
+
     </metal:fields-slot>
     
   </metal:form>
