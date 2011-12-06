@@ -70,7 +70,7 @@
         var mainbar = $('#occams-form-mainbar');
         var sidebar = $('#occams-form-sidebar');
         var editorOffset = editor.offset();
-        var scrollY = $(window).scrollTop()
+        var scrollY = $(window).scrollTop();
         
         // Reposition if the window if the scrolling position is past the editor
         if (scrollY >= editorOffset.top) {

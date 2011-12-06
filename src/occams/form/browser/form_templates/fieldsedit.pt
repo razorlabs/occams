@@ -21,20 +21,6 @@
       </div>
       
       <div id="occams-form-mainbar">
-        
-        <!-- The form's metadata fields -->
-        <div id="occams-form-inputs">
-          <metal:define define-macro="widget_rendering">
-              <tal:widgets repeat="widget view/widgets/values">
-                  <metal:field-slot define-slot="field">
-                      <metal:field define-macro="field">
-                          <tal:widget tal:replace="structure widget/@@ploneform-render-widget"/>
-                      </metal:field>
-                  </metal:field-slot>
-              </tal:widgets>
-          </metal:define>
-        </div>
-        
         <!-- The form schema's field widgets -->
         <div id="occams-form-fieldsets">
           <tal:block tal:repeat="group groups">

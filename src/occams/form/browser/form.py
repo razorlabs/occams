@@ -17,14 +17,15 @@ from avrc.data.store.interfaces import IDataStore
 from avrc.data.store import directives as datastore
 
 from occams.form import MessageFactory as _
-from occams.form.serialize import serializeForm
+from occams.form.browser.widget import fieldWidgetMap
+from occams.form.browser.widget import TextAreaFieldWidget
 from occams.form.interfaces import SESSION_KEY
 from occams.form.interfaces import IOccamsBrowserView
 from occams.form.interfaces import IEditableForm
 from occams.form.interfaces import IFormSummary
 from occams.form.interfaces import IFormSummaryGenerator
 from occams.form.interfaces import typesVocabulary
-from occams.form.browser.widget import fieldWidgetMap
+from occams.form.serialize import serializeForm
 
 
 class ListingEditForm(crud.EditForm):
@@ -203,43 +204,28 @@ class SchemaEditGroup(DisabledFieldsMixin, z3c.form.group.Group):
         return version
 
 
-class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.EditForm):
+class SchemaFieldsEditForm(z3c.form.group.GroupForm, z3c.form.form.Form):
     """
-    Displays a preview the form.
+    Fields editor form.
     
     A note on sub-objects: There currently seems to be too many caveats
     surrounding object widgets (see ``z3c.form.object``). Given that, we
     will be using z3c group forms to represent sub objects.
     """
+
     implements(IOccamsBrowserView)
+
+    template = ViewPageTemplateFile('form_templates/fieldsedit.pt')
 
     ignoreContext = True
     ignoreRequest = True
 
     enable_form_tabbing = False
 
-    template = ViewPageTemplateFile('form_templates/edit.pt')
-
-    # The form's metadata properties
-    fields = z3c.form.field.Fields(IEditableForm).omit('name')
+    fields = z3c.form.field.Fields()
 
     # The form's fields, initialized in the constructor 
     groups = ()
-
-    @property
-    def prefix(self):
-        return 'occams-form-master'
-
-    def __init__(self, context, request):
-        super(SchemaEditForm, self).__init__(context, request)
-        self.request.set('disable_border', True)
-
-    def getContent(self):
-        return dict(
-            name=self.context.item.name,
-            title=self.context.item.title,
-            description=self.context.item.description,
-            )
 
     def types(self):
         """
@@ -272,7 +258,45 @@ class SchemaEditForm(z3c.form.group.GroupForm, z3c.form.form.EditForm):
                 groups.append(SchemaEditGroup(field.schema, self.request, self, field))
 
         self.groups = groups
-        super(SchemaEditForm, self).updateWidgets()
+        super(SchemaFieldsEditForm, self).updateWidgets()
+
+
+class SchemaEditForm(z3c.form.form.EditForm):
+    """
+    Renders the form for editing, using a subform for the fields editor.
+    """
+
+    implements(IOccamsBrowserView)
+
+    template = ViewPageTemplateFile('form_templates/schemaedit.pt')
+
+    # The form's metadata properties (title, description, storage, etcc...)
+    fields = z3c.form.field.Fields(IEditableForm).omit('name')
+
+    # The form's entry fields (the ones the user enters data into when filling out)
+    fieldsForm = None
+
+    @property
+    def prefix(self):
+        return 'occams-form-master'
+
+    def getContent(self):
+        return dict(
+            name=self.context.item.name,
+            title=self.context.item.title,
+            description=self.context.item.description,
+            )
+
+    def update(self):
+        # Override the tiny text area wiget with a nice bigger one
+        self.fields['description'].widgetFactory = TextAreaFieldWidget
+
+        # Render the fields editor form
+        self.fieldsForm = SchemaFieldsEditForm(self.context, self.request)
+        self.fieldsForm.update()
+
+        # Do some magic
+        super(SchemaEditForm, self).update()
 
     @z3c.form.button.buttonAndHandler(_('Cancel'), name='cancel')
     def handleCancel(self):
@@ -300,6 +324,11 @@ class Edit(layout.FormWrapper):
 
     form = SchemaEditForm
 
+    @property
     def label(self):
         return u'Edit: %s (%s)' % (self.context.item.title, self.context.item.name)
+
+    def __init__(self, context, request):
+        super(Edit, self).__init__(context, request)
+        self.request.set('disable_border', True)
 

@@ -21,10 +21,14 @@ grok.global_adapter(choicePrompt, name=u'prompt')
 
 def TextAreaFieldWidget(field, request):
     """  
-    z3c.form doesn't allow configuring of rows so we must subclass it
+    z3c.form doesn't allow configuring of rows so we must subclass it.
+    
+    Unfortunately there is no way to register this, so every view that wants
+    to use this factory must specify it in the ``widgetFactory`` property 
+    of the ``z3c.form.field.Field`` instance.
     """
     widget = z3c.form.browser.textarea.TextAreaFieldWidget(field, request)
-    widget.rows = 10
+    widget.rows = 5
     return widget
 
 
