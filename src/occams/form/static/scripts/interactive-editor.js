@@ -14,8 +14,6 @@
         
         // Handle scrolling events to reposition the sidebar
         $(window).scroll(onWindowScroll);
-        // We also need to do it for resize because the method uses black magic...
-        $(window).resize(onWindowScroll);
         
         // Configure fieldsets as sortable within the editor, note that using
         // 'intersect' as a tolerance won't work here because the forms
@@ -67,17 +65,21 @@
      */
     var onWindowScroll = function(event) {
         var editor = $('#occams-form-editor');
-        var mainbar = $('#occams-form-mainbar');
         var sidebar = $('#occams-form-sidebar');
         var editorOffset = editor.offset();
         var scrollY = $(window).scrollTop();
         
         // Reposition if the window if the scrolling position is past the editor
+        // Note that we only need to re-render if it hasn't been set yet. 
         if (scrollY >= editorOffset.top) {
-            var left = editorOffset.left + mainbar.width();
-            sidebar.css({position: 'fixed', top: 0, right: '', left: left + 'px'});
+            if(sidebar.css('position') != 'fixed') {
+                var right = $(window).width() - (sidebar.offset().left + sidebar.width());
+                sidebar.css({position: 'fixed', top: 0, right: right + 'px'});
+            }
         } else {
-            sidebar.css({position: 'absolute', top: 0, right: 0, left: ''});
+            if ( sidebar.css('position') != 'absolute' ) {
+                sidebar.css({position: 'absolute', top: 0, right: 0});
+            }
         }
         
     };
