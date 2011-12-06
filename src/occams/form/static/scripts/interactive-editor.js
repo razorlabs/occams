@@ -12,6 +12,11 @@
         // Disable text selection, because it's annoying when dragging/dropping
         $('#occams-form-editor').disableSelection();
         
+        // Handle scrolling events to reposition the sidebar
+        $(window).scroll(onWindowScroll);
+        // We also need to do it for resize because the method uses black magic...
+        $(window).resize(onWindowScroll);
+        
         // Configure fieldsets as sortable within the editor, note that using
         // 'intersect' as a tolerance won't work here because the forms
         // can get rather huge and so it will look weird.
@@ -53,7 +58,29 @@
         // Register handlers for edit/delete fields
         $('.occams-form-field .occams-form-edit').click(onFieldEditStart);
         $('.occams-form-field .occams-form-delete').click(onFieldDeleteStart);
-    }
+    };
+        
+    /**
+     * Repositions the side bar on window scroll.
+     * 
+     * @param   event   The DOM event for the window scroll.
+     */
+    var onWindowScroll = function(event) {
+        var editor = $('#occams-form-editor');
+        var mainbar = $('#occams-form-mainbar');
+        var sidebar = $('#occams-form-sidebar');
+        var editorOffset = editor.offset();
+        var scrollY = $(window).scrollTop()
+        
+        // Reposition if the window if the scrolling position is past the editor
+        if (scrollY >= editorOffset.top) {
+            var left = editorOffset.left + mainbar.width();
+            sidebar.css({position: 'fixed', top: 0, right: '', left: left + 'px'});
+        } else {
+            sidebar.css({position: 'absolute', top: 0, right: 0, left: ''});
+        }
+        
+    };
     
     var onTypeDragStart = function(event, ui) {
         var trigger = $(this);

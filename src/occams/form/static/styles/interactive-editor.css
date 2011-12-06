@@ -16,6 +16,7 @@
 
 #occams-form-editor {
 	cursor: default;
+	position: relative;
 	overflow: hidden;
 	width: 100%;
 }
@@ -110,13 +111,14 @@
  ******************************************************************************/
 
 #occams-form-mainbar {
-	float: left;
-	width: 70%;
+    margin-right: 250px;
 }
 
 #occams-form-sidebar {
-	float: right;
-	width: 30%;
+	position: absolute;
+	right:0;
+	top: 0;
+	width: 250px;
 }
 
 #occams-form-inputs,
@@ -183,12 +185,15 @@
 /*******************************************************************************
  * TYPES
  ******************************************************************************/
- 
+
+#occams-form-types {
+	max-width: 300px;
+}
+
 #occams-form-types h3 {
 	background-color: #999;
 	color: #fff;
     margin: 0 2% 0 2%;
-	max-width: 300px;
 }
 
 #occams-form-types ul {
@@ -196,7 +201,6 @@
 	border-top: 1px solid #bbb;
 	list-style: none;
 	margin: 0 2% 2% 2%;
-	max-width: 300px;
 }
 
 #occams-form-types li {
