@@ -101,6 +101,12 @@ class View(FieldFormMixin, z3c.form.form.Form):
 class Add(FieldFormMixin, z3c.form.form.AddForm):
     implements(IOccamsBrowserView)
 
+    fields = z3c.form.field.Fields(IEditableField)
+
+    @property
+    def label(self):
+        return 'Add new field'
+
 
 class Order(object):
     pass
@@ -119,13 +125,6 @@ class Edit(FieldFormMixin, z3c.form.form.EditForm):
     @property
     def label(self):
         return 'Edit: %s' % self.context.item.name
-
-    def updateWidgets(self):
-        super(Edit, self).updateWidgets()
-        # Disable the 'name' field since we're editing.
-        # It would be nice if this was conditionally disabled based
-        # on the role of whomever is editing (e.g. only admins can change it)
-        self.widgets['name'].disabled = 'disabled'
 
     @z3c.form.button.buttonAndHandler(_(u'Cancel'), name='cancel')
     def handleCancel(self, action):
