@@ -8,6 +8,7 @@
 
   <!-- Explicitly load external packages so we don't get ambiguous errors -->
   <include package="plone.app.z3cform" />
+  <include package="collective.z3cform.datagridfield" />
   <include package="avrc.data.store" />
 
   <!-- 

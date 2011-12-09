@@ -7,7 +7,11 @@
     /**
      * Main method that initializes all components
      */
-    var main = function() {
+    var onReady = function() {
+        // No need to continue if the editor is not on this page
+        if ( ! $('#occams-form-editor').length ){
+            return;
+        }
         
         // Disable text selection, because it's annoying when dragging/dropping
         $('#occams-form-editor').disableSelection();
@@ -61,8 +65,8 @@
         $('.occams-form-fieldset > .occams-form-metadata .occams-form-delete').click(onFieldsetDeleteStart);
         
         // Register handlers for edit/delete fields
-        $('.occams-form-field .occams-form-edit').click(onFieldEditStart);
-        $('.occams-form-field .occams-form-delete').click(onFieldDeleteStart);
+        $('.occams-form-field .occams-form-editable').click(onFieldEditStart);
+        $('.occams-form-field .occams-form-deleteable').click(onFieldDeleteStart);
     };
         
     /**
@@ -144,17 +148,13 @@
     var onFieldEditStart = function(event) {
         event.preventDefault();
         var trigger = $(this);
-        var widget = trigger.parents('.occams-form-field').find('.occams-form-widget');
-        var widgetPreview = widget.find('.field');
-        widget.append('<div class="inline-editor"></div>')
-        var widgetEditor = widget.find('.inline-editor');
         
         // It's really bad form to use the ID because it will be injected into
         // the page multiple times, meaning there will be multiple #form elements.
         // This is the only way I could ge this to work though.
         var url = trigger.attr('href') + ' #form';
-        widgetPreview.css({display: 'none'});
-        widgetEditor.load(url, onFieldEditFormLoad);
+        trigger.parents('.occams-form-field').find('.occams-form-view').css({display: 'none'});
+        trigger.parents('.occams-form-field').find('.occams-form-edit').css({display: 'block'}).load(url, onFieldEditFormLoad);
     };
     
     /**
@@ -210,6 +210,6 @@
 //        });
     };
     
-    $(document).ready(main);
+    $(document).ready(onReady);
 
 })(jQuery);

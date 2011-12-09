@@ -36,6 +36,7 @@ setup(
     install_requires=[
         'setuptools',
         'collective.beaker',
+        'collective.z3cform.datagridfield',
         'five.grok',
         'grokcore.traverser',
         'plone.app.z3cform',

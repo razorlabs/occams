@@ -17,13 +17,14 @@
                       type_         type_/token;
                       version       nothing;
                       renderHead    python: True;
+                      itemClass     string: occams-form-type;
                    ">
-                <div  class=""  tal:attributes="class string: occams-form-item occams-form-type ${type_}" >
+                <div  class=""  tal:attributes="class string: occams-form-item ${itemClass} ${type_}" >
                   <div class="occams-form-moveable">Move</div>
                   <div class="occams-form-container">
                     <div class="occams-form-head" tal:condition="renderHead">
                       <div class="occams-form-metadata">
-                        <div class="" tal:attributes="class string: occams-form-title" tal:content="title">Title</div>
+                        <div class="occams-form-title" tal:content="title">Title</div>
                         <div class="occams-form-version" tal:content="version">Version</div>
                       </div>
                       <div class="occams-form-controls">
@@ -58,13 +59,14 @@
                   type_         python: group.type();
                   version       python: group.version();
                   renderHead    not: repeat/group/start;
+                  itemClass     string: occams-form-fieldset;
                 ">
-              <div class="occams-form-item occams-form-fieldset ${type_}">
+              <div  class=""  tal:attributes="class string: occams-form-item ${itemClass} ${type_}" >
                 <div class="occams-form-moveable">Move</div>
                 <div class="occams-form-container">
                   <div class="occams-form-head" tal:condition="renderHead">
                     <div class="occams-form-metadata">
-                      <div class="" tal:attributes="class string: occams-form-title" tal:content="title">Title</div>
+                      <div class="occams-form-title" tal:content="title">Title</div>
                       <div class="occams-form-version" tal:content="version">Version</div>
                     </div>
                     <div class="occams-form-controls">
@@ -93,13 +95,14 @@
                                 type_         python: group.type(widget.field);
                                 version       python: group.version(widget.field);
                                 renderHead    python: True;
+                                itemClass     string: occams-form-field;
                               ">
-                            <div class="occams-form-item occams-form-field ${type_}">
+                            <div  class=""  tal:attributes="class string: occams-form-item ${itemClass} ${type_}" >
                               <div class="occams-form-moveable">Move</div>
                               <div class="occams-form-container">
                                 <div class="occams-form-head" tal:condition="renderHead">
                                   <div class="occams-form-metadata">
-                                    <div class="" tal:attributes="class string: occams-form-title ${type_}" tal:content="title">Title</div>
+                                    <div class="occams-form-title" tal:content="title">Title</div>
                                     <div class="occams-form-version" tal:content="version">Version</div>
                                   </div>
                                   <div class="occams-form-controls">

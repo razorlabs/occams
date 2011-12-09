@@ -11,29 +11,6 @@
  */
 
 /*******************************************************************************
- * PLONE OVERRIDES
- ******************************************************************************/
-
-/* Re-style Plone's error messages to stand out a little more */
-#occams-form-editor .fieldErrorBox .error {
-    color: red;
-    font-weight: bold;
-}
-
-/*******************************************************************************
- * JQUERY OVERRIDES
- ******************************************************************************/
- 
-#occams-form-editor .ui-sortable-placeholder { 
-	border: 0.2em dotted red; 
-	visibility: visible !important;  
-}
-    
-#occams-form-editor .ui-sortable-placeholder * { 
-	visibility: hidden; 
-}
-
-/*******************************************************************************
  * MAIN LAYOUT
  ******************************************************************************/
 
@@ -105,8 +82,45 @@
 }
 
 .occams-form-item .occams-form-title {
+    background-position: 1% 50%;
+    background-repeat: no-repeat;
 	float: left;
+	padding-left: 2em;
 	overflow: hidden;
+}
+
+/* FieldSets will be rendered first, so declare object styles first so the
+   other type style declarations can override it */
+.object .occams-form-title {
+    background-image: url(++resource++occams.form/images/table.png);
+}
+
+.boolean .occams-form-title {
+    background-image: url(++resource++occams.form/images/tick.png);
+}
+
+.date .occams-form-title {
+    background-image: url(++resource++occams.form/images/calendar.png);
+}
+
+.datetime .occams-form-title {
+    background-image: url(++resource++occams.form/images/time.png);
+}
+
+.decimal .occams-form-title {
+    background-image: url(++resource++occams.form/images/calculator.png);
+}
+
+.integer .occams-form-title {
+    background-image: url(++resource++occams.form/images/calculator.png);
+}
+
+.string .occams-form-title {
+    background-image: url(++resource++occams.form/images/textfield.png);
+}
+
+.text .occams-form-title {
+    background-image: url(++resource++occams.form/images/page_white_text.png);
 }
 
 .occams-form-item .occams-form-version {
@@ -164,44 +178,6 @@
 	display: none;
 }
 
-.boolean, .date, .datetime, .decimal, .integer, .object, .string, .text {
-    background-position: 1% 50%;
-    background-repeat: no-repeat;
-    padding-left: 2em;
-}
-
-.boolean {
-    background-image: url(++resource++occams.form/images/tick.png);
-}
-
-.date {
-    background-image: url(++resource++occams.form/images/calendar.png);
-}
-
-.datetime {
-    background-image: url(++resource++occams.form/images/time.png);
-}
-
-.decimal {
-    background-image: url(++resource++occams.form/images/calculator.png);
-}
-
-.integer {
-    background-image: url(++resource++occams.form/images/calculator.png);
-}
-
-.object {
-    background-image: url(++resource++occams.form/images/table.png);
-}
-
-.string {
-    background-image: url(++resource++occams.form/images/textfield.png);
-}
-
-.text {
-    background-image: url(++resource++occams.form/images/page_white_text.png);
-}
-
 /*******************************************************************************
  * TOOLBOX
  ******************************************************************************/
@@ -243,6 +219,10 @@
  * FIELDSET
  ******************************************************************************/
 
+.occams-form-fieldset:first-child > .occams-form-moveable {
+    background: inherit;
+}
+
 .occams-form-fieldset > .occams-form-moveable,
 .occams-form-fieldset > .occams-form-container > .occams-form-head {
     background-color: #BFBFB0;
@@ -263,4 +243,49 @@
 
 .occams-form-field .occams-form-collapseable {
     display: none;
+}
+
+/*******************************************************************************
+ * PLONE OVERRIDES
+ ******************************************************************************/
+
+/* Re-style Plone's error messages to stand out a little more */
+#occams-form-editor .fieldErrorBox .error {
+    color: red;
+    font-weight: bold;
+}
+
+/*******************************************************************************
+ * JQUERY OVERRIDES
+ ******************************************************************************/
+ 
+#occams-form-editor .ui-sortable-placeholder { 
+    border: 0.2em dotted red; 
+    visibility: visible !important;  
+}
+    
+#occams-form-editor .ui-sortable-placeholder * { 
+    visibility: hidden; 
+}
+
+/*******************************************************************************
+ * COLLECTIVE Z3CFORM DATAGRIDFIELD OVERRIDES
+ ******************************************************************************/
+
+#occams-form-editor .datagridwidget-table-view {
+	border: inherit !important;
+	width: 50% !important;
+}
+
+#occams-form-editor .datagridwidget-table-view .header {
+	font-size: 0.825em !important;
+	background: inherit !important;
+}
+
+#occams-form-editor .datagridwidget-table-view th{
+	padding: 0 0.3em !important;
+}
+
+#occams-form-editor .datagridwidget-table-view td{
+    padding: 0.3em !important;
 }
