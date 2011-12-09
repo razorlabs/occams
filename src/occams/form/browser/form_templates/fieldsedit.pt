@@ -23,13 +23,13 @@
                   <div class="occams-form-moveable">Move</div>
                   <div class="occams-form-container">
                     <div class="occams-form-head" tal:condition="renderHead">
+                      <a href="" class="occams-form-collapseable" tal:attributes="href string:#collapse">Collapse</a>
                       <div class="occams-form-metadata">
                         <div class="occams-form-title" tal:content="title">Title</div>
                         <div class="occams-form-version" tal:content="version">Version</div>
                       </div>
                       <div class="occams-form-controls">
                         <ul>
-                          <li><a href="" class="occams-form-collapseable" tal:attributes="href string:#collapse">Collapse</a></li>
                           <li><a href="" class="occams-form-editable" tal:attributes="href editUrl">Edit</a></li>
                           <li><a href="" class="occams-form-deleteable" tal:attributes="href deleteUrl">Delete</a></li>
                         </ul>
@@ -65,13 +65,13 @@
                 <div class="occams-form-moveable">Move</div>
                 <div class="occams-form-container">
                   <div class="occams-form-head" tal:condition="renderHead">
+                    <a href="" class="occams-form-collapseable" tal:attributes="href string:#collapse">Collapse</a>
                     <div class="occams-form-metadata">
                       <div class="occams-form-title" tal:content="title">Title</div>
                       <div class="occams-form-version" tal:content="version">Version</div>
                     </div>
                     <div class="occams-form-controls">
                       <ul>
-                        <li><a href="" class="occams-form-collapseable" tal:attributes="href string:#collapse">Collapse</a></li>
                         <li><a href="" class="occams-form-editable" tal:attributes="href editUrl">Edit</a></li>
                         <li><a href="" class="occams-form-deleteable" tal:attributes="href deleteUrl">Delete</a></li>
                       </ul>
@@ -100,6 +100,7 @@
                             <div  class=""  tal:attributes="class string: occams-form-item ${itemClass} ${type_}" >
                               <div class="occams-form-moveable">Move</div>
                               <div class="occams-form-container">
+                                <a href="" class="occams-form-collapseable" tal:attributes="href string:#collapse">Collapse</a>
                                 <div class="occams-form-head" tal:condition="renderHead">
                                   <div class="occams-form-metadata">
                                     <div class="occams-form-title" tal:content="title">Title</div>
@@ -107,7 +108,6 @@
                                   </div>
                                   <div class="occams-form-controls">
                                     <ul>
-                                      <li><a href="" class="occams-form-collapseable" tal:attributes="href string:#collapse">Collapse</a></li>
                                       <li><a href="" class="occams-form-editable" tal:attributes="href editUrl">Edit</a></li>
                                       <li><a href="" class="occams-form-deleteable" tal:attributes="href deleteUrl">Delete</a></li>
                                     </ul>

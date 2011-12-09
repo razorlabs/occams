@@ -92,7 +92,7 @@ from collective.z3cform.datagridfield import DataGridFieldFactory, DictRow
 #        choicesWidget.allow_delete = True  # Enable/Disable the delete button on the right 
 #        choicesWidget.auto_append = False   # Enable/Disable the auto-append feature 
 class IRow(zope.interface.Interface):
-    label = zope.schema.TextLine(title=_(u'Displayed Label'))
+    title = zope.schema.TextLine(title=_(u'Displayed Label'))
     value = zope.schema.TextLine(title=_(u'Stored Value'),)
 
 class BaseAdd(FieldFormMixin, z3c.form.form.AddForm):
@@ -165,7 +165,7 @@ class Edit(FieldFormMixin, z3c.form.form.EditForm):
     ignoreRequest = True
 
     # Render the name as input (readonly by default renders as VIEW)
-    fields = z3c.form.field.Fields(IEditableField) + \
+    fields = z3c.form.field.Fields(IEditableField).omit('name') + \
         z3c.form.field.Fields(
             zope.schema.List(
                 __name__='choices',
@@ -192,7 +192,6 @@ class Edit(FieldFormMixin, z3c.form.form.EditForm):
         for name, group in ISession(self.request)[SESSION_KEY]['groups'].items():
             if group['schema'] == formName:
                 content = group['fields'][fieldName]
-                content['choices'] = []
                 break
         return content
 

@@ -4,10 +4,10 @@
  * Conventions in this file:
  *  - Containers only define widths and top/bottom padding/margin
  *
- * Themes used:
- *  - http://colorschemedesigner.com/#1T11T3xw0w0w0
- *  - http://colorschemedesigner.com/#3z11TsOsOK-K-
- *
+ * Color Themes used:
+ *  http://colorschemedesigner.com/#1T11T3xw0w0w0
+ *  http://colorschemedesigner.com/#1T11T1BsO6q6q
+ *  http://colorschemedesigner.com/#3z11TsOsOK-K-
  */
 
 /*******************************************************************************
@@ -76,7 +76,8 @@
 }
 
 .occams-form-item .occams-form-metadata {
-	margin-right: 72px;
+	margin-left: 16px;
+	margin-right: 48px;
     padding: 0.1em 0;
 	overflow: hidden;
 }
@@ -87,6 +88,20 @@
 	float: left;
 	padding-left: 2em;
 	overflow: hidden;
+}
+
+.occams-form-item  .occams-form-collapseable {
+	background: center center url(++resource++collective.z3cform.datagridfield/delete_row_icon.gif);
+	display: block;
+	left: 0;
+	position: absolute;
+	text-indent: -9001em;
+	top: 0;
+	width: 16px;
+}
+
+.occams-form-item  .occams-form-collapsed {
+    background-image: url(++resource++collective.z3cform.datagridfield/delete_row_icon.gif);
 }
 
 /* FieldSets will be rendered first, so declare object styles first so the
@@ -134,7 +149,7 @@
 	right: 0;
 	top: 0;
 }
- 
+
 .occams-form-item .occams-form-controls ul {
 	list-style: none;
 	margin: 0 !important;
@@ -153,12 +168,8 @@
 	display: block;
 	height: 16px;
 	line-height: 16px;
-	text-indent: -90001px;
+	text-indent: -9001em;
 	width: 16px;
-}
-
-.occams-form-item .occams-form-controls .occams-form-collapseable {
-    background: url(++resource++occams.form/images/pencil.png);
 }
 
 .occams-form-item .occams-form-controls .occams-form-editable {
@@ -202,6 +213,14 @@
     margin: 0;
 }
 
+#occams-form-new .occams-form-collapseable {
+	display: none;
+}
+
+#occams-form-new .occams-form-metadata {
+    margin-left: 0;
+}
+
 #occams-form-new .occams-form-moveable {
     display: none;
 }
@@ -225,11 +244,11 @@
 
 .occams-form-fieldset > .occams-form-moveable,
 .occams-form-fieldset > .occams-form-container > .occams-form-head {
-    background-color: #BFBFB0;
+    background-color: #D5D5B6;
 }
 
 .occams-form-fieldset > .occams-form-container > .occams-form-content{
-    background: #FFFFE3;
+    background-color: #FFFFF0;
     min-height: 5em;
 }
 
@@ -245,6 +264,10 @@
     display: none;
 }
 
+.occams-form-field .occams-form-metadata {
+    margin-left: 0;
+}
+
 /*******************************************************************************
  * PLONE OVERRIDES
  ******************************************************************************/
@@ -253,6 +276,14 @@
 #occams-form-editor .fieldErrorBox .error {
     color: red;
     font-weight: bold;
+}
+
+#occams-form-editor input[type="text"], 
+#occams-form-editor textarea {
+	color: inherit !important;
+	font-family: "Lucida Grande", Arial, FreeSans !important;
+	font-size: inherit !important;
+	font-weight: inherit !important;
 }
 
 /*******************************************************************************

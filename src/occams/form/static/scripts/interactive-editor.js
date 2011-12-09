@@ -12,10 +12,7 @@
         if ( ! $('#occams-form-editor').length ){
             return;
         }
-        
-        // Disable text selection, because it's annoying when dragging/dropping
-        $('#occams-form-editor').disableSelection();
-        
+                
         // Handle scrolling events to reposition the sidebar
         $(window).scroll(onWindowScroll);
         

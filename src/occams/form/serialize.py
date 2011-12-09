@@ -108,7 +108,7 @@ def serializeField(field):
                 description=field.description,
                 version=datastore.version.bind().get(field),
                 type=type_,
-                choices=dict(),
+                choices=[],
                 is_required=field.required,
                 is_collection=isinstance(field, zope.schema.List),
                 is_readonly=field.readonly,
@@ -118,11 +118,11 @@ def serializeField(field):
 
     if isinstance(field, zope.schema.Choice):
         for order, term in enumerate(field.vocabulary, start=0):
-            result['choices'][term.token] = dict(
+            result['choices'].append(dict(
                 name=term.token,
                 title=term.title,
                 value=term.value,
                 order=order,
-                )
+                ))
 
     return result
