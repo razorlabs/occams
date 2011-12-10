@@ -1,6 +1,6 @@
 <metal:form metal:use-macro="context/@@ploneform-macros/form">
   <metal:fields-slot fill-slot="fields">
     <metal:fields metal:use-macro="context/@@ploneform-macros/fields" />
-    <div tal:replace="structure view/fieldsForm/render" />
+    <div tal:replace="structure view/fieldsSubForm/render" />
   </metal:fields-slot>
 </metal:form>

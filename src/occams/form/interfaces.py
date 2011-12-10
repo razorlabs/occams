@@ -101,6 +101,42 @@ class IEditableField(IOccamsFormComponent):
         )
 
 
+class IEditableChoice(IOccamsFormComponent):
+
+    title = zope.schema.TextLine(
+        title=_(u'Displayed Label'),
+        )
+
+class IEditableStringChoice(IEditableChoice):
+
+    value = zope.schema.TextLine(
+        title=_(u'Stored Value'),
+        reaonly=True,
+        )
+
+
+class IEditableIntegerChoice(IEditableChoice):
+
+    value = zope.schema.Int(
+        title=_(u'Stored Value'),
+        )
+
+
+class IEditableDecimalChoice(IEditableChoice):
+
+    value = zope.schema.Decimal(
+        title=_(u'Stored Value'),
+        )
+
+
+class IEditableBoolChoice(IEditableChoice):
+
+    value = zope.schema.Bool(
+        title=_(u'Stored Value'),
+        readonly=True
+        )
+
+
 class IFormSummary(IOccamsFormComponent):
     """
     Form summary for listing purposes.

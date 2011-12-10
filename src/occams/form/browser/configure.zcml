@@ -9,7 +9,7 @@
   <browser:page
       for="occams.form.interfaces.IRepository"
       name="view"
-      class=".form.Listing"
+      class=".listing.Listing"
       permission="cmf.ManagePortal" 
       />
       
@@ -18,7 +18,7 @@
   <browser:page
       for="occams.form.interfaces.ISchemaContext"
       name="edit"
-      class=".form.Edit"
+      class=".editor.Editor"
       permission="occams.form.ModifyForm" 
       />
         
@@ -27,7 +27,7 @@
   we register a view for every type the user may wish to add to a schema.
    -->
         
-  <browser:page
+<!--   <browser:page
       for="occams.form.interfaces.ISchemaContext"
       name="add-string"
       class=".field.AddString"
@@ -69,7 +69,7 @@
       permission="occams.form.ModifyForm" 
       />
       
-  <!-- ATTRIBUTES -->
+  ATTRIBUTES
             
   <browser:page
       for="occams.form.interfaces.IAttributeContext"
@@ -83,6 +83,6 @@
       name="edit"
       class=".field.Edit"
       permission="occams.form.ModifyForm" 
-      />
+      /> -->
       
 </configure>
