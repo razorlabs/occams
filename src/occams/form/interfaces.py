@@ -111,7 +111,7 @@ class IEditableStringChoice(IEditableChoice):
 
     value = zope.schema.TextLine(
         title=_(u'Stored Value'),
-        reaonly=True,
+        readonly=True,
         )
 
 

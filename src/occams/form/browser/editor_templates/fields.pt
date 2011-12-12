@@ -1,5 +1,5 @@
 <div id="occams-form-editor">
-  <metal:form metal:use-macro="context/@@ploneform-macros/form">
+  <metal:form metal:use-macro="view/@@ploneform-macros/form">
     <metal:fields-slot metal:fill-slot="fields">
     
       <div id="occams-form-aux">
@@ -55,7 +55,7 @@
                 define="
                   editUrl       python: group.editUrl();
                   deleteUrl     python: group.deleteUrl();
-                  title         string: ${group/label} (${group/prefix} : ${group/context/getName});
+                  title         string: ${group/label} (${group/prefix} : ${group/context/schema/name});
                   type_         python: group.type();
                   version       python: group.version();
                   renderHead    not: repeat/group/start;

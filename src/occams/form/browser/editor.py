@@ -1,10 +1,9 @@
 import os.path
+from datetime import datetime
 
 from zope.app.pagetemplate.viewpagetemplatefile import ViewPageTemplateFile
 from zope.interface import implements
 import zope.schema
-from zope.schema.vocabulary import SimpleVocabulary
-from zope.schema.vocabulary import SimpleTerm
 
 from collective.z3cform.datagridfield import DataGridFieldFactory
 from collective.z3cform.datagridfield import DictRow
@@ -28,6 +27,7 @@ from occams.form.interfaces import typesVocabulary
 from occams.form.browser.widgets import fieldWidgetMap
 from occams.form.browser.widgets import TextAreaFieldWidget
 from occams.form.serialize import serializeForm
+from occams.form.serialize import fieldFactory
 
 
 class Editor(layout.FormWrapper):
@@ -140,31 +140,33 @@ class FieldsForm(z3c.form.group.GroupForm, z3c.form.form.Form):
         return typesVocabulary
 
     def update(self):
-        progress = ISession(self.request)[SESSION_KEY]
-
-        fieldFilter = lambda x: x['schema'] is None
-        fieldsetFilter = lambda x: x['schema'] is not None
+        objectFilter = lambda x: x['schema'] is not None
         orderSort = lambda i: i['order']
 
-        fields = sorted(filter(fieldFilter, progress.values()), orderSort)
-        objects = sorted(filter(fieldsetFilter, progress.values()), orderSort)
+        formData = ISession(self.request)[SESSION_KEY]
 
-        self.groups.append(Fieldset(dict(name=None, fields=fields)), self.request, self)
+        defaultFieldsetData = dict(interface=formData['name'], schema=formData)
+        self.groups.append(Fieldset(defaultFieldsetData, self.request, self))
 
-        for object_ in objects:
-            self.groups.append(Fieldset(object_, self.request, self))
+        fields = formData['fields']
+        objects = sorted(filter(objectFilter, fields.values()), key=orderSort)
+
+        for objectData in objects:
+            self.groups.append(Fieldset(objectData, self.request, self))
 
         super(FieldsForm, self).update()
 
 
 class Fieldset(z3c.form.group.Group):
     """
-    A generic group for fields that of type Object to represent as a fieldset.
+    A generic group for fields of type Object to represent as a fieldset.
+    This class can also be used for the top level form to be represented as a
+    fieldset (has no referencing field).
     """
 
     @property
     def prefix(self):
-        return self.context.get('name')
+        return self.context.get('name') or ''
 
     @property
     def label(self):
@@ -178,81 +180,62 @@ class Fieldset(z3c.form.group.Group):
     def parentUrl(self):
         return self.parentForm.context.getParentNode().absolute_url()
 
-    def __init__(self, context, request, parentForm):
-        super(Fieldset, self).__init__(context, request, parentForm)
-
-        if self.fieldInParent is not None:
-            fields = z3c.form.field.Fields(self.context)
-        else:
-            names = []
-            for name, field in zope.schema.getFieldsInOrder(self.context):
-                if not isinstance(field, zope.schema.Object):
-                    names.append(name)
-            fields = z3c.form.field.Fields(self.context).select(*names)
-
-        # The fields NEED to be available before rendering otherwise the
-        # widget overrides will not apply
-        self.fields = fields
-
-    def _pathItems(self, field):
+    def fieldContext(self, field=None):
         if field is None:
-            formName = self.context.getName()
-            fieldName = self.fieldInParent is not None and self.fieldInParent.__name__ or ''
+            fieldContext = self.context
         else:
-            formName = field.interface.getName()
-            fieldName = field.__name__
-        return (formName, fieldName)
+            fieldContext = self.context['schema']['fields'][field.getName()]
+        return fieldContext
+
+    def url(self, field=None):
+        # No field within the object specifiexd, process actual object field
+        fieldContext = self.fieldContext(field)
+        formName = fieldContext.get('interface') or ''
+        fieldName = fieldContext.get('name') or ''
+        return os.path.join(self.parentUrl, formName, fieldName)
 
     def editUrl(self, field=None):
         """
         Template helper for the edit URL of a field or group
         """
-        (formName, fieldName) = self._pathItems(field)
-        return os.path.join(self.parentUrl, formName, fieldName, '@@edit')
+        return os.path.join(self.url(field), '@@edit')
 
     def deleteUrl(self, field=None):
         """
         Template helper for the delete URL of a field or group
         """
-        (formName, fieldName) = self._pathItems(field)
-        return os.path.join(self.parentUrl, formName, fieldName, '@@delete')
+        return os.path.join(self.url(field), '@@delete')
 
     def type(self, field=None):
         """
         Template helper for retrieving the type of a field or group
         """
-        if field is None:
-            type_ = 'object'
-        else:
-            type_ = datastore.type.bind().get(field)
-            if type_ is None:
-                type_ = typesVocabulary.getTerm(field.__class__).token
-        return type_
+        return self.fieldContext(field).get('type')
 
     def version(self, field=None):
         """
         Template helper for retrieving the version of a field or group
         """
-        version = None
-        if field is None:
-            if self.fieldInParent is not None:
-                versionRaw = datastore.version.bind().get(self.fieldInParent)
-            else:
-                versionRaw = None
-        else:
-            versionRaw = datastore.version.bind().get(field)
-        if versionRaw is not None:
-            version = versionRaw.strftime('%Y-%m-%d')
+        versionRaw = self.fieldContext(field).get('version') or datetime.now()
+        version = versionRaw.strftime('%Y-%m-%d')
         return version
+
+    def update(self):
+        fields = z3c.form.field.Fields()
+        for fieldContext in sorted(self.context['schema']['fields'].values(), key=lambda x: x['order']):
+            if fieldContext['type'] != 'object':
+                schemaField = fieldFactory(fieldContext)
+                fields += z3c.form.field.Fields(schemaField)
+                widgetFactory = fieldWidgetMap.get(schemaField.__class__)
+                if widgetFactory:
+                    fields[schemaField.getName()].widgetFactory = widgetFactory
+        self.fields = fields
+        super(Fieldset, self).update()
 
     def updateWidgets(self):
         """
         Configure widgets, we'll mostly be disabling to prevent data entry.
         """
-        for field in self.fields.values():
-            fieldType = field.field.__class__
-            if fieldType in fieldWidgetMap:
-                field.widgetFactory = fieldWidgetMap.get(fieldType)
         super(Fieldset, self).updateWidgets()
         # Disable fields since we're not actually entering data
         for widget in self.widgets.values():
@@ -268,53 +251,15 @@ class FieldPreview(z3c.form.form.Form):
 
     def update(self):
         self.request.set('disable_border', True)
+        schemaField = fieldFactory(self.context)
+        self.fields = z3c.form.field.Fields(schemaField)
+        widgetFactory = fieldWidgetMap.get(schemaField.__class__)
+        if widgetFactory:
+            self.fields[schemaField.getName()].widgetFactory = widgetFactory
         super(FieldPreview, self).update()
 
     def updateWidgets(self):
-        field = self.getContent()
-        factory = typesVocabulary.getTermByToken(field['type']).value
-        options = dict()
-
-        if field['choices']:
-            terms = []
-            validator = factory(**options)
-            for choice in sorted(field['choices'].values(), key=lambda c: c['order']):
-                (token, title, value) = (choice['name'], choice['title'], choice['value'])
-                value = validator.fromUnicode(value)
-                term = SimpleTerm(token=str(token), title=title, value=value)
-                terms.append(term)
-            factory = zope.schema.Choice
-            options = dict(vocabulary=SimpleVocabulary(terms))
-
-        if field['is_collection']:
-            # Wrap the factory and options into the list
-            options = dict(value_type=factory(**options), unique=True)
-            factory = zope.schema.List
-
-        if field['default']:
-            options['default'] = factory(**options).fromUnicode(field['default'])
-
-        # Update the options with the final field parameters
-        options.update(dict(
-            __name__=str(field['name']),
-            title=field['title'],
-            description=field['description'],
-            readonly=field['is_readonly'],
-            required=field['is_required'],
-            ))
-
-        result = factory(**options)
-        result.order = field['order']
-
-        self.fields = z3c.form.field.Fields(result)
-
-        for field in self.fields.values():
-            fieldType = field.field.__class__
-            if fieldType in fieldWidgetMap:
-                field.widgetFactory = fieldWidgetMap.get(fieldType)
-
         super(FieldPreview, self).updateWidgets()
-
         for widget in self.widgets.values():
             widget.disabled = 'disabled'
 

@@ -6,6 +6,8 @@ workflow-ie-ness and all that jazz.
 """
 
 import zope.schema
+from zope.schema.vocabulary import SimpleVocabulary
+from zope.schema.vocabulary import SimpleTerm
 
 from avrc.data.store import directives as datastore
 from avrc.data.store.interfaces import typesVocabulary
@@ -15,17 +17,14 @@ def serializeForm(form):
     """
     Serializes a form as a top-level (master) form.
     """
+    fields = zope.schema.getFieldsInOrder(form)
     result = dict(
         name=form.getName(),
         title=datastore.title.bind().get(form),
         description=datastore.description.bind().get(form),
         version=datastore.version.bind().get(form),
-        fields=dict()
+        fields=dict([(n, serializeField(f)) for n, f in fields])
         )
-
-    for name, field in zope.schema.getFieldsInOrder(form):
-        result['fields'][name] = serializeField(field)
-
     return result
 
 
@@ -36,6 +35,7 @@ def serializeField(field):
     type_ = datastore.type.bind().get(field) or typesVocabulary.getTerm(field.__class__).token
 
     result = dict(
+        interface=field.interface.getName(),
         name=field.__name__,
         title=field.title,
         description=field.description,
@@ -62,4 +62,41 @@ def serializeField(field):
     if isinstance(field, zope.schema.Object):
         result['schema'] = serializeForm(field.schema)
 
+    return result
+
+
+def fieldFactory(fieldData):
+    fieldFactory = typesVocabulary.getTermByToken(fieldData['type']).value
+    options = dict()
+
+    if fieldData['choices']:
+        terms = []
+        validator = fieldFactory(**options)
+        for choice in sorted(fieldData['choices'], key=lambda c: c['order']):
+            (token, title, value) = (choice['name'], choice['title'], choice['value'])
+            value = validator.fromUnicode(value)
+            term = SimpleTerm(token=str(token), title=title, value=value)
+            terms.append(term)
+        fieldFactory = zope.schema.Choice
+        options = dict(vocabulary=SimpleVocabulary(terms))
+
+    if fieldData['is_collection']:
+        # Wrap the fieldFactory and options into the list
+        options = dict(value_type=fieldFactory(**options), unique=True)
+        fieldFactory = zope.schema.List
+
+    if fieldData['default']:
+        options['default'] = fieldFactory(**options).fromUnicode(fieldData['default'])
+
+    # Update the options with the final fieldData parameters
+    options.update(dict(
+        __name__=str(fieldData['name']),
+        title=fieldData['title'],
+        description=fieldData['description'],
+        readonly=fieldData['is_readonly'],
+        required=fieldData['is_required'],
+        ))
+
+    result = fieldFactory(**options)
+    result.order = fieldData['order']
     return result
