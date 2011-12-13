@@ -4,6 +4,13 @@
     xmlns:browser="http://namespaces.zope.org/browser"
     i18n_domain="occams.form">
       
+  <!-- BROWSER TRAVERSAL -->
+  
+  <adapter 
+      factory=".traversal.RepositoryTraverse" 
+      provides="zope.publisher.interfaces.browser.IBrowserPublisher"
+      />
+      
   <!-- REPOSITORY -->
       
   <browser:page
@@ -18,7 +25,7 @@
   <browser:page
       for="occams.form.interfaces.ISchemaContext"
       name="edit"
-      class=".editor.Editor"
+      class=".editor.SchemaEditFormPloneView"
       permission="occams.form.ModifyForm" 
       />
         

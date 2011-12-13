@@ -1,15 +1,15 @@
 
-from zope.schema import getFieldNames
-
-from five import grok
-
-from occams.form.interfaces import IAttributeContext
-from occams.form.interfaces import IEditableField
-
-
-class EditableStringField(grok.Adapter):
-    grok.context(IAttributeContext)
-    grok.provides(IEditableField)
+#from zope.schema import getFieldNames
+#
+#from five import grok
+#
+#from occams.form.interfaces import IAttributeContext
+#from occams.form.interfaces import IEditableField
+#
+#
+#class EditableStringField(grok.Adapter):
+#    grok.context(IAttributeContext)
+#    grok.provides(IEditableField)
 #
 #    def __call__(self):
 #        result = dict()

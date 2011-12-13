@@ -60,7 +60,7 @@ class SummaryListingForm(crud.CrudForm):
         """
         if field == 'title':
             # Redirect to the editor for now, until we can get some stats
-            return os.path.join(self.context.absolute_url(), item.name, '@@edit')
+            return os.path.join(self.context.absolute_url(), item.name)
 
 
 class Listing(layout.FormWrapper):

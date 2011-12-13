@@ -3,14 +3,15 @@ import zope.schema
 from zope.schema.vocabulary import SimpleTerm
 from zope.schema.vocabulary import SimpleVocabulary
 
-from grokcore.component.interfaces import IContext
-from plone.directives import form
+import plone.directives.form
 
 from avrc.data.store.interfaces import IDataBaseItem
 
 from occams.form import MessageFactory as _
 
+
 SESSION_KEY = 'occams.form'
+
 
 typesVocabulary = SimpleVocabulary(terms=[
         SimpleTerm(value=zope.schema.Bool, token='boolean', title=_(u'Boolean')),
@@ -187,7 +188,7 @@ class IFormSummary(IOccamsFormComponent):
         )
 
 
-class IDataBaseItemContext(IOccamsFormComponent, IContext):
+class IDataBaseItemContext(IOccamsFormComponent):
     """
     A wrapper context for DataStore entries so they are traversable.
     This allows a wrapped entry to comply with the Acquisition machinery
@@ -219,6 +220,22 @@ class IAttributeContext(IDataBaseItemContext):
     """
 
 
+class IEditContext(IOccamsFormComponent):
+    """
+    """
+
+    data = zope.schema.Dict(title=u'sadfasf')
+
+
+class IEditSchemaContext(IEditContext):
+    """
+    """
+
+class IEditAttributeContext(IEditContext):
+    """
+    """
+
+
 class IFormSummaryGenerator(zope.interface.Interface):
     """
     Generator of ``IFormSummary`` results from a database
@@ -230,13 +247,14 @@ class IFormSummaryGenerator(zope.interface.Interface):
         """
 
 
-class IRepository(IOccamsFormComponent, form.Schema):
+class IRepository(IOccamsFormComponent, plone.directives.form.Schema):
     """
     Form repository entry point.
     Objects of this type offer services for managing forms as well as
     form EAV tables from ``avrc.data.store.DataStore``
     """
 
+    plone.directives.form.widget(session='z3c.form.browser.radio.RadioFieldWidget')
     session = zope.schema.Choice(
         title=_(u'Database Session'),
         description=_(

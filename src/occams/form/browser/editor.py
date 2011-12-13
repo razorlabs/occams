@@ -4,6 +4,7 @@ from datetime import datetime
 from zope.app.pagetemplate.viewpagetemplatefile import ViewPageTemplateFile
 from zope.interface import implements
 import zope.schema
+from zExceptions import NotFound
 
 from collective.z3cform.datagridfield import DataGridFieldFactory
 from collective.z3cform.datagridfield import DictRow
@@ -15,7 +16,6 @@ import z3c.form.field
 import z3c.form.group
 
 from avrc.data.store.interfaces import IDataStore
-from avrc.data.store import directives as datastore
 
 from occams.form import MessageFactory as _
 from occams.form.interfaces import SESSION_KEY
@@ -29,23 +29,7 @@ from occams.form.browser.widgets import TextAreaFieldWidget
 from occams.form.serialize import serializeForm
 from occams.form.serialize import fieldFactory
 
-
-class Editor(layout.FormWrapper):
-    """ 
-    Form wrapper for Z3C so that we can change the title.
-    """
-
-    @property
-    def form(self):
-        return SchemaEditForm
-
-    @property
-    def label(self):
-        return u'Edit: %s (%s)' % (self.context.item.title, self.context.item.name)
-
-    def __init__(self, context, request):
-        super(Editor, self).__init__(context, request)
-        self.request.set('disable_border', True)
+from zope.publisher.interfaces import IPublishTraverse
 
 
 class SchemaEditForm(z3c.form.form.EditForm):
@@ -110,6 +94,27 @@ class SchemaEditForm(z3c.form.form.EditForm):
         """
         # This is going to be huge
         return
+
+
+class SchemaEditFormPloneView(layout.FormWrapper):
+    """ 
+    Form wrapper for Z3C so that it appears within Plone nicely
+    """
+    implements(IOccamsBrowserView, IPublishTraverse)
+
+    form = SchemaEditForm
+
+    @property
+    def label(self):
+        return u'Edit: %s (%s)' % (self.context.item.title, self.context.item.name)
+
+    def update(self):
+        self.request.set('disable_border', True)
+        super(SchemaEditFormPloneView, self).update()
+
+    def publishTraverse(self, request, name):
+        import pdb; pdb.set_trace()
+        raise NotFound()
 
 
 class FieldsForm(z3c.form.group.GroupForm, z3c.form.form.Form):

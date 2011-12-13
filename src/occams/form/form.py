@@ -2,6 +2,8 @@
 Form summary tools
 """
 
+from zope.interface import implements
+
 from sqlalchemy import func
 from sqlalchemy import String
 from sqlalchemy import Date
@@ -10,8 +12,6 @@ from sqlalchemy.sql.expression import cast
 from sqlalchemy.sql.expression import null
 from sqlalchemy.sql.expression import literal_column
 from sqlalchemy.orm import aliased
-
-from five import grok
 
 from avrc.data.store import model
 
@@ -147,7 +147,7 @@ def summaryTableFactory(session):
 
 
 class DataStoreSchemaSummary(object):
-    grok.implements(IFormSummary)
+    implements(IFormSummary)
 
     _values = None
 
@@ -176,8 +176,8 @@ class DataStoreSchemaSummary(object):
         return self._values.get(name)
 
 
-class FormSummaryGenerator(grok.GlobalUtility):
-    grok.implements(IFormSummaryGenerator)
+class FormSummaryGenerator(object):
+    implements(IFormSummaryGenerator)
 
     def getItems(self, session):
         summaryTable = summaryTableFactory(session)
