@@ -65,8 +65,8 @@ class RepositoryTraverse(object):
     def __init__(self, context, request):
         (self.context, self.request) = (context, request)
 
-    def browserDefault(request):
-        return self, ('@@view',)
+    def browserDefault(self, request):
+        return self.context, ('@@view',)
 
     def publishTraverse(self, request, name):
         # Make sure we're not trying to go to one of the repository's actual views
@@ -92,7 +92,7 @@ class RepositoryTraverse(object):
 
         item = query.first()
 
-        if item is not None:
+        if item is None:
             browserSession = ISession(request)
 
             if SESSION_KEY in browserSession:
@@ -124,11 +124,11 @@ class SchemaTraverse(object):
     def __init__(self, context, request):
         (self.context, self.request) = (context, request)
 
-    def browserDefault(request):
+    def browserDefault(self, request):
         # Forms should just go to their edit forms, we don't have statistics
         # in place and maybe once that is complete we can go to that view
         # instead.
-        return self, ('@@edit',)
+        return self.context, ('@@edit',)
 
     def publishTraverse(self, request, name):
         # DataStore does not allow dashes in names

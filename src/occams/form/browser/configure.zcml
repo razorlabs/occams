@@ -11,6 +11,11 @@
       provides="zope.publisher.interfaces.browser.IBrowserPublisher"
       />
       
+  <adapter 
+      factory=".traversal.SchemaTraverse" 
+      provides="zope.publisher.interfaces.browser.IBrowserPublisher"
+      />
+      
   <!-- REPOSITORY -->
       
   <browser:page
@@ -34,62 +39,62 @@
   we register a view for every type the user may wish to add to a schema.
    -->
         
-<!--   <browser:page
+  <browser:page
       for="occams.form.interfaces.ISchemaContext"
       name="add-string"
-      class=".field.AddString"
+      class=".editor.FieldAddString"
       permission="occams.form.ModifyForm" 
       />
       
   <browser:page
       for="occams.form.interfaces.ISchemaContext"
       name="add-text"
-      class=".field.AddText"
+      class=".editor.FieldAddText"
       permission="occams.form.ModifyForm" 
       />
       
   <browser:page
       for="occams.form.interfaces.ISchemaContext"
       name="add-integer"
-      class=".field.AddInteger"
+      class=".editor.FieldAddInteger"
       permission="occams.form.ModifyForm" 
       />
       
   <browser:page
       for="occams.form.interfaces.ISchemaContext"
       name="add-boolean"
-      class=".field.AddBoolean"
+      class=".editor.FieldAddBoolean"
       permission="occams.form.ModifyForm" 
       />
       
   <browser:page
       for="occams.form.interfaces.ISchemaContext"
       name="add-decimal"
-      class=".field.AddDecimal"
+      class=".editor.FieldAddDecimal"
       permission="occams.form.ModifyForm" 
       />
       
   <browser:page
       for="occams.form.interfaces.ISchemaContext"
       name="add-object"
-      class=".field.AddObject"
+      class=".editor.FieldAddObject"
       permission="occams.form.ModifyForm" 
       />
       
-  ATTRIBUTES
+  <!-- ATTRIBUTES -->
             
   <browser:page
       for="occams.form.interfaces.IAttributeContext"
       name="view"
-      class=".field.View"
+      class=".editor.FieldPreview"
       permission="occams.form.ModifyForm" 
       />
       
   <browser:page
       for="occams.form.interfaces.IAttributeContext"
       name="edit"
-      class=".field.Edit"
+      class=".editor.FieldEdit"
       permission="occams.form.ModifyForm" 
-      /> -->
+      />
       
 </configure>
