@@ -19,7 +19,6 @@ from avrc.data.store.interfaces import IDataStore
 
 from occams.form import MessageFactory as _
 from occams.form.interfaces import SESSION_KEY
-from occams.form.interfaces import IOccamsBrowserView
 from occams.form.interfaces import IEditableField
 from occams.form.interfaces import IEditableForm
 from occams.form.interfaces import IEditableStringChoice
@@ -36,8 +35,6 @@ class SchemaEditForm(z3c.form.form.EditForm):
     """
     Renders the form for editing, using a subform for the fields editor.
     """
-
-    implements(IOccamsBrowserView)
 
     template = ViewPageTemplateFile('editor_templates/schema.pt')
 
@@ -65,10 +62,11 @@ class SchemaEditForm(z3c.form.form.EditForm):
         repository = self.context.getParentNode()
         formName = self.context.item.name
         formVersion = None
+
         # Load the form into the session, which is what we'll be using for
         # intermediary data storage while the form is being modified.
-        form = IDataStore(repository).schemata.get(formName, formVersion)
         browserSession = ISession(self.request)
+        form = IDataStore(repository).schemata.get(formName, formVersion)
         browserSession[SESSION_KEY] = serializeForm(form)
         browserSession.save()
 
@@ -84,8 +82,7 @@ class SchemaEditForm(z3c.form.form.EditForm):
         """
         # Delete the item in the session, leaving everything else intact
         browserSession = ISession(self.request)
-        del browserSession[SESSION_KEY]
-        browserSession.save()
+        browserSession.delete()
 
     @z3c.form.button.buttonAndHandler(_(u'Complete'), name='complete')
     def handleComplete(self):
@@ -100,7 +97,6 @@ class SchemaEditFormPloneView(layout.FormWrapper):
     """ 
     Form wrapper for Z3C so that it appears within Plone nicely
     """
-    implements(IOccamsBrowserView, IPublishTraverse)
 
     form = SchemaEditForm
 
@@ -112,11 +108,6 @@ class SchemaEditFormPloneView(layout.FormWrapper):
         self.request.set('disable_border', True)
         super(SchemaEditFormPloneView, self).update()
 
-    def publishTraverse(self, request, name):
-        import pdb; pdb.set_trace()
-        raise NotFound()
-
-
 class FieldsForm(z3c.form.group.GroupForm, z3c.form.form.Form):
     """
     Fields editor form.
@@ -127,8 +118,6 @@ class FieldsForm(z3c.form.group.GroupForm, z3c.form.form.Form):
     
     Uses Browser Session for data.
     """
-
-    implements(IOccamsBrowserView)
 
     template = ViewPageTemplateFile('editor_templates/fields.pt')
 
@@ -145,20 +134,22 @@ class FieldsForm(z3c.form.group.GroupForm, z3c.form.form.Form):
         return typesVocabulary
 
     def update(self):
+        groups = []
         objectFilter = lambda x: x['schema'] is not None
         orderSort = lambda i: i['order']
 
         formData = ISession(self.request)[SESSION_KEY]
 
         defaultFieldsetData = dict(interface=formData['name'], schema=formData)
-        self.groups.append(Fieldset(defaultFieldsetData, self.request, self))
+        groups.append(Fieldset(defaultFieldsetData, self.request, self))
 
         fields = formData['fields']
         objects = sorted(filter(objectFilter, fields.values()), key=orderSort)
 
         for objectData in objects:
-            self.groups.append(Fieldset(objectData, self.request, self))
+            groups.append(Fieldset(objectData, self.request, self))
 
+        self.groups = groups
         super(FieldsForm, self).update()
 
 
@@ -248,7 +239,6 @@ class Fieldset(z3c.form.group.Group):
 
 
 class FieldPreview(z3c.form.form.Form):
-    implements(IOccamsBrowserView)
 
     @property
     def label(self):
@@ -274,7 +264,6 @@ class FieldPreview(z3c.form.form.Form):
 #        choicesWidget.auto_append = False   # Enable/Disable the auto-append feature 
 
 class BaseFieldAdd(z3c.form.form.AddForm):
-    implements(IOccamsBrowserView)
 
     ignoreRequest = True
 
@@ -342,7 +331,6 @@ class FieldAddObject(BaseFieldAdd):
 
 
 class FieldEdit(z3c.form.form.EditForm):
-    implements(IOccamsBrowserView)
 
     ignoreRequest = True
 
@@ -369,12 +357,17 @@ class FieldEdit(z3c.form.form.EditForm):
 
     def getContent(self):
         content = None
+        browserSession = ISession(self.request)
+        formData = browserSession[SESSION_KEY]
         formName = self.context.getParentNode().item.name
         fieldName = self.context.item.name
-        for name, group in ISession(self.request)[SESSION_KEY]['groups'].items():
-            if group['schema'] == formName:
-                content = group['fields'][fieldName]
-                break
+        if fieldName in formData['fields']:
+            content = formData['fields'][fieldName]
+        else:
+            for name, fieldset in ['fields'].items():
+                if fieldset['schema'] == formName:
+                    content = fieldset['fields'][fieldName]
+                    break
         return content
 
     def update(self):
