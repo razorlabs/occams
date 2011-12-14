@@ -75,10 +75,6 @@ class RepositoryTraverse(object):
         if view is not None:
             return view
 
-        # DataStore does not allow dashes in names 
-        if '-' in name:
-            raise NotFound()
-
         datastore = IDataStore(self.context)
         session = datastore.session
         newContext = None
@@ -131,21 +127,25 @@ class SchemaTraverse(object):
         return self.context, ('@@edit',)
 
     def publishTraverse(self, request, name):
-        # DataStore does not allow dashes in names
-        if '-' in name:
-            raise NotFound()
+        # Make sure we're not trying to go to one of the repository's actual views
+        view = queryMultiAdapter((self.context, request), name=name)
+
+        if view is not None:
+            return view
 
         newContext = None
 
         # Try to find an attribute first
         item = self._findIn(model.Attribute, name)
 
-        if item is None:
+        if item is not None:
+            newContext = AttributeContext(item).__of__(self.context)
+        else:
             # The attribute wasn't found, try to check if it's a data entry
             item = self._findIn(model.Entity, name)
 
-        if item is not None:
-            newContext = AttributeContext(item).__of__(self.context)
+            if item is not None:
+                newContext = EntityContext(item).__of__(self.context)
 
         return newContext
 
@@ -163,3 +163,21 @@ class SchemaTraverse(object):
             )
 
         return query.first()
+
+
+class AttributeTraverse(object):
+    adapts(IAttributeContext, IHTTPRequest)
+    implements(IBrowserPublisher)
+
+    def __init__(self, context, request):
+        (self.context, self.request) = (context, request)
+
+    def browserDefault(self, request):
+        # Forms should just go to their edit forms, we don't have statistics
+        # in place and maybe once that is complete we can go to that view
+        # instead.
+        return self.context, ('@@edit',)
+
+    def publishTraverse(self, request, name):
+        return self.context
+

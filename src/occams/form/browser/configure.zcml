@@ -16,6 +16,11 @@
       provides="zope.publisher.interfaces.browser.IBrowserPublisher"
       />
       
+  <adapter 
+      factory=".traversal.AttributeTraverse" 
+      provides="zope.publisher.interfaces.browser.IBrowserPublisher"
+      />
+      
   <!-- REPOSITORY -->
       
   <browser:page
