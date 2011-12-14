@@ -108,6 +108,7 @@ class SchemaEditFormPloneView(layout.FormWrapper):
         self.request.set('disable_border', True)
         super(SchemaEditFormPloneView, self).update()
 
+
 class FieldsForm(z3c.form.group.GroupForm, z3c.form.form.Form):
     """
     Fields editor form.

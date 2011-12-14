@@ -24,7 +24,7 @@
             containment: 'parent',
             cursor: 'move',
             forcePlaceholderSize: true,
-            handle: '.occams-form-moveable',
+//            handle: '.occams-form-moveable',
             items: '.occams-form-fieldset:not(:first)',
             opacity: 0.6,
         });
@@ -35,7 +35,7 @@
             connectWith: '.occams-form-fields',
             cursor: 'move',
             forcePlaceholderSize: true,
-            handle: '.occams-form-moveable',
+//            handle: '.occams-form-moveable',
             opacity: 0.6,
             receive: onFieldSortReceive,
             remove: onFieldSortRemove,
@@ -47,7 +47,7 @@
         // to the fields listing. We handle new fields using the sortable's
         // ``receive`` event because using droppable's ``drop`` causes two
         // events to be triggered, a known jQuery bug.
-        $('#occams-form-new .occams-form-item:not([class*="object"])').draggable({
+        $('#occams-form-new li').draggable({
             containment: '#occams-form-editor',
             connectToSortable: '.occams-form-fields',
             cursor: 'move',
@@ -65,7 +65,7 @@
         $('.occams-form-field .occams-form-editable').click(onFieldEditStart);
         $('.occams-form-field .occams-form-deleteable').click(onFieldDeleteStart);
     };
-        
+            
     /**
      * Repositions the side bar on window scroll.
      */
@@ -101,20 +101,27 @@
             // actually the received item. This only occurs when sorting
             // a dropped item (``conntectToSortable``).
             // So instead, we find any newly dropped items....
-            var item = $(this).find('.occams-form-basic-type');
-            doNewField(item);
+            item = $(this).find('.ui-draggable').replaceWith($('#occams-form-item-template .occams-form-item').clone())
+//            item.removeClass('occams-form-type');
+//            item.addClass('occams-form-field');
+//            // It's really bad form to use the ID because it will be injected into
+//            // the page multiple times, meaning there will be multiple #form elements.
+//            // This is the only way I could ge this to work though.
+//            var url = trigger.attr('href') + ' #form';
+//            trigger.parents('.occams-form-field').find('.occams-form-view').css({display: 'none'});
+//            trigger.parents('.occams-form-field').find('.occams-form-edit').css({display: 'block'}).load(url, onFieldEditFormLoad);
+//            
+//           var newForm = $(target).find('.occams-form-edit')
+//           newForm.load()
+//           target.remove();
         } else {
             // TODO: handle the moving of another field here.
             console.log('add item to this list');
         }
     };
     
-    /**
-     * 
-     */
-    var doNewField = function( target ){
-       var newForm = $(target).after('<div class="foo"></div>');
-       target.remove();
+    var onFieldAddFormLoad = function() {
+        
     };
     
     /**

@@ -11,7 +11,6 @@ import z3c.form.field
 from avrc.data.store.interfaces import IDataStore
 from avrc.data.store import directives as datastore
 
-from occams.form.interfaces import IOccamsBrowserView
 from occams.form.interfaces import IFormSummary
 from occams.form.interfaces import IFormSummaryGenerator
 
@@ -67,7 +66,6 @@ class Listing(layout.FormWrapper):
     """
     Form wrapper so it can be rendered with a Plone layout and dynamic title.
     """
-    implements(IOccamsBrowserView)
 
     form = SummaryListingForm
 

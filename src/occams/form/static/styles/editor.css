@@ -42,8 +42,69 @@
 }
 
 /*******************************************************************************
+ * TOOLBOX
+ ******************************************************************************/
+
+#occams-form-aux h3 {
+    background-color: #205C90;
+    color: #fff;
+    font-size: 1em;
+    margin: 0;
+    padding: 1% 2%;
+    text-align: center;
+}
+
+#occams-form-new ul {
+    background: #EEE;
+    list-style: none;
+    margin: 0;
+    padding: 0.4em;
+}
+
+#occams-form-new li {
+    margin: 0 0 0.6em 0;
+    width: 250px !important;
+}
+
+#occams-form-new li:last-child {
+    margin: 0;
+}
+
+#occams-form-new a,
+#occams-form-new a:active,
+#occams-form-new a:link,
+#occams-form-new a:hover {
+    background-color: #DDD;
+    border: inherit !important;
+    display: block;
+    color: #666 !important;
+    font-weight: bold;
+    font-size: 85%;
+    overflow: hidden;
+    padding: 0.3em;
+}
+
+#occams-form-new a.object {
+    background-color: #D5D5B6;
+}
+
+#occams-form-new a:hover {
+    background-color: #666;
+    color: #fff !important;
+    cursor: move;
+}
+
+#occams-form-new a.object:hover {
+    background-color: #A6A64A;
+}
+
+/*******************************************************************************
  * ITEM 
  ******************************************************************************/
+
+#occams-form-item-template {
+	display: none;
+}
 
 .occams-form-item {
 	position: relative;
@@ -82,11 +143,15 @@
 	overflow: hidden;
 }
 
-.occams-form-item .occams-form-title {
+.occams-form-item .occams-form-title,
+#occams-form-new a {
     background-position: 1% 50%;
     background-repeat: no-repeat;
+    padding-left: 2em !important;
+}
+
+.occams-form-item .occams-form-title {
 	float: left;
-	padding-left: 2em;
 	overflow: hidden;
 }
 
@@ -106,35 +171,43 @@
 
 /* FieldSets will be rendered first, so declare object styles first so the
    other type style declarations can override it */
-.object .occams-form-title {
+.object .occams-form-title,
+#occams-form-new a.object {
     background-image: url(++resource++occams.form/images/table.png);
 }
 
-.boolean .occams-form-title {
+.boolean .occams-form-title,
+#occams-form-new a.boolean {
     background-image: url(++resource++occams.form/images/tick.png);
 }
 
-.date .occams-form-title {
+.date .occams-form-title,
+#occams-form-new a.date {
     background-image: url(++resource++occams.form/images/calendar.png);
 }
 
-.datetime .occams-form-title {
+.datetime .occams-form-title,
+#occams-form-new a.datetime {
     background-image: url(++resource++occams.form/images/time.png);
 }
 
-.decimal .occams-form-title {
+.decimal .occams-form-title,
+#occams-form-new a.decimal {
     background-image: url(++resource++occams.form/images/calculator.png);
 }
 
-.integer .occams-form-title {
+.integer .occams-form-title,
+#occams-form-new a.integer {
     background-image: url(++resource++occams.form/images/calculator.png);
 }
 
-.string .occams-form-title {
+.string .occams-form-title,
+#occams-form-new a.string {
     background-image: url(++resource++occams.form/images/textfield.png);
 }
 
-.text .occams-form-title {
+.text .occams-form-title,
+#occams-form-new a.text {
     background-image: url(++resource++occams.form/images/page_white_text.png);
 }
 
@@ -190,51 +263,6 @@
 }
 
 /*******************************************************************************
- * TOOLBOX
- ******************************************************************************/
-
-#occams-form-aux h3 {
-	background-color: #205C90;
-	color: #fff;
-	font-size: 1em;
-	margin: 0;
-	padding: 1% 2%;
-	text-align: center;
-}
-
-#occams-form-new ul {
-	background: #EEE;
-	list-style: none;
-	margin: 0;
-	padding: 0.4em;
-}
-
-#occams-form-new li {
-    margin: 0;
-}
-
-#occams-form-new .occams-form-collapseable {
-	display: none;
-}
-
-#occams-form-new .occams-form-metadata {
-    margin-left: 0;
-}
-
-#occams-form-new .occams-form-moveable {
-    display: none;
-}
-
-#occams-form-new .occams-form-container {
-    margin-left: 0;
-}
-
-#occams-form-new .occams-form-controls,
-#occams-form-new .occams-form-content {
-	display: none;
-}
-
-/*******************************************************************************
  * FIELDSET
  ******************************************************************************/
 
@@ -267,6 +295,7 @@
 .occams-form-field .occams-form-metadata {
     margin-left: 0;
 }
+
 
 /*******************************************************************************
  * PLONE OVERRIDES

@@ -12,7 +12,7 @@
       />
       
   <javascript 
-      id="++resource++occams.form/scripts/interactive-editor.js" 
+      id="++resource++occams.form/scripts/editor.js" 
       cacheable="True" 
       compression="none" 
       cookable="True"

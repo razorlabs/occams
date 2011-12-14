@@ -32,12 +32,6 @@ class IOccamsFormComponent(zope.interface.Interface):
     """
 
 
-class IOccamsBrowserView(IOccamsFormComponent):
-    """
-    Marker inteface for views of this plugin
-    """
-
-
 class IEditableForm(IOccamsFormComponent):
     """
     The human-friendly form for edidting a field.
