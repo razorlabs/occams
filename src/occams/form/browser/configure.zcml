@@ -43,50 +43,72 @@
   Since we're working with transient objects that have no object factory,
   we register a view for every type the user may wish to add to a schema.
    -->
-        
-  <browser:page
-      for="occams.form.interfaces.ISchemaContext"
-      name="add-string"
-      class=".editor.FieldAddString"
-      permission="occams.form.ModifyForm" 
-      />
-      
-  <browser:page
-      for="occams.form.interfaces.ISchemaContext"
-      name="add-text"
-      class=".editor.FieldAddText"
-      permission="occams.form.ModifyForm" 
-      />
-      
-  <browser:page
-      for="occams.form.interfaces.ISchemaContext"
-      name="add-integer"
-      class=".editor.FieldAddInteger"
-      permission="occams.form.ModifyForm" 
-      />
-      
+
   <browser:page
       for="occams.form.interfaces.ISchemaContext"
       name="add-boolean"
-      class=".editor.FieldAddBoolean"
+      class=".editor.BooleanFieldAddForm"
+      permission="occams.form.ModifyForm" 
+      />
+      
+  <browser:page
+      for="occams.form.interfaces.ISchemaContext"
+      name="add-date"
+      class=".editor.DateFieldAddForm"
+      permission="occams.form.ModifyForm" 
+      />
+      
+  <browser:page
+      for="occams.form.interfaces.ISchemaContext"
+      name="add-datetime"
+      class=".editor.DateTimeFieldAddForm"
       permission="occams.form.ModifyForm" 
       />
       
   <browser:page
       for="occams.form.interfaces.ISchemaContext"
       name="add-decimal"
-      class=".editor.FieldAddDecimal"
+      class=".editor.DecimalFieldAddForm"
+      permission="occams.form.ModifyForm" 
+      />
+      
+  <browser:page
+      for="occams.form.interfaces.ISchemaContext"
+      name="add-integer"
+      class=".editor.IntegerFieldAddForm"
+      permission="occams.form.ModifyForm" 
+      />
+            
+  <browser:page
+      for="occams.form.interfaces.ISchemaContext"
+      name="add-string"
+      class=".editor.StringFieldAddForm"
+      permission="occams.form.ModifyForm" 
+      />
+      
+   <browser:page
+      for="occams.form.interfaces.ISchemaContext"
+      name="add-text"
+      class=".editor.TextFieldAddForm"
       permission="occams.form.ModifyForm" 
       />
       
   <browser:page
       for="occams.form.interfaces.ISchemaContext"
       name="add-object"
-      class=".editor.FieldAddObject"
+      class=".editor.ObjectFieldAddForm"
       permission="occams.form.ModifyForm" 
       />
       
+      
   <!-- ATTRIBUTES -->
+  
+  <browser:page
+      for="occams.form.interfaces.IAttributeContext"
+      name="edit"
+      class=".editor.FieldEditForm"
+      permission="occams.form.ModifyForm" 
+      />
             
   <browser:page
       for="occams.form.interfaces.IAttributeContext"
@@ -94,12 +116,5 @@
       class=".editor.FieldPreview"
       permission="occams.form.ModifyForm" 
       />
-      
-  <browser:page
-      for="occams.form.interfaces.IAttributeContext"
-      name="edit"
-      class=".editor.FieldEdit"
-      permission="occams.form.ModifyForm" 
-      />
-      
+            
 </configure>

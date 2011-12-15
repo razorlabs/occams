@@ -3,10 +3,10 @@ import zope.schema
 from zope.schema.vocabulary import SimpleTerm
 from zope.schema.vocabulary import SimpleVocabulary
 
+from collective.z3cform.datagridfield import DictRow
 import plone.directives.form
 
 from avrc.data.store.interfaces import IDataBaseItem
-
 from occams.form import MessageFactory as _
 
 
@@ -63,13 +63,14 @@ class IEditableField(IOccamsFormComponent):
     The human-friendly form for edidting a field.
     """
 
+    # Note we did not make this readonly so that users with superpowers can
+    # change it
     name = zope.schema.ASCIILine(
         title=_(u'Variable Name'),
         description=_(
             u'Internal variable name, this value cannot be changed once it is '
             u'created.'
             ),
-        readonly=True,
         )
 
     title = zope.schema.TextLine(
@@ -89,6 +90,8 @@ class IEditableField(IOccamsFormComponent):
         default=False,
         )
 
+class ICollectionField(IOccamsFormComponent):
+
     is_collection = zope.schema.Bool(
         title=_(u'Multiple?'),
         description=_(u'If selected, the user may enter more than one value.'),
@@ -102,18 +105,50 @@ class IEditableChoice(IOccamsFormComponent):
         title=_(u'Displayed Label'),
         )
 
-class IEditableStringChoice(IEditableChoice):
 
-    value = zope.schema.TextLine(
+class IEditableBooleanChoice(IEditableChoice):
+
+    value = zope.schema.Bool(
         title=_(u'Stored Value'),
         readonly=True,
         )
+
+
+class IEditableBooleanField(IEditableField):
+
+    choices = zope.schema.List(
+        title=_(u'Configure True/False Labels'),
+        value_type=DictRow(schema=IEditableBooleanChoice),
+        required=True,
+        )
+
+
+class IEditableDateField(IEditableField):
+
+    pass
+
+
+class IEditableDateTimeField(IEditableField):
+
+    pass
 
 
 class IEditableIntegerChoice(IEditableChoice):
 
     value = zope.schema.Int(
         title=_(u'Stored Value'),
+        )
+
+
+class IEditableIntegerField(IEditableField, ICollectionField):
+
+    choices = zope.schema.List(
+        title=_(u'Value Constraints'),
+        description=_(
+            u'If you want the field to be limited to a subset of possible values, '
+            u'please enter them below. Leave blank otherwise.'),
+        value_type=DictRow(schema=IEditableIntegerChoice),
+        required=False,
         )
 
 
@@ -124,12 +159,46 @@ class IEditableDecimalChoice(IEditableChoice):
         )
 
 
-class IEditableBoolChoice(IEditableChoice):
+class IEditableDecimalField(IEditableField, ICollectionField):
 
-    value = zope.schema.Bool(
-        title=_(u'Stored Value'),
-        readonly=True
+    choices = zope.schema.List(
+        title=_(u'Value Constraints'),
+        description=_(
+            u'If you want the field to be limited to a subset of possible values, '
+            u'please enter them below. Leave blank otherwise.'),
+        value_type=DictRow(schema=IEditableDecimalChoice),
+        required=False,
         )
+
+
+class IEditableStringChoice(IEditableChoice):
+
+    value = zope.schema.TextLine(
+        title=_(u'Stored Value'),
+        readonly=True,
+        )
+
+
+class IEditableStringField(IEditableField, ICollectionField):
+
+    choices = zope.schema.List(
+        title=_(u'Value Constraints'),
+        description=_(
+            u'If you want the field to be limited to a subset of possible values, '
+            u'please enter them below. Leave blank otherwise.'),
+        value_type=DictRow(schema=IEditableStringChoice),
+        required=False,
+        )
+
+
+class IEditableTextField(IEditableField):
+
+    pass
+
+
+class IEditableObjectField(IEditableField):
+
+    pass
 
 
 class IFormSummary(IOccamsFormComponent):
@@ -211,22 +280,6 @@ class IEntityContext(IDataBaseItemContext):
 class IAttributeContext(IDataBaseItemContext):
     """
     Context for DatataStore Attribute wrapper.
-    """
-
-
-class IEditContext(IOccamsFormComponent):
-    """
-    """
-
-    data = zope.schema.Dict(title=u'sadfasf')
-
-
-class IEditSchemaContext(IEditContext):
-    """
-    """
-
-class IEditAttributeContext(IEditContext):
-    """
     """
 
 

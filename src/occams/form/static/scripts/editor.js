@@ -24,7 +24,6 @@
             containment: 'parent',
             cursor: 'move',
             forcePlaceholderSize: true,
-//            handle: '.occams-form-moveable',
             items: '.occams-form-fieldset:not(:first)',
             opacity: 0.6,
         });
@@ -35,7 +34,6 @@
             connectWith: '.occams-form-fields',
             cursor: 'move',
             forcePlaceholderSize: true,
-//            handle: '.occams-form-moveable',
             opacity: 0.6,
             receive: onFieldSortReceive,
             remove: onFieldSortRemove,
@@ -56,6 +54,8 @@
             revert: 'invalid',
             zIndex: 9001,
         });
+        
+        $('#occams-form-new li a').click(onNewFieldClick);
 
         // Register handlers for edit/delete fieldsets
         $('.occams-form-fieldset > .occams-form-metadata .occams-form-edit').click(onFieldsetEditStart);
@@ -89,6 +89,10 @@
         }
         
     };
+    
+    var onNewFieldClick = function(event) {
+        event.preventDefault();
+    };
 
     /**
      * Handles when an field is received from another listing. 
@@ -96,32 +100,30 @@
      * create one.
      */
     var onFieldSortReceive = function(event, ui) {
-        if (! $(ui.sender).hasClass('occams-form-fields')){
+        if (! $(ui.sender).hasClass('occams-form-fields')) {
             // Unfortunately, jQuery UI has a bug where ``ui.item``isn't 
             // actually the received item. This only occurs when sorting
             // a dropped item (``conntectToSortable``).
             // So instead, we find any newly dropped items....
-            item = $(this).find('.ui-draggable').replaceWith($('#occams-form-item-template .occams-form-item').clone())
-//            item.removeClass('occams-form-type');
-//            item.addClass('occams-form-field');
-//            // It's really bad form to use the ID because it will be injected into
-//            // the page multiple times, meaning there will be multiple #form elements.
-//            // This is the only way I could ge this to work though.
-//            var url = trigger.attr('href') + ' #form';
-//            trigger.parents('.occams-form-field').find('.occams-form-view').css({display: 'none'});
-//            trigger.parents('.occams-form-field').find('.occams-form-edit').css({display: 'block'}).load(url, onFieldEditFormLoad);
-//            
-//           var newForm = $(target).find('.occams-form-edit')
-//           newForm.load()
-//           target.remove();
+            var trigger = $(this).find('.ui-draggable');
+            var newField = $('#occams-form-item-template .occams-form-item').clone();
+            var url = trigger.find('a').attr('href') + ' #form';
+            
+            newField.addClass('occams-form-field');
+            trigger.replaceWith(newField);
+
+            console.log(url);
+            newField.find('.occams-form-view').css({display: 'none'});
+            newField.find('.occams-form-edit').css({display: 'block'}).load(url, onFieldAddFormLoad);
+            
         } else {
             // TODO: handle the moving of another field here.
             console.log('add item to this list');
         }
     };
     
-    var onFieldAddFormLoad = function() {
-        
+    var onFieldAddFormLoad = function(response, status, xhr) {
+        console.log(status);
     };
     
     /**
@@ -164,7 +166,7 @@
     /**
      * 
      */
-    var onFieldEditFormLoad = function(){
+    var onFieldEditFormLoad = function(response, status, xhr){
         var trigger = $(this);
         trigger.find('.formControls input[name*="apply"]').click(onFieldEditFormSave);
         trigger.find('.formControls input[name*="cancel"]').click(onFieldEditFormCancel);

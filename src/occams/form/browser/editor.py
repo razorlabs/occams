@@ -2,33 +2,46 @@ import os.path
 from datetime import datetime
 
 from zope.app.pagetemplate.viewpagetemplatefile import ViewPageTemplateFile
-from zope.interface import implements
-import zope.schema
-from zExceptions import NotFound
 
 from collective.z3cform.datagridfield import DataGridFieldFactory
-from collective.z3cform.datagridfield import DictRow
 from collective.beaker.interfaces import ISession
 from plone.z3cform import layout
 import z3c.form.form
 import z3c.form.button
 import z3c.form.field
 import z3c.form.group
+from  z3c.form.browser.text import TextFieldWidget
 
 from avrc.data.store.interfaces import IDataStore
 
 from occams.form import MessageFactory as _
 from occams.form.interfaces import SESSION_KEY
-from occams.form.interfaces import IEditableField
+from occams.form.interfaces import IEditableBooleanField
+from occams.form.interfaces import IEditableDateField
+from occams.form.interfaces import IEditableDateTimeField
+from occams.form.interfaces import IEditableIntegerField
+from occams.form.interfaces import IEditableDecimalField
+from occams.form.interfaces import IEditableStringField
+from occams.form.interfaces import IEditableTextField
+from occams.form.interfaces import IEditableObjectField
 from occams.form.interfaces import IEditableForm
-from occams.form.interfaces import IEditableStringChoice
 from occams.form.interfaces import typesVocabulary
 from occams.form.browser.widgets import fieldWidgetMap
 from occams.form.browser.widgets import TextAreaFieldWidget
 from occams.form.serialize import serializeForm
 from occams.form.serialize import fieldFactory
 
-from zope.publisher.interfaces import IPublishTraverse
+
+editableFieldSchemaMap = dict(
+    boolean=IEditableBooleanField,
+    date=IEditableDateField,
+    datetime=IEditableDateTimeField,
+    decimal=IEditableDecimalField,
+    integer=IEditableIntegerField,
+    string=IEditableStringField,
+    text=IEditableTextField,
+    object=IEditableObjectField,
+    )
 
 
 class SchemaEditForm(z3c.form.form.EditForm):
@@ -102,7 +115,7 @@ class SchemaEditFormPloneView(layout.FormWrapper):
 
     @property
     def label(self):
-        return u'Edit: %s (%s)' % (self.context.item.title, self.context.item.name)
+        return _(u'Edit: %s (%s)') % (self.context.item.title, self.context.item.name)
 
     def update(self):
         self.request.set('disable_border', True)
@@ -260,101 +273,107 @@ class FieldPreview(z3c.form.form.Form):
             widget.disabled = 'disabled'
 
 
-#        choicesWidget.allow_insert = True  # Enable/Disable the insert button on the right 
-#        choicesWidget.allow_delete = True  # Enable/Disable the delete button on the right 
-#        choicesWidget.auto_append = False   # Enable/Disable the auto-append feature 
+class FieldFormMixin(object):
 
-class BaseFieldAdd(z3c.form.form.AddForm):
+    typeName = None
 
-    ignoreRequest = True
+    def datagridInitialise(self, subform, widget):
+        widget.allow_reorder = True
 
-    fields = z3c.form.field.Fields(IEditableField) + \
-        z3c.form.field.Fields(
-            zope.schema.List(
-                __name__='choices',
-                title=_(u'Value Choices'),
-                description=_(
-                    u'If you want the field to be have value constraints, '
-                    u'please enter them below. Leave blank otherwise.'),
-                value_type=DictRow(schema=IEditableStringChoice),
-                required=False,
-                )
-            )
+        if self.typeName == 'boolean':
+            subform.fields['value'].widgetFactory = TextFieldWidget
+            widget.allow_insert = False
+            widget.allow_delete = False
+            widget.auto_append = False
 
-    fields['description'].widgetFactory = TextAreaFieldWidget
-    fields['choices'].widgetFactory = DataGridFieldFactory
+        if self.typeName == 'string':
+            subform.fields = subform.fields.omit('value')
 
-    type_ = None
-
-    @property
-    def label(self):
-        return _(u'New %s Field') % typesVocabulary.getTermByToken(self.type_).title
+    def datagridUpdateWidgets(self, subform, widgets, widget):
+        if self.typeName == 'boolean':
+            widgets['value'].readonly = 'readonly'
 
     def update(self):
         self.request.set('disable_border', True)
-        super(BaseFieldAdd, self).update()
-
-    def updateWidgets(self):
-        super(BaseFieldAdd, self).updateWidgets()
-        self.widgets['choices'].allow_reorder = True
-
-
-class FieldAddBoolean(BaseFieldAdd):
-    type_ = 'boolean'
+        self.fields = z3c.form.field.Fields(editableFieldSchemaMap[self.typeName])
+        self.fields['description'].widgetFactory = TextAreaFieldWidget
+        if 'choices' in self.fields:
+            self.fields['choices'].widgetFactory = DataGridFieldFactory
+        super(FieldFormMixin, self).update()
 
 
-class FieldAddInteger(BaseFieldAdd):
-    type_ = 'integer'
-
-
-class FieldAddDecimal(BaseFieldAdd):
-    type_ = 'decimal'
-
-
-class FieldAddString(BaseFieldAdd):
-    type_ = 'string'
-
-
-class FieldAddText(BaseFieldAdd):
-    type_ = 'text'
-
-
-class FieldAddDateTime(BaseFieldAdd):
-    type_ = 'datetime'
-
-
-class FieldAddTime(BaseFieldAdd):
-    type_ = 'time'
-
-
-class FieldAddObject(BaseFieldAdd):
-    type_ = 'object'
-
-
-class FieldEdit(z3c.form.form.EditForm):
+class BaseFieldAddForm(FieldFormMixin, z3c.form.form.AddForm):
 
     ignoreRequest = True
 
-    # Render the name as input (readonly by default renders as VIEW)
-    fields = z3c.form.field.Fields(IEditableField).omit('name') + \
-        z3c.form.field.Fields(
-            zope.schema.List(
-                __name__='choices',
-                title=_(u'Value Choices'),
-                description=_(
-                    u'If you want the field to be have value constraints, '
-                    u'please enter them below. Leave blank otherwise.'),
-                value_type=DictRow(schema=IEditableStringChoice),
-                required=False,
-                )
-            )
+    @property
+    def label(self):
+        return _('New %s Field') % typesVocabulary.getTermByToken(self.typeName).title
 
-    fields['description'].widgetFactory = TextAreaFieldWidget
-    fields['choices'].widgetFactory = DataGridFieldFactory
+    def nextURL(self):
+        raise NotImplementedError
+
+    def create(self, data):
+        raise NotImplementedError
+
+    def add(self, object):
+        raise NotImplementedError
+
+
+class BooleanFieldAddForm(BaseFieldAddForm):
+
+    typeName = 'boolean'
+
+    def updateWidgets(self):
+        super(BooleanFieldAddForm, self).updateWidgets()
+        self.widgets['choices'].value = [
+            dict(title=u'False', value=False),
+            dict(title=u'True', value=True),
+            ]
+
+
+class DateFieldAddForm(BaseFieldAddForm):
+
+    typeName = 'date'
+
+
+class DateTimeFieldAddForm(BaseFieldAddForm):
+
+    typeName = 'datetime'
+
+
+class DecimalFieldAddForm(BaseFieldAddForm):
+
+    typeName = 'decimal'
+
+
+class IntegerFieldAddForm(BaseFieldAddForm):
+
+    typeName = 'integer'
+
+
+class StringFieldAddForm(BaseFieldAddForm):
+
+    typeName = 'string'
+
+
+class TextFieldAddForm(BaseFieldAddForm):
+
+    typeName = 'text'
+
+
+class ObjectFieldAddForm(BaseFieldAddForm):
+
+    typeName = 'object'
+
+
+class FieldEditForm(FieldFormMixin, z3c.form.form.EditForm):
+
+    ignoreRequest = True
 
     @property
     def label(self):
-        return 'Edit: %s' % self.context.item.name
+        return _(u'Edit: %s') % self.context.item.name
 
     def getContent(self):
         content = None
@@ -372,8 +391,12 @@ class FieldEdit(z3c.form.form.EditForm):
         return content
 
     def update(self):
-        self.request.set('disable_border', True)
-        super(FieldEdit, self).update()
+        self.typeName = self.context.item.type
+        super(FieldEditForm, self).update()
+
+    def updateWidgets(self):
+        super(FieldEditForm, self).updateWidgets()
+        self.widgets['name'].readonly = 'readonly'
 
     @z3c.form.button.buttonAndHandler(_(u'Cancel'), name='cancel')
     def handleCancel(self, action):
@@ -385,14 +408,15 @@ class FieldEdit(z3c.form.form.EditForm):
         """
         Saves field changes to the browser session.
         """
-        super(FieldEdit, self).handleApply(action)
+        super(FieldEditForm, self).handleApply(action)
         if self.status == self.successMessage:
             self.request.response.redirect(os.path.join(self.context.absolute_url(), '@@view'))
 
 
-class FieldOrder(object):
+class FieldOrder(z3c.form.form.Form):
     pass
 
 
-class FieldRemove(object):
+class FieldRemove(z3c.form.form.Form):
     pass
+

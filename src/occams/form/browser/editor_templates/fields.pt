@@ -25,34 +25,31 @@
         <div id="occams-form-item-template">
           <tal:block
               define="
-                  editUrl       nothing;
-                  deleteUrl     nothing;
-                  title         nothing;
-                  type_         nothing;
-                  version       nothing;
+                  editUrl       string:;
+                  deleteUrl     string:;
+                  title         string: New Field;
+                  type_         string:;
+                  version       string:;
                   renderHead    python: True;
-                  itemClass     nothing;
+                  itemClass     string:;
                ">
             <div  class=""  tal:attributes="class string: occams-form-item ${itemClass} ${type_}" >
-              <div class="occams-form-moveable">Move</div>
-              <div class="occams-form-container">
-                <div class="occams-form-head" tal:condition="renderHead">
-                  <a href="" class="occams-form-collapseable" tal:attributes="href string:#collapse">Collapse</a>
-                  <div class="occams-form-metadata">
-                    <div class="occams-form-title" tal:content="title">Title</div>
-                    <div class="occams-form-version" tal:content="version">Version</div>
-                  </div>
-                  <div class="occams-form-controls">
-                    <ul>
-                      <li><a href="" class="occams-form-editable" tal:attributes="href editUrl">Edit</a></li>
-                      <li><a href="" class="occams-form-deleteable" tal:attributes="href deleteUrl">Delete</a></li>
-                    </ul>
-                  </div>
+              <div class="occams-form-head" tal:condition="renderHead">
+                <a href="" class="occams-form-collapseable" tal:attributes="href string:#collapse">Collapse</a>
+                <div class="occams-form-metadata">
+                  <div class="occams-form-title" tal:content="title">Title</div>
+                  <div class="occams-form-version" tal:content="version">Version</div>
                 </div>
-                <div class="occams-form-content">
-                  <div class="occams-form-view"></div>
-                  <div class="occams-form-edit"></div>
+                <div class="occams-form-controls">
+                  <ul>
+                    <li><a href="" class="occams-form-editable" tal:attributes="href editUrl">Edit</a></li>
+                    <li><a href="" class="occams-form-deleteable" tal:attributes="href deleteUrl">Delete</a></li>
+                  </ul>
                 </div>
+              </div>
+              <div class="occams-form-content">
+                <div class="occams-form-view"></div>
+                <div class="occams-form-edit"></div>
               </div>
             </div>
           </tal:block>
@@ -71,72 +68,66 @@
                   renderHead    not: repeat/group/start;
                   itemClass     string: occams-form-fieldset;
                 ">
-              <div  class=""  tal:attributes="class string: occams-form-item ${itemClass} ${type_}" >
-                <div class="occams-form-moveable">Move</div>
-                <div class="occams-form-container">
-                  <div class="occams-form-head" tal:condition="renderHead">
-                    <a href="" class="occams-form-collapseable" tal:attributes="href string:#collapse">Collapse</a>
-                    <div class="occams-form-metadata">
-                      <div class="occams-form-title" tal:content="title">Title</div>
-                      <div class="occams-form-version" tal:content="version">Version</div>
-                    </div>
-                    <div class="occams-form-controls">
-                      <ul>
-                        <li><a href="" class="occams-form-editable" tal:attributes="href editUrl">Edit</a></li>
-                        <li><a href="" class="occams-form-deleteable" tal:attributes="href deleteUrl">Delete</a></li>
-                      </ul>
-                    </div>
+            <div  class=""  tal:attributes="class string: occams-form-item ${itemClass} ${type_}" >
+                <div class="occams-form-head" tal:condition="renderHead">
+                  <a href="" class="occams-form-collapseable" tal:attributes="href string:#collapse">Collapse</a>
+                  <div class="occams-form-metadata">
+                    <div class="occams-form-title" tal:content="title">Title</div>
+                    <div class="occams-form-version" tal:content="version">Version</div>
                   </div>
-                  <div class="occams-form-content">
-                    <div class="ocams-form-view">
-                      <p 
-                          class="occams-form-description"
-                          tal:define="group_description group/description|nothing"
-                          tal:condition="group_description"
-                          tal:content="structure group_description">
-                        Description
-                      </p>
-                      <div class="occams-form-fields">
-                        <tal:widgets repeat="widget group/widgets/values">
-                          <tal:block define="
-                                editUrl       python: group.editUrl(widget.field);
-                                deleteUrl     python: group.deleteUrl(widget.field);
-                                title         python: widget.field.__name__ + ' : ' + group.type(widget.field);
-                                type_         python: group.type(widget.field);
-                                version       python: group.version(widget.field);
-                                renderHead    python: True;
-                                itemClass     string: occams-form-field;
-                              ">
-                            <div  class=""  tal:attributes="class string: occams-form-item ${itemClass} ${type_}" >
-                              <div class="occams-form-moveable">Move</div>
-                              <div class="occams-form-container">
-                                <a href="" class="occams-form-collapseable" tal:attributes="href string:#collapse">Collapse</a>
-                                <div class="occams-form-head" tal:condition="renderHead">
-                                  <div class="occams-form-metadata">
-                                    <div class="occams-form-title" tal:content="title">Title</div>
-                                    <div class="occams-form-version" tal:content="version">Version</div>
-                                  </div>
-                                  <div class="occams-form-controls">
-                                    <ul>
-                                      <li><a href="" class="occams-form-editable" tal:attributes="href editUrl">Edit</a></li>
-                                      <li><a href="" class="occams-form-deleteable" tal:attributes="href deleteUrl">Delete</a></li>
-                                    </ul>
-                                  </div>
-                                </div>
-                                <div class="occams-form-content">
-                                  <div class="occams-form-view">
-                                    <tal:widget tal:replace="structure widget/@@ploneform-render-widget"/>
-                                  </div>
-                                  <div class="occams-form-edit"></div>
-                                </div>
+                  <div class="occams-form-controls">
+                    <ul>
+                      <li><a href="" class="occams-form-editable" tal:attributes="href editUrl">Edit</a></li>
+                      <li><a href="" class="occams-form-deleteable" tal:attributes="href deleteUrl">Delete</a></li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="occams-form-content">
+                  <div class="ocams-form-view">
+                    <p 
+                        class="occams-form-description"
+                        tal:define="group_description group/description|nothing"
+                        tal:condition="group_description"
+                        tal:content="structure group_description">
+                      Description
+                    </p>
+                    <div class="occams-form-fields">
+                      <tal:widgets repeat="widget group/widgets/values">
+                        <tal:block define="
+                              editUrl       python: group.editUrl(widget.field);
+                              deleteUrl     python: group.deleteUrl(widget.field);
+                              title         python: widget.field.__name__ + ' : ' + group.type(widget.field);
+                              type_         python: group.type(widget.field);
+                              version       python: group.version(widget.field);
+                              renderHead    python: True;
+                              itemClass     string: occams-form-field;
+                            ">
+                          <div  class=""  tal:attributes="class string: occams-form-item ${itemClass} ${type_}" >
+                            <a href="" class="occams-form-collapseable" tal:attributes="href string:#collapse">Collapse</a>
+                            <div class="occams-form-head" tal:condition="renderHead">
+                              <div class="occams-form-metadata">
+                                <div class="occams-form-title" tal:content="title">Title</div>
+                                <div class="occams-form-version" tal:content="version">Version</div>
+                              </div>
+                              <div class="occams-form-controls">
+                                <ul>
+                                  <li><a href="" class="occams-form-editable" tal:attributes="href editUrl">Edit</a></li>
+                                  <li><a href="" class="occams-form-deleteable" tal:attributes="href deleteUrl">Delete</a></li>
+                                </ul>
                               </div>
                             </div>
-                          </tal:block>                    
-                        </tal:widgets>
-                      </div>
+                            <div class="occams-form-content">
+                              <div class="occams-form-view">
+                                <tal:widget tal:replace="structure widget/@@ploneform-render-widget"/>
+                              </div>
+                              <div class="occams-form-edit"></div>
+                            </div>
+                          </div>
+                        </tal:block>                    
+                      </tal:widgets>
                     </div>
-                    <div class="occams-form-edit"></div>
                   </div>
+                  <div class="occams-form-edit"></div>
                 </div>
               </div>
             </tal:block>

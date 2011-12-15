@@ -22,6 +22,7 @@ from sqlalchemy.orm import object_session
 from avrc.data.store import model
 from avrc.data.store.interfaces import IDataStore
 
+from occams.form import Logger as log
 from occams.form.interfaces import SESSION_KEY
 from occams.form.interfaces import IRepository
 from occams.form.interfaces import IDataBaseItemContext
