@@ -105,6 +105,8 @@ class IEditableChoice(IOccamsFormComponent):
         title=_(u'Displayed Label'),
         )
 
+    value = zope.interface.Attribute(_(u'The value stored for the answer choice'))
+
 
 class IEditableBooleanChoice(IEditableChoice):
 
@@ -173,10 +175,7 @@ class IEditableDecimalField(IEditableField, ICollectionField):
 
 class IEditableStringChoice(IEditableChoice):
 
-    value = zope.schema.TextLine(
-        title=_(u'Stored Value'),
-        readonly=True,
-        )
+    pass
 
 
 class IEditableStringField(IEditableField, ICollectionField):

@@ -21,10 +21,8 @@
         // can get rather huge and so it will look weird.
         $('#occams-form-fieldsets').sortable({
             axis: 'y',
-            containment: 'parent',
             cursor: 'move',
             forcePlaceholderSize: true,
-            items: '.occams-form-fieldset:not(:first)',
             opacity: 0.6,
         });
         
@@ -45,9 +43,19 @@
         // to the fields listing. We handle new fields using the sortable's
         // ``receive`` event because using droppable's ``drop`` causes two
         // events to be triggered, a known jQuery bug.
-        $('#occams-form-new li').draggable({
+        $('#occams-form-new li:not(:has(a[class="object"]))').draggable({
             containment: '#occams-form-editor',
             connectToSortable: '.occams-form-fields',
+            cursor: 'move',
+            // TODO: should be changed to a more suitable div
+            helper: 'clone',
+            revert: 'invalid',
+            zIndex: 9001,
+        });
+        
+        $('#occams-form-new li:has(a[class="object"])').draggable({
+            containment: '#occams-form-editor',
+            connectToSortable: '#occams-form-fieldsets',
             cursor: 'move',
             // TODO: should be changed to a more suitable div
             helper: 'clone',
@@ -107,12 +115,11 @@
             // So instead, we find any newly dropped items....
             var trigger = $(this).find('.ui-draggable');
             var newField = $('#occams-form-item-template .occams-form-item').clone();
-            var url = trigger.find('a').attr('href') + ' #form';
+            var url = $.trim(trigger.find('a').attr('href')) + ' #form';
             
             newField.addClass('occams-form-field');
             trigger.replaceWith(newField);
 
-            console.log(url);
             newField.find('.occams-form-view').css({display: 'none'});
             newField.find('.occams-form-edit').css({display: 'block'}).load(url, onFieldAddFormLoad);
             
@@ -158,7 +165,7 @@
         // It's really bad form to use the ID because it will be injected into
         // the page multiple times, meaning there will be multiple #form elements.
         // This is the only way I could ge this to work though.
-        var url = trigger.attr('href') + ' #form';
+        var url = $.trim(trigger.attr('href')) + ' #form';
         trigger.parents('.occams-form-field').find('.occams-form-view').css({display: 'none'});
         trigger.parents('.occams-form-field').find('.occams-form-edit').css({display: 'block'}).load(url, onFieldEditFormLoad);
     };

@@ -10,7 +10,7 @@
           <ul>
             <li tal:repeat="type_ view/types">
               <tal:block tal:define="
-                  addUrl    string: ${context/absolute_url}/@@add-${type_/token};
+                  addUrl    string:${context/absolute_url}/@@add-${type_/token};
                   name      type_/token ;
                   title     type_/title;
                   ">
@@ -23,17 +23,17 @@
       
       <div id="occams-form-main">
         <div id="occams-form-item-template">
-          <tal:block
+          <tal:item-template
               define="
                   editUrl       string:;
                   deleteUrl     string:;
-                  title         string: New Field;
+                  title         string:New Field;
                   type_         string:;
                   version       string:;
                   renderHead    python: True;
                   itemClass     string:;
                ">
-            <div  class=""  tal:attributes="class string: occams-form-item ${itemClass} ${type_}" >
+            <div  class=""  tal:attributes="class string:occams-form-item ${itemClass} ${type_}" >
               <div class="occams-form-head" tal:condition="renderHead">
                 <a href="" class="occams-form-collapseable" tal:attributes="href string:#collapse">Collapse</a>
                 <div class="occams-form-metadata">
@@ -52,89 +52,96 @@
                 <div class="occams-form-edit"></div>
               </div>
             </div>
-          </tal:block>
+          </tal:item-template>
         </div>
       
         <!-- The form schema's field widgets -->
-        <div id="occams-form-fieldsets">
-          <tal:block tal:repeat="group groups">
-            <tal:block 
-                define="
-                  editUrl       python: group.editUrl();
-                  deleteUrl     python: group.deleteUrl();
-                  title         string: ${group/label} (${group/prefix} : ${group/context/schema/name});
-                  type_         python: group.type();
-                  version       python: group.version();
-                  renderHead    not: repeat/group/start;
-                  itemClass     string: occams-form-fieldset;
-                ">
-            <div  class=""  tal:attributes="class string: occams-form-item ${itemClass} ${type_}" >
-                <div class="occams-form-head" tal:condition="renderHead">
-                  <a href="" class="occams-form-collapseable" tal:attributes="href string:#collapse">Collapse</a>
-                  <div class="occams-form-metadata">
-                    <div class="occams-form-title" tal:content="title">Title</div>
-                    <div class="occams-form-version" tal:content="version">Version</div>
-                  </div>
-                  <div class="occams-form-controls">
-                    <ul>
-                      <li><a href="" class="occams-form-editable" tal:attributes="href editUrl">Edit</a></li>
-                      <li><a href="" class="occams-form-deleteable" tal:attributes="href deleteUrl">Delete</a></li>
-                    </ul>
-                  </div>
-                </div>
-                <div class="occams-form-content">
-                  <div class="ocams-form-view">
-                    <p 
-                        class="occams-form-description"
-                        tal:define="group_description group/description|nothing"
-                        tal:condition="group_description"
-                        tal:content="structure group_description">
-                      Description
-                    </p>
-                    <div class="occams-form-fields">
-                      <tal:widgets repeat="widget group/widgets/values">
-                        <tal:block define="
-                              editUrl       python: group.editUrl(widget.field);
-                              deleteUrl     python: group.deleteUrl(widget.field);
-                              title         python: widget.field.__name__ + ' : ' + group.type(widget.field);
-                              type_         python: group.type(widget.field);
-                              version       python: group.version(widget.field);
-                              renderHead    python: True;
-                              itemClass     string: occams-form-field;
-                            ">
-                          <div  class=""  tal:attributes="class string: occams-form-item ${itemClass} ${type_}" >
-                            <a href="" class="occams-form-collapseable" tal:attributes="href string:#collapse">Collapse</a>
-                            <div class="occams-form-head" tal:condition="renderHead">
-                              <div class="occams-form-metadata">
-                                <div class="occams-form-title" tal:content="title">Title</div>
-                                <div class="occams-form-version" tal:content="version">Version</div>
-                              </div>
-                              <div class="occams-form-controls">
-                                <ul>
-                                  <li><a href="" class="occams-form-editable" tal:attributes="href editUrl">Edit</a></li>
-                                  <li><a href="" class="occams-form-deleteable" tal:attributes="href deleteUrl">Delete</a></li>
-                                </ul>
-                              </div>
-                            </div>
-                            <div class="occams-form-content">
-                              <div class="occams-form-view">
-                                <tal:widget tal:replace="structure widget/@@ploneform-render-widget"/>
-                              </div>
-                              <div class="occams-form-edit"></div>
-                            </div>
+        <tal:sets tal:repeat="count python: range(2)">
+          <tal:set define="isFirstCount repeat/count/start">
+            <div id="" tal:attributes="id python: isFirstCount and 'occams-form-default-fieldset' or 'occams-form-fieldsets'">
+              <tal:fieldsets tal:repeat="fieldset groups">
+                <tal:check
+                    define="isFirstFieldset repeat/fieldset/start" 
+                    condition="python: (isFirstCount and isFirstFieldset) or not (isFirstCount or isFirstFieldset)">
+                  <tal:fieldset
+                      define="
+                        editUrl       python: fieldset.editUrl();
+                        deleteUrl     python: fieldset.deleteUrl();
+                        title         string:${fieldset/label} (${fieldset/prefix} : ${fieldset/context/schema/name});
+                        type_         python: fieldset.type();
+                        version       python: fieldset.version();
+                        renderHead    not: repeat/fieldset/start;
+                        itemClass     string:occams-form-fieldset;
+                      ">
+                    <div  class=""  tal:attributes="class string:occams-form-item ${itemClass} ${type_}" >
+                      <div class="occams-form-head" tal:condition="renderHead">
+                        <a href="" class="occams-form-collapseable" tal:attributes="href string:#collapse">Collapse</a>
+                        <div class="occams-form-metadata">
+                          <div class="occams-form-title" tal:content="title">Title</div>
+                          <div class="occams-form-version" tal:content="version">Version</div>
+                        </div>
+                        <div class="occams-form-controls">
+                          <ul>
+                            <li><a href="" class="occams-form-editable" tal:attributes="href editUrl">Edit</a></li>
+                            <li><a href="" class="occams-form-deleteable" tal:attributes="href deleteUrl">Delete</a></li>
+                          </ul>
+                        </div>
+                      </div>
+                      <div class="occams-form-content">
+                        <div class="ocams-form-view">
+                          <p 
+                              class="occams-form-description"
+                              tal:define="fieldset_description fieldset/description|nothing"
+                              tal:condition="fieldset_description"
+                              tal:content="structure fieldset_description">
+                            Description
+                          </p>
+                          <div class="occams-form-fields">
+                            <tal:widgets repeat="widget fieldset/widgets/values">
+                              <tal:field define="
+                                    editUrl       python: fieldset.editUrl(widget.field);
+                                    deleteUrl     python: fieldset.deleteUrl(widget.field);
+                                    title         python: widget.field.__name__ + ' : ' + fieldset.type(widget.field);
+                                    type_         python: fieldset.type(widget.field);
+                                    version       python: fieldset.version(widget.field);
+                                    renderHead    python: True;
+                                    itemClass     string:occams-form-field;
+                                  ">
+                                <div  class=""  tal:attributes="class string:occams-form-item ${itemClass} ${type_}" >
+                                  <a href="" class="occams-form-collapseable" tal:attributes="href string:#collapse">Collapse</a>
+                                  <div class="occams-form-head" tal:condition="renderHead">
+                                    <div class="occams-form-metadata">
+                                      <div class="occams-form-title" tal:content="title">Title</div>
+                                      <div class="occams-form-version" tal:content="version">Version</div>
+                                    </div>
+                                    <div class="occams-form-controls">
+                                      <ul>
+                                        <li><a href="" class="occams-form-editable" tal:attributes="href editUrl">Edit</a></li>
+                                        <li><a href="" class="occams-form-deleteable" tal:attributes="href deleteUrl">Delete</a></li>
+                                      </ul>
+                                    </div>
+                                  </div>
+                                  <div class="occams-form-content">
+                                    <div class="occams-form-view">
+                                      <tal:widget tal:replace="structure widget/@@ploneform-render-widget"/>
+                                    </div>
+                                    <div class="occams-form-edit"></div>
+                                  </div>
+                                </div>
+                              </tal:field>                    
+                            </tal:widgets>
                           </div>
-                        </tal:block>                    
-                      </tal:widgets>
+                        </div>
+                        <div class="occams-form-edit"></div>
+                      </div>
                     </div>
-                  </div>
-                  <div class="occams-form-edit"></div>
-                </div>
-              </div>
-            </tal:block>
-          </tal:block>
-        </div>
+                  </tal:fieldset>
+                </tal:check>
+              </tal:fieldsets>
+            </div>
+          </tal:set>
+        </tal:sets>
       </div>
-
     </metal:fields-slot>
   </metal:form>
 </div>

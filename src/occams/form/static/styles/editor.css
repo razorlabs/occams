@@ -300,6 +300,17 @@
 	font-weight: inherit !important;
 }
 
+#occams-form-editor input[type="text"][readonly="readonly"], 
+#occams-form-editor textarea[readonly="readonly"] {
+	background-color: #DDD !important;
+    color: #666 !important;
+	-webkit-user-select: none;
+	-khtml-user-select: none;
+	-moz-user-select: none;
+	-o-user-select: none;
+	user-select: none;
+}
+
 /*******************************************************************************
  * JQUERY OVERRIDES
  ******************************************************************************/

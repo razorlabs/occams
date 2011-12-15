@@ -286,9 +286,6 @@ class FieldFormMixin(object):
             widget.allow_delete = False
             widget.auto_append = False
 
-        if self.typeName == 'string':
-            subform.fields = subform.fields.omit('value')
-
     def datagridUpdateWidgets(self, subform, widgets, widget):
         if self.typeName == 'boolean':
             widgets['value'].readonly = 'readonly'
