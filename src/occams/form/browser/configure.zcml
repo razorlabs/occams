@@ -21,6 +21,11 @@
       provides="zope.publisher.interfaces.browser.IBrowserPublisher"
       />
       
+      
+  <!-- FORM OVERRIDES -->
+  
+  <adapter factory=".editor.AddActions" />
+      
   <!-- REPOSITORY -->
       
   <browser:page

@@ -2,6 +2,8 @@ import os.path
 from datetime import datetime
 
 from zope.app.pagetemplate.viewpagetemplatefile import ViewPageTemplateFile
+from zope.component import adapts
+from zope.interface import Interface
 
 from collective.z3cform.datagridfield import DataGridFieldFactory
 from collective.beaker.interfaces import ISession
@@ -11,6 +13,7 @@ import z3c.form.button
 import z3c.form.field
 import z3c.form.group
 from  z3c.form.browser.text import TextFieldWidget
+from z3c.form.interfaces import IAddForm
 
 from avrc.data.store.interfaces import IDataStore
 
@@ -25,6 +28,7 @@ from occams.form.interfaces import IEditableStringField
 from occams.form.interfaces import IEditableTextField
 from occams.form.interfaces import IEditableObjectField
 from occams.form.interfaces import IEditableForm
+from occams.form.interfaces import IDataBaseItemContext
 from occams.form.interfaces import typesVocabulary
 from occams.form.browser.widgets import fieldWidgetMap
 from occams.form.browser.widgets import TextAreaFieldWidget
@@ -42,6 +46,25 @@ editableFieldSchemaMap = dict(
     text=IEditableTextField,
     object=IEditableObjectField,
     )
+
+class AddActions(z3c.form.button.ButtonActions):
+    adapts(IAddForm, Interface, IDataBaseItemContext)
+
+    def update(self):
+        self.form.buttons = z3c.form.button.Buttons(
+            z3c.form.button.Button('cancel', u'Cancel'),
+            self.form.buttons,
+            )
+        super(AddActions, self).update()
+
+class AddActionHandler(z3c.form.button.ButtonActionHandler):
+    adapts(IAddForm, Interface, Interface, z3c.form.button.ButtonAction)
+
+    def __call__(self):
+        if self.action.name == 'form.buttons.cancel':
+            self.form._finishedAdd = True
+            return
+        super(AddActionHandler, self).__call__()
 
 
 class SchemaEditForm(z3c.form.form.EditForm):

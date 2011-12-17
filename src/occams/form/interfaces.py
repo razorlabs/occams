@@ -84,17 +84,22 @@ class IEditableField(IOccamsFormComponent):
         required=False,
         )
 
-    is_required = zope.schema.Bool(
-        title=_(u'Required?'),
-        description=_(u'If selected, the user will be required to enter a value.'),
-        default=False,
-        )
 
-class ICollectionField(IOccamsFormComponent):
+
+class ICollectable(IOccamsFormComponent):
 
     is_collection = zope.schema.Bool(
         title=_(u'Multiple?'),
         description=_(u'If selected, the user may enter more than one value.'),
+        default=False,
+        )
+
+
+class IRequireable(IOccamsFormComponent):
+
+    is_required = zope.schema.Bool(
+        title=_(u'Required?'),
+        description=_(u'If selected, the user will be required to enter a value.'),
         default=False,
         )
 
@@ -116,7 +121,7 @@ class IEditableBooleanChoice(IEditableChoice):
         )
 
 
-class IEditableBooleanField(IEditableField):
+class IEditableBooleanField(IEditableField, IRequireable):
 
     choices = zope.schema.List(
         title=_(u'Configure True/False Labels'),
@@ -125,12 +130,12 @@ class IEditableBooleanField(IEditableField):
         )
 
 
-class IEditableDateField(IEditableField):
+class IEditableDateField(IEditableField, IRequireable):
 
     pass
 
 
-class IEditableDateTimeField(IEditableField):
+class IEditableDateTimeField(IEditableField, IRequireable):
 
     pass
 
@@ -142,7 +147,7 @@ class IEditableIntegerChoice(IEditableChoice):
         )
 
 
-class IEditableIntegerField(IEditableField, ICollectionField):
+class IEditableIntegerField(IEditableField, IRequireable, ICollectable):
 
     choices = zope.schema.List(
         title=_(u'Value Constraints'),
@@ -161,7 +166,7 @@ class IEditableDecimalChoice(IEditableChoice):
         )
 
 
-class IEditableDecimalField(IEditableField, ICollectionField):
+class IEditableDecimalField(IEditableField, IRequireable, ICollectable):
 
     choices = zope.schema.List(
         title=_(u'Value Constraints'),
@@ -178,7 +183,7 @@ class IEditableStringChoice(IEditableChoice):
     pass
 
 
-class IEditableStringField(IEditableField, ICollectionField):
+class IEditableStringField(IEditableField, IRequireable, ICollectable):
 
     choices = zope.schema.List(
         title=_(u'Value Constraints'),
@@ -190,7 +195,7 @@ class IEditableStringField(IEditableField, ICollectionField):
         )
 
 
-class IEditableTextField(IEditableField):
+class IEditableTextField(IEditableField, IRequireable, ICollectable):
 
     pass
 

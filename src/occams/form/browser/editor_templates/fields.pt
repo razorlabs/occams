@@ -23,7 +23,7 @@
       
       <div id="occams-form-main">
         <div id="occams-form-item-template">
-          <tal:item-template
+          <tal:item
               define="
                   editUrl       string:;
                   deleteUrl     string:;
@@ -52,7 +52,7 @@
                 <div class="occams-form-edit"></div>
               </div>
             </div>
-          </tal:item-template>
+          </tal:item>
         </div>
       
         <!-- The form schema's field widgets -->

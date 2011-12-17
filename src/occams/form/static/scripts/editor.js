@@ -22,8 +22,10 @@
         $('#occams-form-fieldsets').sortable({
             axis: 'y',
             cursor: 'move',
-            forcePlaceholderSize: true,
+            forcePlaceholderSize: false,
             opacity: 0.6,
+            receive: onFieldsetSortReceive,
+            remove: onFieldsetSortRemove,
         });
         
         // Configure fields as sortable within fieldsets (and across fieldsets)
@@ -31,12 +33,14 @@
             axis: 'y',
             connectWith: '.occams-form-fields',
             cursor: 'move',
-            forcePlaceholderSize: true,
+            forcePlaceholderSize: false,
             opacity: 0.6,
             receive: onFieldSortReceive,
             remove: onFieldSortRemove,
             tolerance: 'intersect',
         });
+        
+        $('#occams-form-new li a').click(onNewFieldClick);
         
         // Configure types as draggable, this is how the user will add new fields
         // to a form. Also, using ``connectToSortable``, we can add it
@@ -63,8 +67,6 @@
             zIndex: 9001,
         });
         
-        $('#occams-form-new li a').click(onNewFieldClick);
-
         // Register handlers for edit/delete fieldsets
         $('.occams-form-fieldset > .occams-form-metadata .occams-form-edit').click(onFieldsetEditStart);
         $('.occams-form-fieldset > .occams-form-metadata .occams-form-delete').click(onFieldsetDeleteStart);
@@ -97,9 +99,55 @@
         }
         
     };
-    
+
+    /**
+     * 
+     */
     var onNewFieldClick = function(event) {
         event.preventDefault();
+    };
+
+    /**
+     * 
+     */
+    var onFieldsetSortReceive = function(event, ui) {
+        var trigger = $(this);
+        
+        if (! $(ui.sender).hasClass('occams-form-fields')) {
+            // Unfortunately, jQuery UI has a bug where ``ui.item``isn't 
+            // actually the received item. This only occurs when sorting
+            // a dropped item (``conntectToSortable``).
+            // So instead, we find any newly dropped items....
+            if (! trigger.hasClass('ui-draggable')){
+                trigger = $(this).find('.ui-draggable');
+            }
+            
+            var url = $.trim(trigger.find('a').attr('href')) + ' #form';
+            var newField = $('#occams-form-item-template .occams-form-item').clone().addClass('occams-form-fieldset');
+            
+            trigger.replaceWith(newField);
+
+            newField.find('.occams-form-view').css({display: 'none'});
+            newField.find('.occams-form-edit').css({display: 'block'}).load(url, onFieldsetAddFormLoad);
+            
+        } else {
+            // TODO: handle the moving of another field here.
+            console.log('add item to this list');
+        }
+    };
+
+    /**
+     * 
+     */
+    var onFieldsetSortRemove = function(event, ui) {
+        
+    };
+
+    /**
+     * 
+     */
+    var onFieldsetAddFormLoad = function(event, ui) {
+        
     };
 
     /**
@@ -108,16 +156,20 @@
      * create one.
      */
     var onFieldSortReceive = function(event, ui) {
+        var trigger = $(this);
+        
         if (! $(ui.sender).hasClass('occams-form-fields')) {
             // Unfortunately, jQuery UI has a bug where ``ui.item``isn't 
             // actually the received item. This only occurs when sorting
             // a dropped item (``conntectToSortable``).
             // So instead, we find any newly dropped items....
-            var trigger = $(this).find('.ui-draggable');
-            var newField = $('#occams-form-item-template .occams-form-item').clone();
-            var url = $.trim(trigger.find('a').attr('href')) + ' #form';
+            if (! trigger.hasClass('ui-draggable')){
+                trigger = $(this).find('.ui-draggable');
+            }
             
-            newField.addClass('occams-form-field');
+            var url = $.trim(trigger.find('a').attr('href')) + ' #form';
+            var newField = $('#occams-form-item-template .occams-form-item').clone().addClass('occams-form-field');
+            
             trigger.replaceWith(newField);
 
             newField.find('.occams-form-view').css({display: 'none'});
@@ -130,7 +182,37 @@
     };
     
     var onFieldAddFormLoad = function(response, status, xhr) {
-        console.log(status);
+        var trigger = $(this);
+        trigger.find('.formControls input[name*="add"]').click(onFieldAddFormSave);
+        trigger.find('.formControls input[name*="cancel"]').click(onFieldAddFormCancel);
+    };
+    
+    /**
+     * 
+     */
+    var onFieldAddFormSave = function(event) {
+        event.preventDefault();
+        var trigger = $(this);
+        var widget = trigger.parents('.occams-form-field').find('.occams-form-widget');
+        var form = $(trigger.attr('form'));
+        var url = form.attr('action') + ' #form'
+        var data = form.serializeArray();
+        data.push({name: 'form.buttons.apply', value: 'Apply'});
+        widget.load(url, data, onFieldEditFormLoad);
+    };
+    
+    /**
+     * 
+     */
+    var onFieldAddFormCancel = function(event) {
+        event.preventDefault();
+        var trigger = $(this);
+        var widget = trigger.parents('.occams-form-field').find('.occams-form-widget');
+        var widgetPreview = widget.find('.field');
+        var widgetEditor = widget.find('.inline-editor');
+        
+        widgetPreview.css({display: 'block'});
+        widgetEditor.remove();
     };
     
     /**
