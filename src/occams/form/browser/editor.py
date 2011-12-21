@@ -2,8 +2,6 @@ import os.path
 from datetime import datetime
 
 from zope.app.pagetemplate.viewpagetemplatefile import ViewPageTemplateFile
-from zope.component import adapts
-from zope.interface import Interface
 
 from collective.z3cform.datagridfield import DataGridFieldFactory
 from collective.beaker.interfaces import ISession
@@ -13,8 +11,6 @@ import z3c.form.button
 import z3c.form.field
 import z3c.form.group
 from  z3c.form.browser.text import TextFieldWidget
-from z3c.form.interfaces import IAddForm
-
 from avrc.data.store.interfaces import IDataStore
 
 from occams.form import MessageFactory as _
@@ -28,7 +24,6 @@ from occams.form.interfaces import IEditableStringField
 from occams.form.interfaces import IEditableTextField
 from occams.form.interfaces import IEditableObjectField
 from occams.form.interfaces import IEditableForm
-from occams.form.interfaces import IDataBaseItemContext
 from occams.form.interfaces import typesVocabulary
 from occams.form.browser.widgets import fieldWidgetMap
 from occams.form.browser.widgets import TextAreaFieldWidget
@@ -46,25 +41,6 @@ editableFieldSchemaMap = dict(
     text=IEditableTextField,
     object=IEditableObjectField,
     )
-
-class AddActions(z3c.form.button.ButtonActions):
-    adapts(IAddForm, Interface, IDataBaseItemContext)
-
-    def update(self):
-        self.form.buttons = z3c.form.button.Buttons(
-            z3c.form.button.Button('cancel', u'Cancel'),
-            self.form.buttons,
-            )
-        super(AddActions, self).update()
-
-class AddActionHandler(z3c.form.button.ButtonActionHandler):
-    adapts(IAddForm, Interface, Interface, z3c.form.button.ButtonAction)
-
-    def __call__(self):
-        if self.action.name == 'form.buttons.cancel':
-            self.form._finishedAdd = True
-            return
-        super(AddActionHandler, self).__call__()
 
 
 class SchemaEditForm(z3c.form.form.EditForm):
@@ -275,25 +251,23 @@ class Fieldset(z3c.form.group.Group):
             widget.disabled = 'disabled'
 
 
-class FieldPreview(z3c.form.form.Form):
+class FieldDataMixin(object):
 
-    @property
-    def label(self):
-        return self.context.item.name
-
-    def update(self):
-        self.request.set('disable_border', True)
-        schemaField = fieldFactory(self.context)
-        self.fields = z3c.form.field.Fields(schemaField)
-        widgetFactory = fieldWidgetMap.get(schemaField.__class__)
-        if widgetFactory:
-            self.fields[schemaField.getName()].widgetFactory = widgetFactory
-        super(FieldPreview, self).update()
-
-    def updateWidgets(self):
-        super(FieldPreview, self).updateWidgets()
-        for widget in self.widgets.values():
-            widget.disabled = 'disabled'
+    def getFieldData(self):
+        fieldData = None
+        browserSession = ISession(self.request)
+        formData = browserSession[SESSION_KEY]
+        formName = self.context.getParentNode().item.name
+        fieldName = self.context.item.name
+        if fieldName in formData['fields']:
+            fieldData = formData['fields'][fieldName]
+        else:
+            for name, fieldset in formData['fields'].items():
+                schemaData = fieldset['schema']
+                if schemaData is not None and schemaData['name'] == formName:
+                    fieldData = schemaData['fields'][fieldName]
+                    break
+        return fieldData
 
 
 class FieldFormMixin(object):
@@ -322,6 +296,28 @@ class FieldFormMixin(object):
         super(FieldFormMixin, self).update()
 
 
+class FieldPreview(FieldDataMixin, z3c.form.form.Form):
+
+    @property
+    def label(self):
+        return 'Preview: %s' % self.context.item.name
+
+    def update(self):
+        self.request.set('disable_border', True)
+        fieldData = self.getFieldData()
+        schemaField = fieldFactory(fieldData)
+        self.fields = z3c.form.field.Fields(schemaField)
+        widgetFactory = fieldWidgetMap.get(schemaField.__class__)
+        if widgetFactory:
+            self.fields[schemaField.getName()].widgetFactory = widgetFactory
+        super(FieldPreview, self).update()
+
+    def updateWidgets(self):
+        super(FieldPreview, self).updateWidgets()
+        for widget in self.widgets.values():
+            widget.disabled = 'disabled'
+
+
 class BaseFieldAddForm(FieldFormMixin, z3c.form.form.AddForm):
 
     ignoreRequest = True
@@ -338,6 +334,14 @@ class BaseFieldAddForm(FieldFormMixin, z3c.form.form.AddForm):
 
     def add(self, object):
         raise NotImplementedError
+
+    @z3c.form.button.buttonAndHandler(_(u'Cancel'), name='cancel')
+    def handleCancel(self, action):
+        self._finishedAdd = True
+
+    @z3c.form.button.buttonAndHandler(_(u'Add'), name='add')
+    def handleAdd(self, action):
+        super(BaseFieldAddForm, self).handleAdd(action)
 
 
 class BooleanFieldAddForm(BaseFieldAddForm):
@@ -387,7 +391,7 @@ class ObjectFieldAddForm(BaseFieldAddForm):
     typeName = 'object'
 
 
-class FieldEditForm(FieldFormMixin, z3c.form.form.EditForm):
+class FieldEditForm(FieldFormMixin, FieldDataMixin, z3c.form.form.EditForm):
 
     ignoreRequest = True
 
@@ -396,19 +400,7 @@ class FieldEditForm(FieldFormMixin, z3c.form.form.EditForm):
         return _(u'Edit: %s') % self.context.item.name
 
     def getContent(self):
-        content = None
-        browserSession = ISession(self.request)
-        formData = browserSession[SESSION_KEY]
-        formName = self.context.getParentNode().item.name
-        fieldName = self.context.item.name
-        if fieldName in formData['fields']:
-            content = formData['fields'][fieldName]
-        else:
-            for name, fieldset in ['fields'].items():
-                if fieldset['schema'] == formName:
-                    content = fieldset['fields'][fieldName]
-                    break
-        return content
+        return self.getFieldData()
 
     def update(self):
         self.typeName = self.context.item.type
@@ -428,7 +420,15 @@ class FieldEditForm(FieldFormMixin, z3c.form.form.EditForm):
         """
         Saves field changes to the browser session.
         """
-        super(FieldEditForm, self).handleApply(action)
+        data, errors = self.extractData()
+        if errors:
+            self.status = self.formErrorsMessage
+            return
+        changes = self.applyChanges(data)
+        if changes:
+            self.status = self.successMessage
+        else:
+            self.status = self.noChangesMessage
         if self.status == self.successMessage:
             self.request.response.redirect(os.path.join(self.context.absolute_url(), '@@view'))
 
