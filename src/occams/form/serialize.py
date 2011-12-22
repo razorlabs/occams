@@ -5,6 +5,8 @@ storage of a content type in order to enable form change queues with
 workflow-ie-ness and all that jazz.
 """
 
+import re
+
 import zope.schema
 from zope.schema.vocabulary import SimpleVocabulary
 from zope.schema.vocabulary import SimpleTerm
@@ -46,7 +48,6 @@ def serializeField(field):
         is_required=field.required,
         is_collection=isinstance(field, zope.schema.List),
         is_readonly=field.readonly,
-        default=field.default,
         order=field.order,
         )
 
@@ -65,28 +66,29 @@ def serializeField(field):
     return result
 
 
+def tokenize(value):
+    return re.sub('\W', '-', str(value).lower())
+
+
 def fieldFactory(fieldData):
-    fieldFactory = typesVocabulary.getTermByToken(fieldData['type']).value
+    typeFactory = typesVocabulary.getTermByToken(fieldData['type']).value
     options = dict()
 
     if fieldData['choices']:
         terms = []
-        validator = fieldFactory(**options)
+        validator = typeFactory(**options)
         for choice in sorted(fieldData['choices'], key=lambda c: c['order']):
             (token, title, value) = (choice['name'], choice['title'], choice['value'])
             value = validator.fromUnicode(value)
             term = SimpleTerm(token=str(token), title=title, value=value)
             terms.append(term)
-        fieldFactory = zope.schema.Choice
+        typeFactory = zope.schema.Choice
         options = dict(vocabulary=SimpleVocabulary(terms))
 
     if fieldData['is_collection']:
-        # Wrap the fieldFactory and options into the list
-        options = dict(value_type=fieldFactory(**options), unique=True)
-        fieldFactory = zope.schema.List
-
-    if fieldData['default']:
-        options['default'] = fieldFactory(**options).fromUnicode(fieldData['default'])
+        # Wrap the typeFactory and options into the list
+        options = dict(value_type=typeFactory(**options), unique=True)
+        typeFactory = zope.schema.List
 
     # Update the options with the final fieldData parameters
     options.update(dict(
@@ -97,6 +99,6 @@ def fieldFactory(fieldData):
         required=fieldData['is_required'],
         ))
 
-    result = fieldFactory(**options)
+    result = typeFactory(**options)
     result.order = fieldData['order']
     return result

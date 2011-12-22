@@ -29,6 +29,7 @@ from occams.form.browser.widgets import fieldWidgetMap
 from occams.form.browser.widgets import TextAreaFieldWidget
 from occams.form.serialize import serializeForm
 from occams.form.serialize import fieldFactory
+from occams.form.serialize import tokenize
 
 
 editableFieldSchemaMap = dict(
@@ -276,12 +277,15 @@ class FieldFormMixin(object):
 
     def datagridInitialise(self, subform, widget):
         widget.allow_reorder = True
+        # This is very wonky and needs work on their side
+        widget.auto_append = True
+        widget.allow_insert = True
+        widget.allow_delete = True
 
         if self.typeName == 'boolean':
             subform.fields['value'].widgetFactory = TextFieldWidget
             widget.allow_insert = False
             widget.allow_delete = False
-            widget.auto_append = False
 
     def datagridUpdateWidgets(self, subform, widgets, widget):
         if self.typeName == 'boolean':
@@ -392,6 +396,7 @@ class ObjectFieldAddForm(BaseFieldAddForm):
 
 
 class FieldEditForm(FieldFormMixin, FieldDataMixin, z3c.form.form.EditForm):
+    z3c.form.form.extends(z3c.form.form.EditForm)
 
     ignoreRequest = True
 
@@ -404,33 +409,33 @@ class FieldEditForm(FieldFormMixin, FieldDataMixin, z3c.form.form.EditForm):
 
     def update(self):
         self.typeName = self.context.item.type
+        self.buttons = self.buttons.select('cancel', 'apply')
         super(FieldEditForm, self).update()
 
     def updateWidgets(self):
         super(FieldEditForm, self).updateWidgets()
         self.widgets['name'].readonly = 'readonly'
 
+    def applyChanges(self, data):
+        # Do some extra work with choices on fields we didn't ask for.
+        # Mostly things that are auto-generated for the user since it we
+        # have never used and it they don't seem very relevant 
+        # (except, say, order)
+        if 'choices' in data:
+            for order, choice in enumerate(data['choices'], start=0):
+                if choice.get('value') is None:
+                    choice['value'] = choice['title']
+                choice['name'] = tokenize(choice['value'])
+                choice['order'] = order
+        # Now do the default changes
+        changes = super(FieldEditForm, self).applyChanges(data);
+        self.request.response.redirect(os.path.join(self.context.absolute_url(), '@@view'))
+        return changes
+
     @z3c.form.button.buttonAndHandler(_(u'Cancel'), name='cancel')
     def handleCancel(self, action):
         parent = self.context.getParentNode()
         self.request.response.redirect(os.path.join(parent.absolute_url(), '@@edit'))
-
-    @z3c.form.button.buttonAndHandler(_('Apply'), name='apply')
-    def handleApply(self, action):
-        """
-        Saves field changes to the browser session.
-        """
-        data, errors = self.extractData()
-        if errors:
-            self.status = self.formErrorsMessage
-            return
-        changes = self.applyChanges(data)
-        if changes:
-            self.status = self.successMessage
-        else:
-            self.status = self.noChangesMessage
-        if self.status == self.successMessage:
-            self.request.response.redirect(os.path.join(self.context.absolute_url(), '@@view'))
 
 
 class FieldOrder(z3c.form.form.Form):

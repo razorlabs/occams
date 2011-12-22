@@ -10,11 +10,16 @@
     'use strict';
     
     var methods = {
+        /**
+         * Plug-in initialization
+         */
         init: function(options) {            
             options = $.extend({
-                containment: false,
+                containment: null,
                 itemClass: null,
                 itemsFrom: null,
+                editButton: null,
+                deleteButton: null,
             }, options);
             
             $(this).sortable({
@@ -23,8 +28,8 @@
                 cursor: 'move',
                 forcePlaceholderSize: false,
                 opacity: 0.6,
-                receive: methods._onSortRecieve,
-                remove: methods._onSortRemove,
+                receive: methods._onSortableRecieve,
+                remove: methods._onSortableRemove,
             });
             
             // Configure types as draggable, this is how the user will add new fields
@@ -42,23 +47,23 @@
             });
             
             // Disable type links, to avoid accidental navigation
-            $(options.itemsFrom).find('a').click(methods._onNewItemClick);
-            
-            // Register handlers for edit/delete fieldsets
-            $('.occams-form-fieldset > .occams-form-metadata .occams-form-edit').click(onFieldsetEditStart);
-            $('.occams-form-fieldset > .occams-form-metadata .occams-form-delete').click(onFieldsetDeleteStart);
+            $(options.itemsFrom).find('a').click(methods._onNewClick);
             
             // Register handlers for edit/delete fields
-            $('.occams-form-field .occams-form-editable').click(onFieldEditStart);
-            $('.occams-form-field .occams-form-deleteable').click(onFieldDeleteStart);
+            $(this).find(options.editButton).click(methods._onEditClick);
+            $(this).find(options.deleteButton).click(methods._onDeleteClick);
             
             return this;
+        },
+        
+        _doError: function(msg) {
+            alert(msg);
         },
         
         /**
          * DOM handler for when an item from the "new item" list is clicked
          */
-        _onNewItemClick: function(event) {
+        _onNewClick: function(event) {
             event.preventDefault();
         },
         
@@ -68,7 +73,7 @@
          * In some cases it will be a new item, in which a request is made to
          * create one.
          */
-        _onSortReceive: function(event, ui) {
+        _onSortableReceive: function(event, ui) {
             var trigger = $(this);
             
             if (! $(ui.sender).hasClass('occams-form-fields')) {
@@ -97,7 +102,7 @@
         /**
          * jQuery handler for when an item from this list is moved elsewhere.
          */
-        _onSortRemove: function(event, ui) {
+        _onSortableRemove: function(event, ui) {
             console.log('removed');
         },        
         
@@ -105,7 +110,7 @@
         /**
          * 
          */
-        _onAddFormLoad = function(response, status, xhr) {
+        _onAddFormLoad: function(response, status, xhr) {
             var trigger = $(this);
             trigger.find('.formControls input[name*="add"]').click(onFieldAddFormSave);
             trigger.find('.formControls input[name*="cancel"]').click(onFieldAddFormCancel);
@@ -138,71 +143,86 @@
             widgetPreview.css({display: 'block'});
             widgetEditor.remove();
         },
-        
+
         /**
+         * DOM handler when the edit button for an item is clicked
          * 
+         * Note: It's really bad form to use the ID because it will be 
+         * injected into the page multiple times, meaning there will be multiple 
+         * #form elements. This is the only way I could get this to work though.
          */
-        _onFieldsetEditStart: function(event) {
-            event.preventDefault();
-        };
-        
-        /**
-         * 
-         */
-        _onFieldsetDeleteStart: function(event) {
-            event.preventDefault();
-        },
-        
-        /**
-         * 
-         */
-        onFieldEditStart: function(event) {
+        _onEditClick: function(event) {
             event.preventDefault();
             var trigger = $(this);
-            
-            // It's really bad form to use the ID because it will be injected into
-            // the page multiple times, meaning there will be multiple #form elements.
-            // This is the only way I could ge this to work though.
             var url = $.trim(trigger.attr('href')) + ' #form';
-            trigger.parents('.occams-form-field').find('.occams-form-view').css({display: 'none'});
-            trigger.parents('.occams-form-field').find('.occams-form-edit').css({display: 'block'}).load(url, onFieldEditFormLoad);
-        };
-        
-        /**
-         * 
-         */
-        _onFieldEditFormLoad: function(response, status, xhr){
-            var trigger = $(this);
-            trigger.find('.formControls input[name*="apply"]').click(onFieldEditFormSave);
-            trigger.find('.formControls input[name*="cancel"]').click(onFieldEditFormCancel);
+            trigger.parents('.occams-form-field').find('.occams-form-edit').load(url, methods._onEditFormLoad);
         },
         
         /**
-         * 
+         * XHR handler for when the edit form finishes loading.
+         * Basically sets up the form and begins the fancy animation chain.
          */
-        _onFieldEditFormSave: function(event) {
-            event.preventDefault();
+        _onEditFormLoad: function(response, status, xhr){
+            if (status != 'success') {
+                methods._doError('Failed to load edit form');
+                return;
+            }
+                        
+            // configure loaded form before displaying
             var trigger = $(this);
-            var field = trigger.parents('.occams-form-field');
-            var fieldEditor = field.find('.occams-form-edit');
-            var fieldViewer = field.find('.occams-form-view');
+            var item = trigger.closest('.occams-form-field');
+            item.find('.formControls input[name*="apply"]').click(methods._onEditFormSaveClick);
+            item.find('.formControls input[name*="cancel"]').click(methods._onEditFormCancelClick);
             
-            var fieldForm = $(trigger.attr('form'));
-            var url = fieldForm.attr('action') + ' #form'
-            
-            var data = fieldForm.serializeArray();
+            // begin form display chain
+            item.find('.occams-form-view').slideUp('fast', methods._onViewerDisabled);
+        },
+
+        /**
+         * When all animations are complete, we're ready to start the editor for
+         * an item
+         */
+        _onViewerDisabled: function() {
+            $(this).closest('.occams-form-item').find('.occams-form-edit').slideDown('fast', null);
+        },
+        
+        _onEditorDisabled: function() {
+            $(this).closest('.occams-form-item').find('.occams-form-view').slideDown('fast', null);
+            $(this).closest('.occams-form-item').find('.occams-form-edit').children().remove();
+        },
+        
+        /**
+         * DOM handler when the save button is clicked on the edit form. 
+         */
+        _onEditFormSaveClick: function(event) {
+            event.preventDefault();
+            var trigger = $(this);            
+            var form = $(trigger.attr('form'));
+            var viewer = trigger.closest('.occams-form-item').find('.occams-form-view');
+            var url = form.attr('action') + ' #form'
+            var data = form.serializeArray();
             data.push({name: 'form.buttons.apply', value: 'Apply'});
-            fieldViewer.load(url, data, onFieldEditFormLoad);
-            
-            fieldEditor.css({display: 'none'});
-            fieldEditor.children().remove();
-            fieldViewer.css({display: 'block'});
+            viewer.load(url, data, methods._onEditFormSaveLoad);
         },
+        
+        /**
+         * XHR event when the form data is submitted and a response is returned.
+         */
+        _onEditFormSaveLoad: function(response, status, xhr) {
+            if (status != 'success') {
+                methods._doError('Failed to load save form');
+                return;
+            }
+            $(this).closest('.occams-form-item')
+                .find('.occams-form-edit')
+                .slideUp('fast', methods._onEditorDisabled);
+        },
+        
         
         /**
          * 
          */
-        _onFieldEditFormCancel: function(event) {
+        _onEditFormCancelClick: function(event) {
             event.preventDefault();
             var trigger = $(this);
             var field = trigger.parents('.occams-form-field');
@@ -217,7 +237,7 @@
         /**
          * 
          */
-        _onFieldDeleteStart: function(event) {
+        _onDeleteClick: function(event) {
             event.preventDefault();
             var trigger = $(this);
             var editor = trigger.parents('.occams-form-field')
@@ -276,13 +296,19 @@
         // Fieldset Items
         $('#occams-form-fieldsets').formItems({
             containment: '#occams-form-editor',
+            editButton: '.occams-form-fieldset > .occams-form-head .occams-form-editable',
+            deleteButton: '.occams-form-fieldset > .occams-form-head .occams-form-deleteable',
             itemsFrom: '#occams-form-new li:has(a[class="object"])',
+            itemClass: 'occams-form-fieldset',
         });
         
         // Field Items
         $('.occams-form-fields').formItems({
             containment: '#occams-form-editor',
+            editButton: '.occams-form-field > .occams-form-head .occams-form-editable',
+            deleteButton: '.occams-form-field > .occams-form-head .occams-form-deleteable',
             itemsFrom: '#occams-form-new li:not(:has(a[class="object"]))',
+            itemClass: 'occams-form-field',
         });
     };
     
