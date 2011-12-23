@@ -416,6 +416,11 @@ class FieldEditForm(FieldFormMixin, FieldDataMixin, z3c.form.form.EditForm):
         super(FieldEditForm, self).updateWidgets()
         self.widgets['name'].readonly = 'readonly'
 
+    @z3c.form.button.buttonAndHandler(_(u'Cancel'), name='cancel')
+    def handleCancel(self, action):
+        parent = self.context.getParentNode()
+        self.request.response.redirect(os.path.join(parent.absolute_url()))
+
     def applyChanges(self, data):
         # Do some extra work with choices on fields we didn't ask for.
         # Mostly things that are auto-generated for the user since it we
@@ -432,16 +437,46 @@ class FieldEditForm(FieldFormMixin, FieldDataMixin, z3c.form.form.EditForm):
         self.request.response.redirect(os.path.join(self.context.absolute_url(), '@@view'))
         return changes
 
-    @z3c.form.button.buttonAndHandler(_(u'Cancel'), name='cancel')
-    def handleCancel(self, action):
-        parent = self.context.getParentNode()
-        self.request.response.redirect(os.path.join(parent.absolute_url(), '@@edit'))
-
 
 class FieldOrder(z3c.form.form.Form):
     pass
 
 
-class FieldRemove(z3c.form.form.Form):
-    pass
+class FieldDeleteForm(FieldDataMixin, z3c.form.form.Form):
+    """
+    Delete confirmation form.
+    TODO: It would be nice to have both AJAX and BROWSER mode, 
+    currently this form assumes it's being called via AJAX.
+    """
 
+    template = ViewPageTemplateFile('editor_templates/delete.pt')
+
+    @property
+    def label(self):
+        return _(u'Delete: %s') % self.context.item.name
+
+    def update(self):
+        self.request.set('disable_border', True)
+        super(FieldDeleteForm, self).update()
+
+    @z3c.form.button.buttonAndHandler(_(u'Cancel'), name='cancel')
+    def handleCancel(self, action):
+        # Status: notmodified
+        self.request.response.setStatus(304);
+
+    @z3c.form.button.buttonAndHandler(_(u'Yes, I\'m sure'), name='confirm')
+    def handleDelete(self, action):
+        browserSession = ISession(self.request)
+        formData = browserSession[SESSION_KEY]
+        formName = self.context.getParentNode().item.name
+        fieldName = self.context.item.name
+        if fieldName in formData['fields']:
+            del formData['fields'][fieldName]
+        else:
+            for name, fieldset in formData['fields'].items():
+                schemaData = fieldset['schema']
+                if schemaData is not None and schemaData['name'] == formName:
+                    del schemaData['fields'][fieldName]
+                    break
+        # Status: success
+        self.request.response.setStatus(200);

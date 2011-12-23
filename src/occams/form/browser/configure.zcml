@@ -110,6 +110,13 @@
       class=".editor.FieldEditForm"
       permission="occams.form.ModifyForm" 
       />
+      
+  <browser:page
+      for="occams.form.interfaces.IAttributeContext"
+      name="delete"
+      class=".editor.FieldDeleteForm"
+      permission="occams.form.ModifyForm" 
+      />
             
   <browser:page
       for="occams.form.interfaces.IAttributeContext"

@@ -1,0 +1,11 @@
+<metal:form metal:use-macro="view/@@ploneform-macros/form">
+  <metal:formtop fill-slot="formtop">
+    <div i18n:translate="">
+      Are you sure you want to delete 
+      <strong i18n:name="fieldName" tal:content="context/item/name"></strong> 
+      and all data currently associated with it as of
+      <strong i18n:name="fieldVersion" tal:content="context/item/modify_date"></strong>
+      ?
+    </div>
+  </metal:formtop>
+</metal:form>

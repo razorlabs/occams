@@ -170,9 +170,16 @@
                         
             // configure loaded form before displaying
             var trigger = $(this);
-            var item = trigger.closest('.occams-form-field');
+            var item = trigger.closest('.occams-form-item');
             item.find('.formControls input[name*="apply"]').click(methods._onEditFormSaveClick);
             item.find('.formControls input[name*="cancel"]').click(methods._onEditFormCancelClick);
+            
+            // Run datagridfield's setup, since it assumes the DOM was already
+            // there, but it's not because we dynamically load it. 
+            // Also fix it so that it triggers when the actual input element is
+            // changed.
+            item.find('.auto-append > .datagridwidget-cell input')
+                .change(dataGridField2Functions.autoInsertRow);
             
             // begin form display chain
             item.find('.occams-form-view').slideUp('fast', methods._onViewerDisabled);
@@ -186,6 +193,9 @@
             $(this).closest('.occams-form-item').find('.occams-form-edit').slideDown('fast', null);
         },
         
+        /**
+         * 
+         */
         _onEditorDisabled: function() {
             $(this).closest('.occams-form-item').find('.occams-form-view').slideDown('fast', null);
             $(this).closest('.occams-form-item').find('.occams-form-edit').children().remove();
@@ -198,10 +208,12 @@
             event.preventDefault();
             var trigger = $(this);            
             var form = $(trigger.attr('form'));
-            var viewer = trigger.closest('.occams-form-item').find('.occams-form-view');
+            var viewer = trigger.closest('.occams-form-item').find('.occams-form-view:first');
             var url = form.attr('action') + ' #form'
             var data = form.serializeArray();
-            data.push({name: 'form.buttons.apply', value: 'Apply'});
+            data.push({name: $(this).attr('name'), value: $(this).attr('value')});
+            // Disable the submit button so the user doesn't go click-happy
+            $(this).attr({disabled: 'disabled', value: 'Saving...'});
             viewer.load(url, data, methods._onEditFormSaveLoad);
         },
         
@@ -218,58 +230,93 @@
                 .slideUp('fast', methods._onEditorDisabled);
         },
         
-        
         /**
-         * 
+         * DOM handler when the cancel button is clicked on the edit form.
          */
         _onEditFormCancelClick: function(event) {
             event.preventDefault();
-            var trigger = $(this);
-            var field = trigger.parents('.occams-form-field');
-            var fieldEditor = field.find('.occams-form-edit');
-            var fieldViewer = field.find('.occams-form-view');
-            
-            fieldEditor.css({display: 'none'});
-            fieldEditor.children().remove();
-            fieldViewer.css({display: 'block'});
+            $(this).closest('.occams-form-item')
+                .find('.occams-form-edit')
+                .slideUp('fast', methods._onEditorDisabled);
         },
         
         /**
-         * 
+         * DOM handler for when the delete button for the item is clicked
          */
         _onDeleteClick: function(event) {
             event.preventDefault();
             var trigger = $(this);
-            var editor = trigger.parents('.occams-form-field')
-            editor.remove();
-//            $.ajax({
-//                url: '/Plone/testing/fia-forms-1/LumbarPuncture/test_source/@@test',
-//                success: function (data){
-//                    console.log(data);
-//                },
-//            });
+            var url = $.trim(trigger.attr('href')) + ' #form';
+            trigger
+                .closest('.occams-form-item')
+                .find('.occams-form-edit:first')
+                .load(url, methods._onDeleteFormLoad);
         },
         
+        /**
+         * XHR handler for when the delete form is loaded 
+         */
+        _onDeleteFormLoad: function(response, status, xhr){
+            // configure loaded form before displaying
+            var trigger = $(this);
+            var item = trigger.closest('.occams-form-item');
+            item.find('.formControls input[name*="confirm"]').click(methods._onDeleteFormConfirmClick);
+            item.find('.formControls input[name*="cancel"]').click(methods._onDeleteFormCancelClick);
+            
+            // begin form display chain
+            item.find('.occams-form-view').slideUp('fast', methods._onViewerDisabled);
+        },
         
+        /**
+         * DOM handler for when the confirm button is clicked for item deletion.s
+         */
+        _onDeleteFormConfirmClick: function(event){
+            event.preventDefault();
+            var form = $($(this).attr('form'));
+            var url = form.attr('action');
+            var data = form.serializeArray();
+            data.push({name: $(this).attr('name'), value: $(this).attr('value')});
+            $(this).attr({disabled: 'disabled', value: 'You\'re in trouble now...'});
+            $.ajax({url: url, complete: methods._onDeleteFormConfirmLoad.bind(this)});
+        },
+        
+        /**
+         * XHR handler for when the confirm delete request is completed 
+         */
+        _onDeleteFormConfirmLoad: function(response, status, xhr) {
+            if (status != 'success') {
+                methods._doError('Failed to delete item :(');
+                return;
+            }
+            
+            $(this).closest('.occams-form-item').fadeOut('fast', methods._onDeleted)
+        },
+        
+        /**
+         * When delete animation is complete remove the DOM contents for the 
+         * item.
+         */
+        _onDeleted: function() {
+            $(this).remove();
+        },
+        
+        /**
+         * DOM handler for when the cancel button is clicked on the delete
+         * confirmation form.
+         */
+        _onDeleteFormCancelClick: function(event){
+            event.preventDefault();
+            $(this).closest('.occams-form-item')
+                .find('.occams-form-edit')
+                .slideUp('fast', methods._onEditorDisabled);
+        },  
     };
     
     /**
      * Plug-in namespace registration
      */
-    $.fn.formItems = function( method ) {
-        // A valid method was specified, call it.
-        if ( methods[method] ) {
-            var methodArguements = Array.prototype.slice.call( arguments, 1 )
-            return methods[method].apply( this, methodArguements);
-          
-        // No options or method was specified, initialize
-        } else if ( typeof method === 'object' || ! method ) {
-            return methods.init.apply( this, arguments );
-          
-        // The method specified is not defined
-        } else {
-            $.error('Method ' +  method + ' does not exist on jQuery.formItem');
-        }    
+    $.fn.formItems = function( options ) {
+        return methods.init.apply( this, arguments );
     };
     
 })(jQuery);
