@@ -2,9 +2,47 @@
  * OCCAMS Form Editor Application 
  */
 
+/**
+ * Application Setup
+ */
+(function($){
+    'use strict';
+     
+    /**
+     * Main method that initializes all components.
+     * Since there are no scoped variables we don't need to worry about
+     * closure and so can declare the callback directly as a parameter.
+     */    
+    $(document).ready(function() {
+        // Floating Types Panel
+        $('#occams-form-aux').floatingPanel({
+            containment: '#occams-form-editor',
+        });
+        
+        // Fieldset Items
+        $('#occams-form-fieldsets').formItems({
+            containment: '#occams-form-editor',
+            editButton: '.occams-form-fieldset > .occams-form-head .occams-form-editable',
+            deleteButton: '.occams-form-fieldset > .occams-form-head .occams-form-deleteable',
+            itemsFrom: '#occams-form-new li:has(a[class="object"])',
+            itemClass: 'occams-form-fieldset',
+        });
+        
+        // Field Items
+        $('.occams-form-fields').formItems({
+            containment: '#occams-form-editor',
+            editButton: '.occams-form-field > .occams-form-head .occams-form-editable',
+            deleteButton: '.occams-form-field > .occams-form-head .occams-form-deleteable',
+            itemsFrom: '#occams-form-new li:not(:has(a[class="object"]))',
+            itemClass: 'occams-form-field',
+        });
+    });
+
+})(jQuery);
+
 
 /**
- * Custom Application Plug-ins
+ * Form Items Plug-in
  */
 (function($){
     'use strict';
@@ -321,69 +359,63 @@
     
 })(jQuery);
 
-
 /**
- * Application Settings
+ * Floating Panel Plug-in
  */
 (function($){
     'use strict';
-     
-    /**
-     * Main method that initializes all components
-     */
-    var onReady = function() {
-        // No need to continue if the editor is not on this page
-        if ( ! $('#occams-form-editor').length ){
-            return;
-        }
-                
-        // Handle scrolling events to reposition the sidebar
-        $(window).scroll(onWindowScroll);
+    
+    var methods = {
+        /**
+         * Plug-in initialization
+         */
+        init: function(options) {
+            options = $.extend({
+                containment: null,
+            }, options);
+            
+            $(this).data('floatingPanel', {
+                target: $(this),
+                options: options,
+            })
+            
+            // Handle scrolling events to reposition this panel
+            $(window).scroll(methods._onWindowScroll.bind(this));
+            
+            return this;
+        },
         
-        // Fieldset Items
-        $('#occams-form-fieldsets').formItems({
-            containment: '#occams-form-editor',
-            editButton: '.occams-form-fieldset > .occams-form-head .occams-form-editable',
-            deleteButton: '.occams-form-fieldset > .occams-form-head .occams-form-deleteable',
-            itemsFrom: '#occams-form-new li:has(a[class="object"])',
-            itemClass: 'occams-form-fieldset',
-        });
-        
-        // Field Items
-        $('.occams-form-fields').formItems({
-            containment: '#occams-form-editor',
-            editButton: '.occams-form-field > .occams-form-head .occams-form-editable',
-            deleteButton: '.occams-form-field > .occams-form-head .occams-form-deleteable',
-            itemsFrom: '#occams-form-new li:not(:has(a[class="object"]))',
-            itemClass: 'occams-form-field',
-        });
+        /**
+         * Repositions the panel on window scroll.
+         */
+        _onWindowScroll: function(event) {
+            var data = $(this).data('floatingPanel');
+            var container = $(data.options.containment);
+            var panel = $(this);
+            var containerOffset = container.offset();
+            var scrollY = $(window).scrollTop();
+            
+            // Reposition if the window if the scrolling position is past the editor
+            // Note that we only need to re-render if it hasn't been set yet. 
+            if (scrollY >= containerOffset.top) {
+                if(panel.css('position') != 'fixed') {
+                    var right = $(window).width() - (panel.offset().left + panel.width());
+                    panel.css({position: 'fixed', top: 0, right: right + 'px'});
+                }
+            } else {
+                if ( panel.css('position') != 'absolute' ) {
+                    panel.css({position: 'absolute', top: 0, right: 0});
+                }
+            }
+        },
     };
     
-
     /**
-     * Repositions the side bar on window scroll.
+     * Plug-in namespace registration
      */
-    var onWindowScroll = function(event) {
-        var editor = $('#occams-form-editor');
-        var aux = $('#occams-form-aux');
-        var editorOffset = editor.offset();
-        var scrollY = $(window).scrollTop();
-        
-        // Reposition if the window if the scrolling position is past the editor
-        // Note that we only need to re-render if it hasn't been set yet. 
-        if (scrollY >= editorOffset.top) {
-            if(aux.css('position') != 'fixed') {
-                var right = $(window).width() - (aux.offset().left + aux.width());
-                aux.css({position: 'fixed', top: 0, right: right + 'px'});
-            }
-        } else {
-            if ( aux.css('position') != 'absolute' ) {
-                aux.css({position: 'absolute', top: 0, right: 0});
-            }
-        }
+    $.fn.floatingPanel = function( options ) {
+        return methods.init.apply( this, arguments );
     };
-
-
-    $(document).ready(onReady);
-
+    
 })(jQuery);
+
