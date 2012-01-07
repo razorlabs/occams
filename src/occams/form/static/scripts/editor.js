@@ -1,402 +1,459 @@
 /**
- * OCCAMS Form Editor Application 
+ * @fileOverview OCCAMS Form Editor Application
+ *
  */
 
 /**
- * Application Setup
+ * @class Form Item jQuery Plug-in
  */
 (function($){
     'use strict';
-     
-    /**
-     * Main method that initializes all components.
-     * Since there are no scoped variables we don't need to worry about
-     * closure and so can declare the callback directly as a parameter.
-     */    
-    $(document).ready(function() {
-        // Floating Types Panel
-        $('#occams-form-aux').floatingPanel({
-            containment: '#occams-form-editor',
-        });
-        
-        // Fieldset Items
-        $('#occams-form-fieldsets').formItems({
-            containment: '#occams-form-editor',
-            editButton: '.occams-form-fieldset > .occams-form-head .occams-form-editable',
-            deleteButton: '.occams-form-fieldset > .occams-form-head .occams-form-deleteable',
-            itemsFrom: '#occams-form-new li:has(a[class="object"])',
-            itemClass: 'occams-form-fieldset',
-        });
-        
-        // Field Items
-        $('.occams-form-fields').formItems({
-            containment: '#occams-form-editor',
-            editButton: '.occams-form-field > .occams-form-head .occams-form-editable',
-            deleteButton: '.occams-form-field > .occams-form-head .occams-form-deleteable',
-            itemsFrom: '#occams-form-new li:not(:has(a[class="object"]))',
-            itemClass: 'occams-form-field',
-        });
-    });
 
-})(jQuery);
-
-
-/**
- * Form Items Plug-in
- */
-(function($){
-    'use strict';
-    
     var methods = {
         /**
-         * Plug-in initialization
+         * Initializes the item collection (i.e. the plug-in)
+         * @construct
+         * @private
          */
-        init: function(options) {            
-            options = $.extend({
-                containment: null,
-                itemClass: null,
-                itemsFrom: null,
-                editButton: null,
-                deleteButton: null,
-            }, options);
-            
-            $(this).sortable({
-                axis: 'y',
-                connectWith: this.selector,
-                cursor: 'move',
-                forcePlaceholderSize: false,
-                opacity: 0.6,
-                receive: methods._onSortableRecieve,
-                remove: methods._onSortableRemove,
-            });
-            
-            // Configure types as draggable, this is how the user will add new fields
-            // to a form. Also, using ``connectToSortable``, we can add it
-            // to the fields listing. We handle new fields using the sortable's
-            // ``receive`` event because using droppable's ``drop`` causes two
-            // events to be triggered, a known jQuery bug.
-            $(options.itemsFrom).draggable({
-                containment: options.containment,
-                connectToSortable: this.selector,
-                cursor: 'move',
-                helper: 'clone',
-                revert: 'invalid',
-                zIndex: 9001,
-            });
-            
-            // Disable type links, to avoid accidental navigation
-            $(options.itemsFrom).find('a').click(methods._onNewClick);
-            
-            // Register handlers for edit/delete fields
-            $(this).find(options.editButton).click(methods._onEditClick);
-            $(this).find(options.deleteButton).click(methods._onDeleteClick);
-            
-            return this;
-        },
-        
-        _doError: function(msg) {
-            alert(msg);
-        },
-        
-        /**
-         * DOM handler for when an item from the "new item" list is clicked
-         */
-        _onNewClick: function(event) {
-            event.preventDefault();
-        },
-        
-        /**
-         * jQuery handler for when this list receives a new item from another list.
-         * 
-         * In some cases it will be a new item, in which a request is made to
-         * create one.
-         */
-        _onSortableReceive: function(event, ui) {
-            var trigger = $(this);
-            
-            if (! $(ui.sender).hasClass('occams-form-fields')) {
-                // Unfortunately, jQuery UI has a bug where ``ui.item``isn't 
-                // actually the received item. This only occurs when sorting
-                // a dropped item (``conntectToSortable``).
-                // So instead, we find any newly dropped items....
-                if (! trigger.hasClass('ui-draggable')){
-                    trigger = $(this).find('.ui-draggable');
+        _init: function(options) {
+        	return this.each(function(){
+
+                var settings = $.extend({
+                    containment: null,
+                    draggable: null,
+                    sortable: null,
+                    type: null,
+                    placeholder: null,
+                }, options);
+
+                // Setup the item's parent listing as a sortable
+                if ( ! $(this).closest(settings.sortable).hasClass('ui-sortable') ) {
+                    $(settings.sortable).sortable({
+                        axis: 'y',
+                        containment: settings.containment,
+                        connectWith: settings.sortable,
+                        cursor: 'move',
+                        forcePlaceholderSize: false,
+                        placeholder: settings.placeholder,
+                        items: '.' + settings.type,
+                        opacity: 0.6,
+                        // don't bind to this, let jQuery assign it, it SHOULD
+                        // be the newly added element
+                        stop: methods._onDropped,
+                        receive: methods._onReceived.bind(this),
+                        update: methods._onMoved.bind(this),
+                    });
                 }
-                
-                var url = $.trim(trigger.find('a').attr('href')) + ' #form';
-                var newField = $('#occams-form-item-template .occams-form-item').clone().addClass('occams-form-field');
-                
-                trigger.replaceWith(newField);
 
-                newField.find('.occams-form-view').css({display: 'none'});
-                newField.find('.occams-form-edit').css({display: 'block'}).load(url, methods._onAddFormLoad);
-                
-            } else {
-                // TODO: handle the moving of another field here.
-                console.log('add item to this list');
-            }
-        },
-        
-        /**
-         * jQuery handler for when an item from this list is moved elsewhere.
-         */
-        _onSortableRemove: function(event, ui) {
-            console.log('removed');
-        },        
-        
-    
-        /**
-         * 
-         */
-        _onAddFormLoad: function(response, status, xhr) {
-            var trigger = $(this);
-            trigger.find('.formControls input[name*="add"]').click(onFieldAddFormSave);
-            trigger.find('.formControls input[name*="cancel"]').click(onFieldAddFormCancel);
-        },
-        
-        /**
-         * 
-         */
-        _onFieldAddFormSave: function(event) {
-            event.preventDefault();
-            var trigger = $(this);
-            var widget = trigger.parents('.occams-form-field').find('.occams-form-widget');
-            var form = $(trigger.attr('form'));
-            var url = form.attr('action') + ' #form'
-            var data = form.serializeArray();
-            data.push({name: 'form.buttons.apply', value: 'Apply'});
-            widget.load(url, data, onFieldEditFormLoad);
-        },
-        
-        /**
-         * 
-         */
-        _onFieldAddFormCancel: function(event) {
-            event.preventDefault();
-            var trigger = $(this);
-            var widget = trigger.parents('.occams-form-field').find('.occams-form-widget');
-            var widgetPreview = widget.find('.field');
-            var widgetEditor = widget.find('.inline-editor');
-            
-            widgetPreview.css({display: 'block'});
-            widgetEditor.remove();
+                // Configure types as draggable, this is how the user will add
+                // new fields to a form. Also, using ``connectToSortable``, we
+                // can add it to the fields listing. We handle new fields using
+                // the sortable's ``receive`` event because using droppable's
+                // ``drop`` triggers duplicate events, a known jQuery bug.
+                if ( ! $(settings.draggable).hasClass('ui-draggable') ) {
+                    $(settings.draggable).draggable({
+                        containment: settings.containment,
+                        connectToSortable: settings.sortable,
+                        cursor: 'move',
+                        helper: 'clone',
+                        revert: 'invalid',
+                        zIndex: 9001,
+                    });
+                }
+
+				// Finally, configure the actual item
+				if ( ! $(this).data('formItem') ) {
+					$(this).data('formItem', settings);
+					var controls = $(this).children('.of-head').find('.of-controls');
+				    controls.find('a.of-editable').click(methods._onEditClick.bind(this));
+				    controls.find('a.of-deleteable').click(methods._onDeleteClick.bind(this));
+				}
+        	});
         },
 
+       /**
+        *
+        */
+       _refresh: function(data) {
+           var view = $(this).find('.of-content:first > .of-view');
+           var edit = $(this).find('.of-content:first > .of-edit');
+
+           $(this).find('.of-name').first().text(response.name);
+           $(this).find('.of-title').first().text(response.title);
+           $(this).find('.of-version').first().text(response.version);
+           $(this).find('.of-description').first().text(response.description);
+
+           if (response.view) {
+               var newField = $(response.view).find('#form');
+               view.empty().append(newField);
+           }
+
+           edit.slideUp('fast', methods._onEditorDisabled.bind(this));
+       },
+
         /**
-         * DOM handler when the edit button for an item is clicked
-         * 
-         * Note: It's really bad form to use the ID because it will be 
-         * injected into the page multiple times, meaning there will be multiple 
-         * #form elements. This is the only way I could get this to work though.
+         *
          */
-        _onEditClick: function(event) {
-            event.preventDefault();
-            var trigger = $(this);
-            var url = $.trim(trigger.attr('href')) + ' #form';
-            trigger.parents('.occams-form-field').find('.occams-form-edit').load(url, methods._onEditFormLoad);
+        _enableEditor: function(url, next) {
+            $(this)
+            	.find('.of-content:first > .of-edit')
+            	.load($.trim(url) + ' #form', next);
         },
-        
-        /**
-         * XHR handler for when the edit form finishes loading.
-         * Basically sets up the form and begins the fancy animation chain.
-         */
-        _onEditFormLoad: function(response, status, xhr){
-            if (status != 'success') {
-                methods._doError('Failed to load edit form');
-                return;
-            }
-                        
-            // configure loaded form before displaying
-            var trigger = $(this);
-            var item = trigger.closest('.occams-form-item');
-            item.find('.formControls input[name*="apply"]').click(methods._onEditFormSaveClick);
-            item.find('.formControls input[name*="cancel"]').click(methods._onEditFormCancelClick);
-            
-            // Run datagridfield's setup, since it assumes the DOM was already
-            // there, but it's not because we dynamically load it. 
-            // Also fix it so that it triggers when the actual input element is
-            // changed.
-            item.find('.auto-append > .datagridwidget-cell input')
-                .change(dataGridField2Functions.autoInsertRow);
-            
-            // begin form display chain
-            item.find('.occams-form-view').slideUp('fast', methods._onViewerDisabled);
-        },
+
 
         /**
          * When all animations are complete, we're ready to start the editor for
          * an item
          */
         _onViewerDisabled: function() {
-            $(this).closest('.occams-form-item').find('.occams-form-edit').slideDown('fast', null);
+            $(this).closest('.of-item').find('.of-content:first > .of-edit').slideDown('fast', null);
         },
-        
+
         /**
-         * 
+         *
          */
         _onEditorDisabled: function() {
-            $(this).closest('.occams-form-item').find('.occams-form-view').slideDown('fast', null);
-            $(this).closest('.occams-form-item').find('.occams-form-edit').children().remove();
+        	$(this).closest('.of-item').find('.of-content:first > .of-edit').children().remove();
+        	$(this).closest('.of-item').find('.of-content:first > .of-view').slideDown('fast', null);
+        	return this;
         },
-        
+
         /**
-         * DOM handler when the save button is clicked on the edit form. 
+         *
          */
-        _onEditFormSaveClick: function(event) {
+        _onDisabled: function(){
+        	return $(this).remove();
+        },
+
+        /**
+         * Helper method to setup a form loaded via AJAX
+         *
+         * @param actions a map of button names to handler methods
+         * @returns ``this``
+         */
+        _formSetupHelper: function(actions){
+
+        	$(this).find('.formControls input').each(function(){
+        		var button = $(this);
+        		var action = actions[button.attr('name')];
+        		if (action){
+        			button.click(action);
+        		}
+        	});
+
+	        // Run datagridfield's setup, since it assumes the DOM was already
+	        // there, but it's not because we dynamically load it.
+	        // Also fix it so that it triggers when the actual input element is
+	        // changed.
+	        $(this).find('.auto-append > .datagridwidget-cell input')
+	            .change(dataGridField2Functions.autoInsertRow);
+
+	        // begin form display chain
+	        $(this)
+	        	.find('.of-content:first > .of-view')
+	        	.slideUp('fast', methods._onViewerDisabled.bind(this));
+
+	        return this;
+        },
+
+        /**
+         *
+         */
+        _formSubmitHelper: function(event, callback) {
             event.preventDefault();
-            var trigger = $(this);            
-            var form = $(trigger.attr('form'));
-            var viewer = trigger.closest('.occams-form-item').find('.occams-form-view:first');
-            var url = form.attr('action') + ' #form'
+            var form = $($(event.target).attr('form'));
+            var viewer = $(this).find('.of-content:first > .of-view');
+            var url = form.attr('action')
             var data = form.serializeArray();
-            data.push({name: $(this).attr('name'), value: $(this).attr('value')});
+            data.push({name: $(event.target).attr('name'), value: $(event.target).attr('value')});
             // Disable the submit button so the user doesn't go click-happy
-            $(this).attr({disabled: 'disabled', value: 'Saving...'});
-            viewer.load(url, data, methods._onEditFormSaveLoad);
+            $(event.target).attr({disabled: 'disabled', value: 'Thinking...'});
+            $.post(url, data, callback, 'json');
         },
-        
+
         /**
-         * XHR event when the form data is submitted and a response is returned.
+         *
          */
-        _onEditFormSaveLoad: function(response, status, xhr) {
+        _onEditClick: function(event){
+            event.preventDefault();
+            var url = $(event.target).attr('href');
+            methods._enableEditor.call(this, url, methods._onEditFormLoad.bind(this));
+        },
+
+        /**
+         *
+         */
+        _onDeleteClick: function(event){
+            event.preventDefault();
+            var url = $(event.target).attr('href')
+            methods._enableEditor(url, methods._onDeleteFormLoad.bind(this))
+        },
+
+        /**
+         * XHR handler for when the edit form finishes loading.
+         * Basically sets up the form and begins the fancy animation chain.
+         */
+        _onAddFormLoad: function(response, status, xhr){
             if (status != 'success') {
-                methods._doError('Failed to load save form');
-                return;
+                alert('An error has occured while trying to load the add form');
+            } else {
+            	methods._formSetupHelper.call(this, {
+            		'form.buttons.add': methods._onAddFormSubmitClick.bind(this),
+            		'form.buttons.cancel': methods._onAddFormCancelClick.bind(this),
+            		});
             }
-            $(this).closest('.occams-form-item')
-                .find('.occams-form-edit')
-                .slideUp('fast', methods._onEditorDisabled);
         },
-        
+
         /**
-         * DOM handler when the cancel button is clicked on the edit form.
+         * XHR handler for when the edit form finishes loading.
+         * Basically sets up the form and begins the fancy animation chain.
          */
-        _onEditFormCancelClick: function(event) {
-            event.preventDefault();
-            $(this).closest('.occams-form-item')
-                .find('.occams-form-edit')
-                .slideUp('fast', methods._onEditorDisabled);
+        _onEditFormLoad: function(response, status, xhr){
+            if (status != 'success') {
+                alert('An error has occured while trying to load the edit form');
+            } else {
+            	methods._formSetupHelper.call(this, {
+            		'form.buttons.apply': methods._onEditFormSubmitClick.bind(this),
+            		'form.buttons.cancel': methods._onEditFormCancelClick.bind(this),
+            		});
+            }
         },
-        
+
         /**
-         * DOM handler for when the delete button for the item is clicked
-         */
-        _onDeleteClick: function(event) {
-            event.preventDefault();
-            var trigger = $(this);
-            var url = $.trim(trigger.attr('href')) + ' #form';
-            trigger
-                .closest('.occams-form-item')
-                .find('.occams-form-edit:first')
-                .load(url, methods._onDeleteFormLoad);
-        },
-        
-        /**
-         * XHR handler for when the delete form is loaded 
+         * XHR handler for when the edit form finishes loading.
+         * Basically sets up the form and begins the fancy animation chain.
          */
         _onDeleteFormLoad: function(response, status, xhr){
-            // configure loaded form before displaying
-            var trigger = $(this);
-            var item = trigger.closest('.occams-form-item');
-            item.find('.formControls input[name*="confirm"]').click(methods._onDeleteFormConfirmClick);
-            item.find('.formControls input[name*="cancel"]').click(methods._onDeleteFormCancelClick);
-            
-            // begin form display chain
-            item.find('.occams-form-view').slideUp('fast', methods._onViewerDisabled);
+            if (status != 'success') {
+            	alert('An error has occured while trying to load the delete form');
+            } else {
+            	methods._formSetupHelper.call(this, {
+            		'form.buttons.delete': methods._onDeleteFormSubmitClick.bind(this),
+            		'form.buttons.cancel': methods._onDeleteFormCancelClick.bind(this),
+            		});
+            }
         },
-        
+
+        /**
+         * DOM handler when the save button is clicked on the edit form.
+         */
+        _onAddFormSubmitClick: function(event) {
+        	var callback =  methods._onAddFormSubmitComplete.bind(this);
+        	methods._formSubmitHelper.call(this, event, callback);
+        },
+
+        /**
+         * DOM handler when the save button is clicked on the edit form.
+         */
+        _onEditFormSubmitClick: function(event) {
+        	var callback =  methods._onEditFormSubmitComplete.bind(this);
+        	methods._formSubmitHelper.call(this, event, callback);
+        },
+
         /**
          * DOM handler for when the confirm button is clicked for item deletion.s
          */
-        _onDeleteFormConfirmClick: function(event){
+        _onDeleteFormSubmitClick: function(event){
+        	var callback =  methods._onDeleteFormSubmitComplete.bind(this);
+        	methods._formSubmitHelper.call(this, event, callback);
+        },
+
+        /**
+         *
+         */
+        _onAddFormCancelClick: function(event) {
             event.preventDefault();
-            var form = $($(this).attr('form'));
-            var url = form.attr('action');
-            var data = form.serializeArray();
-            data.push({name: $(this).attr('name'), value: $(this).attr('value')});
-            $(this).attr({disabled: 'disabled', value: 'You\'re in trouble now...'});
-            $.ajax({url: url, complete: methods._onDeleteFormConfirmLoad.bind(this)});
+            methods._remove.call(this);
         },
-        
+
         /**
-         * XHR handler for when the confirm delete request is completed 
+         * DOM handler for when the cancel button on  any of the forms
+         * (add/remove/edit) is clicked.
          */
-        _onDeleteFormConfirmLoad: function(response, status, xhr) {
-            if (status != 'success') {
-                methods._doError('Failed to delete item :(');
-                return;
-            }
-            
-            $(this).closest('.occams-form-item').fadeOut('fast', methods._onDeleted)
+        _onEditFormCancelClick: function(event){
+            event.preventDefault();
+            $(this)
+                .find('.of-content:first > .of-edit')
+                .slideUp('fast', methods._onEditorDisabled.bind(this));
         },
-        
+
         /**
-         * When delete animation is complete remove the DOM contents for the 
-         * item.
-         */
-        _onDeleted: function() {
-            $(this).remove();
-        },
-        
-        /**
-         * DOM handler for when the cancel button is clicked on the delete
-         * confirmation form.
+         * DOM handler for when the cancel button on  any of the forms
+         * (add/remove/edit) is clicked.
          */
         _onDeleteFormCancelClick: function(event){
             event.preventDefault();
-            $(this).closest('.occams-form-item')
-                .find('.occams-form-edit')
-                .slideUp('fast', methods._onEditorDisabled);
-        },  
+            $(this)
+                .find('.of-content:first > .of-edit')
+                .slideUp('fast', methods._onEditorDisabled.bind(this));
+        },
+
+        /**
+         * XHR event when the form data is submitted and a response is returned.
+         */
+        _onAddFormSubmitComplete: function(response, status, xhr) {
+            if (status != 'success') {
+                alert('Failed to save changes!!!.');
+            } else {
+            	methods._refresh.call(this, response)
+            }
+        },
+
+        /**
+         * XHR event when the form data is submitted and a response is returned.
+         */
+        _onEditFormSubmitComplete: function(response, status, xhr) {
+            if (status != 'success') {
+                alert('Failed to save changes!!!.');
+            } else {
+            	methods._refresh.call(this, response)
+            }
+        },
+
+        /**
+         * XHR handler for when the confirm delete request is completed
+         */
+        _onDeleteFormSubmitComplete: function(response, status, xhr) {
+            if (status != 'success') {
+                alert('Failed to delete item :(');
+            } else {
+            	methods._disableItem().call(this);
+            }
+        },
+
+        /**
+         * jQuery handler for when this list receives a new item from another list.
+         *
+         * In some cases it will be a new item, in which a request is made to
+         * create one.
+         *
+         *
+	     * Unfortunately, jQuery UI has a bug where ``ui.item``isn't
+	     * actually the received item. This only occurs when sorting
+	     * a dropped item (``conntectToSortable``).
+		 * So instead, we find any newly dropped items....
+         */
+        _onDropped: function(event, ui) {
+        	// Only handle items coming from a draggable source
+        	if (! $(ui.item).hasClass('ui-draggable')){
+        		return;
+        	}
+
+            var newField = $('#of-item-template .of-item').clone();
+            var url = $.trim($(ui.item).attr('href')) + ' #form';
+            var type = (/add-(\w+)/gi).exec(url)[1];
+            var itemClass = $(this).sortable('option', 'items').substring(1);
+
+            newField.addClass(itemClass);
+            newField.addClass(type);
+            newField.find('.of-type').first().text(type);
+            newField.find('.of-name').first().text('[...]');
+            newField.find('.of-edit').load(url, methods._onAddFormLoad.bind(newField))
+
+            $(ui.item).replaceWith(newField);
+        },
+
+        _onReceived: function(event, ui) {
+        	// Only handle items sortable items
+        	if ($(ui.item).hasClass('ui-draggable')){
+        		return;
+        	}
+
+        	console.log('received');
+        	console.log($(ui.item));
+        },
+
+        /**
+         * jQuery handler for when an item from this list is moved elsewhere.
+         */
+        _onMoved: function(event, ui) {
+        	// Only handle items sortable items
+        	if ($(ui.item).hasClass('ui-draggable')){
+        		return;
+        	}
+
+        	// Only accept items moved within the sortable  (no incoming)
+        	if (!(event.target === ui.item.parent()[0] && !ui.sender)) {
+        		return;
+        	}
+
+        	console.log('moved');
+        	console.log($(ui.item));
+        },
+
     };
-    
+
     /**
      * Plug-in namespace registration
      */
-    $.fn.formItems = function( options ) {
-        return methods.init.apply( this, arguments );
+    $.fn.formItem = function( method ) {
+    	// boilerplate
+        if ( methods[method] ) {
+            return methods[method].apply( this, Array.prototype.slice.call( arguments, 1 ));
+          } else if ( typeof method === 'object' || ! method ) {
+            return methods._init.apply( this, arguments );
+          } else {
+            $.error( 'Method ' +  method + ' does not exist on form item.' );
+          }
     };
-    
+
 })(jQuery);
 
+
 /**
- * Floating Panel Plug-in
+ * Application Setup
  */
 (function($){
     'use strict';
-    
-    var methods = {
-        /**
-         * Plug-in initialization
-         */
-        init: function(options) {
-            options = $.extend({
-                containment: null,
-            }, options);
-            
-            $(this).data('floatingPanel', {
-                target: $(this),
-                options: options,
-            })
-            
-            // Handle scrolling events to reposition this panel
-            $(window).scroll(methods._onWindowScroll.bind(this));
-            
-            return this;
-        },
-        
-        /**
-         * Repositions the panel on window scroll.
-         */
-        _onWindowScroll: function(event) {
-            var data = $(this).data('floatingPanel');
-            var container = $(data.options.containment);
-            var panel = $(this);
+
+    /**
+     * Main method that initializes all components.
+     * Since there are no scoped variables we don't need to worry about
+     * closure and so can declare the callback directly as a parameter.
+     *
+     *
+     */
+    $(document).ready(function() {
+    	// Only setup if we're actually using the editor
+    	if (! $('#of-editor').length) {
+    		return;
+    	}
+
+        // Fieldset Items
+        $('.of-fieldset').formItem({
+            containment: '#of-editor',
+            sortable: '#of-fieldsets',
+            placeholder: 'of-placeholder',
+            draggable: '#of-new l a:has([class="object"])',
+            type: 'of-fieldset',
+        });
+
+        // Field Items
+        $('.of-field').formItem({
+            containment: '#of-editor',
+            sortable: '.of-fields',
+            placeholder: 'of-placeholder',
+            draggable: '#of-new li a:not(:has([class="object"]))',
+            type: 'of-field',
+        });
+
+        // Disable type links so we don't navigate to them
+        $('#of-new li a').each(function(){
+        	$(this).click(function(event){
+        		event.preventDefault();
+        	});
+        });
+
+        // Setup the types element as a floating panel (because the forms
+        // can -- and will -- get pretty long)
+        $(window).scroll(function(event){
+        	var panel = $('#of-aux');
+        	var container = $('#of-editor');
             var containerOffset = container.offset();
             var scrollY = $(window).scrollTop();
-            
+
             // Reposition if the window if the scrolling position is past the editor
-            // Note that we only need to re-render if it hasn't been set yet. 
+            // Note that we only need to re-render if it hasn't been set yet.
             if (scrollY >= containerOffset.top) {
                 if(panel.css('position') != 'fixed') {
                     var right = $(window).width() - (panel.offset().left + panel.width());
@@ -407,15 +464,7 @@
                     panel.css({position: 'absolute', top: 0, right: 0});
                 }
             }
-        },
-    };
-    
-    /**
-     * Plug-in namespace registration
-     */
-    $.fn.floatingPanel = function( options ) {
-        return methods.init.apply( this, arguments );
-    };
-    
-})(jQuery);
+        });
+    });
 
+})(jQuery);

@@ -1,7 +1,10 @@
-import os.path
+from copy import copy
 from datetime import datetime
+import json
+import os.path
 
 from zope.app.pagetemplate.viewpagetemplatefile import ViewPageTemplateFile
+from zope.publisher.browser import BrowserView
 
 from collective.z3cform.datagridfield import DataGridFieldFactory
 from collective.beaker.interfaces import ISession
@@ -97,7 +100,7 @@ class SchemaEditForm(z3c.form.form.EditForm):
         browserSession = ISession(self.request)
         browserSession.delete()
 
-    @z3c.form.button.buttonAndHandler(_(u'Complete'), name='complete')
+    @z3c.form.button.buttonAndHandler(_(u'Complete'), name='submit')
     def handleComplete(self):
         """
         Save the form changes
@@ -107,7 +110,7 @@ class SchemaEditForm(z3c.form.form.EditForm):
 
 
 class SchemaEditFormPloneView(layout.FormWrapper):
-    """ 
+    """
     Form wrapper for Z3C so that it appears within Plone nicely
     """
 
@@ -125,11 +128,11 @@ class SchemaEditFormPloneView(layout.FormWrapper):
 class FieldsForm(z3c.form.group.GroupForm, z3c.form.form.Form):
     """
     Fields editor form.
-    
+
     A note on sub-objects: There currently seems to be too many caveats
     surrounding object widgets (see ``z3c.form.object``). Given that, we
     will be using z3c group forms to represent sub objects.
-    
+
     Uses Browser Session for data.
     """
 
@@ -138,7 +141,7 @@ class FieldsForm(z3c.form.group.GroupForm, z3c.form.form.Form):
     ignoreContext = True
     ignoreRequest = True
 
-    # The form's fields, initialized in the constructor 
+    # The form's fields, initialized in the constructor
     groups = []
 
     def types(self):
@@ -302,6 +305,8 @@ class FieldFormMixin(object):
 
 class FieldPreview(FieldDataMixin, z3c.form.form.Form):
 
+    ignoreRequest = True
+
     @property
     def label(self):
         return 'Preview: %s' % self.context.item.name
@@ -322,7 +327,21 @@ class FieldPreview(FieldDataMixin, z3c.form.form.Form):
             widget.disabled = 'disabled'
 
 
+class FieldJsonView(FieldDataMixin, BrowserView):
+
+    def __call__(self):
+        data = copy(self.getFieldData())
+        del data['schema']
+        if data['type'] != 'object':
+            data['view'] = FieldPreview(self.context, self.request)()
+        else:
+            data['view'] = None
+        data['version'] = data['version'].date().isoformat()
+        return json.dumps(data)
+
+
 class BaseFieldAddForm(FieldFormMixin, z3c.form.form.AddForm):
+    z3c.form.form.extends(z3c.form.form.AddForm)
 
     ignoreRequest = True
 
@@ -330,22 +349,31 @@ class BaseFieldAddForm(FieldFormMixin, z3c.form.form.AddForm):
     def label(self):
         return _('New %s Field') % typesVocabulary.getTermByToken(self.typeName).title
 
-    def nextURL(self):
-        raise NotImplementedError
-
     def create(self, data):
-        raise NotImplementedError
+        result = copy(data)
+        # This is also similar to what is done in the edit form's apply
+        if 'choices' in data:
+            for order, choice in enumerate(data['choices'], start=0):
+                if choice.get('value') is None:
+                    choice['value'] = choice['title']
+                choice['name'] = tokenize(choice['value'])
+                choice['order'] = order
+        result['version'] = datetime.now()
+        return result
 
-    def add(self, object):
-        raise NotImplementedError
+    def add(self, item):
+        ISession(self.request)['occams.form']['fields'][item['name']] = item
+
+    def nextURL(self):
+        return self.context.absolute_url()
+
+    def update(self):
+        self.buttons = self.buttons.select('cancel', 'add');
+        super(BaseFieldAddForm, self).update()
 
     @z3c.form.button.buttonAndHandler(_(u'Cancel'), name='cancel')
     def handleCancel(self, action):
         self._finishedAdd = True
-
-    @z3c.form.button.buttonAndHandler(_(u'Add'), name='add')
-    def handleAdd(self, action):
-        super(BaseFieldAddForm, self).handleAdd(action)
 
 
 class BooleanFieldAddForm(BaseFieldAddForm):
@@ -424,7 +452,7 @@ class FieldEditForm(FieldFormMixin, FieldDataMixin, z3c.form.form.EditForm):
     def applyChanges(self, data):
         # Do some extra work with choices on fields we didn't ask for.
         # Mostly things that are auto-generated for the user since it we
-        # have never used and it they don't seem very relevant 
+        # have never used and it they don't seem very relevant
         # (except, say, order)
         if 'choices' in data:
             for order, choice in enumerate(data['choices'], start=0):
@@ -432,10 +460,14 @@ class FieldEditForm(FieldFormMixin, FieldDataMixin, z3c.form.form.EditForm):
                     choice['value'] = choice['title']
                 choice['name'] = tokenize(choice['value'])
                 choice['order'] = order
+
         # Now do the default changes
         changes = super(FieldEditForm, self).applyChanges(data);
-        self.request.response.redirect(os.path.join(self.context.absolute_url(), '@@view'))
-        return changes
+
+        if changes:
+            self.getContent()['version'] = datetime.now()
+
+        self.request.response.redirect(os.path.join(self.context.absolute_url(), '@@json'))
 
 
 class FieldOrder(z3c.form.form.Form):
@@ -445,7 +477,7 @@ class FieldOrder(z3c.form.form.Form):
 class FieldDeleteForm(FieldDataMixin, z3c.form.form.Form):
     """
     Delete confirmation form.
-    TODO: It would be nice to have both AJAX and BROWSER mode, 
+    TODO: It would be nice to have both AJAX and BROWSER mode,
     currently this form assumes it's being called via AJAX.
     """
 
@@ -461,10 +493,10 @@ class FieldDeleteForm(FieldDataMixin, z3c.form.form.Form):
 
     @z3c.form.button.buttonAndHandler(_(u'Cancel'), name='cancel')
     def handleCancel(self, action):
-        # Status: notmodified
+        # Status: not modified
         self.request.response.setStatus(304);
 
-    @z3c.form.button.buttonAndHandler(_(u'Yes, I\'m sure'), name='confirm')
+    @z3c.form.button.buttonAndHandler(_(u'Yes, I\'m sure'), name='delete')
     def handleDelete(self, action):
         browserSession = ISession(self.request)
         formData = browserSession[SESSION_KEY]

@@ -14,7 +14,7 @@
  * MAIN LAYOUT
  ******************************************************************************/
 
-#occams-form-editor {
+#of-editor {
     border-bottom: 1px dotted #CCC;
     border-top: 1px dotted #CCC;
     cursor: default;
@@ -23,12 +23,12 @@
     width: 100%;
 }
 
-#occams-form-main {
+#of-main {
 	margin-top: 1em;
     margin-right: 250px;
 }
 
-#occams-form-aux {
+#of-aux {
 	margin-top: 1em;
     position: absolute;
     right:0;
@@ -36,8 +36,8 @@
     width: 250px;
 }
 
-#occams-form-inputs,
-#occams-form-fieldsets {
+#of-inputs,
+#of-fieldsets {
     margin-right: 1em;
 }
 
@@ -45,7 +45,7 @@
  * TOOLBOX
  ******************************************************************************/
 
-#occams-form-aux h3 {
+#of-aux h3 {
     background-color: #205C90;
     color: #fff;
     font-size: 1em;
@@ -54,26 +54,26 @@
     text-align: center;
 }
 
-#occams-form-new ul {
+#of-new ul {
     background: #EEE;
     list-style: none;
     margin: 0;
     padding: 0.4em;
 }
 
-#occams-form-new li {
+#of-new li {
     margin: 0 0 0.6em 0;
     width: 250px !important;
 }
 
-#occams-form-new li:last-child {
+#of-new li:last-child {
     margin: 0;
 }
 
-#occams-form-new a,
-#occams-form-new a:active,
-#occams-form-new a:link,
-#occams-form-new a:hover {
+#of-new a,
+#of-new a:active,
+#of-new a:link,
+#of-new a:hover {
     background-color: #DDD;
     border: inherit !important;
     display: block;
@@ -84,17 +84,17 @@
     padding: 0.3em;
 }
 
-#occams-form-new a.object {
+#of-new a.object {
     background-color: #D5D5B6;
 }
 
-#occams-form-new a:hover {
+#of-new a:hover {
     background-color: #666;
     color: #fff !important;
     cursor: move;
 }
 
-#occams-form-new a.object:hover {
+#of-new a.object:hover {
     background-color: #A6A64A;
 }
 
@@ -102,19 +102,22 @@
  * ITEM 
  ******************************************************************************/
 
-#occams-form-item-template {
+#of-item-template {
 	display: none;
 }
 
-.occams-form-item {
+.of-placeholder {
+	height: 0px !important;
+	border: 2px dotted red;
+	margin-bottom: 1em;
+}
+
+.of-item {
 	position: relative;
 	margin-bottom: 1em;
 }
 
-
-.occams-form-item > .occams-form-head {
-    background-color: #DDD;
-	border-bottom: 1px solid #EFEFEF;
+.of-item > .of-head {
 	color: #666;
 	font-size: 85%;
 	font-weight: bold;
@@ -122,26 +125,47 @@
 	position: relative;
 }
 
-.occams-form-item .occams-form-metadata {
+.of-item .of-metadata {
 	margin-left: 16px;
 	margin-right: 48px;
     padding: 0.1em 0;
 	overflow: hidden;
 }
 
-.occams-form-item .occams-form-title,
-#occams-form-new a {
+.of-item .of-type,
+#of-new a {
     background-position: 1% 50%;
     background-repeat: no-repeat;
     padding-left: 2em !important;
 }
 
-.occams-form-item .occams-form-title {
+.of-item .of-type,
+.of-item .of-name
+{
+	font-family: monospace;
+	font-size: 1.3em;
+}
+
+.of-item .of-type,
+.of-item .of-name,
+.of-item .of-title {
 	float: left;
 	overflow: hidden;
 }
 
-.occams-form-item  .occams-form-collapseable {
+.of-item .of-type {
+	font-style: italic; 
+}
+
+.of-item .of-name:before {
+	content: ':'
+}
+
+.of-item .of-name {
+    padding-right: 1em;
+}
+
+.of-item  .of-collapseable {
 	background: center center url(++resource++collective.z3cform.datagridfield/delete_row_icon.gif);
 	display: none; /* Collapsable items are not displayed by default */
 	left: 0;
@@ -151,78 +175,78 @@
 	width: 16px;
 }
 
-.occams-form-item  .occams-form-collapsed {
+.of-item  .of-collapsed {
     background-image: url(++resource++collective.z3cform.datagridfield/delete_row_icon.gif);
 }
 
 /* FieldSets will be rendered first, so declare object styles first so the
    other type style declarations can override it */
-.object .occams-form-title,
-#occams-form-new a.object {
+.object .of-type,
+#of-new a.object {
     background-image: url(++resource++occams.form/images/table.png);
 }
 
-.boolean .occams-form-title,
-#occams-form-new a.boolean {
+.boolean .of-type,
+#of-new a.boolean {
     background-image: url(++resource++occams.form/images/tick.png);
 }
 
-.date .occams-form-title,
-#occams-form-new a.date {
+.date .of-type,
+#of-new a.date {
     background-image: url(++resource++occams.form/images/calendar.png);
 }
 
-.datetime .occams-form-title,
-#occams-form-new a.datetime {
+.datetime .of-type,
+#of-new a.datetime {
     background-image: url(++resource++occams.form/images/time.png);
 }
 
-.decimal .occams-form-title,
-#occams-form-new a.decimal {
+.decimal .of-type,
+#of-new a.decimal {
     background-image: url(++resource++occams.form/images/calculator.png);
 }
 
-.integer .occams-form-title,
-#occams-form-new a.integer {
+.integer .of-type,
+#of-new a.integer {
     background-image: url(++resource++occams.form/images/calculator.png);
 }
 
-.string .occams-form-title,
-#occams-form-new a.string {
+.string .of-type,
+#of-new a.string {
     background-image: url(++resource++occams.form/images/textfield.png);
 }
 
-.text .occams-form-title,
-#occams-form-new a.text {
+.text .of-type,
+#of-new a.text {
     background-image: url(++resource++occams.form/images/page_white_text.png);
 }
 
-.occams-form-item .occams-form-version {
+.of-item .of-version {
 	float: right;
 	padding-right: 1em;
 	overflow: hidden;
 }
 
-.occams-form-item .occams-form-controls {
+.of-item .of-controls {
 	position: absolute;
 	right: 0;
 	top: 0;
 }
 
-.occams-form-item .occams-form-controls ul {
+.of-item .of-controls ul {
 	list-style: none;
 	margin: 0 !important;
 	overflow: hidden;
 	padding: 0;
 }
 
-.occams-form-item .occams-form-controls li {
+.of-item .of-controls li {
 	float: left;
 	margin: 0 !important;
     padding: 2px 4px;
 }
 
-.occams-form-item .occams-form-controls a {
+.of-item .of-controls a {
 	border: inherit !important;
 	display: block;
 	height: 16px;
@@ -231,20 +255,19 @@
 	width: 16px;
 }
 
-.occams-form-item .occams-form-controls .occams-form-editable {
+.of-item .of-controls .of-editable {
 	background: url(++resource++occams.form/images/pencil.png);
 }
 
-.occams-form-item .occams-form-controls .occams-form-deleteable {
+.of-item .of-controls .of-deleteable {
 	background: url(++resource++occams.form/images/delete.png);
 }
 
-.occams-form-item .occams-form-content {
-	background-color: #EEE;
-    padding: 0.8em;
+.of-item .of-content {
+	padding: 0.8em;
 }
 
-.occams-form-item .occams-form-content .occams-form-edit {
+.of-item .of-content .of-edit {
 	display: none;
 }
 
@@ -252,15 +275,21 @@
  * FIELDSET
  ******************************************************************************/
 
-.occams-form-fieldset > .occams-form-head .occams-form-collapseable {
+.of-fieldset > .of-head .of-collapseable {
     display: block;
 }
 
-.occams-form-fieldset > .occams-form-head {
+.of-fieldset > .of-head {
     background-color: #D5D5B6;
 }
 
-.occams-form-fieldset > .occams-form-content {
+.of-fieldset .of-description {
+    background-color: #E6E6DA;
+    color: #555;
+    padding: 0.1em 0.8em;
+}
+
+.of-fieldset > .of-content {
     background-color: #FFFFF0;
     min-height: 5em;
 }
@@ -269,16 +298,30 @@
  * FIELD
  ******************************************************************************/
  
-.occams-form-field:last-child {
+.of-field > .of-head {
+   background-color: #DDD;
+}
+ 
+.of-field:last-child {
     margin-bottom: 0;
 }
 
-.occams-form-field > .occams-form-head .occams-form-collapseable {
+.of-field > .of-head .of-collapseable {
     display: none;
 }
 
-.occams-form-field > .occams-form-head .occams-form-metadata {
+.of-field > .of-head .of-metadata {
     margin-left: 0;
+}
+
+
+.of-field .of-title,
+.of-field .of-description {
+    display: none;
+}
+
+.of-field .of-content {
+    background-color: #EEE;
 }
 
 
@@ -287,21 +330,21 @@
  ******************************************************************************/
 
 /* Re-style Plone's error messages to stand out a little more */
-#occams-form-editor .fieldErrorBox .error {
+#of-editor .fieldErrorBox .error {
     color: red;
     font-weight: bold;
 }
 
-#occams-form-editor input[type="text"], 
-#occams-form-editor textarea {
+#of-editor input[type="text"], 
+#of-editor textarea {
 	color: inherit !important;
 	font-family: "Lucida Grande", Arial, FreeSans !important;
 	font-size: inherit !important;
 	font-weight: inherit !important;
 }
 
-#occams-form-editor input[type="text"][readonly="readonly"], 
-#occams-form-editor textarea[readonly="readonly"] {
+#of-editor input[type="text"][readonly="readonly"], 
+#of-editor textarea[readonly="readonly"] {
 	background-color: #DDD !important;
     color: #666 !important;
 	-webkit-user-select: none;
@@ -315,12 +358,12 @@
  * JQUERY OVERRIDES
  ******************************************************************************/
  
-#occams-form-editor .ui-sortable-placeholder { 
+#of-editor .ui-sortable-placeholder { 
     border: 0.2em dotted red; 
     visibility: visible !important;  
 }
     
-#occams-form-editor .ui-sortable-placeholder * { 
+#of-editor .ui-sortable-placeholder * { 
     visibility: hidden; 
 }
 
@@ -328,20 +371,20 @@
  * COLLECTIVE Z3CFORM DATAGRIDFIELD OVERRIDES
  ******************************************************************************/
 
-#occams-form-editor .datagridwidget-table-view {
+#of-editor .datagridwidget-table-view {
 	border: inherit !important;
 	width: 50% !important;
 }
 
-#occams-form-editor .datagridwidget-table-view .header {
+#of-editor .datagridwidget-table-view .header {
 	font-size: 0.825em !important;
 	background: inherit !important;
 }
 
-#occams-form-editor .datagridwidget-table-view th{
+#of-editor .datagridwidget-table-view th{
 	padding: 0 0.3em !important;
 }
 
-#occams-form-editor .datagridwidget-table-view td{
+#of-editor .datagridwidget-table-view td{
     padding: 0.3em !important;
 }

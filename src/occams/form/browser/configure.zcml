@@ -124,5 +124,12 @@
       class=".editor.FieldPreview"
       permission="occams.form.ModifyForm" 
       />
+      
+  <browser:page
+      for="occams.form.interfaces.IAttributeContext"
+      name="json"
+      class=".editor.FieldJsonView"
+      permission="occams.form.ModifyForm" 
+      />
             
 </configure>

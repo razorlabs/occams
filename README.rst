@@ -82,6 +82,16 @@ Once installed, you will be able to select from a list of registered
 
 .. z3c.saconfig: http://pypi.python.org/pypi/z3c.saconfig
 
+------------
+Attributions
+------------
+
+Some icons by `Yusuke Kamiyamane`_. All rights reserved. Licensed under a `Creative Commons Attribution 3.0`_
+
+.. _Yusuke Kamiyamane: http://p.yusukekamiyamane.com/
+.. _Creative Commons Attribution 3.0: http://creativecommons.org/licenses/by/3.0/
+
+
 ----------
 Disclaimer
 ----------
