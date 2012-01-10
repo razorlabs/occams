@@ -112,7 +112,7 @@ class RepositoryTraverse(object):
 
 class SchemaTraverse(object):
     """
-    Traverses through a ``ISchemContext`` to get an 
+    Traverses through a ``ISchemContext`` to get an
     ``IAttributeContext`` or a ``IEntityContext``
     """
     adapts(ISchemaContext, IHTTPRequest)
@@ -147,6 +147,28 @@ class SchemaTraverse(object):
 
             if item is not None:
                 newContext = EntityContext(item).__of__(self.context)
+
+        if item is None:
+            browserSession = ISession(request)
+
+            if SESSION_KEY in browserSession:
+                formData = browserSession[SESSION_KEY]
+
+                if self.context.item.name != formData['name']:
+                    for field in ['fields'].values():
+                        schemaData = field.get('schema')
+                        if schemaData and schemaData['name'] == name and name in schemaData['fields']:
+                            formData = schemaData
+
+                item = model.Schema(
+                    name=formData['fields'][name]['name'],
+                    title=formData['fields'][name]['title'],
+                    )
+
+                newContext = AttributeContext(item).__of__(self.context)
+
+        if newContext is None:
+            raise NotFound()
 
         return newContext
 

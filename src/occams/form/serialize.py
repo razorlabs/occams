@@ -1,5 +1,5 @@
 """
-Form serialization tools to represent a form as a dictionary that can be 
+Form serialization tools to represent a form as a dictionary that can be
 persisted in a browser session or (hopefully at some point) in an annotation
 storage of a content type in order to enable form change queues with
 workflow-ie-ness and all that jazz.
@@ -47,7 +47,6 @@ def serializeField(field):
         choices=[],
         is_required=field.required,
         is_collection=isinstance(field, zope.schema.List),
-        is_readonly=field.readonly,
         order=field.order,
         )
 
@@ -95,7 +94,6 @@ def fieldFactory(fieldData):
         __name__=str(fieldData['name']),
         title=fieldData['title'],
         description=fieldData['description'],
-        readonly=fieldData['is_readonly'],
         required=fieldData['is_required'],
         ))
 

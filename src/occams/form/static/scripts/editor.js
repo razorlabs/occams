@@ -64,9 +64,11 @@
 				// Finally, configure the actual item
 				if ( ! $(this).data('formItem') ) {
 					$(this).data('formItem', settings);
-					var controls = $(this).children('.of-head').find('.of-controls');
+					var head = $(this).children('.of-head');
+					var controls = head.find('.of-controls')
 				    controls.find('a.of-editable').click(methods._onEditClick.bind(this));
 				    controls.find('a.of-deleteable').click(methods._onDeleteClick.bind(this));
+				    head.find('.of-collapseable').click(methods._onCollapseClick.bind(this));
 				}
         	});
         },
@@ -78,13 +80,13 @@
            var view = $(this).find('.of-content:first > .of-view');
            var edit = $(this).find('.of-content:first > .of-edit');
 
-           $(this).find('.of-name').first().text(response.name);
-           $(this).find('.of-title').first().text(response.title);
-           $(this).find('.of-version').first().text(response.version);
-           $(this).find('.of-description').first().text(response.description);
+           $(this).find('.of-name').first().text(data.name);
+           $(this).find('.of-title').first().text(data.title);
+           $(this).find('.of-version').first().text(data.version);
+           $(this).find('.of-description').first().text(data.description);
 
-           if (response.view) {
-               var newField = $(response.view).find('#form');
+           if (data.view) {
+               var newField = $(data.view).find('#form');
                view.empty().append(newField);
            }
 
@@ -169,6 +171,12 @@
             // Disable the submit button so the user doesn't go click-happy
             $(event.target).attr({disabled: 'disabled', value: 'Thinking...'});
             $.post(url, data, callback, 'json');
+        },
+
+
+        _onCollapseClick: function(event) {
+        	event.preventDefault();
+        	$(this).find('.of-content:first').slideToggle('fast');
         },
 
         /**

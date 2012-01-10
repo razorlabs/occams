@@ -84,6 +84,12 @@ class IEditableField(IOccamsFormComponent):
         required=False,
         )
 
+    order = zope.schema.Int(
+        title=_(u'Order'),
+        description=_(u'The field\'s order in the form'),
+        required=True
+        )
+
 
 
 class ICollectable(IOccamsFormComponent):

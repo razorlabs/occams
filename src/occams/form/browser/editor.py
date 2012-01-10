@@ -1,5 +1,6 @@
 from copy import copy
 from datetime import datetime
+from decimal import Decimal
 import json
 import os.path
 
@@ -18,6 +19,8 @@ from avrc.data.store.interfaces import IDataStore
 
 from occams.form import MessageFactory as _
 from occams.form.interfaces import SESSION_KEY
+from occams.form.interfaces import IEditableForm
+from occams.form.interfaces import IEditableField
 from occams.form.interfaces import IEditableBooleanField
 from occams.form.interfaces import IEditableDateField
 from occams.form.interfaces import IEditableDateTimeField
@@ -26,7 +29,6 @@ from occams.form.interfaces import IEditableDecimalField
 from occams.form.interfaces import IEditableStringField
 from occams.form.interfaces import IEditableTextField
 from occams.form.interfaces import IEditableObjectField
-from occams.form.interfaces import IEditableForm
 from occams.form.interfaces import typesVocabulary
 from occams.form.browser.widgets import fieldWidgetMap
 from occams.form.browser.widgets import TextAreaFieldWidget
@@ -296,7 +298,7 @@ class FieldFormMixin(object):
 
     def update(self):
         self.request.set('disable_border', True)
-        self.fields = z3c.form.field.Fields(editableFieldSchemaMap[self.typeName])
+        self.fields = z3c.form.field.Fields(editableFieldSchemaMap[self.typeName]).omit('order')
         self.fields['description'].widgetFactory = TextAreaFieldWidget
         if 'choices' in self.fields:
             self.fields['choices'].widgetFactory = DataGridFieldFactory
@@ -337,6 +339,10 @@ class FieldJsonView(FieldDataMixin, BrowserView):
         else:
             data['view'] = None
         data['version'] = data['version'].date().isoformat()
+        for choice in data['choices']:
+            if isinstance(choice['value'], Decimal):
+                choice['value'] = str(choice['value'])
+
         return json.dumps(data)
 
 
@@ -344,6 +350,8 @@ class BaseFieldAddForm(FieldFormMixin, z3c.form.form.AddForm):
     z3c.form.form.extends(z3c.form.form.AddForm)
 
     ignoreRequest = True
+
+    _newItem = None
 
     @property
     def label(self):
@@ -359,13 +367,35 @@ class BaseFieldAddForm(FieldFormMixin, z3c.form.form.AddForm):
                 choice['name'] = tokenize(choice['value'])
                 choice['order'] = order
         result['version'] = datetime.now()
+        result['type'] = self.typeName
+        result['interface'] = self.context.item.name
+        result['schema'] = None
         return result
 
     def add(self, item):
-        ISession(self.request)['occams.form']['fields'][item['name']] = item
+        # TODO
+        browserSession = ISession(self.request)
+        formData = browserSession[SESSION_KEY]
+        formName = self.context.item.name
+
+        if formName != formData['name']:
+            for field in sorted(formData['fields'].values(), key=lambda i: i['order']):
+                # Move the field to here
+                if field['type'] == 'object' and formName == field['schema']['name']:
+                    formData = field['schema']
+                    break
+
+        item['order'] = len(formData['fields'])
+        formData['fields'][item['name']] = item
+
+        browserSession.save()
+        self._newItem = item
 
     def nextURL(self):
-        return self.context.absolute_url()
+        url = self.context.absolute_url()
+        if self._newItem is not None:
+            url = os.path.join(url, self._newItem['name'], '@@json')
+        return url
 
     def update(self):
         self.buttons = self.buttons.select('cancel', 'add');
@@ -470,8 +500,55 @@ class FieldEditForm(FieldFormMixin, FieldDataMixin, z3c.form.form.EditForm):
         self.request.response.redirect(os.path.join(self.context.absolute_url(), '@@json'))
 
 
-class FieldOrder(z3c.form.form.Form):
-    pass
+class FieldOrderForm(FieldDataMixin, z3c.form.form.Form):
+    """
+    AJAX form for reordering a field.
+    """
+
+    fields = z3c.form.field.Fields(IEditableField).select('order')
+
+    @property
+    def label(self):
+        return _(u'Reorder: %s') % self.context.item.name
+
+    def getContent(self):
+        return self.getFieldData()
+
+    def update(self):
+        self.request.set('disable_border', True)
+        super(FieldOrderForm, self).update()
+
+    def applyChanges(self, data):
+        browserSession = ISession(self.request)
+        formData = browserSession[SESSION_KEY]
+        formName = self.context.getParentNode().item.name
+        fieldName = self.context.item.name
+        newOrder = data['order']
+        changes = dict()
+        responseStatus = 304 # Status: not modified
+
+        # Search for the form in the session data
+        if fieldName not in formData['fields']:
+            for name, field in formData['fields'].items():
+                if field['type'] == 'object' and field['name'] == formName:
+                    formData = field['schema']
+                    break
+
+        # Only new changes are applied
+        if formData['fields'][fieldName]['order'] != newOrder:
+            # Re-sort the form by setting the target field's order and then
+            # incrementing the order of each field afterwards.
+            for field in sorted(formData['fields'].values(), key=lambda i: i['order']):
+                # Move the field to here
+                if newOrder == field['order']:
+                    formData['fields'][fieldName]['order'] = newOrder
+                    changes[self.fields['order'].interface] = [fieldName]
+                    responseStatus = 200
+                # Reorder anything following
+                if field['name'] != fieldName and newOrder >= field['order']:
+                    field['order'] += 1
+
+        self.request.response.setStatus(responseStatus)
 
 
 class FieldDeleteForm(FieldDataMixin, z3c.form.form.Form):
