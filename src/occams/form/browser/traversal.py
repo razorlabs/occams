@@ -120,6 +120,7 @@ class SchemaTraverse(object):
 
     def __init__(self, context, request):
         (self.context, self.request) = (context, request)
+        self.request.set('disable_border', True)
 
     def browserDefault(self, request):
         # Forms should just go to their edit forms, we don't have statistics
@@ -194,6 +195,7 @@ class AttributeTraverse(object):
 
     def __init__(self, context, request):
         (self.context, self.request) = (context, request)
+        self.request.set('disable_border', True)
 
     def browserDefault(self, request):
         # Forms should just go to their edit forms, we don't have statistics

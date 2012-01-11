@@ -14,6 +14,8 @@ import z3c.form.form
 import z3c.form.button
 import z3c.form.field
 import z3c.form.group
+from z3c.form.interfaces import HIDDEN_MODE
+from z3c.form.interfaces import INPUT_MODE
 from  z3c.form.browser.text import TextFieldWidget
 from avrc.data.store.interfaces import IDataStore
 
@@ -47,6 +49,9 @@ editableFieldSchemaMap = dict(
     text=IEditableTextField,
     object=IEditableObjectField,
     )
+
+STATUS_NOT_MODIFIED = 304
+STATUS_SUCCESS = 200
 
 
 class SchemaEditForm(z3c.form.form.EditForm):
@@ -121,10 +126,6 @@ class SchemaEditFormPloneView(layout.FormWrapper):
     @property
     def label(self):
         return _(u'Edit: %s (%s)') % (self.context.item.title, self.context.item.name)
-
-    def update(self):
-        self.request.set('disable_border', True)
-        super(SchemaEditFormPloneView, self).update()
 
 
 class FieldsForm(z3c.form.group.GroupForm, z3c.form.form.Form):
@@ -257,28 +258,48 @@ class Fieldset(z3c.form.group.Group):
             widget.disabled = 'disabled'
 
 
-class FieldDataMixin(object):
+class FieldFormHelper(object):
 
-    def getFieldData(self):
-        fieldData = None
+    typeName = None
+
+    def getFormData(self):
+        parent = self.context.getParentNode()
         browserSession = ISession(self.request)
         formData = browserSession[SESSION_KEY]
-        formName = self.context.getParentNode().item.name
-        fieldName = self.context.item.name
-        if fieldName in formData['fields']:
-            fieldData = formData['fields'][fieldName]
+
+        if hasattr(parent, 'item'):
+            formName = parent.item.name
+            fieldName = self.context.item.name
         else:
+            formName = self.context.item.name
+            fieldName = None
+
+        if fieldName not in formData['fields']:
             for name, fieldset in formData['fields'].items():
                 schemaData = fieldset['schema']
                 if schemaData is not None and schemaData['name'] == formName:
-                    fieldData = schemaData['fields'][fieldName]
+                    formData = schemaData
                     break
+        return formData
+
+    def getFieldData(self):
+        parent = self.context.getParentNode()
+        if not hasattr(parent, 'item'):
+            fieldData = None
+        else:
+            fieldData = self.getFormData()['fields'][self.context.item.name]
         return fieldData
 
 
-class FieldFormMixin(object):
+class FieldFormInputHelper(FieldFormHelper):
 
-    typeName = None
+    def __init__(self, context, request):
+        super(FieldFormInputHelper, self).__init__(context, request)
+        schema = editableFieldSchemaMap[self.typeName]
+        self.fields = z3c.form.field.Fields(schema)
+        self.fields['description'].widgetFactory = TextAreaFieldWidget
+        if 'choices' in self.fields:
+            self.fields['choices'].widgetFactory = DataGridFieldFactory
 
     def datagridInitialise(self, subform, widget):
         widget.allow_reorder = True
@@ -296,16 +317,39 @@ class FieldFormMixin(object):
         if self.typeName == 'boolean':
             widgets['value'].readonly = 'readonly'
 
-    def update(self):
-        self.request.set('disable_border', True)
-        self.fields = z3c.form.field.Fields(editableFieldSchemaMap[self.typeName]).omit('order')
-        self.fields['description'].widgetFactory = TextAreaFieldWidget
-        if 'choices' in self.fields:
-            self.fields['choices'].widgetFactory = DataGridFieldFactory
-        super(FieldFormMixin, self).update()
+    def move(self, fieldName, position):
+        changes = dict()
+        changed = list()
+        formData = self.getFormData()
+        for field in sorted(formData['fields'].values(), key=lambda i: i['order']):
+            # Move the field to here
+            if position == field['order']:
+                formData['fields'][fieldName]['order'] = position
+                changed.append(fieldName)
 
+            # Reorder anything following
+            if field['name'] != fieldName and position >= field['order']:
+                changed.append(fieldName)
+                field['order'] += 1
 
-class FieldPreview(FieldDataMixin, z3c.form.form.Form):
+        if changes:
+            changes[self.fields['order'].interface] = changed
+        return changes
+
+    def processChoices(self, data):
+        # This is also similar to what is done in the edit form's apply
+        # Do some extra work with choices on fields we didn't ask for.
+        # Mostly things that are auto-generated for the user since it we
+        # have never used and it they don't seem very relevant
+        # (except, say, order)
+        if 'choices' in data:
+            for order, choice in enumerate(data['choices'], start=0):
+                if choice.get('value') is None:
+                    choice['value'] = choice['title']
+                choice['name'] = tokenize(choice['value'])
+                choice['order'] = order
+
+class FieldPreview(FieldFormHelper, z3c.form.form.Form):
 
     ignoreRequest = True
 
@@ -313,27 +357,24 @@ class FieldPreview(FieldDataMixin, z3c.form.form.Form):
     def label(self):
         return 'Preview: %s' % self.context.item.name
 
-    def update(self):
-        self.request.set('disable_border', True)
+    def updateWidgets(self):
         fieldData = self.getFieldData()
         schemaField = fieldFactory(fieldData)
         self.fields = z3c.form.field.Fields(schemaField)
         widgetFactory = fieldWidgetMap.get(schemaField.__class__)
         if widgetFactory:
             self.fields[schemaField.getName()].widgetFactory = widgetFactory
-        super(FieldPreview, self).update()
-
-    def updateWidgets(self):
         super(FieldPreview, self).updateWidgets()
         for widget in self.widgets.values():
             widget.disabled = 'disabled'
 
 
-class FieldJsonView(FieldDataMixin, BrowserView):
+class FieldJsonView(FieldFormHelper, BrowserView):
 
     def __call__(self):
         data = copy(self.getFieldData())
-        del data['schema']
+        if data['schema']:
+            del data['schema']
         if data['type'] != 'object':
             data['view'] = FieldPreview(self.context, self.request)()
         else:
@@ -342,14 +383,15 @@ class FieldJsonView(FieldDataMixin, BrowserView):
         for choice in data['choices']:
             if isinstance(choice['value'], Decimal):
                 choice['value'] = str(choice['value'])
-
         return json.dumps(data)
 
 
-class BaseFieldAddForm(FieldFormMixin, z3c.form.form.AddForm):
+class BaseFieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
+    """
+    Optionally takes a request variable ``order`` to preset where the
+    field will be added (otherwise at the end of the form)
+    """
     z3c.form.form.extends(z3c.form.form.AddForm)
-
-    ignoreRequest = True
 
     _newItem = None
 
@@ -357,38 +399,38 @@ class BaseFieldAddForm(FieldFormMixin, z3c.form.form.AddForm):
     def label(self):
         return _('New %s Field') % typesVocabulary.getTermByToken(self.typeName).title
 
+    def updateWidgets(self):
+        self.buttons = self.buttons.select('cancel', 'add')
+        if 'order' in self.request:
+            self.fields['order'].mode = HIDDEN_MODE
+        else:
+            self.fields['order'].mode = INPUT_MODE
+        super(BaseFieldAddForm, self).updateWidgets()
+        self.widgets['order'].value = self.request.get('order')
+
     def create(self, data):
         result = copy(data)
-        # This is also similar to what is done in the edit form's apply
-        if 'choices' in data:
-            for order, choice in enumerate(data['choices'], start=0):
-                if choice.get('value') is None:
-                    choice['value'] = choice['title']
-                choice['name'] = tokenize(choice['value'])
-                choice['order'] = order
-        result['version'] = datetime.now()
-        result['type'] = self.typeName
-        result['interface'] = self.context.item.name
-        result['schema'] = None
+        self.processChoices(result)
+        position = data['order']
+        fieldCount = len(self.getFormData()['fields'])
+        if position is None or position > fieldCount:
+            position = fieldCount
+        elif position is None or position < 0:
+            position = 0
+        # TODO create schema
+        result.update(dict(
+            version=datetime.now(),
+            type=self.typeName,
+            interface=self.context.item.name,
+            schema=None,
+            order=position
+            ))
         return result
 
     def add(self, item):
-        # TODO
-        browserSession = ISession(self.request)
-        formData = browserSession[SESSION_KEY]
-        formName = self.context.item.name
-
-        if formName != formData['name']:
-            for field in sorted(formData['fields'].values(), key=lambda i: i['order']):
-                # Move the field to here
-                if field['type'] == 'object' and formName == field['schema']['name']:
-                    formData = field['schema']
-                    break
-
-        item['order'] = len(formData['fields'])
+        formData = self.getFormData()
         formData['fields'][item['name']] = item
-
-        browserSession.save()
+        self.move(item['name'], item['order'])
         self._newItem = item
 
     def nextURL(self):
@@ -396,10 +438,6 @@ class BaseFieldAddForm(FieldFormMixin, z3c.form.form.AddForm):
         if self._newItem is not None:
             url = os.path.join(url, self._newItem['name'], '@@json')
         return url
-
-    def update(self):
-        self.buttons = self.buttons.select('cancel', 'add');
-        super(BaseFieldAddForm, self).update()
 
     @z3c.form.button.buttonAndHandler(_(u'Cancel'), name='cancel')
     def handleCancel(self, action):
@@ -453,10 +491,12 @@ class ObjectFieldAddForm(BaseFieldAddForm):
     typeName = 'object'
 
 
-class FieldEditForm(FieldFormMixin, FieldDataMixin, z3c.form.form.EditForm):
+class FieldEditForm(FieldFormInputHelper, z3c.form.form.EditForm):
     z3c.form.form.extends(z3c.form.form.EditForm)
 
-    ignoreRequest = True
+    @property
+    def typeName(self):
+        return self.context.item.type
 
     @property
     def label(self):
@@ -465,12 +505,9 @@ class FieldEditForm(FieldFormMixin, FieldDataMixin, z3c.form.form.EditForm):
     def getContent(self):
         return self.getFieldData()
 
-    def update(self):
-        self.typeName = self.context.item.type
-        self.buttons = self.buttons.select('cancel', 'apply')
-        super(FieldEditForm, self).update()
-
     def updateWidgets(self):
+        self.buttons = self.buttons.select('cancel', 'apply')
+        self.fields['order'].mode = HIDDEN_MODE
         super(FieldEditForm, self).updateWidgets()
         self.widgets['name'].readonly = 'readonly'
 
@@ -480,27 +517,15 @@ class FieldEditForm(FieldFormMixin, FieldDataMixin, z3c.form.form.EditForm):
         self.request.response.redirect(os.path.join(parent.absolute_url()))
 
     def applyChanges(self, data):
-        # Do some extra work with choices on fields we didn't ask for.
-        # Mostly things that are auto-generated for the user since it we
-        # have never used and it they don't seem very relevant
-        # (except, say, order)
-        if 'choices' in data:
-            for order, choice in enumerate(data['choices'], start=0):
-                if choice.get('value') is None:
-                    choice['value'] = choice['title']
-                choice['name'] = tokenize(choice['value'])
-                choice['order'] = order
-
+        self.processChoices(data)
         # Now do the default changes
         changes = super(FieldEditForm, self).applyChanges(data);
-
         if changes:
             self.getContent()['version'] = datetime.now()
-
         self.request.response.redirect(os.path.join(self.context.absolute_url(), '@@json'))
 
 
-class FieldOrderForm(FieldDataMixin, z3c.form.form.Form):
+class FieldOrderForm(FieldFormInputHelper, z3c.form.form.Form):
     """
     AJAX form for reordering a field.
     """
@@ -508,50 +533,23 @@ class FieldOrderForm(FieldDataMixin, z3c.form.form.Form):
     fields = z3c.form.field.Fields(IEditableField).select('order')
 
     @property
+    def typeName(self):
+        return self.context.item.type
+
+    @property
     def label(self):
         return _(u'Reorder: %s') % self.context.item.name
 
-    def getContent(self):
-        return self.getFieldData()
-
-    def update(self):
-        self.request.set('disable_border', True)
-        super(FieldOrderForm, self).update()
-
     def applyChanges(self, data):
-        browserSession = ISession(self.request)
-        formData = browserSession[SESSION_KEY]
-        formName = self.context.getParentNode().item.name
         fieldName = self.context.item.name
-        newOrder = data['order']
-        changes = dict()
-        responseStatus = 304 # Status: not modified
-
-        # Search for the form in the session data
-        if fieldName not in formData['fields']:
-            for name, field in formData['fields'].items():
-                if field['type'] == 'object' and field['name'] == formName:
-                    formData = field['schema']
-                    break
-
-        # Only new changes are applied
-        if formData['fields'][fieldName]['order'] != newOrder:
-            # Re-sort the form by setting the target field's order and then
-            # incrementing the order of each field afterwards.
-            for field in sorted(formData['fields'].values(), key=lambda i: i['order']):
-                # Move the field to here
-                if newOrder == field['order']:
-                    formData['fields'][fieldName]['order'] = newOrder
-                    changes[self.fields['order'].interface] = [fieldName]
-                    responseStatus = 200
-                # Reorder anything following
-                if field['name'] != fieldName and newOrder >= field['order']:
-                    field['order'] += 1
-
-        self.request.response.setStatus(responseStatus)
+        changes = self.move(fieldName, data['order'])
+        if changes:
+            self.request.response.setStatus(STATUS_SUCCESS)
+        else:
+            self.request.response.setStatus(STATUS_NOT_MODIFIED)
 
 
-class FieldDeleteForm(FieldDataMixin, z3c.form.form.Form):
+class FieldDeleteForm(FieldFormInputHelper, z3c.form.form.Form):
     """
     Delete confirmation form.
     TODO: It would be nice to have both AJAX and BROWSER mode,
@@ -561,31 +559,20 @@ class FieldDeleteForm(FieldDataMixin, z3c.form.form.Form):
     template = ViewPageTemplateFile('editor_templates/delete.pt')
 
     @property
+    def typeName(self):
+        return self.context.item.type
+
+    @property
     def label(self):
         return _(u'Delete: %s') % self.context.item.name
 
-    def update(self):
-        self.request.set('disable_border', True)
-        super(FieldDeleteForm, self).update()
-
     @z3c.form.button.buttonAndHandler(_(u'Cancel'), name='cancel')
     def handleCancel(self, action):
-        # Status: not modified
-        self.request.response.setStatus(304);
+        self.request.response.setStatus(STATUS_NOT_MODIFIED);
 
     @z3c.form.button.buttonAndHandler(_(u'Yes, I\'m sure'), name='delete')
     def handleDelete(self, action):
-        browserSession = ISession(self.request)
-        formData = browserSession[SESSION_KEY]
-        formName = self.context.getParentNode().item.name
+        formData = self.getFormData()
         fieldName = self.context.item.name
-        if fieldName in formData['fields']:
-            del formData['fields'][fieldName]
-        else:
-            for name, fieldset in formData['fields'].items():
-                schemaData = fieldset['schema']
-                if schemaData is not None and schemaData['name'] == formName:
-                    del schemaData['fields'][fieldName]
-                    break
-        # Status: success
-        self.request.response.setStatus(200);
+        del formData['fields'][fieldName]
+        self.request.response.setStatus(STATUS_SUCCESS);
