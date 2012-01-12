@@ -1,24 +1,44 @@
 <?xml version="1.0"?>
 <object name="portal_javascripts">
 
-  <javascript 
-      id="++resource++occams.form/scripts/jquery-ui-1.8.16.custom.min.js" 
-      cacheable="True" 
-      compression="none" 
+  <javascript
+      id="++resource++occams.form/scripts/jquery-ui-1.8.16.custom.min.js"
+      cacheable="True"
+      compression="none"
       cookable="True"
-      enabled="True" 
+      enabled="True"
       expression=""
       inline="False"
       />
-      
-  <javascript 
-      id="++resource++occams.form/scripts/editor.js" 
-      cacheable="True" 
-      compression="none" 
+
+  <javascript
+      id="++resource++occams.form/scripts/editor.js"
+      cacheable="True"
+      compression="none"
       cookable="True"
-      enabled="True" 
+      enabled="True"
       expression=""
       inline="False"
       />
-      
+
+  <javascript
+      id="++resource++occams.form/scripts/datagrid-fix.js"
+      cacheable="True"
+      compression="none"
+      cookable="True"
+      enabled="True"
+      expression=""
+      inline="False"
+      />
+
+  <javascript
+      id="++resource++occams.form/scripts/button-fix.js"
+      cacheable="True"
+      compression="none"
+      cookable="True"
+      enabled="True"
+      expression=""
+      inline="False"
+      />
+
 </object>

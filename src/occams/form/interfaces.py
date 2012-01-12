@@ -208,7 +208,12 @@ class IEditableTextField(IEditableField, IRequireable, ICollectable):
 
 class IEditableObjectField(IEditableField):
 
-    pass
+    schemaName = zope.schema.ASCIILine(
+        title=_(u'Sub Form'),
+        description=_(
+            u'Specify the name of the sub form schema to use.'
+            ),
+        )
 
 
 class IFormSummary(IOccamsFormComponent):

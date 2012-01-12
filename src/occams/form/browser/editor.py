@@ -380,9 +380,10 @@ class FieldJsonView(FieldFormHelper, BrowserView):
         else:
             data['view'] = None
         data['version'] = data['version'].date().isoformat()
-        for choice in data['choices']:
-            if isinstance(choice['value'], Decimal):
-                choice['value'] = str(choice['value'])
+        if data['choices']:
+            for choice in data['choices']:
+                if isinstance(choice['value'], Decimal):
+                    choice['value'] = str(choice['value'])
         return json.dumps(data)
 
 
@@ -410,20 +411,36 @@ class BaseFieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
 
     def create(self, data):
         result = copy(data)
+        formData = self.getFormData()
         self.processChoices(result)
+
         position = data['order']
-        fieldCount = len(self.getFormData()['fields'])
+        fieldCount = len(formData['fields'])
         if position is None or position > fieldCount:
             position = fieldCount
         elif position is None or position < 0:
             position = 0
-        # TODO create schema
+
+        schema = None
+
+        if self.typeName == 'object':
+            schema = dict(
+                name=result['schemaName'],
+                title=result['title'],
+                description='auto-generated class',
+                version=datetime.now(),
+                fields=dict(),
+                )
+
+        del result['schemaName']
+
         result.update(dict(
             version=datetime.now(),
             type=self.typeName,
             interface=self.context.item.name,
-            schema=None,
-            order=position
+            schema=schema,
+            choices=None,
+            order=position,
             ))
         return result
 
@@ -549,7 +566,7 @@ class FieldOrderForm(FieldFormInputHelper, z3c.form.form.Form):
             self.request.response.setStatus(STATUS_NOT_MODIFIED)
 
 
-class FieldDeleteForm(FieldFormInputHelper, z3c.form.form.Form):
+class FieldDeleteForm(FieldFormHelper, z3c.form.form.Form):
     """
     Delete confirmation form.
     TODO: It would be nice to have both AJAX and BROWSER mode,
