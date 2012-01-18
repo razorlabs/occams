@@ -1,4 +1,4 @@
-<configure 
+<configure
     xmlns="http://namespaces.zope.org/zope"
     xmlns:browser="http://namespaces.zope.org/browser"
     xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
@@ -6,42 +6,60 @@
     i18n_domain="occams.form">
 
   <!-- Explicitly load external packages so we don't get ambiguous errors -->
-  <include package="plone.app.dexterity" />
-  <include package="plone.app.z3cform" />
   <include package="collective.z3cform.datagridfield" />
+  <include package="plone.app.dexterity" />
+  <include package="plone.app.jquerytools" />
+  <include package="plone.app.z3cform" />
+  <include package="five.globalrequest" />
+
   <include package="avrc.data.store" />
-  
+
   <include file="permissions.zcml" />
   <include package=".browser" />
   <include package=".upgrades" />
-  
+
   <browser:resourceDirectory name="occams.form" directory="static"/>
+
+  <adapter
+      factory=".traversal.RepositoryTraverse"
+      provides="zope.publisher.interfaces.browser.IBrowserPublisher"
+      />
+
+  <adapter
+      factory=".traversal.SchemaTraverse"
+      provides="zope.publisher.interfaces.browser.IBrowserPublisher"
+      />
+
+  <adapter
+      factory=".traversal.AttributeTraverse"
+      provides="zope.publisher.interfaces.browser.IBrowserPublisher"
+      />
 
   <adapter factory=".repository.getRespositorySession" />
   <adapter factory=".repository.getRespositoryDataStore" />
-     
+
   <subscriber
       for="occams.form.interfaces.IRepository
            zope.lifecycleevent.interfaces.IObjectAddedEvent"
       handler=".repository.handleRepositoryAddedEvent"
       />
-        
+
   <subscriber
       for="occams.form.interfaces.IRepository
            zope.lifecycleevent.interfaces.IObjectModifiedEvent"
       handler=".repository.handleRepositoryModifiedEvent"
       />
-      
+
   <utility
       name="occams.form.Forms"
       factory=".repository.RepositoryFormsVocabularyFactory"
       />
-      
+
   <utility
       name="occams.form.AvailableSessions"
       factory=".repository.AvailableSessionsVocabularyFactory"
       />
-      
+
   <utility factory=".form.FormSummaryGenerator" />
 
   <genericsetup:registerProfile

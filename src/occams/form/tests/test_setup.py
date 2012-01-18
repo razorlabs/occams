@@ -8,12 +8,25 @@ class TestSetup(unittest.TestCase):
 
     layer = OCCAMS_FORM_INTEGRATION_TESTING
 
-    def test_installed(self):
+    def assertInstalled(self, namespace):
         portal = self.layer['portal']
         quickinstaller = getToolByName(portal, 'portal_quickinstaller')
-        self.assertTrue(quickinstaller.isProductInstalled('occams.form'))
+        isInstalled = quickinstaller.isProductInstalled(namespace)
+        if not isInstalled:
+            self.fail('[%s] was not installed!' % namespace)
 
-    def test_dexterity_installed(self):
-        portal = self.layer['portal']
-        quickinstaller = getToolByName(portal, 'portal_quickinstaller')
-        self.assertTrue(quickinstaller.isProductInstalled('plone.app.dexterity'))
+    def testInstalled(self):
+        self.assertInstalled('occams.form')
+
+    def testDexterityInstalled(self):
+        self.assertInstalled('plone.app.dexterity')
+
+    def testJqueryToolsInstalled(self):
+        self.assertInstalled('plone.app.jquerytools')
+
+    def testZ3cFormInstalled(self):
+        self.assertInstalled('plone.app.z3cform')
+
+    def testDatagridFieldInstalled(self):
+        self.assertInstalled('collective.z3cform.datagridfield')
+

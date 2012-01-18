@@ -82,6 +82,7 @@ class SchemaEditForm(z3c.form.form.EditForm):
         return ISession(self.request)[SESSION_KEY]
 
     def update(self):
+        self.request.set('disable_border', True)
         repository = self.context.getParentNode()
         formName = self.context.item.name
         formVersion = None
@@ -154,6 +155,7 @@ class FieldsForm(z3c.form.group.GroupForm, z3c.form.form.Form):
         return typesVocabulary
 
     def update(self):
+        self.request.set('disable_border', True)
         groups = []
         objectFilter = lambda x: x['schema'] is not None
         orderSort = lambda i: i['order']
@@ -358,6 +360,7 @@ class FieldPreview(FieldFormHelper, z3c.form.form.Form):
         return 'Preview: %s' % self.context.item.name
 
     def updateWidgets(self):
+        self.request.set('disable_border', True)
         fieldData = self.getFieldData()
         schemaField = fieldFactory(fieldData)
         self.fields = z3c.form.field.Fields(schemaField)
@@ -372,6 +375,7 @@ class FieldPreview(FieldFormHelper, z3c.form.form.Form):
 class FieldJsonView(FieldFormHelper, BrowserView):
 
     def __call__(self):
+        self.request.set('disable_border', True)
         data = copy(self.getFieldData())
         if data['schema']:
             del data['schema']
@@ -401,6 +405,8 @@ class BaseFieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
         return _('New %s Field') % typesVocabulary.getTermByToken(self.typeName).title
 
     def updateWidgets(self):
+        import pdb; pdb.set_trace()
+        self.request.set('disable_border', True)
         self.buttons = self.buttons.select('cancel', 'add')
         if 'order' in self.request:
             self.fields['order'].mode = HIDDEN_MODE
@@ -523,6 +529,7 @@ class FieldEditForm(FieldFormInputHelper, z3c.form.form.EditForm):
         return self.getFieldData()
 
     def updateWidgets(self):
+        self.request.set('disable_border', True)
         self.buttons = self.buttons.select('cancel', 'apply')
         self.fields['order'].mode = HIDDEN_MODE
         super(FieldEditForm, self).updateWidgets()
@@ -557,6 +564,10 @@ class FieldOrderForm(FieldFormInputHelper, z3c.form.form.Form):
     def label(self):
         return _(u'Reorder: %s') % self.context.item.name
 
+    def updateWidgets(self):
+        self.request.set('disable_border', True)
+        super(FieldOrderForm, self).updateWidgets()
+
     def applyChanges(self, data):
         fieldName = self.context.item.name
         changes = self.move(fieldName, data['order'])
@@ -582,6 +593,10 @@ class FieldDeleteForm(FieldFormHelper, z3c.form.form.Form):
     @property
     def label(self):
         return _(u'Delete: %s') % self.context.item.name
+
+    def updateWidgets(self):
+        self.request.set('disable_border', True)
+        super(FieldOrderForm, self).updateWidgets()
 
     @z3c.form.button.buttonAndHandler(_(u'Cancel'), name='cancel')
     def handleCancel(self, action):

@@ -1,7 +1,7 @@
 <div id="of-editor">
   <metal:form metal:use-macro="view/@@ploneform-macros/form">
     <metal:fields-slot metal:fill-slot="fields">
-    
+
       <div id="of-aux">
         <!-- TODO: version selector -->
         <!-- Field types -->
@@ -20,7 +20,7 @@
           </ul>
         </div>
       </div>
-      
+
       <div id="of-main">
         <div id="of-item-template">
           <tal:item
@@ -35,7 +35,13 @@
                   onlyView      python: False;
                   itemClass     string:;
                ">
-            <div  class=""  tal:attributes="class string:of-item ${itemClass} ${type_}" >
+            <div  class=""
+              tal:attributes="
+                  class string:of-item ${itemClass} ${type_};
+                  data-name name;
+                  data-type type_;
+                  data-version version;
+                  ">
               <div class="of-head" tal:condition="not:onlyView">
                 <a href="" class="of-collapseable" tal:attributes="href string:#collapse">Collapse</a>
                 <div class="of-metadata">
@@ -59,14 +65,14 @@
             </div>
           </tal:item>
         </div>
-      
+
         <!-- The form schema's field widgets -->
         <tal:sets tal:repeat="count python: range(2)">
           <tal:set define="isFirstCount repeat/count/start">
             <div id="" tal:attributes="id python: isFirstCount and 'of-default-fieldset' or 'of-fieldsets'">
               <tal:fieldsets tal:repeat="fieldset groups">
                 <tal:check
-                    define="isFirstFieldset repeat/fieldset/start" 
+                    define="isFirstFieldset repeat/fieldset/start"
                     condition="python: (isFirstCount and isFirstFieldset) or not (isFirstCount or isFirstFieldset)">
                   <tal:fieldset
                       define="
@@ -75,12 +81,18 @@
                         name          fieldset/prefix;
                         title         fieldset/label|nothing;
                         description   fieldset/description|nothing;
-                        type_         python: fieldset.type();
+                        type_         python: fieldset.type() or '';
                         version       python: fieldset.version();
                         onlyView      repeat/fieldset/start;
                         itemClass     string:of-fieldset;
                       ">
-                    <div  class=""  tal:attributes="class string:of-item ${itemClass} ${type_}" >
+                    <div  class=""
+                      tal:attributes="
+                          class string:of-item ${itemClass} ${type_};
+                          data-name name;
+                          data-type type_;
+                          data-version version;
+                          ">
                       <div class="of-head" tal:condition="not:onlyView">
                         <a href="" class="of-collapseable" tal:attributes="href string:#collapse">Collapse</a>
                         <div class="of-metadata">
@@ -112,7 +124,13 @@
                                   onlyView      python: False;
                                   itemClass     string:of-field;
                                 ">
-                              <div  class=""  tal:attributes="class string:of-item ${itemClass} ${type_}" >
+                              <div  class=""
+                                tal:attributes="
+                                    class string:of-item ${itemClass} ${type_};
+                                    data-name name;
+                                    data-type type_;
+                                    data-version version;
+                                    ">
                                 <a href="" class="of-collapseable" tal:attributes="href string:#collapse">Collapse</a>
                                 <div class="of-head" tal:condition="not:onlyView">
                                   <div class="of-metadata">
@@ -136,7 +154,7 @@
                                   </div>
                                 </div>
                               </div>
-                            </tal:field>                    
+                            </tal:field>
                           </tal:widgets>
                         </div>
                       </div>

@@ -12,6 +12,7 @@ from occams.form import MessageFactory as _
 
 SESSION_KEY = 'occams.form'
 
+TEXTAREA_SIZE = 5
 
 typesVocabulary = SimpleVocabulary(terms=[
         SimpleTerm(value=zope.schema.Bool, token='boolean', title=_(u'Boolean')),
@@ -283,12 +284,6 @@ class IDataBaseItemContext(IOccamsFormComponent):
 class ISchemaContext(IDataBaseItemContext):
     """
     Context for DataStore Schema wrapper.
-    """
-
-
-class IEntityContext(IDataBaseItemContext):
-    """
-    Context for DataStore Entity wrapper.
     """
 
 

@@ -99,7 +99,7 @@
 }
 
 /*******************************************************************************
- * ITEM 
+ * ITEM
  ******************************************************************************/
 
 #of-item-template {
@@ -154,7 +154,7 @@
 }
 
 .of-item .of-type {
-	font-style: italic; 
+	font-style: italic;
 }
 
 .of-item .of-name:before {
@@ -297,11 +297,11 @@
 /*******************************************************************************
  * FIELD
  ******************************************************************************/
- 
+
 .of-field > .of-head {
    background-color: #DDD;
 }
- 
+
 .of-field:last-child {
     margin-bottom: 0;
 }
@@ -335,7 +335,7 @@
     font-weight: bold;
 }
 
-#of-editor input[type="text"], 
+#of-editor input[type="text"],
 #of-editor textarea {
 	color: inherit !important;
 	font-family: "Lucida Grande", Arial, FreeSans !important;
@@ -343,7 +343,7 @@
 	font-weight: inherit !important;
 }
 
-#of-editor input[type="text"][readonly="readonly"], 
+#of-editor input[type="text"][readonly="readonly"],
 #of-editor textarea[readonly="readonly"] {
 	background-color: #DDD !important;
     color: #666 !important;
@@ -357,14 +357,14 @@
 /*******************************************************************************
  * JQUERY OVERRIDES
  ******************************************************************************/
- 
-#of-editor .ui-sortable-placeholder { 
-    border: 0.2em dotted red; 
-    visibility: visible !important;  
+
+#of-editor .ui-sortable-placeholder {
+    border: 0.2em dotted red;
+    visibility: visible !important;
 }
-    
-#of-editor .ui-sortable-placeholder * { 
-    visibility: hidden; 
+
+#of-editor .ui-sortable-placeholder * {
+    visibility: hidden;
 }
 
 /*******************************************************************************
@@ -388,3 +388,4 @@
 #of-editor .datagridwidget-table-view td{
     padding: 0.3em !important;
 }
+

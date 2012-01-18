@@ -4,24 +4,6 @@
     xmlns:browser="http://namespaces.zope.org/browser"
     i18n_domain="occams.form">
 
-  <!-- BROWSER TRAVERSAL -->
-
-  <adapter
-      factory=".traversal.RepositoryTraverse"
-      provides="zope.publisher.interfaces.browser.IBrowserPublisher"
-      />
-
-  <adapter
-      factory=".traversal.SchemaTraverse"
-      provides="zope.publisher.interfaces.browser.IBrowserPublisher"
-      />
-
-  <adapter
-      factory=".traversal.AttributeTraverse"
-      provides="zope.publisher.interfaces.browser.IBrowserPublisher"
-      />
-
-
   <!-- REPOSITORY -->
 
   <browser:page
@@ -32,6 +14,11 @@
       />
 
   <!-- SCHEMATA -->
+
+  <browser:defaultView
+     for="occams.form.interfaces.ISchemaContext"
+     name="edit"
+     />
 
   <browser:page
       for="occams.form.interfaces.ISchemaContext"
@@ -103,6 +90,11 @@
 
 
   <!-- ATTRIBUTES -->
+
+  <browser:defaultView
+     for="occams.form.interfaces.IAttributeContext"
+     name="edit"
+     />
 
   <browser:page
       for="occams.form.interfaces.IAttributeContext"

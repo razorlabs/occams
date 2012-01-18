@@ -35,16 +35,16 @@ setup(
     zip_safe=False,
     install_requires=[
         'setuptools',
+        'avrc.data.store',
         'collective.beaker',
         'collective.z3cform.datagridfield',
+        'five.globalrequest',
         'plone.app.dexterity',
         'plone.app.z3cform',
         'plone.z3cform',
         'SQLAlchemy',
         'z3c.saconfig',
         'z3c.form',
-
-        'avrc.data.store',
         ],
     extras_require=dict(
         postgresql=['psycopg2'],
