@@ -1,11 +1,12 @@
 import unittest2 as unittest
 
 import zope.schema
+from zope.publisher.browser import TestRequest
 from z3c.form.interfaces import ITextAreaWidget
 
-from occams.form.testing import OCCAMS_FORM_INTEGRATION_TESTING
 from occams.form.interfaces import TEXTAREA_SIZE
 from occams.form.browser.widgets import TextAreaFieldWidget
+from occams.form.testing import OCCAMS_FORM_INTEGRATION_TESTING
 
 
 class TestWidgets(unittest.TestCase):
@@ -13,7 +14,7 @@ class TestWidgets(unittest.TestCase):
     layer = OCCAMS_FORM_INTEGRATION_TESTING
 
     def assertTextArea(self, field):
-        request = self.layer['request']
+        request = TestRequest()
         widget = TextAreaFieldWidget(field, request)
 
         if not ITextAreaWidget.providedBy(widget):

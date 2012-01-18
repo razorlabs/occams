@@ -2,23 +2,25 @@
 Unit testing resources
 """
 
+import os
+import tempfile
+
+from sqlalchemy import create_engine
+
+from collective.beaker.testing import testingSession
 from plone.app.testing import PloneSandboxLayer
 from plone.app.testing import applyProfile
 from plone.app.testing import IntegrationTesting
 from plone.app.testing import FunctionalTesting
-
 from plone.app.testing import PLONE_FIXTURE
 from plone.app.testing import TEST_USER_ID
 from plone.app.testing import TEST_USER_NAME
 from plone.app.testing import login
 from plone.app.testing import setRoles
-
-import os
-import tempfile
 from zope.component import provideUtility
+from zope.component import provideAdapter
 from z3c.saconfig import EngineFactory
 from z3c.saconfig import GloballyScopedSession
-from sqlalchemy import create_engine
 
 from avrc.data.store import model
 
@@ -27,13 +29,16 @@ ENGINE_NAME = u'occams.form.testing.Engine'
 SESSION_NAME = u'occams.form.testing.Session'
 
 
-class OccamsFormSandBoxLayer(PloneSandboxLayer):
+class OccamsFormSandBoxLayer(PloneSandboxLayer,):
 
     defaultBases = (PLONE_FIXTURE,)
 
     def setUpZope(self, app, configurationContext):
         import occams.form as package
         self.loadZCML(package=package)
+
+        # Setup browser session
+        provideAdapter(testingSession)
 
         # Setup the database utilities
         fileno, self.databaseFileName = tempfile.mkstemp(suffix='.db')
@@ -47,6 +52,7 @@ class OccamsFormSandBoxLayer(PloneSandboxLayer):
 
     def tearDownZope(self, app):
         os.unlink(self.databaseFileName)
+
 
     def setUpPloneSite(self, portal):
         applyProfile(portal, 'occams.form:default')

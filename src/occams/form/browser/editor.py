@@ -20,7 +20,7 @@ from  z3c.form.browser.text import TextFieldWidget
 from avrc.data.store.interfaces import IDataStore
 
 from occams.form import MessageFactory as _
-from occams.form.interfaces import SESSION_KEY
+from occams.form.interfaces import DATA_KEY
 from occams.form.interfaces import IEditableForm
 from occams.form.interfaces import IEditableField
 from occams.form.interfaces import IEditableBooleanField
@@ -79,7 +79,7 @@ class SchemaEditForm(z3c.form.form.EditForm):
         return 'occams-form-master'
 
     def getContent(self):
-        return ISession(self.request)[SESSION_KEY]
+        return ISession(self.request)[DATA_KEY]
 
     def update(self):
         self.request.set('disable_border', True)
@@ -91,7 +91,7 @@ class SchemaEditForm(z3c.form.form.EditForm):
         # intermediary data storage while the form is being modified.
         browserSession = ISession(self.request)
         form = IDataStore(repository).schemata.get(formName, formVersion)
-        browserSession[SESSION_KEY] = serializeForm(form)
+        browserSession[DATA_KEY] = serializeForm(form)
         browserSession.save()
 
         # Render the fields editor form
@@ -160,7 +160,7 @@ class FieldsForm(z3c.form.group.GroupForm, z3c.form.form.Form):
         objectFilter = lambda x: x['schema'] is not None
         orderSort = lambda i: i['order']
 
-        formData = ISession(self.request)[SESSION_KEY]
+        formData = ISession(self.request)[DATA_KEY]
 
         defaultFieldsetData = dict(interface=formData['name'], schema=formData)
         groups.append(Fieldset(defaultFieldsetData, self.request, self))
@@ -267,7 +267,7 @@ class FieldFormHelper(object):
     def getFormData(self):
         parent = self.context.getParentNode()
         browserSession = ISession(self.request)
-        formData = browserSession[SESSION_KEY]
+        formData = browserSession[DATA_KEY]
 
         if hasattr(parent, 'item'):
             formName = parent.item.name

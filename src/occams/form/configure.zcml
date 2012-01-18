@@ -10,7 +10,6 @@
   <include package="plone.app.dexterity" />
   <include package="plone.app.jquerytools" />
   <include package="plone.app.z3cform" />
-  <include package="five.globalrequest" />
 
   <include package="avrc.data.store" />
 
@@ -21,17 +20,17 @@
   <browser:resourceDirectory name="occams.form" directory="static"/>
 
   <adapter
-      factory=".traversal.RepositoryTraverse"
+      factory=".traversal.RepositoryTraverser"
       provides="zope.publisher.interfaces.browser.IBrowserPublisher"
       />
 
   <adapter
-      factory=".traversal.SchemaTraverse"
+      factory=".traversal.SchemaTraverser"
       provides="zope.publisher.interfaces.browser.IBrowserPublisher"
       />
 
   <adapter
-      factory=".traversal.AttributeTraverse"
+      factory=".traversal.AttributeTraverser"
       provides="zope.publisher.interfaces.browser.IBrowserPublisher"
       />
 

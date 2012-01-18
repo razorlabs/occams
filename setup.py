@@ -38,7 +38,6 @@ setup(
         'avrc.data.store',
         'collective.beaker',
         'collective.z3cform.datagridfield',
-        'five.globalrequest',
         'plone.app.dexterity',
         'plone.app.z3cform',
         'plone.z3cform',

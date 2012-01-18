@@ -17,7 +17,8 @@ Also, we'd like the following (not supported yet):
 
 """
 
-from zope.globalrequest import getRequest
+from collective.beaker.interfaces import ISession
+from OFS.SimpleItem import SimpleItem
 from zope.component import adapts
 from zope.component import queryMultiAdapter
 from zope.container.interfaces import IReadContainer
@@ -25,15 +26,11 @@ from zope.interface import implements
 from zope.publisher.defaultview import getDefaultViewName
 from zope.publisher.interfaces.http import IHTTPRequest
 from zope.publisher.interfaces.browser import IBrowserPublisher
-from OFS.SimpleItem import SimpleItem
 from zExceptions import NotFound
-
-from collective.beaker.interfaces import ISession
 
 from avrc.data.store import model
 from avrc.data.store.interfaces import IDataStore
-
-from occams.form.interfaces import SESSION_KEY
+from occams.form.interfaces import DATA_KEY
 from occams.form.interfaces import IRepository
 from occams.form.interfaces import IDataBaseItemContext
 from occams.form.interfaces import ISchemaContext
@@ -136,14 +133,11 @@ class ExtendedTraversal(object):
         pass
 
 
-def formDataFactory(contex):
-    request = getRequest()
-    return ISession(request).get(SESSION_KEY, {})
-
-
-class RepositoryTraverse(ExtendedTraversal):
+class RepositoryTraverser(ExtendedTraversal):
     """
     Traverses through a ``IRepository`` to get an ``ISchemaContext``
+    Note that from this point, we can only traverse to EXISTING forms. After
+    that, we can traverse to form data (in case the form is being modified)
     """
     adapts(IRepository, IHTTPRequest)
 
@@ -163,7 +157,7 @@ class RepositoryTraverse(ExtendedTraversal):
             return SchemaContext(item)
 
 
-class SchemaTraverse(ExtendedTraversal):
+class SchemaTraverser(ExtendedTraversal):
     """
     Traverses through a ``ISchemContext`` to get an ``IAttributeContext``
     TODO Eventually we'll want to be able to traverse to an entity as well
@@ -171,24 +165,17 @@ class SchemaTraverse(ExtendedTraversal):
     adapts(ISchemaContext, IHTTPRequest)
 
     def traverse(self, name):
-        factory = model.Attribute
-        formData = formDataFactory(self.context)
+        formData = ISession(self.request).get(DATA_KEY, {})
+        childData = formData['fields'].get(name)
 
-        if self.context.item.name != formData.get('name'):
-            for field in formData['fields'].values():
-                schemaData = field.get('schema')
-                if schemaData.get('name') == name and name in schemaData.get('fields', {}):
-                    formData = schemaData
-
-        if formData:
-            childData = formData['fields'][name]
-            item = factory(name=childData['name'], title=childData['title'],)
-
-        if item is not None:
-            return AttributeContext(item)
+        if childData:
+            return AttributeContext(model.Attribute(
+                name=childData['name'],
+                title=childData['title'],
+                ))
 
 
-class AttributeTraverse(ExtendedTraversal):
+class AttributeTraverser(ExtendedTraversal):
     """
     Traverses through an ``IAttributeContext`` to get ``IAttributeContext``
     values from sub-objects. This only works if the attribute that is
@@ -197,12 +184,13 @@ class AttributeTraverse(ExtendedTraversal):
     adapts(IAttributeContext, IHTTPRequest)
 
     def traverse(self, name):
-        factory = model.Attribute
-        formData = formDataFactory(self.context)
-        contextData = formData['fields'][self.context.item.name]
+        formData = ISession(self.request).get(DATA_KEY, {})
+        contextData = formData['fields'].get(self.context.item.name, {})
         childData = contextData.get('schema', {}).get('fields', {}).get(name)
 
         if childData is not None:
-            item = factory(name=childData['name'], title=childData['title'],)
-            return AttributeContext(item)
+            return AttributeContext(model.Attribute(
+                name=childData['name'],
+                title=childData['title'],
+                ))
 

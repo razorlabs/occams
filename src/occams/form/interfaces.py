@@ -1,16 +1,15 @@
+from collective.z3cform.datagridfield import DictRow
 import zope.interface
 import zope.schema
 from zope.schema.vocabulary import SimpleTerm
 from zope.schema.vocabulary import SimpleVocabulary
-
-from collective.z3cform.datagridfield import DictRow
 import plone.directives.form
 
 from avrc.data.store.interfaces import IDataBaseItem
 from occams.form import MessageFactory as _
 
 
-SESSION_KEY = 'occams.form'
+DATA_KEY = 'occams.form'
 
 TEXTAREA_SIZE = 5
 
