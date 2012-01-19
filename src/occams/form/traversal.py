@@ -46,14 +46,33 @@ class DataBaseItemContext(SimpleItem):
     # The actual data we're wrapping
     item = None
 
-    def __init__(self, item):
+    # Input data
+    data = None
+
+    def __init__(self, item=None, data=None):
         self.item = item
+        self.data = data or dict()
 
         # Set the zope-expected properties
         self.id = None
-        self.__name__ = item.name
-        title = item.title
+        self.__name__ = self.data.get('name') or self.item.name
+        title = self.data.get('title') or self.item.name
         self.Title = lambda: title
+
+    def __getitem__(self, key):
+        if key not in self:
+            raise KeyError
+        return self.data.get(key) or getattr(self.item, key)
+
+    def __setitem__(self, key, value):
+        if key not in self:
+            raise KeyError
+        self.data.set(key, value)
+        if self.item is not None:
+            setattr(self.item, key, value)
+
+    def __contains__(self, key):
+        return key in self.data or hasattr(self.item, key)
 
 
 class SchemaContext(DataBaseItemContext):
@@ -154,7 +173,7 @@ class RepositoryTraverser(ExtendedTraversal):
         item = query.first()
 
         if item is not None:
-            return SchemaContext(item)
+            return SchemaContext(item=item)
 
 
 class SchemaTraverser(ExtendedTraversal):
@@ -169,11 +188,7 @@ class SchemaTraverser(ExtendedTraversal):
         childData = formData['fields'].get(name)
 
         if childData:
-            return AttributeContext(model.Attribute(
-                name=childData['name'],
-                title=childData['title'],
-                ))
-
+            return AttributeContext(data=childData)
 
 class AttributeTraverser(ExtendedTraversal):
     """
@@ -185,12 +200,8 @@ class AttributeTraverser(ExtendedTraversal):
 
     def traverse(self, name):
         formData = ISession(self.request).get(DATA_KEY, {})
-        contextData = formData['fields'].get(self.context.item.name, {})
+        contextData = formData['fields'].get(self.context.__name__, {})
         childData = contextData.get('schema', {}).get('fields', {}).get(name)
 
-        if childData is not None:
-            return AttributeContext(model.Attribute(
-                name=childData['name'],
-                title=childData['title'],
-                ))
-
+        if childData:
+            return AttributeContext(data=childData)

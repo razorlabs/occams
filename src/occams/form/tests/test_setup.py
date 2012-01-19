@@ -30,4 +30,3 @@ class TestSetup(unittest.TestCase):
 
     def testDatagridFieldInstalled(self):
         self.assertInstalled('collective.z3cform.datagridfield')
-

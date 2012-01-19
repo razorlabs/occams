@@ -53,7 +53,6 @@ class OccamsFormSandBoxLayer(PloneSandboxLayer,):
     def tearDownZope(self, app):
         os.unlink(self.databaseFileName)
 
-
     def setUpPloneSite(self, portal):
         applyProfile(portal, 'occams.form:default')
 

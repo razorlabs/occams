@@ -35,56 +35,56 @@
   <browser:page
       for="occams.form.interfaces.ISchemaContext"
       name="add-boolean"
-      class=".editor.BooleanFieldAddForm"
+      class=".editor.FieldAddForm"
       permission="occams.form.ModifyForm"
       />
 
   <browser:page
       for="occams.form.interfaces.ISchemaContext"
       name="add-date"
-      class=".editor.DateFieldAddForm"
+      class=".editor.FieldAddForm"
       permission="occams.form.ModifyForm"
       />
 
   <browser:page
       for="occams.form.interfaces.ISchemaContext"
       name="add-datetime"
-      class=".editor.DateTimeFieldAddForm"
+      class=".editor.FieldAddForm"
       permission="occams.form.ModifyForm"
       />
 
   <browser:page
       for="occams.form.interfaces.ISchemaContext"
       name="add-decimal"
-      class=".editor.DecimalFieldAddForm"
+      class=".editor.FieldAddForm"
       permission="occams.form.ModifyForm"
       />
 
   <browser:page
       for="occams.form.interfaces.ISchemaContext"
       name="add-integer"
-      class=".editor.IntegerFieldAddForm"
+      class=".editor.FieldAddForm"
       permission="occams.form.ModifyForm"
       />
 
   <browser:page
       for="occams.form.interfaces.ISchemaContext"
       name="add-string"
-      class=".editor.StringFieldAddForm"
+      class=".editor.FieldAddForm"
       permission="occams.form.ModifyForm"
       />
 
    <browser:page
       for="occams.form.interfaces.ISchemaContext"
       name="add-text"
-      class=".editor.TextFieldAddForm"
+      class=".editor.FieldAddForm"
       permission="occams.form.ModifyForm"
       />
 
   <browser:page
       for="occams.form.interfaces.ISchemaContext"
       name="add-object"
-      class=".editor.ObjectFieldAddForm"
+      class=".editor.FieldAddForm"
       permission="occams.form.ModifyForm"
       />
 

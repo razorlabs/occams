@@ -92,7 +92,7 @@ class TestTraversal(unittest.TestCase):
         """
         request = TestRequest()
         # Dummy attribute, we don't need all the values in place
-        attribute = model.Attribute(name=u'Foo')
+        attribute = model.Attribute(name=u'bar')
         attributeContext = AttributeContext(attribute)
         traverser = AttributeTraverser(attributeContext, request)
 
@@ -108,6 +108,6 @@ class TestTraversal(unittest.TestCase):
         context = traverser.traverse('evil')
         self.assertIsNone(context, 'Traversed to empty context!')
 
-        context = traverser.traverse('bar')
+        context = traverser.traverse('baz')
         self.assertIsNotNone(context, 'Traversal failed!')
         self.assertTrue(IAttributeContext.providedBy(context), 'Invalid context!')
