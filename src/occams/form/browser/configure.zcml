@@ -23,7 +23,7 @@
   <browser:page
       for="occams.form.interfaces.ISchemaContext"
       name="edit"
-      class=".editor.SchemaEditFormPloneView"
+      class=".editor.FormEditFormPloneView"
       permission="occams.form.ModifyForm"
       />
 

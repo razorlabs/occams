@@ -9,14 +9,12 @@ from zope.interface import implements
 from zope.schema.interfaces import IVocabularyFactory
 from zope.schema.vocabulary import SimpleVocabulary
 from zope.schema.vocabulary import SimpleTerm
-
 from z3c.saconfig import named_scoped_session
 from z3c.saconfig.interfaces import IScopedSession
 
 from avrc.data.store import model
 from avrc.data.store.upgrades import migrate
 from avrc.data.store.interfaces import IDataStore
-
 from occams.form import MessageFactory as _
 from occams.form import Logger as log
 from occams.form.interfaces import IRepository
@@ -27,7 +25,7 @@ MSG_INSALLING = _(u'Configuring "%(repository)s" at "%(url)s" (%(session)s)')
 
 class AvailableSessionsVocabularyFactory(object):
     """
-    Builds a vocabulary containing the Plone instance's registered 
+    Builds a vocabulary containing the Plone instance's registered
     ``z3c.saconfig`` sessions.
     """
     implements(IVocabularyFactory)

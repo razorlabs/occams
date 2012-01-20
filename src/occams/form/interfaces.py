@@ -21,7 +21,6 @@ typesVocabulary = SimpleVocabulary(terms=[
         SimpleTerm(value=zope.schema.Datetime, token='datetime', title=_(u'Date and Time')),
         SimpleTerm(value=zope.schema.TextLine, token='string', title=_(u'Text')),
         SimpleTerm(value=zope.schema.Text, token='text', title=_(u'Paragraph')),
-
         SimpleTerm(value=zope.schema.Object, token='object', title=_(u'Field Set')),
     ])
 
@@ -214,6 +213,18 @@ class IEditableObjectField(IEditableField):
             u'Specify the name of the sub form schema to use.'
             ),
         )
+
+
+typeInputSchemaMap = dict(
+    boolean=IEditableBooleanField,
+    date=IEditableDateField,
+    datetime=IEditableDateTimeField,
+    decimal=IEditableDecimalField,
+    integer=IEditableIntegerField,
+    string=IEditableStringField,
+    text=IEditableTextField,
+    object=IEditableObjectField,
+    )
 
 
 class IFormSummary(IOccamsFormComponent):

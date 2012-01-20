@@ -69,6 +69,37 @@ def tokenize(value):
     return re.sub('\W', '-', str(value).lower())
 
 
+def moveField(formData, fieldName, position):
+    changed = list()
+
+    for field in sorted(formData['fields'].values(), key=lambda i: i['order']):
+        # Move the field to here
+        if position == field['order']:
+            formData['fields'][fieldName]['order'] = position
+            changed.append(fieldName)
+
+        # Reorder anything following
+        if field['name'] != fieldName and position >= field['order']:
+            changed.append(fieldName)
+            field['order'] += 1
+
+    return changed
+
+
+def cleanupChoices(data):
+    # This is also similar to what is done in the edit form's apply
+    # Do some extra work with choices on fields we didn't ask for.
+    # Mostly things that are auto-generated for the user since it we
+    # have never used and it they don't seem very relevant
+    # (except, say, order)
+    if 'choices' in data:
+        for order, choice in enumerate(data['choices'], start=0):
+            if choice.get('value') is None:
+                choice['value'] = choice['title']
+            choice['name'] = tokenize(choice['value'])
+            choice['order'] = order
+
+
 def fieldFactory(fieldData):
     typeFactory = typesVocabulary.getTermByToken(fieldData['type']).value
     options = dict()

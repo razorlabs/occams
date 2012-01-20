@@ -55,8 +55,9 @@ class DataBaseItemContext(SimpleItem):
 
         # Set the zope-expected properties
         self.id = None
-        self.__name__ = self.data.get('name') or self.item.name
+        self.__name__ = str(self.data.get('name') or self.item.name)
         title = self.data.get('title') or self.item.name
+        self.title = title
         self.Title = lambda: title
 
     def __getitem__(self, key):
@@ -161,19 +162,24 @@ class RepositoryTraverser(ExtendedTraversal):
     adapts(IRepository, IHTTPRequest)
 
     def traverse(self, name):
-        session = IDataStore(self.context).session
+        formData = ISession(self.request).get(DATA_KEY, {})
 
-        query = (
-            session.query(model.Schema)
-            .filter(model.Schema.name == name)
-            .filter(model.Schema.asOf(None))
-            .order_by(model.Schema.name.asc())
-            )
+        if formData and formData.get('name') == name:
+            return SchemaContext(data=formData)
+        else:
+            session = IDataStore(self.context).session
 
-        item = query.first()
+            query = (
+                session.query(model.Schema)
+                .filter(model.Schema.name == name)
+                .filter(model.Schema.asOf(None))
+                .order_by(model.Schema.name.asc())
+                )
 
-        if item is not None:
-            return SchemaContext(item=item)
+            item = query.first()
+
+            if item is not None:
+                return SchemaContext(item=item)
 
 
 class SchemaTraverser(ExtendedTraversal):

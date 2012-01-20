@@ -1,16 +1,14 @@
 import os.path
 
-from zope.component import getUtility
-from zope.interface import implements
-
 from plone.z3cform import layout
 from plone.z3cform.crud import crud
+from zope.component import getUtility
+from zope.interface import implements
 import z3c.form.button
 import z3c.form.field
 
 from avrc.data.store.interfaces import IDataStore
 from avrc.data.store import directives as datastore
-
 from occams.form.interfaces import IFormSummary
 from occams.form.interfaces import IFormSummaryGenerator
 

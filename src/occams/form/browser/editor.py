@@ -4,12 +4,11 @@ from decimal import Decimal
 import json
 import os.path
 
-from zope.app.pagetemplate.viewpagetemplatefile import ViewPageTemplateFile
-from zope.publisher.browser import BrowserView
-
 from collective.z3cform.datagridfield import DataGridFieldFactory
 from collective.beaker.interfaces import ISession
 from plone.z3cform import layout
+from zope.app.pagetemplate.viewpagetemplatefile import ViewPageTemplateFile
+from zope.publisher.browser import BrowserView
 import z3c.form.form
 import z3c.form.button
 import z3c.form.field
@@ -17,47 +16,23 @@ import z3c.form.group
 from z3c.form.interfaces import HIDDEN_MODE
 from z3c.form.interfaces import INPUT_MODE
 from  z3c.form.browser.text import TextFieldWidget
-from avrc.data.store.interfaces import IDataStore
 
+from avrc.data.store.interfaces import IDataStore
 from occams.form import MessageFactory as _
 from occams.form.interfaces import DATA_KEY
-from occams.form.interfaces import IRepository
-from occams.form.interfaces import ISchemaContext
-from occams.form.interfaces import IAttributeContext
 from occams.form.interfaces import IEditableForm
 from occams.form.interfaces import IEditableField
-from occams.form.interfaces import IEditableBooleanField
-from occams.form.interfaces import IEditableDateField
-from occams.form.interfaces import IEditableDateTimeField
-from occams.form.interfaces import IEditableIntegerField
-from occams.form.interfaces import IEditableDecimalField
-from occams.form.interfaces import IEditableStringField
-from occams.form.interfaces import IEditableTextField
-from occams.form.interfaces import IEditableObjectField
+from occams.form.interfaces import typeInputSchemaMap
 from occams.form.interfaces import typesVocabulary
 from occams.form.browser.widgets import fieldWidgetMap
 from occams.form.browser.widgets import TextAreaFieldWidget
 from occams.form.serialize import serializeForm
 from occams.form.serialize import fieldFactory
-from occams.form.serialize import tokenize
+from occams.form.serialize import cleanupChoices
+from occams.form.serialize import moveField
 
 
-editableFieldSchemaMap = dict(
-    boolean=IEditableBooleanField,
-    date=IEditableDateField,
-    datetime=IEditableDateTimeField,
-    decimal=IEditableDecimalField,
-    integer=IEditableIntegerField,
-    string=IEditableStringField,
-    text=IEditableTextField,
-    object=IEditableObjectField,
-    )
-
-STATUS_NOT_MODIFIED = 304
-STATUS_SUCCESS = 200
-
-
-class SchemaEditForm(z3c.form.form.EditForm):
+class FormEditForm(z3c.form.form.EditForm):
     """
     Renders the form for editing, using a subform for the fields editor.
     """
@@ -79,41 +54,45 @@ class SchemaEditForm(z3c.form.form.EditForm):
 
     @property
     def prefix(self):
-        return 'occams-form-master'
+        return self.context.__name__
 
     def getContent(self):
         return ISession(self.request)[DATA_KEY]
 
     def update(self):
+        """
+        Loads form metadata into browser session
+        """
         self.request.set('disable_border', True)
         repository = self.context.getParentNode()
-        formName = self.context.item.name
+        formName = self.context.__name__
         formVersion = None
 
-        form = IDataStore(repository).schemata.get(formName, formVersion)
-        formData = serializeForm(form)
+        if not self.context.data:
+            form = IDataStore(repository).schemata.get(formName, formVersion)
+            formData = serializeForm(form)
 
-        # Load the form into the session, which is what we'll be using for
-        # intermediary data storage while the form is being modified.
-        browserSession = ISession(self.request)
-        browserSession[DATA_KEY] = formData
-        browserSession.save()
-
-        self.context.data = formData
+            # Load the form into the session, which is what we'll be using for
+            # intermediary data storage while the form is being modified.
+            browserSession = ISession(self.request)
+            browserSession[DATA_KEY] = formData
+            browserSession.save()
+        else:
+            formData = self.context.data
 
         # Render the fields editor form
-        self.fieldsSubForm = FieldsForm(self.context, self.request)
+        self.fieldsSubForm = FieldsetsForm(self.context, self.request)
         self.fieldsSubForm.update()
-        super(SchemaEditForm, self).update()
+
+        # Continue the z3c form process
+        super(FormEditForm, self).update()
 
     @z3c.form.button.buttonAndHandler(_('Cancel'), name='cancel')
     def handleCancel(self):
         """
         Cancels form changes.
         """
-        # Delete the item in the session, leaving everything else intact
-        browserSession = ISession(self.request)
-        browserSession.delete()
+        ISession(self.request).delete()
 
     @z3c.form.button.buttonAndHandler(_(u'Complete'), name='submit')
     def handleComplete(self):
@@ -124,19 +103,19 @@ class SchemaEditForm(z3c.form.form.EditForm):
         return
 
 
-class SchemaEditFormPloneView(layout.FormWrapper):
+class FormEditFormPloneView(layout.FormWrapper):
     """
     Form wrapper for Z3C so that it appears within Plone nicely
     """
 
-    form = SchemaEditForm
+    form = FormEditForm
 
     @property
     def label(self):
-        return _(u'Edit: %s (%s)') % (self.context.item.title, self.context.item.name)
+        return _(u'Edit: %s (%s)') % (self.context.title, self.context.__name__)
 
 
-class FieldsForm(z3c.form.group.GroupForm, z3c.form.form.Form):
+class FieldsetsForm(z3c.form.group.GroupForm, z3c.form.form.Form):
     """
     Fields editor form.
 
@@ -149,6 +128,7 @@ class FieldsForm(z3c.form.group.GroupForm, z3c.form.form.Form):
 
     template = ViewPageTemplateFile('editor_templates/fields.pt')
 
+    # This we're rendering disabled fields, we don't need context data or kss
     ignoreContext = True
     ignoreRequest = True
 
@@ -162,12 +142,15 @@ class FieldsForm(z3c.form.group.GroupForm, z3c.form.form.Form):
         return typesVocabulary
 
     def update(self):
+        """
+        Configures fields based on session data
+        """
         self.request.set('disable_border', True)
         groups = []
         objectFilter = lambda x: x['schema'] is not None
         orderSort = lambda i: i['order']
 
-        formData = ISession(self.request)[DATA_KEY]
+        formData = self.context.data
 
         defaultFieldsetData = dict(interface=formData['name'], schema=formData)
         groups.append(Fieldset(defaultFieldsetData, self.request, self))
@@ -179,7 +162,7 @@ class FieldsForm(z3c.form.group.GroupForm, z3c.form.form.Form):
             groups.append(Fieldset(objectData, self.request, self))
 
         self.groups = groups
-        super(FieldsForm, self).update()
+        super(FieldsetsForm, self).update()
 
 
 class Fieldset(z3c.form.group.Group):
@@ -201,23 +184,26 @@ class Fieldset(z3c.form.group.Group):
     def description(self):
         return self.context.get('description')
 
-    @property
-    def parentUrl(self):
-        return self.parentForm.context.getParentNode().absolute_url()
-
-    def fieldContext(self, field=None):
+    def fieldData(self, field=None):
+        """
+        Returns either the data of the fieldset or the specified field
+        """
         if field is None:
-            fieldContext = self.context
+            data = self.context
         else:
-            fieldContext = self.context['schema']['fields'][field.getName()]
-        return fieldContext
+            data = self.context['schema']['fields'][field.getName()]
+        return data
 
     def url(self, field=None):
-        # No field within the object specifiexd, process actual object field
-        fieldContext = self.fieldContext(field)
-        formName = fieldContext.get('interface') or ''
-        fieldName = fieldContext.get('name') or ''
-        return os.path.join(self.parentUrl, formName, fieldName)
+        # No field within the object specified, process actual object field
+        parentUrl = self.parentForm.context.absolute_url()
+        parts = [parentUrl]
+        if self.prefix:
+            parts.append(self.prefix)
+        if field:
+            fieldData = self.fieldData(field)
+            parts.append(fieldData.get('name'))
+        return os.path.join(*parts)
 
     def editUrl(self, field=None):
         """
@@ -235,15 +221,14 @@ class Fieldset(z3c.form.group.Group):
         """
         Template helper for retrieving the type of a field or group
         """
-        return self.fieldContext(field).get('type')
+        return self.fieldData(field).get('type')
 
     def version(self, field=None):
         """
         Template helper for retrieving the version of a field or group
         """
-        versionRaw = self.fieldContext(field).get('version') or datetime.now()
-        version = versionRaw.strftime('%Y-%m-%d')
-        return version
+        versionRaw = self.fieldData(field).get('version') or datetime.now()
+        return versionRaw.strftime('%Y-%m-%d')
 
     def update(self):
         fields = z3c.form.field.Fields()
@@ -267,66 +252,10 @@ class Fieldset(z3c.form.group.Group):
             widget.disabled = 'disabled'
 
 
-class FieldFormInputHelper(object):
-
-    def getSchemaFields(self):
-        schema = editableFieldSchemaMap[self.typeName]
-        fields = z3c.form.field.Fields(schema)
-        fields['description'].widgetFactory = TextAreaFieldWidget
-        if 'choices' in fields:
-            fields['choices'].widgetFactory = DataGridFieldFactory
-        return fields
-
-    def datagridInitialise(self, subform, widget):
-        widget.allow_reorder = True
-        # This is very wonky and needs work on their side
-        widget.auto_append = True
-        widget.allow_insert = True
-        widget.allow_delete = True
-
-        if self.typeName == 'boolean':
-            subform.fields['value'].widgetFactory = TextFieldWidget
-            widget.allow_insert = False
-            widget.allow_delete = False
-
-    def datagridUpdateWidgets(self, subform, widgets, widget):
-        if self.typeName == 'boolean':
-            widgets['value'].readonly = 'readonly'
-
-    def move(self, fieldName, position):
-        changes = dict()
-        changed = list()
-        formData = self.getFormData()
-        for field in sorted(formData['fields'].values(), key=lambda i: i['order']):
-            # Move the field to here
-            if position == field['order']:
-                formData['fields'][fieldName]['order'] = position
-                changed.append(fieldName)
-
-            # Reorder anything following
-            if field['name'] != fieldName and position >= field['order']:
-                changed.append(fieldName)
-                field['order'] += 1
-
-        if changes:
-            changes[self.fields['order'].interface] = changed
-        return changes
-
-    def processChoices(self, data):
-        # This is also similar to what is done in the edit form's apply
-        # Do some extra work with choices on fields we didn't ask for.
-        # Mostly things that are auto-generated for the user since it we
-        # have never used and it they don't seem very relevant
-        # (except, say, order)
-        if 'choices' in data:
-            for order, choice in enumerate(data['choices'], start=0):
-                if choice.get('value') is None:
-                    choice['value'] = choice['title']
-                choice['name'] = tokenize(choice['value'])
-                choice['order'] = order
-
-
 class FieldPreview(z3c.form.form.Form):
+    """
+    Preview of form fields for re-rendering single fields during form editing
+    """
 
     ignoreRequest = True
 
@@ -334,31 +263,50 @@ class FieldPreview(z3c.form.form.Form):
     def label(self):
         return 'Preview: %s' % self.context.item.name
 
-    def updateWidgets(self):
+    def getContent(self):
+        return self.context.data
+
+    def update(self):
         self.request.set('disable_border', True)
-        fieldData = self.context.data
-        schemaField = fieldFactory(fieldData)
+        schemaField = fieldFactory(self.getContent())
         self.fields = z3c.form.field.Fields(schemaField)
         widgetFactory = fieldWidgetMap.get(schemaField.__class__)
         if widgetFactory:
             self.fields[schemaField.getName()].widgetFactory = widgetFactory
+        super(FieldPreview, self).update()
+
+    def updateWidgets(self):
+        """
+        Disables widgets since we're not really entering data
+        """
         super(FieldPreview, self).updateWidgets()
         for widget in self.widgets.values():
             widget.disabled = 'disabled'
 
 
 class FieldJsonView(BrowserView):
+    """
+    JSON view for form fields
+    """
 
     def __call__(self):
+        """
+        Returns a clean copy of the current state of the field.
+        Additionally adds an extra ``view`` field in the JSON object
+        for rendering the field on the client side
+        """
         self.request.set('disable_border', True)
         data = copy(self.context.data)
         if data['schema']:
             del data['schema']
+        # For client-side ajax update of the field
         if data['type'] != 'object':
             data['view'] = FieldPreview(self.context, self.request)()
         else:
             data['view'] = None
+        # JSON doesn't understand dates, gotta clean that up too
         data['version'] = data['version'].date().isoformat()
+        # Cleanup choice values (in case they're decimals)
         if data['choices']:
             for choice in data['choices']:
                 if isinstance(choice['value'], Decimal):
@@ -366,42 +314,155 @@ class FieldJsonView(BrowserView):
         return json.dumps(data)
 
 
+class FieldDeleteForm(z3c.form.form.Form):
+    """
+    Delete confirmation form for fields.
+    """
+
+    template = ViewPageTemplateFile('editor_templates/delete.pt')
+
+    @property
+    def label(self):
+        return _(u'Delete: %s') % self.context.__name__
+
+    def getContent(self):
+        return self.context.data
+
+    def update(self):
+        self.request.set('disable_border', True)
+        super(FieldDeleteForm, self).udpate()
+
+    @z3c.form.button.buttonAndHandler(_(u'Cancel'), name='cancel')
+    def handleCancel(self, action):
+        self.request.response.setStatus(304);
+
+    @z3c.form.button.buttonAndHandler(_(u'Yes, I\'m sure'), name='delete')
+    def handleDelete(self, action):
+        del  self.context.data['fields'][self.context.__name__]
+        self.request.response.setStatus(200);
+
+
+class FieldOrderForm(z3c.form.form.Form):
+    """
+    Form for editing the position of a field in a form.
+    """
+
+    fields = z3c.form.field.Fields(IEditableField).select('order')
+
+    @property
+    def label(self):
+        return _(u'Reorder: %s') % self.context.__name__
+
+    def getContent(self):
+        return self.context.data
+
+    def update(self):
+        self.request.set('disable_border', True)
+        super(FieldDeleteForm, self).udpate()
+
+    def applyChanges(self, data):
+        changes = dict()
+        position = data['order']
+        moved = moveField(self.getContent(), self.context.__name__, position)
+        if moved:
+            changes[self.fields['order'].interface] = moved
+            self.request.response.setStatus(200)
+        else:
+            self.request.response.setStatus(304)
+        return changes
+
+class FieldFormInputHelper(object):
+    """
+    Helper class for displaying the inputs for editing field metadata.
+    """
+
+    def getType(self):
+        """
+        Sub classes must return the value type they are editing
+        """
+        raise NotImplementedError
+
+    def getMetadataFields(self):
+        """
+        Configures fields based on type
+        """
+        if not hasattr(self, '_fields'):
+            type_ = self.getType()
+            schema = typeInputSchemaMap[type_]
+            fields = z3c.form.field.Fields(schema)
+            fields['description'].widgetFactory = TextAreaFieldWidget
+            if 'choices' in fields:
+                fields['choices'].widgetFactory = DataGridFieldFactory
+            self._fields = fields
+        return self._fields
+
+    def datagridInitialise(self, subform, widget):
+        """
+        Callback for configuring grid widgets
+        """
+        widget.allow_reorder = True
+        widget.auto_append = True
+
+        # Booleans are not allowed to have more than two values (duh)
+        if self.getType() == 'boolean':
+            subform.fields['value'].widgetFactory = TextFieldWidget
+            widget.allow_insert = False
+            widget.allow_delete = False
+        else:
+            widget.allow_insert = True
+            widget.allow_delete = True
+
+    def datagridUpdateWidgets(self, subform, widgets, widget):
+        """
+        Callback for updating grid widgets
+        """
+        # Booleans are special in that their values are known
+        if self.getType() == 'boolean':
+            widgets['value'].readonly = 'readonly'
+
+
 class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
     """
+    Add form for fields.
+
     Optionally takes a request variable ``order`` to preset where the
     field will be added (otherwise at the end of the form)
     """
     z3c.form.form.extends(z3c.form.form.AddForm)
-
-    _newItem = None
 
     @property
     def label(self):
         return _('New %s Field') % typesVocabulary.getTermByToken(self.typeName).title
 
     @property
-    def typeName(self):
+    def fields(self):
+        return self.getMetadataFields()
+
+    def getType(self):
         return self.__name__.split('-').pop()
 
-    def updateWidgets(self):
+    def update(self):
         self.request.set('disable_border', True)
-        self.fields = self.getSchemaFields()
         self.buttons = self.buttons.select('cancel', 'add')
         if 'order' in self.request:
             self.fields['order'].mode = HIDDEN_MODE
         else:
             self.fields['order'].mode = INPUT_MODE
+        super(FieldAddForm, self).update()
+
+    def updateWidgets(self):
         super(FieldAddForm, self).updateWidgets()
         self.widgets['order'].value = self.request.get('order')
-        if self.typeName == 'boolean':
+        if self.getType() == 'boolean':
             self.widgets['choices'].value = [
                 dict(title=u'False', value=False),
                 dict(title=u'True', value=True),
                 ]
 
     def create(self, data):
-        self.processChoices(data)
+        cleanupChoices(data)
         position = data['order']
+
         fieldCount = len(self.context.data['fields'])
         schema = None
 
@@ -410,7 +471,7 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
         elif position is None or position < 0:
             position = 0
 
-        if self.typeName == 'object':
+        if self.getType() == 'object':
             schema = dict(
                 name=data['schemaName'],
                 title=data['title'],
@@ -419,11 +480,11 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
                 fields=dict(),
                 )
 
-        del data['schemaName']
+            del data['schemaName']
 
         data.update(dict(
             version=datetime.now(),
-            type=self.typeName,
+            type=self.getType(),
             interface=self.context.__name__,
             schema=schema,
             order=position,
@@ -433,7 +494,7 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
 
     def add(self, item):
         self.context.data['fields'][item['name']] = item
-        self.move(item['name'], item['order'])
+        moveField(self.context.data, item['name'], item['order'])
         self._newItem = item
 
     def nextURL(self):
@@ -448,97 +509,50 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
 
 
 class FieldEditForm(FieldFormInputHelper, z3c.form.form.EditForm):
+    """
+    Edit form for field.
+    """
     z3c.form.form.extends(z3c.form.form.EditForm)
-
-    @property
-    def typeName(self):
-        return self.context['type']
 
     @property
     def label(self):
         return _(u'Edit: %s') % self.context.__name__
 
+    @property
+    def fields(self):
+        return self.getMetadataFields()
+
+    def getType(self):
+        return self.context['type']
+
     def getContent(self):
         return self.context.data
 
-    def updateWidgets(self):
+    def update(self):
         self.request.set('disable_border', True)
-        self.fields = self.getSchemaFields()
         self.buttons = self.buttons.select('cancel', 'apply')
         self.fields['order'].mode = HIDDEN_MODE
+        super(FieldEditForm, self).update()
+
+    def updateWidgets(self):
         super(FieldEditForm, self).updateWidgets()
         self.widgets['name'].readonly = 'readonly'
 
     @z3c.form.button.buttonAndHandler(_(u'Cancel'), name='cancel')
     def handleCancel(self, action):
         parent = self.context.getParentNode()
-        self.request.response.redirect(os.path.join(parent.absolute_url()))
+        nextUrl = os.path.join(parent.absolute_url())
+        self.request.response.redirect(nextUrl)
 
     def applyChanges(self, data):
-        self.processChoices(data)
+        """
+        Commits changes to the browser session data
+        """
+        cleanupChoices(data)
         # Now do the default changes
         changes = super(FieldEditForm, self).applyChanges(data);
         if changes:
             self.getContent()['version'] = datetime.now()
-        self.request.response.redirect(os.path.join(self.context.absolute_url(), '@@json'))
-
-
-class FieldOrderForm(FieldFormInputHelper, z3c.form.form.Form):
-    """
-    AJAX form for reordering a field.
-    """
-
-    fields = z3c.form.field.Fields(IEditableField).select('order')
-
-    @property
-    def typeName(self):
-        return self.context['type']
-
-    @property
-    def label(self):
-        return _(u'Reorder: %s') % self.context.__name__
-
-    def updateWidgets(self):
-        self.request.set('disable_border', True)
-        super(FieldOrderForm, self).updateWidgets()
-
-    def applyChanges(self, data):
-        fieldName = self.context.__name__
-        changes = self.move(fieldName, data['order'])
-        if changes:
-            self.request.response.setStatus(STATUS_SUCCESS)
-        else:
-            self.request.response.setStatus(STATUS_NOT_MODIFIED)
-
-
-class FieldDeleteForm(z3c.form.form.Form):
-    """
-    Delete confirmation form.
-    TODO: It would be nice to have both AJAX and BROWSER mode,
-    currently this form assumes it's being called via AJAX.
-    """
-
-    template = ViewPageTemplateFile('editor_templates/delete.pt')
-
-    @property
-    def typeName(self):
-        return self.context['type']
-
-    @property
-    def label(self):
-        return _(u'Delete: %s') % self.context.__name__
-
-    def updateWidgets(self):
-        self.request.set('disable_border', True)
-        super(FieldOrderForm, self).updateWidgets()
-
-    @z3c.form.button.buttonAndHandler(_(u'Cancel'), name='cancel')
-    def handleCancel(self, action):
-        self.request.response.setStatus(STATUS_NOT_MODIFIED);
-
-    @z3c.form.button.buttonAndHandler(_(u'Yes, I\'m sure'), name='delete')
-    def handleDelete(self, action):
-        formData = self.context.data
-        fieldName = self.context.__name__
-        del formData['fields'][fieldName]
-        self.request.response.setStatus(STATUS_SUCCESS);
+        nextUrl = os.path.join(self.context.absolute_url(), '@@json')
+        self.request.response.redirect(nextUrl)
+        return changes

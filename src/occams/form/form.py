@@ -14,7 +14,6 @@ from sqlalchemy.sql.expression import literal_column
 from sqlalchemy.orm import aliased
 
 from avrc.data.store import model
-
 from occams.form.interfaces import IFormSummary
 from occams.form.interfaces import IFormSummaryGenerator
 
@@ -153,7 +152,7 @@ class DataStoreSchemaSummary(object):
 
     def __init__(self, *args, **kwargs):
         self._values = dict()
-        # Get items according to the interface specification 
+        # Get items according to the interface specification
         for name, item in kwargs.items():
             if name in IFormSummary:
                 self._values[name] = item
@@ -184,7 +183,7 @@ class FormSummaryGenerator(object):
         baseSchemaNamesTable = baseSchemaNamesTableFactory(session)
         subSchemaNamesTable = subSchemaNamesTableFactory(session)
 
-        # Final result set, only report master schemata and leaf schemata 
+        # Final result set, only report master schemata and leaf schemata
         query = (
             session.query(
                 model.Schema.name.label('name'),

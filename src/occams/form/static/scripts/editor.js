@@ -141,6 +141,28 @@
             });
         },
 
+       /**
+        *
+        * @returns {String}
+        */
+       url: function(){
+           var baseUrl = $('base').attr('href') || window.location.href;
+           var pathNodes = [$(this).attr('dataset').name];
+
+           $(this).parents('.of-item').each(function(){
+               var name = $(this).attr('dataset').name;
+               if (name) {
+                   pathNodes.unshift(name);
+               }
+           });
+
+           if (baseUrl[baseUrl.length] != '/'){
+               baseUrl += '/';
+           }
+
+           return  baseUrl + pathNodes.join('/');
+       },
+
         /**
          * Refreshes the the item with new incoming data
          * @param data  json data to refresh the item with
@@ -152,10 +174,22 @@
 
             data = $.parseJSON(data);
 
+            // Set the visible labels
             $(this).find('.of-name').first().text(data.name);
             $(this).find('.of-title').first().text(data.title);
             $(this).find('.of-version').first().text(data.version);
             $(this).find('.of-description').first().text(data.description);
+
+            // Also set the new data values
+            $(this).attr('dataset').name = data.name;
+            $(this).attr('dataset').type = data.type;
+            $(this).attr('dataset').version = data.version;
+
+            // Update the urls
+            var url = methods.url.call(this);
+            $(this).find('of-editable').attr('href', url + '/@@edit');
+            $(this).find('of-deleteable').attr('href', url + '/@@delete');
+            console.log(url);
 
             if (data.view) {
                 view.empty().append( $(data.view).find('#form') );
@@ -174,6 +208,7 @@
          */
         _enableEditor : function(url, next) {
             var selector = $.trim(url) + ' #form';
+            $(this).find('.of-controls:first').css({display: 'none'});
             $(this).find('.of-content:first > .of-edit').load(selector, next);
             return this;
         },
@@ -193,6 +228,7 @@
         _onEditorDisabled : function() {
             $(this).find('.of-content:first > .of-edit').children().remove();
             $(this).find('.of-content:first > .of-view').slideDown('fast');
+            $(this).find('.of-controls:first').css({display: ''});
             return this;
         },
 
@@ -407,18 +443,6 @@
                 $(this).fadeOut('fast', methods._onDisabled.bind(this));
             }
             return this;
-        },
-
-        /**
-         *
-         * @returns {String}
-         */
-        url: function(){
-            var path = [$(this).attr('dataset').name];
-            $(this).parents('.of-item').each(function(){
-                path.unshift($(this).attr('dataset').name);
-            });
-            return $('base').attr('href') + '/' + path.join('/');
         },
 
         /**

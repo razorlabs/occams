@@ -3,7 +3,6 @@ Custom widget behavior.
 """
 
 import zope.schema
-
 import z3c.form.browser.textarea
 from z3c.form.browser.radio import RadioFieldWidget
 from z3c.form.browser.checkbox import CheckBoxFieldWidget
