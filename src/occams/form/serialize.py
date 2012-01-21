@@ -92,12 +92,12 @@ def cleanupChoices(data):
     # Mostly things that are auto-generated for the user since it we
     # have never used and it they don't seem very relevant
     # (except, say, order)
-    if 'choices' in data:
-        for order, choice in enumerate(data['choices'], start=0):
-            if choice.get('value') is None:
-                choice['value'] = choice['title']
-            choice['name'] = tokenize(choice['value'])
-            choice['order'] = order
+    data.setdefault('choices', [])
+    for order, choice in enumerate(data['choices'], start=0):
+        if choice.get('value') is None:
+            choice['value'] = choice['title']
+        choice['name'] = tokenize(choice['value'])
+        choice['order'] = order
 
 
 def fieldFactory(fieldData):

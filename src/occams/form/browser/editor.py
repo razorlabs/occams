@@ -9,6 +9,9 @@ from collective.beaker.interfaces import ISession
 from plone.z3cform import layout
 from zope.app.pagetemplate.viewpagetemplatefile import ViewPageTemplateFile
 from zope.publisher.browser import BrowserView
+import zope.schema
+from zope.schema.vocabulary import SimpleVocabulary
+from zExceptions import NotFound
 import z3c.form.form
 import z3c.form.button
 import z3c.form.field
@@ -20,6 +23,7 @@ from  z3c.form.browser.text import TextFieldWidget
 from avrc.data.store.interfaces import IDataStore
 from occams.form import MessageFactory as _
 from occams.form.interfaces import DATA_KEY
+from occams.form.interfaces import IAttributeContext
 from occams.form.interfaces import IEditableForm
 from occams.form.interfaces import IEditableField
 from occams.form.interfaces import typeInputSchemaMap
@@ -49,9 +53,6 @@ class FormEditForm(z3c.form.form.EditForm):
     # Override the tiny text area wiget with a nice bigger one
     fields['description'].widgetFactory = TextAreaFieldWidget
 
-    # The form's entry fields (the ones the user enters data into when filling out)
-    fieldsSubForm = None
-
     @property
     def prefix(self):
         return self.context.__name__
@@ -68,17 +69,14 @@ class FormEditForm(z3c.form.form.EditForm):
         formName = self.context.__name__
         formVersion = None
 
-        if not self.context.data:
-            form = IDataStore(repository).schemata.get(formName, formVersion)
-            formData = serializeForm(form)
+        form = IDataStore(repository).schemata.get(formName, formVersion)
+        formData = serializeForm(form)
 
-            # Load the form into the session, which is what we'll be using for
-            # intermediary data storage while the form is being modified.
-            browserSession = ISession(self.request)
-            browserSession[DATA_KEY] = formData
-            browserSession.save()
-        else:
-            formData = self.context.data
+        # Load the form into the session, which is what we'll be using for
+        # intermediary data storage while the form is being modified.
+        browserSession = ISession(self.request)
+        browserSession[DATA_KEY] = formData
+        browserSession.save()
 
         # Render the fields editor form
         self.fieldsSubForm = FieldsetsForm(self.context, self.request)
@@ -147,7 +145,7 @@ class FieldsetsForm(z3c.form.group.GroupForm, z3c.form.form.Form):
         """
         self.request.set('disable_border', True)
         groups = []
-        objectFilter = lambda x: x['schema'] is not None
+        objectFilter = lambda x: bool(x['schema'])
         orderSort = lambda i: i['order']
 
         formData = self.context.data
@@ -347,8 +345,6 @@ class FieldOrderForm(z3c.form.form.Form):
     Form for editing the position of a field in a form.
     """
 
-    fields = z3c.form.field.Fields(IEditableField).select('order')
-
     @property
     def label(self):
         return _(u'Reorder: %s') % self.context.__name__
@@ -358,7 +354,21 @@ class FieldOrderForm(z3c.form.form.Form):
 
     def update(self):
         self.request.set('disable_border', True)
-        super(FieldDeleteForm, self).udpate()
+
+        objectFilter = lambda x: bool(x['schema'])
+        orderSort = lambda i: i['order']
+        fields = ISession(self.request)[DATA_KEY]['fields']
+        objects = sorted(filter(objectFilter, fields.values()), key=orderSort)
+
+        self.fields = z3c.form.field.Fields(zope.schema.Choice(
+            __name__='sender',
+            title=_(u'Sender Fieldset'),
+            values=[o['name'] for o in objects],
+            required=False,
+            ))
+        self.fields += z3c.form.field.Fields(IEditableField).select('order')
+
+        super(FieldOrderForm, self).update()
 
     def applyChanges(self, data):
         changes = dict()
@@ -443,6 +453,9 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
 
     def update(self):
         self.request.set('disable_border', True)
+        if IAttributeContext.providedBy(self.context) and \
+            self.context['type'] != 'object':
+            raise NotFound()
         self.buttons = self.buttons.select('cancel', 'add')
         if 'order' in self.request:
             self.fields['order'].mode = HIDDEN_MODE
@@ -460,10 +473,15 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
                 ]
 
     def create(self, data):
+        if IAttributeContext.providedBy(self.context):
+            formData = self.context.data['schema']
+        else:
+            formData = self.context.data
+
         cleanupChoices(data)
         position = data['order']
 
-        fieldCount = len(self.context.data['fields'])
+        fieldCount = len(formData['fields'])
         schema = None
 
         if position is None or position > fieldCount:
@@ -485,7 +503,8 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
         data.update(dict(
             version=datetime.now(),
             type=self.getType(),
-            interface=self.context.__name__,
+            interface=formData['name'],
+            is_collection=data.get('is_collection', False),
             schema=schema,
             order=position,
             ))
@@ -493,8 +512,12 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
         return data
 
     def add(self, item):
-        self.context.data['fields'][item['name']] = item
-        moveField(self.context.data, item['name'], item['order'])
+        if IAttributeContext.providedBy(self.context):
+            formData = self.context.data['schema']
+        else:
+            formData = self.context.data
+        formData['fields'][item['name']] = item
+        moveField(formData, item['name'], item['order'])
         self._newItem = item
 
     def nextURL(self):

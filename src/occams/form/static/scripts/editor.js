@@ -1,6 +1,8 @@
 /**
  * @fileOverview OCCAMS Form Editor Application
  *
+ * This module was hastely written and should be really be redone.
+ *
  */
 
 /**
@@ -17,6 +19,9 @@
         if (!$('#of-editor').length){
             return;
         }
+
+        // TODO this will not work for brand new forms and needs to somehow
+        // be redone
 
         // Fieldset Items
         $('.of-fieldset').formItem({
@@ -56,17 +61,11 @@
                     var panelEndX = panel.offset().left + panel.width();
                     var windowEndX = $(window).width();
                     var right = windowEndX - panelEndX;
-                    panel.css({
-                        position : 'fixed',
-                        right : right + 'px'
-                    });
+                    panel.css({ position : 'fixed', right : right + 'px'});
                 }
             } else {
                 if (panel.css('position') != 'absolute') {
-                    panel.css({
-                        position : 'absolute',
-                        right : 0
-                    });
+                    panel.css({ position : 'absolute', right : 0});
                 }
             }
         });
@@ -100,11 +99,13 @@
 
                 // Only setup if the item hasn't been initialized with data
                 $(this).data('formItem', settings);
+
                 var head = $(this).children('.of-head');
                 var controls = head.find('.of-controls');
                 var collapseButton = head.find('.of-collapseable');
                 var editButton = controls.find('a.of-editable');
                 var deleteButton = controls.find('a.of-deleteable');
+
                 editButton.click(methods._onEditClick.bind(this));
                 deleteButton.click(methods._onDeleteClick.bind(this));
                 collapseButton.click(methods._onCollapseClick.bind(this));
@@ -187,9 +188,8 @@
 
             // Update the urls
             var url = methods.url.call(this);
-            $(this).find('of-editable').attr('href', url + '/@@edit');
-            $(this).find('of-deleteable').attr('href', url + '/@@delete');
-            console.log(url);
+            $(this).find('.of-editable').attr('href', url + '/@@edit');
+            $(this).find('.of-deleteable').attr('href', url + '/@@delete');
 
             if (data.view) {
                 view.empty().append( $(data.view).find('#form') );
@@ -206,10 +206,10 @@
         /**
          *
          */
-        _enableEditor : function(url, next) {
+        _enableEditor : function(url, data, next) {
             var selector = $.trim(url) + ' #form';
+            $(this).find('.of-content:first > .of-edit').load(selector, data, next);
             $(this).find('.of-controls:first').css({display: 'none'});
-            $(this).find('.of-content:first > .of-edit').load(selector, next);
             return this;
         },
 
@@ -297,7 +297,7 @@
             event.preventDefault();
             var url = $(event.target).attr('href');
             var callback = methods._onEditFormLoad.bind(this);
-            return methods._enableEditor.call(this, url, callback);
+            return methods._enableEditor.call(this, url, null, callback);
         },
 
         /**
@@ -307,7 +307,7 @@
             event.preventDefault();
             var url = $(event.target).attr('href');
             var callback = methods._onDeleteFormLoad.bind(this);
-            return methods._enableEditor.call(this, url, callback);
+            return methods._enableEditor.call(this, url, null, callback);
         },
 
         /**
@@ -419,6 +419,25 @@
                 alert('Failed to save changes!!!.');
             } else {
                 methods._refresh.call(this, response);
+                var settings = $(this).data('formItem');
+                $(this).formItem(settings);
+
+                // Very quick, disgusting, shameful hack that needs reworking
+                if ($(this).hasClass('of-fieldset')) {
+                    // Setup the item's parent listing as a sortable
+                    $(this).find('.of-fields').sortable({
+                        axis : 'y',
+                        containment : '#of-editor',
+                        connectWith : '.of-fields',
+                        cursor : 'move',
+                        forcePlaceholderSize : false,
+                        placeholder : 'of-placeholder',
+                        items : '.of-field',
+                        opacity : 0.6,
+                        receive : methods._onReceived,
+                        update : methods._onMoved,
+                    });
+                }
             }
         },
 
@@ -464,18 +483,27 @@
                 var settings = $(ui.item).data('formItem');
                 var dropped = $(this).find('.ui-draggable').first();
                 var newField = $('#of-item-template .of-item').clone();
-                var url = $.trim($(dropped).attr('href')) + ' #form';
+                var url = $.trim($(dropped).attr('href'));
                 var type = (/add-(\w+)/gi).exec(url)[1];
                 var itemSelector = $(this).sortable('option', 'items');
                 var itemClass = itemSelector.substring(1);
                 var callback = methods._onAddFormLoad.bind(newField);
                 var data = {order: dropped.index() + 1};
 
+                var sortable = $(this).closest('.of-item');
+
+                // Need to add traversing to fieldsets
+                if (sortable.hasClass('of-fieldset')) {
+                    url = url.slice(0, url.lastIndexOf('/'));
+                    url += '/' + sortable.attr('dataset').name + '/@@add-' + type;
+                }
+
                 newField.addClass(itemClass).addClass(type);
                 newField.find('.of-type').first().text(type);
                 newField.find('.of-name').first().text('[...]');
-                newField.find('.of-edit').load(url, data, callback);
+
                 $(newField).data('formItem', settings);
+                methods._enableEditor.call(newField, url, data, callback);
                 $(dropped).replaceWith(newField);
             }
         },

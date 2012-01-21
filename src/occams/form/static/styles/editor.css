@@ -291,12 +291,15 @@
 
 .of-fieldset > .of-content {
     background-color: #FFFFF0;
-    min-height: 5em;
 }
 
 /*******************************************************************************
  * FIELD
  ******************************************************************************/
+
+.of-fields {
+   min-height: 5em;
+}
 
 .of-field > .of-head {
    background-color: #DDD;

@@ -98,6 +98,55 @@
 
   <browser:page
       for="occams.form.interfaces.IAttributeContext"
+      name="add-boolean"
+      class=".editor.FieldAddForm"
+      permission="occams.form.ModifyForm"
+      />
+
+  <browser:page
+      for="occams.form.interfaces.IAttributeContext"
+      name="add-date"
+      class=".editor.FieldAddForm"
+      permission="occams.form.ModifyForm"
+      />
+
+  <browser:page
+      for="occams.form.interfaces.IAttributeContext"
+      name="add-datetime"
+      class=".editor.FieldAddForm"
+      permission="occams.form.ModifyForm"
+      />
+
+  <browser:page
+      for="occams.form.interfaces.IAttributeContext"
+      name="add-decimal"
+      class=".editor.FieldAddForm"
+      permission="occams.form.ModifyForm"
+      />
+
+  <browser:page
+      for="occams.form.interfaces.IAttributeContext"
+      name="add-integer"
+      class=".editor.FieldAddForm"
+      permission="occams.form.ModifyForm"
+      />
+
+  <browser:page
+      for="occams.form.interfaces.IAttributeContext"
+      name="add-string"
+      class=".editor.FieldAddForm"
+      permission="occams.form.ModifyForm"
+      />
+
+   <browser:page
+      for="occams.form.interfaces.IAttributeContext"
+      name="add-text"
+      class=".editor.FieldAddForm"
+      permission="occams.form.ModifyForm"
+      />
+
+  <browser:page
+      for="occams.form.interfaces.IAttributeContext"
       name="edit"
       class=".editor.FieldEditForm"
       permission="occams.form.ModifyForm"
