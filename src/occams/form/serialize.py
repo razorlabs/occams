@@ -106,10 +106,8 @@ def fieldFactory(fieldData):
 
     if fieldData['choices']:
         terms = []
-        validator = typeFactory(**options)
         for choice in sorted(fieldData['choices'], key=lambda c: c['order']):
             (token, title, value) = (choice['name'], choice['title'], choice['value'])
-            value = validator.fromUnicode(value)
             term = SimpleTerm(token=str(token), title=title, value=value)
             terms.append(term)
         typeFactory = zope.schema.Choice
