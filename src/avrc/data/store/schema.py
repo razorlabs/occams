@@ -1,4 +1,4 @@
-""" 
+"""
 Responsible for the maintenance of Zope-style schemata that will be
 then translated into an EAV structured database.
 """
@@ -204,7 +204,7 @@ class SchemaManager(object):
 
 
     def put(self, key, item):
-        """ 
+        """
         Note: If no key assigned (None), one will be generated
         """
         if not directives.Schema.isEqualOrExtendedBy(item):
@@ -403,8 +403,6 @@ class FieldManager(object):
 
             if attribute.choices:
                 directives.type.set(result, attribute.type)
-            if attribute.widget:
-                directives.widget.set(result, str(attribute.widget))
             directives.__id__.set(result, attribute.id)
             directives.version.set(result, attribute.create_date)
 
@@ -459,7 +457,6 @@ class FieldManager(object):
             is_readonly=item.readonly,
             is_collection=is_collection,
             is_required=item.required,
-            widget=directives.widget.bind().get(field),
             default=(unicode(item.default) if item.default is not None else None),
             order=item.order
             )

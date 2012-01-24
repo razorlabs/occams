@@ -27,8 +27,8 @@ time4 = datetime.now()
 
 
 class FieldManagementTestCase(unittest.TestCase):
-    """ 
-    Verifies DataStore compatibility with Zope-style fields  
+    """
+    Verifies DataStore compatibility with Zope-style fields
     """
 
     layer = DATABASE_LAYER
