@@ -34,7 +34,6 @@ def serializeField(field):
     """
     Serializes an individual field
     """
-    import pdb; pdb.set_trace()
     type_ = datastore.type.bind().get(field) or typesVocabulary.getTerm(field.__class__).token
 
     result = dict(
