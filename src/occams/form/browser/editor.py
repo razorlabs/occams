@@ -10,7 +10,6 @@ from plone.z3cform import layout
 from zope.app.pagetemplate.viewpagetemplatefile import ViewPageTemplateFile
 from zope.publisher.browser import BrowserView
 import zope.schema
-from zope.schema.vocabulary import SimpleVocabulary
 from zExceptions import NotFound
 import z3c.form.form
 import z3c.form.button
@@ -69,14 +68,18 @@ class FormEditForm(z3c.form.form.EditForm):
         formName = self.context.__name__
         formVersion = None
 
-        form = IDataStore(repository).schemata.get(formName, formVersion)
-        formData = serializeForm(form)
-
         # Load the form into the session, which is what we'll be using for
         # intermediary data storage while the form is being modified.
         browserSession = ISession(self.request)
-        browserSession[DATA_KEY] = formData
-        browserSession.save()
+        browserSession.setdefault(DATA_KEY, {})
+        workspace = browserSession[DATA_KEY]
+
+        if formName not in workspace:
+            form = IDataStore(repository).schemata.get(formName, formVersion)
+            formData = serializeForm(form)
+            workspace[formName] = formData
+            self.context.data = formData
+            browserSession.save()
 
         # Render the fields editor form
         self.fieldsSubForm = FieldsetsForm(self.context, self.request)
@@ -90,7 +93,9 @@ class FormEditForm(z3c.form.form.EditForm):
         """
         Cancels form changes.
         """
-        ISession(self.request).delete()
+        workspace = ISession(self.request)[DATA_KEY]
+        formName = self.context.__name__
+        del workspace[formName]
 
     @z3c.form.button.buttonAndHandler(_(u'Complete'), name='submit')
     def handleComplete(self):

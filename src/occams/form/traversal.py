@@ -162,10 +162,10 @@ class RepositoryTraverser(ExtendedTraversal):
     adapts(IRepository, IHTTPRequest)
 
     def traverse(self, name):
-        formData = ISession(self.request).get(DATA_KEY, {})
+        workspace = ISession(self.request).get(DATA_KEY, {})
 
-        if formData and formData.get('name') == name:
-            return SchemaContext(data=formData)
+        if workspace and name in workspace:
+            return SchemaContext(data=workspace[name])
         else:
             session = IDataStore(self.context).session
 
@@ -190,8 +190,9 @@ class SchemaTraverser(ExtendedTraversal):
     adapts(ISchemaContext, IHTTPRequest)
 
     def traverse(self, name):
-        formData = ISession(self.request).get(DATA_KEY, {})
-        childData = formData['fields'].get(name)
+        formName = self.context.__name__
+        workspace = ISession(self.request).get(DATA_KEY, {})
+        childData = workspace.get(formName, {}).get('fields', {}).get(name)
 
         if childData:
             return AttributeContext(data=childData)
@@ -205,9 +206,14 @@ class AttributeTraverser(ExtendedTraversal):
     adapts(IAttributeContext, IHTTPRequest)
 
     def traverse(self, name):
-        formData = ISession(self.request).get(DATA_KEY, {})
-        contextData = formData['fields'].get(self.context.__name__, {})
-        childData = contextData.get('schema', {}).get('fields', {}).get(name)
+        parent = self.context.getParentNode()
+        if ISchemaContext.providedBy(parent):
+            formName = parent.__name__
+            fieldName = self.context.__name__
+            workspace = ISession(self.request).get(DATA_KEY, {})
+            formData = workspace.get(formName, {})
+            fieldData = formData.get('fields', {}).get(fieldName, {})
+            subFieldData = fieldData.get('schema', {}).get('fields', {}).get(name)
 
-        if childData:
-            return AttributeContext(data=childData)
+            if subFieldData:
+                return AttributeContext(data=subFieldData)

@@ -34,6 +34,7 @@ def serializeField(field):
     """
     Serializes an individual field
     """
+    import pdb; pdb.set_trace()
     type_ = datastore.type.bind().get(field) or typesVocabulary.getTerm(field.__class__).token
 
     result = dict(
@@ -50,8 +51,10 @@ def serializeField(field):
         order=field.order,
         )
 
-    if isinstance(field, zope.schema.Choice):
-        for order, term in enumerate(field.vocabulary, start=0):
+    vocabularyPart = getattr(field, 'value_type', field)
+
+    if isinstance(vocabularyPart, zope.schema.Choice):
+        for order, term in enumerate(vocabularyPart.vocabulary, start=0):
             result['choices'].append(dict(
                 name=term.token,
                 title=term.title,
