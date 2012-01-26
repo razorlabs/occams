@@ -70,14 +70,16 @@ class FormEditForm(z3c.form.form.EditForm):
         browserSession = ISession(self.request)
         browserSession.setdefault(DATA_KEY, {})
         workspace = browserSession[DATA_KEY]
+        formData = workspace.get(formName)
 
-        if formName not in workspace:
+        if not formData:
             repository = self.context.getParentNode()
             form = IDataStore(repository).schemata.get(formName, formVersion)
             formData = serializeForm(form)
             workspace[formName] = formData
-            self.context.data = formData
             browserSession.save()
+
+        self.context.data = formData
 
         # Render the fields editor form
         self.fieldsSubForm = FieldsetsForm(self.context, self.request)
