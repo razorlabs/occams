@@ -126,6 +126,11 @@ class ExtendedTraversal(object):
         machinery.
         """
 
+        # Attempt traversal (the item is possibly in other sources)
+        child = self.traverse(name)
+        if child is not None:
+            return child.__of__(self.context)
+
         # Attempt contained child lookup (for folder-ish types)
         if IReadContainer.providedBy(self.context):
             item = self.context.get(name)
@@ -136,11 +141,6 @@ class ExtendedTraversal(object):
         view = queryMultiAdapter((self.context, request), name=name)
         if view is not None:
             return view
-
-        # Attempt traversal (the item is possibly in other sources)
-        child = self.traverse(name)
-        if child is not None:
-            return child.__of__(self.context)
 
         # Well screw it, we tried
         raise NotFound(self.context, name, request)
@@ -164,7 +164,7 @@ class RepositoryTraverser(ExtendedTraversal):
     def traverse(self, name):
         workspace = ISession(self.request).get(DATA_KEY, {})
 
-        if workspace and name in workspace:
+        if name in workspace:
             return SchemaContext(data=workspace[name])
         else:
             session = IDataStore(self.context).session
@@ -190,12 +190,10 @@ class SchemaTraverser(ExtendedTraversal):
     adapts(ISchemaContext, IHTTPRequest)
 
     def traverse(self, name):
-        formName = self.context.__name__
-        workspace = ISession(self.request).get(DATA_KEY, {})
-        childData = workspace.get(formName, {}).get('fields', {}).get(name)
-
-        if childData:
-            return AttributeContext(data=childData)
+        if self.context.data:
+            childData = self.context.data.get('fields', {}).get(name)
+            if childData:
+                return AttributeContext(data=childData)
 
 class AttributeTraverser(ExtendedTraversal):
     """
@@ -206,14 +204,7 @@ class AttributeTraverser(ExtendedTraversal):
     adapts(IAttributeContext, IHTTPRequest)
 
     def traverse(self, name):
-        parent = self.context.getParentNode()
-        if ISchemaContext.providedBy(parent):
-            formName = parent.__name__
-            fieldName = self.context.__name__
-            workspace = ISession(self.request).get(DATA_KEY, {})
-            formData = workspace.get(formName, {})
-            fieldData = formData.get('fields', {}).get(fieldName, {})
-            subFieldData = fieldData.get('schema', {}).get('fields', {}).get(name)
-
-            if subFieldData:
-                return AttributeContext(data=subFieldData)
+        if self.context.data:
+            childData = self.context.data.get('schema', {}).get('fields', {}).get(name)
+            if childData:
+                return AttributeContext(data=childData)

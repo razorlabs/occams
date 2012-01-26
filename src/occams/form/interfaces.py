@@ -185,7 +185,9 @@ class IEditableDecimalField(IEditableField, IRequireable, ICollectable):
 
 class IEditableStringChoice(IEditableChoice):
 
-    pass
+    value = zope.schema.TextLine(
+        title=_(u'Stored Value'),
+        )
 
 
 class IEditableStringField(IEditableField, IRequireable, ICollectable):

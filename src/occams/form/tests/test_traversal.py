@@ -67,17 +67,15 @@ class TestTraversal(unittest.TestCase):
         since it's assumed that we'll be editing the form.
         """
         request = TestRequest()
-        # Dummy schema, we don't need all the values in place
-        schema = model.Schema(name='Foo')
-        schemaContext = SchemaContext(schema)
-        traverser = SchemaTraverser(schemaContext, request)
 
         fieldData = dict(name='bar', title=u'Bar Field')
-        formData = dict(fields=dict(bar=fieldData))
+        formData = dict(name='Test', title=u'Test Form', fields=dict(bar=fieldData))
 
         browserSession = ISession(request)
-        browserSession[DATA_KEY] = formData
+        browserSession[DATA_KEY] = {formData['name']: formData}
         browserSession.save()
+
+        traverser = SchemaTraverser(SchemaContext(data=formData), request)
 
         context = traverser.traverse('evil')
         self.assertIsNone(context, 'Traversed to empty context!')
@@ -91,19 +89,17 @@ class TestTraversal(unittest.TestCase):
         Tests sub-field lookups from a field context
         """
         request = TestRequest()
-        # Dummy attribute, we don't need all the values in place
-        attribute = model.Attribute(name=u'bar')
-        attributeContext = AttributeContext(attribute)
-        traverser = AttributeTraverser(attributeContext, request)
 
         subFieldData = dict(name='baz', title=u'Baz Field')
-        subFormData = dict(fields=dict(baz=subFieldData))
+        subFormData = dict(name='Sub', title=u'Sub Form', fields=dict(baz=subFieldData))
         fieldData = dict(name='bar', title=u'Bar Field', schema=subFormData)
-        formData = dict(fields=dict(bar=fieldData))
+        formData = dict(name='Test', title=u'Test Form', fields=dict(bar=fieldData))
 
         browserSession = ISession(request)
-        browserSession[DATA_KEY] = formData
+        browserSession[DATA_KEY] = {formData['name']: formData}
         browserSession.save()
+
+        traverser = AttributeTraverser(AttributeContext(data=fieldData), request)
 
         context = traverser.traverse('evil')
         self.assertIsNone(context, 'Traversed to empty context!')

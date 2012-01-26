@@ -386,6 +386,7 @@ class FieldOrderForm(z3c.form.form.Form):
             self.request.response.setStatus(304)
         return changes
 
+
 class FieldFormInputHelper(object):
     """
     Helper class for displaying the inputs for editing field metadata.
