@@ -57,24 +57,22 @@ class FormEditForm(z3c.form.form.EditForm):
         return self.context.__name__
 
     def getContent(self):
-        return ISession(self.request)[DATA_KEY]
+        return self.context.data
 
     def update(self):
         """
         Loads form metadata into browser session
         """
         self.request.set('disable_border', True)
-        repository = self.context.getParentNode()
+
         formName = self.context.__name__
         formVersion = None
-
-        # Load the form into the session, which is what we'll be using for
-        # intermediary data storage while the form is being modified.
         browserSession = ISession(self.request)
         browserSession.setdefault(DATA_KEY, {})
         workspace = browserSession[DATA_KEY]
 
         if formName not in workspace:
+            repository = self.context.getParentNode()
             form = IDataStore(repository).schemata.get(formName, formVersion)
             formData = serializeForm(form)
             workspace[formName] = formData
@@ -93,9 +91,7 @@ class FormEditForm(z3c.form.form.EditForm):
         """
         Cancels form changes.
         """
-        workspace = ISession(self.request)[DATA_KEY]
-        formName = self.context.__name__
-        del workspace[formName]
+        del ISession(self.request)[DATA_KEY][self.context.__name__]
 
     @z3c.form.button.buttonAndHandler(_(u'Complete'), name='submit')
     def handleComplete(self):
