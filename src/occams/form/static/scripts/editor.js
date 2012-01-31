@@ -119,6 +119,7 @@
                     forcePlaceholderSize : false,
                     placeholder : settings.placeholder,
                     items : '.' + settings.type,
+                    revert: true,
                     opacity : 0.6,
                     receive : methods._onReceived,
                     update : methods._onMoved,
@@ -488,7 +489,7 @@
                 var itemSelector = $(this).sortable('option', 'items');
                 var itemClass = itemSelector.substring(1);
                 var callback = methods._onAddFormLoad.bind(newField);
-                var data = {order: dropped.index() + 1};
+                var data = {order: dropped.index()};
 
                 var sortable = $(this).closest('.of-item');
 
@@ -509,16 +510,38 @@
         },
 
         /**
-         * jQuery handler for when an item from this list is moved elsewhere.
+         * jQuery handler for when an item from this list is moved.
          */
         _onMoved : function(event, ui) {
             if (event.target === ui.item.parent()[0]) {
-                var settings = $(ui.item).data('formItem');
-                var url = methods.url.call(ui.item);
-                console.log(url);
-                console.log('moved', settings, $(ui.item));
+                var callback = methods._onMoveComplete.bind(event.target);
+                var url = null;
+                var target = $(event.target).closest('.of-item').attr('dataset').name;
+                var position = $(ui.item).index();
+                var data = {
+                    'form.widgets.target': target,
+                    'form.widgets.order': position,
+                    'form.buttons.apply': 1,
+                    };
 
+                if (ui.sender) {
+                    var itemName = $(ui.item).attr('dataset').name;
+                    url = methods.url.call(ui.sender) + itemName;
+                } else {
+                    url = methods.url.call(ui.item);
+                }
+
+               console.log(url, data);
+               $.post(url + '/@@order', data, callback);
             }
+        },
+
+        _onMoveComplete: function(reponse, status, xhr) {
+            if (status != 'success') {
+                alert('Failed to sort item :(');
+                $(this).sortable('cancel');
+            }
+            return this;
         },
     };
 

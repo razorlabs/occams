@@ -5,8 +5,8 @@ import json
 import os.path
 
 from collective.z3cform.datagridfield import DataGridFieldFactory
-from collective.beaker.interfaces import ISession
 from plone.z3cform import layout
+from Products.statusmessages.interfaces import IStatusMessage
 from zope.app.pagetemplate.viewpagetemplatefile import ViewPageTemplateFile
 from zope.publisher.browser import BrowserView
 import zope.schema
@@ -19,17 +19,21 @@ from z3c.form.interfaces import HIDDEN_MODE
 from z3c.form.interfaces import INPUT_MODE
 from  z3c.form.browser.text import TextFieldWidget
 
-from avrc.data.store.interfaces import IDataStore
 from occams.form import MessageFactory as _
-from occams.form.interfaces import DATA_KEY
 from occams.form.interfaces import IAttributeContext
 from occams.form.interfaces import IEditableForm
 from occams.form.interfaces import IEditableField
+from occams.form.interfaces import IRepository
+from occams.form.interfaces import ISchemaContext
 from occams.form.interfaces import typeInputSchemaMap
 from occams.form.interfaces import typesVocabulary
 from occams.form.browser.widgets import fieldWidgetMap
 from occams.form.browser.widgets import TextAreaFieldWidget
-from occams.form.serialize import serializeForm
+from occams.form.traversal import closest
+from occams.form.serialize import loadForm
+from occams.form.serialize import commitForm
+from occams.form.serialize import rollbackForm
+from occams.form.serialize import listFieldsets
 from occams.form.serialize import fieldFactory
 from occams.form.serialize import cleanupChoices
 from occams.form.serialize import moveField
@@ -52,6 +56,8 @@ class FormEditForm(z3c.form.form.EditForm):
     # Override the tiny text area wiget with a nice bigger one
     fields['description'].widgetFactory = TextAreaFieldWidget
 
+    cancelMessage = _(u'Changes canceled, nothing saved.')
+
     @property
     def prefix(self):
         return self.context.__name__
@@ -64,23 +70,10 @@ class FormEditForm(z3c.form.form.EditForm):
         Loads form metadata into browser session
         """
         self.request.set('disable_border', True)
-
+        repository = self.context.getParentNode()
         formName = self.context.__name__
         formVersion = None
-        browserSession = ISession(self.request)
-        browserSession.setdefault(DATA_KEY, {})
-        workspace = browserSession[DATA_KEY]
-        formData = workspace.get(formName)
-
-        if not formData:
-            repository = self.context.getParentNode()
-            form = IDataStore(repository).schemata.get(formName, formVersion)
-            formData = serializeForm(form)
-            workspace[formName] = formData
-            browserSession.save()
-
-        self.context.data = formData
-
+        self.context.data = loadForm(repository, formName, formVersion)
         # Render the fields editor form
         self.fieldsSubForm = FieldsetsForm(self.context, self.request)
         self.fieldsSubForm.update()
@@ -89,19 +82,33 @@ class FormEditForm(z3c.form.form.EditForm):
         super(FormEditForm, self).update()
 
     @z3c.form.button.buttonAndHandler(_('Cancel'), name='cancel')
-    def handleCancel(self):
+    def handleCancel(self, action):
         """
         Cancels form changes.
         """
-        del ISession(self.request)[DATA_KEY][self.context.__name__]
+        repository = self.context.getParentNode()
+        rollbackForm(repository, self.context.__name__)
+        self.request.response.redirect(repository.absolute_url())
+        IStatusMessage(self.request).add(self.cancelMessage)
 
     @z3c.form.button.buttonAndHandler(_(u'Complete'), name='submit')
-    def handleComplete(self):
+    def handleComplete(self, action):
         """
         Save the form changes
         """
-        # This is going to be huge
-        return
+        data, errors = self.extractData()
+        if errors:
+            self.status = self.formErrorsMessage
+        else:
+            if self.applyChanges(data):
+                self.status = self.successMessage
+            else:
+                self.status = self.noChangesMessage
+
+            repository = self.context.getParentNode()
+            commitForm(repository, self.context.__name__)
+            self.request.response.redirect(repository.absolute_url())
+            IStatusMessage(self.request).add(self.status)
 
 
 class FormEditFormPloneView(layout.FormWrapper):
@@ -331,7 +338,7 @@ class FieldDeleteForm(z3c.form.form.Form):
 
     def update(self):
         self.request.set('disable_border', True)
-        super(FieldDeleteForm, self).udpate()
+        super(FieldDeleteForm, self).update()
 
     @z3c.form.button.buttonAndHandler(_(u'Cancel'), name='cancel')
     def handleCancel(self, action):
@@ -339,7 +346,7 @@ class FieldDeleteForm(z3c.form.form.Form):
 
     @z3c.form.button.buttonAndHandler(_(u'Yes, I\'m sure'), name='delete')
     def handleDelete(self, action):
-        del  self.context.data['fields'][self.context.__name__]
+        del  self.getContent()['fields'][self.context.__name__]
         self.request.response.setStatus(200);
 
 
@@ -358,31 +365,58 @@ class FieldOrderForm(z3c.form.form.Form):
     def update(self):
         self.request.set('disable_border', True)
 
-        objectFilter = lambda x: bool(x['schema'])
-        orderSort = lambda i: i['order']
-        fields = ISession(self.request)[DATA_KEY]['fields']
-        objects = sorted(filter(objectFilter, fields.values()), key=orderSort)
+        repository = closest(self.context, IRepository)
+        schemaContext = closest(self.context, ISchemaContext)
+
 
         self.fields = z3c.form.field.Fields(zope.schema.Choice(
-            __name__='sender',
-            title=_(u'Sender Fieldset'),
-            values=[o['name'] for o in objects],
+            __name__='target',
+            title=_(u'Target Fieldset'),
+            description=_(
+                u'The fieldset within the parent form to send the field to.'
+                ),
+            values=listFieldsets(repository, schemaContext.__name__),
             required=False,
             ))
+
         self.fields += z3c.form.field.Fields(IEditableField).select('order')
 
         super(FieldOrderForm, self).update()
 
-    def applyChanges(self, data):
-        changes = dict()
-        position = data['order']
-        moved = moveField(self.getContent(), self.context.__name__, position)
-        if moved:
-            changes[self.fields['order'].interface] = moved
-            self.request.response.setStatus(200)
+    @z3c.form.button.buttonAndHandler(title=_(u'Sort'), name='apply')
+    def handleApply(self, action):
+        data, errors = self.extractData()
+
+        if errors:
+            self.request.response.setStatus(500)
         else:
-            self.request.response.setStatus(304)
-        return changes
+            target = data['target']
+            position = data['order']
+            parent = self.context.getParentNode()
+            fieldData = copy(self.context.data)
+            schemaContext = closest(self.context, ISchemaContext)
+
+            if target:
+                targetFormData = schemaContext.data['fields'][target]['schema']
+            else:
+                targetFormData = schemaContext.data
+
+            if ISchemaContext.providedBy(parent):
+                sourceFormData = parent.data
+            else:
+                sourceFormData = parent.data['schema']
+
+            del sourceFormData['fields'][self.context.__name__]
+            targetFormData['fields'][self.context.__name__] = fieldData
+            moved = moveField(targetFormData, self.context.__name__, position)
+
+            if moved:
+                self.request.response.setStatus(200)
+            else:
+                self.request.response.setStatus(304)
+
+    def render(self):
+        return u''
 
 
 class FieldFormInputHelper(object):
@@ -565,12 +599,6 @@ class FieldEditForm(FieldFormInputHelper, z3c.form.form.EditForm):
         super(FieldEditForm, self).updateWidgets()
         self.widgets['name'].readonly = 'readonly'
 
-    @z3c.form.button.buttonAndHandler(_(u'Cancel'), name='cancel')
-    def handleCancel(self, action):
-        parent = self.context.getParentNode()
-        nextUrl = os.path.join(parent.absolute_url())
-        self.request.response.redirect(nextUrl)
-
     def applyChanges(self, data):
         """
         Commits changes to the browser session data
@@ -583,3 +611,11 @@ class FieldEditForm(FieldFormInputHelper, z3c.form.form.EditForm):
         nextUrl = os.path.join(self.context.absolute_url(), '@@json')
         self.request.response.redirect(nextUrl)
         return changes
+
+    @z3c.form.button.buttonAndHandler(_(u'Cancel'), name='cancel')
+    def handleCancel(self, action):
+        parent = self.context.getParentNode()
+        nextUrl = os.path.join(parent.absolute_url())
+        self.request.response.redirect(nextUrl)
+
+

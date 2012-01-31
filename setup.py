@@ -42,6 +42,7 @@ setup(
         'plone.app.z3cform',
         'plone.z3cform',
         'SQLAlchemy',
+        'zope.globalrequest',
         'z3c.saconfig',
         'z3c.form',
         ],

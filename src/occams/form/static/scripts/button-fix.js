@@ -11,6 +11,7 @@
     'use strict';
     $(document).ready(function(){
         $(document).delegate('form[method="post"]', 'submit', function(event){
+            console.log($(this));
             if ($(this).data('submitFix')){
                 // Also, don't submit via other means if already submitting
                 event.preventDefault();

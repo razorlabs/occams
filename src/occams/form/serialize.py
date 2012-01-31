@@ -7,12 +7,65 @@ workflow-ie-ness and all that jazz.
 
 import re
 
+from collective.beaker.interfaces import ISession
+from zope.globalrequest import getRequest
 import zope.schema
 from zope.schema.vocabulary import SimpleVocabulary
 from zope.schema.vocabulary import SimpleTerm
 
 from avrc.data.store import directives as datastore
+from avrc.data.store.interfaces import IDataStore
 from avrc.data.store.interfaces import typesVocabulary
+from occams.form.interfaces import DATA_KEY
+
+
+def loadForm(repository, formName, formVersion=None):
+    """
+    Loads a serialized form from the workspace or from datastore
+    """
+    request = getRequest()
+    browserSession = ISession(request)
+    browserSession.setdefault(DATA_KEY, {})
+    workspace = browserSession[DATA_KEY]
+    formData = workspace.get(formName)
+
+    if not formData:
+        form = IDataStore(repository).schemata.get(formName, formVersion)
+        formData = serializeForm(form)
+        workspace[formName] = formData
+        browserSession.save()
+
+    return formData
+
+
+def rollbackForm(repository, data):
+    """
+    Cancels changes done to a form
+    """
+
+
+def commitForm(repository, data):
+    """
+    Saves changes done to a form
+    """
+
+
+def commitField(repository, data):
+    """
+    Commits field changes
+    """
+
+
+def listFieldsets(repository, formName):
+    """
+    Lists the fieldsets of a form
+    """
+    request = getRequest()
+    objectFilter = lambda x: bool(x['schema'])
+    orderSort = lambda i: i['order']
+    fields = ISession(request)[DATA_KEY][formName]['fields']
+    objects = sorted(filter(objectFilter, fields.values()), key=orderSort)
+    return [o['name'] for o in objects]
 
 
 def serializeForm(form):
@@ -25,8 +78,14 @@ def serializeForm(form):
         title=datastore.title.bind().get(form),
         description=datastore.description.bind().get(form),
         version=datastore.version.bind().get(form),
-        fields=dict([(n, serializeField(f)) for n, f in fields])
+        fields=dict()
         )
+
+    for order, field in enumerate(fields, start=0):
+        (name, field) = field
+        result['fields'][name] = serializeField(field)
+        result['fields'][name]['order'] = order
+
     return result
 
 

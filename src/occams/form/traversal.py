@@ -37,6 +37,21 @@ from occams.form.interfaces import ISchemaContext
 from occams.form.interfaces import IAttributeContext
 
 
+def closest(context, iparent):
+    """
+    Utility method for finding the closest parent context with the given
+    interface. Search begins at the specified context.
+    """
+    result = None
+    while context is not None:
+        if iparent.providedBy(context):
+            result = context
+            break
+        else:
+            context = context.getParentNode()
+    return result
+
+
 class DataBaseItemContext(SimpleItem):
     """
     Wrapper context for database items to make them Zope-traversal-compatible
