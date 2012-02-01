@@ -278,7 +278,7 @@ class IAttribute(IHistoryItem):
 
     type = zope.schema.Choice(
         title=_(u'Type'),
-        values=sorted(nameZopeMap.keys()),
+        values=sorted(typesVocabulary.by_token.keys()),
         )
 
     choices = zope.schema.Iterable(

@@ -267,7 +267,7 @@ class FieldManager(object):
         session = self.session
         query = (
             session.query(model.Attribute.name)
-            .filter_by(schema=self.schema)
+            .filter(model.Attribute.schema.has(name=self.schema.name))
             .order_by(model.Attribute.order.asc(), model.Attribute.create_date.asc())
             )
         if not ever:
@@ -280,7 +280,8 @@ class FieldManager(object):
         session = self.session
         query = (
             session.query(model.Attribute.create_date.label('event_date'))
-            .filter_by(schema=self.schema, name=key)
+            .filter(model.Attribute.schema.has(name=self.schema.name))
+            .filter_by(name=key)
             .union(
                 session.query(model.Attribute.remove_date)
                 .filter_by(schema=self.schema, name=key)
@@ -295,7 +296,8 @@ class FieldManager(object):
         session = self.session
         query = (
             session.query(model.Attribute)
-            .filter_by(schema=self.schema, name=key)
+            .filter(model.Attribute.schema.has(name=self.schema.name))
+            .filter_by(name=key)
             )
         if not ever:
             query = query.filter(model.Attribute.asOf(on))
@@ -307,7 +309,8 @@ class FieldManager(object):
         session = self.session
         query = (
             session.query(model.Attribute)
-            .filter_by(schema=self.schema, name=key)
+            .filter(model.Attribute.schema.has(name=self.schema.name))
+            .filter_by(name=key)
             )
         if not ever:
             query = query.filter(model.Attribute.asOf(on))
@@ -319,7 +322,8 @@ class FieldManager(object):
         session = self.session
         query = (
             session.query(model.Attribute)
-            .filter_by(schema=self.schema, name=key)
+            .filter(model.Attribute.schema.has(name=self.schema.name))
+            .filter_by(name=key)
             .filter(model.Attribute.asOf(None))
             )
         result = query.update(dict(remove_date=model.NOW), 'fetch')
@@ -333,7 +337,8 @@ class FieldManager(object):
             .filter(None != model.Attribute.remove_date)
             .filter(model.Attribute.id == (
                 session.query(model.Attribute.id)
-                .filter_by(schema=self.schema, name=key)
+                .filter(model.Attribute.schema.has(name=self.schema.name))
+                .filter_by(name=key)
                 .order_by(
                     model.Attribute.create_date.desc()
                     )
@@ -349,7 +354,8 @@ class FieldManager(object):
         session = self.session
         query = (
             session.query(model.Attribute)
-            .filter_by(schema=self.schema, name=key)
+            .filter(model.Attribute.schema.has(name=self.schema.name))
+            .filter_by(name=key)
             .filter(model.Attribute.asOf(on))
             )
         attribute = query.first()
