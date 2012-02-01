@@ -49,7 +49,7 @@ Model = declarative_base()
 
 
 class _AutoNamed(object):
-    """ 
+    """
     Generates the SQL table name from the class name.
     """
 
@@ -61,7 +61,7 @@ class _AutoNamed(object):
 
 
 class _Entry(object):
-    """ 
+    """
     Adds primary key id columns to tables.
     """
 
@@ -69,7 +69,7 @@ class _Entry(object):
 
 
 class _Describeable(object):
-    """ 
+    """
     Adds standard content properties to tables.
     """
 
@@ -84,15 +84,15 @@ class _History(object):
 
     @classmethod
     def asOf(cls, on):
-        """ 
+        """
         Helper method to generate timeline filter
-        
+
         Arguments
             ``on``
                 A `datetime` object to to check against. A filter that checks
                 if ``on`` falls between `create_date` <= `on` < `remove_date`
                 will be returned. A value of `None` indicates the most
-                recent value should be checked for: 
+                recent value should be checked for:
                 `create_date` <= `on` < `infinity`
         """
         filter = (None == cls.remove_date)
@@ -105,7 +105,7 @@ class _History(object):
 
 
 class _Editable(object):
-    """ 
+    """
     Adds user edit modification meta data for lifecycle tracking.
     """
 
@@ -224,6 +224,7 @@ class Attribute(Model, _AutoNamed, _Entry, _Describeable, _Editable, _History):
 
     validator = Column(Unicode)
 
+    # DEPRECATED
     widget = Column(String)
 
     order = Column(Integer, nullable=False)
@@ -232,9 +233,9 @@ class Attribute(Model, _AutoNamed, _Entry, _Describeable, _Editable, _History):
         CheckConstraint(
             """
             CASE
-                WHEN type = 'object' THEN 
+                WHEN type = 'object' THEN
                     object_schema_id IS NOT NULL AND is_inline_object IS NOT NULL
-                ELSE 
+                ELSE
                     object_schema_id IS NULL AND is_inline_object IS NULL
             END
             """,
@@ -291,9 +292,9 @@ class Entity(Model, _AutoNamed, _Entry, _Describeable, _Editable, _History):
 
     state = Relationship('State')
 
-    # Private reference to child objects so that they can be removed in a 
-    # cascading fashion by the ORM (otherwise they'll be left as orphaned 
-    # entries.  
+    # Private reference to child objects so that they can be removed in a
+    # cascading fashion by the ORM (otherwise they'll be left as orphaned
+    # entries.
     _value_objects = Relationship(
         'ValueObject',
         primaryjoin='(Entity.id == ValueObject.entity_id)',
@@ -370,7 +371,7 @@ class _ValueBaseMixin(_Entry, _Editable, _History):
 
 
 class ValueDatetime(Model, _ValueBaseMixin):
-    """ 
+    """
     A datetime EAV value.
     """
 
@@ -379,7 +380,7 @@ class ValueDatetime(Model, _ValueBaseMixin):
 
 
 class ValueInteger(Model, _ValueBaseMixin):
-    """ 
+    """
     A integer EAV value.
     """
 
@@ -389,7 +390,7 @@ class ValueInteger(Model, _ValueBaseMixin):
 
 
 class ValueDecimal(Model, _ValueBaseMixin):
-    """ 
+    """
     A decimal EAV value.
     """
 
@@ -398,7 +399,7 @@ class ValueDecimal(Model, _ValueBaseMixin):
 
 
 class ValueString(Model, _ValueBaseMixin):
-    """ 
+    """
     A string EAV value.
     """
 
@@ -407,7 +408,7 @@ class ValueString(Model, _ValueBaseMixin):
 
 
 class ValueObject(Model, _ValueBaseMixin):
-    """ 
+    """
     An object EAV value.
     """
 
@@ -424,7 +425,7 @@ class ValueObject(Model, _ValueBaseMixin):
 
 
 def _buildAssignmentTable():
-    """ 
+    """
     Builds a union-table for easily searching for value assignments to
     an entity, as currently separate value-specific tables are used which
     unfortunately makes it hard to track this information down.
@@ -450,7 +451,7 @@ assignment_table = _buildAssignmentTable()
 
 
 class Assignment(Model, _History):
-    """ 
+    """
     Helper object for easily accessing value assignments in one table
     as opposed to looking at each value table individually.
     """
