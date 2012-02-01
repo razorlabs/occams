@@ -84,7 +84,6 @@ class FormEditForm(z3c.form.form.EditForm):
         """
         Cancels form changes.
         """
-        import pdb; pdb.set_trace()
         self.workspace.clear(self.context.__name__)
         self.request.response.redirect(self.context.getParentNode().absolute_url())
         IStatusMessage(self.request).add(self.cancelMessage)
@@ -98,13 +97,10 @@ class FormEditForm(z3c.form.form.EditForm):
         if errors:
             self.status = self.formErrorsMessage
         else:
-            if self.applyChanges(data):
-                self.status = self.successMessage
-            else:
-                self.status = self.noChangesMessage
+            self.applyChanges(data)
             self.workspace.commit(self.context.__name__)
             self.request.response.redirect(self.context.getParentNode().absolute_url())
-            IStatusMessage(self.request).add(self.status)
+            IStatusMessage(self.request).add(self.successMessage)
 
 
 class FormEditFormPloneView(layout.FormWrapper):

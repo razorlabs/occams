@@ -47,6 +47,7 @@ class Workspace(object):
         try:
             formData = self.data[name]
         except KeyError:
+            import pdb; pdb.set_trace()
             form = IDataStore(self.repository).schemata.get(name)
             formData = serializeForm(form)
             self.data[name] = formData
@@ -97,14 +98,14 @@ class Workspace(object):
             # retire old schema
             if oldSchema:
                 oldSchema.remove_date = NOW
-                newSchema.base_schema = schema.base_schema
+                newSchema.base_schema = oldSchema.base_schema
 
             # retire old fields
             schemaRetireCount = (
                 session.query(Attribute)
                 .filter(Attribute.schema.has(name=newSchema.name))
                 .filter(~Attribute.name.in_(data.get('fields', {}).keys()))
-                .update(dict(remove_data=NOW), 'fetch')
+                .update(dict(remove_date=NOW), 'fetch')
                 )
 
             # save fields
@@ -113,8 +114,8 @@ class Workspace(object):
                 attributeRetireCount = (
                     session.query(Attribute)
                     .filter(Attribute.schema.has(name=newSchema.name))
-                    .filter((Schema.name == field['name']) & Schema.asOf(None))
-                    .update(dict(remove_data=NOW), 'fetch')
+                    .filter((Attribute.name == field['name']) & Attribute.asOf(None))
+                    .update(dict(remove_date=NOW), 'fetch')
                     )
 
                 # save new newAttribute
@@ -124,7 +125,7 @@ class Workspace(object):
                     title=field['title'],
                     description=field['description'],
                     type=field['type'],
-                    object_schema=commitFormHelper(field['schema']),
+                    object_schema=field['schema'] and commitFormHelper(field['schema']) or None,
                     is_required=field['is_required'],
                     is_collection=field['is_collection'],
                     order=field['order'],

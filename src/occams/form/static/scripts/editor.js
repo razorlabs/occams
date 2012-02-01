@@ -174,7 +174,16 @@
             var view = $(this).find('.of-content:first > .of-view');
             var edit = $(this).find('.of-content:first > .of-edit');
 
-            data = $.parseJSON(data);
+            try{
+                data = $.parseJSON(data);
+            } catch(error) {
+                // The fact that the incoming response could not be parsed
+                // indicates that there was an error with the form and so
+                // it needs to be re-rendered
+                edit.empty().append( $(data).find('#form') );
+                return;
+            }
+
 
             // Set the visible labels
             $(this).find('.of-name').first().text(data.name);

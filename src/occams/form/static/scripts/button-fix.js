@@ -11,13 +11,11 @@
     'use strict';
     $(document).ready(function(){
         $(document).delegate('form[method="post"]', 'submit', function(event){
-            console.log($(this));
             if ($(this).data('submitFix')){
                 // Also, don't submit via other means if already submitting
                 event.preventDefault();
             } else {
                 // Disable the submit buttons so the user doesn't go click-happy
-                $(this).find(':submit').attr('disabled', 'disabled');
                 $(this).data('submitFix', true);
             }
         });

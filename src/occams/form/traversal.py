@@ -202,7 +202,8 @@ class SchemaTraverser(ExtendedTraversal):
 
     def traverse(self, name):
         try:
-            childData = self.context.data['fields'][name]
+            if self.context.data:
+                childData = self.context.data['fields'][name]
         except KeyError:
             context = None
         else:
@@ -220,7 +221,8 @@ class AttributeTraverser(ExtendedTraversal):
 
     def traverse(self, name):
         try:
-            childData = self.context.data['schema']['fields'][name]
+            if self.context.data:
+                childData = self.context.data['schema']['fields'][name]
         except KeyError:
             context = None
         else:

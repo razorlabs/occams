@@ -122,7 +122,6 @@ class IEditableBooleanChoice(IEditableChoice):
 
     value = zope.schema.Bool(
         title=_(u'Stored Value'),
-        readonly=True,
         )
 
 
