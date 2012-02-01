@@ -17,7 +17,6 @@ Also, we'd like the following (not supported yet):
 
 """
 
-from collective.beaker.interfaces import ISession
 from OFS.SimpleItem import SimpleItem
 from zope.component import adapts
 from zope.component import queryMultiAdapter
@@ -30,11 +29,11 @@ from zExceptions import NotFound
 
 from avrc.data.store import model
 from avrc.data.store.interfaces import IDataStore
-from occams.form.interfaces import DATA_KEY
 from occams.form.interfaces import IRepository
 from occams.form.interfaces import IDataBaseItemContext
 from occams.form.interfaces import ISchemaContext
 from occams.form.interfaces import IAttributeContext
+from occams.form.serialize import Workspace
 
 
 def closest(context, iparent):
@@ -177,24 +176,21 @@ class RepositoryTraverser(ExtendedTraversal):
     adapts(IRepository, IHTTPRequest)
 
     def traverse(self, name):
-        workspace = ISession(self.request).get(DATA_KEY, {})
-
-        if name in workspace:
-            return SchemaContext(data=workspace[name])
-        else:
-            session = IDataStore(self.context).session
-
-            query = (
-                session.query(model.Schema)
+        workspace = Workspace(self.context)
+        try:
+            formData = workspace[name]
+        except KeyError:
+            item = (
+                IDataStore(self.context).session.query(model.Schema)
                 .filter(model.Schema.name == name)
                 .filter(model.Schema.asOf(None))
                 .order_by(model.Schema.name.asc())
+                .first()
                 )
-
-            item = query.first()
-
-            if item is not None:
-                return SchemaContext(item=item)
+            context = item and SchemaContext(item=item) or None
+        else:
+            context = SchemaContext(data=formData)
+        return context
 
 
 class SchemaTraverser(ExtendedTraversal):
@@ -205,10 +201,14 @@ class SchemaTraverser(ExtendedTraversal):
     adapts(ISchemaContext, IHTTPRequest)
 
     def traverse(self, name):
-        if self.context.data:
-            childData = self.context.data.get('fields', {}).get(name)
-            if childData:
-                return AttributeContext(data=childData)
+        try:
+            childData = self.context.data['fields'][name]
+        except KeyError:
+            context = None
+        else:
+            context = AttributeContext(data=childData)
+        return context
+
 
 class AttributeTraverser(ExtendedTraversal):
     """
@@ -219,7 +219,10 @@ class AttributeTraverser(ExtendedTraversal):
     adapts(IAttributeContext, IHTTPRequest)
 
     def traverse(self, name):
-        if self.context.data:
-            childData = self.context.data.get('schema', {}).get('fields', {}).get(name)
-            if childData:
-                return AttributeContext(data=childData)
+        try:
+            childData = self.context.data['schema']['fields'][name]
+        except KeyError:
+            context = None
+        else:
+            context = AttributeContext(data=childData)
+        return context

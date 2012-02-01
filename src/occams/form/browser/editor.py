@@ -30,9 +30,7 @@ from occams.form.interfaces import typesVocabulary
 from occams.form.browser.widgets import fieldWidgetMap
 from occams.form.browser.widgets import TextAreaFieldWidget
 from occams.form.traversal import closest
-from occams.form.serialize import loadForm
-from occams.form.serialize import commitForm
-from occams.form.serialize import rollbackForm
+from occams.form.serialize import Workspace
 from occams.form.serialize import listFieldsets
 from occams.form.serialize import fieldFactory
 from occams.form.serialize import cleanupChoices
@@ -70,10 +68,10 @@ class FormEditForm(z3c.form.form.EditForm):
         Loads form metadata into browser session
         """
         self.request.set('disable_border', True)
-        repository = self.context.getParentNode()
-        formName = self.context.__name__
-        formVersion = None
-        self.context.data = loadForm(repository, formName, formVersion)
+
+        self.workspace = Workspace(self.context.getParentNode())
+        self.context.data = self.workspace.load(self.context.__name__)
+
         # Render the fields editor form
         self.fieldsSubForm = FieldsetsForm(self.context, self.request)
         self.fieldsSubForm.update()
@@ -86,9 +84,9 @@ class FormEditForm(z3c.form.form.EditForm):
         """
         Cancels form changes.
         """
-        repository = self.context.getParentNode()
-        rollbackForm(repository, self.context.__name__)
-        self.request.response.redirect(repository.absolute_url())
+        import pdb; pdb.set_trace()
+        self.workspace.clear(self.context.__name__)
+        self.request.response.redirect(self.context.getParentNode().absolute_url())
         IStatusMessage(self.request).add(self.cancelMessage)
 
     @z3c.form.button.buttonAndHandler(_(u'Complete'), name='submit')
@@ -104,10 +102,8 @@ class FormEditForm(z3c.form.form.EditForm):
                 self.status = self.successMessage
             else:
                 self.status = self.noChangesMessage
-
-            repository = self.context.getParentNode()
-            commitForm(repository, self.context.__name__)
-            self.request.response.redirect(repository.absolute_url())
+            self.workspace.commit(self.context.__name__)
+            self.request.response.redirect(self.context.getParentNode().absolute_url())
             IStatusMessage(self.request).add(self.status)
 
 
@@ -240,7 +236,8 @@ class Fieldset(z3c.form.group.Group):
 
     def update(self):
         fields = z3c.form.field.Fields()
-        for fieldContext in sorted(self.context['schema']['fields'].values(), key=lambda x: x['order']):
+        serializedFields = self.context['schema']['fields'].values()
+        for fieldContext in sorted(serializedFields, key=lambda x: x['order']):
             if fieldContext['type'] != 'object':
                 schemaField = fieldFactory(fieldContext)
                 fields += z3c.form.field.Fields(schemaField)

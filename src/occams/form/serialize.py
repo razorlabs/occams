@@ -14,46 +14,136 @@ from zope.schema.vocabulary import SimpleVocabulary
 from zope.schema.vocabulary import SimpleTerm
 
 from avrc.data.store import directives as datastore
+from avrc.data.store.model import Attribute
+from avrc.data.store.model import Schema
+from avrc.data.store.model import Choice
+from avrc.data.store.model import NOW
 from avrc.data.store.interfaces import IDataStore
 from avrc.data.store.interfaces import typesVocabulary
 from occams.form.interfaces import DATA_KEY
 
 
-def loadForm(repository, formName, formVersion=None):
+class Workspace(object):
     """
-    Loads a serialized form from the workspace or from datastore
-    """
-    request = getRequest()
-    browserSession = ISession(request)
-    browserSession.setdefault(DATA_KEY, {})
-    workspace = browserSession[DATA_KEY]
-    formData = workspace.get(formName)
-
-    if not formData:
-        form = IDataStore(repository).schemata.get(formName, formVersion)
-        formData = serializeForm(form)
-        workspace[formName] = formData
-        browserSession.save()
-
-    return formData
-
-
-def rollbackForm(repository, data):
-    """
-    Cancels changes done to a form
+    Helper method for keeping track of form changes
     """
 
+    def __init__(self, repository):
+        self.repository = repository
+        self.browserSession = ISession(getRequest())
+        self.browserSession.setdefault(DATA_KEY, {})
+        self.data = self.browserSession[DATA_KEY]
 
-def commitForm(repository, data):
-    """
-    Saves changes done to a form
-    """
+    def save(self):
+        """
+        Saves the current workspace (nothing done to database)
+        """
+        self.browserSession.save()
 
+    def load(self, name):
+        """
+        Loads a serialized form from the workspace or from datastore
+        """
+        try:
+            formData = self.data[name]
+        except KeyError:
+            form = IDataStore(self.repository).schemata.get(name)
+            formData = serializeForm(form)
+            self.data[name] = formData
+            self.save()
+        return formData
 
-def commitField(repository, data):
-    """
-    Commits field changes
-    """
+    def __contains__(self, key):
+        return key in self.data
+
+    def __getitem__(self, key):
+        return self.data[key]
+
+    def __setitem__(self, key, item):
+        self.data[key] = item
+
+    def clear(self, name):
+        """
+        Cancels changes done to a form
+        """
+        try:
+            del self.data[name]
+            self.save()
+        except KeyError:
+            pass
+
+    def commit(self, name):
+        """
+        Commits the item in the workspace to the database
+        """
+        session = IDataStore(self.repository).session
+
+        def commitFormHelper(data):
+            oldSchema = (
+                session.query(Schema)
+                .filter((Schema.name == data['name']) & Schema.asOf(None))
+                .first()
+                )
+
+            # add new schema
+            newSchema = Schema(
+                name=data['name'],
+                title=data['title'],
+                description=data['description'],
+                )
+
+            session.add(newSchema)
+
+            # retire old schema
+            if oldSchema:
+                oldSchema.remove_date = NOW
+                newSchema.base_schema = schema.base_schema
+
+            # retire old fields
+            schemaRetireCount = (
+                session.query(Attribute)
+                .filter(Attribute.schema.has(name=newSchema.name))
+                .filter(~Attribute.name.in_(data.get('fields', {}).keys()))
+                .update(dict(remove_data=NOW), 'fetch')
+                )
+
+            # save fields
+            for field in data.get('fields', {}).values():
+                # retire old newAttribute
+                attributeRetireCount = (
+                    session.query(Attribute)
+                    .filter(Attribute.schema.has(name=newSchema.name))
+                    .filter((Schema.name == field['name']) & Schema.asOf(None))
+                    .update(dict(remove_data=NOW), 'fetch')
+                    )
+
+                # save new newAttribute
+                newAttribute = Attribute(
+                    schema=newSchema,
+                    name=field['name'],
+                    title=field['title'],
+                    description=field['description'],
+                    type=field['type'],
+                    object_schema=commitFormHelper(field['schema']),
+                    is_required=field['is_required'],
+                    is_collection=field['is_collection'],
+                    order=field['order'],
+                    )
+
+                # save new choices
+                for choice in field['choices']:
+                    newChoice = Choice(
+                        attribute=newAttribute,
+                        name=choice['name'],
+                        title=choice['title'],
+                        value=unicode(choice['value']),
+                        order=choice['order'],
+                        )
+
+            return newSchema
+
+        schema = commitFormHelper(self.data.get(name, {}))
+        self.clear(name)
 
 
 def listFieldsets(repository, formName):
