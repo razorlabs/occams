@@ -29,7 +29,6 @@ from occams.form.interfaces import IRepository
 from occams.form.interfaces import ISchemaContext
 from occams.form.interfaces import typeInputSchemaMap
 from occams.form.interfaces import typesVocabulary
-from occams.form.browser.widgets import fieldWidgetMap
 from occams.form.browser.widgets import TextAreaFieldWidget
 from occams.form.traversal import closest
 from occams.form.serialize import Workspace
@@ -52,8 +51,6 @@ class FormEditForm(StandardForm, z3c.form.form.EditForm):
 
     # The form's metadata properties (title, description, storage, etcc...)
     fields = z3c.form.field.Fields(IEditableForm).omit('name')
-
-#    fields['description'].widgetFactory = TextAreaFieldWidget
 
     cancelMessage = _(u'Changes canceled, nothing saved.')
 
@@ -238,21 +235,8 @@ class Fieldset(StandardForm, DisabledForm, z3c.form.group.Group):
             if fieldContext['type'] != 'object':
                 schemaField = fieldFactory(fieldContext)
                 fields += z3c.form.field.Fields(schemaField)
-#                widgetFactory = fieldWidgetMap.get(schemaField.__class__)
-#                if widgetFactory:
-#                    fields[schemaField.getName()].widgetFactory = widgetFactory
         self.fields = fields
         super(Fieldset, self).update()
-
-#    def updateWidgets(self):
-#        """
-#        Configure widgets, we'll mostly be disabling to prevent data entry.
-#        """
-#        super(Fieldset, self).updateWidgets()
-#        # Disable fields since we're not actually entering data
-#        for widget in self.widgets.values():
-#            widget.disabled = 'disabled'
-
 
 class FieldPreview(StandardForm, DisabledForm, z3c.form.form.Form):
     """
@@ -272,18 +256,7 @@ class FieldPreview(StandardForm, DisabledForm, z3c.form.form.Form):
         self.request.set('disable_border', True)
         schemaField = fieldFactory(self.getContent())
         self.fields = z3c.form.field.Fields(schemaField)
-#        widgetFactory = fieldWidgetMap.get(schemaField.__class__)
-#        if widgetFactory:
-#            self.fields[schemaField.getName()].widgetFactory = widgetFactory
         super(FieldPreview, self).update()
-
-#    def updateWidgets(self):
-#        """
-#        Disables widgets since we're not really entering data
-#        """
-#        super(FieldPreview, self).updateWidgets()
-#        for widget in self.widgets.values():
-#            widget.disabled = 'disabled'
 
 
 class FieldJsonView(BrowserView):
@@ -612,5 +585,3 @@ class FieldEditForm(FieldFormInputHelper, z3c.form.form.EditForm):
         parent = self.context.getParentNode()
         nextUrl = os.path.join(parent.absolute_url())
         self.request.response.redirect(nextUrl)
-
-
