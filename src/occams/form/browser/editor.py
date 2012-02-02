@@ -442,14 +442,15 @@ class FieldFormInputHelper(object):
         Callback for configuring grid widgets
         """
         widget.allow_reorder = True
-        widget.auto_append = True
 
         # Booleans are not allowed to have more than two values (duh)
         if self.getType() == 'boolean':
             subform.fields['value'].widgetFactory = TextFieldWidget
+            widget.auto_append = False
             widget.allow_insert = False
             widget.allow_delete = False
         else:
+            widget.auto_append = True
             widget.allow_insert = True
             widget.allow_delete = True
 

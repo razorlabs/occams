@@ -47,7 +47,6 @@ class Workspace(object):
         try:
             formData = self.data[name]
         except KeyError:
-            import pdb; pdb.set_trace()
             form = IDataStore(self.repository).schemata.get(name)
             formData = serializeForm(form)
             self.data[name] = formData
@@ -109,6 +108,7 @@ class Workspace(object):
                 )
 
             # save fields
+
             for field in data.get('fields', {}).values():
                 # retire old newAttribute
                 attributeRetireCount = (
@@ -131,15 +131,17 @@ class Workspace(object):
                     order=field['order'],
                     )
 
+                session.add(newAttribute)
+
                 # save new choices
                 for choice in field['choices']:
-                    newChoice = Choice(
+                    session.add(Choice(
                         attribute=newAttribute,
                         name=choice['name'],
                         title=choice['title'],
                         value=unicode(choice['value']),
                         order=choice['order'],
-                        )
+                        ))
 
             return newSchema
 
