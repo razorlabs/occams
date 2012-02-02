@@ -17,8 +17,15 @@
 
   <browser:defaultView
      for="occams.form.interfaces.ISchemaContext"
-     name="edit"
+     name="view"
      />
+
+  <browser:page
+      for="occams.form.interfaces.ISchemaContext"
+      name="view"
+      class=".entry.FormPreview"
+      permission="occams.form.ViewForm"
+      />
 
   <browser:page
       for="occams.form.interfaces.ISchemaContext"

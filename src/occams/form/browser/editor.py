@@ -20,6 +20,8 @@ from z3c.form.interfaces import INPUT_MODE
 from  z3c.form.browser.text import TextFieldWidget
 
 from occams.form import MessageFactory as _
+from occams.form.browser.entry import StandardForm
+from occams.form.browser.entry import DisabledForm
 from occams.form.interfaces import IAttributeContext
 from occams.form.interfaces import IEditableForm
 from occams.form.interfaces import IEditableField
@@ -37,7 +39,7 @@ from occams.form.serialize import cleanupChoices
 from occams.form.serialize import moveField
 
 
-class FormEditForm(z3c.form.form.EditForm):
+class FormEditForm(StandardForm, z3c.form.form.EditForm):
     """
     Renders the form for editing, using a subform for the fields editor.
     """
@@ -51,8 +53,7 @@ class FormEditForm(z3c.form.form.EditForm):
     # The form's metadata properties (title, description, storage, etcc...)
     fields = z3c.form.field.Fields(IEditableForm).omit('name')
 
-    # Override the tiny text area wiget with a nice bigger one
-    fields['description'].widgetFactory = TextAreaFieldWidget
+#    fields['description'].widgetFactory = TextAreaFieldWidget
 
     cancelMessage = _(u'Changes canceled, nothing saved.')
 
@@ -165,7 +166,7 @@ class FieldsetsForm(z3c.form.group.GroupForm, z3c.form.form.Form):
         super(FieldsetsForm, self).update()
 
 
-class Fieldset(z3c.form.group.Group):
+class Fieldset(StandardForm, DisabledForm, z3c.form.group.Group):
     """
     A generic group for fields of type Object to represent as a fieldset.
     This class can also be used for the top level form to be represented as a
@@ -237,23 +238,23 @@ class Fieldset(z3c.form.group.Group):
             if fieldContext['type'] != 'object':
                 schemaField = fieldFactory(fieldContext)
                 fields += z3c.form.field.Fields(schemaField)
-                widgetFactory = fieldWidgetMap.get(schemaField.__class__)
-                if widgetFactory:
-                    fields[schemaField.getName()].widgetFactory = widgetFactory
+#                widgetFactory = fieldWidgetMap.get(schemaField.__class__)
+#                if widgetFactory:
+#                    fields[schemaField.getName()].widgetFactory = widgetFactory
         self.fields = fields
         super(Fieldset, self).update()
 
-    def updateWidgets(self):
-        """
-        Configure widgets, we'll mostly be disabling to prevent data entry.
-        """
-        super(Fieldset, self).updateWidgets()
-        # Disable fields since we're not actually entering data
-        for widget in self.widgets.values():
-            widget.disabled = 'disabled'
+#    def updateWidgets(self):
+#        """
+#        Configure widgets, we'll mostly be disabling to prevent data entry.
+#        """
+#        super(Fieldset, self).updateWidgets()
+#        # Disable fields since we're not actually entering data
+#        for widget in self.widgets.values():
+#            widget.disabled = 'disabled'
 
 
-class FieldPreview(z3c.form.form.Form):
+class FieldPreview(StandardForm, DisabledForm, z3c.form.form.Form):
     """
     Preview of form fields for re-rendering single fields during form editing
     """
@@ -271,18 +272,18 @@ class FieldPreview(z3c.form.form.Form):
         self.request.set('disable_border', True)
         schemaField = fieldFactory(self.getContent())
         self.fields = z3c.form.field.Fields(schemaField)
-        widgetFactory = fieldWidgetMap.get(schemaField.__class__)
-        if widgetFactory:
-            self.fields[schemaField.getName()].widgetFactory = widgetFactory
+#        widgetFactory = fieldWidgetMap.get(schemaField.__class__)
+#        if widgetFactory:
+#            self.fields[schemaField.getName()].widgetFactory = widgetFactory
         super(FieldPreview, self).update()
 
-    def updateWidgets(self):
-        """
-        Disables widgets since we're not really entering data
-        """
-        super(FieldPreview, self).updateWidgets()
-        for widget in self.widgets.values():
-            widget.disabled = 'disabled'
+#    def updateWidgets(self):
+#        """
+#        Disables widgets since we're not really entering data
+#        """
+#        super(FieldPreview, self).updateWidgets()
+#        for widget in self.widgets.values():
+#            widget.disabled = 'disabled'
 
 
 class FieldJsonView(BrowserView):
@@ -315,7 +316,7 @@ class FieldJsonView(BrowserView):
         return json.dumps(data)
 
 
-class FieldDeleteForm(z3c.form.form.Form):
+class FieldDeleteForm(StandardForm, z3c.form.form.Form):
     """
     Delete confirmation form for fields.
     """
@@ -343,7 +344,7 @@ class FieldDeleteForm(z3c.form.form.Form):
         self.request.response.setStatus(200);
 
 
-class FieldOrderForm(z3c.form.form.Form):
+class FieldOrderForm(StandardForm, z3c.form.form.Form):
     """
     Form for editing the position of a field in a form.
     """

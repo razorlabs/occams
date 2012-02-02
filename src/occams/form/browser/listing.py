@@ -3,21 +3,32 @@ import os.path
 from plone.z3cform import layout
 from plone.z3cform.crud import crud
 from zope.component import getUtility
-from zope.interface import implements
+import zope.schema
 import z3c.form.button
 import z3c.form.field
 
 from avrc.data.store.interfaces import IDataStore
 from avrc.data.store import directives as datastore
+from occams.form import MessageFactory as _
 from occams.form.interfaces import IFormSummary
 from occams.form.interfaces import IFormSummaryGenerator
+
+
+class ListingEditSubForm(crud.EditSubForm):
+
+    def updateWidgets(self):
+        super(ListingEditSubForm, self).updateWidgets()
+        self.widgets['view_edit'].value = _(u'Edit')
 
 
 class ListingEditForm(crud.EditForm):
     """
     Custom form edit form.
     """
+
     label = None
+
+    editsubform_factory = ListingEditSubForm
 
     # No buttons for this release
     buttons = z3c.form.button.Buttons()
@@ -35,6 +46,9 @@ class SummaryListingForm(crud.CrudForm):
 
     # don't use changes count, apparently it's too confusing for users
     view_schema = z3c.form.field.Fields(IFormSummary).omit('name', 'changeCount')
+    view_schema += z3c.form.field.Fields(
+        zope.schema.TextLine(__name__='edit', title=u'')
+        )
 
     _items = None
 
@@ -58,6 +72,10 @@ class SummaryListingForm(crud.CrudForm):
         if field == 'title':
             # Redirect to the editor for now, until we can get some stats
             return os.path.join(self.context.absolute_url(), item.name)
+
+        if field == 'edit':
+            item.edit = 'Edit'
+            return os.path.join(self.context.absolute_url(), item.name, '@@edit')
 
 
 class Listing(layout.FormWrapper):

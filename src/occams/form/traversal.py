@@ -201,6 +201,8 @@ class SchemaTraverser(ExtendedTraversal):
     adapts(ISchemaContext, IHTTPRequest)
 
     def traverse(self, name):
+        if name == 'view' and self.context.data is None:
+            raise NotFound()
         try:
             if self.context.data:
                 childData = self.context.data['fields'][name]
