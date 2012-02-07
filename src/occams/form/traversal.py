@@ -63,6 +63,9 @@ class DataBaseItemContext(SimpleItem):
     # Input data
     data = None
 
+    def getDataStore(self):
+        return IDataStore(closest(self, IRepository))
+
     def __init__(self, item=None, data=None):
         self.item = item
         self.data = data or dict()

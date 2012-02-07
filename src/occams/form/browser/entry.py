@@ -6,11 +6,11 @@ import zope.schema
 import z3c.form.form
 import z3c.form.group
 
-from avrc.data.store.interfaces import IDataStore
+import avrc.data.store.directives
 from occams.form.browser.widgets import fieldWidgetMap
 
 
-class StandardForm(object):
+class StandardWidgetsMixin(object):
     """
     Renders a standard OCCAMS form
     """
@@ -20,35 +20,28 @@ class StandardForm(object):
             widgetFactory = fieldWidgetMap.get(field.field.__class__)
             if widgetFactory:
                 field.widgetFactory = widgetFactory
-        super(StandardForm, self).update()
+        super(StandardWidgetsMixin, self).update()
 
 
-class DisabledForm(object):
+class DisabledMixin(object):
     """
     Disables all widgets in the form
     """
 
     def updateWidgets(self):
-        super(DisabledForm, self).updateWidgets()
+        super(DisabledMixin, self).updateWidgets()
         for widget in self.widgets.values():
             widget.disabled = 'disabled'
 
 
-class FormPreviewGroup(StandardForm, DisabledForm, z3c.form.group.Group):
+class Group(StandardWidgetsMixin, z3c.form.group.Group):
     """
-    Renders the "fieldset" parts of the form
-    """
-
-
-class FormPreview(StandardForm, DisabledForm, z3c.form.group.GroupForm, z3c.form.form.Form):
-    """
-    Renders the form as it would appear during data entry
+    A datastore-specific group
     """
 
-    ignoreContext = True
-    ignoreRequest = True
-
-    enable_form_tabbing = False
+    @property
+    def prefix(self):
+        return self.context.__name__
 
     @property
     def label(self):
@@ -56,36 +49,56 @@ class FormPreview(StandardForm, DisabledForm, z3c.form.group.GroupForm, z3c.form
 
     @property
     def description(self):
-        return self.context['description']
+        return self.context.description
+
+    def update(self):
+        self.fields = z3c.form.field.Fields(self.context.schema)
+        super(Group, self).update()
+
+
+class Form(StandardWidgetsMixin, z3c.form.group.GroupForm, z3c.form.form.Form):
+    """
+    A datastore-specific form
+    """
+
+    ignoreContext = True
+    ignoreRequest = True
+    enable_form_tabbing = False
+
+    iface = None
+    groupFactory = Group
+
+    @property
+    def label(self):
+        return avrc.data.store.directives.title.bind().get(self.iface)
+
+    @property
+    def description(self):
+        return avrc.data.store.directives.description.bind().get(self.iface)
 
     def update(self):
         self.request.set('disable_border', True)
-        repository = self.context.getParentNode()
-
-        form = IDataStore(repository).schemata.get(self.context.__name__)
-
+        self.iface = self.context.getDataStore().schemata.get(self.context.__name__)
         self.fields = z3c.form.field.Fields()
         self.groups = []
-
-        def overrideWidgets(fields):
-            for field in fields.values():
-                widgetFactory = fieldWidgetMap.get(field.field.__class__)
-                if widgetFactory:
-                    field.widgetFactory = widgetFactory
-
-        for name, field in zope.schema.getFieldsInOrder(form):
+        for name, field in zope.schema.getFieldsInOrder(self.iface):
             if isinstance(field, zope.schema.Object):
-                group = FormPreviewGroup(None, self.request, self)
-                group.prefix = field.__name__
-                group.label = field.title
-                group.description = field.description
-                group.fields = z3c.form.field.Fields(field.schema)
-                self.groups.append(group)
-                overrideWidgets(group.fields)
+                self.groups.append(self.groupFactory(field, self.request, self))
             else:
                 self.fields += z3c.form.field.Fields(field)
+        super(Form, self).update()
 
-        overrideWidgets(self.fields)
 
-        super(FormPreview, self).update()
+class PreviewForm(DisabledMixin, Form):
+    """
+    Renders the form as it would appear during data entry
+    """
+
+    class PreviewGroup(DisabledMixin, Group):
+        """
+        Renders group in preview-mode
+        """
+
+    groupFactory = PreviewGroup
+
 

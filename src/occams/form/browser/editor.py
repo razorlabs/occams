@@ -20,8 +20,8 @@ from z3c.form.interfaces import INPUT_MODE
 from  z3c.form.browser.text import TextFieldWidget
 
 from occams.form import MessageFactory as _
-from occams.form.browser.entry import StandardForm
-from occams.form.browser.entry import DisabledForm
+from occams.form.browser.entry import StandardWidgetsMixin
+from occams.form.browser.entry import DisabledMixin
 from occams.form.interfaces import IAttributeContext
 from occams.form.interfaces import IEditableForm
 from occams.form.interfaces import IEditableField
@@ -38,7 +38,7 @@ from occams.form.serialize import cleanupChoices
 from occams.form.serialize import moveField
 
 
-class FormEditForm(StandardForm, z3c.form.form.EditForm):
+class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
     """
     Renders the form for editing, using a subform for the fields editor.
     """
@@ -163,7 +163,7 @@ class FieldsetsForm(z3c.form.group.GroupForm, z3c.form.form.Form):
         super(FieldsetsForm, self).update()
 
 
-class Fieldset(StandardForm, DisabledForm, z3c.form.group.Group):
+class Fieldset(StandardWidgetsMixin, DisabledMixin, z3c.form.group.Group):
     """
     A generic group for fields of type Object to represent as a fieldset.
     This class can also be used for the top level form to be represented as a
@@ -238,7 +238,7 @@ class Fieldset(StandardForm, DisabledForm, z3c.form.group.Group):
         self.fields = fields
         super(Fieldset, self).update()
 
-class FieldPreview(StandardForm, DisabledForm, z3c.form.form.Form):
+class FieldPreview(StandardWidgetsMixin, DisabledMixin, z3c.form.form.Form):
     """
     Preview of form fields for re-rendering single fields during form editing
     """
@@ -289,7 +289,7 @@ class FieldJsonView(BrowserView):
         return json.dumps(data)
 
 
-class FieldDeleteForm(StandardForm, z3c.form.form.Form):
+class FieldDeleteForm(StandardWidgetsMixin, z3c.form.form.Form):
     """
     Delete confirmation form for fields.
     """
@@ -317,7 +317,7 @@ class FieldDeleteForm(StandardForm, z3c.form.form.Form):
         self.request.response.setStatus(200);
 
 
-class FieldOrderForm(StandardForm, z3c.form.form.Form):
+class FieldOrderForm(StandardWidgetsMixin, z3c.form.form.Form):
     """
     Form for editing the position of a field in a form.
     """
