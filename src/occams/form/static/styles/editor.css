@@ -129,8 +129,8 @@
 }
 
 .of-item .of-metadata {
-	margin-left: 16px;
-	margin-right: 48px;
+	margin-left: 2em;
+	margin-right: 4em;
     padding: 0.1em 0;
 	overflow: hidden;
 }
@@ -322,7 +322,7 @@
 }
 
 .of-field > .of-head .of-metadata {
-    margin-left: 0;
+    margin-left: 0.4em;
 }
 
 .of-field > .of-head:hover {
