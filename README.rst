@@ -72,7 +72,7 @@ via buildout::
       <db:engine name="YOUR.OWN.ENGINE" url="postgresql://...." />
       <db:session name="YOUR.OWN.SESSION" engine="YOUR.OWN.ENGINE" />
     </configure>
-    
+
 This will help keep all your connections in one file as opposed to having them
 scattered through out your eggs, and additionaly it will prevent your from
 accidentally commiting your configuration details to your SCM!
@@ -85,6 +85,10 @@ Once installed, you will be able to select from a list of registered
 ------------
 Attributions
 ------------
+
+Some icons by `famfamfam.com`_
+
+.. _famfamfam.com: http://www.famfamfam.com/lab/icons/silk/
 
 Some icons by `Yusuke Kamiyamane`_. All rights reserved. Licensed under a `Creative Commons Attribution 3.0`_
 

@@ -166,7 +166,7 @@
 }
 
 .of-item  .of-collapseable {
-	background: center center url(++resource++collective.z3cform.datagridfield/delete_row_icon.gif);
+	background: center center no-repeat url(++resource++occams.form/images/toggle.png);
 	display: none; /* Collapsable items are not displayed by default */
 	left: 0;
 	position: absolute;
@@ -176,7 +176,7 @@
 }
 
 .of-item  .of-collapsed {
-    background-image: url(++resource++collective.z3cform.datagridfield/delete_row_icon.gif);
+    background-image: url(++resource++occams.form/images/toggle-expand.png);
 }
 
 /* FieldSets will be rendered first, so declare object styles first so the

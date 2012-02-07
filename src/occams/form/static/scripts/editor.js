@@ -297,6 +297,7 @@
         _onCollapseClick : function(event) {
             event.preventDefault();
             $(this).find('.of-content:first').slideToggle('fast');
+            $(event.target).toggleClass('of-collapsed');
             return this;
         },
 
