@@ -106,6 +106,7 @@
 }
 
 .of-placeholder {
+	display: block;
 	height: 0px !important;
 	border: 2px dotted red;
 	margin-bottom: 1em;
@@ -291,6 +292,11 @@
     color: #FFF;
 }
 
+.of-fieldset .of-collapseable:hover,
+.of-fieldset .of-controls li:hover {
+    background-color: #D5D5B6;
+}
+
 .of-fieldset .of-description {
     background-color: #E6E6DA;
     color: #555;
@@ -328,6 +334,11 @@
 .of-field > .of-head:hover {
     background-color: #666;
     color: #FFF;
+}
+
+.of-field .of-collapseable:hover,
+.of-field .of-controls li:hover {
+    background-color: #DDD;
 }
 
 .of-field .of-title,
@@ -373,18 +384,10 @@
  * JQUERY OVERRIDES
  ******************************************************************************/
 
-#of-editor .ui-sortable-placeholder {
-    border: 0.2em dotted red;
-    visibility: visible !important;
-}
-
-#of-editor .ui-sortable-placeholder * {
-    visibility: hidden;
-}
-
+#of-editor .ui-sortable .ui-draggable,
 #of-editor .ui-draggable-dragging {
-	display: block;
-	width: 100em;
+    display: block;
+    width: 10em;
 }
 
 /*******************************************************************************
