@@ -86,12 +86,22 @@ Once installed, you will be able to select from a list of registered
 Attributions
 ------------
 
-Some icons by `famfamfam.com`_
+This addon uses icons from various sources, which are credited below:
 
-.. _famfamfam.com: http://www.famfamfam.com/lab/icons/silk/
+**Silk Icons**
 
-Some icons by `Yusuke Kamiyamane`_. All rights reserved. Licensed under a `Creative Commons Attribution 3.0`_
+`Mark James (FamFamFam)`_. All rights reserved. Licensed under `Creative Commons Attribution 3.0`_
 
+**Silk Icons Companion**
+
+`Damien Guard`_. All rights reserved. Licensed under `Creative Commons Attribution 3.0`_
+
+**Fugue Icons**
+
+`Yusuke Kamiyamane`_. All rights reserved. Licensed under `Creative Commons Attribution 3.0`_
+
+.. _Damien Guard: http://damieng.com/creative/icons/silk-companion-1-icons
+.. _Mark James (FamFamFam): http://www.famfamfam.com/lab/icons/silk/
 .. _Yusuke Kamiyamane: http://p.yusukekamiyamane.com/
 .. _Creative Commons Attribution 3.0: http://creativecommons.org/licenses/by/3.0/
 

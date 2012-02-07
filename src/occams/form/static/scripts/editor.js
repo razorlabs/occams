@@ -118,6 +118,7 @@
                     cursor : 'move',
                     forcePlaceholderSize : false,
                     placeholder : settings.placeholder,
+                    handle: '.of-metadata',
                     items : '.' + settings.type,
                     revert: true,
                     opacity : 0.6,

@@ -124,6 +124,10 @@
 	position: relative;
 }
 
+.of-item > .of-head .of-metadata:hover {
+    cursor: move;
+}
+
 .of-item .of-metadata {
 	margin-left: 16px;
 	margin-right: 48px;
@@ -165,7 +169,7 @@
 }
 
 .of-item  .of-collapseable {
-	background: center center no-repeat url(++resource++occams.form/images/toggle.png);
+	background: center center no-repeat url(++resource++occams.form/images/control_remove_blue.png);
 	display: none; /* Collapsable items are not displayed by default */
 	left: 0;
 	position: absolute;
@@ -175,19 +179,19 @@
 }
 
 .of-item  .of-collapsed {
-    background-image: url(++resource++occams.form/images/toggle-expand.png);
+    background-image: url(++resource++occams.form/images/control_add_blue.png);
 }
 
 /* FieldSets will be rendered first, so declare object styles first so the
    other type style declarations can override it */
 .object .of-type,
 #of-new a.object {
-    background-image: url(++resource++occams.form/images/table.png);
+    background-image: url(++resource++occams.form/images/ui-group-box.png);
 }
 
 .boolean .of-type,
 #of-new a.boolean {
-    background-image: url(++resource++occams.form/images/tick.png);
+    background-image: url(++resource++occams.form/images/ui-radio-buttons.png);
 }
 
 .date .of-type,
@@ -197,27 +201,27 @@
 
 .datetime .of-type,
 #of-new a.datetime {
-    background-image: url(++resource++occams.form/images/time.png);
+    background-image: url(++resource++occams.form/images/clock.png);
 }
 
 .decimal .of-type,
 #of-new a.decimal {
-    background-image: url(++resource++occams.form/images/calculator.png);
+    background-image: url(++resource++occams.form/images/edit-decimal.png);
 }
 
 .integer .of-type,
 #of-new a.integer {
-    background-image: url(++resource++occams.form/images/calculator.png);
+    background-image: url(++resource++occams.form/images/ui-text-field-format.png);
 }
 
 .string .of-type,
 #of-new a.string {
-    background-image: url(++resource++occams.form/images/textfield.png);
+    background-image: url(++resource++occams.form/images/ui-text-field.png);
 }
 
 .text .of-type,
 #of-new a.text {
-    background-image: url(++resource++occams.form/images/page_white_text.png);
+    background-image: url(++resource++occams.form/images/ui-text-area.png);
 }
 
 .of-item .of-version {
@@ -233,7 +237,6 @@
 }
 
 .of-item .of-controls ul {
-	list-style: none;
 	margin: 0 !important;
 	overflow: hidden;
 	padding: 0;
@@ -241,6 +244,7 @@
 
 .of-item .of-controls li {
 	float: left;
+	list-style: none;
 	margin: 0 !important;
     padding: 2px 4px;
 }
@@ -259,7 +263,7 @@
 }
 
 .of-item .of-controls .of-deleteable {
-	background: center center no-repeat url(++resource++occams.form/images/delete.png);
+	background: center center no-repeat url(++resource++occams.form/images/decline.png);
 }
 
 .of-item .of-content {
@@ -280,6 +284,11 @@
 
 .of-fieldset > .of-head {
     background-color: #D5D5B6;
+}
+
+.of-fieldset > .of-head:hover {
+    background-color: #A6A64A;
+    color: #FFF;
 }
 
 .of-fieldset .of-description {
@@ -316,6 +325,10 @@
     margin-left: 0;
 }
 
+.of-field > .of-head:hover {
+    background-color: #666;
+    color: #FFF;
+}
 
 .of-field .of-title,
 .of-field .of-description {
