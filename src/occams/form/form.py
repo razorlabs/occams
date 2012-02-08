@@ -1,208 +1,105 @@
 """
-Form summary tools
+API base classes for rendering forms in certain contexts.
 """
 
-from zope.interface import implements
+import zope.schema
+import z3c.form.form
+import z3c.form.group
+import z3c.form.browser.textarea
+from z3c.form.browser.radio import RadioFieldWidget
+from z3c.form.browser.checkbox import CheckBoxFieldWidget
 
-from sqlalchemy import func
-from sqlalchemy import String
-from sqlalchemy import Date
-from sqlalchemy.sql.expression import case
-from sqlalchemy.sql.expression import cast
-from sqlalchemy.sql.expression import null
-from sqlalchemy.sql.expression import literal_column
-from sqlalchemy.orm import aliased
-
-from avrc.data.store import model
-from occams.form.interfaces import IFormSummary
-from occams.form.interfaces import IFormSummaryGenerator
+import avrc.data.store.directives
+from occams.form.interfaces import TEXTAREA_SIZE
 
 
-def literal(value):
+def TextAreaFieldWidget(field, request):
     """
-    Helper method to convert a Python value into a SQL string
+    Forms should use a slightly bigger textarea
+
+    z3c.form doesn't allow configuring of rows so we must subclass it.
+
+    Unfortunately there is no way to register this, so every view that wants
+    to use this factory must specify it in the ``widgetFactory`` property
+    of the ``z3c.form.field.Field`` instance.
     """
-    return literal_column('\'%s\'' % str(value), String)
+    widget = z3c.form.browser.textarea.TextAreaFieldWidget(field, request)
+    widget.rows = TEXTAREA_SIZE
+    return widget
 
 
-def changeTableFactory(session):
+fieldWidgetMap = {
+    zope.schema.Choice: RadioFieldWidget,
+    zope.schema.List: CheckBoxFieldWidget,
+    zope.schema.Text: TextAreaFieldWidget,
+    }
+
+
+class StandardWidgetsMixin(object):
     """
-    Helper method to generate a SQLAlchemy expression table for schemata changes.
-    The result set will include all modifications done to each schema.
+    Updates form widgets to use basic widgets that make it easy for the user
+    to distinguish available options.
     """
-    SubSchema = aliased(model.Schema, name='_subschema')
-    SubAttribute = aliased(model.Attribute, name='_subattribute')
 
-    # A query that builds a revision log result set of all master forms,
-    # which also include the revisions of subforms
-    query = (
-        # Master schema create dates
-        session.query(
-            model.Schema.name.label('schema_name'),
-            null().label('attribute_name'),
-            model.Schema.create_date.label('change_date'),
-            )
-        .union(
-            # Master schema removal dates
-            session.query(model.Schema.name, null(), model.Schema.remove_date),
-
-            # Master schema attribute create dates
-            session.query(
-                model.Schema.name,
-                # Only report non-object values as part of the field count
-                case([
-                    (model.Attribute.type != literal('object'),
-                        (model.Schema.name + literal('.') + model.Attribute.name))
-                    ]),
-                model.Attribute.create_date
-                )
-            .join((model.Attribute, (model.Attribute.schema_id == model.Schema.id))),
-
-            # Master schema attribute removal dates
-            session.query(model.Schema.name, null(), model.Attribute.remove_date)
-            .join((model.Attribute, (model.Attribute.schema_id == model.Schema.id))),
-
-            # Sub schema create dates
-            session.query(model.Schema.name, null(), SubSchema.create_date)
-            .join((model.Attribute, (model.Attribute.schema_id == model.Schema.id)))
-            .join((SubSchema, (SubSchema.id == model.Attribute.object_schema_id))),
-
-            # Sub schema removal dates
-            session.query(model.Schema.name, null(), SubSchema.remove_date)
-            .join((model.Attribute, (model.Attribute.schema_id == model.Schema.id)))
-            .join((SubSchema, (SubSchema.id == model.Attribute.object_schema_id))),
-
-            # Sub schema attribute create dates
-            session.query(
-                model.Schema.name,
-                SubSchema.name + literal('.') + SubAttribute.name,
-                SubAttribute.create_date,
-                )
-            .join((model.Attribute, (model.Attribute.schema_id == model.Schema.id)))
-            .join((SubSchema, (SubSchema.id == model.Attribute.object_schema_id)))
-            .join((SubAttribute, (SubAttribute.schema_id == SubSchema.id))),
-
-            # Sub schema attribute removal dates
-            session.query(model.Schema.name, null(), SubAttribute.remove_date,)
-            .join((model.Attribute, (model.Attribute.schema_id == model.Schema.id)))
-            .join((SubSchema, (SubSchema.id == model.Attribute.object_schema_id)))
-            .join((SubAttribute, (SubAttribute.schema_id == SubSchema.id))),
-            )
-        )
-
-    return query.subquery('_change')
+    def update(self):
+        for field in self.fields.values():
+            widgetFactory = fieldWidgetMap.get(field.field.__class__)
+            if widgetFactory:
+                field.widgetFactory = widgetFactory
+        super(StandardWidgetsMixin, self).update()
 
 
-def baseSchemaNamesTableFactory(session):
+class Group(StandardWidgetsMixin, z3c.form.group.Group):
     """
-    Helper method to generate a SQLAlchemy expression table for base schemata names
+    A datastore-specific group
     """
-    BaseSchema = aliased(model.Schema, name='_base')
 
-    # A query that builds a base schema name result set
-    query = (
-        session.query(BaseSchema.name)
-        .join((model.Schema, (model.Schema.base_schema_id == BaseSchema.id)))
-        .group_by(BaseSchema.name)
-        )
+    @property
+    def prefix(self):
+        return self.context.__name__
 
-    return query.subquery()
+    @property
+    def label(self):
+        return self.context.title
+
+    @property
+    def description(self):
+        return self.context.description
+
+    def update(self):
+        self.fields = z3c.form.field.Fields(self.context.schema)
+        super(Group, self).update()
 
 
-def subSchemaNamesTableFactory(session):
+class Form(StandardWidgetsMixin, z3c.form.group.GroupForm, z3c.form.form.Form):
     """
-    Helper method to generate a SQLAlchemy expression table for sub schemata names
+    A datastore-specific form
     """
-    query = (
-        session.query(model.Schema.name)
-        .join((model.Entity, (model.Entity.schema_id == model.Schema.id)))
-        .join((model.ValueObject, (model.ValueObject.value == model.Entity.id)))
-        .group_by(model.Schema.name)
-        )
 
-    return query.subquery()
+    ignoreContext = True
+    ignoreRequest = True
+    enable_form_tabbing = False
 
+    iface = None
+    groupFactory = Group
 
-def summaryTableFactory(session):
-    """
-    Helper method to generate a SQLAlchemy expression table for form summaries
-    """
-    changeTable = changeTableFactory(session)
+    @property
+    def label(self):
+        return avrc.data.store.directives.title.bind().get(self.iface)
 
-    # Summary report table for each schema
-    query = (
-        session.query(
-            changeTable.c.schema_name.label('name'),
-            func.count(changeTable.c.attribute_name.distinct()).label('fieldCount'),
-            func.count(cast(changeTable.c.change_date, Date).distinct()).label('revisionCount'),
-            (func.count() - literal('1')).label('changeCount'),
-            func.max(changeTable.c.change_date).label('currentVersion'),
-            func.min(changeTable.c.change_date).label('createdOn'),
-            )
-        .select_from(changeTable)
-        .group_by(changeTable.c.schema_name)
-        )
-    return query.subquery('_summary')
+    @property
+    def description(self):
+        return avrc.data.store.directives.description.bind().get(self.iface)
 
-
-class DataStoreSchemaSummary(object):
-    implements(IFormSummary)
-
-    _values = None
-
-    def __init__(self, *args, **kwargs):
-        self._values = dict()
-        # Get items according to the interface specification
-        for name, item in kwargs.items():
-            if name in IFormSummary:
-                self._values[name] = item
+    def update(self):
+        self.request.set('disable_border', True)
+        # TODO: should be context-agnostic
+        self.iface = self.context.getDataStore().schemata.get(self.context.__name__)
+        self.fields = z3c.form.field.Fields()
+        self.groups = []
+        for name, field in zope.schema.getFieldsInOrder(self.iface):
+            if isinstance(field, zope.schema.Object):
+                self.groups.append(self.groupFactory(field, self.request, self))
             else:
-                raise AttributeError
-
-        self._values['name'] = str(self._values['name'])
-
-    @classmethod
-    def fromSql(cls, raw):
-        """
-        Helper method to construct from a SQL result
-        """
-        attributes = dict([(name, getattr(raw, name)) for name in IFormSummary.names()])
-        return cls(**attributes)
-
-    def __getattr__(self, name):
-        if name not in self._values:
-            raise AttributeError
-        return self._values.get(name)
-
-
-class FormSummaryGenerator(object):
-    implements(IFormSummaryGenerator)
-
-    def getItems(self, session):
-        summaryTable = summaryTableFactory(session)
-        baseSchemaNamesTable = baseSchemaNamesTableFactory(session)
-        subSchemaNamesTable = subSchemaNamesTableFactory(session)
-
-        # Final result set, only report master schemata and leaf schemata
-        query = (
-            session.query(
-                model.Schema.name.label('name'),
-                model.Schema.title.label('title'),
-                summaryTable.c.fieldCount,
-                summaryTable.c.changeCount,
-                summaryTable.c.revisionCount,
-                summaryTable.c.currentVersion,
-                summaryTable.c.createdOn,
-                )
-            .select_from(model.Schema)
-            .join((summaryTable, (model.Schema.name == summaryTable.c.name)))
-            .filter(~model.Schema.name.in_(baseSchemaNamesTable))
-            .filter(~model.Schema.name.in_(subSchemaNamesTable))
-            .filter(model.Schema.asOf(None))
-            .order_by(model.Schema.title)
-            )
-
-        # Wrap the results into objects Zope can understand
-        items = [DataStoreSchemaSummary.fromSql(r) for r in query.all()]
-
-        return items
+                self.fields += z3c.form.field.Fields(field)
+        super(Form, self).update()

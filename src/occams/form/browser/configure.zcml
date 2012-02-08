@@ -23,14 +23,14 @@
   <browser:page
       for="occams.form.interfaces.ISchemaContext"
       name="view"
-      class=".entry.PreviewForm"
+      class=".editor.FormPreviewForm"
       permission="occams.form.ViewForm"
       />
 
   <browser:page
       for="occams.form.interfaces.ISchemaContext"
       name="edit"
-      class=".editor.FormEditFormPloneView"
+      class=".editor.FormEditFormView"
       permission="occams.form.ModifyForm"
       />
 

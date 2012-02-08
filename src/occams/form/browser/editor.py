@@ -20,8 +20,10 @@ from z3c.form.interfaces import INPUT_MODE
 from  z3c.form.browser.text import TextFieldWidget
 
 from occams.form import MessageFactory as _
-from occams.form.browser.entry import StandardWidgetsMixin
-from occams.form.browser.entry import DisabledMixin
+from occams.form.form import StandardWidgetsMixin
+from occams.form.form import Form
+from occams.form.form import Group
+from occams.form.form import TextAreaFieldWidget
 from occams.form.interfaces import IAttributeContext
 from occams.form.interfaces import IEditableForm
 from occams.form.interfaces import IEditableField
@@ -29,13 +31,47 @@ from occams.form.interfaces import IRepository
 from occams.form.interfaces import ISchemaContext
 from occams.form.interfaces import typeInputSchemaMap
 from occams.form.interfaces import typesVocabulary
-from occams.form.browser.widgets import TextAreaFieldWidget
 from occams.form.traversal import closest
 from occams.form.serialize import Workspace
 from occams.form.serialize import listFieldsets
 from occams.form.serialize import fieldFactory
 from occams.form.serialize import cleanupChoices
 from occams.form.serialize import moveField
+
+
+class DisabledMixin(object):
+    """
+    Disables all widgets in the form
+    """
+
+    def updateWidgets(self):
+        super(DisabledMixin, self).updateWidgets()
+        for widget in self.widgets.values():
+            widget.disabled = 'disabled'
+
+
+class FormPreviewForm(DisabledMixin, Form):
+    """
+    Renders the form as it would appear during data entry
+    """
+
+    class PreviewGroup(DisabledMixin, Group):
+        """
+        Renders group in preview-mode
+        """
+
+    groupFactory = PreviewGroup
+
+
+class FormPreviewFormView(layout.FormWrapper):
+    """
+    Form wrapper for Z3C so that it appears within Plone nicely
+    """
+
+    form = FormPreviewForm
+
+    # TODO: add template for green bar (see plone.app.dexterity: tabbed_forms.pt)
+
 
 
 class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
@@ -101,7 +137,7 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
             IStatusMessage(self.request).add(self.successMessage)
 
 
-class FormEditFormPloneView(layout.FormWrapper):
+class FormEditFormView(layout.FormWrapper):
     """
     Form wrapper for Z3C so that it appears within Plone nicely
     """

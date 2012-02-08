@@ -57,7 +57,7 @@
       factory=".repository.AvailableSessionsVocabularyFactory"
       />
 
-  <utility factory=".form.FormSummaryGenerator" />
+  <utility factory=".summary.FormSummaryGenerator" />
 
   <genericsetup:registerProfile
       name="default"
