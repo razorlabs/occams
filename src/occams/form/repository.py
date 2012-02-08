@@ -2,6 +2,8 @@
 Repository tools
 """
 
+import migrate.exceptions
+import migrate.versioning.api
 from zope.component import getUtilitiesFor
 from zope.component import adapter
 from zope.interface import implementer
@@ -13,7 +15,7 @@ from z3c.saconfig import named_scoped_session
 from z3c.saconfig.interfaces import IScopedSession
 
 from avrc.data.store import model
-from avrc.data.store.upgrades import migrate
+import avrc.data.store.upgrades.migrate
 from avrc.data.store.interfaces import IDataStore
 from occams.form import MessageFactory as _
 from occams.form import Logger as log
@@ -32,7 +34,17 @@ class AvailableSessionsVocabularyFactory(object):
 
     def __call__(self, context):
         registered = getUtilitiesFor(IScopedSession)
-        names = [name for name, utility in registered]
+        names = []
+        for name, utility in registered:
+            session = named_scoped_session(name)
+            url = str(session.bind.url)
+            path = avrc.data.store.upgrades.migrate.REPOSITORY
+            try:
+                migrate.versioning.api.db_version(url, path)
+            except migrate.exceptions.DatabaseNotControlledError:
+                pass
+            else:
+                names.append(name)
         return SimpleVocabulary.fromValues(names)
 
 
@@ -102,4 +114,4 @@ def _configureRepositoryDataStore(repository):
     msg_params = dict(repository=repository_name, session=session_name, url=url)
 
     log.info(MSG_INSALLING % msg_params)
-    migrate.install(datastore.session.bind)
+    avrc.data.store.upgrades.migrate.install(datastore.session.bind)
