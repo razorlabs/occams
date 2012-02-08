@@ -2,16 +2,14 @@
     xmlns="http://namespaces.zope.org/zope"
     xmlns:browser="http://namespaces.zope.org/browser"
     xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
+    xmlns:grok="http://namespaces.zope.org/grok"
     xmlns:i18n="http://namespaces.zope.org/i18n"
     i18n_domain="occams.form">
 
-  <!-- Explicitly load external packages so we don't get ambiguous errors -->
-  <include package="collective.z3cform.datagridfield" />
-  <include package="plone.app.dexterity" />
-  <include package="plone.app.jquerytools" />
-  <include package="plone.app.z3cform" />
+  <includeDependencies package="." />
 
-  <include package="avrc.data.store" />
+  <!-- Needed to get autoform working with the IRepository content type -->
+  <grok:grok package="." />
 
   <include file="permissions.zcml" />
   <include package=".browser" />

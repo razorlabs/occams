@@ -315,7 +315,7 @@ class IFormSummaryGenerator(zope.interface.Interface):
         """
 
 
-class IRepository(IOccamsFormComponent, plone.directives.form.Schema):
+class IRepository(plone.directives.form.Schema):
     """
     Form repository entry point.
     Objects of this type offer services for managing forms as well as

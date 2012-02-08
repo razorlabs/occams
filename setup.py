@@ -40,6 +40,7 @@ setup(
         'collective.z3cform.datagridfield',
         'plone.app.dexterity',
         'plone.app.z3cform',
+        'plone.directives.form',
         'plone.z3cform',
         'SQLAlchemy',
         'zope.globalrequest',
