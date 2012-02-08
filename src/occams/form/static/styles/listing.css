@@ -10,6 +10,14 @@
     display: none;
 }
 
+.portaltype-occams-form-repository table.listing tbody td {
+    background: inherit !important;
+}
+
+.portaltype-occams-form-repository table.listing tbody tr:hover {
+	/* Visual helper for listing rows so we know which one we're selecting */
+    background-color: #CCC;
+}
 
 .portaltype-occams-form-repository .listing a[href*="@@edit"] span{
 	background: center center no-repeat url(++resource++occams.form/images/pencil.png);
