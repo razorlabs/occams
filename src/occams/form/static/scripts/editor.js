@@ -220,7 +220,7 @@
         _enableEditor : function(url, data, next) {
             var selector = $.trim(url) + ' #form';
             $(this).find('.of-content:first > .of-edit').load(selector, data, next);
-            $(this).find('.of-controls:first').css({display: 'none'});
+            $(this).find('.of-controls:first').addClass('of-disabled');
             return this;
         },
 
@@ -239,7 +239,7 @@
         _onEditorDisabled : function() {
             $(this).find('.of-content:first > .of-edit').children().remove();
             $(this).find('.of-content:first > .of-view').slideDown('fast');
-            $(this).find('.of-controls:first').css({display: ''});
+            $(this).find('.of-controls:first').removeClass('of-disabled');
             return this;
         },
 
@@ -307,6 +307,11 @@
          */
         _onEditClick : function(event) {
             event.preventDefault();
+
+            if ($(event.target).closest('.of-controls').hasClass('of-disabled')){
+                return;
+            }
+
             var url = $(event.target).attr('href');
             var callback = methods._onEditFormLoad.bind(this);
             return methods._enableEditor.call(this, url, null, callback);
@@ -317,6 +322,9 @@
          */
         _onDeleteClick : function(event) {
             event.preventDefault();
+            if ($(event.target).closest('.of-controls').hasClass('of-disabled')){
+                return;
+            }
             var url = $(event.target).attr('href');
             var callback = methods._onDeleteFormLoad.bind(this);
             return methods._enableEditor.call(this, url, null, callback);
