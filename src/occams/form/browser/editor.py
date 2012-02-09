@@ -118,7 +118,7 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
         Cancels form changes.
         """
         self.workspace.clear(self.context.__name__)
-        self.request.response.redirect(self.context.getParentNode().absolute_url())
+        self.request.response.redirect(self.context.absolute_url())
         IStatusMessage(self.request).add(self.cancelMessage)
 
     @z3c.form.button.buttonAndHandler(_(u'Commit'), name='submit')
@@ -132,7 +132,7 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
         else:
             self.applyChanges(data)
             self.workspace.commit(self.context.__name__)
-            self.request.response.redirect(self.context.getParentNode().absolute_url())
+            self.request.response.redirect(self.context.absolute_url())
             IStatusMessage(self.request).add(self.successMessage)
 
 
