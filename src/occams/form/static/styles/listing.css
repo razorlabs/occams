@@ -19,6 +19,16 @@
     background-color: #CCC;
 }
 
+.portaltype-occams-form-repository .listing a[href*="@@view"] span{
+    background: center center no-repeat url(++resource++occams.form/images/magnifier.png);
+    border: inherit !important;
+    display: block;
+    height: 16px;
+    line-height: 16px;
+    text-indent: -9001em;
+    width: 16px;
+}
+
 .portaltype-occams-form-repository .listing a[href*="@@edit"] span{
 	background: center center no-repeat url(++resource++occams.form/images/pencil.png);
     border: inherit !important;
@@ -27,5 +37,4 @@
     line-height: 16px;
     text-indent: -9001em;
     width: 16px;
-
 }

@@ -14,11 +14,16 @@ from occams.form.interfaces import IFormSummary
 from occams.form.interfaces import IFormSummaryGenerator
 
 
+additionalControls = [('view', _(u'View')), ('edit', _(u'Edit')), ]
+links = dict(title='', view='@@view', edit='@@edit',)
+
+
 class ListingEditSubForm(crud.EditSubForm):
 
     def updateWidgets(self):
         super(ListingEditSubForm, self).updateWidgets()
-        self.widgets['view_edit'].value = _(u'Edit')
+        for name, title in additionalControls:
+            self.widgets['view_' + name].value = title
 
 
 class ListingEditForm(crud.EditForm):
@@ -44,13 +49,19 @@ class SummaryListingForm(crud.CrudForm):
     addform_factory = crud.NullForm
     editform_factory = ListingEditForm
 
-    # don't use changes count, apparently it's too confusing for users
-    view_schema = z3c.form.field.Fields(IFormSummary).omit('name', 'changeCount')
-    view_schema += z3c.form.field.Fields(
-        zope.schema.TextLine(__name__='edit', title=u'')
-        )
-
     _items = None
+
+    def update(self):
+        # Don't use changes count, apparently it's too confusing for users
+        view_schema = z3c.form.field.Fields(IFormSummary).omit('name', 'changeCount')
+
+        # Add controls
+        for name, title in additionalControls:
+            field = zope.schema.TextLine(__name__=name, title=u'')
+            view_schema += z3c.form.field.Fields(field)
+
+        self.view_schema = view_schema
+        super(SummaryListingForm, self).update()
 
     def get_items(self):
         """
@@ -69,13 +80,8 @@ class SummaryListingForm(crud.CrudForm):
         """
         Renders a link to the form view
         """
-        if field == 'title':
-            # Redirect to the editor for now, until we can get some stats
-            return os.path.join(self.context.absolute_url(), item.name)
-
-        if field == 'edit':
-            item.edit = 'Edit'
-            return os.path.join(self.context.absolute_url(), item.name, '@@edit')
+        if field in links:
+            return os.path.join(self.context.absolute_url(), item.name, links[field])
 
 
 class Listing(layout.FormWrapper):

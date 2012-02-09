@@ -5,9 +5,15 @@
  *  - Containers only define widths and top/bottom padding/margin
  *
  * Color Themes used:
+ *  Ivory:
  *  http://colorschemedesigner.com/#1T11T3xw0w0w0
  *  http://colorschemedesigner.com/#1T11T1BsO6q6q
+ *
+ *  Blue:
  *  http://colorschemedesigner.com/#3z11TsOsOK-K-
+ *
+ *  Green:
+ *  http://colorschemedesigner.com/#2n11Tu9nkw0w0
  */
 
 /*******************************************************************************
@@ -293,11 +299,6 @@
     color: #FFF;
 }
 
-.of-fieldset .of-collapseable:hover,
-.of-fieldset .of-controls li:hover {
-    background-color: #D5D5B6;
-}
-
 .of-fieldset .of-description {
     background-color: #E6E6DA;
     color: #555;
@@ -335,11 +336,6 @@
 .of-field > .of-head:hover {
     background-color: #666;
     color: #FFF;
-}
-
-.of-field .of-collapseable:hover,
-.of-field .of-controls li:hover {
-    background-color: #DDD;
 }
 
 .of-field .of-title,
