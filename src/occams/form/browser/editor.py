@@ -73,7 +73,6 @@ class FormPreviewFormView(layout.FormWrapper):
     # TODO: add template for green bar (see plone.app.dexterity: tabbed_forms.pt)
 
 
-
 class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
     """
     Renders the form for editing, using a subform for the fields editor.
@@ -122,7 +121,7 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
         self.request.response.redirect(self.context.getParentNode().absolute_url())
         IStatusMessage(self.request).add(self.cancelMessage)
 
-    @z3c.form.button.buttonAndHandler(_(u'Complete'), name='submit')
+    @z3c.form.button.buttonAndHandler(_(u'Commit'), name='submit')
     def handleComplete(self, action):
         """
         Save the form changes
@@ -596,6 +595,7 @@ class FieldEditForm(FieldFormInputHelper, z3c.form.form.EditForm):
     def update(self):
         self.request.set('disable_border', True)
         self.buttons = self.buttons.select('cancel', 'apply')
+        self.buttons['apply'].title = _(u'Stage')
         self.fields['order'].mode = HIDDEN_MODE
         super(FieldEditForm, self).update()
 
