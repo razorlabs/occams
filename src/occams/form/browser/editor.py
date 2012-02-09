@@ -450,15 +450,15 @@ class FieldFormInputHelper(object):
         """
         Callback for configuring grid widgets
         """
-        widget.allow_reorder = True
-
         # Booleans are not allowed to have more than two values (duh)
         if self.getType() == 'boolean':
             subform.fields['value'].widgetFactory = TextFieldWidget
             widget.auto_append = False
             widget.allow_insert = False
             widget.allow_delete = False
+            widget.allow_reorder = False
         else:
+            widget.allow_reorder = True
             widget.auto_append = True
             widget.allow_insert = True
             widget.allow_delete = True
@@ -509,8 +509,8 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
         self.widgets['order'].value = self.request.get('order')
         if self.getType() == 'boolean':
             self.widgets['choices'].value = [
-                dict(title=u'False', value=False),
                 dict(title=u'True', value=True),
+                dict(title=u'False', value=False),
                 ]
 
     def create(self, data):
