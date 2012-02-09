@@ -128,6 +128,7 @@ class Workspace(object):
                     object_schema=field['schema'] and commitFormHelper(field['schema']) or None,
                     is_required=field['is_required'],
                     is_collection=field['is_collection'],
+                    is_inline_object=(field['type'] == 'object' or None),
                     order=field['order'],
                     )
 
