@@ -267,6 +267,12 @@
                 button.bind('click', actions[actionName]);
             });
 
+            if ($(this).find('.of-content:first').css('display') == 'none'){
+                $(this).find('.of-content:first > .of-edit').css({display: 'none'});
+                $(this).find('.of-content:first > .of-view').css({display: 'none'});
+                $(this).find('.of-content:first').css({display: ''});
+            }
+
             // begin form display chain
             $(this).find('.of-content:first > .of-view').slideUp('fast',
                     methods._onViewerDisabled.bind(this));
@@ -307,11 +313,9 @@
          */
         _onEditClick : function(event) {
             event.preventDefault();
-
             if ($(event.target).closest('.of-controls').hasClass('of-disabled')){
                 return;
             }
-
             var url = $(event.target).attr('href');
             var callback = methods._onEditFormLoad.bind(this);
             return methods._enableEditor.call(this, url, null, callback);
