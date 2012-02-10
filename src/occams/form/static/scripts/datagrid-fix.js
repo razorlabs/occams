@@ -5,10 +5,10 @@
     // Also fix it so that it triggers when the actual input
     // element is changed.
     $(document).ready(function(){
-        $(document).delegate('.auto-append > .datagridwidget-cell input', 'change',
-            function(event){
-                dataGridField2Functions.autoInsertRow.call(this, event);
-            }
-        );
+        $(document).delegate(
+            '.auto-append > .datagridwidget-cell input',
+            'change',
+            dataGridField2Functions.autoInsertRow
+            );
     });
 })(jQuery);
