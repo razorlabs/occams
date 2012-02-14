@@ -246,7 +246,9 @@ class SchemaManager(object):
         directives.version.set(item, schema.create_date)
 
         manager = FieldManager(schema)
-        for name, field in zope.schema.getFieldsInOrder(item):
+        for order, field in enumerate(zope.schema.getFieldsInOrder(item), start=0):
+            (name, field) = field
+            field.order = order # sanitize the order
             manager.put(name, field)
 
         return schema.id
@@ -433,7 +435,7 @@ class FieldManager(object):
             except LookupError:
                 raise ChoiceTypeNotSpecifiedError
 
-            for i, term in enumerate(field.vocabulary, start=1):
+            for i, term in enumerate(field.vocabulary, start=0):
                 (name, title, value) = (term.token, term.title, term.value)
                 validator.validate(value)
                 title = title is None and name or title
