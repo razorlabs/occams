@@ -382,7 +382,6 @@ class FieldManager(object):
 
                 for choice in query.all():
                     (token, title, value) = (choice.name, choice.title, choice.value)
-                    value = validator.fromUnicode(value)
                     term = SimpleTerm(token=str(token), title=title, value=value)
                     terms.append(term)
                 factory = zope.schema.Choice

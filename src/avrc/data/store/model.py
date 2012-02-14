@@ -1,6 +1,8 @@
 """ Database Definitions
 """
 
+from decimal import Decimal
+
 from zope.interface import implements
 
 from sqlalchemy import text
@@ -262,7 +264,18 @@ class Choice(Model, _AutoNamed, _Entry, _Describeable, _Editable):
     order = Column(Integer, nullable=False, index=True)
 
     def get_value(self):
-        return self._value
+        value = self._value
+        if value is not None:
+            type_ = self.attribute.type
+            if type_ == 'boolean':
+                value = (self._value == 'True')
+            elif type_ == 'integer':
+                value = int(self._value)
+            elif type_ == 'decimal':
+                value = Decimal(self._value)
+            else:
+                value = unicode(self._value)
+        return value
 
     def set_value(self, value):
         if value is not None:
