@@ -237,6 +237,9 @@ class SchemaManager(object):
 
         schema.title = directives.title.bind().get(item)
         schema.description = directives.description.bind().get(item)
+        if schema.description is not None:
+            # Sanitize the description (i.e. make sure no empty strings)
+            schema.description = schema.description.strip() or None
         session.flush()
 
         directives.__id__.set(item, schema.id)
@@ -465,6 +468,9 @@ class FieldManager(object):
             default=(unicode(item.default) if item.default is not None else None),
             order=item.order
             )
+
+        if attribute.description is not None:
+            attribute.description = attribute.description.strip() or None
 
         session.add(attribute)
         session.flush()
