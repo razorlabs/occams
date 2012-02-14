@@ -3,6 +3,12 @@ Form serialization tools to represent a form as a dictionary that can be
 persisted in a browser session or (hopefully at some point) in an annotation
 storage of a content type in order to enable form change queues with
 workflow-ie-ness and all that jazz.
+
+NOTE
+Some of the code in this file should probably be moved over to DatStore at
+some point, such as the dictionary serializing and schema commit code. Maybe
+once we start supporting SQL Alchemy objects natively (instead of interfaces)
+this may be possible.
 """
 
 import re
@@ -77,77 +83,157 @@ class Workspace(object):
         Commits the item in the workspace to the database
         """
         session = IDataStore(self.repository).session
-
-        def commitFormHelper(data):
-            oldSchema = (
-                session.query(Schema)
-                .filter((Schema.name == data['name']) & Schema.asOf(None))
-                .first()
-                )
-
-            # add new schema
-            newSchema = Schema(
-                name=data['name'],
-                title=data['title'],
-                description=data['description'],
-                )
-
-            session.add(newSchema)
-
-            # retire old schema
-            if oldSchema:
-                oldSchema.remove_date = NOW
-                newSchema.base_schema = oldSchema.base_schema
-
-            # retire old fields
-            schemaRetireCount = (
-                session.query(Attribute)
-                .filter(Attribute.schema.has(name=newSchema.name))
-                .filter(~Attribute.name.in_(data.get('fields', {}).keys()))
-                .update(dict(remove_date=NOW), 'fetch')
-                )
-
-            # save fields
-
-            for field in data.get('fields', {}).values():
-                # retire old newAttribute
-                attributeRetireCount = (
-                    session.query(Attribute)
-                    .filter(Attribute.schema.has(name=newSchema.name))
-                    .filter((Attribute.name == field['name']) & Attribute.asOf(None))
-                    .update(dict(remove_date=NOW), 'fetch')
-                    )
-
-                # save new newAttribute
-                newAttribute = Attribute(
-                    schema=newSchema,
-                    name=field['name'],
-                    title=field['title'],
-                    description=field['description'],
-                    type=field['type'],
-                    object_schema=field['schema'] and commitFormHelper(field['schema']) or None,
-                    is_required=field['is_required'],
-                    is_collection=field['is_collection'],
-                    is_inline_object=(field['type'] == 'object' or None),
-                    order=field['order'],
-                    )
-
-                session.add(newAttribute)
-
-                # save new choices
-                for choice in field['choices']:
-                    session.add(Choice(
-                        attribute=newAttribute,
-                        name=choice['name'],
-                        title=choice['title'],
-                        value=unicode(choice['value']),
-                        order=choice['order'],
-                        ))
-
-            return newSchema
-
-        schema = commitFormHelper(self.data.get(name, {}))
+        CommitHelper(session)(self.data.get(name, {}))
         self.clear(name)
+
+
+class CommitHelper(object):
+    """
+    Helper module for committing form changes to the database.
+    There are TONS of moving parts when committing form changes and so it was
+    decided to group them up into a class.
+    """
+
+    def __init__(self, session):
+        self.session = session
+
+    def __call__(self, data):
+        schema = self.doSchema(data)
+        attributeRetireCount = self.doRetireOldFields(data)
+        for field in data.get('fields', {}).values():
+            self.doAttribute(schema, field)
+        return schema
+
+    def doSchema(self, data):
+        """
+        Commits schema metadata
+        """
+        session = self.session
+        schema = (
+            session.query(Schema)
+            .filter((Schema.name == data['name']) & Schema.asOf(None))
+            .first()
+            )
+
+        changeable = ('name', 'title', 'description')
+
+        # version only if necessary
+        for setting in changeable:
+            isSettingModified = getattr(schema, setting) != data[setting]
+            if isSettingModified:
+                # retire old schema
+                if schema:
+                    schema.remove_date = NOW
+                    session.flush()
+                # add new schema
+                schema = Schema(
+                    base_schema=getattr(schema, 'base_schema', None),
+                    name=data['name'],
+                    title=data['title'],
+                    description=data['description'],
+                    )
+                session.add(schema)
+                break
+        return schema
+
+    def doRetireOldFields(self, data):
+        """
+        Retires fields that are no longer part of the schema
+        """
+        session = self.session
+        retireCount = (
+            session.query(Attribute)
+            .filter(Attribute.schema.has(name=data['name']))
+            .filter(~Attribute.name.in_(data.get('fields', {}).keys()))
+            .update(dict(remove_date=NOW), 'fetch')
+            )
+        return retireCount
+
+    def doAttribute(self, schema, data):
+        """
+        Commits a single attribute metadata
+        This method is pretty lengthy as choices aren't currently versioned,
+        so we need to iterate through them and check if they have been
+        modified.
+        """
+        session = self.session
+        choices = dict()
+        isChoicesModified = False
+        isSubFormModified = False
+        attribute = (
+            session.query(Attribute)
+            .filter(Attribute.schema.has(name=schema.name))
+            .filter((Attribute.name == data['name']) & Attribute.asOf(None))
+            .first()
+            )
+
+        # Save subform changes first
+        if data['type'] == 'object':
+            object_schema = CommitHelper(session)(data['schema'])
+            isSubFormModified = (object_schema.id == attribute.object_schema.id)
+        else:
+            object_schema = None
+
+        # Convert choices to SQL Alchemy objects while checking if they've even
+        # been modified
+        for choiceData in data['choices']:
+            if isChoicesModified == False:
+                # If it already exists, check if the settings have changed
+                if choiceData['name'] in attribute.choices:
+                    choice = attribute.choices[choiceData['name']]
+                    changeable = ('name', 'title', 'value', 'order')
+                    for setting in changeable:
+                        if getattr(choice, setting) != choiceData[setting]:
+                            isChoicesModified = True
+                            break
+                # It's a new answer choiceData
+                else:
+                    isChoicesModified = True
+
+            choices[choiceData['name']] = Choice(
+                name=choiceData['name'],
+                title=choiceData['title'],
+                value=unicode(choiceData['value']),
+                order=choiceData['order'],
+                )
+
+        # Check if some have been removed
+        for key in attribute.choices.keys():
+            if key not in choices:
+                isChoicesModified = True
+                break
+
+        changeable = \
+            ('name', 'title', 'description', 'is_required', 'is_collection', 'order')
+
+        # Now check if attribute settings have been changed
+        for setting in changeable:
+            isSettingModified = getattr(attribute, setting) != data[setting]
+
+            if isChoicesModified or isSubFormModified or isSettingModified:
+                # retire old schema
+                if attribute:
+                    attribute.remove_date = NOW
+                    session.flush()
+
+                attribute = Attribute(
+                    schema=schema,
+                    name=data['name'],
+                    title=data['title'],
+                    description=data['description'],
+                    type=data['type'],
+                    object_schema=object_schema,
+                    choices=choices,
+                    is_required=data['is_required'],
+                    is_collection=data['is_collection'],
+                    is_inline_object=(data['type'] == 'object' or None),
+                    order=data['order'],
+                    )
+
+                session.add(attribute)
+                break
+
+        return attribute
 
 
 def listFieldsets(repository, formName):
@@ -187,7 +273,9 @@ def serializeField(field):
     """
     Serializes an individual field
     """
-    type_ = datastore.type.bind().get(field) or typesVocabulary.getTerm(field.__class__).token
+    type_ = \
+        datastore.type.bind().get(field) or \
+        typesVocabulary.getTerm(field.__class__).token
 
     result = dict(
         interface=field.interface.getName(),

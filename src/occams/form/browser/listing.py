@@ -15,7 +15,7 @@ from occams.form.interfaces import IFormSummaryGenerator
 
 
 additionalControls = [('view', _(u'View')), ('edit', _(u'Edit')), ]
-links = dict(title='', view='@@view', edit='@@edit',)
+links = dict(view='@@view', edit='@@edit',)
 
 
 class ListingEditSubForm(crud.EditSubForm):
