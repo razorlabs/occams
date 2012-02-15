@@ -70,19 +70,18 @@
             }
         });
 
-        $('#form').first().submit(function(event){
-            var activeEdits = $(event.target).find('form');
-            $('.of-content').removeClass('of-error');
-            if  (activeEdits.length > 0 ) {
+        // Make sure there are no active edits before committing changes
+        $('#form #form-buttons-submit').click(function(event){
+            // Find any nested form elements
+            var active = $(event.target).closest('form').find('form');
+            if  (active.length > 0 ) {
                 event.preventDefault();
-                var to = $(window).height() - activeEdits.first().offset().top;
-                activeEdits.closest('.of-content').addClass('of-error');
-                $('body')
-                    .animate({scrollTop: to}, {
-                        duration: 1000,
-                        complete: function(){
-                            alert('You still have active edits. Finalize changes and try again.');
-                        },
+                active.closest('.of-content').addClass('of-error');
+                // We're going to focus on the first one
+                $('body').animate({
+                    scrollTop: $(window).height() - active.first().offset().top
+                    }, {
+                        duration: 1000
                     });
             }
         });
@@ -220,7 +219,7 @@
             $(this).find('.of-deleteable').attr('href', url + '/@@delete');
 
             if (data.view) {
-                view.empty().append( $(data.view).find('#form') );
+                view.empty().append( $(data.view).find('#form .field') );
             }
 
             if (settings.contains){
@@ -254,6 +253,7 @@
          *
          */
         _onEditorDisabled : function() {
+            $(this).find('.of-content:first').removeClass('of-error');
             $(this).find('.of-content:first > .of-edit').children().remove();
             $(this).find('.of-content:first > .of-view').slideDown('fast');
             $(this).find('.of-controls:first').removeClass('of-disabled');
