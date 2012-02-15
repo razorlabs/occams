@@ -73,7 +73,7 @@ class DataBaseItemContext(SimpleItem):
         # Set the zope-expected properties
         self.id = None
         self.__name__ = str(self.data.get('name') or self.item.name)
-        title = self.data.get('title') or self.item.name
+        title = self.data.get('title') or self.item.title
         self.title = title
         self.Title = lambda: title
 
