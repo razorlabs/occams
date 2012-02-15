@@ -69,6 +69,23 @@
                 }
             }
         });
+
+        $('#form').first().submit(function(event){
+            var activeEdits = $(event.target).find('form');
+            $('.of-content').removeClass('of-error');
+            if  (activeEdits.length > 0 ) {
+                event.preventDefault();
+                var to = $(window).height() - activeEdits.first().offset().top;
+                activeEdits.closest('.of-content').addClass('of-error');
+                $('body')
+                    .animate({scrollTop: to}, {
+                        duration: 1000,
+                        complete: function(){
+                            alert('You still have active edits. Finalize changes and try again.');
+                        },
+                    });
+            }
+        });
     });
 
 })(jQuery);

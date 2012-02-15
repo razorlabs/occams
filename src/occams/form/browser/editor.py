@@ -89,10 +89,6 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
 
     cancelMessage = _(u'Changes canceled, nothing saved.')
 
-    @property
-    def prefix(self):
-        return self.context.__name__
-
     def getContent(self):
         return self.context.data
 
