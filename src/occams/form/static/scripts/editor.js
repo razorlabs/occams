@@ -554,7 +554,6 @@
                     url = methods.url.call(ui.item);
                 }
 
-               console.log(url, data);
                $.post(url + '/@@order', data, callback);
             }
         },
