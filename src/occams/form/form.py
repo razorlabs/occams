@@ -2,7 +2,6 @@
 API base classes for rendering forms in certain contexts.
 """
 
-from zope.interface import implementsOnly
 import zope.schema
 from zope.schema.interfaces import IChoice
 from zope.schema.interfaces import IList
