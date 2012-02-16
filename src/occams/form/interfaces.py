@@ -151,7 +151,7 @@ class IEditableIntegerChoice(IEditableChoice):
         )
 
 
-class IEditableIntegerField(IEditableField, IRequireable, ICollectable):
+class IEditableIntegerField(IEditableField, IRequireable):
 
     choices = zope.schema.List(
         title=_(u'Value Constraints'),
@@ -170,7 +170,7 @@ class IEditableDecimalChoice(IEditableChoice):
         )
 
 
-class IEditableDecimalField(IEditableField, IRequireable, ICollectable):
+class IEditableDecimalField(IEditableField, IRequireable):
 
     choices = zope.schema.List(
         title=_(u'Value Constraints'),

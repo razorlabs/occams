@@ -8,6 +8,7 @@ import z3c.form.group
 import z3c.form.browser.textarea
 from z3c.form.browser.radio import RadioFieldWidget
 from z3c.form.browser.checkbox import CheckBoxFieldWidget
+from z3c.form.browser.textlines import TextLinesFieldWidget
 
 import avrc.data.store.directives
 from occams.form.interfaces import TEXTAREA_SIZE
@@ -28,13 +29,6 @@ def TextAreaFieldWidget(field, request):
     return widget
 
 
-fieldWidgetMap = {
-    zope.schema.Choice: RadioFieldWidget,
-    zope.schema.List: CheckBoxFieldWidget,
-    zope.schema.Text: TextAreaFieldWidget,
-    }
-
-
 class StandardWidgetsMixin(object):
     """
     Updates form widgets to use basic widgets that make it easy for the user
@@ -43,9 +37,15 @@ class StandardWidgetsMixin(object):
 
     def update(self):
         for field in self.fields.values():
-            widgetFactory = fieldWidgetMap.get(field.field.__class__)
-            if widgetFactory:
-                field.widgetFactory = widgetFactory
+            if isinstance(field.field, zope.schema.Choice):
+                field.widgetFactory = RadioFieldWidget
+            elif isinstance(field.field, zope.schema.List):
+                if isinstance(field.field.value_type, zope.schema.Choice):
+                    field.widgetFactory = CheckBoxFieldWidget
+                elif isinstance(field.field.value_type, zope.schema.TextLine):
+                    field.widgetFactory = TextLinesFieldWidget
+            elif isinstance(field.field, zope.schema.Text):
+                field.widgetFactory = TextAreaFieldWidget
         super(StandardWidgetsMixin, self).update()
 
 
