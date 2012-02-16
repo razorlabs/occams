@@ -114,12 +114,13 @@ class CommitHelper(object):
             .filter((Schema.name == data['name']) & Schema.asOf(None))
             .first()
             )
-
         changeable = ('name', 'title', 'description')
 
         # version only if necessary
         for setting in changeable:
-            isSettingModified = getattr(schema, setting) != data[setting]
+            isSettingModified = (schema is None) or \
+                 (getattr(schema, setting) != data[setting])
+
             if isSettingModified:
                 # retire old schema
                 if schema:
@@ -158,8 +159,6 @@ class CommitHelper(object):
         """
         session = self.session
         choices = dict()
-        isChoicesModified = False
-        isSubFormModified = False
         attribute = (
             session.query(Attribute)
             .filter(Attribute.schema.has(name=schema.name))
@@ -167,10 +166,14 @@ class CommitHelper(object):
             .first()
             )
 
+        isChoicesModified = (attribute is None)
+        isSubFormModified = (attribute is None)
+
         # Save subform changes first
         if data['type'] == 'object':
             object_schema = CommitHelper(session)(data['schema'])
-            isSubFormModified = (object_schema.id == attribute.object_schema.id)
+            if attribute is not None:
+                isSubFormModified = (object_schema.id == attribute.object_schema.id)
         else:
             object_schema = None
 
@@ -178,17 +181,17 @@ class CommitHelper(object):
         # been modified
         for choiceData in data['choices']:
             if isChoicesModified == False:
+                # It's a new answer choiceData
+                if choiceData['name'] not in attribute.choices:
+                    isChoicesModified = True
                 # If it already exists, check if the settings have changed
-                if choiceData['name'] in attribute.choices:
+                else:
                     choice = attribute.choices[choiceData['name']]
                     changeable = ('name', 'title', 'value', 'order')
                     for setting in changeable:
                         if getattr(choice, setting) != choiceData[setting]:
                             isChoicesModified = True
                             break
-                # It's a new answer choiceData
-                else:
-                    isChoicesModified = True
 
             choices[choiceData['name']] = Choice(
                 name=choiceData['name'],
@@ -198,17 +201,19 @@ class CommitHelper(object):
                 )
 
         # Check if some have been removed
-        for key in attribute.choices.keys():
-            if key not in choices:
-                isChoicesModified = True
-                break
+        if attribute is not None:
+            for key in attribute.choices.keys():
+                if key not in choices:
+                    isChoicesModified = True
+                    break
 
         changeable = \
             ('name', 'title', 'description', 'is_required', 'is_collection', 'order')
 
         # Now check if attribute settings have been changed
         for setting in changeable:
-            isSettingModified = getattr(attribute, setting) != data[setting]
+            isSettingModified = (attribute is None) or \
+                (getattr(attribute, setting) != data[setting])
 
             if isChoicesModified or isSubFormModified or isSettingModified:
                 # retire old schema
@@ -224,10 +229,12 @@ class CommitHelper(object):
                     type=data['type'],
                     object_schema=object_schema,
                     choices=choices,
-                    is_required=data['is_required'],
-                    is_collection=data['is_collection'],
-                    is_inline_object=(data['type'] == 'object' or None),
                     order=data['order'],
+                    # These properties don't apply to all types, so set
+                    # them conditionally
+                    is_required=data.get('is_required'),
+                    is_collection=data.get('is_collection'),
+                    is_inline_object=(data['type'] == 'object' or None),
                     )
 
                 session.add(attribute)
@@ -309,7 +316,34 @@ def serializeField(field):
 
 
 def tokenize(value):
+    """
+    Converts the value into a vocabulary token value
+    """
     return re.sub('\W', '-', str(value).lower())
+
+
+def camelize(value):
+    """
+    Converts the value into a valid camel case name
+    Note: leaves the first word intact
+    """
+    result = ''
+    for position, word in enumerate(re.split(r'\W+', value)):
+        if position > 0:
+            word = word[0].upper() + word[1:]
+        result += word
+    return symbolize(result)
+
+
+def symbolize(value):
+    """
+    Converts the value into a valid Python variable name
+    """
+    # Remove invalid characters
+    value = re.sub('[^0-9a-zA-Z_]', '', value)
+    # Remove leading characters until we find a letter or underscore
+    value = re.sub('^[^a-zA-Z_]+', '', value)
+    return value
 
 
 def moveField(formData, fieldName, position):

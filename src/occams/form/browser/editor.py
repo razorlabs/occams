@@ -534,7 +534,7 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
 
         if self.getType() == 'object':
             schema = dict(
-                name=camelize(symbolize(self.context.__name__ + data['title'])),
+                name=self.context.__name__ + camelize(data['title']),
                 title=data['title'],
                 description='auto-generated class',
                 version=datetime.now(),
