@@ -416,7 +416,7 @@ class FieldOrderForm(StandardWidgetsMixin, z3c.form.form.Form):
     def render(self):
         return u''
 
-
+from plone.z3cform.fieldsets.utils import move
 class FieldFormInputHelper(object):
     """
     Helper class for displaying the inputs for editing field metadata.
@@ -435,10 +435,12 @@ class FieldFormInputHelper(object):
         if not hasattr(self, '_fields'):
             type_ = self.getType()
             schema = typeInputSchemaMap[type_]
-            fields = z3c.form.field.Fields(schema)
+            fields = z3c.form.field.Fields(schema).select('name', 'title', 'description')
             fields['description'].widgetFactory = TextAreaFieldWidget
-            if 'choices' in fields:
+            if 'choices' in schema:
+                fields += z3c.form.field.Fields(schema).select('choices')
                 fields['choices'].widgetFactory = DataGridFieldFactory
+            fields += z3c.form.field.Fields(schema).omit('name', 'title', 'description', 'choices')
             self._fields = fields
         return self._fields
 

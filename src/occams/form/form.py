@@ -2,7 +2,12 @@
 API base classes for rendering forms in certain contexts.
 """
 
+from zope.interface import implementsOnly
 import zope.schema
+from zope.schema.interfaces import IChoice
+from zope.schema.interfaces import IList
+from zope.schema.interfaces import ITextLine
+from zope.schema.interfaces import IText
 import z3c.form.form
 import z3c.form.group
 import z3c.form.browser.textarea
@@ -37,14 +42,14 @@ class StandardWidgetsMixin(object):
 
     def update(self):
         for field in self.fields.values():
-            if isinstance(field.field, zope.schema.Choice):
+            if IChoice.providedBy(field.field):
                 field.widgetFactory = RadioFieldWidget
-            elif isinstance(field.field, zope.schema.List):
-                if isinstance(field.field.value_type, zope.schema.Choice):
+            elif IList.providedBy(field.field):
+                if IChoice.providedBy(field.field.value_type):
                     field.widgetFactory = CheckBoxFieldWidget
-                elif isinstance(field.field.value_type, zope.schema.TextLine):
+                elif ITextLine.providedBy(field.field.value_type):
                     field.widgetFactory = TextLinesFieldWidget
-            elif isinstance(field.field, zope.schema.Text):
+            elif IText.providedBy(field.field) and not ITextLine.providedBy(field.field):
                 field.widgetFactory = TextAreaFieldWidget
         super(StandardWidgetsMixin, self).update()
 

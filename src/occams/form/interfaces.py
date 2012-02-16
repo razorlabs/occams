@@ -201,7 +201,7 @@ class IEditableStringField(IEditableField, IRequireable, ICollectable):
         )
 
 
-class IEditableTextField(IEditableField, IRequireable, ICollectable):
+class IEditableTextField(IEditableField, IRequireable):
 
     pass
 
