@@ -37,6 +37,8 @@ from occams.form.serialize import listFieldsets
 from occams.form.serialize import fieldFactory
 from occams.form.serialize import cleanupChoices
 from occams.form.serialize import moveField
+from occams.form.serialize import camelize
+from occams.form.serialize import symbolize
 
 
 class DisabledMixin(object):
@@ -97,6 +99,8 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
         Loads form metadata into browser session
         """
         self.request.set('disable_border', True)
+        self.request.set('disable_plone.rightcolumn', True)
+        self.request.set('disable_plone.leftcolumn', True)
 
         self.workspace = Workspace(self.context.getParentNode())
         self.context.data = self.workspace.load(self.context.__name__)
@@ -416,7 +420,7 @@ class FieldOrderForm(StandardWidgetsMixin, z3c.form.form.Form):
     def render(self):
         return u''
 
-from plone.z3cform.fieldsets.utils import move
+
 class FieldFormInputHelper(object):
     """
     Helper class for displaying the inputs for editing field metadata.
@@ -530,14 +534,12 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
 
         if self.getType() == 'object':
             schema = dict(
-                name=data['schemaName'],
+                name=camelize(symbolize(self.context.__name__ + data['title'])),
                 title=data['title'],
                 description='auto-generated class',
                 version=datetime.now(),
                 fields=dict(),
                 )
-
-            del data['schemaName']
 
         data.update(dict(
             version=datetime.now(),
