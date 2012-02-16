@@ -20,6 +20,13 @@ links = dict(view='@@view', edit='@@edit',)
 
 class ListingEditSubForm(crud.EditSubForm):
 
+    def _select_field(self):
+        """
+        Cancels the rendering of the check box as we can't delete forms
+        as of this release.
+        """
+        return z3c.form.field.Fields()
+
     def updateWidgets(self):
         super(ListingEditSubForm, self).updateWidgets()
         for name, title in additionalControls:
