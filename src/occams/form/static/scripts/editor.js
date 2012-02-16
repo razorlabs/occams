@@ -25,7 +25,6 @@
 
         // Fieldset Items
         $('.of-fieldset').formItem({
-            containment : '#of-editor',
             sortable : '#of-fieldsets',
             type: 'of-fieldset',
             contains: 'of-fields',
@@ -35,7 +34,6 @@
 
         // Field Items
         $('.of-field').formItem({
-            containment : '#of-editor',
             sortable : '.of-fields',
             type: 'of-field',
             contains: null,
@@ -105,7 +103,6 @@
         _initialize : function(options) {
             return $(this).each(function() {
                 var settings = $.extend({
-                    containment : null,
                     draggable : null,
                     sortable : null,
                     type: null,
@@ -129,7 +126,6 @@
                 // Setup the item's parent listing as a sortable
                 $(settings.sortable).sortable({
                     axis : 'y',
-                    containment : settings.containment,
                     connectWith : settings.sortable,
                     cursor : 'move',
                     forcePlaceholderSize : false,
@@ -150,7 +146,6 @@
                 $(settings.draggable)
                     .data('formItem', settings)
                     .draggable({
-                        containment : settings.containment,
                         connectToSortable : settings.sortable,
                         cursor : 'move',
                         helper : 'clone',
@@ -468,7 +463,6 @@
                     // Setup the item's parent listing as a sortable
                     $(this).find('.of-fields').sortable({
                         axis : 'y',
-                        containment : '#of-editor',
                         connectWith : '.of-fields',
                         cursor : 'move',
                         forcePlaceholderSize : false,
