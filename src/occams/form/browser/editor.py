@@ -108,7 +108,7 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
         # Continue the z3c form process
         super(FormEditForm, self).update()
 
-    @z3c.form.button.buttonAndHandler(_('Cancel'), name='cancel')
+    @z3c.form.button.buttonAndHandler(_('Cancel Changes'), name='cancel')
     def handleCancel(self, action):
         """
         Cancels form changes.
@@ -117,7 +117,7 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
         self.request.response.redirect(self.context.absolute_url())
         IStatusMessage(self.request).add(self.cancelMessage)
 
-    @z3c.form.button.buttonAndHandler(_(u'Commit'), name='submit')
+    @z3c.form.button.buttonAndHandler(_(u'Commit Changes'), name='submit')
     def handleComplete(self, action):
         """
         Save the form changes
