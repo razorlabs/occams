@@ -208,12 +208,7 @@ class IEditableTextField(IEditableField, IRequireable):
 
 class IEditableObjectField(IEditableField):
 
-    schemaName = zope.schema.ASCIILine(
-        title=_(u'Sub Form'),
-        description=_(
-            u'Specify the name of the sub form schema to use.'
-            ),
-        )
+    pass
 
 
 typeInputSchemaMap = dict(
