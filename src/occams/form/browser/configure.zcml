@@ -4,6 +4,9 @@
     xmlns:browser="http://namespaces.zope.org/browser"
     i18n_domain="occams.form">
 
+
+  <adapter factory=".editor.VariableNameValidator" />
+
   <!-- REPOSITORY -->
 
   <browser:page

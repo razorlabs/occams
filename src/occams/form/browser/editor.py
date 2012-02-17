@@ -9,6 +9,7 @@ from plone.z3cform import layout
 from Products.statusmessages.interfaces import IStatusMessage
 from zope.app.pagetemplate.viewpagetemplatefile import ViewPageTemplateFile
 from zope.publisher.browser import BrowserView
+import zope.interface
 import zope.schema
 from zExceptions import NotFound
 import z3c.form.form
@@ -18,6 +19,7 @@ import z3c.form.group
 from z3c.form.interfaces import HIDDEN_MODE
 from z3c.form.interfaces import INPUT_MODE
 from  z3c.form.browser.text import TextFieldWidget
+import z3c.form.validator
 
 from occams.form import MessageFactory as _
 from occams.form.form import StandardWidgetsMixin
@@ -40,6 +42,29 @@ from occams.form.serialize import moveField
 from occams.form.serialize import camelize
 from occams.form.serialize import symbolize
 
+
+class VariableNameValidator(z3c.form.validator.SimpleFieldValidator):
+
+    def validate(self, value):
+        super(VariableNameValidator, self).validate(value)
+
+        # Check proper Python variable name
+        if value != symbolize(value):
+            raise zope.interface.Invalid(_(u'Not a valid variable name'))
+
+        if IAttributeContext.providedBy(self.context):
+            schemaData = self.context.data['schema']
+        else:
+            schemaData = self.context.data
+
+        # Avoid duplicate variable names
+        if value in schemaData['fields']:
+            raise zope.interface.Invalid(_(u'Variable name already exists in this form'))
+
+z3c.form.validator.WidgetValidatorDiscriminators(
+    validator=VariableNameValidator,
+    field=IEditableField['name']
+    )
 
 class DisabledMixin(object):
     """
