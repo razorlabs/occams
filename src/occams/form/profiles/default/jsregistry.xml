@@ -21,24 +21,4 @@
       inline="False"
       />
 
-  <javascript
-      id="++resource++occams.form/scripts/datagrid-fix.js"
-      cacheable="True"
-      compression="none"
-      cookable="True"
-      enabled="True"
-      expression=""
-      inline="False"
-      />
-
-  <javascript
-      id="++resource++occams.form/scripts/button-fix.js"
-      cacheable="True"
-      compression="none"
-      cookable="True"
-      enabled="True"
-      expression=""
-      inline="False"
-      />
-
 </object>

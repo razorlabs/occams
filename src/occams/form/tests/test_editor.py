@@ -28,6 +28,11 @@ class TestFieldEdit(unittest.TestCase):
     layer = OCCAMS_FORM_INTEGRATION_TESTING
 
 
+class TestFieldOrder(unittest.TestCase):
+
+    layer = OCCAMS_FORM_INTEGRATION_TESTING
+
+
 class TestFieldAdd(unittest.TestCase):
 
     layer = OCCAMS_FORM_INTEGRATION_TESTING
@@ -44,13 +49,14 @@ class TestFieldAdd(unittest.TestCase):
         """
         Test that we can add valid variables to a form
         """
+        field = IEditableField['name']
         context = SchemaContext(data=dict(
             name='Foo',
             title=u'Foo',
             fields=dict.fromkeys(('foo', 'bar', 'baz'))
             ))
 
-        validator = VariableNameValidator(context, None, None, IEditableField['name'], None)
+        validator = VariableNameValidator(context, None, None, field, None)
 
         # Can't add invalid variable names
         self.assertNotValidName(validator, '----')
@@ -71,7 +77,7 @@ class TestFieldAdd(unittest.TestCase):
                 )
             ))
 
-        validator = VariableNameValidator(context, None, None, IEditableField['name'], None)
+        validator = VariableNameValidator(context, None, None, field, None)
 
         # Can't add invalid variable names
         self.assertNotValidName(validator, '----')

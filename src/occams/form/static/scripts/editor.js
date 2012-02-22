@@ -1,5 +1,10 @@
 /**
  * @fileOverview OCCAMS Form Editor Application
+ *
+ * A note on module setup: methods are broken up into possible editor states,
+ * with setup/transitions/ajax contained as nested methods. The reason for
+ * this style of implementation is to make the code (hopefully) less confusing
+ * to follow.
  */
 (function($) {
     'use strict';
@@ -50,58 +55,50 @@
     };
 
     /**
-     * Refreshes the the item with new incoming data
-     * @param item  the DOM element to update
-     * @param data  an object containing data
+     * Forces the item to update itself based on it's location in the DOM tree
+     * @param item          the DOM element to update
+     * @param properties    A mapping containing additional property update values
+     *                      Possible values include (all optional):
+     *                          - name
+     *                          - title
+     *                          - version
+     *                          - description
+     *                          - view (html content of the new view)
      */
-    var refreshItem = function(item, data) {
+    var updateItem = function(item, properties) {
         // Make sure we have an item
         item = $(item).closest('.of-item');
-        var previewer = $(item).find('.of-content:first > .of-view');
-        var editor = $(item).find('.of-content:first > .of-edit');
+        var previewer = item.find('.of-content:first > .of-view');
 
-        try{
-            data = $.parseJSON(data);
-        } catch(error) {
-            // The fact that the incoming response could not be parsed
-            // indicates that there was an error with the form and so
-            // it needs to be re-rendered
-            editor.empty().append( $(data).find('#content form') );
-            return;
-        }
-
-        if ($(item).hasClass('of-fieldset')) {
+        if (item.hasClass('of-fieldset') && !previewer.hasClass('of-fields')) {
+            // Configure the newly added fieldset
             previewer.addClass('of-fields');
-            // Configure as sortable
             configureFields();
         }
 
-        $(item).find('.of-controls:first').removeClass('of-disabled');
+        item.find('.of-controls:first').removeClass('of-disabled');
 
         // Set the visible labels
-        $(item).find('.of-name:first').text(data.name);
-        $(item).find('.of-title:first').text(data.title);
-        $(item).find('.of-version:first').text(data.version);
-        $(item).find('.of-description:first').text(data.description);
+        item.find('.of-name:first').text(properties.name);
+        item.find('.of-title:first').text(properties.title);
+        item.find('.of-version:first').text(properties.version);
+        item.find('.of-description:first').text(properties.description);
 
         // Set the new data values
-        $(item).attr('dataset').name = data.name;
-        $(item).attr('dataset').type = data.type;
-        $(item).attr('dataset').version = data.version;
+        $(item.attr('dataset')).attr({
+            name: properties.name,
+            type: properties.type,
+            version: properties.version,
+        });
 
         // Update the urls
         var url = getItemUrl(item);
-        $(item).find('.of-editable').attr('href', url + '/@@edit');
-        $(item).find('.of-deleteable').attr('href', url + '/@@delete');
+        item.find('.of-editable').attr('href', url + '/@@edit');
+        item.find('.of-deleteable').attr('href', url + '/@@delete');
 
-        if (data.view) {
-            previewer.empty().append($(data.view).find('#form .field'));
+        if (properties.view) {
+            previewer.empty().append($(properties.view).find('#form .field'));
         }
-
-        editor.slideUp('fast', function(){
-            editor.empty();
-            previewer.slideDown('fast');
-        });
     };
 
     /**
@@ -111,53 +108,77 @@
         event.preventDefault();
         var trigger= $(event.target);
         var form = $(trigger.attr('form'));
-        var url = form.attr('action');
-        var data = form.serializeArray().concat([{
-            name: $(trigger).attr('name'),
-            value: $(trigger).attr('value')
-            }]);
+        var item = trigger.closest('.of-item');
 
-        $.post(url, data, function(response, status, xhr){
-            var item = $(trigger).closest('.of-item');
-            switch($(trigger).attr('name')){
-                case 'add.buttons.add':
-                case 'edit.buttons.apply':
-                    // update the item properties
-                    refreshItem(item, response);
-                    break;
-                case 'delete.buttons.delete':
-                    // Elegantly remove the item from the DOM tree
-                    $(item).fadeOut('fast', function(){$(this).remove();});
-                    break;
-            }
+        $.ajax({
+            type: 'POST',
+            dataType: 'text',
+            url: form.attr('action'),
+            data: form.serializeArray().concat([{
+                // Add the submit button data as well since it doesn't get added
+                name: trigger.attr('name'),
+                value: trigger.attr('value')
+                }]),
+            success: function(response, status, xhr) {
+                switch(trigger.attr('name')){
+                    case 'add.buttons.add':
+                    case 'edit.buttons.apply':
+                        var editor = item.find('.of-content:first > .of-edit');
+                        var previewer = item.find('.of-content:first > .of-view');
+                        var properties = null;
+
+                        try{
+                            properties = $.parseJSON(response);
+                        } catch(error) {
+                            // The page was returned back, render it
+                            editor.empty().append($(response).find('#content form'));
+                        }
+
+                        // Update the item with it's new properties
+                        if (properties) {
+                            updateItem(item, properties);
+                            editor.slideUp('fast', function(){
+                                editor.empty();
+                                previewer.slideDown('fast');
+                            });
+                        }
+                        break;
+                    case 'delete.buttons.delete':
+                        item.fadeOut('fast', function(){
+                            item.remove();
+                        });
+                        break;
+                }
+            },
         });
     };
 
     /**
-     * DOM handler for the special case of canceling an item add form
-     */
-    var onAddFormCancelClick = function(event){
-        event.preventDefault();
-        // Remove the entire item element tree
-        $(event.target).closest('.of-item').fadeOut('fast', function(){
-            $(this).remove();
-        });
-    };
-
-    /**
-     * DOM handler when item edit is canceled
+     * DOM handler when item editing is canceled
      */
     var onItemDataCancelClick = function(event){
         event.preventDefault();
-        (event.target).closest('.of-edit').slideUp('fast', function(){
-            var item = $(this).closest('.of-item');
-            item.find('.of-content:first').removeClass('of-error');
-            item.find('.of-content:first > .of-edit').empty();
-            item.find('.of-content:first > .of-view').slideDown('fast', function(){
-                // Enable buttons once animation is complete
-                item.find('.of-controls:first').removeClass('of-disabled');
+        var trigger = $(event.target);
+        var item = $(event.target).closest('.of-item');
+
+        if ( $(event.target).attr('name') == 'add.buttons.cancel' ) {
+            // Handle add cancel differently by removing the entire element tree
+            item.fadeOut('fast', function(){
+                item.remove();
             });
-        });
+        } else {
+            var content = trigger.closest('.of-content');
+            var editor = content.find('.of-edit:first');
+            var viewer = content.find('.of-view:first');
+            editor.slideUp('fast', function(){
+                content.removeClass('of-error');
+                editor.empty();
+                viewer.slideDown('fast', function(){
+                    // Enable buttons once animation is complete
+                    item.find('.of-controls:first').removeClass('of-disabled');
+                });
+            });
+        }
     };
 
     /**
@@ -175,8 +196,7 @@
                 .addClass(type == 'object' ? 'of-fieldset' : 'of-field')
                 .addClass(type)
                 ;
-            var url = getItemUrl(target) + '/@@add-' + type;
-            var selector = '#content form';
+            var url = getItemUrl(target) + '/@@add-' + type + ' #content form';
             var data = {order: draggable.index()};
 
             newItem.find('.of-type:first').text(type);
@@ -185,7 +205,7 @@
             newItem.find('.of-controls:first').addClass('of-disabled');
             newItem
                 .find('.of-content:first > .of-edit')
-                .load(url + ' ' + selector, data, function(){
+                .load(url , data, function(){
                     newItem.find('.of-content:first > .of-edit').slideDown('fast');
                 });
 
@@ -207,7 +227,6 @@
                 url = getItemUrl(ui.item);
             }
 
-            // Need to use ajax method so we can use the error handler
             $.ajax({
                 type: 'POST',
                 url: url + '/@@order',
@@ -219,7 +238,7 @@
                     },
                 error: function(xhr, status, thrown){
                     $(ui.sender || event.target).sortable('cancel');
-                }
+                },
             });
         }
     };
@@ -264,9 +283,11 @@
     var onActionClick = function(event) {
         event.preventDefault();
         var trigger = $(event.target);
+        // Only take an action if the item's action buttons are not disabled
         if (!$(trigger).closest('.of-controls').hasClass('of-disabled')){
             var url = $(trigger).attr('href');
             var selector = '#content form';
+            $(trigger).closest('.of-controls').addClass('of-disabled');
             $(trigger)
                 .closest('.of-item')
                 .find('.of-edit:first')
@@ -291,14 +312,16 @@
     /**
      * DOM handler when the form editor is committed
      */
-    var onEditorSubmit = function(event){
+    var onEditorSubmitClick = function(event){
         // Find any nested form elements
-        var unstaged = $(event.target).closest('form').find('form');
+        var trigger = $(event.target);
+        var unstaged = trigger.closest('form').find('form');
 
         if ( unstaged.length > 0 ) {
             event.preventDefault();
+
             // The position of the first error
-            var targetY = $(window).height() - unstaged.first().offset().top;
+            var targetY = unstaged.first().closest('.of-item').offset().top;
 
             // Highlight all errors
             unstaged.closest('.of-content').addClass('of-error');
@@ -337,12 +360,11 @@
     var configureActions = function(){
         // Use delegates to apply to ajax loaded items
         $('#of-editor')
-            // Item ations
             .delegate('a.of-editable', 'click', onActionClick)
             .delegate('a.of-deleteable', 'click', onActionClick)
             .delegate('a.of-collapseable', 'click', onCollapseableClick)
             .delegate('input[name="add.buttons.add"]', 'click', onItemDataSubmitClick)
-            .delegate('input[name="add.buttons.cancel"]', 'click', onAddFormCancelClick)
+            .delegate('input[name="add.buttons.cancel"]', 'click', onItemDataCancelClick)
             .delegate('input[name="edit.buttons.apply"]', 'click', onItemDataSubmitClick)
             .delegate('input[name="edit.buttons.cancel"]', 'click', onItemDataCancelClick)
             .delegate('input[name="delete.buttons.delete"]', 'click', onItemDataSubmitClick)
@@ -350,7 +372,36 @@
             ;
 
         // Make sure there are no active edits before committing changes
-        $('#form #form-buttons-submit').click(onEditorSubmit);
+        $('#form #form-buttons-submit').click(onEditorSubmitClick);
+
+        // Prevent click-happy users from resending the form
+        $('#content').delegate('form', 'submit', function(event){
+            // At this point, all validation should have occurred at the click
+            // level, so there is no need to enable/re-enable buttons
+            var trigger = $(event.target);
+            // Don't submit if already submitting
+           if (trigger.data('of-submitted')){
+                event.preventDefault();
+            } else {
+                trigger.data('of-submitted', true);
+                trigger.find(':submit').addClass('of-disabled');
+            }
+        });
+    };
+
+    /**
+     * Configures datagridfield's actions since we load it via ajax
+     */
+    var configureDatagridField = function(){
+        $('#of-editor')
+            .delegate(
+                '.auto-append > .datagridwidget-cell input',
+                'change',
+                function(){
+                    // The function might not be defined yet, so look for it
+                    // when actually triggered
+                    dataGridField2Functions.autoInsertRow.call(this, event);
+                });
     };
 
     /**
@@ -384,6 +435,7 @@
             configureFieldsets();
             configureFields();
             configureAuxilaryBar();
+            configureDatagridField();
             configureActions();
         }
     });
