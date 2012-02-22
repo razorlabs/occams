@@ -2,14 +2,28 @@ import unittest2 as unittest
 
 import zope.interface
 
-
 from occams.form.testing import OCCAMS_FORM_INTEGRATION_TESTING
 from occams.form.browser.editor import VariableNameValidator
 from occams.form.traversal import SchemaContext
 from occams.form.traversal import AttributeContext
 from occams.form.interfaces import IEditableField
 
-class TestForm(unittest.TestCase):
+
+class TestFieldDelete(unittest.TestCase):
+
+    layer = OCCAMS_FORM_INTEGRATION_TESTING
+
+    def testFieldFromForm(self):
+        self.fail()
+
+    def testFieldFromFieldset(self):
+        self.fail()
+
+    def testFieldsetFromForm(self):
+        self.fail()
+
+
+class TestFieldEdit(unittest.TestCase):
 
     layer = OCCAMS_FORM_INTEGRATION_TESTING
 

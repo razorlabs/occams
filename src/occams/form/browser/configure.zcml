@@ -172,7 +172,7 @@
   <browser:page
       for="occams.form.interfaces.IAttributeContext"
       name="delete"
-      class=".editor.FieldDeleteForm"
+      class=".editor.FieldDeleteFormView"
       permission="occams.form.ModifyForm"
       />
 

@@ -5,7 +5,7 @@ import json
 import os.path
 
 from collective.z3cform.datagridfield import DataGridFieldFactory
-from plone.z3cform import layout
+import plone.z3cform.layout
 from Products.statusmessages.interfaces import IStatusMessage
 from zope.app.pagetemplate.viewpagetemplatefile import ViewPageTemplateFile
 from zope.publisher.browser import BrowserView
@@ -43,29 +43,6 @@ from occams.form.serialize import camelize
 from occams.form.serialize import symbolize
 
 
-class VariableNameValidator(z3c.form.validator.SimpleFieldValidator):
-
-    def validate(self, value):
-        super(VariableNameValidator, self).validate(value)
-
-        # Check proper Python variable name
-        if value != symbolize(value):
-            raise zope.interface.Invalid(_(u'Not a valid variable name'))
-
-        if IAttributeContext.providedBy(self.context):
-            schemaData = self.context.data['schema']
-        else:
-            schemaData = self.context.data
-
-        # Avoid duplicate variable names
-        if value in schemaData['fields']:
-            raise zope.interface.Invalid(_(u'Variable name already exists in this form'))
-
-z3c.form.validator.WidgetValidatorDiscriminators(
-    validator=VariableNameValidator,
-    field=IEditableField['name']
-    )
-
 class DisabledMixin(object):
     """
     Disables all widgets in the form
@@ -90,22 +67,12 @@ class FormPreviewForm(DisabledMixin, Form):
     groupFactory = PreviewGroup
 
 
-class FormPreviewFormView(layout.FormWrapper):
-    """
-    Form wrapper for Z3C so that it appears within Plone nicely
-    """
-
-    form = FormPreviewForm
-
-    # TODO: add template for green bar (see plone.app.dexterity: tabbed_forms.pt)
-
-
 class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
     """
     Renders the form for editing, using a subform for the fields editor.
     """
 
-    template = ViewPageTemplateFile('editor_templates/schema.pt')
+    template = ViewPageTemplateFile('editor_templates/schema_edit.pt')
 
     # Certain sub-form components (*cough* datagridfield) don't handle inline
     # validation very well, so we're turning it off on the entire edit for.
@@ -115,6 +82,10 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
     fields = z3c.form.field.Fields(IEditableForm).omit('name')
 
     cancelMessage = _(u'Changes canceled, nothing saved.')
+
+    @property
+    def label(self):
+        return _(u'Edit: %s (%s)') % (self.context.title, self.context.__name__)
 
     def getContent(self):
         return self.context.data
@@ -161,16 +132,8 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
             IStatusMessage(self.request).add(self.successMessage)
 
 
-class FormEditFormView(layout.FormWrapper):
-    """
-    Form wrapper for Z3C so that it appears within Plone nicely
-    """
-
-    form = FormEditForm
-
-    @property
-    def label(self):
-        return _(u'Edit: %s (%s)') % (self.context.title, self.context.__name__)
+# Need to customize the template further, use wrapper
+FormEditFormView = plone.z3cform.layout.wrap_form(FormEditForm)
 
 
 class FieldsetsForm(z3c.form.group.GroupForm, z3c.form.form.Form):
@@ -184,7 +147,7 @@ class FieldsetsForm(z3c.form.group.GroupForm, z3c.form.form.Form):
     Uses Browser Session for data.
     """
 
-    template = ViewPageTemplateFile('editor_templates/fields.pt')
+    template = ViewPageTemplateFile('editor_templates/schema_fields.pt')
 
     # This we're rendering disabled fields, we don't need context data or kss
     ignoreContext = True
@@ -354,7 +317,9 @@ class FieldDeleteForm(StandardWidgetsMixin, z3c.form.form.Form):
     Delete confirmation form for fields.
     """
 
-    template = ViewPageTemplateFile('editor_templates/delete.pt')
+    template = ViewPageTemplateFile('editor_templates/field_delete.pt')
+
+    prefix = 'delete'
 
     @property
     def label(self):
@@ -373,8 +338,17 @@ class FieldDeleteForm(StandardWidgetsMixin, z3c.form.form.Form):
 
     @z3c.form.button.buttonAndHandler(_(u'Yes, I\'m sure'), name='delete')
     def handleDelete(self, action):
-        del  self.getContent()['fields'][self.context.__name__]
-        self.request.response.setStatus(200);
+        parent = self.context.getParentNode()
+        if IAttributeContext.providedBy(parent):
+            schemaData = parent.data['schema']
+        else:
+            schemaData = parent.data
+        del  schemaData['fields'][self.context.__name__]
+        self.request.response.setStatus(200)
+
+
+# Need to wrap the form because of the custom template
+FieldDeleteFormView = plone.z3cform.layout.wrap_form(FieldDeleteForm)
 
 
 class FieldOrderForm(StandardWidgetsMixin, z3c.form.form.Form):
@@ -391,10 +365,8 @@ class FieldOrderForm(StandardWidgetsMixin, z3c.form.form.Form):
 
     def update(self):
         self.request.set('disable_border', True)
-
         repository = closest(self.context, IRepository)
         schemaContext = closest(self.context, ISchemaContext)
-
 
         self.fields = z3c.form.field.Fields(zope.schema.Choice(
             __name__='target',
@@ -413,7 +385,6 @@ class FieldOrderForm(StandardWidgetsMixin, z3c.form.form.Form):
     @z3c.form.button.buttonAndHandler(title=_(u'Sort'), name='apply')
     def handleApply(self, action):
         data, errors = self.extractData()
-
         if errors:
             self.request.response.setStatus(500)
         else:
@@ -508,6 +479,8 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
     """
     z3c.form.form.extends(z3c.form.form.AddForm)
 
+    prefix = 'add'
+
     @property
     def label(self):
         return _('New %s Field') % typesVocabulary.getTermByToken(self.typeName).title
@@ -597,11 +570,39 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
         self._finishedAdd = True
 
 
+class VariableNameValidator(z3c.form.validator.SimpleFieldValidator):
+
+    def validate(self, value):
+        super(VariableNameValidator, self).validate(value)
+
+        # Check proper Python variable name
+        if value != symbolize(value):
+            raise zope.interface.Invalid(_(u'Not a valid variable name'))
+
+        if IAttributeContext.providedBy(self.context):
+            schemaData = self.context.data['schema']
+        else:
+            schemaData = self.context.data
+
+        # Avoid duplicate variable names
+        if value in schemaData['fields']:
+            raise zope.interface.Invalid(_(u'Variable name already exists in this form'))
+
+
+z3c.form.validator.WidgetValidatorDiscriminators(
+    validator=VariableNameValidator,
+    view=FieldAddForm,
+    field=IEditableField['name'],
+    )
+
+
 class FieldEditForm(FieldFormInputHelper, z3c.form.form.EditForm):
     """
     Edit form for field.
     """
     z3c.form.form.extends(z3c.form.form.EditForm)
+
+    prefix = 'edit'
 
     @property
     def label(self):
@@ -619,6 +620,7 @@ class FieldEditForm(FieldFormInputHelper, z3c.form.form.EditForm):
 
     def update(self):
         self.request.set('disable_border', True)
+        # Flip the buttons
         self.buttons = self.buttons.select('cancel', 'apply')
         self.buttons['apply'].title = _(u'Stage')
         self.fields['order'].mode = HIDDEN_MODE

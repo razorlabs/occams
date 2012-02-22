@@ -11,7 +11,7 @@
               name      type_/token ;
               title     type_/title;
               ">
-            <a href="" tal:attributes="href addUrl; class name" tal:content="title"></a>
+            <a href="" tal:attributes="href addUrl; class name; data-type name" tal:content="title"></a>
           </tal:block>
         </li>
       </ul>
