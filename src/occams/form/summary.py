@@ -115,8 +115,7 @@ def subSchemaNamesTableFactory(session):
     """
     query = (
         session.query(model.Schema.name)
-        .join((model.Entity, (model.Entity.schema_id == model.Schema.id)))
-        .join((model.ValueObject, (model.ValueObject.value == model.Entity.id)))
+        .join((model.Attribute, (model.Attribute.object_schema_id == model.Schema.id)))
         .group_by(model.Schema.name)
         )
 
