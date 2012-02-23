@@ -385,32 +385,46 @@ class FieldOrderForm(StandardWidgetsMixin, z3c.form.form.Form):
     def handleApply(self, action):
         data, errors = self.extractData()
         if errors:
-            self.request.response.setStatus(500)
+            self.request.response.setStatus(400)
         else:
-            target = data['target']
-            position = data['order']
+            (target, position) = (data['target'], data['order'])
             parent = self.context.getParentNode()
-            fieldData = copy(self.context.data)
             schemaContext = closest(self.context, ISchemaContext)
 
-            if target:
-                targetFormData = schemaContext.data['fields'][target]['schema']
-            else:
-                targetFormData = schemaContext.data
-
+            # Get the form data that the field is coming from
             if ISchemaContext.providedBy(parent):
                 sourceFormData = parent.data
             else:
                 sourceFormData = parent.data['schema']
 
-            del sourceFormData['fields'][self.context.__name__]
-            targetFormData['fields'][self.context.__name__] = fieldData
-            moved = moveField(targetFormData, self.context.__name__, position)
-
-            if moved:
-                self.request.response.setStatus(200)
+            # Get the target form data that the field is going to
+            if target:
+                targetFormData = schemaContext.data['fields'][target]['schema']
             else:
-                self.request.response.setStatus(304)
+                targetFormData = schemaContext.data
+
+            # Do not allow the field to be moved into another schema if it
+            # already contains a field with the same name
+            if (targetFormData['name'] != sourceFormData['name']) and \
+                    (self.context.data['name'] in targetFormData['fields']):
+                self.request.response.setStatus(400)
+            else:
+                # Keep a record of the data
+                fieldData = copy(self.context.data)
+
+                # Delete it from the old schema
+                del sourceFormData['fields'][self.context.__name__]
+
+                # Add it to the new schema
+                targetFormData['fields'][self.context.__name__] = fieldData
+
+                # Update its position
+                moved = moveField(targetFormData, self.context.__name__, position)
+
+                if moved:
+                    self.request.response.setStatus(200)
+                else:
+                    self.request.response.setStatus(304)
 
     def render(self):
         return u''
