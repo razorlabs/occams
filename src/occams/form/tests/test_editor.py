@@ -32,6 +32,9 @@ class TestFieldOrder(unittest.TestCase):
 
     layer = OCCAMS_FORM_INTEGRATION_TESTING
 
+    def testFieldsetReceive(self):
+        self.fail()
+
 
 class TestFieldAdd(unittest.TestCase):
 

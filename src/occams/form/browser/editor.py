@@ -293,7 +293,6 @@ class FieldJsonView(BrowserView):
         Additionally adds an extra ``view`` field in the JSON object
         for rendering the field on the client side
         """
-        self.request.set('disable_border', True)
         data = copy(self.context.data)
         if data['schema']:
             del data['schema']
@@ -494,20 +493,33 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
 
     def update(self):
         self.request.set('disable_border', True)
+        # Can't add fields to non-object fields
         if IAttributeContext.providedBy(self.context) and \
             self.context['type'] != 'object':
             raise NotFound()
         self.buttons = self.buttons.select('cancel', 'add')
-        if 'order' in self.request:
-            self.fields['order'].mode = HIDDEN_MODE
-        else:
-            self.fields['order'].mode = INPUT_MODE
         super(FieldAddForm, self).update()
 
     def updateWidgets(self):
         super(FieldAddForm, self).updateWidgets()
-        self.widgets['order'].value = self.request.get('order')
-        if self.getType() == 'boolean':
+
+        # Set the order (this is intended for AJAX requests)
+        try:
+            self.widgets['order'].value = int(self.request.get('order', ''))
+        except ValueError:
+            # Ignore junk data
+            pass
+
+        try:
+            #If we have a valid order value, we'll hide it's widget
+            int(self.widgets['order'].value)
+        except ValueError:
+            self.widgets['order'].mode = INPUT_MODE
+        else:
+            self.widgets['order'].mode = HIDDEN_MODE
+
+        # Set the boolean default if not already set
+        if self.getType() == 'boolean' and not self.widgets['choices'].value:
             self.widgets['choices'].value = [
                 dict(title=u'True', value=True),
                 dict(title=u'False', value=False),
