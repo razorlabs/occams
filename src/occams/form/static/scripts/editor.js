@@ -282,11 +282,15 @@
      */
     var onCollapseableClick = function(event) {
         event.preventDefault();
-        $(event.target)
-            .toggleClass('of-collapsed')
-            .closest('.of-item')
-            .find('.of-content:first')
-            .slideToggle('fast');
+        var trigger = $(event.target);
+        var item = trigger.closest('.of-item');
+        if (item.find('form').length <= 0){
+            $(event.target)
+                .toggleClass('of-collapsed')
+                .closest('.of-item')
+                .find('.of-content:first')
+                .slideToggle('fast');
+        }
     };
 
     /**
