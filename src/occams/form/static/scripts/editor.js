@@ -21,12 +21,13 @@
             },
             sortable: {
                 axis : 'y',
+                cancel: '.of-frozen',
                 cursor : 'move',
                 forcePlaceholderSize : false,
                 placeholder : 'of-placeholder',
                 handle: '.of-metadata',
                 revert: true,
-                opacity : 0.7,
+                opacity : 0.9,
             },
         };
 
@@ -141,8 +142,11 @@
                                 editor.empty();
                                 previewer.slideDown('fast');
                             });
+                            item.removeClass('of-frozen');
                         }
+
                         break;
+
                     case 'delete.buttons.delete':
                         item.fadeOut('fast', function(){
                             item.remove();
@@ -176,6 +180,7 @@
                 viewer.slideDown('fast', function(){
                     // Enable buttons once animation is complete
                     item.find('.of-controls:first').removeClass('of-disabled');
+                    item.removeClass('of-frozen');
                 });
             });
         }
@@ -195,9 +200,12 @@
                 .clone()
                 .addClass(type == 'object' ? 'of-fieldset' : 'of-field')
                 .addClass(type)
+                .addClass('of-frozen')
                 ;
             var url = getItemUrl(target) + '/@@add-' + type + ' #content form';
-            var data = {order: draggable.index()};
+            // Find the previous element that is also not currently being added
+            var previous = draggable.prevAll('[data-name!=""]:first');
+            var data = {after: $(previous.attr('dataset')).attr('name')};
 
             newItem.find('.of-type:first').text(type);
             newItem.find('.of-name:first').text('[...]');
@@ -227,13 +235,17 @@
                 url = getItemUrl(ui.item);
             }
 
+            // Find the previous element that is not currently being added
+            var previous = $(ui.item).prevAll('[data-name!=""]:first');
+
             $.ajax({
                 type: 'POST',
                 url: url + '/@@order',
                 data: {
                     'form.widgets.target':
                         $(event.target).closest('.of-item').attr('dataset').name,
-                    'form.widgets.order': $(ui.item).index(),
+                    'form.widgets.after':
+                        $(previous.attr('dataset')).attr('name'),
                     'form.buttons.apply': 1,
                     },
                 error: function(xhr, status, thrown){
@@ -289,7 +301,7 @@
             var selector = '#content form';
             $(trigger).closest('.of-controls').addClass('of-disabled');
             $(trigger)
-                .closest('.of-item')
+                .closest('.of-item').addClass('of-frozen')
                 .find('.of-edit:first')
                 .load(url + ' ' + selector, function(data, status, xhr) {
                     var content = $(this).closest('.of-content');

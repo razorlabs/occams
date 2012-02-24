@@ -11,6 +11,7 @@ once we start supporting SQL Alchemy objects natively (instead of interfaces)
 this may be possible.
 """
 
+from copy import copy
 import re
 
 from collective.beaker.interfaces import ISession
@@ -346,19 +347,20 @@ def symbolize(value):
     return value
 
 
-def moveField(formData, fieldName, position):
+def moveField(formData, fieldName, after=None):
     changed = list()
+    moverData = formData['fields'][fieldName]
 
-    for field in sorted(formData['fields'].values(), key=lambda i: i['order']):
-        # Move the field to here
-        if position == field['order']:
-            formData['fields'][fieldName]['order'] = position
-            changed.append(fieldName)
+    if after is None:
+        moverData['order'] = 0
+    else:
+        moverData['order'] = formData['fields'][after]['order'] + 1
 
-        # Reorder anything following
-        if field['name'] != fieldName and position >= field['order']:
-            changed.append(fieldName)
-            field['order'] += 1
+    # Move everything that follows
+    for fieldData in sorted(formData['fields'].values(), key=lambda i: i['order']):
+        if fieldData['name'] != fieldName and fieldData['order'] >= moverData['order']:
+            fieldData['order'] += 1
+            changed.append(fieldData['name'])
 
     return changed
 

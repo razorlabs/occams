@@ -377,7 +377,11 @@ class FieldOrderForm(StandardWidgetsMixin, z3c.form.form.Form):
             required=False,
             ))
 
-        self.fields += z3c.form.field.Fields(IEditableField).select('order')
+        self.fields += z3c.form.field.Fields(zope.schema.ASCIILine(
+            __name__='after',
+            title=_(u'After which field'),
+            required=False,
+            ))
 
         super(FieldOrderForm, self).update()
 
@@ -387,7 +391,7 @@ class FieldOrderForm(StandardWidgetsMixin, z3c.form.form.Form):
         if errors:
             self.request.response.setStatus(400)
         else:
-            (target, position) = (data['target'], data['order'])
+            (target, after) = (data['target'], data['after'])
             parent = self.context.getParentNode()
             schemaContext = closest(self.context, ISchemaContext)
 
@@ -410,7 +414,7 @@ class FieldOrderForm(StandardWidgetsMixin, z3c.form.form.Form):
                 self.request.response.setStatus(400)
             else:
                 # Keep a record of the data
-                fieldData = copy(self.context.data)
+                fieldData = sourceFormData['fields'][self.context.__name__]
 
                 # Delete it from the old schema
                 del sourceFormData['fields'][self.context.__name__]
@@ -419,7 +423,7 @@ class FieldOrderForm(StandardWidgetsMixin, z3c.form.form.Form):
                 targetFormData['fields'][self.context.__name__] = fieldData
 
                 # Update its position
-                moved = moveField(targetFormData, self.context.__name__, position)
+                moved = moveField(targetFormData, fieldData['name'], after)
 
                 if moved:
                     self.request.response.setStatus(200)
@@ -498,10 +502,6 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
     def label(self):
         return _('New %s Field') % typesVocabulary.getTermByToken(self.typeName).title
 
-    @property
-    def fields(self):
-        return self.getMetadataFields()
-
     def getType(self):
         return self.__name__.split('-').pop()
 
@@ -509,28 +509,32 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
         self.request.set('disable_border', True)
         # Can't add fields to non-object fields
         if IAttributeContext.providedBy(self.context) and \
-            self.context['type'] != 'object':
+                self.context['type'] != 'object':
             raise NotFound()
+
         self.buttons = self.buttons.select('cancel', 'add')
+
+        self.fields = self.getMetadataFields().omit('order')
+
+        self.fields += z3c.form.field.Fields(zope.schema.ASCIILine(
+            __name__='after',
+            title=_(u'After which field'),
+            required=False,
+            ))
+
         super(FieldAddForm, self).update()
 
     def updateWidgets(self):
         super(FieldAddForm, self).updateWidgets()
 
         # Set the order (this is intended for AJAX requests)
-        try:
-            self.widgets['order'].value = int(self.request.get('order', ''))
-        except ValueError:
-            # Ignore junk data
-            pass
+        if 'after' in self.request:
+            self.widgets['after'].value = str(self.request.get('after', ''))
 
-        try:
-            #If we have a valid order value, we'll hide it's widget
-            int(self.widgets['order'].value)
-        except ValueError:
-            self.widgets['order'].mode = INPUT_MODE
+        if self.widgets['after'].value:
+            self.widgets['after'].mode = HIDDEN_MODE
         else:
-            self.widgets['order'].mode = HIDDEN_MODE
+            self.widgets['after'].mode = INPUT_MODE
 
         # Set the boolean default if not already set
         if self.getType() == 'boolean' and not self.widgets['choices'].value:
@@ -546,15 +550,6 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
             formData = self.context.data
 
         cleanupChoices(data)
-        position = data['order']
-
-        fieldCount = len(formData['fields'])
-        schema = None
-
-        if position is None or position > fieldCount:
-            position = fieldCount
-        elif position is None or position < 0:
-            position = 0
 
         if self.getType() == 'object':
             schema = dict(
@@ -564,6 +559,8 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
                 version=datetime.now(),
                 fields=dict(),
                 )
+        else:
+            schema = None
 
         data.update(dict(
             version=datetime.now(),
@@ -571,7 +568,7 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
             interface=formData['name'],
             is_collection=data.get('is_collection', False),
             schema=schema,
-            order=position,
+            order=None
             ))
 
         return data
@@ -582,7 +579,9 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
         else:
             formData = self.context.data
         formData['fields'][item['name']] = item
-        moveField(formData, item['name'], item['order'])
+        moveField(formData, item['name'], item['after'])
+        # The after property is no longer needed
+        del item['after']
         self._newItem = item
 
     def nextURL(self):

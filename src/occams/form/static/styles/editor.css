@@ -145,7 +145,7 @@
 	position: relative;
 }
 
-.of-item > .of-head .of-metadata:hover {
+.of-item:not(.of-frozen) > .of-head .of-metadata:hover {
     cursor: move;
 }
 
@@ -307,7 +307,7 @@
     background-color: #D5D5B6;
 }
 
-.of-fieldset > .of-head:hover {
+.of-fieldset:not(.of-frozen):not(.ui-sortable-helper) > .of-head:hover {
     background-color: #A6A64A;
     color: #FFF;
 }
@@ -346,7 +346,7 @@
     margin-left: 0.4em;
 }
 
-.of-field > .of-head:hover {
+.of-field:not(.of-frozen):not(.ui-sortable-helper) > .of-head:hover {
     background-color: #666;
     color: #FFF;
 }
