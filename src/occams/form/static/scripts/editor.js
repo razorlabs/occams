@@ -103,7 +103,7 @@
     };
 
     /**
-     *
+     * Updates the status of the closest collapseable button
      */
     var updateCollapseableState = function(node) {
         var fieldset = $(node).closest('.of-fieldset');
