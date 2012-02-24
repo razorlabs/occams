@@ -103,6 +103,19 @@
     };
 
     /**
+     *
+     */
+    var updateCollapseableState = function(node) {
+        var fieldset = $(node).closest('.of-fieldset');
+        var button = fieldset.find('.of-collapseable');
+        if (fieldset.find('form').length > 0) {
+            button.addClass('of-disabled');
+        } else {
+            button.removeClass('of-disabled');
+        }
+    };
+
+    /**
      * DOM handler when item form data is submitted
      */
     var onItemDataSubmitClick = function(event){
@@ -141,8 +154,9 @@
                             editor.slideUp('fast', function(){
                                 editor.empty();
                                 previewer.slideDown('fast');
+                                item.removeClass('of-frozen');
+                                updateCollapseableState(item);
                             });
-                            item.removeClass('of-frozen');
                         }
 
                         break;
@@ -181,6 +195,7 @@
                     // Enable buttons once animation is complete
                     item.find('.of-controls:first').removeClass('of-disabled');
                     item.removeClass('of-frozen');
+                    updateCollapseableState(item);
                 });
             });
         }
@@ -207,6 +222,7 @@
             var previous = draggable.prevAll('[data-name!=""]:first');
             var data = {after: $(previous.attr('dataset')).attr('name')};
 
+            updateCollapseableState(newItem);
             newItem.find('.of-type:first').text(type);
             newItem.find('.of-name:first').text('[...]');
             newItem.find('.of-content:first > .of-view').css({display: 'none'});
@@ -318,6 +334,7 @@
                         content.css({display: ''});
                     }
 
+                    updateCollapseableState(editor);
                     previewer.slideUp('fast', function(){
                         editor.slideDown('fast');
                     });
