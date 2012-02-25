@@ -100,7 +100,7 @@ class CommitHelper(object):
 
     def __call__(self, data):
         schema = self.doSchema(data)
-        import pdb; pdb.set_trace()
+
         attributeRetireCount = self.doRetireOldFields(data)
         for field in data.get('fields', {}).values():
             self.doAttribute(schema, field)
