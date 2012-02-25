@@ -14,7 +14,7 @@ this may be possible.
 from copy import copy
 import re
 
-from collective.beaker.interfaces import ISession
+from collective.beaker.interfaces import ISession as IHttpSession
 from zope.globalrequest import getRequest
 import zope.schema
 from zope.schema.vocabulary import SimpleVocabulary
@@ -37,15 +37,15 @@ class Workspace(object):
 
     def __init__(self, repository):
         self.repository = repository
-        self.browserSession = ISession(getRequest())
-        self.browserSession.setdefault(DATA_KEY, {})
-        self.data = self.browserSession[DATA_KEY]
+        self.httpSession = IHttpSession(getRequest())
+        self.httpSession.setdefault(DATA_KEY, {})
+        self.data = self.httpSession[DATA_KEY]
 
     def save(self):
         """
         Saves the current workspace (nothing done to database)
         """
-        self.browserSession.save()
+        self.httpSession.save()
 
     def load(self, name):
         """
@@ -100,6 +100,7 @@ class CommitHelper(object):
 
     def __call__(self, data):
         schema = self.doSchema(data)
+        import pdb; pdb.set_trace()
         attributeRetireCount = self.doRetireOldFields(data)
         for field in data.get('fields', {}).values():
             self.doAttribute(schema, field)
@@ -251,7 +252,7 @@ def listFieldsets(repository, formName):
     request = getRequest()
     objectFilter = lambda x: bool(x['schema'])
     orderSort = lambda i: i['order']
-    fields = ISession(request)[DATA_KEY][formName]['fields']
+    fields = IHttpSession(request)[DATA_KEY][formName]['fields']
     objects = sorted(filter(objectFilter, fields.values()), key=orderSort)
     return [o['name'] for o in objects]
 

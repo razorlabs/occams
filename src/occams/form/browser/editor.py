@@ -4,6 +4,7 @@ from decimal import Decimal
 import json
 import os.path
 
+from collective.beaker.interfaces import ISession as IHttpSession
 from collective.z3cform.datagridfield import DataGridFieldFactory
 import plone.z3cform.layout
 from Products.statusmessages.interfaces import IStatusMessage
@@ -17,7 +18,6 @@ import z3c.form.button
 import z3c.form.field
 import z3c.form.group
 from z3c.form.interfaces import HIDDEN_MODE
-from z3c.form.interfaces import INPUT_MODE
 from  z3c.form.browser.text import TextFieldWidget
 import z3c.form.validator
 
@@ -342,7 +342,9 @@ class FieldDeleteForm(StandardWidgetsMixin, z3c.form.form.Form):
             schemaData = parent.data['schema']
         else:
             schemaData = parent.data
+
         del  schemaData['fields'][self.context.__name__]
+        IHttpSession(self.request).save()
         self.request.response.setStatus(200)
 
 
@@ -426,6 +428,7 @@ class FieldOrderForm(StandardWidgetsMixin, z3c.form.form.Form):
                 moved = moveField(targetFormData, fieldData['name'], after)
 
                 if moved:
+                    IHttpSession(self.request).save()
                     self.request.response.setStatus(200)
                 else:
                     self.request.response.setStatus(304)
@@ -575,10 +578,13 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
             formData = self.context.data['schema']
         else:
             formData = self.context.data
-        formData['fields'][item['name']] = item
-        moveField(formData, item['name'], item['after'])
         # The after property is no longer needed
+        after = item['after']
         del item['after']
+        # Add the new field and save
+        formData['fields'][item['name']] = item
+        moveField(formData, item['name'], after)
+        IHttpSession(self.request).save()
         self._newItem = item
 
     def nextURL(self):
@@ -661,6 +667,7 @@ class FieldEditForm(FieldFormInputHelper, z3c.form.form.EditForm):
         changes = super(FieldEditForm, self).applyChanges(data);
         if changes:
             self.getContent()['version'] = datetime.now()
+            IHttpSession(self.request).save()
         nextUrl = os.path.join(self.context.absolute_url(), '@@json')
         self.request.response.redirect(nextUrl)
         return changes
