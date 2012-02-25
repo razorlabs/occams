@@ -7,3 +7,4 @@ def import_(context, logger=default_logger):
     portal_setup = getToolByName(context, 'portal_setup')
     portal_setup.runImportStepFromProfile(PROFILE_ID, 'cssregistry')
     portal_setup.runImportStepFromProfile(PROFILE_ID, 'jsregistry')
+    portal_setup.runImportStepFromProfile(PROFILE_ID, 'typeinfo')
