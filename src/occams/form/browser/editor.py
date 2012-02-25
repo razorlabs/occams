@@ -582,6 +582,7 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
         after = item['after']
         del item['after']
         # Add the new field and save
+        item['name'] = item['name'].lower()
         formData['fields'][item['name']] = item
         moveField(formData, item['name'], after)
         IHttpSession(self.request).save()
@@ -613,7 +614,7 @@ class VariableNameValidator(z3c.form.validator.SimpleFieldValidator):
             schemaData = self.context.data
 
         # Avoid duplicate variable names
-        if value in schemaData['fields']:
+        if value.lower() in schemaData['fields']:
             raise zope.interface.Invalid(_(u'Variable name already exists in this form'))
 
 
