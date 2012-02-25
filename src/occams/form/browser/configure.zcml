@@ -6,18 +6,29 @@
 
 
   <adapter factory=".editor.VariableNameValidator" />
+  <adapter factory=".workflow.StateNameValidator" />
 
+  <!--            -->
   <!-- REPOSITORY -->
+  <!--            -->
 
   <browser:page
       for="occams.form.interfaces.IRepository"
       name="view"
       class=".listing.Listing"
-      permission="cmf.ManagePortal"
+      permission="occams.form.ViewRepository"
       />
 
-  <!-- SCHEMATA -->
+  <browser:page
+      for="occams.form.interfaces.IRepository"
+      name="workflow"
+      class=".workflow.WorkflowStateListing"
+      permission="occams.form.ViewWorkflowState"
+      />
 
+  <!--          -->
+  <!-- SCHEMATA -->
+  <!--          -->
   <browser:defaultView
      for="occams.form.interfaces.ISchemaContext"
      name="view"
@@ -37,10 +48,7 @@
       permission="occams.form.ModifyForm"
       />
 
-  <!--
-  Since we're working with transient objects that have no object factory,
-  we register a view for every type the user may wish to add to a schema.
-   -->
+  <!-- Need to register an add view for every possibly type -->
 
   <browser:page
       for="occams.form.interfaces.ISchemaContext"
@@ -98,8 +106,9 @@
       permission="occams.form.ModifyForm"
       />
 
-
+  <!--            -->
   <!-- ATTRIBUTES -->
+  <!--            -->
 
   <browser:defaultView
      for="occams.form.interfaces.IAttributeContext"

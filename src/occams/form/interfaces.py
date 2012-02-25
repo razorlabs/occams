@@ -30,6 +30,29 @@ class IOccamsFormComponent(zope.interface.Interface):
     Marker interfaces for interfaces of this plug-in
     """
 
+class IEditableState(IOccamsFormComponent):
+    """
+    The human-friendly form for editing possible form states
+    """
+
+    name = zope.schema.ASCIILine(
+        title=_(u'State label'),
+        description=_(
+            u'This value is used internally'
+            ),
+        )
+
+    title = zope.schema.TextLine(
+        title=_(u'Title'),
+        description=_(u'The displayed name of the state'),
+        )
+
+    description = zope.schema.Text(
+        title=_(u'Description'),
+        description=_(u'A short description about what the state is for.'),
+        required=False,
+        )
+
 
 class IEditableForm(IOccamsFormComponent):
     """

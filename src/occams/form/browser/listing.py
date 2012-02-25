@@ -58,6 +58,14 @@ class SummaryListingForm(crud.CrudForm):
 
     _items = None
 
+    @property
+    def label(self):
+        return self.context.title
+
+    @property
+    def description(self):
+        return self.context.description
+
     def update(self):
         # Don't use changes count, apparently it's too confusing for users
         view_schema = z3c.form.field.Fields(IFormSummary).omit('name', 'changeCount')
@@ -91,18 +99,4 @@ class SummaryListingForm(crud.CrudForm):
             return os.path.join(self.context.absolute_url(), item.name, links[field])
 
 
-class Listing(layout.FormWrapper):
-    """
-    Form wrapper so it can be rendered with a Plone layout and dynamic title.
-    """
-
-    form = SummaryListingForm
-
-    @property
-    def label(self):
-        return self.context.title
-
-    @property
-    def description(self):
-        return self.context.description
-
+Listing = layout.wrap_form(SummaryListingForm)
