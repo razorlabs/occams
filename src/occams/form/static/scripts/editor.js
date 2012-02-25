@@ -37,22 +37,17 @@
     var getItemUrl = function(item){
         // Make sure we have an item
         item = $(item).closest('.of-item');
-
+        var pathNodes = [];
         var baseUrl = $('base').attr('href') || window.location.href;
-        var pathNodes = [$(item).attr('dataset').name];
 
-        if (baseUrl[baseUrl.length] != '/'){
-            baseUrl += '/';
+        if (item.length) {
+            pathNodes.unshift($(item).attr('dataset').name);
+            $(item).parents('.of-item').each(function(){
+                pathNodes.unshift($(this).attr('dataset').name);
+            });
         }
 
-        $(item).parents('.of-item').each(function(){
-            var name = $(this).attr('dataset').name;
-            if (name) {
-                pathNodes.unshift(name);
-            }
-        });
-
-        return  baseUrl + pathNodes.join('/');
+        return  baseUrl.replace(/\/$/, '') + '/' + pathNodes.join('/');
     };
 
     /**
@@ -209,7 +204,10 @@
             var target = $(event.target);
             // jQuery doesn't give the correct ``ui.item`` for draggable items
             var draggable = $(target).find('.ui-draggable').first();
+            var previous = draggable.prevAll('[data-name!=""]:first');
             var type = $(draggable).attr('dataset').type;
+            var url = getItemUrl(draggable) + '/@@add-' + type + ' #content form';
+            var data = {after: $(previous.attr('dataset')).attr('name') || ''};
             var newItem =
                 $('#of-item-template .of-item')
                 .clone()
@@ -217,23 +215,22 @@
                 .addClass(type)
                 .addClass('of-frozen')
                 ;
-            var url = getItemUrl(target) + '/@@add-' + type + ' #content form';
-            // Find the previous element that is also not currently being added
-            var previous = draggable.prevAll('[data-name!=""]:first');
-            var data = {after: $(previous.attr('dataset')).attr('name')};
 
-            updateCollapseableState(newItem);
+            // Configure the new item
             newItem.find('.of-type:first').text(type);
             newItem.find('.of-name:first').text('[...]');
             newItem.find('.of-content:first > .of-view').css({display: 'none'});
             newItem.find('.of-controls:first').addClass('of-disabled');
+
+            // Load the editor into the new item
+            $(draggable).replaceWith(newItem);
+
             newItem
                 .find('.of-content:first > .of-edit')
                 .load(url , data, function(){
+                    updateCollapseableState(newItem);
                     newItem.find('.of-content:first > .of-edit').slideDown('fast');
                 });
-
-            $(draggable).replaceWith(newItem);
         }
     };
 
@@ -261,7 +258,7 @@
                     'form.widgets.target':
                         $(event.target).closest('.of-item').attr('dataset').name,
                     'form.widgets.after':
-                        $(previous.attr('dataset')).attr('name'),
+                        $(previous.attr('dataset')).attr('name') || '',
                     'form.buttons.apply': 1,
                     },
                 error: function(xhr, status, thrown){

@@ -531,10 +531,7 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
         if 'after' in self.request:
             self.widgets['after'].value = str(self.request.get('after', ''))
 
-        if self.widgets['after'].value:
-            self.widgets['after'].mode = HIDDEN_MODE
-        else:
-            self.widgets['after'].mode = INPUT_MODE
+        self.widgets['after'].mode = HIDDEN_MODE
 
         # Set the boolean default if not already set
         if self.getType() == 'boolean' and not self.widgets['choices'].value:
