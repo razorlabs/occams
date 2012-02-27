@@ -582,6 +582,7 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
         after = item['after']
         del item['after']
         # Add the new field and save
+        item['name'] = item['name'].lower()
         formData['fields'][item['name']] = item
         moveField(formData, item['name'], after)
         IHttpSession(self.request).save()
@@ -598,10 +599,30 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
         self._finishedAdd = True
 
 
+# Copied from Python documentation
+reservedWords = """
+and     assert     break     class     continue
+def     del     elif     else     except
+exec     finally     for     from     global
+if     import     in     is     lambda
+not     or     pass     print     raise
+return     try     while
+Data     Float     Int     Numeric     Oxphys
+array     close     float     int     input
+open     range     type     write     zeros
+acos     asin     atan     cos     e
+exp     fabs     floor     log     log10
+pi     sin     sqrt     tan
+""".split()
+
+
 class VariableNameValidator(z3c.form.validator.SimpleFieldValidator):
 
     def validate(self, value):
         super(VariableNameValidator, self).validate(value)
+
+        # We want lower case, so validate as such (will be forced on add)
+        value = value.lower()
 
         # Check proper Python variable name
         if value != symbolize(value):
@@ -611,6 +632,9 @@ class VariableNameValidator(z3c.form.validator.SimpleFieldValidator):
             schemaData = self.context.data['schema']
         else:
             schemaData = self.context.data
+
+        if value in reservedWords:
+            raise zope.interface.Invalid(_(u'Can\'t use reserved programming word'))
 
         # Avoid duplicate variable names
         if value in schemaData['fields']:
