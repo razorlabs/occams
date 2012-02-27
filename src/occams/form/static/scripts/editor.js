@@ -427,7 +427,7 @@
             .delegate(
                 '.auto-append > .datagridwidget-cell input',
                 'change',
-                function(){
+                function(event){
                     // The function might not be defined yet, so look for it
                     // when actually triggered
                     dataGridField2Functions.autoInsertRow.call(this, event);
