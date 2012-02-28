@@ -92,6 +92,7 @@
         item.find('.of-editable').attr('href', url + '/@@edit');
         item.find('.of-deleteable').attr('href', url + '/@@delete');
 
+        // Re-render the widget if possible
         if (properties.view) {
             previewer.empty().append($(properties.view).find('#form .field'));
         }
@@ -117,7 +118,8 @@
         event.preventDefault();
         var trigger= $(event.target);
         var form = $(trigger.attr('form'));
-        var item = trigger.closest('.of-item');
+        var content = form.closest('.of-content');
+        var item = content.closest('.of-item');
 
         $.ajax({
             type: 'POST',
@@ -129,6 +131,10 @@
                 value: trigger.attr('value')
                 }]),
             success: function(response, status, xhr) {
+                // Remove errors, if any
+                content.removeClass('of-error');
+
+                // Handle data based on action
                 switch(trigger.attr('name')){
                     case 'add.buttons.add':
                     case 'edit.buttons.apply':
