@@ -10,3 +10,4 @@ def import_(context, logger=default_logger):
     portal_setup.runImportStepFromProfile(PROFILE_ID, 'cssregistry')
     portal_setup.runImportStepFromProfile(PROFILE_ID, 'jsregistry')
     portal_setup.runImportStepFromProfile(PROFILE_ID, 'typeinfo')
+    portal_setup.runImportStepFromProfile(PROFILE_ID, 'rolemap')
