@@ -5,6 +5,7 @@ import json
 import os.path
 
 from collective.beaker.interfaces import ISession as IHttpSession
+from collective.z3cform.datagridfield import DataGridField
 from collective.z3cform.datagridfield import DataGridFieldFactory
 import plone.z3cform.layout
 from Products.statusmessages.interfaces import IStatusMessage
@@ -608,38 +609,6 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
         self._finishedAdd = True
 
 
-class VariableNameValidator(z3c.form.validator.SimpleFieldValidator):
-
-    def validate(self, value):
-        super(VariableNameValidator, self).validate(value)
-
-        # We want lower case, so validate as such (will be forced on add)
-        value = value.lower()
-
-        # Check proper Python variable name
-        if value != symbolize(value):
-            raise zope.interface.Invalid(_(u'Not a valid variable name'))
-
-        if IAttributeContext.providedBy(self.context):
-            schemaData = self.context.data['schema']
-        else:
-            schemaData = self.context.data
-
-        if value in reservedWords:
-            raise zope.interface.Invalid(_(u'Can\'t use reserved programming word'))
-
-        # Avoid duplicate variable names
-        if value in schemaData['fields']:
-            raise zope.interface.Invalid(_(u'Variable name already exists in this form'))
-
-
-z3c.form.validator.WidgetValidatorDiscriminators(
-    validator=VariableNameValidator,
-    view=FieldAddForm,
-    field=IEditableField['name'],
-    )
-
-
 class FieldEditForm(FieldFormInputHelper, z3c.form.form.EditForm):
     """
     Edit form for field.
@@ -693,3 +662,65 @@ class FieldEditForm(FieldFormInputHelper, z3c.form.form.EditForm):
         parent = self.context.getParentNode()
         nextUrl = os.path.join(parent.absolute_url())
         self.request.response.redirect(nextUrl)
+
+
+class VariableNameValidator(z3c.form.validator.SimpleFieldValidator):
+    """
+    Variable name validation
+    """
+
+    def validate(self, value):
+        super(VariableNameValidator, self).validate(value)
+
+        # We want lower case, so validate as such (will be forced on add)
+        value = value.lower()
+
+        # Check proper Python variable name
+        if value != symbolize(value):
+            raise zope.interface.Invalid(_(u'Not a valid variable name'))
+
+        if IAttributeContext.providedBy(self.context):
+            schemaData = self.context.data['schema']
+        else:
+            schemaData = self.context.data
+
+        if value in reservedWords:
+            raise zope.interface.Invalid(_(u'Can\'t use reserved programming word'))
+
+        # Avoid duplicate variable names
+        if value in schemaData['fields']:
+            raise zope.interface.Invalid(_(u'Variable name already exists in this form'))
+
+
+# Limit variable name validation only to add forms, since that's the only time
+# a user is allow to choose a name
+z3c.form.validator.WidgetValidatorDiscriminators(
+    validator=VariableNameValidator,
+    view=FieldAddForm,
+    field=IEditableField['name'],
+    )
+
+
+class ConstraintValidator(z3c.form.validator.SimpleFieldValidator):
+    """
+    Field constraints validation
+    """
+
+    def validate(self, value):
+        super(ConstraintValidator, self).validate(value)
+        if value:
+            values = [c['value'] for c in value]
+            titles = [c['title'] for c in value]
+            if len(values) != len(set(values)) or len(titles) != len(set(titles)):
+                raise zope.interface.Invalid(_(
+                    u'Only unique values and titles are allowed'
+                    ))
+
+
+# Limit the contraint validator to only forms that will be dealing with
+# field metadata (add/edit)
+z3c.form.validator.WidgetValidatorDiscriminators(
+    validator=ConstraintValidator,
+    view=FieldFormInputHelper,
+    widget=DataGridField
+    )
