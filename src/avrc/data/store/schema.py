@@ -264,8 +264,7 @@ class FieldManager(object):
         self.session = object_session(schema)
         self.schema = schema
 
-        if schema.remove_date is not None:
-            raise Exception('Cannot modify a schema that has been retired.')
+
 
 
     def keys(self, on=None, ever=False):
@@ -324,6 +323,8 @@ class FieldManager(object):
 
 
     def retire(self, key):
+        if self.schema.remove_date is not None:
+            raise Exception('Cannot retire a schema field that has been retired.')
         session = self.session
         query = (
             session.query(model.Attribute)
@@ -420,6 +421,8 @@ class FieldManager(object):
 
 
     def put(self, key, item):
+        if self.schema.remove_date is not None:
+            raise Exception('Cannot modify a schema field that has been retired.')
         session = self.session
         is_collection = zope.schema.interfaces.ICollection.providedBy(item)
         field = item if not is_collection else item.value_type
