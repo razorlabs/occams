@@ -39,6 +39,7 @@ from occams.form.serialize import listFieldsets
 from occams.form.serialize import fieldFactory
 from occams.form.serialize import cleanupChoices
 from occams.form.serialize import moveField
+from occams.form.serialize import reservedWords
 from occams.form.serialize import camelize
 from occams.form.serialize import symbolize
 
@@ -605,23 +606,6 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
     @z3c.form.button.buttonAndHandler(_(u'Cancel'), name='cancel')
     def handleCancel(self, action):
         self._finishedAdd = True
-
-
-# Copied from Python documentation
-reservedWords = """
-and     assert     break     class     continue
-def     del     elif     else     except
-exec     finally     for     from     global
-if     import     in     is     lambda
-not     or     pass     print     raise
-return     try     while
-Data     Float     Int     Numeric     Oxphys
-array     close     float     int     input
-open     range     type     write     zeros
-acos     asin     atan     cos     e
-exp     fabs     floor     log     log10
-pi     sin     sqrt     tan
-""".split()
 
 
 class VariableNameValidator(z3c.form.validator.SimpleFieldValidator):

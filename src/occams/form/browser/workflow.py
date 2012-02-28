@@ -34,6 +34,8 @@ class WorkflowStateListingForm(crud.CrudForm):
             .filter(model.State.is_active == True)
             .order_by(model.State.name)
             )
+        # Convert items to generic dictionaries so we don't have to deal with
+        # strict Zope interface implementation constraints
         for state in query.all():
             items.append((state.id, dict(
                 id=state.id,
@@ -44,6 +46,7 @@ class WorkflowStateListingForm(crud.CrudForm):
         return items
 
     def add(self, data):
+        # By now, validation should be complete and are ready to add
         session = IScopedSession(self.context)
         state = model.State(**data)
         session.add(state)
@@ -51,6 +54,7 @@ class WorkflowStateListingForm(crud.CrudForm):
         return data
 
     def before_update(self, item, data):
+        # By now, validation should be complete and are ready to commit changes
         session = IScopedSession(self.context)
         state = session.query(model.State).filter_by(name=item['name']).first()
         state.name = data['name']
@@ -59,6 +63,7 @@ class WorkflowStateListingForm(crud.CrudForm):
         session.flush()
 
     def remove(self, (id, item)):
+        # Remove the item by "retiring it" from the database
         session = IScopedSession(self.context)
         state = session.query(model.State).get(id)
         if state is not None:
@@ -70,6 +75,9 @@ WorkflowStateListing = layout.wrap_form(WorkflowStateListingForm)
 
 
 class StateNameValidator(z3c.form.validator.SimpleFieldValidator):
+    """
+    Validates the state names when editing/adding
+    """
 
     def validate(self, value):
         super(StateNameValidator, self).validate(value)

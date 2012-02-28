@@ -11,7 +11,6 @@ once we start supporting SQL Alchemy objects natively (instead of interfaces)
 this may be possible.
 """
 
-from copy import copy
 import re
 
 from collective.beaker.interfaces import ISession as IHttpSession
@@ -28,6 +27,23 @@ from avrc.data.store.model import NOW
 from avrc.data.store.interfaces import IDataStore
 from avrc.data.store.interfaces import typesVocabulary
 from occams.form.interfaces import DATA_KEY
+
+
+# Copied from Python documentation
+reservedWords = """
+and     assert     break     class     continue
+def     del     elif     else     except
+exec     finally     for     from     global
+if     import     in     is     lambda
+not     or     pass     print     raise
+return     try     while
+Data     Float     Int     Numeric     Oxphys
+array     close     float     int     input
+open     range     type     write     zeros
+acos     asin     atan     cos     e
+exp     fabs     floor     log     log10
+pi     sin     sqrt     tan
+""".split()
 
 
 class Workspace(object):
