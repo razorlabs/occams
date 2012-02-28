@@ -66,6 +66,14 @@ class FormPreviewForm(DisabledMixin, Form):
 
     groupFactory = PreviewGroup
 
+    @z3c.form.button.buttonAndHandler(_(u'<< Back to Listing'), name='cancel')
+    def handleCancel(self, action):
+        self.request.response.redirect(self.context.getParentNode().absolute_url())
+
+    @z3c.form.button.buttonAndHandler(_(u'Edit This Form'), name='edit')
+    def handleEdit(self, action):
+        self.request.response.redirect(os.path.join(self.context.absolute_url(), '@@edit'))
+
 
 class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
     """
