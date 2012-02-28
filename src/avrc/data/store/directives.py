@@ -1,10 +1,10 @@
-""" 
+"""
 Some of the code for directives was adopted from plone.directives.form
 
 TODO:
     * Need to add scope constraints, currently the directives can
         be applied to anything...
-        
+
     * Resource/Table directives
         * Ideas:
             * url: The url to the Resource
@@ -24,15 +24,15 @@ CASTS = ['string', 'decimal', 'integer', 'boolean']
 
 
 class Table(object):
-    """ 
+    """
     A Schema type that is stored in a SQL database table.
     Classes that subclass this marker will be recognized by datastore
-    but will have their data stored in a conventional SQL table. 
+    but will have their data stored in a conventional SQL table.
     """
 
 
 class Resource(Interface):
-    """ 
+    """
     A Schema type that is stored in an external resource.
     (e.g. Zope content type, MedLine resource, etc)
     Interfaces that subclass this marker are responsible for defining
@@ -41,7 +41,7 @@ class Resource(Interface):
 
 
 class Schema(Interface):
-    """ 
+    """
     Marker interfaces for DataStore schemata.
     Interfaces that subclass this marker will be able to be stored in
     to datastore's EAV storage structure.
@@ -49,7 +49,7 @@ class Schema(Interface):
 
 
 class MetaDataValueStorage(object):
-    """ 
+    """
     Stores annotations in in the Interface's ``TAGGED_DATA``
     """
 
@@ -81,8 +81,8 @@ STORE_VALUE = MetaDataValueStorage()
 #
 
 class __id__(martian.Directive):
-    """ 
-    The database ID number of the item.  
+    """
+    The database ID number of the item.
     This directive is only intended to be read-only by client libraries.
     Intended scope: Schema/Field
     """
@@ -93,7 +93,7 @@ class __id__(martian.Directive):
 
 
 class version(martian.Directive):
-    """ 
+    """
     The version of the item.
     The date the item came into existence is the version value.
     Intended scope: Schema/Field
@@ -105,7 +105,7 @@ class version(martian.Directive):
 
 
 class inline(martian.Directive):
-    """ 
+    """
     If set, the schema (or field referencing the schema) is rendered inline.
     Intended scope: Schema/Field
     """
@@ -119,7 +119,7 @@ class inline(martian.Directive):
 #
 
 class title(martian.Directive):
-    """ 
+    """
     The title of the item.
     Intended scope: Schema
     """
@@ -130,7 +130,7 @@ class title(martian.Directive):
 
 
 class description(martian.Directive):
-    """ 
+    """
     The description of the item.
     Intended scope: Schema
     """
@@ -145,7 +145,7 @@ class description(martian.Directive):
 
 
 class type(martian.Directive):
-    """ 
+    """
     Enforces an EAV type on the field.
     Intended scope: Field
     """
@@ -153,14 +153,3 @@ class type(martian.Directive):
     key = DATASTORE_KEY
     store = STORE_VALUE
     validate = zope.schema.Choice(required=False, values=CASTS).validate
-
-
-class widget(martian.Directive):
-    """ 
-    Enforces a widget module on the field.
-    Intended scope: Field
-    """
-    scope = martian.CLASS
-    key = DATASTORE_KEY
-    store = STORE_VALUE
-    validate = zope.schema.DottedName(required=False).validate

@@ -1,4 +1,4 @@
-""" 
+"""
 Responsible for the maintenance of Zope-style schemata that will be
 then translated into an EAV structured database.
 """
@@ -204,7 +204,7 @@ class SchemaManager(object):
 
 
     def put(self, key, item):
-        """ 
+        """
         Note: If no key assigned (None), one will be generated
         """
         if not directives.Schema.isEqualOrExtendedBy(item):
@@ -237,13 +237,18 @@ class SchemaManager(object):
 
         schema.title = directives.title.bind().get(item)
         schema.description = directives.description.bind().get(item)
+        if schema.description is not None:
+            # Sanitize the description (i.e. make sure no empty strings)
+            schema.description = schema.description.strip() or None
         session.flush()
 
         directives.__id__.set(item, schema.id)
         directives.version.set(item, schema.create_date)
 
         manager = FieldManager(schema)
-        for name, field in zope.schema.getFieldsInOrder(item):
+        for order, field in enumerate(zope.schema.getFieldsInOrder(item), start=0):
+            (name, field) = field
+            field.order = order # sanitize the order
             manager.put(name, field)
 
         return schema.id
@@ -259,15 +264,14 @@ class FieldManager(object):
         self.session = object_session(schema)
         self.schema = schema
 
-        if schema.remove_date is not None:
-            raise Exception('Cannot modify a schema that has been retired.')
+
 
 
     def keys(self, on=None, ever=False):
         session = self.session
         query = (
             session.query(model.Attribute.name)
-            .filter_by(schema=self.schema)
+            .filter(model.Attribute.schema.has(name=self.schema.name))
             .order_by(model.Attribute.order.asc(), model.Attribute.create_date.asc())
             )
         if not ever:
@@ -280,7 +284,8 @@ class FieldManager(object):
         session = self.session
         query = (
             session.query(model.Attribute.create_date.label('event_date'))
-            .filter_by(schema=self.schema, name=key)
+            .filter(model.Attribute.schema.has(name=self.schema.name))
+            .filter_by(name=key)
             .union(
                 session.query(model.Attribute.remove_date)
                 .filter_by(schema=self.schema, name=key)
@@ -295,7 +300,8 @@ class FieldManager(object):
         session = self.session
         query = (
             session.query(model.Attribute)
-            .filter_by(schema=self.schema, name=key)
+            .filter(model.Attribute.schema.has(name=self.schema.name))
+            .filter_by(name=key)
             )
         if not ever:
             query = query.filter(model.Attribute.asOf(on))
@@ -307,7 +313,8 @@ class FieldManager(object):
         session = self.session
         query = (
             session.query(model.Attribute)
-            .filter_by(schema=self.schema, name=key)
+            .filter(model.Attribute.schema.has(name=self.schema.name))
+            .filter_by(name=key)
             )
         if not ever:
             query = query.filter(model.Attribute.asOf(on))
@@ -316,10 +323,13 @@ class FieldManager(object):
 
 
     def retire(self, key):
+        if self.schema.remove_date is not None:
+            raise Exception('Cannot retire a schema field that has been retired.')
         session = self.session
         query = (
             session.query(model.Attribute)
-            .filter_by(schema=self.schema, name=key)
+            .filter(model.Attribute.schema.has(name=self.schema.name))
+            .filter_by(name=key)
             .filter(model.Attribute.asOf(None))
             )
         result = query.update(dict(remove_date=model.NOW), 'fetch')
@@ -333,7 +343,8 @@ class FieldManager(object):
             .filter(None != model.Attribute.remove_date)
             .filter(model.Attribute.id == (
                 session.query(model.Attribute.id)
-                .filter_by(schema=self.schema, name=key)
+                .filter(model.Attribute.schema.has(name=self.schema.name))
+                .filter_by(name=key)
                 .order_by(
                     model.Attribute.create_date.desc()
                     )
@@ -349,7 +360,8 @@ class FieldManager(object):
         session = self.session
         query = (
             session.query(model.Attribute)
-            .filter_by(schema=self.schema, name=key)
+            .filter(model.Attribute.schema.has(name=self.schema.name))
+            .filter_by(name=key)
             .filter(model.Attribute.asOf(on))
             )
         attribute = query.first()
@@ -376,7 +388,6 @@ class FieldManager(object):
 
                 for choice in query.all():
                     (token, title, value) = (choice.name, choice.title, choice.value)
-                    value = validator.fromUnicode(value)
                     term = SimpleTerm(token=str(token), title=title, value=value)
                     terms.append(term)
                 factory = zope.schema.Choice
@@ -403,8 +414,6 @@ class FieldManager(object):
 
             if attribute.choices:
                 directives.type.set(result, attribute.type)
-            if attribute.widget:
-                directives.widget.set(result, str(attribute.widget))
             directives.__id__.set(result, attribute.id)
             directives.version.set(result, attribute.create_date)
 
@@ -412,6 +421,8 @@ class FieldManager(object):
 
 
     def put(self, key, item):
+        if self.schema.remove_date is not None:
+            raise Exception('Cannot modify a schema field that has been retired.')
         session = self.session
         is_collection = zope.schema.interfaces.ICollection.providedBy(item)
         field = item if not is_collection else item.value_type
@@ -427,7 +438,7 @@ class FieldManager(object):
             except LookupError:
                 raise ChoiceTypeNotSpecifiedError
 
-            for i, term in enumerate(field.vocabulary, start=1):
+            for i, term in enumerate(field.vocabulary, start=0):
                 (name, title, value) = (term.token, term.title, term.value)
                 validator.validate(value)
                 title = title is None and name or title
@@ -459,10 +470,12 @@ class FieldManager(object):
             is_readonly=item.readonly,
             is_collection=is_collection,
             is_required=item.required,
-            widget=directives.widget.bind().get(field),
             default=(unicode(item.default) if item.default is not None else None),
             order=item.order
             )
+
+        if attribute.description is not None:
+            attribute.description = attribute.description.strip() or None
 
         session.add(attribute)
         session.flush()
