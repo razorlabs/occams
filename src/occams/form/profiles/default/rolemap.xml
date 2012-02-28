@@ -2,87 +2,74 @@
 <rolemap>
 
   <roles>
-      <role name="Form Administrator" />
+    <role name="Form Administrator" />
   </roles>
 
   <permissions>
-  
-    </permission> -->
+
+    <!--            -->
+    <!-- REPOSITORY -->
+    <!--            -->
+
     <permission name="OCCAMS: View Repository" acquire="True">
       <role name="Member" />
     </permission>
-
-    <permission name="OCCAMS: Create Repository"  acquire="True">
+    <permission name="OCCAMS: Create Repository" acquire="True">
       <role name="Site Administrator" />
-        <role name="Manager"/>
+      <role name="Manager" />
     </permission>
-  
-    <permission name="OCCAMS: Modify Repository"  acquire="True">
+    <permission name="OCCAMS: Modify Repository" acquire="True">
       <role name="Site Administrator" />
-        <role name="Manager"/>
+      <role name="Manager" />
     </permission>
-  
-    <permission name="OCCAMS: Remove Repository"  acquire="True">
+    <permission name="OCCAMS: Remove Repository" acquire="True">
       <role name="Site Administrator" />
-        <role name="Manager"/>
+      <role name="Manager" />
     </permission>
 
-  
-  <!-- FORM -->
-  
-    <permission name="OCCAMS: View Form"  acquire="True">
+    <!--      -->
+    <!-- FORM -->
+    <!--      -->
+
+    <permission name="OCCAMS: View Form" acquire="True">
       <role name="Member" />
     </permission>
-
-  
     <permission name="OCCAMS: Create Form" acquire="True">
-        <role name="Manager"/>
-        <role name="Form Administrator" />
+      <role name="Manager" />
+      <role name="Form Administrator" />
+    </permission>
+    <permission name="OCCAMS: Modify Form" acquire="True">
+      <role name="Manager" />
+      <role name="Form Administrator" />
+    </permission>
+    <permission name="OCCAMS: Remove Form" acquire="True">
+      <role name="Manager" />
+      <role name="Form Administrator" />
+    </permission>
+    <permission name="OCCAMS: Export Form" acquire="True">
+      <role name="Manager" />
+      <role name="Form Administrator" />
     </permission>
 
-  
-    <permission name="OCCAMS: Modify Form"  acquire="True">
-       <role name="Manager"/>
-        <role name="Form Administrator" />
-    </permission>
+    <!--          -->
+    <!-- WORKFLOW -->
+    <!--          -->
 
-  
-    <permission name="OCCAMS: Remove Form"  acquire="True">
-       <role name="Manager"/>
-        <role name="Form Administrator" />
-    </permission>
-
-  
-    <permission name="OCCAMS: Export Form"  acquire="True">
-       <role name="Manager"/>
-       <role name="Form Administrator" />
-    </permission>
-      
- 
-  <!-- WORKFLOW -->
-
-    <permission name="OCCAMS: View Workflow State"  acquire="True">
+    <permission name="OCCAMS: View Workflow State" acquire="True">
       <role name="Member" />
-     </permission>
-
-      
-    <permission name="OCCAMS: Create Workflow State"  acquire="True">
-       <role name="Manager"/>
-       <role name="Form Administrator" />
     </permission>
-
-      
-    <permission name="OCCAMS: Modify Workflow State"  acquire="True">
-       <role name="Manager"/>
-       <role name="Form Administrator" />
+    <permission name="OCCAMS: Create Workflow State" acquire="True">
+      <role name="Manager" />
+      <role name="Form Administrator" />
     </permission>
-
-  
-    <permission name="OCCAMS: Remove Workflow State"  acquire="True">
-       <role name="Manager"/>
-       <role name="Form Administrator" />
+    <permission name="OCCAMS: Modify Workflow State" acquire="True">
+      <role name="Manager" />
+      <role name="Form Administrator" />
     </permission>
-
+    <permission name="OCCAMS: Remove Workflow State" acquire="True">
+      <role name="Manager" />
+      <role name="Form Administrator" />
+    </permission>
 
   </permissions>
 </rolemap>
