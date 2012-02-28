@@ -4,6 +4,13 @@
     xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
     i18n_domain="occams.form">
 
-  <!-- Upgrade registrations. -->
+   <genericsetup:upgradeStep
+      title="OCCAMS Form content updates"
+      description="Adds new changeset content type"
+      source="000"
+      destination="001"
+      handler=".handlers.to_001.import_"
+      profile="occams.form:default"
+      />
       
 </configure>
