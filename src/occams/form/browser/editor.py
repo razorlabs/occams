@@ -573,6 +573,8 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
             schema = None
 
         data.update(dict(
+            # Force lowercase variable names
+            name=data['name'].lower(),
             version=datetime.now(),
             type=self.getType(),
             interface=formData['name'],
@@ -592,7 +594,6 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
         after = item['after']
         del item['after']
         # Add the new field and save
-        item['name'] = item['name'].lower()
         formData['fields'][item['name']] = item
         moveField(formData, item['name'], after)
         IHttpSession(self.request).save()
