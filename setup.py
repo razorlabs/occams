@@ -3,13 +3,13 @@ from setuptools import setup
 
 
 # Working release version
-version = '0.4.0'
+version = '0.4.1'
 
 
 setup(
-    name='hive.form',
+    name='occams.form',
     version=version,
-    description='Provides UI tools for management of EAV-type forms',
+    description='A tool for managing dynamic forms in Plone.',
     classifiers=[
         'Development Status :: 4 - Beta'
         'Framework :: Zope3',
@@ -23,38 +23,36 @@ setup(
         'Topic :: Software Development :: Libraries',
         'Topic :: Utilities',
         ],
-    keywords='AVRC BEAST datastore database eav sqlalchemy relational clinical',
-    author='The BEAST Core Development Team',
+    keywords='OCCAMS datastore database eav sqlalchemy relational clinical',
+    author='BEAST Core Development Team',
     author_email='beast@ucsd.edu',
-    url='http://datam0nk3y.org/P01svn/plone4_eggs/hive.form/trunk',
+    url='https://github.com/beastcore/occams.form',
     license='GPL',
     packages=find_packages('src', exclude=['ez_setup']),
     package_dir={'':'src'},
-    namespace_packages=['hive'],
+    namespace_packages=['occams'],
     include_package_data=True,
     zip_safe=False,
     install_requires=[
         'setuptools',
-
-        # Component specification/documentation
-        'zope.interface',
-        'zope.schema',
-
-        # Plone-specific entry points
-        'five.grok',
-        'plone.dexterity',
-        
-        # ORM utilities and upgrade tools
-        'SQLAlchemy',
-        'sqlalchemy-migrate',
-
-        # Custom add-on dependencies
-        # EAV tools
         'avrc.data.store',
+        'collective.beaker',
+        'collective.z3cform.datagridfield',
+        'plone.app.dexterity',
+        'plone.app.z3cform',
+        'plone.directives.form',
+        'plone.z3cform',
+        'SQLAlchemy',
+        'zope.globalrequest',
+        'z3c.saconfig',
+        'z3c.form',
         ],
     extras_require=dict(
-        test=['zope.testing'],
+        postgresql=['psycopg2'],
+        test=['plone.app.testing'],
         ),
-    tests_require=['zope.testing'],
-    test_suite='hive.form',
+    entry_points="""
+    [z3c.autoinclude.plugin]
+    target = plone
+    """,
     )

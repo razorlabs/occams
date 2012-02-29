@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<metadata>
+  <version>001</version>
+  <dependencies>
+    <dependency>profile-plone.app.z3cform:default</dependency>
+    <dependency>profile-plone.app.jquerytools:default</dependency>
+    <dependency>profile-plone.app.dexterity:default</dependency>
+    <dependency>profile-collective.z3cform.datagridfield:default</dependency>
+  </dependencies>
+</metadata>
