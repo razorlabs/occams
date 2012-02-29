@@ -3,7 +3,7 @@ from setuptools import setup
 
 
 # Working release version
-version = '0.4.3'
+version = '0.4.4'
 
 
 setup(
@@ -24,9 +24,9 @@ setup(
         'Topic :: Utilities',
         ],
     keywords='AVRC BEAST datastore database eav sqlalchemy relational clinical',
-    author='The BEAST Core Development Team',
+    author='BEAST Core Development Team',
     author_email='beast@ucsd.edu',
-    url='http://datam0nk3y.org/P01svn/plone4_eggs/avrc.data.store/trunk',
+    url='https://github.com/beastcore/avrc.data.store',
     license='GPL',
     packages=find_packages('src', exclude=['ez_setup']),
     package_dir={'':'src'},
@@ -53,14 +53,14 @@ setup(
         'martian',
 
         # ORM utilities and upgrade tools
-        'SQLAlchemy>=0.6.7,<0.6.99',
-        'sqlalchemy-migrate>=0.6.1,<0.6.99',
+        'SQLAlchemy',
+        'sqlalchemy-migrate',
 
         ],
     extras_require=dict(
         postgresql=['psycopg2'],
         test=['plone.testing'],
         ),
-    tests_require=['zope.testing'],
+    tests_require=['plone.testing'],
     test_suite='avrc.data.store.tests',
     )
