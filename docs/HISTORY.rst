@@ -2,9 +2,9 @@
 Change Log
 ==========
 
------------------
-[Project: Editor]
------------------
+------------------------------------
+0.4.4 (2012-02-28) [Project: Editor]
+------------------------------------
 
 - General
     - Upgraded types vocabulary with titles
