@@ -1,0 +1,167 @@
+<div id="of-editor">
+
+  <div id="of-aux">
+    <!-- Field types -->
+    <div id="of-new">
+      <h3>Types</h3>
+      <ul>
+        <li tal:repeat="type_ view/types">
+          <tal:block tal:define="
+              addUrl    string:${context/absolute_url}/@@add-${type_/token};
+              name      type_/token ;
+              title     type_/title;
+              ">
+            <a href="" tal:attributes="href addUrl; class name; data-type name" tal:content="title"></a>
+          </tal:block>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <div id="of-main">
+    <div id="of-item-template">
+      <tal:item
+          define="
+              editUrl       string:;
+              deleteUrl     string:;
+              name          string:;
+              title         string:;
+              description   string:;
+              type_         string:;
+              version       string:;
+              onlyView      python: False;
+              itemClass     string:;
+           ">
+        <div  class=""
+          tal:attributes="
+              class string:of-item ${itemClass} ${type_};
+              data-name name;
+              data-type type_;
+              data-version version;
+              ">
+          <div class="of-head" tal:condition="not:onlyView">
+            <a href="" class="of-collapseable" tal:attributes="href string:#collapse">Collapse</a>
+            <div class="of-metadata">
+              <div class="of-type" tal:content="type_">Type</div>
+              <div class="of-name" tal:content="name">Name</div>
+              <div class="of-title" tal:content="title">Title</div>
+              <div class="of-version" tal:content="version">Version</div>
+            </div>
+            <div class="of-controls">
+              <ul>
+                <li><a href="" class="of-editable" tal:attributes="href editUrl">Edit</a></li>
+                <li><a href="" class="of-deleteable" tal:attributes="href deleteUrl">Delete</a></li>
+              </ul>
+            </div>
+          </div>
+          <div class="of-description" tal:condition="not:onlyView" tal:content="description">Description</div>
+          <div class="of-content">
+            <div class="of-edit"></div>
+            <div class="of-view"></div>
+          </div>
+        </div>
+      </tal:item>
+    </div>
+
+    <!-- The form schema's field widgets -->
+    <tal:sets tal:repeat="count python: range(2)">
+      <tal:set define="isFirstCount repeat/count/start">
+        <div id="" tal:attributes="id python: isFirstCount and 'of-default-fieldset' or 'of-fieldsets'">
+          <tal:fieldsets tal:repeat="fieldset view/groups">
+            <tal:check
+                define="isFirstFieldset repeat/fieldset/start"
+                condition="python: (isFirstCount and isFirstFieldset) or not (isFirstCount or isFirstFieldset)">
+              <tal:fieldset
+                  define="
+                    editUrl       python: fieldset.editUrl();
+                    deleteUrl     python: fieldset.deleteUrl();
+                    name          fieldset/prefix;
+                    title         fieldset/label|nothing;
+                    description   fieldset/description|nothing;
+                    type_         python: fieldset.type() or '';
+                    version       python: fieldset.version();
+                    onlyView      repeat/fieldset/start;
+                    itemClass     string:of-fieldset;
+                  ">
+                <div  class=""
+                  tal:attributes="
+                      class string:of-item ${itemClass} ${type_};
+                      data-name name;
+                      data-type type_;
+                      data-version version;
+                      ">
+                  <div class="of-head" tal:condition="not:onlyView">
+                    <a href="" class="of-collapseable" tal:attributes="href string:#collapse">Collapse</a>
+                    <div class="of-metadata">
+                      <div class="of-type" tal:content="type_">Type</div>
+                      <div class="of-name" tal:content="name">Name</div>
+                      <div class="of-title" tal:content="title">Title</div>
+                      <div class="of-version" tal:content="version">Version</div>
+                    </div>
+                    <div class="of-controls">
+                      <ul>
+                        <li><a href="" class="of-editable" tal:attributes="href editUrl">Edit</a></li>
+                        <li><a href="" class="of-deleteable" tal:attributes="href deleteUrl">Delete</a></li>
+                      </ul>
+                    </div>
+                  </div>
+                  <div class="of-description" tal:condition="not:onlyView" tal:content="description">Description</div>
+                  <div class="of-content">
+                    <div class="of-edit"></div>
+                    <div class="of-view of-fields">
+                      <tal:widgets repeat="widget fieldset/widgets/values">
+                        <tal:field define="
+                              editUrl       python: fieldset.editUrl(widget.field);
+                              deleteUrl     python: fieldset.deleteUrl(widget.field);
+                              name          widget/field/__name__;
+                              title         string:;
+                              description   string:;
+                              type_         python: fieldset.type(widget.field);
+                              version       python: fieldset.version(widget.field);
+                              onlyView      python: False;
+                              itemClass     string:of-field;
+                            ">
+                          <div  class=""
+                            tal:attributes="
+                                class string:of-item ${itemClass} ${type_};
+                                data-name name;
+                                data-type type_;
+                                data-version version;
+                                ">
+                            <a href="" class="of-collapseable" tal:attributes="href string:#collapse">Collapse</a>
+                            <div class="of-head" tal:condition="not:onlyView">
+                              <div class="of-metadata">
+                                <div class="of-type" tal:content="type_">Type</div>
+                                <div class="of-name" tal:content="name">Name</div>
+                                <div class="of-title" tal:content="title">Title</div>
+                                <div class="of-version" tal:content="version">Version</div>
+                              </div>
+                              <div class="of-controls">
+                                <ul>
+                                  <li><a href="" class="of-editable" tal:attributes="href editUrl">Edit</a></li>
+                                  <li><a href="" class="of-deleteable" tal:attributes="href deleteUrl">Delete</a></li>
+                                </ul>
+                              </div>
+                            </div>
+                            <div class="of-description" tal:condition="not:onlyView" tal:content="description">Description</div>
+                            <div class="of-content">
+                              <div class="of-edit"></div>
+                              <div class="of-view of-widget">
+                                <tal:widget tal:replace="structure widget/@@ploneform-render-widget"/>
+                              </div>
+                            </div>
+                          </div>
+                        </tal:field>
+                      </tal:widgets>
+                    </div>
+                  </div>
+                </div>
+              </tal:fieldset>
+            </tal:check>
+          </tal:fieldsets>
+        </div>
+      </tal:set>
+    </tal:sets>
+  </div>
+
+</div>

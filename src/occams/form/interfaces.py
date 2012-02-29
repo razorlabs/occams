@@ -1,16 +1,17 @@
+from collective.z3cform.datagridfield import DictRow
 import zope.interface
 import zope.schema
 from zope.schema.vocabulary import SimpleTerm
 from zope.schema.vocabulary import SimpleVocabulary
-
-from grokcore.component.interfaces import IContext
-from plone.directives import form
+import plone.directives.form
 
 from avrc.data.store.interfaces import IDataBaseItem
-
 from occams.form import MessageFactory as _
 
-SESSION_KEY = 'occams.form'
+
+DATA_KEY = 'occams.form'
+
+TEXTAREA_SIZE = 5
 
 typesVocabulary = SimpleVocabulary(terms=[
         SimpleTerm(value=zope.schema.Bool, token='boolean', title=_(u'Boolean')),
@@ -20,7 +21,6 @@ typesVocabulary = SimpleVocabulary(terms=[
         SimpleTerm(value=zope.schema.Datetime, token='datetime', title=_(u'Date and Time')),
         SimpleTerm(value=zope.schema.TextLine, token='string', title=_(u'Text')),
         SimpleTerm(value=zope.schema.Text, token='text', title=_(u'Paragraph')),
-
         SimpleTerm(value=zope.schema.Object, token='object', title=_(u'Field Set')),
     ])
 
@@ -30,11 +30,54 @@ class IOccamsFormComponent(zope.interface.Interface):
     Marker interfaces for interfaces of this plug-in
     """
 
+class IEditableState(IOccamsFormComponent):
+    """
+    The human-friendly form for editing possible form states
+    """
 
-class IOccamsBrowserView(IOccamsFormComponent):
+    name = zope.schema.ASCIILine(
+        title=_(u'State label'),
+        description=_(
+            u'This value is used internally'
+            ),
+        )
+
+    title = zope.schema.TextLine(
+        title=_(u'Title'),
+        description=_(u'The displayed name of the state'),
+        )
+
+    description = zope.schema.Text(
+        title=_(u'Description'),
+        description=_(u'A short description about what the state is for.'),
+        required=False,
+        )
+
+
+class IEditableForm(IOccamsFormComponent):
     """
-    Marker inteface for views of this plugin
+    The human-friendly form for edidting a field.
     """
+
+    name = zope.schema.ASCIILine(
+        title=_(u'Class Name'),
+        description=_(
+            u'Internal variable name, this value cannot be changed once it is '
+            u'created.'
+            ),
+        readonly=True,
+        )
+
+    title = zope.schema.TextLine(
+        title=_(u'Title'),
+        description=_(u'The displayed name of the form.'),
+        )
+
+    description = zope.schema.Text(
+        title=_(u'Description'),
+        description=_(u'A short description about what the form is for.'),
+        required=False,
+        )
 
 
 class IEditableField(IOccamsFormComponent):
@@ -42,13 +85,14 @@ class IEditableField(IOccamsFormComponent):
     The human-friendly form for edidting a field.
     """
 
+    # Note we did not make this readonly so that users with superpowers can
+    # change it
     name = zope.schema.ASCIILine(
         title=_(u'Variable Name'),
         description=_(
             u'Internal variable name, this value cannot be changed once it is '
             u'created.'
             ),
-        readonly=True,
         )
 
     title = zope.schema.TextLine(
@@ -62,17 +106,144 @@ class IEditableField(IOccamsFormComponent):
         required=False,
         )
 
-    is_required = zope.schema.Bool(
-        title=_(u'Required?'),
-        description=_(u'If selected, the user will be required to enter a value.'),
-        default=False,
+    order = zope.schema.Int(
+        title=_(u'Order'),
+        description=_(u'The field\'s order in the form'),
+        required=True
         )
+
+
+
+class ICollectable(IOccamsFormComponent):
 
     is_collection = zope.schema.Bool(
         title=_(u'Multiple?'),
         description=_(u'If selected, the user may enter more than one value.'),
         default=False,
         )
+
+
+class IRequireable(IOccamsFormComponent):
+
+    is_required = zope.schema.Bool(
+        title=_(u'Required?'),
+        description=_(u'If selected, the user will be required to enter a value.'),
+        default=False,
+        )
+
+
+class IEditableChoice(IOccamsFormComponent):
+
+    title = zope.schema.TextLine(
+        title=_(u'Displayed Label'),
+        )
+
+    value = zope.interface.Attribute(_(u'The value stored for the answer choice'))
+
+
+class IEditableBooleanChoice(IEditableChoice):
+
+    value = zope.schema.Bool(
+        title=_(u'Stored Value'),
+        )
+
+
+class IEditableBooleanField(IEditableField, IRequireable):
+
+    choices = zope.schema.List(
+        title=_(u'Configure True/False Labels'),
+        value_type=DictRow(schema=IEditableBooleanChoice),
+        required=True,
+        )
+
+
+class IEditableDateField(IEditableField, IRequireable):
+
+    pass
+
+
+class IEditableDateTimeField(IEditableField, IRequireable):
+
+    pass
+
+
+class IEditableIntegerChoice(IEditableChoice):
+
+    value = zope.schema.Int(
+        title=_(u'Stored Value'),
+        )
+
+
+class IEditableIntegerField(IEditableField, IRequireable):
+
+    choices = zope.schema.List(
+        title=_(u'Value Constraints'),
+        description=_(
+            u'If you want the field to be limited to a subset of possible values, '
+            u'please enter them below. Leave blank otherwise.'),
+        value_type=DictRow(schema=IEditableIntegerChoice),
+        required=False,
+        )
+
+
+class IEditableDecimalChoice(IEditableChoice):
+
+    value = zope.schema.Decimal(
+        title=_(u'Stored Value'),
+        )
+
+
+class IEditableDecimalField(IEditableField, IRequireable):
+
+    choices = zope.schema.List(
+        title=_(u'Value Constraints'),
+        description=_(
+            u'If you want the field to be limited to a subset of possible values, '
+            u'please enter them below. Leave blank otherwise.'),
+        value_type=DictRow(schema=IEditableDecimalChoice),
+        required=False,
+        )
+
+
+class IEditableStringChoice(IEditableChoice):
+
+    value = zope.schema.TextLine(
+        title=_(u'Stored Value'),
+        )
+
+
+class IEditableStringField(IEditableField, IRequireable, ICollectable):
+
+    choices = zope.schema.List(
+        title=_(u'Value Constraints'),
+        description=_(
+            u'If you want the field to be limited to a subset of possible values, '
+            u'please enter them below. Leave blank otherwise.'),
+        value_type=DictRow(schema=IEditableStringChoice),
+        required=False,
+        )
+
+
+class IEditableTextField(IEditableField, IRequireable):
+
+    pass
+
+
+class IEditableObjectField(IEditableField):
+
+    pass
+
+
+typeInputSchemaMap = dict(
+    boolean=IEditableBooleanField,
+    date=IEditableDateField,
+    datetime=IEditableDateTimeField,
+    decimal=IEditableDecimalField,
+    integer=IEditableIntegerField,
+    string=IEditableStringField,
+    text=IEditableTextField,
+    object=IEditableObjectField,
+    )
 
 
 class IFormSummary(IOccamsFormComponent):
@@ -125,7 +296,7 @@ class IFormSummary(IOccamsFormComponent):
         )
 
 
-class IDataBaseItemContext(IOccamsFormComponent, IContext):
+class IDataBaseItemContext(IOccamsFormComponent):
     """
     A wrapper context for DataStore entries so they are traversable.
     This allows a wrapped entry to comply with the Acquisition machinery
@@ -142,12 +313,6 @@ class IDataBaseItemContext(IOccamsFormComponent, IContext):
 class ISchemaContext(IDataBaseItemContext):
     """
     Context for DataStore Schema wrapper.
-    """
-
-
-class IEntityContext(IDataBaseItemContext):
-    """
-    Context for DataStore Entity wrapper.
     """
 
 
@@ -168,13 +333,14 @@ class IFormSummaryGenerator(zope.interface.Interface):
         """
 
 
-class IRepository(IOccamsFormComponent, form.Schema):
+class IRepository(plone.directives.form.Schema):
     """
     Form repository entry point.
     Objects of this type offer services for managing forms as well as
     form EAV tables from ``avrc.data.store.DataStore``
     """
 
+    plone.directives.form.widget(session='z3c.form.browser.radio.RadioFieldWidget')
     session = zope.schema.Choice(
         title=_(u'Database Session'),
         description=_(

@@ -3,35 +3,201 @@
     xmlns:i18n="http://namespaces.zope.org/i18n"
     xmlns:browser="http://namespaces.zope.org/browser"
     i18n_domain="occams.form">
-      
-  <!-- Crud forms aren't grokkable, so register the page here -->
+
+
+  <adapter factory=".editor.VariableNameValidator" />
+  <adapter factory=".editor.ConstraintValidator" />
+  <adapter factory=".workflow.StateNameValidator" />
+
+  <!--            -->
+  <!-- REPOSITORY -->
+  <!--            -->
 
   <browser:page
       for="occams.form.interfaces.IRepository"
       name="view"
-      class=".form.Listing"
-      permission="cmf.ManagePortal" 
+      class=".listing.Listing"
+      permission="occams.form.ViewRepository"
       />
-      
+
+  <browser:page
+      for="occams.form.interfaces.IRepository"
+      name="workflow"
+      class=".workflow.WorkflowStateListing"
+      permission="occams.form.ViewWorkflowState"
+      />
+
+  <!--          -->
+  <!-- SCHEMATA -->
+  <!--          -->
+  <browser:defaultView
+     for="occams.form.interfaces.ISchemaContext"
+     name="view"
+     />
+
+  <browser:page
+      for="occams.form.interfaces.ISchemaContext"
+      name="view"
+      class=".editor.FormPreviewForm"
+      permission="occams.form.ViewForm"
+      />
+
   <browser:page
       for="occams.form.interfaces.ISchemaContext"
       name="edit"
-      class=".form.Edit"
-      permission="occams.form.ModifyForm" 
+      class=".editor.FormEditFormView"
+      permission="occams.form.ModifyForm"
+      />
+
+  <!-- Need to register an add view for every possibly type -->
+
+  <browser:page
+      for="occams.form.interfaces.ISchemaContext"
+      name="add-boolean"
+      class=".editor.FieldAddForm"
+      permission="occams.form.ModifyForm"
+      />
+
+  <browser:page
+      for="occams.form.interfaces.ISchemaContext"
+      name="add-date"
+      class=".editor.FieldAddForm"
+      permission="occams.form.ModifyForm"
+      />
+
+  <browser:page
+      for="occams.form.interfaces.ISchemaContext"
+      name="add-datetime"
+      class=".editor.FieldAddForm"
+      permission="occams.form.ModifyForm"
+      />
+
+  <browser:page
+      for="occams.form.interfaces.ISchemaContext"
+      name="add-decimal"
+      class=".editor.FieldAddForm"
+      permission="occams.form.ModifyForm"
+      />
+
+  <browser:page
+      for="occams.form.interfaces.ISchemaContext"
+      name="add-integer"
+      class=".editor.FieldAddForm"
+      permission="occams.form.ModifyForm"
+      />
+
+  <browser:page
+      for="occams.form.interfaces.ISchemaContext"
+      name="add-string"
+      class=".editor.FieldAddForm"
+      permission="occams.form.ModifyForm"
+      />
+
+   <browser:page
+      for="occams.form.interfaces.ISchemaContext"
+      name="add-text"
+      class=".editor.FieldAddForm"
+      permission="occams.form.ModifyForm"
+      />
+
+  <browser:page
+      for="occams.form.interfaces.ISchemaContext"
+      name="add-object"
+      class=".editor.FieldAddForm"
+      permission="occams.form.ModifyForm"
+      />
+
+  <!--            -->
+  <!-- ATTRIBUTES -->
+  <!--            -->
+
+  <browser:defaultView
+     for="occams.form.interfaces.IAttributeContext"
+     name="edit"
+     />
+
+  <browser:page
+      for="occams.form.interfaces.IAttributeContext"
+      name="add-boolean"
+      class=".editor.FieldAddForm"
+      permission="occams.form.ModifyForm"
+      />
+
+  <browser:page
+      for="occams.form.interfaces.IAttributeContext"
+      name="add-date"
+      class=".editor.FieldAddForm"
+      permission="occams.form.ModifyForm"
+      />
+
+  <browser:page
+      for="occams.form.interfaces.IAttributeContext"
+      name="add-datetime"
+      class=".editor.FieldAddForm"
+      permission="occams.form.ModifyForm"
+      />
+
+  <browser:page
+      for="occams.form.interfaces.IAttributeContext"
+      name="add-decimal"
+      class=".editor.FieldAddForm"
+      permission="occams.form.ModifyForm"
+      />
+
+  <browser:page
+      for="occams.form.interfaces.IAttributeContext"
+      name="add-integer"
+      class=".editor.FieldAddForm"
+      permission="occams.form.ModifyForm"
+      />
+
+  <browser:page
+      for="occams.form.interfaces.IAttributeContext"
+      name="add-string"
+      class=".editor.FieldAddForm"
+      permission="occams.form.ModifyForm"
+      />
+
+   <browser:page
+      for="occams.form.interfaces.IAttributeContext"
+      name="add-text"
+      class=".editor.FieldAddForm"
+      permission="occams.form.ModifyForm"
+      />
+
+  <browser:page
+      for="occams.form.interfaces.IAttributeContext"
+      name="edit"
+      class=".editor.FieldEditForm"
+      permission="occams.form.ModifyForm"
+      />
+
+  <browser:page
+      for="occams.form.interfaces.IAttributeContext"
+      name="order"
+      class=".editor.FieldOrderForm"
+      permission="occams.form.ModifyForm"
+      />
+
+  <browser:page
+      for="occams.form.interfaces.IAttributeContext"
+      name="delete"
+      class=".editor.FieldDeleteFormView"
+      permission="occams.form.ModifyForm"
       />
 
   <browser:page
       for="occams.form.interfaces.IAttributeContext"
       name="view"
-      class=".field.View"
-      permission="occams.form.ModifyForm" 
+      class=".editor.FieldPreview"
+      permission="occams.form.ModifyForm"
       />
-      
+
   <browser:page
       for="occams.form.interfaces.IAttributeContext"
-      name="edit"
-      class=".field.Edit"
-      permission="occams.form.ModifyForm" 
+      name="json"
+      class=".editor.FieldJsonView"
+      permission="occams.form.ModifyForm"
       />
-      
+
 </configure>
