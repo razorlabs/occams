@@ -121,7 +121,17 @@ def ObjectFactory(iface, **kwargs):
 
     for field_name, field in zope.schema.getFieldsInOrder(iface):
         # TODO: figure out how to use FieldProperty with this
-        result.__dict__[field_name] = kwargs.get(field_name)
+        subkwargs = kwargs.get(field_name)
+        if isinstance(field, zope.schema.Object) and subkwargs is not None:
+            ## This is a subobject, and should be generated
+            if IInstance.providedBy(subkwargs):
+                ## hey now, I'm already an Instance object
+                value = subkwargs
+            else:
+                value = ObjectFactory(field.schema, **subkwargs)
+        else:
+            value = kwargs.get(field_name)
+        result.__dict__[field_name] = value
 
     return result
 
@@ -220,8 +230,7 @@ class EntityManager(object):
         if entity is not None:
             manager = ValueManager(entity)
             values = dict([(n, manager.get(n, on=on)) for n in manager.keys(on=on)])
-            iface = SchemaManager(session).get(entity.schema.name, on=on)
-
+            iface = SchemaManager(session).get(entity.schema.name, on=entity.create_date)
             result = ObjectFactory(iface, **values)
             result.__dict__.update(dict(
                 __id__=entity.id,
