@@ -72,7 +72,7 @@ via buildout::
       <db:engine name="YOUR.OWN.ENGINE" url="postgresql://...." />
       <db:session name="YOUR.OWN.SESSION" engine="YOUR.OWN.ENGINE" />
     </configure>
-    
+
 This will help keep all your connections in one file as opposed to having them
 scattered through out your eggs, and additionaly it will prevent your from
 accidentally commiting your configuration details to your SCM!
@@ -81,6 +81,30 @@ Once installed, you will be able to select from a list of registered
 ``z3c.saconfig`` sessions as the target form repository.
 
 .. z3c.saconfig: http://pypi.python.org/pypi/z3c.saconfig
+
+------------
+Attributions
+------------
+
+This addon uses icons from various sources, which are credited below:
+
+**Silk Icons**
+
+`Mark James (FamFamFam)`_. All rights reserved. Licensed under `Creative Commons Attribution 3.0`_
+
+**Silk Icons Companion**
+
+`Damien Guard`_. All rights reserved. Licensed under `Creative Commons Attribution 3.0`_
+
+**Fugue Icons**
+
+`Yusuke Kamiyamane`_. All rights reserved. Licensed under `Creative Commons Attribution 3.0`_
+
+.. _Damien Guard: http://damieng.com/creative/icons/silk-companion-1-icons
+.. _Mark James (FamFamFam): http://www.famfamfam.com/lab/icons/silk/
+.. _Yusuke Kamiyamane: http://p.yusukekamiyamane.com/
+.. _Creative Commons Attribution 3.0: http://creativecommons.org/licenses/by/3.0/
+
 
 ----------
 Disclaimer

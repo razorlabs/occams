@@ -2,6 +2,8 @@
 Form summary tools
 """
 
+from zope.interface import implements
+
 from sqlalchemy import func
 from sqlalchemy import String
 from sqlalchemy import Date
@@ -11,10 +13,7 @@ from sqlalchemy.sql.expression import null
 from sqlalchemy.sql.expression import literal_column
 from sqlalchemy.orm import aliased
 
-from five import grok
-
 from avrc.data.store import model
-
 from occams.form.interfaces import IFormSummary
 from occams.form.interfaces import IFormSummaryGenerator
 
@@ -116,8 +115,7 @@ def subSchemaNamesTableFactory(session):
     """
     query = (
         session.query(model.Schema.name)
-        .join((model.Entity, (model.Entity.schema_id == model.Schema.id)))
-        .join((model.ValueObject, (model.ValueObject.value == model.Entity.id)))
+        .join((model.Attribute, (model.Attribute.object_schema_id == model.Schema.id)))
         .group_by(model.Schema.name)
         )
 
@@ -147,13 +145,13 @@ def summaryTableFactory(session):
 
 
 class DataStoreSchemaSummary(object):
-    grok.implements(IFormSummary)
+    implements(IFormSummary)
 
     _values = None
 
     def __init__(self, *args, **kwargs):
         self._values = dict()
-        # Get items according to the interface specification 
+        # Get items according to the interface specification
         for name, item in kwargs.items():
             if name in IFormSummary:
                 self._values[name] = item
@@ -176,15 +174,15 @@ class DataStoreSchemaSummary(object):
         return self._values.get(name)
 
 
-class FormSummaryGenerator(grok.GlobalUtility):
-    grok.implements(IFormSummaryGenerator)
+class FormSummaryGenerator(object):
+    implements(IFormSummaryGenerator)
 
     def getItems(self, session):
         summaryTable = summaryTableFactory(session)
         baseSchemaNamesTable = baseSchemaNamesTableFactory(session)
         subSchemaNamesTable = subSchemaNamesTableFactory(session)
 
-        # Final result set, only report master schemata and leaf schemata 
+        # Final result set, only report master schemata and leaf schemata
         query = (
             session.query(
                 model.Schema.name.label('name'),

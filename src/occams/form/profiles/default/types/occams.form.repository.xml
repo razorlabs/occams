@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<object 
+<object
     xmlns:i18n="http://xml.zope.org/namespaces/i18n"
     meta_type="Dexterity FTI"
     i18n:domain="occams.form.repository"
@@ -15,27 +15,23 @@
   <property name="content_icon">++resource++occams.form/images/database.png</property>
   <!-- Applications must specificy this as an addable type -->
   <property name="global_allow">True</property>
-  <property name="filter_content_types">True</property>  
+  <property name="filter_content_types">True</property>
   <property name="allowed_content_types">
-    <!-- 
-        No sub-content allowed since we're only using this as a stub for
-        accessing DataStore schemata.
-    -->
   </property>
   <property name="allow_discussion">False</property>
 
   <!-- Content type specification -->
-  <property name="schema">occams.form.interfaces.IRepository</property> 
+  <property name="schema">occams.form.interfaces.IRepository</property>
 
   <!-- Content type implementation (use generic Plone type) -->
   <!-- We use Container because technically it's a container of virtual data -->
   <property name="klass">plone.dexterity.content.Container</property>
 
-  <property name="add_permission">cmf.AddPortalContent</property>
- 
+  <property name="add_permission">occams.form.CreateRepository</property>
+
   <property name="behaviors">
-    <element value="plone.app.content.interfaces.INameFromTitle" />
     <element value="plone.app.dexterity.behaviors.metadata.IDublinCore"/>
+    <element value="plone.app.content.interfaces.INameFromTitle" />
   </property>
 
   <!-- View information -->
@@ -50,6 +46,7 @@
   <alias from="edit" to="@@edit" />
   <alias from="sharing" to="@@sharing" />
   <alias from="view" to="@@view" />
+  <alias from="workflow" to="@@workflow" />
 
   <!-- Actions -->
   <action title="View" action_id="view" category="object" condition_expr=""
@@ -59,5 +56,9 @@
   <action title="Edit" action_id="edit" category="object" condition_expr=""
     url_expr="string:${object_url}/edit" visible="True">
     <permission value="OCCAMS: Modify Repository" />
+  </action>
+  <action title="Workflow" action_id="workflow" category="object" condition_expr=""
+    url_expr="string:${object_url}/workflow" visible="True">
+    <permission value="OCCAMS: View Workflow State" />
   </action>
 </object>
