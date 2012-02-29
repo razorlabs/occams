@@ -12,7 +12,7 @@ from avrc.data.store import model
 
 
 class SchemaOrFieldDirectivesTestCase(unittest.TestCase):
-    """ 
+    """
     Verifies directive library
     """
 
@@ -99,15 +99,5 @@ class FieldDirectivesTestCase(unittest.TestCase):
                 directive.set(field, type_)
 
         value = 'string'
-        directive.set(field, value)
-        self.assertEqual(value, directive.bind().get(field))
-
-
-    def test_widget (self):
-        field = zope.schema.TextLine(__name__='foo', title=u'Foo')
-        directive = directives.widget
-
-        # Check all supported
-        value = 'avrc.data.store.NonExistentWidget'
         directive.set(field, value)
         self.assertEqual(value, directive.bind().get(field))

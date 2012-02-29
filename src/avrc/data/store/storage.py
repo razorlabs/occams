@@ -230,9 +230,7 @@ class EntityManager(object):
         if entity is not None:
             manager = ValueManager(entity)
             values = dict([(n, manager.get(n, on=on)) for n in manager.keys(on=on)])
-
-            iface = SchemaManager(session).get(entity.schema.name, on=on)
-
+            iface = SchemaManager(session).get(entity.schema.name, on=entity.create_date)
             result = ObjectFactory(iface, **values)
             result.__dict__.update(dict(
                 __id__=entity.id,
