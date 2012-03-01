@@ -60,7 +60,6 @@ class PropertyError(EntityError):
     Base class for property-related errors (value)
     """
 
-
 class NotCompatibleError(SchemaError):
     """
     The schema doesn't subclass ``avrc.data.store.directives.Schema``

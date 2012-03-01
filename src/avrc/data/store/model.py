@@ -1,6 +1,7 @@
 """ Database Definitions
 """
 
+from datetime import date
 from decimal import Decimal
 
 from zope.interface import implements
@@ -10,6 +11,7 @@ from sqlalchemy import case
 from sqlalchemy import select
 from sqlalchemy import union
 from sqlalchemy import alias
+from sqlalchemy.sql.functions import coalesce
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.declarative import has_inherited_table
@@ -291,6 +293,28 @@ class Choice(Model, _AutoNamed, _Entry, _Describeable, _Editable):
         )
 
 
+def _defaultCollectDate(context):
+    """
+    Callback for generating default collect date value.
+    It will try to lookup the previous ``collect_date`` and give the
+    date the entry is input by default if none is found.
+    This method should not be called if one is supplied by the user.
+    """
+    entity_table = Entity.__table__
+    name = context.current_parameters['name']
+    collect_date = date.today()
+    if name:
+        result = context.connection.execute(
+            select([entity_table.c.collect_date], (entity_table.c.name == name))
+            .order_by(entity_table.c.create_date.desc())
+            .limit(1)
+            )
+        previous = result.first()
+        if previous:
+            collect_date = previous.collect_date
+    return collect_date
+
+
 class Entity(Model, _AutoNamed, _Entry, _Describeable, _Editable, _History):
     implements(IEntity)
 
@@ -306,7 +330,7 @@ class Entity(Model, _AutoNamed, _Entry, _Describeable, _Editable, _History):
 
     state = Relationship('State')
 
-    collect_date = Column(Date, nullable=False, index=True)
+    collect_date = Column(Date, nullable=False, index=True, default=_defaultCollectDate)
 
     # Private reference to child objects so that they can be removed in a
     # cascading fashion by the ORM (otherwise they'll be left as orphaned
