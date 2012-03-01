@@ -20,6 +20,7 @@ from sqlalchemy.schema import Column
 from sqlalchemy.schema import ForeignKey
 from sqlalchemy.schema import CheckConstraint
 from sqlalchemy.types import Boolean
+from sqlalchemy.types import Date
 from sqlalchemy.types import DateTime
 from sqlalchemy.types import Enum
 from sqlalchemy.types import Numeric
@@ -304,6 +305,8 @@ class Entity(Model, _AutoNamed, _Entry, _Describeable, _Editable, _History):
     state_id = Column(ForeignKey(State.id, ondelete='CASCADE'), index=True)
 
     state = Relationship('State')
+
+    collect_date = Column(Date, nullable=False, index=True)
 
     # Private reference to child objects so that they can be removed in a
     # cascading fashion by the ORM (otherwise they'll be left as orphaned

@@ -399,6 +399,13 @@ class IEntity(IHistoryItem):
         schema=ISchema
         )
 
+    state = zope.interface.Attribute(_(u'The current workflow state'))
+
+    collect_date = zope.schema.Date(
+        title=_(u'Date Collected'),
+        description=_(u'The date that the information was physically collected'),
+        )
+
 
 class IValue(IHistoryItem):
     """
