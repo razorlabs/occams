@@ -8,10 +8,10 @@ from zope.interface import implements
 
 from sqlalchemy import text
 from sqlalchemy import case
+from sqlalchemy import cast
 from sqlalchemy import select
 from sqlalchemy import union
 from sqlalchemy import alias
-from sqlalchemy.sql.functions import coalesce
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.declarative import has_inherited_table
@@ -102,8 +102,8 @@ class _History(object):
         """
         filter = (None == cls.remove_date)
         if on is not None:
-            after_create = (on >= cls.create_date)
-            before_remove = (on < cls.remove_date)
+            after_create = (cast(on, Date) >= cast(cls.create_date, Date))
+            before_remove = (cast(on, Date) < cast(cls.remove_date, Date))
             during = after_create & before_remove
             filter = case([(filter, after_create)], else_=during)
         return filter
