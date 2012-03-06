@@ -1,15 +1,13 @@
 
+from datetime import date
 import unittest2 as unittest
 
 from zope.interface.interface import InterfaceClass
-
 import zope.schema
 
 from avrc.data.store.testing import DATABASE_LAYER
-
 from avrc.data.store import directives
 from avrc.data.store import model
-from avrc.data.store.datastore import DataStore
 from avrc.data.store.schema import SchemaManager
 from avrc.data.store.schema import FieldManager
 from avrc.data.store.storage import ObjectFactory
@@ -18,7 +16,7 @@ from avrc.data.store.storage import ValueManager
 
 
 class DemoTestCase(unittest.TestCase):
-    """ 
+    """
     A real-world usage case scenario
     """
 
@@ -49,6 +47,10 @@ class DemoTestCase(unittest.TestCase):
         sample = ObjectFactory(SampleSchema)
         entities = EntityManager(session)
         id = entities.put(None, sample)
+
+        # Ensure that the collect date was automatically set since we didn't
+        # specify one
+        self.assertEqual(sample.getCollectDate(), sample.__version__.date())
 
         ### 4. Now assign values
 
