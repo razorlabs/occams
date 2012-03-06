@@ -213,6 +213,12 @@ class ISchema(IHistoryItem):
         description=_(u'Listing of schemata that subclass the Zope-style interface.'),
         )
 
+    state = zope.schema.Choice(
+        title=_(u'Circulation State'),
+        values=sorted(['draft', 'pending-review', 'published', 'retired']),
+        default='draft',
+        )
+
     storage = zope.schema.Choice(
         title=_(u'Storage method'),
         description=_(
@@ -265,8 +271,6 @@ class IAttribute(IHistoryItem):
     rendered inline.
     Resulting attribute objects can then be used to produce forms such as
     Zope-style schema field.
-
-    TODO: Currently there is no way of constraining list length.
     """
 
     schema = zope.schema.Object(
@@ -289,23 +293,9 @@ class IAttribute(IHistoryItem):
         default=False,
         )
 
-    is_readonly = zope.schema.Bool(
-        title=_(u'Is the attribute a read-only?'),
-        default=False
-        )
-
     is_required = zope.schema.Bool(
         title=_(u'Is the attribute a required field?'),
         default=False,
-        )
-
-    is_inline_object = zope.schema.Bool(
-        title=_(u'Is the attribute form rendered inline?'),
-        description=_(
-            u'Only applies to attributes of type "object". '
-            u'If True, overrides `ISchema.is_inline`. '
-            ),
-        required=False,
         )
 
     object_schema = zope.schema.Object(
@@ -315,30 +305,26 @@ class IAttribute(IHistoryItem):
         required=False
         )
 
-    url_template = zope.schema.URI(
-        title=_(u'URI template'),
-        description=_(
-            u'Only applies to attributes of type "object" that are a resource.'
-            ),
-        required=False
-        )
-
-    min = zope.schema.Int(
+    value_min = zope.schema.Int(
         title=_(u'Minimum value'),
         description=u'Minimum length or value (depending on type)',
         required=False,
         )
 
-    max = zope.schema.Int(
+    value_max = zope.schema.Int(
         title=_(u'Maximum value'),
         description=u'Maximum length or value (depending on type)',
         required=False
         )
 
-    default = zope.schema.TextLine(
-        title=_(u'Default value'),
-        description=u' (Coerced on add)',
+    collection_min = zope.schema.Int(
+        title=_(u'Minimum list length'),
         required=False,
+        )
+
+    collection_max = zope.schema.Int(
+        title=_(u'Maximum list length'),
+        required=False
         )
 
     validator = zope.schema.TextLine(
@@ -347,13 +333,6 @@ class IAttribute(IHistoryItem):
             u'Use Perl-derivative regular expression to validate the attribute value.'
             ),
         required=False,
-        )
-
-    # DEPRECATED
-    widget = zope.schema.DottedName(
-        title=_(u'Widget namespace.'),
-        description=_(u'Client library name space for rendering.'),
-        required=False
         )
 
     order = zope.schema.Int(
@@ -398,7 +377,11 @@ class IEntity(IHistoryItem):
         schema=ISchema
         )
 
-    state = zope.interface.Attribute(_(u'The current workflow state'))
+    state = zope.schema.Choice(
+        title=_(u'The current workflow state'),
+        values=sorted(['pending-entry', 'pending-review', 'completed', 'not-done']),
+        default='pending-entry',
+        )
 
     collect_date = zope.schema.Date(
         title=_(u'Date Collected'),
