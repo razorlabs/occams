@@ -1,4 +1,4 @@
-""" 
+"""
 Data store primary classes and modules
 """
 
@@ -20,3 +20,4 @@ from avrc.data.store.schema import HierarchyInspector
 from avrc.data.store.storage import EntityManager
 from avrc.data.store.storage import ValueManager
 from avrc.data.store.storage import ObjectFactory
+

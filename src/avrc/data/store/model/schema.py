@@ -26,6 +26,7 @@ from avrc.data.store.model._meta import Model
 from avrc.data.store.model._meta import Referenceable
 from avrc.data.store.model._meta import Describeable
 from avrc.data.store.model.tracking import Modifiable
+from avrc.data.store.model.tracking import buildModifiableConstraints
 
 
 SCHEMA_STORAGE_NAMES = sorted([term.token for term in ISchema['storage'].vocabulary])
@@ -61,10 +62,10 @@ class Schema(Model, Referenceable, Describeable, Modifiable):
     is_inline = Column(Boolean)
 
     @declared_attr
-    def __table_args__(self):
-        return Modifiable.__table_args__ + (
-            Index('ix_%s_name' % self.__tablename__, 'name'),
-            Index('ix_%s_base_schema_id' % self.__tablename__, 'base_schema_id'),
+    def __table_args__(cls):
+        return buildModifiableConstraints(cls) + (
+            Index('ix_%s_name' % cls.__tablename__, 'name'),
+            Index('ix_%s_base_schema_id' % cls.__tablename__, 'base_schema_id'),
             )
 
 
@@ -102,12 +103,12 @@ class Attribute(Model, Referenceable, Describeable, Modifiable):
     order = Column(Integer, nullable=False)
 
     @declared_attr
-    def __table_args__(self):
-        return Modifiable.__table_args__ + (
+    def __table_args__(cls):
+        return buildModifiableConstraints(cls) + (
             UniqueConstraint('schema_id', 'name'),
             UniqueConstraint('schema_id', 'order'),
-            Index('ix_%s_object_schema_id' % self.__tablename__, 'object_schema_id'),
-            Index('ix_%s_checksum' % self.__tablename__, 'checksum'),
+            Index('ix_%s_object_schema_id' % cls.__tablename__, 'object_schema_id'),
+            Index('ix_%s_checksum' % cls.__tablename__, 'checksum'),
             CheckConstraint(
                 """
                 CASE WHEN type = 'object'
@@ -115,7 +116,7 @@ class Attribute(Model, Referenceable, Describeable, Modifiable):
                 ELSE object_schema_id IS NULL
                 END
                 """,
-                name='ck_%s_valid_object_bind' % self.__tablename__,
+                name='ck_%s_valid_object_bind' % cls.__tablename__,
                 ),
             )
 
@@ -153,10 +154,10 @@ class Choice(Model, Referenceable, Describeable, Modifiable):
     order = Column(Integer, nullable=False)
 
     @declared_attr
-    def __table_args__(self):
-        return Modifiable.__table_args__ + (
+    def __table_args__(cls):
+        return buildModifiableConstraints(cls) + (
             UniqueConstraint('attribute_id', 'name'),
             UniqueConstraint('attribute_id', 'order'),
-            Index('ix_%s_value' % self.__tablename__, 'value')
+            Index('ix_%s_value' % cls.__tablename__, 'value')
             )
 

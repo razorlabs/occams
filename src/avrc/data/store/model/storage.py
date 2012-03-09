@@ -26,6 +26,7 @@ from avrc.data.store.model._meta import Model
 from avrc.data.store.model._meta import Referenceable
 from avrc.data.store.model._meta import Describeable
 from avrc.data.store.model.tracking import Modifiable
+from avrc.data.store.model.tracking import buildModifiableConstraints
 from avrc.data.store.model.schema import Schema
 from avrc.data.store.model.schema import Attribute
 from avrc.data.store.model.schema import Choice
@@ -71,12 +72,22 @@ class Entity(Model, Referenceable, Describeable, Modifiable):
 
     collect_date = Column(Date, nullable=False, default=_defaultCollectDate)
 
+    integer_values = Relationship('ValueInteger')
+
+    datetime_values = Relationship('ValueDatetime')
+
+    decimal_values = Relationship('ValueDecimal')
+
+    string_values = Relationship('ValueString')
+
+    obect_values = Relationship('ValueObject')
+
     @declared_attr
-    def __table_args__(self):
-        return Modifiable.__table_args__ + (
+    def __table_args__(cls):
+        return buildModifiableConstraints(cls) + (
             UniqueConstraint('schema_id', 'name'),
-            Index('ix_%s_schema_id' % self.__tablename__, 'schema_id'),
-            Index('ix_%s_collect_date' % self.__tablename__, 'collect_date'),
+            Index('ix_%s_schema_id' % cls.__tablename__, 'schema_id'),
+            Index('ix_%s_collect_date' % cls.__tablename__, 'collect_date'),
             )
 
 
@@ -114,11 +125,11 @@ class _ValueBaseMixin(Referenceable, Modifiable):
         return Column(cls.__valuetype__, index=True)
 
     @declared_attr
-    def __table_args__(self):
-        return Modifiable.__table_args__ + (
-            Index('ix_%s_entity_id' % self.__tablename__, 'entity_id'),
-            Index('ix_%s_attribute_id' % self.__tablename__, 'attribute_id'),
-            Index('ix_%s_choice_id' % self.__tablename__, 'choice_id'),
+    def __table_args__(cls):
+        return buildModifiableConstraints(cls) + (
+            Index('ix_%s_entity_id' % cls.__tablename__, 'entity_id'),
+            Index('ix_%s_attribute_id' % cls.__tablename__, 'attribute_id'),
+            Index('ix_%s_choice_id' % cls.__tablename__, 'choice_id'),
             )
 
 
