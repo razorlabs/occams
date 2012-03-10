@@ -16,17 +16,15 @@ import sqlalchemy
 from sqlalchemy.orm import object_session
 from sqlalchemy.orm.scoping import ScopedSession
 
-from avrc.data.store import directives
-from avrc.data.store import model as dsmodel
-from avrc.data.store.interfaces import IInstance
-from avrc.data.store.interfaces import IEntity
-from avrc.data.store.interfaces import IEntityManager
-from avrc.data.store.interfaces import IValueManager
-from avrc.data.store.interfaces import IEntityManagerFactory
-from avrc.data.store.interfaces import IValueManagerFactory
-from avrc.data.store.interfaces import PropertyNotDefinedError
-from avrc.data.store.interfaces import InvalidObjectError
-from avrc.data.store.schema import SchemaManager
+from occams.datastore import directives
+from occams.datastore import model as dsmodel
+from occams.datastore.interfaces import IInstance
+from occams.datastore.interfaces import IEntity
+from occams.datastore.interfaces import IEntityManager
+from occams.datastore.interfaces import IValueManager
+from occams.datastore.interfaces import IEntityManagerFactory
+from occams.datastore.interfaces import IValueManagerFactory
+from occams.datastore.schema import SchemaManager
 
 
 # Where the types are stored

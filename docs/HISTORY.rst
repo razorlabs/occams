@@ -6,9 +6,9 @@ Change Log
 0.6.0 (???)
 -----------
 
-Overhauled versioning mechanics for better sanity (using deep copy method)
-
-Credit to ``[RodriguezMueller]`` for this amazing breakthrough.
+- General
+    - Rebranded to ``occams.datastore``
+    - Overhauled versioning mechanics
 
 - Managers
     - ``retire``, ``restore`` are now deprecated and removed

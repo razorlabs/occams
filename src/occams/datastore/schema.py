@@ -13,15 +13,15 @@ from zope.schema.vocabulary import SimpleTerm
 from sqlalchemy.orm import object_session
 from sqlalchemy.orm.scoping import ScopedSession
 
-from avrc.data.store import directives
-from avrc.data.store import model
-from avrc.data.store.interfaces import typesVocabulary
-from avrc.data.store.interfaces import IHierarchy
-from avrc.data.store.interfaces import ISchema
-from avrc.data.store.interfaces import ISchemaManager
-from avrc.data.store.interfaces import IFieldManager
-from avrc.data.store.interfaces import ISchemaManagerFactory
-from avrc.data.store.interfaces import IFieldManagerFactory
+from occams.datastore import directives
+from occams.datastore import model
+from occams.datastore.interfaces import typesVocabulary
+from occams.datastore.interfaces import IHierarchy
+from occams.datastore.interfaces import ISchema
+from occams.datastore.interfaces import ISchemaManager
+from occams.datastore.interfaces import IFieldManager
+from occams.datastore.interfaces import ISchemaManagerFactory
+from occams.datastore.interfaces import IFieldManagerFactory
 
 
 class HierarchyInspector(object):

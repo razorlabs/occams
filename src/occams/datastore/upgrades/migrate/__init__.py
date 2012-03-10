@@ -2,7 +2,7 @@ import os.path
 import migrate.versioning.api
 import migrate.exceptions
 
-from avrc.data.store.model import Model
+from occams.datastore.model import Model
 
 
 REPOSITORY = os.path.dirname(__file__)

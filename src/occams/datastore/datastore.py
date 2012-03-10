@@ -12,12 +12,12 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.scoping import ScopedSession
 
 
-from avrc.data.store.interfaces import IDataStoreFactory
-from avrc.data.store.interfaces import IDataStore
-from avrc.data.store.interfaces import IDatastore
-from avrc.data.store.storage import EntityManager
-from avrc.data.store.storage import ObjectFactory
-from avrc.data.store.schema import SchemaManager
+from occams.datastore.interfaces import IDataStoreFactory
+from occams.datastore.interfaces import IDataStore
+from occams.datastore.interfaces import IDatastore
+from occams.datastore.storage import EntityManager
+from occams.datastore.storage import ObjectFactory
+from occams.datastore.schema import SchemaManager
 
 
 class Datastore(object):

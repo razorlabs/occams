@@ -19,14 +19,14 @@ from sqlalchemy.types import String
 from sqlalchemy.types import Unicode
 from zope.interface import implements
 
-from avrc.data.store.interfaces import ISchema
-from avrc.data.store.interfaces import IAttribute
-from avrc.data.store.interfaces import IChoice
-from avrc.data.store.model._meta import Model
-from avrc.data.store.model._meta import Referenceable
-from avrc.data.store.model._meta import Describeable
-from avrc.data.store.model.tracking import Modifiable
-from avrc.data.store.model.tracking import buildModifiableConstraints
+from occams.datastore.interfaces import ISchema
+from occams.datastore.interfaces import IAttribute
+from occams.datastore.interfaces import IChoice
+from occams.datastore.model._meta import Model
+from occams.datastore.model._meta import Referenceable
+from occams.datastore.model._meta import Describeable
+from occams.datastore.model.tracking import Modifiable
+from occams.datastore.model.tracking import buildModifiableConstraints
 
 
 SCHEMA_STORAGE_NAMES = sorted([term.token for term in ISchema['storage'].vocabulary])

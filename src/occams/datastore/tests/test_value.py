@@ -5,15 +5,15 @@ from datetime import datetime
 from zope.interface.verify import verifyClass
 from zope.interface.verify import verifyObject
 
-from avrc.data.store import model
-from avrc.data.store.interfaces import IValueManagerFactory
-from avrc.data.store.interfaces import IManager
-from avrc.data.store.interfaces import PropertyNotDefinedError
-from avrc.data.store.storage import ValueManager
-from avrc.data.store.storage import SchemaManager
-from avrc.data.store.storage import ObjectFactory
+from occams.datastore import model
+from occams.datastore.interfaces import IValueManagerFactory
+from occams.datastore.interfaces import IManager
+from occams.datastore.interfaces import PropertyNotDefinedError
+from occams.datastore.storage import ValueManager
+from occams.datastore.storage import SchemaManager
+from occams.datastore.storage import ObjectFactory
 
-from avrc.data.store.testing import DATABASE_LAYER
+from occams.datastore.testing import DATABASE_LAYER
 
 
 time1 = datetime.now()

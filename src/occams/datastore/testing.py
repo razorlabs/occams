@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import scoped_session
 
-from avrc.data.store import model
+from occams.datastore import model
 from plone.testing import Layer
 
 #CONFIG_URL = 'postgresql://test@localhost/eavcr_test'

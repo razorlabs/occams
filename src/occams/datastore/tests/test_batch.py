@@ -7,11 +7,11 @@ from zope.interface.common.sequence import IFiniteSequence
 
 from z3c.batching.interfaces import IBatch
 
-from avrc.data.store import model
-from avrc.data.store.batch import SqlBatch
-from avrc.data.store.batch import SqlBatches
+from occams.datastore import model
+from occams.datastore.batch import SqlBatch
+from occams.datastore.batch import SqlBatches
 
-from avrc.data.store.testing import DATABASE_LAYER
+from occams.datastore.testing import DATABASE_LAYER
 
 
 class BatchingTestCase(unittest.TestCase):

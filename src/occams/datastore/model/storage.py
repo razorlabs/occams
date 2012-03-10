@@ -20,16 +20,16 @@ from sqlalchemy.types import Integer
 from sqlalchemy.types import Unicode
 from zope.interface import implements
 
-from avrc.data.store.interfaces import IEntity
-from avrc.data.store.interfaces import IValue
-from avrc.data.store.model._meta import Model
-from avrc.data.store.model._meta import Referenceable
-from avrc.data.store.model._meta import Describeable
-from avrc.data.store.model.tracking import Modifiable
-from avrc.data.store.model.tracking import buildModifiableConstraints
-from avrc.data.store.model.schema import Schema
-from avrc.data.store.model.schema import Attribute
-from avrc.data.store.model.schema import Choice
+from occams.datastore.interfaces import IEntity
+from occams.datastore.interfaces import IValue
+from occams.datastore.model._meta import Model
+from occams.datastore.model._meta import Referenceable
+from occams.datastore.model._meta import Describeable
+from occams.datastore.model.tracking import Modifiable
+from occams.datastore.model.tracking import buildModifiableConstraints
+from occams.datastore.model.schema import Schema
+from occams.datastore.model.schema import Attribute
+from occams.datastore.model.schema import Choice
 
 
 ENTITY_STATE_NAMES = sorted([term.token for term in IEntity['state'].vocabulary])
@@ -199,7 +199,6 @@ def _buildAssignmentTable():
                 m.attribute_id.label('attribute_id'),
                 m.create_date.label('create_date'),
                 m.modify_date.label('modify_date'),
-                m.remove_date.label('remove_date'),
                 ])
             )
         queries.append(query)

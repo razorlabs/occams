@@ -1,4 +1,4 @@
-<configure xmlns="http://namespaces.zope.org/zope" i18n_domain="avrc.data.store">
+<configure xmlns="http://namespaces.zope.org/zope" i18n_domain="occams.datastore">
 
   <include package="zope.component" file="meta.zcml" />
 
@@ -12,7 +12,7 @@
   <adapter factory=".storage.ValueManager" />
 
   <utility  
-    name="avrc.data.store.Types"  
+    name="occams.datastore.Types"  
     component=".interfaces.typesVocabulary"
     provides="zope.schema.interfaces.IVocabulary"
     />

@@ -3,12 +3,12 @@ import unittest2 as unittest
 import decimal
 import datetime
 
-from avrc.data.store import model
-from avrc.data.store.storage import ValueManager
-from avrc.data.store.storage import ObjectFactory
-from avrc.data.store.schema import SchemaManager
+from occams.datastore import model
+from occams.datastore.storage import ValueManager
+from occams.datastore.storage import ObjectFactory
+from occams.datastore.schema import SchemaManager
 
-from avrc.data.store.testing import DATABASE_LAYER
+from occams.datastore.testing import DATABASE_LAYER
 
 
 class TypeTestCase(unittest.TestCase):

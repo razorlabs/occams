@@ -7,8 +7,8 @@ import zope.schema
 from zope.schema.interfaces import WrongType
 from zope.schema.interfaces import ConstraintNotSatisfied
 
-from avrc.data.store import directives
-from avrc.data.store import model
+from occams.datastore import directives
+from occams.datastore import model
 
 
 class SchemaOrFieldDirectivesTestCase(unittest.TestCase):

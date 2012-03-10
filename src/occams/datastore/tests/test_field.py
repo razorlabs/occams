@@ -10,14 +10,14 @@ from zope.schema.interfaces import WrongType
 
 import sqlalchemy.exc
 
-from avrc.data.store import directives
-from avrc.data.store import model
-from avrc.data.store.interfaces import IManager
-from avrc.data.store.interfaces import IFieldManagerFactory
-from avrc.data.store.interfaces import TypeNotSupportedError
-from avrc.data.store.schema import FieldManager
+from occams.datastore import directives
+from occams.datastore import model
+from occams.datastore.interfaces import IManager
+from occams.datastore.interfaces import IFieldManagerFactory
+from occams.datastore.interfaces import TypeNotSupportedError
+from occams.datastore.schema import FieldManager
 
-from avrc.data.store.testing import DATABASE_LAYER
+from occams.datastore.testing import DATABASE_LAYER
 
 
 time1 = datetime.now()

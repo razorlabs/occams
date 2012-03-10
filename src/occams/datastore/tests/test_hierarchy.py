@@ -1,10 +1,10 @@
 
 import unittest2 as unittest
 
-from avrc.data.store import model
-from avrc.data.store.schema import HierarchyInspector
+from occams.datastore import model
+from occams.datastore.schema import HierarchyInspector
 
-from avrc.data.store.testing import DATABASE_LAYER
+from occams.datastore.testing import DATABASE_LAYER
 
 
 def createSchema(name, base=None):

@@ -14,7 +14,7 @@ from zope.schema.interfaces import IVocabulary
 from zope.schema.vocabulary import SimpleVocabulary
 from zope.schema.vocabulary import SimpleTerm
 
-from avrc.data.store import MessageFactory as _
+from occams.datastore import MessageFactory as _
 
 
 # Fixed type vocabulary

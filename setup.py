@@ -7,7 +7,7 @@ version = '0.4.4'
 
 
 setup(
-    name='avrc.data.store',
+    name='occams.datastore',
     version=version,
     description='Provides storage solution for sparse data.',
     classifiers=[
@@ -23,14 +23,14 @@ setup(
         'Topic :: Software Development :: Libraries',
         'Topic :: Utilities',
         ],
-    keywords='AVRC BEAST datastore database eav sqlalchemy relational clinical',
-    author='BEAST Core Development Team',
-    author_email='beast@ucsd.edu',
-    url='https://github.com/beastcore/avrc.data.store',
+    keywords='AVRC BIT OCCAMS datastore database eav sqlalchemy relational clinical',
+    author='BIT Core Development Team',
+    author_email='bitcore@ucsd.edu',
+    url='https://github.com/bitcore/occams.datastore',
     license='GPL',
     packages=find_packages('src', exclude=['ez_setup']),
     package_dir={'':'src'},
-    namespace_packages=['avrc', 'avrc.data'],
+    namespace_packages=['occams'],
     include_package_data=True,
     zip_safe=False,
     install_requires=[
@@ -62,5 +62,5 @@ setup(
         test=['plone.testing'],
         ),
     tests_require=['plone.testing'],
-    test_suite='avrc.data.store.tests',
+    test_suite='occams.datastore.tests',
     )

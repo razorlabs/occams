@@ -5,14 +5,14 @@ import unittest2 as unittest
 from zope.interface.interface import InterfaceClass
 import zope.schema
 
-from avrc.data.store.testing import DATABASE_LAYER
-from avrc.data.store import directives
-from avrc.data.store import model
-from avrc.data.store.schema import SchemaManager
-from avrc.data.store.schema import FieldManager
-from avrc.data.store.storage import ObjectFactory
-from avrc.data.store.storage import EntityManager
-from avrc.data.store.storage import ValueManager
+from occams.datastore.testing import DATABASE_LAYER
+from occams.datastore import directives
+from occams.datastore import model
+from occams.datastore.schema import SchemaManager
+from occams.datastore.schema import FieldManager
+from occams.datastore.storage import ObjectFactory
+from occams.datastore.storage import EntityManager
+from occams.datastore.storage import ValueManager
 
 
 class DemoTestCase(unittest.TestCase):

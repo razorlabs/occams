@@ -17,8 +17,8 @@ from sqlalchemy.types import DateTime
 from sqlalchemy.types import String
 from sqlalchemy.types import Unicode
 
-from avrc.data.store.model._meta import Model
-from avrc.data.store.model._meta import Referenceable
+from occams.datastore.model._meta import Model
+from occams.datastore.model._meta import Referenceable
 
 
 NOW = text('CURRENT_TIMESTAMP')

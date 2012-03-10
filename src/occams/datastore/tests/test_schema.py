@@ -8,15 +8,15 @@ from zope.interface.verify import verifyObject
 
 import sqlalchemy.exc
 
-from avrc.data.store import directives
-from avrc.data.store import model
-from avrc.data.store.interfaces import IManager
-from avrc.data.store.interfaces import ISchemaManagerFactory
-from avrc.data.store.interfaces import NotCompatibleError
-from avrc.data.store.interfaces import MultipleBasesError
-from avrc.data.store.schema import SchemaManager
+from occams.datastore import directives
+from occams.datastore import model
+from occams.datastore.interfaces import IManager
+from occams.datastore.interfaces import ISchemaManagerFactory
+from occams.datastore.interfaces import NotCompatibleError
+from occams.datastore.interfaces import MultipleBasesError
+from occams.datastore.schema import SchemaManager
 
-from avrc.data.store.testing import DATABASE_LAYER
+from occams.datastore.testing import DATABASE_LAYER
 
 
 time1 = datetime.now()

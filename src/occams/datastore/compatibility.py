@@ -1,7 +1,7 @@
 
 from zope.interface.interface import InterfaceClass
-from avrc.data.store import directives
-from avrc.data.store import model
+from occams.datastore import directives
+from occams.datastore import model
 
 
 def schema2iface(session, schema):

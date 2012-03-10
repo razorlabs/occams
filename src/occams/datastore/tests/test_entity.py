@@ -5,14 +5,14 @@ from datetime import datetime
 from zope.interface.verify import verifyClass
 from zope.interface.verify import verifyObject
 
-from avrc.data.store import model
-from avrc.data.store.interfaces import IEntityManagerFactory
-from avrc.data.store.interfaces import IManager
-from avrc.data.store.storage import EntityManager
-from avrc.data.store.storage import ObjectFactory
-from avrc.data.store.schema import SchemaManager
+from occams.datastore import model
+from occams.datastore.interfaces import IEntityManagerFactory
+from occams.datastore.interfaces import IManager
+from occams.datastore.storage import EntityManager
+from occams.datastore.storage import ObjectFactory
+from occams.datastore.schema import SchemaManager
 
-from avrc.data.store.testing import DATABASE_LAYER
+from occams.datastore.testing import DATABASE_LAYER
 
 
 time1 = datetime.now()
