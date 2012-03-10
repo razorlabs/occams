@@ -2,9 +2,60 @@
 Change Log
 ==========
 
-------------------------------------
-0.4.5 (???)
-------------------------------------
+-----------
+0.6.0 (???)
+-----------
+
+Overhauled versioning mechanics for better sanity (using deep copy method)
+
+Credit to ``[RodriguezMueller]`` for this amazing breakthrough.
+
+- Managers
+    - ``retire``, ``restore`` are now deprecated and removed
+    - ``purge`` has been renamed to ``remove``
+    - ``key`` paramter may now be a specific id number of an item as opposed
+            to simply it's string name
+    - ``put`` **ONLY** accepts sqlalchemy items.
+    - ``get`` now returns **ONLY** sqlalchemy items. If you wish to use
+            the zope functionality, use the new compatibility interfaces
+
+- Database
+    - ``asOf`` removed since it requires extra control of what entries to
+        return as of the specified date, the logic for this method
+        has been embedded into the managers.
+    - All ``*_user_id`` metadata columns are active
+    - All ``remove_*`` columns have been deprecated and removed, since they
+        introduce intricate dependencies with parent items that are ambiguous.
+        (e.g. my parent is "retired", am I retired?)
+    - ``Schema.state`` to determine its circulation, which
+            will make it helpful when editing unpublished schemat
+    - ``Schema.is_inline`` now indicates if the schema can only be used
+            as a subschema
+    - ``Attribute.min`` removed
+    - ``Attribute.max`` removed
+    - ``Attribute.default`` removed
+    - ``Attribute.widget`` removed
+    - ``Attribute.is_inline_object`` removed
+    - ``Attribute.is_readonly`` removed
+    - ``Attribute.checksum`` is a new property for determining the similarity
+            of this attribute from another form version's
+    - ``Attribute.validator`` is now observed
+    - ``Attribute.value_min`` now specifies the minimum allowed length or value
+    - ``Attribute.value_max`` now specifies the maximum allowed length or value
+    - ``Attribute.collection_min`` now specifies the minimum length of the collection
+    - ``Attribute.collection_max`` now specifies the maximum length of the collection
+    - ``Entity.state`` is now a built-in column instead of a foreign key,
+            as other products expect specific values of this property and should
+            not be changed unless a software update is necessary
+    - ``State`` deprecated in favor of new ``Entity.state`` property
+    - ``User`` a new table for tracking user changes
+    - ``Log`` a new table that lists specific changes to properties of
+            tables, useful for displaying feeds and auditing purposes
+
+
+-----------
+0.5.0 (???)
+-----------
 
 - General
     - Add support for collect_date (backwards compatible)
