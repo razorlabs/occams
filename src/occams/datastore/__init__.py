@@ -13,11 +13,11 @@ MessageFactory = zope.i18nmessageid.MessageFactory(__name__)
 Logger = logging.getLogger(__name__)
 
 
-from occams.datastore.datastore import DataStore
-from occams.datastore.schema import SchemaManager
-from occams.datastore.schema import FieldManager
-from occams.datastore.schema import HierarchyInspector
-from occams.datastore.storage import EntityManager
-from occams.datastore.storage import ValueManager
-from occams.datastore.storage import ObjectFactory
+from occams.datastore.managers import DataStore
+from occams.datastore.managers import SchemaManager
+from occams.datastore.managers import FieldManager
+from occams.datastore.managers import HierarchyInspector
+from occams.datastore.managers import EntityManager
+from occams.datastore.managers import ValueManager
+from occams.datastore.managers import ObjectFactory
 

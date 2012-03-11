@@ -4,8 +4,6 @@
 from datetime import date
 
 from sqlalchemy import select
-from sqlalchemy import union
-from sqlalchemy import alias
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship as Relationship
 from sqlalchemy.schema import Column
@@ -121,8 +119,12 @@ class _ValueBaseMixin(Referenceable, Modifiable):
         return Relationship('Choice')
 
     @declared_attr
-    def value(cls):
-        return Column(cls.__valuetype__, index=True)
+    def _value(cls):
+        return Column('value', cls.__valuetype__, index=True)
+
+    @property
+    def value(self):
+        return self._value
 
     @declared_attr
     def __table_args__(cls):
@@ -141,6 +143,10 @@ class ValueDatetime(Model, _ValueBaseMixin):
     __tablename__ = 'datetime'
     __valuetype__ = DateTime
 
+    @property
+    def value(self):
+        return self._value if self.attribute.type == 'datetime' else self._value.date()
+
 
 class ValueInteger(Model, _ValueBaseMixin):
     """
@@ -150,6 +156,9 @@ class ValueInteger(Model, _ValueBaseMixin):
     __tablename__ = 'integer'
     __valuetype__ = Integer
 
+    @property
+    def value(self):
+        return self._value if self.attribute.type == 'integer' else bool(self._value)
 
 
 class ValueDecimal(Model, _ValueBaseMixin):
@@ -183,43 +192,6 @@ class ValueObject(Model, _ValueBaseMixin):
     def value_object(cls):
         return Relationship('Entity', primaryjoin='%s.value == Entity.id' % cls.__name__,)
 
-
-def _buildAssignmentTable():
-    """
-    Builds a union-table for easily searching for value assignments to
-    an entity, as currently separate value-specific tables are used which
-    unfortunately makes it hard to track this information down.
-    """
-    queries = []
-
-    for m in (ValueString, ValueInteger, ValueObject, ValueDatetime, ValueDecimal):
-        query = (
-            select([
-                m.entity_id.label('entity_id'),
-                m.attribute_id.label('attribute_id'),
-                m.create_date.label('create_date'),
-                m.modify_date.label('modify_date'),
-                ])
-            )
-        queries.append(query)
-
-    return alias(union(*queries))
-
-
-assignment_table = _buildAssignmentTable()
-
-
-class Assignment(Model):
-    """
-    Helper object for easily accessing value assignments in one table
-    as opposed to looking at each value table individually.
-    """
-    __table__ = assignment_table
-
-    attribute = Relationship('Attribute')
-
-    entity = Relationship('Entity')
-
-    __mapper_args__ = dict(
-        primary_key=[assignment_table.c.entity_id, assignment_table.c.attribute_id]
-        )
+    @property
+    def value(self):
+        return self.value_object

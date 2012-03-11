@@ -2,17 +2,17 @@
 
   <include package="zope.component" file="meta.zcml" />
 
-  <adapter factory=".datastore.DataStore" />
-  
-  <adapter factory=".schema.SchemaManager" />
-  <adapter factory=".schema.FieldManager" />
-  <adapter factory=".schema.HierarchyInspector" />
-  
-  <adapter factory=".storage.EntityManager" />
-  <adapter factory=".storage.ValueManager" />
+  <adapter factory=".managers.DataStore" />
 
-  <utility  
-    name="occams.datastore.Types"  
+  <adapter factory=".managers.SchemaManager" />
+  <adapter factory=".managers.FieldManager" />
+  <adapter factory=".managers.HierarchyInspector" />
+
+  <adapter factory=".managers.EntityManager" />
+  <adapter factory=".managers.ValueManager" />
+
+  <utility
+    name="occams.datastore.Types"
     component=".interfaces.typesVocabulary"
     provides="zope.schema.interfaces.IVocabulary"
     />
