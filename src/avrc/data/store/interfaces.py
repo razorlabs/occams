@@ -60,7 +60,6 @@ class PropertyError(EntityError):
     Base class for property-related errors (value)
     """
 
-
 class NotCompatibleError(SchemaError):
     """
     The schema doesn't subclass ``avrc.data.store.directives.Schema``
@@ -397,6 +396,13 @@ class IEntity(IHistoryItem):
         title=_(u'Object Schema'),
         description=_(u'The scheme the object will provide once generated.'),
         schema=ISchema
+        )
+
+    state = zope.interface.Attribute(_(u'The current workflow state'))
+
+    collect_date = zope.schema.Date(
+        title=_(u'Date Collected'),
+        description=_(u'The date that the information was physically collected'),
         )
 
 
