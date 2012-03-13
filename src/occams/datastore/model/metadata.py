@@ -1,5 +1,4 @@
-"""
-User tracking definitions
+""" Common metadata modules
 """
 
 import threading
@@ -17,28 +16,63 @@ from sqlalchemy.types import DateTime
 from sqlalchemy.types import String
 from sqlalchemy.types import Unicode
 
-from occams.datastore.model._meta import Model
-from occams.datastore.model._meta import Referenceable
+from sqlalchemy.ext.declarative import has_inherited_table
+from sqlalchemy.types import Integer
+
+from occams.datastore.model.model import Model
 
 
 NOW = text('CURRENT_TIMESTAMP')
 
-trackingRegistry = threading.local()
-trackingRegistry.user = None
+registry = threading.local()
+registry.user = None
+
 
 def setActiveUser(user):
-    trackingRegistry.user = user
+    registry.user = user
 
 
 def getActiveUser():
-    return trackingRegistry.user
+    return registry.user
 
 
 def clearActiveUser():
-    trackingRegistry.user = None
+    registry.user = None
 
 
-class User(Model, Referenceable):
+class AutoNamed(object):
+    """
+    Generates the SQL table name from the class name.
+    """
+
+    @declared_attr
+    def __tablename__(cls):
+        if has_inherited_table(cls) and AutoNamed not in cls.__bases__:
+            return None
+        return cls.__name__.lower()
+
+
+class Referenceable(object):
+    """
+    Adds primary key id columns to tables.
+    """
+
+    id = Column(Integer, primary_key=True)
+
+
+class Describeable(object):
+    """
+    Adds standard content properties to tables.
+    """
+
+    name = Column(String, nullable=False)
+
+    title = Column(Unicode, nullable=False)
+
+    description = Column(Unicode)
+
+
+class User(Model, AutoNamed, Referenceable):
 
     email = Column(String, nullable=False)
 
@@ -54,7 +88,7 @@ class User(Model, Referenceable):
         )
 
 
-class Log(Model, Referenceable):
+class Log(Model, AutoNamed, Referenceable):
 
     user_id = Column(ForeignKey(User.id), nullable=False)
 

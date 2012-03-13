@@ -9,7 +9,6 @@ from sqlalchemy.orm import scoped_session
 from occams.datastore import model
 from plone.testing import Layer
 
-#CONFIG_URL = 'postgresql://test@localhost/eavcr_test'
 CONFIG_URL = 'sqlite:///'
 CONFIG_ECHO = False
 
@@ -26,6 +25,8 @@ class DataBaseLayer(Layer):
         engine = create_engine(CONFIG_URL, echo=CONFIG_ECHO)
         model.Model.metadata.create_all(engine, checkfirst=True)
         factory = sessionmaker(engine, autoflush=False, autocommit=False)
+        model.registerAuditingSession(factory)
+        model.registerLibarianSession(factory)
         self['session'] = scoped_session(factory)
 
     def tearDown(self):

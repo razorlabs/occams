@@ -16,15 +16,18 @@ from sqlalchemy.types import Enum
 from sqlalchemy.types import Numeric
 from sqlalchemy.types import Integer
 from sqlalchemy.types import Unicode
+from sqlalchemy.orm import object_session
 from zope.interface import implements
 
 from occams.datastore.interfaces import IEntity
 from occams.datastore.interfaces import IValue
-from occams.datastore.model._meta import Model
-from occams.datastore.model._meta import Referenceable
-from occams.datastore.model._meta import Describeable
-from occams.datastore.model.tracking import Modifiable
-from occams.datastore.model.tracking import buildModifiableConstraints
+from occams.datastore.model.model import Model
+from occams.datastore.model.metadata import AutoNamed
+from occams.datastore.model.metadata import Referenceable
+from occams.datastore.model.metadata import Describeable
+from occams.datastore.model.metadata import Modifiable
+from occams.datastore.model.metadata import buildModifiableConstraints
+from occams.datastore.model.auditing import Auditable
 from occams.datastore.model.schema import Schema
 from occams.datastore.model.schema import Attribute
 from occams.datastore.model.schema import Choice
@@ -33,7 +36,7 @@ from occams.datastore.model.schema import Choice
 ENTITY_STATE_NAMES = sorted([term.token for term in IEntity['state'].vocabulary])
 
 
-def _defaultCollectDate(context):
+def defaultCollectDate(context):
     """
     Callback for generating default collect date value.
     It will try to lookup the previous ``collect_date`` and give the
@@ -55,12 +58,23 @@ def _defaultCollectDate(context):
     return collect_date
 
 
-class Entity(Model, Referenceable, Describeable, Modifiable):
+class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
     implements(IEntity)
 
-    schema_id = Column(ForeignKey(Schema.id, ondelete='CASCADE'), nullable=False)
+    @declared_attr
+    def schema_id(cls):
+        return Column(
+            ForeignKey(
+                column=Schema.id,
+                name='fk_%s_schema_id' % cls.__tablename__,
+                ondelete='CASCADE',
+                ),
+                nullable=False
+            )
 
-    schema = Relationship('Schema')
+    @declared_attr
+    def schema(cls):
+        return Relationship('Schema')
 
     state = Column(
         Enum(*ENTITY_STATE_NAMES, name='entity_state'),
@@ -68,7 +82,7 @@ class Entity(Model, Referenceable, Describeable, Modifiable):
         server_default=IEntity['state'].default
         )
 
-    collect_date = Column(Date, nullable=False, default=_defaultCollectDate)
+    collect_date = Column(Date, nullable=False, default=defaultCollectDate)
 
     integer_values = Relationship('ValueInteger')
 
@@ -78,7 +92,8 @@ class Entity(Model, Referenceable, Describeable, Modifiable):
 
     string_values = Relationship('ValueString')
 
-    obect_values = Relationship('ValueObject')
+    obect_values = Relationship('ValueObject',
+        primaryjoin='Entity.id == ValueObject._value')
 
     @declared_attr
     def __table_args__(cls):
@@ -89,22 +104,38 @@ class Entity(Model, Referenceable, Describeable, Modifiable):
             )
 
 
-class _ValueBaseMixin(Referenceable, Modifiable):
+class _ValueBaseMixin(Referenceable, Modifiable, Auditable):
     implements(IValue)
 
+    __tablename__ = None
     __valuetype__ = None
 
     @declared_attr
     def entity_id(cls):
-        return Column(ForeignKey(Entity.id, ondelete='CASCADE'), nullable=False,)
+        return Column(
+            ForeignKey(
+                column=Entity.id,
+                name='fk_%s_entity_id' % cls.__tablename__,
+                ondelete='CASCADE',
+                ),
+            nullable=False,
+            )
 
     @declared_attr
     def entity(cls):
-        return Relationship('Entity', primaryjoin='%s.entity_id == Entity.id' % cls.__name__)
+        return Relationship('Entity',
+            primaryjoin='%s.entity_id == Entity.id' % cls.__name__)
 
     @declared_attr
     def attribute_id(cls):
-        return Column(ForeignKey(Attribute.id, ondelete='CASCADE'), nullable=False,)
+        return Column(
+            ForeignKey(
+                column=Attribute.id,
+                name='fk_%s_attribute_id' % cls.__tablename__,
+                ondelete='CASCADE',
+                ),
+            nullable=False,
+            )
 
     @declared_attr
     def attribute(cls):
@@ -112,7 +143,13 @@ class _ValueBaseMixin(Referenceable, Modifiable):
 
     @declared_attr
     def choice_id(cls):
-        return Column(ForeignKey(Choice.id, ondelete='CASCADE'),)
+        return Column(
+            ForeignKey(
+                column=Choice.id,
+                name='fk_%s_choice_id' % cls.__tablename__,
+                ondelete='CASCADE',
+                ),
+            )
 
     @declared_attr
     def choice(cls):
@@ -120,11 +157,21 @@ class _ValueBaseMixin(Referenceable, Modifiable):
 
     @declared_attr
     def _value(cls):
-        return Column('value', cls.__valuetype__, index=True)
+        return Column('value', cls.__valuetype__)
 
     @property
     def value(self):
-        return self._value
+        type_ = self.attribute.type
+        value = self._value
+        if type_ == 'date':
+            value = value.date()
+        elif type_ == 'boolean':
+            value = bool(value)
+        elif type_ == 'object':
+            session = object_session(self)
+            if session:
+                value = session.query(Entity).get(self._value)
+        return value
 
     @declared_attr
     def __table_args__(cls):
@@ -132,66 +179,36 @@ class _ValueBaseMixin(Referenceable, Modifiable):
             Index('ix_%s_entity_id' % cls.__tablename__, 'entity_id'),
             Index('ix_%s_attribute_id' % cls.__tablename__, 'attribute_id'),
             Index('ix_%s_choice_id' % cls.__tablename__, 'choice_id'),
+            Index('ix_%s_value' % cls.__tablename__, 'value')
             )
 
 
 class ValueDatetime(Model, _ValueBaseMixin):
-    """
-    A datetime EAV value.
-    """
-
     __tablename__ = 'datetime'
     __valuetype__ = DateTime
 
-    @property
-    def value(self):
-        return self._value if self.attribute.type == 'datetime' else self._value.date()
-
 
 class ValueInteger(Model, _ValueBaseMixin):
-    """
-    A integer EAV value.
-    """
-
     __tablename__ = 'integer'
     __valuetype__ = Integer
 
-    @property
-    def value(self):
-        return self._value if self.attribute.type == 'integer' else bool(self._value)
-
 
 class ValueDecimal(Model, _ValueBaseMixin):
-    """
-    A decimal EAV value.
-    """
-
     __tablename__ = 'decimal'
     __valuetype__ = Numeric
 
 
 class ValueString(Model, _ValueBaseMixin):
-    """
-    A string EAV value.
-    """
-
     __tablename__ = 'string'
     __valuetype__ = Unicode
 
 
 class ValueObject(Model, _ValueBaseMixin):
-    """
-    An object EAV value.
-    """
-
     __tablename__ = 'object'
-    __valuetype__ = ForeignKey(Entity.id, ondelete='CASCADE')
+    __valuetype__ = ForeignKey(
+        column=Entity.id,
+        name='fk_%s_value' % __tablename__,
+        ondelete='CASCADE'
+        )
 
-    # NOTE: If there are shared objects, THEY WILL BE REMOVED AS WELL...
-    @declared_attr
-    def value_object(cls):
-        return Relationship('Entity', primaryjoin='%s.value == Entity.id' % cls.__name__,)
 
-    @property
-    def value(self):
-        return self.value_object
