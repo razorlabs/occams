@@ -31,36 +31,36 @@ from occams.datastore import model
 
 
 # Where the types are stored
-nameModelMap = dict(
-    integer=model.ValueInteger,
-    boolean=model.ValueInteger,
-    string=model.ValueString,
-    text=model.ValueString,
-    decimal=model.ValueDecimal,
-    date=model.ValueDatetime,
-    datetime=model.ValueDatetime,
-    object=model.ValueObject,
-    )
-
-# What the types are cast to when queried
-nameSqlMap = dict(
-    integer=sqlalchemy.Integer,
-    string=sqlalchemy.Unicode,
-    text=sqlalchemy.UnicodeText,
-    boolean=sqlalchemy.Boolean,
-    decimal=sqlalchemy.Numeric,
-    date=sqlalchemy.Date,
-    datetime=sqlalchemy.DateTime,
-    object=sqlalchemy.Integer,
-    )
-
-valueModels = (
-    model.ValueDatetime,
-    model.ValueDecimal,
-    model.ValueInteger,
-    model.ValueObject,
-    model.ValueString
-    )
+#nameModelMap = dict(
+#    integer=model.ValueInteger,
+#    boolean=model.ValueInteger,
+#    string=model.ValueString,
+#    text=model.ValueString,
+#    decimal=model.ValueDecimal,
+#    date=model.ValueDatetime,
+#    datetime=model.ValueDatetime,
+#    object=model.ValueObject,
+#    )
+#
+## What the types are cast to when queried
+#nameSqlMap = dict(
+#    integer=sqlalchemy.Integer,
+#    string=sqlalchemy.Unicode,
+#    text=sqlalchemy.UnicodeText,
+#    boolean=sqlalchemy.Boolean,
+#    decimal=sqlalchemy.Numeric,
+#    date=sqlalchemy.Date,
+#    datetime=sqlalchemy.DateTime,
+#    object=sqlalchemy.Integer,
+#    )
+#
+#valueModels = (
+#    model.ValueDatetime,
+#    model.ValueDecimal,
+#    model.ValueInteger,
+#    model.ValueObject,
+#    model.ValueString
+#    )
 
 
 class DataStore(object):

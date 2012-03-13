@@ -184,7 +184,7 @@ def auditableBeforeFlush(session, flush_context, instances):
 
 
 def registerAuditingSession(session):
-    event.listens_for(session, 'before_flush', auditableBeforeFlush)
+    event.listen(session, 'before_flush', auditableBeforeFlush)
 
 
 def unregisterAuditingSession(session):

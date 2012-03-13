@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship as Relationship
 from sqlalchemy.schema import Column
-from sqlalchemy.schema import ForeignKey
+from sqlalchemy.schema import ForeignKeyConstraint
 from sqlalchemy.schema import Index
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.types import Date
@@ -61,20 +61,9 @@ def defaultCollectDate(context):
 class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
     implements(IEntity)
 
-    @declared_attr
-    def schema_id(cls):
-        return Column(
-            ForeignKey(
-                column=Schema.id,
-                name='fk_%s_schema_id' % cls.__tablename__,
-                ondelete='CASCADE',
-                ),
-                nullable=False
-            )
+    schema_id = Column(Integer, nullable=False)
 
-    @declared_attr
-    def schema(cls):
-        return Relationship('Schema')
+    schema = Relationship('Schema')
 
     state = Column(
         Enum(*ENTITY_STATE_NAMES, name='entity_state'),
@@ -98,6 +87,12 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
     @declared_attr
     def __table_args__(cls):
         return buildModifiableConstraints(cls) + (
+            ForeignKeyConstraint(
+                columns=['schema_id'],
+                refcolumns=['schema.id'],
+                name='fk_%s_schema_id' % cls.__tablename__,
+                ondelete='CASCADE',
+                ),
             UniqueConstraint('schema_id', 'name'),
             Index('ix_%s_schema_id' % cls.__tablename__, 'schema_id'),
             Index('ix_%s_collect_date' % cls.__tablename__, 'collect_date'),
@@ -112,14 +107,7 @@ class _ValueBaseMixin(Referenceable, Modifiable, Auditable):
 
     @declared_attr
     def entity_id(cls):
-        return Column(
-            ForeignKey(
-                column=Entity.id,
-                name='fk_%s_entity_id' % cls.__tablename__,
-                ondelete='CASCADE',
-                ),
-            nullable=False,
-            )
+        return Column(Integer, nullable=False)
 
     @declared_attr
     def entity(cls):
@@ -128,14 +116,7 @@ class _ValueBaseMixin(Referenceable, Modifiable, Auditable):
 
     @declared_attr
     def attribute_id(cls):
-        return Column(
-            ForeignKey(
-                column=Attribute.id,
-                name='fk_%s_attribute_id' % cls.__tablename__,
-                ondelete='CASCADE',
-                ),
-            nullable=False,
-            )
+        return Column(Integer, nullable=False)
 
     @declared_attr
     def attribute(cls):
@@ -143,13 +124,7 @@ class _ValueBaseMixin(Referenceable, Modifiable, Auditable):
 
     @declared_attr
     def choice_id(cls):
-        return Column(
-            ForeignKey(
-                column=Choice.id,
-                name='fk_%s_choice_id' % cls.__tablename__,
-                ondelete='CASCADE',
-                ),
-            )
+        return Column(Integer)
 
     @declared_attr
     def choice(cls):
@@ -175,12 +150,42 @@ class _ValueBaseMixin(Referenceable, Modifiable, Auditable):
 
     @declared_attr
     def __table_args__(cls):
-        return buildModifiableConstraints(cls) + (
+        constraints = buildModifiableConstraints(cls) + (
+            ForeignKeyConstraint(
+                columns=['entity_id'],
+                refcolumns=['entity.id'],
+                name='fk_%s_entity_id' % cls.__tablename__,
+                ondelete='CASCADE',
+                ),
+            ForeignKeyConstraint(
+                columns=['attribute_id'],
+                refcolumns=['attribute.id'],
+                name='fk_%s_attribute_id' % cls.__tablename__,
+                ondelete='CASCADE',
+                ),
+            ForeignKeyConstraint(
+                columns=['choice_id'],
+                refcolumns=['choice.id'],
+                name='fk_%s_choice_id' % cls.__tablename__,
+                ondelete='CASCADE',
+                ),
             Index('ix_%s_entity_id' % cls.__tablename__, 'entity_id'),
             Index('ix_%s_attribute_id' % cls.__tablename__, 'attribute_id'),
             Index('ix_%s_choice_id' % cls.__tablename__, 'choice_id'),
             Index('ix_%s_value' % cls.__tablename__, 'value')
             )
+
+        if cls.__tablename__ == 'object':
+            constraints += (
+                ForeignKeyConstraint(
+                    columns=['value'],
+                    refcolumns=['entity.id'],
+                    name='fk_%s_value' % cls.__tablename__,
+                    ondelete='CASCADE'
+                    ),
+                )
+
+        return constraints
 
 
 class ValueDatetime(Model, _ValueBaseMixin):
@@ -205,10 +210,5 @@ class ValueString(Model, _ValueBaseMixin):
 
 class ValueObject(Model, _ValueBaseMixin):
     __tablename__ = 'object'
-    __valuetype__ = ForeignKey(
-        column=Entity.id,
-        name='fk_%s_value' % __tablename__,
-        ondelete='CASCADE'
-        )
-
+    __valuetype__ = Integer
 

@@ -52,20 +52,26 @@ def checksum(*args):
 
 
 def generateChecksum(attribute):
-    return checksum(*[
-            attribute.schema.name,
-            attribute.schema.description,
-            attribute.name,
-            attribute.title,
-            attribute.description,
-            attribute.type,
-            attribute.is_collection,
-            attribute.is_required,
-            attribute.object_schema_id,
-            ])
+    values = [
+        attribute.schema.name,
+        attribute.schema.description,
+        attribute.name,
+        attribute.title,
+        attribute.description,
+        attribute.type,
+        attribute.is_collection,
+        attribute.is_required,
+        attribute.object_schema_id,
+        ]
+    for choice in attribute.choices.values():
+        values.extend([choice.name, choice.title, choice.value])
+    return checksum(*values)
 
 
 def attributeBeforeFlush(session, flush_context, instances):
+    """
+    Session Event handler to update attribute checksums
+    """
     attributes = lambda i: isinstance(i, Attribute)
     for instance in filter(attributes, session.new):
         instance.checksum = generateChecksum(instance)
@@ -74,7 +80,7 @@ def attributeBeforeFlush(session, flush_context, instances):
 
 
 def registerLibarianSession(session):
-    event.listens_for(session, 'before_flush', attributeBeforeFlush)
+    event.listen(session, 'before_flush', attributeBeforeFlush)
 
 
 def unregisterLibarianSession(session):
@@ -109,6 +115,7 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
     is_inline = Column(Boolean)
 
     attributes = Relationship('Attribute',
+        primaryjoin='Schema.id == Attribute.schema_id',
         collection_class=attribute_mapped_collection('name'))
 
     @declared_attr
@@ -128,7 +135,9 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         return self.attributes[key]
 
     def __setitem__(self, key, value):
-        self.attributes[key] = value
+        if key != value.name:
+            raise ValueError
+        self.attributes[value.name] = value
 
     def __delitem__(self, key):
         del self.attributes[key]
@@ -160,9 +169,9 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
 
     choices = Relationship('Choice', collection_class=attribute_mapped_collection('name'))
 
-    is_collection = Column(Boolean, nullable=False, server_default='FALSE')
+    is_collection = Column(Boolean, nullable=False, default=False)
 
-    is_required = Column(Boolean, nullable=False, server_default='FALSE')
+    is_required = Column(Boolean, nullable=False, default=False)
 
     object_schema_id = Column(Integer)
 
@@ -203,9 +212,10 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
             Index('ix_%s_checksum' % cls.__tablename__, 'checksum'),
             CheckConstraint(
                 """
-                CASE WHEN type = 'object'
-                THEN object_schema_id IS NOT NULL
-                ELSE object_schema_id IS NULL
+                CASE WHEN type = 'object' THEN
+                    object_schema_id IS NOT NULL
+                ELSE
+                    object_schema_id IS NULL
                 END
                 """,
                 name='ck_%s_valid_object_bind' % cls.__tablename__,
@@ -258,4 +268,3 @@ class Choice(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
             UniqueConstraint('attribute_id', 'order'),
             Index('ix_%s_value' % cls.__tablename__, 'value')
             )
-

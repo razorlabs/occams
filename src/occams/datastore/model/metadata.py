@@ -2,6 +2,7 @@
 """
 
 import threading
+import warnings
 
 from sqlalchemy import text
 from sqlalchemy.ext.declarative import declared_attr
@@ -29,11 +30,21 @@ registry.user = None
 
 
 def setActiveUser(user):
+    if user.id is None:
+        warnings.warn(
+            'Setting active user that does not have an ID number yet. '
+            'Possibly this method was called before flushing the user to the '
+            'database.'
+            )
     registry.user = user
 
 
 def getActiveUser():
     return registry.user
+
+
+def getActiveUserId():
+    return registry.user.id
 
 
 def clearActiveUser():
@@ -76,7 +87,7 @@ class User(Model, AutoNamed, Referenceable):
 
     email = Column(String, nullable=False)
 
-    fullname = Column(Unicode, nullable=False)
+    fullname = Column(Unicode)
 
     create_date = Column(DateTime, nullable=False, server_default=NOW)
 
@@ -136,7 +147,12 @@ class Modifiable(object):
 
     @declared_attr
     def create_user_id(cls):
-        return Column(ForeignKey(User.id), nullable=False, default=getActiveUser)
+        return Column(ForeignKey(User.id), nullable=False, default=getActiveUserId)
+
+    @declared_attr
+    def create_user(cls):
+        return Relationship('User',
+            primaryjoin='%s.create_user_id == User.id' % cls.__name__)
 
     @declared_attr
     def modify_date(cls):
@@ -144,4 +160,9 @@ class Modifiable(object):
 
     @declared_attr
     def modify_user_id(cls):
-        return Column(ForeignKey(User.id), nullable=False, default=getActiveUser)
+        return Column(ForeignKey(User.id), nullable=False, default=getActiveUserId)
+
+    @declared_attr
+    def modify_user(cls):
+        return Relationship('User',
+            primaryjoin='%s.modify_user_id == User.id' % cls.__name__)
