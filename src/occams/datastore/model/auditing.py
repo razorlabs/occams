@@ -38,14 +38,14 @@ def auditableBeforeFlush(session, flush_context, instances):
         createRevision(instance, session, deleted=True)
 
 
-def registerAuditingSession(session):
+def registerAuditingListener(session):
     """
     Registers a session listener for auditable instances
     """
     event.listen(session, 'before_flush', auditableBeforeFlush)
 
 
-def unregisterAuditingSession(session):
+def unregisterAuditingListener(session):
     """
     Unregisters a session listener for auditable instances
     """
@@ -139,6 +139,9 @@ def auditMapper(mapping):
 
 
 def createRevision(instance, session, deleted=False):
+    """
+    TODO: clear revision on deepcopy
+    """
     obj_mapper = object_mapper(instance)
     audit_mapper = instance.__audit_mapper__
     audit_cls = audit_mapper.class_

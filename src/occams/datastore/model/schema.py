@@ -3,6 +3,7 @@
 
 import hashlib
 from decimal import Decimal
+from datetime import date
 import re
 
 from sqlalchemy import event
@@ -17,6 +18,7 @@ from sqlalchemy.schema import ForeignKeyConstraint
 from sqlalchemy.schema import Index
 from sqlalchemy.types import Boolean
 from sqlalchemy.types import Enum
+from sqlalchemy.types import Date
 from sqlalchemy.types import Integer
 from sqlalchemy.types import String
 from sqlalchemy.types import Unicode
@@ -25,7 +27,7 @@ from zope.interface import implements
 from occams.datastore.interfaces import ISchema
 from occams.datastore.interfaces import IAttribute
 from occams.datastore.interfaces import IChoice
-from occams.datastore.model.model import Model
+from occams.datastore.model import Model
 from occams.datastore.model.metadata import AutoNamed
 from occams.datastore.model.metadata import Referenceable
 from occams.datastore.model.metadata import Describeable
@@ -93,12 +95,17 @@ def attributeBeforeFlush(session, flush_context, instances):
         instance._checksum = generateChecksum(instance)
 
 
-def registerLibarianSession(session):
+def registerAttributeListener(session):
     event.listen(session, 'before_flush', attributeBeforeFlush)
 
 
-def unregisterLibarianSession(session):
+def unregisterAttributeListener(session):
     event.remove(session, 'before_flush', attributeBeforeFlush)
+
+
+def defaultPublishDate(context):
+    if context.current_parameters['state'] in ('published', 'deprecated'):
+        return date.today()
 
 
 class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
@@ -115,6 +122,7 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
     state = Column(
         Enum(*SCHEMA_STATE_NAMES, name='schema_state'),
         nullable=False,
+        default=ISchema['state'].default,
         server_default=ISchema['state'].default
         )
 
@@ -123,6 +131,8 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         nullable=False,
         server_default=ISchema['storage'].default
         )
+
+    publish_date = Column(Date, nullable=True, default=defaultPublishDate)
 
     is_association = Column(Boolean)
 

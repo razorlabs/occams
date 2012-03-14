@@ -149,7 +149,7 @@ class ISchema(IHistoryItem):
 
     state = zope.schema.Choice(
         title=_(u'Circulation State'),
-        values=sorted(['draft', 'pending-review', 'published', 'retired']),
+        values=sorted(['draft', 'review', 'published', 'deprecated']),
         default='draft',
         )
 
@@ -313,8 +313,8 @@ class IEntity(IHistoryItem):
 
     state = zope.schema.Choice(
         title=_(u'The current workflow state'),
-        values=sorted(['pending-entry', 'pending-review', 'completed', 'not-done']),
-        default='pending-entry',
+        values=sorted(['draft', 'review', 'complete', 'incomplete', 'not-done']),
+        default='draft',
         )
 
     collect_date = zope.schema.Date(
@@ -351,50 +351,6 @@ class IValue(IHistoryItem):
     value = zope.schema.Field(
         title=_(u'Assigned Value'),
         )
-
-
-
-
-class IInstance(IDataStoreComponent):
-    """
-    An object derived from EAV entries. Objects of this type are effectively
-    stripped from their database references and are simply Python objects.
-    """
-
-    __id__ = zope.interface.Attribute(_(
-        u'The INTERNAL id of the instance. Tampering or accessing this id '
-        u'outside of this package is highly not recommended'))
-
-
-    __schema__ = zope.interface.Attribute(_(
-        u'The schema the created object will represent'
-        ))
-
-
-    __state__ = zope.interface.Attribute(_(
-        u'The workflow state of the created object.'
-        ))
-
-
-    title = zope.interface.Attribute(_(
-        u'The instance\'s database-unique name'
-        ))
-
-
-    description = zope.interface.Attribute(_(
-        u'A description for the object'
-        ))
-
-
-    def setState(state):
-        """
-        """
-
-
-    def getState():
-        """
-        """
-
 
 
 class IManager(IDataStoreComponent):

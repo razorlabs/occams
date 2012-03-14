@@ -2,19 +2,13 @@
 Application layers
 """
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.orm import scoped_session
+import sqlalchemy.orm
+import plone.testing
 
 from occams.datastore import model
-from plone.testing import Layer
 
 
-CONFIG_URL = 'sqlite:///'
-CONFIG_ECHO = True
-
-
-class DataBaseLayer(Layer):
+class DataBaseLayer(plone.testing.Layer):
     """
     DataBase application layer for tests.
     """
@@ -23,12 +17,10 @@ class DataBaseLayer(Layer):
         """
         Creates the database structures.
         """
-        engine = create_engine(CONFIG_URL, echo=CONFIG_ECHO)
+        engine = sqlalchemy.create_engine('sqlite:///', echo=True)
         model.Model.metadata.create_all(engine, checkfirst=True)
-        factory = sessionmaker(engine, autoflush=False, autocommit=False)
-        self['session'] = session = scoped_session(factory)
-        model.registerAuditingSession(session)
-        model.registerLibarianSession(session)
+        factory = sqlalchemy.orm.sessionmaker(engine, class_=model.DataStoreSession)
+        self['session'] = sqlalchemy.orm.scoped_session(factory)
 
     def tearDown(self):
         """

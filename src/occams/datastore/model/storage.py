@@ -4,6 +4,7 @@
 from datetime import date
 
 from sqlalchemy import select
+from sqlalchemy import event
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship as Relationship
 from sqlalchemy.schema import Column
@@ -21,7 +22,7 @@ from zope.interface import implements
 
 from occams.datastore.interfaces import IEntity
 from occams.datastore.interfaces import IValue
-from occams.datastore.model.model import Model
+from occams.datastore.model import Model
 from occams.datastore.model.metadata import AutoNamed
 from occams.datastore.model.metadata import Referenceable
 from occams.datastore.model.metadata import Describeable
@@ -56,6 +57,25 @@ def defaultCollectDate(context):
         if previous:
             collect_date = previous.collect_date
     return collect_date
+
+
+def entityBeforeFlush(session, flush_context, instances):
+    """
+    Session Event handler to update attribute checksums
+    """
+#    attributes = lambda i: isinstance(i, Attribute)
+#    for instance in filter(attributes, session.new):
+#        instance._checksum = generateChecksum(instance)
+#    for instance in filter(attributes, session.dirty):
+#        instance._checksum = generateChecksum(instance)
+
+
+def registerEntityListener(session):
+    event.listen(session, 'before_flush', entityBeforeFlush)
+
+
+def unregisterEntityListenter(session):
+    event.remove(session, 'before_flush', entityBeforeFlush)
 
 
 class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):

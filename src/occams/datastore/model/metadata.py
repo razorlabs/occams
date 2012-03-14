@@ -4,23 +4,21 @@
 import threading
 import warnings
 
-from sqlalchemy import text
-from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm import relationship as Relationship
+from sqlalchemy.types import String
+from sqlalchemy.types import Unicode
 from sqlalchemy.schema import Column
+from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.ext.declarative import has_inherited_table
+from sqlalchemy.types import Integer
+from sqlalchemy import text
+from sqlalchemy.orm import relationship as Relationship
 from sqlalchemy.schema import CheckConstraint
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.schema import Index
 from sqlalchemy.schema import ForeignKeyConstraint
-from sqlalchemy.types import Enum
 from sqlalchemy.types import DateTime
-from sqlalchemy.types import String
-from sqlalchemy.types import Unicode
 
-from sqlalchemy.ext.declarative import has_inherited_table
-from sqlalchemy.types import Integer
-
-from occams.datastore.model.model import Model
+from occams.datastore.model import Model
 
 
 NOW = text('CURRENT_TIMESTAMP')
@@ -96,33 +94,6 @@ class User(Model, AutoNamed, Referenceable):
     __table_args__ = (
         UniqueConstraint('email'),
         CheckConstraint('create_date <= modify_date', 'ck_user_valid_timeline'),
-        )
-
-
-class Log(Model, AutoNamed, Referenceable):
-
-    user_id = Column(Integer, nullable=False)
-
-    user = Relationship('User')
-
-    action = Column(
-        Enum('add', 'update', 'delete', name='log_action'),
-        nullable=False
-        )
-
-    previous = Column(Unicode)
-
-    current = Column(Unicode)
-
-    log_date = Column(DateTime, nullable=False, server_default=NOW)
-
-    __table_args__ = (
-        ForeignKeyConstraint(
-            columns=['user_id'],
-            refcolumns=['user.id'],
-            name='fk_%s_user_id' % 'log',
-            ondelete='RESTRICT'
-            ),
         )
 
 
