@@ -1,12 +1,14 @@
 """ Database Definitions
 """
 
+from datetime import date
 from decimal import Decimal
 
 from zope.interface import implements
 
 from sqlalchemy import text
 from sqlalchemy import case
+from sqlalchemy import cast
 from sqlalchemy import select
 from sqlalchemy import union
 from sqlalchemy import alias
@@ -20,6 +22,7 @@ from sqlalchemy.schema import Column
 from sqlalchemy.schema import ForeignKey
 from sqlalchemy.schema import CheckConstraint
 from sqlalchemy.types import Boolean
+from sqlalchemy.types import Date
 from sqlalchemy.types import DateTime
 from sqlalchemy.types import Enum
 from sqlalchemy.types import Numeric
@@ -99,8 +102,8 @@ class _History(object):
         """
         filter = (None == cls.remove_date)
         if on is not None:
-            after_create = (on >= cls.create_date)
-            before_remove = (on < cls.remove_date)
+            after_create = (cast(on, Date) >= cast(cls.create_date, Date))
+            before_remove = (cast(on, Date) < cast(cls.remove_date, Date))
             during = after_create & before_remove
             filter = case([(filter, after_create)], else_=during)
         return filter
@@ -290,6 +293,28 @@ class Choice(Model, _AutoNamed, _Entry, _Describeable, _Editable):
         )
 
 
+def _defaultCollectDate(context):
+    """
+    Callback for generating default collect date value.
+    It will try to lookup the previous ``collect_date`` and give the
+    date the entry is input by default if none is found.
+    This method should not be called if one is supplied by the user.
+    """
+    entity_table = Entity.__table__
+    name = context.current_parameters['name']
+    collect_date = date.today()
+    if name:
+        result = context.connection.execute(
+            select([entity_table.c.collect_date], (entity_table.c.name == name))
+            .order_by(entity_table.c.create_date.desc())
+            .limit(1)
+            )
+        previous = result.first()
+        if previous:
+            collect_date = previous.collect_date
+    return collect_date
+
+
 class Entity(Model, _AutoNamed, _Entry, _Describeable, _Editable, _History):
     implements(IEntity)
 
@@ -304,6 +329,8 @@ class Entity(Model, _AutoNamed, _Entry, _Describeable, _Editable, _History):
     state_id = Column(ForeignKey(State.id, ondelete='CASCADE'), index=True)
 
     state = Relationship('State')
+
+    collect_date = Column(Date, nullable=False, index=True, default=_defaultCollectDate)
 
     # Private reference to child objects so that they can be removed in a
     # cascading fashion by the ORM (otherwise they'll be left as orphaned
