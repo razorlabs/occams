@@ -52,19 +52,33 @@ def checksum(*args):
 
 
 def generateChecksum(attribute):
+    """
+    Creates a checksum for an attribute.
+    """
     values = [
+        # Consider ONLY the schema name, as descriptions would create a new
+        # checksum for all attributes
         attribute.schema.name,
-        attribute.schema.description,
+
+        # Attribute properties to consider, note object_schema_id is not
+        # considered because only its fields matter not the actual sub form
+        # itself
         attribute.name,
         attribute.title,
         attribute.description,
         attribute.type,
         attribute.is_collection,
         attribute.is_required,
-        attribute.object_schema_id,
         ]
-    for choice in attribute.choices.values():
-        values.extend([choice.name, choice.title, choice.value])
+
+    # Consider choices as well, but order them alphabetically instead of
+    # by order in case things were just rearranged, which apparently
+    # should never affect the checksum
+    for choice in sorted(attribute.choices.values(), key=lambda c: c.order):
+        # Choice name does not matter because it's only used for communication
+        # between the user interface and the data dictionary
+        values.extend([choice.order, choice.title, choice.value])
+
     return checksum(*values)
 
 
@@ -74,9 +88,9 @@ def attributeBeforeFlush(session, flush_context, instances):
     """
     attributes = lambda i: isinstance(i, Attribute)
     for instance in filter(attributes, session.new):
-        instance.checksum = generateChecksum(instance)
+        instance._checksum = generateChecksum(instance)
     for instance in filter(attributes, session.dirty):
-        instance.checksum = generateChecksum(instance)
+        instance._checksum = generateChecksum(instance)
 
 
 def registerLibarianSession(session):
@@ -177,7 +191,9 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
 
     object_schema = Relationship('Schema', primaryjoin=(object_schema_id == Schema.id))
 
-    checksum = Column(String(32), nullable=False)
+    _checksum = Column('checksum', String(32), nullable=False)
+
+    checksum = Synonym('_checksum', descriptor=property(lambda self: self._checksum))
 
     value_min = Column(Integer)
 

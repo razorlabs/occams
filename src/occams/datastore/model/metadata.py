@@ -11,7 +11,7 @@ from sqlalchemy.schema import Column
 from sqlalchemy.schema import CheckConstraint
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.schema import Index
-from sqlalchemy.schema import ForeignKey
+from sqlalchemy.schema import ForeignKeyConstraint
 from sqlalchemy.types import Enum
 from sqlalchemy.types import DateTime
 from sqlalchemy.types import String
@@ -93,7 +93,7 @@ class User(Model, AutoNamed, Referenceable):
 
     modify_date = Column(DateTime, nullable=False, server_default=NOW, onupdate=NOW)
 
-    __table_args = (
+    __table_args__ = (
         UniqueConstraint('email'),
         CheckConstraint('create_date <= modify_date', 'ck_user_valid_timeline'),
         )
@@ -101,12 +101,12 @@ class User(Model, AutoNamed, Referenceable):
 
 class Log(Model, AutoNamed, Referenceable):
 
-    user_id = Column(ForeignKey(User.id), nullable=False)
+    user_id = Column(Integer, nullable=False)
 
     user = Relationship('User')
 
     action = Column(
-        Enum('add', 'update', 'delete', name='feed_action'),
+        Enum('add', 'update', 'delete', name='log_action'),
         nullable=False
         )
 
@@ -115,6 +115,15 @@ class Log(Model, AutoNamed, Referenceable):
     current = Column(Unicode)
 
     log_date = Column(DateTime, nullable=False, server_default=NOW)
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            columns=['user_id'],
+            refcolumns=['user.id'],
+            name='fk_%s_user_id' % 'log',
+            ondelete='RESTRICT'
+            ),
+        )
 
 
 def buildModifiableConstraints(cls):
@@ -127,6 +136,18 @@ def buildModifiableConstraints(cls):
     copying and pasting the constraints to each class.
     """
     return (
+        ForeignKeyConstraint(
+            columns=['create_user_id'],
+            refcolumns=['user.id'],
+            name='fk_%s_create_user_id' % cls.__tablename__,
+            ondelete='RESTRICT'
+            ),
+        ForeignKeyConstraint(
+            columns=['modify_user_id'],
+            refcolumns=['user.id'],
+            name='fk_%s_modify_user_id' % cls.__tablename__,
+            ondelete='RESTRICT'
+            ),
         CheckConstraint(
             'create_date <= modify_date',
             'ck_%s_valid_timeline' % cls.__tablename__
@@ -147,7 +168,7 @@ class Modifiable(object):
 
     @declared_attr
     def create_user_id(cls):
-        return Column(ForeignKey(User.id), nullable=False, default=getActiveUserId)
+        return Column(Integer, nullable=False, default=getActiveUserId)
 
     @declared_attr
     def create_user(cls):
@@ -160,7 +181,7 @@ class Modifiable(object):
 
     @declared_attr
     def modify_user_id(cls):
-        return Column(ForeignKey(User.id), nullable=False, default=getActiveUserId)
+        return Column(Integer, nullable=False, default=getActiveUserId)
 
     @declared_attr
     def modify_user(cls):
