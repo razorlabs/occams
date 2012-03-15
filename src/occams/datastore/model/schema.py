@@ -3,13 +3,15 @@
 
 import hashlib
 from decimal import Decimal
-from datetime import date
+import datetime
 import re
 
 from sqlalchemy import event
+from sqlalchemy import cast
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship as Relationship
 from sqlalchemy.orm import synonym as Synonym
+from sqlalchemy.orm import class_mapper
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.schema import Column
 from sqlalchemy.schema import CheckConstraint
@@ -76,7 +78,7 @@ def generateChecksum(attribute):
     # Consider choices as well, but order them alphabetically instead of
     # by order in case things were just rearranged, which apparently
     # should never affect the checksum
-    for choice in sorted(attribute.choices.values(), key=lambda c: c.order):
+    for choice in attribute.choices:
         # Choice name does not matter because it's only used for communication
         # between the user interface and the data dictionary
         values.extend([choice.order, choice.title, choice.value])
@@ -104,8 +106,37 @@ def unregisterAttributeListener(session):
 
 
 def defaultPublishDate(context):
-    if context.current_parameters['state'] in ('published', 'deprecated'):
-        return date.today()
+    if context.current_parameters['state'] == 'published':
+        return datetime.date.today()
+
+
+def defaultDeprecateDate(context):
+    if context.current_parameters['state'] == 'deprecated':
+        return datetime.date.today()
+
+
+def deepcopy(schema):
+    schemaList = ('base_schema', 'name', 'title', 'description', 'storage', 'is_inline',)
+    attributeList = ('name', 'title', 'description', 'type', 'is_collection',
+        'object_schema', 'object_schema_id',
+        'is_required', 'collection_min', 'collection_max',
+        'value_min', 'value_max', 'validator', 'order'
+        )
+    choiceList = ('name', 'title', 'description', 'value', 'order')
+    schemaCopy = Schema(**dict([(p, getattr(schema, p)) for p in schemaList]))
+
+    for attributeName, attribute in schema.attributes.items():
+        attributeCopy = Attribute(**dict([(p, getattr(attribute, p)) for p in attributeList]))
+        schemaCopy.attributes[attributeName] = attributeCopy
+
+        if attribute.type == 'object':
+            attributeCopy.object_schema = deepcopy(attribute.object_schema)
+
+        for choice in attribute.choices:
+            choiceCopy = Choice(**dict([(p, getattr(choice, p)) for p in choiceList]))
+            attributeCopy.choices.append(choiceCopy)
+
+    return schemaCopy
 
 
 class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
@@ -138,9 +169,13 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
 
     is_inline = Column(Boolean)
 
-    attributes = Relationship('Attribute',
+    attributes = Relationship(
+        'Attribute',
         primaryjoin='Schema.id == Attribute.schema_id',
-        collection_class=attribute_mapped_collection('name'))
+        collection_class=attribute_mapped_collection('name'),
+        back_populates='schema',
+        order_by='Attribute.order',
+        )
 
     @declared_attr
     def __table_args__(cls):
@@ -151,16 +186,25 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
                 name='fk_%s_base_schema_id' % cls.__tablename__,
                 ondelete='CASCADE',
                 ),
-            Index('ix_%s_name' % cls.__tablename__, 'name'),
+            UniqueConstraint('name', 'publish_date'),
             Index('ix_%s_base_schema_id' % cls.__tablename__, 'base_schema_id'),
+            CheckConstraint(
+                """
+                CASE
+                    WHEN state = 'draft' OR state='review' THEN
+                        publish_date IS NULL
+                    WHEN state = 'published' OR state = 'retracted' THEN
+                        publish_date IS NOT NULL
+                END
+                """,
+                name='ck_%s_valid_publication'
+                ),
             )
 
     def __getitem__(self, key):
         return self.attributes[key]
 
     def __setitem__(self, key, value):
-        if key != value.name:
-            raise ValueError
         self.attributes[value.name] = value
 
     def __delitem__(self, key):
@@ -181,17 +225,38 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
     def __iter__(self):
         return self.attributes.__iter__()
 
+    @classmethod
+    def asOf(cls, on, session):
+        """
+        Helper method for finding the most recently published version of a schema
+        """
+        query = session.query(cls).filter(cls.state == 'published')
+        if on is not None:
+            if not isinstance(on, datetime.date):
+                raise ValueError('[%s] is not a valid timestamp' % on)
+            query = query.filter(cls.publish_date <= cast(on, Date))
+        query = query.order_by(cls.publish_date.desc()).limit(1)
+        return query.first()
+
 
 class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
     implements(IAttribute)
 
     schema_id = Column(Integer, nullable=False,)
 
-    schema = Relationship('Schema', primaryjoin=(schema_id == Schema.id))
+    schema = Relationship(
+        'Schema',
+        back_populates='attributes',
+        primaryjoin=(schema_id == Schema.id),
+        )
 
     type = Column(Enum(*ATTRIBUTE_TYPE_NAMES, name='attribute_type'), nullable=False)
 
-    choices = Relationship('Choice', collection_class=attribute_mapped_collection('name'))
+    choices = Relationship(
+        'Choice',
+        back_populates='attribute',
+        order_by='Choice.order',
+        )
 
     is_collection = Column(Boolean, nullable=False, default=False)
 
@@ -254,7 +319,7 @@ class Choice(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
 
     attribute_id = Column(Integer, nullable=False,)
 
-    attribute = Relationship('Attribute')
+    attribute = Relationship('Attribute', back_populates='choices')
 
     def get_value(self):
         value = self._value

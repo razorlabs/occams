@@ -32,7 +32,12 @@ class ModelTestCase(unittest.TestCase):
     def testAttribute(self):
         session = self.layer['session']
         schema = model.Schema(name='Foo', title=u'Foo')
-        schema['foo'] = model.Attribute(name='foo', title=u'Enter Foo', type='string', schema=schema, order=0)
+        schema['foo'] = model.Attribute(
+            name='foo',
+            title=u'Enter Foo',
+            type='string',
+            order=0
+            )
         session.add(schema)
         session.flush()
         schemaCount = session.query(model.Attribute).count()
@@ -41,11 +46,32 @@ class ModelTestCase(unittest.TestCase):
     def testChoice(self):
         session = self.layer['session']
         schema = model.Schema(name='Foo', title=u'Foo')
-        attribute = schema['foo'] = model.Attribute(name='foo', title=u'Enter Foo', type='string', schema=schema, order=0)
-        schema['foo'].choices['foo'] = model.Choice(attribute=attribute, name='foo', title=u'Foo', value='foo', order=0)
-        schema['foo'].choices['bar'] = model.Choice(attribute=attribute, name='bar', title=u'Bar', value='bar', order=1)
-        schema['foo'].choices['baz'] = model.Choice(attribute=attribute, name='baz', title=u'Baz', value='baz', order=2)
+        schema['foo'] = model.Attribute(name='foo', title=u'Enter Foo', type='string', order=0)
+        schema['foo'].choices = [
+            model.Choice(name='foo', title=u'Foo', value='foo', order=0),
+            model.Choice(name='bar', title=u'Bar', value='bar', order=1),
+            model.Choice(name='baz', title=u'Baz', value='baz', order=2),
+            ]
         session.add(schema)
         session.flush()
         schemaCount = session.query(model.Choice).count()
         self.assertEquals(schemaCount, 3, u'Did not find choices')
+
+    def testDeepCopy(self):
+        session = self.layer['session']
+        schema = model.Schema(name='Foo', title=u'Foo')
+        schema['foo'] = model.Attribute(name='foo', title=u'Enter Foo', type='string', order=0)
+        schema['foo'].choices = [
+            model.Choice(name='foo', title=u'Foo', value='foo', order=0),
+            model.Choice(name='bar', title=u'Bar', value='bar', order=1),
+            model.Choice(name='baz', title=u'Baz', value='baz', order=2),
+            ]
+        session.add(schema)
+        session.flush()
+        schemaCount = session.query(model.Choice).count()
+        self.assertEquals(schemaCount, 3, u'Did not find choices')
+
+        schemaCopy = model.deepcopy(schema)
+        session.add(schemaCopy)
+        session.flush()
+        self.assertNotEqual(schema.id, schemaCopy.id)

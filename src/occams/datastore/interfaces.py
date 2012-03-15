@@ -149,7 +149,7 @@ class ISchema(IHistoryItem):
 
     state = zope.schema.Choice(
         title=_(u'Circulation State'),
-        values=sorted(['draft', 'review', 'published', 'deprecated']),
+        values=sorted(['draft', 'review', 'published', 'retracted']),
         default='draft',
         )
 

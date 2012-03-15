@@ -18,6 +18,7 @@ from occams.datastore.model.auditing import unregisterAuditingListener
 from occams.datastore.model.schema import Schema
 from occams.datastore.model.schema import Attribute
 from occams.datastore.model.schema import Choice
+from occams.datastore.model.schema import deepcopy
 from occams.datastore.model.schema import registerAttributeListener
 from occams.datastore.model.schema import unregisterAttributeListener
 
