@@ -16,13 +16,13 @@ Also, we'd like the following (not supported yet):
     - `repository/formName/entityName/@@view`
 
 """
-
+try:
+    from repoze.zope2.publishtraverse import DefaultPublishTraverse
+except ImportError:
+    from ZPublisher.BaseRequest import DefaultPublishTraverse
 from OFS.SimpleItem import SimpleItem
 from zope.component import adapts
-from zope.component import queryMultiAdapter
-from zope.container.interfaces import IReadContainer
 from zope.interface import implements
-from zope.publisher.defaultview import getDefaultViewName
 from zope.publisher.interfaces.http import IHTTPRequest
 from zope.publisher.interfaces.browser import IBrowserPublisher
 from zExceptions import NotFound
@@ -107,7 +107,7 @@ class AttributeContext(DataBaseItemContext):
     implements(IAttributeContext)
 
 
-class ExtendedTraversal(object):
+class ExtendedTraversal(DefaultPublishTraverse):
     """
     Generic traverser for dynamic object URL traversal from non-zodb sources
     Parts of the code for this class adopted from ``grokcore.traverser``,
@@ -120,47 +120,18 @@ class ExtendedTraversal(object):
 
     implements(IBrowserPublisher)
 
-    def __init__(self, context, request):
-        """
-        Convenience constructor so sub-classes don't have to set these values
-        """
-        self.context = context
-        self.request = request
-
-    def browserDefault(self, request):
-        """
-        Returns the default view name for the current context.
-        Ideally, transient contexts should still register their default views
-        with <browser:defaultView for="foo.context" name="view" />
-        """
-        view_name = getDefaultViewName(self.context, request)
-        view_uri = "@@%s" % view_name
-        return self.context, (view_uri,)
-
     def publishTraverse(self, request, name):
         """
         Traverses through the current context in the URL, favoring default
         machinery.
         """
-
         # Attempt traversal (the item is possibly in other sources)
         child = self.traverse(name)
         if child is not None:
             return child.__of__(self.context)
 
-        # Attempt contained child lookup (for folder-ish types)
-        if IReadContainer.providedBy(self.context):
-            item = self.context.get(name)
-            if item is not None:
-                return item
-
-        # Attempt view lookup (maybe the name is a view?)
-        view = queryMultiAdapter((self.context, request), name=name)
-        if view is not None:
-            return view
-
         # Well screw it, we tried
-        raise NotFound(self.context, name, request)
+        return super(ExtendedTraversal, self).publishTraverse(request, name)
 
     def traverse(self, name):
         """
