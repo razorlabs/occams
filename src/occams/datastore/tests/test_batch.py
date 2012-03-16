@@ -15,7 +15,7 @@ from occams.datastore.testing import DATABASE_LAYER
 
 
 class BatchingTestCase(unittest.TestCase):
-    """ 
+    """
     Verifies DataStore Entity storage
     """
 
@@ -33,11 +33,9 @@ class BatchingTestCase(unittest.TestCase):
             ])
         self.session.flush()
 
-
     def test_implementation(self):
         self.assertTrue(verifyClass(IBatch, SqlBatch))
         self.assertTrue(verifyClass(IFiniteSequence, SqlBatches))
-
 
     def test_first_element(self):
         session = self.session
@@ -47,7 +45,6 @@ class BatchingTestCase(unittest.TestCase):
         self.assertNotEqual(id, None)
         self.assertTrue(item.name, 'Bar')
 
-
     def test_last_element(self):
         session = self.session
         query = session.query(model.Schema).order_by(model.Schema.name)
@@ -55,7 +52,6 @@ class BatchingTestCase(unittest.TestCase):
         (id, item) = batch.firstElement
         self.assertNotEqual(id, None)
         self.assertTrue(item.name, 'Raz')
-
 
     def test_getitem(self):
         session = self.session
@@ -66,13 +62,11 @@ class BatchingTestCase(unittest.TestCase):
         self.assertTrue(item.name, 'Foo')
         self.assertRaises(IndexError, batch.__getitem__, 10)
 
-
     def test_len(self):
         session = self.session
         query = session.query(model.Schema).order_by(model.Schema.name)
         batch = SqlBatch(query)
         self.assertTrue(len(batch), 6)
-
 
     def test_contains(self):
         session = self.session
@@ -84,7 +78,6 @@ class BatchingTestCase(unittest.TestCase):
         item = model.Schema(id=99, name='Blarg', title=u'Blah')
         self.assertFalse(item in batch)
 
-
     def test_getslice_(self):
         session = self.session
         query = session.query(model.Schema).order_by(model.Schema.name)
@@ -93,7 +86,6 @@ class BatchingTestCase(unittest.TestCase):
         self.assertNotEqual(None, generator)
         names = tuple([r.name for i, r in generator])
         self.assertEqual(('Caz', 'Foo'), names)
-
 
     def test_eq(self):
         session = self.session

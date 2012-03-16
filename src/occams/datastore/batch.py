@@ -10,7 +10,7 @@ from z3c.batching.batch import Batches
 
 class SqlBatch(Batch):
     """
-    Batch implementation for sqlalchemy. 
+    Batch implementation for sqlalchemy.
     See IBatch
     """
 
@@ -105,7 +105,7 @@ class SqlBatch(Batch):
 
 
     def __contains__(self, item):
-        return item in iter(self)
+        return (item.id, item) in iter(self)
 
 
     def __getslice__(self, i, j):
