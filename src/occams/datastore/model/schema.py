@@ -115,30 +115,6 @@ def defaultDeprecateDate(context):
         return datetime.date.today()
 
 
-def deepcopy(schema):
-    schemaList = ('base_schema', 'name', 'title', 'description', 'storage', 'is_inline',)
-    attributeList = ('name', 'title', 'description', 'type', 'is_collection',
-        'object_schema', 'object_schema_id',
-        'is_required', 'collection_min', 'collection_max',
-        'value_min', 'value_max', 'validator', 'order'
-        )
-    choiceList = ('name', 'title', 'description', 'value', 'order')
-    schemaCopy = Schema(**dict([(p, getattr(schema, p)) for p in schemaList]))
-
-    for attributeName, attribute in schema.attributes.items():
-        attributeCopy = Attribute(**dict([(p, getattr(attribute, p)) for p in attributeList]))
-        schemaCopy.attributes[attributeName] = attributeCopy
-
-        if attribute.type == 'object':
-            attributeCopy.object_schema = deepcopy(attribute.object_schema)
-
-        for choice in attribute.choices:
-            choiceCopy = Choice(**dict([(p, getattr(choice, p)) for p in choiceList]))
-            attributeCopy.choices.append(choiceCopy)
-
-    return schemaCopy
-
-
 class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
     implements(ISchema)
 
@@ -226,17 +202,45 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         return self.attributes.__iter__()
 
     @classmethod
-    def asOf(cls, on, session):
+    def asOf(cls, key, on, session):
         """
         Helper method for finding the most recently published version of a schema
         """
-        query = session.query(cls).filter(cls.state == 'published')
+        query = session.query(cls).filter_by(name=key, state='published')
         if on is not None:
             if not isinstance(on, datetime.date):
                 raise ValueError('[%s] is not a valid timestamp' % on)
             query = query.filter(cls.publish_date <= cast(on, Date))
         query = query.order_by(cls.publish_date.desc()).limit(1)
         return query.first()
+
+    def copy(self):
+        schemaList = (
+            'base_schema', 'name', 'title', 'description', 'storage', 'is_inline',
+            )
+        attributeList = (
+            'name', 'title', 'description', 'type', 'is_collection',
+            'object_schema', 'object_schema_id',
+            'is_required', 'collection_min', 'collection_max',
+            'value_min', 'value_max', 'validator', 'order'
+            )
+        choiceList = ('name', 'title', 'description', 'value', 'order')
+
+        copy = lambda c, l: c.__class__(**dict([(p, getattr(c, p)) for p in l]))
+
+        schemaCopy = copy(self, schemaList)
+
+        for attributeName, attribute in self.attributes.items():
+            attributeCopy = copy(attribute, attributeList)
+            schemaCopy.attributes[attributeName] = attributeCopy
+
+            if attribute.type == 'object':
+                attributeCopy.object_schema = attribute.object_schema.copy()
+
+            for choice in attribute.choices:
+                attributeCopy.choices.append(copy(choice, choiceList))
+
+        return schemaCopy
 
 
 class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):

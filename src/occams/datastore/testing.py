@@ -17,7 +17,7 @@ class DataBaseLayer(plone.testing.Layer):
         """
         Creates the database structures.
         """
-        engine = sqlalchemy.create_engine('sqlite:///', echo=False)
+        engine = sqlalchemy.create_engine('sqlite:///', echo=True)
         model.Model.metadata.create_all(engine, checkfirst=True)
         factory = sqlalchemy.orm.sessionmaker(engine, class_=model.DataStoreSession)
         self['session'] = sqlalchemy.orm.scoped_session(factory)

@@ -353,6 +353,41 @@ class IValue(IHistoryItem):
         )
 
 
+class IInstance(IDataStoreComponent):
+    """
+    An object derived from EAV entries. Objects of this type are effectively
+    stripped from their database references and are simply Python objects.
+    """
+
+    __id__ = zope.interface.Attribute(_(
+        u'The INTERNAL id of the instance. Tampering or accessing this id '
+        u'outside of this package is highly not recommended'))
+
+    __schema__ = zope.interface.Attribute(_(
+        u'The schema the created object will represent'
+        ))
+
+    __state__ = zope.interface.Attribute(_(
+        u'The workflow state of the created object.'
+        ))
+
+    title = zope.interface.Attribute(_(
+        u'The instance\'s database-unique name'
+        ))
+
+    description = zope.interface.Attribute(_(
+        u'A description for the object'
+        ))
+
+    def setState(state):
+        """
+        """
+
+    def getState():
+        """
+        """
+
+
 class IManager(IDataStoreComponent):
     """
     Specification for management components, that is, components that are in

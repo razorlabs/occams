@@ -57,7 +57,7 @@ class ModelTestCase(unittest.TestCase):
         schemaCount = session.query(model.Choice).count()
         self.assertEquals(schemaCount, 3, u'Did not find choices')
 
-    def testDeepCopy(self):
+    def testSchemaCopy(self):
         session = self.layer['session']
         schema = model.Schema(name='Foo', title=u'Foo')
         schema['foo'] = model.Attribute(name='foo', title=u'Enter Foo', type='string', order=0)
@@ -71,7 +71,7 @@ class ModelTestCase(unittest.TestCase):
         schemaCount = session.query(model.Choice).count()
         self.assertEquals(schemaCount, 3, u'Did not find choices')
 
-        schemaCopy = model.deepcopy(schema)
+        schemaCopy = schema.copy()
         session.add(schemaCopy)
         session.flush()
         self.assertNotEqual(schema.id, schemaCopy.id)

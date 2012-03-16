@@ -69,15 +69,22 @@ def cleanDataByState(entity):
                 del entity[name]
 
 
+def enforceSchemaState(entity):
+    if entity.scheam.state != 'published':
+        raise Exception
+
+
 def entityBeforeFlush(session, flush_context, instances):
     """
     Session Event handler to update attribute checksums
     """
-    attributes = lambda i: isinstance(i, Entity)
-    for instance in filter(attributes, session.new):
-        instance._checksum = cleanDataByState(instance)
-    for instance in filter(attributes, session.dirty):
-        instance._checksum = cleanDataByState(instance)
+    instances = lambda i: isinstance(i, Entity)
+    for instance in filter(instances, session.new):
+        enforceSchemaState(instance)
+        cleanDataByState(instance)
+    for instance in filter(instances, session.dirty):
+        enforceSchemaState(instance)
+        cleanDataByState(instance)
 
 
 def registerEntityListener(session):
