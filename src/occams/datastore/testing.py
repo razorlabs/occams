@@ -8,7 +8,7 @@ import plone.testing
 from occams.datastore import model
 
 
-class DataBaseLayer(plone.testing.Layer):
+class DataStoreLayer(plone.testing.Layer):
     """
     DataBase application layer for tests.
     """
@@ -17,7 +17,7 @@ class DataBaseLayer(plone.testing.Layer):
         """
         Creates the database structures.
         """
-        engine = sqlalchemy.create_engine('sqlite:///', echo=True)
+        engine = sqlalchemy.create_engine('sqlite:///', echo=False)
         model.Model.metadata.create_all(engine, checkfirst=True)
         factory = sqlalchemy.orm.sessionmaker(engine, class_=model.DataStoreSession)
         self['session'] = sqlalchemy.orm.scoped_session(factory)
@@ -47,4 +47,4 @@ class DataBaseLayer(plone.testing.Layer):
         self['session'].rollback()
 
 
-DATABASE_LAYER = DataBaseLayer()
+DATASTORE_LAYER = DataStoreLayer()

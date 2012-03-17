@@ -29,8 +29,6 @@ class SchemaOrFieldDirectivesTestCase(unittest.TestCase):
         directive.set(field, value)
         self.assertEqual(value, directive.bind().get(field))
 
-
-
     def test_version (self):
         iface = InterfaceClass('Sample')
         field = zope.schema.Text(__name__='foo', title=u'Foo')
@@ -44,7 +42,6 @@ class SchemaOrFieldDirectivesTestCase(unittest.TestCase):
         self.assertEqual(value, directive.bind().get(iface))
         directive.set(field, value)
         self.assertEqual(value, directive.bind().get(field))
-
 
     def test_inline (self):
         iface = InterfaceClass('Sample')
@@ -62,7 +59,6 @@ class SchemaOrFieldDirectivesTestCase(unittest.TestCase):
 
 class SchemaDirectivesTestCase(unittest.TestCase):
 
-
     def test_title(self):
         iface = InterfaceClass('Sample')
         directive = directives.title
@@ -72,7 +68,6 @@ class SchemaDirectivesTestCase(unittest.TestCase):
         value = u'This is a title'
         directive.set(iface, value)
         self.assertEqual(value, directive.bind().get(iface))
-
 
     def test_description(self):
         iface = InterfaceClass('Sample')

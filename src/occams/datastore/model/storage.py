@@ -74,31 +74,6 @@ def enforceSchemaState(entity):
         raise Exception
 
 
-def entityBeforeFlush(session, flush_context, instances):
-    """
-    Session Event handler to update attribute checksums
-    """
-    instances = lambda i: isinstance(i, Entity)
-    for instance in filter(instances, session.new):
-        enforceSchemaState(instance)
-        cleanDataByState(instance)
-    for instance in filter(instances, session.dirty):
-        enforceSchemaState(instance)
-        cleanDataByState(instance)
-
-
-def registerEntityListener(session):
-    """
-    """
-    event.listen(session, 'before_flush', entityBeforeFlush)
-
-
-def unregisterEntityListenter(session):
-    """
-    """
-    event.remove(session, 'before_flush', entityBeforeFlush)
-
-
 class ValueDictionary(object):
     """
     """

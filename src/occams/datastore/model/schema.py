@@ -83,26 +83,7 @@ def generateChecksum(attribute):
         # between the user interface and the data dictionary
         values.extend([choice.order, choice.title, choice.value])
 
-    return checksum(*values)
-
-
-def attributeBeforeFlush(session, flush_context, instances):
-    """
-    Session Event handler to update attribute checksums
-    """
-    attributes = lambda i: isinstance(i, Attribute)
-    for instance in filter(attributes, session.new):
-        instance._checksum = generateChecksum(instance)
-    for instance in filter(attributes, session.dirty):
-        instance._checksum = generateChecksum(instance)
-
-
-def registerAttributeListener(session):
-    event.listen(session, 'before_flush', attributeBeforeFlush)
-
-
-def unregisterAttributeListener(session):
-    event.remove(session, 'before_flush', attributeBeforeFlush)
+    attribute._checksum = checksum(*values)
 
 
 def defaultPublishDate(context):

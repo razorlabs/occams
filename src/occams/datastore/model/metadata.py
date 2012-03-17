@@ -1,9 +1,6 @@
 """ Common metadata modules
 """
 
-import threading
-import warnings
-
 from sqlalchemy.types import String
 from sqlalchemy.types import Unicode
 from sqlalchemy.schema import Column
@@ -23,30 +20,21 @@ from occams.datastore.model import Model
 
 NOW = text('CURRENT_TIMESTAMP')
 
-registry = threading.local()
-registry.user = None
+
+def assignCreator(instance):
+    pass
 
 
-def setActiveUser(user):
-    if user.id is None:
-        warnings.warn(
-            'Setting active user that does not have an ID number yet. '
-            'Possibly this method was called before flushing the user to the '
-            'database.'
-            )
-    registry.user = user
+def assignModifier(instance):
+    pass
 
 
-def getActiveUser():
-    return registry.user
-
-
-def getActiveUserId():
-    return registry.user.id
-
-
-def clearActiveUser():
-    registry.user = None
+def onModifiableBeforeFlush(session, flush_context, instances):
+    instances = lambda i: isinstance(i, Modifiable)
+    for instance in filter(instances, session.new):
+        assignCreator(instance)
+    for instance in filter(instances, session.dirty):
+        assignModifier(instance)
 
 
 class AutoNamed(object):
@@ -139,7 +127,7 @@ class Modifiable(object):
 
     @declared_attr
     def create_user_id(cls):
-        return Column(Integer, nullable=False, default=getActiveUserId)
+        return Column(Integer, nullable=False)
 
     @declared_attr
     def create_user(cls):
@@ -152,7 +140,7 @@ class Modifiable(object):
 
     @declared_attr
     def modify_user_id(cls):
-        return Column(Integer, nullable=False, default=getActiveUserId)
+        return Column(Integer, nullable=False)
 
     @declared_attr
     def modify_user(cls):

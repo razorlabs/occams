@@ -11,7 +11,7 @@ from occams.datastore import model
 from occams.datastore.batch import SqlBatch
 from occams.datastore.batch import SqlBatches
 
-from occams.datastore.testing import DATABASE_LAYER
+from occams.datastore.testing import DATASTORE_LAYER
 
 
 class BatchingTestCase(unittest.TestCase):
@@ -19,7 +19,7 @@ class BatchingTestCase(unittest.TestCase):
     Verifies DataStore Entity storage
     """
 
-    layer = DATABASE_LAYER
+    layer = DATASTORE_LAYER
 
     def setUp(self):
         self.session = self.layer['session']

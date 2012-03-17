@@ -27,31 +27,6 @@ class Auditable(object):
         return map
 
 
-def auditableBeforeFlush(session, flush_context, instances):
-    """
-    Session Event handler for when auditable instances are about to be flushed
-    """
-    auditables = lambda i: hasattr(i, '__audit_mapper__')
-    for instance in filter(auditables, session.dirty):
-        createRevision(instance, session)
-    for instance in filter(auditables, session.deleted):
-        createRevision(instance, session, deleted=True)
-
-
-def registerAuditingListener(session):
-    """
-    Registers a session listener for auditable instances
-    """
-    event.listen(session, 'before_flush', auditableBeforeFlush)
-
-
-def unregisterAuditingListener(session):
-    """
-    Unregisters a session listener for auditable instances
-    """
-    event.remove(session, 'before_flush', auditableBeforeFlush)
-
-
 def auditMapper(mapping):
     """
     Creates an identical mapping for auditing purposes
