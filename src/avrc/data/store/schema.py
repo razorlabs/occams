@@ -169,36 +169,37 @@ class SchemaManager(object):
             .filter(model.Schema.asOf(on))
             )
         schema = query.first()
-        iface = None
 
-        if schema is not None:
-            # Process the base classes first
-            if schema.base_schema:
-                ibase = self.get(schema.base_schema.name, on=on)
-            else:
-                ibase = directives.Schema
+        if schema is None:
+            raise KeyError('[\'%s\' as of \'%s\'] was not found' % (key, on))
 
-            # Call Field manager
-            manager = FieldManager(schema)
-            attribute_keys = manager.keys(on=on)
-            attributes = dict()
+        # Process the base classes first
+        if schema.base_schema:
+            ibase = self.get(schema.base_schema.name, on=on)
+        else:
+            ibase = directives.Schema
 
-            for attribute_name in attribute_keys:
-                field = manager.get(attribute_name, on=on)
-                attributes[str(attribute_name)] = field
+        # Call Field manager
+        manager = FieldManager(schema)
+        attribute_keys = manager.keys(on=on)
+        attributes = dict()
 
-            iface = InterfaceClass(
-                name=str(schema.name),
-                bases=[ibase],
-                attrs=attributes,
-                )
+        for attribute_name in attribute_keys:
+            field = manager.get(attribute_name, on=on)
+            attributes[str(attribute_name)] = field
 
-            alsoProvides(iface, ISchemaFormat)
+        iface = InterfaceClass(
+            name=str(schema.name),
+            bases=[ibase],
+            attrs=attributes,
+            )
 
-            directives.__id__.set(iface, schema.id)
-            directives.title.set(iface, schema.title)
-            directives.description.set(iface, schema.description)
-            directives.version.set(iface, schema.create_date)
+        alsoProvides(iface, ISchemaFormat)
+
+        directives.__id__.set(iface, schema.id)
+        directives.title.set(iface, schema.title)
+        directives.description.set(iface, schema.description)
+        directives.version.set(iface, schema.create_date)
 
         return iface
 
