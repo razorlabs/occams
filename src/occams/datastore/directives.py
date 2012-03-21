@@ -101,7 +101,7 @@ class version(martian.Directive):
     scope = martian.CLASS
     key = DATASTORE_KEY
     store = STORE_VALUE
-    validate = zope.schema.Datetime(required=False).validate
+    validate = zope.schema.Date(required=False).validate
 
 
 class inline(martian.Directive):

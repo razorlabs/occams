@@ -18,6 +18,7 @@ from zope.schema.vocabulary import SimpleVocabulary
 
 from occams.datastore import model
 from occams.datastore import directives
+from occams.datastore.interfaces import ManagerKeyError
 from occams.datastore.interfaces import IHierarchy
 from occams.datastore.interfaces import ISchema
 from occams.datastore.interfaces import IAttribute
@@ -34,24 +35,24 @@ class HierarchyInspector(object):
         self.session = session
 
     def getChildren(self , key, on=None):
-        schema = model.Schema.asOf(key, on, self.session)
-        if schema is None:
-            raise KeyError
-        children = self._getChildrenOfSchema(schema)
-        return [schemaToInterface(child) for child in children]
+        return [schemaToInterface(c) for c in self._children(self._get(key, on))]
 
     def getChildrenNames(self, key, on=None):
-        return [schema.name for schema in self.getChildren(key, on)]
+        return [c.name for c in self._children(self._get(key, on))]
 
-    def _getChildrenOfSchema(self, schema):
+    def _get(self, key, on=None):
+        schema = model.Schema.asOf(key, on, self.session)
+        if schema is None:
+            raise ManagerKeyError(model.Schema, key, on)
+        return schema
+
+    def _children(self, schema):
         result = []
-        if schema is not None:
-            for node in schema.sub_schemata:
-                if node.sub_schemata:
-                    children = self._getChildrenOfSchema(node)
-                    result.extend(children)
-                else:
-                    result.append(node)
+        for node in schema.sub_schemata:
+            if node.sub_schemata:
+                result.extend(self._children(node))
+            else:
+                result.append(node)
         return result
 
 
@@ -62,17 +63,27 @@ class SchemaManager(object):
 
     def __init__(self, session):
         self.session = session
-        self.query = session.query(model.Schema).filter_by(state='published')
 
-    def keys(self, on=None):
-        return [i.name for i in self.query.group_by('name').all()]
+    def _query(self, key=None, on=None, ever=False):
+        session = self.session
+        query = session.query(model.Schema).filter_by(state='published')
+        # Filter schemata with the given name, if specified
+        if key is not None:
+            query = query.filter(model.Schema.name == unicode(key))
+        # Filter schemata that exist as of the given date
+        if on is not None:
+            query = query.filter(model.Schema.publish_date <= on)
+        # Ever is ignored now
+        return query
+
+    def keys(self, on=None, ever=False):
+        return [i.name for i in self._query(on=on, ever=ever).group_by('name').all()]
 
     def lifecycles(self, key):
-        query = self.query.filter_by(name=key).order_by('order')
-        return [i.publish_date for i in query.all()]
+        return [i.publish_date for i in self._query(key=key).all()]
 
     def has(self, key, on=None, ever=False):
-        return self.query.filter_by(key=key).count() > 0
+        return self._query(key=key, on=on, ever=ever).count() > 0
 
     def purge(self, key, on=None, ever=False):
         schema = model.Schema.asOf(key, on, self.session)
@@ -83,15 +94,15 @@ class SchemaManager(object):
         return 0
 
     def retire(self, key):
-        return self.purge(key)
+        raise NotImplementedError('Unsafe to purge series of Schema(%s)' % key)
 
     def restore(self, key):
-        raise NotImplementedError
+        raise NotImplementedError('Cannot undo audit of Schema(%s)' % key)
 
     def get(self, key, on=None):
         schema = model.Schema.asOf(key, on, self.session)
         if schema is None:
-            raise KeyError
+            raise ManagerKeyError(model.Schema, key, on)
         return schemaToInterface(schema)
 
     def put(self, key, item):
@@ -116,7 +127,7 @@ def schemaToInterface(schema):
     iface = InterfaceClass(
         name=str(schema.name),
         bases=[ibase],
-        attrs=[attributeToField(a) for a in iter(schema.attributes)],
+        attrs=dict([(a.name, attributeToField(a)) for a in iter(schema.attributes)]),
         )
 
     directives.__id__.set(iface, schema.id)

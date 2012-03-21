@@ -91,11 +91,6 @@ def defaultPublishDate(context):
         return datetime.date.today()
 
 
-def defaultDeprecateDate(context):
-    if context.current_parameters['state'] == 'deprecated':
-        return datetime.date.today()
-
-
 class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
     implements(ISchema)
 
@@ -187,7 +182,7 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         """
         Helper method for finding the most recently published version of a schema
         """
-        query = session.query(cls).filter_by(name=key, state='published')
+        query = session.query(cls).filter_by(name=unicode(key), state='published')
         if on is not None:
             if not isinstance(on, datetime.date):
                 raise ValueError('[%s] is not a valid timestamp' % on)

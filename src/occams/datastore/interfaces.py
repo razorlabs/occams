@@ -32,6 +32,17 @@ typesVocabulary = SimpleVocabulary([
     )
 
 
+class ManagerKeyError(KeyError):
+
+    def __init__(self, class_, key, on=None):
+        if on is not None:
+            message = '%s(%s) as of %s not found' % (class_.__name__, key, on)
+        else:
+            message = '%s(%s) not found' % (class_.__name__, key)
+        super(ManagerKeyError, self).__init__(message)
+
+
+
 class IDataStoreComponent(zope.interface.Interface):
     """
     Marker interface for components of this package.
