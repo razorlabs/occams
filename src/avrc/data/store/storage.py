@@ -493,7 +493,8 @@ class ValueManager(object):
         if isinstance(key, basestring):
             query = (
                 session.query(dsmodel.Attribute)
-                .filter_by(name=key, schema=entity.schema)
+                .filter_by(name=key)
+                .filter(dsmodel.Attribute.schema.has(name=entity.schema.name))
                 .filter(dsmodel.Attribute.asOf(None))
                 )
             attribute = query.first()
