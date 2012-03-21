@@ -1,4 +1,3 @@
-from sqlalchemy import event
 from sqlalchemy import Column
 from sqlalchemy import ForeignKeyConstraint
 from sqlalchemy import Integer
@@ -7,6 +6,7 @@ from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import mapper
 from sqlalchemy.orm import attributes
 from sqlalchemy.orm import object_mapper
+from sqlalchemy.orm import object_session
 from sqlalchemy.orm.exc import UnmappedColumnError
 from sqlalchemy.orm.properties import RelationshipProperty
 
@@ -113,10 +113,11 @@ def auditMapper(mapping):
         mapping.add_property('revision', mapping.local_table.c.revision)
 
 
-def createRevision(instance, session, deleted=False):
+def createRevision(instance, deleted=False):
     """
     TODO: clear revision on deepcopy
     """
+    session = object_session(instance)
     obj_mapper = object_mapper(instance)
     audit_mapper = instance.__audit_mapper__
     audit_cls = audit_mapper.class_

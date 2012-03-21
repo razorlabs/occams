@@ -9,9 +9,7 @@ from zope.interface.verify import verifyObject
 import sqlalchemy.exc
 
 from occams.datastore import model
-
-
-from occams.datastore.testing import DATABASE_LAYER
+from occams.datastore.testing import DATASTORE_LAYER
 
 
 class ModelTestCase(unittest.TestCase):
@@ -19,7 +17,7 @@ class ModelTestCase(unittest.TestCase):
     Verifies DataStore compatibility with Zope-style schema
     """
 
-    layer = DATABASE_LAYER
+    layer = DATASTORE_LAYER
 
     def testSchema(self):
         session = self.layer['session']

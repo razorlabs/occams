@@ -9,6 +9,7 @@ from sqlalchemy.ext.declarative import has_inherited_table
 from sqlalchemy.types import Integer
 from sqlalchemy import text
 from sqlalchemy.orm import relationship as Relationship
+from sqlalchemy.orm import object_session
 from sqlalchemy.schema import CheckConstraint
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.schema import Index
@@ -21,20 +22,19 @@ from occams.datastore.model import Model
 NOW = text('CURRENT_TIMESTAMP')
 
 
-def assignCreator(instance):
-    pass
+def updateMetadata(instance, created):
+    session = object_session(instance)
 
+    key = session.userCallback()
+    user = session.query(User).filter_by(key=key).first()
 
-def assignModifier(instance):
-    pass
+    if user is None:
+        raise ValueError('Cannot find user \'%s\'' % key)
 
+    if created:
+        instance.create_user = user
 
-def onModifiableBeforeFlush(session, flush_context, instances):
-    instances = lambda i: isinstance(i, Modifiable)
-    for instance in filter(instances, session.new):
-        assignCreator(instance)
-    for instance in filter(instances, session.dirty):
-        assignModifier(instance)
+    instance.modify_user = user
 
 
 class AutoNamed(object):
@@ -71,16 +71,14 @@ class Describeable(object):
 
 class User(Model, AutoNamed, Referenceable):
 
-    email = Column(String, nullable=False)
-
-    fullname = Column(Unicode)
+    key = Column(String, nullable=False)
 
     create_date = Column(DateTime, nullable=False, server_default=NOW)
 
     modify_date = Column(DateTime, nullable=False, server_default=NOW, onupdate=NOW)
 
     __table_args__ = (
-        UniqueConstraint('email'),
+        UniqueConstraint('key'),
         CheckConstraint('create_date <= modify_date', 'ck_user_valid_timeline'),
         )
 

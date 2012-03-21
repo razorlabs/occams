@@ -2,11 +2,11 @@
 Application layers
 """
 
-import sqlalchemy.orm
+from sqlalchemy import create_engine
 import plone.testing
 
 from occams.datastore import model
-
+from occams.datastore.model.session import scoped_session
 
 class DataStoreLayer(plone.testing.Layer):
     """
@@ -17,28 +17,26 @@ class DataStoreLayer(plone.testing.Layer):
         """
         Creates the database structures.
         """
-        engine = sqlalchemy.create_engine('sqlite:///', echo=False)
+        engine = create_engine('sqlite:///', echo=False)
         model.Model.metadata.create_all(engine, checkfirst=True)
-        factory = sqlalchemy.orm.sessionmaker(engine, class_=model.DataStoreSession)
-        self['session'] = sqlalchemy.orm.scoped_session(factory)
+        session = scoped_session(bind=engine, user=lambda: 'bitcore@ucsd.edu')
+        self['session'] = session
 
     def tearDown(self):
         """
         Destroys the database structures.
         """
-        model.Model.metadata.drop_all(self['session'].bind, checkfirst=True)
         self['session'].close()
         del self['session']
 
     def testSetUp(self):
         """
-        Sets active user for each test
         """
         session = self['session']
-        user = model.User(email='bitcore@ucsd.edu')
+        user = model.User(key='bitcore@ucsd.edu')
         session.add(user)
         session.flush()
-        model.setActiveUser(user)
+        self['user'] = user
 
     def testTearDown(self):
         """
