@@ -63,12 +63,12 @@ valueModels = (
 
 
 class Item(object):
-    """ 
+    """
     Base class for objects with an interface.
     """
 
     def __init__(self, **kwargs):
-        """ 
+        """
         Constructor method that uses the schema's fields as key word arguments.
         """
         try:
@@ -82,13 +82,13 @@ class Item(object):
 
 
 def ObjectFactory(iface, **kwargs):
-    """ 
+    """
     Spawns 'anonymous' objects from interface specifications.
 
     Arguments
         ``iface``
             A Zope-style Interface
-        ``kwargs``: 
+        ``kwargs``:
             Values to apply to the newly created object
     """
     if not iface.extends(Interface):
@@ -104,12 +104,19 @@ def ObjectFactory(iface, **kwargs):
         __name__ = None
         __title__ = None
         __version__ = None
+        __collect_date__ = None
 
         def setState(self, state):
             self.__state__ = unicode(state)
 
         def getState(self):
             return self.__state__
+
+        def setCollectDate(self, date):
+            self.__collect_date__ = date
+
+        def getCollectDate(self):
+            return self.__collect_date__
 
         def __eq__(self, other):
             return self.__id__ == getattr(other, '__id__', None)
@@ -230,7 +237,7 @@ class EntityManager(object):
         if entity is not None:
             manager = ValueManager(entity)
             values = dict([(n, manager.get(n, on=on)) for n in manager.keys(on=on)])
-            iface = SchemaManager(session).get(entity.schema.name, on=entity.create_date)
+            iface = SchemaManager(session).get(entity.schema.name, on=entity.collect_date)
             result = ObjectFactory(iface, **values)
             result.__dict__.update(dict(
                 __id__=entity.id,
@@ -262,15 +269,11 @@ class EntityManager(object):
         name = u''
         title = u''
         is_new = True
+        iface = item.__schema__
 
         state = item.getState()
         filter = state is None and dict(is_default=True) or dict(name=state)
         state = session.query(dsmodel.State).filter_by(**filter).first()
-
-        iface = item.__schema__
-        schema_id = directives.__id__.bind().get(iface)
-        schema_name = iface.__name__
-        schema_title = directives.title.bind().get(iface)
 
         if item.__name__ is not None:
             name = item.__name__
@@ -278,12 +281,18 @@ class EntityManager(object):
             is_new = False
             self.retire(name)
 
-        entity = dsmodel.Entity(schema_id=schema_id, name=name, title=title, state=state)
+        entity = dsmodel.Entity(
+            schema_id=directives.__id__.bind().get(iface),
+            name=name,
+            title=title,
+            state=state,
+            )
         session.add(entity)
         session.flush()
 
         if is_new:
-            entity.name = '%s-%d' % (schema_name, entity.id)
+            schema_title = directives.title.bind().get(iface)
+            entity.name = '%s-%d' % (iface.__name__, entity.id)
             entity.title = u'%s-%d' % (schema_title, entity.id)
             session.flush()
 
@@ -293,6 +302,7 @@ class EntityManager(object):
         item.__schema__ = iface
         item.__state__ = entity.state and entity.state.name or None
         item.__version__ = entity.create_date
+        item.__collect_date__ = entity.collect_date
 
         value_manager = ValueManager(entity)
 
@@ -312,9 +322,6 @@ class ValueManager(object):
     def __init__(self, entity):
         self.session = object_session(entity)
         self.entity = entity
-
-        if entity.remove_date is not None:
-            raise Exception('Cannot modify an entity that has already been retired.')
 
 
     def keys(self, on=None, ever=False):
@@ -480,10 +487,14 @@ class ValueManager(object):
         entries = []
         entity = self.entity
 
+        if entity.remove_date is not None:
+            raise Exception('Cannot modify an entity that has already been retired.')
+
         if isinstance(key, basestring):
             query = (
                 session.query(dsmodel.Attribute)
-                .filter_by(name=key, schema=entity.schema)
+                .filter_by(name=key)
+                .filter(dsmodel.Attribute.schema.has(name=entity.schema.name))
                 .filter(dsmodel.Attribute.asOf(None))
                 )
             attribute = query.first()
