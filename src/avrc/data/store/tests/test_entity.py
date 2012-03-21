@@ -21,7 +21,7 @@ time3 = datetime.now()
 time4 = datetime.now()
 
 class EntityManagerTestCase(unittest.TestCase):
-    """ 
+    """
     Verifies DataStore Entity storage
     """
 
@@ -31,7 +31,7 @@ class EntityManagerTestCase(unittest.TestCase):
     def setUp(self):
         self.session = self.layer['session']
 
-        schema = model.Schema(name='Foo', title=u'Type Foo', create_date=time1)
+        schema = model.Schema(name='Foo', title=u'Type Foo', create_date=time1, modify_date=time1)
         self.session.add(schema)
 
         self.session.add_all([
