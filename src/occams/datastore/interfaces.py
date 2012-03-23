@@ -104,47 +104,13 @@ class IModifiable(IDataStoreComponent):
         readonly=True,
         )
 
-    remove_date = zope.schema.Datetime(
-        title=_(u'Date Removed'),
-        readonly=True,
-        required=False,
-        )
-
 
 class IDataBaseItem(IEntry, IDescribeable, IModifiable):
     """
     An object that originates from database.
     """
 
-
-class IHistoryItem(IDataBaseItem):
-    """
-    An extension of a database item. Entries of this type are non-unique
-    (i.e. the `name` is non-unique) and so a new entry is committed to the
-    database for each modification of the object, unless otherwise specified
-    by management-utility parameters. When this occurs, the previous
-    named entry is decommissioned and a new entry is created.
-    Thus, each `create_date` and `remove_date` pair now denotes a point in
-    time for an entry with `name`.
-
-    Repurposed standard `IDataBaseItem` attributes:
-        ``name``
-            Internally, the name is the lifespan of the object. This means
-            that there will be multiple entries in the database for
-            the object with the given name, and so the timestamps
-            will be able to indicate it's lifecycle.
-        ``create_date``
-            The date when the named entry came into existence.
-        ``modify_date``
-            Used if changes are ammended to and active named entry (as
-            opposed expanding the named entry's history).
-        ``remove_date``
-            The date when the named entry was decommissioned. A value of
-            None denotes that the entry is still active.
-    """
-
-
-class ISchema(IHistoryItem):
+class ISchema(IDataBaseItem):
     """
     An object that describes how an EAV schema is generated.
     Typically, an EAV schema represents a group of attributes that represent
@@ -174,6 +140,10 @@ class ISchema(IHistoryItem):
             ),
         values=sorted(['resource', 'eav', 'table']),
         default='eav',
+        )
+
+    publish_date = zope.schema.Date(
+        title=_(u'The date the schema was published for data collection')
         )
 
     is_association = zope.schema.Bool(
@@ -206,7 +176,7 @@ ISchema.base_schema = zope.schema.Object(
     )
 
 
-class IAttribute(IHistoryItem):
+class IAttribute(IDataBaseItem):
     """
     An object that describes how an EAV attribute is generated.
     Typically, an attribute is a meaningful property in the class data set.
@@ -310,7 +280,7 @@ class IChoice(IDataBaseItem):
         )
 
 
-class IEntity(IHistoryItem):
+class IEntity(IDataBaseItem):
     """
     An object that describes how an EAV object is generated.
     Note that work flow states may be assigned to class entities.
@@ -334,7 +304,7 @@ class IEntity(IHistoryItem):
         )
 
 
-class IValue(IHistoryItem):
+class IValue(IDataBaseItem):
     """
     An object that records values assigned to an EAV Entity.
     """
@@ -544,25 +514,13 @@ class IManager(IDataStoreComponent):
 
 class ISchemaManager(IManager):
     """
-    Marker interface for utilities that manage schemata metadata.
-    """
-
-
-class IFieldManager(IManager):
-    """
-    Marker interface for utilities that manage field metadata.
+    Manages published schemata in Zope-style format
     """
 
 
 class IEntityManager(IManager):
     """
-    Marker interface for utilities that manage entity metadata.
-    """
-
-
-class IValueManager(IManager):
-    """
-    Marker interface for utilities that manage value metadata.
+    Managers data entry of schema Python Object-style format
     """
 
 
@@ -582,23 +540,6 @@ class ISchemaManagerFactory(IDataStoreComponent):
         """
 
 
-class IFieldManagerFactory(IDataStoreComponent):
-    """
-    Produces a manager that is able to use database attribute descriptions
-    to produce Zope-style Fields.
-    """
-
-    def __call__(schema):
-        """
-        Manager call signature.
-
-        Arguments
-            ``schema``
-                An object that provides `ISchema`, to know which fields
-                to retrieve.
-        """
-
-
 class IEntityManagerFactory(IDataStoreComponent):
     """
     Produces a manager that is able to use database entry descriptions
@@ -613,23 +554,6 @@ class IEntityManagerFactory(IDataStoreComponent):
         Arguments
             ``session``
                 A database session to use for retrieval of entry information.
-        """
-
-
-class IValueManagerFactory(IDataStoreComponent):
-    """
-    Produces a manager that is able to use database value descriptions to
-    produce the values assigned to an object.
-    """
-
-    def __call__(entity):
-        """
-        Manager call signature.
-
-        Arguments
-            ``entity``
-                An object that provides `IEntity`, to know which assignments
-                to retrieve.
         """
 
 
@@ -688,13 +612,6 @@ class IDataStore(IDataStoreComponent):
     """
 
 
-class IDatastore(zope.interface.Interface):
-    """
-    Legacy DataStore specification.
-    Deprecated in favor of ``IDataStore``
-    """
-
-
 class IDataStoreFactory(IDataStoreComponent):
     """
     How to instantiate a DataStore
@@ -703,6 +620,7 @@ class IDataStoreFactory(IDataStoreComponent):
     def __call__(session):
         """ The session to use.
         """
+
 
 class IDataStoreExtension(IDataStoreComponent):
     """
@@ -714,8 +632,3 @@ class IDataStoreExtension(IDataStoreComponent):
         """
         The ``DataStore`` to use.
         """
-
-
-class ISchemaFormat(IDataStoreComponent):
-    """
-    """

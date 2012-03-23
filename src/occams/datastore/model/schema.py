@@ -157,6 +157,8 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         return self.attributes[key]
 
     def __setitem__(self, key, value):
+        if key != value.name:
+            value.name = key
         self.attributes[value.name] = value
 
     def __delitem__(self, key):
@@ -176,47 +178,6 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
 
     def __iter__(self):
         return self.attributes.__iter__()
-
-    @classmethod
-    def asOf(cls, key, on, session):
-        """
-        Helper method for finding the most recently published version of a schema
-        """
-        query = session.query(cls).filter_by(name=unicode(key), state='published')
-        if on is not None:
-            if not isinstance(on, datetime.date):
-                raise ValueError('[%s] is not a valid timestamp' % on)
-            query = query.filter(cls.publish_date <= cast(on, Date))
-        query = query.order_by(cls.publish_date.desc()).limit(1)
-        return query.first()
-
-    def copy(self):
-        schemaList = (
-            'base_schema', 'name', 'title', 'description', 'storage', 'is_inline',
-            )
-        attributeList = (
-            'name', 'title', 'description', 'type', 'is_collection',
-            'object_schema', 'object_schema_id',
-            'is_required', 'collection_min', 'collection_max',
-            'value_min', 'value_max', 'validator', 'order'
-            )
-        choiceList = ('name', 'title', 'description', 'value', 'order')
-
-        copy = lambda c, l: c.__class__(**dict([(p, getattr(c, p)) for p in l]))
-
-        schemaCopy = copy(self, schemaList)
-
-        for attributeName, attribute in self.attributes.items():
-            attributeCopy = copy(attribute, attributeList)
-            schemaCopy.attributes[attributeName] = attributeCopy
-
-            if attribute.type == 'object':
-                attributeCopy.object_schema = attribute.object_schema.copy()
-
-            for choice in attribute.choices:
-                attributeCopy.choices.append(copy(choice, choiceList))
-
-        return schemaCopy
 
 
 class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):

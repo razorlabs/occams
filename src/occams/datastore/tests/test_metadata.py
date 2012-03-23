@@ -6,7 +6,7 @@ from occams.datastore import model
 from occams.datastore.testing import DATASTORE_LAYER
 
 
-class UserTestCase(unittest.TestCase):
+class UserModelTestCase(unittest.TestCase):
     """
     Verifies user storage
     """
@@ -44,7 +44,7 @@ class UserTestCase(unittest.TestCase):
         session.rollback()
 
 
-class ModifiableTestCase(unittest.TestCase):
+class ModifiableMixinTestCase(unittest.TestCase):
     """
     Verifies modifiable extensions
     """

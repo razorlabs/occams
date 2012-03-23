@@ -11,7 +11,7 @@ from zope.interface import alsoProvides
 import zope.schema
 from zope.schema.interfaces import IObject
 
-from occams.datastore import model as model
+from occams.datastore import model
 from occams.datastore import directives
 from occams.datastore.schema import schemaToInterface
 from occams.datastore.interfaces import IInstance

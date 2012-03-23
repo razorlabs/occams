@@ -14,17 +14,9 @@ from sqlalchemy.orm.scoping import ScopedSession
 
 from occams.datastore.interfaces import IDataStoreFactory
 from occams.datastore.interfaces import IDataStore
-from occams.datastore.interfaces import IDatastore
 from occams.datastore.storage import EntityManager
 from occams.datastore.storage import ObjectFactory
 from occams.datastore.schema import SchemaManager
-
-
-class Datastore(object):
-    """
-    For the love of baby jesus, do not use this.
-    """
-    implements(IDatastore)
 
 
 class DataStore(object):
