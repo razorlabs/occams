@@ -59,6 +59,12 @@ def generateChecksum(attribute):
     """
     Creates a checksum for an attribute.
     """
+
+    # This attribute has not been assigned a parent schema yet, let the
+    # database handle this issue
+    if attribute.schema is None:
+        return None
+
     values = [
         # Consider ONLY the schema name, as descriptions would create a new
         # checksum for all attributes
@@ -127,6 +133,7 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         collection_class=attribute_mapped_collection('name'),
         back_populates='schema',
         order_by='Attribute.order',
+        cascade='all, delete, delete-orphan',
         )
 
     @declared_attr
@@ -175,9 +182,6 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
 
     def items(self):
         return self.attributes.items()
-
-    def __iter__(self):
-        return self.attributes.__iter__()
 
 
 class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):

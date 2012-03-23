@@ -16,11 +16,10 @@ import zope.schema
 from zope.interface import Interface
 from zope.interface.interface import TAGGED_DATA
 
+from occams.datastore.interfaces import typesVocabulary
 
-DATASTORE_KEY = '__avrc_data_store__'
 
-# Allowed type constraints for choices
-CASTS = ['string', 'decimal', 'integer', 'boolean']
+DATASTORE_KEY = '__occams_datastore__'
 
 
 class Table(object):
@@ -152,4 +151,7 @@ class type(martian.Directive):
     scope = martian.CLASS
     key = DATASTORE_KEY
     store = STORE_VALUE
-    validate = zope.schema.Choice(required=False, values=CASTS).validate
+    validate = zope.schema.Choice(
+        required=False,
+        values=[t.token for t in iter(typesVocabulary)]
+        ).validate

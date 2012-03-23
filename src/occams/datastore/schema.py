@@ -237,7 +237,7 @@ def copy(schema):
         schemaCopy.attributes[attributeName] = attributeCopy
 
         if attribute.type == 'object':
-            attributeCopy.object_schema = attribute.object_schema.copy()
+            attributeCopy.object_schema = copy(attribute.object_schema)
 
         for choice in attribute.choices:
             attributeCopy.choices.append(createFrom(choice, choiceList))
@@ -275,18 +275,23 @@ def schemaToInterface(schema):
 @implementer(IField)
 def attributeToField(attribute):
     """
-    Converts a SQLAlchemy attribute into a Zope-style field
+    Converts a SQLAlchemy attribute instance into a Zope-style field
     """
 
+    # Start off with the basic raw factory for the type
     factory = typesVocabulary.getTermByToken(attribute.type).value
+
+    # Build the parameters needed as the attribute is processed
     options = dict()
 
     if attribute.object_schema:
         options = dict(schema=schemaToInterface(attribute.object_schema))
 
+    # If dealing with answer choices, configure the factory
     if attribute.choices:
         terms = []
 
+        # Build the Zope-style vocabulary
         for choice in attribute.choices:
             (token, title, value) = (choice.name, choice.title, choice.value)
             terms.append(SimpleTerm(token=str(token), title=title, value=value))
@@ -294,8 +299,9 @@ def attributeToField(attribute):
         factory = zope.schema.Choice
         options = dict(vocabulary=SimpleVocabulary(terms))
 
+    # If dealing with collections of values, configure the factory
     if attribute.is_collection:
-        # Wrap the factory and options into the list
+        # Wrap the factory and original options into the list
         options = dict(value_type=factory(**options), unique=True)
         factory = zope.schema.List
 
@@ -308,12 +314,13 @@ def attributeToField(attribute):
         ))
 
     result = factory(**options)
+
+    # Order can't be one of the parameters, so assign it separately
     result.order = attribute.order
 
-    if attribute.choices:
-        directives.type.set(result, attribute.type)
-
+    # Configure the directives for better hinting
     directives.__id__.set(result, attribute.id)
+    directives.type.set(result, attribute.type)
     directives.version.set(result, attribute.schema.publish_date)
 
     return result
@@ -367,6 +374,7 @@ def fieldToAttribute(field):
     """
     Converts a Zope-style filed into a SQLAlchemy attribute instance
     """
+
     properties = dict(
         name=field.__name__,
         title=field.title,
@@ -375,18 +383,23 @@ def fieldToAttribute(field):
         is_required=field.required,
         choices=[],
         order=field.order,
-        type=directives.type.bind().get(field)
         )
 
-    field = field if not properties['is_collection'] else field.value_type
+    properties['type'] = directives.type.bind().get(field)
 
-    if zope.schema.interfaces.IChoice.providedBy(field):
-        try:
-            validator = (typesVocabulary.getTermByToken(properties['type']).value)()
-        except LookupError:
-            raise ValueError
+    if properties['type'] is None:
+        typeField = getattr(field, 'value_type', field)
+        if not zope.schema.interfaces.IChoice.providedBy(typeField):
+            properties['type'] = typesVocabulary.getTerm(typeField.__class__).token
+        else:
+            raise ValueError('Received field with choices and  with no type directive')
+    else:
+        typeField = field
 
-        for i, term in enumerate(field.vocabulary, start=0):
+    if zope.schema.interfaces.IChoice.providedBy(typeField):
+        validator = (typesVocabulary.getTermByToken(properties['type']).value)()
+
+        for i, term in enumerate(typeField.vocabulary, start=0):
             validator.validate(term.value)
             properties['choices'].append(model.Choice(
                 name=term.token,
@@ -395,13 +408,10 @@ def fieldToAttribute(field):
                 order=i,
                 ))
     else:
-        try:
-            properties['type'] = typesVocabulary.getTerm(field.__class__).token
-        except LookupError:
-            raise ValueError
+        properties['type'] = typesVocabulary.getTerm(typeField.__class__).token
 
-        if zope.schema.interfaces.IObject.providedBy(field):
-            properties['object_schema'] = interfaceToSchema(field.schema)
+        if zope.schema.interfaces.IObject.providedBy(typeField):
+            properties['object_schema'] = interfaceToSchema(typeField.schema)
             properties['object_schema'].is_inline = True
 
     return model.Attribute(**properties)

@@ -4,8 +4,11 @@ Test case for schema implementations and services
 
 import unittest2 as unittest
 from datetime import date
+from datetime import datetime
+from decimal import Decimal
 
 import sqlalchemy.exc
+import zope.schema
 from zope.schema.interfaces import IInt
 from zope.schema.interfaces import IDecimal
 from zope.schema.interfaces import ITextLine
@@ -74,11 +77,99 @@ class SchemaModelTestCase(unittest.TestCase):
         self.assertNotEqual(None, schema.modify_date)
         self.assertNotEqual(None, schema.modify_user)
 
+    def testDefaultPublishDate(self):
+        # Make sure the system can auto-assign a publish date to schemata
+        # that are marked as published
+        session = self.layer['session']
+        schema = model.Schema(name='Sample', title=u'Sample', state='published')
+        session.add(schema)
+        session.flush()
+        self.assertNotEqual(schema.publish_date, None)
+
     def testMissingTitle(self):
         session = self.layer['session']
         with self.assertRaises(sqlalchemy.exc.IntegrityError):
             session.add(model.Schema(name='Sample'))
             session.flush()
+
+    def testDelete(self):
+        # Test deleting an attribute via dict-like API
+        session = self.layer['session']
+        schema = model.Schema(name='Foo', title=u'Foo')
+        schema['foo'] = model.Attribute(title=u'foo', type='string', order=0)
+        session.add(schema)
+        session.flush()
+        # The attribute should have been committed
+        result = session.query(model.Attribute).filter_by(name='foo').count()
+        self.assertEqual(result, 1)
+        # Delete it like you would a dictionary
+        del schema['foo']
+        session.flush()
+        # Should have been deleted
+        result = session.query(model.Attribute).filter_by(name='foo').count()
+        self.assertEqual(result, 0)
+
+    def testContains(self):
+        # Test dict-like containment
+        session = self.layer['session']
+        schema = model.Schema(name='Foo', title=u'Foo')
+        session.add(schema)
+        session.flush()
+        self.assertNotIn('foo', schema)
+        schema['foo'] = model.Attribute(title=u'foo', type='string', order=0)
+        session.flush()
+        self.assertIn('foo', schema)
+        self.assertNotIn('bar', schema)
+
+    def testKeys(self):
+        # Test dict-like containment
+        session = self.layer['session']
+        schema = model.Schema(name='Foo', title=u'Foo')
+        session.add(schema)
+        session.flush()
+        keys = schema.keys()
+        self.assertEqual(len(keys), 0)
+        schema['foo'] = model.Attribute(title=u'foo', type='string', order=0)
+        schema['bar'] = model.Attribute(title=u'bar', type='string', order=1)
+        session.flush()
+        keys = schema.keys()
+        self.assertEqual(len(keys), 2)
+        self.assertIn('foo', keys)
+        self.assertIn('bar', keys)
+        self.assertNotIn('baz', keys)
+
+    def testValues(self):
+        # Make sure we can enumerate the attributes in the schema
+        session = self.layer['session']
+        schema = model.Schema(name='Foo', title=u'Foo')
+        session.add(schema)
+        session.flush()
+        values = schema.values()
+        self.assertEqual(len(values), 0)
+        schema['foo'] = model.Attribute(title=u'foo', type='string', order=0)
+        session.flush()
+        values = schema.values()
+        self.assertEqual(len(values), 1)
+        attribute = values[0]
+        self.assertEqual(schema, attribute.schema)
+        self.assertEqual(attribute.name, 'foo')
+
+    def testItems(self):
+        # Make sure we can enumerate the key/value pairs of the schema
+        session = self.layer['session']
+        schema = model.Schema(name='Foo', title=u'Foo')
+        session.add(schema)
+        session.flush()
+        items = schema.items()
+        self.assertEqual(len(items), 0)
+        schema['foo'] = model.Attribute(title=u'foo', type='string', order=0)
+        session.flush()
+        items = schema.items()
+        self.assertEqual(len(items), 1)
+        name, attribute = items[0]
+        self.assertEqual(schema, attribute.schema)
+        self.assertEqual(attribute.name, 'foo')
+        self.assertEqual(attribute.name, name)
 
 
 class SchemaCopyTestCase(unittest.TestCase):
@@ -88,7 +179,7 @@ class SchemaCopyTestCase(unittest.TestCase):
 
     layer = DATASTORE_LAYER
 
-    def testCopy(self):
+    def testBasic(self):
         session = self.layer['session']
         schema = model.Schema(name='Foo', title=u'Foo')
         schema['foo'] = \
@@ -107,6 +198,37 @@ class SchemaCopyTestCase(unittest.TestCase):
         session.add(schemaCopy)
         session.flush()
         self.assertNotEqual(schema.id, schemaCopy.id)
+
+    def testWithSubObject(self):
+        session = self.layer['session']
+        schema = model.Schema(
+            name='Foo',
+            title=u'Foo',
+            attributes=dict(
+                bar=model.Attribute(
+                    name='bar',
+                    title=u'Bar',
+                    type='object',
+                    order=0,
+                    object_schema=model.Schema(
+                        name='Bar',
+                        title=u'Bar',
+                        is_inline=True,
+                        )
+                    )
+                )
+            )
+
+        session.add(schema)
+        session.flush()
+
+        schemaCopy = copy(schema)
+        session.add(schemaCopy)
+        session.flush()
+
+        self.assertNotEqual(schema, schemaCopy)
+        self.assertEqual(schema.name, schemaCopy.name)
+        self.assertNotEqual(schema['bar'].object_schema, schemaCopy['bar'].object_schema)
 
 
 class AttributeTestCase(unittest.TestCase):
@@ -161,49 +283,63 @@ class HierarchyTestCase(unittest.TestCase):
 
     layer = DATASTORE_LAYER
 
-
-    def testChildren(self):
+    def setUp(self):
         session = self.layer['session']
 
         create = lambda n, b: model.Schema(
             base_schema=b,
             name=str(n),
             title=unicode(n),
-            state='published'
+            state='published',
+            publish_date=p3,
             )
 
+        # Create some dummy data
         animal = create('Animal', None)
-
         bird = create('Bird', animal)
         reptile = create('Reptile', animal)
         mammal = create('Mammal', animal)
         amphibian = create('Amphibian', animal)
-
         session.add_all([
             create('Hawk', bird),
             create('Chicken', bird),
             create('Goose', bird),
             create('Sparrow', bird),
-
             create('Snake', reptile),
             create('Lizard', reptile),
             create('Turtle', reptile),
-
             create('Mouse', mammal),
             create('Dog', mammal),
             create('Cat', mammal),
-
             create('Frog', amphibian),
             create('Salamander', amphibian),
             ])
 
         session.flush()
 
+    def testDistantRoot(self):
+        # Make sure we can get the leaf nodes from higher up the family tree
+        # (such as the root)
+        session = self.layer['session']
         hierarchy = HierarchyInspector(session)
+        children = hierarchy.getChildren('Animal')
+        self.assertEqual(len(children), 12)
 
-        names = hierarchy.getChildren('Bird')
-        self.assertEqual(4, len(names))
+    def testChildren(self):
+        # Get the actual objects
+        session = self.layer['session']
+        hierarchy = HierarchyInspector(session)
+        children = hierarchy.getChildren('Bird')
+        self.assertEqual(4, len(children))
 
+        self.assertTrue(directives.Schema.isEqualOrExtendedBy(children[0]))
+        self.assertTrue(directives.Schema.isEqualOrExtendedBy(children[1]))
+        self.assertTrue(directives.Schema.isEqualOrExtendedBy(children[2]))
+        self.assertTrue(directives.Schema.isEqualOrExtendedBy(children[3]))
+
+    def testChildrenNames(self):
+        session = self.layer['session']
+        hierarchy = HierarchyInspector(session)
         result = hierarchy.getChildrenNames('Bird')
         names = [n for n in result]
         self.assertEqual(4, len(names))
@@ -213,11 +349,28 @@ class HierarchyTestCase(unittest.TestCase):
         self.assertIn('Goose', names)
         self.assertIn('Sparrow', names)
 
+    def testNonExistent(self):
+        session = self.layer['session']
+        hierarchy = HierarchyInspector(session)
+
+        with self.assertRaises(ManagerKeyError):
+            hierarchy.getChildren('Fish')
+
         with self.assertRaises(ManagerKeyError):
             hierarchy.getChildrenNames('Fish')
 
-        names = hierarchy.getChildrenNames('Animal')
-        self.assertEqual(12, len(names))
+    def testVersioned(self):
+        session = self.layer['session']
+        hierarchy = HierarchyInspector(session)
+
+        # Shouldn't be able to get children that have not been published
+        # as of the given date
+
+        with self.assertRaises(ManagerKeyError):
+            children = hierarchy.getChildren('Animal', on=p1)
+
+        with self.assertRaises(ManagerKeyError):
+            names = hierarchy.getChildrenNames('Animal', on=p1)
 
 
 class SchemaManagerTestCase(unittest.TestCase):
@@ -327,7 +480,7 @@ class SchemaManagerTestCase(unittest.TestCase):
 
         # This behavior has been deprecated and should no long function
         with self.assertRaises(NotImplementedError):
-            manager.retire('Foo')
+            manager.restore('Foo')
 
     def testPurge(self):
         session = self.layer['session']
@@ -538,6 +691,17 @@ class InterfaceToSchemaTestCase(unittest.TestCase):
         session.add(schema)
         session.flush()
 
+    def testWithAttributes(self):
+        # Make sure that a schema with attributes can be converted
+        iface = InterfaceClass(
+            name='Foo',
+            bases=[directives.Schema],
+            attrs=dict(foo=zope.schema.TextLine(__name__='foo', title=u''))
+            )
+
+        schema = interfaceToSchema(iface)
+        self.assertIn('foo', schema)
+
 
 class AttributeToFieldTestCase(unittest.TestCase):
     """
@@ -548,16 +712,16 @@ class AttributeToFieldTestCase(unittest.TestCase):
 
     def testBasic(self):
         types = dict(
-            boolean=IBool,
-            integer=IInt,
-            decimal=IDecimal,
-            string=ITextLine,
-            text=IText,
-            date=IDate,
-            datetime=IDatetime
+            boolean=(IBool, [True, False]),
+            integer=(IInt, [1, 7]),
+            decimal=(IDecimal, [Decimal('3.4'), Decimal('4.5')]),
+            string=(ITextLine, ['foo', 'bar']),
+            text=(IText, ['Some\nFoo', 'Some\nBar']),
+            date=(IDate, [date(2011, 01, 03), date(2012, 02, 19)]),
+            datetime=(IDatetime, [datetime(2011, 01, 03), datetime(2012, 02, 19)]),
             )
 
-        for name, itype in types.iteritems():
+        for (name, (itype, choices)) in types.iteritems():
             schema = model.Schema(name='Foo', title=u'Foo')
 
             # Test as basic types
@@ -572,11 +736,59 @@ class AttributeToFieldTestCase(unittest.TestCase):
             self.assertTrue(IList.providedBy(field))
             self.assertTrue(itype.providedBy(field.value_type))
 
-    def testChoices(self):
-        pass
+            # Test with choices
+            schema['foo'] = \
+                model.Attribute(title=u'', type=name, order=0)
+            for choice in choices:
+                schema['foo'].choices.append(model.Choice(
+                    name=str(choice),
+                    title=unicode(choice),
+                    value=choice
+                    ))
+            field = attributeToField(schema['foo'])
+            self.assertTrue(IChoice.providedBy(field))
+            self.assertEqual(directives.type.bind().get(field), name)
+
+            # Test with choices AND as a collection
+            schema['foo'] = \
+                model.Attribute(title=u'', type=name, is_collection=True, order=0)
+            for choice in choices:
+                schema['foo'].choices.append(model.Choice(
+                    name=str(choice),
+                    title=unicode(choice),
+                    value=choice
+                    ))
+            field = attributeToField(schema['foo'])
+            self.assertTrue(IList.providedBy(field))
+            self.assertTrue(IChoice.providedBy(field.value_type))
+            self.assertEqual(directives.type.bind().get(field), name)
 
     def testObject(self):
-        pass
+        # Test as a basic sub-object
+        schema = model.Schema(name='Foo', title=u'Foo')
+        schema['foo'] = model.Attribute(
+            title=u'',
+            order=0,
+            type='object',
+            object_schema=model.Schema(name='Bar', title=u'Bar', is_inline=True)
+            )
+        field = attributeToField(schema['foo'])
+        self.assertTrue(IObject.providedBy(field))
+        self.assertEqual(directives.type.bind().get(field), 'object')
+
+        # Test as a collection
+        schema = model.Schema(name='Foo', title=u'Foo')
+        schema['foo'] = model.Attribute(
+            title=u'',
+            order=0,
+            type='object',
+            is_collection=True,
+            object_schema=model.Schema(name='Bar', title=u'Bar', is_inline=True)
+            )
+        field = attributeToField(schema['foo'])
+        self.assertTrue(IList.providedBy(field))
+        self.assertTrue(IObject.providedBy(field.value_type))
+        self.assertEqual(directives.type.bind().get(field), 'object')
 
 
 class FieldToAttributeTestCase(unittest.TestCase):
@@ -585,27 +797,54 @@ class FieldToAttributeTestCase(unittest.TestCase):
     """
 
     layer = DATASTORE_LAYER
-#
-#    def testInteger(self):
-#        self.fail()
-#
-#    def testDecimal(self):
-#        self.fail()
-#
-#    def testBoolean(self):
-#        self.fail()
-#
-#    def testDatetime(self):
-#        self.fail()
-#
-#    def testDate(self):
-#        self.fail()
-#
-#    def testObject(self):
-#        self.fail()
-#
-#    def testString(self):
-#        self.fail()
-#
-#    def testText(self):
-#        self.fail()
+
+    def testBasic(self):
+        types = dict(
+            boolean=(zope.schema.Bool, [True, False]),
+            integer=(zope.schema.Int, [1, 7]),
+            decimal=(zope.schema.Decimal, [Decimal('3.4'), Decimal('4.5')]),
+            string=(zope.schema.TextLine, [u'foo', u'bar']),
+            text=(zope.schema.Text, [u'Some\nFoo', u'Some\nBar']),
+            date=(zope.schema.Date, [date(2011, 01, 03), date(2012, 02, 19)]),
+            datetime=(zope.schema.Datetime,
+                [datetime(2011, 01, 03), datetime(2012, 02, 19)]),
+            )
+
+        for name, (ztype, choices) in types.items():
+            # Test as a basic field type
+            field = ztype(__name__='Foo', title=u'Foo')
+            attribute = fieldToAttribute(field)
+            self.assertEqual(attribute.type, name)
+
+            # Test as a collection
+            field = zope.schema.List(__name__='Foo', title=u'Foo', value_type=ztype())
+            attribute = fieldToAttribute(field)
+            self.assertEqual(attribute.type, name)
+            self.assertTrue(attribute.is_collection)
+
+            # Test with answer choices
+            field = zope.schema.Choice(__name__='Foo', title=u'Foo', values=choices)
+            # Cannot convert a choice field without a directive
+            with self.assertRaises(ValueError):
+                attribute = fieldToAttribute(field)
+            directives.type.set(field, name)
+            attribute = fieldToAttribute(field)
+            self.assertEqual(attribute.type, name)
+
+
+    def testObject(self):
+        field = zope.schema.Object(
+            __name__='foo',
+            title=u'Foo',
+            schema=InterfaceClass('Foo')
+            )
+        # Same deal, cannot add an object that doesn't use the directive base
+        with self.assertRaises(ValueError):
+            attribute = fieldToAttribute(field)
+
+        # Add the proper base and try again, should work correctly now
+        field.schema = InterfaceClass('Foo', bases=[directives.Schema])
+        attribute = fieldToAttribute(field)
+        self.assertEqual(attribute.type, 'object')
+        self.assertTrue(attribute.object_schema is not None)
+        self.assertEqual(attribute.object_schema.name, 'Foo')
