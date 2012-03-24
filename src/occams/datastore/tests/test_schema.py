@@ -59,6 +59,47 @@ class SchemaModelTestCase(unittest.TestCase):
         schemaCount = session.query(model.Schema).count()
         self.assertEquals(schemaCount, 1, u'Found more than one entry')
 
+    def testSamePublishDate(self):
+        # Test publish date uniqueness
+        session = self.layer['session']
+
+        # Add a published schema
+        session.add(model.Schema(
+            name='Foo',
+            title=u'Foo',
+            state='published',
+            publish_date=p1
+            ))
+        session.flush()
+
+        # Add a work-in-progress schema, should not interfere
+        session.add(model.Schema(
+            name='Foo',
+            title=u'Foo',
+            state='draft',
+            publish_date=None
+            ))
+        session.flush()
+
+        # Add another published schema (not on the same date)
+        session.add(model.Schema(
+            name='Foo',
+            title=u'Foo',
+            state='published',
+            publish_date=p2
+            ))
+        session.flush()
+
+        # Now try to add a schema published on the same date as another
+        with self.assertRaises(sqlalchemy.exc.IntegrityError):
+            session.add(model.Schema(
+                name='Foo',
+                title=u'Foo',
+                state='published',
+                publish_date=p1
+                ))
+            session.flush()
+
     def testProperties(self):
         session = self.layer['session']
         schema = model.Schema(name='Sample', title=u'This is a sample.')
