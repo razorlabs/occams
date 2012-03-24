@@ -37,7 +37,12 @@ class SchemaOrFieldDirectivesTestCase(unittest.TestCase):
         self.assertRaises(WrongType, directive.set, iface, 12.4)
         self.assertRaises(WrongType, directive.set, iface, 1234)
 
-        value = datetime.datetime.now()
+        # Only accepts dates (not datetime values)
+        with self.assertRaises(WrongType):
+            value = datetime.datetime.now()
+            directive.set(iface, value)
+
+        value = datetime.date.today()
         directive.set(iface, value)
         self.assertEqual(value, directive.bind().get(iface))
         directive.set(field, value)
@@ -87,11 +92,7 @@ class FieldDirectivesTestCase(unittest.TestCase):
 
         # Check all supported
         for type_ in model.Attribute.__table__.c.type.type.enums:
-            if type_ not in directives.CASTS:
-                exception = ConstraintNotSatisfied
-                self.assertRaises(exception, directive.set, field, type_)
-            else:
-                directive.set(field, type_)
+            directive.set(field, type_)
 
         value = 'string'
         directive.set(field, value)
