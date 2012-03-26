@@ -3,6 +3,7 @@ Schema utilities
 """
 
 from sqlalchemy.orm.scoping import ScopedSession
+from sqlalchemy.orm.exc import NoResultFound
 from zope.component import adapts
 from zope.component import adapter
 from zope.interface import classProvides
@@ -64,10 +65,10 @@ class HierarchyInspector(object):
         if on:
             query = query.filter(model.Schema.publish_date <= on)
         query = query.order_by(model.Schema.publish_date.desc())
-        schema = query.first()
-        if schema is None:
+        try:
+            return query.one()
+        except NoResultFound:
             raise ManagerKeyError(model.Schema, key, on)
-        return schema
 
     def _children(self, schema):
         """
@@ -80,14 +81,15 @@ class HierarchyInspector(object):
         Returns
             A list of the leaf nodes of the current schema
         """
-        result = []
-        for node in schema.sub_schemata:
-            if node.sub_schemata:
-                result.extend(self._children(node))
+        # Iterate through the children
+        for child in iter(schema.sub_schemata):
+            # If the child has children as well, continue recursion
+            if child.sub_schemata:
+                for leaf in self._children(child):
+                    yield leaf
+            # Otherwise return the child as a leaf
             else:
-                result.append(node)
-        return result
-
+                yield child
 
 class SchemaManager(object):
     classProvides(ISchemaManagerFactory)
@@ -108,7 +110,7 @@ class SchemaManager(object):
         else:
             query = query.filter(model.Schema.publish_date != None)
         query = query.group_by('name')
-        return [i.name for i in query.all()]
+        return [i.name for i in iter(query)]
 
     keys.__doc__ = ISchemaManager['keys'].__doc__
 
@@ -116,7 +118,7 @@ class SchemaManager(object):
         query = self.session.query(model.Schema).filter_by(name=key)
         query = query.filter(model.Schema.publish_date != None)
         query = query.order_by(model.Schema.publish_date.desc())
-        return [i.publish_date for i in query.all()]
+        return [i.publish_date for i in iter(query)]
 
     lifecycles.__doc__ = ISchemaManager['lifecycles'].__doc__
 
@@ -138,25 +140,26 @@ class SchemaManager(object):
         else:
             query = query.filter(model.Schema.publish_date != None)
         if not ever:
-            query = query.order_by(model.Schema.publish_date.desc())
-            schema = query.first()
-            if schema is not None:
+            query = query.order_by(model.Schema.publish_date.desc()).limit(1)
+            try:
+                schema = query.one()
+            except NoResultFound:
+                return 0
+            else:
                 session.delete(schema)
                 return 1
-            else:
-                return 0
         else:
             return query.delete('fetch')
 
     purge.__doc__ = ISchemaManager['purge'].__doc__
 
     def retire(self, key):
-        raise NotImplementedError('Unsafe to purge series of Schema(%s)' % key)
+        raise NotImplementedError
 
     retire.__doc__ = ISchemaManager['retire'].__doc__
 
     def restore(self, key):
-        raise NotImplementedError('Cannot undo audit of Schema(%s)' % key)
+        raise NotImplementedError
 
     restore.__doc__ = ISchemaManager['restore'].__doc__
 
@@ -168,10 +171,11 @@ class SchemaManager(object):
         else:
             query = query.filter(model.Schema.publish_date != None)
         query = query.order_by(model.Schema.publish_date.desc())
-        schema = query.first()
-        if schema is None:
+        try:
+            schema = query.one()
+            return schemaToInterface(schema)
+        except NoResultFound:
             raise ManagerKeyError(model.Schema, key, on)
-        return schemaToInterface(schema)
 
     get.__doc__ = ISchemaManager['get'].__doc__
 
@@ -188,15 +192,17 @@ class SchemaManager(object):
         schema = interfaceToSchema(item)
         if schema.base_schema is not None:
             # If the incoming schema has a base class, try to reuse an existing one
-            base_schema = (
+            base_schema_query = (
                 session.query(model.Schema)
                 .filter_by(name=schema.base_schema.name)
                 .filter(model.Schema.publish_date != None)
                 .order_by(model.Schema.publish_date.desc())
-                .first()
                 )
-            if base_schema is not None:
-                schema.base_schema = base_schema
+            try:
+                schema.base_schema = base_schema_query.one()
+            except NoResultFound:
+                pass
+
         session.add(schema)
         session.flush()
         directives.__id__.set(item, schema.id)

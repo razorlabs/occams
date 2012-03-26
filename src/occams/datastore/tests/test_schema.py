@@ -127,6 +127,12 @@ class SchemaModelTestCase(unittest.TestCase):
         session.flush()
         self.assertNotEqual(schema.publish_date, None)
 
+        # It should only work if the schema is marked as published
+        schema = model.Schema(name='Sample2', title=u'Sample')
+        session.add(schema)
+        session.flush()
+        self.assertEqual(schema.publish_date, None)
+
     def testMissingTitle(self):
         session = self.layer['session']
         with self.assertRaises(sqlalchemy.exc.IntegrityError):
@@ -163,7 +169,7 @@ class SchemaModelTestCase(unittest.TestCase):
         self.assertNotIn('bar', schema)
 
     def testKeys(self):
-        # Test dict-like containment
+        # Test dict-like reporting of keys
         session = self.layer['session']
         schema = model.Schema(name='Foo', title=u'Foo')
         session.add(schema)
