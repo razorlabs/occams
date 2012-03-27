@@ -7,8 +7,9 @@ from sqlalchemy import select
 from sqlalchemy import event
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship as Relationship
-from sqlalchemy.orm.collections import mapped_collection
+from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.orm.collections import collection
+from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.schema import Column
 from sqlalchemy.schema import ForeignKeyConstraint
 from sqlalchemy.schema import Index
@@ -70,34 +71,9 @@ def cleanDataByState(entity):
 
 
 def enforceSchemaState(entity):
-    if entity.scheam.state != 'published':
-        raise Exception
-
-
-class ValueDictionary(object):
-    """
-    """
-
-    def __init__(self):
-        self.data = dict()
-        self.keyfunc = lambda item:  (item.entity, item.attribute)
-
-    @collection.appender
-    def append(self, item):
-        key = self.keyfunc(item)
-        if item.attribute.is_collection:
-            self.data.setdefault(key, [])
-            self.data[key].append(item)
-        else:
-            self.data[key] = item
-
-    @collection.remover
-    def remove(self, item):
-        del self.data[self.keyfunc(item)]
-
-    @collection.iterator
-    def __iter__(self):
-        return self.data.__iter__()
+    schema = entity.schema
+    if schema.state != 'published':
+        raise ValueError('Cannot collect data for unpublished Schema(%s)' % schema.name)
 
 
 class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
@@ -115,18 +91,40 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
 
     collect_date = Column(Date, nullable=False, default=defaultCollectDate)
 
-    _string_values = Relationship('ValueString', collection_class=ValueDictionary)
+    _string_values = Relationship(
+        'ValueString',
+        cascade='all, delete-orphan',
+        back_populates='entity',
+        lazy='dynamic',
+        )
 
-    _integer_values = Relationship('ValueInteger', collection_class=ValueDictionary)
+    _integer_values = Relationship(
+        'ValueInteger',
+        cascade='all, delete-orphan',
+        back_populates='entity',
+        lazy='dynamic',
+        )
 
-    _datetime_values = Relationship('ValueDatetime', collection_class=ValueDictionary)
+    _datetime_values = Relationship(
+        'ValueDatetime',
+        cascade='all, delete-orphan',
+        back_populates='entity',
+        lazy='dynamic',
+        )
 
-    _decimal_values = Relationship('ValueDecimal', collection_class=ValueDictionary)
+    _decimal_values = Relationship(
+        'ValueDecimal',
+        cascade='all, delete-orphan',
+        back_populates='entity',
+        lazy='dynamic',
+        )
 
     _obect_values = Relationship(
         'ValueObject',
+        cascade='all, delete-orphan',
+        back_populates='entity',
         primaryjoin='Entity.id == ValueObject._value',
-        collection_class=ValueDictionary
+        lazy='dynamic',
         )
 
     @declared_attr
@@ -143,47 +141,55 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
             Index('ix_%s_collect_date' % cls.__tablename__, 'collect_date'),
             )
 
-    def _values(self, key):
-        if key not in self.schema:
-            raise KeyError
+    def _getCollector(self, key):
         type_ = self.schema[key].type
-        if type_ in ('string', 'text'):
-            result = self._string_values
+        if type_ in ('string', 'text',):
+            return self._string_values
         elif type_ in ('integer', 'boolean'):
-            result = self._integer_values
+            return self._integer_values
         elif type_ in ('datetime', 'date'):
-            result = self._datetime_values
+            return self._datetime_values
         elif type_ == 'decimal':
-            result = self._decimal_values
+            return self._decimal_values
         elif type_ == 'object':
-            result = self._object_values
+            return self._object_values
         else:
-            raise NotImplementedError
-        return result
+            raise NotImplementedError(type_)
 
     def __getitem__(self, key):
-        return self._values(key)[(self, self.schema[key])].value
+        collector = self._getCollector(key)
+        attribute = self.schema[key]
+        query = collector.filter_by(attribute=attribute)
+        if attribute.is_collection:
+            value = [v.value for v in iter(query)]
+        else:
+            try:
+                wrappedValue = query.one()
+            except NoResultFound:
+                value = None
+            else:
+                value = wrappedValue.value
+        return value
 
     def __setitem__(self, key, value):
-        valueKey = (self, self.schema[key])
-        valueFactory = nameModelMap[self.schema[key].type]
-        values = self._values[key]
-        values.append(valueFactory(value=value))
+        collector = self._getCollector(key)
+        attribute = self.schema[key]
+        wrapperFactory = nameModelMap[attribute.type]
+
+        if not collector.filter_by(attribute=attribute, _value=value).count() > 0:
+            collector.append(wrapperFactory(attribute=attribute, _value=value))
 
     def __delitem__(self, key):
-        del self.__map[key]
-
-    def __contains__(self, key):
-        return key in self.schema
-
-    def keys(self):
-        self.schema.keys()
-
-    def values(self):
-        return [prop.value for prop in self.__map.values()]
+        collector = self._getCollector(key)
+        attribute = self.schema[key]
+        collector.remove(collector.filter_by(attribute=attribute))
 
     def items(self):
-        return [(key, prop.value) for key, prop in self.__map.items()]
+        return list(self.iteritems())
+
+    def iteritems(self):
+        for key in self.schema.iterkeys():
+            yield (key, self[key])
 
 
 def TypeMappingClass(className, tableName, valueType):
@@ -202,8 +208,10 @@ def TypeMappingClass(className, tableName, valueType):
 
         @declared_attr
         def entity(cls):
-            return Relationship('Entity',
-                primaryjoin='%s.entity_id == Entity.id' % cls.__name__)
+            return Relationship(
+                'Entity',
+                primaryjoin='%s.entity_id == Entity.id' % cls.__name__
+                )
 
         @declared_attr
         def attribute_id(cls):

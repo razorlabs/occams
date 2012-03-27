@@ -2,12 +2,16 @@
 """
 
 from sqlalchemy.orm.scoping import ScopedSession
+from sqlalchemy.orm.exc import NoResultFound
 from zope.component import adapts
+from zope.component import adapter
 from zope.interface import implements
+from zope.interface import implementer
 from zope.interface import providedBy
 from zope.interface import classProvides
 from zope.interface import directlyProvides
 from zope.interface import alsoProvides
+from zope.interface.common.mapping import IFullMapping
 import zope.schema
 from zope.schema.interfaces import IObject
 
@@ -15,6 +19,7 @@ from occams.datastore import model
 from occams.datastore import directives
 from occams.datastore.schema import schemaToInterface
 from occams.datastore.interfaces import IInstance
+from occams.datastore.interfaces import IEntity
 from occams.datastore.interfaces import IEntityManager
 from occams.datastore.interfaces import IEntityManagerFactory
 
@@ -93,37 +98,57 @@ class EntityManager(object):
     implements(IEntityManager)
     adapts(ScopedSession)
 
+    __doc__ = IEntityManager.__doc__
+
     def __init__(self, session):
         self.session = session
-        self.query = (
-            session.query(model.Entity)
-            .filter(model.Entity.schema.has(state='published'))
-            .filter(model.Entity.state.in_(['complete', 'not-done']))
-            )
+
+    __init__.__doc__ = IEntityManagerFactory['__call__'].__doc__
 
     def keys(self, on=None, ever=False):
-        return [entity.name for entity in self.query.group_by('name').all()]
+        query = self.session.query(model.Entity)
+        query = query.filter_by(model.Entity.schema.has(state='published'))
+        if on:
+            query = query.filter(model.Entity.collect_date <= on)
+        query = query.group_by('name')
+        return [entity.name for entity in iter(query)]
+
+    keys.__doc__ = IEntityManager['keys'].__doc__
 
     def lifecycles(self, key):
-        entity = self.query.filter_by(name=key).all()
-        if entity:
-            if len(entity) > 1:
-                raise Exception
+        query = self.session.query(model.Entity)
+        query = query.filter_by(model.Entity.schema.has(state='published'))
+        query = query.filter_by(name=key)
+        try:
+            entity = query.one()
+        except NoResultFound:
+            return []
+        else:
             return [entity.collect_date]
+
+    lifecycles.__doc__ = IEntityManager['lifecycles'].__doc__
 
     def has(self, key, on=None, ever=False):
         return self.query.filter(name=key).count() > 0
+
+    has.__doc__ = IEntityManager['has'].__doc__
 
     def purge(self, key, on=None, ever=False):
         result = self.query.filter(name=key).delete('fetch')
         self.session.flush()
         return result
 
+    purge.__doc__ = IEntityManager['purge'].__doc__
+
     def retire(self, key):
-        return self.purge(key)
+        raise NotImplementedError
+
+    retire.__doc__ = IEntityManager['retire'].__doc__
 
     def restore(self, key):
         raise NotImplementedError
+
+    retire.__doc__ = IEntityManager['retire'].__doc__
 
     def get(self, key, on=None):
         entity = self.query.filter_by(name=key).first()
@@ -158,6 +183,8 @@ class EntityManager(object):
 
         return result
 
+    get.__doc__ = IEntityManager['get'].__doc__
+
     def put(self, key, item):
         entity = self.session.query(model.Entity).get(item.__id__)
         if entity is None:
@@ -187,3 +214,22 @@ class EntityManager(object):
 
         return entity.id
 
+    put.__doc__ = IEntityManager['put'].__doc__
+
+
+@adapter(IEntity)
+@implementer(IFullMapping)
+def entityToMapping(entity):
+    pass
+
+
+@adapter(IEntity)
+@implementer(IInstance)
+def entityToObject(entity):
+    pass
+
+
+@adapter(IInstance)
+@implementer(IEntity)
+def objectToEntity(object_):
+    pass
