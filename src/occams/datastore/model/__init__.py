@@ -24,6 +24,22 @@ from occams.datastore.model.storage import ValueDatetime
 from occams.datastore.model.session import DataStoreSession
 
 
+__all__ = (
+    'Model',
+    'User',
+    'Auditable',
+    'Schema',
+    'Attribute',
+    'Choice',
+    'Entity',
+    'ValueInteger',
+    'ValueString',
+    'ValueObject',
+    'ValueDecimal',
+    'ValueDatetime',
+    )
+
+
 if __name__ == '__main__':
     # A convenient way for checking the model even correctly loads the tables
     Model.metadata.create_all(bind=sqlalchemy.create_engine('sqlite:///', echo=True))

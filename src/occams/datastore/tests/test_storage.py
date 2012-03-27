@@ -109,10 +109,6 @@ class EntityModelTestCase(unittest.TestCase):
         entity['bar'] = 2
         entity['bar'] = 3
         session.flush()
-
-        import pdb; pdb.set_trace()
-        print 'adfasdfsadf'
-
 #
 #    def testDelete(self):
 #        # Test deleting an attribute via dict-like API

@@ -18,3 +18,5 @@ from occams.datastore.schema import SchemaManager
 from occams.datastore.schema import HierarchyInspector
 from occams.datastore.storage import EntityManager
 from occams.datastore.storage import ObjectFactory
+
+from occams.datastore.model import *
