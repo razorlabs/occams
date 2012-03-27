@@ -20,6 +20,8 @@ from occams.datastore.model.storage import ValueObject
 from occams.datastore.model.storage import ValueDecimal
 from occams.datastore.model.storage import ValueDatetime
 
+from occams.datastore.model.context import External
+from occams.datastore.model.context import Context
 
 from occams.datastore.model.session import DataStoreSession
 
@@ -37,6 +39,8 @@ __all__ = (
     'ValueObject',
     'ValueDecimal',
     'ValueDatetime',
+    'External',
+    'Context',
     )
 
 
