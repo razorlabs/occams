@@ -44,41 +44,23 @@ def main():
     import sys
     usage = """overhaul.py OLDCONNECT NEWCONNECT"""
     configureGlobalSession(sys.argv[1], sys.argv[2])
-    printListOfSchemas()
+    moveIntoSchemaTable()
     if isWorking():
         print "Yay!"
 
 def moveIntoSchemaTable():
     """Do general task over stuff produced by printListOfSchemas()"""
-    pass
+    schemaChanges = getKnownSchemaChanges()
+    for revision in schemaChanges:
+        createSchemaInWhatever(revision)
 
-def printListOfSchemas(): 
-    global Session
-    changes = changeTableFactory(Session)
-    subforms = subSchemaNamesTableFactory(Session)
-    realChanges = (
-        Session.query(changes.c.schema_name, changes.c.change_date)
-        .filter(changes.c.change_date != None)
-        .filter(~changes.c.schema_name.in_(subforms))
-        .group_by(changes.c.schema_name, changes.c.change_date)
-        .order_by(changes.c.schema_name, changes.c.change_date)
-        )
-    #import pdb; pdb.set_trace()
-    print "\n".join(map(str,realChanges.all()))
+def createSchemaInWhatever(revision):
+    """Given a schema name and revision date, create such a schema"""
+    print "Please implement import from old to new of",revision
 
-def configureGlobalSession(old_connect, new_connect):
-    """Set up Session for data manipulation and create new tables as side effect."""
-    global old_model
-    new_engine = create_engine(new_connect)
-    model.Model.metadata.create_all(bind=new_engine, checkfirst=True)
-    tables = []
-    tables_model = model.Model.metadata.sorted_tables
-    tables += dict.fromkeys(tables_model, new_engine).items()
-    #import pdb; pdb.set_trace()
-    Session.configure(binds=dict(tables))
-    old_model = SqlSoup(old_connect,session=Session)
-    #tables_datastore = old_model.sorted_tables
-    #tables += dict.fromkeys(tables_datastore, old_model.bind).items()
+    #import eavthing
+    #data = getData()
+    #eavthing.make_it_so(data)
 
 #def makeSchema(blob):
 #    """Not used code yet... conceptual example from Marco"""
@@ -104,6 +86,49 @@ def configureGlobalSession(old_connect, new_connect):
 #    assert schema.revision == 1
 #    newSchema = copy(schema)
 #    session.add(newSchema)
+
+
+def getKnownSchemaChanges(): 
+    global Session
+    changes = changeTableFactory(Session)
+    subforms = subSchemaNamesTableFactory(Session)
+    evilforms = baseSchemaNamesTableFactory(Session)
+    realChanges = (
+        Session.query(changes.c.schema_name, changes.c.change_date)
+        .filter(changes.c.change_date != None)
+        .filter(~changes.c.schema_name.in_(subforms))
+        .filter(~changes.c.schema_name.in_(evilforms))
+        .group_by(changes.c.schema_name, changes.c.change_date)
+        .order_by(changes.c.schema_name, changes.c.change_date)
+        )
+    return realChanges.all()
+
+def configureGlobalSession(old_connect, new_connect):
+    """Set up Session for data manipulation and create new tables as side effect."""
+    global old_model
+    new_engine = create_engine(new_connect)
+    model.Model.metadata.create_all(bind=new_engine, checkfirst=True)
+    tables = []
+    tables_model = model.Model.metadata.sorted_tables
+    tables += dict.fromkeys(tables_model, new_engine).items()
+    #import pdb; pdb.set_trace()
+    Session.configure(binds=dict(tables))
+    old_model = SqlSoup(old_connect,session=Session)
+    #tables_datastore = old_model.sorted_tables
+    #tables += dict.fromkeys(tables_datastore, old_model.bind).items()
+
+
+
+def baseSchemaNamesTableFactory(session):
+    """Helper method to generate a SQLAlchemy expression table for base schemata names"""
+    BaseSchema = aliased(old_model.entity("schema"), name='_base')
+    # A query that builds a base schema name result set
+    query = (
+        session.query(BaseSchema.name)
+        .join((old_model.entity("schema"), (old_model.entity("schema").base_schema_id == BaseSchema.id)))
+        .group_by(BaseSchema.name)
+        )
+    return query.subquery()
 
 def literal(value):
     """Helper method to convert a Python value into a SQL string"""
