@@ -9,6 +9,7 @@ Precondition Assumptions:
     3. For avrc_data we have "DROP TABLE"-ed: entity, state, datetime, 
         integer, object, decimal, string, schema, attribute, and choice.
     4. During the upgrade process, the website will be turned off.
+    5. The source schema table is unique on (schema.name,DATE(create_date))
 
 Design Assumptions:
     1. Reflect avrc_demo_data w/ sqlsoup (readonly to ensure no changes).
@@ -31,11 +32,12 @@ from sqlalchemy.sql.expression import null
 from sqlalchemy.sql.expression import literal_column
 from sqlalchemy.orm import aliased
 
-global USER
-USER = (lambda : "bitcore@ucsd.edu") # can be called by a library
-
 global Session
-Session = scoped_session(sessionmaker())
+Session = scoped_session(
+    sessionmaker(
+        class_=model.DataStoreSession,
+        user=(lambda : "bitcore@ucsd.edu") # can be called by a library
+        ))
 
 global old_model
 
@@ -44,23 +46,86 @@ def main():
     import sys
     usage = """overhaul.py OLDCONNECT NEWCONNECT"""
     configureGlobalSession(sys.argv[1], sys.argv[2])
-    moveIntoSchemaTable()
+    addUser("bitcore@ucsd.edu")
+    moveInParentSchemas()
+    moveInChildSchemas()
+    #moveAttributesAndChoices()
+    Session.commit()
     if isWorking():
         print "Yay!"
 
-def moveIntoSchemaTable():
+def moveAttributesAndChoices():
+    pass
+
+def moveInChildSchemas():
+    schemaChanges = getKnownSchemaChanges()
+    for revision in schemaChanges:
+        originals = getOriginalChildSchemas(revision)
+        createSchemas(revision,originals)
+        print "Installed",len(originals),"child schemas!"
+
+def moveInParentSchemas():
     """Do general task over stuff produced by printListOfSchemas()"""
     schemaChanges = getKnownSchemaChanges()
     for revision in schemaChanges:
-        createSchemaInWhatever(revision)
+        originals = [getOriginalParentSchema(revision)]
+        createSchemas(revision,originals)
 
-def createSchemaInWhatever(revision):
+def createSchemas(revision,originals):
     """Given a schema name and revision date, create such a schema"""
-    print "Please implement import from old to new of",revision
+    form_name, publish_date = revision[0],revision[1]
+    for original in originals:
+        simples = ["name","title","description","storage","create_date","modify_date"]
+        buildIt = {
+            "state":"published",
+            #"create_date":publish_date,
+            #"modify_date":publish_date,
+            "publish_date":publish_date,
+            }
+        for simple in simples:
+            buildIt[simple] = getattr(original,simple)
+        toEnter = model.Schema(**buildIt)
+        Session.add(toEnter)
+        Session.flush()
+        print "Added for",revision
 
-    #import eavthing
-    #data = getData()
-    #eavthing.make_it_so(data)
+def getOriginalChildSchemas(revision):
+    """Return all "original" child schemas for a given parent."""
+    # NOTE: We know that child schemas were never really versioned
+    # at the schema level.  Weird attributes, but that's it.
+    parent_schema = getOriginalParentSchema(revision)
+    sch = old_model.entity("schema")
+    att = old_model.entity("attribute")
+    qry = (
+        Session.query(sch)
+        .join(att,(sch.id == att.object_schema_id))
+        .filter(att.schema_id == parent_schema.id)
+        )
+    return qry.all()
+
+def getOriginalParentSchema(revision):
+    """Return... Track down the template Yay!"""
+    import sqlalchemy.exc
+    form_name, publish_date = revision[0],revision[1]
+    sch = old_model.entity("schema")
+    qry = (
+        Session.query(sch)
+        .filter(sch.name == form_name)
+        .filter(cast(sch.create_date,Date) <= publish_date)
+        .filter((cast(sch.remove_date,Date) > publish_date) | (sch.remove_date == None))
+        )
+    try:
+        out = qry.one()
+    except sqlalchemy.exc.SQLAlchemyError as err:
+        import pdb;pdb.set_trace()
+        print "foo"
+    return out
+
+def addUser(email):
+    #user = Session.query(model.User).filter(model.User.key == email).first()
+    #if not user:
+    Session.add(model.User(key=email))
+    Session.flush()
 
 #def makeSchema(blob):
 #    """Not used code yet... conceptual example from Marco"""
@@ -89,12 +154,13 @@ def createSchemaInWhatever(revision):
 
 
 def getKnownSchemaChanges(): 
+    from sqlalchemy import func
     global Session
     changes = changeTableFactory(Session)
     subforms = subSchemaNamesTableFactory(Session)
     evilforms = baseSchemaNamesTableFactory(Session)
     realChanges = (
-        Session.query(changes.c.schema_name, changes.c.change_date)
+        Session.query(changes.c.schema_name, changes.c.change_date,func.count().label('revisionCount'))
         .filter(changes.c.change_date != None)
         .filter(~changes.c.schema_name.in_(subforms))
         .filter(~changes.c.schema_name.in_(evilforms))
@@ -107,15 +173,13 @@ def configureGlobalSession(old_connect, new_connect):
     """Set up Session for data manipulation and create new tables as side effect."""
     global old_model
     new_engine = create_engine(new_connect)
+    model.Model.metadata.drop_all(bind=new_engine, checkfirst=True)
     model.Model.metadata.create_all(bind=new_engine, checkfirst=True)
     tables = []
     tables_model = model.Model.metadata.sorted_tables
     tables += dict.fromkeys(tables_model, new_engine).items()
-    #import pdb; pdb.set_trace()
     Session.configure(binds=dict(tables))
     old_model = SqlSoup(old_connect,session=Session)
-    #tables_datastore = old_model.sorted_tables
-    #tables += dict.fromkeys(tables_datastore, old_model.bind).items()
 
 
 
@@ -230,12 +294,9 @@ def isWorking():
     """Did [] work?"""
     global old_model
     good = True
-    if Session.query(old_model.entity("schema")).count() < 1:
-        print "SqlSoup broken"
-        good = False
-    if Session.query(model.Schema).count() > 0:
-        print "Session broken"
-        good = False
+    #if Session.query(old_model.entity("schema")).count() != 32:
+    #    print "Wrong number of schemas added"
+    #    good = False
     return good
 
 if __name__ == '__main__':
