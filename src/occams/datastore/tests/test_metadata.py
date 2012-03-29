@@ -32,7 +32,7 @@ class UserModelTestCase(unittest.TestCase):
         self.assertIsNotNone(user.id, 'User was not flushed')
 
         # Make sure the dates are valid
-        self.assertTrue(user.create_date == user.modify_date, 'Different create dates')
+        self.assertEqual(user.create_date, user.modify_date, 'Different create dates')
 
         # Make sure we can't use an incorrect timeline
         user.create_date += datetime.timedelta(1)
@@ -56,7 +56,7 @@ class ModifiableMixinTestCase(unittest.TestCase):
         Test is new mappings obey the modifiable extension properly
         """
         session = self.layer['session']
-        schema = model.Schema(name='Foo', title=u'Foo')
+        schema = model.Schema(name='Foo', title=u'')
         session.add(schema)
         session.flush()
 
