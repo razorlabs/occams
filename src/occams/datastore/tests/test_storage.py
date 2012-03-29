@@ -105,54 +105,89 @@ class EntityModelTestCase(unittest.TestCase):
         self.assertEqual(5, entity['foo'])
 
         schema['bar'] = model.Attribute(title=u'', type='integer', is_collection=True, order=1)
-        entity['bar'] = 1
-        entity['bar'] = 2
-        entity['bar'] = 3
+        entity['bar'] = [1, 2, 3]
         session.flush()
-#
-#    def testDelete(self):
-#        # Test deleting an attribute via dict-like API
-#        session = self.layer['session']
-#        schema = model.Schema(name='Foo', title=u'Foo')
-#        schema['foo'] = model.Attribute(title=u'foo', type='string', order=0)
-#        session.add(schema)
-#        session.flush()
-#        # The attribute should have been committed
-#        result = session.query(model.Attribute).filter_by(name='foo').count()
-#        self.assertEqual(result, 1)
-#        # Delete it like you would a dictionary
-#        del schema['foo']
-#        session.flush()
-#        # Should have been deleted
-#        result = session.query(model.Attribute).filter_by(name='foo').count()
-#        self.assertEqual(result, 0)
-#
-#    def testItems(self):
-#        # Make sure we can enumerate the key/value pairs of the schema
-#        session = self.layer['session']
-#        schema = model.Schema(name='Foo', title=u'Foo')
-#        session.add(schema)
-#        session.flush()
-#        items = schema.items()
-#        self.assertEqual(len(items), 0)
-#        schema['foo'] = model.Attribute(title=u'foo', type='string', order=0)
-#        session.flush()
-#        items = schema.items()
-#        self.assertEqual(len(items), 1)
-#        name, attribute = items[0]
-#        self.assertEqual(schema, attribute.schema)
-#        self.assertEqual(attribute.name, 'foo')
-#        self.assertEqual(attribute.name, name)
+        self.assertListEqual(entity['bar'], [1, 2, 3])
+
+    def testDelete(self):
+        # Test deleting an attribute via dict-like API
+        session = self.layer['session']
+        schema = model.Schema(name='Foo', title=u'', state='published')
+        entity = model.Entity(schema=schema, name='Foo', title=u'')
+        session.add(entity)
+
+        with self.assertRaises(KeyError):
+            del entity['foo']
+
+        schema['foo'] = model.Attribute(title=u'', type='integer', order=0)
+        session.flush()
+
+        # Nothing happens
+        del entity['foo']
+        session.flush()
+
+        entity['foo'] = 5
+        session.flush()
+
+        # The attribute should have been committed
+        result = session.query(model.ValueInteger).filter_by(attribute=schema['foo']).count()
+        self.assertEqual(1, result)
+        # Delete it like you would a dictionary
+        del entity['foo']
+        session.flush()
+        # Should have been deleted
+        result = session.query(model.ValueInteger).filter_by(attribute=schema['foo']).count()
+        self.assertEqual(0, result)
+
+        # Now try it with something that can have more than one value..
+        schema['bar'] = model.Attribute(title=u'', type='integer', is_collection=True, order=1)
+        entity['bar'] = [1, 2, 3]
+        session.flush()
+
+        # The attribute should have been committed
+        result = session.query(model.ValueInteger).filter_by(attribute=schema['bar']).count()
+        self.assertEqual(3, result)
+        # Delete it like you would a dictionary
+        del entity['bar']
+        session.flush()
+        # Should have been deleted
+        result = session.query(model.ValueInteger).filter_by(attribute=schema['bar']).count()
+        self.assertEqual(0, result)
 
 
-#class EntityManagerTestCase(unittest.TestCase):
-#    """
-#    Verifies DataStore Entity storage
-#    """
-#
-#    layer = DATASTORE_LAYER
-#
-#
+    def testItems(self):
+        # Make sure we can enumerate the key/value pairs of the schema
+        session = self.layer['session']
+        schema = model.Schema(name='Foo', title=u'', state='published')
+        entity = model.Entity(schema=schema, name='Foo', title=u'')
+        session.add(entity)
+        session.flush()
+        items = entity.items()
+        self.assertEqual([], items)
+
+        schema['foo'] = model.Attribute(title=u'', type='integer', order=0)
+        entity['foo'] = 5
+        session.flush()
+        items = entity.items()
+        self.assertEqual(1, len(items))
+        self.assertListEqual([('foo', 5)], items)
+
+        schema['bar'] = model.Attribute(title=u'', type='integer', is_collection=True, order=1)
+        entity['bar'] = [1, 2, 3]
+        session.flush()
+        items = entity.items()
+        self.assertEqual(2, len(items))
+        self.assertListEqual([('foo', 5), ('bar', [1, 2, 3])], items)
+
+
+class EntityManagerTestCase(unittest.TestCase):
+    """
+    Verifies DataStore Entity storage
+    """
+
+    layer = DATASTORE_LAYER
+
+
 #    def setUp(self):
 #        self.layer['session'] = self.layer['session']
 #
