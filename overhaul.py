@@ -48,13 +48,30 @@ def main():
     configureGlobalSession(sys.argv[1], sys.argv[2])
     addUser("bitcore@ucsd.edu")
     moveInAllSchemas()
-    moveInAttributesAndChoices()
+
+    #moveInAttributesAndChoices() # as part of the schemas?
+
+    # Do some QA before implementing the last two move-ins
+    # because it would suck to have something wrong and have
+    # to re-work entities...
+    moveInEntities()
+    moveInValues() # as part of the entities?
+
     Session.commit()
     if isWorking():
         print "Yay!"
 
-def moveInAttributesAndChoices():
+def moveInEntities():
     pass
+
+def moveInValues():
+    pass
+
+def moveInAttributesAndChoices():
+    schemaChanges = getKnownSchemaChanges()
+    for revision in schemaChanges:
+        o_attr = getOriginalAttrsAndChoices()
+        createAttrs(revision,o_attrs)
 
 def moveInAllSchemas():
     schemaChanges = getKnownSchemaChanges()
@@ -67,7 +84,11 @@ def moveInAllSchemas():
         for c_original in c_originals:
             new_child = createSchema(revision,c_original)
             p_attr = getLinkingAttr(c_original)
-            createAttr(revision,new_parent,new_child,p_attr)
+            new_attrs = createAttr(revision,new_parent,new_child,p_attr)
+
+            # Do attribute/choice move-in here or as separate step
+            # in main()?  That's the first decision :-)
+
         print "Installed",len(c_originals),"child schemas!"
 
 def createAttr(revision,new_parent,new_child,p_attr):
