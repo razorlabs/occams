@@ -5,7 +5,6 @@ import unittest2 as unittest
 from zope.interface.interface import InterfaceClass
 import zope.schema
 from zope.schema.interfaces import WrongType
-from zope.schema.interfaces import ConstraintNotSatisfied
 
 from occams.datastore import directives
 from occams.datastore import model
@@ -18,10 +17,12 @@ class SchemaOrFieldDirectivesTestCase(unittest.TestCase):
 
     def test_id (self):
         iface = InterfaceClass('Sample')
-        field = zope.schema.Text(__name__='foo', title=u'Foo')
+        field = zope.schema.Text(__name__='foo', title=u'')
         directive = directives.__id__
-        self.assertRaises(WrongType, directive.set, iface, 'This is an id')
-        self.assertRaises(WrongType, directive.set, iface, 12.4)
+        with self.assertRaises(WrongType):
+            directive.set(iface, 'This is an id')
+        with self.assertRaises(WrongType):
+            directive.set(iface, 12.4)
 
         value = 1234
         directive.set(iface, value)
@@ -31,11 +32,14 @@ class SchemaOrFieldDirectivesTestCase(unittest.TestCase):
 
     def test_version (self):
         iface = InterfaceClass('Sample')
-        field = zope.schema.Text(__name__='foo', title=u'Foo')
+        field = zope.schema.Text(__name__='foo', title=u'')
         directive = directives.version
-        self.assertRaises(WrongType, directive.set, iface, 'This is an id')
-        self.assertRaises(WrongType, directive.set, iface, 12.4)
-        self.assertRaises(WrongType, directive.set, iface, 1234)
+        with self.assertRaises(WrongType):
+            directive.set(iface, 'This is an id')
+        with self.assertRaises(WrongType):
+            directive.set(iface, 12.4)
+        with self.assertRaises(WrongType):
+            directive.set(iface, 1234)
 
         # Only accepts dates (not datetime values)
         with self.assertRaises(WrongType):
@@ -50,10 +54,12 @@ class SchemaOrFieldDirectivesTestCase(unittest.TestCase):
 
     def test_inline (self):
         iface = InterfaceClass('Sample')
-        field = zope.schema.Text(__name__='foo', title=u'Foo')
+        field = zope.schema.Text(__name__='foo', title=u'')
         directive = directives.inline
-        self.assertRaises(WrongType, directive.set, iface, 'This is an id')
-        self.assertRaises(WrongType, directive.set, iface, 12.4)
+        with self.assertRaises(WrongType):
+            directive.set(iface, 'This is an id')
+        with self.assertRaises(WrongType):
+            directive.set(iface, 12.4)
 
         value = True
         directive.set(iface, value)
@@ -67,8 +73,10 @@ class SchemaDirectivesTestCase(unittest.TestCase):
     def test_title(self):
         iface = InterfaceClass('Sample')
         directive = directives.title
-        self.assertRaises(WrongType, directive.set, iface, 1234)
-        self.assertRaises(WrongType, directive.set, iface, 'This is \n a title')
+        with self.assertRaises(WrongType):
+            directive.set(iface, 1234)
+        with self.assertRaises(WrongType):
+            directive.set(iface, 'This is \n a title')
 
         value = u'This is a title'
         directive.set(iface, value)
@@ -87,7 +95,7 @@ class SchemaDirectivesTestCase(unittest.TestCase):
 class FieldDirectivesTestCase(unittest.TestCase):
 
     def test_type (self):
-        field = zope.schema.Choice(__name__='foo', title=u'Foo', values=[1, 2, 3])
+        field = zope.schema.Choice(__name__='foo', title=u'', values=[1, 2, 3])
         directive = directives.type
 
         # Check all supported
