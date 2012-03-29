@@ -57,7 +57,7 @@ class SchemaModelTestCase(unittest.TestCase):
         session.add(schema)
         session.flush()
         schemaCount = session.query(model.Schema).count()
-        self.assertEquals(schemaCount, 1, u'Found more than one entry')
+        self.assertEquals(1, schemaCount, u'Found more than one entry')
 
     def testSamePublishDate(self):
         # Test publish date uniqueness
@@ -125,13 +125,13 @@ class SchemaModelTestCase(unittest.TestCase):
         schema = model.Schema(name='Sample', title=u'Sample', state='published')
         session.add(schema)
         session.flush()
-        self.assertNotEqual(schema.publish_date, None)
+        self.assertIsNotNone(schema.publish_date)
 
         # It should only work if the schema is marked as published
         schema = model.Schema(name='Sample2', title=u'Sample')
         session.add(schema)
         session.flush()
-        self.assertEqual(schema.publish_date, None)
+        self.assertIsNone(schema.publish_date)
 
     def testMissingTitle(self):
         session = self.layer['session']
@@ -148,13 +148,13 @@ class SchemaModelTestCase(unittest.TestCase):
         session.flush()
         # The attribute should have been committed
         result = session.query(model.Attribute).filter_by(name='foo').count()
-        self.assertEqual(result, 1)
+        self.assertEqual(1, result)
         # Delete it like you would a dictionary
         del schema['foo']
         session.flush()
         # Should have been deleted
         result = session.query(model.Attribute).filter_by(name='foo').count()
-        self.assertEqual(result, 0)
+        self.assertEqual(0, result)
 
     def testContains(self):
         # Test dict-like containment
@@ -192,11 +192,11 @@ class SchemaModelTestCase(unittest.TestCase):
         session.add(schema)
         session.flush()
         values = schema.values()
-        self.assertEqual(len(values), 0)
+        self.assertEqual(0, len(values))
         schema['foo'] = model.Attribute(title=u'foo', type='string', order=0)
         session.flush()
         values = schema.values()
-        self.assertEqual(len(values), 1)
+        self.assertEqual(1, len(values))
         attribute = values[0]
         self.assertEqual(schema, attribute.schema)
         self.assertEqual(attribute.name, 'foo')
@@ -208,15 +208,15 @@ class SchemaModelTestCase(unittest.TestCase):
         session.add(schema)
         session.flush()
         items = schema.items()
-        self.assertEqual(len(items), 0)
+        self.assertEqual(0, len(items))
         schema['foo'] = model.Attribute(title=u'foo', type='string', order=0)
         session.flush()
         items = schema.items()
         self.assertEqual(len(items), 1)
         name, attribute = items[0]
         self.assertEqual(schema, attribute.schema)
-        self.assertEqual(attribute.name, 'foo')
-        self.assertEqual(attribute.name, name)
+        self.assertEqual('foo', attribute.name)
+        self.assertEqual(name, attribute.name)
 
 
 class SchemaCopyTestCase(unittest.TestCase):
@@ -239,7 +239,7 @@ class SchemaCopyTestCase(unittest.TestCase):
         session.add(schema)
         session.flush()
         schemaCount = session.query(model.Choice).count()
-        self.assertEquals(schemaCount, 3, u'Did not find choices')
+        self.assertEquals(3, schemaCount, u'Did not find choices')
 
         schemaCopy = copy(schema)
         session.add(schemaCopy)
@@ -297,7 +297,7 @@ class AttributeTestCase(unittest.TestCase):
         session.add(schema)
         session.flush()
         schemaCount = session.query(model.Attribute).count()
-        self.assertEquals(schemaCount, 1, u'Found more than one entry')
+        self.assertEquals(1, schemaCount, u'Found more than one entry')
 
 
 class ChoiceTestCase(unittest.TestCase):
@@ -320,7 +320,7 @@ class ChoiceTestCase(unittest.TestCase):
         session.add(schema)
         session.flush()
         schemaCount = session.query(model.Choice).count()
-        self.assertEquals(schemaCount, 3, u'Did not find choices')
+        self.assertEquals(3, schemaCount, u'Did not find choices')
 
 
 class HierarchyTestCase(unittest.TestCase):
@@ -370,7 +370,7 @@ class HierarchyTestCase(unittest.TestCase):
         session = self.layer['session']
         hierarchy = HierarchyInspector(session)
         children = hierarchy.getChildren('Animal')
-        self.assertEqual(len(children), 12)
+        self.assertEqual(12, len(children))
 
     def testChildren(self):
         # Get the actual objects
@@ -587,7 +587,7 @@ class SchemaManagerTestCase(unittest.TestCase):
         name = 'Bar'
         item = manager.get(name)
         self.assertEqual(name, item.__name__)
-        self.assertNotEqual(None, item)
+        self.assertIsNotNone(item)
 
         # Get something that doesn't exist yet
         name = 'Caz'
@@ -596,7 +596,7 @@ class SchemaManagerTestCase(unittest.TestCase):
         # Only works if we specify the version
         item = manager.get(name, on=p3)
         self.assertEqual(name, item.__name__)
-        self.assertNotEqual(None, item)
+        self.assertIsNotNone(item)
 
         # Also, can't get anything that hasn't been published yet
         name = 'Jaz'
@@ -607,12 +607,11 @@ class SchemaManagerTestCase(unittest.TestCase):
         session = self.layer['session']
         manager = SchemaManager(session)
 
-
         item = InterfaceClass('Sample', [directives.Schema])
         directives.title.set(item, u'Sample Schema')
         directives.version.set(item, p1)
         newId = manager.put(None, item)
-        self.assertTrue(newId > 0)
+        self.assertGreater(newId, 0)
 
         # Cannot insert again (as in, cannot insert existing schemata)
         with self.assertRaises(ValueError):
@@ -623,7 +622,7 @@ class SchemaManagerTestCase(unittest.TestCase):
         directives.title.set(item, u'Sample Schema')
         directives.version.set(item, p2)
         newId = manager.put(None, item)
-        self.assertTrue(newId > 0)
+        self.assertGreater(newId, 0)
 
         # Needs to be a published form
         item = InterfaceClass('Fail', [directives.Schema])
@@ -647,23 +646,23 @@ class SchemaManagerTestCase(unittest.TestCase):
 
         # Inserting Child A should also insert it's base schema
         newId = manager.put(None, childa)
-        self.assertTrue(newId > 0)
+        self.assertGreater(newId, 0)
 
         # Inserting Child B should reuse the same base schema
         newId = manager.put(None, childb)
-        self.assertTrue(newId > 0)
+        self.assertGreater(newId, 0)
 
         # Make sure only one base schema was inserted
         count = session.query(model.Schema).filter_by(name='Base').count()
-        self.assertEquals(count, 1)
+        self.assertEquals(1, count)
 
         # Make sure only one child A schema was inserted
         count = session.query(model.Schema).filter_by(name='ChildA').count()
-        self.assertEquals(count, 1)
+        self.assertEquals(1, count)
 
         # Make sure only one child B schema was inserted
         count = session.query(model.Schema).filter_by(name='ChildB').count()
-        self.assertEquals(count, 1)
+        self.assertEquals(1, count)
 
 
 class SchemaToInterfaceTestCase(unittest.TestCase):
@@ -866,7 +865,7 @@ class FieldToAttributeTestCase(unittest.TestCase):
             # Test as a collection
             field = zope.schema.List(__name__='Foo', title=u'Foo', value_type=ztype())
             attribute = fieldToAttribute(field)
-            self.assertEqual(attribute.type, name)
+            self.assertEqual(name, attribute.type)
             self.assertTrue(attribute.is_collection)
 
             # Test with answer choices
@@ -876,7 +875,7 @@ class FieldToAttributeTestCase(unittest.TestCase):
                 attribute = fieldToAttribute(field)
             directives.type.set(field, name)
             attribute = fieldToAttribute(field)
-            self.assertEqual(attribute.type, name)
+            self.assertEqual(name, attribute.type)
 
 
     def testObject(self):
@@ -892,6 +891,6 @@ class FieldToAttributeTestCase(unittest.TestCase):
         # Add the proper base and try again, should work correctly now
         field.schema = InterfaceClass('Foo', bases=[directives.Schema])
         attribute = fieldToAttribute(field)
-        self.assertEqual(attribute.type, 'object')
-        self.assertTrue(attribute.object_schema is not None)
-        self.assertEqual(attribute.object_schema.name, 'Foo')
+        self.assertEqual('object', attribute.type)
+        self.assertIsNotNone(attribute.object_schema)
+        self.assertEqual('Foo', attribute.object_schema.name)

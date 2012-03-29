@@ -54,7 +54,7 @@ setup(
 
         # ORM utilities and upgrade tools
         'SQLAlchemy',
-        'sqlalchemy-migrate',
+        'alembic',
 
         ],
     extras_require=dict(
