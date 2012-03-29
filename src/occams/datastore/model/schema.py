@@ -177,11 +177,20 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
     def keys(self):
         return self.attributes.keys()
 
+    def iterkeys(self):
+        return self.attributes.iterkeys()
+
     def values(self):
         return self.attributes.values()
 
+    def itervalues(self):
+        return self.attributes.itervalues()
+
     def items(self):
         return self.attributes.items()
+
+    def iteritems(self):
+        return self.attributes.iteritems()
 
 
 class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):

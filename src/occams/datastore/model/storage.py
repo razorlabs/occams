@@ -176,13 +176,20 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         attribute = self.schema[key]
         wrapperFactory = nameModelMap[attribute.type]
 
-        if not collector.filter_by(attribute=attribute, _value=value).count() > 0:
-            collector.append(wrapperFactory(attribute=attribute, _value=value))
+        if attribute.is_collection:
+            # Don't even bother to try and get a diff, just remove it
+            del self[key]
+
+        values = [value] if not isinstance(value, list) else value
+
+        for value in values:
+            if not collector.filter_by(attribute=attribute, _value=value).count() > 0:
+                collector.append(wrapperFactory(attribute=attribute, _value=value))
 
     def __delitem__(self, key):
         collector = self._getCollector(key)
         attribute = self.schema[key]
-        collector.remove(collector.filter_by(attribute=attribute))
+        collector.filter_by(attribute=attribute).delete('fetch')
 
     def items(self):
         return list(self.iteritems())

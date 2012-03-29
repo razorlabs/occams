@@ -44,7 +44,7 @@ class EntityModelTestCase(unittest.TestCase):
         session.add(entity)
         session.flush()
         count = session.query(model.Entity).count()
-        self.assertEquals(count, 1)
+        self.assertEquals(1, count)
 
     def testProperties(self):
         session = self.layer['session']
@@ -54,11 +54,11 @@ class EntityModelTestCase(unittest.TestCase):
         session.flush()
 
         # Check that all properties are working properly
-        self.assertNotEqual(None, entity.schema)
-        self.assertNotEqual(None, entity.create_date)
-        self.assertNotEqual(None, entity.create_user)
-        self.assertNotEqual(None, entity.modify_date)
-        self.assertNotEqual(None, entity.modify_user)
+        self.assertIsNotNone(entity.schema)
+        self.assertIsNotNone(entity.create_date)
+        self.assertIsNotNone(entity.create_user)
+        self.assertIsNotNone(entity.modify_date)
+        self.assertIsNotNone(entity.modify_user)
 
     def testDefaultCollectDate(self):
         # Make sure the system can auto-assign a collect date for the entry
@@ -67,7 +67,7 @@ class EntityModelTestCase(unittest.TestCase):
         entity = model.Entity(schema=schema, name='Foo', title=u'')
         session.add(entity)
         session.flush()
-        self.assertEqual(entity.collect_date, date.today())
+        self.assertEqual(date.today(), entity.collect_date)
 
         # If one is supplied by the user, don't do anything
         collect_date = date(2010, 9, 1)
