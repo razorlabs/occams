@@ -47,53 +47,80 @@ def main():
     usage = """overhaul.py OLDCONNECT NEWCONNECT"""
     configureGlobalSession(sys.argv[1], sys.argv[2])
     addUser("bitcore@ucsd.edu")
-    moveInParentSchemas()
-    moveInChildSchemas()
-    #moveAttributesAndChoices()
+    moveInAllSchemas()
+    moveInAttributesAndChoices()
     Session.commit()
     if isWorking():
         print "Yay!"
 
-def moveAttributesAndChoices():
+def moveInAttributesAndChoices():
     pass
 
-def moveInChildSchemas():
+def moveInAllSchemas():
     schemaChanges = getKnownSchemaChanges()
     for revision in schemaChanges:
-        originals = getOriginalChildSchemas(revision)
-        createSchemas(revision,originals)
-        print "Installed",len(originals),"child schemas!"
+        # PARENTS SCHEMAS
+        p_original = getOriginalParentSchema(revision)
+        new_parent = createSchema(revision,p_original)
+        # CHILD SCHEMAS AND THEIR PARENT ATTRIBUTES
+        c_originals = getOriginalChildSchemas(p_original)
+        for c_original in c_originals:
+            new_child = createSchema(revision,c_original)
+            p_attr = getLinkingAttr(c_original)
+            createAttr(revision,new_parent,new_child,p_attr)
+        print "Installed",len(c_originals),"child schemas!"
 
-def moveInParentSchemas():
-    """Do general task over stuff produced by printListOfSchemas()"""
-    schemaChanges = getKnownSchemaChanges()
-    for revision in schemaChanges:
-        originals = [getOriginalParentSchema(revision)]
-        createSchemas(revision,originals)
-
-def createSchemas(revision,originals):
+def createAttr(revision,new_parent,new_child,p_attr):
     """Given a schema name and revision date, create such a schema"""
     form_name, publish_date = revision[0],revision[1]
-    for original in originals:
-        simples = ["name","title","description","storage","create_date","modify_date"]
-        buildIt = {
-            "state":"published",
-            #"create_date":publish_date,
-            #"modify_date":publish_date,
-            "publish_date":publish_date,
-            }
-        for simple in simples:
-            buildIt[simple] = getattr(original,simple)
-        toEnter = model.Schema(**buildIt)
-        Session.add(toEnter)
-        Session.flush()
-        print "Added for",revision
+    simples = [
+            "name","title","description",
+            "type","is_collection","is_required","order",
+            "create_date","modify_date"]
+    buildIt = {
+        # the "_id" will be added to the keys and the ".id" on the
+        # instances will be handled by convention-respecting machinery
+        # in model.Attribute when (**builtIt) is processed.
+        "schema":new_parent,
+        "object_schema":new_child,
+        }
+    for simple in simples:
+        buildIt[simple] = getattr(p_attr,simple)
+    toEnter = model.Attribute(**buildIt)
+    Session.add(toEnter)
+    Session.flush()
+    print "Added an attribute named",p_attr.name
 
-def getOriginalChildSchemas(revision):
+def createSchema(revision,original):
+    """Given a schema name and revision date, create such a schema"""
+    form_name, publish_date = revision[0],revision[1]
+    simples = ["name","title","description","storage","create_date","modify_date"]
+    buildIt = {
+        "state":"published",
+        "publish_date":publish_date,
+        }
+    for simple in simples:
+        buildIt[simple] = getattr(original,simple)
+    toEnter = model.Schema(**buildIt)
+    Session.add(toEnter)
+    Session.flush()
+    print "Added a schema for",revision
+    return toEnter
+
+def getLinkingAttr(c_original):
+    """Get original parent attribute given original child schema"""
+    sch = old_model.entity("schema")
+    att = old_model.entity("attribute")
+    qry = (
+        Session.query(att)
+        .filter(att.object_schema_id == c_original.id)
+        )
+    return qry.one()
+
+def getOriginalChildSchemas(parent_schema):
     """Return all "original" child schemas for a given parent."""
     # NOTE: We know that child schemas were never really versioned
     # at the schema level.  Weird attributes, but that's it.
-    parent_schema = getOriginalParentSchema(revision)
     sch = old_model.entity("schema")
     att = old_model.entity("attribute")
     qry = (
