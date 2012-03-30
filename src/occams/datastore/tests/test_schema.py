@@ -8,7 +8,6 @@ from datetime import datetime
 from decimal import Decimal
 
 import sqlalchemy.exc
-import zope.schema
 from zope.schema.interfaces import IInt
 from zope.schema.interfaces import IDecimal
 from zope.schema.interfaces import ITextLine
@@ -16,25 +15,19 @@ from zope.schema.interfaces import IText
 from zope.schema.interfaces import IBool
 from zope.schema.interfaces import IDate
 from zope.schema.interfaces import IDatetime
-from zope.schema.interfaces import IObject
 from zope.schema.interfaces import IChoice
 from zope.schema.interfaces import IList
-from zope.interface.interface import InterfaceClass
 from zope.interface.verify import verifyClass
 from zope.interface.verify import verifyObject
 
 from occams.datastore import model
-from occams.datastore import directives
 from occams.datastore.interfaces import IManager
 from occams.datastore.interfaces import ISchemaManagerFactory
 from occams.datastore.interfaces import ManagerKeyError
 from occams.datastore.schema import SchemaManager
 from occams.datastore.schema import HierarchyInspector
 from occams.datastore.schema import copy
-from occams.datastore.schema import schemaToInterface
 from occams.datastore.schema import attributeToField
-from occams.datastore.schema import interfaceToSchema
-from occams.datastore.schema import fieldToAttribute
 from occams.datastore.testing import DATASTORE_LAYER
 
 
@@ -369,25 +362,20 @@ class HierarchyTestCase(unittest.TestCase):
         # (such as the root)
         session = self.layer['session']
         hierarchy = HierarchyInspector(session)
-        children = hierarchy.getChildren('Animal')
+        children = hierarchy.children('Animal')
         self.assertEqual(12, len(children))
 
     def testChildren(self):
         # Get the actual objects
         session = self.layer['session']
         hierarchy = HierarchyInspector(session)
-        children = hierarchy.getChildren('Bird')
+        children = hierarchy.children('Bird')
         self.assertEqual(4, len(children))
-
-        self.assertTrue(directives.Schema.isEqualOrExtendedBy(children[0]))
-        self.assertTrue(directives.Schema.isEqualOrExtendedBy(children[1]))
-        self.assertTrue(directives.Schema.isEqualOrExtendedBy(children[2]))
-        self.assertTrue(directives.Schema.isEqualOrExtendedBy(children[3]))
 
     def testChildrenNames(self):
         session = self.layer['session']
         hierarchy = HierarchyInspector(session)
-        result = hierarchy.getChildrenNames('Bird')
+        result = hierarchy.childrenNames('Bird')
         names = [n for n in result]
         self.assertEqual(4, len(names))
         self.assertIn('Hawk', names)
@@ -401,10 +389,10 @@ class HierarchyTestCase(unittest.TestCase):
         hierarchy = HierarchyInspector(session)
 
         with self.assertRaises(ManagerKeyError):
-            hierarchy.getChildren('Fish')
+            hierarchy.children('Fish')
 
         with self.assertRaises(ManagerKeyError):
-            hierarchy.getChildrenNames('Fish')
+            hierarchy.childrenNames('Fish')
 
     def testVersioned(self):
         session = self.layer['session']
@@ -414,10 +402,10 @@ class HierarchyTestCase(unittest.TestCase):
         # as of the given date
 
         with self.assertRaises(ManagerKeyError):
-            children = hierarchy.getChildren('Animal', on=p1)
+            children = hierarchy.children('Animal', on=p1)
 
         with self.assertRaises(ManagerKeyError):
-            names = hierarchy.getChildrenNames('Animal', on=p1)
+            names = hierarchy.childrenNames('Animal', on=p1)
 
 
 class SchemaManagerTestCase(unittest.TestCase):
@@ -430,28 +418,21 @@ class SchemaManagerTestCase(unittest.TestCase):
     def setUp(self):
         session = self.layer['session']
 
-        create = lambda n, s, p: model.Schema(
-            name=str(n),
-            title=unicode(n),
-            state=s,
-            publish_date=p
-            )
-
         # Add dummy data with multiple versions of forms in various states
         session.add_all([
-            create('Foo', 'published', p1),
-            create('Foo', 'published', p2),
-            create('Foo', 'published', p3),
+            model.Schema(name='Foo', title=u'', state='published', publish_date=p1),
+            model.Schema(name='Foo', title=u'', state='published', publish_date=p2),
+            model.Schema(name='Foo', title=u'', state='published', publish_date=p3),
 
-            create('Bar', 'published', p1),
+            model.Schema(name='Bar', title=u'', state='published', publish_date=p1),
 
-            create('Baz', 'published', p1),
-            create('Baz', 'published', p3),
+            model.Schema(name='Baz', title=u'', state='published', publish_date=p1),
+            model.Schema(name='Baz', title=u'', state='published', publish_date=p3),
 
-            create('Caz', 'published', p2),
+            model.Schema(name='Caz', title=u'', state='published', publish_date=p2),
 
             # Manager's only report published schemata
-            create('Jaz', 'draft', None),
+            model.Schema(name='Jaz', title=u'', state='draft'),
             ])
 
         session.flush()
@@ -464,26 +445,13 @@ class SchemaManagerTestCase(unittest.TestCase):
         session = self.layer['session']
         manager = SchemaManager(session)
 
-        keys = manager.keys()
-        self.assertEqual(4, len(keys))
+        self.assertItemsEqual(['Foo', 'Bar', 'Baz', 'Caz'], manager.keys())
 
-        # Doesn't do anything anymore
-        keys = manager.keys(ever=True)
-        self.assertEqual(4, len(keys))
+        # Doesn't do anything anymore=
+        self.assertItemsEqual(['Foo', 'Bar', 'Baz', 'Caz'], manager.keys(ever=True))
 
         # Caz should not have existed yet
-        keys = manager.keys(on=p1)
-        self.assertEqual(3, len(keys))
-        self.assertIn('Foo', keys)
-        self.assertIn('Bar', keys)
-        self.assertIn('Baz', keys)
-        self.assertNotIn('Caz', keys)
-
-    def testLifecycle(self):
-        session = self.layer['session']
-        manager = SchemaManager(session)
-        publications = manager.lifecycles('Foo')
-        self.assertEqual(3, len(publications))
+        self.assertItemsEqual(['Foo', 'Bar', 'Baz'], manager.keys(on=p1))
 
     def testHas(self):
         session = self.layer['session']
@@ -512,22 +480,6 @@ class SchemaManagerTestCase(unittest.TestCase):
         # Caz existed happily after p2
         self.assertTrue(manager.has('Caz', on=p2))
         self.assertTrue(manager.has('Caz', on=p3))
-
-    def testRetire(self):
-        session = self.layer['session']
-        manager = SchemaManager(session)
-
-        # This behavior has been deprecated and should no long function
-        with self.assertRaises(NotImplementedError):
-            manager.retire('Foo')
-
-    def testRestore(self):
-        session = self.layer['session']
-        manager = SchemaManager(session)
-
-        # This behavior has been deprecated and should no long function
-        with self.assertRaises(NotImplementedError):
-            manager.restore('Foo')
 
     def testPurge(self):
         session = self.layer['session']
@@ -580,173 +532,46 @@ class SchemaManagerTestCase(unittest.TestCase):
 
         # Get something that dosn't exist
         with self.assertRaises(ManagerKeyError):
-            name = 'NonExisting'
-            item = manager.get(name)
+            item = manager.get('NonExisting')
+
+        # Get something with multiple versions
+        item1 = manager.get('Foo', on=p1)
+        item2 = manager.get('Foo', on=p2)
+        self.assertNotEqual(item1, item2)
+        self.assertEqual(item1.name, item2.name)
 
         # Get something that only has one version
-        name = 'Bar'
-        item = manager.get(name)
-        self.assertEqual(name, item.__name__)
+        item = manager.get('Bar')
+        self.assertEqual('Bar', item.name)
         self.assertIsNotNone(item)
 
         # Get something that doesn't exist yet
-        name = 'Caz'
         with self.assertRaises(ManagerKeyError):
-            item = manager.get(name, on=p1)
+            item = manager.get('Caz', on=p1)
         # Only works if we specify the version
-        item = manager.get(name, on=p3)
-        self.assertEqual(name, item.__name__)
+        item = manager.get('Caz', on=p3)
+        self.assertEqual('Caz', item.name)
         self.assertIsNotNone(item)
 
         # Also, can't get anything that hasn't been published yet
-        name = 'Jaz'
         with self.assertRaises(ManagerKeyError):
-            item = manager.get(name)
+            item = manager.get('Jaz')
 
     def testPut(self):
         session = self.layer['session']
         manager = SchemaManager(session)
 
-        item = InterfaceClass('Sample', [directives.Schema])
-        directives.title.set(item, u'Sample Schema')
-        directives.version.set(item, p1)
-        newId = manager.put(None, item)
-        self.assertGreater(newId, 0)
+        schema = model.Schema(name='Foo', title=u'', state='published')
 
-        # Cannot insert again (as in, cannot insert existing schemata)
+        id = manager.put('Bar', schema)
+        self.assertEqual(id, schema.id)
+
+        schema.description = u'Hello world!'
+        id = manager.put('Bar', schema)
+        self.assertEqual(id, schema.id)
+
         with self.assertRaises(ValueError):
-            newId = manager.put(None, item)
-
-        # Suppose we want to insert a another copy of the schema
-        item = InterfaceClass('Sample', [directives.Schema])
-        directives.title.set(item, u'Sample Schema')
-        directives.version.set(item, p2)
-        newId = manager.put(None, item)
-        self.assertGreater(newId, 0)
-
-        # Needs to be a published form
-        item = InterfaceClass('Fail', [directives.Schema])
-        directives.title.set(item, u'Sample Schema')
-        directives.version.set(item, None)
-        with self.assertRaises(ValueError):
-            newId = manager.put(None, item)
-
-        # Now try putting something with base schema
-        session = self.layer['session']
-        manager = SchemaManager(session)
-        base = InterfaceClass('Base', bases=[directives.Schema])
-        directives.title.set(base, u'Base')
-        directives.version.set(base, p1)
-        childa = InterfaceClass('ChildA', bases=[base])
-        directives.title.set(childa, u'Child A')
-        directives.version.set(childa, p3)
-        childb = InterfaceClass('ChildB', bases=[base])
-        directives.title.set(childb, u'Child B')
-        directives.version.set(childb, p4)
-
-        # Inserting Child A should also insert it's base schema
-        newId = manager.put(None, childa)
-        self.assertGreater(newId, 0)
-
-        # Inserting Child B should reuse the same base schema
-        newId = manager.put(None, childb)
-        self.assertGreater(newId, 0)
-
-        # Make sure only one base schema was inserted
-        count = session.query(model.Schema).filter_by(name='Base').count()
-        self.assertEquals(1, count)
-
-        # Make sure only one child A schema was inserted
-        count = session.query(model.Schema).filter_by(name='ChildA').count()
-        self.assertEquals(1, count)
-
-        # Make sure only one child B schema was inserted
-        count = session.query(model.Schema).filter_by(name='ChildB').count()
-        self.assertEquals(1, count)
-
-
-class SchemaToInterfaceTestCase(unittest.TestCase):
-    """
-    Verifies that a schema can be converted to a Zope-style interface
-    """
-
-    layer = DATASTORE_LAYER
-
-    def testBasic(self):
-        # Cannot convert something that doesn't extend directive base schema class
-        schema = model.Schema(name='Foo', title=u'Foo Schema')
-        iface = schemaToInterface(schema)
-
-        # Make sure it's valid
-        self.assertTrue(directives.Schema.isEqualOrExtendedBy(iface))
-
-    def testSubClassed(self):
-        # Cannot convert something that doesn't extend directive base schema class
-        base = model.Schema(name='Base', title=u'Base Schema')
-        schema = model.Schema(base_schema=base, name='Foo', title=u'Foo Schema')
-        iface = schemaToInterface(schema)
-
-        # Make sure the schema (and it's base schema) are valid
-        self.assertTrue(directives.Schema.isEqualOrExtendedBy(iface))
-        self.assertTrue(directives.Schema.isEqualOrExtendedBy(iface.__bases__[0]))
-
-
-class InterfaceToSchemaTestCase(unittest.TestCase):
-    """
-    Verifies that a Zope style interface can be converted to a SQLAlchemy schema
-    """
-
-    layer = DATASTORE_LAYER
-
-    def testNonDirective(self):
-        # Cannot convert something that doesn't extend directive base schema class
-        item = InterfaceClass('WillFail')
-        with self.assertRaises(ValueError):
-            interfaceToSchema(item)
-
-    def testMultiBase(self):
-        # Cannot convert something with multiple bases classes
-        fail1 = InterfaceClass('Base1')
-        fail2 = InterfaceClass('Base2')
-        # Shouldn't work even if one of the schema is properly structured
-        good = InterfaceClass('FailBase', bases=[directives.Schema])
-        item = InterfaceClass('WillFail', bases=[good, fail1, fail2])
-        with self.assertRaises(ValueError):
-            interfaceToSchema(item)
-
-    def testBasic(self):
-        basic = InterfaceClass('Basic', bases=[directives.Schema])
-        directives.title.set(basic, u'Basic Schema')
-        schema = interfaceToSchema(basic)
-
-        # Should be able to add it to the database with no problems
-        session = self.layer['session']
-        session.add(schema)
-        session.flush()
-
-    def testSubClassed(self):
-        # Convert something that has a base class
-        base = InterfaceClass('Base', bases=[directives.Schema])
-        directives.title.set(base, u'This is a base')
-        item = InterfaceClass('ContainsABase', bases=[base])
-        directives.title.set(item, u'This is a child')
-        schema = interfaceToSchema(item)
-
-        # Should be able to add it to the database with no problems
-        session = self.layer['session']
-        session.add(schema)
-        session.flush()
-
-    def testWithAttributes(self):
-        # Make sure that a schema with attributes can be converted
-        iface = InterfaceClass(
-            name='Foo',
-            bases=[directives.Schema],
-            attrs=dict(foo=zope.schema.TextLine(__name__='foo', title=u''))
-            )
-
-        schema = interfaceToSchema(iface)
-        self.assertIn('foo', schema)
+            id = manager.put(None, model.Entity(schema=schema, name=None, title=u''))
 
 
 class AttributeToFieldTestCase(unittest.TestCase):
@@ -793,7 +618,6 @@ class AttributeToFieldTestCase(unittest.TestCase):
                     ))
             field = attributeToField(schema['foo'])
             self.assertTrue(IChoice.providedBy(field))
-            self.assertEqual(directives.type.bind().get(field), name)
 
             # Test with choices AND as a collection
             schema['foo'] = \
@@ -807,7 +631,6 @@ class AttributeToFieldTestCase(unittest.TestCase):
             field = attributeToField(schema['foo'])
             self.assertTrue(IList.providedBy(field))
             self.assertTrue(IChoice.providedBy(field.value_type))
-            self.assertEqual(directives.type.bind().get(field), name)
 
     def testObject(self):
         # Test as a basic sub-object
@@ -818,79 +641,5 @@ class AttributeToFieldTestCase(unittest.TestCase):
             type='object',
             object_schema=model.Schema(name='Bar', title=u'Bar', is_inline=True)
             )
-        field = attributeToField(schema['foo'])
-        self.assertTrue(IObject.providedBy(field))
-        self.assertEqual(directives.type.bind().get(field), 'object')
-
-        # Test as a collection
-        schema = model.Schema(name='Foo', title=u'Foo')
-        schema['foo'] = model.Attribute(
-            title=u'',
-            order=0,
-            type='object',
-            is_collection=True,
-            object_schema=model.Schema(name='Bar', title=u'Bar', is_inline=True)
-            )
-        field = attributeToField(schema['foo'])
-        self.assertTrue(IList.providedBy(field))
-        self.assertTrue(IObject.providedBy(field.value_type))
-        self.assertEqual(directives.type.bind().get(field), 'object')
-
-
-class FieldToAttributeTestCase(unittest.TestCase):
-    """
-    Verifies that a Zope style field can be converted to a SQLAlchemy attribute
-    """
-
-    layer = DATASTORE_LAYER
-
-    def testBasic(self):
-        types = dict(
-            boolean=(zope.schema.Bool, [True, False]),
-            integer=(zope.schema.Int, [1, 7]),
-            decimal=(zope.schema.Decimal, [Decimal('3.4'), Decimal('4.5')]),
-            string=(zope.schema.TextLine, [u'foo', u'bar']),
-            text=(zope.schema.Text, [u'Some\nFoo', u'Some\nBar']),
-            date=(zope.schema.Date, [date(2011, 01, 03), date(2012, 02, 19)]),
-            datetime=(zope.schema.Datetime,
-                [datetime(2011, 01, 03), datetime(2012, 02, 19)]),
-            )
-
-        for name, (ztype, choices) in types.items():
-            # Test as a basic field type
-            field = ztype(__name__='Foo', title=u'Foo')
-            attribute = fieldToAttribute(field)
-            self.assertEqual(attribute.type, name)
-
-            # Test as a collection
-            field = zope.schema.List(__name__='Foo', title=u'Foo', value_type=ztype())
-            attribute = fieldToAttribute(field)
-            self.assertEqual(name, attribute.type)
-            self.assertTrue(attribute.is_collection)
-
-            # Test with answer choices
-            field = zope.schema.Choice(__name__='Foo', title=u'Foo', values=choices)
-            # Cannot convert a choice field without a directive
-            with self.assertRaises(ValueError):
-                attribute = fieldToAttribute(field)
-            directives.type.set(field, name)
-            attribute = fieldToAttribute(field)
-            self.assertEqual(name, attribute.type)
-
-
-    def testObject(self):
-        field = zope.schema.Object(
-            __name__='foo',
-            title=u'Foo',
-            schema=InterfaceClass('Foo')
-            )
-        # Same deal, cannot add an object that doesn't use the directive base
         with self.assertRaises(ValueError):
-            attribute = fieldToAttribute(field)
-
-        # Add the proper base and try again, should work correctly now
-        field.schema = InterfaceClass('Foo', bases=[directives.Schema])
-        attribute = fieldToAttribute(field)
-        self.assertEqual('object', attribute.type)
-        self.assertIsNotNone(attribute.object_schema)
-        self.assertEqual('Foo', attribute.object_schema.name)
+            field = attributeToField(schema['foo'])

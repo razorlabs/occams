@@ -36,29 +36,25 @@ setup(
     install_requires=[
         'setuptools',
 
-        # ZOPE component functionality
-        'zope.component',
-        'zope.configuration',
+        # Component specification/documentation
         'zope.deprecation',
         'zope.i18nmessageid',
-
-        # Component specification/documentation
         'zope.interface',
         'zope.schema',
 
         # Batching support
         'z3c.batching',
 
-        # Interface directives for schemata
-        'martian',
-
         # ORM utilities and upgrade tools
         'SQLAlchemy',
         'alembic',
-
         ],
     extras_require=dict(
         postgresql=['psycopg2'],
+        zope=[
+            'zope.component',
+            'zope.configuration',
+            ],
         test=['plone.testing'],
         ),
     tests_require=['plone.testing'],

@@ -12,6 +12,17 @@ from occams.datastore.model.storage import enforceSchemaState
 from occams.datastore.model.storage import cleanDataByState
 
 
+def scoped_session(bind=None, user=None):
+    """
+    Convenience method for returning a scoped session already using
+    DataStore's customized session
+    """
+    return sqlalchemy.orm.scoped_session(sqlalchemy.orm.sessionmaker(
+        bind=bind,
+        class_=DataStoreSession,
+        user=user
+        ))
+
 
 class DataStoreSession(sqlalchemy.orm.Session):
     """
@@ -42,18 +53,6 @@ class DataStoreSession(sqlalchemy.orm.Session):
         kwargs.setdefault('autocommit', False)
         super(DataStoreSession, self).__init__(*args, **kwargs)
         sqlalchemy.event.listen(self, 'before_flush', onBeforeFlush)
-
-
-def scoped_session(bind, user):
-    """
-    Convenience method for returning a scoped session already using
-    DataStore's customized session
-    """
-    return sqlalchemy.orm.scoped_session(sqlalchemy.orm.sessionmaker(
-        bind=bind,
-        class_=DataStoreSession,
-        user=user
-        ))
 
 
 def onBeforeFlush(session, flush_context, instances):
