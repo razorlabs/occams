@@ -9,6 +9,7 @@ Precondition Assumptions:
     3. For avrc_data we have "DROP TABLE"-ed: entity, state, datetime, 
         integer, object, decimal, string, schema, attribute, and choice.
     4. During the upgrade process, the website will be turned off.
+    5. The source schema table is unique on (schema.name,DATE(create_date))
 
 Design Assumptions:
     1. Reflect avrc_demo_data w/ sqlsoup (readonly to ensure no changes).
@@ -31,11 +32,12 @@ from sqlalchemy.sql.expression import null
 from sqlalchemy.sql.expression import literal_column
 from sqlalchemy.orm import aliased
 
-global USER
-USER = (lambda : "bitcore@ucsd.edu") # can be called by a library
-
 global Session
-Session = scoped_session(sessionmaker())
+Session = scoped_session(
+    sessionmaker(
+        class_=model.DataStoreSession,
+        user=(lambda : "bitcore@ucsd.edu") # can be called by a library
+        ))
 
 global old_model
 
@@ -44,66 +46,234 @@ def main():
     import sys
     usage = """overhaul.py OLDCONNECT NEWCONNECT"""
     configureGlobalSession(sys.argv[1], sys.argv[2])
-    printListOfSchemas()
+    addUser("bitcore@ucsd.edu")
+    moveInAllSchemas()
+    moveInAttributesAndChoices()
+
+    # Do some QA before implementing the last two move-ins
+    # because it would suck to have something wrong and have
+    # to re-work entities...
+    moveInEntities()
+    moveInValues() # as part of the entities?
+
+    Session.commit()
     if isWorking():
         print "Yay!"
 
-def moveIntoSchemaTable():
-    """Do general task over stuff produced by printListOfSchemas()"""
+def moveInEntities():
     pass
 
-def printListOfSchemas(): 
+def moveInValues():
+    pass
+
+def moveInAttributesAndChoices():
+    schemaChanges = getInstalledSchemas()
+    for newSchema in schemaChanges:
+        attrsAndChoices = getOriginalAttrsAndChoices(newSchema)
+        createAttrsAndChoices(newSchema,attrsAndChoices)
+
+def moveInAllSchemas():
+    schemaChanges = getKnownSchemaChanges()
+    for revision in schemaChanges:
+        installed = 0
+        #print "==========\nWorking on revision:",revision
+        # PARENTS SCHEMAS
+        p_original = getOriginalParentSchema(revision)
+        new_parent = createSchema(revision,p_original)
+        installed += 1
+        # CHILD SCHEMAS AND THEIR LINKING PARENT ATTRIBUTES
+        c_originals = getOriginalChildSchemas(p_original)
+        for c_original in c_originals:
+            new_child = createSchema(revision,c_original)
+            installed += 1
+            p_attr = getLinkingAttr(c_original)
+            createLinkingAttr(revision,new_parent,new_child,p_attr)
+        #print "Installed %s total schemas and related attributes." % installed
+
+def createAttrsAndChoices(newSchema,attrsAndChoices):
+    """Given a schema name and revision date, create such a schema"""
+    simpleAttr = [
+            "name","title","description",
+            "type","is_collection","is_required",
+            "create_date","modify_date"]
+    simpleChoice = [
+            "name","title","description","value",
+            "create_date","modify_date"]
+    for i, (attribute, choices) in enumerate(attrsAndChoices):
+        buildAttr = {
+            "order":i,
+            "create_date":newSchema.create_date,
+            "modify_date":newSchema.modify_date,
+            }
+        for simple in simpleAttr:
+            buildAttr[simple] = getattr(attribute,simple)
+        newSchema[attribute.name] = model.Attribute(**buildAttr)
+        for j, choice in enumerate(choices):
+            buildChoice = {
+                "order":j,
+                "create_date":newSchema.create_date,
+                "modify_date":newSchema.modify_date,
+                }
+            for simple in simpleChoice:
+                buildChoice[simple] = getattr(choice,simple)
+            newSchema[attribute.name].choices.append(model.Choice(**buildChoice))
+    Session.flush()
+
+def createSchema(revision,original):
+    """Given a schema name and revision date, create such a schema"""
+    form_name, publish_date = revision[0],revision[1]
+    simples = ["name","title","description","storage","create_date","modify_date"]
+    buildIt = {
+        "state":"published",
+        "publish_date":publish_date,
+        }
+    for simple in simples:
+        buildIt[simple] = getattr(original,simple)
+    toEnter = model.Schema(**buildIt)
+    Session.add(toEnter)
+    Session.flush()
+    return toEnter
+
+def getInstalledSchemas():
+    """So simple it hurts :)"""
+    return Session.query(model.Schema).order_by("publish_date").all()
+
+def createLinkingAttr(revision,new_parent,new_child,p_attr):
+     """Create the linking attributes between new parent and child attributes"""
+     form_name, publish_date = revision[0],revision[1]
+     simples = [
+             "name","title","description",
+             "type","is_collection","is_required","order",
+             "create_date","modify_date"]
+     buildIt = {
+         # the "_id" will be added to the keys and the ".id" on the
+         # instances will be handled by convention-respecting machinery
+         # in model.Attribute when (**builtIt) is processed.
+         "schema":new_parent,
+         "object_schema":new_child,
+         }
+     for simple in simples:
+         buildIt[simple] = getattr(p_attr,simple)
+     toEnter = model.Attribute(**buildIt)
+     Session.add(toEnter)
+     Session.flush()
+
+def getOriginalAttrsAndChoices(newSchema):
+    """Taking new schema and finding the old attributes and choices for it
+    
+    Safe to use nothing but name and publish_date to connect things.
+    Exclude the linking attributes that have already been set up.
+    Choices are deep copied off of attributes so they're trivial to grab."""
+    sch = old_model.entity("schema")
+    att = old_model.entity("attribute")
+    chc = old_model.entity("choice")
+    publish_date = newSchema.publish_date
+    qry = ( # All the attributes we want!
+        Session.query(att)
+        .join(sch,(sch.id == att.schema_id))
+        .filter(sch.name == newSchema.name)
+        .filter(cast(att.create_date,Date) <= publish_date)
+        .filter((cast(att.remove_date,Date) > publish_date) | (att.remove_date == None))
+        .filter(att.type != "object")
+        .order_by(att.order.asc())
+        )
+    attributes = qry.all()
+    out = []
+    for attribute in attributes:
+        qry = ( # Choices are deep copied and not complicated :)
+            Session.query(chc)
+            .filter(chc.attribute_id == attribute.id)
+            .order_by(chc.order.asc())
+            )
+        choices = qry.all()
+        out.append([attribute,choices])
+    return out
+
+def getLinkingAttr(c_original):
+    """Get original parent attribute given original child schema"""
+    sch = old_model.entity("schema")
+    att = old_model.entity("attribute")
+    qry = (
+        Session.query(att)
+        .filter(att.object_schema_id == c_original.id)
+        )
+    return qry.one()
+
+def getOriginalChildSchemas(parent_schema):
+    """Return all "original" child schemas for a given parent."""
+    # NOTE: We know that child schemas were never really versioned
+    # at the schema level.  Weird attributes, but that's it.
+    sch = old_model.entity("schema")
+    att = old_model.entity("attribute")
+    qry = (
+        Session.query(sch)
+        .join(att,(sch.id == att.object_schema_id))
+        .filter(att.schema_id == parent_schema.id)
+        )
+    return qry.all()
+
+def getOriginalParentSchema(revision):
+    """Return... Track down the template Yay!"""
+    import sqlalchemy.exc
+    form_name, publish_date = revision[0],revision[1]
+    sch = old_model.entity("schema")
+    qry = (
+        Session.query(sch)
+        .filter(sch.name == form_name)
+        .filter(cast(sch.create_date,Date) <= publish_date)
+        .filter((cast(sch.remove_date,Date) > publish_date) | (sch.remove_date == None))
+        )
+    try:
+        out = qry.one()
+    except sqlalchemy.exc.SQLAlchemyError as err:
+        import pdb;pdb.set_trace()
+        print "foo"
+    return out
+
+def addUser(email):
+    #user = Session.query(model.User).filter(model.User.key == email).first()
+    #if not user:
+    Session.add(model.User(key=email))
+    Session.flush()
+
+def getKnownSchemaChanges(): 
+    from sqlalchemy import func
     global Session
     changes = changeTableFactory(Session)
     subforms = subSchemaNamesTableFactory(Session)
+    evilforms = baseSchemaNamesTableFactory(Session)
     realChanges = (
-        Session.query(changes.c.schema_name, changes.c.change_date)
+        Session.query(changes.c.schema_name, changes.c.change_date,func.count().label('revisionCount'))
         .filter(changes.c.change_date != None)
         .filter(~changes.c.schema_name.in_(subforms))
+        .filter(~changes.c.schema_name.in_(evilforms))
         .group_by(changes.c.schema_name, changes.c.change_date)
         .order_by(changes.c.schema_name, changes.c.change_date)
         )
-    #import pdb; pdb.set_trace()
-    print "\n".join(map(str,realChanges.all()))
+    return realChanges.all()
 
 def configureGlobalSession(old_connect, new_connect):
     """Set up Session for data manipulation and create new tables as side effect."""
     global old_model
     new_engine = create_engine(new_connect)
+    model.Model.metadata.drop_all(bind=new_engine, checkfirst=True)
     model.Model.metadata.create_all(bind=new_engine, checkfirst=True)
     tables = []
     tables_model = model.Model.metadata.sorted_tables
     tables += dict.fromkeys(tables_model, new_engine).items()
-    #import pdb; pdb.set_trace()
     Session.configure(binds=dict(tables))
     old_model = SqlSoup(old_connect,session=Session)
-    #tables_datastore = old_model.sorted_tables
-    #tables += dict.fromkeys(tables_datastore, old_model.bind).items()
 
-#def makeSchema(blob):
-#    """Not used code yet... conceptual example from Marco"""
-#    schema = model.Schema(
-#       name='Foo',
-#       title='Foo Form',
-#       state='published',
-#       publish_date=date(),
-#       attributes=dict(
-#           model.Attribute(name='foo', title=u'Enter Foo', order=0, choices=[
-#               model.Choice(),
-#               model.Choice(),
-#           ]),
-#           model.Attribute(name='foo', title=u'Enter Foo', order=1),
-#           model.Attribute(name='foo', title=u'Enter Foo', order=2),
-#           model.Attribute(name='foo', title=u'Enter Foo', order=3),
-#       )
-#    Session.add(schema)
-#    Session.flush()
-#    assert schema.revision == 0
-#    schema.description = 'adfasdfadsfasd'
-#    Session.flush()
-#    assert schema.revision == 1
-#    newSchema = copy(schema)
-#    session.add(newSchema)
+def baseSchemaNamesTableFactory(session):
+    """Helper method to generate a SQLAlchemy expression table for base schemata names"""
+    BaseSchema = aliased(old_model.entity("schema"), name='_base')
+    # A query that builds a base schema name result set
+    query = (
+        session.query(BaseSchema.name)
+        .join((old_model.entity("schema"), (old_model.entity("schema").base_schema_id == BaseSchema.id)))
+        .group_by(BaseSchema.name)
+        )
+    return query.subquery()
 
 def literal(value):
     """Helper method to convert a Python value into a SQL string"""
@@ -205,12 +375,9 @@ def isWorking():
     """Did [] work?"""
     global old_model
     good = True
-    if Session.query(old_model.entity("schema")).count() < 1:
-        print "SqlSoup broken"
-        good = False
-    if Session.query(model.Schema).count() > 0:
-        print "Session broken"
-        good = False
+    #if Session.query(old_model.entity("schema")).count() != 32:
+    #    print "Wrong number of schemas added"
+    #    good = False
     return good
 
 if __name__ == '__main__':

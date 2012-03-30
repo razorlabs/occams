@@ -251,8 +251,8 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
                 name='fk_%s_object_schema_id' % cls.__tablename__,
                 ondelete='SET NULL',
                 ),
-            UniqueConstraint('schema_id', 'name'),
-            UniqueConstraint('schema_id', 'order'),
+            UniqueConstraint('schema_id', 'name', name='uq_%s_name' % cls.__tablename__),
+            UniqueConstraint('schema_id', 'order', name='uq_%s_order' % cls.__tablename__),
             Index('ix_%s_object_schema_id' % cls.__tablename__, 'object_schema_id'),
             Index('ix_%s_checksum' % cls.__tablename__, 'checksum'),
             CheckConstraint(
