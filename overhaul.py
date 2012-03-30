@@ -48,8 +48,7 @@ def main():
     configureGlobalSession(sys.argv[1], sys.argv[2])
     addUser("bitcore@ucsd.edu")
     moveInAllSchemas()
-
-    #moveInAttributesAndChoices() # as part of the schemas?
+    moveInAttributesAndChoices()
 
     # Do some QA before implementing the last two move-ins
     # because it would suck to have something wrong and have
@@ -68,49 +67,57 @@ def moveInValues():
     pass
 
 def moveInAttributesAndChoices():
-    schemaChanges = getKnownSchemaChanges()
-    for revision in schemaChanges:
-        o_attr = getOriginalAttrsAndChoices()
-        createAttrs(revision,o_attrs)
+    schemaChanges = getInstalledSchemas()
+    for newSchema in schemaChanges:
+        attrsAndChoices = getOriginalAttrsAndChoices(newSchema)
+        createAttrsAndChoices(newSchema,attrsAndChoices)
 
 def moveInAllSchemas():
     schemaChanges = getKnownSchemaChanges()
     for revision in schemaChanges:
+        installed = 0
+        #print "==========\nWorking on revision:",revision
         # PARENTS SCHEMAS
         p_original = getOriginalParentSchema(revision)
         new_parent = createSchema(revision,p_original)
-        # CHILD SCHEMAS AND THEIR PARENT ATTRIBUTES
+        installed += 1
+        # CHILD SCHEMAS AND THEIR LINKING PARENT ATTRIBUTES
         c_originals = getOriginalChildSchemas(p_original)
         for c_original in c_originals:
             new_child = createSchema(revision,c_original)
+            installed += 1
             p_attr = getLinkingAttr(c_original)
-            new_attrs = createAttr(revision,new_parent,new_child,p_attr)
+            createLinkingAttr(revision,new_parent,new_child,p_attr)
+        #print "Installed %s total schemas and related attributes." % installed
 
-            # Do attribute/choice move-in here or as separate step
-            # in main()?  That's the first decision :-)
-
-        print "Installed",len(c_originals),"child schemas!"
-
-def createAttr(revision,new_parent,new_child,p_attr):
+def createAttrsAndChoices(newSchema,attrsAndChoices):
     """Given a schema name and revision date, create such a schema"""
-    form_name, publish_date = revision[0],revision[1]
-    simples = [
+    simpleAttr = [
             "name","title","description",
-            "type","is_collection","is_required","order",
+            "type","is_collection","is_required",
             "create_date","modify_date"]
-    buildIt = {
-        # the "_id" will be added to the keys and the ".id" on the
-        # instances will be handled by convention-respecting machinery
-        # in model.Attribute when (**builtIt) is processed.
-        "schema":new_parent,
-        "object_schema":new_child,
-        }
-    for simple in simples:
-        buildIt[simple] = getattr(p_attr,simple)
-    toEnter = model.Attribute(**buildIt)
-    Session.add(toEnter)
+    simpleChoice = [
+            "name","title","description","value",
+            "create_date","modify_date"]
+    for i, (attribute, choices) in enumerate(attrsAndChoices):
+        buildAttr = {
+            "order":i,
+            "create_date":newSchema.create_date,
+            "modify_date":newSchema.modify_date,
+            }
+        for simple in simpleAttr:
+            buildAttr[simple] = getattr(attribute,simple)
+        newSchema[attribute.name] = model.Attribute(**buildAttr)
+        for j, choice in enumerate(choices):
+            buildChoice = {
+                "order":j,
+                "create_date":newSchema.create_date,
+                "modify_date":newSchema.modify_date,
+                }
+            for simple in simpleChoice:
+                buildChoice[simple] = getattr(choice,simple)
+            newSchema[attribute.name].choices.append(model.Choice(**buildChoice))
     Session.flush()
-    print "Added an attribute named",p_attr.name
 
 def createSchema(revision,original):
     """Given a schema name and revision date, create such a schema"""
@@ -125,8 +132,62 @@ def createSchema(revision,original):
     toEnter = model.Schema(**buildIt)
     Session.add(toEnter)
     Session.flush()
-    print "Added a schema for",revision
     return toEnter
+
+def getInstalledSchemas():
+    """So simple it hurts :)"""
+    return Session.query(model.Schema).order_by("publish_date").all()
+
+def createLinkingAttr(revision,new_parent,new_child,p_attr):
+     """Create the linking attributes between new parent and child attributes"""
+     form_name, publish_date = revision[0],revision[1]
+     simples = [
+             "name","title","description",
+             "type","is_collection","is_required","order",
+             "create_date","modify_date"]
+     buildIt = {
+         # the "_id" will be added to the keys and the ".id" on the
+         # instances will be handled by convention-respecting machinery
+         # in model.Attribute when (**builtIt) is processed.
+         "schema":new_parent,
+         "object_schema":new_child,
+         }
+     for simple in simples:
+         buildIt[simple] = getattr(p_attr,simple)
+     toEnter = model.Attribute(**buildIt)
+     Session.add(toEnter)
+     Session.flush()
+
+def getOriginalAttrsAndChoices(newSchema):
+    """Taking new schema and finding the old attributes and choices for it
+    
+    Safe to use nothing but name and publish_date to connect things.
+    Exclude the linking attributes that have already been set up.
+    Choices are deep copied off of attributes so they're trivial to grab."""
+    sch = old_model.entity("schema")
+    att = old_model.entity("attribute")
+    chc = old_model.entity("choice")
+    publish_date = newSchema.publish_date
+    qry = ( # All the attributes we want!
+        Session.query(att)
+        .join(sch,(sch.id == att.schema_id))
+        .filter(sch.name == newSchema.name)
+        .filter(cast(att.create_date,Date) <= publish_date)
+        .filter((cast(att.remove_date,Date) > publish_date) | (att.remove_date == None))
+        .filter(att.type != "object")
+        .order_by(att.order.asc())
+        )
+    attributes = qry.all()
+    out = []
+    for attribute in attributes:
+        qry = ( # Choices are deep copied and not complicated :)
+            Session.query(chc)
+            .filter(chc.attribute_id == attribute.id)
+            .order_by(chc.order.asc())
+            )
+        choices = qry.all()
+        out.append([attribute,choices])
+    return out
 
 def getLinkingAttr(c_original):
     """Get original parent attribute given original child schema"""
@@ -175,32 +236,6 @@ def addUser(email):
     Session.add(model.User(key=email))
     Session.flush()
 
-#def makeSchema(blob):
-#    """Not used code yet... conceptual example from Marco"""
-#    schema = model.Schema(
-#       name='Foo',
-#       title='Foo Form',
-#       state='published',
-#       publish_date=date(),
-#       attributes=dict(
-#           model.Attribute(name='foo', title=u'Enter Foo', order=0, choices=[
-#               model.Choice(),
-#               model.Choice(),
-#           ]),
-#           model.Attribute(name='foo', title=u'Enter Foo', order=1),
-#           model.Attribute(name='foo', title=u'Enter Foo', order=2),
-#           model.Attribute(name='foo', title=u'Enter Foo', order=3),
-#       )
-#    Session.add(schema)
-#    Session.flush()
-#    assert schema.revision == 0
-#    schema.description = 'adfasdfadsfasd'
-#    Session.flush()
-#    assert schema.revision == 1
-#    newSchema = copy(schema)
-#    session.add(newSchema)
-
-
 def getKnownSchemaChanges(): 
     from sqlalchemy import func
     global Session
@@ -228,8 +263,6 @@ def configureGlobalSession(old_connect, new_connect):
     tables += dict.fromkeys(tables_model, new_engine).items()
     Session.configure(binds=dict(tables))
     old_model = SqlSoup(old_connect,session=Session)
-
-
 
 def baseSchemaNamesTableFactory(session):
     """Helper method to generate a SQLAlchemy expression table for base schemata names"""
