@@ -2,35 +2,38 @@
 Change Log
 ==========
 
------------
-0.6.0 (???)
------------
+------------
+1.0.0a (???)
+------------
 
 - General
     - Rebranded to ``occams.datastore``
     - Overhauled versioning mechanics
 
 - Managers
-    - ``retire``, ``restore`` are now deprecated and removed
-    - ``purge`` has been renamed to ``remove``
-    - ``key`` paramter may now be a specific id number of an item as opposed
-            to simply it's string name
-    - ``put`` **ONLY** accepts sqlalchemy items.
-    - ``get`` now returns **ONLY** sqlalchemy items. If you wish to use
-            the zope functionality, use the new compatibility interfaces
+    - ``retire``/``restore``/``lifecycles`` have been removed since they no
+        longer make sense with the new versioning/auditing mechanics
+    - ``keys`` no longer accepts ``ever``
+    - ``has`` no longer accepts ``ever``
+    - Dropped support for Zope interfaces, will be implemeting import/export
+        via XML in a future release
+    - ``Datastore.schemata`` is now a method that requires a schema as input
+    - ``put`` **ONLY** accepts sqlalchemy instances.
+    - ``get`` now returns **ONLY** sqlalchemy instance. If you wish to use
+            the zope functionality, use the new compatibility adapters
 
 - Database
-    - ``asOf`` removed since it requires extra control of what entries to
+    - ``asOf`` removed since it requires extra control of which entries to
         return as of the specified date, the logic for this method
         has been embedded into the managers.
-    - All ``*_user_id`` metadata columns are active
-    - All ``remove_*`` columns have been deprecated and removed, since they
-        introduce intricate dependencies with parent items that are ambiguous.
+    - All ``*_user_id`` metadata columns are activated
+    - All ``remove_*`` columns have been removed, since they introduce complicated
+        dependencies with parent items that are ambiguous.
         (e.g. my parent is "retired", am I retired?)
-    - ``Schema.state`` to determine its circulation, which
-            will make it helpful when editing unpublished schemat
+    - ``Schema.state`` to determine its circulation, which will make it helpful
+        when editing unpublished schemat
     - ``Schema.is_inline`` now indicates if the schema can only be used
-            as a subschema
+        as a subschema
     - ``Attribute.min`` removed
     - ``Attribute.max`` removed
     - ``Attribute.default`` removed
@@ -47,10 +50,10 @@ Change Log
     - ``Entity.state`` is now a built-in column instead of a foreign key,
             as other products expect specific values of this property and should
             not be changed unless a software update is necessary
-    - ``State`` deprecated in favor of new ``Entity.state`` property
-    - ``User`` a new table for tracking user changes
-    - ``Log`` a new table that lists specific changes to properties of
-            tables, useful for displaying feeds and auditing purposes
+    - ``State`` removed in favor of new ``Entity.state`` property
+    - ``User`` a new mapping for tracking user changes
+    - ``Context`` a new mapping for relating entities to external resources
+    - ``External`` a new mapping for keeping track of external resources
 
 
 -----------
