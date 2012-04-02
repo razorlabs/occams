@@ -13,7 +13,7 @@ from sqlalchemy.sql.expression import null
 from sqlalchemy.sql.expression import literal_column
 from sqlalchemy.orm import aliased
 
-from avrc.data.store import model
+from occam.datastore import model
 from occams.form.interfaces import IFormSummary
 from occams.form.interfaces import IFormSummaryGenerator
 

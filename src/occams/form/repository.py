@@ -14,9 +14,9 @@ from zope.schema.vocabulary import SimpleTerm
 from z3c.saconfig import named_scoped_session
 from z3c.saconfig.interfaces import IScopedSession
 
-from avrc.data.store import model
-import avrc.data.store.upgrades.migrate
-from avrc.data.store.interfaces import IDataStore
+from occams.datastore import model
+import occams.datastore.upgrades.migrate
+from occams.datastore.interfaces import IDataStore
 from occams.form import MessageFactory as _
 from occams.form import Logger as log
 from occams.form.interfaces import IRepository
@@ -38,7 +38,7 @@ class AvailableSessionsVocabularyFactory(object):
         for name, utility in registered:
             session = named_scoped_session(name)
             url = str(session.bind.url)
-            path = avrc.data.store.upgrades.migrate.REPOSITORY
+            path = occams.datastore.upgrades.migrate.REPOSITORY
             try:
                 migrate.versioning.api.db_version(url, path)
             except migrate.exceptions.DatabaseNotControlledError:
@@ -114,4 +114,4 @@ def _configureRepositoryDataStore(repository):
     msg_params = dict(repository=repository_name, session=session_name, url=url)
 
     log.info(MSG_INSALLING % msg_params)
-    avrc.data.store.upgrades.migrate.install(datastore.session.bind)
+    occams.datastore.upgrades.migrate.install(datastore.session.bind)

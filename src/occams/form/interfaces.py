@@ -5,7 +5,7 @@ from zope.schema.vocabulary import SimpleTerm
 from zope.schema.vocabulary import SimpleVocabulary
 import plone.directives.form
 
-from avrc.data.store.interfaces import IDataBaseItem
+from occams.datastore.interfaces import IDataBaseItem
 from occams.form import MessageFactory as _
 
 
@@ -337,7 +337,7 @@ class IRepository(plone.directives.form.Schema):
     """
     Form repository entry point.
     Objects of this type offer services for managing forms as well as
-    form EAV tables from ``avrc.data.store.DataStore``
+    form EAV tables from ``occams.datastore.DataStore``
     """
 
     plone.directives.form.widget(session='z3c.form.browser.radio.RadioFieldWidget')

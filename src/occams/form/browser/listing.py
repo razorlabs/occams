@@ -7,8 +7,8 @@ import zope.schema
 import z3c.form.button
 import z3c.form.field
 
-from avrc.data.store.interfaces import IDataStore
-from avrc.data.store import directives as datastore
+from occams.datastore.interfaces import IDataStore
+from occams.datastore import directives as datastore
 from occams.form import MessageFactory as _
 from occams.form.interfaces import IFormSummary
 from occams.form.interfaces import IFormSummaryGenerator

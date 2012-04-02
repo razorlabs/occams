@@ -27,8 +27,8 @@ from zope.publisher.interfaces.http import IHTTPRequest
 from zope.publisher.interfaces.browser import IBrowserPublisher
 from zExceptions import NotFound
 
-from avrc.data.store import model
-from avrc.data.store.interfaces import IDataStore
+from occam.datastore import model
+from occam.datastore.interfaces import IDataStore
 from occams.form.interfaces import IRepository
 from occams.form.interfaces import IDataBaseItemContext
 from occams.form.interfaces import ISchemaContext

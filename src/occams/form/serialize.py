@@ -19,13 +19,13 @@ import zope.schema
 from zope.schema.vocabulary import SimpleVocabulary
 from zope.schema.vocabulary import SimpleTerm
 
-from avrc.data.store import directives as datastore
-from avrc.data.store.model import Attribute
-from avrc.data.store.model import Schema
-from avrc.data.store.model import Choice
-from avrc.data.store.model import NOW
-from avrc.data.store.interfaces import IDataStore
-from avrc.data.store.interfaces import typesVocabulary
+from occams.datastore import directives as datastore
+from occams.datastore.model import Attribute
+from occams.datastore.model import Schema
+from occams.datastore.model import Choice
+from occams.datastore.model import NOW
+from occams.datastore.interfaces import IDataStore
+from occams.datastore.interfaces import typesVocabulary
 from occams.form.interfaces import DATA_KEY
 
 
