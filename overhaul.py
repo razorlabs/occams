@@ -10,6 +10,23 @@ Precondition Assumptions:
         integer, object, decimal, string, schema, attribute, and choice.
     4. During the upgrade process, the website will be turned off.
     5. The source schema table is unique on (schema.name,DATE(create_date))
+    6. We have run the choice-fixing-sql to adjust a few create dates
+
+-- choice fixing sql!!
+
+-- run this to vierfy that gibbon has the same IDs as were problematic on gibbon-test-db
+SELECT sc.name, sc.create_date, a.name, a.id, a.create_date
+  FROM schema sc
+    JOIN attribute a ON a.schema_id = sc.id
+  WHERE sc.name IN ('FollowupHistoryNeedleSharingPartners','IEarlyTestMSMPartners')
+
+-- run this to fix:
+UPDATE attribute
+  SET "create_date" = sc.create_date
+  FROM schema sc
+  WHERE sc.id = attribute.schema_id
+    AND attribute.id IN (271,272,274,308,309,310,311,273)
+
 
 Design Assumptions:
     1. Reflect avrc_demo_data w/ sqlsoup (readonly to ensure no changes).
@@ -95,15 +112,15 @@ def createAttrsAndChoices(newSchema,attrsAndChoices):
     simpleAttr = [
             "name","title","description",
             "type","is_collection","is_required",
-            "create_date","modify_date"]
+            "create_date","modify_date"
+            ]
     simpleChoice = [
             "name","title","description","value",
-            "create_date","modify_date"]
+            "create_date","modify_date"
+            ]
     for i, (attribute, choices) in enumerate(attrsAndChoices):
         buildAttr = {
             "order":i,
-            "create_date":newSchema.create_date,
-            "modify_date":newSchema.modify_date,
             }
         for simple in simpleAttr:
             buildAttr[simple] = getattr(attribute,simple)
@@ -111,8 +128,6 @@ def createAttrsAndChoices(newSchema,attrsAndChoices):
         for j, choice in enumerate(choices):
             buildChoice = {
                 "order":j,
-                "create_date":newSchema.create_date,
-                "modify_date":newSchema.modify_date,
                 }
             for simple in simpleChoice:
                 buildChoice[simple] = getattr(choice,simple)
