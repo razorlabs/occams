@@ -1,20 +1,14 @@
-""" Schema-based data entry utilities.
+"""
+Python object helpers
 """
 
-from sqlalchemy.orm.exc import NoResultFound
-from zope.component import adapts
 from zope.component import adapter
-from zope.interface import implements
 from zope.interface import implementer
-from zope.interface import providedBy
-from zope.interface import classProvides
-from zope.interface import directlyProvides
-from zope.interface import alsoProvides
 from zope.interface.common.mapping import IFullMapping
+from zope.interface import providedBy
+from zope.interface import directlyProvides
 import zope.schema
-from zope.schema.interfaces import IObject
 
-from occams.datastore import model
 from occams.datastore.interfaces import IEntity
 
 
@@ -39,7 +33,7 @@ class Item(object):
                 setattr(self, name, kwargs.get(name))
 
 
-def ObjectFactory(iface, **kwargs):
+def ItemFactory(iface, **kwargs):
     """
     Spawns objects from interface specifications.
 
@@ -61,7 +55,7 @@ def ObjectFactory(iface, **kwargs):
                 ## hey now, I'm already an Instance object
                 value = subkwargs
             else:
-                value = ObjectFactory(field.schema, **subkwargs)
+                value = ItemFactory(field.schema, **subkwargs)
         else:
             value = kwargs.get(field_name)
         result.__dict__[field_name] = value
@@ -69,9 +63,16 @@ def ObjectFactory(iface, **kwargs):
     return result
 
 
+# It just sounds cooler
+spawn = ItemFactory
+
+
 @adapter(IEntity)
 @implementer(IFullMapping)
 def entityToMapping(entity):
+    """
+    Converts an entity into a Python dictionary
+    """
     result = dict()
     for key, value in entity.items():
         if entity.schema[key].type == 'object':

@@ -2,16 +2,10 @@
 
   <include package="zope.component" file="meta.zcml" />
 
-  <adapter factory=".datastore.DataStore" />
   <adapter factory=".schema.HierarchyInspector" />
   <adapter factory=".schema.SchemaManager" />
-  <adapter factory=".entity.EntityManager" />
-
-  <adapter factory=".schema.schemaToInterface" />
   <adapter factory=".schema.attributeToField" />
-
-  <adapter factory=".schema.interfaceToSchema" />
-  <adapter factory=".schema.fieldToAttribute" />
+  <adapter factory=".item.entityToMapping" />
 
   <utility
     name="occams.datastore.Types"

@@ -106,7 +106,7 @@ class SqlBatch(Batch):
         if j > self.end:
             j = self._trueSize
         query = self.query.slice(i, j)
-        for result in query.all():
+        for result in query:
             if hasattr(result, 'objectify'):
                 result = result.objectify()
             yield (result.id, result)

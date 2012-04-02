@@ -26,7 +26,7 @@ def updateMetadata(instance, created):
     session = object_session(instance)
 
     key = session.userCallback()
-    user = session.query(User).filter_by(key=key).first()
+    user = session.query(User).filter_by(key=key).one()
 
     if user is None:
         raise ValueError('Cannot find user \'%s\'' % key)

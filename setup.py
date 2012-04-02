@@ -37,13 +37,20 @@ setup(
         'setuptools',
 
         # Component specification/documentation
+        # Note that these packages do not install the entire Zope ecosystem,
+        # they install necessary building blocks that are useful merely for
+        # specification and documentation.
+        'zope.component',
         'zope.deprecation',
         'zope.i18nmessageid',
         'zope.interface',
         'zope.schema',
 
-        # Batching support
+        # Low-level batching support for Zope products
         'z3c.batching',
+
+        # Import/Export support via XML
+        'lxml',
 
         # ORM utilities and upgrade tools
         'SQLAlchemy',
@@ -51,10 +58,7 @@ setup(
         ],
     extras_require=dict(
         postgresql=['psycopg2'],
-        zope=[
-            'zope.component',
-            'zope.configuration',
-            ],
+        zope=['zope.configuration'],
         test=['plone.testing'],
         ),
     tests_require=['plone.testing'],

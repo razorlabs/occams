@@ -105,7 +105,7 @@ class SchemaModelTestCase(unittest.TestCase):
         self.assertEqual(None, schema.description)
         self.assertEqual('eav', schema.storage)
         self.assertEqual(None, schema.is_association)
-        self.assertEqual(None, schema.is_inline)
+        self.assertEqual(False, schema.is_inline)
         self.assertNotEqual(None, schema.create_date)
         self.assertNotEqual(None, schema.create_user)
         self.assertNotEqual(None, schema.modify_date)

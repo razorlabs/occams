@@ -15,6 +15,6 @@ Logger = logging.getLogger(__name__)
 
 from occams.datastore.schema import SchemaManager
 from occams.datastore.schema import HierarchyInspector
-from occams.datastore.storage import ObjectFactory
+from occams.datastore.item import ItemFactory
 
 from occams.datastore.model import *

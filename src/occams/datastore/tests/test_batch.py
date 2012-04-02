@@ -73,7 +73,7 @@ class BatchingTestCase(unittest.TestCase):
         session = self.session
         query = session.query(model.Schema).order_by(model.Schema.name)
         batch = SqlBatch(query)
-        item = session.query(model.Schema).filter_by(name='Bar').first()
+        item = session.query(model.Schema).filter_by(name='Bar').one()
         self.assertIn(item, batch)
 
         item = model.Schema(id=99, name='Blarg', title=u'Blah')
