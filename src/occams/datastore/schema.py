@@ -15,7 +15,7 @@ from zope.schema.vocabulary import SimpleTerm
 from zope.schema.vocabulary import SimpleVocabulary
 
 from occams.datastore import model
-from occams.datastore.interfaces import ManagerKeyError
+from occams.datastore.interfaces import NotFoundError
 from occams.datastore.interfaces import IHierarchy
 from occams.datastore.interfaces import IAttribute
 from occams.datastore.interfaces import ISchemaManager
@@ -136,7 +136,7 @@ class SchemaManager(object):
         try:
             schema = query.one()
         except NoResultFound:
-            raise ManagerKeyError(model.Schema, key, on)
+            raise NotFoundError(model.Schema, (key, on))
         else:
             return schema
 
