@@ -119,7 +119,7 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         lazy='dynamic',
         )
 
-    _obect_values = Relationship(
+    _object_values = Relationship(
         'ValueObject',
         cascade='all, delete-orphan',
         back_populates='entity',
