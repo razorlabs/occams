@@ -334,83 +334,119 @@ class IValue(IDataBaseItem):
         )
 
 
-class IInstance(IDataStoreComponent):
-    """
-    An object derived from EAV entries. Objects of this type are effectively
-    stripped from their database references and are simply Python objects.
-    """
-
-    __id__ = zope.interface.Attribute(_(
-        u'The INTERNAL id of the instance. Tampering or accessing this id '
-        u'outside of this package is highly not recommended'))
-
-    __schema__ = zope.interface.Attribute(_(
-        u'The schema the created object will represent'
-        ))
-
-    __state__ = zope.interface.Attribute(_(
-        u'The workflow state of the created object.'
-        ))
-
-    title = zope.interface.Attribute(_(
-        u'The instance\'s database-unique name'
-        ))
-
-    description = zope.interface.Attribute(_(
-        u'A description for the object'
-        ))
-
-    def setState(state):
-        """
-        """
-
-    def getState():
-        """
-        """
-
-
 class IManager(IDataStoreComponent):
     """
-    Specification for management components, that is, components that are in
-    charge of a particular class of data. Note that a manager is simply a
-    utility into to the data store, therefore creating multiple instances
-    of a manager should have no effect on the objects being managed as they
-    are still being pulled from the same source.
+    A manager component that is in charge of accessing a particular class of
+    data. Note that a manager is simply a utility into to the data store,
+    therefore creating multiple instances of a manager should have no effect on
+    the objects being managed as they are still being pulled from the same source.
 
-    Note that ``on`` and ``ever`` arguments are mutually exclusive for
-    methods taking them as parameters.
+    In theory, anything that can be done in a manager should be able to be
+    done using the models themselves.
     """
 
-
-    def keys(on=None, ever=False):
+    def keys():
         """
         Generates a collection of the keys for the objects the component is
         managing.
-
-        Arguments
-            ``on``
-                (Optional) Only checks data active "on" the time specified.
-            ``ever``
-                (Optional) If set, covers all items "ever" active.
 
         Returns
             A listing of the object keys being managed by this manager.
         """
 
-    def lifecycles(key):
+    def has(key):
         """
-        Generates the available versions for key.
+        Checks if the component is managing the item.
 
         Arguments
             ``key``
                 The name of the item.
 
         Returns
-            A list of tuples (create, remove) of the specified key
+            ``True`` if the manager is in control of the item, ``False`` otherwise
+        """
+
+    def purge(key):
+        """
+        Completely removes the target and all data associated with it
+        from the database. Note that any constraints that are in place in
+        the database will take precedence, possibly raising
+        ``ConstraintNotSatisfied`` errors
+
+        Arguments
+            ``key``
+                The name of the item.
+
+        Returns
+            The number of items purged from the dabase. (This does
+            not include all related items).
+        """
+
+    def get(key):
+        """
+        Retrieve an item in the database.
+
+        Arguments
+            ``key``
+                The name of the item.
+
+        Returns
+            An object maintained by the manger.
+
+        Raises
+            ``ManagerKeyError`` if the item is not found
+        """
+
+    def put(key, item):
+        """
+        Adds the item to the manager.
+
+        Arguments
+            ``key``
+                The name of the item.
+            ``item``
+                The item to be stored in the manager.
+
+        Returns
+            The database id number of the newly stored item
         """
 
 
-    def has(key, on=None, ever=False):
+class IUserManager(IManager):
+    # No new functionality yet.
+    pass
+
+
+class IUserManagerFactory(IDataStoreComponent):
+
+    def __call__(session):
+        """
+        Schema Manager constructor call signature.
+
+        Arguments
+            ``session``
+                A database session to use for retrieval of entry information.
+        """
+
+
+class ISchemaManager(IManager):
+
+    def keys(on=None):
+        """
+        Generates a collection of the keys for the objects the component is
+        managing.
+
+        Arguments
+            ``on``
+                (Optional) Query for the most recent schema as of the date
+                specified. A value of ``None`` (default) indicates the most
+                recent schema.
+
+        Returns
+            A listing of the object keys being managed by this manager.
+        """
+
+    def has(key, on=None):
         """
         Checks if the component is managing the item.
 
@@ -418,14 +454,13 @@ class IManager(IDataStoreComponent):
             ``key``
                 The name of the item.
             ``on``
-                (Optional) Only checks data active "on" the time specified.
-            ``ever``
-                (Optional) If set, covers all items "ever" active.
+                (Optional) Query for the most recent schema as of the date
+                specified. A value of ``None`` (default) indicates the most
+                recent schema.
 
         Returns
-            True if the manager is in control of the item.
+            ``True`` if the manager is in control of the item, ``False`` otherwise
         """
-
 
     def purge(key, on=None, ever=False):
         """
@@ -436,48 +471,16 @@ class IManager(IDataStoreComponent):
             ``key``
                 The name of the item.
             ``on``
-                (Optional) Only checks data active "on" the time specified.
+                (Optional) Query for the most recent schema as of the date
+                specified. A value of ``None`` (default) indicates the most
+                recent schema.
             ``ever``
-                (Optional) If set, covers all items "ever" active.
+
 
         Returns
             The number of items purged from the data store. (This does
             not include all related items).
         """
-
-
-    def retire(key):
-        """
-        Retires the contained item. This means that it's information
-        remains, only it's not visible anymore. The reason this
-        functionality is useful is so that data can be 'brought back'
-        if expiring caused undesired side-effects. Note that this
-        method only works with currently active items.
-
-        Arguments
-            ``key``
-                The name of the item.
-
-        Returns
-            True if successfully retired.
-        """
-
-
-    def restore(key):
-        """
-        Restores a previously retired item. Only works on the most recently
-        retired item.
-
-        Arguments
-            ``key``
-                The name of the item.
-
-        Returns
-            The restored object, None otherwise (nothing to restore). In
-            cases where the item being restored is still active, the item
-            will still be returned, unmodified.
-        """
-
 
     def get(key, on=None):
         """
@@ -487,69 +490,23 @@ class IManager(IDataStoreComponent):
             ``key``
                 The name of the item.
             ``on``
-                (Optional) Only checks data active "on" the time specified.
+                (Optional) Query for the most recent schema as of the date
+                specified. A value of ``None`` (default) indicates the most
+                recent schema.
 
         Returns
-            An object maintained by the manger. None if not found.
+            An object maintained by the manger.
+
+        Raises
+            ``ManagerKeyError`` if the item is not found
         """
-
-
-    def put(key, item):
-        """
-        Adds the item to the manager. If there is already an item with
-        the same name, then the already existing item is retired and
-        the new item is added as the currently active item for the name.
-
-
-        Arguments
-            ``key``
-                The name of the item.
-            ``item``
-                The item to be stored in the manager.
-
-        Returns
-            A key to the newly stored item
-        """
-
-
-class ISchemaManager(IManager):
-    """
-    Manages published schemata in Zope-style format
-    """
-
-
-class IEntityManager(IManager):
-    """
-    Managers data entry of schema Python Object-style format
-    """
 
 
 class ISchemaManagerFactory(IDataStoreComponent):
-    """
-    Produces a manager that is able to use database schema descriptions
-    to produce Zope-style Interfaces/Schemata.
-    """
 
     def __call__(session):
         """
-        Manager call signature.
-
-        Arguments
-            ``session``
-                A database session to use for retrieval of entry information.
-        """
-
-
-class IEntityManagerFactory(IDataStoreComponent):
-    """
-    Produces a manager that is able to use database entry descriptions
-    to produce an object that provides a Zope-style interface that is
-    also stored in the database.
-    """
-
-    def __call__(session):
-        """
-        Manager call signature.
+        Schema Manager constructor call signature.
 
         Arguments
             ``session``
@@ -563,72 +520,82 @@ class IHierarchy(IDataStoreComponent):
     description.
     """
 
-    def getChildren(key, on=None):
+    def children(key, on=None):
         """
-        Return the Zope-style interfaces of all the children (leaf nodes)
-        in the hierarchy of the specified name.
+        Return the children (leaf nodes) in the hierarchy of the specified name.
 
         Arguments
             ``key``
                 The name of the parent schema.
             ``on``
-                (Optional) Only checks data active "on" the time specified.
+                (Optional) Query for the most recent schema as of the date
+                specified. A value of ``None`` (default) indicates the most
+                recent schema.
+
+        Raises
+            ``ManagerKeyError`` if the parent schema is not found
         """
 
-
-    def getChildrenNames(key, on=None):
+    def iterChildren(key, on=None):
         """
-        Return the names of all the children (leaf nodes)
-        in the hierarchy of the specified name.
+        Returns an iterator over the children (leaf nodes) in the hierarchy of
+        the specified name.
 
         Arguments
             ``key``
                 The name of the parent schema.
             ``on``
-                (Optional) Only checks data active "on" the time specified.
+                (Optional) Query for the most recent schema as of the date
+                specified. A value of ``None`` (default) indicates the most
+                recent schema.
+
+        Raises
+            ``ManagerKeyError`` if the parent schema is not found
         """
+
+
+    def childrenNames(key, on=None):
+        """
+        Return the names of all the children (leaf nodes) in the hierarchy of
+        the specified name.
+
+        Arguments
+            ``key``
+                The name of the parent schema.
+            ``on``
+                (Optional) Query for the most recent schema as of the date
+                specified. A value of ``None`` (default) indicates the most
+                recent schema.
+
+        Raises
+            ``ManagerKeyError`` if the parent schema is not found
+        """
+
+    def iterChildrenNames(key, on=None):
+        """
+        Return an iterator over the names of all the children (leaf nodes) in
+        the hierarchy of the specified name.
+
+        Arguments
+            ``key``
+                The name of the parent schema.
+            ``on``
+                (Optional) Query for the most recent schema as of the date
+                specified. A value of ``None`` (default) indicates the most
+                recent schema.
+
+        Raises
+            ``ManagerKeyError`` if the parent schema is not found
+        """
+
 
 class IHierarchyFactory(IDataStoreComponent):
-    """
-    Produces an object that is able to inspect the hierarchy of schemata.
-    """
 
     def __call__(session):
         """
-        Produces a hierarchy inspector.
+        Hierarchy Inspector constructor call signature
 
         Arguments
             ``session``
                 A database session to use for retrieval of entry information.
-        """
-
-
-class IDataStore(IDataStoreComponent):
-    """
-    Represents a data store utility that can be added to a site. It is in
-    charge of managing the entire network of data that will be created from
-    schemata, etc. It achieves this by using registered helper utilities
-    that it adapts into called 'managers'.
-    """
-
-
-class IDataStoreFactory(IDataStoreComponent):
-    """
-    How to instantiate a DataStore
-    """
-
-    def __call__(session):
-        """ The session to use.
-        """
-
-
-class IDataStoreExtension(IDataStoreComponent):
-    """
-    A factory specification for legacy systems that still depend on a
-    DataStore object as a utility.
-    """
-
-    def __call__(datastore):
-        """
-        The ``DataStore`` to use.
         """

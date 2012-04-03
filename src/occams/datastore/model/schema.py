@@ -125,7 +125,7 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
 
     is_association = Column(Boolean)
 
-    is_inline = Column(Boolean)
+    is_inline = Column(Boolean, nullable=False, default=False)
 
     attributes = Relationship(
         'Attribute',
