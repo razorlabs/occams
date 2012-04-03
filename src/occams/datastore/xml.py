@@ -4,10 +4,14 @@ Import/Export functionality of schemata via XML files
 
 from datetime import datetime
 import lxml.etree
+import lxml.objectify
 from lxml.builder import ElementMaker
 
-from occams.datastore.schema import SchemaManager
-from occams.datastore.interfaces import ManagerKeyError
+from sqlalchemy.exc import IntegrityError
+
+from occams.datastore import model
+from occams.datastore.interfaces import AlreadyExistsError
+from occams.datastore.interfaces import XmlError
 
 
 E = ElementMaker(nsmap={None : 'http://bitcore.ucsd.edu/occams/datastore'})
@@ -40,23 +44,25 @@ def schemaToXml(schema):
     Converts a schema into an XML element tree
     """
 
-    eschema = E.schema(
+    xschema = E.schema(
         E.title(schema.title),
         name=schema.name,
         storage=schema.storage,
-        inline=str(schema.is_inline),
         published=schema.publish_date.strftime('%Y-%m-%d')
         )
 
+    if schema.is_inline:
+        xschema.set('inline', str(schema.is_inline))
+
     if schema.description is not None:
-        eschema.append(E.description(schema.description or ''))
+        xschema.append(E.description(schema.description or ''))
 
     if schema.attributes:
-        eschema.append(
+        xschema.append(
             E.attributes(*[attributeToXml(a) for a in schema.attributes.values()])
             )
 
-    return eschema
+    return xschema
 
 
 def attributeToXml(attribute):
@@ -64,7 +70,7 @@ def attributeToXml(attribute):
     Converts an attribute into an XML element tree
     """
 
-    eattribute = E.attribute(
+    xattribute = E.attribute(
         E.checksum(attribute.checksum),
         E.title(attribute.title),
         name=attribute.name,
@@ -73,11 +79,11 @@ def attributeToXml(attribute):
         )
 
     if attribute.description is not None:
-        eattribute.append(E.description(attribute.description))
+        xattribute.append(E.description(attribute.description))
 
     if attribute.type == 'object':
         # Continue processing subschemata recursively
-        eattribute.append(schemaToXml(attribute.object_schema))
+        xattribute.append(schemaToXml(attribute.object_schema))
 
     if attribute.is_collection:
         ecollection = E.collection()
@@ -99,9 +105,9 @@ def attributeToXml(attribute):
         attribute.append(E.validator(attribute.validator))
 
     if attribute.choices:
-        eattribute.append(E.choices(*[choiceToXml(c) for c in attribute.choices]))
+        xattribute.append(E.choices(*[choiceToXml(c) for c in attribute.choices]))
 
-    return eattribute
+    return xattribute
 
 
 def choiceToXml(choice):
@@ -125,26 +131,28 @@ def importFromXml(session, file_):
         ``SchemaAlreadyExistsError`` if the schema already exists
     """
 
+    parser = lxml.etree.XMLParser(remove_blank_text=True)
+
     if isinstance(file_, basestring):
         with open(file_) as in_:
-            tree = lxml.etree.parse(in_)
+            tree = lxml.objectify.parse(in_)
     else:
-        tree = lxml.etree.parse(file_)
+        tree = lxml.objectify.parse(file_)
 
-    manager = SchemaManager(session)
-    eschema = tree.getroot()
+    xschema = tree.getroot()
+    schema = xmlToSchema(xschema)
 
     try:
-        publish_date = datetime.strptime('%Y-%m-%d', eschema.publish_date).date()
-        schema = manager.get(eschema.name, publish_date)
-    except ManagerKeyError:
-        schema = xmlToSchema(eschema)
-        manager.put(schema)
+        session.add(schema)
+        session.flush()
+    except IntegrityError:
+        raise
+#        raise AlreadyExistsError(model.Schema, (schema.name, schema.publish_date,))
 
     return schema
 
 
-def xmlToSchema(xml):
+def xmlToSchema(element):
     """
     Converts an XML file into a schema
 
@@ -153,8 +161,26 @@ def xmlToSchema(xml):
             The filename or file object to import from
     """
 
+    schema = model.Schema(
+        name=element.attrib['name'],
+        title=element.title,
+        description=getattr(element, 'description', None),
+        state='published',
+        publish_date=datetime.strptime(element.attrib['published'], '%Y-%m-%d').date(),
+        storage=element.attrib['storage'],
+        )
 
-def elementToAttribuet(element):
+    if 'inline' in element.attrib:
+        schema.is_inline = element.attrib['inline'].lower()[0] in ('1', 't'),
+
+    for xattribute in getattr(element, 'attributes', []):
+        attribute = elementToAttribute(xattribute)
+        schema[attribute.name] = attribute
+
+    return schema
+
+
+def elementToAttribute(element):
     pass
 
 

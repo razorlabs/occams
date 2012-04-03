@@ -23,7 +23,7 @@ from zope.interface.verify import verifyObject
 from occams.datastore import model
 from occams.datastore.interfaces import IManager
 from occams.datastore.interfaces import ISchemaManagerFactory
-from occams.datastore.interfaces import ManagerKeyError
+from occams.datastore.interfaces import NotFoundError
 from occams.datastore.schema import SchemaManager
 from occams.datastore.schema import HierarchyInspector
 from occams.datastore.schema import copy
@@ -388,10 +388,10 @@ class HierarchyTestCase(unittest.TestCase):
         session = self.layer['session']
         hierarchy = HierarchyInspector(session)
 
-        with self.assertRaises(ManagerKeyError):
+        with self.assertRaises(NotFoundError):
             hierarchy.children('Fish')
 
-        with self.assertRaises(ManagerKeyError):
+        with self.assertRaises(NotFoundError):
             hierarchy.childrenNames('Fish')
 
     def testVersioned(self):
@@ -401,10 +401,10 @@ class HierarchyTestCase(unittest.TestCase):
         # Shouldn't be able to get children that have not been published
         # as of the given date
 
-        with self.assertRaises(ManagerKeyError):
+        with self.assertRaises(NotFoundError):
             children = hierarchy.children('Animal', on=p1)
 
-        with self.assertRaises(ManagerKeyError):
+        with self.assertRaises(NotFoundError):
             names = hierarchy.childrenNames('Animal', on=p1)
 
 
@@ -531,7 +531,7 @@ class SchemaManagerTestCase(unittest.TestCase):
         manager = SchemaManager(session)
 
         # Get something that dosn't exist
-        with self.assertRaises(ManagerKeyError):
+        with self.assertRaises(NotFoundError):
             item = manager.get('NonExisting')
 
         # Get something with multiple versions
@@ -546,7 +546,7 @@ class SchemaManagerTestCase(unittest.TestCase):
         self.assertIsNotNone(item)
 
         # Get something that doesn't exist yet
-        with self.assertRaises(ManagerKeyError):
+        with self.assertRaises(NotFoundError):
             item = manager.get('Caz', on=p1)
         # Only works if we specify the version
         item = manager.get('Caz', on=p3)
@@ -554,7 +554,7 @@ class SchemaManagerTestCase(unittest.TestCase):
         self.assertIsNotNone(item)
 
         # Also, can't get anything that hasn't been published yet
-        with self.assertRaises(ManagerKeyError):
+        with self.assertRaises(NotFoundError):
             item = manager.get('Jaz')
 
     def testPut(self):

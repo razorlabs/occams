@@ -5,7 +5,7 @@ from zope.interface import classProvides
 from zope.interface import implements
 
 from occams.datastore import model
-from occams.datastore.interfaces import ManagerKeyError
+from occams.datastore.interfaces import NotFoundError
 from occams.datastore.interfaces import IUserManager
 from occams.datastore.interfaces import IUserManagerFactory
 
@@ -42,7 +42,7 @@ class UserManager(object):
         try:
             user = self.session.query(model.User).filter_by(key=key).one()
         except NoResultFound:
-            raise ManagerKeyError(model.User, key)
+            raise NotFoundError(model.User, (key,))
         else:
             return user
 
