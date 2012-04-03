@@ -58,13 +58,7 @@ Session = scoped_session(
 
 global old_model
 
-global states # TODO: compare these old states to occams.datastore.interfaces.py
-states = {
-    1:"pending-entry",
-    2:"pending-review"
-    3:"complete"
-    4:"not-done"
-    }
+global entity_state # Filled during Session creation and so on
 
 def main():
     """Handle argv, specialize globals, launch job."""
@@ -72,9 +66,11 @@ def main():
     usage = """overhaul.py OLDCONNECT NEWCONNECT"""
     configureGlobalSession(sys.argv[1], sys.argv[2])
     addUser("bitcore@ucsd.edu")
+    entityLimit = None
+    print "Moving in all schemas and %s entities" % entityLimit
     moveInAllSchemas()
     moveInAttributesAndChoices()
-    moveInEntities()
+    moveInEntities(limit=entityLimit)
 
     #moveInValues() # as part of the entities?
     #moveInExternalContext() # don't forget this!!
@@ -87,8 +83,9 @@ def moveInValues():
     pass
 
 
-def moveInEntities():
+def moveInEntities(limit=None):
     """Docstring me!"""
+    counter = 0
     for name in yieldDistinctEntityNames():
         newEntity = None
         newSchema = None
@@ -97,6 +94,10 @@ def moveInEntities():
                 newSchema = getSchemaForEntity(schema_name,sourceEntity.create_date)
             # NOTE: createEntity will handle Session.flush()
             newEntity = createEntity(sourceEntity,newEntity,newSchema)
+        counter += 1
+        if limit:
+            if counter >= limit:
+                return
 
 
 def moveInAttributesAndChoices():
@@ -125,6 +126,7 @@ def moveInAllSchemas():
             
 def createEntity(sourceEntity,prevNewEntity,newSchema):
     """Handles each step replaying entity diffs over time."""
+    global entity_state
     if prevNewEntity is None:
         prevNewEntity = model.Entity(
                 create_date=sourceEntity.create_date,
@@ -134,17 +136,11 @@ def createEntity(sourceEntity,prevNewEntity,newSchema):
     simples = ["name","title","description",]
     for simple in simples:
         setattr(prevNewEntity,simple,getattr(sourceEntity,simple))
-    prevNewEntity.state = "complete"
+    prevNewEntity.state = entity_state[sourceEntity.state_id]
     prevNewEntity.modify_date = sourceEntity.create_date
     Session.add(prevNewEntity) 
     Session.flush()
     return prevNewEntity
-
-def yieldOrderedEntities(name):
-    """Docstring me!"""
-    ent = old_model.entity("entity")
-
-    return newEntity
 
 def createAttrsAndChoices(newSchema,attrsAndChoices):
     """Given a schema name and revision date, create such a schema"""
@@ -225,6 +221,7 @@ def createLinkingAttr(revision,new_parent,new_child,p_attr):
 
 def yieldOrderedEntities(name):
     """Docstring me!"""
+    from sqlalchemy.sql import exists
     ent = old_model.entity("entity")
     sch = old_model.entity("schema")
     qry = (
@@ -239,10 +236,15 @@ def yieldOrderedEntities(name):
     return iter(qry)
 
 def yieldDistinctEntityNames():
-    """Docstring me!"""
+    """Returns entity names that are *parent* entities only.
+    
+    (Identifies parents by left join where obj.value is NULL)"""
     ent = old_model.entity("entity")
+    obj = old_model.entity("object")
     qry = (
         Session.query(ent.name)
+        .outerjoin(obj, (ent.id == obj.value))
+        .filter(obj.value == None)
         .group_by(ent.name)
         )
     for (item,) in qry:
@@ -345,6 +347,7 @@ def getKnownSchemaChanges():
 def configureGlobalSession(old_connect, new_connect):
     """Set up Session for data manipulation and create new tables as side effect."""
     global old_model
+    global entity_state
     new_engine = create_engine(new_connect)
     model.Model.metadata.drop_all(bind=new_engine, checkfirst=True)
     model.Model.metadata.create_all(bind=new_engine, checkfirst=True)
@@ -353,6 +356,18 @@ def configureGlobalSession(old_connect, new_connect):
     tables += dict.fromkeys(tables_model, new_engine).items()
     Session.configure(binds=dict(tables))
     old_model = SqlSoup(old_connect,session=Session)
+    entity_state = getEntityStateDict()
+
+def getEntityStateDict():
+    """Returns entity state dictionary for use elsewhere."""
+    state = old_model.entity("state")
+    qry = (
+        Session.query(state)
+        )
+    entity_state = {}
+    for state in qry:
+        entity_state[state.id] = state.name
+    return entity_state
 
 def baseSchemaNamesTableFactory(session):
     """Helper method to generate a SQLAlchemy expression table for base schemata names"""
