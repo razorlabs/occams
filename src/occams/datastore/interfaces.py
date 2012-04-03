@@ -32,15 +32,49 @@ typesVocabulary = SimpleVocabulary([
     )
 
 
-class ManagerKeyError(KeyError):
+class DataStoreError(Exception):
+    """
+    Base exception class for this module
+    """
 
-    def __init__(self, class_, key, on=None):
-        if on is not None:
-            message = '%s(%s) as of %s not found' % (class_.__name__, key, on)
-        else:
-            message = '%s(%s) not found' % (class_.__name__, key)
-        super(ManagerKeyError, self).__init__(message)
 
+class NotFoundError(DataStoreError):
+    """
+    Raised when the entry was not found
+    """
+
+
+class UnexpectedResultError(DataStoreError):
+    """
+    Raised when  the result set returned from the database is not the expected
+    value. Examples include receiving more than one result when only one is
+    expected.
+    """
+
+
+class MissingKeyError(DataStoreError):
+    """
+    Raised when a new item is missing a unique name
+    """
+
+
+class AlreadyExistsError(DataStoreError):
+    """
+    Raised when trying to add an entry that already exists
+    """
+
+
+class CorruptAttributeError(DataStoreError):
+    """
+    Raised when the specified checksum of an attribute does not actually match
+    the generated checksum.
+    """
+
+
+class XmlError(DataStoreError):
+    """
+    Raised when there is an error generating or parsing an XML file.
+    """
 
 
 class IDataStoreComponent(zope.interface.Interface):
@@ -109,6 +143,7 @@ class IDataBaseItem(IEntry, IDescribeable, IModifiable):
     """
     An object that originates from database.
     """
+
 
 class ISchema(IDataBaseItem):
     """
@@ -294,8 +329,8 @@ class IEntity(IDataBaseItem):
 
     state = zope.schema.Choice(
         title=_(u'The current workflow state'),
-        values=sorted(['draft', 'review', 'complete', 'incomplete', 'not-done']),
-        default='draft',
+        values=sorted(['pending-entry', 'pending-review', 'complete', 'not-done']),
+        default='pending-entry',
         )
 
     collect_date = zope.schema.Date(
