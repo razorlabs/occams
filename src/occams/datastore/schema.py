@@ -243,3 +243,4 @@ def attributeToField(attribute):
     result.order = attribute.order
 
     return result
+
