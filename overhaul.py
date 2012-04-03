@@ -58,6 +58,14 @@ Session = scoped_session(
 
 global old_model
 
+global states # TODO: compare these old states to occams.datastore.interfaces.py
+states = {
+    1:"pending-entry",
+    2:"pending-review"
+    3:"complete"
+    4:"not-done"
+    }
+
 def main():
     """Handle argv, specialize globals, launch job."""
     import sys
@@ -66,22 +74,30 @@ def main():
     addUser("bitcore@ucsd.edu")
     moveInAllSchemas()
     moveInAttributesAndChoices()
-
-    # Do some QA before implementing the last two move-ins
-    # because it would suck to have something wrong and have
-    # to re-work entities...
     moveInEntities()
-    moveInValues() # as part of the entities?
+
+    #moveInValues() # as part of the entities?
+    #moveInExternalContext() # don't forget this!!
 
     Session.commit()
     if isWorking():
         print "Yay!"
 
-def moveInEntities():
-    pass
-
 def moveInValues():
     pass
+
+
+def moveInEntities():
+    """Docstring me!"""
+    for name in yieldDistinctEntityNames():
+        newEntity = None
+        newSchema = None
+        for sourceEntity,schema_name in yieldOrderedEntities(name):
+            if newSchema is None:
+                newSchema = getSchemaForEntity(schema_name,sourceEntity.create_date)
+            # NOTE: createEntity will handle Session.flush()
+            newEntity = createEntity(sourceEntity,newEntity,newSchema)
+
 
 def moveInAttributesAndChoices():
     schemaChanges = getInstalledSchemas()
@@ -106,6 +122,29 @@ def moveInAllSchemas():
             p_attr = getLinkingAttr(c_original)
             createLinkingAttr(revision,new_parent,new_child,p_attr)
         #print "Installed %s total schemas and related attributes." % installed
+            
+def createEntity(sourceEntity,prevNewEntity,newSchema):
+    """Handles each step replaying entity diffs over time."""
+    if prevNewEntity is None:
+        prevNewEntity = model.Entity(
+                create_date=sourceEntity.create_date,
+                name=sourceEntity.name,
+                schema=newSchema,
+                )
+    simples = ["name","title","description",]
+    for simple in simples:
+        setattr(prevNewEntity,simple,getattr(sourceEntity,simple))
+    prevNewEntity.state = "complete"
+    prevNewEntity.modify_date = sourceEntity.create_date
+    Session.add(prevNewEntity) 
+    Session.flush()
+    return prevNewEntity
+
+def yieldOrderedEntities(name):
+    """Docstring me!"""
+    ent = old_model.entity("entity")
+
+    return newEntity
 
 def createAttrsAndChoices(newSchema,attrsAndChoices):
     """Given a schema name and revision date, create such a schema"""
@@ -149,6 +188,17 @@ def createSchema(revision,original):
     Session.flush()
     return toEnter
 
+def getSchemaForEntity(schema_name,entity_date):
+    """Not plural == singular, not impossible publish version."""
+    qry = (
+        Session.query(model.Schema)
+        .filter(model.Schema.name == schema_name)
+        .filter(model.Schema.publish_date <= entity_date)
+        .order_by(model.Schema.publish_date.desc())
+        .limit(1)
+        )
+    return qry.one()
+
 def getInstalledSchemas():
     """So simple it hurts :)"""
     return Session.query(model.Schema).order_by("publish_date").all()
@@ -172,6 +222,31 @@ def createLinkingAttr(revision,new_parent,new_child,p_attr):
      toEnter = model.Attribute(**buildIt)
      Session.add(toEnter)
      Session.flush()
+
+def yieldOrderedEntities(name):
+    """Docstring me!"""
+    ent = old_model.entity("entity")
+    sch = old_model.entity("schema")
+    qry = (
+        Session.query(ent,sch.name)
+        .join(sch, (sch.id == ent.schema_id))
+        .filter(ent.name == name)
+        .order_by(
+            ent.create_date,
+            ent.remove_date.nullslast(),
+            ent.id)
+        )
+    return iter(qry)
+
+def yieldDistinctEntityNames():
+    """Docstring me!"""
+    ent = old_model.entity("entity")
+    qry = (
+        Session.query(ent.name)
+        .group_by(ent.name)
+        )
+    for (item,) in qry:
+        yield item
 
 def getOriginalAttrsAndChoices(newSchema):
     """Taking new schema and finding the old attributes and choices for it
