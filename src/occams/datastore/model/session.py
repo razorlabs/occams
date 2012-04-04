@@ -12,18 +12,6 @@ from occams.datastore.model.storage import enforceSchemaState
 from occams.datastore.model.storage import cleanDataByState
 
 
-def scoped_session(bind=None, user=None):
-    """
-    Convenience method for returning a scoped session already using
-    DataStore's customized session
-    """
-    return sqlalchemy.orm.scoped_session(sqlalchemy.orm.sessionmaker(
-        bind=bind,
-        class_=DataStoreSession,
-        user=user
-        ))
-
-
 class DataStoreSession(sqlalchemy.orm.Session):
     """
     Custom session that registers itself to the various datastore listeners.
