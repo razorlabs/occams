@@ -66,7 +66,7 @@ def main():
     usage = """overhaul.py OLDCONNECT NEWCONNECT"""
     configureGlobalSession(sys.argv[1], sys.argv[2])
     addUser("bitcore@ucsd.edu")
-    entityLimit = None
+    entityLimit = 1000
     print "Moving in all schemas and %s entities" % entityLimit
     moveInAllSchemas()
     moveInAttributesAndChoices()
@@ -89,16 +89,15 @@ def moveInEntities(limit=None):
     """
     counter = 0
     for name in yieldDistinctEntityNames():
+        counter += 1
+        if limit is not None and counter > limit:
+            return
         newEntity = None
         newSchema = None
         for sourceEntity,schema_name in yieldOrderedEntities(name):
             if newSchema is None:
                 newSchema = getSchemaForEntity(schema_name,sourceEntity.create_date)
             newEntity = createEntity(sourceEntity,newEntity,newSchema)
-        counter += 1
-        if limit:
-            if counter >= limit:
-                return
 
 def moveInAttributesAndChoices():
     schemaChanges = getInstalledSchemas()
@@ -136,7 +135,13 @@ def createEntity(sourceEntity,prevNewEntity,newSchema):
     simples = ["name","title","description",]
     for simple in simples:
         setattr(prevNewEntity,simple,getattr(sourceEntity,simple))
-    prevNewEntity.state = entity_state[sourceEntity.state_id]
+    try:
+        prevNewEntity.state = entity_state[sourceEntity.state_id]
+    except KeyError as err:
+        if "None" in err.__str__():
+            prevNewEntity.state = "error"
+        else:
+            raise err
     prevNewEntity.modify_date = sourceEntity.create_date
     Session.add(prevNewEntity) 
     Session.flush()

@@ -329,7 +329,11 @@ class IEntity(IDataBaseItem):
 
     state = zope.schema.Choice(
         title=_(u'The current workflow state'),
-        values=sorted(['pending-entry', 'pending-review', 'complete', 'not-done']),
+        values=sorted([
+            'pending-entry', 'pending-review', 
+            'complete', 'not-done',
+            'error',
+            ]),
         default='pending-entry',
         )
 
