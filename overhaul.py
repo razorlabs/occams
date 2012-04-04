@@ -71,10 +71,8 @@ def main():
     moveInAllSchemas()
     moveInAttributesAndChoices()
     moveInEntities(limit=entityLimit)
-
     #moveInValues() # as part of the entities?
     #moveInExternalContext() # don't forget this!!
-
     Session.commit()
     if isWorking():
         print "Yay!"
@@ -82,9 +80,13 @@ def main():
 def moveInValues():
     pass
 
-
 def moveInEntities(limit=None):
-    """Docstring me!"""
+    """This function will probably work in stages to move entities.
+    
+    WORKING - Stage 1: Parent entities
+    TODO - Stage 2: Child entities
+    TODO - Stage 3: linking object values
+    """
     counter = 0
     for name in yieldDistinctEntityNames():
         newEntity = None
@@ -92,13 +94,11 @@ def moveInEntities(limit=None):
         for sourceEntity,schema_name in yieldOrderedEntities(name):
             if newSchema is None:
                 newSchema = getSchemaForEntity(schema_name,sourceEntity.create_date)
-            # NOTE: createEntity will handle Session.flush()
             newEntity = createEntity(sourceEntity,newEntity,newSchema)
         counter += 1
         if limit:
             if counter >= limit:
                 return
-
 
 def moveInAttributesAndChoices():
     schemaChanges = getInstalledSchemas()
@@ -238,13 +238,21 @@ def yieldOrderedEntities(name):
 def yieldDistinctEntityNames():
     """Returns entity names that are *parent* entities only.
     
-    (Identifies parents by left join where obj.value is NULL)"""
+    Finding parents by left join where obj.value is NULL turns up
+    274 "orphan child entities" that cause the code to crash.  These
+    should be handled by some kind of separate cleaning process.
+    When one is found it should be added to the assumptions at the
+    top of this script.
+
+    As a fallback, parent entities in this method are defined by 
+    using a schema that isn't treated as a child schema in any 
+    attribute."""
     ent = old_model.entity("entity")
-    obj = old_model.entity("object")
+    att = old_model.entity("attribute")
     qry = (
         Session.query(ent.name)
-        .outerjoin(obj, (ent.id == obj.value))
-        .filter(obj.value == None)
+        .outerjoin(att, (ent.schema_id == att.object_schema_id))
+        .filter(att.id == None)
         .group_by(ent.name)
         )
     for (item,) in qry:
