@@ -10,6 +10,23 @@ Precondition Assumptions:
         integer, object, decimal, string, schema, attribute, and choice.
     4. During the upgrade process, the website will be turned off.
     5. The source schema table is unique on (schema.name,DATE(create_date))
+    6. We have run the choice-fixing-sql to adjust a few create dates
+
+-- choice fixing sql!!
+
+-- run this to vierfy that gibbon has the same IDs as were problematic on gibbon-test-db
+SELECT sc.name, sc.create_date, a.name, a.id, a.create_date
+  FROM schema sc
+    JOIN attribute a ON a.schema_id = sc.id
+  WHERE sc.name IN ('FollowupHistoryNeedleSharingPartners','IEarlyTestMSMPartners')
+
+-- run this to fix:
+UPDATE attribute
+  SET "create_date" = sc.create_date
+  FROM schema sc
+  WHERE sc.id = attribute.schema_id
+    AND attribute.id IN (271,272,274,308,309,310,311,273)
+
 
 Design Assumptions:
     1. Reflect avrc_demo_data w/ sqlsoup (readonly to ensure no changes).
@@ -41,30 +58,47 @@ Session = scoped_session(
 
 global old_model
 
+global entity_state # Filled during Session creation and so on
+
 def main():
     """Handle argv, specialize globals, launch job."""
     import sys
     usage = """overhaul.py OLDCONNECT NEWCONNECT"""
     configureGlobalSession(sys.argv[1], sys.argv[2])
     addUser("bitcore@ucsd.edu")
+    entityLimit = None
+    print "Moving in all schemas and %s entities" % entityLimit
     moveInAllSchemas()
     moveInAttributesAndChoices()
-
-    # Do some QA before implementing the last two move-ins
-    # because it would suck to have something wrong and have
-    # to re-work entities...
-    moveInEntities()
-    moveInValues() # as part of the entities?
-
+    moveInEntities(limit=entityLimit)
+    #moveInValues() # as part of the entities?
+    #moveInExternalContext() # don't forget this!!
     Session.commit()
     if isWorking():
         print "Yay!"
 
-def moveInEntities():
-    pass
-
 def moveInValues():
     pass
+
+def moveInEntities(limit=None):
+    """This function will probably work in stages to move entities.
+    
+    WORKING - Stage 1: Parent entities
+    TODO - Stage 2: Child entities
+    TODO - Stage 3: linking object values
+    """
+    counter = 0
+    for name in yieldDistinctEntityNames():
+        newEntity = None
+        newSchema = None
+        for sourceEntity,schema_name in yieldOrderedEntities(name):
+            if newSchema is None:
+                newSchema = getSchemaForEntity(schema_name,sourceEntity.create_date)
+            newEntity = createEntity(sourceEntity,newEntity,newSchema)
+        counter += 1
+        if limit:
+            if counter >= limit:
+                return
 
 def moveInAttributesAndChoices():
     schemaChanges = getInstalledSchemas()
@@ -89,21 +123,39 @@ def moveInAllSchemas():
             p_attr = getLinkingAttr(c_original)
             createLinkingAttr(revision,new_parent,new_child,p_attr)
         #print "Installed %s total schemas and related attributes." % installed
+            
+def createEntity(sourceEntity,prevNewEntity,newSchema):
+    """Handles each step replaying entity diffs over time."""
+    global entity_state
+    if prevNewEntity is None:
+        prevNewEntity = model.Entity(
+                create_date=sourceEntity.create_date,
+                name=sourceEntity.name,
+                schema=newSchema,
+                )
+    simples = ["name","title","description",]
+    for simple in simples:
+        setattr(prevNewEntity,simple,getattr(sourceEntity,simple))
+    prevNewEntity.state = entity_state[sourceEntity.state_id]
+    prevNewEntity.modify_date = sourceEntity.create_date
+    Session.add(prevNewEntity) 
+    Session.flush()
+    return prevNewEntity
 
 def createAttrsAndChoices(newSchema,attrsAndChoices):
     """Given a schema name and revision date, create such a schema"""
     simpleAttr = [
             "name","title","description",
             "type","is_collection","is_required",
-            "create_date","modify_date"]
+            "create_date","modify_date"
+            ]
     simpleChoice = [
             "name","title","description","value",
-            "create_date","modify_date"]
+            "create_date","modify_date"
+            ]
     for i, (attribute, choices) in enumerate(attrsAndChoices):
         buildAttr = {
             "order":i,
-            "create_date":newSchema.create_date,
-            "modify_date":newSchema.modify_date,
             }
         for simple in simpleAttr:
             buildAttr[simple] = getattr(attribute,simple)
@@ -111,8 +163,6 @@ def createAttrsAndChoices(newSchema,attrsAndChoices):
         for j, choice in enumerate(choices):
             buildChoice = {
                 "order":j,
-                "create_date":newSchema.create_date,
-                "modify_date":newSchema.modify_date,
                 }
             for simple in simpleChoice:
                 buildChoice[simple] = getattr(choice,simple)
@@ -133,6 +183,17 @@ def createSchema(revision,original):
     Session.add(toEnter)
     Session.flush()
     return toEnter
+
+def getSchemaForEntity(schema_name,entity_date):
+    """Not plural == singular, not impossible publish version."""
+    qry = (
+        Session.query(model.Schema)
+        .filter(model.Schema.name == schema_name)
+        .filter(model.Schema.publish_date <= entity_date)
+        .order_by(model.Schema.publish_date.desc())
+        .limit(1)
+        )
+    return qry.one()
 
 def getInstalledSchemas():
     """So simple it hurts :)"""
@@ -157,6 +218,45 @@ def createLinkingAttr(revision,new_parent,new_child,p_attr):
      toEnter = model.Attribute(**buildIt)
      Session.add(toEnter)
      Session.flush()
+
+def yieldOrderedEntities(name):
+    """Docstring me!"""
+    from sqlalchemy.sql import exists
+    ent = old_model.entity("entity")
+    sch = old_model.entity("schema")
+    qry = (
+        Session.query(ent,sch.name)
+        .join(sch, (sch.id == ent.schema_id))
+        .filter(ent.name == name)
+        .order_by(
+            ent.create_date,
+            ent.remove_date.nullslast(),
+            ent.id)
+        )
+    return iter(qry)
+
+def yieldDistinctEntityNames():
+    """Returns entity names that are *parent* entities only.
+    
+    Finding parents by left join where obj.value is NULL turns up
+    274 "orphan child entities" that cause the code to crash.  These
+    should be handled by some kind of separate cleaning process.
+    When one is found it should be added to the assumptions at the
+    top of this script.
+
+    As a fallback, parent entities in this method are defined by 
+    using a schema that isn't treated as a child schema in any 
+    attribute."""
+    ent = old_model.entity("entity")
+    att = old_model.entity("attribute")
+    qry = (
+        Session.query(ent.name)
+        .outerjoin(att, (ent.schema_id == att.object_schema_id))
+        .filter(att.id == None)
+        .group_by(ent.name)
+        )
+    for (item,) in qry:
+        yield item
 
 def getOriginalAttrsAndChoices(newSchema):
     """Taking new schema and finding the old attributes and choices for it
@@ -255,6 +355,7 @@ def getKnownSchemaChanges():
 def configureGlobalSession(old_connect, new_connect):
     """Set up Session for data manipulation and create new tables as side effect."""
     global old_model
+    global entity_state
     new_engine = create_engine(new_connect)
     model.Model.metadata.drop_all(bind=new_engine, checkfirst=True)
     model.Model.metadata.create_all(bind=new_engine, checkfirst=True)
@@ -263,6 +364,18 @@ def configureGlobalSession(old_connect, new_connect):
     tables += dict.fromkeys(tables_model, new_engine).items()
     Session.configure(binds=dict(tables))
     old_model = SqlSoup(old_connect,session=Session)
+    entity_state = getEntityStateDict()
+
+def getEntityStateDict():
+    """Returns entity state dictionary for use elsewhere."""
+    state = old_model.entity("state")
+    qry = (
+        Session.query(state)
+        )
+    entity_state = {}
+    for state in qry:
+        entity_state[state.id] = state.name
+    return entity_state
 
 def baseSchemaNamesTableFactory(session):
     """Helper method to generate a SQLAlchemy expression table for base schemata names"""
