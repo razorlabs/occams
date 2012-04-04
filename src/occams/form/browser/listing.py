@@ -6,13 +6,12 @@ from zope.component import getUtility
 import zope.schema
 import z3c.form.button
 import z3c.form.field
-
-from occams.datastore.interfaces import IDataStore
-from occams.datastore import directives as datastore
+from z3c.saconfig import named_scoped_session
 from occams.form import MessageFactory as _
 from occams.form.interfaces import IFormSummary
 from occams.form.interfaces import IFormSummaryGenerator
-
+from occams.datastore import model
+from occams.datastore.interfaces import ISchema
 
 additionalControls = [('view', _(u'View')), ('edit', _(u'Edit')), ]
 links = dict(view='@@view', edit='@@edit',)
@@ -68,7 +67,7 @@ class SummaryListingForm(crud.CrudForm):
 
     def update(self):
         # Don't use changes count, apparently it's too confusing for users
-        view_schema = z3c.form.field.Fields(IFormSummary).omit('name', 'changeCount')
+        view_schema = z3c.form.field.Fields(IFormSummary).omit('id', 'name')
 
         # Add controls
         for name, title in additionalControls:
@@ -85,10 +84,9 @@ class SummaryListingForm(crud.CrudForm):
         # Plone seems to call this method more than once, so make sure
         # we return an already generated listing.
         if self._items is None:
-            datastore = IDataStore(self.context)
             generator = getUtility(IFormSummaryGenerator)
-            listing = generator.getItems(datastore.session)
-            self._items = [(summary.name, summary) for summary in listing]
+            listing = generator.getItems(named_scoped_session(self.context.session))
+            self._items = [(summary.id, summary) for summary in listing]
         return self._items
 
     def link(self, item, field):

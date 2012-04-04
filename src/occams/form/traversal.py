@@ -26,9 +26,8 @@ from zope.interface import implements
 from zope.publisher.interfaces.http import IHTTPRequest
 from zope.publisher.interfaces.browser import IBrowserPublisher
 from zExceptions import NotFound
-
-from occam.datastore import model
-from occam.datastore.interfaces import IDataStore
+from z3c.saconfig import named_scoped_session
+from occams.datastore import model
 from occams.form.interfaces import IRepository
 from occams.form.interfaces import IDataBaseItemContext
 from occams.form.interfaces import ISchemaContext
@@ -62,9 +61,6 @@ class DataBaseItemContext(SimpleItem):
 
     # Input data
     data = None
-
-    def getDataStore(self):
-        return IDataStore(closest(self, IRepository))
 
     def __init__(self, item=None, data=None):
         self.item = item
@@ -150,16 +146,18 @@ class RepositoryTraverser(ExtendedTraversal):
     adapts(IRepository, IHTTPRequest)
 
     def traverse(self, name):
+        import pdb; pdb.set_trace( )
+        model.Schema.id.label('id'),
         workspace = Workspace(self.context)
         try:
             formData = workspace[name]
         except KeyError:
+            session = named_scoped_session(self.context.session)
             item = (
-                IDataStore(self.context).session.query(model.Schema)
+                session.query(model.Schema)
                 .filter(model.Schema.name == name)
-                .filter(model.Schema.asOf(None))
-                .order_by(model.Schema.name.asc())
-                .first()
+                .order_by(model.Schema.publish_date.desc()
+                .limit(1)).one()
                 )
             context = item and SchemaContext(item=item) or None
         else:

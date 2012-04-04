@@ -6,7 +6,7 @@ from zope.publisher.browser import TestRequest
 from zExceptions import NotFound
 from z3c.saconfig import named_scoped_session
 
-from avrc.data.store import model
+from occams.datastore import model
 from occams.form.traversal import SchemaContext
 from occams.form.traversal import AttributeContext
 from occams.form.traversal import RepositoryTraverser

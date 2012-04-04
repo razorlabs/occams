@@ -18,13 +18,11 @@ from zope.globalrequest import getRequest
 import zope.schema
 from zope.schema.vocabulary import SimpleVocabulary
 from zope.schema.vocabulary import SimpleTerm
-
-from occams.datastore import directives as datastore
+from z3c.saconfig import named_scoped_session
 from occams.datastore.model import Attribute
 from occams.datastore.model import Schema
 from occams.datastore.model import Choice
 from occams.datastore.model import NOW
-from occams.datastore.interfaces import IDataStore
 from occams.datastore.interfaces import typesVocabulary
 from occams.form.interfaces import DATA_KEY
 
@@ -45,7 +43,7 @@ exp     fabs     floor     log     log10
 pi     sin     sqrt     tan
 """.split()
 
-
+from occams.datastore.interfaces import ISchemaManager
 class Workspace(object):
     """
     Helper method for keeping track of form changes
@@ -70,7 +68,7 @@ class Workspace(object):
         try:
             formData = self.data[name]
         except KeyError:
-            form = IDataStore(self.repository).schemata.get(name)
+            form = ISchemaManager(named_scoped_session(self.repository.session)).get(name)
             formData = serializeForm(form)
             self.data[name] = formData
             self.save()
@@ -99,7 +97,7 @@ class Workspace(object):
         """
         Commits the item in the workspace to the database
         """
-        session = IDataStore(self.repository).session
+        session = named_scoped_session(self.repository.session)
         CommitHelper(session)(self.data.get(name, {}))
         self.clear(name)
 
@@ -280,9 +278,9 @@ def serializeForm(form):
     fields = zope.schema.getFieldsInOrder(form)
     result = dict(
         name=form.getName(),
-        title=datastore.title.bind().get(form),
-        description=datastore.description.bind().get(form),
-        version=datastore.version.bind().get(form),
+        title=form.title,
+        description=form.description,
+        version=form.publish_date,
         fields=dict()
         )
 
@@ -299,7 +297,7 @@ def serializeField(field):
     Serializes an individual field
     """
     type_ = \
-        datastore.type.bind().get(field) or \
+        field.type or \
         typesVocabulary.getTerm(field.__class__).token
 
     result = dict(
@@ -307,7 +305,7 @@ def serializeField(field):
         name=field.__name__,
         title=field.title,
         description=field.description,
-        version=datastore.version.bind().get(field),
+        version=field.publish_date,
         type=type_,
         schema=None,
         choices=[],

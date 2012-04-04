@@ -2,8 +2,8 @@
 Repository tools
 """
 
-import migrate.exceptions
-import migrate.versioning.api
+# import migrate.exceptions
+# import migrate.versioning.api
 from zope.component import getUtilitiesFor
 from zope.component import adapter
 from zope.interface import implementer
@@ -15,8 +15,6 @@ from z3c.saconfig import named_scoped_session
 from z3c.saconfig.interfaces import IScopedSession
 
 from occams.datastore import model
-import occams.datastore.upgrades.migrate
-from occams.datastore.interfaces import IDataStore
 from occams.form import MessageFactory as _
 from occams.form import Logger as log
 from occams.form.interfaces import IRepository
@@ -36,36 +34,16 @@ class AvailableSessionsVocabularyFactory(object):
         registered = getUtilitiesFor(IScopedSession)
         names = []
         for name, utility in registered:
-            session = named_scoped_session(name)
-            url = str(session.bind.url)
-            path = occams.datastore.upgrades.migrate.REPOSITORY
-            try:
-                migrate.versioning.api.db_version(url, path)
-            except migrate.exceptions.DatabaseNotControlledError:
-                pass
-            else:
-                names.append(name)
+            # session = named_scoped_session(name)
+            # url = str(session.bind.url)
+            # path = occams.datastore.upgrades.migrate.REPOSITORY
+            # try:
+            #     migrate.versioning.api.db_version(url, path)
+            # except migrate.exceptions.DatabaseNotControlledError:
+            #     pass
+            # else:
+            names.append(name)
         return SimpleVocabulary.fromValues(names)
-
-
-class RepositoryFormsVocabularyFactory(object):
-    """
-    Builds a vocabulary containing all the form names in the context
-    """
-    implements(IVocabularyFactory)
-
-    def __call__(self, context):
-        if not IRepository.providedBy(context):
-            raise Exception(_(u'Can only calculate forms for a repository'))
-        datastore = IDataStore(context)
-        session = datastore.session
-        query = (
-            session.query(model.Schema)
-            .filter(model.Schema.asOf(None))
-            .order_by(model.Schema.title)
-            )
-        terms = [SimpleTerm(s.name, title=s.title) for s in query.all()]
-        return SimpleVocabulary(terms=terms)
 
 
 @adapter(IRepository)
@@ -76,14 +54,23 @@ def getRespositorySession(context):
     """
     return named_scoped_session(context.session)
 
+class RepositoryFormsVocabularyFactory(object):
+    """
+    Builds a vocabulary containing all the form names in the context
+    """
+    implements(IVocabularyFactory)
 
-@adapter(IRepository)
-@implementer(IDataStore)
-def getRespositoryDataStore(context):
-    """
-    Retrieves the a datastore using the session specified by the repository
-    """
-    return IDataStore(named_scoped_session(context.session))
+    def __call__(self, context):
+        if not IRepository.providedBy(context):
+            raise Exception(_(u'Can only calculate forms for a repository'))
+        session = named_scoped_session(context.session)
+        query = (
+            session.query(model.Schema)
+            .filter(model.Schema.asOf(None))
+            .order_by(model.Schema.title)
+            )
+        terms = [SimpleTerm(s.name, title=s.title) for s in query.all()]
+        return SimpleVocabulary(terms=terms)
 
 
 def handleRepositoryAddedEvent(item, event):
@@ -106,12 +93,11 @@ def _configureRepositoryDataStore(repository):
     """
     Helper method to install DataStore tables for a Repository
     """
-    datastore = IDataStore(repository)
-    session = datastore.session
+    session = named_scoped_session(repository.session)
     url = session.bind.url
     repository_name = repository.getId()
     session_name = repository.session
     msg_params = dict(repository=repository_name, session=session_name, url=url)
 
     log.info(MSG_INSALLING % msg_params)
-    occams.datastore.upgrades.migrate.install(datastore.session.bind)
+    # occams.datastore.upgrades.migrate.install(datastore.session.bind)

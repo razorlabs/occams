@@ -14,7 +14,7 @@ from z3c.form.browser.radio import RadioFieldWidget
 from z3c.form.browser.checkbox import CheckBoxFieldWidget
 from z3c.form.browser.textlines import TextLinesFieldWidget
 
-import occams.datastore.directives
+#import occams.datastore.directives
 from occams.form.interfaces import TEXTAREA_SIZE
 
 
@@ -89,11 +89,11 @@ class Form(StandardWidgetsMixin, z3c.form.group.GroupForm, z3c.form.form.Form):
 
     @property
     def label(self):
-        return occams.datastore.directives.title.bind().get(self.iface)
+        return self.iface['title']
 
     @property
     def description(self):
-        return occams.datastore.directives.description.bind().get(self.iface)
+        return self.iface['description']
 
     def update(self):
         self.request.set('disable_border', True)

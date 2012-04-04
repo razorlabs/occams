@@ -24,6 +24,10 @@ typesVocabulary = SimpleVocabulary(terms=[
         SimpleTerm(value=zope.schema.Object, token='object', title=_(u'Field Set')),
     ])
 
+class IDataStore(zope.interface.Interface):
+    """
+    Class to get rid of
+    """
 
 class IOccamsFormComponent(zope.interface.Interface):
     """
@@ -251,6 +255,12 @@ class IFormSummary(IOccamsFormComponent):
     Form summary for listing purposes.
     """
 
+    id = zope.schema.Int(
+        title=_(u'Id'),
+        description=_(u'Machine id'),
+        readonly=True
+        )
+
     name = zope.schema.ASCIILine(
         title=_(u'Name'),
         description=_(u'Machine name'),
@@ -263,38 +273,42 @@ class IFormSummary(IOccamsFormComponent):
         readonly=True,
         )
 
-    fieldCount = zope.schema.Int(
+    field_count = zope.schema.Int(
         title=_(u'Fields'),
         description=_(
             u'Number of fields in the form, not including subform fields.'
             ),
         readonly=True,
         )
-
-    revisionCount = zope.schema.Int(
-        title=_(u'Revisions'),
-        description=_(u'Number of times the form has been published'),
+    revision = zope.schema.Int(
+        title=_(u'Form Revision'),
+        description=_(u'The revision of this form'),
         readonly=True,
         )
 
-    changeCount = zope.schema.Int(
-        title=_(u'Changes'),
-        description=_(u'Number of times the form has been modified'),
+    state = zope.schema.TextLine(
+        title=_(u'Form State'),
+        description=_(u'The State of this form'),
         readonly=True,
         )
 
-    currentVersion = zope.schema.Date(
-        title=_(u'Current'),
-        description=_(u'Current revision'),
-        readonly=True,
-        )
+    # create_user = zope.schema.TextLine(
+    #     title=_(u'Created By'),
+    #     description=_(u'Person who created the form'),
+    #     readonly=True,
+    #     )
 
-    createdOn = zope.schema.Date(
-        title=_(u'Created'),
+    create_date = zope.schema.Date(
+        title=_(u'Create Date'),
         description=_(u'The date the form was created'),
         readonly=True,
         )
 
+    publish_date = zope.schema.Date(
+        title=_(u'Publish Date'),
+        description=_(u'The date the form was published'),
+        readonly=True,
+        )
 
 class IDataBaseItemContext(IOccamsFormComponent):
     """
@@ -353,3 +367,11 @@ class IRepository(plone.directives.form.Schema):
         required=True,
         default=None,
         )
+
+
+
+class ISessionUserFactory(zope.interface.Interface):
+    """
+    Set up a session that is friendly to our datastore
+    """
+

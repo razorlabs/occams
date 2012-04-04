@@ -35,7 +35,7 @@ setup(
     zip_safe=False,
     install_requires=[
         'setuptools',
-        'avrc.data.store',
+        'occams.datastore',
         'collective.beaker',
         'collective.z3cform.datagridfield',
         'plone.app.dexterity',
