@@ -4,10 +4,12 @@ Import/Export functionality of schemata via XML files
 
 from datetime import datetime
 import lxml.etree
+import lxml.objectify
 from lxml.builder import ElementMaker
+from sqlalchemy.exc import IntegrityError
 
-from occams.datastore.schema import SchemaManager
-from occams.datastore.interfaces import ManagerKeyError
+from occams.datastore import model
+from occams.datastore.interfaces import AlreadyExistsError
 
 
 E = ElementMaker(nsmap={None : 'http://bitcore.ucsd.edu/occams/datastore'})
@@ -24,7 +26,7 @@ def exportToXml(schema, file_):
             The filename or file object to write to
     """
 
-    xml = schemaToXml(schema)
+    xml = schemaToElement(schema)
     xml.insert(0, lxml.etree.Comment('Generated: %s' % datetime.now()))
     content = lxml.etree.tounicode(xml)
 
@@ -35,36 +37,38 @@ def exportToXml(schema, file_):
         file_.write(content)
 
 
-def schemaToXml(schema):
+def schemaToElement(schema):
     """
     Converts a schema into an XML element tree
     """
 
-    eschema = E.schema(
+    xschema = E.schema(
         E.title(schema.title),
         name=schema.name,
         storage=schema.storage,
-        inline=str(schema.is_inline),
         published=schema.publish_date.strftime('%Y-%m-%d')
         )
 
+    if schema.is_inline:
+        xschema.set('inline', str(schema.is_inline))
+
     if schema.description is not None:
-        eschema.append(E.description(schema.description or ''))
+        xschema.append(E.description(schema.description or ''))
 
     if schema.attributes:
-        eschema.append(
-            E.attributes(*[attributeToXml(a) for a in schema.attributes.values()])
+        xschema.append(
+            E.attributes(*[attributeToElement(a) for a in schema.attributes.values()])
             )
 
-    return eschema
+    return xschema
 
 
-def attributeToXml(attribute):
+def attributeToElement(attribute):
     """
     Converts an attribute into an XML element tree
     """
 
-    eattribute = E.attribute(
+    xattribute = E.attribute(
         E.checksum(attribute.checksum),
         E.title(attribute.title),
         name=attribute.name,
@@ -73,11 +77,11 @@ def attributeToXml(attribute):
         )
 
     if attribute.description is not None:
-        eattribute.append(E.description(attribute.description))
+        xattribute.append(E.description(attribute.description))
 
     if attribute.type == 'object':
         # Continue processing subschemata recursively
-        eattribute.append(schemaToXml(attribute.object_schema))
+        xattribute.append(schemaToElement(attribute.object_schema))
 
     if attribute.is_collection:
         ecollection = E.collection()
@@ -99,12 +103,12 @@ def attributeToXml(attribute):
         attribute.append(E.validator(attribute.validator))
 
     if attribute.choices:
-        eattribute.append(E.choices(*[choiceToXml(c) for c in attribute.choices]))
+        xattribute.append(E.choices(*[choiceToElement(c) for c in attribute.choices]))
 
-    return eattribute
+    return xattribute
 
 
-def choiceToXml(choice):
+def choiceToElement(choice):
     """
     Converts a choice into an XML element tree
     """
@@ -127,37 +131,100 @@ def importFromXml(session, file_):
 
     if isinstance(file_, basestring):
         with open(file_) as in_:
-            tree = lxml.etree.parse(in_)
+            tree = lxml.objectify.parse(in_)
     else:
-        tree = lxml.etree.parse(file_)
+        tree = lxml.objectify.parse(file_)
 
-    manager = SchemaManager(session)
-    eschema = tree.getroot()
+    xschema = tree.getroot()
+    schema = elementToSchema(xschema)
 
     try:
-        publish_date = datetime.strptime('%Y-%m-%d', eschema.publish_date).date()
-        schema = manager.get(eschema.name, publish_date)
-    except ManagerKeyError:
-        schema = xmlToSchema(eschema)
-        manager.put(schema)
+        session.add(schema)
+        session.flush()
+    except IntegrityError as e:
+        if 'unique' in e.message:
+            e = AlreadyExistsError(model.Schema, schema.name, schema.publish_date)
+        raise e
 
     return schema
 
 
-def xmlToSchema(xml):
+def elementToSchema(element):
     """
-    Converts an XML file into a schema
+    Converts a schema XML element into a sqlalchemy ``Schema`` instance
+    """
+    schema = model.Schema(
+        name=str(element.attrib['name']),
+        title=unicode(element.title),
+        state='published',
+        publish_date=datetime.strptime(element.attrib['published'], '%Y-%m-%d').date(),
+        storage=str(element.attrib['storage']),
+        )
 
-    Arguments
-        ``file_``
-            The filename or file object to import from
+    if hasattr(element, 'description'):
+        schema.description = str(element.description)
+
+    if 'inline' in element.attrib:
+        schema.is_inline = element.attrib['inline'].lower()[0] in ('1', 't'),
+
+    for index, xattribute in enumerate(getattr(element, 'attributes', [])):
+        attribute = elementToAttribute(xattribute)
+        attribute.order = index
+        schema[attribute.name] = attribute
+
+    return schema
+
+
+def elementToAttribute(element):
+    """
+    Converts an attribute XML element into a sqlalchemy ``Attribute`` element
     """
 
+    attribute = model.Attribute(
+        name=str(element.attr['name']),
+        title=unicode(element.title),
+        type=str(element.attr['type']),
+        is_required=str(element.attr['required']).lower()[0] in ('t', '1'),
+        )
 
-def elementToAttribuet(element):
-    pass
+    if hasattr(element, 'description'):
+        attribute.description = unicode(element.description)
+
+    if hasattr(element, 'checksum'):
+        attribute.checksum = str(element.checksum)
+
+    if attribute.type == 'object':
+        attribute.object_schema = elementToSchema(element.schema)
+
+    if hasattr(element, 'collection'):
+        attribute.is_collection = True
+        if 'min' in element.collection.attr:
+            attribute.collection_min = int(element.collection.attr['min'])
+        if 'max' in element.collection.attr:
+            attribute.collection_max = int(element.collection.attr['max'])
+
+    if hasattr(element, 'limit'):
+        if 'min' in element.limit.attr:
+            attribute.value_min = int(element.limit.attr['min'])
+        if 'max' in element.limit.attr:
+            attribute.value_max = int(element.limit.attr['max'])
+
+    if hasattr(element, 'validator'):
+        attribute.validator = str(element.validator)
+
+    for index, xchoice in enumerate(getattr(element, 'choices', [])):
+        choice = elementToChoice(xchoice)
+        choice.order = index
+        attribute.choices.append(choice)
+
+    return attribute
 
 
 def elementToChoice(element):
-    pass
-
+    """
+    Converts a choice XML element into a sqlalchemy ``Choice`` instance
+    """
+    return model.Choice(
+        title=unicode(element.title),
+        _value=unicode(element.attr['value']),
+        )

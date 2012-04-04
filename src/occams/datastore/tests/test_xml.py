@@ -1,22 +1,31 @@
 import datetime
 import tempfile
+from StringIO import StringIO
 import lxml.etree
 import unittest2 as unittest
 
 import sqlalchemy.exc
 from occams.datastore import model
 from occams.datastore.testing import DATASTORE_LAYER
-from occams.datastore.xml import schemaToXml
-from occams.datastore.xml import xmlToSchema
+from occams.datastore.xml import schemaToElement
+from occams.datastore.xml import elementToSchema
 from occams.datastore.xml import exportToXml
 from occams.datastore.xml import importFromXml
 
+basicXml = """
+<schema name="Foo" published="2012-03-01" storage="eav">
+    <title>Foo</title>
+</schema>
+"""
+
+subSchemaXml = """
+"""
 
 class XmlTestCase(unittest.TestCase):
 
     layer = DATASTORE_LAYER
 
-    def testBasic(self):
+    def testBasicSchematToXml(self):
         session = self.layer['session']
         schema = model.Schema(
             name='Foo',
@@ -36,7 +45,11 @@ class XmlTestCase(unittest.TestCase):
             )
         session.add(schema)
         session.flush()
-        xml = schemaToXml(schema)
-        print
-        print lxml.etree.tounicode(xml, pretty_print=True)
-        print
+        xml = schemaToElement(schema)
+
+
+    def testBasicXmlToSchema(self):
+        session = self.layer['session']
+        file_ = StringIO(basicXml)
+        schema = importFromXml(session, file_)
+        schema = importFromXml(session, file_)

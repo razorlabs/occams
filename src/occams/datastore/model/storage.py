@@ -62,7 +62,7 @@ def defaultCollectDate(context):
 def cleanDataByState(entity):
     """
     """
-    if entity.state == 'not-done':
+    if entity is not None and entity.state == 'not-done':
         for name, attribute in entity.schema.attributes.items():
             if attribute.type == 'object':
                 cleanDataByState(entity[name])
@@ -119,7 +119,7 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         lazy='dynamic',
         )
 
-    _obect_values = Relationship(
+    _object_values = Relationship(
         'ValueObject',
         cascade='all, delete-orphan',
         back_populates='entity',
