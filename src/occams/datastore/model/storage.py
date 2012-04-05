@@ -76,6 +76,45 @@ def enforceSchemaState(entity):
         raise ValueError('Cannot collect data for unpublished Schema(%s)' % schema.name)
 
 
+class External(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
+
+    @declared_attr
+    def __table_args__(cls):
+        return buildModifiableConstraints(cls) + (
+            UniqueConstraint('name', name='uq_%s_name' % cls.__tablename__),
+            )
+
+
+class Context(Model, AutoNamed, Modifiable, Auditable):
+
+    entity_id = Column(Integer, nullable=False, primary_key=True)
+
+    entity = Relationship('Entity')
+
+    external_id = Column(Integer, nullable=False, primary_key=True)
+
+    external = Relationship('External')
+
+    key = Column(Integer, nullable=False, primary_key=True)
+
+    @declared_attr
+    def __table_args__(cls):
+        return buildModifiableConstraints(cls) + (
+            ForeignKeyConstraint(
+                columns=['entity_id'],
+                refcolumns=['entity.id'],
+                name='fk_%s_entity_id' % cls.__tablename__,
+                ondelete='CASCADE',
+                ),
+            ForeignKeyConstraint(
+                columns=['external_id'],
+                refcolumns=['external.id'],
+                name='fk_%s_external_id' % cls.__tablename__,
+                ondelete='CASCADE',
+                ),
+            )
+
+
 class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
     implements(IEntity)
 
