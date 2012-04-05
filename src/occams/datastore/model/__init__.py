@@ -10,18 +10,18 @@ from occams.datastore.model.metadata import NOW
 from occams.datastore.model.auditing import Auditable
 
 from occams.datastore.model.schema import Schema
+from occams.datastore.model.schema import Category
 from occams.datastore.model.schema import Attribute
 from occams.datastore.model.schema import Choice
 
+from occams.datastore.model.storage import External
+from occams.datastore.model.storage import Context
 from occams.datastore.model.storage import Entity
 from occams.datastore.model.storage import ValueInteger
 from occams.datastore.model.storage import ValueString
 from occams.datastore.model.storage import ValueObject
 from occams.datastore.model.storage import ValueDecimal
 from occams.datastore.model.storage import ValueDatetime
-
-from occams.datastore.model.context import External
-from occams.datastore.model.context import Context
 
 from occams.datastore.model.session import DataStoreSession
 
@@ -32,6 +32,7 @@ __all__ = (
     'NOW',
     'Auditable',
     'Schema',
+    'Category',
     'Attribute',
     'Choice',
     'Entity',

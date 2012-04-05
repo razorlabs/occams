@@ -99,6 +99,17 @@ class IEntry(IDataStoreComponent):
         )
 
 
+class IUser(IEntry):
+    """
+    A simple user for audit trails
+    """
+
+    key = zope.schema.ASCIILine(
+        title=_(u'User Key'),
+        description=_(u'A unique way of distinguishing a user (e.g. email or uid)')
+        )
+
+
 class IDescribeable(IDataStoreComponent):
     """
     A human-readable object.
@@ -133,8 +144,20 @@ class IModifiable(IDataStoreComponent):
         readonly=True,
         )
 
+    create_user = zope.schema.Object(
+        title=_(u'Created By'),
+        schema=IUser,
+        readonly=True,
+        )
+
     modify_date = zope.schema.Datetime(
         title=_(u'Date Modified'),
+        readonly=True,
+        )
+
+    modify_user = zope.schema.Object(
+        title=_(u'Modified By'),
+        schema=IUser,
         readonly=True,
         )
 
@@ -142,6 +165,12 @@ class IModifiable(IDataStoreComponent):
 class IDataBaseItem(IEntry, IDescribeable, IModifiable):
     """
     An object that originates from database.
+    """
+
+
+class ICategory(IDataBaseItem):
+    """
+    Logical categories for schemata in order to be able to group them.
     """
 
 
@@ -157,6 +186,11 @@ class ISchema(IDataBaseItem):
     sub_schemata = zope.schema.Iterable(
         title=_(u'Sub Schemata'),
         description=_(u'Listing of schemata that subclass the Zope-style interface.'),
+        )
+
+    categories = zope.schema.Iterable(
+        title=_(u'Categories'),
+        description=_(u'Listing of schema categories.')
         )
 
     state = zope.schema.Choice(

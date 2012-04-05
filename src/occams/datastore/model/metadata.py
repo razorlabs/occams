@@ -15,9 +15,10 @@ from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.schema import Index
 from sqlalchemy.schema import ForeignKeyConstraint
 from sqlalchemy.types import DateTime
+from zope.interface import implements
 
 from occams.datastore.model import Model
-
+from occams.datastore.interfaces import IUser
 
 NOW = text('CURRENT_TIMESTAMP')
 
@@ -70,6 +71,7 @@ class Describeable(object):
 
 
 class User(Model, AutoNamed, Referenceable):
+    implements(IUser)
 
     key = Column(String, nullable=False)
 

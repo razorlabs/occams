@@ -3,10 +3,12 @@ Application layers
 """
 
 from sqlalchemy import create_engine
+from sqlalchemy.orm import scoped_session
+from sqlalchemy.orm import sessionmaker
 import plone.testing
 
 from occams.datastore import model
-from occams.datastore.model.session import scoped_session
+
 
 class DataStoreLayer(plone.testing.Layer):
     """
@@ -19,8 +21,11 @@ class DataStoreLayer(plone.testing.Layer):
         """
         engine = create_engine('sqlite:///', echo=False)
         model.Model.metadata.create_all(engine, checkfirst=True)
-        session = scoped_session(bind=engine, user=lambda: 'bitcore@ucsd.edu')
-        self['session'] = session
+        self['session'] = scoped_session(sessionmaker(
+            bind=engine,
+            class_=model.DataStoreSession,
+            user=lambda: 'bitcore@ucsd.edu'
+            ))
 
     def tearDown(self):
         """
