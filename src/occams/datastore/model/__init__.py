@@ -6,7 +6,7 @@ Model = sqlalchemy.ext.declarative.declarative_base()
 
 
 from occams.datastore.model.metadata import User
-
+from occams.datastore.model.metadata import NOW
 from occams.datastore.model.auditing import Auditable
 
 from occams.datastore.model.schema import Schema
@@ -29,6 +29,7 @@ from occams.datastore.model.session import DataStoreSession
 __all__ = (
     'Model',
     'User',
+    'NOW',
     'Auditable',
     'Schema',
     'Category',
