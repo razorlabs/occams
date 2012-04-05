@@ -2,7 +2,6 @@
 API base classes for rendering forms in certain contexts.
 """
 
-import zope.schema
 from zope.schema.interfaces import IChoice
 from zope.schema.interfaces import IList
 from zope.schema.interfaces import ITextLine
@@ -13,8 +12,8 @@ import z3c.form.browser.textarea
 from z3c.form.browser.radio import RadioFieldWidget
 from z3c.form.browser.checkbox import CheckBoxFieldWidget
 from z3c.form.browser.textlines import TextLinesFieldWidget
+from zope.schema.interfaces import IField
 
-#import occams.datastore.directives
 from occams.form.interfaces import TEXTAREA_SIZE
 
 
@@ -60,7 +59,8 @@ class Group(StandardWidgetsMixin, z3c.form.group.Group):
 
     @property
     def prefix(self):
-        return self.context.__name__
+        # import pdb; pdb.set_trace( )
+        return str(self.context.name)
 
     @property
     def label(self):
@@ -71,8 +71,12 @@ class Group(StandardWidgetsMixin, z3c.form.group.Group):
         return self.context.description
 
     def update(self):
-        self.fields = z3c.form.field.Fields(self.context.schema)
+        # import pdb; pdb.set_trace( )
+        self.fields = z3c.form.field.Fields()
+        for name, field in self.context.items():
+            self.fields += z3c.form.field.Fields(IField(field))
         super(Group, self).update()
+
 
 
 class Form(StandardWidgetsMixin, z3c.form.group.GroupForm, z3c.form.form.Form):
@@ -98,12 +102,11 @@ class Form(StandardWidgetsMixin, z3c.form.group.GroupForm, z3c.form.form.Form):
     def update(self):
         self.request.set('disable_border', True)
         # TODO: should be context-agnostic
-        self.iface = self.context.getDataStore().schemata.get(self.context.__name__)
         self.fields = z3c.form.field.Fields()
         self.groups = []
-        for name, field in zope.schema.getFieldsInOrder(self.iface):
-            if isinstance(field, zope.schema.Object):
-                self.groups.append(self.groupFactory(field, self.request, self))
+        for name, field in self.context.item.items():
+            if field.type == 'object':
+                self.groups.append(self.groupFactory(field.object_schema, self.request, self))
             else:
-                self.fields += z3c.form.field.Fields(field)
+                self.fields += z3c.form.field.Fields(IField(field))
         super(Form, self).update()

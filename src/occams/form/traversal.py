@@ -62,7 +62,7 @@ class DataBaseItemContext(SimpleItem):
     # Input data
     data = None
 
-    def __init__(self, item=None, data=None):
+    def __init__(self, item=None, data=None, ):
         self.item = item
         self.data = data or dict()
 
@@ -146,7 +146,6 @@ class RepositoryTraverser(ExtendedTraversal):
     adapts(IRepository, IHTTPRequest)
 
     def traverse(self, name):
-        import pdb; pdb.set_trace( )
         model.Schema.id.label('id'),
         workspace = Workspace(self.context)
         try:
@@ -156,8 +155,8 @@ class RepositoryTraverser(ExtendedTraversal):
             item = (
                 session.query(model.Schema)
                 .filter(model.Schema.name == name)
-                .order_by(model.Schema.publish_date.desc()
-                .limit(1)).one()
+                .order_by(model.Schema.publish_date.desc())
+                .limit(1).one()
                 )
             context = item and SchemaContext(item=item) or None
         else:
