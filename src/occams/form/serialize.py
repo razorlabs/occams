@@ -44,62 +44,62 @@ pi     sin     sqrt     tan
 """.split()
 
 from occams.datastore.interfaces import ISchemaManager
-class Workspace(object):
-    """
-    Helper method for keeping track of form changes
-    """
+# class Workspace(object):
+#     """
+#     Helper method for keeping track of form changes
+#     """
 
-    def __init__(self, repository):
-        self.repository = repository
-        self.httpSession = IHttpSession(getRequest())
-        self.httpSession.setdefault(DATA_KEY, {})
-        self.data = self.httpSession[DATA_KEY]
+#     def __init__(self, repository):
+#         self.repository = repository
+#         self.httpSession = IHttpSession(getRequest())
+#         self.httpSession.setdefault(DATA_KEY, {})
+#         self.data = self.httpSession[DATA_KEY]
 
-    def save(self):
-        """
-        Saves the current workspace (nothing done to database)
-        """
-        self.httpSession.save()
+#     def save(self):
+#         """
+#         Saves the current workspace (nothing done to database)
+#         """
+#         self.httpSession.save()
 
-    def load(self, name):
-        """
-        Loads a serialized form from the workspace or from datastore
-        """
-        try:
-            formData = self.data[name]
-        except KeyError:
-            form = ISchemaManager(named_scoped_session(self.repository.session)).get(name)
-            formData = serializeForm(form)
-            self.data[name] = formData
-            self.save()
-        return formData
+#     def load(self, name):
+#         """
+#         Loads a serialized form from the workspace or from datastore
+#         """
+#         try:
+#             formData = self.data[name]
+#         except KeyError:
+#             form = ISchemaManager(named_scoped_session(self.repository.session)).get(name)
+#             formData = serializeForm(form)
+#             self.data[name] = formData
+#             self.save()
+#         return formData
 
-    def __contains__(self, key):
-        return key in self.data
+#     def __contains__(self, key):
+#         return key in self.data
 
-    def __getitem__(self, key):
-        return self.data[key]
+#     def __getitem__(self, key):
+#         return self.data[key]
 
-    def __setitem__(self, key, item):
-        self.data[key] = item
+#     def __setitem__(self, key, item):
+#         self.data[key] = item
 
-    def clear(self, name):
-        """
-        Cancels changes done to a form
-        """
-        try:
-            del self.data[name]
-            self.save()
-        except KeyError:
-            pass
+#     def clear(self, name):
+#         """
+#         Cancels changes done to a form
+#         """
+#         try:
+#             del self.data[name]
+#             self.save()
+#         except KeyError:
+#             pass
 
-    def commit(self, name):
-        """
-        Commits the item in the workspace to the database
-        """
-        session = named_scoped_session(self.repository.session)
-        CommitHelper(session)(self.data.get(name, {}))
-        self.clear(name)
+#     def commit(self, name):
+#         """
+#         Commits the item in the workspace to the database
+#         """
+#         session = named_scoped_session(self.repository.session)
+#         CommitHelper(session)(self.data.get(name, {}))
+#         self.clear(name)
 
 
 class CommitHelper(object):
@@ -275,19 +275,18 @@ def serializeForm(form):
     """
     Serializes a form as a top-level (master) form.
     """
-    fields = zope.schema.getFieldsInOrder(form)
+
     result = dict(
-        name=form.getName(),
+        name=str(form.name),
         title=form.title,
         description=form.description,
         version=form.publish_date,
         fields=dict()
         )
 
-    for order, field in enumerate(fields, start=0):
-        (name, field) = field
+    for name, field in form.items():
         result['fields'][name] = serializeField(field)
-        result['fields'][name]['order'] = order
+        result['fields'][name]['order'] = field.order
 
     return result
 
@@ -296,37 +295,32 @@ def serializeField(field):
     """
     Serializes an individual field
     """
-    type_ = \
-        field.type or \
-        typesVocabulary.getTerm(field.__class__).token
-
     result = dict(
-        interface=field.interface.getName(),
-        name=field.__name__,
+        name=str(field.name),
         title=field.title,
         description=field.description,
-        version=field.publish_date,
-        type=type_,
+        # version=field.publish_date,
+        type=field.type,
         schema=None,
         choices=[],
-        is_required=field.required,
-        is_collection=isinstance(field, zope.schema.List),
+        is_required=field.is_required,
+        is_collection=field.is_collection,
         order=field.order,
         )
 
-    vocabularyPart = getattr(field, 'value_type', field)
+    #vocabularyPart = getattr(field, 'value_type', field)
 
-    if isinstance(vocabularyPart, zope.schema.Choice):
-        for order, term in enumerate(vocabularyPart.vocabulary, start=0):
+    if len(field.choices):
+        for choice in field.choices:
             result['choices'].append(dict(
-                name=term.token,
-                title=term.title,
-                value=term.value,
-                order=order,
+                name=choice.name,
+                title=choice.title,
+                value=choice._value,
+                order=choice.order,
                 ))
 
-    if isinstance(field, zope.schema.Object):
-        result['schema'] = serializeForm(field.schema)
+    if field.type == 'object':
+        result['schema'] = serializeForm(field.object_schema)
 
     return result
 

@@ -35,7 +35,6 @@ from occams.form.interfaces import ISchemaContext
 from occams.form.interfaces import typeInputSchemaMap
 from occams.form.interfaces import typesVocabulary
 from occams.form.traversal import closest
-from occams.form.serialize import Workspace
 from occams.form.serialize import listFieldsets
 from occams.form.serialize import fieldFactory
 from occams.form.serialize import cleanupChoices
@@ -77,6 +76,8 @@ class FormPreviewForm(DisabledMixin, Form):
         self.request.response.redirect(os.path.join(self.context.absolute_url(), '@@edit'))
 
 
+from occams.form.serialize import serializeForm
+
 class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
     """
     Renders the form for editing, using a subform for the fields editor.
@@ -95,7 +96,7 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
 
     @property
     def label(self):
-        return _(u'Edit: %s (%s)') % (self.context.title, self.context.__name__)
+        return _(u'Edit: %s (%s)') % (self.context.item.title, self.context.item.name)
 
     def getContent(self):
         return self.context.data
@@ -108,9 +109,7 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
         self.request.set('disable_plone.rightcolumn', True)
         self.request.set('disable_plone.leftcolumn', True)
 
-        self.workspace = Workspace(self.context.getParentNode())
-        self.context.data = self.workspace.load(self.context.__name__)
-
+        self.context.data = serializeForm(self.context.item)
         # Render the fields editor form
         self.fieldsSubForm = FieldsetsForm(self.context, self.request)
         self.fieldsSubForm.update()
@@ -123,7 +122,7 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
         """
         Cancels form changes.
         """
-        self.workspace.clear(self.context.__name__)
+        #self.workspace.clear(self.context.__name__)
         self.request.response.redirect(self.context.absolute_url())
         IStatusMessage(self.request).add(self.cancelMessage)
 
@@ -137,7 +136,7 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
             self.status = self.formErrorsMessage
         else:
             self.applyChanges(data)
-            self.workspace.commit(self.context.__name__)
+            #self.workspace.commit(self.context.__name__)
             self.request.response.redirect(self.context.absolute_url())
             IStatusMessage(self.request).add(self.successMessage)
 
@@ -222,7 +221,7 @@ class Fieldset(StandardWidgetsMixin, DisabledMixin, z3c.form.group.Group):
         if field is None:
             data = self.context
         else:
-            data = self.context['schema']['fields'][field.getName()]
+            data = self.context['schema']['fields'][field.__name__]
         return data
 
     def url(self, field=None):

@@ -310,6 +310,12 @@ class IFormSummary(IOccamsFormComponent):
         readonly=True,
         )
 
+    draft_id = zope.schema.Int(
+        title=_(u'Draft id'),
+        description=_(u'The id of the current users draft'),
+        readonly=True,
+        )
+
 class IDataBaseItemContext(IOccamsFormComponent):
     """
     A wrapper context for DataStore entries so they are traversable.

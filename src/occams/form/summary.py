@@ -3,6 +3,7 @@ Form summary tools
 """
 
 from zope.interface import implements
+from AccessControl import getSecurityManager
 
 from sqlalchemy import func
 from sqlalchemy import String
@@ -55,7 +56,7 @@ class FormSummaryGenerator(object):
     implements(IFormSummaryGenerator)
 
     def getItems(self, session):
-
+        current_user = getSecurityManager().getUser().getId()
         SubSchema = aliased(model.Schema, name='_subschema')
         SubAttribute = aliased(model.Attribute, name='_subattribute')
         FieldCount = (
@@ -69,6 +70,20 @@ class FormSummaryGenerator(object):
                 .group_by(model.Schema.id)
                 ).subquery('fieldcount')
 
+        EditVersion = (
+            session.query(
+                model.Schema.id.label('schema_id'),
+                SubSchema.id.label('draft_id'),
+                )
+                .select_from(model.Schema)
+                .join(SubSchema, model.Schema.name == SubSchema.name)
+                .join(model.User, SubSchema.create_user_id == model.User.id)
+                .filter(SubSchema.state == 'draft')
+                .filter(model.User.key == current_user)
+                .order_by(SubSchema.create_date.desc())
+                .limit(1)
+            ).subquery('editversion')
+
         query = (
             session.query(model.Schema.id.label('id'),
                                  model.Schema.name.label('name'),
@@ -77,11 +92,15 @@ class FormSummaryGenerator(object):
                                  model.Schema.revision.label('revision'),
                                  model.Schema.state.label('state'),
                                  model.Schema.create_date.label('create_date'),
-                                 model.Schema.publish_date.label('publish_date')
+                                 model.Schema.publish_date.label('publish_date'),
+                                 EditVersion.c.draft_id.label('draft_id')
                                  )
             .join(FieldCount, model.Schema.id == FieldCount.c.schema_id)
+            .outerjoin(EditVersion, model.Schema.id == EditVersion.c.schema_id)
             .filter(model.Schema.is_inline == False)
+            .filter(model.Schema.state == 'published')
             .order_by(model.Schema.title.asc(), model.Schema.publish_date.desc())
             )
+
         items = [DataStoreSchemaSummary.fromSql(r) for r in query.all()]
         return items

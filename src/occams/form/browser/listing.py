@@ -11,25 +11,30 @@ from occams.form import MessageFactory as _
 from occams.form.interfaces import IFormSummary
 from occams.form.interfaces import IFormSummaryGenerator
 from occams.datastore import model
-from occams.datastore.interfaces import ISchema
+from z3c.form import button
+from occams.datastore.schema import copy
+
+from occams.form.form import UserAwareMixin
 
 additionalControls = [('view', _(u'View')), ('edit', _(u'Edit')), ]
 links = dict(view='@@view', edit='@@edit',)
 
-
 class ListingEditSubForm(crud.EditSubForm):
 
-    def _select_field(self):
-        """
-        Cancels the rendering of the check box as we can't delete forms
-        as of this release.
-        """
-        return z3c.form.field.Fields()
+    # def _select_field(self):
+    #     """
+    #     Cancels the rendering of the check box as we can't delete forms
+    #     as of this release.
+    #     """
+    #     return z3c.form.field.Fields()
 
     def updateWidgets(self):
         super(ListingEditSubForm, self).updateWidgets()
         for name, title in additionalControls:
-            self.widgets['view_' + name].value = title
+            if name != 'edit' or self.content.draft_id:
+                self.widgets['view_' + name].value = title
+            else:
+                self.widgets['view_' + name].value = ''
 
 
 class ListingEditForm(crud.EditForm):
@@ -38,14 +43,29 @@ class ListingEditForm(crud.EditForm):
     """
 
     label = None
-
     editsubform_factory = ListingEditSubForm
 
-    # No buttons for this release
-    buttons = z3c.form.button.Buttons()
+    @button.buttonAndHandler(_('Draft New Version'), name='draft')
+    def handleDraft(self, action):
+        selected = self.selected_items()
+        session_name = self.context.context.session
+        if selected:
+            Session = named_scoped_session(session_name)
+            for obj_id, obj in selected:
+                if obj.draft_id:
+                    continue
+                old_schema = Session.query(model.Schema).filter(model.Schema.id == obj_id).one()
+                new_schema = copy(old_schema)
+                Session.add(new_schema)
+            Session.flush()
+        return self.request.response.redirect(self.action)
 
 
-class SummaryListingForm(crud.CrudForm):
+    @button.buttonAndHandler(_('Delete'), name='delete')
+    def handleDelete(self, action):
+        raise Exception('NO!')
+        
+class SummaryListingForm(crud.CrudForm, UserAwareMixin):
     """
     Lists the forms in the repository.
     No add form is needed as that will be a separate view.
@@ -67,11 +87,12 @@ class SummaryListingForm(crud.CrudForm):
 
     def update(self):
         # Don't use changes count, apparently it's too confusing for users
-        view_schema = z3c.form.field.Fields(IFormSummary).omit('id', 'name')
+        view_schema = z3c.form.field.Fields(IFormSummary).omit('id', 'name', 'draft_id')
 
         # Add controls
         for name, title in additionalControls:
             field = zope.schema.TextLine(__name__=name, title=u'')
+
             view_schema += z3c.form.field.Fields(field)
 
         self.view_schema = view_schema
@@ -93,8 +114,15 @@ class SummaryListingForm(crud.CrudForm):
         """
         Renders a link to the form view
         """
-        if field in links:
-            return os.path.join(self.context.absolute_url(), item.name, links[field])
+        if field == 'view':
+        # if field in links:
+            try:
+                return os.path.join(self.context.absolute_url(), item.name+'-'+item.publish_date.isoformat(), links[field])
+            except:
+                import pdb; pdb.set_trace( )
+        elif field == 'edit' and item.draft_id is not None:
+            return os.path.join(self.context.absolute_url(), str(item.draft_id), links[field])
+      
 
 
 Listing = layout.wrap_form(SummaryListingForm)

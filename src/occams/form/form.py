@@ -1,6 +1,7 @@
 """
 API base classes for rendering forms in certain contexts.
 """
+from AccessControl import getSecurityManager
 
 from zope.schema.interfaces import IChoice
 from zope.schema.interfaces import IList
@@ -13,9 +14,10 @@ from z3c.form.browser.radio import RadioFieldWidget
 from z3c.form.browser.checkbox import CheckBoxFieldWidget
 from z3c.form.browser.textlines import TextLinesFieldWidget
 from zope.schema.interfaces import IField
+from z3c.saconfig import named_scoped_session
+from occams.datastore import model
 
 from occams.form.interfaces import TEXTAREA_SIZE
-
 
 def TextAreaFieldWidget(field, request):
     """
@@ -30,6 +32,22 @@ def TextAreaFieldWidget(field, request):
     widget = z3c.form.browser.textarea.TextAreaFieldWidget(field, request)
     widget.rows = TEXTAREA_SIZE
     return widget
+
+class UserAwareMixin(object):
+    """
+    Verifies that the current user is in datastore
+    """
+    def update(self):
+        if not hasattr(self, 'session'):
+            if hasattr(self.context, 'session') and self.context.session:
+                self.session = self.context.session
+        if hasattr(self, 'session'):
+            current_user = getSecurityManager().getUser().getId()
+            Session = named_scoped_session(self.context.session)
+            if current_user and Session.query(model.User).filter(model.User.key == current_user).first():
+                Session.add(model.User(key=current_user))
+                Session.flush()
+        super(UserAwareMixin, self).update()
 
 
 class StandardWidgetsMixin(object):

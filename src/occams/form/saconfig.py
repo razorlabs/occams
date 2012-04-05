@@ -4,10 +4,10 @@ from z3c.saconfig.utility import GloballyScopedSession
 from zope import component
 from z3c.saconfig.interfaces import IScopedSession, IEngineFactory
 from sqlalchemy.orm import  sessionmaker, scoped_session
+from AccessControl import getSecurityManager
 
 from occams.datastore.model.session import DataStoreSession
 from occams.form.interfaces import ISessionUserFactory
-# from occams.form.session import occams_session
 
 class EventAwareScopedSession(GloballyScopedSession):
     """A globally scoped session.
@@ -31,20 +31,19 @@ class EventAwareScopedSession(GloballyScopedSession):
         if 'user' not in kw:
             user_factory = component.getUtility(ISessionUserFactory,
                                                   name='occams.SessionUserFactory')
-            kw['user'] = user_factory(self)
+            kw['user'] = user_factory
         if 'class_' not in kw:
             kw['class_'] = DataStoreSession
         return scoped_session(sessionmaker(**kw))
 
-
 class SessionUserFactory(object):
     """
-    Needs to be called "occams.SessionUserFactory
+    Needs to be called "occams.SessionUserFactory"
     """
     implements(ISessionUserFactory)
 
-    def __call__(self, context):
+    def __call__(self):
         """
-
+        Get the id of the current user
         """
-        return "foo@foo.foo"
+        return getSecurityManager().getUser().getId()

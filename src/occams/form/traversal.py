@@ -27,13 +27,12 @@ from zope.publisher.interfaces.http import IHTTPRequest
 from zope.publisher.interfaces.browser import IBrowserPublisher
 from zExceptions import NotFound
 from z3c.saconfig import named_scoped_session
+from sqlalchemy.orm.exc import NoResultFound
 from occams.datastore import model
 from occams.form.interfaces import IRepository
 from occams.form.interfaces import IDataBaseItemContext
 from occams.form.interfaces import ISchemaContext
 from occams.form.interfaces import IAttributeContext
-from occams.form.serialize import Workspace
-
 
 def closest(context, iparent):
     """
@@ -135,7 +134,7 @@ class ExtendedTraversal(DefaultPublishTraverse):
         a context can be searched for in other sources besides the zodb
         """
         pass
-
+from datetime import datetime
 
 class RepositoryTraverser(ExtendedTraversal):
     """
@@ -146,21 +145,48 @@ class RepositoryTraverser(ExtendedTraversal):
     adapts(IRepository, IHTTPRequest)
 
     def traverse(self, name):
-        model.Schema.id.label('id'),
-        workspace = Workspace(self.context)
+        """
+        We have several paths to a form. The main path is by name, which
+        returns you the latest published version of that form name. 
+        Second path is by a name-date combo that returns the published form with 
+        that publish date.
+        The Third path is by an id number, which is the id of the form. This is how
+        you arrive at a draft, or a specific form for editing.
+        """
+        schema_id = None
+        schema_name = None
+        sep = None
+        pub_date = None
+        session = named_scoped_session(self.context.session)
+
         try:
-            formData = workspace[name]
-        except KeyError:
-            session = named_scoped_session(self.context.session)
-            item = (
+            schema_id = int(name)
+        except ValueError:
+            schema_name, sep, pub_date = name.partition('-')
+
+        if schema_id:
+            # an id was entered. Verify that it isn't a subfield, and return it
+            query = (
                 session.query(model.Schema)
-                .filter(model.Schema.name == name)
-                .order_by(model.Schema.publish_date.desc())
-                .limit(1).one()
+                .filter(model.Schema.id == schema_id)
+                .filter(~model.Schema.is_inline)
                 )
-            context = item and SchemaContext(item=item) or None
         else:
-            context = SchemaContext(data=formData)
+            query = (
+                session.query(model.Schema)
+                .filter(model.Schema.name == schema_name)
+                .filter(model.Schema.state == 'published')
+                .order_by(model.Schema.publish_date.desc())
+                )
+            if pub_date:
+                query = query.filter(
+                        model.Schema.publish_date==datetime.strptime(pub_date, '%Y-%m-%d').date()
+                        )
+        try:
+            item = query.limit(1).one()
+        except NoResultFound("No Form Matches %s" % name):
+            item = None
+        context = item and SchemaContext(item=item) or None
         return context
 
 
@@ -172,15 +198,15 @@ class SchemaTraverser(ExtendedTraversal):
     adapts(ISchemaContext, IHTTPRequest)
 
     def traverse(self, name):
-        if name == 'view' and self.context.data is None:
+        if name == 'view' and self.context.item is None:
             raise NotFound()
         try:
-            if self.context.data:
-                childData = self.context.data['fields'][name]
+            context = AttributeContext(item=self.context.item[name])
+            # if self.context.data:
+            #     childData = self.context.data['fields'][name]
         except KeyError:
             context = None
-        else:
-            context = AttributeContext(data=childData)
+        # else:
         return context
 
 
@@ -194,10 +220,12 @@ class AttributeTraverser(ExtendedTraversal):
 
     def traverse(self, name):
         try:
-            if self.context.data:
-                childData = self.context.data['schema']['fields'][name]
+            context = AttributeContext(item=self.context.item[name])
+
+            # if self.context.data:
+            #     childData = self.context.data['schema']['fields'][name]
         except KeyError:
             context = None
-        else:
-            context = AttributeContext(data=childData)
+        # else:
+        #     context = AttributeContext(data=childData)
         return context
