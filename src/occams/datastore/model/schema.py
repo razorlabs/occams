@@ -6,13 +6,11 @@ from decimal import Decimal
 import datetime
 import re
 
-from sqlalchemy import event
-from sqlalchemy import cast
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship as Relationship
 from sqlalchemy.orm import synonym as Synonym
-from sqlalchemy.orm import class_mapper
 from sqlalchemy.orm.collections import attribute_mapped_collection
+from sqlalchemy.schema import Table
 from sqlalchemy.schema import Column
 from sqlalchemy.schema import CheckConstraint
 from sqlalchemy.schema import UniqueConstraint
@@ -27,6 +25,7 @@ from sqlalchemy.types import Unicode
 from zope.interface import implements
 
 from occams.datastore.interfaces import ISchema
+from occams.datastore.interfaces import ICategory
 from occams.datastore.interfaces import IAttribute
 from occams.datastore.interfaces import IChoice
 from occams.datastore.model import Model
@@ -97,6 +96,32 @@ def defaultPublishDate(context):
         return datetime.date.today()
 
 
+class Category(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
+    implements(ICategory)
+
+    @declared_attr
+    def __table_args__(cls):
+        return buildModifiableConstraints(cls)
+
+
+schema_category_table = Table('schema_category', Model.metadata,
+    Column('schema_id', Integer, primary_key=True),
+    Column('category_id', Integer, primary_key=True),
+    ForeignKeyConstraint(
+        columns=['schema_id'],
+        refcolumns=['schema.id'],
+        name='fk_schema_category_schema_id',
+        ondelete='CASCADE',
+        ),
+    ForeignKeyConstraint(
+        columns=['category_id'],
+        refcolumns=['category.id'],
+        name='fk_schema_category_category_id',
+        ondelete='CASCADE',
+        ),
+    )
+
+
 class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
     implements(ISchema)
 
@@ -107,6 +132,11 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         return Relationship('Schema', remote_side='%s.id' % cls.__name__)
 
     sub_schemata = Relationship('Schema', remote_side=base_schema_id)
+
+    categories = Relationship(
+        'Category',
+        secondary=schema_category_table
+        )
 
     state = Column(
         Enum(*SCHEMA_STATE_NAMES, name='schema_state'),
