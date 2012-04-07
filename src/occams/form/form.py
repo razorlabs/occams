@@ -77,7 +77,6 @@ class Group(StandardWidgetsMixin, z3c.form.group.Group):
 
     @property
     def prefix(self):
-        # import pdb; pdb.set_trace( )
         return str(self.context.name)
 
     @property

@@ -33,6 +33,8 @@ from occams.form.interfaces import IRepository
 from occams.form.interfaces import IDataBaseItemContext
 from occams.form.interfaces import ISchemaContext
 from occams.form.interfaces import IAttributeContext
+from occams.form.serialize import serializeField
+from occams.form.serialize import serializeForm
 
 def closest(context, iparent):
     """
@@ -59,34 +61,33 @@ class DataBaseItemContext(SimpleItem):
     item = None
 
     # Input data
-    data = None
 
     def __init__(self, item=None, data=None, ):
         self.item = item
-        self.data = data or dict()
 
         # Set the zope-expected properties
         self.id = None
-        self.__name__ = str(self.data.get('name') or self.item.name)
-        title = self.data.get('title') or self.item.title
+        self.__name__ = str(self.item.name)
+        title =self.item.title
         self.title = title
         self.Title = lambda: title
 
     def __getitem__(self, key):
         if key not in self:
             raise KeyError
-        return self.data.get(key) or getattr(self.item, key)
+        return getattr(self.item, key)
 
     def __setitem__(self, key, value):
         if key not in self:
             raise KeyError
-        self.data.set(key, value)
-        if self.item is not None:
-            setattr(self.item, key, value)
+        setattr(self.item, key, value)
 
     def __contains__(self, key):
-        return key in self.data or hasattr(self.item, key)
+        return hasattr(self.item, key)
 
+    @property
+    def data(self):
+        raise NotImplementedError
 
 class SchemaContext(DataBaseItemContext):
     """
@@ -94,6 +95,13 @@ class SchemaContext(DataBaseItemContext):
     """
     implements(ISchemaContext)
 
+    def __init__(self, item=None, data=None, ):
+        super(SchemaContext, self).__init__(item, data)
+        self.__name__ = str(self.item.id)
+
+    @property
+    def data(self):
+        return serializeForm(self.item)
 
 class AttributeContext(DataBaseItemContext):
     """
@@ -101,6 +109,9 @@ class AttributeContext(DataBaseItemContext):
     """
     implements(IAttributeContext)
 
+    @property
+    def data(self):
+        return serializeField(self.item)
 
 class ExtendedTraversal(DefaultPublishTraverse):
     """
@@ -184,7 +195,7 @@ class RepositoryTraverser(ExtendedTraversal):
                         )
         try:
             item = query.limit(1).one()
-        except NoResultFound("No Form Matches %s" % name):
+        except NoResultFound:
             item = None
         context = item and SchemaContext(item=item) or None
         return context
@@ -198,6 +209,7 @@ class SchemaTraverser(ExtendedTraversal):
     adapts(ISchemaContext, IHTTPRequest)
 
     def traverse(self, name):
+
         if name == 'view' and self.context.item is None:
             raise NotFound()
         try:

@@ -116,10 +116,7 @@ class SummaryListingForm(crud.CrudForm, UserAwareMixin):
         """
         if field == 'view':
         # if field in links:
-            try:
-                return os.path.join(self.context.absolute_url(), item.name+'-'+item.publish_date.isoformat(), links[field])
-            except:
-                import pdb; pdb.set_trace( )
+            return os.path.join(self.context.absolute_url(), item.name+'-'+item.publish_date.isoformat(), links[field])
         elif field == 'edit' and item.draft_id is not None:
             return os.path.join(self.context.absolute_url(), str(item.draft_id), links[field])
       

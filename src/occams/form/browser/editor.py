@@ -43,6 +43,8 @@ from occams.form.serialize import reservedWords
 from occams.form.serialize import camelize
 from occams.form.serialize import symbolize
 
+from z3c.saconfig import named_scoped_session
+
 
 class DisabledMixin(object):
     """
@@ -76,7 +78,6 @@ class FormPreviewForm(DisabledMixin, Form):
         self.request.response.redirect(os.path.join(self.context.absolute_url(), '@@edit'))
 
 
-from occams.form.serialize import serializeForm
 
 class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
     """
@@ -108,8 +109,6 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
         self.request.set('disable_border', True)
         self.request.set('disable_plone.rightcolumn', True)
         self.request.set('disable_plone.leftcolumn', True)
-
-        self.context.data = serializeForm(self.context.item)
         # Render the fields editor form
         self.fieldsSubForm = FieldsetsForm(self.context, self.request)
         self.fieldsSubForm.update()
@@ -179,7 +178,6 @@ class FieldsetsForm(z3c.form.group.GroupForm, z3c.form.form.Form):
         groups = []
         objectFilter = lambda x: bool(x['schema'])
         orderSort = lambda i: i['order']
-
         formData = self.context.data
 
         defaultFieldsetData = dict(interface=formData['name'], schema=formData)
@@ -302,7 +300,7 @@ class FieldJsonView(BrowserView):
         Additionally adds an extra ``view`` field in the JSON object
         for rendering the field on the client side
         """
-        data = copy(self.context.data)
+        data = self.context.data
         if data['schema']:
             del data['schema']
         # For client-side ajax update of the field
@@ -311,7 +309,6 @@ class FieldJsonView(BrowserView):
         else:
             data['view'] = None
         # JSON doesn't understand dates, gotta clean that up too
-        data['version'] = data['version'].date().isoformat()
         # Cleanup choice values (in case they're decimals)
         if data['choices']:
             for choice in data['choices']:
@@ -375,7 +372,6 @@ class FieldOrderForm(StandardWidgetsMixin, z3c.form.form.Form):
 
     def update(self):
         self.request.set('disable_border', True)
-        repository = closest(self.context, IRepository)
         schemaContext = closest(self.context, ISchemaContext)
 
         self.fields = z3c.form.field.Fields(zope.schema.Choice(
@@ -384,7 +380,7 @@ class FieldOrderForm(StandardWidgetsMixin, z3c.form.form.Form):
             description=_(
                 u'The fieldset within the parent form to send the field to.'
                 ),
-            values=listFieldsets(repository, schemaContext.__name__),
+            values=listFieldsets(schemaContext.data),
             required=False,
             ))
 
@@ -399,48 +395,45 @@ class FieldOrderForm(StandardWidgetsMixin, z3c.form.form.Form):
     @z3c.form.button.buttonAndHandler(title=_(u'Sort'), name='apply')
     def handleApply(self, action):
         data, errors = self.extractData()
+
         if errors:
             self.request.response.setStatus(400)
         else:
+            import pdb; pdb.set_trace( )
+            moved = list()
+            repositoryContext = closest(self.context, IRepository)
             (target, after) = (data['target'], data['after'])
             parent = self.context.getParentNode()
             schemaContext = closest(self.context, ISchemaContext)
-
-            # Get the form data that the field is coming from
-            if ISchemaContext.providedBy(parent):
-                sourceFormData = parent.data
-            else:
-                sourceFormData = parent.data['schema']
-
+            sourceForm = parent.item
             # Get the target form data that the field is going to
             if target:
-                targetFormData = schemaContext.data['fields'][target]['schema']
+                targetForm = schemaContext.item[target]
             else:
-                targetFormData = schemaContext.data
+                targetForm = schemaContext.item
+            if targetForm == sourceForm:
+                ## We can move this in place
+                moved.extend(moveField(targetForm, self.context.item, after))
 
+            elif self.context.item in targetForm.values():
             # Do not allow the field to be moved into another schema if it
             # already contains a field with the same name
-            if (targetFormData['name'] != sourceFormData['name']) and \
-                    (self.context.data['name'] in targetFormData['fields']):
                 self.request.response.setStatus(400)
             else:
-                # Keep a record of the data
-                fieldData = sourceFormData['fields'][self.context.__name__]
-
-                # Delete it from the old schema
-                del sourceFormData['fields'][self.context.__name__]
-
-                # Add it to the new schema
-                targetFormData['fields'][self.context.__name__] = fieldData
-
-                # Update its position
-                moved = moveField(targetFormData, fieldData['name'], after)
-
-                if moved:
-                    IHttpSession(self.request).save()
-                    self.request.response.setStatus(200)
-                else:
-                    self.request.response.setStatus(304)
+                # This item needs to move to a different fieldset
+                field = self.context.item
+                del sourceForm[self.context.item.name]
+                moved.append(sourceForm)
+                targetForm[field.name] = field
+                moved.extend(moveField(targetForm, field, after))
+            if moved:
+                Session = named_scoped_session(repositoryContext.session)
+                for reordered in moved:
+                    Session.add(reordered)
+                Session.flush()
+                self.request.response.setStatus(200)
+            else:
+                self.request.response.setStatus(304)
 
     def render(self):
         return u''
@@ -608,7 +601,6 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
     def handleCancel(self, action):
         self._finishedAdd = True
 
-
 class FieldEditForm(FieldFormInputHelper, z3c.form.form.EditForm):
     """
     Edit form for field.
@@ -649,10 +641,13 @@ class FieldEditForm(FieldFormInputHelper, z3c.form.form.EditForm):
         """
         cleanupChoices(data)
         # Now do the default changes
-        changes = super(FieldEditForm, self).applyChanges(data);
+        changes = super(FieldEditForm, self).applyChanges(data)
         if changes:
-            self.getContent()['version'] = datetime.now()
-            IHttpSession(self.request).save()
+            for change in changes[IEditableField]:
+                setattr(self.context.item, change, data[change])
+            Session = named_scoped_session(self.context.session)
+            Session.add(self.context.item)
+            Session.flush()
         nextUrl = os.path.join(self.context.absolute_url(), '@@json')
         self.request.response.redirect(nextUrl)
         return changes

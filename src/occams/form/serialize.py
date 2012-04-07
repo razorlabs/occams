@@ -259,23 +259,20 @@ class CommitHelper(object):
         return attribute
 
 
-def listFieldsets(repository, formName):
+def listFieldsets(schema_data):
     """
     Lists the fieldsets of a form
     """
-    request = getRequest()
     objectFilter = lambda x: bool(x['schema'])
     orderSort = lambda i: i['order']
-    fields = IHttpSession(request)[DATA_KEY][formName]['fields']
+    fields = schema_data['fields']
     objects = sorted(filter(objectFilter, fields.values()), key=orderSort)
     return [o['name'] for o in objects]
-
 
 def serializeForm(form):
     """
     Serializes a form as a top-level (master) form.
     """
-
     result = dict(
         name=str(form.name),
         title=form.title,
@@ -356,21 +353,24 @@ def symbolize(value):
     return value
 
 
-def moveField(formData, fieldName, after=None):
+def moveField(form, field, after=None):
     changed = list()
-    moverData = formData['fields'][fieldName]
-
     if after is None:
-        moverData['order'] = 0
+        field.order = 0
     else:
-        moverData['order'] = formData['fields'][after]['order'] + 1
-
+        field.order = form[after].order + 1
     # Move everything that follows
-    for fieldData in sorted(formData['fields'].values(), key=lambda i: i['order']):
-        if fieldData['name'] != fieldName and fieldData['order'] >= moverData['order']:
-            fieldData['order'] += 1
-            changed.append(fieldData['name'])
-
+    for formfield in sorted(form.values(), key=lambda i: i.order):
+        if formfield != field and formfield.order >= field.order:
+            formfield.order += 1
+    ## ok, we need to reorder everything, because we're "adding" an item
+    order = 0
+    for formfield in sorted(form.values(), key=lambda i: i.order):
+        oldOrder = formfield.order
+        formfield.order = order
+        if order != oldOrder:
+            changed.append(formfield)
+        order +=1
     return changed
 
 

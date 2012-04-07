@@ -81,7 +81,6 @@ class FormSummaryGenerator(object):
                 .filter(SubSchema.state == 'draft')
                 .filter(model.User.key == current_user)
                 .order_by(SubSchema.create_date.desc())
-                .limit(1)
             ).subquery('editversion')
 
         query = (
