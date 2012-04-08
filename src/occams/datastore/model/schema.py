@@ -330,14 +330,15 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
 
 class Choice(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
     implements(IChoice)
-
+    # TODO: when a value is assigned and no name is yet given, autopopulate one
     attribute_id = Column(Integer, nullable=False,)
 
     attribute = Relationship('Attribute', back_populates='choices')
 
     def get_value(self):
         value = self._value
-        if value is not None:
+        # Try and be helpful by auto-converting the value
+        if value is not None and self.attribute is not None:
             type_ = self.attribute.type
             if type_ == 'boolean':
                 value = (self._value == 'True')
