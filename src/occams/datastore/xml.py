@@ -57,9 +57,6 @@ def schemaToElement(schema):
         published=schema.publish_date.strftime('%Y-%m-%d')
         )
 
-    if schema.is_inline:
-        xschema.set('inline', str(schema.is_inline))
-
     if schema.description is not None:
         xschema.append(E.description(schema.description))
 
@@ -174,9 +171,6 @@ def elementToSchema(element):
 
     if hasattr(element, 'description'):
         schema.description = str(element.description)
-
-    if 'inline' in element.attrib:
-        schema.is_inline = str(element.attrib['inline']).lower()[0] in ('1', 't')
 
     xattributes = element.find('attributes')
 

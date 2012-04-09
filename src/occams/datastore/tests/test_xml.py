@@ -26,7 +26,7 @@ class XmlTestCase(unittest.TestCase):
 
     layer = DATASTORE_LAYER
 
-    def testSchemaToXml(self):
+    def testSchemaToXmlViaStream(self):
         schema = model.Schema(
             name='Foo',
             # Test unicode just for kicks
@@ -44,6 +44,16 @@ class XmlTestCase(unittest.TestCase):
         self.assertIsInstance(content, unicode)
         self.assertIn(u'<schema', content)
 
+    def testSchemaToXmlViaFileName(self):
+        schema = model.Schema(
+            name='Foo',
+            # Test unicode just for kicks
+            title=u'F∆å¬˙∂ß∆å∫¬oo',
+            storage='eav',
+            state='published',
+            publish_date=datetime.date(2012, 03, 01)
+            )
+
         # test with a temporary filename
         target = tempfile.NamedTemporaryFile(delete=False)
         target.close()
@@ -53,7 +63,7 @@ class XmlTestCase(unittest.TestCase):
         self.assertIsInstance(content, unicode)
         self.assertIn(u'<schema', content)
 
-    def testSchemaToElement(self):
+    def testSchemaToElementRequiredSettings(self):
         # Minimum requirements for a Schema XML element
         schema = model.Schema(
             name='Foo',
@@ -69,26 +79,37 @@ class XmlTestCase(unittest.TestCase):
         self.assertEqual(schema.title, unicode(xschema.find('title').text))
         self.assertEqual(str(schema.publish_date), str(xschema.attrib['published']))
 
-        # Optional inline
-        with self.assertRaises(KeyError):
-            xschema.attrib['inline']
-        schema.is_inline = True
-        xschema = schemaToElement(schema)
-        self.assertEqual(str(schema.is_inline), str(xschema.attrib['inline']))
+    def testSchemaToElementOptionalDescription(self):
+        schema = model.Schema(
+            name='Foo',
+            title=u'Foo',
+            storage='eav',
+            state='published',
+            publish_date=datetime.date(2012, 03, 01)
+            )
 
-        # Optional description
+        xschema = schemaToElement(schema)
         self.assertIsNone(xschema.find('description'))
         schema.description = u'Obvious description \n is obvious'
         xschema = schemaToElement(schema)
         self.assertEqual(schema.description, unicode(xschema.find('description').text))
 
-        # # Optional attributes
+    def testSchemaToElementOptionalAttribute(self):
+        schema = model.Schema(
+            name='Foo',
+            title=u'Foo',
+            storage='eav',
+            state='published',
+            publish_date=datetime.date(2012, 03, 01)
+            )
+
+        xschema = schemaToElement(schema)
         self.assertIsNone(xschema.find('attributes'))
         schema['foo'] = model.Attribute(title=u'foo', type='string', order=0)
         xschema = schemaToElement(schema)
         self.assertIsNotNone(xschema.find('attributes').find('attribute'))
 
-    def testAttributeToElement(self):
+    def testAttributeToElementRequiredSettings(self):
         # Minimum settings
         attribute = model.Attribute(name='foo', title=u'Foo', type='string')
         xattribute = attributeToElement(attribute)
@@ -97,12 +118,18 @@ class XmlTestCase(unittest.TestCase):
         self.assertEqual(attribute.title, unicode(xattribute.find('title').text))
         self.assertEqual(attribute.type, str(xattribute.attrib['type']))
 
+    def testAttributeToElementOptionalChecksum(self):
+        attribute = model.Attribute(name='foo', title=u'Foo', type='string')
+        xattribute = attributeToElement(attribute)
         # Optional checksum (if schema was previously exported)
         self.assertIsNone(xattribute.find('checksum'))
         attribute._checksum = 'ief0cn37'
         xattribute = attributeToElement(attribute)
         self.assertEqual(attribute.checksum, str(xattribute.find('checksum').text))
 
+    def testAttributeToElementOptionalDescription(self):
+        attribute = model.Attribute(name='foo', title=u'Foo', type='string')
+        xattribute = attributeToElement(attribute)
         # Optional description
         self.assertIsNone(xattribute.find('description'))
         attribute.description = u'Describe \n all the things!'
@@ -110,6 +137,9 @@ class XmlTestCase(unittest.TestCase):
         self.assertEqual(
             attribute.description, unicode(xattribute.find('description').text))
 
+    def testAttributeToElementOptionalCollection(self):
+        attribute = model.Attribute(name='foo', title=u'Foo', type='string')
+        xattribute = attributeToElement(attribute)
         # Optional collection constraints
         self.assertIsNone(xattribute.find('collection'))
         attribute.is_collection = True
@@ -130,6 +160,9 @@ class XmlTestCase(unittest.TestCase):
         self.assertEqual(
             str(attribute.collection_max), str(xattribute.find('collection').attrib['max']))
 
+    def testAttributeToElementOptionalLimit(self):
+        attribute = model.Attribute(name='foo', title=u'Foo', type='string')
+        xattribute = attributeToElement(attribute)
         # Optional value limit
         self.assertIsNone(xattribute.find('limit'))
         attribute.value_min = 16
@@ -146,12 +179,18 @@ class XmlTestCase(unittest.TestCase):
         self.assertEqual(
             str(attribute.value_min), str(xattribute.find('limit').attrib['max']))
 
+    def testAttributeToElementOptionalValidator(self):
+        attribute = model.Attribute(name='foo', title=u'Foo', type='string')
+        xattribute = attributeToElement(attribute)
         # Optional validator
         self.assertIsNone(xattribute.find('validator'))
         attribute.validator = '/.+/'
         xattribute = attributeToElement(attribute)
         self.assertEqual(attribute.validator, str(xattribute.find('validator').text))
 
+    def testAttributeToElementOptionalChoice(self):
+        attribute = model.Attribute(name='foo', title=u'Foo', type='string')
+        xattribute = attributeToElement(attribute)
         # Optional choices
         self.assertIsNone(xattribute.find('choices'))
         attribute.choices.append(model.Choice(
@@ -159,6 +198,7 @@ class XmlTestCase(unittest.TestCase):
         xattribute = attributeToElement(attribute)
         self.assertIsNotNone(xattribute.find('choices').find('choice'))
 
+    def testAttributeToElementOptionalSubSchema(self):
         # Optional sub schemata
         attribute = model.Attribute(
             name='foo', title=u'Foo', type='object',
@@ -180,34 +220,48 @@ class XmlTestCase(unittest.TestCase):
         self.assertEqual(choice.value, unicode(xchoice.attrib['value']))
         self.assertEqual(choice.title, unicode(xchoice.text))
 
-    def testXmlToSchema(self):
+    def testXmlToSchemaViaStream(self):
         session = self.layer['session']
-        template = (
-            u'<schema name="%(name)s" published="%(published)s" storage="eav">'
-            u'<title>%(title)s</title>'
+        source = (
+            u'<schema name="Foo" published="2012-03-01" storage="eav">'
+            u'<title>Foo Schema</title>'
             u'</schema>'
             )
-        minimalXml = template % dict(name=u'Foo', title=u'Foo', published=u'2012-03-01')
 
-        file_ = StringIO(minimalXml)
+        file_ = StringIO(source)
         schema = importXml(session, file_)
         self.assertIsNotNone(schema.id)
 
-        # Try importing it from a filename
-        minimalXml = template % dict(name=u'Bar', title=u'Bår', published=u'2012-03-01')
+    def testXmlToSchemaViaFileName(self):
+        session = self.layer['session']
+        source = (
+            u'<schema name="Foo" published="2012-03-01" storage="eav">'
+            u'<title>Foo Schema</title>'
+            u'</schema>'
+            )
         target = tempfile.NamedTemporaryFile(delete=False)
         target.close()
         with codecs.open(target.name, mode='w+b', encoding='utf-8') as stream:
-            stream.write(minimalXml)
+            stream.write(source)
 
         schema = importXml(session, target.name)
         self.assertIsNotNone(schema.id)
+
+    def testXmlToSchemaAlreadyExists(self):
+        session = self.layer['session']
+        source = (
+            u'<schema name="Foo" published="2012-03-01" storage="eav">'
+            u'<title>Foo Schema</title>'
+            u'</schema>'
+            )
+        file_ = StringIO(source)
+        schema = importXml(session, file_)
 
         # Can't import the same schema if one already exists for the (name, date)
         with self.assertRaises(AlreadyExistsError):
             schema = importXml(session, file_)
 
-    def testElementToSchema(self):
+    def testElementToSchemaRequiredSettings(self):
         # Minimum settings
         xschema = E.schema(
             E.title(u'Foo'),
@@ -222,22 +276,29 @@ class XmlTestCase(unittest.TestCase):
         self.assertEqual(str(schema.publish_date), str(xschema.attrib['published']))
         self.assertEqual(schema.title, unicode(xschema.title.text))
 
-        # Optional description
+    def testElementToSchemaOptionalDescription(self):
+        xschema = E.schema(
+            E.title(u'Foo'),
+            name=u'Foo',
+            storage='eav',
+            published='2012-03-01'
+            )
+
+        schema = elementToSchema(xschema)
         self.assertIsNone(schema.description)
         xschema.append(E.description(u'Clean \n all the things!'))
         schema = elementToSchema(xschema)
         self.assertEqual(schema.description, unicode(xschema.description.text))
 
-        # Optinoal inline setting
-        self.assertFalse(schema.is_inline)
-        xschema.set('inline', 'True')
-        schema = elementToSchema(xschema)
-        self.assertEqual(str(schema.is_inline), str(xschema.attrib['inline']))
-        xschema.set('inline', 'False')
-        schema = elementToSchema(xschema)
-        self.assertEqual(str(schema.is_inline), str(xschema.attrib['inline']))
+    def testElementToSchemaOptionalAttribute(self):
+        xschema = E.schema(
+            E.title(u'Foo'),
+            name=u'Foo',
+            storage='eav',
+            published='2012-03-01'
+            )
 
-        # Optinal attributes
+        schema = elementToSchema(xschema)
         self.assertEqual(0, len(schema.attributes))
         xschema.append(E.attributes(
             E.attribute(E.title(u'Foo'), name='Foo', type='string')
@@ -245,8 +306,7 @@ class XmlTestCase(unittest.TestCase):
         schema = elementToSchema(xschema)
         self.assertEqual(1, len(schema.attributes))
 
-    def testElementToAttribute(self):
-        # Minimum settings
+    def testElementToAttributeRequiredSettings(self):
         xattribute = E.attribute(E.title(u'Foo'), name='Foo', type='string')
         attribute = elementToAttribute(xattribute)
         self.assertEqual(attribute.name, str(xattribute.attrib['name']))
@@ -254,7 +314,10 @@ class XmlTestCase(unittest.TestCase):
         self.assertEqual(attribute.title, unicode(xattribute.title.text))
         self.assertFalse(attribute.is_required)
 
-        # Optional required
+    def testElementToAttributeOptionalRequired(self):
+        xattribute = E.attribute(E.title(u'Foo'), name='Foo', type='string')
+        attribute = elementToAttribute(xattribute)
+
         xattribute.set('required', 'True')
         attribute = elementToAttribute(xattribute)
         self.assertTrue(attribute.is_required)
@@ -262,19 +325,26 @@ class XmlTestCase(unittest.TestCase):
         attribute = elementToAttribute(xattribute)
         self.assertFalse(attribute.is_required)
 
-        # Optional description
+    def testElementToAttributeOptionalDescription(self):
+        xattribute = E.attribute(E.title(u'Foo'), name='Foo', type='string')
+        attribute = elementToAttribute(xattribute)
         self.assertIsNone(attribute.description)
         xattribute.append(E.description(u'Why not \n zoidberg?'))
         attribute = elementToAttribute(xattribute)
         self.assertEqual(attribute.description, unicode(xattribute.description.text))
 
-        # Optional checksum
+    def testElementToAttributeOptionalChecksum(self):
+        xattribute = E.attribute(E.title(u'Foo'), name='Foo', type='string')
+        attribute = elementToAttribute(xattribute)
         self.assertIsNone(attribute.checksum)
         xattribute.append(E.checksum(u'3fjdfdfa'))
         attribute = elementToAttribute(xattribute)
         self.assertEqual(attribute.checksum, str(xattribute.checksum.text))
 
-        # Optional collection
+    def testElementToAttributeOptionalCollection(self):
+        xattribute = E.attribute(E.title(u'Foo'), name='Foo', type='string')
+        attribute = elementToAttribute(xattribute)
+
         self.assertFalse(attribute.is_collection)
         xattribute.append(E.collection())
         attribute = elementToAttribute(xattribute)
@@ -298,6 +368,10 @@ class XmlTestCase(unittest.TestCase):
         attribute = elementToAttribute(xattribute)
         self.assertEqual(attribute.collection_max, int(xattribute.collection.attrib['max']))
 
+    def testElementToAttributeOptionalLimit(self):
+        xattribute = E.attribute(E.title(u'Foo'), name='Foo', type='string')
+        attribute = elementToAttribute(xattribute)
+
         xattribute.append(E.limit())
 
         # Optinal value minimum
@@ -318,12 +392,18 @@ class XmlTestCase(unittest.TestCase):
         attribute = elementToAttribute(xattribute)
         self.assertEqual(attribute.value_max, int(xattribute.limit.attrib['max']))
 
+    def testElementToAttributeOptionalValidator(self):
+        xattribute = E.attribute(E.title(u'Foo'), name='Foo', type='string')
+        attribute = elementToAttribute(xattribute)
         # Optinoal validator
         self.assertIsNone(attribute.validator)
         xattribute.append(E.validator('/.+/'))
         attribute = elementToAttribute(xattribute)
         self.assertEqual(attribute.validator, str(xattribute.validator.text))
 
+    def testElementToAttributeOptionalChoices(self):
+        xattribute = E.attribute(E.title(u'Foo'), name='Foo', type='string')
+        attribute = elementToAttribute(xattribute)
         # Optional choices
         self.assertEqual(0, len(attribute.choices))
         xattribute.append(E.choices())
@@ -334,6 +414,9 @@ class XmlTestCase(unittest.TestCase):
         self.assertEqual(1, len(attribute.choices))
         self.assertEqual(0, attribute.choices[0].order)
 
+    def testElementToAttributeOptionalSubSchema(self):
+        xattribute = E.attribute(E.title(u'Foo'), name='Foo', type='string')
+        attribute = elementToAttribute(xattribute)
         # Optional sub schema
         self.assertIsNone(attribute.object_schema)
         xattribute = E.attribute(
