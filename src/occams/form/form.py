@@ -88,7 +88,6 @@ class Group(StandardWidgetsMixin, z3c.form.group.Group):
         return self.context.description
 
     def update(self):
-        # import pdb; pdb.set_trace( )
         self.fields = z3c.form.field.Fields()
         for name, field in self.context.items():
             self.fields += z3c.form.field.Fields(IField(field))

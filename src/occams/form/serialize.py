@@ -13,18 +13,14 @@ this may be possible.
 
 import re
 
-from collective.beaker.interfaces import ISession as IHttpSession
-from zope.globalrequest import getRequest
 import zope.schema
 from zope.schema.vocabulary import SimpleVocabulary
 from zope.schema.vocabulary import SimpleTerm
-from z3c.saconfig import named_scoped_session
-from occams.datastore.model import Attribute
-from occams.datastore.model import Schema
-from occams.datastore.model import Choice
-from occams.datastore.model import NOW
+# from occams.datastore.model import Attribute
+# from occams.datastore.model import Schema
+# from occams.datastore.model import Choice
+# from occams.datastore.model import NOW
 from occams.datastore.interfaces import typesVocabulary
-from occams.form.interfaces import DATA_KEY
 
 
 # Copied from Python documentation
@@ -43,220 +39,162 @@ exp     fabs     floor     log     log10
 pi     sin     sqrt     tan
 """.split()
 
-from occams.datastore.interfaces import ISchemaManager
-# class Workspace(object):
+
+# class CommitHelper(object):
 #     """
-#     Helper method for keeping track of form changes
+#     Helper module for committing form changes to the database.
+#     There are TONS of moving parts when committing form changes and so it was
+#     decided to group them up into a class.
 #     """
 
-#     def __init__(self, repository):
-#         self.repository = repository
-#         self.httpSession = IHttpSession(getRequest())
-#         self.httpSession.setdefault(DATA_KEY, {})
-#         self.data = self.httpSession[DATA_KEY]
+#     def __init__(self, session):
+#         self.session = session
 
-#     def save(self):
+#     def __call__(self, data):
+#         schema = self.doSchema(data)
+
+#         attributeRetireCount = self.doRetireOldFields(data)
+#         for field in data.get('fields', {}).values():
+#             self.doAttribute(schema, field)
+#         return schema
+
+#     def doSchema(self, data):
 #         """
-#         Saves the current workspace (nothing done to database)
+#         Commits schema metadata
 #         """
-#         self.httpSession.save()
+#         session = self.session
+#         schema = (
+#             session.query(Schema)
+#             .filter((Schema.name == data['name']) & Schema.asOf(None))
+#             .first()
+#             )
+#         changeable = ('name', 'title', 'description')
 
-#     def load(self, name):
+#         # version only if necessary
+#         for setting in changeable:
+#             isSettingModified = (schema is None) or \
+#                  (getattr(schema, setting) != data[setting])
+
+#             if isSettingModified:
+#                 # retire old schema
+#                 if schema:
+#                     schema.remove_date = NOW
+#                     session.flush()
+#                 # add new schema
+#                 schema = Schema(
+#                     base_schema=getattr(schema, 'base_schema', None),
+#                     name=data['name'],
+#                     title=data['title'],
+#                     description=data['description'],
+#                     )
+#                 session.add(schema)
+#                 break
+#         return schema
+
+#     def doRetireOldFields(self, data):
 #         """
-#         Loads a serialized form from the workspace or from datastore
+#         Retires fields that are no longer part of the schema
 #         """
-#         try:
-#             formData = self.data[name]
-#         except KeyError:
-#             form = ISchemaManager(named_scoped_session(self.repository.session)).get(name)
-#             formData = serializeForm(form)
-#             self.data[name] = formData
-#             self.save()
-#         return formData
+#         session = self.session
+#         retireCount = (
+#             session.query(Attribute)
+#             .filter(Attribute.schema.has(name=data['name']))
+#             .filter(~Attribute.name.in_(data.get('fields', {}).keys()))
+#             .update(dict(remove_date=NOW), 'fetch')
+#             )
+#         return retireCount
 
-#     def __contains__(self, key):
-#         return key in self.data
-
-#     def __getitem__(self, key):
-#         return self.data[key]
-
-#     def __setitem__(self, key, item):
-#         self.data[key] = item
-
-#     def clear(self, name):
+#     def doAttribute(self, schema, data):
 #         """
-#         Cancels changes done to a form
+#         Commits a single attribute metadata
+#         This method is pretty lengthy as choices aren't currently versioned,
+#         so we need to iterate through them and check if they have been
+#         modified.
 #         """
-#         try:
-#             del self.data[name]
-#             self.save()
-#         except KeyError:
-#             pass
+#         session = self.session
+#         choices = dict()
+#         attribute = (
+#             session.query(Attribute)
+#             .filter(Attribute.schema.has(name=schema.name))
+#             .filter((Attribute.name == data['name']) & Attribute.asOf(None))
+#             .first()
+#             )
 
-#     def commit(self, name):
-#         """
-#         Commits the item in the workspace to the database
-#         """
-#         session = named_scoped_session(self.repository.session)
-#         CommitHelper(session)(self.data.get(name, {}))
-#         self.clear(name)
+#         isChoicesModified = (attribute is None)
+#         isSubFormModified = (attribute is None)
 
+#         # Save subform changes first
+#         if data['type'] == 'object':
+#             object_schema = CommitHelper(session)(data['schema'])
+#             if attribute is not None:
+#                 isSubFormModified = (object_schema.id == attribute.object_schema.id)
+#         else:
+#             object_schema = None
 
-class CommitHelper(object):
-    """
-    Helper module for committing form changes to the database.
-    There are TONS of moving parts when committing form changes and so it was
-    decided to group them up into a class.
-    """
+#         # Convert choices to SQL Alchemy objects while checking if they've even
+#         # been modified
+#         for choiceData in data['choices']:
+#             if isChoicesModified == False:
+#                 # It's a new answer choiceData
+#                 if choiceData['name'] not in attribute.choices:
+#                     isChoicesModified = True
+#                 # If it already exists, check if the settings have changed
+#                 else:
+#                     choice = attribute.choices[choiceData['name']]
+#                     changeable = ('name', 'title', 'value', 'order')
+#                     for setting in changeable:
+#                         if getattr(choice, setting) != choiceData[setting]:
+#                             isChoicesModified = True
+#                             break
 
-    def __init__(self, session):
-        self.session = session
+#             choices[choiceData['name']] = Choice(
+#                 name=choiceData['name'],
+#                 title=choiceData['title'],
+#                 value=unicode(choiceData['value']),
+#                 order=choiceData['order'],
+#                 )
 
-    def __call__(self, data):
-        schema = self.doSchema(data)
+#         # Check if some have been removed
+#         if attribute is not None:
+#             for key in attribute.choices.keys():
+#                 if key not in choices:
+#                     isChoicesModified = True
+#                     break
 
-        attributeRetireCount = self.doRetireOldFields(data)
-        for field in data.get('fields', {}).values():
-            self.doAttribute(schema, field)
-        return schema
+#         changeable = \
+#             ('name', 'title', 'description', 'is_required', 'is_collection', 'order')
 
-    def doSchema(self, data):
-        """
-        Commits schema metadata
-        """
-        session = self.session
-        schema = (
-            session.query(Schema)
-            .filter((Schema.name == data['name']) & Schema.asOf(None))
-            .first()
-            )
-        changeable = ('name', 'title', 'description')
+#         # Now check if attribute settings have been changed
+#         for setting in changeable:
+#             isSettingModified = (attribute is None) or \
+#                 (getattr(attribute, setting) != data[setting])
 
-        # version only if necessary
-        for setting in changeable:
-            isSettingModified = (schema is None) or \
-                 (getattr(schema, setting) != data[setting])
+#             if isChoicesModified or isSubFormModified or isSettingModified:
+#                 # retire old schema
+#                 if attribute:
+#                     attribute.remove_date = NOW
+#                     session.flush()
 
-            if isSettingModified:
-                # retire old schema
-                if schema:
-                    schema.remove_date = NOW
-                    session.flush()
-                # add new schema
-                schema = Schema(
-                    base_schema=getattr(schema, 'base_schema', None),
-                    name=data['name'],
-                    title=data['title'],
-                    description=data['description'],
-                    )
-                session.add(schema)
-                break
-        return schema
+#                 attribute = Attribute(
+#                     schema=schema,
+#                     name=data['name'],
+#                     title=data['title'],
+#                     description=data['description'],
+#                     type=data['type'],
+#                     object_schema=object_schema,
+#                     choices=choices,
+#                     order=data['order'],
+#                     # These properties don't apply to all types, so set
+#                     # them conditionally
+#                     is_required=data.get('is_required'),
+#                     is_collection=data.get('is_collection'),
+#                     is_inline_object=(data['type'] == 'object' or None),
+#                     )
 
-    def doRetireOldFields(self, data):
-        """
-        Retires fields that are no longer part of the schema
-        """
-        session = self.session
-        retireCount = (
-            session.query(Attribute)
-            .filter(Attribute.schema.has(name=data['name']))
-            .filter(~Attribute.name.in_(data.get('fields', {}).keys()))
-            .update(dict(remove_date=NOW), 'fetch')
-            )
-        return retireCount
+#                 session.add(attribute)
+#                 break
 
-    def doAttribute(self, schema, data):
-        """
-        Commits a single attribute metadata
-        This method is pretty lengthy as choices aren't currently versioned,
-        so we need to iterate through them and check if they have been
-        modified.
-        """
-        session = self.session
-        choices = dict()
-        attribute = (
-            session.query(Attribute)
-            .filter(Attribute.schema.has(name=schema.name))
-            .filter((Attribute.name == data['name']) & Attribute.asOf(None))
-            .first()
-            )
-
-        isChoicesModified = (attribute is None)
-        isSubFormModified = (attribute is None)
-
-        # Save subform changes first
-        if data['type'] == 'object':
-            object_schema = CommitHelper(session)(data['schema'])
-            if attribute is not None:
-                isSubFormModified = (object_schema.id == attribute.object_schema.id)
-        else:
-            object_schema = None
-
-        # Convert choices to SQL Alchemy objects while checking if they've even
-        # been modified
-        for choiceData in data['choices']:
-            if isChoicesModified == False:
-                # It's a new answer choiceData
-                if choiceData['name'] not in attribute.choices:
-                    isChoicesModified = True
-                # If it already exists, check if the settings have changed
-                else:
-                    choice = attribute.choices[choiceData['name']]
-                    changeable = ('name', 'title', 'value', 'order')
-                    for setting in changeable:
-                        if getattr(choice, setting) != choiceData[setting]:
-                            isChoicesModified = True
-                            break
-
-            choices[choiceData['name']] = Choice(
-                name=choiceData['name'],
-                title=choiceData['title'],
-                value=unicode(choiceData['value']),
-                order=choiceData['order'],
-                )
-
-        # Check if some have been removed
-        if attribute is not None:
-            for key in attribute.choices.keys():
-                if key not in choices:
-                    isChoicesModified = True
-                    break
-
-        changeable = \
-            ('name', 'title', 'description', 'is_required', 'is_collection', 'order')
-
-        # Now check if attribute settings have been changed
-        for setting in changeable:
-            isSettingModified = (attribute is None) or \
-                (getattr(attribute, setting) != data[setting])
-
-            if isChoicesModified or isSubFormModified or isSettingModified:
-                # retire old schema
-                if attribute:
-                    attribute.remove_date = NOW
-                    session.flush()
-
-                attribute = Attribute(
-                    schema=schema,
-                    name=data['name'],
-                    title=data['title'],
-                    description=data['description'],
-                    type=data['type'],
-                    object_schema=object_schema,
-                    choices=choices,
-                    order=data['order'],
-                    # These properties don't apply to all types, so set
-                    # them conditionally
-                    is_required=data.get('is_required'),
-                    is_collection=data.get('is_collection'),
-                    is_inline_object=(data['type'] == 'object' or None),
-                    )
-
-                session.add(attribute)
-                break
-
-        return attribute
+#         return attribute
 
 
 def listFieldsets(schema_data):

@@ -1,10 +1,8 @@
-from copy import copy
 from datetime import datetime
 from decimal import Decimal
 import json
 import os.path
 
-from collective.beaker.interfaces import ISession as IHttpSession
 from collective.z3cform.datagridfield import DataGridField
 from collective.z3cform.datagridfield import DataGridFieldFactory
 import plone.z3cform.layout
@@ -125,7 +123,7 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
         self.request.response.redirect(self.context.absolute_url())
         IStatusMessage(self.request).add(self.cancelMessage)
 
-    @z3c.form.button.buttonAndHandler(_(u'Commit Changes'), name='submit')
+    @z3c.form.button.buttonAndHandler(_(u'Publish Changes'), name='submit')
     def handleComplete(self, action):
         """
         Save the form changes
@@ -343,14 +341,15 @@ class FieldDeleteForm(StandardWidgetsMixin, z3c.form.form.Form):
 
     @z3c.form.button.buttonAndHandler(_(u'Yes, I\'m sure'), name='delete')
     def handleDelete(self, action):
-        parent = self.context.getParentNode()
-        if IAttributeContext.providedBy(parent):
-            schemaData = parent.data['schema']
-        else:
-            schemaData = parent.data
-
-        del  schemaData['fields'][self.context.__name__]
-        IHttpSession(self.request).save()
+        deleteable = list()
+        deleteable.append(self.context.item)
+        if self.context.item.object_schema:
+            deleteable.append(self.context.item.object_schema)
+            deleteable.extend(self.context.item.object_schema.values())
+        Session = named_scoped_session(self.context.session)
+        for removed in deleteable:
+            Session.delete(removed)
+        Session.flush()
         self.request.response.setStatus(200)
 
 
@@ -399,7 +398,6 @@ class FieldOrderForm(StandardWidgetsMixin, z3c.form.form.Form):
         if errors:
             self.request.response.setStatus(400)
         else:
-            import pdb; pdb.set_trace( )
             moved = list()
             repositoryContext = closest(self.context, IRepository)
             (target, after) = (data['target'], data['after'])
@@ -491,6 +489,7 @@ class FieldFormInputHelper(object):
         if self.getType() == 'boolean':
             widgets['value'].readonly = 'readonly'
 
+from occams.datastore import model
 
 class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
     """
@@ -546,55 +545,57 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
                 ]
 
     def create(self, data):
-        if IAttributeContext.providedBy(self.context):
-            formData = self.context.data['schema']
-        else:
-            formData = self.context.data
-
         cleanupChoices(data)
-
+        newSchema = None
         if self.getType() == 'object':
-            schema = dict(
-                name=self.context.__name__ + camelize(data['title']),
-                title=data['title'],
-                description='auto-generated class',
-                version=datetime.now(),
-                fields=dict(),
+            ## Need to create a new schema and a new Attribute
+            newSchema = model.Schema(
+                    name = self.context.__name__ + camelize(data['title']),
+                    title = data['title'],
+                    description = data['description'],
+                    is_inline = True
                 )
-        else:
-            schema = None
 
-        data.update(dict(
-            # Force lowercase variable names
-            name=data['name'].lower(),
-            version=datetime.now(),
-            type=self.getType(),
-            interface=formData['name'],
-            is_collection=data.get('is_collection', False),
-            schema=schema,
-            order=None
-            ))
+        newAttribute = model.Attribute(
+                name=data['name'].lower(),
+                title=data['title'],
+                description=data['description'],
+                is_collection= data.get('is_collection', False),
+                is_required=data.get('is_collection', False),
+                type = self.getType(),
+                object_schema = newSchema
+                )
 
-        return data
+        newAttribute.after = data['after']
+        return newAttribute
 
     def add(self, item):
         if IAttributeContext.providedBy(self.context):
-            formData = self.context.data['schema']
+            form = self.context.item.object_schema
         else:
-            formData = self.context.data
+            form = self.context.item
+
         # The after property is no longer needed
-        after = item['after']
-        del item['after']
-        # Add the new field and save
-        formData['fields'][item['name']] = item
-        moveField(formData, item['name'], after)
-        IHttpSession(self.request).save()
+        after = item.after
+        del item.after
+        updated = list()
+        form[item.name] = item
+        updated.append(form)
+        updated.append(item)
+        if item.object_schema:
+            updated.append(item.object_schema)
+        updated.extend(moveField(form, item, after))
+        Session = named_scoped_session(self.context.session)
+        for change in updated:
+            Session.add(change)
+        Session.flush()
+
         self._newItem = item
 
     def nextURL(self):
         url = self.context.absolute_url()
         if self._newItem is not None:
-            url = os.path.join(url, self._newItem['name'], '@@json')
+            url = os.path.join(url, str(self._newItem.id), '@@json')
         return url
 
     @z3c.form.button.buttonAndHandler(_(u'Cancel'), name='cancel')
@@ -627,7 +628,7 @@ class FieldEditForm(FieldFormInputHelper, z3c.form.form.EditForm):
         self.request.set('disable_border', True)
         # Flip the buttons
         self.buttons = self.buttons.select('cancel', 'apply')
-        self.buttons['apply'].title = _(u'Stage')
+        self.buttons['apply'].title = _(u'Apply')
         self.fields['order'].mode = HIDDEN_MODE
         super(FieldEditForm, self).update()
 
@@ -643,8 +644,11 @@ class FieldEditForm(FieldFormInputHelper, z3c.form.form.EditForm):
         # Now do the default changes
         changes = super(FieldEditForm, self).applyChanges(data)
         if changes:
-            for change in changes[IEditableField]:
-                setattr(self.context.item, change, data[change])
+            # Get into the heart of the changes
+            for changelist in changes.values():
+                ## outputes lists, so go through them:
+                for change in changelist:
+                    setattr(self.context.item, change, data[change])
             Session = named_scoped_session(self.context.session)
             Session.add(self.context.item)
             Session.flush()

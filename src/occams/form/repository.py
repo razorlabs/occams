@@ -34,15 +34,8 @@ class AvailableSessionsVocabularyFactory(object):
         registered = getUtilitiesFor(IScopedSession)
         names = []
         for name, utility in registered:
-            # session = named_scoped_session(name)
-            # url = str(session.bind.url)
-            # path = occams.datastore.upgrades.migrate.REPOSITORY
-            # try:
-            #     migrate.versioning.api.db_version(url, path)
-            # except migrate.exceptions.DatabaseNotControlledError:
-            #     pass
-            # else:
-            names.append(name)
+            if name.find('occams') >= 0:
+                names.append(name)
         return SimpleVocabulary.fromValues(names)
 
 
@@ -66,7 +59,6 @@ class RepositoryFormsVocabularyFactory(object):
         session = named_scoped_session(context.session)
         query = (
             session.query(model.Schema)
-            .filter(model.Schema.asOf(None))
             .order_by(model.Schema.title)
             )
         terms = [SimpleTerm(s.name, title=s.title) for s in query.all()]

@@ -214,11 +214,8 @@ class SchemaTraverser(ExtendedTraversal):
             raise NotFound()
         try:
             context = AttributeContext(item=self.context.item[name])
-            # if self.context.data:
-            #     childData = self.context.data['fields'][name]
         except KeyError:
             context = None
-        # else:
         return context
 
 
@@ -233,11 +230,6 @@ class AttributeTraverser(ExtendedTraversal):
     def traverse(self, name):
         try:
             context = AttributeContext(item=self.context.item[name])
-
-            # if self.context.data:
-            #     childData = self.context.data['schema']['fields'][name]
         except KeyError:
             context = None
-        # else:
-        #     context = AttributeContext(data=childData)
         return context
