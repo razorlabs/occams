@@ -209,7 +209,6 @@ class SchemaTraverser(ExtendedTraversal):
     adapts(ISchemaContext, IHTTPRequest)
 
     def traverse(self, name):
-
         if name == 'view' and self.context.item is None:
             raise NotFound()
         try:

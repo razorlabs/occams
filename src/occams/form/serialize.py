@@ -16,12 +16,8 @@ import re
 import zope.schema
 from zope.schema.vocabulary import SimpleVocabulary
 from zope.schema.vocabulary import SimpleTerm
-# from occams.datastore.model import Attribute
-# from occams.datastore.model import Schema
-# from occams.datastore.model import Choice
-# from occams.datastore.model import NOW
 from occams.datastore.interfaces import typesVocabulary
-
+from sqlalchemy.orm.session import Session as sqlalchemysession
 
 # Copied from Python documentation
 reservedWords = """
@@ -38,164 +34,6 @@ acos     asin     atan     cos     e
 exp     fabs     floor     log     log10
 pi     sin     sqrt     tan
 """.split()
-
-
-# class CommitHelper(object):
-#     """
-#     Helper module for committing form changes to the database.
-#     There are TONS of moving parts when committing form changes and so it was
-#     decided to group them up into a class.
-#     """
-
-#     def __init__(self, session):
-#         self.session = session
-
-#     def __call__(self, data):
-#         schema = self.doSchema(data)
-
-#         attributeRetireCount = self.doRetireOldFields(data)
-#         for field in data.get('fields', {}).values():
-#             self.doAttribute(schema, field)
-#         return schema
-
-#     def doSchema(self, data):
-#         """
-#         Commits schema metadata
-#         """
-#         session = self.session
-#         schema = (
-#             session.query(Schema)
-#             .filter((Schema.name == data['name']) & Schema.asOf(None))
-#             .first()
-#             )
-#         changeable = ('name', 'title', 'description')
-
-#         # version only if necessary
-#         for setting in changeable:
-#             isSettingModified = (schema is None) or \
-#                  (getattr(schema, setting) != data[setting])
-
-#             if isSettingModified:
-#                 # retire old schema
-#                 if schema:
-#                     schema.remove_date = NOW
-#                     session.flush()
-#                 # add new schema
-#                 schema = Schema(
-#                     base_schema=getattr(schema, 'base_schema', None),
-#                     name=data['name'],
-#                     title=data['title'],
-#                     description=data['description'],
-#                     )
-#                 session.add(schema)
-#                 break
-#         return schema
-
-#     def doRetireOldFields(self, data):
-#         """
-#         Retires fields that are no longer part of the schema
-#         """
-#         session = self.session
-#         retireCount = (
-#             session.query(Attribute)
-#             .filter(Attribute.schema.has(name=data['name']))
-#             .filter(~Attribute.name.in_(data.get('fields', {}).keys()))
-#             .update(dict(remove_date=NOW), 'fetch')
-#             )
-#         return retireCount
-
-#     def doAttribute(self, schema, data):
-#         """
-#         Commits a single attribute metadata
-#         This method is pretty lengthy as choices aren't currently versioned,
-#         so we need to iterate through them and check if they have been
-#         modified.
-#         """
-#         session = self.session
-#         choices = dict()
-#         attribute = (
-#             session.query(Attribute)
-#             .filter(Attribute.schema.has(name=schema.name))
-#             .filter((Attribute.name == data['name']) & Attribute.asOf(None))
-#             .first()
-#             )
-
-#         isChoicesModified = (attribute is None)
-#         isSubFormModified = (attribute is None)
-
-#         # Save subform changes first
-#         if data['type'] == 'object':
-#             object_schema = CommitHelper(session)(data['schema'])
-#             if attribute is not None:
-#                 isSubFormModified = (object_schema.id == attribute.object_schema.id)
-#         else:
-#             object_schema = None
-
-#         # Convert choices to SQL Alchemy objects while checking if they've even
-#         # been modified
-#         for choiceData in data['choices']:
-#             if isChoicesModified == False:
-#                 # It's a new answer choiceData
-#                 if choiceData['name'] not in attribute.choices:
-#                     isChoicesModified = True
-#                 # If it already exists, check if the settings have changed
-#                 else:
-#                     choice = attribute.choices[choiceData['name']]
-#                     changeable = ('name', 'title', 'value', 'order')
-#                     for setting in changeable:
-#                         if getattr(choice, setting) != choiceData[setting]:
-#                             isChoicesModified = True
-#                             break
-
-#             choices[choiceData['name']] = Choice(
-#                 name=choiceData['name'],
-#                 title=choiceData['title'],
-#                 value=unicode(choiceData['value']),
-#                 order=choiceData['order'],
-#                 )
-
-#         # Check if some have been removed
-#         if attribute is not None:
-#             for key in attribute.choices.keys():
-#                 if key not in choices:
-#                     isChoicesModified = True
-#                     break
-
-#         changeable = \
-#             ('name', 'title', 'description', 'is_required', 'is_collection', 'order')
-
-#         # Now check if attribute settings have been changed
-#         for setting in changeable:
-#             isSettingModified = (attribute is None) or \
-#                 (getattr(attribute, setting) != data[setting])
-
-#             if isChoicesModified or isSubFormModified or isSettingModified:
-#                 # retire old schema
-#                 if attribute:
-#                     attribute.remove_date = NOW
-#                     session.flush()
-
-#                 attribute = Attribute(
-#                     schema=schema,
-#                     name=data['name'],
-#                     title=data['title'],
-#                     description=data['description'],
-#                     type=data['type'],
-#                     object_schema=object_schema,
-#                     choices=choices,
-#                     order=data['order'],
-#                     # These properties don't apply to all types, so set
-#                     # them conditionally
-#                     is_required=data.get('is_required'),
-#                     is_collection=data.get('is_collection'),
-#                     is_inline_object=(data['type'] == 'object' or None),
-#                     )
-
-#                 session.add(attribute)
-#                 break
-
-#         return attribute
-
 
 def listFieldsets(schema_data):
     """
@@ -292,24 +130,24 @@ def symbolize(value):
 
 
 def moveField(form, field, after=None):
-    changed = list()
+    subSession = sqlalchemysession.object_session(form).begin(subtransactions=True)
     if after is None:
-        field.order = 0
+        field.order = 100
     else:
-        field.order = form[after].order + 1
+        field.order = form[after].order + 101
     # Move everything that follows
     for formfield in sorted(form.values(), key=lambda i: i.order):
+        formfield.order += 100
         if formfield != field and formfield.order >= field.order:
-            formfield.order += 1
-    ## ok, we need to reorder everything, because we're "adding" an item
+            formfield.order += 101
+
+    subSession.commit()
     order = 0
+    ## ok, we need to reorder everything
     for formfield in sorted(form.values(), key=lambda i: i.order):
-        oldOrder = formfield.order
         formfield.order = order
-        if order != oldOrder:
-            changed.append(formfield)
         order +=1
-    return changed
+    return form
 
 
 def cleanupChoices(data):
@@ -324,6 +162,40 @@ def cleanupChoices(data):
             choice['value'] = choice['title']
         choice['name'] = tokenize(choice['value'])
         choice['order'] = order
+
+def findChoice(value, itemlist):
+    for i, item in enumerate(itemlist):
+        if item['value'] == value:
+            return itemlist.pop(i)
+    return None
+
+from occams.datastore import model
+
+def applyChoiceChanges(field, choiceData):
+    # Need a helper to add choice changes
+    subSession = sqlalchemysession.object_session(field).begin(subtransactions=True)
+    for choice in field.choices:
+        choice.order = choice.order+100
+    subSession.commit()
+    Session = sqlalchemysession.object_session(field)
+    for i, choice in enumerate(field.choices):
+        newValue = findChoice(choice.value, choiceData)
+        if newValue is not None:
+            for key, value in newValue.items():
+                setattr(choice, key, value)
+        else:
+            Session.delete(choice)
+            field.choices.remove(choice)
+
+    for new_choice in choiceData:
+        newChoice = model.Choice(
+            name = str(new_choice['name']),
+            title = unicode(new_choice['title']),
+            order = new_choice['order'],
+            value = unicode(new_choice['value'])
+            )
+        field.choices.append(newChoice)
+    return field
 
 
 def fieldFactory(fieldData):
