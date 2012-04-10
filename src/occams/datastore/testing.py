@@ -19,7 +19,7 @@ class DataStoreLayer(plone.testing.Layer):
         """
         Creates the database structures.
         """
-        engine = create_engine('sqlite:///', echo=False)
+        engine = create_engine('sqlite://', echo=False)
         model.Model.metadata.create_all(engine, checkfirst=True)
         self['session'] = scoped_session(sessionmaker(
             bind=engine,

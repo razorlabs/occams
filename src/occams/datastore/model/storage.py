@@ -222,7 +222,11 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         values = [value] if not isinstance(value, list) else value
 
         for value in values:
-            if not collector.filter_by(attribute=attribute, _value=value).count() > 0:
+            if attribute.type == 'object':
+                filter = dict(_value=value.id)
+            else:
+                filter = dict(_value=value)
+            if not collector.filter_by(attribute=attribute).filter_by(**filter).count() > 0:
                 collector.append(wrapperFactory(attribute=attribute, _value=value))
 
     def __delitem__(self, key):

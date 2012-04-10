@@ -2,12 +2,14 @@
 Python object helpers
 """
 
+from sqlalchemy.orm import object_session
 from zope.component import adapter
 from zope.interface import implementer
 from zope.interface.common.mapping import IFullMapping
 from zope.interface import providedBy
 from zope.interface import directlyProvides
 import zope.schema
+from zope.schema import getFieldsInOrder
 
 from occams.datastore.interfaces import IEntity
 
@@ -25,11 +27,11 @@ class Item(object):
             # If this object indeed has an interface we'll use it to
             # constraint the parameters
             iface = list(providedBy(self))[0]
-        except KeyError:
+        except IndexError:
             # Just a regular object
             pass
         else:
-            for name in iface.names():
+            for name, field in getFieldsInOrder(iface):
                 setattr(self, name, kwargs.get(name))
 
 
@@ -69,13 +71,26 @@ spawn = ItemFactory
 
 @adapter(IEntity)
 @implementer(IFullMapping)
-def entityToMapping(entity):
+def entityToDictionary(entity):
     """
     Converts an entity into a Python dictionary
     """
-    result = dict()
+    result = dict(
+        __metadata__=dict(
+            id=entity.id,
+            state=entity.state,
+            collect_date=entity.collect_date,
+            create_date=entity.create_date,
+            create_user=getattr(entity.create_user, 'name', None),
+            modify_date=entity.modify_date,
+            modify_user=getattr(entity.create_user, 'name', None),
+            )
+        )
+    # TODO: might be better to user a subquery table instead of accessing as
+    # dictionary
     for key, value in entity.items():
         if entity.schema[key].type == 'object':
-            value = entityToMapping(entity[key])
+            value = entityToDictionary(entity[key])
         result[key] = value
+
     return result
