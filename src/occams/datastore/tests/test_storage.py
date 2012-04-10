@@ -11,7 +11,7 @@ from zope.interface.verify import verifyObject
 
 from occams.datastore import model
 from occams.datastore.testing import DATASTORE_LAYER
-
+from occams.datastore.interfaces import  IEntity
 
 p1 = date(2012, 3, 1)
 p2 = date(2012, 4, 1)
@@ -25,6 +25,10 @@ class EntityModelTestCase(unittest.TestCase):
     """
 
     layer = DATASTORE_LAYER
+
+    def testImplementation(self):
+        self.assertTrue(verifyClass(IEntity, model.Entity))
+        self.assertTrue(verifyObject(IEntity, model.Entity()))
 
     def testAdd(self):
         session = self.layer['session']

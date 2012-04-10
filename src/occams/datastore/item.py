@@ -86,7 +86,8 @@ def entityToDictionary(entity):
             modify_user=getattr(entity.create_user, 'name', None),
             )
         )
-
+    # TODO: might be better to user a subquery table instead of accessing as
+    # dictionary
     for key, value in entity.items():
         if entity.schema[key].type == 'object':
             value = entityToDictionary(entity[key])

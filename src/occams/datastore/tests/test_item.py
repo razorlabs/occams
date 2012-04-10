@@ -9,6 +9,7 @@ from zope.interface import implements
 import zope.schema
 
 from occams.datastore import model
+from occams.datastore.testing import DATASTORE_LAYER
 from occams.datastore.item import Item
 from occams.datastore.item import ItemFactory
 from occams.datastore.item import entityToDictionary
@@ -97,15 +98,49 @@ class ItemFactoryTestCase(unittest.TestCase):
 
 class EntityToDictionaryTestCase(unittest.TestCase):
 
+    layer = DATASTORE_LAYER
+
     def testBasic(self):
+        session = self.layer['session']
         schema = model.Schema(name='IFoo', title=u'', state='published', attributes=dict(
             zero=model.Attribute(name='zero', title=u'', type='string', order=0),
-            one=model.Attribute(name='one', title=u'', type='integer', order=0),
-            two=model.Attribute(name='two', title=u'', type='boolean', order=0),
+            one=model.Attribute(name='one', title=u'', type='integer', order=1),
+            two=model.Attribute(name='two', title=u'', type='boolean', order=2),
             ))
         entity = model.Entity(schema=schema, name='foo', title=u'Foo')
-        entity['zero'] = 'huzzah?'
+        session.add(entity)
+        session.flush()
+
+        entity['zero'] = u'huzzah?'
         entity['one'] = 123
         entity['two'] = True
         # This is currently not working because storage is not quite done yet
         data = entityToDictionary(entity)
+        self.assertIn('__metadata__', data)
+        self.assertIn('zero', data)
+        self.assertIn('one', data)
+        self.assertIn('two', data)
+
+    def testWithSubObject(self):
+        session = self.layer['session']
+        schema = model.Schema(name='IFoo', title=u'', state='published',)
+        schema['zero'] = model.Attribute(title=u'', type='object', order=0,)
+        schema['zero'].object_schema = model.Schema(name='ISub', title=u'Sub', state='published',)
+        schema['zero']['one'] = model.Attribute(title=u'', type='integer', order=0)
+        schema['zero']['two'] = model.Attribute(title=u'', type='string', order=1)
+
+        entity = model.Entity(schema=schema, name='foo', title=u'Foo')
+        session.add(entity)
+        session.flush()
+
+        sub = model.Entity(schema=schema['zero'].object_schema, name='sub', title=u'sub')
+        session.add(sub)
+        session.flush()
+        entity['zero'] = sub
+        entity['zero']['one'] = 1234
+        entity['zero']['two'] = u'huzzah?'
+
+        # This is currently not working because storage is not quite done yet
+        data = entityToDictionary(entity)
+        self.assertIn('__metadata__', data)
+

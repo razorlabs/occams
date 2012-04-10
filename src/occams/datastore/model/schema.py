@@ -298,34 +298,34 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
             )
 
     def __getitem__(self, key):
-        return self.object_schema.attributes[key]
+        return self.object_schema[key]
 
     def __setitem__(self, key, value):
-        self.object_schema.attributes[key] = value
+        self.object_schema[key] = value
 
     def __delitem__(self, key):
-        del self.object_schema.attributes[key]
+        del self.object_schema[key]
 
     def __contains__(self, key):
-        return key in self.object_schema.attributes
+        return key in self.object_schema
 
     def keys(self):
-        return self.object_schema.attributes.keys()
+        return self.object_schema.keys()
 
     def iterkeys(self):
-        return self.object_schema.attributes.iterkeys()
+        return self.object_schema.iterkeys()
 
     def values(self):
-        return self.object_schema.attributes.values()
+        return self.object_schema.values()
 
     def itervalues(self):
-        return self.object_schema.attributes.itervalues()
+        return self.object_schema.itervalues()
 
     def items(self):
-        return self.object_schema.attributes.items()
+        return self.object_schema.items()
 
     def iteritems(self):
-        return self.object_schema.attributes.iteritems()
+        return self.object_schema.iteritems()
 
 
 class Choice(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
