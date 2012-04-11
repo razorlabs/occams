@@ -46,6 +46,6 @@ __all__ = (
     )
 
 
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     # A convenient way for checking the model even correctly loads the tables
-    Model.metadata.create_all(bind=sqlalchemy.create_engine('sqlite:///', echo=True))
+    Model.metadata.create_all(bind=sqlalchemy.create_engine('sqlite://', echo=True))
