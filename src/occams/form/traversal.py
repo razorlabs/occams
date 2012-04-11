@@ -101,7 +101,12 @@ class SchemaContext(DataBaseItemContext):
 
     @property
     def data(self):
-        return serializeForm(self.item)
+        cachedData = getattr(self, '_data', None)
+        if cachedData:
+            return cachedData
+        else:
+            self._data = serializeForm(self.item)
+            return self._data
 
 class AttributeContext(DataBaseItemContext):
     """
@@ -111,7 +116,12 @@ class AttributeContext(DataBaseItemContext):
 
     @property
     def data(self):
-        return serializeField(self.item)
+        cachedData = getattr(self, '_data', None)
+        if cachedData:
+            return cachedData
+        else:
+            self._data = serializeField(self.item)
+            return self._data
 
 class ExtendedTraversal(DefaultPublishTraverse):
     """
@@ -186,13 +196,17 @@ class RepositoryTraverser(ExtendedTraversal):
             query = (
                 session.query(model.Schema)
                 .filter(model.Schema.name == schema_name)
-                .filter(model.Schema.state == 'published')
+                .filter(model.Schema.publish_date != None)
+                #.filter(model.Schema.state == 'published')
+
                 .order_by(model.Schema.publish_date.desc())
                 )
             if pub_date:
                 query = query.filter(
                         model.Schema.publish_date==datetime.strptime(pub_date, '%Y-%m-%d').date()
                         )
+            else:
+                query = query.filter(model.Schema.publish_date < model.NOW)
         try:
             item = query.limit(1).one()
         except NoResultFound:

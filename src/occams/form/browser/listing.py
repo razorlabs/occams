@@ -14,6 +14,8 @@ from occams.form.interfaces import IEditableForm
 from occams.datastore import model
 from z3c.form import button
 from occams.datastore.schema import copy
+from z3c.form.interfaces import DISPLAY_MODE
+from zope.security import checkPermission
 
 from occams.form.form import UserAwareMixin
 from occams.form.serialize import camelize
@@ -23,23 +25,30 @@ links = dict(view='@@view', edit='@@edit',)
 
 class ListingEditSubForm(crud.EditSubForm):
 
-    # def _select_field(self):
-    #     """
-    #     Cancels the rendering of the check box as we can't delete forms
-    #     as of this release.
-    #     """
-    #     return z3c.form.field.Fields()
+    def _select_field(self):
+        select_field = super(ListingEditSubForm, self)._select_field()
+        if self.content.state == 'retracted' or not \
+            ( checkPermission("occams.form.DraftForm", self.context) or \
+                checkPermission("occams.form.RemoveForm", self.context) ):
+            select_field.mode = DISPLAY_MODE
+        return select_field
 
     def updateWidgets(self):
         super(ListingEditSubForm, self).updateWidgets()
         stateWidget = 'view_state' in self.widgets and self.widgets['view_state'] or None
+        isCurrentWidget = 'view_current' in self.widgets and self.widgets['view_current'] or None
+
         if stateWidget:
             stateWidget.addClass(str(stateWidget.value))
-        if self.content.is_current:
-            for widget in self.widgets.values():
-                widget.addClass('current')
+            if stateWidget.value == 'retracted':
+                for widget in self.widgets.values():
+                    widget.addClass('retracted')             
+        if isCurrentWidget and self.content.is_current:
+            isCurrentWidget.addClass('is_current')
+            isCurrentWidget.value='current'
+
         for name, title in additionalControls:
-            if name != 'edit' or (self.content.is_editable):
+            if name != 'edit' or (self.content.is_editable and checkPermission('occams.form.ModifyForm', self.context)):
                 self.widgets['view_' + name].value = title
             else:
                 self.widgets['view_' + name].value = ''
@@ -53,7 +62,10 @@ class ListingEditForm(crud.EditForm):
     label = None
     editsubform_factory = ListingEditSubForm
 
-    @button.buttonAndHandler(_('Draft New Version'), name='draft')
+    def can_draft(self):
+        return  checkPermission("occams.form.ModifyForm", self.context) 
+
+    @button.buttonAndHandler(_('Draft New Version'), name='draft', condition= lambda self: self.can_draft())
     def handleDraft(self, action):
         selected = self.selected_items()
         session_name = self.context.context.session
@@ -66,7 +78,10 @@ class ListingEditForm(crud.EditForm):
             Session.flush()
         return self.request.response.redirect(self.action)
 
-    @button.buttonAndHandler(_('Retract'), name='retract')
+    def can_retract(self):
+        return  checkPermission("occams.form.RemoveForm", self.context) 
+
+    @button.buttonAndHandler(_('Retract'), name='retract', condition= lambda self: self.can_retract())
     def handleRetract(self, action):
         selected = self.selected_items()
         session_name = self.context.context.session
@@ -93,7 +108,11 @@ class SummaryListingForm(crud.CrudForm, UserAwareMixin):
     See ``configure.zcml`` for directive configuration.
     """
 
-    addform_factory = AddForm
+    @property
+    def addform_factory(self):
+        if checkPermission("occams.form.CreateForm", self.context):
+            return AddForm
+        return crud.NullForm
     editform_factory = ListingEditForm
 
     _items = None
@@ -123,7 +142,9 @@ class SummaryListingForm(crud.CrudForm, UserAwareMixin):
 
     def update(self):
         # Don't use changes count, apparently it's too confusing for users
-        view_schema = z3c.form.field.Fields(IFormSummary).omit('id', 'name', 'is_editable')
+        field = zope.schema.TextLine(__name__='current', title=u'')
+        view_schema = z3c.form.field.Fields(field)
+        view_schema += z3c.form.field.Fields(IFormSummary).omit('id', 'name', 'is_editable', 'is_current')
 
         # Add controls
         for name, title in additionalControls:
@@ -153,7 +174,7 @@ class SummaryListingForm(crud.CrudForm, UserAwareMixin):
             return os.path.join(self.context.absolute_url(), item.name+'-'+item.publish_date.isoformat(), links[field])
         elif field == 'view':
             return os.path.join(self.context.absolute_url(), str(item.id), links[field])
-        elif field == 'edit' and item.is_editable:
+        elif field == 'edit' and item.is_editable and checkPermission('occams.form.ModifyForm', self.context):
             return os.path.join(self.context.absolute_url(), str(item.id), links[field])
       
 

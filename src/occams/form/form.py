@@ -44,7 +44,7 @@ class UserAwareMixin(object):
         if hasattr(self, 'session'):
             current_user = getSecurityManager().getUser().getId()
             Session = named_scoped_session(self.context.session)
-            if current_user and Session.query(model.User).filter(model.User.key == current_user).first():
+            if current_user and Session.query(model.User).filter(model.User.key == current_user).count() <= 0:
                 Session.add(model.User(key=current_user))
                 Session.flush()
         super(UserAwareMixin, self).update()
@@ -89,13 +89,12 @@ class Group(StandardWidgetsMixin, z3c.form.group.Group):
 
     def update(self):
         self.fields = z3c.form.field.Fields()
-        for name, field in self.context.items():
+        for name, field in self.context.object_schema.items():
             self.fields += z3c.form.field.Fields(IField(field))
         super(Group, self).update()
 
 
-
-class Form(StandardWidgetsMixin, z3c.form.group.GroupForm, z3c.form.form.Form):
+class Form(StandardWidgetsMixin, UserAwareMixin, z3c.form.group.GroupForm, z3c.form.form.Form):
     """
     A datastore-specific form
     """
@@ -122,7 +121,7 @@ class Form(StandardWidgetsMixin, z3c.form.group.GroupForm, z3c.form.form.Form):
         self.groups = []
         for name, field in self.context.item.items():
             if field.type == 'object':
-                self.groups.append(self.groupFactory(field.object_schema, self.request, self))
+                self.groups.append(self.groupFactory(field, self.request, self))
             else:
                 self.fields += z3c.form.field.Fields(IField(field))
         super(Form, self).update()

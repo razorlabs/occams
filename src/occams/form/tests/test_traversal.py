@@ -1,6 +1,5 @@
 import unittest2 as unittest
 
-from collective.beaker.interfaces import ISession
 from zope.browser.interfaces import IBrowserView
 from zope.publisher.browser import TestRequest
 from zExceptions import NotFound

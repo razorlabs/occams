@@ -70,19 +70,6 @@ class FormSummaryGenerator(object):
                 .group_by(model.Schema.id)
                 ).subquery('fieldcount')
 
-        # EditVersion = (
-        #     session.query(
-        #         model.Schema.id.label('schema_id'),
-        #         SubSchema.id.label('draft_id'),
-        #         )
-        #         .select_from(model.Schema)
-        #         .join(SubSchema, model.Schema.name == SubSchema.name)
-        #         .join(model.User, SubSchema.create_user_id == model.User.id)
-        #         .filter(SubSchema.state == 'draft')
-        #         .filter(model.User.key == current_user)
-        #         .order_by(SubSchema.create_date.desc())
-        #     ).subquery('editversion')
-
         MaxDate = (
             session.query(
                 model.Schema.name.label('name'),
@@ -90,7 +77,7 @@ class FormSummaryGenerator(object):
                 )
                 .filter(model.Schema.is_inline == False)
                 .filter(model.Schema.state == 'published')
-                .filter(model.Schema.publish_date != None)
+                .filter(model.Schema.publish_date < model.NOW)
                 .group_by(model.Schema.name)
             ).subquery('maxversion')
 
@@ -113,7 +100,6 @@ class FormSummaryGenerator(object):
             .outerjoin(MaxDate, model.Schema.name == MaxDate.c.name)
             # .outerjoin(EditVersion, model.Schema.id == EditVersion.c.schema_id)
             .filter(model.Schema.is_inline == False)
-            .filter(model.Schema.state != 'retracted')
             .order_by(model.Schema.title.asc(), model.Schema.publish_date.desc().nullslast())
             )
 

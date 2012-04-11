@@ -46,7 +46,6 @@
             });
         }
 
-        console.log(pathNodes)
         return  baseUrl.replace(/\/$/, '') + '/' + pathNodes.join('/');
     };
 

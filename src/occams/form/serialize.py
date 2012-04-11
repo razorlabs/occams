@@ -71,7 +71,6 @@ def serializeField(field):
         name=str(field.name),
         title=field.title,
         description=field.description,
-        # version=field.publish_date,
         type=field.type,
         schema=None,
         choices=[],
@@ -79,8 +78,6 @@ def serializeField(field):
         is_collection=field.is_collection,
         order=field.order,
         )
-
-    #vocabularyPart = getattr(field, 'value_type', field)
 
     if len(field.choices):
         for choice in field.choices:

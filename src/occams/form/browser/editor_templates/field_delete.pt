@@ -1,7 +1,7 @@
 <metal:form metal:use-macro="view/@@ploneform-macros/form">
   <metal:formtop fill-slot="formtop">
     <div i18n:translate="">
-      Are you sure you want to delete
+      Are you sure you want to discard
       <strong i18n:name="fieldName" tal:content="context/name"></strong>
       ?
     </div>

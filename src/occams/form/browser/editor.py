@@ -1,6 +1,7 @@
 from decimal import Decimal
 import json
 import os.path
+from copy import copy
 
 from collective.z3cform.datagridfield import DataGridField
 from collective.z3cform.datagridfield import DataGridFieldFactory
@@ -21,10 +22,11 @@ import z3c.form.validator
 from sqlalchemy.orm.session import Session as sqlalchemysession
 from z3c.saconfig import named_scoped_session
 import datetime
+from zope.security import checkPermission
+from AccessControl import getSecurityManager
+
 from occams.form import MessageFactory as _
 from occams.form.form import StandardWidgetsMixin
-from occams.form.form import Form
-from occams.form.form import Group
 from occams.form.form import TextAreaFieldWidget
 from occams.form.interfaces import IAttributeContext
 from occams.form.interfaces import IEditableForm
@@ -40,7 +42,8 @@ from occams.form.serialize import cleanupChoices
 from occams.form.serialize import reservedWords
 from occams.form.serialize import camelize
 from occams.form.serialize import symbolize
-
+from occams.form.browser.preview import DisabledMixin
+from occams.form.form import UserAwareMixin
 
 
 # Helper Methods
@@ -93,41 +96,8 @@ def moveField(form, field, after=None):
         formfield.order = order
     return form
 
-class DisabledMixin(object):
-    """
-    Disables all widgets in the form
-    """
 
-    def updateWidgets(self):
-        super(DisabledMixin, self).updateWidgets()
-        for widget in self.widgets.values():
-            widget.disabled = 'disabled'
-
-
-class FormPreviewForm(DisabledMixin, Form):
-    """
-    Renders the form as it would appear during data entry
-    """
-
-    class PreviewGroup(DisabledMixin, Group):
-        """
-        Renders group in preview-mode
-        """
-
-    groupFactory = PreviewGroup
-
-    @z3c.form.button.buttonAndHandler(_(u'<< Back to Listing'), name='cancel')
-    def handleCancel(self, action):
-        repository = closest(self.context, IRepository)
-        self.request.response.redirect(repository.absolute_url())
-
-    @z3c.form.button.buttonAndHandler(_(u'Edit This Form'), name='edit')
-    def handleEdit(self, action):
-        self.request.response.redirect(os.path.join(self.context.absolute_url(), '@@edit'))
-
-
-
-class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
+class FormEditForm(StandardWidgetsMixin, UserAwareMixin, z3c.form.form.EditForm):
     """
     Renders the form for editing, using a subform for the fields editor.
     """
@@ -145,7 +115,11 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
 
     @property
     def label(self):
-        return _(u'Edit: %s (%s)') % (self.context.item.title, self.context.item.name)
+        formlabel = 'Edit: ' + self.context.item.title 
+        formlabel = formlabel + ' -- Draft created by %(user_name)s on %(create_date)s' % dict(
+                user_name=str(self.context.item.create_user.key),
+                create_date=self.context.item.create_date.strftime('%Y/%m/%d'))
+        return _(u'%s') % (formlabel)
 
     def getContent(self):
         return self.context.data
@@ -164,13 +138,19 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
         # Continue the z3c form process
         super(FormEditForm, self).update()
 
-
     @z3c.form.button.buttonAndHandler(_(u'<< Back to Listing'), name='cancel')
     def handleCancel(self, action):
         repository = closest(self.context, IRepository)
         self.request.response.redirect(repository.absolute_url())
 
-    @z3c.form.button.buttonAndHandler(_(u'Discard Draft'), name='discard')
+
+    def can_discard(self):
+        return not self.context.item.publish_date and \
+            (self.context.item.create_user.key == getSecurityManager().getUser().getId() or \
+                checkPermission("occams.form.RemoveForm", self.context)
+            )
+
+    @z3c.form.button.buttonAndHandler(_(u'Discard Draft'), name='discard', condition=lambda self: self.can_discard())
     def handleDiscard(self, action):
         """
         Discard form changes.
@@ -183,7 +163,10 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
         self.request.response.redirect(repository.absolute_url())
         IStatusMessage(self.request).add(self.cancelMessage)
 
-    @z3c.form.button.buttonAndHandler(_(u'Submit Draft for Review'), name='submit')
+    def can_submit(self):
+        return (self.context.item.state == 'draft')
+
+    @z3c.form.button.buttonAndHandler(_(u'Submit Draft for Review'), name='submit', condition=lambda self: self.can_submit())
     def handleSubmit(self, action):
         """
         Save the form changes
@@ -194,12 +177,18 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
         else:
             Session = named_scoped_session(self.context.session)
             self.context.item.title = unicode(data['title'])
-            self.context.item.description = unicode(data['description'])
+            if data['description']:
+                self.context.item.description = unicode(data['description'])
             self.context.item.state = 'review'
             Session.flush()
             repository = closest(self.context, IRepository)
             self.request.response.redirect(repository.absolute_url())
             IStatusMessage(self.request).add(self.successMessage)
+
+    def can_publish(self):
+        return checkPermission("occams.form.PublishForm", self.context)  and \
+                  not self.context.item.publish_date
+        
 
     @z3c.form.button.buttonAndHandler(_(u'Publish Draft'), name='publish')
     def handleComplete(self, action):
@@ -212,10 +201,11 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
         else:
             Session = named_scoped_session(self.context.session)
             self.context.item.title = unicode(data['title'])
-            self.context.item.description = unicode(data['description'])
+            if data['description']:
+                self.context.item.description = unicode(data['description'])
             self.context.item.state = 'published'
             if data['publish_date']:
-                self.context.item.publish_date = datetime.date(data['publish_date'])
+                self.context.item.publish_date = data['publish_date']
             else:
                 self.context.item.publish_date = datetime.date.today()
             Session.flush()
@@ -377,7 +367,7 @@ class FieldJsonView(BrowserView):
         Additionally adds an extra ``view`` field in the JSON object
         for rendering the field on the client side
         """
-        data = self.context.data
+        data = copy(self.context.data)
         if data['schema']:
             del data['schema']
         # For client-side ajax update of the field
@@ -423,6 +413,7 @@ class FieldDeleteForm(StandardWidgetsMixin, z3c.form.form.Form):
         Session = named_scoped_session(self.context.session)
         Session.delete(self.context.item)
         Session.flush()
+        self.context._data = None
         self.request.response.setStatus(200)
 
 
@@ -482,6 +473,7 @@ class FieldOrderForm(StandardWidgetsMixin, z3c.form.form.Form):
                 targetForm = schemaContext.item
             if targetForm == sourceForm:
                 moveField(targetForm, self.context.item, after)
+                self.context._data = None
             elif self.context.item in targetForm.values():
             # Do not allow the field to be moved into another schema if it
             # already contains a field with the same name
@@ -490,8 +482,11 @@ class FieldOrderForm(StandardWidgetsMixin, z3c.form.form.Form):
                 # This item needs to move to a different fieldset
                 field = self.context.item
                 del sourceForm[self.context.item.name]
+                parent._data = None
                 targetForm[field.name] = field
                 moveField(targetForm, field, after)
+                schemaContext._data = None
+                self.context._data = None
             Session.flush()
             self.request.response.setStatus(200)
 
@@ -631,7 +626,7 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
         if data.has_key('choices') and data['choices']:
             applyChoiceChanges(newAttribute, data['choices'])
 
-        newAttribute.after = data['after']
+        newAttribute._after = data['after']
         return newAttribute
 
     def add(self, item):
@@ -640,8 +635,8 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
         else:
             form = self.context.item
         # The after property is no longer needed
-        after = item.after
-        del item.after
+        after = item._after
+        del item._after
         form[item.name] = item
         moveField(form, item, after)
         Session = named_scoped_session(self.context.session)
@@ -697,6 +692,7 @@ class FieldEditForm(FieldFormInputHelper, z3c.form.form.EditForm):
         """
         Commits changes to the browser session data
         """
+
         cleanupChoices(data)
         # Now do the default changes
         changes = super(FieldEditForm, self).applyChanges(data)
@@ -711,7 +707,7 @@ class FieldEditForm(FieldFormInputHelper, z3c.form.form.EditForm):
                     else:
                         setattr(self.context.item, change, data[change])
             Session.flush()
-
+        self.context._data = None
         nextUrl = os.path.join(self.context.absolute_url(), '@@json')
         self.request.response.redirect(nextUrl)
         return changes
