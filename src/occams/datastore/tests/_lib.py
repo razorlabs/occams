@@ -10,12 +10,12 @@ import sqlalchemy as sa
 from sqlalchemy import exc as sa_exc
 
 
-def eq_(a, b, msg=None):
+def eq_(a, b, msg=None): # pragma: no cover
     """Assert a == b, with repr messaging on failure."""
     assert a == b, msg or "%r != %r" % (a, b)
 
 _repr_stack = set()
-class BasicEntity(object):
+class BasicEntity(object): # pragma: no cover
     def __init__(self, **kw):
         for key, value in kw.iteritems():
             setattr(self, key, value)
@@ -34,7 +34,7 @@ class BasicEntity(object):
             _repr_stack.remove(id(self))
 
 _recursion_stack = set()
-class ComparableEntity(BasicEntity):
+class ComparableEntity(BasicEntity): # pragma: no cover
     def __hash__(self):
         return hash(self.__class__)
 
