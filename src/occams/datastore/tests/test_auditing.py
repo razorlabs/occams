@@ -1,36 +1,46 @@
+"""
+Tests for auditing components.
+Note that these tests were mostly (if not entirely) copied from the SQLAlchemy
+examples for versioning.
+
+Credits to **zzzeek** et al.
+"""
+
 import unittest2 as unittest
 
+from sqlalchemy import event
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine, Column, Integer, String, ForeignKey
-from sqlalchemy import event
 from sqlalchemy.orm import clear_mappers, sessionmaker, deferred, relationship
-from sqlalchemy.test.lib.entities import ComparableEntity
 
-from occams.datastore.model.auditing import Auditable
-from occams.datastore.model.auditing import createRevision
-
+from occams.datastore.model.auditing import Auditable, createRevision
+from _lib import ComparableEntity, eq_
 
 
-Base = declarative_base()
+engine = None
+Base = None
+Session = None
+
 
 def auditing_session(session):
     @event.listens_for(session, 'before_flush')
     def before_flush(session, flush_context, instances):
         auditable = lambda i: isinstance(i, Auditable)
         for obj in filter(auditable, session.dirty):
-            createRevision(obj, session)
+            createRevision(obj)
         for obj in filter(auditable, session.deleted):
-            createRevision(obj, session, deleted=True)
+            createRevision(obj, deleted=True)
 
-class TestAuditing(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        cls.Session = sessionmaker(bind=create_engine('sqlite://'))
-        auditing_session(cls.Session)
+class AuditableTestCase(unittest.TestCase):
+
+    def setUp(self):
+        global Base, Session
+        Base = declarative_base(bind=create_engine('sqlite://', echo=True))
+        Session = sessionmaker()
+        auditing_session(Session)
 
     def tearDown(self):
-        self.Session.rollback()
         clear_mappers()
         Base.metadata.drop_all()
 
@@ -38,7 +48,6 @@ class TestAuditing(unittest.TestCase):
         Base.metadata.create_all()
 
     def test_plain(self):
-        Session = self.Session
         class SomeClass(Auditable, Base, ComparableEntity):
             __tablename__ = 'sometable'
 
@@ -54,26 +63,26 @@ class TestAuditing(unittest.TestCase):
         sc.name = 'sc1modified'
         sess.commit()
 
-        assert sc.version == 2
+        self.assertEqual(2, sc.revision)
 
-        SomeClassHistory = SomeClass.__history_mapper__.class_
+        SomeClassHistory = SomeClass.__audit_mapper__.class_
 
         eq_(
-            sess.query(SomeClassHistory).filter(SomeClassHistory.version == 1).all(),
-            [SomeClassHistory(version=1, name='sc1')]
+            sess.query(SomeClassHistory).filter(SomeClassHistory.revision == 1).all(),
+            [SomeClassHistory(revision=1, name='sc1')]
         )
 
         sc.name = 'sc1modified2'
 
         eq_(
-            sess.query(SomeClassHistory).order_by(SomeClassHistory.version).all(),
+            sess.query(SomeClassHistory).order_by(SomeClassHistory.revision).all(),
             [
-                SomeClassHistory(version=1, name='sc1'),
-                SomeClassHistory(version=2, name='sc1modified')
+                SomeClassHistory(revision=1, name='sc1'),
+                SomeClassHistory(revision=2, name='sc1modified')
             ]
         )
 
-        assert sc.version == 3
+        assert sc.revision == 3
 
         sess.commit()
 
@@ -83,10 +92,10 @@ class TestAuditing(unittest.TestCase):
         sess.commit()
 
         eq_(
-            sess.query(SomeClassHistory).order_by(SomeClassHistory.version).all(),
+            sess.query(SomeClassHistory).order_by(SomeClassHistory.revision).all(),
             [
-                SomeClassHistory(version=1, name='sc1'),
-                SomeClassHistory(version=2, name='sc1modified')
+                SomeClassHistory(revision=1, name='sc1'),
+                SomeClassHistory(revision=2, name='sc1modified')
             ]
         )
 
@@ -94,16 +103,15 @@ class TestAuditing(unittest.TestCase):
         sess.commit()
 
         eq_(
-            sess.query(SomeClassHistory).order_by(SomeClassHistory.version).all(),
+            sess.query(SomeClassHistory).order_by(SomeClassHistory.revision).all(),
             [
-                SomeClassHistory(version=1, name='sc1'),
-                SomeClassHistory(version=2, name='sc1modified'),
-                SomeClassHistory(version=3, name='sc1modified2')
+                SomeClassHistory(revision=1, name='sc1'),
+                SomeClassHistory(revision=2, name='sc1modified'),
+                SomeClassHistory(revision=3, name='sc1modified2')
             ]
         )
 
     def test_from_null(self):
-        Session = self.Session
         class SomeClass(Auditable, Base, ComparableEntity):
             __tablename__ = 'sometable'
 
@@ -119,11 +127,11 @@ class TestAuditing(unittest.TestCase):
         sc.name = 'sc1'
         sess.commit()
 
-        assert sc.version == 2
+        assert sc.revision == 2
 
     def test_deferred(self):
         """test versioning of unloaded, deferred columns."""
-        Session = self.Session
+
         class SomeClass(Auditable, Base, ComparableEntity):
             __tablename__ = 'sometable'
 
@@ -144,18 +152,17 @@ class TestAuditing(unittest.TestCase):
         sc.name = 'sc1modified'
         sess.commit()
 
-        assert sc.version == 2
+        assert sc.revision == 2
 
-        SomeClassHistory = SomeClass.__history_mapper__.class_
+        SomeClassHistory = SomeClass.__audit_mapper__.class_
 
         eq_(
-            sess.query(SomeClassHistory).filter(SomeClassHistory.version == 1).all(),
-            [SomeClassHistory(version=1, name='sc1', data='somedata')]
+            sess.query(SomeClassHistory).filter(SomeClassHistory.revision == 1).all(),
+            [SomeClassHistory(revision=1, name='sc1', data='somedata')]
         )
 
 
     def test_joined_inheritance(self):
-        Session = self.Session
         class BaseClass(Auditable, Base, ComparableEntity):
             __tablename__ = 'basetable'
 
@@ -196,44 +203,43 @@ class TestAuditing(unittest.TestCase):
         sep1.name = 'sep1mod'
         sess.commit()
 
-        BaseClassHistory = BaseClass.__history_mapper__.class_
-        SubClassSeparatePkHistory = SubClassSeparatePk.__history_mapper__.class_
-        SubClassSamePkHistory = SubClassSamePk.__history_mapper__.class_
+        BaseClassHistory = BaseClass.__audit_mapper__.class_
+        SubClassSeparatePkHistory = SubClassSeparatePk.__audit_mapper__.class_
+        SubClassSamePkHistory = SubClassSamePk.__audit_mapper__.class_
         eq_(
             sess.query(BaseClassHistory).order_by(BaseClassHistory.id).all(),
             [
-                SubClassSeparatePkHistory(id=1, name=u'sep1', type=u'sep', version=1),
-                BaseClassHistory(id=2, name=u'base1', type=u'base', version=1),
-                SubClassSamePkHistory(id=3, name=u'same1', type=u'same', version=1)
+                SubClassSeparatePkHistory(id=1, name=u'sep1', type=u'sep', revision=1),
+                BaseClassHistory(id=2, name=u'base1', type=u'base', revision=1),
+                SubClassSamePkHistory(id=3, name=u'same1', type=u'same', revision=1)
             ]
         )
 
         same1.subdata2 = 'same1subdatamod2'
 
         eq_(
-            sess.query(BaseClassHistory).order_by(BaseClassHistory.id, BaseClassHistory.version).all(),
+            sess.query(BaseClassHistory).order_by(BaseClassHistory.id, BaseClassHistory.revision).all(),
             [
-                SubClassSeparatePkHistory(id=1, name=u'sep1', type=u'sep', version=1),
-                BaseClassHistory(id=2, name=u'base1', type=u'base', version=1),
-                SubClassSamePkHistory(id=3, name=u'same1', type=u'same', version=1),
-                SubClassSamePkHistory(id=3, name=u'same1', type=u'same', version=2)
+                SubClassSeparatePkHistory(id=1, name=u'sep1', type=u'sep', revision=1),
+                BaseClassHistory(id=2, name=u'base1', type=u'base', revision=1),
+                SubClassSamePkHistory(id=3, name=u'same1', type=u'same', revision=1),
+                SubClassSamePkHistory(id=3, name=u'same1', type=u'same', revision=2)
             ]
         )
 
         base1.name = 'base1mod2'
         eq_(
-            sess.query(BaseClassHistory).order_by(BaseClassHistory.id, BaseClassHistory.version).all(),
+            sess.query(BaseClassHistory).order_by(BaseClassHistory.id, BaseClassHistory.revision).all(),
             [
-                SubClassSeparatePkHistory(id=1, name=u'sep1', type=u'sep', version=1),
-                BaseClassHistory(id=2, name=u'base1', type=u'base', version=1),
-                BaseClassHistory(id=2, name=u'base1mod', type=u'base', version=2),
-                SubClassSamePkHistory(id=3, name=u'same1', type=u'same', version=1),
-                SubClassSamePkHistory(id=3, name=u'same1', type=u'same', version=2)
+                SubClassSeparatePkHistory(id=1, name=u'sep1', type=u'sep', revision=1),
+                BaseClassHistory(id=2, name=u'base1', type=u'base', revision=1),
+                BaseClassHistory(id=2, name=u'base1mod', type=u'base', revision=2),
+                SubClassSamePkHistory(id=3, name=u'same1', type=u'same', revision=1),
+                SubClassSamePkHistory(id=3, name=u'same1', type=u'same', revision=2)
             ]
         )
 
     def test_single_inheritance(self):
-        Session = self.Session
         class BaseClass(Auditable, Base, ComparableEntity):
             __tablename__ = 'basetable'
 
@@ -259,23 +265,23 @@ class TestAuditing(unittest.TestCase):
 
         b1.name = 'b1modified'
 
-        BaseClassHistory = BaseClass.__history_mapper__.class_
-        SubClassHistory = SubClass.__history_mapper__.class_
+        BaseClassHistory = BaseClass.__audit_mapper__.class_
+        SubClassHistory = SubClass.__audit_mapper__.class_
 
         eq_(
-            sess.query(BaseClassHistory).order_by(BaseClassHistory.id, BaseClassHistory.version).all(),
-            [BaseClassHistory(id=1, name=u'b1', type=u'base', version=1)]
+            sess.query(BaseClassHistory).order_by(BaseClassHistory.id, BaseClassHistory.revision).all(),
+            [BaseClassHistory(id=1, name=u'b1', type=u'base', revision=1)]
         )
 
         sc.name = 's1modified'
         b1.name = 'b1modified2'
 
         eq_(
-            sess.query(BaseClassHistory).order_by(BaseClassHistory.id, BaseClassHistory.version).all(),
+            sess.query(BaseClassHistory).order_by(BaseClassHistory.id, BaseClassHistory.revision).all(),
             [
-                BaseClassHistory(id=1, name=u'b1', type=u'base', version=1),
-                BaseClassHistory(id=1, name=u'b1modified', type=u'base', version=2),
-                SubClassHistory(id=2, name=u's1', type=u'sub', version=1)
+                BaseClassHistory(id=1, name=u'b1', type=u'base', revision=1),
+                BaseClassHistory(id=1, name=u'b1modified', type=u'base', revision=2),
+                SubClassHistory(id=2, name=u's1', type=u'sub', revision=1)
             ]
         )
 
@@ -285,7 +291,6 @@ class TestAuditing(unittest.TestCase):
         sess.flush()
 
     def test_unique(self):
-        Session = self.Session
         class SomeClass(Auditable, Base, ComparableEntity):
             __tablename__ = 'sometable'
 
@@ -302,15 +307,15 @@ class TestAuditing(unittest.TestCase):
         sc.data = 'sc1modified'
         sess.commit()
 
-        assert sc.version == 2
+        assert sc.revision == 2
 
         sc.data = 'sc1modified2'
         sess.commit()
 
-        assert sc.version == 3
+        assert sc.revision == 3
 
     def test_relationship(self):
-        Session = self.Session
+
         class SomeRelated(Base, ComparableEntity):
             __tablename__ = 'somerelated'
 
@@ -324,7 +329,7 @@ class TestAuditing(unittest.TestCase):
             related_id = Column(Integer, ForeignKey('somerelated.id'))
             related = relationship("SomeRelated")
 
-        SomeClassHistory = SomeClass.__history_mapper__.class_
+        SomeClassHistory = SomeClass.__audit_mapper__.class_
 
         self.create_tables()
         sess = Session()
@@ -332,27 +337,27 @@ class TestAuditing(unittest.TestCase):
         sess.add(sc)
         sess.commit()
 
-        assert sc.version == 1
+        assert sc.revision == 1
 
         sr1 = SomeRelated()
         sc.related = sr1
         sess.commit()
 
-        assert sc.version == 2
+        assert sc.revision == 2
 
         eq_(
-            sess.query(SomeClassHistory).filter(SomeClassHistory.version == 1).all(),
-            [SomeClassHistory(version=1, name='sc1', related_id=None)]
+            sess.query(SomeClassHistory).filter(SomeClassHistory.revision == 1).all(),
+            [SomeClassHistory(revision=1, name='sc1', related_id=None)]
         )
 
         sc.related = None
 
         eq_(
-            sess.query(SomeClassHistory).order_by(SomeClassHistory.version).all(),
+            sess.query(SomeClassHistory).order_by(SomeClassHistory.revision).all(),
             [
-                SomeClassHistory(version=1, name='sc1', related_id=None),
-                SomeClassHistory(version=2, name='sc1', related_id=sr1.id)
+                SomeClassHistory(revision=1, name='sc1', related_id=None),
+                SomeClassHistory(revision=2, name='sc1', related_id=sr1.id)
             ]
         )
 
-        assert sc.version == 3
+        assert sc.revision == 3

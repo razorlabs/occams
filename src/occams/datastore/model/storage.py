@@ -10,6 +10,7 @@ from sqlalchemy.orm import relationship as Relationship
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.orm.collections import collection
 from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.orm import backref
 from sqlalchemy.schema import Column
 from sqlalchemy.schema import ForeignKeyConstraint
 from sqlalchemy.schema import Index
@@ -32,6 +33,9 @@ from occams.datastore.model.metadata import Describeable
 from occams.datastore.model.metadata import Modifiable
 from occams.datastore.model.metadata import buildModifiableConstraints
 from occams.datastore.model.auditing import Auditable
+from occams.datastore.model.schema import Schema
+from occams.datastore.model.schema import Attribute
+from occams.datastore.model.schema import Choice
 
 
 ENTITY_STATE_NAMES = sorted([term.token for term in IEntity['state'].vocabulary])
@@ -89,11 +93,9 @@ class Context(Model, AutoNamed, Modifiable, Auditable):
 
     entity_id = Column(Integer, nullable=False, primary_key=True)
 
-    entity = Relationship('Entity')
-
     external_id = Column(Integer, nullable=False, primary_key=True)
 
-    external = Relationship('External')
+    external = Relationship(External)
 
     key = Column(Integer, nullable=False, primary_key=True)
 
@@ -120,7 +122,14 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
 
     schema_id = Column(Integer, nullable=False)
 
-    schema = Relationship('Schema')
+    schema = Relationship(Schema)
+
+    contexts = Relationship(
+        Context,
+        backref=backref(
+            name='entity',
+            )
+        )
 
     state = Column(
         Enum(*ENTITY_STATE_NAMES, name='entity_state'),
@@ -129,42 +138,6 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         )
 
     collect_date = Column(Date, nullable=False, default=defaultCollectDate)
-
-    _string_values = Relationship(
-        'ValueString',
-        cascade='all, delete-orphan',
-        back_populates='entity',
-        lazy='dynamic',
-        )
-
-    _integer_values = Relationship(
-        'ValueInteger',
-        cascade='all, delete-orphan',
-        back_populates='entity',
-        lazy='dynamic',
-        )
-
-    _datetime_values = Relationship(
-        'ValueDatetime',
-        cascade='all, delete-orphan',
-        back_populates='entity',
-        lazy='dynamic',
-        )
-
-    _decimal_values = Relationship(
-        'ValueDecimal',
-        cascade='all, delete-orphan',
-        back_populates='entity',
-        lazy='dynamic',
-        )
-
-    _object_values = Relationship(
-        'ValueObject',
-        cascade='all, delete-orphan',
-        back_populates='entity',
-        primaryjoin='Entity.id == ValueObject._value',
-        lazy='dynamic',
-        )
 
     @declared_attr
     def __table_args__(cls):
@@ -259,8 +232,13 @@ def TypeMappingClass(className, tableName, valueType):
         @declared_attr
         def entity(cls):
             return Relationship(
-                'Entity',
-                primaryjoin='%s.entity_id == Entity.id' % cls.__name__
+                Entity,
+                primaryjoin='%s.entity_id == Entity.id' % cls.__name__,
+                backref=backref(
+                    name='_%s_values' % cls.__tablename__,
+                    cascade='all, delete-orphan',
+                    lazy='dynamic',
+                    )
                 )
 
         @declared_attr
@@ -269,7 +247,7 @@ def TypeMappingClass(className, tableName, valueType):
 
         @declared_attr
         def attribute(cls):
-            return Relationship('Attribute')
+            return Relationship(Attribute)
 
         @declared_attr
         def choice_id(cls):
@@ -277,7 +255,7 @@ def TypeMappingClass(className, tableName, valueType):
 
         @declared_attr
         def choice(cls):
-            return Relationship('Choice')
+            return Relationship(Choice)
 
         @declared_attr
         def _value(cls):

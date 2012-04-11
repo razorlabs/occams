@@ -9,6 +9,7 @@ import re
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship as Relationship
 from sqlalchemy.orm import synonym as Synonym
+from sqlalchemy.orm import backref
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.schema import Table
 from sqlalchemy.schema import Column
@@ -157,15 +158,6 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
 
     is_inline = Column(Boolean, nullable=False, default=False)
 
-    attributes = Relationship(
-        'Attribute',
-        primaryjoin='Schema.id == Attribute.schema_id',
-        collection_class=attribute_mapped_collection('name'),
-        back_populates='schema',
-        order_by='Attribute.order',
-        cascade='all, delete, delete-orphan',
-        )
-
     @declared_attr
     def __table_args__(cls):
         return buildModifiableConstraints(cls) + (
@@ -229,18 +221,18 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
     schema_id = Column(Integer, nullable=False,)
 
     schema = Relationship(
-        'Schema',
-        back_populates='attributes',
+        Schema,
+        backref=backref(
+            name='attributes',
+            primaryjoin='Schema.id == Attribute.schema_id',
+            collection_class=attribute_mapped_collection('name'),
+            order_by='Attribute.order',
+            cascade='all, delete, delete-orphan',
+            ),
         primaryjoin=(schema_id == Schema.id),
         )
 
     type = Column(Enum(*ATTRIBUTE_TYPE_NAMES, name='attribute_type'), nullable=False)
-
-    choices = Relationship(
-        'Choice',
-        back_populates='attribute',
-        order_by='Choice.order',
-        )
 
     is_collection = Column(Boolean, nullable=False, default=False)
 
@@ -333,7 +325,13 @@ class Choice(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
     # TODO: when a value is assigned and no name is yet given, autopopulate one
     attribute_id = Column(Integer, nullable=False,)
 
-    attribute = Relationship('Attribute', back_populates='choices')
+    attribute = Relationship(
+        Attribute,
+        backref=backref(
+            name='choices',
+            order_by='Choice.order',
+            )
+        )
 
     def get_value(self):
         value = self._value

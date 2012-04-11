@@ -1,3 +1,14 @@
+"""
+Auditing components for mappings.
+Note that the majory of this code was copied from the SQLAlchemy examples on
+``versioning``/``history``. Our team decided to rename the mechanics to
+``auditing`` as we felt it was a better suited name and also avoids confusion
+with the schema deep-copying mechanics we already have (which our team
+refers to as ``versioning``)
+
+Credit to **zzzeek** et al.
+"""
+
 from sqlalchemy import Column
 from sqlalchemy import ForeignKeyConstraint
 from sqlalchemy import Integer
@@ -26,7 +37,6 @@ class Auditable(object):
             return mp
         return map
 
-
 def auditMapper(mapping):
     """
     Creates an identical mapping for auditing purposes
@@ -36,11 +46,9 @@ def auditMapper(mapping):
 
     # Set the 'active_history' flag only on column-mapped attributes so that
     # the old revision of the info is always loaded
-    # There's an issue with setting it to all attributes. For some reason,
-    # relationships with strings as joins causes issues where this mapper isn't
-    # able to locate the mapping (because it hasn't been created yet maybe?)
-    for column in mapping.columns:
-        column.active_history = True
+    for prop in mapping.iterate_properties:
+        getattr(mapping.class_, prop.key).impl.active_history = True
+
 
     super_mapper = mapping.inherits
     super_history_mapper = getattr(mapping.class_, '__audit_mapper__', None)
@@ -115,9 +123,9 @@ def auditMapper(mapping):
 
 def createRevision(instance, deleted=False):
     """
-    TODO: clear revision on deepcopy
+    Inspects the instance for changes and bumps it's previous row data to
+    the audit table.
     """
-    session = object_session(instance)
     obj_mapper = object_mapper(instance)
     audit_mapper = instance.__audit_mapper__
     audit_cls = audit_mapper.class_
@@ -126,7 +134,7 @@ def createRevision(instance, deleted=False):
 
     attr = {}
 
-    obj_changed = False
+    changed = False
 
     for om, hm in zip(obj_mapper.iterate_to_root(), audit_mapper.iterate_to_root()):
         if hm.single:
@@ -138,10 +146,10 @@ def createRevision(instance, deleted=False):
 
             obj_col = om.local_table.c[hist_col.key]
 
-            # get the value of the
-            # attribute based on the MapperProperty related to the
-            # mapped column.  this will allow usage of MapperProperties
-            # that have a different keyname than that of the mapped column.
+            # get the value of the attribute based on the MapperProperty
+            # related to the mapped column.  this will allow usage of
+            # MapperProperties that have a different keyname than that of the
+            # mapped column.
             try:
                 prop = obj_mapper.get_property_by_column(obj_col)
             except UnmappedColumnError:
@@ -156,32 +164,30 @@ def createRevision(instance, deleted=False):
             if prop.key not in obj_state.dict:
                 getattr(instance, prop.key)
 
-            a, u, d = attributes.get_history(instance, prop.key)
+            # (added, unchanged, deleted)
+            (a, u, d) = attributes.get_history(instance, prop.key)
 
             if d:
                 attr[hist_col.key] = d[0]
-                obj_changed = True
+                changed = True
             elif u:
                 attr[hist_col.key] = u[0]
             else:
                 # if the attribute had no value.
                 attr[hist_col.key] = a[0]
-                obj_changed = True
+                changed = True
 
-    if not obj_changed:
-        # not changed, but we have relationships.  OK
-        # check those too
+    if not changed:
+        # not changed, but we have relationships.  OK check those too
         for prop in obj_mapper.iterate_properties:
             if isinstance(prop, RelationshipProperty) and \
                 attributes.get_history(instance, prop.key).has_changes():
-                obj_changed = True
+                changed = True
                 break
 
-    if obj_changed or deleted:
+    if changed or deleted:
+        session = object_session(instance)
         attr['revision'] = instance.revision
-        hist = audit_cls()
-        for key, value in attr.iteritems():
-            setattr(hist, key, value)
-        session.add(hist)
+        session.add(audit_cls(**attr))
         instance.revision += 1
 
