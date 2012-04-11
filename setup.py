@@ -36,7 +36,6 @@ setup(
     install_requires=[
         'setuptools',
         'occams.datastore',
-        'collective.beaker',
         'collective.z3cform.datagridfield',
         'plone.app.dexterity',
         'plone.app.z3cform',

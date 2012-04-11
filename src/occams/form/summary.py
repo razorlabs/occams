@@ -70,18 +70,29 @@ class FormSummaryGenerator(object):
                 .group_by(model.Schema.id)
                 ).subquery('fieldcount')
 
-        EditVersion = (
+        # EditVersion = (
+        #     session.query(
+        #         model.Schema.id.label('schema_id'),
+        #         SubSchema.id.label('draft_id'),
+        #         )
+        #         .select_from(model.Schema)
+        #         .join(SubSchema, model.Schema.name == SubSchema.name)
+        #         .join(model.User, SubSchema.create_user_id == model.User.id)
+        #         .filter(SubSchema.state == 'draft')
+        #         .filter(model.User.key == current_user)
+        #         .order_by(SubSchema.create_date.desc())
+        #     ).subquery('editversion')
+
+        MaxDate = (
             session.query(
-                model.Schema.id.label('schema_id'),
-                SubSchema.id.label('draft_id'),
+                model.Schema.name.label('name'),
+                func.max(model.Schema.publish_date).label('publish_date')
                 )
-                .select_from(model.Schema)
-                .join(SubSchema, model.Schema.name == SubSchema.name)
-                .join(model.User, SubSchema.create_user_id == model.User.id)
-                .filter(SubSchema.state == 'draft')
-                .filter(model.User.key == current_user)
-                .order_by(SubSchema.create_date.desc())
-            ).subquery('editversion')
+                .filter(model.Schema.is_inline == False)
+                .filter(model.Schema.state == 'published')
+                .filter(model.Schema.publish_date != None)
+                .group_by(model.Schema.name)
+            ).subquery('maxversion')
 
         query = (
             session.query(model.Schema.id.label('id'),
@@ -90,15 +101,20 @@ class FormSummaryGenerator(object):
                                  FieldCount.c.field_count.label('field_count'),
                                  model.Schema.revision.label('revision'),
                                  model.Schema.state.label('state'),
+                                 model.User.key.label('create_user'),
                                  model.Schema.create_date.label('create_date'),
                                  model.Schema.publish_date.label('publish_date'),
-                                 EditVersion.c.draft_id.label('draft_id')
+                                 (model.Schema.publish_date == MaxDate.c.publish_date).label('is_current'),
+                                 # EditVersion.c.draft_id.label('draft_id'),
+                                 ((model.Schema.state.in_(['draft', 'review'])) & (model.User.key == current_user)).label('is_editable')
                                  )
             .join(FieldCount, model.Schema.id == FieldCount.c.schema_id)
-            .outerjoin(EditVersion, model.Schema.id == EditVersion.c.schema_id)
+            .join(model.User, model.Schema.create_user_id == model.User.id)
+            .outerjoin(MaxDate, model.Schema.name == MaxDate.c.name)
+            # .outerjoin(EditVersion, model.Schema.id == EditVersion.c.schema_id)
             .filter(model.Schema.is_inline == False)
-            .filter(model.Schema.state == 'published')
-            .order_by(model.Schema.title.asc(), model.Schema.publish_date.desc())
+            .filter(model.Schema.state != 'retracted')
+            .order_by(model.Schema.title.asc(), model.Schema.publish_date.desc().nullslast())
             )
 
         items = [DataStoreSchemaSummary.fromSql(r) for r in query.all()]

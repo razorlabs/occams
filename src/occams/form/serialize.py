@@ -17,7 +17,6 @@ import zope.schema
 from zope.schema.vocabulary import SimpleVocabulary
 from zope.schema.vocabulary import SimpleTerm
 from occams.datastore.interfaces import typesVocabulary
-from sqlalchemy.orm.session import Session as sqlalchemysession
 
 # Copied from Python documentation
 reservedWords = """
@@ -129,27 +128,6 @@ def symbolize(value):
     return value
 
 
-def moveField(form, field, after=None):
-    subSession = sqlalchemysession.object_session(form).begin(subtransactions=True)
-    if after is None:
-        field.order = 100
-    else:
-        field.order = form[after].order + 101
-    # Move everything that follows
-    for formfield in sorted(form.values(), key=lambda i: i.order):
-        formfield.order += 100
-        if formfield != field and formfield.order >= field.order:
-            formfield.order += 101
-
-    subSession.commit()
-    order = 0
-    ## ok, we need to reorder everything
-    for formfield in sorted(form.values(), key=lambda i: i.order):
-        formfield.order = order
-        order +=1
-    return form
-
-
 def cleanupChoices(data):
     # This is also similar to what is done in the edit form's apply
     # Do some extra work with choices on fields we didn't ask for.
@@ -163,39 +141,6 @@ def cleanupChoices(data):
         choice['name'] = tokenize(choice['value'])
         choice['order'] = order
 
-def findChoice(value, itemlist):
-    for i, item in enumerate(itemlist):
-        if item['value'] == value:
-            return itemlist.pop(i)
-    return None
-
-from occams.datastore import model
-
-def applyChoiceChanges(field, choiceData):
-    # Need a helper to add choice changes
-    subSession = sqlalchemysession.object_session(field).begin(subtransactions=True)
-    for choice in field.choices:
-        choice.order = choice.order+100
-    subSession.commit()
-    Session = sqlalchemysession.object_session(field)
-    for i, choice in enumerate(field.choices):
-        newValue = findChoice(choice.value, choiceData)
-        if newValue is not None:
-            for key, value in newValue.items():
-                setattr(choice, key, value)
-        else:
-            Session.delete(choice)
-            field.choices.remove(choice)
-
-    for new_choice in choiceData:
-        newChoice = model.Choice(
-            name = str(new_choice['name']),
-            title = unicode(new_choice['title']),
-            order = new_choice['order'],
-            value = unicode(new_choice['value'])
-            )
-        field.choices.append(newChoice)
-    return field
 
 
 def fieldFactory(fieldData):

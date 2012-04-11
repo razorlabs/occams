@@ -18,7 +18,9 @@ import z3c.form.group
 from z3c.form.interfaces import HIDDEN_MODE
 from  z3c.form.browser.text import TextFieldWidget
 import z3c.form.validator
-
+from sqlalchemy.orm.session import Session as sqlalchemysession
+from z3c.saconfig import named_scoped_session
+import datetime
 from occams.form import MessageFactory as _
 from occams.form.form import StandardWidgetsMixin
 from occams.form.form import Form
@@ -35,14 +37,61 @@ from occams.form.traversal import closest
 from occams.form.serialize import listFieldsets
 from occams.form.serialize import fieldFactory
 from occams.form.serialize import cleanupChoices
-from occams.form.serialize import moveField
 from occams.form.serialize import reservedWords
 from occams.form.serialize import camelize
 from occams.form.serialize import symbolize
-from occams.form.serialize import applyChoiceChanges
 
-from z3c.saconfig import named_scoped_session
 
+
+# Helper Methods
+def applyChoiceChanges(field, choiceData):
+    # Need a helper to add choice changes
+    if field.choices:
+        def findChoice(value, itemlist):
+            for i, item in enumerate(itemlist):
+                if item['value'] == value:
+                    return itemlist.pop(i)
+            return None
+
+        subSession = sqlalchemysession.object_session(field)
+        for choice in field.choices:
+            choice.order = choice.order+100
+        subSession.flush()
+
+        for choice in field.choices:
+            newValue = findChoice(choice.value, choiceData)
+            if newValue is not None:
+                for key, value in newValue.items():
+                    setattr(choice, key, value)
+            else:
+                field.choices.remove(choice)
+
+    for new_choice in choiceData:
+        newChoice = model.Choice(
+            name = str(new_choice['name']),
+            title = unicode(new_choice['title']),
+            order = new_choice['order'],
+            value = unicode(new_choice['value'])
+            )
+        field.choices.append(newChoice)
+    return field
+
+def moveField(form, field, after=None):
+    subSession = sqlalchemysession.object_session(form)
+    if after is None:
+        field.order = 100
+    else:
+        field.order = form[after].order + 101
+    # Move everything that follows
+    for formfield in sorted(form.values(), key=lambda i: i.order):
+        formfield.order += 100
+        if formfield != field and formfield.order >= field.order:
+            formfield.order += 1
+    subSession.flush()
+    ## ok, we need to reorder everything
+    for order, formfield in enumerate(sorted(form.values(), key=lambda i: i.order)):
+        formfield.order = order
+    return form
 
 class DisabledMixin(object):
     """
@@ -69,7 +118,8 @@ class FormPreviewForm(DisabledMixin, Form):
 
     @z3c.form.button.buttonAndHandler(_(u'<< Back to Listing'), name='cancel')
     def handleCancel(self, action):
-        self.request.response.redirect(self.context.getParentNode().absolute_url())
+        repository = closest(self.context, IRepository)
+        self.request.response.redirect(repository.absolute_url())
 
     @z3c.form.button.buttonAndHandler(_(u'Edit This Form'), name='edit')
     def handleEdit(self, action):
@@ -114,10 +164,16 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
         # Continue the z3c form process
         super(FormEditForm, self).update()
 
-    @z3c.form.button.buttonAndHandler(_('Discard Draft'), name='cancel')
+
+    @z3c.form.button.buttonAndHandler(_(u'<< Back to Listing'), name='cancel')
     def handleCancel(self, action):
+        repository = closest(self.context, IRepository)
+        self.request.response.redirect(repository.absolute_url())
+
+    @z3c.form.button.buttonAndHandler(_(u'Discard Draft'), name='discard')
+    def handleDiscard(self, action):
         """
-        Cancels form changes.
+        Discard form changes.
         """
         Session = named_scoped_session(self.context.session)
         Session.delete(self.context.item)
@@ -127,7 +183,25 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
         self.request.response.redirect(repository.absolute_url())
         IStatusMessage(self.request).add(self.cancelMessage)
 
-    @z3c.form.button.buttonAndHandler(_(u'Publish Draft'), name='submit')
+    @z3c.form.button.buttonAndHandler(_(u'Submit Draft for Review'), name='submit')
+    def handleSubmit(self, action):
+        """
+        Save the form changes
+        """
+        data, errors = self.extractData()
+        if errors:
+            self.status = self.formErrorsMessage
+        else:
+            Session = named_scoped_session(self.context.session)
+            self.context.item.title = unicode(data['title'])
+            self.context.item.description = unicode(data['description'])
+            self.context.item.state = 'review'
+            Session.flush()
+            repository = closest(self.context, IRepository)
+            self.request.response.redirect(repository.absolute_url())
+            IStatusMessage(self.request).add(self.successMessage)
+
+    @z3c.form.button.buttonAndHandler(_(u'Publish Draft'), name='publish')
     def handleComplete(self, action):
         """
         Save the form changes
@@ -136,8 +210,17 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
         if errors:
             self.status = self.formErrorsMessage
         else:
-            self.applyChanges(data)
-            self.request.response.redirect(self.context.absolute_url())
+            Session = named_scoped_session(self.context.session)
+            self.context.item.title = unicode(data['title'])
+            self.context.item.description = unicode(data['description'])
+            self.context.item.state = 'published'
+            if data['publish_date']:
+                self.context.item.publish_date = datetime.date(data['publish_date'])
+            else:
+                self.context.item.publish_date = datetime.date.today()
+            Session.flush()
+            repository = closest(self.context, IRepository)
+            self.request.response.redirect(repository.absolute_url())
             IStatusMessage(self.request).add(self.successMessage)
 
 
@@ -700,3 +783,5 @@ z3c.form.validator.WidgetValidatorDiscriminators(
     view=FieldFormInputHelper,
     widget=DataGridField
     )
+
+

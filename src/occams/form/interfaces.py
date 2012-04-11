@@ -83,6 +83,12 @@ class IEditableForm(IOccamsFormComponent):
         required=False,
         )
 
+    publish_date = zope.schema.Date(
+        title=_(u'Publish Date'),
+        description=_(u'The publication date of the form. Only applies when publishing. Leave blank to publish today.'),
+        required=False,
+        )
+
 
 class IEditableField(IOccamsFormComponent):
     """
@@ -273,16 +279,9 @@ class IFormSummary(IOccamsFormComponent):
         readonly=True,
         )
 
-    field_count = zope.schema.Int(
-        title=_(u'Fields'),
-        description=_(
-            u'Number of fields in the form, not including subform fields.'
-            ),
-        readonly=True,
-        )
-    revision = zope.schema.Int(
-        title=_(u'Form Revision'),
-        description=_(u'The revision of this form'),
+    publish_date = zope.schema.Date(
+        title=_(u'Publish Date'),
+        description=_(u'The date the form was published'),
         readonly=True,
         )
 
@@ -292,11 +291,19 @@ class IFormSummary(IOccamsFormComponent):
         readonly=True,
         )
 
-    # create_user = zope.schema.TextLine(
-    #     title=_(u'Created By'),
-    #     description=_(u'Person who created the form'),
-    #     readonly=True,
-    #     )
+    field_count = zope.schema.Int(
+        title=_(u'Fields'),
+        description=_(
+            u'Number of fields in the form, not including subform fields.'
+            ),
+        readonly=True,
+        )
+
+    create_user = zope.schema.TextLine(
+        title=_(u'Created By'),
+        description=_(u'Person who created the form'),
+        readonly=True,
+        )
 
     create_date = zope.schema.Date(
         title=_(u'Create Date'),
@@ -304,17 +311,18 @@ class IFormSummary(IOccamsFormComponent):
         readonly=True,
         )
 
-    publish_date = zope.schema.Date(
-        title=_(u'Publish Date'),
-        description=_(u'The date the form was published'),
+    is_current = zope.schema.Bool(
+        title=_(u'Current'),
+        description=_(u'This entry the latest version'),
         readonly=True,
         )
 
-    draft_id = zope.schema.Int(
-        title=_(u'Draft id'),
-        description=_(u'The id of the current users draft'),
+    is_editable = zope.schema.Bool(
+        title=_(u'Editable'),
+        description=_(u'This entry editable by the current user'),
         readonly=True,
         )
+
 
 class IDataBaseItemContext(IOccamsFormComponent):
     """

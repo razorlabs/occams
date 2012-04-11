@@ -10,11 +10,13 @@ from z3c.saconfig import named_scoped_session
 from occams.form import MessageFactory as _
 from occams.form.interfaces import IFormSummary
 from occams.form.interfaces import IFormSummaryGenerator
+from occams.form.interfaces import IEditableForm
 from occams.datastore import model
 from z3c.form import button
 from occams.datastore.schema import copy
 
 from occams.form.form import UserAwareMixin
+from occams.form.serialize import camelize
 
 additionalControls = [('view', _(u'View')), ('edit', _(u'Edit')), ]
 links = dict(view='@@view', edit='@@edit',)
@@ -30,8 +32,14 @@ class ListingEditSubForm(crud.EditSubForm):
 
     def updateWidgets(self):
         super(ListingEditSubForm, self).updateWidgets()
+        stateWidget = 'view_state' in self.widgets and self.widgets['view_state'] or None
+        if stateWidget:
+            stateWidget.addClass(str(stateWidget.value))
+        if self.content.is_current:
+            for widget in self.widgets.values():
+                widget.addClass('current')
         for name, title in additionalControls:
-            if name != 'edit' or self.content.draft_id:
+            if name != 'edit' or (self.content.is_editable):
                 self.widgets['view_' + name].value = title
             else:
                 self.widgets['view_' + name].value = ''
@@ -52,19 +60,32 @@ class ListingEditForm(crud.EditForm):
         if selected:
             Session = named_scoped_session(session_name)
             for obj_id, obj in selected:
-                if obj.draft_id:
-                    continue
                 old_schema = Session.query(model.Schema).filter(model.Schema.id == obj_id).one()
                 new_schema = copy(old_schema)
                 Session.add(new_schema)
             Session.flush()
         return self.request.response.redirect(self.action)
 
+    @button.buttonAndHandler(_('Retract'), name='retract')
+    def handleRetract(self, action):
+        selected = self.selected_items()
+        session_name = self.context.context.session
+        if selected:
+            Session = named_scoped_session(session_name)
+            for obj_id, obj in selected:
+                schema = Session.query(model.Schema).filter(model.Schema.id == obj_id).one()
+                if not schema.publish_date:
+                    Session.delete(schema)
+                else:
+                    schema.state='retracted'
+            Session.flush()
+        return self.request.response.redirect(self.action)
 
-    @button.buttonAndHandler(_('Delete'), name='delete')
-    def handleDelete(self, action):
-        raise Exception('NO!')
-        
+class AddForm(crud.AddForm):
+    """
+    """
+    label = _(u"Add a new form")
+
 class SummaryListingForm(crud.CrudForm, UserAwareMixin):
     """
     Lists the forms in the repository.
@@ -72,10 +93,12 @@ class SummaryListingForm(crud.CrudForm, UserAwareMixin):
     See ``configure.zcml`` for directive configuration.
     """
 
-    addform_factory = crud.NullForm
+    addform_factory = AddForm
     editform_factory = ListingEditForm
 
     _items = None
+
+    add_schema = z3c.form.field.Fields(IEditableForm).omit('name', 'publish_date')
 
     @property
     def label(self):
@@ -85,16 +108,27 @@ class SummaryListingForm(crud.CrudForm, UserAwareMixin):
     def description(self):
         return self.context.description
 
+    def add(self, data):
+        Session = named_scoped_session(self.context.session)
+
+        newSchema = model.Schema(
+                name = camelize(data['title']),
+                title = unicode(data['title']),
+                description = unicode(data['description']),
+                state = 'draft'
+                )
+        Session.add(newSchema)
+        Session.flush()
+        return newSchema
+
     def update(self):
         # Don't use changes count, apparently it's too confusing for users
-        view_schema = z3c.form.field.Fields(IFormSummary).omit('id', 'name', 'draft_id')
+        view_schema = z3c.form.field.Fields(IFormSummary).omit('id', 'name', 'is_editable')
 
         # Add controls
         for name, title in additionalControls:
             field = zope.schema.TextLine(__name__=name, title=u'')
-
             view_schema += z3c.form.field.Fields(field)
-
         self.view_schema = view_schema
         super(SummaryListingForm, self).update()
 
@@ -114,11 +148,13 @@ class SummaryListingForm(crud.CrudForm, UserAwareMixin):
         """
         Renders a link to the form view
         """
-        if field == 'view':
+        if field == 'view' and item.publish_date:
         # if field in links:
             return os.path.join(self.context.absolute_url(), item.name+'-'+item.publish_date.isoformat(), links[field])
-        elif field == 'edit' and item.draft_id is not None:
-            return os.path.join(self.context.absolute_url(), str(item.draft_id), links[field])
+        elif field == 'view':
+            return os.path.join(self.context.absolute_url(), str(item.id), links[field])
+        elif field == 'edit' and item.is_editable:
+            return os.path.join(self.context.absolute_url(), str(item.id), links[field])
       
 
 
