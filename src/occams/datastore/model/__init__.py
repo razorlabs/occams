@@ -29,7 +29,6 @@ from occams.datastore.model.session import DataStoreSession
 __all__ = (
     'Model',
     'User',
-    'NOW',
     'Auditable',
     'Schema',
     'Category',

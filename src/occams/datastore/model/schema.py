@@ -240,6 +240,7 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
         'Choice',
         back_populates='attribute',
         order_by='Choice.order',
+        cascade="all, delete, delete-orphan"
         )
 
     is_collection = Column(Boolean, nullable=False, default=False)
