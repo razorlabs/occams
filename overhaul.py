@@ -3,6 +3,13 @@
 
 #########1#########2#########3#########4#########5#########6#########7#####
 
+Design Assumptions:
+    1. Reflect avrc_demo_data w/ sqlsoup (readonly to ensure no changes).
+    2. No modifications to support tables (specimen, subject, etc) will be necessary.
+    3. Remove dates will respect chronology (ie data processed in order leaves 
+        final row with NULL remove date, and the rest "clean").
+    4. The process will run in one go, within a single night or weekend.
+
 Precondition Assumptions:
     1. There are two databases per run (eg avrc_demo_data and avrc_data)
     2. The avrc_data will start as a straight up copy of avrc_demo_data.
@@ -10,29 +17,43 @@ Precondition Assumptions:
         integer, object, decimal, string, schema, attribute, and choice.
     4. During the upgrade process, the website will be turned off.
     5. The source schema table is unique on (schema.name,DATE(create_date))
-    6. We have run the choice-fixing-sql to adjust a few create dates
+    6. We have run some SQL against gibbon that fixed some oddities in the source
 
 -- choice fixing sql!!
-
 -- run this to vierfy that gibbon has the same IDs as were problematic on gibbon-test-db
 SELECT sc.name, sc.create_date, a.name, a.id, a.create_date
   FROM schema sc
     JOIN attribute a ON a.schema_id = sc.id
   WHERE sc.name IN ('FollowupHistoryNeedleSharingPartners','IEarlyTestMSMPartners')
-
+;
 -- run this to fix:
 UPDATE attribute
   SET "create_date" = sc.create_date
   FROM schema sc
   WHERE sc.id = attribute.schema_id
     AND attribute.id IN (271,272,274,308,309,310,311,273)
+;
 
-
-Design Assumptions:
-    1. Reflect avrc_demo_data w/ sqlsoup (readonly to ensure no changes).
-    2. No modifications to support tables (specimen, subject, etc) will be necessary.
-    3. Remove dates will respect chronology (ie data processed in order leaves final row with NULL remove date, and the rest "clean").
-    4. The process will run in one go, within a single night or weekend.
+-- Verify that two RapidTests are confused because of a create_date
+-- on the *morning* before the RapidTest was versioned later that day
+SELECT *
+  FROM entity e
+  WHERE DATE(e.create_date) = '2012-03-01'
+    AND e.create_date < '2012-03-01 13:13:45.198454'
+    AND e.schema_id IN (19,75)
+;
+-- Make the updated RapidTest always point to the new schema, an hour after it was created
+UPDATE entity
+  SET create_date = '2012-03-01 14:14:00.600112', schema_id = 75
+  WHERE name IN ('RapidTest-148743')
+    AND create_date = '2012-03-01 08:14:00.600112'
+;
+-- Make the RapidTest created that morning think it was created before the confusion started
+UPDATE entity
+  SET create_date = '2012-02-29 07:15:31.972552'
+  WHERE name = 'RapidTest-148740'
+    AND create_date = '2012-03-01 07:15:31.972552'
+;
 
 """
 from sqlalchemy.ext.sqlsoup import SqlSoup
@@ -66,7 +87,7 @@ def main():
     usage = """overhaul.py OLDCONNECT NEWCONNECT"""
     configureGlobalSession(sys.argv[1], sys.argv[2])
     addUser("bitcore@ucsd.edu")
-    entityLimit = 250
+    entityLimit = 7000
     print "Moving in all schemas and %s entities" % entityLimit
     moveInAllSchemas()
     moveInAttributesAndChoices()
@@ -266,12 +287,7 @@ def getSchemaAndAttrForEntity(p_schema_name,p_attr_name,entity_date):
         Session.query(sch2)
         .filter(sch2.id == p_out_attr.object_schema_id)
         )
-    import sqlalchemy.orm.exc
-    try:
-        c_out_schema = qry.one()
-    except sqlalchemy.orm.exc.NoResultFound as err:
-        import pdb; pdb.set_trace()
-        print "foo"
+    c_out_schema = qry.one()
     return c_out_schema,p_out_attr
 
 def getSchemaForEntity(schema_name,entity_date):
