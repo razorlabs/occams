@@ -24,7 +24,7 @@ class UserManager(object):
 
     def keys(self):
         query = self.session.query(model.User).order_by('key')
-        return [i.name for i in iter(query)]
+        return [i.key for i in iter(query)]
 
     keys.__doc__ = IUserManager['keys'].__doc__
 

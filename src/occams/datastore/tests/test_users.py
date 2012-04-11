@@ -4,6 +4,7 @@ import unittest2 as unittest
 import sqlalchemy.exc
 from occams.datastore import model
 from occams.datastore.testing import DATASTORE_LAYER
+from occams.datastore.users import UserManager
 
 
 class UserModelTestCase(unittest.TestCase):
@@ -53,7 +54,14 @@ class UserManagerTestCase(unittest.TestCase):
     layer = DATASTORE_LAYER
 
     def testKeys(self):
-        pass
+        session = self.layer['session']
+        manager = UserManager(session)
+
+        self.assertNotIn('foo@foo.com', manager.keys())
+
+        session.add(model.User(key='foo@foo.com'))
+        session.flush()
+        self.assertIn('foo@foo.com', manager.keys())
 
     def testHas(self):
         pass

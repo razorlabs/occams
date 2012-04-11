@@ -17,11 +17,6 @@ from occams.datastore.model.auditing import Auditable, createRevision
 from _lib import ComparableEntity, eq_
 
 
-engine = None
-Base = None
-Session = None
-
-
 def auditing_session(session):
     @event.listens_for(session, 'before_flush')
     def before_flush(session, flush_context, instances):
@@ -35,27 +30,23 @@ def auditing_session(session):
 class AuditableTestCase(unittest.TestCase):
 
     def setUp(self):
-        global Base, Session
-        Base = declarative_base(bind=create_engine('sqlite://', echo=True))
-        Session = sessionmaker()
-        auditing_session(Session)
+        self.Base = declarative_base(bind=create_engine('sqlite://'))
+        self.Session = sessionmaker()
+        auditing_session(self.Session)
 
     def tearDown(self):
         clear_mappers()
-        Base.metadata.drop_all()
-
-    def create_tables(self):
-        Base.metadata.create_all()
+        self.Base.metadata.drop_all()
 
     def test_plain(self):
-        class SomeClass(Auditable, Base, ComparableEntity):
+        class SomeClass(Auditable, self.Base, ComparableEntity):
             __tablename__ = 'sometable'
 
             id = Column(Integer, primary_key=True)
             name = Column(String(50))
 
-        self.create_tables()
-        sess = Session()
+        self.Base.metadata.create_all()
+        sess = self.Session()
         sc = SomeClass(name='sc1')
         sess.add(sc)
         sess.commit()
@@ -63,7 +54,7 @@ class AuditableTestCase(unittest.TestCase):
         sc.name = 'sc1modified'
         sess.commit()
 
-        self.assertEqual(2, sc.revision)
+        assert sc.revision == 2
 
         SomeClassHistory = SomeClass.__audit_mapper__.class_
 
@@ -112,14 +103,14 @@ class AuditableTestCase(unittest.TestCase):
         )
 
     def test_from_null(self):
-        class SomeClass(Auditable, Base, ComparableEntity):
+        class SomeClass(Auditable, self.Base, ComparableEntity):
             __tablename__ = 'sometable'
 
             id = Column(Integer, primary_key=True)
             name = Column(String(50))
 
-        self.create_tables()
-        sess = Session()
+        self.Base.metadata.create_all()
+        sess = self.Session()
         sc = SomeClass()
         sess.add(sc)
         sess.commit()
@@ -132,15 +123,15 @@ class AuditableTestCase(unittest.TestCase):
     def test_deferred(self):
         """test versioning of unloaded, deferred columns."""
 
-        class SomeClass(Auditable, Base, ComparableEntity):
+        class SomeClass(Auditable, self.Base, ComparableEntity):
             __tablename__ = 'sometable'
 
             id = Column(Integer, primary_key=True)
             name = Column(String(50))
             data = deferred(Column(String(25)))
 
-        self.create_tables()
-        sess = Session()
+        self.Base.metadata.create_all()
+        sess = self.Session()
         sc = SomeClass(name='sc1', data='somedata')
         sess.add(sc)
         sess.commit()
@@ -163,7 +154,7 @@ class AuditableTestCase(unittest.TestCase):
 
 
     def test_joined_inheritance(self):
-        class BaseClass(Auditable, Base, ComparableEntity):
+        class BaseClass(Auditable, self.Base, ComparableEntity):
             __tablename__ = 'basetable'
 
             id = Column(Integer, primary_key=True)
@@ -189,8 +180,8 @@ class AuditableTestCase(unittest.TestCase):
 
             __mapper_args__ = {'polymorphic_identity':'same'}
 
-        self.create_tables()
-        sess = Session()
+        self.Base.metadata.create_all()
+        sess = self.Session()
 
         sep1 = SubClassSeparatePk(name='sep1', subdata1='sep1subdata')
         base1 = BaseClass(name='base1')
@@ -240,7 +231,7 @@ class AuditableTestCase(unittest.TestCase):
         )
 
     def test_single_inheritance(self):
-        class BaseClass(Auditable, Base, ComparableEntity):
+        class BaseClass(Auditable, self.Base, ComparableEntity):
             __tablename__ = 'basetable'
 
             id = Column(Integer, primary_key=True)
@@ -253,8 +244,8 @@ class AuditableTestCase(unittest.TestCase):
             subname = Column(String(50), unique=True)
             __mapper_args__ = {'polymorphic_identity':'sub'}
 
-        self.create_tables()
-        sess = Session()
+        self.Base.metadata.create_all()
+        sess = self.Session()
 
         b1 = BaseClass(name='b1')
         sc = SubClass(name='s1', subname='sc1')
@@ -291,15 +282,15 @@ class AuditableTestCase(unittest.TestCase):
         sess.flush()
 
     def test_unique(self):
-        class SomeClass(Auditable, Base, ComparableEntity):
+        class SomeClass(Auditable, self.Base, ComparableEntity):
             __tablename__ = 'sometable'
 
             id = Column(Integer, primary_key=True)
             name = Column(String(50), unique=True)
             data = Column(String(50))
 
-        self.create_tables()
-        sess = Session()
+        self.Base.metadata.create_all()
+        sess = self.Session()
         sc = SomeClass(name='sc1', data='sc1')
         sess.add(sc)
         sess.commit()
@@ -316,12 +307,12 @@ class AuditableTestCase(unittest.TestCase):
 
     def test_relationship(self):
 
-        class SomeRelated(Base, ComparableEntity):
+        class SomeRelated(self.Base, ComparableEntity):
             __tablename__ = 'somerelated'
 
             id = Column(Integer, primary_key=True)
 
-        class SomeClass(Auditable, Base, ComparableEntity):
+        class SomeClass(Auditable, self.Base, ComparableEntity):
             __tablename__ = 'sometable'
 
             id = Column(Integer, primary_key=True)
@@ -331,8 +322,8 @@ class AuditableTestCase(unittest.TestCase):
 
         SomeClassHistory = SomeClass.__audit_mapper__.class_
 
-        self.create_tables()
-        sess = Session()
+        self.Base.metadata.create_all()
+        sess = self.Session()
         sc = SomeClass(name='sc1')
         sess.add(sc)
         sess.commit()
