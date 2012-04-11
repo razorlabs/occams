@@ -577,17 +577,22 @@ class SchemaManagerTestCase(unittest.TestCase):
         session = self.layer['session']
         manager = SchemaManager(session)
 
-        schema = model.Schema(name='Foo', title=u'', state='published')
-
-        id = manager.put('Bar', schema)
-        self.assertEqual(id, schema.id)
-
-        schema.description = u'Hello world!'
-        id = manager.put('Bar', schema)
-        self.assertEqual(id, schema.id)
-
+        # Can't determine name
         with self.assertRaises(ValueError):
-            id = manager.put(None, model.Entity(schema=schema, name=None, title=u''))
+            id = manager.put(None, model.Schema(name=None, title=u''))
+
+        schema = model.Schema(name=None, title=u'', state='published')
+
+        # Uses the key
+        id = manager.put('Foo', schema)
+        self.assertEqual(id, schema.id)
+        self.assertEqual('Foo', schema.name)
+
+        # Ignores the key when given a name
+        schema = model.Schema(name='Bar', title=u'', state='published')
+        id = manager.put('Ignored', schema)
+        self.assertEqual(id, schema.id)
+        self.assertEqual('Bar', schema.name)
 
 
 class AttributeToFieldTestCase(unittest.TestCase):
