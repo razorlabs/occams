@@ -77,6 +77,12 @@ class XmlError(DataStoreError):
     """
 
 
+class NonExistentUser(DataStoreError):
+    """
+    Raised when flushing data with an non-existent user.
+    """
+
+
 class IDataStoreComponent(zope.interface.Interface):
     """
     Marker interface for components of this package.

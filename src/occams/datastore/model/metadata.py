@@ -8,6 +8,7 @@ from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.declarative import has_inherited_table
 from sqlalchemy.types import Integer
 from sqlalchemy import text
+from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import relationship as Relationship
 from sqlalchemy.orm import object_session
 from sqlalchemy.schema import CheckConstraint
@@ -19,6 +20,8 @@ from zope.interface import implements
 
 from occams.datastore.model import Model
 from occams.datastore.interfaces import IUser
+from occams.datastore.interfaces import NonExistentUser
+
 
 NOW = text('CURRENT_TIMESTAMP')
 
@@ -27,10 +30,11 @@ def updateMetadata(instance, created):
     session = object_session(instance)
 
     key = session.userCallback()
-    user = session.query(User).filter_by(key=key).one()
 
-    if user is None:
-        raise ValueError('Cannot find user \'%s\'' % key)
+    try:
+        user = session.query(User).filter_by(key=key).one()
+    except NoResultFound:
+        raise NonExistentUser(key)
 
     if created:
         instance.create_user = user
@@ -131,7 +135,7 @@ class Modifiable(object):
 
     @declared_attr
     def create_user(cls):
-        return Relationship('User',
+        return Relationship(User,
             primaryjoin='%s.create_user_id == User.id' % cls.__name__)
 
     @declared_attr
@@ -144,5 +148,5 @@ class Modifiable(object):
 
     @declared_attr
     def modify_user(cls):
-        return Relationship('User',
+        return Relationship(User,
             primaryjoin='%s.modify_user_id == User.id' % cls.__name__)
