@@ -92,14 +92,10 @@ def main():
     moveInAllSchemas()
     moveInAttributesAndChoices()
     moveInEntities(limit=entityLimit)
-    #moveInValues() # as part of the entities?
     #moveInExternalContext() # don't forget this!!
     Session.commit()
     if isWorking():
         print "Yay!"
-
-def moveInValues():
-    pass
 
 def moveInEntities(limit=None):
     """This function will probably work in stages to move entities.
@@ -123,6 +119,10 @@ def moveInEntities(limit=None):
                 newSchema = getSchemaForEntity(schema_name,the_create_date)
             # Set up *this revision* for this parent
             newParentEntity = createEntity(sourceEntity,newParentEntity,newSchema)
+            Session.add(newParentEntity)
+            Session.flush()
+            newParentEntity = updateValues(newParentEntity,sourceEntity)
+            Session.flush()
 
             ## This section is commented out until Marco's datastore code to
             ## handle child attachment works...
@@ -135,9 +135,44 @@ def moveInEntities(limit=None):
             #        oldChildEntity, 
             #        getattr(newParentEntity,oldParentAttrName,None),
             #        newChildSchema)
+            #    newParentEntity[oldParentAttrName] = updateValues(
+            #        newParentEntity[oldParentAttrName],
+            #        oldChildEntity)
 
-            Session.add(newParentEntity)
-            Session.flush()
+
+def updateValues(partialNewEntity,oldEntity):
+    """Return the same partialNewEntity, except augmented with old values."""
+    for attribute in partialNewEntity.schema.values():
+        if attribute.type == 'object' or attribute.is_collection: 
+            # is_collection restriction is only here so we can test: non-collections first
+            continue
+        value = getOldValue(attribute, oldEntity)
+        partialNewEntity[attribute.name] = value
+    return partialNewEntity
+
+def getOldValue(attribute, oldEntity):
+    """Uses knowledge of attribute to return one of the entities old values."""
+    type_to_table = {
+        "boolean":"integer",
+        "integer":"integer",
+        "text":"string",
+        "string":"string",
+        "date":"datetime",
+        "decimal":"decimal",
+        }
+    att = old_model.entity("attribute")
+    val = old_model.entity(type_to_table[attribute.type])
+    qry = (
+        Session.query(val.value)
+        .join(att, (att.id == val.attribute_id))
+        .filter(att.name == attribute.name)
+        .filter(val.entity_id == oldEntity.id)
+        )
+    if qry.count() > 1 and not attribute.is_collection:
+        raise Exception("fml")
+    elif attribute.is_collection:
+        return qry.all()
+    return qry.first()
 
 def yieldChildEntities(oldParentEntity):
     """Get child entites with parrent attr names given parent entity name.
