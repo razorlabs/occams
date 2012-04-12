@@ -140,85 +140,6 @@ class SchemaModelTestCase(unittest.TestCase):
             session.add(model.Schema(name='Sample'))
             session.flush()
 
-    def testDelete(self):
-        # Test deleting an attribute via dict-like API
-        session = self.layer['session']
-        schema = model.Schema(name='Foo', title=u'Foo')
-        schema['foo'] = model.Attribute(title=u'foo', type='string', order=0)
-        session.add(schema)
-        session.flush()
-        # The attribute should have been committed
-        result = session.query(model.Attribute).filter_by(name='foo').count()
-        self.assertEqual(1, result)
-        # Delete it like you would a dictionary
-        del schema['foo']
-        session.flush()
-        # Should have been deleted
-        result = session.query(model.Attribute).filter_by(name='foo').count()
-        self.assertEqual(0, result)
-
-    def testContains(self):
-        # Test dict-like containment
-        session = self.layer['session']
-        schema = model.Schema(name='Foo', title=u'Foo')
-        session.add(schema)
-        session.flush()
-        self.assertNotIn('foo', schema)
-        schema['foo'] = model.Attribute(title=u'foo', type='string', order=0)
-        session.flush()
-        self.assertIn('foo', schema)
-        self.assertNotIn('bar', schema)
-
-    def testKeys(self):
-        # Test dict-like reporting of keys
-        session = self.layer['session']
-        schema = model.Schema(name='Foo', title=u'Foo')
-        session.add(schema)
-        session.flush()
-        keys = schema.keys()
-        self.assertEqual(len(keys), 0)
-        schema['foo'] = model.Attribute(title=u'foo', type='string', order=0)
-        schema['bar'] = model.Attribute(title=u'bar', type='string', order=1)
-        session.flush()
-        keys = schema.keys()
-        self.assertEqual(len(keys), 2)
-        self.assertIn('foo', keys)
-        self.assertIn('bar', keys)
-        self.assertNotIn('baz', keys)
-
-    def testValues(self):
-        # Make sure we can enumerate the attributes in the schema
-        session = self.layer['session']
-        schema = model.Schema(name='Foo', title=u'Foo')
-        session.add(schema)
-        session.flush()
-        values = schema.values()
-        self.assertEqual(0, len(values))
-        schema['foo'] = model.Attribute(title=u'foo', type='string', order=0)
-        session.flush()
-        values = schema.values()
-        self.assertEqual(1, len(values))
-        attribute = values[0]
-        self.assertEqual(schema, attribute.schema)
-        self.assertEqual(attribute.name, 'foo')
-
-    def testItems(self):
-        # Make sure we can enumerate the key/value pairs of the schema
-        session = self.layer['session']
-        schema = model.Schema(name='Foo', title=u'Foo')
-        session.add(schema)
-        session.flush()
-        items = schema.items()
-        self.assertEqual(0, len(items))
-        schema['foo'] = model.Attribute(title=u'foo', type='string', order=0)
-        session.flush()
-        items = schema.items()
-        self.assertEqual(len(items), 1)
-        name, attribute = items[0]
-        self.assertEqual(schema, attribute.schema)
-        self.assertEqual('foo', attribute.name)
-        self.assertEqual(name, attribute.name)
-
 
 class SchemaCopyTestCase(unittest.TestCase):
     """
@@ -293,16 +214,183 @@ class AttributeModelTestCase(unittest.TestCase):
     def testAdd(self):
         session = self.layer['session']
         schema = model.Schema(name='Foo', title=u'Foo')
-        schema['foo'] = model.Attribute(
+        attribute = model.Attribute(
+            schema=schema,
             name='foo',
             title=u'Enter Foo',
             type='string',
             order=0
             )
-        session.add(schema)
+        session.add(attribute)
         session.flush()
         schemaCount = session.query(model.Attribute).count()
         self.assertEquals(1, schemaCount, u'Found more than one entry')
+
+
+class DictionaryLikeTesCase(unittest.TestCase):
+    """
+    Tests inspection of schema/attributes as dictionaries
+    """
+
+    layer = DATASTORE_LAYER
+
+    def testSet(self):
+        session = self.layer['session']
+        schema = model.Schema(name='Foo', title=u'')
+        attribute = model.Attribute(title=u'', type='string', order=0)
+        schema['foo'] = attribute
+        session.add(schema)
+        session.flush()
+        schemaCount = session.query(model.Attribute).count()
+        self.assertEquals(1, schemaCount)
+        self.assertEqual('foo', attribute.name)
+        self.assertIsNotNone(attribute.id)
+
+        # Equivalent functionality as subschema
+        subschema = model.Schema(name='Bar', title=u'')
+        attribute = model.Attribute(title=u'', type='object', object_schema=subschema, order=1)
+        schema['sub'] = attribute
+        subattribute = model.Attribute(title=u'', type='string', order=0)
+        attribute['bar'] = subattribute
+        session.flush()
+        self.assertEqual('bar', subattribute.name)
+
+    def testGet(self):
+        session = self.layer['session']
+        schema = model.Schema(name='Foo', title=u'')
+        attribute = model.Attribute(schema=schema, name='foo', title=u'', type='string', order=0)
+        session.add(schema)
+        session.flush()
+
+        self.assertEqual(attribute.id, schema['foo'].id)
+        self.assertEqual(attribute.name, schema['foo'].name)
+
+        # Equivalent functionality as subschema
+        subschema = model.Schema(name='Bar', title=u'')
+        attribute = model.Attribute(schema=schema, name='sub', title=u'', type='object', object_schema=subschema, order=1)
+        model.Attribute(schema=subschema, name='bar', title=u'', type='string', order=0)
+        session.flush()
+        self.assertEqual('bar', attribute['bar'].name)
+
+    def testDelete(self):
+        # Test deleting an attribute via dict-like API
+        session = self.layer['session']
+        schema = model.Schema(name='Foo', title=u'')
+        model.Attribute(name='foo', schema=schema, title=u'foo', type='string', order=0)
+        session.add(schema)
+        session.flush()
+        # The attribute should have been committed
+        result = session.query(model.Attribute).filter_by(name='foo').count()
+        self.assertEqual(1, result)
+        # Delete it like you would a dictionary
+        del schema['foo']
+        session.flush()
+        # Should have been deleted
+        result = session.query(model.Attribute).filter_by(name='foo').count()
+        self.assertEqual(0, result)
+
+        # Equivalent functionality as subschema
+        subschema = model.Schema(name='Bar', title=u'')
+        attribute = model.Attribute(schema=schema, name='sub', title=u'', type='object', object_schema=subschema, order=1)
+        model.Attribute(schema=subschema, name='bar', title=u'', type='string', order=0)
+        session.flush()
+        result = session.query(model.Attribute).filter_by(name='bar').count()
+        self.assertEqual(1, result)
+        del attribute['bar']
+        result = session.query(model.Attribute).filter_by(name='bar').count()
+        self.assertEqual(0, result)
+
+    def testContains(self):
+        # Test dict-like containment
+        session = self.layer['session']
+        schema = model.Schema(name='Foo', title=u'')
+        session.add(schema)
+        session.flush()
+        self.assertNotIn('foo', schema)
+        model.Attribute(schema=schema, name='foo', title=u'foo', type='string', order=0)
+        session.flush()
+        self.assertIn('foo', schema)
+        self.assertNotIn('bar', schema)
+
+        # Equivalent functionality as subschema
+        subschema = model.Schema(name='Bar', title=u'')
+        attribute = model.Attribute(schema=schema, name='sub', title=u'', type='object', object_schema=subschema, order=1)
+        model.Attribute(schema=subschema, name='bar', title=u'', type='string', order=0)
+        session.flush()
+        self.assertIn('bar', attribute)
+
+    def testKeys(self):
+        # Test dict-like reporting of keys
+        session = self.layer['session']
+        schema = model.Schema(name='Foo', title=u'')
+        session.add(schema)
+        session.flush()
+        keys = schema.keys()
+        self.assertEqual(len(keys), 0)
+        model.Attribute(schema=schema, name='foo', title=u'', type='string', order=0)
+        model.Attribute(schema=schema, name='bar', title=u'', type='string', order=1)
+        session.flush()
+        keys = schema.keys()
+        self.assertEqual(2, len(keys))
+        self.assertItemsEqual(['bar', 'foo'], keys)
+
+        # Equivalent functionality as subschema
+        subschema = model.Schema(name='Bar', title=u'')
+        attribute = model.Attribute(schema=schema, name='sub', title=u'', type='object', object_schema=subschema, order=2)
+        model.Attribute(schema=subschema, name='bar', title=u'', type='string', order=0)
+        model.Attribute(schema=subschema, name='baz', title=u'', type='string', order=1)
+        session.flush()
+        self.assertItemsEqual(['bar', 'baz'], attribute.keys())
+
+    def testValues(self):
+        # Make sure we can enumerate the attributes in the schema
+        session = self.layer['session']
+        schema = model.Schema(name='Foo', title=u'')
+        session.add(schema)
+        session.flush()
+        values = schema.values()
+        self.assertEqual(0, len(values))
+        model.Attribute(schema=schema, name='foo', title=u'', type='string', order=0)
+        session.flush()
+        values = schema.values()
+        self.assertEqual(1, len(values))
+        attribute = values[0]
+        self.assertEqual(schema.id, attribute.schema.id)
+        self.assertEqual(attribute.name, 'foo')
+
+        # Equivalent functionality as subschema
+        subschema = model.Schema(name='Bar', title=u'')
+        attribute = model.Attribute(schema=schema, name='sub', title=u'', type='object', object_schema=subschema, order=2)
+        subattribtue = model.Attribute(schema=subschema, name='bar', title=u'', type='string', order=0)
+        session.flush()
+        values = attribute.values()
+        self.assertEqual(subattribtue.id, values[0].id)
+
+    def testItems(self):
+        # Make sure we can enumerate the key/value pairs of the schema
+        session = self.layer['session']
+        schema = model.Schema(name='Foo', title=u'')
+        session.add(schema)
+        session.flush()
+        items = schema.items()
+        self.assertEqual(0, len(items))
+        schema['foo'] = model.Attribute(title=u'', type='string', order=0)
+        session.flush()
+        items = schema.items()
+        self.assertEqual(len(items), 1)
+        name, attribute = items[0]
+        self.assertEqual(schema, attribute.schema)
+        self.assertEqual('foo', attribute.name)
+        self.assertEqual(name, attribute.name)
+
+        # Equivalent functionality as subschema
+        subschema = model.Schema(name='Bar', title=u'')
+        attribute = model.Attribute(schema=schema, name='sub', title=u'', type='object', object_schema=subschema, order=2)
+        subattribtue = model.Attribute(schema=subschema, name='bar', title=u'', type='string', order=0)
+        session.flush()
+        items = attribute.items()
+        self.assertEqual(subattribtue.name, items[0][0])
+        self.assertEqual(subattribtue.name, items[0][1].name)
 
 
 class ChoiceModelTestCase(unittest.TestCase):
