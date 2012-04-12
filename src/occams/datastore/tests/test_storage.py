@@ -13,11 +13,6 @@ from occams.datastore import model
 from occams.datastore.testing import DATASTORE_LAYER
 from occams.datastore.interfaces import  IEntity
 
-p1 = date(2012, 3, 1)
-p2 = date(2012, 4, 1)
-p3 = date(2012, 5, 1)
-p4 = date(2012, 6, 1)
-
 
 class EntityModelTestCase(unittest.TestCase):
     """

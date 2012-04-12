@@ -4,11 +4,8 @@
 from datetime import date
 
 from sqlalchemy import select
-from sqlalchemy import event
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship as Relationship
-from sqlalchemy.orm.collections import attribute_mapped_collection
-from sqlalchemy.orm.collections import collection
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import backref
 from sqlalchemy.schema import Column
@@ -39,28 +36,6 @@ from occams.datastore.model.schema import Choice
 
 
 ENTITY_STATE_NAMES = sorted([term.token for term in IEntity['state'].vocabulary])
-
-
-def defaultCollectDate(context):
-    """
-    Callback for generating default collect date value.
-    It will try to lookup the previous ``collect_date`` and give the
-    date the entry is input by default if none is found.
-    This method should not be called if one is supplied by the user.
-    """
-    entity_table = Entity.__table__
-    name = context.current_parameters['name']
-    collect_date = date.today()
-    if name:
-        result = context.connection.execute(
-            select([entity_table.c.collect_date], (entity_table.c.name == name))
-            .order_by(entity_table.c.create_date.desc())
-            .limit(1)
-            )
-        previous = result.first()
-        if previous:
-            collect_date = previous.collect_date
-    return collect_date
 
 
 def cleanDataByState(entity):
@@ -137,7 +112,7 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         server_default=IEntity['state'].default
         )
 
-    collect_date = Column(Date, nullable=False, default=defaultCollectDate)
+    collect_date = Column(Date, nullable=False, default=date.today)
 
     @declared_attr
     def __table_args__(cls):
