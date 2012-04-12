@@ -143,7 +143,7 @@ def moveInEntities(limit=None):
 def updateValues(partialNewEntity,oldEntity):
     """Return the same partialNewEntity, except augmented with old values."""
     for attribute in partialNewEntity.schema.values():
-        if attribute.type == 'object' or attribute.is_collection: 
+        if attribute.type == 'object': 
             # is_collection restriction is only here so we can test: non-collections first
             continue
         value = getOldValue(attribute, oldEntity)
