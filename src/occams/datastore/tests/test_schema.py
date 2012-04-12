@@ -21,6 +21,10 @@ from zope.interface.verify import verifyClass
 from zope.interface.verify import verifyObject
 
 from occams.datastore import model
+from occams.datastore.interfaces import ISchema
+from occams.datastore.interfaces import IAttribute
+from occams.datastore.interfaces import IChoice as dsIChoice
+from occams.datastore.interfaces import ICategory
 from occams.datastore.interfaces import IManager
 from occams.datastore.interfaces import ISchemaManagerFactory
 from occams.datastore.interfaces import NotFoundError
@@ -43,6 +47,10 @@ class SchemaModelTestCase(unittest.TestCase):
     """
 
     layer = DATASTORE_LAYER
+
+    def testImplementation(self):
+        self.assertTrue(verifyClass(ISchema, model.Schema))
+        self.assertTrue(verifyObject(ISchema, model.Schema()))
 
     def testAdd(self):
         session = self.layer['session']
@@ -271,12 +279,16 @@ class SchemaCopyTestCase(unittest.TestCase):
         self.assertNotEqual(schema['bar'].object_schema, schemaCopy['bar'].object_schema)
 
 
-class AttributeTestCase(unittest.TestCase):
+class AttributeModelTestCase(unittest.TestCase):
     """
     Verifies Attribute model
     """
 
     layer = DATASTORE_LAYER
+
+    def testImplementation(self):
+        self.assertTrue(verifyClass(IAttribute, model.Attribute))
+        self.assertTrue(verifyObject(IAttribute, model.Attribute()))
 
     def testAdd(self):
         session = self.layer['session']
@@ -293,12 +305,16 @@ class AttributeTestCase(unittest.TestCase):
         self.assertEquals(1, schemaCount, u'Found more than one entry')
 
 
-class ChoiceTestCase(unittest.TestCase):
+class ChoiceModelTestCase(unittest.TestCase):
     """
     Verifies Choice model
     """
 
     layer = DATASTORE_LAYER
+
+    def testImplementation(self):
+        self.assertTrue(verifyClass(dsIChoice, model.Choice))
+        self.assertTrue(verifyObject(dsIChoice, model.Choice()))
 
     def testAdd(self):
         session = self.layer['session']
@@ -561,17 +577,22 @@ class SchemaManagerTestCase(unittest.TestCase):
         session = self.layer['session']
         manager = SchemaManager(session)
 
-        schema = model.Schema(name='Foo', title=u'', state='published')
-
-        id = manager.put('Bar', schema)
-        self.assertEqual(id, schema.id)
-
-        schema.description = u'Hello world!'
-        id = manager.put('Bar', schema)
-        self.assertEqual(id, schema.id)
-
+        # Can't determine name
         with self.assertRaises(ValueError):
-            id = manager.put(None, model.Entity(schema=schema, name=None, title=u''))
+            id = manager.put(None, model.Schema(name=None, title=u''))
+
+        schema = model.Schema(name=None, title=u'', state='published')
+
+        # Uses the key
+        id = manager.put('Foo', schema)
+        self.assertEqual(id, schema.id)
+        self.assertEqual('Foo', schema.name)
+
+        # Ignores the key when given a name
+        schema = model.Schema(name='Bar', title=u'', state='published')
+        id = manager.put('Ignored', schema)
+        self.assertEqual(id, schema.id)
+        self.assertEqual('Bar', schema.name)
 
 
 class AttributeToFieldTestCase(unittest.TestCase):
@@ -608,8 +629,7 @@ class AttributeToFieldTestCase(unittest.TestCase):
             self.assertTrue(itype.providedBy(field.value_type))
 
             # Test with choices
-            schema['foo'] = \
-                model.Attribute(title=u'', type=name, order=0)
+            schema['foo'] = model.Attribute(title=u'', type=name, order=0)
             for choice in choices:
                 schema['foo'].choices.append(model.Choice(
                     name=str(choice),

@@ -21,7 +21,6 @@ class SqlBatch(Batch):
     end = FieldProperty(IBatch['end'])
 
     def __init__(self, query, start=0, size=20, batches=None):
-
         length = query.count()
 
         if length == 0:
@@ -30,6 +29,7 @@ class SqlBatch(Batch):
         if start >= length:
             raise IndexError('start index key out of range')
 
+        # trueSize is the number of remaining items in the current batch
         if start + size >= length:
             trueSize = length - start
         else:
@@ -44,13 +44,17 @@ class SqlBatch(Batch):
         self.end = end
         self.size = size
 
+        # The thing we're iterating with
         self.query = query
-        self.batches = batches
+
+        # Required for internals to work
         self._length = length
         self._trueSize = trueSize
 
         if batches is None:
             batches = SqlBatches(self)
+
+        self.batches = batches
 
     @property
     def firstElement(self):
@@ -115,6 +119,7 @@ class SqlBatch(Batch):
         return ((self.size, self.start, self.query) ==
                 (other.size, other.start, other.query))
 
+
 class SqlBatches(Batches):
     """
     A sequence object representing all the batches.
@@ -136,6 +141,6 @@ class SqlBatches(Batches):
         if key not in self._batches:
             if key < 0:
                 key = self.total + key
-            batch = Batch(self.query, key * self.size, self.size, self)
+            batch = SqlBatch(self.query, key * self.size, self.size, self)
             self._batches[batch.index] = batch
         return self._batches[key]
