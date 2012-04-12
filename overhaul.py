@@ -87,7 +87,7 @@ def main():
     usage = """overhaul.py OLDCONNECT NEWCONNECT"""
     configureGlobalSession(sys.argv[1], sys.argv[2])
     addUser("bitcore@ucsd.edu")
-    entityLimit = 7000
+    entityLimit = 1000
     print "Moving in all schemas and %s entities" % entityLimit
     moveInAllSchemas()
     moveInAttributesAndChoices()
@@ -101,56 +101,115 @@ def main():
 def moveInValues():
     pass
 
+
+
 def moveInEntities(limit=None):
     """This function will probably work in stages to move entities.
     
     WORKING - Stage 1: Parent entities
-    WORKING - Stage 2: Child entities
-    IN PROGRESS - Stage 3: linking object values
+    TO TEST - Stage 2: Child entities
+    TO TEST - Stage 3: linking object values
     """
     counter = 0
     for name in yieldDistinctParentEntityNames():
         counter += 1
         if limit is not None and counter > limit:
             return
-
-        # FIRST HANGLE THE PARENT ENTITIES
-        newEntity = None
+        # FIRST HANDLE THE PARENT ENTITIES
+        newParentEntity = None
         newSchema = None
+        the_create_date = None
         for sourceEntity,schema_name in yieldOrderedEntities(name):
             if newSchema is None:
-                newSchema = getSchemaForEntity(schema_name,sourceEntity.create_date)
-            newEntity = createEntity(sourceEntity,newEntity,newSchema)
+                the_create_date = sourceEntity.create_date
+                newSchema = getSchemaForEntity(schema_name,the_create_date)
+            # Set up *this revision* for this parent
+            newParentEntity = createEntity(sourceEntity,newParentEntity,newSchema)
+            # Use datastore's built in awesomeness to handle subentities and the
+            # implicit linking object values for this revision.  Then commit :)
+            for oldChildEntity,oldParentAttrName in yieldObjectsForParentEntity(sourceEntity):
+                newChildSchema = newSchema[oldParentAttrName].object_schema
+                newParentEntity[oldParentAttrName] = createEntity(
+                    oldChildEntity, 
+                    getattr(newParentEntity,oldParentAttrName,None),
+                    newChildSchema)
+            Session.add(newParentEntity)
+            Session.flush()
+##
+## This was the old version of subentities and linking objects...
+## Evil bugs were hard to debug and we scrapped it :)
+##
+#        # NOW HANDLE THE CHILD ENTITIES AND LINKING OBJECT VALUES
+#        newChildEntity = None
+#        newChildSchema = None
+#        newParentAttr = None
+#        oldChildSchema = None
+#        for oldChildEntity,p_schema_name,p_attr_name in yieldOrderedChildEntities(name):
+#            #Stage N: 
+#            if not newChildEntity:
+#                newChildSchema,newParentAttr = getSchemaAndAttrForEntity(
+#                    p_schema_name,p_attr_name,the_create_date) #oldChildEntity.create_date)
+#                oldChildSchema = newChildSchema
+#            elif newChildEntity.name != oldChildEntity.name: 
+#                createLinkingObjectValue(newEntity,newChildEntity,newParentAttr)
+#                oldChildSchema = newChildSchema
+#                newChildSchema,newParentAttr = getSchemaAndAttrForEntity(
+#                    p_schema_name,p_attr_name,the_create_date)
+#            elif newChildEntity.name == oldChildEntity.name:
+#                # Simple mod to the same child entity, nothing complicated.
+#                pass
+#            else:
+#                raise Exception("Dumb programmer")
+#            # Stage M: Always push oldChildEntity towards DB, if newChildEntity is None
+#            # it will insert a new row, otherwise it will update the earlier thing.
+#            if (newChildSchema.name != oldChildSchema.name) and newChildEntity:
+#                if newChildEntity.name == oldChildEntity.name and newChildSchema.name not in oldChildEntity.name:
+#                    import pdb; pdb.set_trace()
+#                    print "fo"
+#            newChildEntity = createEntity(oldChildEntity,newChildEntity,newChildSchema) 
+#        if newChildEntity:
+#            createLinkingObjectValue(newEntity,newChildEntity,newParentAttr)
 
-        # NOW HANDLE THE CHILD ENTITIES AND LINKING OBJECT VALUES
-        # The gotchas here are the *heterogenous* entities.  For a parent name
-        # like "EarlyTest-5" you can have child entity names like "EarlyTestMen-57"
-        # and "EarlyTestWomen-400" representing different sections of the early
-        # test form, with different schema, and within each section there can be
-        # more than one entity (though only one where remove_date IS NULL) with 
-        # its own history of state changes or whatever. This code functions 
-        # after the parent entity for the name has been handled and spins over
-        # all child entity revisions, watching their names and reaquiring the
-        # relevant metadata when they switch.
-        newChildEntity = None
-        newChildSchema = None
-        newParentAttr = None
-        for oldChildEntity,p_schema_name,p_attr_name in yieldOrderedChildEntities(name):
+def yieldObjectsForParentEntity(oldParentEntity):
+    """Get child entites with parrent attr names given parent entity name.
+    
+    For a given parent entity name, *skip* any non-object attributes it
+    has... the whole point here is to handle parent/child linking issues,
+    and the real meat of the forms (ints, dates, strings, etc) won't be
+    handled till this skeleton exists."""
+    from sqlalchemy.orm import aliased
+    c_ent = aliased(old_model.entity("entity"))
+    p_ent = old_model.entity("entity")
+    obj = old_model.entity("object")
+    #sch = old_model.entity("schema")
+    att = old_model.entity("attribute")
+    qry = (
+        Session.query(c_ent, att.name) #,sch.name)
+        .join(obj, (c_ent.id == obj.value))
+        .join(p_ent, (p_ent.id == obj.entity_id))
+        .filter(p_ent == oldParentEntity)
+        .join(att, (att.id == obj.attribute_id)) # & (sch.id == att.schema_id))
+        #.join(sch, (sch.id == p_ent.schema_id))
+        #.order_by(
+        #    c_ent.create_date,
+        #    c_ent.remove_date.nullslast(),
+        #    c_ent.id)
+        #)
+    return iter(qry)
 
-            #print p_schema_name+"."+p_attr_name, "=", oldChildEntity.name
-
-            if not newChildEntity:
-                newChildSchema,newParentAttr = getSchemaAndAttrForEntity(
-                    p_schema_name,p_attr_name,oldChildEntity.create_date)
-            elif newChildEntity.name != sourceEntity.name:
-                createLinkingObjectValue(newEntity,newChildEntity,newParentAttr)
-                newChildSchema,newParentAttr = getSchemaAndAttrForEntity(
-                    p_schema_name,p_attr_name,oldChildEntity.create_date)
-            else:
-                pass
-            newChildEntity = createEntity(sourceEntity,newChildEntity,newChildSchema)
-        if newChildEntity:
-            createLinkingObjectValue(newEntity,newChildEntity,newParentAttr)
+def yieldOrderedEntities(name):
+    ent = old_model.entity("entity")
+    obj = old_model.entity("object")
+    qry = (
+        Session.query(ent,sch.name)
+        .join(sch, (sch.id == ent.schema_id))
+        .filter(ent.name == name)
+        .order_by(
+            ent.create_date,
+            ent.remove_date.nullslast(),
+            ent.id)
+        )
+    return iter(qry)
 
 def moveInAttributesAndChoices():
     schemaChanges = getInstalledSchemas()
@@ -203,7 +262,10 @@ def createLinkingObjectValue(newEntity,newChildEntity,newParentAttr):
     Session.add(objectobject)
             
 def createEntity(sourceEntity,prevNewEntity,newSchema):
-    """Handles each step replaying entity diffs over time."""
+    """Either create ur update (depending on prevNewEntity == None).
+    
+    This needs a Session.add(createEntity()) and a Session.flush().
+    Those are your job as the user of this function."""
     global entity_state
     if prevNewEntity is None:
         prevNewEntity = model.Entity(
@@ -222,8 +284,6 @@ def createEntity(sourceEntity,prevNewEntity,newSchema):
         else:
             raise err
     prevNewEntity.modify_date = sourceEntity.create_date
-    Session.add(prevNewEntity) 
-    Session.flush()
     return prevNewEntity
 
 def createAttrsAndChoices(newSchema,attrsAndChoices):
