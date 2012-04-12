@@ -124,25 +124,24 @@ def moveInEntities(limit=None):
             newParentEntity = updateValues(newParentEntity,sourceEntity)
             Session.flush()
 
-            # This section is commented out until Marco's datastore code to
-            # handle child attachment works...
-            
-            # Use datastore's built in awesomeness to handle subentities and the
-            # implicit linking object values for this revision.  Then commit :)
-            for oldChildEntity,oldParentAttrName in yieldChildEntities(sourceEntity):
-                newChildSchema = newSchema[oldParentAttrName].object_schema
-                import pdb; pdb.set_trace()
-                
-                tempChildEntity = createEntity(
-                    oldChildEntity, 
-                    getattr(newParentEntity,oldParentAttrName,None),
-                    newChildSchema)
-                newParentEntity[oldParentAttrName] = tempChildEntity
-                Session.flush()
-                newParentEntity[oldParentAttrName] = updateValues(
-                    newParentEntity[oldParentAttrName],
-                    oldChildEntity)
-                Session.flush()
+            ## This section is commented out until Marco's datastore code to
+            ## handle child attachment works...
+           # 
+           # # Use datastore's built in awesomeness to handle subentities and the
+           # # implicit linking object values for this revision.  Then commit :)
+           # for oldChildEntity,oldParentAttrName in yieldChildEntities(sourceEntity):
+           #     newChildSchema = newSchema[oldParentAttrName].object_schema
+           #     tempChildEntity = createEntity(
+           #         oldChildEntity, 
+           #         getattr(newParentEntity,oldParentAttrName,None),
+           #         newChildSchema)
+           #     newParentEntity[oldParentAttrName] = tempChildEntity
+           #     #import pdb; pdb.set_trace()
+           #     Session.flush()
+           #     newParentEntity[oldParentAttrName] = updateValues(
+           #         newParentEntity[oldParentAttrName],
+           #         oldChildEntity)
+           #     Session.flush()
 
 def updateValues(partialNewEntity,oldEntity):
     """Return the same partialNewEntity, except augmented with old values."""
