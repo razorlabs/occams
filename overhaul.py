@@ -101,8 +101,6 @@ def main():
 def moveInValues():
     pass
 
-
-
 def moveInEntities(limit=None):
     """This function will probably work in stages to move entities.
     
@@ -125,52 +123,23 @@ def moveInEntities(limit=None):
                 newSchema = getSchemaForEntity(schema_name,the_create_date)
             # Set up *this revision* for this parent
             newParentEntity = createEntity(sourceEntity,newParentEntity,newSchema)
-            # Use datastore's built in awesomeness to handle subentities and the
-            # implicit linking object values for this revision.  Then commit :)
-            for oldChildEntity,oldParentAttrName in yieldObjectsForParentEntity(sourceEntity):
-                newChildSchema = newSchema[oldParentAttrName].object_schema
-                newParentEntity[oldParentAttrName] = createEntity(
-                    oldChildEntity, 
-                    getattr(newParentEntity,oldParentAttrName,None),
-                    newChildSchema)
+
+            ## This section is commented out until Marco's datastore code to
+            ## handle child attachment works...
+            #
+            ## Use datastore's built in awesomeness to handle subentities and the
+            ## implicit linking object values for this revision.  Then commit :)
+            #for oldChildEntity,oldParentAttrName in yieldChildEntities(sourceEntity):
+            #    newChildSchema = newSchema[oldParentAttrName].object_schema
+            #    newParentEntity[oldParentAttrName] = createEntity(
+            #        oldChildEntity, 
+            #        getattr(newParentEntity,oldParentAttrName,None),
+            #        newChildSchema)
+
             Session.add(newParentEntity)
             Session.flush()
-##
-## This was the old version of subentities and linking objects...
-## Evil bugs were hard to debug and we scrapped it :)
-##
-#        # NOW HANDLE THE CHILD ENTITIES AND LINKING OBJECT VALUES
-#        newChildEntity = None
-#        newChildSchema = None
-#        newParentAttr = None
-#        oldChildSchema = None
-#        for oldChildEntity,p_schema_name,p_attr_name in yieldOrderedChildEntities(name):
-#            #Stage N: 
-#            if not newChildEntity:
-#                newChildSchema,newParentAttr = getSchemaAndAttrForEntity(
-#                    p_schema_name,p_attr_name,the_create_date) #oldChildEntity.create_date)
-#                oldChildSchema = newChildSchema
-#            elif newChildEntity.name != oldChildEntity.name: 
-#                createLinkingObjectValue(newEntity,newChildEntity,newParentAttr)
-#                oldChildSchema = newChildSchema
-#                newChildSchema,newParentAttr = getSchemaAndAttrForEntity(
-#                    p_schema_name,p_attr_name,the_create_date)
-#            elif newChildEntity.name == oldChildEntity.name:
-#                # Simple mod to the same child entity, nothing complicated.
-#                pass
-#            else:
-#                raise Exception("Dumb programmer")
-#            # Stage M: Always push oldChildEntity towards DB, if newChildEntity is None
-#            # it will insert a new row, otherwise it will update the earlier thing.
-#            if (newChildSchema.name != oldChildSchema.name) and newChildEntity:
-#                if newChildEntity.name == oldChildEntity.name and newChildSchema.name not in oldChildEntity.name:
-#                    import pdb; pdb.set_trace()
-#                    print "fo"
-#            newChildEntity = createEntity(oldChildEntity,newChildEntity,newChildSchema) 
-#        if newChildEntity:
-#            createLinkingObjectValue(newEntity,newChildEntity,newParentAttr)
 
-def yieldObjectsForParentEntity(oldParentEntity):
+def yieldChildEntities(oldParentEntity):
     """Get child entites with parrent attr names given parent entity name.
     
     For a given parent entity name, *skip* any non-object attributes it
@@ -181,35 +150,26 @@ def yieldObjectsForParentEntity(oldParentEntity):
     c_ent = aliased(old_model.entity("entity"))
     p_ent = old_model.entity("entity")
     obj = old_model.entity("object")
-    #sch = old_model.entity("schema")
     att = old_model.entity("attribute")
     qry = (
-        Session.query(c_ent, att.name) #,sch.name)
+        Session.query(c_ent, att.name) 
         .join(obj, (c_ent.id == obj.value))
         .join(p_ent, (p_ent.id == obj.entity_id))
         .filter(p_ent == oldParentEntity)
-        .join(att, (att.id == obj.attribute_id)) # & (sch.id == att.schema_id))
-        #.join(sch, (sch.id == p_ent.schema_id))
-        #.order_by(
-        #    c_ent.create_date,
-        #    c_ent.remove_date.nullslast(),
-        #    c_ent.id)
-        #)
-    return iter(qry)
-
-def yieldOrderedEntities(name):
-    ent = old_model.entity("entity")
-    obj = old_model.entity("object")
-    qry = (
-        Session.query(ent,sch.name)
-        .join(sch, (sch.id == ent.schema_id))
-        .filter(ent.name == name)
-        .order_by(
-            ent.create_date,
-            ent.remove_date.nullslast(),
-            ent.id)
+        .join(att, (att.id == obj.attribute_id)) 
         )
     return iter(qry)
+
+def getSchemaForEntity(schema_name,entity_date):
+    """Not plural == singular, not impossible publish version."""
+    qry = (
+        Session.query(model.Schema)
+        .filter(model.Schema.name == schema_name)
+        .filter(model.Schema.publish_date <= entity_date)
+        .order_by(model.Schema.publish_date.desc())
+        .limit(1)
+        )
+    return qry.one()
 
 def moveInAttributesAndChoices():
     schemaChanges = getInstalledSchemas()
@@ -235,32 +195,6 @@ def moveInAllSchemas():
             createLinkingAttr(revision,new_parent,new_child,p_attr)
         #print "Installed %s total schemas and related attributes." % installed
 
-def createLinkingObjectValue(newEntity,newChildEntity,newParentAttr):
-    """Install linking object value between parent/child entities.
-    
-    A parent can have different children under different attributes.
-    The original linking value (in the original object table) can be
-    totally ignored because:
-
-    1) All the critical IDs come with the new  entities (even the 
-    object.value is just newChildEntity.id).
-
-    2) It doesn't make sense for value objects to have choice_ids.
-    """
-    build = {
-        "entity_id":newEntity.id,
-        "_value":newChildEntity.id,
-        "attribute_id":newParentAttr.id,
-        "create_date":newChildEntity.create_date,
-        "modify_date":newChildEntity.modify_date,
-        }
-    # TODO: come back when underlying code works differently
-    #   for now, just stick the entire working ValueObject
-    #   into the session and be done :-)
-    #newEntity[newParentAttr.name] = model.ValueObject(**build)
-    objectobject = model.ValueObject(**build)
-    Session.add(objectobject)
-            
 def createEntity(sourceEntity,prevNewEntity,newSchema):
     """Either create ur update (depending on prevNewEntity == None).
     
@@ -328,38 +262,6 @@ def createSchema(revision,original):
     Session.flush()
     return toEnter
 
-def getSchemaAndAttrForEntity(p_schema_name,p_attr_name,entity_date):
-    """Return schema and attribute from new system so IDs can be used."""
-    # FIRST GET THE PARENT ATTRIBUTE IN THE NEW SYSTEM
-    p_schema = getSchemaForEntity(p_schema_name,entity_date)
-    att = model.Attribute
-    sch = model.Schema
-    qry = (
-        Session.query(att)
-        .filter(att.name == p_attr_name)
-        .join(sch, (att.schema_id == sch.id))
-        .filter(sch.id == p_schema.id)
-        )
-    p_out_attr = qry.one()
-    # THEN GET THE CHILD SCHEMA IN THE NEW SYSTEM
-    sch2 = model.Schema
-    qry = (
-        Session.query(sch2)
-        .filter(sch2.id == p_out_attr.object_schema_id)
-        )
-    c_out_schema = qry.one()
-    return c_out_schema,p_out_attr
-
-def getSchemaForEntity(schema_name,entity_date):
-    """Not plural == singular, not impossible publish version."""
-    qry = (
-        Session.query(model.Schema)
-        .filter(model.Schema.name == schema_name)
-        .filter(model.Schema.publish_date <= entity_date)
-        .order_by(model.Schema.publish_date.desc())
-        .limit(1)
-        )
-    return qry.one()
 
 def getInstalledSchemas():
     """So simple it hurts :)"""
@@ -384,34 +286,6 @@ def createLinkingAttr(revision,new_parent,new_child,p_attr):
      toEnter = model.Attribute(**buildIt)
      Session.add(toEnter)
      Session.flush()
-
-def yieldOrderedChildEntities(parentEntityName):
-    """Get child entites with parrent attr names given parent entity name.
-    
-    For a given parent entity name, *skip* any non-object attributes it
-    has... the whole point here is to handle parent/child linking issues,
-    and the real meat of the forms (ints, dates, strings, etc) won't be
-    handled till this skeleton exists."""
-    from sqlalchemy.orm import aliased
-    c_ent = aliased(old_model.entity("entity"))
-    p_ent = old_model.entity("entity")
-    sch = old_model.entity("schema")
-    att = old_model.entity("attribute")
-    obj = old_model.entity("object")
-    qry = (
-        Session.query(c_ent,sch.name,att.name)
-        .join(obj, (c_ent.id == obj.value)) ###########
-        .join(p_ent, (p_ent.id == obj.entity_id))
-        .filter(p_ent.name == parentEntityName)
-        .join(sch, (sch.id == p_ent.schema_id))
-        .join(att, ((sch.id == att.schema_id) & 
-                    (att.id == obj.attribute_id)))
-        .order_by(
-            c_ent.create_date,
-            c_ent.remove_date.nullslast(),
-            c_ent.id)
-        )
-    return iter(qry)
 
 def yieldOrderedEntities(name):
     """Given entity name, yield entities themselves."""
