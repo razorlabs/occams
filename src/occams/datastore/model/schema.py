@@ -330,6 +330,7 @@ class Choice(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         backref=backref(
             name='choices',
             order_by='Choice.order',
+            cascade="all, delete, delete-orphan"
             )
         )
 
