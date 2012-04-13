@@ -4,13 +4,11 @@
 from datetime import date
 
 from sqlalchemy import select
-from sqlalchemy import event
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship as Relationship
-from sqlalchemy.orm.collections import attribute_mapped_collection
-from sqlalchemy.orm.collections import collection
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import backref
+from sqlalchemy.orm import synonym
 from sqlalchemy.schema import Column
 from sqlalchemy.schema import ForeignKeyConstraint
 from sqlalchemy.schema import Index
@@ -26,6 +24,7 @@ from zope.interface import implements
 
 from occams.datastore.interfaces import IEntity
 from occams.datastore.interfaces import IValue
+from occams.datastore.interfaces import InvalidEntitySchemaError
 from occams.datastore.model import Model
 from occams.datastore.model.metadata import AutoNamed
 from occams.datastore.model.metadata import Referenceable
@@ -41,43 +40,12 @@ from occams.datastore.model.schema import Choice
 ENTITY_STATE_NAMES = sorted([term.token for term in IEntity['state'].vocabulary])
 
 
-def defaultCollectDate(context):
-    """
-    Callback for generating default collect date value.
-    It will try to lookup the previous ``collect_date`` and give the
-    date the entry is input by default if none is found.
-    This method should not be called if one is supplied by the user.
-    """
-    entity_table = Entity.__table__
-    name = context.current_parameters['name']
-    collect_date = date.today()
-    if name:
-        result = context.connection.execute(
-            select([entity_table.c.collect_date], (entity_table.c.name == name))
-            .order_by(entity_table.c.create_date.desc())
-            .limit(1)
-            )
-        previous = result.first()
-        if previous:
-            collect_date = previous.collect_date
-    return collect_date
-
-
-def cleanDataByState(entity):
-    """
-    """
-    if entity is not None and entity.state == 'not-done':
-        for name, attribute in entity.schema.attributes.items():
-            if attribute.type == 'object':
-                cleanDataByState(entity[name])
-            else:
-                del entity[name]
-
-
 def enforceSchemaState(entity):
-    schema = entity.schema
-    if schema.state != 'published':
-        raise ValueError('Cannot collect data for unpublished Schema(%s)' % schema.name)
+    """
+    Makes sure an entity cannot be added to an unpublished schema
+    """
+    if entity.schema.state != 'published':
+        raise InvalidEntitySchemaError(entity.schema.name, entity.schema.state)
 
 
 class External(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
@@ -137,7 +105,7 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         server_default=IEntity['state'].default
         )
 
-    collect_date = Column(Date, nullable=False, default=defaultCollectDate)
+    collect_date = Column(Date, nullable=False, default=date.today)
 
     @declared_attr
     def __table_args__(cls):
@@ -165,7 +133,8 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
             return self._decimal_values
         elif type_ == 'object':
             return self._object_values
-        else:
+        else: # pragma: no cover
+            # Extreme edge case that is actually a programming error
             raise NotImplementedError(type_)
 
     def __getitem__(self, key):
@@ -196,11 +165,12 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
 
         for value in values:
             if attribute.type == 'object':
-                filter = dict(_value=value.id)
+                params = dict(attribute=attribute, sub_entity=value)
             else:
-                filter = dict(_value=value)
-            if not collector.filter_by(attribute=attribute).filter_by(**filter).count() > 0:
-                collector.append(wrapperFactory(attribute=attribute, _value=value))
+                params = dict(attribute=attribute, value=value)
+
+            if not collector.filter_by(**params).count() > 0:
+                collector.append(wrapperFactory(**params))
 
     def __delitem__(self, key):
         collector = self._getCollector(key)
@@ -261,8 +231,7 @@ def TypeMappingClass(className, tableName, valueType):
         def _value(cls):
             return Column('value', cls.__valuetype__)
 
-        @property
-        def value(self):
+        def getValue(self):
             type_ = self.attribute.type
             value = self._value
             if type_ == 'date':
@@ -274,6 +243,11 @@ def TypeMappingClass(className, tableName, valueType):
                 if session:
                     value = session.query(Entity).get(self._value)
             return value
+
+        def setValue(self, value):
+            self._value = value
+
+        value = property(getValue, setValue)
 
         @declared_attr
         def __table_args__(cls):
@@ -329,6 +303,8 @@ ValueDecimal = TypeMappingClass('ValueDecimal', 'decimal', Numeric)
 ValueString = TypeMappingClass('ValueString', 'string', Unicode)
 
 ValueObject = TypeMappingClass('ValueObject', 'object', Integer)
+
+ValueObject.sub_entity = Relationship(Entity, primaryjoin='Entity.id == ValueObject._value')
 
 nameModelMap = dict(
     integer=ValueInteger,

@@ -164,18 +164,27 @@ def createRevision(instance, deleted=False):
                 if liveProperty.key not in instanceState.dict:
                     getattr(instance, liveProperty.key)
 
-                # (added, unchanged, deleted)
-                (a, u, d) = attributes.get_history(instance, liveProperty.key)
+                # (new value for live table / unchanged value / previous value)
+                (new, unchanged, previous) = attributes.get_history(instance, liveProperty.key)
 
-                if d:
-                    values[auditColumn.key] = d[0]
+                if previous:
+                    values[auditColumn.key] = previous[0]
                     changed = True
-                elif u:
-                    values[auditColumn.key] = u[0]
-                else:
-                    # if the attribute had no value.
-                    values[auditColumn.key] = a[0]
-                    changed = True
+                elif unchanged:
+                    values[auditColumn.key] = unchanged[0]
+                else: # pragma: no cover
+                    # Typically the first clause will catch changes from
+                    # a previous value. There is no conceivable case where
+                    # this exception might be thrown, but we added it
+                    # for completeness as we do not want faulty values added.
+                    # Previous code was:
+                    #     values[auditColumn.key] = new[0]
+                    #     changed = True
+                    raise NotImplementedError(
+                        'Received unexpected case where a instance was updated '
+                        'with a value that it previously did not have or was '
+                        'aware of.'
+                        )
 
     if not changed:
         # Nothing has changed, consider relationship changes.

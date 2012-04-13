@@ -8,13 +8,21 @@ Credits to **zzzeek** et al.
 
 import unittest2 as unittest
 
+import sqlalchemy as sa
+from sqlalchemy import exc as sa_exc
 from sqlalchemy import event
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey
-from sqlalchemy.orm import clear_mappers, sessionmaker, deferred, relationship
+from sqlalchemy import create_engine
+from sqlalchemy import Column
+from sqlalchemy import Integer
+from sqlalchemy import String
+from sqlalchemy import ForeignKey
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import deferred
+from sqlalchemy.orm import relationship
+from sqlalchemy.orm import scoped_session
 
 from occams.datastore.model.auditing import Auditable, createRevision
-from _lib import ComparableEntity, eq_
 
 
 def auditing_session(session):
@@ -27,46 +35,129 @@ def auditing_session(session):
             createRevision(obj, deleted=True)
 
 
+def eq_(a, b, msg=None): # pragma: no cover
+    """Assert a == b, with repr messaging on failure."""
+    assert a == b, msg or "%r != %r" % (a, b)
+
+
+_repr_stack = set()
+class BasicEntity(object): # pragma: no cover
+    def __init__(self, **kw):
+        for key, value in kw.iteritems():
+            setattr(self, key, value)
+
+    def __repr__(self):
+        if id(self) in _repr_stack:
+            return object.__repr__(self)
+        _repr_stack.add(id(self))
+        try:
+            return "%s(%s)" % (
+                (self.__class__.__name__),
+                ', '.join(["%s=%r" % (key, getattr(self, key))
+                           for key in sorted(self.__dict__.keys())
+                           if not key.startswith('_')]))
+        finally:
+            _repr_stack.remove(id(self))
+
+
+_recursion_stack = set()
+class ComparableEntity(BasicEntity): # pragma: no cover
+    def __hash__(self):
+        return hash(self.__class__)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __eq__(self, other):
+        """'Deep, sparse compare.
+
+        Deeply compare two entities, following the non-None attributes of the
+        non-persisted object, if possible.
+
+        """
+        if other is self:
+            return True
+        elif not self.__class__ == other.__class__:
+            return False
+
+        if id(self) in _recursion_stack:
+            return True
+        _recursion_stack.add(id(self))
+
+        try:
+            # pick the entity thats not SA persisted as the source
+            try:
+                self_key = sa.orm.attributes.instance_state(self).key
+            except sa.orm.exc.NO_STATE:
+                self_key = None
+
+            if other is None:
+                a = self
+                b = other
+            elif self_key is not None:
+                a = other
+                b = self
+            else:
+                a = self
+                b = other
+
+            for attr in a.__dict__.keys():
+                if attr.startswith('_'):
+                    continue
+                value = getattr(a, attr)
+
+                try:
+                    # handle lazy loader errors
+                    battr = getattr(b, attr)
+                except (AttributeError, sa_exc.UnboundExecutionError):
+                    return False
+
+                if hasattr(value, '__iter__'):
+                    if list(value) != list(battr):
+                        return False
+                else:
+                    if value is not None and value != battr:
+                        return False
+            return True
+        finally:
+            _recursion_stack.remove(id(self))
+
+
 class AuditableTestCase(unittest.TestCase):
 
-    def setUp(self):
-        self.Base = declarative_base(bind=create_engine('sqlite://'))
-        self.Session = sessionmaker()
-        auditing_session(self.Session)
-
-    def tearDown(self):
-        clear_mappers()
-        self.Base.metadata.drop_all()
-
     def test_plain(self):
-        class SomeClass(Auditable, self.Base, ComparableEntity):
+        Base = declarative_base(bind=create_engine('sqlite://'))
+
+        class SomeClass(Auditable, Base, ComparableEntity):
             __tablename__ = 'sometable'
 
             id = Column(Integer, primary_key=True)
             name = Column(String(50))
 
-        self.Base.metadata.create_all()
-        sess = self.Session()
+        Base.metadata.create_all()
+        session = scoped_session(sessionmaker())
+        auditing_session(session)
+
         sc = SomeClass(name='sc1')
-        sess.add(sc)
-        sess.commit()
+        session.add(sc)
+        session.commit()
 
         sc.name = 'sc1modified'
-        sess.commit()
+        session.commit()
 
         assert sc.revision == 2
 
         SomeClassHistory = SomeClass.__audit_mapper__.class_
 
         eq_(
-            sess.query(SomeClassHistory).filter(SomeClassHistory.revision == 1).all(),
+            session.query(SomeClassHistory).filter(SomeClassHistory.revision == 1).all(),
             [SomeClassHistory(revision=1, name='sc1')]
         )
 
         sc.name = 'sc1modified2'
 
         eq_(
-            sess.query(SomeClassHistory).order_by(SomeClassHistory.revision).all(),
+            session.query(SomeClassHistory).order_by(SomeClassHistory.revision).all(),
             [
                 SomeClassHistory(revision=1, name='sc1'),
                 SomeClassHistory(revision=2, name='sc1modified')
@@ -75,26 +166,26 @@ class AuditableTestCase(unittest.TestCase):
 
         assert sc.revision == 3
 
-        sess.commit()
+        session.commit()
 
         sc.name = 'temp'
         sc.name = 'sc1modified2'
 
-        sess.commit()
+        session.commit()
 
         eq_(
-            sess.query(SomeClassHistory).order_by(SomeClassHistory.revision).all(),
+            session.query(SomeClassHistory).order_by(SomeClassHistory.revision).all(),
             [
                 SomeClassHistory(revision=1, name='sc1'),
                 SomeClassHistory(revision=2, name='sc1modified')
             ]
         )
 
-        sess.delete(sc)
-        sess.commit()
+        session.delete(sc)
+        session.commit()
 
         eq_(
-            sess.query(SomeClassHistory).order_by(SomeClassHistory.revision).all(),
+            session.query(SomeClassHistory).order_by(SomeClassHistory.revision).all(),
             [
                 SomeClassHistory(revision=1, name='sc1'),
                 SomeClassHistory(revision=2, name='sc1modified'),
@@ -103,58 +194,67 @@ class AuditableTestCase(unittest.TestCase):
         )
 
     def test_from_null(self):
-        class SomeClass(Auditable, self.Base, ComparableEntity):
+        Base = declarative_base(bind=create_engine('sqlite://'))
+
+        class SomeClass(Auditable, Base, ComparableEntity):
             __tablename__ = 'sometable'
 
             id = Column(Integer, primary_key=True)
             name = Column(String(50))
 
-        self.Base.metadata.create_all()
-        sess = self.Session()
+        Base.metadata.create_all()
+        session = scoped_session(sessionmaker())
+        auditing_session(session)
+
         sc = SomeClass()
-        sess.add(sc)
-        sess.commit()
+        session.add(sc)
+        session.commit()
 
         sc.name = 'sc1'
-        sess.commit()
+        session.commit()
 
         assert sc.revision == 2
 
     def test_deferred(self):
         """test versioning of unloaded, deferred columns."""
+        Base = declarative_base(bind=create_engine('sqlite://'))
 
-        class SomeClass(Auditable, self.Base, ComparableEntity):
+        class SomeClass(Auditable, Base, ComparableEntity):
             __tablename__ = 'sometable'
 
             id = Column(Integer, primary_key=True)
             name = Column(String(50))
             data = deferred(Column(String(25)))
 
-        self.Base.metadata.create_all()
-        sess = self.Session()
-        sc = SomeClass(name='sc1', data='somedata')
-        sess.add(sc)
-        sess.commit()
-        sess.close()
+        Base.metadata.create_all()
+        session = scoped_session(sessionmaker())
+        auditing_session(session)
 
-        sc = sess.query(SomeClass).first()
+        sc = SomeClass(name='sc1', data='somedata')
+        session.add(sc)
+        session.commit()
+        session.close()
+
+        sc = session.query(SomeClass).first()
         assert 'data' not in sc.__dict__
 
         sc.name = 'sc1modified'
-        sess.commit()
+        session.commit()
 
         assert sc.revision == 2
 
         SomeClassHistory = SomeClass.__audit_mapper__.class_
 
         eq_(
-            sess.query(SomeClassHistory).filter(SomeClassHistory.revision == 1).all(),
+            session.query(SomeClassHistory).filter(SomeClassHistory.revision == 1).all(),
             [SomeClassHistory(revision=1, name='sc1', data='somedata')]
         )
 
 
     def test_joined_inheritance(self):
-        class BaseClass(Auditable, self.Base, ComparableEntity):
+        Base = declarative_base(bind=create_engine('sqlite://'))
+
+        class BaseClass(Auditable, Base, ComparableEntity):
             __tablename__ = 'basetable'
 
             id = Column(Integer, primary_key=True)
@@ -180,25 +280,26 @@ class AuditableTestCase(unittest.TestCase):
 
             __mapper_args__ = {'polymorphic_identity':'same'}
 
-        self.Base.metadata.create_all()
-        sess = self.Session()
+        Base.metadata.create_all()
+        session = scoped_session(sessionmaker())
+        auditing_session(session)
 
         sep1 = SubClassSeparatePk(name='sep1', subdata1='sep1subdata')
         base1 = BaseClass(name='base1')
         same1 = SubClassSamePk(name='same1', subdata2='same1subdata')
-        sess.add_all([sep1, base1, same1])
-        sess.commit()
+        session.add_all([sep1, base1, same1])
+        session.commit()
 
         base1.name = 'base1mod'
         same1.subdata2 = 'same1subdatamod'
         sep1.name = 'sep1mod'
-        sess.commit()
+        session.commit()
 
         BaseClassHistory = BaseClass.__audit_mapper__.class_
         SubClassSeparatePkHistory = SubClassSeparatePk.__audit_mapper__.class_
         SubClassSamePkHistory = SubClassSamePk.__audit_mapper__.class_
         eq_(
-            sess.query(BaseClassHistory).order_by(BaseClassHistory.id).all(),
+            session.query(BaseClassHistory).order_by(BaseClassHistory.id).all(),
             [
                 SubClassSeparatePkHistory(id=1, name=u'sep1', type=u'sep', revision=1),
                 BaseClassHistory(id=2, name=u'base1', type=u'base', revision=1),
@@ -209,7 +310,7 @@ class AuditableTestCase(unittest.TestCase):
         same1.subdata2 = 'same1subdatamod2'
 
         eq_(
-            sess.query(BaseClassHistory).order_by(BaseClassHistory.id, BaseClassHistory.revision).all(),
+            session.query(BaseClassHistory).order_by(BaseClassHistory.id, BaseClassHistory.revision).all(),
             [
                 SubClassSeparatePkHistory(id=1, name=u'sep1', type=u'sep', revision=1),
                 BaseClassHistory(id=2, name=u'base1', type=u'base', revision=1),
@@ -220,7 +321,7 @@ class AuditableTestCase(unittest.TestCase):
 
         base1.name = 'base1mod2'
         eq_(
-            sess.query(BaseClassHistory).order_by(BaseClassHistory.id, BaseClassHistory.revision).all(),
+            session.query(BaseClassHistory).order_by(BaseClassHistory.id, BaseClassHistory.revision).all(),
             [
                 SubClassSeparatePkHistory(id=1, name=u'sep1', type=u'sep', revision=1),
                 BaseClassHistory(id=2, name=u'base1', type=u'base', revision=1),
@@ -231,7 +332,9 @@ class AuditableTestCase(unittest.TestCase):
         )
 
     def test_single_inheritance(self):
-        class BaseClass(Auditable, self.Base, ComparableEntity):
+        Base = declarative_base(bind=create_engine('sqlite://'))
+
+        class BaseClass(Auditable, Base, ComparableEntity):
             __tablename__ = 'basetable'
 
             id = Column(Integer, primary_key=True)
@@ -244,15 +347,16 @@ class AuditableTestCase(unittest.TestCase):
             subname = Column(String(50), unique=True)
             __mapper_args__ = {'polymorphic_identity':'sub'}
 
-        self.Base.metadata.create_all()
-        sess = self.Session()
+        Base.metadata.create_all()
+        session = scoped_session(sessionmaker())
+        auditing_session(session)
 
         b1 = BaseClass(name='b1')
         sc = SubClass(name='s1', subname='sc1')
 
-        sess.add_all([b1, sc])
+        session.add_all([b1, sc])
 
-        sess.commit()
+        session.commit()
 
         b1.name = 'b1modified'
 
@@ -260,7 +364,7 @@ class AuditableTestCase(unittest.TestCase):
         SubClassHistory = SubClass.__audit_mapper__.class_
 
         eq_(
-            sess.query(BaseClassHistory).order_by(BaseClassHistory.id, BaseClassHistory.revision).all(),
+            session.query(BaseClassHistory).order_by(BaseClassHistory.id, BaseClassHistory.revision).all(),
             [BaseClassHistory(id=1, name=u'b1', type=u'base', revision=1)]
         )
 
@@ -268,7 +372,7 @@ class AuditableTestCase(unittest.TestCase):
         b1.name = 'b1modified2'
 
         eq_(
-            sess.query(BaseClassHistory).order_by(BaseClassHistory.id, BaseClassHistory.revision).all(),
+            session.query(BaseClassHistory).order_by(BaseClassHistory.id, BaseClassHistory.revision).all(),
             [
                 BaseClassHistory(id=1, name=u'b1', type=u'base', revision=1),
                 BaseClassHistory(id=1, name=u'b1modified', type=u'base', revision=2),
@@ -279,40 +383,45 @@ class AuditableTestCase(unittest.TestCase):
         # test the unique constraint on the subclass
         # column
         sc.name = "modifyagain"
-        sess.flush()
+        session.flush()
 
     def test_unique(self):
-        class SomeClass(Auditable, self.Base, ComparableEntity):
+        Base = declarative_base(bind=create_engine('sqlite://'))
+
+        class SomeClass(Auditable, Base, ComparableEntity):
             __tablename__ = 'sometable'
 
             id = Column(Integer, primary_key=True)
             name = Column(String(50), unique=True)
             data = Column(String(50))
 
-        self.Base.metadata.create_all()
-        sess = self.Session()
+        Base.metadata.create_all()
+        session = scoped_session(sessionmaker())
+        auditing_session(session)
+
         sc = SomeClass(name='sc1', data='sc1')
-        sess.add(sc)
-        sess.commit()
+        session.add(sc)
+        session.commit()
 
         sc.data = 'sc1modified'
-        sess.commit()
+        session.commit()
 
         assert sc.revision == 2
 
         sc.data = 'sc1modified2'
-        sess.commit()
+        session.commit()
 
         assert sc.revision == 3
 
     def test_relationship(self):
+        Base = declarative_base(bind=create_engine('sqlite://'))
 
-        class SomeRelated(self.Base, ComparableEntity):
+        class SomeRelated(Base, ComparableEntity):
             __tablename__ = 'somerelated'
 
             id = Column(Integer, primary_key=True)
 
-        class SomeClass(Auditable, self.Base, ComparableEntity):
+        class SomeClass(Auditable, Base, ComparableEntity):
             __tablename__ = 'sometable'
 
             id = Column(Integer, primary_key=True)
@@ -322,29 +431,31 @@ class AuditableTestCase(unittest.TestCase):
 
         SomeClassHistory = SomeClass.__audit_mapper__.class_
 
-        self.Base.metadata.create_all()
-        sess = self.Session()
+        Base.metadata.create_all()
+        session = scoped_session(sessionmaker())
+        auditing_session(session)
+
         sc = SomeClass(name='sc1')
-        sess.add(sc)
-        sess.commit()
+        session.add(sc)
+        session.commit()
 
         assert sc.revision == 1
 
         sr1 = SomeRelated()
         sc.related = sr1
-        sess.commit()
+        session.commit()
 
         assert sc.revision == 2
 
         eq_(
-            sess.query(SomeClassHistory).filter(SomeClassHistory.revision == 1).all(),
+            session.query(SomeClassHistory).filter(SomeClassHistory.revision == 1).all(),
             [SomeClassHistory(revision=1, name='sc1', related_id=None)]
         )
 
         sc.related = None
 
         eq_(
-            sess.query(SomeClassHistory).order_by(SomeClassHistory.revision).all(),
+            session.query(SomeClassHistory).order_by(SomeClassHistory.revision).all(),
             [
                 SomeClassHistory(revision=1, name='sc1', related_id=None),
                 SomeClassHistory(revision=2, name='sc1', related_id=sr1.id)

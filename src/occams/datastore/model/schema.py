@@ -197,19 +197,19 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         return key in self.attributes
 
     def keys(self):
-        return self.attributes.keys()
+        return list(self.iterkeys())
 
     def iterkeys(self):
         return self.attributes.iterkeys()
 
     def values(self):
-        return self.attributes.values()
+        return list(self.itervalues())
 
     def itervalues(self):
         return self.attributes.itervalues()
 
     def items(self):
-        return self.attributes.items()
+        return list(self.iteritems())
 
     def iteritems(self):
         return self.attributes.iteritems()
@@ -302,19 +302,19 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
         return key in self.object_schema
 
     def keys(self):
-        return self.object_schema.keys()
+        return list(self.iterkeys())
 
     def iterkeys(self):
         return self.object_schema.iterkeys()
 
     def values(self):
-        return self.object_schema.values()
+        return list(self.itervalues())
 
     def itervalues(self):
         return self.object_schema.itervalues()
 
     def items(self):
-        return self.object_schema.items()
+        return list(self.iteritems())
 
     def iteritems(self):
         return self.object_schema.iteritems()
