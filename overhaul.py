@@ -92,10 +92,35 @@ def main():
     moveInAllSchemas()
     moveInAttributesAndChoices()
     moveInEntities(limit=entityLimit)
-    #moveInExternalContext() # don't forget this!!
+#    moveInExternalContext()
     Session.commit()
     if isWorking():
         print "Yay!"
+
+#def moveInExternalContext():
+#    """Make up contents of "external", then fill "context" using intance tables."""
+#    # SUBJECT LOGIC IS THE SIMPLEST
+#    ext_subject = mode.External(
+#        name="subject", title="anything?",
+#        description="subject table in clinical DB")
+#    Session.add(ext_subject)
+#    Session.flush()
+#    for our,parentEntityName in subjectInstances():
+#        new_context = {
+#            "entity_id":getNewEntityId(parentEntityName),
+#            "external_id":ext_subject.id,
+#            "key":our,
+#            }
+#        Session.add(model.Context(**new_context))
+#    Session.flush()
+#
+#    # Then do the same basic thing (with increasing cleverness) for 
+#    # the visit, partner, and enrollment instance tables...
+
+def subjectInstances():
+    """In the home stretch!"""
+    our, parentEntityName = None,None
+    yield our, parentEntityName
 
 def moveInEntities(limit=None):
     """This function will probably work in stages to move entities.
