@@ -190,7 +190,7 @@ class FormEditForm(StandardWidgetsMixin, UserAwareMixin, z3c.form.form.EditForm)
                   not self.context.item.publish_date
         
 
-    @z3c.form.button.buttonAndHandler(_(u'Publish Draft'), name='publish')
+    @z3c.form.button.buttonAndHandler(_(u'Publish Draft'), name='publish', condition= lambda self: self.can_publish())
     def handleComplete(self, action):
         """
         Save the form changes
@@ -200,18 +200,26 @@ class FormEditForm(StandardWidgetsMixin, UserAwareMixin, z3c.form.form.EditForm)
             self.status = self.formErrorsMessage
         else:
             Session = named_scoped_session(self.context.session)
-            self.context.item.title = unicode(data['title'])
-            if data['description']:
-                self.context.item.description = unicode(data['description'])
-            self.context.item.state = 'published'
-            if data['publish_date']:
-                self.context.item.publish_date = data['publish_date']
+            publish_date = data['publish_date'] or datetime.date.today()
+            uniquePublishQuery = (
+                    Session.query(model.Schema)
+                    .filter(model.Schema.name == self.context.item.name)
+                    .filter(model.Schema.publish_date == publish_date)
+                )
+            if uniquePublishQuery.count() > 0:
+                self.request.response.redirect(self.context.absolute_url() + "/@@edit")
+                message = "There is already a version of this form published on %s; Please select a new date." % publish_date.isoformat()
+                IStatusMessage(self.request).add(message)
             else:
-                self.context.item.publish_date = datetime.date.today()
-            Session.flush()
-            repository = closest(self.context, IRepository)
-            self.request.response.redirect(repository.absolute_url())
-            IStatusMessage(self.request).add(self.successMessage)
+                self.context.item.title = unicode(data['title'])
+                if data['description']:
+                    self.context.item.description = unicode(data['description'])
+                self.context.item.state = 'published'
+                self.context.item.publish_date = publish_date
+                Session.flush()
+                repository = closest(self.context, IRepository)
+                self.request.response.redirect(repository.absolute_url())
+                IStatusMessage(self.request).add(self.successMessage)
 
 
 # Need to customize the template further, use wrapper
@@ -474,7 +482,7 @@ class FieldOrderForm(StandardWidgetsMixin, z3c.form.form.Form):
             if targetForm == sourceForm:
                 moveField(targetForm, self.context.item, after)
                 self.context._data = None
-            elif self.context.item in targetForm.values():
+            elif (self.context.item in targetForm.values()) or (self.context.item.name in targetForm.keys()):
             # Do not allow the field to be moved into another schema if it
             # already contains a field with the same name
                 self.request.response.setStatus(400)

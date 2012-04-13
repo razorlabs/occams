@@ -20,8 +20,8 @@ from occams.datastore.interfaces import typesVocabulary
 
 # Copied from Python documentation
 reservedWords = """
-and     assert     break     class     continue
-def     del     elif     else     except
+and     assert     break     class     continue     choice
+def     del     elif     else     except 
 exec     finally     for     from     global
 if     import     in     is     lambda
 not     or     pass     print     raise

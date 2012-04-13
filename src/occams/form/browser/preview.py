@@ -2,9 +2,11 @@ from occams.form.form import Form
 from occams.form.form import Group
 import z3c.form.button
 import os.path
+import datetime
 from z3c.saconfig import named_scoped_session
 from zope.security import checkPermission
 from AccessControl import getSecurityManager
+from Products.statusmessages.interfaces import IStatusMessage
 
 from occams.datastore import model
 from occams.datastore.schema import copy
@@ -66,6 +68,7 @@ class FormPreviewForm(DisabledMixin, Form):
     def handleEdit(self, action):
         self.request.response.redirect(os.path.join(self.context.absolute_url(), '@@edit'))
 
+
     def can_draft(self):
         return checkPermission("occams.form.ModifyForm", self.context) 
 
@@ -79,3 +82,27 @@ class FormPreviewForm(DisabledMixin, Form):
         repositoryContext = closest(self.context, IRepository)
         self.request.response.redirect(os.path.join(repositoryContext.absolute_url(), str(new_schema.id), '@@edit'))
 
+    def can_publish(self):
+        return  (not self.context.item.publish_date) and  \
+        checkPermission("occams.form.PublishForm", self.context) 
+
+    @z3c.form.button.buttonAndHandler(_(u'Publish Form'), name='publish', condition= lambda self: self.can_publish())
+    def handlePublish(self, action):
+        Session = named_scoped_session(self.context.session)
+        publish_date = datetime.date.today()
+        uniquePublishQuery = (
+                Session.query(model.Schema)
+                .filter(model.Schema.name == self.context.item.name)
+                .filter(model.Schema.publish_date == publish_date)
+            )
+        if uniquePublishQuery.count() > 0:
+            self.request.response.redirect(self.context.absolute_url())
+            message = "There is already a version of this form published on %s." % publish_date.isoformat()
+            IStatusMessage(self.request).add(message)
+        else:
+            self.context.item.state = 'published'
+            self.context.item.publish_date = publish_date
+            Session.flush()
+            repository = closest(self.context, IRepository)
+            self.request.response.redirect(repository.absolute_url())
+            IStatusMessage(self.request).add(self.successMessage)
