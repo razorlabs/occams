@@ -20,7 +20,7 @@ from zope.interface import implements
 
 from occams.datastore.model import Model
 from occams.datastore.interfaces import IUser
-from occams.datastore.interfaces import NonExistentUser
+from occams.datastore.interfaces import NonExistentUserError
 
 
 NOW = text('CURRENT_TIMESTAMP')
@@ -34,7 +34,7 @@ def updateMetadata(instance, created):
     try:
         user = session.query(User).filter_by(key=key).one()
     except NoResultFound:
-        raise NonExistentUser(key)
+        raise NonExistentUserError(key)
 
     if created:
         instance.create_user = user

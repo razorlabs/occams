@@ -12,7 +12,7 @@ from sqlalchemy.orm import sessionmaker
 
 from occams.datastore import model
 from occams.datastore.model.metadata import AutoNamed
-from occams.datastore.interfaces import NonExistentUser
+from occams.datastore.interfaces import NonExistentUserError
 from occams.datastore.testing import DATASTORE_LAYER
 
 
@@ -100,6 +100,6 @@ class ModifiableMixinTestCase(unittest.TestCase):
         schema = model.Schema(name='Foo', title=u'')
         renegadeSession.add(schema)
 
-        with self.assertRaises(NonExistentUser):
+        with self.assertRaises(NonExistentUserError):
             renegadeSession.flush()
 

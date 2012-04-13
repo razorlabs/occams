@@ -9,7 +9,6 @@ from occams.datastore.model.schema import generateChecksum
 from occams.datastore.model.schema import Attribute
 from occams.datastore.model.storage import Entity
 from occams.datastore.model.storage import enforceSchemaState
-from occams.datastore.model.storage import cleanDataByState
 
 
 class DataStoreSession(sqlalchemy.orm.Session):
@@ -65,7 +64,6 @@ def dispatch(instance, state):
 
     if isinstance(instance, Entity) and state in ('new', 'dirty'):
         enforceSchemaState(instance)
-        cleanDataByState(instance)
 
     if isinstance(instance, Modifiable) and state in ('new', 'dirty'):
         updateMetadata(instance, created=(state == 'new'))

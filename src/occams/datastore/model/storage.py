@@ -23,6 +23,7 @@ from zope.interface import implements
 
 from occams.datastore.interfaces import IEntity
 from occams.datastore.interfaces import IValue
+from occams.datastore.interfaces import InvalidEntitySchemaError
 from occams.datastore.model import Model
 from occams.datastore.model.metadata import AutoNamed
 from occams.datastore.model.metadata import Referenceable
@@ -38,21 +39,12 @@ from occams.datastore.model.schema import Choice
 ENTITY_STATE_NAMES = sorted([term.token for term in IEntity['state'].vocabulary])
 
 
-def cleanDataByState(entity):
-    """
-    """
-    if entity is not None and entity.state == 'not-done':
-        for name, attribute in entity.schema.attributes.items():
-            if attribute.type == 'object':
-                cleanDataByState(entity[name])
-            else:
-                del entity[name]
-
-
 def enforceSchemaState(entity):
-    schema = entity.schema
-    if schema.state != 'published':
-        raise ValueError('Cannot collect data for unpublished Schema(%s)' % schema.name)
+    """
+    Makes sure an entity cannot be added to an unpublished schema
+    """
+    if entity.schema.state != 'published':
+        raise InvalidEntitySchemaError(entity.schema.name, entity.schema.state)
 
 
 class External(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
@@ -140,7 +132,8 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
             return self._decimal_values
         elif type_ == 'object':
             return self._object_values
-        else:
+        else: # pragma: no cover
+            # Extreme edge case that is actually a programming error
             raise NotImplementedError(type_)
 
     def __getitem__(self, key):

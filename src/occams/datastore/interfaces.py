@@ -77,9 +77,15 @@ class XmlError(DataStoreError):
     """
 
 
-class NonExistentUser(DataStoreError):
+class NonExistentUserError(DataStoreError):
     """
     Raised when flushing data with an non-existent user.
+    """
+
+
+class InvalidEntitySchemaError(DataStoreError):
+    """
+    Raised when an entity is being added foran invalid schema. (e.g. unpublished)
     """
 
 

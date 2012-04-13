@@ -4,6 +4,8 @@ Tests for storage implementations and services
 
 import unittest2 as unittest
 from datetime import date
+from datetime import datetime
+from decimal import Decimal
 
 import sqlalchemy.exc
 from zope.interface.verify import verifyClass
@@ -12,6 +14,7 @@ from zope.interface.verify import verifyObject
 from occams.datastore import model
 from occams.datastore.testing import DATASTORE_LAYER
 from occams.datastore.interfaces import  IEntity
+from occams.datastore.interfaces import InvalidEntitySchemaError
 
 
 class EntityModelTestCase(unittest.TestCase):
@@ -33,6 +36,14 @@ class EntityModelTestCase(unittest.TestCase):
         session.flush()
         count = session.query(model.Entity).count()
         self.assertEquals(1, count)
+
+    def testAddUnpublishedSchema(self):
+        session = self.layer['session']
+        schema = model.Schema(name='Foo', title=u'')
+        entity = model.Entity(schema=schema, name='Foo', title=u'')
+        session.add(entity)
+        with self.assertRaises(InvalidEntitySchemaError):
+            session.flush()
 
     def testProperties(self):
         session = self.layer['session']
@@ -76,6 +87,48 @@ class EntityModelTestCase(unittest.TestCase):
             session.add(model.Entity(schema=schema, name='Entry'))
             session.flush()
 
+    def testTypes(self):
+        session = self.layer['session']
+        sample = [
+            ('integer', 5, [1, 2, 3]),
+            ('decimal', Decimal('16.4'), [Decimal('1.5'), Decimal('12.1'), Decimal('3.0')]),
+            ('boolean', True, [True, False]),
+            ('string', u'foo', [u'foo', u'bar', u'baz']),
+            ('text', u'foo\nbar', [u'par\n1', u'par\n2', u'par\n3']),
+            ('date', date(2010, 3, 1), [date(2010, 1, 1), date(2010, 2, 1), date(2010, 3, 1)]),
+            ('datetime', datetime(2010, 3, 1, 5, 3, 0), [
+                datetime(2010, 3, 1, 5, 3, 0),
+                datetime(2010, 5, 1, 5, 3, 0),
+                datetime(2010, 8, 1, 5, 3, 0),
+                ]),
+            ]
+
+        schema = model.Schema(name='Foo', title=u'', state='published')
+        entity = model.Entity(schema=schema, name='Foo', title=u'')
+        session.add(entity)
+        session.flush()
+
+        order = 0
+
+        for typeName, simple, collection in sample:
+            # Do simple values
+            simpleName = typeName + 'simple'
+            schema[simpleName] = model.Attribute(title=u'', type=typeName, order=order)
+            entity[simpleName] = simple
+            session.flush()
+            self.assertEqual(simple, entity[simpleName])
+
+            order += 1
+
+            # Now try collections
+            collectionName = typeName + 'collection'
+            schema[collectionName] = model.Attribute(title=u'', type=typeName, is_collection=True, order=order)
+            entity[collectionName] = collection
+            session.flush()
+            self.assertItemsEqual(collection, entity[collectionName])
+
+            order += 1
+
     def testDictLike(self):
         session = self.layer['session']
         schema = model.Schema(name='Foo', title=u'', state='published')
@@ -87,12 +140,15 @@ class EntityModelTestCase(unittest.TestCase):
         with self.assertRaises(KeyError):
             entity['foo'] = 5
 
+        # Basic datatypes
         schema['foo'] = model.Attribute(title=u'', type='integer', order=0)
+        self.assertIsNone(entity['foo'])
         entity['foo'] = 5
         session.flush()
         self.assertEqual(5, entity['foo'])
 
         schema['bar'] = model.Attribute(title=u'', type='integer', is_collection=True, order=1)
+        self.assertListEqual([], entity['bar'])
         entity['bar'] = [1, 2, 3]
         session.flush()
         self.assertListEqual(entity['bar'], [1, 2, 3])
