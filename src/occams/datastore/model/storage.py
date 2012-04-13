@@ -8,6 +8,7 @@ from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship as Relationship
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import backref
+from sqlalchemy.orm import synonym
 from sqlalchemy.schema import Column
 from sqlalchemy.schema import ForeignKeyConstraint
 from sqlalchemy.schema import Index
@@ -164,11 +165,12 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
 
         for value in values:
             if attribute.type == 'object':
-                filter = dict(_value=value.id)
+                params = dict(attribute=attribute, sub_entity=value)
             else:
-                filter = dict(_value=value)
-            if not collector.filter_by(attribute=attribute).filter_by(**filter).count() > 0:
-                collector.append(wrapperFactory(attribute=attribute, _value=value))
+                params = dict(attribute=attribute, value=value)
+
+            if not collector.filter_by(**params).count() > 0:
+                collector.append(wrapperFactory(**params))
 
     def __delitem__(self, key):
         collector = self._getCollector(key)
@@ -229,8 +231,7 @@ def TypeMappingClass(className, tableName, valueType):
         def _value(cls):
             return Column('value', cls.__valuetype__)
 
-        @property
-        def value(self):
+        def getValue(self):
             type_ = self.attribute.type
             value = self._value
             if type_ == 'date':
@@ -242,6 +243,11 @@ def TypeMappingClass(className, tableName, valueType):
                 if session:
                     value = session.query(Entity).get(self._value)
             return value
+
+        def setValue(self, value):
+            self._value = value
+
+        value = property(getValue, setValue)
 
         @declared_attr
         def __table_args__(cls):
@@ -297,6 +303,8 @@ ValueDecimal = TypeMappingClass('ValueDecimal', 'decimal', Numeric)
 ValueString = TypeMappingClass('ValueString', 'string', Unicode)
 
 ValueObject = TypeMappingClass('ValueObject', 'object', Integer)
+
+ValueObject.sub_entity = Relationship(Entity, primaryjoin='Entity.id == ValueObject._value')
 
 nameModelMap = dict(
     integer=ValueInteger,

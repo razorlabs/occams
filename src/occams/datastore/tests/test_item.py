@@ -140,7 +140,12 @@ class EntityToDictionaryTestCase(unittest.TestCase):
         entity['zero']['one'] = 1234
         entity['zero']['two'] = u'huzzah?'
 
-        # This is currently not working because storage is not quite done yet
         data = entityToDictionary(entity)
         self.assertIn('__metadata__', data)
+        self.assertIn('zero', data)
+        self.assertIn('__metadata__', data['zero'])
+        self.assertIn('one', data['zero'])
+        self.assertEqual(1234, data['zero']['one'])
+        self.assertIn('two', data['zero'])
+        self.assertEqual(u'huzzah?', data['zero']['two'])
 

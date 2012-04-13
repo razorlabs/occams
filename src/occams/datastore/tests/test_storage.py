@@ -129,6 +129,28 @@ class EntityModelTestCase(unittest.TestCase):
 
             order += 1
 
+    def testSubObject(self):
+        session = self.layer['session']
+        schema = model.Schema(name='Foo', title=u'', state='published')
+        entity = model.Entity(schema=schema, name='Foo', title=u'')
+        session.add(entity)
+        session.flush()
+
+        subschema = model.Schema(name='Sub', title=u'', state='published')
+        model.Attribute(schema=schema, name='sub', title=u'', type='object', order=0, object_schema=subschema)
+        model.Attribute(schema=subschema, name='bar', title=u'', type='string', order=0)
+        session.flush()
+        self.assertIsNone(entity['sub'])
+
+        subentity = model.Entity(schema=subschema, name='Sub', title=u'')
+        entity['sub'] = subentity
+        session.flush()
+        self.assertEqual(subentity.id, entity['sub'].id)
+
+        entity['sub']['bar'] = u'bleh'
+        session.flush()
+        self.assertEqual(u'bleh', entity['sub']['bar'])
+
     def testDictLike(self):
         session = self.layer['session']
         schema = model.Schema(name='Foo', title=u'', state='published')
