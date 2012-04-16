@@ -135,8 +135,9 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
     sub_schemata = Relationship('Schema', remote_side=base_schema_id)
 
     categories = Relationship(
-        'Category',
-        secondary=schema_category_table
+        Category,
+        secondary=schema_category_table,
+        collection_class=set,
         )
 
     state = Column(

@@ -200,9 +200,10 @@ class ISchema(IDataBaseItem):
         description=_(u'Listing of schemata that subclass the Zope-style interface.'),
         )
 
-    categories = zope.schema.Iterable(
+    categories = zope.schema.Set(
         title=_(u'Categories'),
-        description=_(u'Listing of schema categories.')
+        description=_(u'Listing of schema categories.'),
+        value_type=zope.schema.Object(schema=ICategory),
         )
 
     state = zope.schema.Choice(
@@ -376,7 +377,7 @@ class IEntity(IDataBaseItem):
     state = zope.schema.Choice(
         title=_(u'The current workflow state'),
         values=sorted([
-            'pending-entry', 'pending-review', 
+            'pending-entry', 'pending-review',
             'complete', 'not-done',
             'error',
             ]),
