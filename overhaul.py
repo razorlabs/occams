@@ -3,6 +3,13 @@
 
 #########1#########2#########3#########4#########5#########6#########7#####
 
+Design Assumptions:
+    1. Reflect avrc_demo_data w/ sqlsoup (readonly to ensure no changes).
+    2. No modifications to support tables (specimen, subject, etc) will be necessary.
+    3. Remove dates will respect chronology (ie data processed in order leaves 
+        final row with NULL remove date, and the rest "clean").
+    4. The process will run in one go, within a single night or weekend.
+
 Precondition Assumptions:
     1. There are two databases per run (eg avrc_demo_data and avrc_data)
     2. The avrc_data will start as a straight up copy of avrc_demo_data.
@@ -10,29 +17,43 @@ Precondition Assumptions:
         integer, object, decimal, string, schema, attribute, and choice.
     4. During the upgrade process, the website will be turned off.
     5. The source schema table is unique on (schema.name,DATE(create_date))
-    6. We have run the choice-fixing-sql to adjust a few create dates
+    6. We have run some SQL against gibbon that fixed some oddities in the source
 
 -- choice fixing sql!!
-
 -- run this to vierfy that gibbon has the same IDs as were problematic on gibbon-test-db
 SELECT sc.name, sc.create_date, a.name, a.id, a.create_date
   FROM schema sc
     JOIN attribute a ON a.schema_id = sc.id
   WHERE sc.name IN ('FollowupHistoryNeedleSharingPartners','IEarlyTestMSMPartners')
-
+;
 -- run this to fix:
 UPDATE attribute
   SET "create_date" = sc.create_date
   FROM schema sc
   WHERE sc.id = attribute.schema_id
     AND attribute.id IN (271,272,274,308,309,310,311,273)
+;
 
-
-Design Assumptions:
-    1. Reflect avrc_demo_data w/ sqlsoup (readonly to ensure no changes).
-    2. No modifications to support tables (specimen, subject, etc) will be necessary.
-    3. Remove dates will respect chronology (ie data processed in order leaves final row with NULL remove date, and the rest "clean").
-    4. The process will run in one go, within a single night or weekend.
+-- Verify that two RapidTests are confused because of a create_date
+-- on the *morning* before the RapidTest was versioned later that day
+SELECT *
+  FROM entity e
+  WHERE DATE(e.create_date) = '2012-03-01'
+    AND e.create_date < '2012-03-01 13:13:45.198454'
+    AND e.schema_id IN (19,75)
+;
+-- Make the updated RapidTest always point to the new schema, an hour after it was created
+UPDATE entity
+  SET create_date = '2012-03-01 14:14:00.600112', schema_id = 75
+  WHERE name IN ('RapidTest-148743')
+    AND create_date = '2012-03-01 08:14:00.600112'
+;
+-- Make the RapidTest created that morning think it was created before the confusion started
+UPDATE entity
+  SET create_date = '2012-02-29 07:15:31.972552'
+  WHERE name = 'RapidTest-148740'
+    AND create_date = '2012-03-01 07:15:31.972552'
+;
 
 """
 from sqlalchemy.ext.sqlsoup import SqlSoup
@@ -66,39 +87,152 @@ def main():
     usage = """overhaul.py OLDCONNECT NEWCONNECT"""
     configureGlobalSession(sys.argv[1], sys.argv[2])
     addUser("bitcore@ucsd.edu")
-    entityLimit = None
+    entityLimit = 100
     print "Moving in all schemas and %s entities" % entityLimit
     moveInAllSchemas()
     moveInAttributesAndChoices()
     moveInEntities(limit=entityLimit)
-    #moveInValues() # as part of the entities?
-    #moveInExternalContext() # don't forget this!!
+#    moveInExternalContext()
     Session.commit()
     if isWorking():
         print "Yay!"
 
-def moveInValues():
-    pass
+#def moveInExternalContext():
+#    """Make up contents of "external", then fill "context" using intance tables."""
+#    # SUBJECT LOGIC IS THE SIMPLEST
+#    ext_subject = mode.External(
+#        name="subject", title="anything?",
+#        description="subject table in clinical DB")
+#    Session.add(ext_subject)
+#    Session.flush()
+#    for our,parentEntityName in subjectInstances():
+#        new_context = {
+#            "entity_id":getNewEntityId(parentEntityName),
+#            "external_id":ext_subject.id,
+#            "key":our,
+#            }
+#        Session.add(model.Context(**new_context))
+#    Session.flush()
+#
+#    # Then do the same basic thing (with increasing cleverness) for 
+#    # the visit, partner, and enrollment instance tables...
+
+def subjectInstances():
+    """In the home stretch!"""
+    our, parentEntityName = None,None
+    yield our, parentEntityName
 
 def moveInEntities(limit=None):
     """This function will probably work in stages to move entities.
     
     WORKING - Stage 1: Parent entities
-    TODO - Stage 2: Child entities
-    TODO - Stage 3: linking object values
+    TO TEST - Stage 2: Child entities
+    TO TEST - Stage 3: linking object values
     """
     counter = 0
-    for name in yieldDistinctEntityNames():
-        newEntity = None
+    for name in yieldDistinctParentEntityNames():
+        counter += 1
+        if limit is not None and counter > limit:
+            return
+        # FIRST HANDLE THE PARENT ENTITIES
+        newParentEntity = None
         newSchema = None
+        the_create_date = None
         for sourceEntity,schema_name in yieldOrderedEntities(name):
             if newSchema is None:
-                newSchema = getSchemaForEntity(schema_name,sourceEntity.create_date)
-            newEntity = createEntity(sourceEntity,newEntity,newSchema)
-        counter += 1
-        if limit:
-            if counter >= limit:
-                return
+                the_create_date = sourceEntity.create_date
+                newSchema = getSchemaForEntity(schema_name,the_create_date)
+            # Set up *this revision* for this parent
+            newParentEntity = createEntity(sourceEntity,newParentEntity,newSchema)
+            Session.add(newParentEntity)
+            Session.flush()
+            newParentEntity = updateValues(newParentEntity,sourceEntity)
+            Session.flush()
+
+            ## This section is commented out until Marco's datastore code to
+            ## handle child attachment works...
+           # 
+           # # Use datastore's built in awesomeness to handle subentities and the
+           # # implicit linking object values for this revision.  Then commit :)
+           # for oldChildEntity,oldParentAttrName in yieldChildEntities(sourceEntity):
+           #     newChildSchema = newSchema[oldParentAttrName].object_schema
+           #     tempChildEntity = createEntity(
+           #         oldChildEntity, 
+           #         getattr(newParentEntity,oldParentAttrName,None),
+           #         newChildSchema)
+           #     newParentEntity[oldParentAttrName] = tempChildEntity
+           #     #import pdb; pdb.set_trace()
+           #     Session.flush()
+           #     newParentEntity[oldParentAttrName] = updateValues(
+           #         newParentEntity[oldParentAttrName],
+           #         oldChildEntity)
+           #     Session.flush()
+
+def updateValues(partialNewEntity,oldEntity):
+    """Return the same partialNewEntity, except augmented with old values."""
+    for attribute in partialNewEntity.schema.values():
+        if attribute.type == 'object': 
+            # is_collection restriction is only here so we can test: non-collections first
+            continue
+        value = getOldValue(attribute, oldEntity)
+        partialNewEntity[attribute.name] = value
+    return partialNewEntity
+
+def getOldValue(attribute, oldEntity):
+    """Uses knowledge of attribute to return one of the entities old values."""
+    type_to_table = {
+        "boolean":"integer",
+        "integer":"integer",
+        "text":"string",
+        "string":"string",
+        "date":"datetime",
+        "decimal":"decimal",
+        }
+    att = old_model.entity("attribute")
+    val = old_model.entity(type_to_table[attribute.type])
+    qry = (
+        Session.query(val.value)
+        .join(att, (att.id == val.attribute_id))
+        .filter(att.name == attribute.name)
+        .filter(val.entity_id == oldEntity.id)
+        )
+    if qry.count() > 1 and not attribute.is_collection:
+        raise Exception("fml")
+    elif attribute.is_collection:
+        return qry.all()
+    return qry.first()
+
+def yieldChildEntities(oldParentEntity):
+    """Get child entites with parrent attr names given parent entity name.
+    
+    For a given parent entity name, *skip* any non-object attributes it
+    has... the whole point here is to handle parent/child linking issues,
+    and the real meat of the forms (ints, dates, strings, etc) won't be
+    handled till this skeleton exists."""
+    from sqlalchemy.orm import aliased
+    c_ent = aliased(old_model.entity("entity"))
+    p_ent = old_model.entity("entity")
+    obj = old_model.entity("object")
+    att = old_model.entity("attribute")
+    qry = (
+        Session.query(c_ent, att.name) 
+        .join(obj, (c_ent.id == obj.value))
+        .join(p_ent, (p_ent.id == obj.entity_id))
+        .filter(p_ent.id == oldParentEntity.id)
+        .join(att, (att.id == obj.attribute_id)) 
+        )
+    return iter(qry)
+
+def getSchemaForEntity(schema_name,entity_date):
+    """Not plural == singular, not impossible publish version."""
+    qry = (
+        Session.query(model.Schema)
+        .filter(model.Schema.name == schema_name)
+        .filter(model.Schema.publish_date <= entity_date)
+        .order_by(model.Schema.publish_date.desc())
+        .limit(1)
+        )
+    return qry.one()
 
 def moveInAttributesAndChoices():
     schemaChanges = getInstalledSchemas()
@@ -123,9 +257,12 @@ def moveInAllSchemas():
             p_attr = getLinkingAttr(c_original)
             createLinkingAttr(revision,new_parent,new_child,p_attr)
         #print "Installed %s total schemas and related attributes." % installed
-            
+
 def createEntity(sourceEntity,prevNewEntity,newSchema):
-    """Handles each step replaying entity diffs over time."""
+    """Either create ur update (depending on prevNewEntity == None).
+    
+    This needs a Session.add(createEntity()) and a Session.flush().
+    Those are your job as the user of this function."""
     global entity_state
     if prevNewEntity is None:
         prevNewEntity = model.Entity(
@@ -136,10 +273,14 @@ def createEntity(sourceEntity,prevNewEntity,newSchema):
     simples = ["name","title","description",]
     for simple in simples:
         setattr(prevNewEntity,simple,getattr(sourceEntity,simple))
-    prevNewEntity.state = entity_state[sourceEntity.state_id]
+    try:
+        prevNewEntity.state = entity_state[sourceEntity.state_id]
+    except KeyError as err:
+        if "None" in err.__str__():
+            prevNewEntity.state = "error"
+        else:
+            raise err
     prevNewEntity.modify_date = sourceEntity.create_date
-    Session.add(prevNewEntity) 
-    Session.flush()
     return prevNewEntity
 
 def createAttrsAndChoices(newSchema,attrsAndChoices):
@@ -184,16 +325,6 @@ def createSchema(revision,original):
     Session.flush()
     return toEnter
 
-def getSchemaForEntity(schema_name,entity_date):
-    """Not plural == singular, not impossible publish version."""
-    qry = (
-        Session.query(model.Schema)
-        .filter(model.Schema.name == schema_name)
-        .filter(model.Schema.publish_date <= entity_date)
-        .order_by(model.Schema.publish_date.desc())
-        .limit(1)
-        )
-    return qry.one()
 
 def getInstalledSchemas():
     """So simple it hurts :)"""
@@ -220,8 +351,7 @@ def createLinkingAttr(revision,new_parent,new_child,p_attr):
      Session.flush()
 
 def yieldOrderedEntities(name):
-    """Docstring me!"""
-    from sqlalchemy.sql import exists
+    """Given entity name, yield entities themselves."""
     ent = old_model.entity("entity")
     sch = old_model.entity("schema")
     qry = (
@@ -235,7 +365,7 @@ def yieldOrderedEntities(name):
         )
     return iter(qry)
 
-def yieldDistinctEntityNames():
+def yieldDistinctParentEntityNames():
     """Returns entity names that are *parent* entities only.
     
     Finding parents by left join where obj.value is NULL turns up
