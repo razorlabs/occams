@@ -7,6 +7,7 @@ import datetime
 import re
 
 from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.ext.orderinglist import ordering_list
 from sqlalchemy.orm import relationship as Relationship
 from sqlalchemy.orm import synonym as Synonym
 from sqlalchemy.orm import backref
@@ -331,6 +332,7 @@ class Choice(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         backref=backref(
             name='choices',
             order_by='Choice.order',
+            collection_class=ordering_list('order'),
             cascade="all, delete, delete-orphan"
             )
         )
