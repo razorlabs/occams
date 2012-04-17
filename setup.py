@@ -58,7 +58,6 @@ setup(
         ],
     extras_require=dict(
         postgresql=['psycopg2'],
-        zope=['zope.configuration'],
         test=['plone.testing'],
         ),
     tests_require=['plone.testing'],
