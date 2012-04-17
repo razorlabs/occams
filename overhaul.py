@@ -87,8 +87,11 @@ def main():
     usage = """overhaul.py OLDCONNECT NEWCONNECT"""
     configureGlobalSession(sys.argv[1], sys.argv[2])
     addUser("bitcore@ucsd.edu")
-    entityLimit = 100
-    print "Moving in all schemas and %s entities" % entityLimit
+    entityLimit = None
+    if not entityLimit:
+        print "Moving in all schemas and entities"
+    else:
+        print "Moving in all schemas and %s entities" % entityLimit
     moveInAllSchemas()
     moveInAttributesAndChoices()
     moveInEntities(limit=entityLimit)
@@ -146,29 +149,51 @@ def moveInEntities(limit=None):
             newParentEntity = createEntity(sourceEntity,newParentEntity,newSchema)
             Session.add(newParentEntity)
             Session.flush()
-            newParentEntity = updateValues(newParentEntity,sourceEntity)
-            Session.flush()
+            # Use datastore's built in awesomeness to handle subentities and the
+            # implicit linking object values for this revision.  Then commit :)
+            for oldChildEntity,oldParentAttrName in yieldChildEntities(sourceEntity):
+                newChildSchema = newSchema[oldParentAttrName].object_schema
+                try:
+                    newChildEntity = newParentEntity[oldParentAttrName]
+                except KeyError:
+                    newChildEntity = None
+                newChildEntity = createEntity(
+                    oldChildEntity,
+                    newChildEntity,
+                    newChildSchema)
+                newParentEntity[oldParentAttrName] = newChildEntity
+                Session.flush()
+                newParentEntity[oldParentAttrName] = updateEntity(
+                    newParentEntity[oldParentAttrName],
+                    oldChildEntity)
+                Session.flush()
 
-            ## This section is commented out until Marco's datastore code to
-            ## handle child attachment works...
-           # 
-           # # Use datastore's built in awesomeness to handle subentities and the
-           # # implicit linking object values for this revision.  Then commit :)
-           # for oldChildEntity,oldParentAttrName in yieldChildEntities(sourceEntity):
-           #     newChildSchema = newSchema[oldParentAttrName].object_schema
-           #     tempChildEntity = createEntity(
-           #         oldChildEntity, 
-           #         getattr(newParentEntity,oldParentAttrName,None),
-           #         newChildSchema)
-           #     newParentEntity[oldParentAttrName] = tempChildEntity
-           #     #import pdb; pdb.set_trace()
-           #     Session.flush()
-           #     newParentEntity[oldParentAttrName] = updateValues(
-           #         newParentEntity[oldParentAttrName],
-           #         oldChildEntity)
-           #     Session.flush()
+def createEntity(sourceEntity,prevNewEntity,newSchema):
+    """Either create ur update (depending on prevNewEntity == None).
+    
+    This needs a Session.add(createEntity()) and a Session.flush().
+    Those are your job as the user of this function."""
+    global entity_state
+    if prevNewEntity is None:
+        prevNewEntity = model.Entity(
+                create_date=sourceEntity.create_date,
+                name=sourceEntity.name,
+                schema=newSchema,
+                )
+    simples = ["title","description",]
+    for simple in simples:
+        setattr(prevNewEntity,simple,getattr(sourceEntity,simple))
+    try:
+        prevNewEntity.state = entity_state[sourceEntity.state_id]
+    except KeyError as err:
+        if "None" in err.__str__():
+            prevNewEntity.state = "error"
+        else:
+            raise err
+    prevNewEntity.modify_date = sourceEntity.create_date
+    return prevNewEntity
 
-def updateValues(partialNewEntity,oldEntity):
+def updateEntity(partialNewEntity,oldEntity):
     """Return the same partialNewEntity, except augmented with old values."""
     for attribute in partialNewEntity.schema.values():
         if attribute.type == 'object': 
@@ -252,36 +277,12 @@ def moveInAllSchemas():
         # CHILD SCHEMAS AND THEIR LINKING PARENT ATTRIBUTES
         c_originals = getOriginalChildSchemas(p_original)
         for c_original in c_originals:
-            new_child = createSchema(revision,c_original)
+            new_child = createSchema(revision,c_original,inline=True)
             installed += 1
             p_attr = getLinkingAttr(c_original)
             createLinkingAttr(revision,new_parent,new_child,p_attr)
         #print "Installed %s total schemas and related attributes." % installed
 
-def createEntity(sourceEntity,prevNewEntity,newSchema):
-    """Either create ur update (depending on prevNewEntity == None).
-    
-    This needs a Session.add(createEntity()) and a Session.flush().
-    Those are your job as the user of this function."""
-    global entity_state
-    if prevNewEntity is None:
-        prevNewEntity = model.Entity(
-                create_date=sourceEntity.create_date,
-                name=sourceEntity.name,
-                schema=newSchema,
-                )
-    simples = ["name","title","description",]
-    for simple in simples:
-        setattr(prevNewEntity,simple,getattr(sourceEntity,simple))
-    try:
-        prevNewEntity.state = entity_state[sourceEntity.state_id]
-    except KeyError as err:
-        if "None" in err.__str__():
-            prevNewEntity.state = "error"
-        else:
-            raise err
-    prevNewEntity.modify_date = sourceEntity.create_date
-    return prevNewEntity
 
 def createAttrsAndChoices(newSchema,attrsAndChoices):
     """Given a schema name and revision date, create such a schema"""
@@ -310,13 +311,14 @@ def createAttrsAndChoices(newSchema,attrsAndChoices):
             newSchema[attribute.name].choices.append(model.Choice(**buildChoice))
     Session.flush()
 
-def createSchema(revision,original):
+def createSchema(revision,original,inline=False):
     """Given a schema name and revision date, create such a schema"""
     form_name, publish_date = revision[0],revision[1]
     simples = ["name","title","description","storage","create_date","modify_date"]
     buildIt = {
         "state":"published",
         "publish_date":publish_date,
+        "is_inline":inline
         }
     for simple in simples:
         buildIt[simple] = getattr(original,simple)
@@ -324,7 +326,6 @@ def createSchema(revision,original):
     Session.add(toEnter)
     Session.flush()
     return toEnter
-
 
 def getInstalledSchemas():
     """So simple it hurts :)"""
