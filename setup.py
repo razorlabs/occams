@@ -53,12 +53,11 @@ setup(
         'lxml',
 
         # ORM utilities and upgrade tools
-        'SQLAlchemy',
-        'alembic',
+        'SQLAlchemy >=0.7.0,<0.7.99',
+        'alembic >=0.3.0,<0.3.99',
         ],
     extras_require=dict(
         postgresql=['psycopg2'],
-        zope=['zope.configuration'],
         test=['plone.testing'],
         ),
     tests_require=['plone.testing'],

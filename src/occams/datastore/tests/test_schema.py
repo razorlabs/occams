@@ -141,6 +141,103 @@ class SchemaModelTestCase(unittest.TestCase):
             session.flush()
 
 
+class AttributeModelTestCase(unittest.TestCase):
+    """
+    Verifies Attribute model
+    """
+
+    layer = DATASTORE_LAYER
+
+    def testImplementation(self):
+        self.assertTrue(verifyClass(IAttribute, model.Attribute))
+        self.assertTrue(verifyObject(IAttribute, model.Attribute()))
+
+    def testAdd(self):
+        session = self.layer['session']
+        schema = model.Schema(name='Foo', title=u'Foo')
+        attribute = model.Attribute(
+            schema=schema,
+            name='foo',
+            title=u'Enter Foo',
+            type='string',
+            order=0
+            )
+        session.add(attribute)
+        session.flush()
+        schemaCount = session.query(model.Attribute).count()
+        self.assertEquals(1, schemaCount, u'Found more than one entry')
+
+
+class ChoiceModelTestCase(unittest.TestCase):
+    """
+    Verifies Choice model
+    """
+
+    layer = DATASTORE_LAYER
+
+    def testImplementation(self):
+        self.assertTrue(verifyClass(dsIChoice, model.Choice))
+        self.assertTrue(verifyObject(dsIChoice, model.Choice()))
+
+    def testAdd(self):
+        session = self.layer['session']
+        schema = model.Schema(name='Foo', title=u'Foo')
+        schema['foo'] = \
+            model.Attribute(name='foo', title=u'Enter Foo', type='string', order=0)
+        schema['foo'].choices = [
+            model.Choice(name='foo', title=u'Foo', value='foo', order=0),
+            model.Choice(name='bar', title=u'Bar', value='bar', order=1),
+            model.Choice(name='baz', title=u'Baz', value='baz', order=2),
+            ]
+        session.add(schema)
+        session.flush()
+        schemaCount = session.query(model.Choice).count()
+        self.assertEquals(3, schemaCount, u'Did not find choices')
+
+
+class CategoryModelTestCase(unittest.TestCase):
+    """
+    Verifies Category model
+    """
+
+    layer = DATASTORE_LAYER
+
+    def testImplemetation(self):
+        self.assertTrue(verifyClass(ICategory, model.Category))
+        self.assertTrue(verifyObject(ICategory, model.Category()))
+
+    def testAdd(self):
+        session = self.layer['session']
+        category = model.Category(name='Tests', title=u'Test Schemata')
+        session.add(category)
+        session.flush()
+
+        self.assertIsNotNone(category.id)
+        self.assertEqual('Tests', category.name)
+        self.assertEqual(u'Test Schemata', category.title)
+        self.assertIsNone(category.description)
+
+    def testAppendToSchema(self):
+        session = self.layer['session']
+        schema = model.Schema(name='Foo', title=u'', state='published')
+        session.add(schema)
+        session.flush()
+
+        self.assertEqual(0, len(schema.categories))
+        category1 = model.Category(name='Tests', title=u'Test Schemata')
+        schema.categories.add(category1)
+        session.flush()
+        self.assertEqual(1, len(schema.categories))
+
+        schema.categories.add(category1)
+        session.flush()
+        self.assertEqual(1, len(schema.categories))
+
+        category2 = model.Category(name='Bars', title=u'Bar Schemata')
+        schema.categories.add(category2)
+        self.assertEqual(2, len(schema.categories))
+
+
 class SchemaCopyTestCase(unittest.TestCase):
     """
     Verifies that schemata can be "deep" copied as new versions of schemata
@@ -198,33 +295,6 @@ class SchemaCopyTestCase(unittest.TestCase):
         self.assertNotEqual(schema, schemaCopy)
         self.assertEqual(schema.name, schemaCopy.name)
         self.assertNotEqual(schema['bar'].object_schema, schemaCopy['bar'].object_schema)
-
-
-class AttributeModelTestCase(unittest.TestCase):
-    """
-    Verifies Attribute model
-    """
-
-    layer = DATASTORE_LAYER
-
-    def testImplementation(self):
-        self.assertTrue(verifyClass(IAttribute, model.Attribute))
-        self.assertTrue(verifyObject(IAttribute, model.Attribute()))
-
-    def testAdd(self):
-        session = self.layer['session']
-        schema = model.Schema(name='Foo', title=u'Foo')
-        attribute = model.Attribute(
-            schema=schema,
-            name='foo',
-            title=u'Enter Foo',
-            type='string',
-            order=0
-            )
-        session.add(attribute)
-        session.flush()
-        schemaCount = session.query(model.Attribute).count()
-        self.assertEquals(1, schemaCount, u'Found more than one entry')
 
 
 class DictionaryLikeTesCase(unittest.TestCase):
@@ -391,33 +461,6 @@ class DictionaryLikeTesCase(unittest.TestCase):
         items = attribute.items()
         self.assertEqual(subattribtue.name, items[0][0])
         self.assertEqual(subattribtue.name, items[0][1].name)
-
-
-class ChoiceModelTestCase(unittest.TestCase):
-    """
-    Verifies Choice model
-    """
-
-    layer = DATASTORE_LAYER
-
-    def testImplementation(self):
-        self.assertTrue(verifyClass(dsIChoice, model.Choice))
-        self.assertTrue(verifyObject(dsIChoice, model.Choice()))
-
-    def testAdd(self):
-        session = self.layer['session']
-        schema = model.Schema(name='Foo', title=u'Foo')
-        schema['foo'] = \
-            model.Attribute(name='foo', title=u'Enter Foo', type='string', order=0)
-        schema['foo'].choices = [
-            model.Choice(name='foo', title=u'Foo', value='foo', order=0),
-            model.Choice(name='bar', title=u'Bar', value='bar', order=1),
-            model.Choice(name='baz', title=u'Baz', value='baz', order=2),
-            ]
-        session.add(schema)
-        session.flush()
-        schemaCount = session.query(model.Choice).count()
-        self.assertEquals(3, schemaCount, u'Did not find choices')
 
 
 class HierarchyTestCase(unittest.TestCase):
