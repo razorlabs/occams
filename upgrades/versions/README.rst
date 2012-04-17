@@ -1,1 +1,1 @@
-Contains upgrade scripts
+Where the actual upgrade scripts reside.
