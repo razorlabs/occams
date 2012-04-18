@@ -2,6 +2,7 @@
 Tests for storage implementations and services
 """
 
+import time
 import unittest2 as unittest
 from datetime import date
 from datetime import datetime
@@ -15,6 +16,7 @@ from occams.datastore import model
 from occams.datastore.testing import DATASTORE_LAYER
 from occams.datastore.interfaces import  IEntity
 from occams.datastore.interfaces import InvalidEntitySchemaError
+from occams.datastore.interfaces import ConstraintError
 
 
 class EntityModelTestCase(unittest.TestCase):
@@ -128,6 +130,122 @@ class EntityModelTestCase(unittest.TestCase):
             self.assertItemsEqual(collection, entity[collectionName])
 
             order += 1
+
+    def testAttributeRequiredConstraint(self):
+        # An attribute is required to set a value
+        with self.assertRaises(ConstraintError):
+            value = model.ValueString(_value='Foo')
+
+    def testValueMinConstraint(self):
+        session = self.layer['session']
+        tests = (
+            # (type, limit, below, equal, over)
+            ('string', 5, 'foo', 'foooo', 'foobario'),
+            ('integer', 5, 2, 5, 10),
+            ('decimal', 5, Decimal('2.0'), Decimal('5.0'), Decimal('10.0')),
+            ('date', time.mktime(date(2009, 5, 6).timetuple()), date(2001, 2, 8), date(2009, 5, 6), date(2010, 4, 6)),
+            ('datetime', time.mktime(date(2009, 5, 6).timetuple()), datetime(2001, 2, 8), datetime(2009, 5, 6), datetime(2010, 4, 6)),
+            )
+
+        schema = model.Schema(name='Foo', title=u'', state='published')
+        entity = model.Entity(schema=schema, name='Foo', title=u'')
+        session.add(entity)
+        session.flush()
+
+        for i, test in enumerate(tests):
+            type_, limit, below, equal, over = test
+            model.Attribute(schema=schema, name=type_, title=u'', type=type_, value_min=limit, order=i)
+
+            with self.assertRaises(ConstraintError):
+                entity[type_] = below
+
+            entity[type_] = equal
+            entity[type_] = over
+
+        model.Attribute(schema=schema, name='boolean', title=u'', type='boolean', value_min=10, order=100)
+        with self.assertRaises(NotImplementedError):
+            entity['boolean'] = True
+
+
+    def testValueMaxConstraint(self):
+        session = self.layer['session']
+        tests = (
+            # (type, limit, below, equal, over)
+            ('string', 5, 'foo', 'foooo', 'foobario'),
+            ('integer', 5, 2, 5, 10),
+            ('decimal', 5, Decimal('2.0'), Decimal('5.0'), Decimal('10.0')),
+            ('date', time.mktime(date(2009, 5, 6).timetuple()), date(2001, 2, 8), date(2009, 5, 6), date(2010, 4, 6)),
+            ('datetime', time.mktime(date(2009, 5, 6).timetuple()), datetime(2001, 2, 8), datetime(2009, 5, 6), datetime(2010, 4, 6)),
+            )
+
+        schema = model.Schema(name='Foo', title=u'', state='published')
+        entity = model.Entity(schema=schema, name='Foo', title=u'')
+        session.add(entity)
+        session.flush()
+
+        for i, test in enumerate(tests):
+            type_, limit, below, equal, over = test
+            model.Attribute(schema=schema, name=type_, title=u'', type=type_, value_max=limit, order=i)
+
+            entity[type_] = below
+            entity[type_] = equal
+
+            with self.assertRaises(ConstraintError):
+                entity[type_] = over
+
+        model.Attribute(schema=schema, name='boolean', title=u'', type='boolean', value_max=10, order=100)
+        with self.assertRaises(NotImplementedError):
+            entity['boolean'] = True
+
+    def testValidatorConstraint(self):
+        session = self.layer['session']
+        schema = model.Schema(name='Foo', title=u'', state='published')
+        model.Attribute(
+            schema=schema,
+            name='test',
+            title=u'',
+            type='string',
+            # Valid US phone number
+            validator=r'\d{3}-\d{3}-\d{4}',
+            order=0
+            )
+        session.add(schema)
+        session.flush()
+
+        entity = model.Entity(schema=schema, name='Foo', title=u'')
+        session.add(entity)
+
+        with self.assertRaises(ConstraintError):
+            entity['test'] = u'trollol'
+
+        entity['test'] = '123-456-7890'
+        session.flush()
+        self.assertEqual('123-456-7890', entity['test'])
+
+    def testChoiceConstraint(self):
+        session = self.layer['session']
+        schema = model.Schema(name='Foo', title=u'', state='published')
+        model.Attribute(schema=schema, name='test', title=u'', type='string', order=0, choices=[
+            model.Choice(name='foo', title=u'Foo', value=u'foo', order=0),
+            model.Choice(name='bar', title=u'Bar', value=u'bar', order=1),
+            model.Choice(name='baz', title=u'Baz', value=u'baz', order=2),
+            ])
+        session.add(schema)
+        session.flush()
+
+        entity = model.Entity(schema=schema, name=u'FooEntry', title=u'')
+        session.add(entity)
+        entity['test'] = u'foo'
+        session.flush()
+
+        entry = session.query(model.ValueString).filter_by(_value=u'foo').one()
+        self.assertIsNotNone(entry.choice, u'Choice not set')
+
+        # Should not be able to set it to something outside of the specified
+        # choice constraints
+
+        with self.assertRaises(ConstraintError):
+            entity['test'] = u'umadbro?'
 
     def testSubObject(self):
         session = self.layer['session']

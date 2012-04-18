@@ -1,11 +1,15 @@
 """ Database Definitions
 """
 
+from decimal import Decimal
 from datetime import date
+from datetime import datetime
+import re
 
 from sqlalchemy import select
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
+from sqlalchemy import event
 from sqlalchemy.orm import relationship as Relationship
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import backref
@@ -28,6 +32,7 @@ from zope.interface import implements
 from occams.datastore.interfaces import IEntity
 from occams.datastore.interfaces import IValue
 from occams.datastore.interfaces import InvalidEntitySchemaError
+from occams.datastore.interfaces import ConstraintError
 from occams.datastore.model import Model
 from occams.datastore.model.metadata import AutoNamed
 from occams.datastore.model.metadata import Referenceable
@@ -328,6 +333,70 @@ ValueString = TypeMappingClass('ValueString', 'string', Unicode)
 ValueObject = TypeMappingClass('ValueObject', 'object', Integer)
 
 ValueObject.sub_entity = Relationship(Entity, primaryjoin='Entity.id == ValueObject._value')
+
+def validateValue(target, value, oldvalue, initiator):
+    """
+    Attempts to make sure that valid values are set to an entity
+    """
+    attribute = target.attribute
+
+    if attribute is None:
+        raise ConstraintError('No attribute assigned for value: %s' % value)
+
+    def comparable(type_, check, interpreted):
+        """
+        Local helper function to convert the check expression and target value
+        into a equally comparable values
+        """
+        if type_ in ('string', 'text'):
+            interpreted = len(value)
+        elif type_ in ('integer'):
+            pass
+        elif type_ in ('decimal'):
+            check = Decimal(check)
+        elif type_ in ('date'):
+            check = date.fromtimestamp(check)
+        elif type_ in ('datetime'):
+            check = datetime.fromtimestamp(check)
+        else:
+            raise NotImplementedError('Cannot coerce limit for type: %s' % type_)
+        return check, interpreted
+
+    if attribute.value_min is not None:
+        check, interpreted = comparable(attribute.type, attribute.value_min, value)
+
+        if interpreted < check:
+            raise ConstraintError(attribute.schema.name, attribute.name, check, '<', interpreted, value)
+
+    if attribute.value_max is not None:
+        check, interpreted = comparable(attribute.type, attribute.value_max, value)
+
+        if interpreted > check:
+            raise ConstraintError(attribute.schema.name, attribute.name, check, '>', interpreted, value)
+
+    # TODO: collections
+
+    if attribute.validator is not None and not re.match(attribute.validator, str(value)):
+        raise ConstraintError(attribute.schema.name, attribute.name, attribute.validator, value)
+
+    if attribute.choices:
+        found = None
+        for choice in attribute.choices:
+            if choice.value == value:
+                found = choice
+                break
+        if not found:
+            raise ConstraintError(attribute.schema.name, attribute.name, attribute.choices, value)
+
+        target.choice = choice
+
+
+event.listen(ValueDatetime._value, 'set', validateValue)
+event.listen(ValueInteger._value, 'set', validateValue)
+event.listen(ValueDecimal._value, 'set', validateValue)
+event.listen(ValueString._value, 'set', validateValue)
+event.listen(ValueObject._value, 'set', validateValue)
+
 
 nameModelMap = dict(
     integer=ValueInteger,

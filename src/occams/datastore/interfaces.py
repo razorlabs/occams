@@ -89,6 +89,12 @@ class InvalidEntitySchemaError(DataStoreError):
     """
 
 
+class ConstraintError(DataStoreError):
+    """
+    Raised when an invalid value is set to an entity
+    """
+
+
 class IDataStoreComponent(zope.interface.Interface):
     """
     Marker interface for components of this package.

@@ -248,6 +248,7 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
 
     checksum = Synonym('_checksum', descriptor=property(lambda self: self._checksum))
 
+    # TODO: these should be something, they work for almost every type except decimal
     value_min = Column(Integer)
 
     value_max = Column(Integer)
@@ -279,6 +280,30 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
             UniqueConstraint('schema_id', 'order', name='uq_%s_order' % cls.__tablename__),
             Index('ix_%s_object_schema_id' % cls.__tablename__, 'object_schema_id'),
             Index('ix_%s_checksum' % cls.__tablename__, 'checksum'),
+            CheckConstraint(
+                "collection_min IS NULL OR collection_min >= 0",
+                name='ck_%s_unsigned_collection_min' % cls.__tablename__,
+                ),
+            CheckConstraint(
+                "collection_max IS NULL OR collection_max >= 0",
+                name='ck_%s_unsigned_collection_max' % cls.__tablename__,
+                ),
+            CheckConstraint(
+                "collection_min < collection_max",
+                name='ck_%s_valid_collection' % cls.__tablename__,
+                ),
+            CheckConstraint(
+                "value_min IS NULL OR value_min >= 0",
+                name='ck_%s_unsigned_value_min' % cls.__tablename__,
+                ),
+            CheckConstraint(
+                "value_max IS NULL OR value_max >= 0",
+                name='ck_%s_unsigned_value_max' % cls.__tablename__,
+                ),
+            CheckConstraint(
+                "value_min < value_max",
+                name='ck_%s_valid_value' % cls.__tablename__,
+                ),
             CheckConstraint(
                 """
                 CASE WHEN type = 'object' THEN
@@ -372,7 +397,7 @@ class Choice(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
                 name='fk_%s_attribute_id' % cls.__tablename__,
                 ondelete='CASCADE',
                 ),
-            UniqueConstraint('attribute_id', 'name'),
-            UniqueConstraint('attribute_id', 'order'),
-            Index('ix_%s_value' % cls.__tablename__, 'value')
+            UniqueConstraint('attribute_id', 'name', name='uq_%s_name' % cls.__tablename__),
+            UniqueConstraint('attribute_id', 'order', name='uq_%s_order' % cls.__tablename__),
+            UniqueConstraint('attribute_id', 'value', name='uq_%s_value' % cls.__tablename__),
             )
