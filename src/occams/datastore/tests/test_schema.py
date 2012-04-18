@@ -237,6 +237,21 @@ class CategoryModelTestCase(unittest.TestCase):
         schema.categories.add(category2)
         self.assertEqual(2, len(schema.categories))
 
+        schema2 = model.Schema(name='Bar', title=u'', state='published')
+        schema2.categories.add(category2)
+        session.add(schema2)
+        session.flush()
+
+        # Now try a common use case: get all schema of a certain cateogry
+        schemata = (
+            session.query(model.Schema)
+            .join(model.Schema.categories)
+            .filter_by(name='Bars')
+            .all()
+            )
+
+        self.assertItemsEqual(['Foo', 'Bar'], [s.name for s in schemata])
+
 
 class SchemaCopyTestCase(unittest.TestCase):
     """
