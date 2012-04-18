@@ -5,12 +5,14 @@ from datetime import date
 
 from sqlalchemy import select
 from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import relationship as Relationship
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import backref
 from sqlalchemy.orm import synonym
 from sqlalchemy.schema import Column
 from sqlalchemy.schema import ForeignKeyConstraint
+from sqlalchemy.schema import ForeignKey
 from sqlalchemy.schema import Index
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.types import Date
@@ -19,6 +21,7 @@ from sqlalchemy.types import Enum
 from sqlalchemy.types import Numeric
 from sqlalchemy.types import Integer
 from sqlalchemy.types import Unicode
+from sqlalchemy.types import String
 from sqlalchemy.orm import object_session
 from zope.interface import implements
 
@@ -48,22 +51,22 @@ def enforceSchemaState(entity):
         raise InvalidEntitySchemaError(entity.schema.name, entity.schema.state)
 
 
-class External(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
-
-    @declared_attr
-    def __table_args__(cls):
-        return buildModifiableConstraints(cls) + (
-            UniqueConstraint('name', name='uq_%s_name' % cls.__tablename__),
-            )
-
-
 class Context(Model, AutoNamed, Modifiable, Auditable):
 
     entity_id = Column(Integer, nullable=False, primary_key=True)
 
-    external_id = Column(Integer, nullable=False, primary_key=True)
+    # Discriminator column for the keys and associations
+    external = Column(String, nullable=False, primary_key=True)
 
-    external = Relationship(External)
+    @classmethod
+    def creator(cls, external):
+        """Provide a 'creator' function to use with
+        the association proxy."""
+
+        return lambda entity: Context(
+            entity=entity,
+            external=external,
+            )
 
     key = Column(Integer, nullable=False, primary_key=True)
 
@@ -74,12 +77,6 @@ class Context(Model, AutoNamed, Modifiable, Auditable):
                 columns=['entity_id'],
                 refcolumns=['entity.id'],
                 name='fk_%s_entity_id' % cls.__tablename__,
-                ondelete='CASCADE',
-                ),
-            ForeignKeyConstraint(
-                columns=['external_id'],
-                refcolumns=['external.id'],
-                name='fk_%s_external_id' % cls.__tablename__,
                 ondelete='CASCADE',
                 ),
             )
@@ -183,6 +180,32 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
     def iteritems(self):
         for key in self.schema.iterkeys():
             yield (key, self[key])
+
+
+class HasEntities(object):
+    """
+    Mixin class to allow other models to associate with entities using a
+    central association class (i.e. ``Context``)
+    """
+
+    @declared_attr
+    def contexts(cls):
+        name = cls.__tablename__
+
+        cls.entities = association_proxy(
+            'contexts', 'entity',
+            creator=Context.creator(name)
+            )
+
+        return Relationship(
+            Context,
+            primaryjoin='(%s.id == Context.key) & (Context.external == "%s")' % (cls.__name__, name),
+            foreign_keys=[Context.key, Context.external],
+            backref=backref(
+                '%s_parent' % name,
+                uselist=False
+                )
+            )
 
 
 def TypeMappingClass(className, tableName, valueType):

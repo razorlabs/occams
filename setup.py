@@ -58,8 +58,7 @@ setup(
         ],
     extras_require=dict(
         postgresql=['psycopg2'],
-        test=['plone.testing'],
+        test=['plone.testing'], # Required for layers, does not install Plone
         ),
     tests_require=['plone.testing'],
-    test_suite='occams.datastore.tests',
     )

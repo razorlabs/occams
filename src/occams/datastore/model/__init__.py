@@ -14,7 +14,6 @@ from occams.datastore.model.schema import Category
 from occams.datastore.model.schema import Attribute
 from occams.datastore.model.schema import Choice
 
-from occams.datastore.model.storage import External
 from occams.datastore.model.storage import Context
 from occams.datastore.model.storage import Entity
 from occams.datastore.model.storage import ValueInteger
@@ -40,7 +39,6 @@ __all__ = (
     'ValueObject',
     'ValueDecimal',
     'ValueDatetime',
-    'External',
     'Context',
     )
 
