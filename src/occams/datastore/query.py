@@ -3,38 +3,45 @@ A utility for allowing the access of entered schema data to be represented
 in a SQL table-like fashion.
 """
 
-from sqlalchemy.orm import object_session
-
 from occams.datastore import model
-from occams.datastore.schema import SchemaManager
 
 
-def schemaByNameToSubQuery(session, name, on=None):
+def schemaToSubQuery(session, name, split=False):
     """
     Returns a schema entity data as an aliased sub-query.
 
     Arguments
-        ``session``
-            The session containing the schema data
         ``name``
-            The name of the schema
-        ``on``
-            (Optional) The target publish date, if none exists or ``None`` is
-            specified, the most recent schema will be used.
+            The name of the schema family to generate the subquery for
+        ``split``
+            Optional parameter to split aggressively split the variable
+            names by checksum. False by default.
+
+    Returns
+        A subquery representation of the schema family
     """
-    return schemaToSubQuery(SchemaManager(session).get(name, on))
 
+    schemaQuery = (
+        session.query(model.Schema)
+        .filter(model.Schema.name == name)
+        .filter(model.Schema.publish_date != None)
+        .order_by(model.Schema.publish_date.asc())
+        )
 
-def schemaToSubQuery(schema):
-    """
-    Returns a schema entity data as an aliased sub-query.
+    exportQuery = (
+        session.query(
+            model.Entity.id.label('entity_id'),
+            model.Entity.state.label('entity_state'),
+            model.Entity.collect_date.label('entity_collect_date'),
+            )
+        .join(model.Entity.schema)
+        .filter(model.Schema.name == name)
+        )
 
-    Arguments
-        ``schema``
-            The schema to use for generating the sub-query
-    """
-    session = object_session(schema)
-    query = session.query(model.Entity)
+    names = set([])
 
-    subquery = query.subquery(schema.name)
-    return subquery
+    for schema in schemaQuery:
+        pass
+
+    subQuery = exportQuery.subquery(name)
+    return subQuery
