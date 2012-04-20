@@ -21,6 +21,7 @@ from sqlalchemy.schema import Index
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.types import Date
 from sqlalchemy.types import DateTime
+from sqlalchemy.types import Boolean
 from sqlalchemy.types import Enum
 from sqlalchemy.types import Numeric
 from sqlalchemy.types import Integer
@@ -398,6 +399,7 @@ event.listen(ValueString._value, 'set', validateValue)
 event.listen(ValueObject._value, 'set', validateValue)
 
 
+# Where the types are stored
 nameModelMap = dict(
     integer=ValueInteger,
     boolean=ValueInteger,
@@ -407,4 +409,16 @@ nameModelMap = dict(
     date=ValueDatetime,
     datetime=ValueDatetime,
     object=ValueObject,
+    )
+
+
+# When retrieving values from storage, cast to these
+nameCastMap = dict(
+    integer=Integer,
+    boolean=Boolean,
+    string=Unicode,
+    text=Unicode,
+    date=Date,
+    datetime=DateTime,
+    decimal=Numeric,
     )
