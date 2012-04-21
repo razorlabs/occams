@@ -19,19 +19,6 @@ from occams.datastore.model.storage import nameCastMap
 from occams.datastore.model.storage import nameModelMap
 
 
-class collection(ColumnElement):
-    def __init__(self, column, separator='-', order_by=None):
-        self.column = column
-        self.separator = '-'
-        self.order_by = order_by
-
-
-@compiler.compiles(collection, 'postgres')
-@compiler.compiles(collection, 'postgresql')
-def compileCollectionPostgreSql(element, compiler, **kw):
-    return "ARRAY(%s)" % compiler.process(element.column)
-
-
 def schemaToSubQuery(session, name, split=False):
     """
     Returns a schema entity data as an aliased sub-query.
@@ -47,15 +34,10 @@ def schemaToSubQuery(session, name, split=False):
         A subquery representation of the schema family
     """
 
-    attributeQuery = (
-        session.query(model.Attribute)
-        .join(model.Attribute.schema)
-        .filter((model.Schema.name == name) & (model.Schema.publish_date != None))
-        .order_by(
-            model.Attribute.order.asc(),
-            model.Schema.publish_date.asc()
-            )
-        )
+    names, columns = getHeader(session, name, split=False)
+
+    for name in names:
+        print name
 
     exportQuery = (
         session.query(
@@ -64,31 +46,85 @@ def schemaToSubQuery(session, name, split=False):
             model.Entity.collect_date.label('entity_collect_date'),
             )
         .join(model.Entity.schema)
-        .filter((model.Schema.name == name) & (model.Schema.publish_date != None))
+        .filter(model.Schema.name == name)
+        .filter(model.Schema.publish_date != None)
         )
 
-    for attribute in attributeQuery:
-        Value = aliased(nameModelMap[attribute.type])
-
-        if attribute.is_collection:
-            column = collection(
-                session.query(cast(Value._value, nameCastMap[attribute.type]))
-                .filter(Value.entity_id == model.Entity.id)
-                .filter(Value.attribute_id == attribute.id)
-                .correlate(model.Entity)
-                .subquery()
-                .as_scalar()
-                )
-        else:
-            exportQuery = exportQuery.outerjoin(
-                Value,
-                ((Value.entity_id == model.Entity.id) &
-                    (Value.attribute_id == attribute.id))
-                )
-
-            column = cast(Value._value, nameCastMap[attribute.type])
-
-        exportQuery = exportQuery.add_column(column.label(attribute.name))
+#    for attribute in attributeQuery:
+#        Value = aliased(nameModelMap[attribute.type])
+#
+#        if attribute.is_collection:
+#            column = collection(
+#                session.query(cast(Value._value, nameCastMap[attribute.type]))
+#                .filter(Value.entity_id == model.Entity.id)
+#                .filter(Value.attribute_id == attribute.id)
+#                .correlate(model.Entity)
+#                .subquery()
+#                .as_scalar()
+#                )
+#        else:
+#            exportQuery = exportQuery.outerjoin(
+#                Value,
+#                ((Value.entity_id == model.Entity.id) &
+#                    (Value.attribute_id == attribute.id))
+#                )
+#
+#            column = cast(Value._value, nameCastMap[attribute.type])
+#
+#        exportQuery = exportQuery.add_column(column.label(attribute.name))
 
     subQuery = exportQuery.subquery(name)
     return subQuery
+
+
+def getHeader(session, name, split=False, prefix=''):
+    names = []
+    columns = {}
+
+    attributeQuery = (
+        session.query(model.Attribute)
+        .join(model.Attribute.schema)
+        .filter(model.Schema.name == name)
+        .filter(model.Schema.publish_date != None)
+        .order_by(
+            model.Attribute.order.asc(),
+            model.Schema.publish_date.asc()
+            )
+        )
+
+    for attribute in attributeQuery:
+        if attribute.type == 'object':
+            subnames, subcolumns = getHeader(
+                session=session,
+                name=attribute.object_schema.name,
+                prefix=attribute.name + '_',
+                split=split,
+                )
+            names.extend(subnames)
+            columns.update(subcolumns)
+        else:
+            specialName = attribute.name
+
+            if split:
+                specialName += '_' + attribute.checksum
+
+            if specialName not in columns:
+                names.append(specialName)
+                columns.setdefault(specialName, [])
+
+            columns[specialName].append(attribute)
+
+    return names, columns
+
+
+class collection(ColumnElement):
+    def __init__(self, column, separator='-', order_by=None):
+        self.column = column
+        self.separator = '-'
+        self.order_by = order_by
+
+
+@compiler.compiles(collection, 'postgres')
+@compiler.compiles(collection, 'postgresql')
+def compileCollectionPostgreSql(element, compiler, **kw):
+    return "ARRAY(%s)" % compiler.process(element.column)
