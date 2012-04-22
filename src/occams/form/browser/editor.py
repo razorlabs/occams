@@ -43,7 +43,7 @@ from occams.form.serialize import reservedWords
 from occams.form.serialize import camelize
 from occams.form.serialize import symbolize
 from occams.form.browser.preview import DisabledMixin
-from occams.form.form import UserAwareMixin
+from occams.datastore import model
 
 
 # Helper Methods
@@ -97,7 +97,7 @@ def moveField(form, field, after=None):
     return form
 
 
-class FormEditForm(StandardWidgetsMixin, UserAwareMixin, z3c.form.form.EditForm):
+class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
     """
     Renders the form for editing, using a subform for the fields editor.
     """
@@ -555,7 +555,6 @@ class FieldFormInputHelper(object):
         if self.getType() == 'boolean':
             widgets['value'].readonly = 'readonly'
 
-from occams.datastore import model
 
 class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
     """

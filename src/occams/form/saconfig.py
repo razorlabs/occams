@@ -5,10 +5,13 @@ from zope import component
 from z3c.saconfig.interfaces import IScopedSession, IEngineFactory
 from sqlalchemy.orm import  sessionmaker, scoped_session
 from AccessControl import getSecurityManager
+from z3c.saconfig import named_scoped_session
+from zope.component import getUtilitiesFor
 
 from occams.datastore.model.session import DataStoreSession
+from occams.datastore import model
 from occams.form.interfaces import ISessionUserFactory
-
+from sqlalchemy.exc import ProgrammingError
 class EventAwareScopedSession(GloballyScopedSession):
     """A globally scoped session.
 
@@ -47,3 +50,18 @@ class SessionUserFactory(object):
         Get the id of the current user
         """
         return getSecurityManager().getUser().getId()
+
+def registerUser(event):
+    registered = getUtilitiesFor(IScopedSession)
+    for name, utility in registered:
+        if name.find('occams') >= 0:
+            Session = named_scoped_session(name)
+            try:
+                userQ = Session.query(model.User).filter_by(key = event.principal.getId())
+                if not userQ.count():
+                    newUser= model.User(key = event.principal.getId())
+                    Session.add(newUser)
+                    Session.flush()
+            except ProgrammingError:
+                ## not a occams repository?!?!?
+                continue

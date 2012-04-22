@@ -2,8 +2,6 @@
 Repository tools
 """
 
-# import migrate.exceptions
-# import migrate.versioning.api
 from zope.component import getUtilitiesFor
 from zope.component import adapter
 from zope.interface import implementer

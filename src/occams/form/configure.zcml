@@ -17,6 +17,14 @@
 
   <browser:resourceDirectory name="occams.form" directory="static"/>
 
+   <subscriber
+    for="Products.PluggableAuthService.interfaces.events.IUserLoggedInEvent"
+    handler=".saconfig.registerUser"
+    />
+
+  <adapter factory="occams.datastore.schema.attributeToField" />
+  <adapter factory="occams.datastore.item.entityToDictionary" />
+
   <adapter
       factory=".traversal.RepositoryTraverser"
       provides="zope.publisher.interfaces.browser.IBrowserPublisher"

@@ -1,4 +1,5 @@
 from occams.form.form import Form
+from occams.form.form import StandardWidgetsMixin
 from occams.form.form import Group
 import z3c.form.button
 import os.path

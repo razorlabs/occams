@@ -33,22 +33,6 @@ def TextAreaFieldWidget(field, request):
     widget.rows = TEXTAREA_SIZE
     return widget
 
-class UserAwareMixin(object):
-    """
-    Verifies that the current user is in datastore
-    """
-    def update(self):
-        if not hasattr(self, 'session'):
-            if hasattr(self.context, 'session') and self.context.session:
-                self.session = self.context.session
-        if hasattr(self, 'session'):
-            current_user = getSecurityManager().getUser().getId()
-            Session = named_scoped_session(self.context.session)
-            if current_user and Session.query(model.User).filter(model.User.key == current_user).count() <= 0:
-                Session.add(model.User(key=current_user))
-                Session.flush()
-        super(UserAwareMixin, self).update()
-
 
 class StandardWidgetsMixin(object):
     """
@@ -94,7 +78,7 @@ class Group(StandardWidgetsMixin, z3c.form.group.Group):
         super(Group, self).update()
 
 
-class Form(StandardWidgetsMixin, UserAwareMixin, z3c.form.group.GroupForm, z3c.form.form.Form):
+class Form(StandardWidgetsMixin, z3c.form.group.GroupForm, z3c.form.form.Form):
     """
     A datastore-specific form
     """

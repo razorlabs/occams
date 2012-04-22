@@ -17,7 +17,6 @@ from occams.datastore.schema import copy
 from z3c.form.interfaces import DISPLAY_MODE
 from zope.security import checkPermission
 
-from occams.form.form import UserAwareMixin
 from occams.form.serialize import camelize
 
 additionalControls = [('view', _(u'View')), ('edit', _(u'Edit')), ]
@@ -101,7 +100,7 @@ class AddForm(crud.AddForm):
     """
     label = _(u"Add a new form")
 
-class SummaryListingForm(crud.CrudForm, UserAwareMixin):
+class SummaryListingForm(crud.CrudForm):
     """
     Lists the forms in the repository.
     No add form is needed as that will be a separate view.
