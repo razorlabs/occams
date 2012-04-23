@@ -8,6 +8,7 @@ from datetime import date
 from occams.datastore.testing import DATASTORE_LAYER
 from occams.datastore import model
 from occams.datastore.query import schemaToSubQuery
+from occams.datastore.query import getHeader
 from occams.datastore.schema import copy
 
 
@@ -17,32 +18,16 @@ p3 = date(2011, 8, 1)
 p4 = date(2012, 5, 1)
 
 
-class SchemaToSubQueryTestCase(unittest.TestCase):
+class QueryTestCase(unittest.TestCase):
     """
     Verifies the subquery adapter
     """
 
     layer = DATASTORE_LAYER
 
-    def testUnpublished(self):
+    def testGetHeader(self):
         session = self.layer['session']
-        schema = model.Schema(name='A', title=u'', state='draft')
-        session.add(schema)
-        session.flush()
-
-#        subquery = schemaToSubQuery(session, 'A', split=True)
-
-    def testEmpty(self):
-        session = self.layer['session']
-        schema = model.Schema(name='A', title=u'', state='published', publish_date=p1)
-        session.add(schema)
-        session.flush()
-
-        subquery = schemaToSubQuery(session, 'A', split=True)
-
-    def testFlatString(self):
-        session = self.layer['session']
-        schema = model.Schema(
+        schema1 = model.Schema(
             name='A',
             title=u'',
             state='published',
@@ -51,24 +36,82 @@ class SchemaToSubQueryTestCase(unittest.TestCase):
                 a=model.Attribute(name='a', title=u'', type='string', order=0),
                 )
             )
-        session.add(schema)
-        session.flush()
+        session.add(schema1)
 
-        entity = model.Entity(schema=schema, name='Foo', title=u'')
-        session.add(entity)
-        entity['a'] = u'foo'
-        session.flush()
+        names, columns = getHeader(session, 'A', split=False)
+        self.assertItemsEqual(['a'], names)
+        self.assertItemsEqual(['a'], columns.keys())
 
-        entity = model.Entity(schema=schema, name='Bar', title=u'')
-        session.add(entity)
-        entity['a'] = u'Bar'
-        session.flush()
+        names, columns = getHeader(session, 'A', split=True)
+        expected = ['a_' + schema1['a'].checksum]
+        self.assertItemsEqual(expected, names)
+        self.assertItemsEqual(expected, columns.keys())
 
-        subquery = schemaToSubQuery(session, 'A', split=True)
-        for s in session.query(subquery):
-            print s
+        schema2 = model.Schema(
+            name='A',
+            title=u'',
+            state='published',
+            publish_date=p2,
+            attributes=dict(
+                a=model.Attribute(name='a', title=u'New title', type='string', order=0),
+                )
+            )
+        session.add(schema2)
 
-    def testSubSchemata(self):
-        pass
+        names, columns = getHeader(session, 'A', split=False)
+        self.assertItemsEqual(['a'], names)
+        self.assertItemsEqual(['a'], columns.keys())
+
+        names, columns = getHeader(session, 'A', split=True)
+        expected = ['a_' + schema1['a'].checksum, 'a_' + schema2['a'].checksum]
+        self.assertItemsEqual(expected, names)
+        self.assertItemsEqual(expected, columns.keys())
+
+#    def testUnpublished(self):
+#        session = self.layer['session']
+#        schema = model.Schema(name='A', title=u'', state='draft')
+#        session.add(schema)
+#        session.flush()
+#
+##        subquery = schemaToSubQuery(session, 'A', split=True)
+#
+#    def testEmpty(self):
+#        session = self.layer['session']
+#        schema = model.Schema(name='A', title=u'', state='published', publish_date=p1)
+#        session.add(schema)
+#        session.flush()
+#
+#        subquery = schemaToSubQuery(session, 'A', split=True)
+#
+#    def testFlatString(self):
+#        session = self.layer['session']
+#        schema = model.Schema(
+#            name='A',
+#            title=u'',
+#            state='published',
+#            publish_date=p1,
+#            attributes=dict(
+#                a=model.Attribute(name='a', title=u'', type='string', order=0),
+#                )
+#            )
+#        session.add(schema)
+#        session.flush()
+#
+#        entity = model.Entity(schema=schema, name='Foo', title=u'')
+#        session.add(entity)
+#        entity['a'] = u'foo'
+#        session.flush()
+#
+#        entity = model.Entity(schema=schema, name='Bar', title=u'')
+#        session.add(entity)
+#        entity['a'] = u'Bar'
+#        session.flush()
+#
+#        subquery = schemaToSubQuery(session, 'A', split=True)
+#        for s in session.query(subquery):
+#            print s
+#
+#    def testSubSchemata(self):
+#        pass
 
 
