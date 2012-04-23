@@ -6,17 +6,14 @@ from datetime import date
 from datetime import datetime
 import re
 
-from sqlalchemy import select
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy import event
 from sqlalchemy.orm import relationship as Relationship
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import backref
-from sqlalchemy.orm import synonym
 from sqlalchemy.schema import Column
 from sqlalchemy.schema import ForeignKeyConstraint
-from sqlalchemy.schema import ForeignKey
 from sqlalchemy.schema import Index
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.types import Date
@@ -66,8 +63,9 @@ class Context(Model, AutoNamed, Modifiable, Auditable):
 
     @classmethod
     def creator(cls, external):
-        """Provide a 'creator' function to use with
-        the association proxy."""
+        """
+        Provide a 'creator' function to use with the association proxy.
+        """
 
         return lambda entity: Context(
             entity=entity,
@@ -97,6 +95,7 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
 
     contexts = Relationship(
         Context,
+        cascade='all, delete-orphan',
         backref=backref(
             name='entity',
             )
@@ -207,6 +206,7 @@ class HasEntities(object):
             Context,
             primaryjoin='(%s.id == Context.key) & (Context.external == "%s")' % (cls.__name__, name),
             foreign_keys=[Context.key, Context.external],
+            cascade='all, delete-orphan',
             backref=backref(
                 '%s_parent' % name,
                 uselist=False
