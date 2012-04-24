@@ -5,7 +5,7 @@ from occams.datastore.model.metadata import updateMetadata
 from occams.datastore.model.metadata import Modifiable
 from occams.datastore.model.auditing import Auditable
 from occams.datastore.model.auditing import createRevision
-from occams.datastore.model.schema import generateChecksum
+from occams.datastore.model.schema import setChecksum
 from occams.datastore.model.schema import Attribute
 from occams.datastore.model.storage import Entity
 from occams.datastore.model.storage import enforceSchemaState
@@ -60,7 +60,7 @@ def dispatch(instance, state):
     """
 
     if isinstance(instance, Attribute) and state in ('new', 'dirty'):
-        generateChecksum(instance)
+        setChecksum(instance)
 
     if isinstance(instance, Entity) and state in ('new', 'dirty'):
         enforceSchemaState(instance)

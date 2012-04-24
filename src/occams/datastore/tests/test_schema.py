@@ -21,6 +21,7 @@ from zope.interface.verify import verifyClass
 from zope.interface.verify import verifyObject
 
 from occams.datastore import model
+from occams.datastore.model.schema import generateChecksum
 from occams.datastore.interfaces import ISchema
 from occams.datastore.interfaces import IAttribute
 from occams.datastore.interfaces import IChoice as dsIChoice
@@ -256,6 +257,97 @@ class CategoryModelTestCase(unittest.TestCase):
         self.assertItemsEqual(['Foo', 'Bar'], [s.name for s in schemata])
 
 
+class ChecksumTestCase(unittest.TestCase):
+
+    def testGenerate(self):
+        attribute1 = model.Attribute(
+            schema=model.Schema(name='Sample', title=u'Sample Schema'),
+            name=u'value',
+            title=u'Enter value',
+            type='string'
+            )
+
+        attribute2 = model.Attribute(
+            schema=model.Schema(name='Sample', title=u'Sample Schema'),
+            name=u'value',
+            title=u'Enter value',
+            type='string'
+            )
+
+        checksum1 = generateChecksum(attribute1)
+        checksum2 = generateChecksum(attribute2)
+
+        self.assertIsNotNone(checksum1)
+        self.assertIsNotNone(checksum2)
+        self.assertEqual(checksum1, checksum2)
+
+        attribute2.schema.title = 'New title that makes no difference'
+        checksum2 = generateChecksum(attribute2)
+        self.assertEqual(checksum1, checksum2)
+
+        attribute2.schema.name = 'ThisDoes'
+        checksum2 = generateChecksum(attribute2)
+        self.assertNotEqual(checksum1, checksum2)
+
+        # Change it back
+        attribute2.schema.name = 'Sample'
+        checksum2 = generateChecksum(attribute2)
+        self.assertEqual(checksum1, checksum2)
+
+        attribute2.title = u'Bleh'
+        checksum2 = generateChecksum(attribute2)
+        self.assertNotEqual(checksum1, checksum2)
+
+    def testGenerateWithChoices(self):
+        attribute1 = model.Attribute(
+            schema=model.Schema(name='Sample', title=u'Sample Schema'),
+            name=u'value',
+            title=u'Enter value',
+            type='string',
+            choices=[
+                model.Choice(name='never', title=u'Never', value=u'never', order=0),
+                model.Choice(name='sometimes', title=u'Sometimes', value=u'sometimes', order=1),
+                model.Choice(name='always', title=u'Always', value=u'always', order=2),
+                ]
+            )
+
+        attribute2 = model.Attribute(
+            schema=model.Schema(name='Sample', title=u'Sample Schema'),
+            name=u'value',
+            title=u'Enter value',
+            type='string',
+            choices=[
+                model.Choice(name='never', title=u'Never', value=u'never', order=0),
+                model.Choice(name='sometimes', title=u'Sometimes', value=u'sometimes', order=1),
+                model.Choice(name='always', title=u'Always', value=u'always', order=2),
+                ]
+            )
+
+        checksum1 = generateChecksum(attribute1)
+        checksum2 = generateChecksum(attribute2)
+
+        self.assertIsNotNone(checksum1)
+        self.assertIsNotNone(checksum2)
+        self.assertEqual(checksum1, checksum2)
+
+        attribute2.schema.title = 'New title that makes no difference'
+        checksum2 = generateChecksum(attribute2)
+        self.assertEqual(checksum1, checksum2)
+
+        attribute2.schema.name = 'ThisDoes'
+        checksum2 = generateChecksum(attribute2)
+        self.assertNotEqual(checksum1, checksum2)
+
+        # Change it back
+        attribute2.schema.name = 'Sample'
+        checksum2 = generateChecksum(attribute2)
+        self.assertEqual(checksum1, checksum2)
+
+        attribute2.title = u'Bleh'
+        checksum2 = generateChecksum(attribute2)
+        self.assertNotEqual(checksum1, checksum2)
+
+
 class SchemaCopyTestCase(unittest.TestCase):
     """
     Verifies that schemata can be "deep" copied as new versions of schemata
@@ -265,23 +357,51 @@ class SchemaCopyTestCase(unittest.TestCase):
 
     def testBasic(self):
         session = self.layer['session']
-        schema = model.Schema(name='Foo', title=u'Foo')
-        schema['foo'] = \
-            model.Attribute(name='foo', title=u'Enter Foo', type='string', order=0)
-        schema['foo'].choices = [
-            model.Choice(name='foo', title=u'Foo', value='foo', order=0),
-            model.Choice(name='bar', title=u'Bar', value='bar', order=1),
-            model.Choice(name='baz', title=u'Baz', value='baz', order=2),
-            ]
+        schema = model.Schema(
+            name='Foo',
+            title=u'Foo',
+            attributes=dict(
+                foo=model.Attribute(
+                    name='foo',
+                    title=u'Enter Foo',
+                    type='string',
+                    choices=[
+                        model.Choice(name='foo', title=u'Foo', value='foo', order=0),
+                        model.Choice(name='bar', title=u'Bar', value='bar', order=1),
+                        model.Choice(name='baz', title=u'Baz', value='baz', order=2),
+                        ],
+                    order=0
+                    )
+                )
+            )
+
         session.add(schema)
         session.flush()
-        schemaCount = session.query(model.Choice).count()
-        self.assertEquals(3, schemaCount, u'Did not find choices')
 
         schemaCopy = copy(schema)
+
+        # The ones that matter for checksums
+        self.assertEqual(schema.name, schemaCopy.name)
+        self.assertEqual(schema['foo'].name, schemaCopy['foo'].name)
+        self.assertEqual(schema['foo'].title, schemaCopy['foo'].title)
+        self.assertEqual(schema['foo'].description, schemaCopy['foo'].description)
+        self.assertEqual(schema['foo'].type, schemaCopy['foo'].type)
+        self.assertEqual(schema['foo'].is_collection, schemaCopy['foo'].is_collection)
+        self.assertEqual(schema['foo'].is_required, schemaCopy['foo'].is_required)
+        for i in range(3):
+            self.assertEqual(schema['foo'].choices[i].name, schemaCopy['foo'].choices[i].name)
+            self.assertEqual(schema['foo'].choices[i].title, schemaCopy['foo'].choices[i].title)
+            self.assertEqual(schema['foo'].choices[i].value, schemaCopy['foo'].choices[i].value)
+            self.assertEqual(schema['foo'].choices[i].order, schemaCopy['foo'].choices[i].order)
+
         session.add(schemaCopy)
         session.flush()
         self.assertNotEqual(schema.id, schemaCopy.id)
+        self.assertEqual(schema['foo'].checksum, schemaCopy['foo'].checksum)
+
+        schemaCopy['foo'].title = u'New Title'
+        session.flush()
+        self.assertNotEqual(schema['foo'].checksum, schemaCopy['foo'].checksum)
 
     def testWithSubObject(self):
         session = self.layer['session']
