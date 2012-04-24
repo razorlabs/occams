@@ -20,7 +20,7 @@ class HasEntitiesTestCase(unittest.TestCase):
     Test the mixin class
     """
 
-    def testAdd(self):
+    def testUsage(self):
         session = scoped_session(sessionmaker(
             bind=create_engine('sqlite://'),
             class_=model.DataStoreSession,
@@ -92,11 +92,25 @@ class HasEntitiesTestCase(unittest.TestCase):
         # Now suppose that we only have an entity and want to know its parents
         # Example: get all the SomeClassX references of an entity
 
-        query = session.query(model.Entity).filter_by(name=u'foo')
-        entity = query.one()
+        entity = session.query(model.Entity).filter_by(name=u'foo').one()
 
         sc1list = [c.sampleclass1_parent.name for c in entity.contexts if c.sampleclass1_parent]
         self.assertItemsEqual(['Foo'], sc1list)
+
+        # Querying them directly
+        # There is no clean way of querying for an entity by context in
+        # a generic association setting, as it would have to know about
+        # all ``HasEntities`` classes that reference it
+        sc1EntitiesQuery = (
+            session.query(model.Entity)
+            .join(model.Entity.contexts)
+            .filter(model.Context.external == u'sampleclass1')
+            .join(SampleClass1, (SampleClass1.id == model.Context.key))
+            .filter(SampleClass1.name == 'Foo')
+            )
+
+        entitylist = [e.name for e in sc1EntitiesQuery]
+        self.assertItemsEqual(['foo', 'bar', 'baz'], entitylist)
 
         # Now try adding the entity to an additional context
         session.add(SampleClass1(name='Jar', entities=[entity]))
@@ -114,3 +128,11 @@ class HasEntitiesTestCase(unittest.TestCase):
 
         sc1list = [sc1.name for sc1 in query]
         self.assertItemsEqual(['Foo', 'Jar'], sc1list)
+
+        # Now try deleting a context object
+        sc1 = session.query(SampleClass1).filter_by(name=u'Foo').one()
+        session.delete(sc1)
+        session.flush()
+
+        self.assertEqual(0, sc1EntitiesQuery.count())
+

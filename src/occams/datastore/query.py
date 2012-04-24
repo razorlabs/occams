@@ -1,12 +1,6 @@
 """
 A utility for allowing the access of entered schema data to be represented
 in a SQL table-like fashion.
-
-Steps to build:
-    * Collapse all the related attributes into an ordered tree
-    * The tree will then be used as the header
-    * Use a configuration file to further condense the header plan
-    * with the header we can then begin building a subquery for the actual data
 """
 
 from sqlalchemy import cast
@@ -14,12 +8,28 @@ from sqlalchemy.ext import compiler
 from sqlalchemy.sql import ColumnElement
 from sqlalchemy.orm import aliased
 
+from occams.datastore.interfaces import InvalidEntitySchemaError
 from occams.datastore import model
 from occams.datastore.model.storage import nameCastMap
 from occams.datastore.model.storage import nameModelMap
 
 
-def schemaToSubQuery(session, name, split=False):
+class Split(object):
+    """
+    An enum indicating how columns in the final sub-query should be split.
+    Splitting algorithms are as follows:
+        ``NAME``
+            No splitting should occur, all attributes are grouped by their name
+        ``CHECKSUM``
+            All attributes are grouped by their checksum
+        ``ID``
+            Aggressively split by attribute id
+    """
+
+    (NAME, CHECKSUM, ID) = range(3)
+
+
+def schemaToSubQuery(session, name, split=Split.NAME):
     """
     Returns a schema entity data as an aliased sub-query.
 
@@ -34,10 +44,11 @@ def schemaToSubQuery(session, name, split=False):
         A subquery representation of the schema family
     """
 
-    names, columns = getHeader(session, name, split=False)
+    # Collapse all the related attributes into an ordered tree
+    names, columns = getAttributes(session, name, split=split)
 
-    for name in names:
-        print name
+    # TODO somewhere in here we further collapse the attributes based on a
+    # configuration file
 
     exportQuery = (
         session.query(
@@ -50,36 +61,52 @@ def schemaToSubQuery(session, name, split=False):
         .filter(model.Schema.publish_date != None)
         )
 
-#    for attribute in attributeQuery:
-#        Value = aliased(nameModelMap[attribute.type])
-#
-#        if attribute.is_collection:
-#            column = collection(
-#                session.query(cast(Value._value, nameCastMap[attribute.type]))
-#                .filter(Value.entity_id == model.Entity.id)
-#                .filter(Value.attribute_id == attribute.id)
-#                .correlate(model.Entity)
-#                .subquery()
-#                .as_scalar()
-#                )
-#        else:
-#            exportQuery = exportQuery.outerjoin(
-#                Value,
-#                ((Value.entity_id == model.Entity.id) &
-#                    (Value.attribute_id == attribute.id))
-#                )
-#
-#            column = cast(Value._value, nameCastMap[attribute.type])
-#
-#        exportQuery = exportQuery.add_column(column.label(attribute.name))
+    for name in names:
+        for attribute in columns[name]:
+
+            Value = aliased(nameModelMap[attribute.type])
+
+            if attribute.is_collection:
+                column = collection(
+                    session.query(cast(Value._value, nameCastMap[attribute.type]))
+                    .filter(Value.entity_id == model.Entity.id)
+                    .filter(Value.attribute_id == attribute.id)
+                    .correlate(model.Entity)
+                    .subquery()
+                    .as_scalar()
+                    )
+            else:
+                exportQuery = exportQuery.outerjoin(
+                    Value,
+                    ((Value.entity_id == model.Entity.id) &
+                        (Value.attribute_id == attribute.id))
+                    )
+
+                column = cast(Value._value, nameCastMap[attribute.type])
+
+            exportQuery = exportQuery.add_column(column.label(name))
 
     subQuery = exportQuery.subquery(name)
     return subQuery
 
 
-def getHeader(session, name, split=False, prefix=''):
+def getAttributes(session, name, split=Split.NAME, prefix=''):
+    """
+    Consolidates all of the attributes in a form hierarchy into a flat header.
+    """
     names = []
-    columns = {}
+    attributes = {}
+
+    schemaCheckQuery = (
+        session.query(model.Schema)
+        .filter(model.Schema.name == name)
+        .filter(model.Schema.publish_date != None)
+        )
+
+    count = schemaCheckQuery.count()
+
+    if count <= 0:
+        raise InvalidEntitySchemaError(name)
 
     attributeQuery = (
         session.query(model.Attribute)
@@ -87,40 +114,49 @@ def getHeader(session, name, split=False, prefix=''):
         .filter(model.Schema.name == name)
         .filter(model.Schema.publish_date != None)
         .order_by(
+            model.Schema.publish_date.asc(),
             model.Attribute.order.asc(),
-            model.Schema.publish_date.asc()
             )
         )
 
     for attribute in attributeQuery:
         if attribute.type == 'object':
-            subnames, subcolumns = getHeader(
+            subnames, subattributes = getAttributes(
                 session=session,
                 name=attribute.object_schema.name,
                 prefix=attribute.name + '_',
                 split=split,
                 )
-            names.extend(subnames)
-            columns.update(subcolumns)
-        else:
-            specialName = attribute.name
 
-            if split:
+            for subname in subnames:
+                if subname not in attributes:
+                    names.append(subname)
+
+            attributes.update(subattributes)
+        else:
+            specialName = prefix + attribute.name
+
+            if split == Split.CHECKSUM:
                 specialName += '_' + attribute.checksum
 
-            if specialName not in columns:
+            if specialName not in attributes:
                 names.append(specialName)
-                columns.setdefault(specialName, [])
+                attributes.setdefault(specialName, [])
 
-            columns[specialName].append(attribute)
+            attributes[specialName].append(attribute)
 
-    return names, columns
+    return names, attributes
 
 
 class collection(ColumnElement):
+    """
+    Collection element for dynamically representing a collection in any
+    vendor-specific dialect.
+    """
+
     def __init__(self, column, separator='-', order_by=None):
         self.column = column
-        self.separator = '-'
+        self.separator = separator
         self.order_by = order_by
 
 
@@ -128,3 +164,8 @@ class collection(ColumnElement):
 @compiler.compiles(collection, 'postgresql')
 def compileCollectionPostgreSql(element, compiler, **kw):
     return "ARRAY(%s)" % compiler.process(element.column)
+
+
+@compiler.compiles(collection, 'sqlite')
+def compileCollectionSqlite(element, compiler, **kw):
+    return "GROUP_CONCAT(%s)" % compiler.process(element.column)

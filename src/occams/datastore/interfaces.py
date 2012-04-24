@@ -85,7 +85,7 @@ class NonExistentUserError(DataStoreError):
 
 class InvalidEntitySchemaError(DataStoreError):
     """
-    Raised when an entity is being added foran invalid schema. (e.g. unpublished)
+    Raised when an entity is being added for an invalid schema. (e.g. unpublished)
     """
 
 

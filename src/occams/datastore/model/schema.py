@@ -43,6 +43,9 @@ SCHEMA_STORAGE_NAMES = sorted([term.token for term in ISchema['storage'].vocabul
 SCHEMA_STATE_NAMES = sorted([term.token for term in ISchema['state'].vocabulary])
 ATTRIBUTE_TYPE_NAMES = sorted([term.token for term in IAttribute['type'].vocabulary])
 
+IS_REQUIRED_DEFAULT = False
+IS_COLLECTION_DEFAULT = False
+
 
 def checksum(*args):
     """
@@ -76,11 +79,21 @@ def generateChecksum(attribute):
         # itself
         attribute.name,
         attribute.title,
-        attribute.description,
+        attribute.description, # None != '', let the values behave naturally
         attribute.type,
-        attribute.is_collection,
-        attribute.is_required,
         ]
+
+    # is_collection and is_required could potentially not have been set at this
+    # point, so assume their future default values
+    if attribute.is_collection is None:
+        values.append(IS_COLLECTION_DEFAULT)
+    else:
+        values.append(attribute.is_collection)
+
+    if attribute.is_required is None:
+        values.append(IS_REQUIRED_DEFAULT)
+    else:
+        values.append(attribute.is_required)
 
     # Consider choices as well, but order them alphabetically instead of
     # by order in case things were just rearranged, which apparently
@@ -90,7 +103,11 @@ def generateChecksum(attribute):
         # between the user interface and the data dictionary
         values.extend([choice.order, choice.title, choice.value])
 
-    attribute._checksum = checksum(*values)
+    return checksum(*values)
+
+
+def setChecksum(attribute):
+    attribute._checksum = generateChecksum(attribute)
 
 
 def defaultPublishDate(context):
@@ -236,9 +253,9 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
 
     type = Column(Enum(*ATTRIBUTE_TYPE_NAMES, name='attribute_type'), nullable=False)
 
-    is_collection = Column(Boolean, nullable=False, default=False)
+    is_collection = Column(Boolean, nullable=False, default=IS_COLLECTION_DEFAULT)
 
-    is_required = Column(Boolean, nullable=False, default=False)
+    is_required = Column(Boolean, nullable=False, default=IS_REQUIRED_DEFAULT)
 
     object_schema_id = Column(Integer)
 
