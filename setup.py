@@ -36,6 +36,16 @@ setup(
     install_requires=[
         'setuptools',
 
+        # Useful tool for result sets
+        'ordereddict',
+
+        # Import/Export support via XML
+        'lxml',
+
+        # ORM utilities and upgrade tools
+        'SQLAlchemy >=0.7.0,<0.7.99',
+        'alembic >=0.3.0,<0.3.99',
+
         # Component specification/documentation
         # Note that these packages do not install the entire Zope ecosystem,
         # they install necessary building blocks that are useful merely for
@@ -48,13 +58,6 @@ setup(
 
         # Low-level batching support for Zope products
         'z3c.batching',
-
-        # Import/Export support via XML
-        'lxml',
-
-        # ORM utilities and upgrade tools
-        'SQLAlchemy >=0.7.0,<0.7.99',
-        'alembic >=0.3.0,<0.3.99',
         ],
     extras_require=dict(
         postgresql=['psycopg2'],
