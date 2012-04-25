@@ -96,6 +96,7 @@ class ItemFactoryTestCase(unittest.TestCase):
         self.assertTrue(IBar.providedBy(item.bar))
         self.assertEqual(123, item.bar.integerField)
 
+
 class EntityToDictionaryTestCase(unittest.TestCase):
 
     layer = DATASTORE_LAYER
@@ -133,6 +134,13 @@ class EntityToDictionaryTestCase(unittest.TestCase):
         session.add(entity)
         session.flush()
 
+        # Trying converting before we assign anything, because we're evil
+        data = entityToDictionary(entity)
+        self.assertIn('__metadata__', data)
+        self.assertIn('zero', data)
+        self.assertIsNone(data['zero'])
+
+        # Now be nice and actually assign it data
         sub = model.Entity(schema=schema['zero'].object_schema, name='sub', title=u'sub')
         session.add(sub)
         session.flush()
