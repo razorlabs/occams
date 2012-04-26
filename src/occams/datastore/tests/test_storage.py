@@ -13,6 +13,7 @@ from zope.interface.verify import verifyClass
 from zope.interface.verify import verifyObject
 
 from occams.datastore import model
+from occams.datastore.model.storage import nameModelMap
 from occams.datastore.testing import DATASTORE_LAYER
 from occams.datastore.interfaces import  IEntity
 from occams.datastore.interfaces import InvalidEntitySchemaError
@@ -92,13 +93,16 @@ class EntityModelTestCase(unittest.TestCase):
     def testTypes(self):
         session = self.layer['session']
         sample = [
-            ('integer', 5, [1, 2, 3]),
-            ('decimal', Decimal('16.4'), [Decimal('1.5'), Decimal('12.1'), Decimal('3.0')]),
-            ('boolean', True, [True, False]),
-            ('string', u'foo', [u'foo', u'bar', u'baz']),
-            ('text', u'foo\nbar', [u'par\n1', u'par\n2', u'par\n3']),
-            ('date', date(2010, 3, 1), [date(2010, 1, 1), date(2010, 2, 1), date(2010, 3, 1)]),
-            ('datetime', datetime(2010, 3, 1, 5, 3, 0), [
+            ('integer', 5, 8, [1, 2, 3]),
+            ('decimal', Decimal('16.4'), Decimal('12.3'),
+                    [Decimal('1.5'), Decimal('12.1'), Decimal('3.0')]),
+            ('boolean', True, False, [True, False]),
+            ('string', u'foo', u'bar', [u'foo', u'bar', u'baz']),
+            ('text', u'foo\nbar', u'foo\nbario', [u'par\n1', u'par\n2', u'par\n3']),
+            ('date', date(2010, 3, 1), date(2010, 4, 1),
+                [date(2010, 1, 1), date(2010, 2, 1), date(2010, 3, 1)]),
+            ('datetime', datetime(2010, 3, 1, 5, 3, 0), datetime(2011, 3, 1, 5, 3, 0),
+                [
                 datetime(2010, 3, 1, 5, 3, 0),
                 datetime(2010, 5, 1, 5, 3, 0),
                 datetime(2010, 8, 1, 5, 3, 0),
@@ -112,13 +116,30 @@ class EntityModelTestCase(unittest.TestCase):
 
         order = 0
 
-        for typeName, simple, collection in sample:
+        for typeName, simple, update, collection in sample:
+            ModelClass = nameModelMap[typeName]
+
             # Do simple values
             simpleName = typeName + 'simple'
             schema[simpleName] = model.Attribute(title=u'', type=typeName, order=order)
             entity[simpleName] = simple
             session.flush()
             self.assertEqual(simple, entity[simpleName])
+
+            # Double check auditing
+            valueQuery = session.query(ModelClass).filter_by(attribute=schema[simpleName])
+
+            valueObject = valueQuery.one()
+            self.assertEqual(1, valueObject.revision)
+
+            # Try updating
+            entity[simpleName] = update
+            session.flush()
+            self.assertEqual(update, entity[simpleName])
+
+            # Triple check auditing
+            valueObject = valueQuery.one()
+            self.assertEqual(2, valueObject.revision)
 
             order += 1
 
@@ -129,7 +150,19 @@ class EntityModelTestCase(unittest.TestCase):
             session.flush()
             self.assertItemsEqual(collection, entity[collectionName])
 
+            valueQuery = session.query(ModelClass).filter_by(attribute=schema[collectionName])
+
             order += 1
+
+            # Make sure we can also update
+            entity[collectionName] = collection[:2]
+            session.flush()
+            self.assertItemsEqual(collection[:2], entity[collectionName])
+            self.assertEqual(2, valueQuery.count())
+
+            # Lists are not audited, they're just removed and a new one is
+            # set
+            self.assertItemsEqual([1, 1], [v.revision for v in valueQuery])
 
     def testSubObject(self):
         session = self.layer['session']
