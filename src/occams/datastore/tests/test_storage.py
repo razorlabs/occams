@@ -14,7 +14,7 @@ from zope.interface.verify import verifyObject
 
 from occams.datastore import model
 from occams.datastore.model.storage import nameModelMap
-from occams.datastore.testing import DATASTORE_LAYER
+from occams.datastore.testing import OCCAMS_DATASTORE_MODEL_FIXTURE
 from occams.datastore.interfaces import  IEntity
 from occams.datastore.interfaces import InvalidEntitySchemaError
 from occams.datastore.interfaces import ConstraintError
@@ -25,7 +25,7 @@ class EntityModelTestCase(unittest.TestCase):
     Verifies entity model
     """
 
-    layer = DATASTORE_LAYER
+    layer = OCCAMS_DATASTORE_MODEL_FIXTURE
 
     def testImplementation(self):
         self.assertTrue(verifyClass(IEntity, model.Entity))

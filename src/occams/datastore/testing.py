@@ -10,7 +10,7 @@ import plone.testing
 from occams.datastore import model
 
 
-class DataStoreLayer(plone.testing.Layer):
+class OccamsDataStoreModelLayer(plone.testing.Layer):
     """
     DataBase application layer for tests.
     """
@@ -50,4 +50,4 @@ class DataStoreLayer(plone.testing.Layer):
         self['session'].rollback()
 
 
-DATASTORE_LAYER = DataStoreLayer()
+OCCAMS_DATASTORE_MODEL_FIXTURE = OccamsDataStoreModelLayer()

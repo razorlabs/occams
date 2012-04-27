@@ -9,7 +9,7 @@ from zope.interface import implements
 import zope.schema
 
 from occams.datastore import model
-from occams.datastore.testing import DATASTORE_LAYER
+from occams.datastore.testing import OCCAMS_DATASTORE_MODEL_FIXTURE
 from occams.datastore.item import Item
 from occams.datastore.item import ItemFactory
 from occams.datastore.item import entityToDictionary
@@ -99,7 +99,7 @@ class ItemFactoryTestCase(unittest.TestCase):
 
 class EntityToDictionaryTestCase(unittest.TestCase):
 
-    layer = DATASTORE_LAYER
+    layer = OCCAMS_DATASTORE_MODEL_FIXTURE
 
     def testBasic(self):
         session = self.layer['session']
