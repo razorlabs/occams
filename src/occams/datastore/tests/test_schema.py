@@ -195,7 +195,6 @@ class ChoiceModelTestCase(unittest.TestCase):
         schemaCount = session.query(model.Choice).count()
         self.assertEquals(3, schemaCount, u'Did not find choices')
 
-
 class CategoryModelTestCase(unittest.TestCase):
     """
     Verifies Category model
@@ -599,6 +598,36 @@ class DictionaryLikeTesCase(unittest.TestCase):
         items = attribute.items()
         self.assertEqual(subattribtue.name, items[0][0])
         self.assertEqual(subattribtue.name, items[0][1].name)
+
+    def testOrdering(self):
+        """
+        Make sure attributes are reported in the correct order
+        """
+        session = self.layer['session']
+        schema = model.Schema(name='Sample', title=u'Sample Schema')
+        model.Attribute(schema=schema, name='foo', title=u'', type='string', order=0)
+        model.Attribute(schema=schema, name='bar', title=u'', type='integer', order=1)
+        model.Attribute(schema=schema, name='baz', title=u'', type='decimal', order=2)
+        session.add(schema)
+        session.flush()
+
+        self.assertListEqual(['foo', 'bar', 'baz'], schema.keys())
+
+        items = schema.items()
+        self.assertEqual('foo', items[0][1].name)
+        self.assertEqual('bar', items[1][1].name)
+        self.assertEqual('baz', items[2][1].name)
+
+        # Try moving one
+        schema['foo'].order = 3
+        session.flush()
+
+        self.assertListEqual(['bar', 'baz', 'foo'], schema.keys())
+
+        items = schema.items()
+        self.assertEqual('bar', items[0][1].name)
+        self.assertEqual('baz', items[1][1].name)
+        self.assertEqual('foo', items[2][1].name)
 
 
 class HierarchyTestCase(unittest.TestCase):

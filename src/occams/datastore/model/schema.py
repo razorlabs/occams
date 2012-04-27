@@ -219,19 +219,22 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         return list(self.iterkeys())
 
     def iterkeys(self):
-        return self.attributes.iterkeys()
+        for attribute in sorted(self.attributes.values(), key=lambda a: a.order):
+            yield attribute.name
 
     def values(self):
         return list(self.itervalues())
 
     def itervalues(self):
-        return self.attributes.itervalues()
+        for attribute in sorted(self.attributes.values(), key=lambda a: a.order):
+            yield attribute
 
     def items(self):
         return list(self.iteritems())
 
     def iteritems(self):
-        return self.attributes.iteritems()
+        for attribute in sorted(self.attributes.values(), key=lambda a: a.order):
+            yield attribute.name, attribute
 
 
 class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
