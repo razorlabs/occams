@@ -14,6 +14,7 @@ from sqlalchemy.orm import backref
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.schema import Table
 from sqlalchemy.schema import Column
+from sqlalchemy.schema import PrimaryKeyConstraint
 from sqlalchemy.schema import CheckConstraint
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.schema import ForeignKeyConstraint
@@ -124,8 +125,9 @@ class Category(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audita
 
 
 schema_category_table = Table('schema_category', Model.metadata,
-    Column('schema_id', Integer, primary_key=True),
-    Column('category_id', Integer, primary_key=True),
+    Column('schema_id', Integer),
+    Column('category_id', Integer),
+    PrimaryKeyConstraint('schema_id', 'category_id'),
     ForeignKeyConstraint(
         columns=['schema_id'],
         refcolumns=['schema.id'],
