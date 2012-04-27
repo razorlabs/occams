@@ -20,7 +20,7 @@ class OccamsDataStoreModelLayer(plone.testing.Layer):
         Creates the database structures.
         """
         engine = create_engine('sqlite://', echo=False)
-        model.Model.metadata.create_all(engine, checkfirst=True)
+        model.Model.metadata.create_all(engine, checkfirst=False)
         self['session'] = scoped_session(sessionmaker(
             bind=engine,
             class_=model.DataStoreSession,

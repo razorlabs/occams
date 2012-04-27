@@ -42,6 +42,7 @@ __all__ = (
     'ValueDecimal',
     'ValueDatetime',
     'Context',
+    'DataStoreSession',
     )
 
 
