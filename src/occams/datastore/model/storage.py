@@ -159,20 +159,28 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         attribute = self.schema[key]
         wrapperFactory = nameModelMap[attribute.type]
 
+        # Helper method to determine where the value for an attribute should be set
+        storedAt = lambda a: a.type == 'object' and 'sub_entity' or 'value'
+
+        # Helper method for getting the appropriate parameters for an attribute/value
+        params = lambda a, v: dict(zip(('attribute', storedAt(a)), (a, v)))
+
+        # Helper methot to add an item to the value collector
+        append = lambda v: collector.append(wrapperFactory(**params(attribute, v)))
+
         if attribute.is_collection:
-            # Don't even bother to try and get a diff, just remove it
+            # Don't even bother to try and get a diff, just remove it and set it
             del self[key]
-
-        values = [value] if not isinstance(value, list) else value
-
-        for value in values:
-            if attribute.type == 'object':
-                params = dict(attribute=attribute, sub_entity=value)
+            map(append, value)
+        else:
+            # For scalars, we're only dealing with one value, so it's OK to
+            # try and update it
+            try:
+                entry = collector.filter_by(attribute=attribute).one()
+            except NoResultFound:
+                append(value)
             else:
-                params = dict(attribute=attribute, value=value)
-
-            if not collector.filter_by(**params).count() > 0:
-                collector.append(wrapperFactory(**params))
+                entry.value = value
 
     def __delitem__(self, key):
         collector = self._getCollector(key)
@@ -263,7 +271,9 @@ def TypeMappingClass(className, tableName, valueType):
         def getValue(self):
             type_ = self.attribute.type
             value = self._value
-            if type_ == 'date':
+            if type_ == 'date' and isinstance(value, datetime):
+                # Sometimes it's converted to datetime and so we need to
+                # convert it back
                 value = value.date()
             elif type_ == 'boolean':
                 value = bool(value)

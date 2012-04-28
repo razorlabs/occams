@@ -89,16 +89,16 @@ class HasEntitiesTestCase(unittest.TestCase):
         sc1 = query.one()
         self.assertIsNotNone(sc1)
 
-        # Now suppose that we only have an entity and want to know its parents
-        # Example: get all the SomeClassX references of an entity
+        # Now suppose that we only have an fooEntity and want to know its parents
+        # Example: get all the SomeClassX references of an fooEntity
 
-        entity = session.query(model.Entity).filter_by(name=u'foo').one()
+        fooEntity = session.query(model.Entity).filter_by(name=u'foo').one()
 
-        sc1list = [c.sampleclass1_parent.name for c in entity.contexts if c.sampleclass1_parent]
+        sc1list = [c.sampleclass1_parent.name for c in fooEntity.contexts if c.sampleclass1_parent]
         self.assertItemsEqual(['Foo'], sc1list)
 
         # Querying them directly
-        # There is no clean way of querying for an entity by context in
+        # There is no clean way of querying for an fooEntity by context in
         # a generic association setting, as it would have to know about
         # all ``HasEntities`` classes that reference it
         sc1EntitiesQuery = (
@@ -112,21 +112,21 @@ class HasEntitiesTestCase(unittest.TestCase):
         entitylist = [e.name for e in sc1EntitiesQuery]
         self.assertItemsEqual(['foo', 'bar', 'baz'], entitylist)
 
-        # Now try adding the entity to an additional context
-        session.add(SampleClass1(name='Jar', entities=[entity]))
+        # Now try adding the fooEntity to an additional context
+        session.add(SampleClass1(name='Jar', entities=[fooEntity]))
         session.flush()
 
-        sc1list = [c.sampleclass1_parent.name for c in entity.contexts if c.sampleclass1_parent]
+        sc1list = [c.sampleclass1_parent.name for c in fooEntity.contexts if c.sampleclass1_parent]
         self.assertItemsEqual(['Foo', 'Jar'], sc1list)
 
         # But what if you want to query them directly? Same as above, query
         # for a SampleClass that contains the specific schemata you want
-        query = (
+        hasFooQuery = (
             session.query(SampleClass1)
             .filter(SampleClass1.entities.any(model.Entity.name == u'foo'))
             )
 
-        sc1list = [sc1.name for sc1 in query]
+        sc1list = [sc1.name for sc1 in hasFooQuery]
         self.assertItemsEqual(['Foo', 'Jar'], sc1list)
 
         # Now try deleting a context object
@@ -135,4 +135,19 @@ class HasEntitiesTestCase(unittest.TestCase):
         session.flush()
 
         self.assertEqual(0, sc1EntitiesQuery.count())
+
+        # Make sure we didn't accidentally remote the data from 'Jar'
+        sc1list = [sc1.name  for sc1 in hasFooQuery]
+        self.assertItemsEqual(['Jar'], sc1list)
+
+        # Double check just in case
+        self.assertEqual(1, session.query(model.Context).filter_by(external='sampleclass1').count())
+        self.assertEqual(1, session.query(model.Entity).filter_by(name=u'foo').count())
+
+        # TODO Currently there is absolutely no way to remove orphans. The
+        # application must do this manually. This is because assocation proxies
+        # cannot delete orphans and the way the relationships are setup, it
+        # does not allow this..
+        #self.assertEqual(0, session.query(model.Entity).filter_by(name=u'bar').count())
+        #self.assertEqual(0, session.query(model.Entity).filter_by(name=u'baz').count())
 

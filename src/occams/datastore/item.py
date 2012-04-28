@@ -73,24 +73,34 @@ spawn = ItemFactory
 @implementer(IFullMapping)
 def entityToDictionary(entity):
     """
-    Converts an entity into a Python dictionary
+    Converts an entity into a Python dictionary.
+    This utility tries not to assume any particular entity data as implementing
+    clients my employ their own conventions. Instead this utility tries to
+    replicate the entity in dictionary format as best it can regardless
+    of whatever exotic conventions a client is using.
     """
-    result = dict(
-        __metadata__=dict(
-            id=entity.id,
-            state=entity.state,
-            collect_date=entity.collect_date,
-            create_date=entity.create_date,
-            create_user=getattr(entity.create_user, 'name', None),
-            modify_date=entity.modify_date,
-            modify_user=getattr(entity.create_user, 'name', None),
+
+    if entity is None:
+        result = None
+
+    else:
+        result = dict(
+            __metadata__=dict(
+                id=entity.id,
+                state=entity.state,
+                collect_date=entity.collect_date,
+                create_date=entity.create_date,
+                create_user=getattr(entity.create_user, 'name', None),
+                modify_date=entity.modify_date,
+                modify_user=getattr(entity.create_user, 'name', None),
+                )
             )
-        )
-    # TODO: might be better to user a subquery table instead of accessing as
-    # dictionary
-    for key, value in entity.items():
-        if entity.schema[key].type == 'object':
-            value = entityToDictionary(entity[key])
-        result[key] = value
+
+        # TODO: might be better to user a subquery table instead of accessing as
+        # dictionary
+        for key, value in entity.items():
+            if entity.schema[key].type == 'object':
+                value = entityToDictionary(entity[key])
+            result[key] = value
 
     return result

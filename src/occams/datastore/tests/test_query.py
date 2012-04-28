@@ -40,13 +40,11 @@ class QueryTestCase(unittest.TestCase):
             )
         session.add(schema1)
 
-        names, columns = getAttributes(session, 'A', split=Split.NAME)
-        self.assertItemsEqual(['a'], names)
+        columns = getAttributes(session, 'A', split=Split.NAME)
         self.assertItemsEqual(['a'], columns.keys())
 
-        names, columns = getAttributes(session, 'A', split=Split.CHECKSUM)
+        columns = getAttributes(session, 'A', split=Split.CHECKSUM)
         expected = ['a_' + schema1['a'].checksum]
-        self.assertItemsEqual(expected, names)
         self.assertItemsEqual(expected, columns.keys())
 
         schema2 = model.Schema(
@@ -60,13 +58,11 @@ class QueryTestCase(unittest.TestCase):
             )
         session.add(schema2)
 
-        names, columns = getAttributes(session, 'A', split=Split.NAME)
-        self.assertItemsEqual(['a'], names)
+        columns = getAttributes(session, 'A', split=Split.NAME)
         self.assertItemsEqual(['a'], columns.keys())
 
-        names, columns = getAttributes(session, 'A', split=Split.CHECKSUM)
+        columns = getAttributes(session, 'A', split=Split.CHECKSUM)
         expected = ['a_' + schema1['a'].checksum, 'a_' + schema2['a'].checksum]
-        self.assertItemsEqual(expected, names)
         self.assertItemsEqual(expected, columns.keys())
 
     def testGetAttributesWithSubSchema(self):
@@ -97,14 +93,12 @@ class QueryTestCase(unittest.TestCase):
             )
         session.add(schema1)
 
-        names, columns = getAttributes(session, 'Main', split=Split.NAME)
+        columns = getAttributes(session, 'Main', split=Split.NAME)
         expected = ['a', 'sub_x']
-        self.assertItemsEqual(expected, names)
         self.assertItemsEqual(expected, columns.keys())
 
-        names, columns = getAttributes(session, 'Main', split=Split.CHECKSUM)
+        columns = getAttributes(session, 'Main', split=Split.CHECKSUM)
         expected = ['a_' + schema1['a'].checksum, 'sub_x_' + schema1['sub']['x'].checksum]
-        self.assertItemsEqual(expected, names)
         self.assertItemsEqual(expected, columns.keys())
 
         schema2 = copy(schema1)
@@ -116,19 +110,17 @@ class QueryTestCase(unittest.TestCase):
         session.add(schema2)
         session.flush()
 
-        names, columns = getAttributes(session, 'Main', split=Split.NAME)
+        columns = getAttributes(session, 'Main', split=Split.NAME)
         expected = ['a', 'sub_x']
-        self.assertItemsEqual(expected, names)
         self.assertItemsEqual(expected, columns.keys())
 
-        names, columns = getAttributes(session, 'Main', split=Split.CHECKSUM)
+        columns = getAttributes(session, 'Main', split=Split.CHECKSUM)
         expected = [
             'a_' + schema1['a'].checksum,
             'sub_x_' + schema1['sub']['x'].checksum,
             'sub_x_' + schema2['sub']['x'].checksum,
             ]
 
-        self.assertItemsEqual(expected, names)
         self.assertItemsEqual(expected, columns.keys())
 
     def testUnpublishedSchema(self):
@@ -139,6 +131,17 @@ class QueryTestCase(unittest.TestCase):
 
         with self.assertRaises(InvalidEntitySchemaError):
             subquery = schemaToSubQuery(session, 'A', split=False)
+
+    def testExpectedMetadataColumns(self):
+        session = self.layer['session']
+        schema = model.Schema(name='A', title=u'', state='published', publish_date=p1)
+        session.add(schema)
+        session.flush()
+
+        subquery = schemaToSubQuery(session, 'A', split=True)
+        self.assertIn('entity_id', subquery.c)
+        self.assertIn('entity_state', subquery.c)
+        self.assertIn('entity_collect_date', subquery.c)
 
     def testEmptySchema(self):
         session = self.layer['session']
@@ -170,19 +173,27 @@ class QueryTestCase(unittest.TestCase):
         session.add(schema)
         session.flush()
 
-        entity = model.Entity(schema=schema, name='Foo', title=u'')
+        entity = model.Entity(schema=schema, name='Foo', title=u'', collect_date=p1)
         session.add(entity)
-        entity['a'] = u'foo'
+        entity['a'] = u'foovalue'
         session.flush()
 
-        entity = model.Entity(schema=schema, name='Bar', title=u'')
+        entity = model.Entity(schema=schema, name='Bar', title=u'', collect_date=p2)
         session.add(entity)
-        entity['a'] = u'Bar'
+        entity['a'] = u'barvalue'
         session.flush()
 
-        subquery = schemaToSubQuery(session, 'A', split=True)
-        for s in session.query(subquery):
-            print s
+        subquery = schemaToSubQuery(session, 'A', split=False)
+
+        self.assertIn('a', subquery.c)
+
+        result = session.query(subquery).filter_by(entity_id=1).one()
+        self.assertEqual(p1, result.entity_collect_date)
+        self.assertEqual('foovalue', result.a)
+
+        result = session.query(subquery).filter_by(entity_id=2).one()
+        self.assertEqual(p2, result.entity_collect_date)
+        self.assertEqual('barvalue', result.a)
 
     def testSubSchemataWithString(self):
         pass

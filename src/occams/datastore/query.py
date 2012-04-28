@@ -3,6 +3,7 @@ A utility for allowing the access of entered schema data to be represented
 in a SQL table-like fashion.
 """
 
+from ordereddict import OrderedDict
 from sqlalchemy import cast
 from sqlalchemy.ext import compiler
 from sqlalchemy.sql import ColumnElement
@@ -41,11 +42,15 @@ def schemaToSubQuery(session, name, split=Split.NAME):
             names by checksum. False by default.
 
     Returns
-        A subquery representation of the schema family
+        A subquery representation of the schema family.
+        Note that the results that will be retured by the subquery are
+        namedtuples of each result
+
     """
 
     # Collapse all the related attributes into an ordered tree
-    names, columns = getAttributes(session, name, split=split)
+    columns = getAttributes(session, name, split=split)
+    names = columns.keys()
 
     # TODO somewhere in here we further collapse the attributes based on a
     # configuration file
@@ -92,10 +97,12 @@ def schemaToSubQuery(session, name, split=Split.NAME):
 
 def getAttributes(session, name, split=Split.NAME, prefix=''):
     """
-    Consolidates all of the attributes in a form hierarchy into a flat header.
+    Consolidates all the attributes in a schema hierarchy into a single listing.
+    The way this is accomplished is by traversing all the nodes in each
+    hierarchy level and reporting only the leaf nodes (i.e. basic data types,
+    not sub schemata)
     """
-    names = []
-    attributes = {}
+    attributes = OrderedDict()
 
     schemaCheckQuery = (
         session.query(model.Schema)
@@ -121,16 +128,12 @@ def getAttributes(session, name, split=Split.NAME, prefix=''):
 
     for attribute in attributeQuery:
         if attribute.type == 'object':
-            subnames, subattributes = getAttributes(
+            subattributes = getAttributes(
                 session=session,
                 name=attribute.object_schema.name,
                 prefix=attribute.name + '_',
                 split=split,
                 )
-
-            for subname in subnames:
-                if subname not in attributes:
-                    names.append(subname)
 
             attributes.update(subattributes)
         else:
@@ -140,12 +143,11 @@ def getAttributes(session, name, split=Split.NAME, prefix=''):
                 specialName += '_' + attribute.checksum
 
             if specialName not in attributes:
-                names.append(specialName)
                 attributes.setdefault(specialName, [])
 
             attributes[specialName].append(attribute)
 
-    return names, attributes
+    return attributes
 
 
 class collection(ColumnElement):
