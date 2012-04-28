@@ -9,6 +9,7 @@ Design Assumptions:
     3. Remove dates will respect chronology (ie data processed in order leaves 
         final row with NULL remove date, and the rest "clean").
     4. The process will run in one go, within a single night or weekend.
+    5. Dave's clinical overhaul will run afterwards and handle the context table.
 
 Precondition Assumptions:
     1. There are two databases per run (eg avrc_demo_data and avrc_data)
@@ -87,7 +88,7 @@ def main():
     usage = """overhaul.py OLDCONNECT NEWCONNECT"""
     configureGlobalSession(sys.argv[1], sys.argv[2])
     addUser("bitcore@ucsd.edu")
-    entityLimit = 50
+    entityLimit = 300
     if not entityLimit:
         print "Moving in all schemas and entities"
     else:
@@ -95,44 +96,43 @@ def main():
     moveInAllSchemas()
     moveInAttributesAndChoices()
     moveInEntities(limit=entityLimit)
-    moveInExternalContext()
+    #moveInExternalContext()
     Session.commit()
     if isWorking():
         print "Yay!"
 
-def moveInExternalContext():
-    """Make up contents of "external", then fill "context" using intance tables."""
-    # SUBJECT LOGIC IS THE SIMPLEST
-    for parentEntityName,subject_id in yieldSubjectInstances():
-        new_context = {
-            "entity":getNewEntityId(parentEntityName),
-            "external":"subject",
-            "key":subject_id,
-            }
-        Session.add(model.Context(**new_context))
-    Session.flush()
-    # Then do the same basic thing (with increasing cleverness) for 
-    # the visit, partner, and enrollment instance tables...
-
-def getNewEntityId(parentEntityName):
-    """Grab the new ID for the old entity name."""
-    qry = (
-        Session.query(model.Entity)
-        .filter(model.Entity.name == parentEntityName)
-        )
-    return qry.one()
-
-def yieldSubjectInstances():
-    """In the home stretch!"""
-    ent = old_model.entity("entity")
-    pin = old_model.entity("subject_instance")
-    qry = (
-        Session.query(ent.name,pin.subject_id)
-        .join(pin, (ent.id == pin.instance_id))
-        .group_by(ent.name,pin.subject_id)
-        )
-    return iter(qry)
-
+#def moveInExternalContext():
+#    """Make up contents of "external", then fill "context" using intance tables."""
+#    # SUBJECT LOGIC IS THE SIMPLEST
+#    for parentEntityName,subject_id in yieldSubjectInstances():
+#        new_context = {
+#            "entity":getNewEntityId(parentEntityName),
+#            "external":"subject",
+#            "key":subject_id,
+#            }
+#        Session.add(model.Context(**new_context))
+#    Session.flush()
+#    # Then do the same basic thing (with increasing cleverness) for 
+#    # the visit, partner, and enrollment instance tables...
+#
+#def getNewEntityId(parentEntityName):
+#    """Grab the new ID for the old entity name."""
+#    qry = (
+#        Session.query(model.Entity)
+#        .filter(model.Entity.name == parentEntityName)
+#        )
+#    return qry.one()
+#
+#def yieldSubjectInstances():
+#    """In the home stretch!"""
+#    ent = old_model.entity("entity")
+#    pin = old_model.entity("subject_instance")
+#    qry = (
+#        Session.query(ent.name,pin.subject_id)
+#        .join(pin, (ent.id == pin.instance_id))
+#        .group_by(ent.name,pin.subject_id)
+#        )
+#    return iter(qry)
 
 def moveInEntities(limit=None):
     """This function will probably work in stages to move entities.
