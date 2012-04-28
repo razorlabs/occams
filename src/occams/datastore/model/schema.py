@@ -36,7 +36,6 @@ from occams.datastore.model.metadata import AutoNamed
 from occams.datastore.model.metadata import Referenceable
 from occams.datastore.model.metadata import Describeable
 from occams.datastore.model.metadata import Modifiable
-from occams.datastore.model.metadata import buildModifiableConstraints
 from occams.datastore.model.auditing import Auditable
 
 
@@ -119,10 +118,6 @@ def defaultPublishDate(context):
 class Category(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
     implements(ICategory)
 
-    @declared_attr
-    def __table_args__(cls):
-        return buildModifiableConstraints(cls)
-
 
 schema_category_table = Table('schema_category', Model.metadata,
     Column('schema_id', Integer),
@@ -181,7 +176,7 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
 
     @declared_attr
     def __table_args__(cls):
-        return buildModifiableConstraints(cls) + (
+        return (
             ForeignKeyConstraint(
                 columns=['base_schema_id'],
                 refcolumns=['schema.id'],
@@ -199,7 +194,7 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
                         publish_date IS NOT NULL
                 END
                 """,
-                name='ck_%s_valid_publication'
+                name='ck_%s_valid_publication' % cls.__tablename__
                 ),
             )
 
@@ -285,7 +280,7 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
 
     @declared_attr
     def __table_args__(cls):
-        return buildModifiableConstraints(cls) + (
+        return (
             ForeignKeyConstraint(
                 columns=['schema_id'],
                 refcolumns=['schema.id'],
@@ -412,7 +407,7 @@ class Choice(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
 
     @declared_attr
     def __table_args__(cls):
-        return buildModifiableConstraints(cls) + (
+        return (
             ForeignKeyConstraint(
                 columns=['attribute_id'],
                 refcolumns=['attribute.id'],

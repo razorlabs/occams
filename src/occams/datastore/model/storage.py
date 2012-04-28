@@ -36,7 +36,6 @@ from occams.datastore.model.metadata import AutoNamed
 from occams.datastore.model.metadata import Referenceable
 from occams.datastore.model.metadata import Describeable
 from occams.datastore.model.metadata import Modifiable
-from occams.datastore.model.metadata import buildModifiableConstraints
 from occams.datastore.model.auditing import Auditable
 from occams.datastore.model.schema import Schema
 from occams.datastore.model.schema import Attribute
@@ -76,7 +75,7 @@ class Context(Model, AutoNamed, Modifiable, Auditable):
 
     @declared_attr
     def __table_args__(cls):
-        return buildModifiableConstraints(cls) + (
+        return (
             ForeignKeyConstraint(
                 columns=['entity_id'],
                 refcolumns=['entity.id'],
@@ -111,7 +110,7 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
 
     @declared_attr
     def __table_args__(cls):
-        return buildModifiableConstraints(cls) + (
+        return (
             ForeignKeyConstraint(
                 columns=['schema_id'],
                 refcolumns=['schema.id'],
@@ -290,7 +289,7 @@ def TypeMappingClass(className, tableName, valueType):
 
         @declared_attr
         def __table_args__(cls):
-            constraints = buildModifiableConstraints(cls) + (
+            constraints = (
                 ForeignKeyConstraint(
                     columns=['entity_id'],
                     refcolumns=['entity.id'],
