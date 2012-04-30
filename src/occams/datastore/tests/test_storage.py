@@ -181,6 +181,12 @@ class EntityModelTestCase(unittest.TestCase):
         session.flush()
         self.assertEqual(subentity.id, entity['sub'].id)
 
+        # Update the subentity, should be ok
+        subentity = model.Entity(schema=subschema, name='NewSub', title=u'')
+        entity['sub'] = subentity
+        session.flush()
+        self.assertEqual(subentity.id, entity['sub'].id)
+
         # Because there is not enough confidence in subobjects, try every
         # single possible type
         sample = [
