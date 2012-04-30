@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 """Upgrade process for EAV versioning cleanup.
 
+On jemueller-dt, run this script thusly for maximum happy:
+
+time ~/Environments/NewAEH/zinstance/bin/zopepy ./overhaul.py postgresql://plone:pl0n3@gibbon-test-db/avrc_demo_data postgresql://plone:pl0n3@gibbon-test-db/avrc_data
+
 #########1#########2#########3#########4#########5#########6#########7#####
 
 Design Assumptions:
@@ -9,6 +13,7 @@ Design Assumptions:
     3. Remove dates will respect chronology (ie data processed in order leaves 
         final row with NULL remove date, and the rest "clean").
     4. The process will run in one go, within a single night or weekend.
+    5. Dave's clinical overhaul will run afterwards and handle the context table.
 
 Precondition Assumptions:
     1. There are two databases per run (eg avrc_demo_data and avrc_data)
@@ -87,7 +92,7 @@ def main():
     usage = """overhaul.py OLDCONNECT NEWCONNECT"""
     configureGlobalSession(sys.argv[1], sys.argv[2])
     addUser("bitcore@ucsd.edu")
-    entityLimit = None
+    entityLimit = 300
     if not entityLimit:
         print "Moving in all schemas and entities"
     else:
@@ -95,7 +100,7 @@ def main():
     moveInAllSchemas()
     moveInAttributesAndChoices()
     moveInEntities(limit=entityLimit)
-#    moveInExternalContext()
+    #moveInExternalContext()
     Session.commit()
     if isWorking():
         print "Yay!"
@@ -103,27 +108,35 @@ def main():
 #def moveInExternalContext():
 #    """Make up contents of "external", then fill "context" using intance tables."""
 #    # SUBJECT LOGIC IS THE SIMPLEST
-#    ext_subject = mode.External(
-#        name="subject", title="anything?",
-#        description="subject table in clinical DB")
-#    Session.add(ext_subject)
-#    Session.flush()
-#    for our,parentEntityName in subjectInstances():
+#    for parentEntityName,subject_id in yieldSubjectInstances():
 #        new_context = {
-#            "entity_id":getNewEntityId(parentEntityName),
-#            "external_id":ext_subject.id,
-#            "key":our,
+#            "entity":getNewEntityId(parentEntityName),
+#            "external":"subject",
+#            "key":subject_id,
 #            }
 #        Session.add(model.Context(**new_context))
 #    Session.flush()
-#
 #    # Then do the same basic thing (with increasing cleverness) for 
 #    # the visit, partner, and enrollment instance tables...
-
-def subjectInstances():
-    """In the home stretch!"""
-    our, parentEntityName = None,None
-    yield our, parentEntityName
+#
+#def getNewEntityId(parentEntityName):
+#    """Grab the new ID for the old entity name."""
+#    qry = (
+#        Session.query(model.Entity)
+#        .filter(model.Entity.name == parentEntityName)
+#        )
+#    return qry.one()
+#
+#def yieldSubjectInstances():
+#    """In the home stretch!"""
+#    ent = old_model.entity("entity")
+#    pin = old_model.entity("subject_instance")
+#    qry = (
+#        Session.query(ent.name,pin.subject_id)
+#        .join(pin, (ent.id == pin.instance_id))
+#        .group_by(ent.name,pin.subject_id)
+#        )
+#    return iter(qry)
 
 def moveInEntities(limit=None):
     """This function will probably work in stages to move entities.
@@ -199,11 +212,14 @@ def updateEntity(partialNewEntity,oldEntity):
         if attribute.type == 'object': 
             # is_collection restriction is only here so we can test: non-collections first
             continue
-        value = getOldValue(attribute, oldEntity)
-        partialNewEntity[attribute.name] = value
+        listOfValues = getOldValues(attribute, oldEntity)
+        if attribute.is_collection:
+            partialNewEntity[attribute.name] = listOfValues
+        elif listOfValues:
+            partialNewEntity[attribute.name] = listOfValues[0]
     return partialNewEntity
 
-def getOldValue(attribute, oldEntity):
+def getOldValues(attribute, oldEntity):
     """Uses knowledge of attribute to return one of the entities old values."""
     type_to_table = {
         "boolean":"integer",
@@ -223,9 +239,7 @@ def getOldValue(attribute, oldEntity):
         )
     if qry.count() > 1 and not attribute.is_collection:
         raise Exception("fml")
-    elif attribute.is_collection:
-        return qry.all()
-    return qry.first()
+    return [v for (v,) in qry]
 
 def yieldChildEntities(oldParentEntity):
     """Get child entites with parrent attr names given parent entity name.
@@ -462,10 +476,10 @@ def getOriginalParentSchema(revision):
     return out
 
 def addUser(email):
-    #user = Session.query(model.User).filter(model.User.key == email).first()
-    #if not user:
-    Session.add(model.User(key=email))
-    Session.flush()
+    user = Session.query(model.User).filter(model.User.key == email).first()
+    if not user:
+        Session.add(model.User(key=email))
+        Session.flush()
 
 def getKnownSchemaChanges(): 
     from sqlalchemy import func
@@ -488,7 +502,32 @@ def configureGlobalSession(old_connect, new_connect):
     global old_model
     global entity_state
     new_engine = create_engine(new_connect)
-    model.Model.metadata.drop_all(bind=new_engine, checkfirst=True)
+    # NOTE: This was working, then something changed in the clinical DB based
+    # on Dave Mote's work (still not well understood, possibly no longer there)
+    # and then it was changed to adapt, and now it MAY have been put back into
+    # a usable state, but you shouldn't trust it too much because things are
+    # no longer pristine.  It might be wise to rederive what table manipulations
+    # should be going on from scratch again, just to be safe?
+    from sqlalchemy import MetaData
+    comprehensiveMetadata = MetaData(bind=new_engine, reflect=True)
+    comprehensiveMetadata.drop_all()
+    #buildFromScratch = [
+    #    "datetime","integer","string","object",
+    #    "category_schema","schema","attribute","choice", "category",
+    #    "entity","context"]
+    #for tablename in buildFromScratch:
+    #    auditToo = tablename + "_audit"
+    #    tables = model.Model.metadata.tables
+    #    if tablename in tables:
+    #        try:
+    #            tables[tablename].drop(new_engine)
+    #        except:
+    #            continue
+    #    if auditToo in tables:
+    #        try:
+    #            tables[auditToo].drop(new_engine)
+    #        except:
+    #            continue
     model.Model.metadata.create_all(bind=new_engine, checkfirst=True)
     tables = []
     tables_model = model.Model.metadata.sorted_tables
