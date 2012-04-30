@@ -16,6 +16,7 @@ from sqlalchemy.schema import Column
 from sqlalchemy.schema import ForeignKeyConstraint
 from sqlalchemy.schema import Index
 from sqlalchemy.schema import UniqueConstraint
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.types import Date
 from sqlalchemy.types import DateTime
 from sqlalchemy.types import Boolean
@@ -149,8 +150,6 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
                 value = container.value.date()
             elif container.attribute.type == 'boolean':
                 value = bool(container.value)
-            elif container.attribute.type == 'object':
-                value = container.sub_entity
             else:
                 value = container.value
             return value
@@ -172,10 +171,11 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         wrapperFactory = nameModelMap[attribute.type]
 
         # Helper method to determine where the value for an attribute should be set
-        storedAt = lambda a: a.type == 'object' and 'sub_entity' or 'value'
+#        storedAt = lambda a: a.type == 'object' and 'sub_entity' or 'value'
 
         # Helper method for getting the appropriate parameters for an attribute/value
-        params = lambda a, v: dict(zip(('attribute', storedAt(a)), (a, v)))
+#        params = lambda a, v: dict(zip(('attribute', storedAt(a)), (a, v)))
+        params = lambda a, v: dict(zip(('attribute', 'value'), (a, v)))
 
         # Helper methot to add an item to the value collector
         append = lambda v: collector.append(wrapperFactory(**params(attribute, v)))
@@ -192,10 +192,7 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
             except NoResultFound:
                 append(value)
             else:
-                if attribute.type == 'object':
-                    entry.sub_entity = value
-                else:
-                    entry.value = value
+                entry.value = value
 
     def __delitem__(self, key):
         collector = self._getCollector(key)
@@ -280,7 +277,7 @@ def TypeMappingClass(className, tableName, valueType):
             return Relationship(Choice)
 
         @declared_attr
-        def value(cls):
+        def _value(cls):
             return Column('value', cls.__valuetype__)
 
         @declared_attr
@@ -338,7 +335,15 @@ ValueString = TypeMappingClass('ValueString', 'string', Unicode)
 
 ValueObject = TypeMappingClass('ValueObject', 'object', Integer)
 
-ValueObject.sub_entity = Relationship(Entity, primaryjoin='Entity.id == ValueObject.value')
+# Specify how the ``value`` properties behave, pretty much they're synonymns
+# of the ``_value`` property, except for objects, which behave as relationships
+scalarValuePropety = hybrid_property(lambda self: self._value, lambda self, value: setattr(self, '_value', value))
+ValueDatetime.value = scalarValuePropety
+ValueInteger.value = scalarValuePropety
+ValueDecimal.value = scalarValuePropety
+ValueString.value = scalarValuePropety
+ValueObject.value = Relationship(Entity, primaryjoin='Entity.id == ValueObject._value')
+
 
 def validateValue(target, value, oldvalue, initiator):
     """
