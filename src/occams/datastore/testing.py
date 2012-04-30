@@ -10,7 +10,7 @@ import plone.testing
 from occams.datastore import model
 
 
-class DataStoreLayer(plone.testing.Layer):
+class OccamsDataStoreModelLayer(plone.testing.Layer):
     """
     DataBase application layer for tests.
     """
@@ -20,7 +20,7 @@ class DataStoreLayer(plone.testing.Layer):
         Creates the database structures.
         """
         engine = create_engine('sqlite://', echo=False)
-        model.Model.metadata.create_all(engine, checkfirst=True)
+        model.Model.metadata.create_all(engine, checkfirst=False)
         self['session'] = scoped_session(sessionmaker(
             bind=engine,
             class_=model.DataStoreSession,
@@ -50,4 +50,4 @@ class DataStoreLayer(plone.testing.Layer):
         self['session'].rollback()
 
 
-DATASTORE_LAYER = DataStoreLayer()
+OCCAMS_DATASTORE_MODEL_FIXTURE = OccamsDataStoreModelLayer()

@@ -5,7 +5,7 @@ Tests the schema subquery converter module
 import unittest2 as unittest
 from datetime import date
 
-from occams.datastore.testing import DATASTORE_LAYER
+from occams.datastore.testing import OCCAMS_DATASTORE_MODEL_FIXTURE
 from occams.datastore import model
 from occams.datastore.interfaces import InvalidEntitySchemaError
 from occams.datastore.query import Split
@@ -25,7 +25,7 @@ class QueryTestCase(unittest.TestCase):
     Verifies the subquery adapter
     """
 
-    layer = DATASTORE_LAYER
+    layer = OCCAMS_DATASTORE_MODEL_FIXTURE
 
     def testGetAttributes(self):
         session = self.layer['session']

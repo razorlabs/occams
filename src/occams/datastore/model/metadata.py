@@ -13,8 +13,7 @@ from sqlalchemy.orm import relationship as Relationship
 from sqlalchemy.orm import object_session
 from sqlalchemy.schema import CheckConstraint
 from sqlalchemy.schema import UniqueConstraint
-from sqlalchemy.schema import Index
-from sqlalchemy.schema import ForeignKeyConstraint
+from sqlalchemy.schema import ForeignKey
 from sqlalchemy.types import DateTime
 from zope.interface import implements
 
@@ -83,41 +82,15 @@ class User(Model, AutoNamed, Referenceable):
 
     modify_date = Column(DateTime, nullable=False, server_default=NOW, onupdate=NOW)
 
-    __table_args__ = (
-        UniqueConstraint('key'),
-        CheckConstraint('create_date <= modify_date', 'ck_user_valid_timeline'),
-        )
-
-
-def buildModifiableConstraints(cls):
-    """
-    Returns constrains for modifiable columns, tailored for the specified class
-
-    There doesn't seem to be a good way to put this as a ``declared_attr`` of
-    ``Modifiable``, dude the difficulty of using ``super`` on ``property``
-    decorators. This, though, is a better alternative as opposed to
-    copying and pasting the constraints to each class.
-    """
-    return (
-        ForeignKeyConstraint(
-            columns=['create_user_id'],
-            refcolumns=['user.id'],
-            name='fk_%s_create_user_id' % cls.__tablename__,
-            ondelete='RESTRICT'
-            ),
-        ForeignKeyConstraint(
-            columns=['modify_user_id'],
-            refcolumns=['user.id'],
-            name='fk_%s_modify_user_id' % cls.__tablename__,
-            ondelete='RESTRICT'
-            ),
-        CheckConstraint(
-            'create_date <= modify_date',
-            'ck_%s_valid_timeline' % cls.__tablename__
-            ),
-        Index('ix_%s_create_user_id' % cls.__tablename__, 'create_user_id'),
-        Index('ix_%s_modify_user_id' % cls.__tablename__, 'modify_user_id'),
-        )
+    @declared_attr
+    def __table_args__(cls):
+        return (
+            UniqueConstraint('key', name='uq_%s_key' % cls.__tablename__),
+            CheckConstraint(
+                'create_date <= modify_date',
+                name='ck_%s_valid_timeline' % cls.__tablename__
+                ),
+            )
 
 
 class Modifiable(object):
@@ -127,11 +100,24 @@ class Modifiable(object):
 
     @declared_attr
     def create_date(cls):
-        return Column(DateTime, nullable=False, server_default=NOW)
+        return Column(
+            DateTime,
+            nullable=False,
+            server_default=NOW
+            )
 
     @declared_attr
     def create_user_id(cls):
-        return Column(Integer, nullable=False)
+        return Column(
+            Integer,
+            ForeignKey(
+                'user.id',
+                name='fk_%s_create_user_id' % cls.__tablename__,
+                ondelete='RESTRICT'
+                ),
+            nullable=False,
+            index=True, # SA Index() still sucks
+            )
 
     @declared_attr
     def create_user(cls):
@@ -140,11 +126,29 @@ class Modifiable(object):
 
     @declared_attr
     def modify_date(cls):
-        return Column(DateTime, nullable=False, server_default=NOW, onupdate=NOW)
+        return Column(
+            DateTime,
+            CheckConstraint(
+                'create_date <= modify_date',
+                'ck_%s_valid_timeline' % cls.__tablename__
+                ),
+            nullable=False,
+            server_default=NOW,
+            onupdate=NOW
+            )
 
     @declared_attr
     def modify_user_id(cls):
-        return Column(Integer, nullable=False)
+        return Column(
+            Integer,
+            ForeignKey(
+                'user.id',
+                name='fk_%s_modify_user_id' % cls.__tablename__,
+                ondelete='RESTRICT'
+                ),
+            nullable=False,
+            index=True, # SA Index() still sucks
+            )
 
     @declared_attr
     def modify_user(cls):

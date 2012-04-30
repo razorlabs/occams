@@ -16,6 +16,7 @@ from occams.datastore.model.schema import Choice
 
 from occams.datastore.model.storage import Context
 from occams.datastore.model.storage import Entity
+from occams.datastore.model.storage import HasEntities
 from occams.datastore.model.storage import ValueInteger
 from occams.datastore.model.storage import ValueString
 from occams.datastore.model.storage import ValueObject
@@ -34,12 +35,14 @@ __all__ = (
     'Attribute',
     'Choice',
     'Entity',
+    'HasEntities',
     'ValueInteger',
     'ValueString',
     'ValueObject',
     'ValueDecimal',
     'ValueDatetime',
     'Context',
+    'DataStoreSession',
     )
 
 
