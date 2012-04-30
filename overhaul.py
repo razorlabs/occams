@@ -92,7 +92,7 @@ def main():
     usage = """overhaul.py OLDCONNECT NEWCONNECT"""
     configureGlobalSession(sys.argv[1], sys.argv[2])
     addUser("bitcore@ucsd.edu")
-    entityLimit = 300
+    entityLimit = None
     if not entityLimit:
         print "Moving in all schemas and entities"
     else:
@@ -100,51 +100,18 @@ def main():
     moveInAllSchemas()
     moveInAttributesAndChoices()
     moveInEntities(limit=entityLimit)
-    #moveInExternalContext()
     Session.commit()
     if isWorking():
         print "Yay!"
 
-#def moveInExternalContext():
-#    """Make up contents of "external", then fill "context" using intance tables."""
-#    # SUBJECT LOGIC IS THE SIMPLEST
-#    for parentEntityName,subject_id in yieldSubjectInstances():
-#        new_context = {
-#            "entity":getNewEntityId(parentEntityName),
-#            "external":"subject",
-#            "key":subject_id,
-#            }
-#        Session.add(model.Context(**new_context))
-#    Session.flush()
-#    # Then do the same basic thing (with increasing cleverness) for 
-#    # the visit, partner, and enrollment instance tables...
-#
-#def getNewEntityId(parentEntityName):
-#    """Grab the new ID for the old entity name."""
-#    qry = (
-#        Session.query(model.Entity)
-#        .filter(model.Entity.name == parentEntityName)
-#        )
-#    return qry.one()
-#
-#def yieldSubjectInstances():
-#    """In the home stretch!"""
-#    ent = old_model.entity("entity")
-#    pin = old_model.entity("subject_instance")
-#    qry = (
-#        Session.query(ent.name,pin.subject_id)
-#        .join(pin, (ent.id == pin.instance_id))
-#        .group_by(ent.name,pin.subject_id)
-#        )
-#    return iter(qry)
-
 def moveInEntities(limit=None):
-    """This function will probably work in stages to move entities.
+    """Work in stages to move entities and their values.  Parents & children.
+
+    Associated leaf attributes handled in passing for everything.
     
     WORKING - Stage 1: Parent entities
-    TO TEST - Stage 2: Child entities
-    TO TEST - Stage 3: linking object values
-    """
+    WORKING - Stage 2: Child entities
+    WORKING - Stage 3: handled by datastore automagically!"""
     counter = 0
     for name in yieldDistinctParentEntityNames():
         counter += 1
@@ -220,7 +187,7 @@ def updateEntity(partialNewEntity,oldEntity):
     return partialNewEntity
 
 def getOldValues(attribute, oldEntity):
-    """Uses knowledge of attribute to return one of the entities old values."""
+    """Return values from old system with respect for is_collection status"""
     type_to_table = {
         "boolean":"integer",
         "integer":"integer",
@@ -511,23 +478,6 @@ def configureGlobalSession(old_connect, new_connect):
     from sqlalchemy import MetaData
     comprehensiveMetadata = MetaData(bind=new_engine, reflect=True)
     comprehensiveMetadata.drop_all()
-    #buildFromScratch = [
-    #    "datetime","integer","string","object",
-    #    "category_schema","schema","attribute","choice", "category",
-    #    "entity","context"]
-    #for tablename in buildFromScratch:
-    #    auditToo = tablename + "_audit"
-    #    tables = model.Model.metadata.tables
-    #    if tablename in tables:
-    #        try:
-    #            tables[tablename].drop(new_engine)
-    #        except:
-    #            continue
-    #    if auditToo in tables:
-    #        try:
-    #            tables[auditToo].drop(new_engine)
-    #        except:
-    #            continue
     model.Model.metadata.create_all(bind=new_engine, checkfirst=True)
     tables = []
     tables_model = model.Model.metadata.sorted_tables

@@ -9,7 +9,6 @@ SELECT e.name, e.create_date, COUNT(*)
   HAVING COUNT(*) > 1
 ;
 
-
 -- In ALL SYSTEMS, the the entity and attribute of every value should have the same schema_id
 SELECT e.name, e.schema_id AS entity_schema_id ,sc_e.name AS entity_schema_name
        ,a.name ,a.schema_id AS attr_schema_id ,sc_a.name AS attr_schema_name
@@ -155,6 +154,7 @@ SELECT e.name AS entity_name
   WHERE e.create_date < sc.create_date 
 ;
 
+
 -- Child schemas should have is_inline = true so they can be easily detected
 -- and managed.  This will show too few or too many is_inline values:
 SELECT sc.name
@@ -188,4 +188,3 @@ SELECT v.entity_id, a.name, COUNT(*)
   WHERE a.is_collection = false
   GROUP BY v.entity_id, a.name
   HAVING COUNT(*) > 1
-
