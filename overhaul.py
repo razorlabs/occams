@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 """Upgrade process for EAV versioning cleanup.
 
+On jemueller-dt, run this script thusly for maximum happy:
+
+time ~/Environments/NewAEH/zinstance/bin/zopepy ./overhaul.py postgresql://plone:pl0n3@gibbon-test-db/avrc_demo_data postgresql://plone:pl0n3@gibbon-test-db/avrc_data
+
 #########1#########2#########3#########4#########5#########6#########7#####
 
 Design Assumptions:
@@ -208,11 +212,14 @@ def updateEntity(partialNewEntity,oldEntity):
         if attribute.type == 'object': 
             # is_collection restriction is only here so we can test: non-collections first
             continue
-        value = getOldValue(attribute, oldEntity)
-        partialNewEntity[attribute.name] = value
+        listOfValues = getOldValues(attribute, oldEntity)
+        if attribute.is_collection:
+            partialNewEntity[attribute.name] = listOfValues
+        elif listOfValues:
+            partialNewEntity[attribute.name] = listOfValues[0]
     return partialNewEntity
 
-def getOldValue(attribute, oldEntity):
+def getOldValues(attribute, oldEntity):
     """Uses knowledge of attribute to return one of the entities old values."""
     type_to_table = {
         "boolean":"integer",
@@ -232,9 +239,7 @@ def getOldValue(attribute, oldEntity):
         )
     if qry.count() > 1 and not attribute.is_collection:
         raise Exception("fml")
-    elif attribute.is_collection:
-        return qry.all()
-    return qry.first()
+    return [v for (v,) in qry]
 
 def yieldChildEntities(oldParentEntity):
     """Get child entites with parrent attr names given parent entity name.
@@ -497,26 +502,32 @@ def configureGlobalSession(old_connect, new_connect):
     global old_model
     global entity_state
     new_engine = create_engine(new_connect)
-    #from sqlalchemy import MetaData
-    #comprehensiveMetadata = MetaData(bind=new_engine, reflect=True)
-    #comprehensiveMetadata.drop_all()
-    buildFromScratch = [
-        "datetime","integer","string","object",
-        "category_schema","schema","attribute","choice", "category",
-        "entity","context"]
-    for tablename in buildFromScratch:
-        auditToo = tablename + "_audit"
-        tables = model.Model.metadata.tables
-        if tablename in tables:
-            try:
-                tables[tablename].drop(new_engine)
-            except:
-                continue
-        if auditToo in tables:
-            try:
-                tables[auditToo].drop(new_engine)
-            except:
-                continue
+    # NOTE: This was working, then something changed in the clinical DB based
+    # on Dave Mote's work (still not well understood, possibly no longer there)
+    # and then it was changed to adapt, and now it MAY have been put back into
+    # a usable state, but you shouldn't trust it too much because things are
+    # no longer pristine.  It might be wise to rederive what table manipulations
+    # should be going on from scratch again, just to be safe?
+    from sqlalchemy import MetaData
+    comprehensiveMetadata = MetaData(bind=new_engine, reflect=True)
+    comprehensiveMetadata.drop_all()
+    #buildFromScratch = [
+    #    "datetime","integer","string","object",
+    #    "category_schema","schema","attribute","choice", "category",
+    #    "entity","context"]
+    #for tablename in buildFromScratch:
+    #    auditToo = tablename + "_audit"
+    #    tables = model.Model.metadata.tables
+    #    if tablename in tables:
+    #        try:
+    #            tables[tablename].drop(new_engine)
+    #        except:
+    #            continue
+    #    if auditToo in tables:
+    #        try:
+    #            tables[auditToo].drop(new_engine)
+    #        except:
+    #            continue
     model.Model.metadata.create_all(bind=new_engine, checkfirst=True)
     tables = []
     tables_model = model.Model.metadata.sorted_tables
