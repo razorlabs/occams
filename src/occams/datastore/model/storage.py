@@ -142,15 +142,28 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         collector = self._getCollector(key)
         attribute = self.schema[key]
         query = collector.filter_by(attribute=attribute)
+
+        def convert(container):
+            if container.attribute.type == 'date' and isinstance(container.value, datetime):
+                # Sometimes it's converted to datetime and so we need to convert it back
+                value = container.value.date()
+            elif container.attribute.type == 'boolean':
+                value = bool(container.value)
+            elif container.attribute.type == 'object':
+                value = container.sub_entity
+            else:
+                value = container.value
+            return value
+
         if attribute.is_collection:
-            value = [v.value for v in iter(query)]
+            value = [convert(v) for v in iter(query)]
         else:
             try:
                 wrappedValue = query.one()
             except NoResultFound:
                 value = None
             else:
-                value = wrappedValue.value
+                value = convert(wrappedValue)
         return value
 
     def __setitem__(self, key, value):
@@ -267,28 +280,8 @@ def TypeMappingClass(className, tableName, valueType):
             return Relationship(Choice)
 
         @declared_attr
-        def _value(cls):
+        def value(cls):
             return Column('value', cls.__valuetype__)
-
-        def getValue(self):
-            type_ = self.attribute.type
-            value = self._value
-            if type_ == 'date' and isinstance(value, datetime):
-                # Sometimes it's converted to datetime and so we need to
-                # convert it back
-                value = value.date()
-            elif type_ == 'boolean':
-                value = bool(value)
-            elif type_ == 'object':
-                session = object_session(self)
-                if session:
-                    value = session.query(Entity).get(self._value)
-            return value
-
-        def setValue(self, value):
-            self._value = value
-
-        value = property(getValue, setValue)
 
         @declared_attr
         def __table_args__(cls):
@@ -345,7 +338,7 @@ ValueString = TypeMappingClass('ValueString', 'string', Unicode)
 
 ValueObject = TypeMappingClass('ValueObject', 'object', Integer)
 
-ValueObject.sub_entity = Relationship(Entity, primaryjoin='Entity.id == ValueObject._value')
+ValueObject.sub_entity = Relationship(Entity, primaryjoin='Entity.id == ValueObject.value')
 
 def validateValue(target, value, oldvalue, initiator):
     """
@@ -356,7 +349,7 @@ def validateValue(target, value, oldvalue, initiator):
     if attribute is None:
         raise ConstraintError('No attribute assigned for value: %s' % value)
 
-    def comparable(type_, check, interpreted):
+    def compareable(type_, check, interpreted):
         """
         Local helper function to convert the check expression and target value
         into a equally comparable values
@@ -376,13 +369,13 @@ def validateValue(target, value, oldvalue, initiator):
         return check, interpreted
 
     if attribute.value_min is not None:
-        check, interpreted = comparable(attribute.type, attribute.value_min, value)
+        check, interpreted = compareable(attribute.type, attribute.value_min, value)
 
         if interpreted < check:
             raise ConstraintError(attribute.schema.name, attribute.name, check, '<', interpreted, value)
 
     if attribute.value_max is not None:
-        check, interpreted = comparable(attribute.type, attribute.value_max, value)
+        check, interpreted = compareable(attribute.type, attribute.value_max, value)
 
         if interpreted > check:
             raise ConstraintError(attribute.schema.name, attribute.name, check, '>', interpreted, value)
@@ -404,11 +397,11 @@ def validateValue(target, value, oldvalue, initiator):
         target.choice = choice
 
 
-event.listen(ValueDatetime._value, 'set', validateValue)
-event.listen(ValueInteger._value, 'set', validateValue)
-event.listen(ValueDecimal._value, 'set', validateValue)
-event.listen(ValueString._value, 'set', validateValue)
-event.listen(ValueObject._value, 'set', validateValue)
+event.listen(ValueDatetime.value, 'set', validateValue)
+event.listen(ValueInteger.value, 'set', validateValue)
+event.listen(ValueDecimal.value, 'set', validateValue)
+event.listen(ValueString.value, 'set', validateValue)
+event.listen(ValueObject.value, 'set', validateValue)
 
 
 # Where the types are stored
