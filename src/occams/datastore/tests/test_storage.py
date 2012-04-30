@@ -227,7 +227,7 @@ class EntityModelTestCase(unittest.TestCase):
     def testAttributeRequiredConstraint(self):
         # An attribute is required to set a value
         with self.assertRaises(ConstraintError):
-            value = model.ValueString(_value='Foo')
+            value = model.ValueString(value=u'Foo')
 
     def testValueMinConstraint(self):
         session = self.layer['session']
@@ -330,7 +330,7 @@ class EntityModelTestCase(unittest.TestCase):
         entity['test'] = u'foo'
         session.flush()
 
-        entry = session.query(model.ValueString).filter_by(_value=u'foo').one()
+        entry = session.query(model.ValueString).filter_by(value=u'foo').one()
         self.assertIsNotNone(entry.choice, u'Choice not set')
 
         # Should not be able to set it to something outside of the specified

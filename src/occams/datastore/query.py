@@ -73,7 +73,7 @@ def schemaToSubQuery(session, name, split=Split.NAME):
 
             if attribute.is_collection:
                 column = collection(
-                    session.query(cast(Value._value, nameCastMap[attribute.type]))
+                    session.query(cast(Value.value, nameCastMap[attribute.type]))
                     .filter(Value.entity_id == model.Entity.id)
                     .filter(Value.attribute_id == attribute.id)
                     .correlate(model.Entity)
@@ -87,7 +87,7 @@ def schemaToSubQuery(session, name, split=Split.NAME):
                         (Value.attribute_id == attribute.id))
                     )
 
-                column = cast(Value._value, nameCastMap[attribute.type])
+                column = cast(Value.value, nameCastMap[attribute.type])
 
             exportQuery = exportQuery.add_column(column.label(name))
 
