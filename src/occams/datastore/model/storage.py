@@ -179,7 +179,10 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
             except NoResultFound:
                 append(value)
             else:
-                entry.value = value
+                if attribute.type == 'object':
+                    entry.sub_entity = value
+                else:
+                    entry.value = value
 
     def __delitem__(self, key):
         collector = self._getCollector(key)
