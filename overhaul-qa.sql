@@ -165,3 +165,27 @@ SELECT sc.name
     LEFT JOIN attribute a ON (sc.id = a.object_schema_id)
   WHERE (a.name IS NULL AND sc.is_inline = True)
      OR (a.name IS NOT NULL AND sc.is_inline = False)
+;
+
+-- In NEW SYSTEM, we expect no extraneous values when attribute.is_collection = false
+-- (This QA constraint was added when it was understood that something in the new
+-- versioning import was breaking the assumption.)
+SELECT v.entity_id, a.name, COUNT(*)
+  FROM (
+      SELECT to_char(value,'YYYY-MM-DD HH24:MI:SS'), id, 'datetime' AS table_type, entity_id, attribute_id FROM datetime
+      UNION ALL
+      SELECT to_char(value,'FM99999999999999'), id, 'integer' AS table_type, entity_id, attribute_id FROM integer
+      UNION ALL
+      SELECT to_char(value,'FM99999999999999.099999999'), id, 'decimal' AS table_type, entity_id, attribute_id FROM decimal
+      UNION ALL
+      SELECT value, id, 'string' AS table_type, entity_id, attribute_id FROM string
+      UNION ALL
+      SELECT to_char(value,'FM99999999999999'), id, 'object' AS table_type, entity_id, attribute_id FROM object
+         ) v
+    JOIN attribute a ON a.id = v.attribute_id
+    -- LEFT JOIN schema sc_e ON sc_e.id = e.schema_id
+    -- LEFT JOIN schema sc_a ON sc_a.id = a.schema_id
+  WHERE a.is_collection = false
+  GROUP BY v.entity_id, a.name
+  HAVING COUNT(*) > 1
+
