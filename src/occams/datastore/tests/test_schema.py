@@ -729,7 +729,7 @@ class SchemaManagerTestCase(unittest.TestCase):
 
     layer = OCCAMS_DATASTORE_MODEL_FIXTURE
 
-    def setUp(self):
+    def prePopulate(self):
         session = self.layer['session']
 
         # Add dummy data with multiple versions of forms in various states
@@ -757,6 +757,7 @@ class SchemaManagerTestCase(unittest.TestCase):
 
     def testKeys(self):
         session = self.layer['session']
+        self.prePopulate()
         manager = SchemaManager(session)
 
         self.assertItemsEqual(['Foo', 'Bar', 'Baz', 'Caz'], manager.keys())
@@ -769,6 +770,7 @@ class SchemaManagerTestCase(unittest.TestCase):
 
     def testHas(self):
         session = self.layer['session']
+        self.prePopulate()
         manager = SchemaManager(session)
 
         # Foo existed since p1
@@ -797,6 +799,7 @@ class SchemaManagerTestCase(unittest.TestCase):
 
     def testPurge(self):
         session = self.layer['session']
+        self.prePopulate()
         manager = SchemaManager(session)
 
         # Shouldn't delete any non-existing schemata
@@ -842,6 +845,7 @@ class SchemaManagerTestCase(unittest.TestCase):
 
     def testGet(self):
         session = self.layer['session']
+        self.prePopulate()
         manager = SchemaManager(session)
 
         # Get something that dosn't exist
