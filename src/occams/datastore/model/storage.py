@@ -53,13 +53,12 @@ def enforceSchemaState(entity):
     if entity.schema.state != 'published':
         raise InvalidEntitySchemaError(entity.schema.name, entity.schema.state)
 
+class Context(Model, AutoNamed, Referenceable, Modifiable, Auditable):
 
-class Context(Model, AutoNamed, Modifiable, Auditable):
-
-    entity_id = Column(Integer, nullable=False, primary_key=True)
+    entity_id = Column(Integer, nullable=False)
 
     # Discriminator column for the keys and associations
-    external = Column(String, nullable=False, primary_key=True)
+    external = Column(String, nullable=False)
 
     @classmethod
     def creator(cls, external):
@@ -72,7 +71,7 @@ class Context(Model, AutoNamed, Modifiable, Auditable):
             external=external,
             )
 
-    key = Column(Integer, nullable=False, primary_key=True)
+    key = Column(Integer, nullable=False)
 
     @declared_attr
     def __table_args__(cls):
@@ -83,6 +82,7 @@ class Context(Model, AutoNamed, Modifiable, Auditable):
                 name='fk_%s_entity_id' % cls.__tablename__,
                 ondelete='CASCADE',
                 ),
+            UniqueConstraint('entity_id', 'external', 'key'),
             )
 
 
