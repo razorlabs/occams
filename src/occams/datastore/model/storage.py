@@ -227,6 +227,7 @@ class HasEntities(object):
             primaryjoin='(%s.id == Context.key) & (Context.external == "%s")' % (cls.__name__, name),
             foreign_keys=[Context.key, Context.external],
             cascade='all, delete-orphan',
+            collection_class=set,
             backref=backref(
                 '%s_parent' % name,
                 uselist=False
