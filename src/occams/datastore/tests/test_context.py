@@ -75,6 +75,11 @@ class HasEntitiesTestCase(unittest.TestCase):
         self.assertEqual(3, len(sc1.entities))
         self.assertItemsEqual(['foo', 'bar', 'baz'], [e.name for e in sc1.entities])
 
+        # Add one more to verify collection_class is of type "set"
+        sc1.entities.add(model.Entity(schema=schemaB, name='car', title=u''),)
+        session.flush()
+        self.assertItemsEqual(['foo', 'bar', 'baz', 'car'], [e.name for e in sc1.entities])
+
         sc2 = session.query(SampleClass2).filter_by(name='Bar').one()
         self.assertEqual(2, len(sc2.entities))
         self.assertItemsEqual(['raz', 'caz'], [e.name for e in sc2.entities])
@@ -110,7 +115,7 @@ class HasEntitiesTestCase(unittest.TestCase):
             )
 
         entitylist = [e.name for e in sc1EntitiesQuery]
-        self.assertItemsEqual(['foo', 'bar', 'baz'], entitylist)
+        self.assertItemsEqual(['foo', 'bar', 'car', 'baz'], entitylist)
 
         # Now try adding the fooEntity to an additional context
         session.add(SampleClass1(name='Jar', entities=[fooEntity]))
