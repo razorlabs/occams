@@ -4,6 +4,8 @@ Tests the schema subquery converter module
 
 import unittest2 as unittest
 from datetime import date
+from datetime import datetime
+from decimal import Decimal
 
 from occams.datastore.testing import OCCAMS_DATASTORE_MODEL_FIXTURE
 from occams.datastore import model
@@ -300,6 +302,7 @@ class ColumnPlanTestCase(unittest.TestCase):
         for e in expected:
             self.assertEqual(1, len(plan[e]))
 
+
 class SchemaToSubqueryTestCase(unittest.TestCase):
     """
     Verifies subquery exporting
@@ -313,10 +316,8 @@ class SchemaToSubqueryTestCase(unittest.TestCase):
         session.add(schema)
         session.flush()
 
-        subquery = schemaToSubquery(session, 'A')
+        plan, subquery = schemaToSubquery(session, 'A')
         self.assertIn('entity_id', subquery.c)
-        self.assertIn('entity_state', subquery.c)
-        self.assertIn('entity_collect_date', subquery.c)
 
     def testEmptySchema(self):
         session = self.layer['session']
@@ -324,7 +325,7 @@ class SchemaToSubqueryTestCase(unittest.TestCase):
         session.add(schema)
         session.flush()
 
-        subquery = schemaToSubquery(session, 'A', split=True)
+        plan, subquery = schemaToSubquery(session, 'A', Split.NAME)
 
         self.assertEqual(0, session.query(subquery).count())
 
@@ -334,41 +335,88 @@ class SchemaToSubqueryTestCase(unittest.TestCase):
 
         self.assertEqual(1, session.query(subquery).count())
 
-    def testFlatSchemaWithString(self):
+    def createEntity(self, schema, name, collect_date, values):
+        session = self.layer['session']
+        entity = model.Entity(schema=schema, name=name, title=u'', collect_date=collect_date)
+        session.add(entity)
+        for key, value in values.iteritems():
+            entity[key] = value
+        session.flush()
+        return entity
+
+    def createSchema(self, name, publish_date, attributes):
         session = self.layer['session']
         schema = model.Schema(
-            name='A',
+            name=name,
             title=u'',
             state='published',
-            publish_date=p1,
-            attributes=dict(
-                a=model.Attribute(name='a', title=u'', type='string', order=0),
-                )
+            publish_date=publish_date,
+            attributes=attributes
             )
         session.add(schema)
         session.flush()
+        return schema
 
-        entity = model.Entity(schema=schema, name='Foo', title=u'', collect_date=p1)
-        session.add(entity)
-        entity['a'] = u'foovalue'
-        session.flush()
+    def testFlatSchema(self):
+        session = self.layer['session']
 
-        entity = model.Entity(schema=schema, name='Bar', title=u'', collect_date=p2)
-        session.add(entity)
-        entity['a'] = u'barvalue'
-        session.flush()
+        schema1 = self.createSchema('Sample', p1, dict(
+            textValue=model.Attribute(name='textValue', title=u'', type='text', order=0),
+            stringValue=model.Attribute(name='stringValue', title=u'', type='string', order=1),
+            integerValue=model.Attribute(name='integerValue', title=u'', type='integer', order=2),
+            decimalValue=model.Attribute(name='decimalValue', title=u'', type='decimal', order=3),
+            booleanValue=model.Attribute(name='booleanValue', title=u'', type='boolean', order=4),
+            dateValue=model.Attribute(name='dateValue', title=u'', type='date', order=5),
+            datetimeValue=model.Attribute(name='datetimeValue', title=u'', type='datetime', order=6),
+            ))
 
-        subquery = schemaToSubquery(session, 'A', split=False)
+        entity1 = self.createEntity(schema1, 'Foo', p1, dict(
+            textValue=u'some\nfoovalue',
+            stringValue=u'foovalue',
+            integerValue=10,
+            decimalValue=Decimal('5.1'),
+            booleanValue=True,
+            dateValue=date(2010, 10, 1),
+            datetimeValue=datetime(2010, 10, 1, 5, 10, 30),
+            ))
 
-        self.assertIn('a', subquery.c)
+        entity2 = self.createEntity(schema1, 'Bar', p1, dict(
+            textValue=u'some\nbarvalue',
+            stringValue=u'barvalue',
+            integerValue=30,
+            decimalValue=Decimal('1.89'),
+            booleanValue=False,
+            dateValue=date(2012, 5, 1),
+            datetimeValue=datetime(2012, 5, 1, 16, 19),
+            ))
 
-        result = session.query(subquery).filter_by(entity_id=1).one()
-        self.assertEqual(p1, result.entity_collect_date)
-        self.assertEqual('foovalue', result.a)
+        plan, subquery = schemaToSubquery(session, 'Sample', Split.NAME)
 
-        result = session.query(subquery).filter_by(entity_id=2).one()
-        self.assertEqual(p2, result.entity_collect_date)
-        self.assertEqual('barvalue', result.a)
+        result = session.query(subquery).filter_by(entity_id=entity1.id).one()
+        self.assertEqual(entity1['textValue'], result.textValue)
+        self.assertEqual(entity1['stringValue'], result.stringValue)
+        self.assertEqual(entity1['integerValue'], result.integerValue)
+        self.assertEqual(entity1['booleanValue'], result.booleanValue)
+        self.assertEqual(str(entity1['dateValue']), str(result.dateValue))
+        self.assertEqual(str(entity1['datetimeValue']), str(result.datetimeValue))
 
-    def testSubSchemataWithString(self):
-        pass
+        result = session.query(subquery).filter_by(entity_id=entity2.id).one()
+        self.assertEqual(entity2['textValue'], result.textValue)
+        self.assertEqual(entity2['stringValue'], result.stringValue)
+        self.assertEqual(entity2['integerValue'], result.integerValue)
+        self.assertEqual(entity2['booleanValue'], result.booleanValue)
+        self.assertEqual(str(entity2['dateValue']), str(result.dateValue))
+        self.assertEqual(str(entity2['datetimeValue']), str(result.datetimeValue))
+
+#        # Now add a new version
+#        schema2 = copy(schema1)
+#        schema2.state = 'published'
+#        schema2.publish_date = p2
+#        schema2['a'].title = u'prime'
+#        session.add(schema2)
+#        session.flush()
+#
+#        entity3 = self.createEntity(schema2, 'Baz', p2, dict(a=u'bazvalue'))
+#
+#        plan, subquery = schemaToSubquery(session, 'A', Split.NAME)
+

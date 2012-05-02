@@ -215,6 +215,10 @@ class HasEntities(object):
 
     @declared_attr
     def contexts(cls):
+        """
+        Relationship to the context mapping class.
+        If you want to be forwared to entities, use ``entities`` instead.
+        """
         name = cls.__tablename__
 
         cls.entities = association_proxy(
