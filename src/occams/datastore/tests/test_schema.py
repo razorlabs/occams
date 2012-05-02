@@ -217,7 +217,7 @@ class CategoryModelTestCase(unittest.TestCase):
         self.assertEqual(u'Test Schemata', category.title)
         self.assertIsNone(category.description)
 
-    def testAppendToSchema(self):
+    def testAddToSchema(self):
         session = self.layer['session']
         schema = model.Schema(name='Foo', title=u'', state='published')
         session.add(schema)
@@ -228,14 +228,19 @@ class CategoryModelTestCase(unittest.TestCase):
         schema.categories.add(category1)
         session.flush()
         self.assertEqual(1, len(schema.categories))
+        self.assertEqual(1, len(category1.schemata))
+        self.assertItemsEqual(['Foo'], [s.name for s in category1.schemata])
 
         schema.categories.add(category1)
         session.flush()
         self.assertEqual(1, len(schema.categories))
+        self.assertEqual(1, len(category1.schemata))
 
         category2 = model.Category(name='Bars', title=u'Bar Schemata')
         schema.categories.add(category2)
         self.assertEqual(2, len(schema.categories))
+        self.assertItemsEqual(['Tests', 'Bars'], [c.name for c in schema.categories])
+        self.assertItemsEqual(['Foo'], [s.name for s in category2.schemata])
 
         # Now try a common use case: get all schema of a certain cateogry
         # First we'll need a second schema of the same category of another
@@ -254,6 +259,24 @@ class CategoryModelTestCase(unittest.TestCase):
 
         # Should be the ones we just marked
         self.assertItemsEqual(['Foo', 'Bar'], [s.name for s in schemata])
+
+    def testAddSchemata(self):
+        session = self.layer['session']
+        category1 = model.Category(name='Tests', title=u'')
+        session.add(category1)
+        session.flush()
+
+        schema1 = model.Schema(name='A', title=u'', state='published', publish_date=p1)
+        category1.schemata.add(schema1)
+        session.flush()
+        self.assertItemsEqual(['A'], [s.name for s in category1.schemata])
+        self.assertItemsEqual(['Tests'], [c.name for c in schema1.categories])
+
+        schema2 = model.Schema(name='B', title=u'', state='published', publish_date=p1)
+        category1.schemata.add(schema2)
+        session.flush()
+        self.assertItemsEqual(['A', 'B'], [s.name for s in category1.schemata])
+        self.assertItemsEqual(['Tests'], [c.name for c in schema2.categories])
 
 
 class ChecksumTestCase(unittest.TestCase):
