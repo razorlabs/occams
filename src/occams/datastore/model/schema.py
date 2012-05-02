@@ -153,6 +153,10 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         Category,
         secondary=schema_category_table,
         collection_class=set,
+        backref=backref(
+            'schemata',
+            collection_class=set,
+            )
         )
 
     state = Column(
