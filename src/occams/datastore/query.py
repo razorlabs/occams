@@ -5,6 +5,7 @@ in a SQL table-like fashion.
 
 from ordereddict import OrderedDict
 from sqlalchemy import cast
+from sqlalchemy import func
 from sqlalchemy.ext import compiler
 from sqlalchemy.sql import ColumnElement
 from sqlalchemy.orm import aliased
@@ -30,16 +31,13 @@ class Split(object):
     (NAME, CHECKSUM, ID) = range(3)
 
 
-def defaultColumnNaming(session, name, split, path, attributes):
-    """
-    Implements default naming behavior of subquery columns
-    """
-    return '_'.join(path)
-
-
-def schemaToSubquery(session, name, split=Split.NAME, merge=dict(), naming=defaultColumnNaming):
+def schemaToSubquery(session, name, split=Split.NAME):
     """
     Returns a schema entity data as an aliased sub-query.
+
+    This query can then be further queried to fulfill bureaucratic requirements.
+
+    Suggested usage of subquery is via "common table expressions" (i.e. WITH staement...)
 
     Arguments
         ``session``
@@ -63,64 +61,52 @@ def schemaToSubquery(session, name, split=Split.NAME, merge=dict(), naming=defau
                 * attributes: the attributes for the column
             Note that merge is not passed as a parameter as this method
             takes care of the final column merging.
-    Returns
-        A subquery representation of the schema family.
 
-        Note that the results that will be retured by the subquery are
-        named tuples of each result using the names of the naming
-        schema as the property names.
+    Returns
+        A tuple containing the plan used, and the final subquery
+
+        Developer note: the results that will be returned by the subquery are
+        named tuples of each result using the names of the naming schema as the
+        property names.
 
     """
 
     # Collapse all the related attributes into an ordered tree
-    plan = getColumnPlan(session, name, split=split)
-
-    # TODO somewhere in here we further collapse the attributes based on a
-    # configuration file
+    plan = getColumnPlan(session, name, split)
 
     exportQuery = (
-        session.query(
-            model.Entity.id.label('entity_id'),
-            model.Entity.state.label('entity_state'),
-            model.Entity.collect_date.label('entity_collect_date'),
-            )
+        session.query(model.Entity.id.label('entity_id'))
         .join(model.Entity.schema)
         .filter((model.Schema.name == name) & (model.Schema.publish_date != None))
         )
 
     for path, attributes in plan.iteritems():
-        for attribute in attributes:
-            columnName = defaultColumnNaming(session, name, split, path, attributes)
+        columnName = '_'.join(path)
+        finalType = attributes[-1].type
+        ids = [a.id for a in attributes]
+        isEverCollection = True in set([a.is_collection for a in attributes])
 
-            # YOU LEFT OFF HERE
+        Value = aliased(nameModelMap[finalType], name='%s_%s' % (columnName, finalType))
+        valueClause = (Value.entity_id == model.Entity.id) & (Value.attribute_id.in_(ids))
+        # SA really doesn't like the hybrid property for casting, use the _column
+        valueCasted = convert(Value._value, finalType)
 
-            Value = aliased(nameModelMap[attribute.type])
+        if isEverCollection:
+            # Collections are built using correlated subqueries
+            valueQuery = session.query(valueCasted).filter(valueClause)
+            column = collection(valueQuery.correlate(model.Entity).as_scalar())
+        else:
+            # Scalars are build via LEFT JOIN
+            exportQuery = exportQuery.outerjoin(Value, valueClause)
+            column = valueCasted
 
-            if attribute.is_collection:
-                column = collection(
-                    session.query(cast(Value._value, nameCastMap[attribute.type]))
-                    .filter(Value.entity_id == model.Entity.id)
-                    .filter(Value.attribute_id == attribute.id)
-                    .correlate(model.Entity)
-                    .subquery()
-                    .as_scalar()
-                    )
-            else:
-                exportQuery = exportQuery.outerjoin(
-                    Value,
-                    ((Value.entity_id == model.Entity.id) &
-                        (Value.attribute_id == attribute.id))
-                    )
-
-                column = cast(Value._value, nameCastMap[attribute.type])
-
-            exportQuery = exportQuery.add_column(column.label(columnName))
+        exportQuery = exportQuery.add_column(column.label(columnName))
 
     subQuery = exportQuery.subquery(name)
-    return subQuery
+    return plan, subQuery
 
 
-def getColumnPlan(session, name, split=Split.NAME):
+def getColumnPlan(session, name, split=Split.NAME, path=()):
     """
     Consolidates all the plan in a schema hierarchy into a single listing.
     The way this is accomplished is by traversing all the nodes in each
@@ -137,6 +123,10 @@ def getColumnPlan(session, name, split=Split.NAME):
             The name of the schema to get columns plans for
         ``split``
             (Optional) the splitting algorithm to use. Default is by name.
+        ``path``
+            (Optional)  current traversing path in the hierarchy.
+            This is useful if you want to prepend additional column
+            prefixes.
 
     Returns
         An ordered dictionary using the path to the attribute as the key,
@@ -185,19 +175,50 @@ def getColumnPlan(session, name, split=Split.NAME):
 
     for attribute in attributeQuery:
         if attribute.type == 'object':
-            subattributes = getColumnPlan(session, attribute.object_schema.name, split)
-            for path, items in subattributes.iteritems():
-                plan[(attribute.name,) + path] = items
+            subName = attribute.object_schema.name
+            subPath = (attribute.name,)
+            subPlan = getColumnPlan(session, subName, split, subPath)
+            plan.update(subPlan)
         else:
             if split == Split.CHECKSUM:
-                path = (attribute.name, attribute.checksum)
+                columnPath = path + (attribute.name, attribute.checksum)
             elif split == Split.ID:
-                path = (attribute.name, attribute.id)
+                columnPath = path + (attribute.name, attribute.id)
             else:
-                path = (attribute.name,)
-            plan.setdefault(path, []).append(attribute)
+                columnPath = path + (attribute.name,)
+            plan.setdefault(columnPath, []).append(attribute)
 
     return plan
+
+
+class convert(ColumnElement):
+    """
+    Collection element for dynamically representing a collection in any
+    vendor-specific dialect.
+    """
+
+    def __init__(self, column, typeName):
+        self.column = column
+        self.typeName = typeName
+        self.type = nameCastMap[typeName]
+
+
+@compiler.compiles(convert, 'sqlite')
+def compileConvertSqlite(element, compiler, **kw):
+    # Very special case for sqlite as it has limited data types
+    if element.typeName == 'date':
+        converted = func.date(element.column)
+    elif element.typeName == 'datetime':
+        converted = func.datetime(element.column)
+    else:
+        converted = cast(element.column, element.type)
+    return compiler.process(converted)
+
+
+@compiler.compiles(convert, 'postgres')
+@compiler.compiles(convert, 'postgresql')
+def compileConvertPostgresql(element, compiler, **kw):
+    return compiler.process(cast(element.column, element.type))
 
 
 class collection(ColumnElement):
@@ -210,6 +231,7 @@ class collection(ColumnElement):
         self.column = column
         self.separator = separator
         self.order_by = order_by
+        # TODO: needs type
 
 
 @compiler.compiles(collection, 'postgres')
