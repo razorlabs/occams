@@ -186,14 +186,6 @@ def createRevision(instance, deleted=False):
                         'aware of.'
                         )
 
-    if not changed:
-        # Nothing has changed, consider relationship changes.
-        for liveProperty in liveMapper.iterate_properties:
-            if isinstance(liveProperty, RelationshipProperty) and \
-                attributes.get_history(instance, liveProperty.key).has_changes():
-                changed = True
-                break
-
     if changed or deleted:
         # Commit previous values to audit table
         session = object_session(instance)
