@@ -33,7 +33,7 @@ from occams.datastore.schema import SchemaManager
 from occams.datastore.schema import HierarchyInspector
 from occams.datastore.schema import copy
 from occams.datastore.schema import attributeToField
-from occams.datastore.testing import OCCAMS_DATASTORE_MODEL_FIXTURE
+from occams.datastore.testing import OCCAMS_DATASTORE_FIXTURE
 
 
 p1 = date(2012, 3, 1)
@@ -47,7 +47,7 @@ class SchemaModelTestCase(unittest.TestCase):
     Verifies Schema model
     """
 
-    layer = OCCAMS_DATASTORE_MODEL_FIXTURE
+    layer = OCCAMS_DATASTORE_FIXTURE
 
     def testImplementation(self):
         self.assertTrue(verifyClass(ISchema, model.Schema))
@@ -147,7 +147,7 @@ class AttributeModelTestCase(unittest.TestCase):
     Verifies Attribute model
     """
 
-    layer = OCCAMS_DATASTORE_MODEL_FIXTURE
+    layer = OCCAMS_DATASTORE_FIXTURE
 
     def testImplementation(self):
         self.assertTrue(verifyClass(IAttribute, model.Attribute))
@@ -174,7 +174,7 @@ class ChoiceModelTestCase(unittest.TestCase):
     Verifies Choice model
     """
 
-    layer = OCCAMS_DATASTORE_MODEL_FIXTURE
+    layer = OCCAMS_DATASTORE_FIXTURE
 
     def testImplementation(self):
         self.assertTrue(verifyClass(dsIChoice, model.Choice))
@@ -200,7 +200,7 @@ class CategoryModelTestCase(unittest.TestCase):
     Verifies Category model
     """
 
-    layer = OCCAMS_DATASTORE_MODEL_FIXTURE
+    layer = OCCAMS_DATASTORE_FIXTURE
 
     def testImplemetation(self):
         self.assertTrue(verifyClass(ICategory, model.Category))
@@ -375,7 +375,7 @@ class SchemaCopyTestCase(unittest.TestCase):
     Verifies that schemata can be "deep" copied as new versions of schemata
     """
 
-    layer = OCCAMS_DATASTORE_MODEL_FIXTURE
+    layer = OCCAMS_DATASTORE_FIXTURE
 
     def testBasic(self):
         session = self.layer['session']
@@ -462,7 +462,7 @@ class DictionaryLikeTesCase(unittest.TestCase):
     Tests inspection of schema/attributes as dictionaries
     """
 
-    layer = OCCAMS_DATASTORE_MODEL_FIXTURE
+    layer = OCCAMS_DATASTORE_FIXTURE
 
     def testSet(self):
         session = self.layer['session']
@@ -658,7 +658,7 @@ class HierarchyTestCase(unittest.TestCase):
     Verifies schema hierarchy listing manager
     """
 
-    layer = OCCAMS_DATASTORE_MODEL_FIXTURE
+    layer = OCCAMS_DATASTORE_FIXTURE
 
     def setUp(self):
         session = self.layer['session']
@@ -750,7 +750,7 @@ class SchemaManagerTestCase(unittest.TestCase):
     Verifies schema manager
     """
 
-    layer = OCCAMS_DATASTORE_MODEL_FIXTURE
+    layer = OCCAMS_DATASTORE_FIXTURE
 
     def prePopulate(self):
         session = self.layer['session']
@@ -925,7 +925,7 @@ class AttributeToFieldTestCase(unittest.TestCase):
     Verifies that a SQLAlchemy attribute can be converted to a Zope-style field
     """
 
-    layer = OCCAMS_DATASTORE_MODEL_FIXTURE
+    layer = OCCAMS_DATASTORE_FIXTURE
 
     def testBasic(self):
         types = dict(

@@ -4,7 +4,7 @@ import unittest2 as unittest
 import sqlalchemy.exc
 from occams.datastore.interfaces import NotFoundError
 from occams.datastore import model
-from occams.datastore.testing import OCCAMS_DATASTORE_MODEL_FIXTURE
+from occams.datastore.testing import OCCAMS_DATASTORE_FIXTURE
 from occams.datastore.users import UserManager
 
 
@@ -13,7 +13,7 @@ class UserModelTestCase(unittest.TestCase):
     Verifies user storage
     """
 
-    layer = OCCAMS_DATASTORE_MODEL_FIXTURE
+    layer = OCCAMS_DATASTORE_FIXTURE
 
     def testAdd(self):
         session = self.layer['session']
@@ -52,7 +52,7 @@ class UserModelTestCase(unittest.TestCase):
 
 class UserManagerTestCase(unittest.TestCase):
 
-    layer = OCCAMS_DATASTORE_MODEL_FIXTURE
+    layer = OCCAMS_DATASTORE_FIXTURE
 
     def testKeys(self):
         session = self.layer['session']

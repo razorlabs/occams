@@ -10,9 +10,16 @@ import plone.testing
 from occams.datastore import model
 
 
-class OccamsDataStoreModelLayer(plone.testing.Layer):
+class OccamsDataStoreLayer(plone.testing.Layer):
     """
     DataBase application layer for tests.
+
+    Important GOTCHA:  if you are plugging into DataStore with additional models,
+    make sure that their metadata has been loaded into the ``Model`` declarative
+    base, otherwise they wont be available during testing. Rarely will
+    this be an issue and will possibly even go unnoticed, unless the client
+    application is doing something exotic like deferring the loading of the
+    model classes.
     """
 
     def setUp(self):
@@ -50,4 +57,4 @@ class OccamsDataStoreModelLayer(plone.testing.Layer):
         self['session'].rollback()
 
 
-OCCAMS_DATASTORE_MODEL_FIXTURE = OccamsDataStoreModelLayer()
+OCCAMS_DATASTORE_FIXTURE = OccamsDataStoreLayer()
