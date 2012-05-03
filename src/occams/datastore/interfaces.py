@@ -101,7 +101,7 @@ class IDataStoreComponent(zope.interface.Interface):
     """
 
 
-class IEntry(IDataStoreComponent):
+class IReferenceable(IDataStoreComponent):
     """
     An object that can be stored in a database.
     """
@@ -117,7 +117,7 @@ class IEntry(IDataStoreComponent):
         )
 
 
-class IUser(IEntry):
+class IUser(IReferenceable):
     """
     A simple user for audit trails
     """
@@ -180,7 +180,7 @@ class IModifiable(IDataStoreComponent):
         )
 
 
-class IDataBaseItem(IEntry, IDescribeable, IModifiable):
+class IDataBaseItem(IReferenceable, IDescribeable, IModifiable):
     """
     An object that originates from database.
     """

@@ -13,7 +13,7 @@ from sqlalchemy.orm import sessionmaker
 from occams.datastore import model
 from occams.datastore.model.metadata import AutoNamed
 from occams.datastore.interfaces import NonExistentUserError
-from occams.datastore.testing import OCCAMS_DATASTORE_MODEL_FIXTURE
+from occams.datastore.testing import OCCAMS_DATASTORE_FIXTURE
 
 
 class AutoNamingTestCase(unittest.TestCase):
@@ -59,7 +59,7 @@ class ModifiableMixinTestCase(unittest.TestCase):
     # alongside the production code. Perhaps one day we can move these tests
     # into their own separate package and then extend ``Model`` in a test sample.
 
-    layer = OCCAMS_DATASTORE_MODEL_FIXTURE
+    layer = OCCAMS_DATASTORE_FIXTURE
 
     def testBasic(self):
         """

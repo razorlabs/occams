@@ -6,11 +6,9 @@ in a SQL table-like fashion.
 from ordereddict import OrderedDict
 from sqlalchemy import cast
 from sqlalchemy import func
-from sqlalchemy.ext import compiler
-from sqlalchemy.sql import ColumnElement
 from sqlalchemy.orm import aliased
+from sqlalchemy.orm import joinedload
 
-from occams.datastore.interfaces import InvalidEntitySchemaError
 from occams.datastore import model
 from occams.datastore.model.storage import nameCastMap
 from occams.datastore.model.storage import nameModelMap
@@ -84,17 +82,47 @@ def schemaToSubquery(session, name, split=Split.NAME):
         columnName = '_'.join(path)
         finalType = attributes[-1].type
         ids = [a.id for a in attributes]
-        isEverCollection = True in set([a.is_collection for a in attributes])
 
         Value = aliased(nameModelMap[finalType], name='%s_%s' % (columnName, finalType))
         valueClause = (Value.entity_id == model.Entity.id) & (Value.attribute_id.in_(ids))
-        # SA really doesn't like the hybrid property for casting, use the _column
-        valueCasted = convert(Value._value, finalType)
 
-        if isEverCollection:
+        # SA really doesn't like the hybrid property for casting, use the _column
+        rawColumn = Value._value
+
+        # Very special case for sqlite as it has limited data types
+        if 'sqlite' in str(session.bind.url) and finalType in ('date', 'datetime'):
+            if finalType == 'date':
+                valueCasted = func.date(rawColumn)
+            elif finalType == 'datetime':
+                valueCasted = func.datetime(rawColumn)
+        else:
+            valueCasted = cast(rawColumn, nameCastMap[finalType])
+
+        # Hanlde collections
+        if True in set([a.is_collection for a in attributes]):
             # Collections are built using correlated subqueries
-            valueQuery = session.query(valueCasted).filter(valueClause)
-            column = collection(valueQuery.correlate(model.Entity).as_scalar())
+            if 'postgresql' in str(session.bind.url):
+                # Special logic for postrgres, because it supports actual arrays
+                column = func.array(
+                    session.query(valueCasted)
+                    .filter(valueClause)
+                    .correlate(model.Entity)
+                    .subquery()
+                    )
+            else:
+                # Everything else get's a comma-delimeted string
+                column = (
+                    session.query(func.group_concat(valueCasted))
+                    .filter(valueClause)
+                    .correlate(model.Entity)
+                    .subquery()
+                    )
+
+        # Handle sub objects
+        elif True in set([a.schema.is_inline for a in attributes]):
+            pass
+
+        # Handle scalar values
         else:
             # Scalars are build via LEFT JOIN
             exportQuery = exportQuery.outerjoin(Value, valueClause)
@@ -137,16 +165,6 @@ def getColumnPlan(session, name, split=Split.NAME, path=()):
     """
     plan = OrderedDict()
 
-    schemaCheckQuery = (
-        session.query(model.Schema)
-        .filter((model.Schema.name == name) & (model.Schema.publish_date != None))
-        )
-
-    count = schemaCheckQuery.count()
-
-    if count <= 0:
-        raise InvalidEntitySchemaError(name)
-
     # Aliased so we don't get naming ambiguity
     RecentAttribute = aliased(model.Attribute, name='recent_attribute')
 
@@ -165,6 +183,10 @@ def getColumnPlan(session, name, split=Split.NAME, path=()):
     # Get all the attributes ordered by their most recent order, then oldest to newest
     attributeQuery = (
         session.query(model.Attribute)
+        .options(
+            joinedload(model.Attribute.schema),
+            joinedload(model.Attribute.choices),
+            )
         .join(model.Attribute.schema)
         .filter((model.Schema.name == name) & (model.Schema.publish_date != None))
         .order_by(
@@ -189,57 +211,3 @@ def getColumnPlan(session, name, split=Split.NAME, path=()):
             plan.setdefault(columnPath, []).append(attribute)
 
     return plan
-
-
-class convert(ColumnElement):
-    """
-    Collection element for dynamically representing a collection in any
-    vendor-specific dialect.
-    """
-
-    def __init__(self, column, typeName):
-        self.column = column
-        self.typeName = typeName
-        self.type = nameCastMap[typeName]
-
-
-@compiler.compiles(convert, 'sqlite')
-def compileConvertSqlite(element, compiler, **kw):
-    # Very special case for sqlite as it has limited data types
-    if element.typeName == 'date':
-        converted = func.date(element.column)
-    elif element.typeName == 'datetime':
-        converted = func.datetime(element.column)
-    else:
-        converted = cast(element.column, element.type)
-    return compiler.process(converted)
-
-
-@compiler.compiles(convert, 'postgres')
-@compiler.compiles(convert, 'postgresql')
-def compileConvertPostgresql(element, compiler, **kw):
-    return compiler.process(cast(element.column, element.type))
-
-
-class collection(ColumnElement):
-    """
-    Collection element for dynamically representing a collection in any
-    vendor-specific dialect.
-    """
-
-    def __init__(self, column, separator='-', order_by=None):
-        self.column = column
-        self.separator = separator
-        self.order_by = order_by
-        # TODO: needs type
-
-
-@compiler.compiles(collection, 'postgres')
-@compiler.compiles(collection, 'postgresql')
-def compileCollectionPostgreSql(element, compiler, **kw):
-    return "ARRAY(%s)" % compiler.process(element.column)
-
-
-@compiler.compiles(collection, 'sqlite')
-def compileCollectionSqlite(element, compiler, **kw):
-    return "GROUP_CONCAT(%s)" % compiler.process(element.column)

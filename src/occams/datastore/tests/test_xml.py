@@ -10,7 +10,7 @@ import unittest2 as unittest
 
 import sqlalchemy.exc
 from occams.datastore import model
-from occams.datastore.testing import OCCAMS_DATASTORE_MODEL_FIXTURE
+from occams.datastore.testing import OCCAMS_DATASTORE_FIXTURE
 from occams.datastore.xml import exportXml
 from occams.datastore.xml import schemaToElement
 from occams.datastore.xml import attributeToElement
@@ -24,7 +24,7 @@ from occams.datastore.interfaces import AlreadyExistsError
 
 class XmlTestCase(unittest.TestCase):
 
-    layer = OCCAMS_DATASTORE_MODEL_FIXTURE
+    layer = OCCAMS_DATASTORE_FIXTURE
 
     def testSchemaToXmlViaStream(self):
         schema = model.Schema(

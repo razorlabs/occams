@@ -7,9 +7,8 @@ from datetime import date
 from datetime import datetime
 from decimal import Decimal
 
-from occams.datastore.testing import OCCAMS_DATASTORE_MODEL_FIXTURE
+from occams.datastore.testing import OCCAMS_DATASTORE_FIXTURE
 from occams.datastore import model
-from occams.datastore.interfaces import InvalidEntitySchemaError
 from occams.datastore.query import Split
 from occams.datastore.query import schemaToSubquery
 from occams.datastore.query import getColumnPlan
@@ -27,15 +26,7 @@ class ColumnPlanTestCase(unittest.TestCase):
     Verifies column header
     """
 
-    layer = OCCAMS_DATASTORE_MODEL_FIXTURE
-
-    def testUnpublishedSchema(self):
-        session = self.layer['session']
-        session.add(model.Schema(name='A', title=u'', state='draft'))
-        session.flush()
-
-        with self.assertRaises(InvalidEntitySchemaError):
-            plan = getColumnPlan(session, 'A')
+    layer = OCCAMS_DATASTORE_FIXTURE
 
     def testEmptyPublishedSchema(self):
         session = self.layer['session']
@@ -308,7 +299,7 @@ class SchemaToSubqueryTestCase(unittest.TestCase):
     Verifies subquery exporting
     """
 
-    layer = OCCAMS_DATASTORE_MODEL_FIXTURE
+    layer = OCCAMS_DATASTORE_FIXTURE
 
     def testExpectedMetadataColumns(self):
         session = self.layer['session']
