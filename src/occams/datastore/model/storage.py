@@ -177,8 +177,10 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         append = lambda v: collector.append(wrapperFactory(**params(attribute, v)))
 
         def convert(value, type_):
-            if type_ == 'boolean':
-                converted = bool(value)
+            if value is None:
+                converted = None
+            elif type_ == 'boolean':
+                converted = int(value)
             else:
                 converted = value
             return converted
