@@ -145,7 +145,9 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         query = collector.filter_by(attribute=attribute)
 
         def convert(container):
-            if container.attribute.type == 'date' and isinstance(container.value, datetime):
+            if container.value is None:
+                value = None
+            elif container.attribute.type == 'date' and isinstance(container.value, datetime):
                 # Sometimes it's converted to datetime and so we need to convert it back
                 value = container.value.date()
             elif container.attribute.type == 'boolean':
@@ -177,8 +179,10 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         append = lambda v: collector.append(wrapperFactory(**params(attribute, v)))
 
         def convert(value, type_):
-            if type_ == 'boolean':
-                converted = bool(value)
+            if value is None:
+                converted = None
+            elif type_ == 'boolean':
+                converted = int(value)
             else:
                 converted = value
             return converted
@@ -364,6 +368,11 @@ def validateValue(target, value, oldvalue, initiator):
 
     if attribute is None:
         raise ConstraintError('No attribute assigned for value: %s' % value)
+
+    # Don't check None values, as the user may want to create empty/placeholder
+    # scheamta
+    if value is None:
+        return
 
     def compareable(type_, check, interpreted):
         """

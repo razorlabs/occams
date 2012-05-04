@@ -121,16 +121,19 @@ class EntityModelTestCase(unittest.TestCase):
 
             # Do simple values
             simpleName = typeName + 'simple'
-            schema[simpleName] = model.Attribute(title=u'', type=typeName, order=order)
+            schema[simpleName] = model.Attribute(title=u'', type=typeName, is_required=False, order=order)
+            entity[simpleName] = None
+            session.flush()
+            self.assertEqual(None, entity[simpleName])
+
             entity[simpleName] = simple
             session.flush()
             self.assertEqual(simple, entity[simpleName])
 
             # Double check auditing
             valueQuery = session.query(ModelClass).filter_by(attribute=schema[simpleName])
-
             valueObject = valueQuery.one()
-            self.assertEqual(1, valueObject.revision)
+            self.assertEqual(2, valueObject.revision)
 
             # Try updating
             entity[simpleName] = update
@@ -139,7 +142,7 @@ class EntityModelTestCase(unittest.TestCase):
 
             # Triple check auditing
             valueObject = valueQuery.one()
-            self.assertEqual(2, valueObject.revision)
+            self.assertEqual(3, valueObject.revision)
 
             order += 1
 
@@ -247,11 +250,12 @@ class EntityModelTestCase(unittest.TestCase):
 
         for i, test in enumerate(tests):
             type_, limit, below, equal, over = test
-            model.Attribute(schema=schema, name=type_, title=u'', type=type_, value_min=limit, order=i)
+            model.Attribute(schema=schema, name=type_, title=u'', type=type_, is_required=False, value_min=limit, order=i)
 
             with self.assertRaises(ConstraintError):
                 entity[type_] = below
 
+            entity[type_] = None
             entity[type_] = equal
             entity[type_] = over
 
@@ -277,8 +281,9 @@ class EntityModelTestCase(unittest.TestCase):
 
         for i, test in enumerate(tests):
             type_, limit, below, equal, over = test
-            model.Attribute(schema=schema, name=type_, title=u'', type=type_, value_max=limit, order=i)
+            model.Attribute(schema=schema, name=type_, title=u'', type=type_, is_required=False, value_max=limit, order=i)
 
+            entity[type_] = None
             entity[type_] = below
             entity[type_] = equal
 
@@ -297,6 +302,7 @@ class EntityModelTestCase(unittest.TestCase):
             name='test',
             title=u'',
             type='string',
+            is_required=False,
             # Valid US phone number
             validator=r'\d{3}-\d{3}-\d{4}',
             order=0
@@ -306,6 +312,8 @@ class EntityModelTestCase(unittest.TestCase):
 
         entity = model.Entity(schema=schema, name='Foo', title=u'')
         session.add(entity)
+
+        entity['test'] = None
 
         with self.assertRaises(ConstraintError):
             entity['test'] = u'trollol'
@@ -317,7 +325,7 @@ class EntityModelTestCase(unittest.TestCase):
     def testChoiceConstraint(self):
         session = self.layer['session']
         schema = model.Schema(name='Foo', title=u'', state='published')
-        model.Attribute(schema=schema, name='test', title=u'', type='string', order=0, choices=[
+        model.Attribute(schema=schema, name='test', title=u'', type='string', is_required=False, order=0, choices=[
             model.Choice(name='foo', title=u'Foo', value=u'foo', order=0),
             model.Choice(name='bar', title=u'Bar', value=u'bar', order=1),
             model.Choice(name='baz', title=u'Baz', value=u'baz', order=2),
@@ -327,6 +335,8 @@ class EntityModelTestCase(unittest.TestCase):
 
         entity = model.Entity(schema=schema, name=u'FooEntry', title=u'')
         session.add(entity)
+
+        entity['test'] = None
         entity['test'] = u'foo'
         session.flush()
 
