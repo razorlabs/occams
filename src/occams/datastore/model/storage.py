@@ -170,29 +170,35 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         attribute = self.schema[key]
         wrapperFactory = nameModelMap[attribute.type]
 
-        # Helper method to determine where the value for an attribute should be set
-#        storedAt = lambda a: a.type == 'object' and 'sub_entity' or 'value'
-
         # Helper method for getting the appropriate parameters for an attribute/value
-#        params = lambda a, v: dict(zip(('attribute', storedAt(a)), (a, v)))
         params = lambda a, v: dict(zip(('attribute', 'value'), (a, v)))
 
         # Helper methot to add an item to the value collector
         append = lambda v: collector.append(wrapperFactory(**params(attribute, v)))
 
+        def convert(value, type_):
+            if type_ == 'boolean':
+                converted = bool(value)
+            else:
+                converted = value
+            return converted
+
         if attribute.is_collection:
             # Don't even bother to try and get a diff, just remove it and set it
             del self[key]
-            map(append, value)
+
+            map(append, map(lambda v: convert(v, attribute.type), value))
         else:
             # For scalars, we're only dealing with one value, so it's OK to
             # try and update it
+            convertedValue = convert(value, attribute.type)
+
             try:
                 entry = collector.filter_by(attribute=attribute).one()
             except NoResultFound:
-                append(value)
+                append(convertedValue)
             else:
-                entry.value = value
+                entry.value = convertedValue
 
     def __delitem__(self, key):
         collector = self._getCollector(key)
