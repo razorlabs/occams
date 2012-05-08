@@ -9,6 +9,17 @@ import plone.testing
 
 from occams.datastore import model
 
+# Vendor-specific URIs, note that some tests still use the SQLite URI for
+# general proof-of-concept testing (auditing, metadata, batching, etc)
+
+SQLITE_URI = 'sqlite://'
+
+# Use this if you have a testing database setup, if only there was an in-memory
+# postgres database...
+PSQL_URI = 'postgresql://localhost/test'
+
+DEFAULT_URI = SQLITE_URI
+
 
 class OccamsDataStoreLayer(plone.testing.Layer):
     """
@@ -26,7 +37,8 @@ class OccamsDataStoreLayer(plone.testing.Layer):
         """
         Creates the database structures.
         """
-        engine = create_engine('sqlite://', echo=False)
+        engine = create_engine(DEFAULT_URI, echo=False)
+        model.Model.metadata.drop_all(engine, checkfirst=True)
         model.Model.metadata.create_all(engine, checkfirst=False)
         self['session'] = scoped_session(sessionmaker(
             bind=engine,
