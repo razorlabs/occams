@@ -1,6 +1,6 @@
-=========
-DataStore
-=========
+================
+OCCAMS DataStore
+================
 
 
 The purpose of this plug-in is to facilitate the management of sparse data that
@@ -19,6 +19,7 @@ short.
 
 Using this setup, new object schema can be dynamically defined to allow new
 attributes to be entered for an entity.
+
 
 Example: Basic EAV schema definition and usage primer.
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -93,6 +94,7 @@ Example: Basic EAV schema definition and usage primer.
     more complex, these examples serve as a primer on the basics of how
     the sparse data is stored.
 
+
 ----------------
 History Tracking
 ----------------
@@ -100,39 +102,61 @@ History Tracking
 Due to the nature of clinical trials in the demand for evolving data and the
 importance of auditing, there are **two** different types of history tracking:
 
-    Revisioning
-        In an earlier incarnation of ``DataStore``, we used "delta" entries
-        to keep track of schema changes over its lifetime. This proved to be
-        excruciatingly painful to code with and so a new method was
-        devised: **deep copying** schemata when a new schema version is
-        proposed. There are then multiple benifits to having this mechanism:
-        multiple forms can be in circulation as well as being unplublished
-        for development, and data is now directly linked to the form revision
-        that it was filled out for. This also has the added benifits of the
-        form actually physically existing in one atomic form as opposed to
-        being sharded by deltas. Also, we use a *checksum* value for
-        determining how the attribute has changed across schema revisions.
-        This property is useful for reporting purposes.
 
-        Furthermore, sub schemata and choices are also deep copied.
+Versioning (Cabinet Theory)
++++++++++++++++++++++++++++
+
+A brief history: In an earlier incarnation of ``DataStore``, we used "delta"
+entries to keep track of schema changes over its lifetime. This proved to be
+excruciatingly painful to code with and so a new method was
+devised: **deep copying** schemata when a new schema version is
+proposed.
+
+The general concept behind *deep-copy* follows a *cabinet analogy* that
+the we devised to help explain. In this anaology, we've abstracted schemata
+to paper forms and the database to a filing cabinet. Typically a form
+will be drafted to collect data about a certain subject. The draft form is then
+published and when data needs to be filled in, a photo copy of the form is
+made to be filled out and stored into the filing cabinet. Now, say that
+the there were mistakes in the form. The general procedure would be to photo
+copy the form, whiteout changes, add new questions and then stick the form
+back into the filing cabinet. Now we have to versions of the form in circulation
+that can be further photo copied for data entry or redrafting.
+
+There are multiple benifits to using the deep-copy mechanism:
+multiple forms can be in circulation as well as being unplublished
+for development, and data is now directly linked to the form revision
+that it was filled out for. This also has the added benifits of the
+form actually physically existing in one atomic form as opposed to
+being fragmented by deltas.
+
+Also, we use an internal *checksum* value for determining how the attribute has
+changed across schema revisions. This property is useful for reporting purposes.
+
+Furthermore, sub schemata and choices are also deep copied. This means
+that a sub schemata can only really have one parent and not be shared accross
+schemata.
 
 
-    Auditing
-        In addition to form revisions, we also care about **how** the data itself
-        has changed over time (e.g. spelling errors, misentered entry data).
-        Using deep copying would be overkill in these situations since we
-        ever want to look at this back history for auditing purposes and
-        would actually interfere when querying for entries. So, data changes
-        will be stored in a separate *auditing* table to keep track of
-        data deltas over time. Thus, when a row is changed, a copy of
-        the previous row is entered in the auditing table and the changes
-        are then applied to the live row.
+Auditing (aka C.Y.A. or "Cover-Your-Ass")
++++++++++++++++++++++++++++++++++++++++++
+
+In addition to form revisions, we also care about **how** the data itself
+has changed over time (e.g. spelling errors, misentered entry data).
+Using deep copying would be overkill in these situations since we
+ever want to look at this back history for auditing purposes and
+would actually interfere when querying for entries. So, data changes
+will be stored in a separate *auditing* table to keep track of
+data deltas over time. Thus, when a row is changed, a copy of
+the previous row is entered in the auditing table and the changes
+are then applied to the live row. Furthermore we keep track of who changed
+the data.
 
 
-Example: Revisions
-++++++++++++++++++
+Example: Schema copies
+++++++++++++++++++++++
 
-    This example covers the concept of schema revisions
+    This example covers the concept of schema deep copying.
     Note that tables have been simplified to expose the core concepts.
 
     :Table: ``schema``
@@ -217,46 +241,35 @@ Example: Auditing
     table across all row versions.
 
 
---------
-Managers
---------
+----------------------
+Where's the interface?
+----------------------
 
-Managers are a way to access the DataStore data through a Python API that
-mimics a container-like system.
+This module only implements the EAV system using `SQLAlchemy`_, to maintain
+the implementation vendor-agnostic as much as possible. As such, much of
+the functionality is integrated into the model classes so that the ORM
+can be used as the API. Additionally, there is no web interface built-in as
+the general goal here is to offer a generic sparse-data solution that can be
+used further customized on a per-institution basis. For one such example, see
+`occams.form`_
 
-Basic manager terminology is defined as follows:
-
-keys
-    Lists the names.
-lifecycles
-    Lists the revisions of a name.
-has
-    Checks if the name exists.
-purge
-    Removes the object entirely.
-retire
-    Retires an object (can be restored)
-restore
-    Restores a retired object.
-put
-    Add/Edit an object
-get
-    Retrieve an object.
+.. _SQLAlchemy: http://www.sqlalchemy.org/
+.. _occams.form: https://github.com/beastcore/occams.form.git
 
 ------------------
 Self-Certification
 ------------------
 
-    [ ] Internationalized
+    [-] Internationalized
 
-    [ ] Unit tests
+    [X] Unit tests
 
     [ ] End-user documentation
 
-    [ ] Internal documentation (documentation, interfaces, etc.)
+    [X] Internal documentation (documentation, interfaces, etc.)
 
-    [ ] Existed and maintained for at least 6 months
+    [X] Existed and maintained for at least 6 months
 
-    [ ] Installs and uninstalls cleanly
+    [X] Installs and uninstalls cleanly
 
-    [ ] Code structure follows best practice
+    [X] Code structure follows best practice

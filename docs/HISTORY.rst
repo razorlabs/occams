@@ -8,19 +8,14 @@ Change Log
 
 - General
     - Rebranded to ``occams.datastore``
-    - Overhauled versioning mechanics
+    - Overhauled versioning mechanics to new "cabinet" anology
+    - Auditing enabled
+    - XML module for export/import schemata
+    - 100% code testing coverage
+    - Switched to alembic database migration system
 
 - Managers
-    - ``retire``/``restore``/``lifecycles`` have been removed since they no
-        longer make sense with the new versioning/auditing mechanics
-    - ``keys`` no longer accepts ``ever``
-    - ``has`` no longer accepts ``ever``
-    - Dropped support for Zope interfaces, will be implemeting import/export
-        via XML in a future release
-    - ``Datastore.schemata`` is now a method that requires a schema as input
-    - ``put`` **ONLY** accepts sqlalchemy instances.
-    - ``get`` now returns **ONLY** sqlalchemy instance. If you wish to use
-            the zope functionality, use the new compatibility adapters
+    - Deprecated, query the models directly
 
 - Database
     - ``asOf`` removed since it requires extra control of which entries to
@@ -54,6 +49,7 @@ Change Log
     - ``User`` a new mapping for tracking user changes
     - ``Context`` a new mapping for relating entities to external resources
     - ``External`` a new mapping for keeping track of external resources
+    - ``Category`` a new mapping for tagging forms rather than creating subclasses.
 
 
 -----------
