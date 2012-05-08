@@ -44,7 +44,7 @@ setup(
 
         # ORM utilities and upgrade tools
         'SQLAlchemy >=0.7.0,<0.7.99',
-        'alembic >=0.3.0,<0.3.99',
+        'sqlalchemy-migrate >=0.7.0,<0.7.99',
 
         # Component specification/documentation
         # Note that these packages do not install the entire Zope ecosystem,
