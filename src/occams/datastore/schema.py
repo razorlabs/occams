@@ -83,7 +83,7 @@ class SchemaManager(object):
     __init__.__doc__ = ISchemaManagerFactory['__call__'].__doc__
 
     def keys(self, on=None, ever=False):
-        query = self.session.query(model.Schema)
+        query = self.session.query(model.Schema.name)
         if on:
             query = query.filter(model.Schema.publish_date <= on)
         else:
