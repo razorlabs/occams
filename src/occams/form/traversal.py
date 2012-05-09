@@ -35,7 +35,7 @@ from occams.form.interfaces import ISchemaContext
 from occams.form.interfaces import IAttributeContext
 from occams.form.serialize import serializeField
 from occams.form.serialize import serializeForm
-
+from plone.app.layout.navigation.interfaces import INavigationRoot
 def closest(context, iparent):
     """
     Utility method for finding the closest parent context with the given
@@ -45,6 +45,9 @@ def closest(context, iparent):
     while context is not None:
         if iparent.providedBy(context):
             result = context
+            break
+        elif INavigationRoot.providedBy(context):
+            ## We've reached the ceiling, folks
             break
         else:
             context = context.getParentNode()
