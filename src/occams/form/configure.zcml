@@ -17,6 +17,14 @@
 
   <browser:resourceDirectory name="occams.form" directory="static"/>
 
+   <subscriber
+    for="Products.PluggableAuthService.interfaces.events.IUserLoggedInEvent"
+    handler=".saconfig.registerUser"
+    />
+
+  <adapter factory="occams.datastore.schema.attributeToField" />
+  <adapter factory="occams.datastore.item.entityToDictionary" />
+
   <adapter
       factory=".traversal.RepositoryTraverser"
       provides="zope.publisher.interfaces.browser.IBrowserPublisher"
@@ -33,7 +41,6 @@
       />
 
   <adapter factory=".repository.getRespositorySession" />
-  <adapter factory=".repository.getRespositoryDataStore" />
 
   <subscriber
       for="occams.form.interfaces.IRepository
@@ -55,6 +62,11 @@
   <utility
       name="occams.form.AvailableSessions"
       factory=".repository.AvailableSessionsVocabularyFactory"
+      />
+
+  <utility
+      name="occams.SessionUserFactory"
+      factory=".saconfig.SessionUserFactory"
       />
 
   <utility factory=".summary.FormSummaryGenerator" />

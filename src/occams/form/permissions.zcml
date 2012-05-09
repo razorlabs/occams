@@ -52,6 +52,18 @@
       />
   
   <permission 
+      id="occams.form.ModifyPublishedForm"
+      title="OCCAMS: Modify Published Form" 
+      description="Allows a user to create a draft of a dynamic form"
+      />
+
+  <permission 
+      id="occams.form.PublishForm"
+      title="OCCAMS: Publish Form" 
+      description="Allows a user to publish a draft of a dynamic form"
+      />
+
+  <permission 
       id="occams.form.RemoveForm" 
       title="OCCAMS: Remove Form" 
       description="Allows a user to remove a dynamic form"
