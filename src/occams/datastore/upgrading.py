@@ -25,7 +25,7 @@ def install(metadata, engine, repository):
     """
     url = str(engine.url)
 
-    if isinstance(repository, basestring):
+    if not isinstance(repository, basestring):
         repository = os.path.dirname(repository.__file__)
 
     try:
@@ -63,7 +63,7 @@ def sync(metadata, engine, repository, version=None):
     if version is None:
         version = migrate.versioning.api.version(repository)
 
-    if isinstance(repository, basestring):
+    if not isinstance(repository, basestring):
         repository = os.path.dirname(repository.__file__)
 
     try:
