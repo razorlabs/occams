@@ -3,11 +3,11 @@ from setuptools import setup
 
 
 # Working release version
-version = '0.5.1'
+version = '1.0.0b1'
 
 
 setup(
-    name='avrc.data.store',
+    name='occams.datastore',
     version=version,
     description='Provides storage solution for sparse data.',
     classifiers=[
@@ -23,44 +23,45 @@ setup(
         'Topic :: Software Development :: Libraries',
         'Topic :: Utilities',
         ],
-    keywords='AVRC BEAST datastore database eav sqlalchemy relational clinical',
-    author='BEAST Core Development Team',
-    author_email='beast@ucsd.edu',
-    url='https://github.com/beastcore/avrc.data.store',
+    keywords='AVRC BIT OCCAMS datastore database eav sqlalchemy relational clinical',
+    author='BIT Core Development Team',
+    author_email='bitcore@ucsd.edu',
+    url='https://github.com/bitcore/occams.datastore',
     license='GPL',
     packages=find_packages('src', exclude=['ez_setup']),
     package_dir={'':'src'},
-    namespace_packages=['avrc', 'avrc.data'],
+    namespace_packages=['occams'],
     include_package_data=True,
     zip_safe=False,
     install_requires=[
         'setuptools',
 
-        # ZOPE component functionality
-        'zope.component',
-        'zope.configuration',
-        'zope.deprecation',
-        'zope.i18nmessageid',
+        # Useful tool for result sets
+        'ordereddict',
+
+        # Import/Export support via XML
+        'lxml',
+
+        # ORM utilities and upgrade tools
+        'SQLAlchemy >=0.7.0,<0.7.99',
+        'sqlalchemy-migrate >=0.7.0,<0.7.99',
 
         # Component specification/documentation
+        # Note that these packages do not install the entire Zope ecosystem,
+        # they install necessary building blocks that are useful merely for
+        # specification and documentation.
+        'zope.component',
+        'zope.deprecation',
+        'zope.i18nmessageid',
         'zope.interface',
         'zope.schema',
 
-        # Batching support
+        # Low-level batching support for Zope products
         'z3c.batching',
-
-        # Interface directives for schemata
-        'martian',
-
-        # ORM utilities and upgrade tools
-        'SQLAlchemy',
-        'sqlalchemy-migrate',
-
         ],
     extras_require=dict(
         postgresql=['psycopg2'],
-        test=['plone.testing'],
+        test=['plone.testing'], # Required for layers, does not install Plone
         ),
     tests_require=['plone.testing'],
-    test_suite='avrc.data.store.tests',
     )

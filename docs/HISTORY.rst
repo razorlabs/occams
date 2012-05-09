@@ -2,9 +2,59 @@
 Change Log
 ==========
 
-------------------------------------
-0.4.5 (???)
-------------------------------------
+------------
+1.0.0a (???)
+------------
+
+- General
+    - Rebranded to ``occams.datastore``
+    - Overhauled versioning mechanics to new "cabinet" anology
+    - Auditing enabled
+    - XML module for export/import schemata
+    - 100% code testing coverage
+    - Switched to alembic database migration system
+
+- Managers
+    - Deprecated, query the models directly
+
+- Database
+    - ``asOf`` removed since it requires extra control of which entries to
+        return as of the specified date, the logic for this method
+        has been embedded into the managers.
+    - All ``*_user_id`` metadata columns are activated
+    - All ``remove_*`` columns have been removed, since they introduce complicated
+        dependencies with parent items that are ambiguous.
+        (e.g. my parent is "retired", am I retired?)
+    - ``Schema.state`` to determine its circulation, which will make it helpful
+        when editing unpublished schemat
+    - ``Schema.is_inline`` now indicates if the schema can only be used
+        as a subschema
+    - ``Attribute.min`` removed
+    - ``Attribute.max`` removed
+    - ``Attribute.default`` removed
+    - ``Attribute.widget`` removed
+    - ``Attribute.is_inline_object`` removed
+    - ``Attribute.is_readonly`` removed
+    - ``Attribute.checksum`` is a new property for determining the similarity
+            of this attribute from another form version's
+    - ``Attribute.validator`` is now observed
+    - ``Attribute.value_min`` now specifies the minimum allowed length or value
+    - ``Attribute.value_max`` now specifies the maximum allowed length or value
+    - ``Attribute.collection_min`` now specifies the minimum length of the collection
+    - ``Attribute.collection_max`` now specifies the maximum length of the collection
+    - ``Entity.state`` is now a built-in column instead of a foreign key,
+            as other products expect specific values of this property and should
+            not be changed unless a software update is necessary
+    - ``State`` removed in favor of new ``Entity.state`` property
+    - ``User`` a new mapping for tracking user changes
+    - ``Context`` a new mapping for relating entities to external resources
+    - ``External`` a new mapping for keeping track of external resources
+    - ``Category`` a new mapping for tagging forms rather than creating subclasses.
+
+
+-----------
+0.5.0 (???)
+-----------
 
 - General
     - Add support for collect_date (backwards compatible)
