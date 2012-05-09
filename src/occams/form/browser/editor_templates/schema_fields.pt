@@ -28,7 +28,6 @@
               title         string:;
               description   string:;
               type_         string:;
-              version       string:;
               onlyView      python: False;
               itemClass     string:;
            ">
@@ -37,7 +36,6 @@
               class string:of-item ${itemClass} ${type_};
               data-name name;
               data-type type_;
-              data-version version;
               ">
           <div class="of-head" tal:condition="not:onlyView">
             <a href="" class="of-collapseable" tal:attributes="href string:#collapse">Collapse</a>
@@ -45,7 +43,6 @@
               <div class="of-type" tal:content="type_">Type</div>
               <div class="of-name" tal:content="name">Name</div>
               <div class="of-title" tal:content="title">Title</div>
-              <div class="of-version" tal:content="version">Version</div>
             </div>
             <div class="of-controls">
               <ul>
@@ -79,7 +76,6 @@
                     title         fieldset/label|nothing;
                     description   fieldset/description|nothing;
                     type_         python: fieldset.type() or '';
-                    version       python: fieldset.version();
                     onlyView      repeat/fieldset/start;
                     itemClass     string:of-fieldset;
                   ">
@@ -88,7 +84,6 @@
                       class string:of-item ${itemClass} ${type_};
                       data-name name;
                       data-type type_;
-                      data-version version;
                       ">
                   <div class="of-head" tal:condition="not:onlyView">
                     <a href="" class="of-collapseable" tal:attributes="href string:#collapse">Collapse</a>
@@ -96,7 +91,6 @@
                       <div class="of-type" tal:content="type_">Type</div>
                       <div class="of-name" tal:content="name">Name</div>
                       <div class="of-title" tal:content="title">Title</div>
-                      <div class="of-version" tal:content="version">Version</div>
                     </div>
                     <div class="of-controls">
                       <ul>
@@ -117,7 +111,6 @@
                               title         string:;
                               description   string:;
                               type_         python: fieldset.type(widget.field);
-                              version       python: fieldset.version(widget.field);
                               onlyView      python: False;
                               itemClass     string:of-field;
                             ">
@@ -126,7 +119,6 @@
                                 class string:of-item ${itemClass} ${type_};
                                 data-name name;
                                 data-type type_;
-                                data-version version;
                                 ">
                             <a href="" class="of-collapseable" tal:attributes="href string:#collapse">Collapse</a>
                             <div class="of-head" tal:condition="not:onlyView">
@@ -134,7 +126,6 @@
                                 <div class="of-type" tal:content="type_">Type</div>
                                 <div class="of-name" tal:content="name">Name</div>
                                 <div class="of-title" tal:content="title">Title</div>
-                                <div class="of-version" tal:content="version">Version</div>
                               </div>
                               <div class="of-controls">
                                 <ul>

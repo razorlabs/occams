@@ -7,7 +7,6 @@ import tempfile
 
 from sqlalchemy import create_engine
 
-from collective.beaker.testing import testingSession
 from plone.app.testing import PloneSandboxLayer
 from plone.app.testing import applyProfile
 from plone.app.testing import IntegrationTesting
@@ -18,16 +17,14 @@ from plone.app.testing import TEST_USER_NAME
 from plone.app.testing import login
 from plone.app.testing import setRoles
 from zope.component import provideUtility
-from zope.component import provideAdapter
 from z3c.saconfig import EngineFactory
-from z3c.saconfig import GloballyScopedSession
-
-from avrc.data.store import model
+from occams.form.saconfig import EventAwareScopedSession
+from occams.datastore import model
 
 
 ENGINE_NAME = u'occams.form.testing.Engine'
 SESSION_NAME = u'occams.form.testing.Session'
-
+USER_NAME = u'occams.form.testing.User'
 
 class OccamsFormSandBoxLayer(PloneSandboxLayer,):
 
@@ -38,7 +35,6 @@ class OccamsFormSandBoxLayer(PloneSandboxLayer,):
         self.loadZCML(package=package)
 
         # Setup browser session
-        provideAdapter(testingSession)
 
         # Setup the database utilities
         fileno, self.databaseFileName = tempfile.mkstemp(suffix='.db')
@@ -46,9 +42,13 @@ class OccamsFormSandBoxLayer(PloneSandboxLayer,):
         # we don't actually need the engine, just the uri for the utilities
         model.Model.metadata.create_all(create_engine(uri))
         engineUtility = EngineFactory(uri)
-        sessionUtility = GloballyScopedSession(engine=ENGINE_NAME)
+
+        userUtility = (lambda: "bitcore@ucsd.edu")
+        sessionUtility = EventAwareScopedSession(engine=ENGINE_NAME)
+        provideUtility(userUtility, name=USER_NAME)
         provideUtility(engineUtility, name=ENGINE_NAME)
         provideUtility(sessionUtility, name=SESSION_NAME)
+
 
     def tearDownZope(self, app):
         os.unlink(self.databaseFileName)
