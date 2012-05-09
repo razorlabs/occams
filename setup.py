@@ -3,7 +3,7 @@ from setuptools import setup
 
 
 # Working release version
-version = '0.4.1'
+version = '1.0b1'
 
 
 setup(
@@ -35,8 +35,7 @@ setup(
     zip_safe=False,
     install_requires=[
         'setuptools',
-        'avrc.data.store',
-        'collective.beaker',
+        'occams.datastore',
         'collective.z3cform.datagridfield',
         'plone.app.dexterity',
         'plone.app.z3cform',

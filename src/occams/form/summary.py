@@ -3,17 +3,14 @@ Form summary tools
 """
 
 from zope.interface import implements
+from AccessControl import getSecurityManager
 
 from sqlalchemy import func
 from sqlalchemy import String
-from sqlalchemy import Date
-from sqlalchemy.sql.expression import case
-from sqlalchemy.sql.expression import cast
-from sqlalchemy.sql.expression import null
 from sqlalchemy.sql.expression import literal_column
 from sqlalchemy.orm import aliased
 
-from avrc.data.store import model
+from occams.datastore import model
 from occams.form.interfaces import IFormSummary
 from occams.form.interfaces import IFormSummaryGenerator
 
@@ -23,126 +20,6 @@ def literal(value):
     Helper method to convert a Python value into a SQL string
     """
     return literal_column('\'%s\'' % str(value), String)
-
-
-def changeTableFactory(session):
-    """
-    Helper method to generate a SQLAlchemy expression table for schemata changes.
-    The result set will include all modifications done to each schema.
-    """
-    SubSchema = aliased(model.Schema, name='_subschema')
-    SubAttribute = aliased(model.Attribute, name='_subattribute')
-
-    # A query that builds a revision log result set of all master forms,
-    # which also include the revisions of subforms
-    query = (
-        # Master schema create dates
-        session.query(
-            model.Schema.name.label('schema_name'),
-            null().label('attribute_name'),
-            model.Schema.create_date.label('change_date'),
-            )
-        .union(
-            # Master schema removal dates
-            session.query(model.Schema.name, null(), model.Schema.remove_date),
-
-            # Master schema attribute create dates
-            session.query(
-                model.Schema.name,
-                # Only report non-object values as part of the field count
-                case([
-                    (model.Attribute.type != literal('object'),
-                        (model.Schema.name + literal('.') + model.Attribute.name))
-                    ]),
-                model.Attribute.create_date
-                )
-            .join((model.Attribute, (model.Attribute.schema_id == model.Schema.id))),
-
-            # Master schema attribute removal dates
-            session.query(model.Schema.name, null(), model.Attribute.remove_date)
-            .join((model.Attribute, (model.Attribute.schema_id == model.Schema.id))),
-
-            # Sub schema create dates
-            session.query(model.Schema.name, null(), SubSchema.create_date)
-            .join((model.Attribute, (model.Attribute.schema_id == model.Schema.id)))
-            .join((SubSchema, (SubSchema.id == model.Attribute.object_schema_id))),
-
-            # Sub schema removal dates
-            session.query(model.Schema.name, null(), SubSchema.remove_date)
-            .join((model.Attribute, (model.Attribute.schema_id == model.Schema.id)))
-            .join((SubSchema, (SubSchema.id == model.Attribute.object_schema_id))),
-
-            # Sub schema attribute create dates
-            session.query(
-                model.Schema.name,
-                SubSchema.name + literal('.') + SubAttribute.name,
-                SubAttribute.create_date,
-                )
-            .join((model.Attribute, (model.Attribute.schema_id == model.Schema.id)))
-            .join((SubSchema, (SubSchema.id == model.Attribute.object_schema_id)))
-            .join((SubAttribute, (SubAttribute.schema_id == SubSchema.id))),
-
-            # Sub schema attribute removal dates
-            session.query(model.Schema.name, null(), SubAttribute.remove_date,)
-            .join((model.Attribute, (model.Attribute.schema_id == model.Schema.id)))
-            .join((SubSchema, (SubSchema.id == model.Attribute.object_schema_id)))
-            .join((SubAttribute, (SubAttribute.schema_id == SubSchema.id))),
-            )
-        )
-
-    return query.subquery('_change')
-
-
-def baseSchemaNamesTableFactory(session):
-    """
-    Helper method to generate a SQLAlchemy expression table for base schemata names
-    """
-    BaseSchema = aliased(model.Schema, name='_base')
-
-    # A query that builds a base schema name result set
-    query = (
-        session.query(BaseSchema.name)
-        .join((model.Schema, (model.Schema.base_schema_id == BaseSchema.id)))
-        .group_by(BaseSchema.name)
-        )
-
-    return query.subquery()
-
-
-def subSchemaNamesTableFactory(session):
-    """
-    Helper method to generate a SQLAlchemy expression table for sub schemata names
-    """
-    query = (
-        session.query(model.Schema.name)
-        .join((model.Attribute, (model.Attribute.object_schema_id == model.Schema.id)))
-        .group_by(model.Schema.name)
-        )
-
-    return query.subquery()
-
-
-def summaryTableFactory(session):
-    """
-    Helper method to generate a SQLAlchemy expression table for form summaries
-    """
-    changeTable = changeTableFactory(session)
-
-    # Summary report table for each schema
-    query = (
-        session.query(
-            changeTable.c.schema_name.label('name'),
-            func.count(changeTable.c.attribute_name.distinct()).label('fieldCount'),
-            func.count(cast(changeTable.c.change_date, Date).distinct()).label('revisionCount'),
-            (func.count() - literal('1')).label('changeCount'),
-            func.max(changeTable.c.change_date).label('currentVersion'),
-            func.min(changeTable.c.change_date).label('createdOn'),
-            )
-        .select_from(changeTable)
-        .group_by(changeTable.c.schema_name)
-        )
-    return query.subquery('_summary')
-
 
 class DataStoreSchemaSummary(object):
     implements(IFormSummary)
@@ -164,6 +41,7 @@ class DataStoreSchemaSummary(object):
     def fromSql(cls, raw):
         """
         Helper method to construct from a SQL result
+        DAVE : THIS MAKES DICT FROM QUERY ITEMS
         """
         attributes = dict([(name, getattr(raw, name)) for name in IFormSummary.names()])
         return cls(**attributes)
@@ -178,30 +56,52 @@ class FormSummaryGenerator(object):
     implements(IFormSummaryGenerator)
 
     def getItems(self, session):
-        summaryTable = summaryTableFactory(session)
-        baseSchemaNamesTable = baseSchemaNamesTableFactory(session)
-        subSchemaNamesTable = subSchemaNamesTableFactory(session)
+        current_user = getSecurityManager().getUser().getId()
+        SubSchema = aliased(model.Schema, name='_subschema')
+        SubAttribute = aliased(model.Attribute, name='_subattribute')
+        FieldCount = (
+            session.query(model.Schema.id.label('schema_id'),
+                                 func.count(model.Schema.id).label('field_count'))
+                .select_from(model.Schema)
+                .outerjoin(model.Attribute, model.Schema.id == model.Attribute.schema_id)
+                .outerjoin(SubSchema, SubSchema.id == model.Attribute.object_schema_id)
+                .outerjoin(SubAttribute, SubSchema.id == SubAttribute.schema_id)
+                .filter(~model.Schema.is_inline) 
+                .group_by(model.Schema.id)
+                ).subquery('fieldcount')
 
-        # Final result set, only report master schemata and leaf schemata
-        query = (
+        MaxDate = (
             session.query(
                 model.Schema.name.label('name'),
-                model.Schema.title.label('title'),
-                summaryTable.c.fieldCount,
-                summaryTable.c.changeCount,
-                summaryTable.c.revisionCount,
-                summaryTable.c.currentVersion,
-                summaryTable.c.createdOn,
+                func.max(model.Schema.publish_date).label('publish_date')
                 )
-            .select_from(model.Schema)
-            .join((summaryTable, (model.Schema.name == summaryTable.c.name)))
-            .filter(~model.Schema.name.in_(baseSchemaNamesTable))
-            .filter(~model.Schema.name.in_(subSchemaNamesTable))
-            .filter(model.Schema.asOf(None))
-            .order_by(model.Schema.title)
+                .filter(model.Schema.is_inline == False)
+                .filter(model.Schema.state == 'published')
+                .filter(model.Schema.publish_date < model.NOW)
+                .group_by(model.Schema.name)
+            ).subquery('maxversion')
+
+        query = (
+            session.query(model.Schema.id.label('id'),
+                                 model.Schema.name.label('name'),
+                                 model.Schema.title.label('title'),
+                                 FieldCount.c.field_count.label('field_count'),
+                                 model.Schema.revision.label('revision'),
+                                 model.Schema.state.label('state'),
+                                 model.User.key.label('create_user'),
+                                 model.Schema.create_date.label('create_date'),
+                                 model.Schema.publish_date.label('publish_date'),
+                                 (model.Schema.publish_date == MaxDate.c.publish_date).label('is_current'),
+                                 # EditVersion.c.draft_id.label('draft_id'),
+                                 ((model.Schema.state.in_(['draft', 'review'])) & (model.User.key == current_user)).label('is_editable')
+                                 )
+            .join(FieldCount, model.Schema.id == FieldCount.c.schema_id)
+            .join(model.User, model.Schema.create_user_id == model.User.id)
+            .outerjoin(MaxDate, model.Schema.name == MaxDate.c.name)
+            # .outerjoin(EditVersion, model.Schema.id == EditVersion.c.schema_id)
+            .filter(model.Schema.is_inline == False)
+            .order_by(model.Schema.title.asc(), model.Schema.publish_date.desc().nullslast())
             )
 
-        # Wrap the results into objects Zope can understand
         items = [DataStoreSchemaSummary.fromSql(r) for r in query.all()]
-
         return items

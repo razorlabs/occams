@@ -13,26 +13,15 @@ this may be possible.
 
 import re
 
-from collective.beaker.interfaces import ISession as IHttpSession
-from zope.globalrequest import getRequest
 import zope.schema
 from zope.schema.vocabulary import SimpleVocabulary
 from zope.schema.vocabulary import SimpleTerm
-
-from avrc.data.store import directives as datastore
-from avrc.data.store.model import Attribute
-from avrc.data.store.model import Schema
-from avrc.data.store.model import Choice
-from avrc.data.store.model import NOW
-from avrc.data.store.interfaces import IDataStore
-from avrc.data.store.interfaces import typesVocabulary
-from occams.form.interfaces import DATA_KEY
-
+from occams.datastore.interfaces import typesVocabulary
 
 # Copied from Python documentation
 reservedWords = """
-and     assert     break     class     continue
-def     del     elif     else     except
+and     assert     break     class     continue     choice
+def     del     elif     else     except 
 exec     finally     for     from     global
 if     import     in     is     lambda
 not     or     pass     print     raise
@@ -45,251 +34,31 @@ exp     fabs     floor     log     log10
 pi     sin     sqrt     tan
 """.split()
 
-
-class Workspace(object):
-    """
-    Helper method for keeping track of form changes
-    """
-
-    def __init__(self, repository):
-        self.repository = repository
-        self.httpSession = IHttpSession(getRequest())
-        self.httpSession.setdefault(DATA_KEY, {})
-        self.data = self.httpSession[DATA_KEY]
-
-    def save(self):
-        """
-        Saves the current workspace (nothing done to database)
-        """
-        self.httpSession.save()
-
-    def load(self, name):
-        """
-        Loads a serialized form from the workspace or from datastore
-        """
-        try:
-            formData = self.data[name]
-        except KeyError:
-            form = IDataStore(self.repository).schemata.get(name)
-            formData = serializeForm(form)
-            self.data[name] = formData
-            self.save()
-        return formData
-
-    def __contains__(self, key):
-        return key in self.data
-
-    def __getitem__(self, key):
-        return self.data[key]
-
-    def __setitem__(self, key, item):
-        self.data[key] = item
-
-    def clear(self, name):
-        """
-        Cancels changes done to a form
-        """
-        try:
-            del self.data[name]
-            self.save()
-        except KeyError:
-            pass
-
-    def commit(self, name):
-        """
-        Commits the item in the workspace to the database
-        """
-        session = IDataStore(self.repository).session
-        CommitHelper(session)(self.data.get(name, {}))
-        self.clear(name)
-
-
-class CommitHelper(object):
-    """
-    Helper module for committing form changes to the database.
-    There are TONS of moving parts when committing form changes and so it was
-    decided to group them up into a class.
-    """
-
-    def __init__(self, session):
-        self.session = session
-
-    def __call__(self, data):
-        schema = self.doSchema(data)
-
-        attributeRetireCount = self.doRetireOldFields(data)
-        for field in data.get('fields', {}).values():
-            self.doAttribute(schema, field)
-        return schema
-
-    def doSchema(self, data):
-        """
-        Commits schema metadata
-        """
-        session = self.session
-        schema = (
-            session.query(Schema)
-            .filter((Schema.name == data['name']) & Schema.asOf(None))
-            .first()
-            )
-        changeable = ('name', 'title', 'description')
-
-        # version only if necessary
-        for setting in changeable:
-            isSettingModified = (schema is None) or \
-                 (getattr(schema, setting) != data[setting])
-
-            if isSettingModified:
-                # retire old schema
-                if schema:
-                    schema.remove_date = NOW
-                    session.flush()
-                # add new schema
-                schema = Schema(
-                    base_schema=getattr(schema, 'base_schema', None),
-                    name=data['name'],
-                    title=data['title'],
-                    description=data['description'],
-                    )
-                session.add(schema)
-                break
-        return schema
-
-    def doRetireOldFields(self, data):
-        """
-        Retires fields that are no longer part of the schema
-        """
-        session = self.session
-        retireCount = (
-            session.query(Attribute)
-            .filter(Attribute.schema.has(name=data['name']))
-            .filter(~Attribute.name.in_(data.get('fields', {}).keys()))
-            .update(dict(remove_date=NOW), 'fetch')
-            )
-        return retireCount
-
-    def doAttribute(self, schema, data):
-        """
-        Commits a single attribute metadata
-        This method is pretty lengthy as choices aren't currently versioned,
-        so we need to iterate through them and check if they have been
-        modified.
-        """
-        session = self.session
-        choices = dict()
-        attribute = (
-            session.query(Attribute)
-            .filter(Attribute.schema.has(name=schema.name))
-            .filter((Attribute.name == data['name']) & Attribute.asOf(None))
-            .first()
-            )
-
-        isChoicesModified = (attribute is None)
-        isSubFormModified = (attribute is None)
-
-        # Save subform changes first
-        if data['type'] == 'object':
-            object_schema = CommitHelper(session)(data['schema'])
-            if attribute is not None:
-                isSubFormModified = (object_schema.id == attribute.object_schema.id)
-        else:
-            object_schema = None
-
-        # Convert choices to SQL Alchemy objects while checking if they've even
-        # been modified
-        for choiceData in data['choices']:
-            if isChoicesModified == False:
-                # It's a new answer choiceData
-                if choiceData['name'] not in attribute.choices:
-                    isChoicesModified = True
-                # If it already exists, check if the settings have changed
-                else:
-                    choice = attribute.choices[choiceData['name']]
-                    changeable = ('name', 'title', 'value', 'order')
-                    for setting in changeable:
-                        if getattr(choice, setting) != choiceData[setting]:
-                            isChoicesModified = True
-                            break
-
-            choices[choiceData['name']] = Choice(
-                name=choiceData['name'],
-                title=choiceData['title'],
-                value=unicode(choiceData['value']),
-                order=choiceData['order'],
-                )
-
-        # Check if some have been removed
-        if attribute is not None:
-            for key in attribute.choices.keys():
-                if key not in choices:
-                    isChoicesModified = True
-                    break
-
-        changeable = \
-            ('name', 'title', 'description', 'is_required', 'is_collection', 'order')
-
-        # Now check if attribute settings have been changed
-        for setting in changeable:
-            isSettingModified = (attribute is None) or \
-                (getattr(attribute, setting) != data[setting])
-
-            if isChoicesModified or isSubFormModified or isSettingModified:
-                # retire old schema
-                if attribute:
-                    attribute.remove_date = NOW
-                    session.flush()
-
-                attribute = Attribute(
-                    schema=schema,
-                    name=data['name'],
-                    title=data['title'],
-                    description=data['description'],
-                    type=data['type'],
-                    object_schema=object_schema,
-                    choices=choices,
-                    order=data['order'],
-                    # These properties don't apply to all types, so set
-                    # them conditionally
-                    is_required=data.get('is_required'),
-                    is_collection=data.get('is_collection'),
-                    is_inline_object=(data['type'] == 'object' or None),
-                    )
-
-                session.add(attribute)
-                break
-
-        return attribute
-
-
-def listFieldsets(repository, formName):
+def listFieldsets(schema_data):
     """
     Lists the fieldsets of a form
     """
-    request = getRequest()
     objectFilter = lambda x: bool(x['schema'])
     orderSort = lambda i: i['order']
-    fields = IHttpSession(request)[DATA_KEY][formName]['fields']
+    fields = schema_data['fields']
     objects = sorted(filter(objectFilter, fields.values()), key=orderSort)
     return [o['name'] for o in objects]
-
 
 def serializeForm(form):
     """
     Serializes a form as a top-level (master) form.
     """
-    fields = zope.schema.getFieldsInOrder(form)
     result = dict(
-        name=form.getName(),
-        title=datastore.title.bind().get(form),
-        description=datastore.description.bind().get(form),
-        version=datastore.version.bind().get(form),
+        name=str(form.name),
+        title=form.title,
+        description=form.description,
+        version=form.publish_date,
         fields=dict()
         )
 
-    for order, field in enumerate(fields, start=0):
-        (name, field) = field
+    for name, field in form.items():
         result['fields'][name] = serializeField(field)
-        result['fields'][name]['order'] = order
+        result['fields'][name]['order'] = field.order
 
     return result
 
@@ -298,37 +67,29 @@ def serializeField(field):
     """
     Serializes an individual field
     """
-    type_ = \
-        datastore.type.bind().get(field) or \
-        typesVocabulary.getTerm(field.__class__).token
-
     result = dict(
-        interface=field.interface.getName(),
-        name=field.__name__,
+        name=str(field.name),
         title=field.title,
         description=field.description,
-        version=datastore.version.bind().get(field),
-        type=type_,
+        type=field.type,
         schema=None,
         choices=[],
-        is_required=field.required,
-        is_collection=isinstance(field, zope.schema.List),
+        is_required=field.is_required,
+        is_collection=field.is_collection,
         order=field.order,
         )
 
-    vocabularyPart = getattr(field, 'value_type', field)
-
-    if isinstance(vocabularyPart, zope.schema.Choice):
-        for order, term in enumerate(vocabularyPart.vocabulary, start=0):
+    if len(field.choices):
+        for choice in field.choices:
             result['choices'].append(dict(
-                name=term.token,
-                title=term.title,
-                value=term.value,
-                order=order,
+                name=choice.name,
+                title=choice.title,
+                value=choice._value,
+                order=choice.order,
                 ))
 
-    if isinstance(field, zope.schema.Object):
-        result['schema'] = serializeForm(field.schema)
+    if field.type == 'object':
+        result['schema'] = serializeForm(field.object_schema)
 
     return result
 
@@ -364,24 +125,6 @@ def symbolize(value):
     return value
 
 
-def moveField(formData, fieldName, after=None):
-    changed = list()
-    moverData = formData['fields'][fieldName]
-
-    if after is None:
-        moverData['order'] = 0
-    else:
-        moverData['order'] = formData['fields'][after]['order'] + 1
-
-    # Move everything that follows
-    for fieldData in sorted(formData['fields'].values(), key=lambda i: i['order']):
-        if fieldData['name'] != fieldName and fieldData['order'] >= moverData['order']:
-            fieldData['order'] += 1
-            changed.append(fieldData['name'])
-
-    return changed
-
-
 def cleanupChoices(data):
     # This is also similar to what is done in the edit form's apply
     # Do some extra work with choices on fields we didn't ask for.
@@ -394,6 +137,7 @@ def cleanupChoices(data):
             choice['value'] = choice['title']
         choice['name'] = tokenize(choice['value'])
         choice['order'] = order
+
 
 
 def fieldFactory(fieldData):
