@@ -30,11 +30,51 @@
 }
 
 .portaltype-occams-form-repository .listing a[href*="@@edit"] span{
-	background: center center no-repeat url(++resource++occams.form/images/pencil.png);
+    background: center center no-repeat url(++resource++occams.form/images/pencil.png);
     border: inherit !important;
     display: block;
     height: 16px;
     line-height: 16px;
     text-indent: -9001em;
     width: 16px;
+}
+
+
+.portaltype-occams-form-repository .listing .is_current {
+   background: center center no-repeat url(++resource++occams.form/images/star_gold.png);
+   display: inline-block;
+   height: 16px;
+   line-height: 16px;
+   text-indent: -9001em;
+   width: 16px;
+}
+
+.published {
+   color: green;
+}
+
+.review {
+   color: orange;
+}
+
+.retracted {
+   color: DarkGray;
+}
+
+.draft {
+   color: red;
+}
+
+.current {
+    font-weight: bold;
+}
+
+.crud-form {
+    clear: both;
+    margin-bottom: 4em;
+}
+
+.crud-form .action {
+    float: left;
+    margin: 10px;
 }
