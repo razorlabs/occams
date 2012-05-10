@@ -1,6 +1,8 @@
 """ Database Definitions
 """
 
+from copy import copy
+from copy import deepcopy
 import hashlib
 from decimal import Decimal
 import datetime
@@ -237,6 +239,15 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         for attribute in sorted(self.attributes.values(), key=lambda a: a.order):
             yield attribute.name, attribute
 
+    def __copy__(self):
+        keys = ('name', 'title', 'description', 'storage', 'is_inline')
+        return self.__class__(**dict([(k, getattr(self, k)) for k in keys]))
+
+    def __deepcopy__(self, memo):
+        duplicate = copy(self)
+        duplicate.attributes = dict([(n, deepcopy(a)) for n, a in self.attributes.iteritems()])
+        return duplicate
+
 
 class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
     implements(IAttribute)
@@ -367,6 +378,20 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
     def iteritems(self):
         return self.object_schema.iteritems()
 
+    def __copy__(self):
+        keys = (
+            'name', 'title', 'description', 'type', 'is_collection', 'is_required',
+            'collection_min', 'collection_max', 'value_min', 'value_max',
+            'validator', 'order'
+            )
+        return self.__class__(**dict([(k, getattr(self, k)) for k in keys]))
+
+    def __deepcopy__(self, memo):
+        duplicate = copy(self)
+        duplicate.object_schema = deepcopy(self.object_schema)
+        duplicate.choices = [deepcopy(c) for c in iter(self.choices)]
+        return duplicate
+
 
 class Choice(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
     implements(IChoice)
@@ -422,3 +447,10 @@ class Choice(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
             UniqueConstraint('attribute_id', 'order', name='uq_%s_order' % cls.__tablename__),
             UniqueConstraint('attribute_id', 'value', name='uq_%s_value' % cls.__tablename__),
             )
+
+    def __copy__(self):
+        keys = ('name', 'title', 'description', 'value', 'order')
+        return self.__class__(**dict([(k, getattr(self, k)) for k in keys]))
+
+    def __deepcopy__(self, memo):
+        return copy(self)

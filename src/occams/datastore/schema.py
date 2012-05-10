@@ -155,46 +155,6 @@ class SchemaManager(object):
     put.__doc__ = ISchemaManager['put'].__doc__
 
 
-def copy(schema):
-    """
-    Copies a schema's properties into a new instance of a schema
-
-    Arguments
-        ``schema``
-            A SQLAlchemy schema instance to be copied
-    Returns
-        A new instance containing 'most' of the properties of the old schema,
-        with exception of data such as metadata and state/publication
-        information
-    """
-    schemaList = (
-        'base_schema', 'name', 'title', 'description', 'storage', 'is_inline',
-        )
-    attributeList = (
-        'name', 'title', 'description', 'type', 'is_collection',
-        'object_schema', 'object_schema_id',
-        'is_required', 'collection_min', 'collection_max',
-        'value_min', 'value_max', 'validator', 'order'
-        )
-    choiceList = ('name', 'title', 'description', 'value', 'order')
-
-    createFrom = lambda c, l: c.__class__(**dict([(p, getattr(c, p)) for p in l]))
-
-    schemaCopy = createFrom(schema, schemaList)
-
-    for attributeName, attribute in schema.attributes.items():
-        attributeCopy = createFrom(attribute, attributeList)
-        schemaCopy.attributes[attributeName] = attributeCopy
-
-        if attribute.type == 'object':
-            attributeCopy.object_schema = copy(attribute.object_schema)
-
-        for choice in attribute.choices:
-            attributeCopy.choices.append(createFrom(choice, choiceList))
-
-    return schemaCopy
-
-
 @adapter(IAttribute)
 @implementer(IField)
 def attributeToField(attribute):

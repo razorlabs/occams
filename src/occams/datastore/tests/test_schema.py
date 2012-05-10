@@ -3,6 +3,7 @@ Test case for schema implementations and services
 """
 
 import unittest2 as unittest
+from copy import deepcopy
 from datetime import date
 from datetime import datetime
 from decimal import Decimal
@@ -31,7 +32,6 @@ from occams.datastore.interfaces import ISchemaManagerFactory
 from occams.datastore.interfaces import NotFoundError
 from occams.datastore.schema import SchemaManager
 from occams.datastore.schema import HierarchyInspector
-from occams.datastore.schema import copy
 from occams.datastore.schema import attributeToField
 from occams.datastore.testing import OCCAMS_DATASTORE_FIXTURE
 
@@ -400,7 +400,7 @@ class SchemaCopyTestCase(unittest.TestCase):
         session.add(schema)
         session.flush()
 
-        schemaCopy = copy(schema)
+        schemaCopy = deepcopy(schema)
 
         # The ones that matter for checksums
         self.assertEqual(schema.name, schemaCopy.name)
@@ -448,7 +448,7 @@ class SchemaCopyTestCase(unittest.TestCase):
         session.add(schema)
         session.flush()
 
-        schemaCopy = copy(schema)
+        schemaCopy = deepcopy(schema)
         session.add(schemaCopy)
         session.flush()
 
