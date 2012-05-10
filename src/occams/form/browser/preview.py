@@ -10,7 +10,7 @@ from AccessControl import getSecurityManager
 from Products.statusmessages.interfaces import IStatusMessage
 
 from occams.datastore import model
-from occams.datastore.schema import copy
+from copy import deepcopy
 
 from occams.form import MessageFactory as _
 from occams.form.interfaces import IRepository
@@ -77,7 +77,7 @@ class FormPreviewForm(DisabledMixin, Form):
     def handleDraft(self, action):
         Session = named_scoped_session(self.context.session)
         old_schema = Session.query(model.Schema).filter(model.Schema.id == self.context.item.id).one()
-        new_schema = copy(old_schema)
+        new_schema = deepcopy(old_schema)
         Session.add(new_schema)
         Session.flush()
         repositoryContext = closest(self.context, IRepository)

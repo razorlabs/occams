@@ -13,7 +13,7 @@ from occams.form.interfaces import IFormSummaryGenerator
 from occams.form.interfaces import IEditableForm
 from occams.datastore import model
 from z3c.form import button
-from occams.datastore.schema import copy
+from copy import deepcopy
 from z3c.form.interfaces import DISPLAY_MODE
 from zope.security import checkPermission
 
@@ -72,7 +72,7 @@ class ListingEditForm(crud.EditForm):
             Session = named_scoped_session(session_name)
             for obj_id, obj in selected:
                 old_schema = Session.query(model.Schema).filter(model.Schema.id == obj_id).one()
-                new_schema = copy(old_schema)
+                new_schema = deepcopy(old_schema)
                 Session.add(new_schema)
             Session.flush()
         return self.request.response.redirect(self.action)
