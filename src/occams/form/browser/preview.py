@@ -1,3 +1,4 @@
+from copy import deepcopy
 from occams.form.form import Form
 from occams.form.form import StandardWidgetsMixin
 from occams.form.form import Group
@@ -10,7 +11,6 @@ from AccessControl import getSecurityManager
 from Products.statusmessages.interfaces import IStatusMessage
 
 from occams.datastore import model
-from copy import deepcopy
 
 from occams.form import MessageFactory as _
 from occams.form.interfaces import IRepository
@@ -63,17 +63,17 @@ class FormPreviewForm(DisabledMixin, Form):
     def can_edit(self):
         return (self.context.item.create_user.key == getSecurityManager().getUser().getId()) and \
         (not self.context.item.publish_date) and  \
-        checkPermission("occams.form.ModifyForm", self.context) 
+        checkPermission("occams.form.ModifyForm", self.context)
 
-    @z3c.form.button.buttonAndHandler(_(u'Edit'), name='edit', condition= lambda self: self.can_edit())
+    @z3c.form.button.buttonAndHandler(_(u'Edit'), name='edit', condition=lambda self: self.can_edit())
     def handleEdit(self, action):
         self.request.response.redirect(os.path.join(self.context.absolute_url(), '@@edit'))
 
 
     def can_draft(self):
-        return checkPermission("occams.form.ModifyForm", self.context) 
+        return checkPermission("occams.form.ModifyForm", self.context)
 
-    @z3c.form.button.buttonAndHandler(_(u'Draft New Version'), name='draft', condition= lambda self: self.can_draft())
+    @z3c.form.button.buttonAndHandler(_(u'Draft New Version'), name='draft', condition=lambda self: self.can_draft())
     def handleDraft(self, action):
         Session = named_scoped_session(self.context.session)
         old_schema = Session.query(model.Schema).filter(model.Schema.id == self.context.item.id).one()
@@ -85,9 +85,9 @@ class FormPreviewForm(DisabledMixin, Form):
 
     def can_publish(self):
         return  (not self.context.item.publish_date) and  \
-        checkPermission("occams.form.PublishForm", self.context) 
+        checkPermission("occams.form.PublishForm", self.context)
 
-    @z3c.form.button.buttonAndHandler(_(u'Publish Form'), name='publish', condition= lambda self: self.can_publish())
+    @z3c.form.button.buttonAndHandler(_(u'Publish Form'), name='publish', condition=lambda self: self.can_publish())
     def handlePublish(self, action):
         Session = named_scoped_session(self.context.session)
         publish_date = datetime.date.today()
