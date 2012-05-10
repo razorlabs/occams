@@ -1,6 +1,6 @@
-=========
-DataStore
-=========
+================
+OCCAMS DataStore
+================
 
 
 The purpose of this plug-in is to facilitate the management of sparse data that
@@ -19,6 +19,7 @@ short.
 
 Using this setup, new object schema can be dynamically defined to allow new
 attributes to be entered for an entity.
+
 
 Example: Basic EAV schema definition and usage primer.
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -93,167 +94,182 @@ Example: Basic EAV schema definition and usage primer.
     more complex, these examples serve as a primer on the basics of how
     the sparse data is stored.
 
+
 ----------------
 History Tracking
 ----------------
 
-Because a clinical trial is evolving throughout its life cycle, data schema
-should be able to accommodate those changes. Enter **history tracking**
-
-History tracking is accomplished in the database framework by using the entrie's
-``name`` field throughout it's life cycle and simply marking the entry as
-removed when a new version is to be commissioned.
+Due to the nature of clinical trials in the demand for evolving data and the
+importance of auditing, there are **two** different types of history tracking:
 
 
-Example: Active/Retired
-+++++++++++++++++++++++
-
-    :Table: ``sample``
-
-    ====  ====  ===========  ===========
-    id    name  create_date  remove_date
-    ====  ====  ===========  ===========
-    28    foo   2011-06-07   2011-06-08
-    45    foo   2011-06-08   2011-07-25
-    57    foo   2011-08-10
-    ====  ====  ===========  ===========
-
-    In the above example we see that the object named ``foo`` was added on
-    ``2011-06-07`` and retired a couple of times. In the last row it was
-    inactive for a couple of weeks before being active again. Note that the last
-    column does not have a ``remove_date`` because it is the currently active
-    version of the ``foo`` object.
-
-
-Although this paradigm is fairly simple for objects that don't have any
-dependents, it because increasingly complex when the object must then
-be referenced other objects.
-
-
-Example: With child objects
+Versioning (Cabinet Theory)
 +++++++++++++++++++++++++++
 
-    We now look at another example where an object can have children and how
-    it affects history tracking.
+A brief history: In an earlier incarnation of ``DataStore``, we used "delta"
+entries to keep track of schema changes over its lifetime. This proved to be
+excruciatingly painful to code with and so a new method was
+devised: **deep copying** schemata when a new schema version is
+proposed.
 
-    :Table: ``parent``
+The general concept behind *deep-copy* follows a *cabinet analogy* that
+the we devised to help explain. In this anaology, we've abstracted schemata
+to paper forms and the database to a filing cabinet. Typically a form
+will be drafted to collect data about a certain subject. The draft form is then
+published and when data needs to be filled in, a photo copy of the form is
+made to be filled out and stored into the filing cabinet. Now, say that
+the there were mistakes in the form. The general procedure would be to photo
+copy the form, whiteout changes, add new questions and then stick the form
+back into the filing cabinet. Now we have to versions of the form in circulation
+that can be further photo copied for data entry or redrafting.
 
-    ====  ====  ===========  ===========
-    id    name  create_date  remove_date
-    ====  ====  ===========  ===========
-    28    foo   2011-03-17
-    ====  ====  ===========  ===========
+There are multiple benifits to using the deep-copy mechanism:
+multiple forms can be in circulation as well as being unplublished
+for development, and data is now directly linked to the form revision
+that it was filled out for. This also has the added benifits of the
+form actually physically existing in one atomic form as opposed to
+being fragmented by deltas.
 
-    :Table: ``child``
+Also, we use an internal *checksum* value for determining how the attribute has
+changed across schema revisions. This property is useful for reporting purposes.
 
-    ====  =========  ====  ===========  ===========
-    id    parent_id  name  create_date  remove_date
-    ====  =========  ====  ===========  ===========
-    17    28         bar   2011-03-27   2011-05-20
-    24    28         bar   2011-05-25   2011-06-03
-    33    28         bar   2011-07-01
-    ====  =========  ====  ===========  ===========
-
-    In this example, the child ``bar`` has a parent ``foo``. The child entry
-    was modified several times during the life cycle of ``foo`` and is
-    active as of ``2011-08-10``.
-
-    In this particular case, the parent object inherently has several versions
-    based on the revisions done to it's child that must be taken into
-    account. Thus, the parent ``foo`` should have the following versions:
-
-        - 2011-03-17 (Date ``foo`` was added)
-        - 2011-03-25 (Date ``bar`` was added)
-        - 2011-05-20 (Date ``bar`` was updated)
-        - 2011-06-03 (Date ``bar`` was retired)
-        - 2011-07-01 (Date ``bar`` was activated)
+Furthermore, sub schemata and choices are also deep copied. This means
+that a sub schemata can only really have one parent and not be shared accross
+schemata.
 
 
-Example: Multi-versioned parent with multi-versioned children
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Auditing (aka C.Y.A. or "Cover-Your-Ass")
++++++++++++++++++++++++++++++++++++++++++
 
-    We now look at an extreme example similar to what would be found in a
-    typical use case.
-
-    :Table: ``parent``
-
-    ====  ====  ===========  ===========
-    id    name  create_date  remove_date
-    ====  ====  ===========  ===========
-    28    foo   2011-03-17   2011-05-25
-    45    foo   2011-05-25   2011-06-13
-    57    foo   2011-07-01
-    ====  ====  ===========  ===========
-
-    :Table: ``child``
-
-    ====  =========  ====  ===========  ===========
-    id    parent_id  name  create_date  remove_date
-    ====  =========  ====  ===========  ===========
-    17    28         bar   2011-03-27
-    19    28         lio   2011-03-27
-    24    45         bar   2011-05-25
-    28    45         lio   2011-05-25   2011-05-29
-    33    57         bar   2011-07-01
-    ====  =========  ====  ===========  ===========
-
-    In this example, the parent ``foo` was revised several times and so its
-    children where also copied with each revision. Note that child ``lio`` was
-    removed before the the third revision of parent ``foo``. Of particular
-    importance in this example is that the child objects inherit the the removal
-    dates of their parents, unless otherwise noted.
+In addition to form revisions, we also care about **how** the data itself
+has changed over time (e.g. spelling errors, misentered entry data).
+Using deep copying would be overkill in these situations since we
+ever want to look at this back history for auditing purposes and
+would actually interfere when querying for entries. So, data changes
+will be stored in a separate *auditing* table to keep track of
+data deltas over time. Thus, when a row is changed, a copy of
+the previous row is entered in the auditing table and the changes
+are then applied to the live row. Furthermore we keep track of who changed
+the data.
 
 
-In this context of EAV, data is entered into the current version of the schema
-(i.e. no backversion data entry is allowed).
+Example: Schema copies
+++++++++++++++++++++++
 
-Some of the limitations of this approach, however, is the fact that data
-must be copied with each revision, as well as possible name collisions that may
-interfere with the timestamps. One final limitation is the the increase in
-complexity of query-writing to an already complicated data design (EAV query
-writing).
+    This example covers the concept of schema deep copying.
+    Note that tables have been simplified to expose the core concepts.
+
+    :Table: ``schema``
+
+    ====  ====  ===========
+    id    name  create_date
+    ====  ====  ===========
+    19    foo   2010-09-01
+    28    bar   2011-03-17
+    56    caz   2011-08-28
+    122   bar   2012-03-09
+    129   foo   2012-03-09
+    ====  ====  ===========
+
+    :Table: ``attribute``
+
+    ====  =========  ====  =======  ===========
+    id    schema_id  name  title    create_date
+    ====  =========  ====  =======  ===========
+    17    19         x     Enter x  2010-09-01
+    39    28         r     Ener r   2011-03-17
+    45    28         s     Enter s  2011-03-17
+    51    56         a     Enter a  2011-08-28
+    51    56         b     Enter b  2011-08-28
+    51    56         c     Enter c  2011-08-28
+    311   122        r     Enter r  2012-03-09
+    345   122        s     Enter s  2012-03-09
+    394   129        x     Enter x  2012-03-09
+    420   129        y     Enter y  2012-03-09
+    ====  =========  ====  =======  ===========
+
+    In this example, three distinct parents exist: ``foo``, ``bar``, and ``caz``.
+    Observing ``foo`` and ``bar``, we can  see they both have two revisions.
+    In the case of ``foo``, another field ``y`` was added to this revision.
+    In the case of ``bar``, a spelling error was fixed. Although, in some
+    institutions, this my not have been necessary as simplying updating
+    the schema title for the specific revision would have sufficed. But, for
+    the sake of this example, we revisioned the schema.
+
+    Also note, that attribute names are **unique** within a schema. However,
+    schema names are **not unique** as there needs to be several copies
+    in circulation. From data inspection, though, we should be able to
+    deduce the forms are of the same lineage because of their name.
 
 
---------
-Managers
---------
+Example: Auditing
++++++++++++++++++
 
-Managers are a way to access the DataStore data through a Python API that
-mimics a container-like system.
+    This example covers the concept of data auditing in a generic case.
 
-Basic manager terminology is defined as follows:
 
-keys
-    Lists the names.
-lifecycles
-    Lists the revisions of a name.
-has
-    Checks if the name exists.
-purge
-    Retires an object (can be restored)
-retire
-    Removes the object entirely.
-restore
-    Restores a purged object.
-put
-    Add/Edit an object
-get
-    Retrieve an object.
+    :Table: ``data``
+
+    ====  ====  =======  =======
+    id    name  value    version
+    ====  ====  =======  =======
+    19    foo   3.0      003
+    28    bar   'stuff'  001
+    ====  ====  =======  =======
+
+    :Table: ``data_history``
+
+    ====  ====  =======  =======
+    id    name  value    version
+    ====  ====  =======  =======
+    19    foo   0.2      001
+    19    foo   1.3      002
+    22    caz   15       001
+    22    caz   22       002
+    22    caz   32       003
+    ====  ====  =======  =======
+
+
+    In this example, note that each row has a ``version`` number to indicate
+    how many times it has been changed. In a separate table, previous versions
+    of the row are stored for historical auditing purposes, but are not
+    necessarily crucial for everyday data querying. In any case, obvering the
+    ``data_history`` table, we can see all the previous values of ``foo`` as
+    well as discover that ``caz`` used to exist but has since been removed
+    from the live table. Note that ``id`` number are what indicate the
+    uniqueness of a row, which is why it's maintained in the ``data_history``
+    table across all row versions.
+
+
+----------------------
+Where's the interface?
+----------------------
+
+This module only implements the EAV system using `SQLAlchemy`_, to maintain
+the implementation vendor-agnostic as much as possible. As such, much of
+the functionality is integrated into the model classes so that the ORM
+can be used as the API. Additionally, there is no web interface built-in as
+the general goal here is to offer a generic sparse-data solution that can be
+used further customized on a per-institution basis. For one such example, see
+`occams.form`_
+
+.. _SQLAlchemy: http://www.sqlalchemy.org/
+.. _occams.form: https://github.com/beastcore/occams.form.git
 
 ------------------
 Self-Certification
 ------------------
 
-    [ ] Internationalized
+    [-] Internationalized
 
-    [ ] Unit tests
+    [X] Unit tests
 
     [ ] End-user documentation
 
-    [ ] Internal documentation (documentation, interfaces, etc.)
+    [X] Internal documentation (documentation, interfaces, etc.)
 
-    [ ] Existed and maintained for at least 6 months
+    [X] Existed and maintained for at least 6 months
 
-    [ ] Installs and uninstalls cleanly
+    [X] Installs and uninstalls cleanly
 
-    [ ] Code structure follows best practice
+    [X] Code structure follows best practice
