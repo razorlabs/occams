@@ -193,7 +193,29 @@ class AuditableTestCase(unittest.TestCase):
             ]
         )
 
-    def test_from_null(self):
+    def test_from_null_with_flushes(self):
+        Base = declarative_base(bind=create_engine('sqlite://'))
+
+        class SomeClass(Auditable, Base, ComparableEntity):
+            __tablename__ = 'sometable'
+
+            id = Column(Integer, primary_key=True)
+            name = Column(String(50))
+
+        Base.metadata.create_all()
+        session = scoped_session(sessionmaker())
+        auditing_session(session)
+
+        sc = SomeClass()
+        session.add(sc)
+        session.flush()
+
+        sc.name = 'sc1'
+        session.flush()
+
+        assert sc.revision == 2
+
+    def test_from_null_with_commits(self):
         Base = declarative_base(bind=create_engine('sqlite://'))
 
         class SomeClass(Auditable, Base, ComparableEntity):
