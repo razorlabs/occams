@@ -167,30 +167,29 @@ def createRevision(instance, deleted=False):
                 # (new value for live table / unchanged value / previous value)
                 (new, unchanged, previous) = attributes.get_history(instance, liveProperty.key)
 
-                if previous:
-                    values[auditColumn.key] = previous[0]
-                    changed = True
-                elif unchanged:
+                if unchanged:
+                    # Value was not modified
                     values[auditColumn.key] = unchanged[0]
-                else: # pragma: no cover
-                    # Typically the first clause will catch changes from
-                    # a previous value. There is no conceivable case where
-                    # this exception might be thrown, but we added it
-                    # for completeness as we do not want faulty values added.
-                    # Previous code was:
-                    #     values[auditColumn.key] = new[0]
-                    #     changed = True
-                    raise NotImplementedError(
-                        'Received unexpected case where a instance was updated '
-                        'with a value that it previously did not have or was '
-                        'aware of.'
-                        )
+                else:
+                    try:
+                        # Attempt to get the previous value
+                        values[auditColumn.key] = previous[0]
+                    except IndexError:
+                        # If the value does not have any previous values
+                        # assume it was NULL from a ``flush``, which appears
+                        # to be the case most of the time. SA tends to just
+                        # use an empty list for previously NULL values on
+                        # ``flush`` (yet strangely enough uses a list
+                        # containing ``None`` on ``commit``...)
+                        # We DO NOT by any means want to use the new value
+                        # otherwise it will look as if nothing changed
+                        values[auditColumn.key] = None
+                    finally:
+                        changed = True
 
     if changed or deleted:
         # Commit previous values to audit table
         session = object_session(instance)
         values['revision'] = instance.revision
-        audit_cls = auditMapper.class_
-        session.add(audit_cls(**values))
+        session.add(auditMapper.class_(**values))
         instance.revision += 1
-
