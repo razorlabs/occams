@@ -188,3 +188,31 @@ SELECT v.entity_id, a.name, COUNT(*)
   WHERE a.is_collection = false
   GROUP BY v.entity_id, a.name
   HAVING COUNT(*) > 1
+;
+
+-- In NEW SYSTEM, we expect all string values to line up
+-- with a choice value.  (Note that some "boolean" int
+-- values will line up with choice.value text of "True"
+-- and "False" which is weird, and which this *properly*
+-- ignores for the sake of QA work.)
+SELECT c_actual.attribute_id
+      ,c_actual.choice_id
+      ,c_actual.value
+      ,c_expect.attribute_id
+      ,c_expect.value
+  FROM (
+    SELECT st.value, st.attribute_id, st.choice_id
+      FROM string st
+      WHERE choice_id IS NOT NULL
+      GROUP BY st.value, st.attribute_id, st.choice_id
+       ) c_actual
+    LEFT JOIN (
+    SELECT ch.value, ch.attribute_id
+      FROM choice ch
+       ) c_expect 
+    ON (c_actual.attribute_id = c_expect.attribute_id
+    AND c_actual.value        = c_expect.value)
+  WHERE c_actual.value IS NULL
+  ORDER BY c_actual.attribute_id, c_actual.value
+;
+
