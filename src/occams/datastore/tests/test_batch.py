@@ -122,6 +122,11 @@ class BatchingTestCase(unittest.TestCase):
 
     def testLen(self):
         session = self.layer['session']
+
+        query = session.query(Sample).limit(0)
+        batch = SqlBatch(query)
+        self.assertEqual(0, len(batch))
+
         query = session.query(Sample).order_by(Sample.name)
         batch = SqlBatch(query)
         self.assertEqual(len(batch), 6)

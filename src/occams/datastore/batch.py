@@ -21,40 +21,39 @@ class SqlBatch(Batch):
     end = FieldProperty(IBatch['end'])
 
     def __init__(self, query, start=0, size=20, batches=None):
-        length = query.count()
-
-        if length == 0:
-            start = -1
-
-        if start >= length:
-            raise IndexError('start index key out of range')
-
-        # trueSize is the number of remaining items in the current batch
-        if start + size >= length:
-            trueSize = length - start
-        else:
-            trueSize = size
-
-        if length == 0:
-            end = -1
-        else:
-            end = start + trueSize - 1
-
-        self.start = start
-        self.end = end
-        self.size = size
-
-        # The thing we're iterating with
+        """
+        Tweak the original ``Batch.__init__`` to accommodate SQL queries
+        """
         self.query = query
 
-        # Required for internals to work
+        length = query.count()
         self._length = length
-        self._trueSize = trueSize
+
+        # See interfaces.IBatch
+        self.start = start
+        if length == 0:
+            self.start = -1
+        elif start >= length:
+            raise IndexError('start index key out of range')
+
+        # See interfaces.IBatch
+        self.size = size
+        self._trueSize = size
+
+        if start + size >= length:
+            self._trueSize = length - start
+
+        # See interfaces.IBatch
+        if length == 0:
+            self.end = -1
+        else:
+            self.end = start + self._trueSize - 1
 
         if batches is None:
             batches = SqlBatches(self)
 
         self.batches = batches
+
 
     @property
     def firstElement(self):
