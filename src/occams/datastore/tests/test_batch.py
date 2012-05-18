@@ -74,8 +74,8 @@ class BatchingTestCase(unittest.TestCase):
         # Validate proper starting point with empty sequence
         query = session.query(Sample).limit(0)
         batch = SqlBatch(query)
-        self.assertEqual(-1, batch.start)
-        self.assertEqual(-1, batch.end)
+        self.assertEqual(0, batch.start)
+        self.assertEqual(0, batch.end)
 
         # Validate improper starting point past the length
         query = session.query(Sample)
@@ -145,6 +145,10 @@ class BatchingTestCase(unittest.TestCase):
         session = self.layer['session']
         query = session.query(Sample).order_by(Sample.name)
         batch = SqlBatch(query)
+
+        # Doesn't like negative numbers
+        batch[-1:4]
+
         generator = batch[2:4]
         self.assertIsNotNone(generator)
         names = [r.name for i, r in generator]
