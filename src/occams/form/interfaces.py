@@ -53,7 +53,7 @@ class IEditableState(IOccamsFormComponent):
 
     description = zope.schema.Text(
         title=_(u'Description'),
-        description=_(u'A short description about what the state is for.'),
+        description=_(u'A short description about the state.'),
         required=False,
         )
 
@@ -79,7 +79,7 @@ class IEditableForm(IOccamsFormComponent):
 
     description = zope.schema.Text(
         title=_(u'Description'),
-        description=_(u'A short description about what the form is for.'),
+        description=_(u'A short description about the form\'s purpose.'),
         required=False,
         )
 
@@ -112,7 +112,7 @@ class IEditableField(IOccamsFormComponent):
 
     description = zope.schema.Text(
         title=_(u'Description'),
-        description=_(u'A short description about what this field is for.'),
+        description=_(u'A short description about the field\'s purpose.'),
         required=False,
         )
 
