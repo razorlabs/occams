@@ -19,6 +19,7 @@ from sqlalchemy.orm import mapper
 from sqlalchemy.orm import attributes
 from sqlalchemy.orm import object_mapper
 from sqlalchemy.orm import object_session
+from sqlalchemy.orm.properties import MANYTOONE
 from sqlalchemy.orm.exc import UnmappedColumnError
 from sqlalchemy.orm.properties import RelationshipProperty
 
@@ -186,6 +187,15 @@ def createRevision(instance, deleted=False):
                         values[auditColumn.key] = None
                     finally:
                         changed = True
+
+    if not changed:
+        # Nothing has changed, consider relationship changes.
+        for liveProperty in liveMapper.iterate_properties:
+            if isinstance(liveProperty, RelationshipProperty)  and \
+                    liveProperty.direction == MANYTOONE and \
+                    attributes.get_history(instance, liveProperty.key).has_changes():
+                changed = True
+                break
 
     if changed or deleted:
         # Commit previous values to audit table

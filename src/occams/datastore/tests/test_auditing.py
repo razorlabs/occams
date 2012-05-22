@@ -434,3 +434,54 @@ class AuditableTestCase(unittest.TestCase):
         session.commit()
 
         assert sc.revision == 3
+
+    def test_relationship(self):
+        Base = declarative_base(bind=create_engine('sqlite://'))
+
+        class SomeRelated(Base, ComparableEntity):
+            __tablename__ = 'somerelated'
+
+            id = Column(Integer, primary_key=True)
+
+        class SomeClass(Auditable, Base, ComparableEntity):
+            __tablename__ = 'sometable'
+
+            id = Column(Integer, primary_key=True)
+            name = Column(String(50))
+            related_id = Column(Integer, ForeignKey('somerelated.id'))
+            related = relationship("SomeRelated")
+
+        SomeClassHistory = SomeClass.__audit_mapper__.class_
+
+        Base.metadata.create_all()
+        session = scoped_session(sessionmaker())
+        auditing_session(session)
+
+        sc = SomeClass(name='sc1')
+        session.add(sc)
+        session.commit()
+
+        assert sc.revision == 1
+
+        sr1 = SomeRelated()
+        sc.related = sr1
+        session.commit()
+
+        assert sc.revision == 2
+
+        eq_(
+            session.query(SomeClassHistory).filter(SomeClassHistory.revision == 1).all(),
+            [SomeClassHistory(revision=1, name='sc1', related_id=None)]
+        )
+
+        sc.related = None
+
+        eq_(
+            session.query(SomeClassHistory).order_by(SomeClassHistory.revision).all(),
+            [
+                SomeClassHistory(revision=1, name='sc1', related_id=None),
+                SomeClassHistory(revision=2, name='sc1', related_id=sr1.id)
+            ]
+        )
+
+        assert sc.revision == 3
