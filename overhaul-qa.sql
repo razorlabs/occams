@@ -216,3 +216,14 @@ SELECT c_actual.attribute_id
   ORDER BY c_actual.attribute_id, c_actual.value
 ;
 
+-- In the NEW SYSTEM, we expect that every patient_id stored in
+-- the context table as a "patient" key, should match an entry
+-- in the patient (formerly subject) table.
+SELECT *
+  FROM context pc
+    LEFT JOIN patient p ON (pc.key = p.id)
+  WHERE pc.external = 'patient'
+    AND p.our IS NULL
+  LIMIT 10
+;
+

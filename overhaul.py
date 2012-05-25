@@ -92,7 +92,7 @@ def main():
     usage = """overhaul.py OLDCONNECT NEWCONNECT"""
     configureGlobalSession(sys.argv[1], sys.argv[2])
     addUser("bitcore@ucsd.edu")
-    entityLimit = None
+    entityLimit = 200
     if not entityLimit:
         print "Moving in all schemas and entities"
     else:
