@@ -227,3 +227,17 @@ SELECT *
   LIMIT 10
 ;
 
+-- In NEW SYSTEM the built in collect_date should not be homogenously
+-- a single day, because that means its probably all the day that the
+-- script was run, when it should be the visit_date at the worst or the
+-- collect_date at the best.
+SELECT * FROM (
+SELECT ARRAY(
+         SELECT e.collect_date
+           FROM entity e
+           GROUP BY e.collect_date
+       ) as collect_dates
+  ) arr
+  WHERE replace(split_part(array_dims(arr.collect_dates),':',1),'[','')::int = 1
+;
+
