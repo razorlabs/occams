@@ -24,42 +24,6 @@ Precondition Assumptions:
     5. The source schema table is unique on (schema.name,DATE(create_date))
     6. We have run some SQL against gibbon that fixed some oddities in the source
 
--- choice fixing sql!!
--- run this to vierfy that gibbon has the same IDs as were problematic on gibbon-test-db
-SELECT sc.name, sc.create_date, a.name, a.id, a.create_date
-  FROM schema sc
-    JOIN attribute a ON a.schema_id = sc.id
-  WHERE sc.name IN ('FollowupHistoryNeedleSharingPartners','IEarlyTestMSMPartners')
-;
--- run this to fix:
-UPDATE attribute
-  SET "create_date" = sc.create_date
-  FROM schema sc
-  WHERE sc.id = attribute.schema_id
-    AND attribute.id IN (271,272,274,308,309,310,311,273)
-;
-
--- Verify that two RapidTests are confused because of a create_date
--- on the *morning* before the RapidTest was versioned later that day
-SELECT *
-  FROM entity e
-  WHERE DATE(e.create_date) = '2012-03-01'
-    AND e.create_date < '2012-03-01 13:13:45.198454'
-    AND e.schema_id IN (19,75)
-;
--- Make the updated RapidTest always point to the new schema, an hour after it was created
-UPDATE entity
-  SET create_date = '2012-03-01 14:14:00.600112', schema_id = 75
-  WHERE name IN ('RapidTest-148743')
-    AND create_date = '2012-03-01 08:14:00.600112'
-;
--- Make the RapidTest created that morning think it was created before the confusion started
-UPDATE entity
-  SET create_date = '2012-02-29 07:15:31.972552'
-  WHERE name = 'RapidTest-148740'
-    AND create_date = '2012-03-01 07:15:31.972552'
-;
-
 """
 from sqlalchemy.ext.sqlsoup import SqlSoup
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -92,7 +56,7 @@ def main():
     usage = """overhaul.py OLDCONNECT NEWCONNECT"""
     configureGlobalSession(sys.argv[1], sys.argv[2])
     addUser("bitcore@ucsd.edu")
-    entityLimit = 200
+    entityLimit = None
     if not entityLimit:
         print "Moving in all schemas and entities"
     else:
