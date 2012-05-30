@@ -2,15 +2,21 @@
 """Test the upgrade process for EAV versioning by running each SQL query agains the given DB
 
 On jemueller-dt, run this script thusly for maximum happy:
-./qa-on-overhaul.py postgresql://plone:pl0n3@gibbon-test-db/avrc_data
+
+./qa-on-overhaul.py overhaul-qa.sql postgresql://plone:pl0n3@gibbon-test-db/avrc_data
+
 """
 
 def main():
     """Handle argv, specialize globals, launch job."""
     import sys
-    usage = """./qa-on-overhaul.py NEWCONNECT"""
-    connectionString = sys.argv[1]
-    testQueries = getTestQueries()
+    usage = """./qa-on-overhaul.py FILE NEWCONNECT"""
+    if len(sys.argv) != 3:
+        print usage
+        sys.exit(-1)
+    filename = sys.argv[1]
+    connectionString = sys.argv[2]
+    testQueries = getTestQueries(filename)
     for query in testQueries:
         freshCursor = getPsycopg2Cursor(connectionString)
         runQueryAndReportAnyRows(query,freshCursor)
@@ -25,8 +31,8 @@ def cleanSqlFromFile(inSQL):
         newSQL = newSQL[1:]
     return newSQL
 
-def getTestQueries():
-    f = open("overhaul-qa.sql")
+def getTestQueries(filename):
+    f = open(filename)
     text = f.read()
     f.close()
     goodEnough = "abcdefghijklmnopqrstuvwxyz"
@@ -109,7 +115,7 @@ def runQueryAndReportAnyRows(sql,cursor):
     results = cursor.fetchall()
     if len(results):
         print "="*20
-        print "PROBLEM WITH IMPORT FOUND!"
+        print "PROBLEM WITH DATABASE FOUND!"
         for row in results:
             print row
         print sql
