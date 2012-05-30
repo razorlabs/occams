@@ -1,9 +1,13 @@
 #!/usr/bin/env python
 """Test the upgrade process for EAV versioning by running each SQL query agains the given DB
 
-On jemueller-dt, run this script thusly for maximum happy:
+On jemueller-dt, during use of this script, you'll probably find these useful:
+
+./qa-on-overhaul.py preoverhaul-check.sql postgresql://plone:pl0n3@gibbon-test-db/avrc_data
 
 ./qa-on-overhaul.py overhaul-qa.sql postgresql://plone:pl0n3@gibbon-test-db/avrc_data
+
+./qa-on-overhaul.py postcontext-check.sql postgresql://plone:pl0n3@gibbon-qa/avrc_data
 
 """
 
