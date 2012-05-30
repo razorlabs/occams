@@ -42,3 +42,49 @@ SELECT name, DATE(create_date), COUNT(*)
   HAVING COUNT(*) > 1
 ;
 
+-- ----------------------
+
+-- There are some visit-associated forms that are associated
+-- with more than one visit in the original data, which is logically
+-- impossible in the new system.  
+-- This SHOWS the problem children:
+SELECT e.name
+      ,COUNT(DISTINCT(vi.visit_id)) as visit_count
+      ,array_agg(DISTINCT(vi.visit_id)) as visit_ids
+      ,bool_or(e.remove_date IS NULL) as has_any_live
+  FROM entity e
+    JOIN visit_instance vi ON e.id = vi.instance_id
+  GROUP BY e.name
+  HAVING COUNT(DISTINCT(vi.visit_id)) > 1 -- confusing duplicates...
+     AND bool_or(e.remove_date IS NULL) -- ...that matter because some are live
+;
+
+-- ----------------------
+
+-- The original protocol/cycle table represents planned steps within
+-- a study.  It will change names from "protocol" to "cycle".  Before
+-- the transition, a duplication (two things with the same "NAME") 
+-- need to be patched so that the spurious one is gone.
+
+-- This query SHOWS duplication, specifically for p_ids = {25,26}
+SELECT domain_id, cycle, COUNT(*), array_agg(id) as ids
+  FROM protocol
+  GROUP BY domain_id, cycle
+  HAVING COUNT(*) > 1
+;
+
+-- This query SHOWS references to p_id=25 that should be redirected:
+SELECT protocol_id, 'visit_protocol' as table_src
+  FROM visit_protocol
+  WHERE protocol_id = 25
+UNION ALL
+SELECT protocol_id, 'specimen' as table_src
+  FROM specimen
+  WHERE protocol_id = 25
+UNION ALL
+SELECT protocol_id, 'protocol_schema' as table_src
+  FROM protocol_schema
+  WHERE protocol_id = 25
+;
+
+

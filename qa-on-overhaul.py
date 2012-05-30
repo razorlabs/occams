@@ -35,6 +35,9 @@ def getTestQueries(filename):
     f = open(filename)
     text = f.read()
     f.close()
+    for badword in ["UPDATE"]:
+        if badword in text:
+            raise Exception("You shouldn't have %s in the file!"%badword)
     goodEnough = "abcdefghijklmnopqrstuvwxyz"
     goodEnough = "-" + goodEnough + goodEnough.upper()
     queries = map((lambda s: s.strip()),text.split(";"))
@@ -116,9 +119,10 @@ def runQueryAndReportAnyRows(sql,cursor):
     if len(results):
         print "="*20
         print "PROBLEM WITH DATABASE FOUND!"
+        print sql
+        print "-"*15
         for row in results:
             print row
-        print sql
 
 if __name__ == '__main__':
     main()
