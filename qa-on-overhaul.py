@@ -14,13 +14,20 @@ On jemueller-dt, during use of this script, you'll probably find these useful:
 def main():
     """Handle argv, specialize globals, launch job."""
     import sys
-    usage = """./qa-on-overhaul.py FILE NEWCONNECT"""
-    if len(sys.argv) != 3:
+    usage = """./qa-on-overhaul.py FILE NEWCONNECT [--updateok]"""
+    update_ok = False
+    if len(sys.argv) == 3:
+        filename = sys.argv[1]
+        connectionString = sys.argv[2]
+    elif len(sys.argv) == 4 and sys.argv[3] == "--updateok":
+        print "Actually, this is a bad idea."
+        print "\nLook at comments in preoverhaul-datapatch.sql for a better way to run this!\n"
         print usage
         sys.exit(-1)
-    filename = sys.argv[1]
-    connectionString = sys.argv[2]
-    testQueries = getTestQueries(filename)
+    else:
+        print usage
+        sys.exit(-1)
+    testQueries = getTestQueries(filename,update_ok)
     for query in testQueries:
         freshCursor = getPsycopg2Cursor(connectionString)
         runQueryAndReportAnyRows(query,freshCursor)
@@ -35,12 +42,12 @@ def cleanSqlFromFile(inSQL):
         newSQL = newSQL[1:]
     return newSQL
 
-def getTestQueries(filename):
+def getTestQueries(filename,updateIsOK):
     f = open(filename)
     text = f.read()
     f.close()
     for badword in ["UPDATE"]:
-        if badword in text:
+        if not updateIsOK and badword in text:
             raise Exception("You shouldn't have %s in the file!"%badword)
     goodEnough = "abcdefghijklmnopqrstuvwxyz"
     goodEnough = "-" + goodEnough + goodEnough.upper()
@@ -119,7 +126,12 @@ def runQueryAndReportAnyRows(sql,cursor):
         print err.__str__()
         print sql
         return None
-    results = cursor.fetchall()
+    try:
+        results = cursor.fetchall()
+    except psycopg2.ProgrammingError as err:
+        results = []
+        print "Minor warning: This SQL returned nothing..."
+        print sql
     if len(results):
         print "="*20
         print "PROBLEM WITH DATABASE FOUND!"
