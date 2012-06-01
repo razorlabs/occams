@@ -71,9 +71,9 @@ def main():
 def moveInEntities(limit=None):
     """Work in stages to move entities and their values.  Parents & children.
 
-    Associated leaf attributes handled in passing for everything.
+    Associated leaf attributes explicitly handled at each step by updateEntity()
     
-    WORKING - Stage 1: Parent entities
+    WORKING - Stage 1: Parent entities (now with missing leaf attributes!)
     WORKING - Stage 2: Child entities
     WORKING - Stage 3: handled by datastore automagically!"""
     counter = 0
@@ -93,6 +93,13 @@ def moveInEntities(limit=None):
             newParentEntity = createEntity(sourceEntity,newParentEntity,newSchema)
             Session.add(newParentEntity)
             Session.flush()
+
+            # It turned out that leaf values did NOT "come for free" and had
+            # to be handled by hand.  Last minute upgrade to overhaul based on
+            # data focused QA.
+            newParentEntity = updateEntity(newParentEntity,sourceEntity)
+            Session.flush()
+
             # Use datastore's built in awesomeness to handle subentities and the
             # implicit linking object values for this revision.  Then commit :)
             for oldChildEntity,oldParentAttrName in yieldChildEntities(sourceEntity):
@@ -141,7 +148,6 @@ def updateEntity(partialNewEntity,oldEntity):
     """Return the same partialNewEntity, except augmented with old values."""
     for attribute in partialNewEntity.schema.values():
         if attribute.type == 'object': 
-            # is_collection restriction is only here so we can test: non-collections first
             continue
         listOfValues = getOldValues(attribute, oldEntity)
         if attribute.is_collection:
@@ -433,12 +439,6 @@ def configureGlobalSession(old_connect, new_connect):
     global old_model
     global entity_state
     new_engine = create_engine(new_connect)
-    # NOTE: This was working, then something changed in the clinical DB based
-    # on Dave Mote's work (still not well understood, possibly no longer there)
-    # and then it was changed to adapt, and now it MAY have been put back into
-    # a usable state, but you shouldn't trust it too much because things are
-    # no longer pristine.  It might be wise to rederive what table manipulations
-    # should be going on from scratch again, just to be safe?
     from sqlalchemy import MetaData
     comprehensiveMetadata = MetaData(bind=new_engine, reflect=True)
     comprehensiveMetadata.drop_all()

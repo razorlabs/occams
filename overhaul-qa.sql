@@ -241,3 +241,27 @@ SELECT ARRAY(
   WHERE replace(split_part(array_dims(arr.collect_dates),':',1),'[','')::int = 1
 ;
 
+
+-- In BOTH SYSTEMS if a schema has entities and attributes, then every
+-- string attribute should have at least one value in the string table.
+-- (Other than a few rare/wierd things that can be excepted below...)
+SELECT grp.schema_name, grp.attr_name, COUNT(*), MIN(grp.value), MAX(grp.value)
+  FROM (
+    SELECT sc.name AS schema_name
+          ,a.name  AS attr_name
+          ,v.value
+      FROM schema sc
+        JOIN entity e      ON sc.id = e.schema_id
+        JOIN attribute a   ON sc.id = a.schema_id
+        LEFT JOIN string v ON (e.id = v.entity_id AND a.id = v.attribute_id)
+      WHERE a.type = 'string'
+        AND a.name NOT LIKE '%comment%' -- "GenitalSecretions","comments" is empty in source
+        AND a.name NOT LIKE '%reason' -- "ScreeningRouteOfTransmission027","nonenrollment_reason"
+      GROUP BY sc.name, a.name, v.value
+       ) grp
+  GROUP BY grp.schema_name, grp.attr_name
+  HAVING COUNT(*) = 1
+     AND MIN(grp.value) IS NULL
+;
+
+
