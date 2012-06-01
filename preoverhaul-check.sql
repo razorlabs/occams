@@ -87,4 +87,22 @@ SELECT protocol_id, 'protocol_schema' as table_src
   WHERE protocol_id = 25
 ;
 
+-- ----------------------
+
+-- The Termination form versioned in the old-versioning system to get
+-- a new 'screen-failure' option, and then old data was marked as
+-- having that problem.  In the new system, that violates the constraint
+-- of "writing on paper that didn't exist then" issue.  Solution to make
+-- things happen is to sneak a new choice in there.
+
+-- This SHOWS the problem:
+SELECT sc.id, sc.name
+  FROM schema sc
+    JOIN attribute a ON sc.id = a.schema_id
+  WHERE a.name = 'reason'
+    AND 'screen-failure' NOT IN (
+      SELECT ch.value
+        FROM choice ch
+        WHERE ch.attribute_id = a.id)
+;
 
