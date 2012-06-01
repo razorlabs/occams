@@ -24,42 +24,6 @@ Precondition Assumptions:
     5. The source schema table is unique on (schema.name,DATE(create_date))
     6. We have run some SQL against gibbon that fixed some oddities in the source
 
--- choice fixing sql!!
--- run this to vierfy that gibbon has the same IDs as were problematic on gibbon-test-db
-SELECT sc.name, sc.create_date, a.name, a.id, a.create_date
-  FROM schema sc
-    JOIN attribute a ON a.schema_id = sc.id
-  WHERE sc.name IN ('FollowupHistoryNeedleSharingPartners','IEarlyTestMSMPartners')
-;
--- run this to fix:
-UPDATE attribute
-  SET "create_date" = sc.create_date
-  FROM schema sc
-  WHERE sc.id = attribute.schema_id
-    AND attribute.id IN (271,272,274,308,309,310,311,273)
-;
-
--- Verify that two RapidTests are confused because of a create_date
--- on the *morning* before the RapidTest was versioned later that day
-SELECT *
-  FROM entity e
-  WHERE DATE(e.create_date) = '2012-03-01'
-    AND e.create_date < '2012-03-01 13:13:45.198454'
-    AND e.schema_id IN (19,75)
-;
--- Make the updated RapidTest always point to the new schema, an hour after it was created
-UPDATE entity
-  SET create_date = '2012-03-01 14:14:00.600112', schema_id = 75
-  WHERE name IN ('RapidTest-148743')
-    AND create_date = '2012-03-01 08:14:00.600112'
-;
--- Make the RapidTest created that morning think it was created before the confusion started
-UPDATE entity
-  SET create_date = '2012-02-29 07:15:31.972552'
-  WHERE name = 'RapidTest-148740'
-    AND create_date = '2012-03-01 07:15:31.972552'
-;
-
 """
 from sqlalchemy.ext.sqlsoup import SqlSoup
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -107,9 +71,9 @@ def main():
 def moveInEntities(limit=None):
     """Work in stages to move entities and their values.  Parents & children.
 
-    Associated leaf attributes handled in passing for everything.
+    Associated leaf attributes explicitly handled at each step by updateEntity()
     
-    WORKING - Stage 1: Parent entities
+    WORKING - Stage 1: Parent entities (now with missing leaf attributes!)
     WORKING - Stage 2: Child entities
     WORKING - Stage 3: handled by datastore automagically!"""
     counter = 0
@@ -129,6 +93,13 @@ def moveInEntities(limit=None):
             newParentEntity = createEntity(sourceEntity,newParentEntity,newSchema)
             Session.add(newParentEntity)
             Session.flush()
+
+            # It turned out that leaf values did NOT "come for free" and had
+            # to be handled by hand.  Last minute upgrade to overhaul based on
+            # data focused QA.
+            newParentEntity = updateEntity(newParentEntity,sourceEntity)
+            Session.flush()
+
             # Use datastore's built in awesomeness to handle subentities and the
             # implicit linking object values for this revision.  Then commit :)
             for oldChildEntity,oldParentAttrName in yieldChildEntities(sourceEntity):
@@ -177,7 +148,6 @@ def updateEntity(partialNewEntity,oldEntity):
     """Return the same partialNewEntity, except augmented with old values."""
     for attribute in partialNewEntity.schema.values():
         if attribute.type == 'object': 
-            # is_collection restriction is only here so we can test: non-collections first
             continue
         listOfValues = getOldValues(attribute, oldEntity)
         if attribute.is_collection:
@@ -469,12 +439,6 @@ def configureGlobalSession(old_connect, new_connect):
     global old_model
     global entity_state
     new_engine = create_engine(new_connect)
-    # NOTE: This was working, then something changed in the clinical DB based
-    # on Dave Mote's work (still not well understood, possibly no longer there)
-    # and then it was changed to adapt, and now it MAY have been put back into
-    # a usable state, but you shouldn't trust it too much because things are
-    # no longer pristine.  It might be wise to rederive what table manipulations
-    # should be going on from scratch again, just to be safe?
     from sqlalchemy import MetaData
     comprehensiveMetadata = MetaData(bind=new_engine, reflect=True)
     comprehensiveMetadata.drop_all()

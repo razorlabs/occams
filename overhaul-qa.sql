@@ -188,3 +188,76 @@ SELECT v.entity_id, a.name, COUNT(*)
   WHERE a.is_collection = false
   GROUP BY v.entity_id, a.name
   HAVING COUNT(*) > 1
+;
+
+-- In NEW SYSTEM, we expect all string values to line up
+-- with a choice value.  (Note that some "boolean" int
+-- values will line up with choice.value text of "True"
+-- and "False" which is weird, and which this *properly*
+-- ignores for the sake of QA work.)
+SELECT c_actual.attribute_id
+      ,c_actual.choice_id
+      ,c_actual.value
+      ,c_expect.attribute_id
+      ,c_expect.value
+  FROM (
+    SELECT st.value, st.attribute_id, st.choice_id
+      FROM string st
+      WHERE choice_id IS NOT NULL
+      GROUP BY st.value, st.attribute_id, st.choice_id
+       ) c_actual
+    LEFT JOIN (
+    SELECT ch.value, ch.attribute_id
+      FROM choice ch
+       ) c_expect 
+    ON (c_actual.attribute_id = c_expect.attribute_id
+    AND c_actual.value        = c_expect.value)
+  WHERE c_actual.value IS NULL
+  ORDER BY c_actual.attribute_id, c_actual.value
+;
+
+-- This is a known problem that will be solved by a general "date sanity"
+-- script that will run after this, and after the aeh/context overhaul as well...
+-- 
+-- -- In NEW SYSTEM the built in collect_date should not be homogenously
+-- -- a single day, because that means its probably all the day that the
+-- -- script was run, when it should be the visit_date at the worst or the
+-- -- collect_date at the best.
+-- SELECT * FROM (
+-- SELECT ARRAY(
+--          SELECT e.collect_date
+--            FROM entity e
+--            GROUP BY e.collect_date
+--        ) as collect_dates
+--   ) arr
+--   WHERE replace(split_part(array_dims(arr.collect_dates),':',1),'[','')::int = 1
+-- 
+SELECT * FROM context WHERE 1=2
+;
+
+-- In BOTH SYSTEMS if a schema has entities and attributes, then every
+-- string attribute should have at least one value in the string table.
+-- (Other than a few rare/wierd things that can be excepted below...)
+SELECT grp.schema_name, grp.attr_name, COUNT(*), MIN(grp.value), MAX(grp.value)
+  FROM (
+    SELECT sc.name AS schema_name
+          ,a.name  AS attr_name
+          ,v.value
+      FROM schema sc
+        JOIN entity e      ON sc.id = e.schema_id
+        JOIN attribute a   ON sc.id = a.schema_id
+        LEFT JOIN string v ON (e.id = v.entity_id AND a.id = v.attribute_id)
+      WHERE a.type = 'string'
+        AND a.name NOT LIKE '%comment%' -- "GenitalSecretions","comments" is empty in source
+        AND a.name NOT LIKE '%reason' -- "ScreeningRouteOfTransmission027","nonenrollment_reason"
+       	-- Partner stuff is inherently sparse and this just quiets down the noise...
+	AND sc.name NOT LIKE '%PartnerContactContact%'
+	AND NOT (sc.name LIKE '%PartnerBio%' AND a.name = 'suffix')
+      GROUP BY sc.name, a.name, v.value
+       ) grp
+  GROUP BY grp.schema_name, grp.attr_name
+  HAVING COUNT(*) = 1
+     AND MIN(grp.value) IS NULL
+;
+
+
