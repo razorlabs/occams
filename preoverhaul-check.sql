@@ -106,3 +106,49 @@ SELECT sc.id, sc.name
         WHERE ch.attribute_id = a.id)
 ;
 
+-- ----------------------
+
+-- Gary had result Positive changed to Preliminary Positive and verify_results 
+-- Negative to Discordant. This has been generally unhappy-making for data users
+-- and now we're having schema/date constraint issues trying to migrate it.  The
+-- current plan is to detect and adjust the past Gary-suggested-values so that
+-- just "never existed" and thus to make things easier to import.  Cross fingers!
+
+-- This SHOWS the RapidTests.result = prelim positive in the choice tables
+SELECT sc.id, sc.name, a.create_date, a.name, v.create_date, v.value, v.id AS choice_id
+  FROM choice v
+    JOIN attribute a ON a.id = v.attribute_id
+    JOIN schema sc   ON sc.id = a.schema_id
+  WHERE v.value = 'Preliminary Positive'
+    AND sc.name = 'RapidTest'
+    AND a.name = 'result'
+;
+
+-- This SHOWS the RapidTests.result = prelim positive in the string tables
+SELECT sc.id AS schema_id, e.create_date, e.name, v.create_date, v.value
+  FROM string v
+    JOIN entity e    ON e.id = v.entity_id
+    JOIN schema sc   ON sc.id = e.schema_id
+  WHERE v.value = 'Preliminary Positive'
+    AND sc.name = 'RapidTest'
+;
+
+-- This SHOWS the RapidTests.verify_result = discordant in the choice tables
+SELECT sc.id, sc.name, a.create_date, a.name, v.create_date, v.value, v.id AS choice_id
+  FROM choice v
+    JOIN attribute a ON a.id = v.attribute_id
+    JOIN schema sc   ON sc.id = a.schema_id
+  WHERE v.value = 'Discordant'
+    AND sc.name = 'RapidTest'
+    AND a.name = 'verify_result'
+;
+
+-- This SHOWS the RapidTests.result = prelim positive in the string tables
+SELECT sc.id AS schema_id, e.create_date, e.name, v.create_date, v.value
+  FROM string v
+    JOIN entity e    ON e.id = v.entity_id
+    JOIN schema sc   ON sc.id = e.schema_id
+  WHERE v.value = 'Discordant'
+    AND sc.name = 'RapidTest'
+;
+
