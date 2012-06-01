@@ -68,6 +68,14 @@ def dispatch(instance, state):
     if isinstance(instance, Modifiable) and state in ('new', 'dirty'):
         updateMetadata(instance, created=(state == 'new'))
 
-    if isinstance(instance, Auditable) and state in ('dirty', 'deleted'):
-        createRevision(instance, deleted=(state == 'deleted'))
+    if isinstance(instance, Auditable) and state in ('dirty'):
+        createRevision(instance, deleted=False)
 
+    if isinstance(instance, Auditable) and state in ('deleted'):
+        # Audit the last revision of the row
+        createRevision(instance, deleted=True)
+        # If the row keeps track of its metadata, we want to record whom deleted
+        # the row as well, so issue a final touch and then audit again
+        if isinstance(instance, Modifiable):
+            updateMetadata(instance, created=False)
+            createRevision(instance, deleted=True)

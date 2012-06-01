@@ -120,6 +120,12 @@ def defaultPublishDate(context):
 class Category(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
     implements(ICategory)
 
+    @declared_attr
+    def __table_args__(cls):
+        return (
+            UniqueConstraint('name', name='uq_%s_name' % cls.__tablename__),
+            )
+
 
 schema_category_table = Table('schema_category', Model.metadata,
     Column('schema_id', Integer),

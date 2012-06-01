@@ -21,40 +21,39 @@ class SqlBatch(Batch):
     end = FieldProperty(IBatch['end'])
 
     def __init__(self, query, start=0, size=20, batches=None):
+        """
+        Tweak the original ``Batch.__init__`` to accommodate SQL queries
+        """
+        self.query = query
+
         length = query.count()
 
+        # See interfaces.IBatch
         if length == 0:
-            start = -1
-
-        if start >= length:
+            # Some SQL vendors don't like negatives so floor it to zero
+            start = 0
+        elif start >= length:
             raise IndexError('start index key out of range')
 
-        # trueSize is the number of remaining items in the current batch
+        # See interfaces.IBatch
         if start + size >= length:
             trueSize = length - start
         else:
             trueSize = size
 
+        # See interfaces.IBatch
         if length == 0:
-            end = -1
+            # Same thing as start
+            end = 0
         else:
             end = start + trueSize - 1
 
+        self._trueSize = trueSize
+        self.size = size
         self.start = start
         self.end = end
-        self.size = size
-
-        # The thing we're iterating with
-        self.query = query
-
-        # Required for internals to work
         self._length = length
-        self._trueSize = trueSize
-
-        if batches is None:
-            batches = SqlBatches(self)
-
-        self.batches = batches
+        self.batches = batches or SqlBatches(self)
 
     @property
     def firstElement(self):
@@ -62,9 +61,7 @@ class SqlBatch(Batch):
         See interfaces.IBatch
         """
         result = self.query.offset(self.start).limit(1).one()
-        if hasattr(result, 'objectify'):
-            result = result.objectify()
-        return (result.id, result)
+        return (result.id, getattr(result, 'objectify', lambda: result)())
 
     @property
     def lastElement(self):
@@ -72,9 +69,7 @@ class SqlBatch(Batch):
         See interfaces.IBatch
         """
         result = self.query.offset(self.end).limit(1).one()
-        if hasattr(result, 'objectify'):
-            result = result.objectify()
-        return (result.id, result)
+        return (result.id, getattr(result, 'objectify', lambda: result)())
 
     def __getitem__(self, key):
         """
@@ -82,10 +77,13 @@ class SqlBatch(Batch):
         """
         if key >= self._trueSize:
             raise IndexError('batch index out of range')
-        result = self.query.offset(self.start + key).limit(1).one()
-        if hasattr(result, 'objectify'):
-            result = result.objectify()
-        return (result.id, result)
+        if key < 0:
+            if self._trueSize > 0:
+                key = self._trueSize + key
+            else:
+                key = 0
+        result = self.query.offset(key).limit(1).one()
+        return (result.id, getattr(result, 'objectify', lambda: result)())
 
     def __iter__(self):
         """
@@ -93,9 +91,7 @@ class SqlBatch(Batch):
         """
         if self._length > 0:
             for result in self.query.slice(self.start, self.end + 1):
-                if hasattr(result, 'objectify'):
-                    result = result.objectify()
-                yield (result.id, result)
+                yield (result.id, getattr(result, 'objectify', lambda: result)())
 
     def __len__(self):
         """
@@ -109,11 +105,14 @@ class SqlBatch(Batch):
     def __getslice__(self, i, j):
         if j > self.end:
             j = self._trueSize
+        if i < 0:
+            if self._trueSize > 0:
+                i = self._trueSize + i
+            else:
+                i = 0
         query = self.query.slice(i, j)
         for result in query:
-            if hasattr(result, 'objectify'):
-                result = result.objectify()
-            yield (result.id, result)
+            yield (result.id, getattr(result, 'objectify', lambda: result)())
 
     def __eq__(self, other):
         return ((self.size, self.start, self.query) ==
