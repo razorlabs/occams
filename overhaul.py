@@ -62,7 +62,11 @@ def main():
     else:
         print "Moving in all schemas and %s entities" % entityLimit
     moveInAllSchemas()
+    Session.commit()
+    print "Committed Schemas"
     moveInAttributesAndChoices()
+    Session.commit()
+    print "Committed Attributes/Choices"
     moveInEntities(limit=entityLimit)
     Session.commit()
     if isWorking():
@@ -82,43 +86,52 @@ def moveInEntities(limit=None):
         if limit is not None and counter > limit:
             return
         # FIRST HANDLE THE PARENT ENTITIES
-        newParentEntity = None
-        newSchema = None
-        the_create_date = None
-        for sourceEntity,schema_name in yieldOrderedEntities(name):
-            if newSchema is None:
-                the_create_date = sourceEntity.create_date
-                newSchema = getSchemaForEntity(schema_name,the_create_date)
-            # Set up *this revision* for this parent
-            newParentEntity = createEntity(sourceEntity,newParentEntity,newSchema)
-            Session.add(newParentEntity)
-            Session.flush()
-
-            # It turned out that leaf values did NOT "come for free" and had
-            # to be handled by hand.  Last minute upgrade to overhaul based on
-            # data focused QA.
-            newParentEntity = updateEntity(newParentEntity,sourceEntity)
-            Session.flush()
-
-            # Use datastore's built in awesomeness to handle subentities and the
-            # implicit linking object values for this revision.  Then commit :)
-            for oldChildEntity,oldParentAttrName in yieldChildEntities(sourceEntity):
-                newChildSchema = newSchema[oldParentAttrName].object_schema
-                try:
-                    newChildEntity = newParentEntity[oldParentAttrName]
-                except KeyError:
-                    newChildEntity = None
-                newChildEntity = createEntity(
-                    oldChildEntity,
-                    newChildEntity,
-                    newChildSchema)
-                newParentEntity[oldParentAttrName] = newChildEntity
-                Session.flush()
-                newParentEntity[oldParentAttrName] = updateEntity(
-                    newParentEntity[oldParentAttrName],
-                    oldChildEntity)
+        try:
+            newParentEntity = None
+            newSchema = None
+            the_create_date = None
+            for sourceEntity,schema_name in yieldOrderedEntities(name):
+                if newSchema is None:
+                    the_create_date = sourceEntity.create_date
+                    newSchema = getSchemaForEntity(schema_name,the_create_date)
+                # Set up *this revision* for this parent
+                newParentEntity = createEntity(sourceEntity,newParentEntity,newSchema)
+                Session.add(newParentEntity)
                 Session.flush()
 
+                # It turned out that leaf values did NOT "come for free" and had
+                # to be handled by hand.  Last minute upgrade to overhaul based on
+                # data focused QA.
+                newParentEntity = updateEntity(newParentEntity,sourceEntity)
+                Session.flush()
+
+                # Use datastore's built in awesomeness to handle subentities and the
+                # implicit linking object values for this revision.  Then commit :)
+                for oldChildEntity,oldParentAttrName in yieldChildEntities(sourceEntity):
+                    newChildSchema = newSchema[oldParentAttrName].object_schema
+                    try:
+                        newChildEntity = newParentEntity[oldParentAttrName]
+                    except KeyError:
+                        newChildEntity = None
+                    newChildEntity = createEntity(
+                        oldChildEntity,
+                        newChildEntity,
+                        newChildSchema)
+                    newParentEntity[oldParentAttrName] = newChildEntity
+                    Session.flush()
+                    newParentEntity[oldParentAttrName] = updateEntity(
+                        newParentEntity[oldParentAttrName],
+                        oldChildEntity)
+                    Session.flush()
+        except:
+            Session.rollback()
+            print "*"*80
+            print "ERROR: Name %s had errors" % name
+            print "*"*80
+        else:
+            Session.commit()
+            print "Committing %s" % name
+            
 def createEntity(sourceEntity,prevNewEntity,newSchema):
     """Either create ur update (depending on prevNewEntity == None).
     
