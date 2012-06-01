@@ -123,10 +123,10 @@ def moveInEntities(limit=None):
                         newParentEntity[oldParentAttrName],
                         oldChildEntity)
                     Session.flush()
-        except:
+        except Exception as err:
             Session.rollback()
             print "*"*80
-            print "ERROR: Name %s had errors" % name
+            print "ERROR: Name %s had error: %s" % (name,err.__str__())
             print "*"*80
         else:
             Session.commit()
@@ -447,14 +447,15 @@ def getKnownSchemaChanges():
         )
     return realChanges.all()
 
-def configureGlobalSession(old_connect, new_connect):
+def configureGlobalSession(old_connect, new_connect,withDropAll=True):
     """Set up Session for data manipulation and create new tables as side effect."""
     global old_model
     global entity_state
     new_engine = create_engine(new_connect)
     from sqlalchemy import MetaData
     comprehensiveMetadata = MetaData(bind=new_engine, reflect=True)
-    comprehensiveMetadata.drop_all()
+    if withDropAll:
+        comprehensiveMetadata.drop_all()
     model.Model.metadata.create_all(bind=new_engine, checkfirst=True)
     tables = []
     tables_model = model.Model.metadata.sorted_tables
