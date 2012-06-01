@@ -216,31 +216,24 @@ SELECT c_actual.attribute_id
   ORDER BY c_actual.attribute_id, c_actual.value
 ;
 
--- In the NEW SYSTEM, we expect that every patient_id stored in
--- the context table as a "patient" key, should match an entry
--- in the patient (formerly subject) table.
-SELECT *
-  FROM context pc
-    LEFT JOIN patient p ON (pc.key = p.id)
-  WHERE pc.external = 'patient'
-    AND p.our IS NULL
-  LIMIT 10
+-- This is a known problem that will be solved by a general "date sanity"
+-- script that will run after this, and after the aeh/context overhaul as well...
+-- 
+-- -- In NEW SYSTEM the built in collect_date should not be homogenously
+-- -- a single day, because that means its probably all the day that the
+-- -- script was run, when it should be the visit_date at the worst or the
+-- -- collect_date at the best.
+-- SELECT * FROM (
+-- SELECT ARRAY(
+--          SELECT e.collect_date
+--            FROM entity e
+--            GROUP BY e.collect_date
+--        ) as collect_dates
+--   ) arr
+--   WHERE replace(split_part(array_dims(arr.collect_dates),':',1),'[','')::int = 1
+-- 
+SELECT * FROM context WHERE 1=2
 ;
-
--- In NEW SYSTEM the built in collect_date should not be homogenously
--- a single day, because that means its probably all the day that the
--- script was run, when it should be the visit_date at the worst or the
--- collect_date at the best.
-SELECT * FROM (
-SELECT ARRAY(
-         SELECT e.collect_date
-           FROM entity e
-           GROUP BY e.collect_date
-       ) as collect_dates
-  ) arr
-  WHERE replace(split_part(array_dims(arr.collect_dates),':',1),'[','')::int = 1
-;
-
 
 -- In BOTH SYSTEMS if a schema has entities and attributes, then every
 -- string attribute should have at least one value in the string table.
@@ -257,6 +250,9 @@ SELECT grp.schema_name, grp.attr_name, COUNT(*), MIN(grp.value), MAX(grp.value)
       WHERE a.type = 'string'
         AND a.name NOT LIKE '%comment%' -- "GenitalSecretions","comments" is empty in source
         AND a.name NOT LIKE '%reason' -- "ScreeningRouteOfTransmission027","nonenrollment_reason"
+       	-- Partner stuff is inherently sparse and this just quiets down the noise...
+	AND sc.name NOT LIKE '%PartnerContactContact%'
+	AND NOT (sc.name LIKE '%PartnerBio%' AND a.name = 'suffix')
       GROUP BY sc.name, a.name, v.value
        ) grp
   GROUP BY grp.schema_name, grp.attr_name
