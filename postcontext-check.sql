@@ -44,10 +44,33 @@ SELECT e.consent_date
 -- Every form/entity should have at least *some* context data.  If this had no LIMIT it
 -- would throw tens of thousands of error rows before context overhaul runs, and should
 -- throw ZERO after context overhaul runs...
-SELECT e.name
+SELECT sc.name, COUNT(*)
   FROM entity e
+    JOIN schema sc ON sc.id = e.schema_id
     LEFT JOIN context c ON e.id = c.entity_id
   WHERE c.key IS NULL
-  LIMIT 12
+    AND NOT sc.is_inline
+  GROUP BY sc.name
+  HAVING COUNT(*) > 0
+  ORDER BY COUNT(*) DESC
 ;
+
+
+-- ----------------------
+-- Every form/entity, more specifically, should be associated with a A PATIENT
+-- except perhaps for Partner's where index patient import logic was a bit
+-- tricky (data is preserved, you get the index patient via JOIN through partner)
+SELECT sc.name, COUNT(*)
+  FROM entity e
+    JOIN schema sc ON sc.id = e.schema_id
+    LEFT JOIN context c ON (e.id = c.entity_id AND c.external = 'patient')
+  WHERE c.key IS NULL
+    -- AND sc.name NOT LIKE '%Partner%'
+    AND NOT sc.is_inline
+  GROUP BY sc.name
+  HAVING COUNT(*) > 0
+  ORDER BY COUNT(*) DESC
+;
+
+
 
