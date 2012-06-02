@@ -33,6 +33,15 @@ SELECT ARRAY(
   WHERE replace(split_part(array_dims(arr.collect_dates),':',1),'[','')::int = 1
 ;
 
+-- This SHOWS probable errors in collect_date contents due to way too many
+-- forms claiming to have been collected the same day.  This is another 
+-- way to "gesture" towards the real problem that might be helpful.
+SELECT collect_date, COUNT(*) AS total_forms
+  FROM entity
+  GROUP BY collect_date
+  HAVING COUNT(*) > 800
+;
+
 -- This SHOWS the old datetimes associated with attribute-style collect_date's
 SELECT sc.name AS schema_name
       ,a.name  AS attr_name
