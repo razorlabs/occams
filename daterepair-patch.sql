@@ -18,7 +18,7 @@
 
 -- This FIXES the actual contents of entity.collect_date
 UPDATE entity
-  SET date_collected = (
+  SET collect_date = (
          COALESCE(
           (SELECT DATE(v.value) -- attr_date_collected
              FROM "datetime" v
@@ -33,7 +33,7 @@ UPDATE entity
           )
          ,DATE(entity.create_date))
          )
-  FROM schema 
+  FROM schema sc 
   WHERE sc.id = entity.schema_id
     AND sc.is_inline = false
 ;

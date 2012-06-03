@@ -16,30 +16,38 @@
 -- This SHOWS the actual contents of entity.collect_date that are wrong
 -- 
 -- In NEW SYSTEM the built in collect_date should not be homogenously
--- a single day, because that means its probably all the day that the
--- script was run, when it should be the visit_date at the worst or the
--- collect_date at the best. This is not the absolute best way to check
--- that the problem has been TRULY SOLVED but it is good enough for now
--- and the conceptuallly pure thing might be impossible without importing
+-- a single day for a given form date, because that means its probably all
+-- the day that the script was run, when it should be the visit_date at the 
+-- worst or the collect_date at the best. This is not the absolute best way 
+-- to check that the problem has been TRULY SOLVED but it is good enough for 
+-- now and the conceptuallly pure thing might be impossible without importing
 -- a copy of the real world (because the real goal here is ultimately
 -- just to make the data correspond to the world in a better way).
-SELECT * FROM (
-SELECT ARRAY(
-         SELECT e.collect_date
-           FROM entity e
-           GROUP BY e.collect_date
-       ) as collect_dates
-  ) arr
-  WHERE replace(split_part(array_dims(arr.collect_dates),':',1),'[','')::int = 1
+SELECT sc.name AS schema_name
+      ,e.state
+      ,COUNT(*) AS total_forms
+      ,replace(split_part(array_dims(array_agg(DISTINCT(e.collect_date))),':',2),']','')::int AS unique_dates
+      ,array_dims(array_agg(e.collect_date)) AS date_array_dims
+      -- ,array_agg(DISTINCT(e.collect_date)) AS collect_dates -- For debugging but ugly as output
+  FROM entity e
+    JOIN schema sc ON sc.id = e.schema_id
+  -- Pregancy forms too rare for automated checks to work properly
+  WHERE NOT (sc.name = 'Pregnancy' and e.state = 'complete')
+    AND sc.is_inline = false -- Only care about parent.collect_date's
+  GROUP BY sc.name, e.state
+  HAVING replace(split_part(array_dims(array_agg(DISTINCT(e.collect_date))),':',2),']','')::int = 1
+  ORDER BY replace(split_part(array_dims(array_agg(DISTINCT(e.collect_date))),':',2),']','')::int DESC
 ;
 
 -- This SHOWS probable errors in collect_date contents due to way too many
 -- forms claiming to have been collected the same day.  This is another 
 -- way to "gesture" towards the real problem that might be helpful.
 SELECT collect_date, COUNT(*) AS total_forms
-  FROM entity
+  FROM entity e
+    JOIN schema sc ON sc.id = e.schema_id
+  WHERE sc.is_inline = false -- Only care about parent.collect_date's
   GROUP BY collect_date
-  HAVING COUNT(*) > 800
+  HAVING COUNT(*) > 400
 ;
 
 -- This SHOWS the old datetimes associated with attribute-style collect_date's
