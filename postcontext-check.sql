@@ -40,37 +40,49 @@ SELECT e.consent_date
     AND e.consent_date IS NULL
 ;
 
--- ----------------------
--- Every form/entity should have at least *some* context data.  If this had no LIMIT it
--- would throw tens of thousands of error rows before context overhaul runs, and should
--- throw ZERO after context overhaul runs...
-SELECT sc.name, COUNT(*)
-  FROM entity e
-    JOIN schema sc ON sc.id = e.schema_id
-    LEFT JOIN context c ON e.id = c.entity_id
-  WHERE c.key IS NULL
-    AND NOT sc.is_inline
-  GROUP BY sc.name
-  HAVING COUNT(*) > 0
-  ORDER BY COUNT(*) DESC
-;
+-- This now only detects forms where the patient data was deleted and the forms haven't
+-- been.  This is organizationally complicated.  The forms will not be deleted at this
+-- time but are likely to in the future, thus this SQL is likely to become useful as an
+-- ongoing QA process (verifying integrity of form-to-clinical connections) in the 
+-- future.  When that issue has been resolved, use these queries for that :)
+-- 
+-- -- ----------------------
+-- -- Every form/entity should have at least *some* context data.  If this had no LIMIT it
+-- -- would throw tens of thousands of error rows before context overhaul runs, and should
+-- -- throw ZERO after context overhaul runs...
+-- SELECT sc.name, COUNT(*)
+--   FROM entity e
+--     JOIN schema sc ON sc.id = e.schema_id
+--     LEFT JOIN context c ON e.id = c.entity_id
+--   WHERE c.key IS NULL
+--     AND NOT sc.is_inline
+--   GROUP BY sc.name
+--   HAVING COUNT(*) > 0
+--   ORDER BY COUNT(*) DESC
+-- 
+-- SEMICOLON NEEDED!
+-- 
+-- -- ----------------------
+-- -- Every form/entity, more specifically, should be associated with a A PATIENT
+-- -- except perhaps for Partner's where index patient import logic was a bit
+-- -- tricky (data is preserved, you get the index patient via JOIN through partner)
+-- SELECT sc.name, COUNT(*)
+--   FROM entity e
+--     JOIN schema sc ON sc.id = e.schema_id
+--     LEFT JOIN context c ON (e.id = c.entity_id AND c.external = 'patient')
+--   WHERE c.key IS NULL
+--     -- AND sc.name NOT LIKE '%Partner%'
+--     AND NOT sc.is_inline
+--   GROUP BY sc.name
+--   HAVING COUNT(*) > 0
+--   ORDER BY COUNT(*) DESC
+-- 
+-- SEMICOLON NEEDED!
+-- 
+SELECT * FROM context WHERE 1=2;
 
 
--- ----------------------
--- Every form/entity, more specifically, should be associated with a A PATIENT
--- except perhaps for Partner's where index patient import logic was a bit
--- tricky (data is preserved, you get the index patient via JOIN through partner)
-SELECT sc.name, COUNT(*)
-  FROM entity e
-    JOIN schema sc ON sc.id = e.schema_id
-    LEFT JOIN context c ON (e.id = c.entity_id AND c.external = 'patient')
-  WHERE c.key IS NULL
-    -- AND sc.name NOT LIKE '%Partner%'
-    AND NOT sc.is_inline
-  GROUP BY sc.name
-  HAVING COUNT(*) > 0
-  ORDER BY COUNT(*) DESC
-;
+
 
 
 
