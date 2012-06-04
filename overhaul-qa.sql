@@ -216,8 +216,12 @@ SELECT c_actual.attribute_id
   ORDER BY c_actual.attribute_id, c_actual.value
 ;
 
--- This is a known problem that will be solved by a general "date sanity"
--- script that will run after this, and after the aeh/context overhaul as well...
+-- See the daterpair-chech.sql file for a rough copy of this query where it
+-- does more good.  The fix can be found in daterepair-patch.sql.
+-- This is still in this script because the script is likely to be used as
+-- "ongoing system automated QA" that verifies invariants systematically.
+-- When things are all nice and clean, comment this back in and it will
+-- probably function in this manner at that time.
 -- 
 -- -- In NEW SYSTEM the built in collect_date should not be homogenously
 -- -- a single day, because that means its probably all the day that the
