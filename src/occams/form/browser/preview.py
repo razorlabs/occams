@@ -71,7 +71,7 @@ class FormPreviewForm(DisabledMixin, Form):
 
 
     def can_draft(self):
-        return checkPermission("occams.form.ModifyForm", self.context)
+        return checkPermission("occams.form.ModifyForm", self.context) and self.context.item.state != 'draft'
 
     @z3c.form.button.buttonAndHandler(_(u'Draft New Version'), name='draft', condition=lambda self: self.can_draft())
     def handleDraft(self, action):
