@@ -44,12 +44,12 @@ from occams.form.serialize import camelize
 from occams.form.serialize import symbolize
 from occams.form.browser.preview import DisabledMixin
 from occams.datastore import model
-
+from sqlalchemy.orm import object_session
 
 # Helper Methods
 def applyChoiceChanges(field, choiceData):
     # Need a helper to add choice changes
-    subSession = sqlalchemysession.object_session(field)
+    subSession = object_session(field)
     if field.choices:
         def findChoice(value, itemlist):
             for i, item in enumerate(itemlist):
@@ -59,6 +59,7 @@ def applyChoiceChanges(field, choiceData):
 
         for choice in field.choices:
             choice.order = choice.order+100
+
         subSession.flush()
         removable = []
         for choice in field.choices:
@@ -84,7 +85,7 @@ def applyChoiceChanges(field, choiceData):
     return field
 
 def moveField(form, field, after=None):
-    subSession = sqlalchemysession.object_session(form)
+    subSession = object_session(form)
     if after is None:
         field.order = 100
     else:
