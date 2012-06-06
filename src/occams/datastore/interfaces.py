@@ -384,7 +384,7 @@ class IEntity(IDataBaseItem):
         title=_(u'The current workflow state'),
         values=sorted([
             'pending-entry', 'pending-review',
-            'complete', 'not-done', 'inline'
+            'complete', 'not-done', 'inline',
             'error',
             ]),
         default='pending-entry',
