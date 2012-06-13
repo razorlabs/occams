@@ -44,11 +44,12 @@ from occams.form.serialize import camelize
 from occams.form.serialize import symbolize
 from occams.form.browser.preview import DisabledMixin
 from occams.datastore import model
-
+from sqlalchemy.orm import object_session
 
 # Helper Methods
 def applyChoiceChanges(field, choiceData):
     # Need a helper to add choice changes
+    subSession = object_session(field)
     if field.choices:
         def findChoice(value, itemlist):
             for i, item in enumerate(itemlist):
@@ -56,18 +57,21 @@ def applyChoiceChanges(field, choiceData):
                     return itemlist.pop(i)
             return None
 
-        subSession = sqlalchemysession.object_session(field)
         for choice in field.choices:
             choice.order = choice.order+100
-        subSession.flush()
 
+        subSession.flush()
+        removable = []
         for choice in field.choices:
             newValue = findChoice(choice.value, choiceData)
             if newValue is not None:
                 for key, value in newValue.items():
                     setattr(choice, key, value)
             else:
-                field.choices.remove(choice)
+                removable.append(choice)
+        for choice in removable:
+            field.choices.remove(choice)
+        subSession.flush()
 
     for new_choice in choiceData:
         newChoice = model.Choice(
@@ -77,10 +81,11 @@ def applyChoiceChanges(field, choiceData):
             value = unicode(new_choice['value'])
             )
         field.choices.append(newChoice)
+    subSession.flush()
     return field
 
 def moveField(form, field, after=None):
-    subSession = sqlalchemysession.object_session(form)
+    subSession = object_session(form)
     if after is None:
         field.order = 100
     else:
@@ -143,6 +148,9 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
         repository = closest(self.context, IRepository)
         self.request.response.redirect(repository.absolute_url())
 
+    @z3c.form.button.buttonAndHandler(_(u'Preview'), name='view')
+    def handleView(self, action):
+        self.request.response.redirect(os.path.join(self.context.absolute_url(), '@@view'))
 
     def can_discard(self):
         return not self.context.item.publish_date and \
