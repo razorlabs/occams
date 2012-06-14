@@ -8,7 +8,7 @@ import zope.interface
 import z3c.form.validator
 from z3c.saconfig.interfaces import IScopedSession
 
-from avrc.data.store import model
+from occams.datastore import model
 from occams.form import MessageFactory as _
 from occams.form.interfaces import IEditableState
 

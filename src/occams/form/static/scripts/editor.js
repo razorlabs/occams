@@ -39,7 +39,6 @@
         item = $(item).closest('.of-item');
         var pathNodes = [];
         var baseUrl = $('base').attr('href') || window.location.href;
-
         if (item.length) {
             pathNodes.unshift($(item).attr('dataset').name);
             $(item).parents('.of-item').each(function(){
@@ -57,7 +56,6 @@
      *                      Possible values include (all optional):
      *                          - name
      *                          - title
-     *                          - version
      *                          - description
      *                          - view (html content of the new view)
      */
@@ -77,14 +75,12 @@
         // Set the visible labels
         item.find('.of-name:first').text(properties.name);
         item.find('.of-title:first').text(properties.title);
-        item.find('.of-version:first').text(properties.version);
         item.find('.of-description:first').text(properties.description);
 
         // Set the new data values
         $(item.attr('dataset')).attr({
             name: properties.name,
             type: properties.type,
-            version: properties.version,
         });
 
         // Update the urls
@@ -94,7 +90,8 @@
 
         // Re-render the widget if possible
         if (properties.view) {
-            previewer.empty().append($(properties.view).find('#form .field'));
+            var widgetView = $(properties.view).find('#form .field')
+            previewer.empty().append(widgetView);
         }
     };
 
@@ -249,7 +246,7 @@
 
             if (ui.sender) {
                 // Need to get it's original location for the view to work
-                url = getItemUrl(ui.sender) + $(ui.item).attr('dataset').name;
+                url = getItemUrl(ui.sender) +'/'+ $(ui.item).attr('dataset').name;
             } else {
                 url = getItemUrl(ui.item);
             }

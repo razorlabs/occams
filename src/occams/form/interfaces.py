@@ -5,7 +5,7 @@ from zope.schema.vocabulary import SimpleTerm
 from zope.schema.vocabulary import SimpleVocabulary
 import plone.directives.form
 
-from avrc.data.store.interfaces import IDataBaseItem
+from occams.datastore.interfaces import IDataBaseItem
 from occams.form import MessageFactory as _
 
 
@@ -24,6 +24,10 @@ typesVocabulary = SimpleVocabulary(terms=[
         SimpleTerm(value=zope.schema.Object, token='object', title=_(u'Field Set')),
     ])
 
+class IDataStore(zope.interface.Interface):
+    """
+    Class to get rid of
+    """
 
 class IOccamsFormComponent(zope.interface.Interface):
     """
@@ -49,7 +53,7 @@ class IEditableState(IOccamsFormComponent):
 
     description = zope.schema.Text(
         title=_(u'Description'),
-        description=_(u'A short description about what the state is for.'),
+        description=_(u'A short description about the state.'),
         required=False,
         )
 
@@ -75,7 +79,13 @@ class IEditableForm(IOccamsFormComponent):
 
     description = zope.schema.Text(
         title=_(u'Description'),
-        description=_(u'A short description about what the form is for.'),
+        description=_(u'A short description about the form\'s purpose.'),
+        required=False,
+        )
+
+    publish_date = zope.schema.Date(
+        title=_(u'Publish Date'),
+        description=_(u'The publication date of the form. Only applies when publishing. Leave blank to publish today.'),
         required=False,
         )
 
@@ -102,7 +112,7 @@ class IEditableField(IOccamsFormComponent):
 
     description = zope.schema.Text(
         title=_(u'Description'),
-        description=_(u'A short description about what this field is for.'),
+        description=_(u'A short description about the field\'s purpose.'),
         required=False,
         )
 
@@ -251,6 +261,12 @@ class IFormSummary(IOccamsFormComponent):
     Form summary for listing purposes.
     """
 
+    id = zope.schema.Int(
+        title=_(u'Id'),
+        description=_(u'Machine id'),
+        readonly=True
+        )
+
     name = zope.schema.ASCIILine(
         title=_(u'Name'),
         description=_(u'Machine name'),
@@ -263,7 +279,19 @@ class IFormSummary(IOccamsFormComponent):
         readonly=True,
         )
 
-    fieldCount = zope.schema.Int(
+    publish_date = zope.schema.Date(
+        title=_(u'Publish Date'),
+        description=_(u'The date the form was published'),
+        readonly=True,
+        )
+
+    state = zope.schema.TextLine(
+        title=_(u'Form State'),
+        description=_(u'The State of this form'),
+        readonly=True,
+        )
+
+    field_count = zope.schema.Int(
         title=_(u'Fields'),
         description=_(
             u'Number of fields in the form, not including subform fields.'
@@ -271,27 +299,27 @@ class IFormSummary(IOccamsFormComponent):
         readonly=True,
         )
 
-    revisionCount = zope.schema.Int(
-        title=_(u'Revisions'),
-        description=_(u'Number of times the form has been published'),
+    create_user = zope.schema.TextLine(
+        title=_(u'Created By'),
+        description=_(u'Person who created the form'),
         readonly=True,
         )
 
-    changeCount = zope.schema.Int(
-        title=_(u'Changes'),
-        description=_(u'Number of times the form has been modified'),
-        readonly=True,
-        )
-
-    currentVersion = zope.schema.Date(
-        title=_(u'Current'),
-        description=_(u'Current revision'),
-        readonly=True,
-        )
-
-    createdOn = zope.schema.Date(
-        title=_(u'Created'),
+    create_date = zope.schema.Date(
+        title=_(u'Create Date'),
         description=_(u'The date the form was created'),
+        readonly=True,
+        )
+
+    is_current = zope.schema.Bool(
+        title=_(u'Current'),
+        description=_(u'This entry the latest version'),
+        readonly=True,
+        )
+
+    is_editable = zope.schema.Bool(
+        title=_(u'Editable'),
+        description=_(u'This entry editable by the current user'),
         readonly=True,
         )
 
@@ -337,7 +365,7 @@ class IRepository(plone.directives.form.Schema):
     """
     Form repository entry point.
     Objects of this type offer services for managing forms as well as
-    form EAV tables from ``avrc.data.store.DataStore``
+    form EAV tables from ``occams.datastore.DataStore``
     """
 
     plone.directives.form.widget(session='z3c.form.browser.radio.RadioFieldWidget')
@@ -353,3 +381,11 @@ class IRepository(plone.directives.form.Schema):
         required=True,
         default=None,
         )
+
+
+
+class ISessionUserFactory(zope.interface.Interface):
+    """
+    Set up a session that is friendly to our datastore
+    """
+

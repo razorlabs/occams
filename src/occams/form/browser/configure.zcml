@@ -38,7 +38,7 @@
   <browser:page
       for="occams.form.interfaces.ISchemaContext"
       name="view"
-      class=".editor.FormPreviewForm"
+      class=".preview.FormPreviewForm"
       permission="occams.form.ViewForm"
       />
 
