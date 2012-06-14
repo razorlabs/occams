@@ -3,7 +3,7 @@ from setuptools import setup
 
 
 # Working release version
-version = '1.0b1'
+version = '1.0.0b1'
 
 
 setup(
