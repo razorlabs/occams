@@ -88,15 +88,15 @@ def applyChoiceChanges(field, choiceData):
 def moveField(form, field, after=None):
     subSession = object_session(form)
     if after is None:
-        field.order = 0
+        field.order = 100
     else:
-        field.order = form[after].order + 1
+        field.order = form[after].order + 101
     # Move everything that follows
     for formfield in sorted(form.values(), key=lambda i: i.order):
         if formfield != field:
             formfield.order += 100
-        if formfield != field and formfield.order >= field.order:
-            formfield.order += 1
+            if  formfield.order >= field.order:
+                formfield.order += 1
     subSession.flush()
     ## ok, we need to reorder everything
     for order, formfield in enumerate(sorted(form.values(), key=lambda i: i.order)):
