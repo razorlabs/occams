@@ -10,6 +10,7 @@ from Products.statusmessages.interfaces import IStatusMessage
 from zope.app.pagetemplate.viewpagetemplatefile import ViewPageTemplateFile
 from zope.publisher.browser import BrowserView
 import zope.interface
+import zope.event
 import zope.schema
 from zExceptions import NotFound
 import z3c.form.form
@@ -87,18 +88,20 @@ def applyChoiceChanges(field, choiceData):
 def moveField(form, field, after=None):
     subSession = object_session(form)
     if after is None:
-        field.order = 100
+        field.order = 0
     else:
-        field.order = form[after].order + 101
+        field.order = form[after].order + 1
     # Move everything that follows
     for formfield in sorted(form.values(), key=lambda i: i.order):
-        formfield.order += 100
+        if formfield != field:
+            formfield.order += 100
         if formfield != field and formfield.order >= field.order:
             formfield.order += 1
     subSession.flush()
     ## ok, we need to reorder everything
     for order, formfield in enumerate(sorted(form.values(), key=lambda i: i.order)):
         formfield.order = order
+    subSession.flush()
     return form
 
 
@@ -617,8 +620,14 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
                 dict(title=u'False', value=False),
                 ]
 
-    def create(self, data):
+    def createAndAdd(self, data):
         cleanupChoices(data)
+
+        if IAttributeContext.providedBy(self.context):
+            form = self.context.item.object_schema
+        else:
+            form = self.context.item
+
         newSchema = None
         if self.getType() == 'object':
             ## Need to create a new schema and a new Attribute
@@ -628,7 +637,6 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
                     description = data['description'],
                     is_inline = True
                 )
-
         newAttribute = model.Attribute(
                 name=str(data['name']).lower(),
                 title=data['title'],
@@ -636,28 +644,27 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
                 is_collection= data.get('is_collection', False),
                 is_required=data.get('is_collection', False),
                 type = self.getType(),
-                object_schema = newSchema
+                object_schema = newSchema,
+                order = len(form.keys()) 
                 )
+
+        form[newAttribute.name] = newAttribute
+        Session = named_scoped_session(self.context.session)
+
+        Session.add(form)
+        Session.flush()
+        zope.event.notify(zope.lifecycleevent.ObjectCreatedEvent(newAttribute))
+
+        # The after property is no longer needed
+        after = data['after']
+        moveField(form, newAttribute, after)        
         if data.has_key('choices') and data['choices']:
             applyChoiceChanges(newAttribute, data['choices'])
 
-        newAttribute._after = data['after']
-        return newAttribute
-
-    def add(self, item):
-        if IAttributeContext.providedBy(self.context):
-            form = self.context.item.object_schema
-        else:
-            form = self.context.item
-        # The after property is no longer needed
-        after = item._after
-        del item._after
-        form[item.name] = item
-        moveField(form, item, after)
-        Session = named_scoped_session(self.context.session)
-        Session.add(form)
         Session.flush()
-        self._newItem = item
+
+        self._newItem = newAttribute
+        return newAttribute
 
     def nextURL(self):
         url = self.context.absolute_url()
