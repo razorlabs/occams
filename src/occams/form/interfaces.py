@@ -6,6 +6,7 @@ from zope.schema.vocabulary import SimpleVocabulary
 import plone.directives.form
 
 from occams.datastore.interfaces import IDataBaseItem
+from occams.datastore.interfaces import IEntity
 from occams.form import MessageFactory as _
 
 
@@ -360,7 +361,6 @@ class IFormSummaryGenerator(zope.interface.Interface):
         Returns a full listing of ``IFormSummary`` objects in the context
         """
 
-
 class IRepository(plone.directives.form.Schema):
     """
     Form repository entry point.
@@ -383,9 +383,42 @@ class IRepository(plone.directives.form.Schema):
         )
 
 
-
 class ISessionUserFactory(zope.interface.Interface):
     """
     Set up a session that is friendly to our datastore
     """
 
+class IDataEntryForm(zope.interface.Interface):
+    """ A marker class for forms associated with this product"""
+
+class IDataBaseEntryContext(zope.interface.Interface):
+    """
+    A wrapper context for DataStore entries so they are traversable.
+    This allows a wrapped entry to comply with the Acquisition machinery
+    in Plone.
+    """
+
+    title = zope.schema.TextLine(
+        title=u"Title",
+        description=u"Short title for the form",
+        required=False
+        )
+
+    item = zope.schema.Object(
+        title=_(u'The schema this context wraps'),
+        schema=IEntity,
+        readonly=True
+        )
+
+class IDataBaseAddContext(zope.interface.Interface):
+    """
+    A wrapper context for DataStore entries so they are traversable.
+    This allows a wrapped entry to comply with the Acquisition machinery
+    in Plone.
+    """
+
+    title = zope.schema.TextLine(
+        title=u"Title",
+        description=u"Short title for the form",
+        required=False
+        )
