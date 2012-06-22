@@ -4,32 +4,28 @@ Placeholder for future data entry views.
 from datetime import date, datetime
 from Products.statusmessages.interfaces import IStatusMessage
 import plone.z3cform.layout
-from z3c.form.interfaces import DISPLAY_MODE, INPUT_MODE, IFieldWidget
+from z3c.form.interfaces import DISPLAY_MODE, INPUT_MODE
 from z3c.saconfig import named_scoped_session
-from zope.security import checkPermission
 import z3c.form.group
 import z3c.form.button
 import z3c.form.field
 import z3c.form.browser
-import zope.schema
 from zope.app.pagetemplate.viewpagetemplatefile import ViewPageTemplateFile
-from z3c.form.widget import StaticWidgetAttribute
 from zope.interface import implements
-from five import grok
-from zope.publisher.interfaces.http import IHTTPRequest
 from zope.schema.interfaces import IField
 from zope.event import notify
 
 from zope.lifecycleevent import modified
 
 from occams.form.traversal import closest
-from plone.memoize import view, instance
+from plone.memoize import view
 from sqlalchemy.orm import object_session
 from sqlalchemy.orm.exc import NoResultFound
 
 from occams.form import MessageFactory as _
 from occams.form import interfaces
 from occams.datastore import model
+from occams.form.entry import EntityMovedEvent
 def DynamicChoiceWidget(field, request):
     """
     An Adapter that returns a Radio Widget if the number of choices is less
@@ -49,7 +45,10 @@ class DataEntryGroup(z3c.form.group.Group):
     implements(interfaces.IDataEntryForm)
     data = None
     def getContent(self):
-       return self.context.data.get(self.__name__, {})
+        data = self.context.get('data', None)
+        if data:
+            return data.get(self.__name__, {})
+        return {}
 
 class DataForm(object):
     """
@@ -258,8 +257,6 @@ class DataAddForm(z3c.form.group.GroupForm, DataForm, z3c.form.form.AddForm):
 DataAddFormView = plone.z3cform.layout.wrap_form(DataAddForm)
 
 
-
-
 class DataEntryAddForm(z3c.form.group.GroupForm, z3c.form.form.AddForm):
     """
     Form for adding data when creating Plone content
@@ -364,19 +361,6 @@ class DataEntryAddForm(z3c.form.group.GroupForm, z3c.form.form.AddForm):
 
         return entries
 
-
-    def createAndAdd(self, data):
-        """
-        Add extra functionality to the base class's ``createAndAdd``.
-        Note that the extending class must still implement the expected
-        ``create``, ``add``, and ``nextURL`` methods expected by ``z3c.form``
-        """
-
-        entries = self.extractEntries(data)
-        for formName, connection in self.entryForms:
-            self.addEntries(formName, entries[formName])
-        return None
-
     def addEntry(self, formschema, data, newEntity=None):
         Session = object_session(formschema)
         collect_date = data.pop('collect_date', date.today())
@@ -405,19 +389,19 @@ class DataEntryAddForm(z3c.form.group.GroupForm, z3c.form.form.AddForm):
         Session.flush()
         return newEntity
 
-    def addEntries(self, item, formName, formdata):
+
+    def createAndAdd(self, data):
         """
-        Inspects the data and attempts to add any associated forms to the
-        new content
+        Add extra functionality to the base class's ``createAndAdd``.
+        Note that the extending class must still implement the expected
+        ``create``, ``add``, and ``nextURL`` methods expected by ``z3c.form``
         """
-        #for formName, connection in self.entryForms:
-        Session = object_session(item)
-        schema = self.getSchema(formName, Session)
-        if schema:
-            prevEntry = None
-            newEntity = self.addEntry(schema, formdata, prevEntry)
-            Session.flush()
-            notify(EntityMovedEvent(item, newEntity))
+
+        entries = self.extractEntries(data)
+        for formName, connection in self.entryForms:
+            self.addEntry(formName, entries[formName])
+        return None
+
 
     @z3c.form.button.buttonAndHandler(_('Start Over'), name='restart')
     def restart(self, action):
