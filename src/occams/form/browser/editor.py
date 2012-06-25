@@ -191,6 +191,9 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
             if data['description']:
                 self.context.item.description = unicode(data['description'])
             self.context.item.state = 'review'
+            for attribute in self.context.item.itervalues():
+                if attribute.type == u'object':
+                    attribute.object_schema.state = u'review'
             Session.flush()
             repository = closest(self.context, IRepository)
             self.request.response.redirect(repository.absolute_url())
