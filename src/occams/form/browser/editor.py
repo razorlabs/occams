@@ -191,6 +191,9 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
             if data['description']:
                 self.context.item.description = unicode(data['description'])
             self.context.item.state = 'review'
+            for attribute in self.context.item.itervalues():
+                if attribute.type == u'object':
+                    attribute.object_schema.state = u'review'
             Session.flush()
             repository = closest(self.context, IRepository)
             self.request.response.redirect(repository.absolute_url())
@@ -225,8 +228,12 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
                 self.context.item.title = unicode(data['title'])
                 if data['description']:
                     self.context.item.description = unicode(data['description'])
-                self.context.item.state = 'published'
+                self.context.item.state = u'published'
                 self.context.item.publish_date = publish_date
+                for attribute in self.context.item.itervalues():
+                    if attribute.type == u'object':
+                        attribute.object_schema.state = u'published'
+                        attribute.object_schema.publish_date = publish_date
                 Session.flush()
                 repository = closest(self.context, IRepository)
                 self.request.response.redirect(repository.absolute_url())
@@ -643,7 +650,7 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
         # create a new sub-schema if the new field is an object
         if newAttribute.type == 'object':
             newAttribute.object_schema = model.Schema(
-                name=self.context.__name__ + camelize(data['title']),
+                name=form.name + camelize(data['title']),
                 title=data['title'],
                 description=data['description'],
                 is_inline=True
