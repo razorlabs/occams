@@ -8,10 +8,11 @@
         <li tal:repeat="type_ view/types">
           <tal:block tal:define="
               addUrl    string:${context/absolute_url}/@@add-${type_/token};
-              name      type_/token ;
+              name      type_/token;
               title     type_/title;
+              typeClass string:of-${name};
               ">
-            <a href="" tal:attributes="href addUrl; class name; data-type name" tal:content="title"></a>
+            <a href="" tal:attributes="href addUrl; class typeClass; data-type name" tal:content="title"></a>
           </tal:block>
         </li>
       </ul>
@@ -28,12 +29,13 @@
               title         string:;
               description   string:;
               type_         string:;
+              typeClass     string:;
               onlyView      python: False;
               itemClass     string:;
            ">
         <div  class=""
           tal:attributes="
-              class string:of-item ${itemClass} ${type_};
+              class string:of-item ${itemClass} ${typeClass};
               data-name name;
               data-type type_;
               ">
@@ -76,12 +78,13 @@
                     title         fieldset/label|nothing;
                     description   fieldset/description|nothing;
                     type_         python: fieldset.type() or '';
+                    typeClass     python: type_ and 'of-'+type_ or '';
                     onlyView      repeat/fieldset/start;
                     itemClass     string:of-fieldset;
                   ">
                 <div  class=""
                   tal:attributes="
-                      class string:of-item ${itemClass} ${type_};
+                      class string:of-item ${itemClass} ${typeClass};
                       data-name name;
                       data-type type_;
                       ">
@@ -111,12 +114,13 @@
                               title         string:;
                               description   string:;
                               type_         python: fieldset.type(widget.field);
+                              typeClass     string:of-${type_};
                               onlyView      python: False;
                               itemClass     string:of-field;
                             ">
                           <div  class=""
                             tal:attributes="
-                                class string:of-item ${itemClass} ${type_};
+                                class string:of-item ${itemClass} ${typeClass};
                                 data-name name;
                                 data-type type_;
                                 ">
