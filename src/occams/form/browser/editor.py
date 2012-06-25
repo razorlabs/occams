@@ -643,7 +643,7 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
         # create a new sub-schema if the new field is an object
         if newAttribute.type == 'object':
             newAttribute.object_schema = model.Schema(
-                name=self.context.__name__ + camelize(data['title']),
+                name=form.name + camelize(data['title']),
                 title=data['title'],
                 description=data['description'],
                 is_inline=True
