@@ -233,7 +233,7 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
                 for attribute in self.context.item.itervalues():
                     if attribute.type == u'object':
                         attribute.object_schema.state = u'published'
-                        attribute.object_schema.publishe_date = publish_date
+                        attribute.object_schema.publish_date = publish_date
                 Session.flush()
                 repository = closest(self.context, IRepository)
                 self.request.response.redirect(repository.absolute_url())
