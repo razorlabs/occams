@@ -4,14 +4,13 @@ Data entry functionality
 from five import grok
 from zope.interface import implements
 import zope.component
-from avrc.aeh import interfaces
-from avrc.aeh import model
-from occams.form import traversal
-from zope.interface.common.mapping import IFullMapping
+from occams.form import interfaces
+# from occams.form import traversal
+# from zope.interface.common.mapping import IFullMapping
 from sqlalchemy.orm import object_session
-from occams.form.traversal import closest
-from sqlalchemy.orm.exc import NoResultFound
-from plone.memoize import ram
+# from occams.form.traversal import closest
+# from sqlalchemy.orm.exc import NoResultFound
+# from plone.memoize import ram
 import zope.interface
 def _entity_context_cache_key(method, self):
     return self.item.id
@@ -166,7 +165,7 @@ def _entity_data_cache_key(method, self):
 #         return {}
 
 class EntityMovedEvent(zope.component.interfaces.ObjectEvent):
-    """Event to notify that employees have been saved.
+    """Event to notify that entities have been saved.
     """
     implements(interfaces.IEntityMovedEvent)
 

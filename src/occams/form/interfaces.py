@@ -422,3 +422,13 @@ class IDataBaseAddContext(zope.interface.Interface):
         description=u"Short title for the form",
         required=False
         )
+
+# ------------------------------------------------------------------------------
+# Custom Events
+# ------------------------------------------------------------------------------
+
+class IEntityMovedEvent(zope.component.interfaces.IObjectEvent):
+    """
+    """
+    context = zope.interface.Attribute("The IClinicalMarker item")
+    object = zope.interface.Attribute("The Entity")
