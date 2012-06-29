@@ -81,6 +81,8 @@ lib
 parts
 sdist
 var
+# Ignore custom development configurations
+develop.cfg
 
 ##### Translations
 *.mo

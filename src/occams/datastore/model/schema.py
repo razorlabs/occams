@@ -251,6 +251,7 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
 
     def __deepcopy__(self, memo):
         duplicate = copy(self)
+        duplicate.categories = set([c for c in self.categories])
         duplicate.attributes = dict([(n, deepcopy(a)) for n, a in self.attributes.iteritems()])
         return duplicate
 

@@ -425,6 +425,27 @@ class SchemaCopyTestCase(unittest.TestCase):
         session.flush()
         self.assertNotEqual(schema['foo'].checksum, schemaCopy['foo'].checksum)
 
+    def testWithCategories(self):
+        session = self.layer['session']
+        schema = model.Schema(name=u'Categorized', title=u'Categorized Schema')
+        session.add(schema)
+        session.flush()
+
+        # assert with no categories assigned yet
+        schemaCopy = deepcopy(schema)
+        self.assertEqual(0, len(schema.categories))
+        self.assertEqual(0, len(schemaCopy.categories))
+
+        # add one category
+        stinky = model.Category(name=u'Stinky', title=u'Stinky')
+        schema.categories.add(stinky)
+        session.flush()
+
+        # make sure the category is copied over
+        schemaCopy = deepcopy(schema)
+        self.assertItemsEqual([stinky.id], [c.id for c in schema.categories])
+        self.assertItemsEqual([stinky.id], [c.id for c in schemaCopy.categories])
+
     def testWithSubObject(self):
         session = self.layer['session']
         schema = model.Schema(
