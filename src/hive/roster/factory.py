@@ -11,21 +11,20 @@ def isValidOurNumber(our_number):
     """
     Helper method to verify valid OUR numbers
     OUR Number Format:
-        * First four digits may not have vowels
+        * No vowels
         * No ambiguous characters (1,l,0,o)
         * Two groups of three digits separated by a hyphen
     """
     our_format = re.compile(r"""
         [2-9bcdfghjkmnpqrstvwxz]{3}         # No vowels or ambiguous characters
         -                                   # Separator
-        [2-9bcdfghjkmnpqrstvwxz]            # No vowels or ambiguous characters
-        [2-9abcdefghijkmnpqrstuvwxyz]{2}    # No ambiguous characters
-        """, 
+        [2-9bcdfghjkmnpqrstvwxz]{3}         # No vowels or ambiguous characters
+        """,
         re.IGNORECASE | re.VERBOSE
         )
-    
+
     match = our_format.match(our_number)
-    result = match is not None 
+    result = match is not None
     return result
 
 
@@ -33,7 +32,7 @@ class Registry(object):
     implements(IRegistry)
 
     def create(self):
-        # Hard-code for now, ideally in the future it would be nice to get the 
+        # Hard-code for now, ideally in the future it would be nice to get the
         # name from the actual site. Perhaps this can be implemented in the
         # future as a behavior.
         site = Session.query(model.Site).filter_by(title=u'AEH').first()
@@ -41,7 +40,7 @@ class Registry(object):
         while True:
             identifier = model.Identifier(origin=site)
             Session.add(identifier)
-            
+
             # Flush so the identifier is assigned a primary key.
             Session.flush()
 
