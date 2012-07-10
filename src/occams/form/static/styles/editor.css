@@ -98,7 +98,7 @@
     padding: 0.3em;
 }
 
-#of-new a.object {
+#of-new a.of-object {
     background-color: #D5D5B6;
 }
 
@@ -108,7 +108,7 @@
     cursor: move;
 }
 
-#of-new a.object:hover {
+#of-new a.of-object:hover {
     background-color: #A6A64A;
 }
 
@@ -209,43 +209,43 @@
 
 /* FieldSets will be rendered first, so declare object styles first so the
    other type style declarations can override it */
-.object .of-type,
-#of-new a.object {
+.of-object .of-type,
+#of-new a.of-object {
     background-image: url(++resource++occams.form/images/ui-group-box.png);
 }
 
-.boolean .of-type,
-#of-new a.boolean {
+.of-boolean .of-type,
+#of-new a.of-boolean {
     background-image: url(++resource++occams.form/images/ui-radio-buttons.png);
 }
 
-.date .of-type,
-#of-new a.date {
+.of-date .of-type,
+#of-new a.of-date {
     background-image: url(++resource++occams.form/images/calendar.png);
 }
 
-.datetime .of-type,
-#of-new a.datetime {
+.of-datetime .of-type,
+#of-new a.of-datetime {
     background-image: url(++resource++occams.form/images/clock.png);
 }
 
-.decimal .of-type,
-#of-new a.decimal {
+.of-decimal .of-type,
+#of-new a.of-decimal {
     background-image: url(++resource++occams.form/images/edit-decimal.png);
 }
 
-.integer .of-type,
-#of-new a.integer {
+.of-integer .of-type,
+#of-new a.of-integer {
     background-image: url(++resource++occams.form/images/ui-text-field-format.png);
 }
 
-.string .of-type,
-#of-new a.string {
+.of-string .of-type,
+#of-new a.of-string {
     background-image: url(++resource++occams.form/images/ui-text-field.png);
 }
 
-.text .of-type,
-#of-new a.text {
+.of-text .of-type,
+#of-new a.of-text {
     background-image: url(++resource++occams.form/images/ui-text-area.png);
 }
 
