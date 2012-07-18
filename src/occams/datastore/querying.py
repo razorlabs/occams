@@ -30,7 +30,7 @@ def schemaToSubquery(session, name, split=BY_NAME):
 
     This query can then be further queried to fulfill bureaucratic requirements.
 
-    Suggested usage of subquery is via "common table expressions" (i.e. WITH staement...)
+    Suggested usage of subquery is via "common table expressions" (i.e. WITH statement...)
 
     Arguments
         ``session``
@@ -39,21 +39,6 @@ def schemaToSubquery(session, name, split=BY_NAME):
             The name of the schema family to generate the subquery for
         ``split``
             (Optional) the splitting algorithm to use. Default is by name.
-        ``merge``
-            (Optional) a reverse lookup dictionary to how columns should be combined
-            Essentially, a dictionary who's key / value pairs are interpreted
-            as: "column_name" / "column_to_combine_with"
-        ``naming``
-            (Optional) The naming scheme to use, default is ``defaultColumnNaming``
-            Client applications can override this by passing a method
-            callback which will be passed the following parameters:
-                * session: session being used
-                * name: the schema that the subquery is being generated for
-                * split: splitting algorithm used
-                * path: the key in the column plan
-                * attributes: the attributes for the column
-            Note that merge is not passed as a parameter as this method
-            takes care of the final column merging.
 
     Returns
         A tuple containing the plan used, and the final subquery
@@ -61,7 +46,6 @@ def schemaToSubquery(session, name, split=BY_NAME):
         Developer note: the results that will be returned by the subquery are
         named tuples of each result using the names of the naming schema as the
         property names.
-
     """
 
     # Collapse all the related attributes into an ordered tree
