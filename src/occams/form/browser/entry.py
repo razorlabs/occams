@@ -45,10 +45,13 @@ class DataEntryGroup(z3c.form.group.Group):
     implements(interfaces.IDataEntryForm)
     data = None
     def getContent(self):
-        data = self.context.get('data', None)
+        data = self.context.get('data', getattr(self.context, 'data', None))
         if data:
-            return data.get(self.__name__, {})
-        return {}
+            for name in self.__name__.split('.'):
+                data = data.get(name, {})
+        else:
+            data = {}
+        return data
 
 class DataForm(object):
     """
@@ -106,7 +109,6 @@ class DataForm(object):
                 fields += z3c.form.field.Fields(zField, prefix=prefix)
             groups.extend(self.getPostGroups())
         return(fields, groups)
-
 
 
 class DataEntryForm(z3c.form.group.GroupForm, DataForm, z3c.form.form.Form):
@@ -255,7 +257,6 @@ class DataAddForm(z3c.form.group.GroupForm, DataForm, z3c.form.form.AddForm):
         return self.context.getParentNode().absolute_url()
 
 DataAddFormView = plone.z3cform.layout.wrap_form(DataAddForm)
-
 
 class DataEntryAddForm(z3c.form.group.GroupForm, z3c.form.form.AddForm):
     """
@@ -409,3 +410,114 @@ class DataEntryAddForm(z3c.form.group.GroupForm, z3c.form.form.AddForm):
 
 
 
+class DataEntryEditForm(z3c.form.group.GroupForm, z3c.form.form.EditForm):
+    """
+    Form for adding data when creating Plone content
+    """
+    implements(interfaces.IDataEntryForm)
+    z3c.form.form.extends(z3c.form.form.EditForm)
+
+    label = _(u'Enter Forms')
+
+    enable_form_tabbing = False
+    entryForms = list()
+
+    def getPreFields(self):
+        """
+        Fields that should appear before the EAV Fields
+        """
+        return z3c.form.field.Fields()
+
+    def getPreGroups(self):
+        """
+        Group Fields that should appear before the EAV Fields
+        """
+        return []
+
+    def getPostGroups(self):
+        """
+        Group Fields that should appear after the EAV Fields
+        """
+        return []
+
+    def getContent(self):
+        return dict()
+
+    def getSchema(self, formName, Session):
+        thisdate = getattr(self.context, 'visit_date', date.today())
+        formQ = (
+            Session.query(model.Schema)
+            .filter(model.Schema.name == formName)
+            .filter(model.Schema.state == 'published')
+            .filter(model.Schema.publish_date < thisdate)
+            .order_by(model.Schema.publish_date.desc())
+            .limit(1)
+            )
+        try:
+            form = formQ.one()
+        except NoResultFound:
+            form = None
+        return form
+
+    def buildGroup(self, schema):
+        fields = z3c.form.field.Fields()
+        groups = []
+        for name, field in sorted(schema.items(), key=lambda f: f[1].order):
+            prefix = str('%s.%s') % (str(schema.name), str(name))
+            if field.type == 'object':
+                fieldset = DataEntryGroup(self.context, self.request, self)
+                fieldset.__name__ = prefix
+                fieldset.label = field.title
+                fieldset.description = field.description
+                for name, field in sorted(field.object_schema.items(), key=lambda f: f[1].order):
+                    fieldset.fields += z3c.form.field.Fields(IField(field), prefix=prefix)
+                groups.append(fieldset)
+            else:
+                zField = z3c.form.field.Field(IField(field), name=prefix)
+                fields += z3c.form.field.Fields(zField, prefix=prefix)
+        return (fields, groups)
+
+    @view.memoize
+    def getForms(self):
+        fields = self.getPreFields()
+        groups = self.getPreGroups()
+        # Add the data entry forms
+        for formName, connection in self.entryForms:
+            Session = named_scoped_session(connection)
+            schema = self.getSchema(formName, Session)
+            if schema:
+                subfields, subgroups = self.buildGroup(schema)
+                fields +=subfields
+                groups.extend(subgroups)
+        groups.extend(self.getPostGroups())
+        return (fields, groups)
+
+    def update(self):
+        if not getattr(self, '_fields', None) or not getattr(self, '_groups', None):
+            (self._fields, self._groups) = self.getForms()
+        self.fields = self._fields
+        self.groups = self._groups
+        super(DataEntryEditForm, self).update()
+
+    def extractEntries(self, data):
+        # We're going to extract the incoming data to their appropriate
+        # form entry data (properly nested, of course)
+        entries = dict()
+
+        # First do the fields
+        for field in self.fields.values():
+            (formName, dot, fieldName) = field.__name__.partition('.')
+            if fieldName and field.__name__ in data:
+                entries.setdefault(formName, dict())
+                entries[formName].setdefault(fieldName, None)
+                z3c.form.form.applyChanges(self, entries[formName], {field.__name__: data[field.__name__]})
+
+        # Next extract the the groups
+        for group in self.groups:
+            (formName, dot, fieldName) = group.__name__.partition('.')
+            if fieldName:
+                entries.setdefault(formName, dict())
+                entries[formName].setdefault(fieldName, dict())
+                z3c.form.form.applyChanges(group, entries[formName][fieldName], data)
+
+        return entries
