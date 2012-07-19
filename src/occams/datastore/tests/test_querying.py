@@ -7,6 +7,8 @@ import decimal
 import copy
 import unittest2 as unittest
 
+from sqlalchemy import orm
+
 from occams.datastore import model as datastore
 from occams.datastore import querying
 from occams.datastore import testing
@@ -18,9 +20,45 @@ t3 = datetime.date(2011, 8, 1)
 t4 = datetime.date(2012, 5, 1)
 
 
-class ColumnPlanTestCase(unittest.TestCase):
+def createEntity(schema, name, collect_date, values={}):
     u"""
-    Verifies column header
+    Helper method to create an entities
+    """
+    session = orm.object_session(schema)
+    entity = datastore.Entity(
+        schema=schema,
+        name=name,
+        title=u'',
+        collect_date=collect_date
+        )
+    session.add(entity)
+    for key, value in values.iteritems():
+        entity[key] = value
+    session.flush()
+    return entity
+
+
+def createSchema(session, name, publish_date, attributes={}):
+    u"""
+    Helper method to create schemata
+    """
+    schema = datastore.Schema(
+        name=name,
+        title=u'',
+        state=u'published',
+        publish_date=publish_date
+        )
+    for attribute_name, attribute in attributes.iteritems():
+        schema[attribute_name] = attribute
+    session.add(schema)
+    session.flush()
+    return schema
+
+
+
+class HeaderTestCase(unittest.TestCase):
+    u"""
+    Ensures that column headers can be properly generated.
     """
 
     layer = testing.OCCAMS_DATASTORE_FIXTURE
@@ -29,33 +67,40 @@ class ColumnPlanTestCase(unittest.TestCase):
         session = self.layer[u'session']
         session.add(datastore.Schema(name=u'A', title=u'', state=u'published'))
         session.flush()
-        plan = querying.getColumnPlan(session, u'A')
+
+        # by NAME
+        plan = querying.getHeaderByName(session, u'A')
+        self.assertEqual(0, len(plan))
+
+        # by CHECKSUM
+        plan = querying.getHeaderByChecksum(session, u'A')
+        self.assertEqual(0, len(plan))
+
+        # by ID
+        plan = querying.getHeaderById(session, u'A')
         self.assertEqual(0, len(plan))
 
     def testKeysFromSingleForm(self):
         session = self.layer[u'session']
-        schema = datastore.Schema(name=u'A', title=u'', state=u'published',
-            attributes=dict(
-                a=datastore.Attribute(name='a', title=u'', type=u'string', order=0),
-                )
-            )
+        schema = datastore.Schema(name=u'A', title=u'', state=u'published')
+        schema[u'a'] = datastore.Attribute(title=u'', type=u'string', order=0)
         session.add(schema)
         session.flush()
 
-        # By Name
-        plan = querying.getColumnPlan(session, u'A', split=querying.BY_NAME)
+        # by NAME
+        plan = querying.getHeaderByName(session, u'A')
         expected = [(u'a',)]
         self.assertListEqual(expected, plan.keys())
         self.assertEqual(1, len(plan[expected[0]]))
 
-        # By Checksum
-        plan = querying.getColumnPlan(session, u'A', split=querying.BY_CHECKSUM)
+        # by CHECKSUM
+        plan = querying.getHeaderByChecksum(session, u'A')
         expected = [(u'a', schema[u'a'].checksum)]
         self.assertListEqual(expected, plan.keys())
         self.assertEqual(1, len(plan[expected[0]]))
 
-        # By id
-        plan = querying.getColumnPlan(session, u'A', split=querying.BY_ID)
+        # by ID
+        plan = querying.getHeaderById(session, u'A')
         expected = [(u'a', schema[u'a'].id)]
         self.assertListEqual(expected, plan.keys())
         for e in expected:
@@ -63,11 +108,8 @@ class ColumnPlanTestCase(unittest.TestCase):
 
     def testKeysFromMultpleVersions(self):
         session = self.layer[u'session']
-        schema1 = datastore.Schema(name=u'A', title=u'', state=u'published', publish_date=t1,
-            attributes=dict(
-                a=datastore.Attribute(name=u'a', title=u'', type=u'string', order=0),
-                )
-            )
+        schema1 = datastore.Schema(name=u'A', title=u'', state=u'published', publish_date=t1)
+        schema1[u'a'] = datastore.Attribute(title=u'', type=u'string', order=0)
 
         schema2 = copy.deepcopy(schema1)
         schema2.state = u'published'
@@ -80,21 +122,21 @@ class ColumnPlanTestCase(unittest.TestCase):
 
         session.add_all([schema1, schema2, schema3])
 
-        # By Name
-        plan = querying.getColumnPlan(session, u'A', split=querying.BY_NAME)
+        # by NAME
+        plan = querying.getHeaderByName(session, u'A')
         expected = [(u'a',)]
         self.assertListEqual(expected, plan.keys())
         self.assertEqual(3, len(plan[expected[0]]))
 
-        # By Checksum
-        plan = querying.getColumnPlan(session, u'A', split=querying.BY_CHECKSUM)
+        # by CHECKSUM
+        plan = querying.getHeaderByChecksum(session, u'A')
         expected = [(u'a', schema1[u'a'].checksum), (u'a', schema3[u'a'].checksum)]
         self.assertListEqual(expected, plan.keys())
         self.assertEqual(2, len(plan[expected[0]]))
         self.assertEqual(1, len(plan[expected[1]]))
 
-        # By id
-        plan = querying.getColumnPlan(session, u'A', split=querying.BY_ID)
+        # by ID
+        plan = querying.getHeaderById(session, u'A')
         expected = [
             (u'a', schema1[u'a'].id),
             (u'a', schema2[u'a'].id),
@@ -106,26 +148,19 @@ class ColumnPlanTestCase(unittest.TestCase):
 
     def testKeysFromSubSchema(self):
         session = self.layer[u'session']
-        schema = datastore.Schema(name=u'A', title=u'', state=u'published',
-            attributes=dict(
-                a=datastore.Attribute(name=u'a', title=u'', type=u'string', order=0),
-                b=datastore.Attribute(name=u'b', title=u'', type=u'object', order=1,
-                    object_schema=datastore.Schema(name=u'B', title=u'', state=u'published',
-                        attributes=dict(
-                            x=datastore.Attribute(name=u'x', title=u'', type=u'string', order=0,),
-                            y=datastore.Attribute(name=u'y', title=u'', type=u'string', order=1,),
-                            z=datastore.Attribute(name=u'z', title=u'', type=u'string', order=2,),
-                            )
-                        )
-                    ),
-                c=datastore.Attribute(name=u'c', title=u'', type=u'string', order=2),
-                )
-            )
+        schema = datastore.Schema(name=u'A', title=u'', state=u'published')
+        schema[u'a'] = datastore.Attribute(title=u'', type=u'string', order=0)
+        schema[u'b'] = datastore.Attribute(title=u'', type=u'object', order=1)
+        schema[u'b'].object_schema = datastore.Schema(name=u'B', title=u'', state=u'published')
+        schema[u'b'][u'x'] = datastore.Attribute(title=u'', type=u'string', order=0)
+        schema[u'b'][u'y'] = datastore.Attribute(title=u'', type=u'string', order=1)
+        schema[u'b'][u'z'] = datastore.Attribute(title=u'', type=u'string', order=2)
+        schema[u'c'] = datastore.Attribute(title=u'', type=u'string', order=2)
         session.add(schema)
         session.flush()
 
-        # By Name
-        plan = querying.getColumnPlan(session, u'A', split=querying.BY_NAME)
+        # by NAME
+        plan = querying.getHeaderByName(session, u'A')
         expected = [(u'a',), (u'b', u'x'), (u'b', u'y'), (u'b', u'z'), (u'c',)]
         self.assertListEqual(expected, plan.keys())
         self.assertEqual(1, len(plan[expected[0]]))
@@ -134,8 +169,8 @@ class ColumnPlanTestCase(unittest.TestCase):
         self.assertEqual(1, len(plan[expected[3]]))
         self.assertEqual(1, len(plan[expected[4]]))
 
-        # By Checksum
-        plan = querying.getColumnPlan(session, u'A', split=querying.BY_CHECKSUM)
+        # by CHECKSUM
+        plan = querying.getHeaderByChecksum(session, u'A')
         expected = [
             (u'a', schema[u'a'].checksum),
             (u'b', u'x', schema[u'b'][u'x'].checksum),
@@ -151,7 +186,7 @@ class ColumnPlanTestCase(unittest.TestCase):
         self.assertEqual(1, len(plan[expected[4]]))
 
         # By id
-        plan = querying.getColumnPlan(session, u'A', split=querying.BY_ID)
+        plan = querying.getHeaderById(session, u'A')
         expected = [
             (u'a', schema[u'a'].id),
             (u'b', u'x', schema[u'b'][u'x'].id),
@@ -199,21 +234,14 @@ class ColumnPlanTestCase(unittest.TestCase):
                 z
         """
         session = self.layer[u'session']
-        schema1 = datastore.Schema(name=u'A', title=u'', state=u'published', publish_date=t1,
-            attributes=dict(
-                a=datastore.Attribute(name=u'a', title=u'', type=u'string', order=0),
-                b=datastore.Attribute(name=u'b', title=u'', type=u'object', order=1,
-                    object_schema=datastore.Schema(name=u'B', title=u'', state=u'published', publish_date=t1,
-                        attributes=dict(
-                            x=datastore.Attribute(name=u'x', title=u'', type=u'string', order=0,),
-                            y=datastore.Attribute(name=u'y', title=u'', type=u'string', order=1,),
-                            z=datastore.Attribute(name=u'z', title=u'', type=u'string', order=2,),
-                            )
-                        )
-                    ),
-                c=datastore.Attribute(name=u'c', title=u'', type=u'string', order=2),
-                )
-            )
+        schema1 = datastore.Schema(name=u'A', title=u'', state=u'published', publish_date=t1)
+        schema1[u'a'] = datastore.Attribute(title=u'', type=u'string', order=0)
+        schema1[u'b'] = datastore.Attribute(title=u'', type=u'object', order=1)
+        schema1[u'b'].object_schema = datastore.Schema(name=u'B', title=u'', state=u'published', publish_date=t1)
+        schema1[u'b'][u'x'] = datastore.Attribute(title=u'', type=u'string', order=0)
+        schema1[u'b'][u'y'] = datastore.Attribute(title=u'', type=u'string', order=1)
+        schema1[u'b'][u'z'] = datastore.Attribute(title=u'', type=u'string', order=2)
+        schema1[u'c'] = datastore.Attribute(title=u'', type=u'string', order=2)
 
         schema2 = copy.deepcopy(schema1)
         schema2.state = schema2[u'b'].object_schema.state = u'published'
@@ -236,8 +264,8 @@ class ColumnPlanTestCase(unittest.TestCase):
         session.add_all([schema1, schema2, schema3])
         session.flush()
 
-        # By Name
-        plan = querying.getColumnPlan(session, u'A', split=querying.BY_NAME)
+        # by NAME
+        plan = querying.getHeaderByName(session, u'A')
         expected = [(u'a',), (u'b', u'z'), (u'b', u'x'), (u'b', u'y'), (u'c',), (u'y',)]
         self.assertListEqual(expected, plan.keys())
         self.assertEqual(3, len(plan[expected[0]]))
@@ -247,8 +275,8 @@ class ColumnPlanTestCase(unittest.TestCase):
         self.assertEqual(2, len(plan[expected[4]]))
         self.assertEqual(1, len(plan[expected[5]]))
 
-        # By Checksum
-        plan = querying.getColumnPlan(session, u'A', split=querying.BY_CHECKSUM)
+        # by CHECKSUM
+        plan = querying.getHeaderByChecksum(session, u'A')
         expected = [
             (u'a', schema1[u'a'].checksum),
             (u'a', schema2[u'a'].checksum),
@@ -269,8 +297,8 @@ class ColumnPlanTestCase(unittest.TestCase):
         self.assertEqual(2, len(plan[expected[6]]))
         self.assertEqual(1, len(plan[expected[7]]))
 
-        # By id
-        plan = querying.getColumnPlan(session, u'A', split=querying.BY_ID)
+        # by ID
+        plan = querying.getHeaderById(session, u'A')
         expected = [
             (u'a', schema1[u'a'].id),
             (u'a', schema2[u'a'].id),
@@ -291,9 +319,9 @@ class ColumnPlanTestCase(unittest.TestCase):
             self.assertEqual(1, len(plan[e]))
 
 
-class SchemaToSubqueryTestCase(unittest.TestCase):
+class SchemaToQueryTestCase(unittest.TestCase):
     u"""
-    Verifies subquery exporting
+    Ensures that schema queries can by properly generated
     """
 
     layer = testing.OCCAMS_DATASTORE_FIXTURE
@@ -304,7 +332,13 @@ class SchemaToSubqueryTestCase(unittest.TestCase):
         session.add(schema)
         session.flush()
 
-        plan, subquery = querying.schemaToSubquery(session, u'A')
+        plan, subquery = querying.schemaToQueryById(session, u'A')
+        self.assertIn(u'entity_id', subquery.c)
+
+        plan, subquery = querying.schemaToQueryByName(session, u'A')
+        self.assertIn(u'entity_id', subquery.c)
+
+        plan, subquery = querying.schemaToQueryByChecksum(session, u'A')
         self.assertIn(u'entity_id', subquery.c)
 
     def testEmptySchema(self):
@@ -313,7 +347,7 @@ class SchemaToSubqueryTestCase(unittest.TestCase):
         session.add(schema)
         session.flush()
 
-        plan, subquery = querying.schemaToSubquery(session, u'A', querying.BY_NAME)
+        plan, subquery = querying.schemaToQueryByName(session, u'A')
 
         self.assertEqual(0, session.query(subquery).count())
 
@@ -323,42 +357,20 @@ class SchemaToSubqueryTestCase(unittest.TestCase):
 
         self.assertEqual(1, session.query(subquery).count())
 
-    def createEntity(self, schema, name, collect_date, values):
-        session = self.layer[u'session']
-        entity = datastore.Entity(schema=schema, name=name, title=u'', collect_date=collect_date)
-        session.add(entity)
-        for key, value in values.iteritems():
-            entity[key] = value
-        session.flush()
-        return entity
-
-    def createSchema(self, name, publish_date, attributes):
-        session = self.layer[u'session']
-        schema = datastore.Schema(
-            name=name,
-            title=u'',
-            state=u'published',
-            publish_date=publish_date,
-            attributes=attributes
-            )
-        session.add(schema)
-        session.flush()
-        return schema
-
     def testFlatSchema(self):
         session = self.layer[u'session']
 
-        schema1 = self.createSchema(u'Sample', t1, dict(
-            textValue=datastore.Attribute(name=u'textValue', title=u'', type=u'text', order=0),
-            stringValue=datastore.Attribute(name=u'stringValue', title=u'', type=u'string', order=1),
-            integerValue=datastore.Attribute(name=u'integerValue', title=u'', type=u'integer', order=2),
-            decimalValue=datastore.Attribute(name=u'decimalValue', title=u'', type=u'decimal', order=3),
-            booleanValue=datastore.Attribute(name=u'booleanValue', title=u'', type=u'boolean', order=4),
-            dateValue=datastore.Attribute(name=u'dateValue', title=u'', type=u'date', order=5),
-            datetimeValue=datastore.Attribute(name=u'datetimeValue', title=u'', type=u'datetime', order=6),
+        schema1 = createSchema(session, u'Sample', t1, dict(
+            textValue=datastore.Attribute(title=u'', type=u'text', order=0),
+            stringValue=datastore.Attribute(title=u'', type=u'string', order=1),
+            integerValue=datastore.Attribute(title=u'', type=u'integer', order=2),
+            decimalValue=datastore.Attribute(title=u'', type=u'decimal', order=3),
+            booleanValue=datastore.Attribute(title=u'', type=u'boolean', order=4),
+            dateValue=datastore.Attribute(title=u'', type=u'date', order=5),
+            datetimeValue=datastore.Attribute(title=u'', type=u'datetime', order=6),
             ))
 
-        entity1 = self.createEntity(schema1, u'Foo', t1, dict(
+        entity1 = createEntity(schema1, u'Foo', t1, dict(
             textValue=u'some\nfoovalue',
             stringValue=u'foovalue',
             integerValue=10,
@@ -368,7 +380,7 @@ class SchemaToSubqueryTestCase(unittest.TestCase):
             datetimeValue=datetime.datetime(2010, 10, 1, 5, 10, 30),
             ))
 
-        entity2 = self.createEntity(schema1, u'Bar', t1, dict(
+        entity2 = createEntity(schema1, u'Bar', t1, dict(
             textValue=u'some\nbarvalue',
             stringValue=u'barvalue',
             integerValue=30,
@@ -378,7 +390,7 @@ class SchemaToSubqueryTestCase(unittest.TestCase):
             datetimeValue=datetime.datetime(2012, 5, 1, 16, 19),
             ))
 
-        plan, subquery = querying.schemaToSubquery(session, u'Sample', querying.BY_NAME)
+        plan, subquery = querying.schemaToQueryByName(session, u'Sample')
 
         result = session.query(subquery).filter_by(entity_id=entity1.id).one()
         self.assertEqual(entity1[u'textValue'], result.textValue)
