@@ -21,11 +21,13 @@ from occams.form.traversal import closest
 from plone.memoize import view
 from sqlalchemy.orm import object_session
 from sqlalchemy.orm.exc import NoResultFound
+from zope.app.pagetemplate import viewpagetemplatefile
 
 from occams.form import MessageFactory as _
 from occams.form import interfaces
 from occams.datastore import model
 from occams.form.entry import EntityMovedEvent
+
 def DynamicChoiceWidget(field, request):
     """
     An Adapter that returns a Radio Widget if the number of choices is less
@@ -417,6 +419,8 @@ class DataEntryEditForm(z3c.form.group.GroupForm, z3c.form.form.EditForm):
     implements(interfaces.IDataEntryForm)
     z3c.form.form.extends(z3c.form.form.EditForm)
 
+    template = viewpagetemplatefile.ViewPageTemplateFile('entry_templates/uberform.pt')
+
     label = _(u'Enter Forms')
 
     enable_form_tabbing = False
@@ -441,7 +445,7 @@ class DataEntryEditForm(z3c.form.group.GroupForm, z3c.form.form.EditForm):
         return []
 
     def getContent(self):
-        return dict()
+        return self.context.data
 
     def getSchema(self, formName, Session):
         thisdate = getattr(self.context, 'visit_date', date.today())
@@ -459,23 +463,28 @@ class DataEntryEditForm(z3c.form.group.GroupForm, z3c.form.form.EditForm):
             form = None
         return form
 
-    def buildGroup(self, schema):
-        fields = z3c.form.field.Fields()
+    def buildGroup(self, schema, label=None, description=None, prefix=None):
         groups = []
+        if not prefix:
+            prefix = str(schema.name)
+        fieldset = DataEntryGroup(self.context, self.request, self)
+        fieldset.__name__ = prefix
+        fieldset.label = label and label or schema.title
+        fieldset.description = description and description or schema.description
+        fieldset.fields = z3c.form.field.Fields()
         for name, field in sorted(schema.items(), key=lambda f: f[1].order):
-            prefix = str('%s.%s') % (str(schema.name), str(name))
+            subprefix = str('%s.%s') % (prefix, str(name))
             if field.type == 'object':
-                fieldset = DataEntryGroup(self.context, self.request, self)
-                fieldset.__name__ = prefix
-                fieldset.label = field.title
-                fieldset.description = field.description
-                for name, field in sorted(field.object_schema.items(), key=lambda f: f[1].order):
-                    fieldset.fields += z3c.form.field.Fields(IField(field), prefix=prefix)
-                groups.append(fieldset)
+                groups.append(self.buildGroup(
+                                            field.object_schema,
+                                            label=field.title,
+                                            description=field.description,
+                                            prefix=subprefix))
             else:
-                zField = z3c.form.field.Field(IField(field), name=prefix)
-                fields += z3c.form.field.Fields(zField, prefix=prefix)
-        return (fields, groups)
+                zField = z3c.form.field.Field(IField(field), name=subprefix)
+                fieldset.fields += z3c.form.field.Fields(zField, prefix=subprefix)
+        fieldset.groups = groups
+        return fieldset
 
     @view.memoize
     def getForms(self):
@@ -486,9 +495,9 @@ class DataEntryEditForm(z3c.form.group.GroupForm, z3c.form.form.EditForm):
             Session = named_scoped_session(connection)
             schema = self.getSchema(formName, Session)
             if schema:
-                subfields, subgroups = self.buildGroup(schema)
-                fields +=subfields
-                groups.extend(subgroups)
+                fieldset = self.buildGroup(schema)
+                # fields +=subfields
+                groups.append(fieldset)
         groups.extend(self.getPostGroups())
         return (fields, groups)
 

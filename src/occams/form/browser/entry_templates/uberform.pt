@@ -1,0 +1,147 @@
+<metal:define define-macro="titlelessform" tal:omit-tag="">
+        <tal:status define="status view/status" condition="status">
+            <dl class="portalMessage error"
+                tal:condition="view/widgets/errors">
+                <dt i18n:translate="">
+                    Error
+                </dt>
+                <dd tal:content="status" />
+            </dl>
+
+            <dl class="portalMessage info"
+                tal:condition="not: view/widgets/errors">
+                <dt i18n:translate="">
+                    Info
+                </dt>
+                <dd tal:content="status" />
+            </dl>
+        </tal:status>
+
+        <tal:comment condition="nothing">
+          <ul tal:define="errors view/widgets/errors"
+              tal:condition="errors">
+            <li tal:repeat="error errors">
+              <tal:block replace="error/widget/label"/>:
+              <tal:block replace="structure error/render" />
+            </li>
+          </ul>
+        </tal:comment>
+        <p  class="discreet"
+            tal:define="description view/description | nothing"
+            tal:content="description">
+                Description
+        </p>
+
+        <form class="rowlike enableUnloadProtection" action="." method="post"
+              tal:define="form_name view/form_name | nothing;
+                          default_fieldset_label view/default_fieldset_label | form_name;
+                          form_tabbing python:bool(view.enable_form_tabbing);
+                          show_default_label python:default_fieldset_label;"
+              tal:attributes="action request/getURL; enctype view/enctype;
+                              class python: form_tabbing and 'rowlike enableUnloadProtection enableFormTabbing' or default">
+          <input type="hidden"
+               name="fieldset.current"
+               tal:attributes="value request/fieldset.current | string:" />
+
+          <!-- Default fieldset -->
+
+          <metal:define define-macro="fields">
+
+            <fieldset id="fieldset-default" tal:omit-tag="not:show_default_label">
+
+                <legend tal:condition="show_default_label"
+                        tal:attributes="id string:fieldsetlegend-default"
+                        tal:content="default_fieldset_label">Form name</legend>
+
+                <metal:define define-macro="widget_rendering">
+                    <tal:widgets repeat="widget view/widgets/values">
+                      <div class="row horizontal"
+                           tal:define="hidden python:widget.mode == 'hidden'"
+                           tal:omit-tag="hidden">
+
+                        <metal:field define-macro="field">
+                          <div class="field"
+                               tal:define="error widget/error"
+                               tal:attributes="class python:'field' + (error and ' error' or '')">
+
+                            <label for="" class="horizontal"
+                                   tal:attributes="for widget/id"
+                                   tal:condition="not:hidden">
+                              <span i18n:translate=""
+                                    tal:content="widget/label">label</span>
+                            </label>
+
+                            <span class="fieldRequired horizontal" title="Required"
+                                  tal:condition="python:widget.required and not hidden"
+                                  i18n:translate="label_required"
+                                  i18n:attributes="title title_required;">
+                              (Required)
+                            </span>
+
+                            <div class="formHelp"
+                                 tal:define="description widget/field/description"
+                                 i18n:translate=""
+                                 tal:content="description"
+                                 tal:condition="python:description and not hidden"
+                                 >field description</div>
+
+                            <div tal:condition="error"
+                                 tal:content="error/message">
+                              Error
+                            </div>
+
+                            <div class="widget horizontal">
+                              <input type="text" tal:replace="structure widget/render" />
+                            </div>
+                          </div>
+                        </metal:field>
+
+                      </div>
+                    </tal:widgets>
+                </metal:define>
+
+            </fieldset>
+
+            <!-- Secondary fieldsets -->
+            <metal:define define-macro="fieldset_rendering">
+
+            <fieldset
+                tal:define="groups view/groups | nothing;"
+                tal:repeat="group groups"
+                tal:attributes="id string:fieldset-${repeat/group/index}">
+
+                    <legend tal:define="form_name group/label"
+                            tal:condition="form_name"
+                            tal:attributes="id string:fieldsetlegend-${repeat/group/index}"
+                            tal:content="form_name">Form name</legend>
+
+                    <p class="discreet" i18n:translate=""
+                       tal:define="group_description group/description|nothing"
+                       tal:condition="group_description"
+                       tal:content="group_description">
+                        Description
+                    </p>
+
+                    <tal:block define="view nocall:group">
+                        <metal:block use-macro="template/macros/widget_rendering" />
+                        <tal:has_groups condition="view/groups">
+                          <metal:subblock use-macro="template/macros/fieldset_rendering" />
+                        </tal:has_groups>
+                    </tal:block>
+
+            </fieldset>
+          </metal:define>
+          </metal:define>
+
+          <metal:define define-macro="actions">
+
+            <div class="formFields" tal:condition="view/actions/values|nothing">
+                <tal:block repeat="action view/actions/values">
+                  <input type="submit"
+                    tal:replace="structure action/render" />
+                </tal:block>
+            </div>
+          </metal:define>
+
+        </form>
+      </metal:define>
