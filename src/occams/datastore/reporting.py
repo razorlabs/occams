@@ -26,34 +26,34 @@ from occams.datastore import model as datastore
 from occams.datastore.model import storage
 
 
-def schemaToQueryById(session, schema_name):
+def schemaToReportById(session, schema_name):
     u"""
     Builds a sub-query for a schema using the ID split algorithm
     """
     header = getHeaderById(session, schema_name)
-    query = buildReportQuery(session, schema_name, header)
-    return header, query
+    table = buildReportTable(session, schema_name, header)
+    return header, table
 
 
-def schemaToQueryByName(session, schema_name):
+def schemaToReportByName(session, schema_name):
     u"""
     Builds a sub-query for a schema using the NAME split algorithm
     """
     header = getHeaderByName(session, schema_name)
-    query = buildReportQuery(session, schema_name, header)
-    return header, query
+    table = buildReportTable(session, schema_name, header)
+    return header, table
 
 
-def schemaToQueryByChecksum(session, schema_name):
+def schemaToReportByChecksum(session, schema_name):
     u"""
     Builds a sub-query for a schema using the CHECKSUM split algorithm
     """
     header = getHeaderByChecksum(session, schema_name)
-    query = buildReportQuery(session, schema_name, header)
-    return header, query
+    table = buildReportTable(session, schema_name, header)
+    return header, table
 
 
-def buildReportQuery(session, schema_name, header):
+def buildReportTable(session, schema_name, header):
     u"""
     Builds a schema entity data report table as an aliased sub-query.
 
@@ -74,6 +74,11 @@ def buildReportQuery(session, schema_name, header):
         named tuples of each result using the names of the naming schema as the
         property names.
     """
+    # special cases depending on the database vendor
+    is_sqlite = u'sqlite' in str(session.bind.url)
+    is_postgres = u'postgres' in str(session.bind.url)
+    # convenient expression for evaluating a list of boleans
+    reduce_or = lambda i: reduce((lambda x, y: x or y), i)
 
     entity_query = (
         session.query(datastore.Entity.id.label(u'entity_id'))
@@ -94,11 +99,8 @@ def buildReportQuery(session, schema_name, header):
         value_clause = entity_clause & attribute_clause
         # sqlalchemy doesn't like the hybrid property for casting
         value_column = value_class._value
-        or_ = lambda x, y: x or y
-        is_ever_collection = reduce(or_, [a.is_collection for a in attributes])
-        is_ever_subattribute = reduce(or_, [a.schema.is_inline for a in attributes])
-        is_sqlite = u'sqlite' in str(session.bind.url)
-        is_postgres = u'postgres' in str(session.bind.url)
+        is_ever_collection = reduce_or([a.is_collection for a in attributes])
+        is_ever_subattribute = reduce_or([a.schema.is_inline for a in attributes])
 
         # very special case for sqlite as it has limited data type
         if is_sqlite and type_name == u'date':
@@ -145,8 +147,13 @@ def buildReportQuery(session, schema_name, header):
 
         entity_query = entity_query.add_column(column_part.label(column_name))
 
-    query = entity_query.subquery(schema_name)
-    return query
+    if is_sqlite:
+        # sqlite does not support common table expressions
+        report_table = entity_query.subquery(schema_name)
+    else:
+        report_table = entity_query.cte(schema_name)
+
+    return report_table
 
 
 def getHeaderByName(session, schema_name, path=()):

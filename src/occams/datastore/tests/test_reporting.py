@@ -10,7 +10,7 @@ import unittest2 as unittest
 from sqlalchemy import orm
 
 from occams.datastore import model as datastore
-from occams.datastore import querying
+from occams.datastore import reporting
 from occams.datastore import testing
 
 
@@ -69,15 +69,15 @@ class HeaderTestCase(unittest.TestCase):
         session.flush()
 
         # by NAME
-        plan = querying.getHeaderByName(session, u'A')
+        plan = reporting.getHeaderByName(session, u'A')
         self.assertEqual(0, len(plan))
 
         # by CHECKSUM
-        plan = querying.getHeaderByChecksum(session, u'A')
+        plan = reporting.getHeaderByChecksum(session, u'A')
         self.assertEqual(0, len(plan))
 
         # by ID
-        plan = querying.getHeaderById(session, u'A')
+        plan = reporting.getHeaderById(session, u'A')
         self.assertEqual(0, len(plan))
 
     def testKeysFromSingleForm(self):
@@ -88,19 +88,19 @@ class HeaderTestCase(unittest.TestCase):
         session.flush()
 
         # by NAME
-        plan = querying.getHeaderByName(session, u'A')
+        plan = reporting.getHeaderByName(session, u'A')
         expected = [(u'a',)]
         self.assertListEqual(expected, plan.keys())
         self.assertEqual(1, len(plan[expected[0]]))
 
         # by CHECKSUM
-        plan = querying.getHeaderByChecksum(session, u'A')
+        plan = reporting.getHeaderByChecksum(session, u'A')
         expected = [(u'a', schema[u'a'].checksum)]
         self.assertListEqual(expected, plan.keys())
         self.assertEqual(1, len(plan[expected[0]]))
 
         # by ID
-        plan = querying.getHeaderById(session, u'A')
+        plan = reporting.getHeaderById(session, u'A')
         expected = [(u'a', schema[u'a'].id)]
         self.assertListEqual(expected, plan.keys())
         for e in expected:
@@ -123,20 +123,20 @@ class HeaderTestCase(unittest.TestCase):
         session.add_all([schema1, schema2, schema3])
 
         # by NAME
-        plan = querying.getHeaderByName(session, u'A')
+        plan = reporting.getHeaderByName(session, u'A')
         expected = [(u'a',)]
         self.assertListEqual(expected, plan.keys())
         self.assertEqual(3, len(plan[expected[0]]))
 
         # by CHECKSUM
-        plan = querying.getHeaderByChecksum(session, u'A')
+        plan = reporting.getHeaderByChecksum(session, u'A')
         expected = [(u'a', schema1[u'a'].checksum), (u'a', schema3[u'a'].checksum)]
         self.assertListEqual(expected, plan.keys())
         self.assertEqual(2, len(plan[expected[0]]))
         self.assertEqual(1, len(plan[expected[1]]))
 
         # by ID
-        plan = querying.getHeaderById(session, u'A')
+        plan = reporting.getHeaderById(session, u'A')
         expected = [
             (u'a', schema1[u'a'].id),
             (u'a', schema2[u'a'].id),
@@ -160,7 +160,7 @@ class HeaderTestCase(unittest.TestCase):
         session.flush()
 
         # by NAME
-        plan = querying.getHeaderByName(session, u'A')
+        plan = reporting.getHeaderByName(session, u'A')
         expected = [(u'a',), (u'b', u'x'), (u'b', u'y'), (u'b', u'z'), (u'c',)]
         self.assertListEqual(expected, plan.keys())
         self.assertEqual(1, len(plan[expected[0]]))
@@ -170,7 +170,7 @@ class HeaderTestCase(unittest.TestCase):
         self.assertEqual(1, len(plan[expected[4]]))
 
         # by CHECKSUM
-        plan = querying.getHeaderByChecksum(session, u'A')
+        plan = reporting.getHeaderByChecksum(session, u'A')
         expected = [
             (u'a', schema[u'a'].checksum),
             (u'b', u'x', schema[u'b'][u'x'].checksum),
@@ -186,7 +186,7 @@ class HeaderTestCase(unittest.TestCase):
         self.assertEqual(1, len(plan[expected[4]]))
 
         # By id
-        plan = querying.getHeaderById(session, u'A')
+        plan = reporting.getHeaderById(session, u'A')
         expected = [
             (u'a', schema[u'a'].id),
             (u'b', u'x', schema[u'b'][u'x'].id),
@@ -265,7 +265,7 @@ class HeaderTestCase(unittest.TestCase):
         session.flush()
 
         # by NAME
-        plan = querying.getHeaderByName(session, u'A')
+        plan = reporting.getHeaderByName(session, u'A')
         expected = [(u'a',), (u'b', u'z'), (u'b', u'x'), (u'b', u'y'), (u'c',), (u'y',)]
         self.assertListEqual(expected, plan.keys())
         self.assertEqual(3, len(plan[expected[0]]))
@@ -276,7 +276,7 @@ class HeaderTestCase(unittest.TestCase):
         self.assertEqual(1, len(plan[expected[5]]))
 
         # by CHECKSUM
-        plan = querying.getHeaderByChecksum(session, u'A')
+        plan = reporting.getHeaderByChecksum(session, u'A')
         expected = [
             (u'a', schema1[u'a'].checksum),
             (u'a', schema2[u'a'].checksum),
@@ -298,7 +298,7 @@ class HeaderTestCase(unittest.TestCase):
         self.assertEqual(1, len(plan[expected[7]]))
 
         # by ID
-        plan = querying.getHeaderById(session, u'A')
+        plan = reporting.getHeaderById(session, u'A')
         expected = [
             (u'a', schema1[u'a'].id),
             (u'a', schema2[u'a'].id),
@@ -332,13 +332,13 @@ class SchemaToQueryTestCase(unittest.TestCase):
         session.add(schema)
         session.flush()
 
-        plan, subquery = querying.schemaToQueryById(session, u'A')
+        plan, subquery = reporting.schemaToReportById(session, u'A')
         self.assertIn(u'entity_id', subquery.c)
 
-        plan, subquery = querying.schemaToQueryByName(session, u'A')
+        plan, subquery = reporting.schemaToReportByName(session, u'A')
         self.assertIn(u'entity_id', subquery.c)
 
-        plan, subquery = querying.schemaToQueryByChecksum(session, u'A')
+        plan, subquery = reporting.schemaToReportByChecksum(session, u'A')
         self.assertIn(u'entity_id', subquery.c)
 
     def testEmptySchema(self):
@@ -347,7 +347,7 @@ class SchemaToQueryTestCase(unittest.TestCase):
         session.add(schema)
         session.flush()
 
-        plan, subquery = querying.schemaToQueryByName(session, u'A')
+        plan, subquery = reporting.schemaToReportByName(session, u'A')
 
         self.assertEqual(0, session.query(subquery).count())
 
@@ -390,7 +390,7 @@ class SchemaToQueryTestCase(unittest.TestCase):
             datetimeValue=datetime.datetime(2012, 5, 1, 16, 19),
             ))
 
-        plan, subquery = querying.schemaToQueryByName(session, u'Sample')
+        playn, subquery = reporting.schemaToReportByName(session, u'Sample')
 
         result = session.query(subquery).filter_by(entity_id=entity1.id).one()
         self.assertEqual(entity1[u'textValue'], result.textValue)
@@ -418,5 +418,5 @@ class SchemaToQueryTestCase(unittest.TestCase):
 #
 #        entity3 = self.createEntity(schema2, u'Baz', t2, dict(a=u'bazvalue'))
 #
-#        plan, subquery = querying.schemaToSubquery(session, u'A', querying.BY_NAME)
+#        plan, subquery = reporting.schemaToSubquery(session, u'A', reporting.BY_NAME)
 
