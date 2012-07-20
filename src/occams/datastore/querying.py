@@ -89,14 +89,14 @@ def buildReportQuery(session, schema_name, header):
         value_source = storage.nameModelMap[type_name]
         value_name = u'%s_%s' % (column_name, type_name)
         value_class = orm.aliased(value_source, name=value_name)
-        value_clause = (
-            (value_class.entity_id == datastore.Entity.id)
-            & (value_class.attribute_id.in_(attribute_ids))
-            )
+        attribute_clause = (value_class.attribute_id.in_(attribute_ids))
+        entity_clause = (value_class.entity_id == datastore.Entity.id)
+        value_clause = entity_clause & attribute_clause
         # sqlalchemy doesn't like the hybrid property for casting
         value_column = value_class._value
         or_ = lambda x, y: x or y
         is_ever_collection = reduce(or_, [a.is_collection for a in attributes])
+        is_ever_subattribute = reduce(or_, [a.schema.is_inline for a in attributes])
         is_sqlite = u'sqlite' in str(session.bind.url)
         is_postgres = u'postgres' in str(session.bind.url)
 
@@ -125,6 +125,18 @@ def buildReportQuery(session, schema_name, header):
                 .correlate(datastore.Entity)
                 .subquery()
                 )
+        elif is_ever_subattribute:
+            # need to do an extra left join for the sub-object assocation table
+            associate_class = orm.aliased(datastore.ValueObject)
+            associate_clause = (model.Entity.id == associate_class.entity_id)
+            entity_clause =  (model.Entity.id == associate_class.value)
+            value_clause = entity_clause & attribute_clause
+            entity_query = (
+                entity_query
+                .outerjoin(associate_class, associate_clause)
+                .outerjoin(value_class, value_clause)
+                )
+            column = value_casted
         else:
             # scalars are build via LEFT JOIN
             entity_query = entity_query.outerjoin(value_class, value_clause)
