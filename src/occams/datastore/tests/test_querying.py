@@ -332,13 +332,13 @@ class SchemaToQueryTestCase(unittest.TestCase):
         session.add(schema)
         session.flush()
 
-        plan, subquery = querying.schemaToQueryById(session, u'A')
+        plan, subquery = querying.schemaToTableById(session, u'A')
         self.assertIn(u'entity_id', subquery.c)
 
-        plan, subquery = querying.schemaToQueryByName(session, u'A')
+        plan, subquery = querying.schemaToTableByName(session, u'A')
         self.assertIn(u'entity_id', subquery.c)
 
-        plan, subquery = querying.schemaToQueryByChecksum(session, u'A')
+        plan, subquery = querying.schemaToTableByChecksum(session, u'A')
         self.assertIn(u'entity_id', subquery.c)
 
     def testEmptySchema(self):
@@ -347,7 +347,7 @@ class SchemaToQueryTestCase(unittest.TestCase):
         session.add(schema)
         session.flush()
 
-        plan, subquery = querying.schemaToQueryByName(session, u'A')
+        plan, subquery = querying.schemaToTableByName(session, u'A')
 
         self.assertEqual(0, session.query(subquery).count())
 
@@ -390,7 +390,7 @@ class SchemaToQueryTestCase(unittest.TestCase):
             datetimeValue=datetime.datetime(2012, 5, 1, 16, 19),
             ))
 
-        plan, subquery = querying.schemaToQueryByName(session, u'Sample')
+        playn, subquery = querying.schemaToTableByName(session, u'Sample')
 
         result = session.query(subquery).filter_by(entity_id=entity1.id).one()
         self.assertEqual(entity1[u'textValue'], result.textValue)

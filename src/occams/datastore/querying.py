@@ -26,34 +26,34 @@ from occams.datastore import model as datastore
 from occams.datastore.model import storage
 
 
-def schemaToQueryById(session, schema_name):
+def schemaToTableById(session, schema_name):
     u"""
     Builds a sub-query for a schema using the ID split algorithm
     """
     header = getHeaderById(session, schema_name)
-    query = buildReportQuery(session, schema_name, header)
-    return header, query
+    table = buildReportTable(session, schema_name, header)
+    return header, table
 
 
-def schemaToQueryByName(session, schema_name):
+def schemaToTableByName(session, schema_name):
     u"""
     Builds a sub-query for a schema using the NAME split algorithm
     """
     header = getHeaderByName(session, schema_name)
-    query = buildReportQuery(session, schema_name, header)
-    return header, query
+    table = buildReportTable(session, schema_name, header)
+    return header, table
 
 
-def schemaToQueryByChecksum(session, schema_name):
+def schemaToTableByChecksum(session, schema_name):
     u"""
     Builds a sub-query for a schema using the CHECKSUM split algorithm
     """
     header = getHeaderByChecksum(session, schema_name)
-    query = buildReportQuery(session, schema_name, header)
-    return header, query
+    table = buildReportTable(session, schema_name, header)
+    return header, table
 
 
-def buildReportQuery(session, schema_name, header):
+def buildReportTable(session, schema_name, header):
     u"""
     Builds a schema entity data report table as an aliased sub-query.
 
@@ -145,8 +145,8 @@ def buildReportQuery(session, schema_name, header):
 
         entity_query = entity_query.add_column(column_part.label(column_name))
 
-    query = entity_query.subquery(schema_name)
-    return query
+    report_table = entity_query.subquery(schema_name)
+    return report_table
 
 
 def getHeaderByName(session, schema_name, path=()):
