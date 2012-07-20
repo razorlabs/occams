@@ -26,7 +26,7 @@ from occams.datastore import model as datastore
 from occams.datastore.model import storage
 
 
-def schemaToTableById(session, schema_name):
+def schemaToReportById(session, schema_name):
     u"""
     Builds a sub-query for a schema using the ID split algorithm
     """
@@ -35,7 +35,7 @@ def schemaToTableById(session, schema_name):
     return header, table
 
 
-def schemaToTableByName(session, schema_name):
+def schemaToReportByName(session, schema_name):
     u"""
     Builds a sub-query for a schema using the NAME split algorithm
     """
@@ -44,7 +44,7 @@ def schemaToTableByName(session, schema_name):
     return header, table
 
 
-def schemaToTableByChecksum(session, schema_name):
+def schemaToReportByChecksum(session, schema_name):
     u"""
     Builds a sub-query for a schema using the CHECKSUM split algorithm
     """
@@ -74,6 +74,9 @@ def buildReportTable(session, schema_name, header):
         named tuples of each result using the names of the naming schema as the
         property names.
     """
+    is_sqlite = u'sqlite' in str(session.bind.url)
+    is_postgres = u'postgres' in str(session.bind.url)
+    or_ = lambda x, y: x or y
 
     entity_query = (
         session.query(datastore.Entity.id.label(u'entity_id'))
@@ -94,11 +97,8 @@ def buildReportTable(session, schema_name, header):
         value_clause = entity_clause & attribute_clause
         # sqlalchemy doesn't like the hybrid property for casting
         value_column = value_class._value
-        or_ = lambda x, y: x or y
         is_ever_collection = reduce(or_, [a.is_collection for a in attributes])
         is_ever_subattribute = reduce(or_, [a.schema.is_inline for a in attributes])
-        is_sqlite = u'sqlite' in str(session.bind.url)
-        is_postgres = u'postgres' in str(session.bind.url)
 
         # very special case for sqlite as it has limited data type
         if is_sqlite and type_name == u'date':
@@ -145,7 +145,12 @@ def buildReportTable(session, schema_name, header):
 
         entity_query = entity_query.add_column(column_part.label(column_name))
 
-    report_table = entity_query.subquery(schema_name)
+    if is_sqlite:
+        # sqlite does not support common table expressions
+        report_table = entity_query.subquery(schema_name)
+    else:
+        report_table = entity_query.cte(schema_name)
+
     return report_table
 
 
