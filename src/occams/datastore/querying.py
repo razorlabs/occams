@@ -119,7 +119,7 @@ def buildReportQuery(session, schema_name, header):
                 aggregator = lambda q: q
                 aggregate_values = sa.func.group_concat(value_casted)
 
-            column = aggregator(
+            column_part = aggregator(
                 session.query(aggregate_values)
                 .filter(value_clause)
                 .correlate(datastore.Entity)
@@ -130,19 +130,20 @@ def buildReportQuery(session, schema_name, header):
             associate_class = orm.aliased(datastore.ValueObject)
             associate_clause = (model.Entity.id == associate_class.entity_id)
             entity_clause =  (model.Entity.id == associate_class.value)
+            # override the value_clause to use the object association table
             value_clause = entity_clause & attribute_clause
             entity_query = (
                 entity_query
                 .outerjoin(associate_class, associate_clause)
                 .outerjoin(value_class, value_clause)
                 )
-            column = value_casted
+            column_part = value_casted
         else:
             # scalars are build via LEFT JOIN
             entity_query = entity_query.outerjoin(value_class, value_clause)
-            column = value_casted
+            column_part = value_casted
 
-        entity_query = entity_query.add_column(column.label(column_name))
+        entity_query = entity_query.add_column(column_part.label(column_name))
 
     query = entity_query.subquery(schema_name)
     return query
