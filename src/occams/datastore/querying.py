@@ -2,11 +2,16 @@ u"""
 A utility for allowing the access of entered schema data to be represented
 in a SQL table-like fashion.
 
-Splitting algorithms are as follows:
+Because of the nature of how datastore handles schema versions, this module
+offers difference kinds of reporting granularity in the form of
+*attribute splitting*, meaning that the attribute metdata is inpected to
+determine how the final report columns show up in the query.
+So far, three types of attribute splitting are available:
+
     **NAME**
         No splitting should occur, all attributes are grouped by their name
     **CHECKSUM**
-        All attributes are grouped by their checksum
+        All attribute in a lineage are grouped by their checksum
     **ID**
         Aggressively split by attribute id
 
@@ -26,7 +31,7 @@ def schemaToQueryById(session, schema_name):
     Builds a sub-query for a schema using the ID split algorithm
     """
     header = getHeaderById(session, schema_name)
-    query = buildQuery(session, schema_name, header)
+    query = buildReportQuery(session, schema_name, header)
     return header, query
 
 
@@ -35,7 +40,7 @@ def schemaToQueryByName(session, schema_name):
     Builds a sub-query for a schema using the NAME split algorithm
     """
     header = getHeaderByName(session, schema_name)
-    query = buildQuery(session, schema_name, header)
+    query = buildReportQuery(session, schema_name, header)
     return header, query
 
 
@@ -44,11 +49,11 @@ def schemaToQueryByChecksum(session, schema_name):
     Builds a sub-query for a schema using the CHECKSUM split algorithm
     """
     header = getHeaderByChecksum(session, schema_name)
-    query = buildQuery(session, schema_name, header)
+    query = buildReportQuery(session, schema_name, header)
     return header, query
 
 
-def buildQuery(session, schema_name, header):
+def buildReportQuery(session, schema_name, header):
     u"""
     Builds a schema entity data report table as an aliased sub-query.
 
@@ -133,6 +138,25 @@ def buildQuery(session, schema_name, header):
 
 def getHeaderByName(session, schema_name, path=()):
     u"""
+    Builds a column header for the schema hierarchy using the NAME algorithm.
+    The header columns reported are only the basic data types.
+
+    Note that the final columns are ordered by most recent order number within
+    the parent, then by the parent's publication date (oldest to newest).
+
+    Arguments
+        ``session``
+            The session to query plan from
+        ``name``
+            The name of the schema to get columns plans for
+        ``path``
+            (Optional)  current traversing path in the hierarchy.
+            This is useful if you want to prepend additional column
+            prefixes.
+
+    Returns
+        An ordered dictionary using the path to the attribute as the key,
+        and the associated attribute list as the value.
     """
     plan = ordereddict.OrderedDict()
     attribute_query = getAttributeQuery(session, schema_name)
@@ -150,6 +174,26 @@ def getHeaderByName(session, schema_name, path=()):
 
 def getHeaderByChecksum(session, schema_name, path=()):
     u"""
+    Builds a column header for the schema hierarchy using the CHECKSUM algorithm.
+    The header columns reported are only the basic data types.
+
+    Note that the final columns are ordered by most recent order number within
+    the parent, then by the parent's publication date (oldest to newest).
+
+    Arguments
+        ``session``
+            The session to query plan from
+        ``name``
+            The name of the schema to get columns plans for
+        ``path``
+            (Optional)  current traversing path in the hierarchy.
+            This is useful if you want to prepend additional column
+            prefixes.
+
+    Returns
+        An ordered dictionary using the path to the attribute as the key,
+        and the associated attribute list as the value. The path will
+        also contain the attribute's checksum.
     """
     plan = ordereddict.OrderedDict()
     attribute_query = getAttributeQuery(session, schema_name)
