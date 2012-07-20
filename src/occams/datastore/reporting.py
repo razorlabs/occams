@@ -74,9 +74,11 @@ def buildReportTable(session, schema_name, header):
         named tuples of each result using the names of the naming schema as the
         property names.
     """
+    # special cases depending on the database vendor
     is_sqlite = u'sqlite' in str(session.bind.url)
     is_postgres = u'postgres' in str(session.bind.url)
-    or_ = lambda x, y: x or y
+    # convenient expression for evaluating a list of boleans
+    reduce_or = lambda i: reduce((lambda x, y: x or y), i)
 
     entity_query = (
         session.query(datastore.Entity.id.label(u'entity_id'))
@@ -97,8 +99,8 @@ def buildReportTable(session, schema_name, header):
         value_clause = entity_clause & attribute_clause
         # sqlalchemy doesn't like the hybrid property for casting
         value_column = value_class._value
-        is_ever_collection = reduce(or_, [a.is_collection for a in attributes])
-        is_ever_subattribute = reduce(or_, [a.schema.is_inline for a in attributes])
+        is_ever_collection = reduce_or([a.is_collection for a in attributes])
+        is_ever_subattribute = reduce_or([a.schema.is_inline for a in attributes])
 
         # very special case for sqlite as it has limited data type
         if is_sqlite and type_name == u'date':
