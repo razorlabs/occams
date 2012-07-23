@@ -406,6 +406,19 @@ class UberEditForm(z3c.form.group.GroupForm, UberForm, z3c.form.form.EditForm):
 
     template = viewpagetemplatefile.ViewPageTemplateFile('entry_templates/uberform.pt')
 
+    @view.memoize
+    def getForms(self):
+        fields = self.getPreFields()
+        groups = self.getPreGroups()
+        # Add the data entry forms
+        ## yeah, no. use existing entities
+
+        for entity in self.context.item.entities:
+            fieldset = self.buildGroup(entity.schema)
+            groups.append(fieldset)
+        groups.extend(self.getPostGroups())
+        return (fields, groups)
+
     def update(self):
         if not getattr(self, '_fields', None) or not getattr(self, '_groups', None):
             (self._fields, self._groups) = self.getForms()
@@ -413,13 +426,39 @@ class UberEditForm(z3c.form.group.GroupForm, UberForm, z3c.form.form.EditForm):
         self.groups = self._groups
         super(UberEditForm, self).update()
 
-
+    def addEntry(self, formschema, data, newEntity=None):
+        Session = object_session(formschema)
+        collect_date = data.pop('collect_date', date.today())
+        formstate = data.pop('formstate', u'pending-review')
+        formTitle = formschema.name + datetime.now().isoformat()
+        if newEntity is None:
+            newEntity = model.Entity(schema=formschema, name=formTitle, title=formschema.name, state=formstate, collect_date=collect_date)
+            Session.add(newEntity)
+            Session.flush()
+        else:
+            newEntity.state = formstate
+            Session.flush()
+        for key, val in data.items():
+            if type(val) == dict:
+                if newEntity[key] is None:
+                    subschema = formschema[key].object_schema
+                    subtitle = "%s%s" % (formTitle, subschema.name)
+                    subEntity = model.Entity(schema=subschema, name=subtitle, title=subtitle, state=u'inline', collect_date=collect_date)
+                    Session.add(subEntity)
+                    Session.flush()
+                    newEntity[key] = subEntity
+                for subkey, subval in val.items():
+                    newEntity[key][subkey] = subval
+            else:
+                newEntity[key] = val
+        Session.flush()
+        return newEntity
 
     def applyEntityChanges(self, entity, data):
         """
         """
         changes = []
-        import pdb; pdb.set_trace( )
+        session = object_session(entity)
         collect_date = data.pop('collect_date', date.today())
         if entity.collect_date != collect_date:
             entity.collect_date = collect_date
@@ -427,12 +466,22 @@ class UberEditForm(z3c.form.group.GroupForm, UberForm, z3c.form.form.EditForm):
             if data.has_key(key):
                 if type(data[key]) == dict:
                     if value is None:
+                        ## Need to create a new entity
                         import pdb; pdb.set_trace( )
-                        #!! Create a new entity
-                    self.applyEntityChanges(value, data[key])
+                        subschema = entity.schema[key].object_schema
+                        subtitle = "%s%s" % (entity.title, subschema.name)
+                        value = model.Entity(schema=subschema, name=subtitle, title=subtitle, state=u'inline', collect_date=collect_date)
+                        session.add(value)
+                        session.flush()
+                        entity[key] = value
+                        session.flush()
+                    newchanges = self.applyEntityChanges(value, data[key])
+                    changes.extend(newchanges)
                 else:
-                    entity[key] = value
-                    self.context.session.flush()
+                    entity[key] = data[key]
+                    changes.append(key)
+                    session.flush()
+        return changes
 
 
         #     (sub1, sep, sub2) = key.partition('.')
@@ -464,15 +513,31 @@ class UberEditForm(z3c.form.group.GroupForm, UberForm, z3c.form.form.EditForm):
         """
         """
         changes=[]
+        formNames = set()
         changedForms = set()
+        for name in data.keys():
+            (form, dot, field) = name.partition('.')
+            formNames.add(form)
+        for name in formNames:
+            self.context.data.setdefault(name, {})
         for name in super(UberEditForm, self).applyChanges(data).values()[0]:
             (form, dot, field) = name.partition('.')
             changedForms.add(form)
         changedData = self.getContent()
         for entity in self.context.item.entities:
             if entity.schema.name in changedForms:
+                changedForms.remove(entity.schema.name)
                 newchanges = self.applyEntityChanges(entity, changedData[entity.schema.name])
                 changes.extend(newchanges)
+        if len(changedForms):
+            session =  object_session(self.context.item)
+            for schema_name in changedForms:
+                schema = self.getSchema(schema_name, session)
+                newEntity = self.addEntry(schema, changedData[schema_name])
+                self.context.item.entities.add(newEntity)
+                # newchanges = self.applyEntityChanges(newEntity, changedData[schema_name])
+
+                session.flush()
         return changes
 
 
