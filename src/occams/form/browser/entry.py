@@ -466,8 +466,6 @@ class UberEditForm(z3c.form.group.GroupForm, UberForm, z3c.form.form.EditForm):
             if data.has_key(key):
                 if type(data[key]) == dict:
                     if value is None:
-                        ## Need to create a new entity
-                        import pdb; pdb.set_trace( )
                         subschema = entity.schema[key].object_schema
                         subtitle = "%s%s" % (entity.title, subschema.name)
                         value = model.Entity(schema=subschema, name=subtitle, title=subtitle, state=u'inline', collect_date=collect_date)
@@ -483,31 +481,6 @@ class UberEditForm(z3c.form.group.GroupForm, UberForm, z3c.form.form.EditForm):
                     session.flush()
         return changes
 
-
-        #     (sub1, sep, sub2) = key.partition('.')
-        #     if sub1[0] == '_':
-        #         continue
-        #     elif sep:
-        #         subobj = entity[sub1]
-        #         if subobj is None:
-        #             subschema = entity.schema[sub1].object_schema
-        #             subname = "%s_%s" % (entity.name, sub1)
-        #             subobj = model.Entity(name=subname, title=subschema.title, schema=subschema, collect_date=collect_date)
-        #             self.context.session.add(subobj)
-        #             self.context.session.flush()
-        #             entity[sub1] = subobj
-        #             self.context.session.flush()
-        #         if subobj[sub2] != value:
-        #             changes.append(key)
-        #             subobj[sub2] = value
-        #         if subobj.collect_date != collect_date:
-        #             subobj.collect_date = collect_date
-        #     else:
-        #         if entity[sub1] != value:
-        #             changes.append(key)
-        #             entity[sub1] = value
-        #     self.context.session.flush()
-        # return changes
 
     def applyChanges(self, data):
         """

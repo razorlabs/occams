@@ -28,7 +28,7 @@
         </tal:comment>
         <p  class="discreet"
             tal:define="description view/description | nothing"
-            tal:content="description">
+            tal:content="structure description">
                 Description
         </p>
 
