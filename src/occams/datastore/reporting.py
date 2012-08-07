@@ -132,19 +132,18 @@ def buildReportTable(session, schema_name, header):
         elif is_ever_subattribute:
             # need to do an extra left join for the sub-object assocation table
             associate_name = path[0]
+
             if associate_name not in sub_entities:
+                associate_clause = (datastore.Entity.id == associate_class.entity_id)
                 associate_class = orm.aliased(datastore.ValueObject, name=associate_name)
+                entity_query = entity_query.outerjoin(associate_class, associate_clause)
             else:
                 associate_class = sub_entities[associate_name]
-            associate_clause = (datastore.Entity.id == associate_class.entity_id)
+
             entity_clause =  (value_class.entity_id == associate_class._value)
             # override the value_clause to use the object association table
             value_clause = entity_clause & attribute_clause
-            entity_query = (
-                entity_query
-                .outerjoin(associate_class, associate_clause)
-                .outerjoin(value_class, value_clause)
-                )
+            entity_query = entity_query.outerjoin(value_class, value_clause)
             column_part = value_casted
         else:
             # scalars are build via LEFT JOIN
