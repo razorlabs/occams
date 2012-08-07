@@ -137,7 +137,7 @@ def buildReportTable(session, schema_name, header):
                 associate_class = orm.aliased(datastore.ValueObject, name=associate_name)
                 associate_clause = (datastore.Entity.id == associate_class.entity_id)
                 entity_query = entity_query.outerjoin(associate_class, associate_clause)
-                sub_entities[assocaite_name] = associate_class
+                sub_entities[associate_name] = associate_class
             else:
                 associate_class = sub_entities[associate_name]
 
