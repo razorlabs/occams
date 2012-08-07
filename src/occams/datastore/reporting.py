@@ -125,7 +125,7 @@ def buildReportTable(session, schema_name, header):
                 session.query(aggregate_values)
                 .filter(value_clause)
                 .correlate(datastore.Entity)
-                .subquery()
+                .as_scalar()
                 )
         elif is_ever_subattribute:
             # need to do an extra left join for the sub-object assocation table
