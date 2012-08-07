@@ -87,6 +87,8 @@ def buildReportTable(session, schema_name, header):
         .filter(datastore.Schema.publish_date != None)
         )
 
+    sub_entities = dict()
+
     for path, attributes in header.iteritems():
         column_name = u'_'.join(path)
         type_name = attributes[-1].type
@@ -129,7 +131,11 @@ def buildReportTable(session, schema_name, header):
                 )
         elif is_ever_subattribute:
             # need to do an extra left join for the sub-object assocation table
-            associate_class = orm.aliased(datastore.ValueObject)
+            associate_name = path[0]
+            if associate_name not in sub_entities:
+                associate_class = orm.aliased(datastore.ValueObject, name=associate_name)
+            else:
+                associate_class = sub_entities[associate_name]
             associate_clause = (datastore.Entity.id == associate_class.entity_id)
             entity_clause =  (value_class.entity_id == associate_class._value)
             # override the value_clause to use the object association table
