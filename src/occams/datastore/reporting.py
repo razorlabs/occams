@@ -135,8 +135,11 @@ def buildReportTable(session, schema_name, header):
 
             if associate_name not in sub_entities:
                 associate_class = orm.aliased(datastore.ValueObject, name=associate_name)
-                associate_clause = (datastore.Entity.id == associate_class.entity_id)
-                entity_query = entity_query.outerjoin(associate_class, associate_clause)
+                entity_query = entity_query.outerjoin(
+                    associate_class,
+                    (datastore.Entity.id == associate_class.entity_id)
+                    & (associate_class.attribute_id.in_([a.schema.parent_attribute.id for a in attributes]))
+                    )
                 sub_entities[associate_name] = associate_class
             else:
                 associate_class = sub_entities[associate_name]
