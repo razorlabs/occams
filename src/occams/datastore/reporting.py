@@ -72,14 +72,14 @@ def checkSqlite(session):
     u"""
     Checks if the session is using sqlite
     """
-    return u'sqlite' in str(session.bind.url)
+    return session.bind.url.drivername == u'sqlite'
 
 
 def checkPostgres(session):
     u"""
     Checks if the session is using postgresql
     """
-    return u'postgres' in str(session.bind.url)
+    return session.bind.url.drivername in (u'postgres', u'postgresql')
 
 
 def buildReportTable(session, schema_name, header):
