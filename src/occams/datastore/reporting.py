@@ -18,6 +18,7 @@ So far, three types of attribute splitting are available:
 """
 
 import ordereddict
+import operator
 
 import sqlalchemy as sa
 from sqlalchemy import orm
@@ -53,6 +54,34 @@ def schemaToReportByChecksum(session, schema_name):
     return header, table
 
 
+def checkCollection(attributes):
+    u"""
+    Checks if the attribute list is ever a collection type
+    """
+    return reduce(operator.or_, [a.is_collection for a in attributes])
+
+
+def checkObject(attributes):
+    u"""
+    Checks if the attribute list is ever an object type
+    """
+    return reduce(operator.or_, [a.schema.is_inline for a in attributes])
+
+
+def checkSqlite(session):
+    u"""
+    Checks if the session is using sqlite
+    """
+    return u'sqlite' in str(session.bind.url)
+
+
+def checkPostgres(session):
+    u"""
+    Checks if the session is using postgresql
+    """
+    return u'postgres' in str(session.bind.url)
+
+
 def buildReportTable(session, schema_name, header):
     u"""
     Builds a schema entity data report table as an aliased sub-query.
@@ -74,11 +103,9 @@ def buildReportTable(session, schema_name, header):
         named tuples of each result using the names of the naming schema as the
         property names.
     """
-    # special cases depending on the database vendor
-    is_sqlite = u'sqlite' in str(session.bind.url)
-    is_postgres = u'postgres' in str(session.bind.url)
-    # convenient expression for evaluating a list of boleans
-    reduce_or = lambda i: reduce((lambda x, y: x or y), i)
+
+    # sub objects that have been joined so we don't rejoin
+    joined = dict()
 
     entity_query = (
         session.query(datastore.Entity.id.label(u'entity_id'))
@@ -87,82 +114,116 @@ def buildReportTable(session, schema_name, header):
         .filter(datastore.Schema.publish_date != None)
         )
 
-    sub_entities = dict()
-
     for path, attributes in header.iteritems():
-        column_name = u'_'.join(path)
-        type_name = attributes[-1].type
-        attribute_ids = [a.id for a in attributes]
-        value_source = storage.nameModelMap[type_name]
-        value_name = u'%s_%s' % (column_name, type_name)
-        value_class = orm.aliased(value_source, name=value_name)
-        attribute_clause = (value_class.attribute_id.in_(attribute_ids))
-        entity_clause = (value_class.entity_id == datastore.Entity.id)
-        value_clause = entity_clause & attribute_clause
-        # sqlalchemy doesn't like the hybrid property for casting
-        value_column = value_class._value
-        is_ever_collection = reduce_or([a.is_collection for a in attributes])
-        is_ever_subattribute = reduce_or([a.schema.is_inline for a in attributes])
-
-        # very special case for sqlite as it has limited data type
-        if is_sqlite and type_name == u'date':
-            value_casted = sa.func.date(value_column)
-        elif is_sqlite and type_name == u'datetime':
-            value_casted = sa.func.datetime(value_column)
+        if checkCollection(attributes):
+            entity_query = _addCollection(entity_query, path, attributes)
+        elif checkObject(attributes):
+            entity_query = _addObject(entity_query, path, attributes, joined)
         else:
-            value_casted = sa.cast(value_column, storage.nameCastMap[type_name])
+            entity_query = _addScalar(entity_query, path, attributes)
 
-        if is_ever_collection:
-            # collections are built using correlated subqueries
-            if is_postgres:
-                # use postgres arrays if available
-                aggregator = sa.func.array
-                aggregate_values = value_casted
-            else:
-                # everything else get's a comma-delimeted string
-                aggregator = lambda q: q
-                aggregate_values = sa.func.group_concat(value_casted)
-
-            column_part = aggregator(
-                session.query(aggregate_values)
-                .filter(value_clause)
-                .correlate(datastore.Entity)
-                .as_scalar()
-                )
-        elif is_ever_subattribute:
-            # need to do an extra left join for the sub-object assocation table
-            associate_name = path[0]
-
-            if associate_name not in sub_entities:
-                associate_class = orm.aliased(datastore.ValueObject, name=associate_name)
-                entity_query = entity_query.outerjoin(
-                    associate_class,
-                    (datastore.Entity.id == associate_class.entity_id)
-                    & (associate_class.attribute_id.in_([a.schema.parent_attribute.id for a in attributes]))
-                    )
-                sub_entities[associate_name] = associate_class
-            else:
-                associate_class = sub_entities[associate_name]
-
-            entity_clause =  (value_class.entity_id == associate_class._value)
-            # override the value_clause to use the object association table
-            value_clause = entity_clause & attribute_clause
-            entity_query = entity_query.outerjoin(value_class, value_clause)
-            column_part = value_casted
-        else:
-            # scalars are build via LEFT JOIN
-            entity_query = entity_query.outerjoin(value_class, value_clause)
-            column_part = value_casted
-
-        entity_query = entity_query.add_column(column_part.label(column_name))
-
-    if is_sqlite:
+    if checkSqlite(session):
         # sqlite does not support common table expressions
         report_table = entity_query.subquery(schema_name)
     else:
         report_table = entity_query.cte(schema_name)
 
     return report_table
+
+
+def _addCollection(entity_query, path, attributes):
+    u"""
+    Adds collection column to the entity query
+    """
+    session = entity_query.session
+    value_class, value_column = _getValueColumn(session, path, attributes)
+
+    if not checkPostgres(session):
+        # postgres can handle arrays, everything else is delimited
+        aggregator = sa.func.array
+    else:
+        aggregator = lambda q: q
+        value_column = sa.func.group_concat(value_column)
+
+    column_part = aggregator(
+        session.query(value_column)
+        .filter(value_class.entity_id == datastore.Entity.id)
+        .filter(value_class.attribute_id.in_([a.id for a in attributes]))
+        .correlate(datastore.Entity)
+        .as_scalar()
+        )
+
+    entity_query = entity_query.add_column(column_part.label(u'_'.join(path)))
+    return entity_query
+
+
+def _addObject(entity_query, path, attributes, joined=None):
+    u"""
+    Adds object columns to the entity query
+    """
+    session = entity_query.session
+    value_class, value_column = _getValueColumn(session, path, attributes)
+    parent_name = path[0]
+
+    if joined and parent_name not in joined:
+        # need to do an extra left join for the sub-object assocation table
+        associate_class = orm.aliased(datastore.ValueObject, name=parent_name)
+        joined[parent_name] = associate_class
+
+        entity_query = entity_query.outerjoin(
+            joined[parent_name],
+            (datastore.Entity.id == associate_class.entity_id)
+            & (associate_class.attribute_id.in_(
+                [a.schema.parent_attribute.id for a in attributes]
+                ))
+            )
+
+    entity_query = entity_query.outerjoin(
+        value_class,
+        ((value_class.entity_id == associate_class._value)
+        & value_class.attribute_id.in_([a.id for a in attributes]))
+        )
+
+    column_part = value_column
+    entity_query = entity_query.add_column(column_part.label(u'_'.join(path)))
+    return entity_query
+
+
+def _addScalar(entity_query, path, attributes):
+    u"""
+    Adds scalar column to the entity query
+    """
+    session = entity_query.session
+    value_class, value_column = _getValueColumn(session, path, attributes)
+    # scalars are build via LEFT JOIN
+    entity_query = entity_query.outerjoin(
+        value_class,
+        ((value_class.entity_id == datastore.Entity.id)
+            & (value_class.attribute_id.in_([a.id for a in attributes])))
+        )
+    column_part = value_column
+    entity_query = entity_query.add_column(column_part.label(u'_'.join(path)))
+    return entity_query
+
+
+def _getValueColumn(session, path, attributes):
+    u"""
+    Determines the value class and column for the attributes
+    """
+    # find the correct value class and alias it (for mulitple joins)
+    type_name = attributes[-1].type
+    source_class = storage.nameModelMap[type_name]
+    value_name = u'_'.join(path + (type_name,))
+    value_class = orm.aliased(source_class, name=value_name)
+    # sqlite is very finicky about dates: must be function result
+    if checkSqlite(session) and type_name == u'date':
+        value_column = sa.func.date(value_class._value)
+    elif checkSqlite(session) and type_name == u'datetime':
+        value_column = sa.func.datetime(value_class._value)
+    else:
+        cast_type = storage.nameCastMap[type_name]
+        value_column = sa.cast(value_class._value, cast_type)
+    return value_class, value_column
 
 
 def getHeaderByName(session, schema_name, path=()):
