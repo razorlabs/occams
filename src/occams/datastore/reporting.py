@@ -2,6 +2,32 @@ u"""
 A utility for allowing the access of entered schema data to be represented
 in a SQL table-like fashion.
 
+Some key terms to keep in mind for this documentation:
+
+    ``lineage`` or ``ancestry``
+        For a given attribute name, all the *published* attributes that
+        have every existed.
+
+    ``hiearchy`` or ``path``
+        The attributes location in the schema
+        (e.q. Form -> attribute -> sub-attribute)
+
+    ``column plan`` or ``header``
+        Thee concept of inspect a schema's history in order to flatten it
+        into an exportable table. A plan contains information about what
+        information each column in the report should contain and how to
+        render it (e.g. types/objects/collections)
+
+    ``report`` or ``export``
+        The actual exported entity, flattened by a column plan. The goal
+        of the report is to consolidate all the EAV data for an entity into
+        a queryable result, so that it can then be further queried as if it
+        an actual table. Therefore, depending on the database vendor, the
+        final report will either be a common-table-expression (CTE) result
+        or just a subquery. Usage of a vendor that supports CTE is strongly
+        encouraged, especially when joining different reports (which
+        the subquery result doesn't handle very well)
+
 Because of the nature of how datastore handles schema versions, this module
 offers difference kinds of reporting granularity in the form of
 *attribute splitting*, meaning that the attribute metdata is inpected to
@@ -133,19 +159,33 @@ def buildReportTable(session, schema_name, header):
 
 def _addCollection(entity_query, path, attributes):
     u"""
-    Adds collection column to the entity query
+    Helper method to add collection column to the entity query
+
+    Collection attributes are added via correlated sub-queries to the parent
+    entity.
+
+    Attempts to use postgres' native array support, otherwise the column is
+    generated as a comma-delimited string column.
+
+    Arguments
+        ``entity_query``
+            The pending query being generated
+        ``path``
+            The column plan path
+        ``attributes``
+            The attributes in the ancestry for the the path
+
+    Returns
+        The modified entity_query
     """
+    value_class, value_column = _getValueColumn(path, attributes)
     session = entity_query.session
-    value_class, value_column = _getValueColumn(session, path, attributes)
 
     if not checkPostgres(session):
-        # postgres can handle arrays, everything else is delimited
-        aggregator = sa.func.array
-    else:
-        aggregator = lambda q: q
+        # aggregate subquery results into comma-delimited list
         value_column = sa.func.group_concat(value_column)
 
-    column_part = aggregator(
+    column_part = (
         session.query(value_column)
         .filter(value_class.entity_id == datastore.Entity.id)
         .filter(value_class.attribute_id.in_([a.id for a in attributes]))
@@ -153,63 +193,122 @@ def _addCollection(entity_query, path, attributes):
         .as_scalar()
         )
 
-    entity_query = entity_query.add_column(column_part.label(u'_'.join(path)))
+    if checkPostgres(session):
+        # use postgres' native array support if available
+        column_part = sa.func.array(column_part)
+
+    column_name = u'_'.join(path)
+    column_part = column_part.label(column_name)
+    entity_query = entity_query.add_column(column_part)
     return entity_query
 
 
 def _addObject(entity_query, path, attributes, joined=None):
     u"""
-    Adds object columns to the entity query
+    Helper method to add object column to the entity query
+
+    Object sub-attributes are added via a LEFT OUTER JOIN to the object
+    value table (only once if using the ``joined`` parameter) and then via
+    another LEFT OUTER JOIN for each sub-attribute
+
+    This method attempts to join the object value table only once so
+    that sub attributes can then join from it. This is of course assuming
+    that the calling method is passing the same lookup table reference.
+
+    Arguments
+        ``entity_query``
+            The pending query being generated
+        ``path``
+            The column plan path
+        ``attributes``
+            The attributes in the ancestry for the the path
+        ``joined``
+            (optional) a lookup table fo joined entities for sub-objects.
+            Useful for limitting object table joins to one-per-subobject
+            as opposed to one-per-subattribute
+
+    Returns
+        The modified entity_query
     """
-    session = entity_query.session
-    value_class, value_column = _getValueColumn(session, path, attributes)
+    value_class, value_column = _getValueColumn(path, attributes)
+
+    # we're going to use this as a key in the lookup table of joined objects
     parent_name = path[0]
 
-    if joined and parent_name not in joined:
+    if joined is None:
+        # just in case the client reset the value
+        joined = {}
+
+    if parent_name not in joined:
         # need to do an extra left join for the sub-object assocation table
         associate_class = orm.aliased(datastore.ValueObject, name=parent_name)
+        # keep a reference in the lookup table
         joined[parent_name] = associate_class
-
-        entity_query = entity_query.outerjoin(
-            joined[parent_name],
+        # do a single join to the sub-object
+        entity_query = entity_query.outerjoin(associate_class, (
             (datastore.Entity.id == associate_class.entity_id)
-            & (associate_class.attribute_id.in_(
+            & associate_class.attribute_id.in_(
                 [a.schema.parent_attribute.id for a in attributes]
-                ))
-            )
+                )
+            ))
+    else:
+        associate_class = joined[parent_name]
 
-    entity_query = entity_query.outerjoin(
-        value_class,
-        ((value_class.entity_id == associate_class._value)
-        & value_class.attribute_id.in_([a.id for a in attributes]))
-        )
+    # each subsequent join should be using the lookup table
+    entity_query = entity_query.outerjoin(value_class, (
+        (value_class.entity_id == associate_class._value)
+        & value_class.attribute_id.in_([a.id for a in attributes])
+        ))
 
-    column_part = value_column
-    entity_query = entity_query.add_column(column_part.label(u'_'.join(path)))
+    column_name = u'_'.join(path)
+    column_part = value_column.label(column_name)
+    entity_query = entity_query.add_column(column_part)
     return entity_query
 
 
 def _addScalar(entity_query, path, attributes):
     u"""
-    Adds scalar column to the entity query
+    Helper method to add scalar column to the entity query
+
+    Scalar columns are added via LEFT OUTER JOIN
+
+    Arguments
+        ``entity_query``
+            The pending query being generated
+        ``path``
+            The column plan path
+        ``attributes``
+            The attributes in the ancestry for the the path
+
+    Returns
+        The modified entity_query
     """
-    session = entity_query.session
-    value_class, value_column = _getValueColumn(session, path, attributes)
-    # scalars are build via LEFT JOIN
-    entity_query = entity_query.outerjoin(
-        value_class,
-        ((value_class.entity_id == datastore.Entity.id)
-            & (value_class.attribute_id.in_([a.id for a in attributes])))
-        )
-    column_part = value_column
-    entity_query = entity_query.add_column(column_part.label(u'_'.join(path)))
+    value_class, value_column = _getValueColumn(path, attributes)
+    entity_query = entity_query.outerjoin(value_class, (
+        (value_class.entity_id == datastore.Entity.id)
+        & value_class.attribute_id.in_([a.id for a in attributes])
+        ))
+    column_part = value_column.label(u'_'.join(path))
+    entity_query = entity_query.add_column(column_part)
     return entity_query
 
 
-def _getValueColumn(session, path, attributes):
+def _getValueColumn(path, attributes):
     u"""
     Determines the value class and column for the attributes
+
+    Arguments
+        ``path``
+            The column plan path
+        ``attributes``
+            The attributes in the ancestry for the given path
+
+    Returns
+        A tuple consisting of the value_class to query from as well
+        as the casted column containing the actual stored value.
     """
+    # the attribute listing should give a hint as to which session
+    session = orm.object_session(attributes[-1])
     # find the correct value class and alias it (for mulitple joins)
     type_name = attributes[-1].type
     source_class = storage.nameModelMap[type_name]
