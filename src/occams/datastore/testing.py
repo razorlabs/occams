@@ -16,9 +16,10 @@ SQLITE_URI = 'sqlite://'
 
 # Use this if you have a testing database setup, if only there was an in-memory
 # postgres database...
-PSQL_URI = 'postgresql://localhost/test'
+PSQL_URI = 'postgresql://tester:test1234@localhost/datastore_test'
 
-DEFAULT_URI = SQLITE_URI
+#DEFAULT_URI = SQLITE_URI
+DEFAULT_URI = PSQL_URI
 
 
 class OccamsDataStoreLayer(plone.testing.Layer):
