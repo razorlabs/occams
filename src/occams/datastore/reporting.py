@@ -41,6 +41,11 @@ So far, three types of attribute splitting are available:
     **ID**
         Aggressively split by attribute id
 
+For typical usage, see:
+    ``schemaToReportById``
+    ``schematoReportByName``
+    ``schemaToReportByChecksum``
+
 """
 
 import ordereddict
@@ -84,6 +89,7 @@ def checkCollection(attributes):
     u"""
     Checks if the attribute list is ever a collection type
     """
+
     return reduce(operator.or_, [bool(a.is_collection) for a in attributes])
 
 
@@ -142,11 +148,11 @@ def buildReportTable(session, schema_name, header):
 
     for path, attributes in header.iteritems():
         if checkCollection(attributes):
-            entity_query = _addCollection(entity_query, path, attributes)
+            entity_query = addCollection(entity_query, path, attributes)
         elif checkObject(attributes):
-            entity_query = _addObject(entity_query, path, attributes, joined)
+            entity_query = addObject(entity_query, path, attributes, joined)
         else:
-            entity_query = _addScalar(entity_query, path, attributes)
+            entity_query = addScalar(entity_query, path, attributes)
 
     if checkSqlite(session):
         # sqlite does not support common table expressions
@@ -157,7 +163,7 @@ def buildReportTable(session, schema_name, header):
     return report_table
 
 
-def _addCollection(entity_query, path, attributes):
+def addCollection(entity_query, path, attributes):
     u"""
     Helper method to add collection column to the entity query
 
@@ -178,7 +184,7 @@ def _addCollection(entity_query, path, attributes):
     Returns
         The modified entity_query
     """
-    value_class, value_column = _getValueColumn(path, attributes)
+    value_class, value_column = getValueColumn(path, attributes)
     session = entity_query.session
 
     if not checkPostgres(session):
@@ -203,7 +209,7 @@ def _addCollection(entity_query, path, attributes):
     return entity_query
 
 
-def _addObject(entity_query, path, attributes, joined=None):
+def addObject(entity_query, path, attributes, joined=None):
     u"""
     Helper method to add object column to the entity query
 
@@ -230,20 +236,16 @@ def _addObject(entity_query, path, attributes, joined=None):
     Returns
         The modified entity_query
     """
-    value_class, value_column = _getValueColumn(path, attributes)
+    value_class, value_column = getValueColumn(path, attributes)
 
     # we're going to use this as a key in the lookup table of joined objects
     parent_name = path[0]
 
-    if joined is None:
-        # just in case the client reset the value
-        joined = {}
-
-    if parent_name not in joined:
+    if joined is not None and parent_name in joined:
+        associate_class = joined[parent_name]
+    else:
         # need to do an extra left join for the sub-object assocation table
         associate_class = orm.aliased(datastore.ValueObject, name=parent_name)
-        # keep a reference in the lookup table
-        joined[parent_name] = associate_class
         # do a single join to the sub-object
         entity_query = entity_query.outerjoin(associate_class, (
             (datastore.Entity.id == associate_class.entity_id)
@@ -251,8 +253,9 @@ def _addObject(entity_query, path, attributes, joined=None):
                 [a.schema.parent_attribute.id for a in attributes]
                 )
             ))
-    else:
-        associate_class = joined[parent_name]
+        if joined is not None:
+            # keep a reference in the lookup table
+            joined[parent_name] = associate_class
 
     # each subsequent join should be using the lookup table
     entity_query = entity_query.outerjoin(value_class, (
@@ -266,7 +269,7 @@ def _addObject(entity_query, path, attributes, joined=None):
     return entity_query
 
 
-def _addScalar(entity_query, path, attributes):
+def addScalar(entity_query, path, attributes):
     u"""
     Helper method to add scalar column to the entity query
 
@@ -283,7 +286,7 @@ def _addScalar(entity_query, path, attributes):
     Returns
         The modified entity_query
     """
-    value_class, value_column = _getValueColumn(path, attributes)
+    value_class, value_column = getValueColumn(path, attributes)
     entity_query = entity_query.outerjoin(value_class, (
         (value_class.entity_id == datastore.Entity.id)
         & value_class.attribute_id.in_([a.id for a in attributes])
@@ -293,7 +296,7 @@ def _addScalar(entity_query, path, attributes):
     return entity_query
 
 
-def _getValueColumn(path, attributes):
+def getValueColumn(path, attributes):
     u"""
     Determines the value class and column for the attributes
 
