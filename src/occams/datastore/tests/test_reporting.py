@@ -7,6 +7,7 @@ import decimal
 import copy
 import unittest2 as unittest
 
+import sqlalchemy as sa
 from sqlalchemy import orm
 
 from occams.datastore import model as datastore
@@ -54,6 +55,58 @@ def createSchema(session, name, publish_date, attributes={}):
     session.flush()
     return schema
 
+
+class UtilitiesTestCase(unittest.TestCase):
+    u"""
+    Ensures the helper utilities are working properly
+    """
+
+    def testCheckPostgres(self):
+        engine = sa.create_engine(testing.PSQL_URI)
+        session = orm.scoped_session(orm.sessionmaker(engine))
+        self.assertTrue(reporting.checkPostgres(session))
+
+        engine = sa.create_engine(testing.SQLITE_URI)
+        session = orm.scoped_session(orm.sessionmaker(engine))
+        self.assertFalse(reporting.checkPostgres(session))
+
+    def testCheckSqlite(self):
+        engine = sa.create_engine(testing.SQLITE_URI)
+        session = orm.scoped_session(orm.sessionmaker(engine))
+        self.assertTrue(reporting.checkSqlite(session))
+
+        engine = sa.create_engine(testing.PSQL_URI)
+        session = orm.scoped_session(orm.sessionmaker(engine))
+        self.assertFalse(reporting.checkSqlite(session))
+
+    def testCheckCollection(self):
+        # typical usage will be on history of attributes and we will want to know
+        # if the attribte in question was ever a collection
+
+        # does not contain collection
+        attributes = [datastore.Attribute(name=u'foo')]
+        self.assertFalse(reporting.checkCollection(attributes))
+
+        # does contain collection
+        attributes.append(datastore.Attribute(name=u'foo', is_collection=True))
+        self.assertTrue(reporting.checkCollection(attributes))
+
+    def testCheckObject(self):
+        # typical usage will be on history of attributes and we will want to know
+        # if the attribute in question was ever a sub-attribute
+
+        # was not a sub-attribute
+        attributes = [datastore.Attribute(
+            name=u'foo',
+            schema=datastore.Schema(name=u'Foo')
+            )]
+        self.assertFalse(reporting.checkObject(attributes))
+
+        attributes.append(datastore.Attribute(
+            name=u'foo',
+            schema=datastore.Schema(name=u'Foo', is_inline=True)
+            ))
+        self.assertTrue(reporting.checkObject(attributes))
 
 
 class HeaderTestCase(unittest.TestCase):
@@ -390,7 +443,7 @@ class SchemaToQueryTestCase(unittest.TestCase):
             datetimeValue=datetime.datetime(2012, 5, 1, 16, 19),
             ))
 
-        playn, subquery = reporting.schemaToReportByName(session, u'Sample')
+        plan, subquery = reporting.schemaToReportByName(session, u'Sample')
 
         result = session.query(subquery).filter_by(entity_id=entity1.id).one()
         self.assertEqual(entity1[u'textValue'], result.textValue)

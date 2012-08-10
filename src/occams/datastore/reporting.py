@@ -84,14 +84,14 @@ def checkCollection(attributes):
     u"""
     Checks if the attribute list is ever a collection type
     """
-    return reduce(operator.or_, [a.is_collection for a in attributes])
+    return reduce(operator.or_, [bool(a.is_collection) for a in attributes])
 
 
 def checkObject(attributes):
     u"""
     Checks if the attribute list is ever an object type
     """
-    return reduce(operator.or_, [a.schema.is_inline for a in attributes])
+    return reduce(operator.or_, [bool(a.schema.is_inline) for a in attributes])
 
 
 def checkSqlite(session):
