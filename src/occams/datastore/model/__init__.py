@@ -1,8 +1,30 @@
+import sqlalchemy
 import sqlalchemy.ext.declarative
 
 
-# Base class for declarative syntax on our models
-Model = sqlalchemy.ext.declarative.declarative_base()
+class ModelClassFactory(object):
+    u"""
+    Utility class for creating new inheritable SQLAlchemy base model class
+    with a common declarative base.
+    """
+
+    declarative_base = sqlalchemy.ext.declarative.declarative_base()
+
+    def __call__(self, class_name):
+        u"""
+        Creates a new abstract base model class.
+        """
+        return type(str(class_name), (self.declarative_base,), dict(
+            __abstract__=True,
+            metadata=sqlalchemy.MetaData()
+            ))
+
+
+# This is the method to use in client modules
+ModelClass = ModelClassFactory()
+
+# Useful example
+DataStoreModel = ModelClass(u'DataStoreModel')
 
 
 from occams.datastore.model.metadata import User
@@ -27,7 +49,7 @@ from occams.datastore.model.session import DataStoreSession
 
 
 __all__ = (
-    'Model',
+    'ModelClass',
     'User',
     'Auditable',
     'Schema',
@@ -49,3 +71,4 @@ __all__ = (
 if __name__ == '__main__': # pragma: no cover
     # A convenient way for checking the model even correctly loads the tables
     Model.metadata.create_all(bind=sqlalchemy.create_engine('sqlite://', echo=True))
+

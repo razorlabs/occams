@@ -27,14 +27,14 @@ class HasEntitiesTestCase(unittest.TestCase):
             user=lambda:'foo@foo.com'
         ))
 
-        class SampleClass1(model.Model, HasEntities):
+        class SampleClass1(model.DataStoreModel, HasEntities):
             __tablename__ = 'sampleclass1'
 
             id = Column(Integer, primary_key=True)
 
             name = Column(String, nullable=False)
 
-        class SampleClass2(model.Model, HasEntities):
+        class SampleClass2(model.DataStoreModel, HasEntities):
             __tablename__ = 'sampleclass2'
 
             id = Column(Integer, primary_key=True)
@@ -42,7 +42,7 @@ class HasEntitiesTestCase(unittest.TestCase):
             name = Column(String, nullable=False)
 
         # Register a default user
-        model.Model.metadata.create_all(session.bind)
+        model.DataStoreModel.metadata.create_all(session.bind)
         session.add(model.User(key='foo@foo.com'))
         session.flush()
 

@@ -17,7 +17,7 @@ from sqlalchemy.schema import ForeignKey
 from sqlalchemy.types import DateTime
 from zope.interface import implements
 
-from occams.datastore.model import Model
+from occams.datastore.model import DataStoreModel as Model
 from occams.datastore.interfaces import IUser
 from occams.datastore.interfaces import NonExistentUserError
 
