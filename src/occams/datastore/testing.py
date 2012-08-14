@@ -18,8 +18,8 @@ SQLITE_URI = u'sqlite://'
 # postgres database...
 PSQL_URI = u'postgresql://tester:test1234@localhost/datastore_test'
 
-#DEFAULT_URI = SQLITE_URI
-DEFAULT_URI = PSQL_URI
+DEFAULT_URI = SQLITE_URI
+#DEFAULT_URI = PSQL_URI
 
 
 class OccamsDataStoreLayer(plone.testing.Layer):

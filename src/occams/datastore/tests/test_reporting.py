@@ -390,6 +390,7 @@ class ValueColumnTestCase(unittest.TestCase):
         self.assertEquals(u'decimal', value_class.__tablename__)
         self.assertTrue(isinstance(value_column.type, sa.Numeric))
 
+    @unittest.skipIf('sqlite' in testing.DEFAULT_URI, u'Vendor does not support date/time')
     def testDateColumn(self):
         session = self.layer[u'session']
         testing.createSchema(session, u'A', t1, dict(
@@ -401,6 +402,19 @@ class ValueColumnTestCase(unittest.TestCase):
         self.assertEquals(u'datetime', value_class.__tablename__)
         self.assertTrue(isinstance(value_column.type, sa.Date))
 
+    @unittest.skipIf('sqlite' not in testing.DEFAULT_URI, u'Vendor supports date/time')
+    def testStringDateColumn(self):
+        session = self.layer[u'session']
+        testing.createSchema(session, u'A', t1, dict(
+            a=datastore.Attribute(type=u'date', order=0),
+            ))
+        plan = reporting.getHeaderByName(session, u'A')
+        path, attributes = plan.items()[0]
+        value_class, value_column = reporting.getValueColumn(path, attributes)
+        self.assertEquals(u'datetime', value_class.__tablename__)
+        self.assertEquals(u'date', value_column.name)
+
+    @unittest.skipIf('sqlite' in testing.DEFAULT_URI, u'Vendor does not support date/time')
     def testDatetimeColumn(self):
         session = self.layer[u'session']
         testing.createSchema(session, u'A', t1, dict(
@@ -412,6 +426,17 @@ class ValueColumnTestCase(unittest.TestCase):
         self.assertEquals(u'datetime', value_class.__tablename__)
         self.assertTrue(isinstance(value_column.type, sa.DateTime))
 
+    @unittest.skipIf('sqlite' not in testing.DEFAULT_URI, u'Vendor supports date/time')
+    def testStringDatetimeColumn(self):
+        session = self.layer[u'session']
+        testing.createSchema(session, u'A', t1, dict(
+            a=datastore.Attribute(type=u'datetime', order=0),
+            ))
+        plan = reporting.getHeaderByName(session, u'A')
+        path, attributes = plan.items()[0]
+        value_class, value_column = reporting.getValueColumn(path, attributes)
+        self.assertEquals(u'datetime', value_class.__tablename__)
+        self.assertEquals(u'datetime', value_column.name)
 
 class SchemaToQueryTestCase(unittest.TestCase):
     u"""
@@ -461,7 +486,8 @@ class SchemaToQueryTestCase(unittest.TestCase):
         result = session.query(report).filter_by(entity_id=entity1.id).one()
         self.assertEqual(entity1[u'value'], result.value)
 
-    def testCollectionValues(self):
+    @unittest.skipIf(u'postgres' not in testing.DEFAULT_URI, u'Not using postgres')
+    def testArrayCollectionValues(self):
         session = self.layer[u'session']
 
         schema1 = testing.createSchema(session, u'Sample', t1, dict(
@@ -475,6 +501,24 @@ class SchemaToQueryTestCase(unittest.TestCase):
         plan, report = reporting.schemaToReportByName(session, u'Sample')
         result = session.query(report).filter_by(entity_id=entity1.id).one()
         self.assertListEqual(entity1[u'value'], result.value)
+
+    @unittest.skipIf(u'postgres' in testing.DEFAULT_URI, u'Using ARRAY type')
+    def testDelimitedCollectionValues(self):
+        session = self.layer[u'session']
+
+        schema1 = testing.createSchema(session, u'Sample', t1, dict(
+            value=datastore.Attribute(type=u'string', is_collection=True, order=0),
+            ))
+
+        entity1 = testing.createEntity(schema1, u'Foo', t1, dict(
+            value=[u'one', u'two'],
+            ))
+
+        plan, report = reporting.schemaToReportByName(session, u'Sample')
+        result = session.query(report).filter_by(entity_id=entity1.id).one()
+        expected_value = ','.join(entity1[u'value'])
+        result_value = ','.join(entity1[u'value'])
+        self.assertEqual(expected_value, result_value)
 
     def testObjectValues(self):
         session = self.layer[u'session']
