@@ -81,7 +81,8 @@ class SqlBatch(Batch):
             if self._trueSize > 0:
                 key = self._trueSize + key
             else:
-                key = 0
+                # the batch since is empty and so we can't access any item
+                raise IndexError('batch index out of range')
         result = self.query.offset(key).limit(1).one()
         return (result.id, getattr(result, 'objectify', lambda: result)())
 
@@ -103,13 +104,15 @@ class SqlBatch(Batch):
         return (item.id, item) in iter(self)
 
     def __getslice__(self, i, j):
+        # note: python adjusts the index, but it may still be negative
+        # (e.g. if the negative number is larger than the whole list)
+        if i < 0:
+            i = 0
         if j > self.end:
             j = self._trueSize
-        if i < 0:
-            if self._trueSize > 0:
-                i = self._trueSize + i
-            else:
-                i = 0
+        if j < i:
+            # stop value may not be less than the index
+            j = i
         query = self.query.slice(i, j)
         for result in query:
             yield (result.id, getattr(result, 'objectify', lambda: result)())

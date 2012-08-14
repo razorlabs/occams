@@ -1,5 +1,5 @@
 u"""
-Tests the schema subquery converter module
+Tests the schema report converter module
 """
 
 import datetime
@@ -7,6 +7,7 @@ import decimal
 import copy
 import unittest2 as unittest
 
+import sqlalchemy as sa
 from sqlalchemy import orm
 
 from occams.datastore import model as datastore
@@ -20,40 +21,57 @@ t3 = datetime.date(2011, 8, 1)
 t4 = datetime.date(2012, 5, 1)
 
 
-def createEntity(schema, name, collect_date, values={}):
+class UtilitiesTestCase(unittest.TestCase):
     u"""
-    Helper method to create an entities
+    Ensures the helper utilities are working properly
     """
-    session = orm.object_session(schema)
-    entity = datastore.Entity(
-        schema=schema,
-        name=name,
-        title=u'',
-        collect_date=collect_date
-        )
-    session.add(entity)
-    for key, value in values.iteritems():
-        entity[key] = value
-    session.flush()
-    return entity
 
+    def testCheckPostgres(self):
+        engine = sa.create_engine(testing.PSQL_URI)
+        session = orm.scoped_session(orm.sessionmaker(engine))
+        self.assertTrue(reporting.checkPostgres(session))
 
-def createSchema(session, name, publish_date, attributes={}):
-    u"""
-    Helper method to create schemata
-    """
-    schema = datastore.Schema(
-        name=name,
-        title=u'',
-        state=u'published',
-        publish_date=publish_date
-        )
-    for attribute_name, attribute in attributes.iteritems():
-        schema[attribute_name] = attribute
-    session.add(schema)
-    session.flush()
-    return schema
+        engine = sa.create_engine(testing.SQLITE_URI)
+        session = orm.scoped_session(orm.sessionmaker(engine))
+        self.assertFalse(reporting.checkPostgres(session))
 
+    def testCheckSqlite(self):
+        engine = sa.create_engine(testing.SQLITE_URI)
+        session = orm.scoped_session(orm.sessionmaker(engine))
+        self.assertTrue(reporting.checkSqlite(session))
+
+        engine = sa.create_engine(testing.PSQL_URI)
+        session = orm.scoped_session(orm.sessionmaker(engine))
+        self.assertFalse(reporting.checkSqlite(session))
+
+    def testCheckCollection(self):
+        # typical usage will be on history of attributes and we will want to know
+        # if the attribte in question was ever a collection
+
+        # does not contain collection
+        attributes = [datastore.Attribute(name=u'foo')]
+        self.assertFalse(reporting.checkCollection(attributes))
+
+        # does contain collection
+        attributes.append(datastore.Attribute(name=u'foo', is_collection=True))
+        self.assertTrue(reporting.checkCollection(attributes))
+
+    def testCheckObject(self):
+        # typical usage will be on history of attributes and we will want to know
+        # if the attribute in question was ever a sub-attribute
+
+        # was not a sub-attribute
+        attributes = [datastore.Attribute(
+            name=u'foo',
+            schema=datastore.Schema(name=u'Foo')
+            )]
+        self.assertFalse(reporting.checkObject(attributes))
+
+        attributes.append(datastore.Attribute(
+            name=u'foo',
+            schema=datastore.Schema(name=u'Foo', is_inline=True)
+            ))
+        self.assertTrue(reporting.checkObject(attributes))
 
 
 class HeaderTestCase(unittest.TestCase):
@@ -65,8 +83,7 @@ class HeaderTestCase(unittest.TestCase):
 
     def testEmptyPublishedSchema(self):
         session = self.layer[u'session']
-        session.add(datastore.Schema(name=u'A', title=u'', state=u'published'))
-        session.flush()
+        testing.createSchema(session, u'A', t1)
 
         # by NAME
         plan = reporting.getHeaderByName(session, u'A')
@@ -82,10 +99,9 @@ class HeaderTestCase(unittest.TestCase):
 
     def testKeysFromSingleForm(self):
         session = self.layer[u'session']
-        schema = datastore.Schema(name=u'A', title=u'', state=u'published')
-        schema[u'a'] = datastore.Attribute(title=u'', type=u'string', order=0)
-        session.add(schema)
-        session.flush()
+        schema = testing.createSchema(session, u'A', t1, dict(
+            a=datastore.Attribute(type=u'string', order=0)
+            ))
 
         # by NAME
         plan = reporting.getHeaderByName(session, u'A')
@@ -108,8 +124,9 @@ class HeaderTestCase(unittest.TestCase):
 
     def testKeysFromMultpleVersions(self):
         session = self.layer[u'session']
-        schema1 = datastore.Schema(name=u'A', title=u'', state=u'published', publish_date=t1)
-        schema1[u'a'] = datastore.Attribute(title=u'', type=u'string', order=0)
+        schema1 = testing.createSchema(session, u'A', t1, dict(
+            a=datastore.Attribute(type=u'string', order=0)
+            ))
 
         schema2 = copy.deepcopy(schema1)
         schema2.state = u'published'
@@ -319,6 +336,83 @@ class HeaderTestCase(unittest.TestCase):
             self.assertEqual(1, len(plan[e]))
 
 
+class ValueColumnTestCase(unittest.TestCase):
+    u"""
+    Collection of tests for scalar column generation
+    *Note* that these tests only use the header data to generate the
+    appropriately typed column, they assume nothing about the
+    separation algorithm used.
+    """
+
+    layer = testing.OCCAMS_DATASTORE_FIXTURE
+
+    def testStringColumn(self):
+        session = self.layer[u'session']
+        testing.createSchema(session, u'A', t1, dict(
+            a=datastore.Attribute(type=u'string', order=0),
+            ))
+        plan = reporting.getHeaderByName(session, u'A')
+        path, attributes = plan.items()[0]
+        value_class, value_column = reporting.getValueColumn(path, attributes)
+        self.assertEquals(u'string', value_class.__tablename__)
+        self.assertTrue(isinstance(value_column.type, sa.Unicode))
+
+    def testTextColumn(self):
+        session = self.layer[u'session']
+        testing.createSchema(session, u'A', t1, dict(
+            a=datastore.Attribute(type=u'text', order=0),
+            ))
+        plan = reporting.getHeaderByName(session, u'A')
+        path, attributes = plan.items()[0]
+        value_class, value_column = reporting.getValueColumn(path, attributes)
+        self.assertEquals(u'string', value_class.__tablename__)
+        self.assertTrue(isinstance(value_column.type, sa.Unicode))
+
+    def testIntegerColumn(self):
+        session = self.layer[u'session']
+        testing.createSchema(session, u'A', t1, dict(
+            a=datastore.Attribute(type=u'integer', order=0),
+            ))
+        plan = reporting.getHeaderByName(session, u'A')
+        path, attributes = plan.items()[0]
+        value_class, value_column = reporting.getValueColumn(path, attributes)
+        self.assertEquals(u'integer', value_class.__tablename__)
+        self.assertTrue(isinstance(value_column.type, sa.Integer))
+
+    def testDecimalColumn(self):
+        session = self.layer[u'session']
+        testing.createSchema(session, u'A', t1, dict(
+            a=datastore.Attribute(type=u'decimal', order=0),
+            ))
+        plan = reporting.getHeaderByName(session, u'A')
+        path, attributes = plan.items()[0]
+        value_class, value_column = reporting.getValueColumn(path, attributes)
+        self.assertEquals(u'decimal', value_class.__tablename__)
+        self.assertTrue(isinstance(value_column.type, sa.Numeric))
+
+    def testDateColumn(self):
+        session = self.layer[u'session']
+        testing.createSchema(session, u'A', t1, dict(
+            a=datastore.Attribute(type=u'date', order=0),
+            ))
+        plan = reporting.getHeaderByName(session, u'A')
+        path, attributes = plan.items()[0]
+        value_class, value_column = reporting.getValueColumn(path, attributes)
+        self.assertEquals(u'datetime', value_class.__tablename__)
+        self.assertTrue(isinstance(value_column.type, sa.Date))
+
+    def testDatetimeColumn(self):
+        session = self.layer[u'session']
+        testing.createSchema(session, u'A', t1, dict(
+            a=datastore.Attribute(type=u'datetime', order=0),
+            ))
+        plan = reporting.getHeaderByName(session, u'A')
+        path, attributes = plan.items()[0]
+        value_class, value_column = reporting.getValueColumn(path, attributes)
+        self.assertEquals(u'datetime', value_class.__tablename__)
+        self.assertTrue(isinstance(value_column.type, sa.DateTime))
+
+
 class SchemaToQueryTestCase(unittest.TestCase):
     u"""
     Ensures that schema queries can by properly generated
@@ -328,95 +422,91 @@ class SchemaToQueryTestCase(unittest.TestCase):
 
     def testExpectedMetadataColumns(self):
         session = self.layer[u'session']
-        schema = datastore.Schema(name=u'A', title=u'', state=u'published', publish_date=t1)
-        session.add(schema)
-        session.flush()
+        testing.createSchema(session, u'A', t1)
 
-        plan, subquery = reporting.schemaToReportById(session, u'A')
-        self.assertIn(u'entity_id', subquery.c)
+        plan, report = reporting.schemaToReportById(session, u'A')
+        self.assertIn(u'entity_id', report.c)
 
-        plan, subquery = reporting.schemaToReportByName(session, u'A')
-        self.assertIn(u'entity_id', subquery.c)
+        plan, report = reporting.schemaToReportByName(session, u'A')
+        self.assertIn(u'entity_id', report.c)
 
-        plan, subquery = reporting.schemaToReportByChecksum(session, u'A')
-        self.assertIn(u'entity_id', subquery.c)
+        plan, report = reporting.schemaToReportByChecksum(session, u'A')
+        self.assertIn(u'entity_id', report.c)
 
     def testEmptySchema(self):
         session = self.layer[u'session']
-        schema = datastore.Schema(name=u'A', title=u'', state=u'published', publish_date=t1)
-        session.add(schema)
-        session.flush()
+        schema = testing.createSchema(session, u'A', t1)
 
-        plan, subquery = reporting.schemaToReportByName(session, u'A')
+        plan, report = reporting.schemaToReportByName(session, u'A')
+        self.assertEqual(0, session.query(report).count())
 
-        self.assertEqual(0, session.query(subquery).count())
+        testing.createEntity(schema, u'Sample', None)
+        self.assertEqual(1, session.query(report).count())
 
-        entity = datastore.Entity(schema=schema, name=u'Sample', title=u'')
-        session.add(entity)
-        session.flush()
-
-        self.assertEqual(1, session.query(subquery).count())
-
-    def testFlatSchema(self):
+    def testScalarValues(self):
         session = self.layer[u'session']
 
-        schema1 = createSchema(session, u'Sample', t1, dict(
-            textValue=datastore.Attribute(title=u'', type=u'text', order=0),
-            stringValue=datastore.Attribute(title=u'', type=u'string', order=1),
-            integerValue=datastore.Attribute(title=u'', type=u'integer', order=2),
-            decimalValue=datastore.Attribute(title=u'', type=u'decimal', order=3),
-            booleanValue=datastore.Attribute(title=u'', type=u'boolean', order=4),
-            dateValue=datastore.Attribute(title=u'', type=u'date', order=5),
-            datetimeValue=datastore.Attribute(title=u'', type=u'datetime', order=6),
+        # first version of the sample schema
+        schema1 = testing.createSchema(session, u'Sample', t1, dict(
+            value=datastore.Attribute(type=u'string', order=0),
             ))
 
-        entity1 = createEntity(schema1, u'Foo', t1, dict(
-            textValue=u'some\nfoovalue',
-            stringValue=u'foovalue',
-            integerValue=10,
-            decimalValue=decimal.Decimal(u'5.1'),
-            booleanValue=True,
-            dateValue=datetime.date(2010, 10, 1),
-            datetimeValue=datetime.datetime(2010, 10, 1, 5, 10, 30),
+        # add some entries for the schema
+        entity1 = testing.createEntity(schema1, u'Foo', t1, dict(
+            value=u'foovalue',
             ))
 
-        entity2 = createEntity(schema1, u'Bar', t1, dict(
-            textValue=u'some\nbarvalue',
-            stringValue=u'barvalue',
-            integerValue=30,
-            decimalValue=decimal.Decimal(u'1.89'),
-            booleanValue=False,
-            dateValue=datetime.date(2012, 5, 1),
-            datetimeValue=datetime.datetime(2012, 5, 1, 16, 19),
+        # generate report by name, should be able to access attributes as columns
+        plan, report = reporting.schemaToReportByName(session, u'Sample')
+        result = session.query(report).filter_by(entity_id=entity1.id).one()
+        self.assertEqual(entity1[u'value'], result.value)
+
+    def testCollectionValues(self):
+        session = self.layer[u'session']
+
+        schema1 = testing.createSchema(session, u'Sample', t1, dict(
+            value=datastore.Attribute(type=u'string', is_collection=True, order=0),
             ))
 
-        playn, subquery = reporting.schemaToReportByName(session, u'Sample')
+        entity1 = testing.createEntity(schema1, u'Foo', t1, dict(
+            value=[u'one', u'two'],
+            ))
 
-        result = session.query(subquery).filter_by(entity_id=entity1.id).one()
-        self.assertEqual(entity1[u'textValue'], result.textValue)
-        self.assertEqual(entity1[u'stringValue'], result.stringValue)
-        self.assertEqual(entity1[u'integerValue'], result.integerValue)
-        self.assertEqual(entity1[u'booleanValue'], result.booleanValue)
-        self.assertEqual(str(entity1[u'dateValue']), str(result.dateValue))
-        self.assertEqual(str(entity1[u'datetimeValue']), str(result.datetimeValue))
+        plan, report = reporting.schemaToReportByName(session, u'Sample')
+        result = session.query(report).filter_by(entity_id=entity1.id).one()
+        self.assertListEqual(entity1[u'value'], result.value)
 
-        result = session.query(subquery).filter_by(entity_id=entity2.id).one()
-        self.assertEqual(entity2[u'textValue'], result.textValue)
-        self.assertEqual(entity2[u'stringValue'], result.stringValue)
-        self.assertEqual(entity2[u'integerValue'], result.integerValue)
-        self.assertEqual(entity2[u'booleanValue'], result.booleanValue)
-        self.assertEqual(str(entity2[u'dateValue']), str(result.dateValue))
-        self.assertEqual(str(entity2[u'datetimeValue']), str(result.datetimeValue))
+    def testObjectValues(self):
+        session = self.layer[u'session']
 
-#        # Now add a new version
-#        schema2 = copy.deepcopy(schema1)
-#        schema2.state = u'published'
-#        schema2.publish_date = t2
-#        schema2['a'].title = u'prime'
-#        session.add(schema2)
-#        session.flush()
-#
-#        entity3 = self.createEntity(schema2, u'Baz', t2, dict(a=u'bazvalue'))
-#
-#        plan, subquery = reporting.schemaToSubquery(session, u'A', reporting.BY_NAME)
+        schema1 = datastore.Schema(
+            name=u'Sample',
+            title=u'',
+            state=u'published',
+            publish_date=t1
+            )
+        schema1[u'sub'] = datastore.Attribute(title=u'', type=u'object', order=0)
+        schema1[u'sub'].object_schema = datastore.Schema(
+            name=u'Sub',
+            title=u'',
+            state=u'published',
+            publish_date=schema1.publish_date,
+            is_inline=True
+            )
+        schema1[u'sub']['value'] = datastore.Attribute(title=u'', type=u'string', order=0)
+        session.add(schema1)
+        session.flush()
+
+        entity1 = datastore.Entity(schema=schema1, name=u'Foo', title=u'', collect_date=t1)
+        session.add(entity1)
+        session.flush()
+        entity1[u'sub'] = datastore.Entity(
+            schema=schema1['sub'].object_schema, name=u'SubFoo', title=u'', collect_date=t1)
+        session.flush()
+        entity1[u'sub'][u'value'] = u'foovalue'
+        session.flush()
+
+        plan, report = reporting.schemaToReportByName(session, u'Sample')
+        result = session.query(report).filter_by(entity_id=entity1.id).one()
+        self.assertEqual(entity1[u'sub'][u'value'], result.sub_value)
 

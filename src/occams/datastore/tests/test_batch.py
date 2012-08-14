@@ -112,11 +112,27 @@ class BatchingTestCase(unittest.TestCase):
 
     def testGetItem(self):
         session = self.layer['session']
+
+        # access an empty result set
+        query = session.query(Sample).filter_by(name='')
+        batch = SqlBatch(query)
+
+        with self.assertRaises(IndexError):
+            (id, item) = batch[-1]
+
         query = session.query(Sample).order_by(Sample.name)
         batch = SqlBatch(query)
+
+        # access the last item
+        (id, item) = batch[-1]
+        self.assertEqual('Raz', item.name)
+
+        # normal case
         (id, item) = batch[3]
         self.assertIsNotNone(id)
         self.assertEqual(item.name, 'Foo')
+
+        # access an item beyond the length of the result set
         with self.assertRaises(IndexError):
             batch[10]
 
@@ -147,14 +163,21 @@ class BatchingTestCase(unittest.TestCase):
         batch = SqlBatch(query)
 
         # Doesn't like negative numbers
-        batch[-1:4]
+        generator = batch[-1:4]
+        names = [r.name for i, r in generator]
+        self.assertListEqual([], names)
+
+        # Extreme case of negative numbers, which just get anchored to zero
+        generator = batch[-10:4]
+        names = [r.name for i, r in generator]
+        self.assertListEqual([u'Bar', u'Baz', u'Caz', u'Foo'], names)
 
         generator = batch[2:4]
         self.assertIsNotNone(generator)
         names = [r.name for i, r in generator]
         self.assertListEqual(['Caz', 'Foo'], names)
 
-        # Should anchor to the "tru size"
+        # Should anchor to the "true size"
         generator = batch[4:200]
         names = [r.name for i, r in generator]
         self.assertListEqual(['Jaz', 'Raz'], names)
