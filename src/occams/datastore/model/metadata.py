@@ -111,7 +111,7 @@ class Modifiable(object):
         return Column(
             Integer,
             ForeignKey(
-                'user.id',
+                User.id,
                 name='fk_%s_create_user_id' % cls.__tablename__,
                 ondelete='RESTRICT'
                 ),
@@ -142,7 +142,7 @@ class Modifiable(object):
         return Column(
             Integer,
             ForeignKey(
-                'user.id',
+                User.id,
                 name='fk_%s_modify_user_id' % cls.__tablename__,
                 ondelete='RESTRICT'
                 ),
