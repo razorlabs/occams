@@ -1,29 +1,29 @@
-"""
+u"""
 Application layers
 """
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import scoped_session
-from sqlalchemy.orm import sessionmaker
+import sqlalchemy as sa
+from sqlalchemy import orm
 import plone.testing
 
-from occams.datastore import model
+from occams.datastore import model as datastore
+
 
 # Vendor-specific URIs, note that some tests still use the SQLite URI for
 # general proof-of-concept testing (auditing, metadata, batching, etc)
 
-SQLITE_URI = 'sqlite://'
+SQLITE_URI = u'sqlite://'
 
 # Use this if you have a testing database setup, if only there was an in-memory
 # postgres database...
-PSQL_URI = 'postgresql://tester:test1234@localhost/datastore_test'
+PSQL_URI = u'postgresql://tester:test1234@localhost/datastore_test'
 
 #DEFAULT_URI = SQLITE_URI
 DEFAULT_URI = PSQL_URI
 
 
 class OccamsDataStoreLayer(plone.testing.Layer):
-    """
+    u"""
     DataBase application layer for tests.
 
     Important GOTCHA:  if you are plugging into DataStore with additional models,
@@ -35,39 +35,79 @@ class OccamsDataStoreLayer(plone.testing.Layer):
     """
 
     def setUp(self):
-        """
+        u"""
         Creates the database structures.
         """
-        engine = create_engine(DEFAULT_URI, echo=False)
-        model.Model.metadata.drop_all(engine, checkfirst=True)
-        model.Model.metadata.create_all(engine, checkfirst=False)
-        self['session'] = scoped_session(sessionmaker(
+        engine = sa.create_engine(DEFAULT_URI, echo=False)
+        datastore.Model.metadata.drop_all(engine, checkfirst=True)
+        datastore.Model.metadata.create_all(engine, checkfirst=False)
+        self[u'session'] = orm.scoped_session(orm.sessionmaker(
             bind=engine,
-            class_=model.DataStoreSession,
-            user=lambda: 'bitcore@ucsd.edu'
+            class_=datastore.DataStoreSession,
+            user=lambda: u'bitcore@ucsd.edu'
             ))
 
     def tearDown(self):
-        """
+        u"""
         Destroys the database structures.
         """
-        self['session'].close()
-        del self['session']
+        self[u'session'].close()
+        del self[u'session']
 
     def testSetUp(self):
+        u"""
+        Preloads data for each test case method
         """
-        """
-        session = self['session']
-        user = model.User(key='bitcore@ucsd.edu')
+        session = self[u'session']
+        user = datastore.User(key=u'bitcore@ucsd.edu')
         session.add(user)
         session.flush()
-        self['user'] = user
+        self[u'user'] = user
 
     def testTearDown(self):
-        """
+        u"""
         Cancels the transaction after each test case method.
         """
-        self['session'].rollback()
+        self[u'session'].rollback()
 
 
 OCCAMS_DATASTORE_FIXTURE = OccamsDataStoreLayer()
+
+
+def createSchema(session, name, publish_date=None, attributes=None):
+    u"""
+    Helper method to create schemata
+    """
+    schema = datastore.Schema(name=name, title=u'')
+    if publish_date is not None:
+        schema.state = u'published'
+        schema.publish_date = publish_date
+    if attributes:
+        for attribute_name, attribute in attributes.iteritems():
+            if attribute.title is None:
+                # Set empty title if lazy
+                attribute.title = u''
+            schema[attribute_name] = attribute
+    session.add(schema)
+    session.flush()
+    return schema
+
+
+def createEntity(schema, name, collect_date, values=None):
+    u"""
+    Helper method to create an entities
+    """
+    session = orm.object_session(schema)
+    entity = datastore.Entity(
+        schema=schema,
+        name=name,
+        title=u'',
+        collect_date=collect_date
+        )
+    session.add(entity)
+    if values is not None:
+        for key, value in values.iteritems():
+            entity[key] = value
+    session.flush()
+    return entity
+

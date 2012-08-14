@@ -299,6 +299,7 @@ def addScalar(entity_query, path, attributes):
 def getValueColumn(path, attributes):
     u"""
     Determines the value class and column for the attributes
+    Uses the most recent type used for the attribute
 
     Arguments
         ``path``
