@@ -281,7 +281,14 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
 
     object_schema_id = Column(Integer)
 
-    object_schema = Relationship('Schema', primaryjoin=(object_schema_id == Schema.id))
+    object_schema = Relationship(
+        'Schema',
+        primaryjoin=(object_schema_id == Schema.id),
+        backref=backref(
+            name=u'parent_attribute',
+            uselist=False,
+            )
+        )
 
     _checksum = Column('checksum', String(32), nullable=False)
 

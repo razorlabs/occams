@@ -61,7 +61,7 @@ class SqlBatch(Batch):
         See interfaces.IBatch
         """
         result = self.query.offset(self.start).limit(1).one()
-        return (result.id, getattr(result, 'objectify', lambda: result)())
+        return (getattr(result, 'id', 1), result)
 
     @property
     def lastElement(self):
@@ -69,7 +69,7 @@ class SqlBatch(Batch):
         See interfaces.IBatch
         """
         result = self.query.offset(self.end).limit(1).one()
-        return (result.id, getattr(result, 'objectify', lambda: result)())
+        return (getattr(result, 'id', 1), result)
 
     def __getitem__(self, key):
         """
@@ -81,17 +81,18 @@ class SqlBatch(Batch):
             if self._trueSize > 0:
                 key = self._trueSize + key
             else:
-                key = 0
+                # the batch since is empty and so we can't access any item
+                raise IndexError('batch index out of range')
         result = self.query.offset(key).limit(1).one()
-        return (result.id, getattr(result, 'objectify', lambda: result)())
+        return (getattr(result, 'id', 1), result)
 
     def __iter__(self):
         """
         See zope.interface.common.sequence.IMinimalSequence
         """
         if self._length > 0:
-            for result in self.query.slice(self.start, self.end + 1):
-                yield (result.id, getattr(result, 'objectify', lambda: result)())
+            for res_count, result in enumerate(self.query.slice(self.start, self.end + 1)):
+                yield (getattr(result, 'id', res_count), result)
 
     def __len__(self):
         """
@@ -103,16 +104,18 @@ class SqlBatch(Batch):
         return (item.id, item) in iter(self)
 
     def __getslice__(self, i, j):
+        # note: python adjusts the index, but it may still be negative
+        # (e.g. if the negative number is larger than the whole list)
+        if i < 0:
+            i = 0
         if j > self.end:
             j = self._trueSize
-        if i < 0:
-            if self._trueSize > 0:
-                i = self._trueSize + i
-            else:
-                i = 0
+        if j < i:
+            # stop value may not be less than the index
+            j = i
         query = self.query.slice(i, j)
-        for result in query:
-            yield (result.id, getattr(result, 'objectify', lambda: result)())
+        for res_count, result in enumerate(query):
+            yield (getattr(result, 'id', res_count), result)
 
     def __eq__(self, other):
         return ((self.size, self.start, self.query) ==
