@@ -29,6 +29,10 @@ DataStoreModel = ModelClass(u'DataStoreModel')
 
 from occams.datastore.model.metadata import User
 from occams.datastore.model.metadata import NOW
+from occams.datastore.model.metadata import AutoNamed
+from occams.datastore.model.metadata import Describeable
+from occams.datastore.model.metadata import Modifiable
+from occams.datastore.model.metadata import Referenceable
 from occams.datastore.model.auditing import Auditable
 
 from occams.datastore.model.schema import Schema
@@ -52,6 +56,10 @@ __all__ = (
     'ModelClass',
     'DataStoreModel',
     'User',
+    'AutoNamed',
+    'Describeable',
+    'Modifiable',
+    'Referenceable',
     'Auditable',
     'Schema',
     'Category',
