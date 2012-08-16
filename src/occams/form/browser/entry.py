@@ -494,7 +494,8 @@ class UberEditForm(z3c.form.group.GroupForm, UberForm, z3c.form.form.EditForm):
             formNames.add(form)
         for name in formNames:
             self.context.data.setdefault(name, {})
-        for name in super(UberEditForm, self).applyChanges(data).values()[0]:
+        for name in super(UberEditForm, self).applyChanges(data).values():
+            name = name[0]
             (form, dot, field) = name.partition('.')
             changedForms.add(form)
         changedData = self.getContent()
