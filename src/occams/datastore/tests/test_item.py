@@ -101,6 +101,10 @@ class EntityToDictionaryTestCase(unittest.TestCase):
 
     layer = OCCAMS_DATASTORE_FIXTURE
 
+    def testNone(self):
+        data = entityToDictionary(None)
+        self.assertIsNone(data)
+
     def testBasic(self):
         session = self.layer['session']
         schema = model.Schema(name='IFoo', title=u'', state='published', attributes=dict(
@@ -138,7 +142,8 @@ class EntityToDictionaryTestCase(unittest.TestCase):
         data = entityToDictionary(entity)
         self.assertIn('__metadata__', data)
         self.assertIn('zero', data)
-        self.assertIsNone(data['zero'])
+        self.assertIsNotNone(data['zero'])
+        self.assertItemsEqual({}, data['zero'])
 
         # Now be nice and actually assign it data
         sub = model.Entity(schema=schema['zero'].object_schema, name='sub', title=u'sub')
