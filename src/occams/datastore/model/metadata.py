@@ -17,7 +17,7 @@ from sqlalchemy.schema import ForeignKey
 from sqlalchemy.types import DateTime
 from zope.interface import implements
 
-from occams.datastore.model import Model
+from occams.datastore.model import DataStoreModel as Model
 from occams.datastore.interfaces import IUser
 from occams.datastore.interfaces import NonExistentUserError
 
@@ -111,7 +111,7 @@ class Modifiable(object):
         return Column(
             Integer,
             ForeignKey(
-                'user.id',
+                User.id,
                 name='fk_%s_create_user_id' % cls.__tablename__,
                 ondelete='RESTRICT'
                 ),
@@ -142,7 +142,7 @@ class Modifiable(object):
         return Column(
             Integer,
             ForeignKey(
-                'user.id',
+                User.id,
                 name='fk_%s_modify_user_id' % cls.__tablename__,
                 ondelete='RESTRICT'
                 ),
