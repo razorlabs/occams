@@ -5,26 +5,23 @@ Unit testing resources
 import os
 import tempfile
 
-from sqlalchemy import create_engine
-
+import sqlalchemy as sa
 from plone.app.testing import PloneSandboxLayer
 from plone.app.testing import applyProfile
 from plone.app.testing import IntegrationTesting
 from plone.app.testing import FunctionalTesting
 from plone.app.testing import PLONE_FIXTURE
 from plone.app.testing import TEST_USER_ID
-from plone.app.testing import TEST_USER_NAME
-from plone.app.testing import login
-from plone.app.testing import setRoles
-from zope.component import provideUtility
-from z3c.saconfig import EngineFactory
+import zope.component
+from z3c import saconfig
+
+from occams.datastore import model as datastore
 from occams.form.saconfig import EventAwareScopedSession
-from occams.datastore import model
 
 
 ENGINE_NAME = u'occams.form.testing.Engine'
 SESSION_NAME = u'occams.form.testing.Session'
-USER_NAME = u'occams.form.testing.User'
+
 
 class OccamsFormSandBoxLayer(PloneSandboxLayer,):
 
@@ -34,36 +31,28 @@ class OccamsFormSandBoxLayer(PloneSandboxLayer,):
         import occams.form as package
         self.loadZCML(package=package)
 
-        # Setup browser session
-
-        # Setup the database utilities
+        # setup the database utilities
         fileno, self.databaseFileName = tempfile.mkstemp(suffix='.db')
         uri = 'sqlite:///%s' % self.databaseFileName
+
         # we don't actually need the engine, just the uri for the utilities
-        model.Model.metadata.create_all(create_engine(uri))
-        engineUtility = EngineFactory(uri)
-
-        userUtility = (lambda: "bitcore@ucsd.edu")
+        datastore.DataStoreModel.metadata.create_all(sa.create_engine(uri))
+        engineUtility = saconfig.EngineFactory(uri)
         sessionUtility = EventAwareScopedSession(engine=ENGINE_NAME)
-        provideUtility(userUtility, name=USER_NAME)
-        provideUtility(engineUtility, name=ENGINE_NAME)
-        provideUtility(sessionUtility, name=SESSION_NAME)
+        zope.component.provideUtility(engineUtility, name=ENGINE_NAME)
+        zope.component.provideUtility(sessionUtility, name=SESSION_NAME)
 
+        session = saconfig.named_scoped_session(SESSION_NAME)
+
+        # add the test users
+        session.add(datastore.User(key=TEST_USER_ID))
+        session.flush()
 
     def tearDownZope(self, app):
         os.unlink(self.databaseFileName)
 
     def setUpPloneSite(self, portal):
         applyProfile(portal, 'occams.form:default')
-
-        # Add test content
-        setRoles(portal, TEST_USER_ID, ['Manager'])
-        login(portal, TEST_USER_NAME)
-        portal.invokeFactory('occams.form.repository', 'test-repository',
-            title=u'Test Repository',
-            session=SESSION_NAME
-            )
-        setRoles(portal, TEST_USER_ID, ['Member'])
 
 
 OCCAMS_FORM_FIXTURE = OccamsFormSandBoxLayer()
