@@ -35,6 +35,7 @@ setup(
     zip_safe=False,
     install_requires=[
         'setuptools',
+        'Pillow',
         'occams.datastore',
         'collective.z3cform.datagridfield',
         'plone.app.dexterity',
