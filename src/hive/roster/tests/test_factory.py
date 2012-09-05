@@ -28,18 +28,17 @@ class TestFactory(unittest.TestCase):
             '222-o22',
             '222-u22',
             '222-y22',
+            '222-fag',
             )
 
         valid_numbers = (
-            '222-22a',
-            '222-22e',
-            '222-22i',
-            '222-22u',
-            '222-22y',
+            '222-22b',
+            '222-22f',
+            '222-22g',
             )
 
         for number in invalid_numbers:
-            self.assertFalse(isValidOurNumber(number))
+            self.assertFalse(isValidOurNumber(number), '%s is unexpectedly valid' % number)
 
         for number in valid_numbers:
-            self.assertTrue(isValidOurNumber(number))
+            self.assertTrue(isValidOurNumber(number), '%s is unexpectedly invalid' % number)
