@@ -33,7 +33,7 @@ from occams.datastore.interfaces import ISchema
 from occams.datastore.interfaces import ICategory
 from occams.datastore.interfaces import IAttribute
 from occams.datastore.interfaces import IChoice
-from occams.datastore.model import Model
+from occams.datastore.model import DataStoreModel as Model
 from occams.datastore.model.metadata import AutoNamed
 from occams.datastore.model.metadata import Referenceable
 from occams.datastore.model.metadata import Describeable

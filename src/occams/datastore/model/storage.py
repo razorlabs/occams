@@ -32,7 +32,7 @@ from occams.datastore.interfaces import IEntity
 from occams.datastore.interfaces import IValue
 from occams.datastore.interfaces import InvalidEntitySchemaError
 from occams.datastore.interfaces import ConstraintError
-from occams.datastore.model import Model
+from occams.datastore.model import DataStoreModel as Model
 from occams.datastore.model.metadata import AutoNamed
 from occams.datastore.model.metadata import Referenceable
 from occams.datastore.model.metadata import Describeable

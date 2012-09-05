@@ -39,8 +39,8 @@ class OccamsDataStoreLayer(plone.testing.Layer):
         Creates the database structures.
         """
         engine = sa.create_engine(DEFAULT_URI, echo=False)
-        datastore.Model.metadata.drop_all(engine, checkfirst=True)
-        datastore.Model.metadata.create_all(engine, checkfirst=False)
+        datastore.DataStoreModel.metadata.drop_all(engine, checkfirst=True)
+        datastore.DataStoreModel.metadata.create_all(engine, checkfirst=False)
         self[u'session'] = orm.scoped_session(orm.sessionmaker(
             bind=engine,
             class_=datastore.DataStoreSession,
