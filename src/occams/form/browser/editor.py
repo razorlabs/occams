@@ -407,6 +407,8 @@ class FieldJsonView(BrowserView):
             for choice in data['choices']:
                 if isinstance(choice['value'], Decimal):
                     choice['value'] = str(choice['value'])
+
+        self.request.response.setHeader(u'Content-type', u'application/json')
         return json.dumps(data)
 
 
