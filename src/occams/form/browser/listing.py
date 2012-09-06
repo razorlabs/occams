@@ -133,9 +133,12 @@ class SummaryListingForm(crud.CrudForm):
         newSchema = model.Schema(
                 name=camelize(data['title']),
                 title=unicode(data['title']),
-                description=unicode(data['description']),
                 state='draft'
                 )
+
+        if data['description'] is not None:
+            newSchema.description = data['description']
+
         Session.add(newSchema)
         Session.flush()
         return newSchema
