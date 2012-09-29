@@ -2,14 +2,14 @@ import os.path
 import migrate.versioning.api
 import migrate.exceptions
 
-from hive.roster.model import Model
+from occams.roster.model import RosterModel as Model
 
 
 REPOSITORY = os.path.dirname(__file__)
 
 
 def install(engine):
-    """ 
+    """
     Install the databases.
     This method will setup the database models using the specified engine
     bind. This is simply a convenience method for creating the database
@@ -31,7 +31,7 @@ def install(engine):
 
 
 def legacy(engine):
-    """ 
+    """
     Helper method for the sole purpose of putting a legacy database under
     version control. Once under version control, sync may be called.
     """
@@ -44,12 +44,12 @@ def legacy(engine):
 
 
 def sync(engine, version=None):
-    """ 
+    """
     Synchronizes the version of the current model to the live database
     model.
-    
+
     This method assumes that the database has already been previously
-    installed. Since there was not version control previously, if the 
+    installed. Since there was not version control previously, if the
     database is not tagged then it will assume version 0 and try to
     upgrade.
     """

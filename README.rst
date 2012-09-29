@@ -1,11 +1,13 @@
-Introduction
-============
+OCCAMS Roster
+=============
+
+Utility for generting Site Numbers in OUR number format.
 
 
 Installation
-============
+------------
 
-Requires a z3c.saconfig session named ``hive.roster.Session``
+Requires a z3c.saconfig session named ``occams.roster.Session``
 
 
 ==================
