@@ -40,6 +40,7 @@ class IIdentifier(interface.Interface):
     origin = schema.Object(
         title=_(u"Origin"),
         description=_(u'The site that generated the OUR number'),
+        schema=ISite,
         )
 
     our_number = schema.Int(
