@@ -49,10 +49,17 @@ class IIdentifier(interface.Interface):
         )
 
 
-class IOurDistributeable(interface.Interface):
+class IOurNumberDistributor(interface.Interface):
     u"""
-
+    An organization or entity that distributes OUR numbers
     """
+
+    def get_source_name():
+        u"""
+        To distribute OUR numbers, the content must be able to specify a
+        "source" name. This name should stay consistent in order
+        to correctly report which site generates specific OUR numbers.
+        """
 
 
 class IOurNumberSupport(interface.Interface):
@@ -60,18 +67,8 @@ class IOurNumberSupport(interface.Interface):
     A behaviour that allows content to be able to assing OUR numbers.
     """
 
-    site_name = schema.ASCIILine(
-        title=_(u'Site Name'),
-        description=_(
-            u'Content that wants to generate OUR numbers needs a '
-            u'site name. This site name must stay constant if the '
-            u'content wants to be able to lookup what OUR numbers it '
-            u'has generated.'
-            )
-        )
-
     def generate():
         u"""
-        Generates an OUR number for the content item.
+        Generates an OUR number for the distributor
         """
 

@@ -25,11 +25,6 @@
   <!-- upgrade support for existing installations -->
   <include package=".upgrades" />
 
-  <plone:behavior
-      title="OUR Number Assignment Support"
-      provides=".interfaces.IOurNumberSupport"
-      factory=".support.OurNumberSupport"
-      for=".interfaces.IOurDistributeable"
-      />
+  <adapter factory='.support.OurNumberSupport' />
 
 </configure>

@@ -57,20 +57,25 @@ class Identifier(RosterModel):
         primary_key=True
         )
 
-    origin_id = schema.Column(schema.ForeignKey(Site.id), nullable=False)
+    origin_id = schema.Column(
+        types.Integer,
+        schema.ForeignKey(Site.id),
+        nullable=False
+        )
 
-    origin = orm.relationship('Site')
+    origin = orm.relationship(
+        Site,
+        backref=orm.backref(
+            name='identifiers',
+            lazy='dynamic',
+            )
+        )
 
     @hybrid.hybrid_property
     def our_number(self):
-        encoded = base36.encode(self.id)
-        zerofilled = encoded.rjust(6, '0')
-        formatted = '%c%c%c-%c%c%c' % tuple(zerofilled)
+        encoded = base36.encode(self.id).rjust(6, '0')
+        formatted = '%c%c%c-%c%c%c' % tuple(encoded)
         return formatted
-
-    @hybrid.hybrid_property
-    def value(self):
-        return self.id
 
     is_active = schema.Column(types.Boolean, nullable=False, default=True)
 
