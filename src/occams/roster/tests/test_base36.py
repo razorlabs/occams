@@ -27,6 +27,7 @@ class EncodeTestCase(unittest.TestCase):
             self.assertIn(ALPHABET[number], base36.encode(-number))
 
     def test_multidigit(self):
+        # precalculated known values
         self.assertEqual('1', base36.encode(1))
         self.assertEqual('a', base36.encode(10))
         self.assertEqual('2s', base36.encode(100))

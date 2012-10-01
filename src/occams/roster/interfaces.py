@@ -20,38 +20,11 @@ OUR_PATTERN = re.compile(r"""
 START_ID = base36.decode(u'222222')
 
 
-class ISite(interface.Interface):
-    u"""
-    An organization/entity that can issue OUR numbers.
-    Useful for keeping track of OUR number origins
-    """
-
-    title = schema.TextLine(
-        title=_(u'Site Title'),
-        description=_(u'The name of the site, for our records.'),
-        )
-
-
-class IIdentifier(interface.Interface):
-    u"""
-    A registered OUR number
-    """
-
-    origin = schema.Object(
-        title=_(u"Origin"),
-        description=_(u'The site that generated the OUR number'),
-        schema=ISite,
-        )
-
-    our_number = schema.Int(
-        title=_(u'Raw OUR number'),
-        readonly=True,
-        )
-
-
 class IOurNumberDistributor(interface.Interface):
     u"""
-    An organization or entity that distributes OUR numbers
+    An organization or entity that distributes OUR numbers.
+    Objects of this type can use the ``IOurNumberSupport`` utility for issuing
+    OUR numbers.
     """
 
     def get_source_name():
@@ -71,4 +44,37 @@ class IOurNumberSupport(interface.Interface):
         u"""
         Generates an OUR number for the distributor
         """
+
+
+class ISite(interface.Interface):
+    u"""
+    An originating site (e.g. organization, institution, etc) for OUR numbers
+    """
+
+    title = schema.TextLine(
+        title=_(u'Title'),
+        description=_(u'The name of the site, for our records.'),
+        )
+
+
+class IIdentifier(interface.Interface):
+    u"""
+    A registered OUR number
+    """
+
+    origin = schema.Object(
+        title=_(u'Origin'),
+        description=_(u'The site that generated the OUR number'),
+        schema=ISite,
+        )
+
+    our_number = schema.Int(
+        title=_(u'OUR number'),
+        readonly=True,
+        )
+
+    is_active = schema.Bool(
+        title=_(u'Is active?'),
+        description=_(u'Set to True if the OUR number is in circulation')
+        )
 
