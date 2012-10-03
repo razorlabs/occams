@@ -2,31 +2,32 @@ import unittest2 as unittest
 
 from Products.CMFCore.utils import getToolByName
 
-from occams.form.testing import OCCAMS_FORM_INTEGRATION_TESTING
+from occams.form import testing
 
 
-class TestSetup(unittest.TestCase):
+class SetupTestCase(unittest.TestCase):
 
-    layer = OCCAMS_FORM_INTEGRATION_TESTING
+    layer = testing.OCCAMS_FORM_INTEGRATION_TESTING
 
-    def assertInstalled(self, namespace):
+    def assert_installed(self, namespace):
         portal = self.layer['portal']
         quickinstaller = getToolByName(portal, 'portal_quickinstaller')
-        isInstalled = quickinstaller.isProductInstalled(namespace)
-        if not isInstalled:
+        is_installed = quickinstaller.isProductInstalled(namespace)
+        if not is_installed:
             self.fail('[%s] was not installed!' % namespace)
 
-    def testInstalled(self):
-        self.assertInstalled('occams.form')
+    def test_installed(self):
+        self.assert_installed('occams.form')
 
-    def testDexterityInstalled(self):
-        self.assertInstalled('plone.app.dexterity')
+    def test_dexterity_installed(self):
+        self.assert_installed('plone.app.dexterity')
 
-    def testJqueryToolsInstalled(self):
-        self.assertInstalled('plone.app.jquerytools')
+    def test_jquery_tools_installed(self):
+        self.assert_installed('plone.app.jquerytools')
 
-    def testZ3cFormInstalled(self):
-        self.assertInstalled('plone.app.z3cform')
+    def test_z3c_form_installed(self):
+        self.assert_installed('plone.app.z3cform')
 
-    def testDatagridFieldInstalled(self):
-        self.assertInstalled('collective.z3cform.datagridfield')
+    def test_datagrid_field_installed(self):
+        self.assert_installed('collective.z3cform.datagridfield')
+

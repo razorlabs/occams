@@ -35,10 +35,9 @@ setup(
     zip_safe=False,
     install_requires=[
         'setuptools',
-        'Pillow',
         'occams.datastore',
         'collective.z3cform.datagridfield',
-        'plone.app.dexterity',
+        'plone.app.dexterity[grok]',
         'plone.app.z3cform',
         'plone.directives.form',
         'plone.z3cform',
@@ -49,7 +48,7 @@ setup(
         ],
     extras_require=dict(
         postgresql=['psycopg2'],
-        test=['plone.app.testing'],
+        test=['Pillow', 'plone.app.testing'],
         ),
     entry_points="""
     [z3c.autoinclude.plugin]
