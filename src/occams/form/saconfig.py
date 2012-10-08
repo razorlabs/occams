@@ -62,16 +62,16 @@ def handle_login(event):
     u"""
     Registers a user when they log in
     """
-    sessions = component.getUtilitiesFor(IScopedSession)
-    for name, session in sessions:
+    for name, utility in component.getUtilitiesFor(sa_interfaces.IScopedSession):
         if name.find('occams') >= 0:
             principal = event.principal.getId()
+            session = saconfig.named_scoped_session(name)
             try:
                 user = session.query(model.User).filter_by(key=principal).one()
             except orm.exc.NoResultFound:
-                # No user found, register into datastore accountability table
+                # no user found, register into datastore accountability table
                 user = model.User(key=principal)
-                session.add(newUser)
+                session.add(user)
                 session.flush()
             except sa.exc.ProgrammingError:
                 # no occams repository, ignore
