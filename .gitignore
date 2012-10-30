@@ -81,6 +81,7 @@ lib
 parts
 sdist
 var
+develop.cfg
 
 ##### Translations
 *.mo

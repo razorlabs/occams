@@ -123,7 +123,7 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
 
     @property
     def label(self):
-        formlabel = 'Edit: ' + self.context.item.title 
+        formlabel = 'Edit: ' + self.context.item.title
         formlabel = formlabel + ' -- Draft created by %(user_name)s on %(create_date)s' % dict(
                 user_name=str(self.context.item.create_user.key),
                 create_date=self.context.item.create_date.strftime('%Y/%m/%d'))
@@ -191,6 +191,9 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
             if data['description']:
                 self.context.item.description = unicode(data['description'])
             self.context.item.state = 'review'
+            for attribute in self.context.item.itervalues():
+                if attribute.type == u'object':
+                    attribute.object_schema.state = u'review'
             Session.flush()
             repository = closest(self.context, IRepository)
             self.request.response.redirect(repository.absolute_url())
@@ -199,7 +202,7 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
     def can_publish(self):
         return checkPermission("occams.form.PublishForm", self.context)  and \
                   not self.context.item.publish_date
-        
+
 
     @z3c.form.button.buttonAndHandler(_(u'Publish Draft'), name='publish', condition= lambda self: self.can_publish())
     def handleComplete(self, action):
@@ -225,8 +228,12 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
                 self.context.item.title = unicode(data['title'])
                 if data['description']:
                     self.context.item.description = unicode(data['description'])
-                self.context.item.state = 'published'
+                self.context.item.state = u'published'
                 self.context.item.publish_date = publish_date
+                for attribute in self.context.item.itervalues():
+                    if attribute.type == u'object':
+                        attribute.object_schema.state = u'published'
+                        attribute.object_schema.publish_date = publish_date
                 Session.flush()
                 repository = closest(self.context, IRepository)
                 self.request.response.redirect(repository.absolute_url())
@@ -400,6 +407,8 @@ class FieldJsonView(BrowserView):
             for choice in data['choices']:
                 if isinstance(choice['value'], Decimal):
                     choice['value'] = str(choice['value'])
+
+        self.request.response.setHeader(u'Content-type', u'application/json')
         return json.dumps(data)
 
 
@@ -621,6 +630,7 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
                 ]
 
     def createAndAdd(self, data):
+        Session = named_scoped_session(self.context.session)
         cleanupChoices(data)
 
         if IAttributeContext.providedBy(self.context):
@@ -628,40 +638,37 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
         else:
             form = self.context.item
 
-        newSchema = None
-        if self.getType() == 'object':
-            ## Need to create a new schema and a new Attribute
-            newSchema = model.Schema(
-                    name = self.context.__name__ + camelize(data['title']),
-                    title = data['title'],
-                    description = data['description'],
-                    is_inline = True
-                )
+        # create the new field and let ``moveField`` automatically sort it
         newAttribute = model.Attribute(
-                name=str(data['name']).lower(),
+            schema=form,
+            name=str(data['name']).lower(),
+            title=data['title'],
+            description=data['description'],
+            type=self.getType(),
+            is_collection=data.get('is_collection', False),
+            is_required=data.get('is_collection', False),
+            )
+
+        # create a new sub-schema if the new field is an object
+        if newAttribute.type == 'object':
+            newAttribute.object_schema = model.Schema(
+                name=form.name + camelize(data['title']),
                 title=data['title'],
                 description=data['description'],
-                is_collection= data.get('is_collection', False),
-                is_required=data.get('is_collection', False),
-                type = self.getType(),
-                object_schema = newSchema,
-                order = len(form.keys()) 
+                is_inline=True
                 )
 
-        form[newAttribute.name] = newAttribute
-        Session = named_scoped_session(self.context.session)
+        # update the column ordering
+        moveField(form, newAttribute, data['after'])
 
-        Session.add(form)
-        Session.flush()
-        zope.event.notify(zope.lifecycleevent.ObjectCreatedEvent(newAttribute))
-
-        # The after property is no longer needed
-        after = data['after']
-        moveField(form, newAttribute, after)        
+        # add choices, if any
         if data.has_key('choices') and data['choices']:
             applyChoiceChanges(newAttribute, data['choices'])
 
         Session.flush()
+
+        # broadcast new item only after it's been completely configured
+        zope.event.notify(zope.lifecycleevent.ObjectCreatedEvent(newAttribute))
 
         self._newItem = newAttribute
         return newAttribute

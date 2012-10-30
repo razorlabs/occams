@@ -2,27 +2,39 @@
 <object name="portal_css">
 
   <stylesheet id="++resource++occams.form/styles/listing.css"
-      title="" 
-      cacheable="True" 
-      compression="safe" 
+      title=""
+      cacheable="True"
+      compression="safe"
       cookable="True"
-      enabled="1" 
-      expression="" 
-      media="screen" 
-      rel="stylesheet" 
+      enabled="1"
+      expression=""
+      media="screen"
+      rel="stylesheet"
       rendering="import"
     />
-    
+
   <stylesheet id="++resource++occams.form/styles/editor.css"
-      title="" 
-      cacheable="True" 
-      compression="safe" 
+      title=""
+      cacheable="True"
+      compression="safe"
       cookable="True"
-      enabled="1" 
-      expression="" 
-      media="screen" 
-      rel="stylesheet" 
+      enabled="1"
+      expression=""
+      media="screen"
+      rel="stylesheet"
       rendering="import"
     />
-    
+
+  <stylesheet id="++resource++occams.form/styles/entry.css"
+      title=""
+      cacheable="True"
+      compression="safe"
+      cookable="True"
+      enabled="1"
+      expression=""
+      media="screen"
+      rel="stylesheet"
+      rendering="import"
+    />
+
 </object>

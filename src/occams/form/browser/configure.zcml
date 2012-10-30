@@ -9,6 +9,37 @@
   <adapter factory=".editor.ConstraintValidator" />
   <adapter factory=".workflow.StateNameValidator" />
 
+  <adapter for="zope.schema.Choice zope.publisher.interfaces.http.IHTTPRequest"
+                 provides="z3c.form.interfaces.IFieldWidget"
+                 factory=".entry.DynamicChoiceWidget" />
+  <!--            -->
+  <!-- ENTRY  -->
+  <!--            -->
+
+  <browser:defaultView
+       for="occams.form.interfaces.IDataBaseEntryContext"
+       name="edit"
+       />
+  <browser:defaultView
+       for="occams.form.interfaces.IDataBaseAddContext"
+       name="add"
+       />
+
+  <browser:page
+      for="occams.form.interfaces.IDataBaseEntryContext"
+      name="edit"
+      class=".entry.DataEntryFormView"
+      permission="occams.form.ModifyEntry"
+      />
+
+  <browser:page
+      for="occams.form.interfaces.IDataBaseAddContext"
+      name="add"
+      class=".entry.DataAddFormView"
+      permission="occams.form.CreateEntry"
+      />
+
+
   <!--            -->
   <!-- REPOSITORY -->
   <!--            -->

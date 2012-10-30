@@ -215,7 +215,7 @@
                 $('#of-item-template .of-item')
                 .clone()
                 .addClass(type == 'object' ? 'of-fieldset' : 'of-field')
-                .addClass(type)
+                .addClass('of-' + type)
                 .addClass('of-frozen')
                 ;
 

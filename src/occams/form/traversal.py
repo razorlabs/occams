@@ -28,14 +28,19 @@ from zope.publisher.interfaces.browser import IBrowserPublisher
 from zExceptions import NotFound
 from z3c.saconfig import named_scoped_session
 from sqlalchemy.orm.exc import NoResultFound
+from zope.interface.common.mapping import IFullMapping
+from sqlalchemy.orm import object_session
 from occams.datastore import model
 from occams.form.interfaces import IRepository
 from occams.form.interfaces import IDataBaseItemContext
+from occams.form.interfaces import IDataBaseEntryContext
+from occams.form.interfaces import IDataBaseAddContext
 from occams.form.interfaces import ISchemaContext
 from occams.form.interfaces import IAttributeContext
 from occams.form.serialize import serializeField
 from occams.form.serialize import serializeForm
 from plone.app.layout.navigation.interfaces import INavigationRoot
+
 def closest(context, iparent):
     """
     Utility method for finding the closest parent context with the given
@@ -91,6 +96,73 @@ class DataBaseItemContext(SimpleItem):
     @property
     def data(self):
         raise NotImplementedError
+
+class DataBaseEntryContext(SimpleItem):
+    """
+    Wrapper context for database items to make them Zope-traversal-compatible
+    """
+    implements(IDataBaseEntryContext)
+
+    # The actual data we're wrapping
+    item = None
+
+    # Input data
+
+    def __init__(self, item=None, data=None):
+        self.item = item
+        self.session = object_session(item)
+        self.formschema = item.schema
+
+        self.id = None
+        self.name = self.__name__ = str(self.formschema.name)
+        title = self.formschema.title
+
+        self.title = title
+        self.Title = lambda:title
+        self.description = self.formschema.description
+
+    def __getitem__(self, key):
+        if key not in self:
+            raise KeyError
+        return getattr(self.item, key)
+
+    def __setitem__(self, key, value):
+        if key not in self:
+            raise KeyError
+        setattr(self.item, key, value)
+
+    def __contains__(self, key):
+        return hasattr(self.item, key)
+
+    @property
+    def data(self):
+        mapping = getattr(self, '_data', None)
+        if mapping is None:
+            mapping = IFullMapping(self.item)
+            mapping['collect_date'] = self.item.collect_date
+            self._data = mapping
+        return self._data
+
+class DataBaseAddContext(DataBaseItemContext):
+    """
+    Entity context for traversal. Provides the parts necessary for interacting with
+    avrc.data.store Entities in a traversable manner within the Plone context
+    """
+    implements(IDataBaseAddContext)
+
+    def __init__(self, formschema, data=None):
+        self.formschema = formschema
+        self.session = object_session(formschema)
+        self.id = None
+        self.name = self.__name__ = str(self.formschema.name)
+        title = self.formschema.title
+        self.title = title
+        self.Title = lambda:title
+        self.description = self.formschema.description
+
+    @property
+    def data(self):
+        return {}
 
 class SchemaContext(DataBaseItemContext):
     """
