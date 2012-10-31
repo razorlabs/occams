@@ -16,6 +16,8 @@ Also, we'd like the following (not supported yet):
     - `repository/formName/entityName/@@view`
 
 """
+
+from datetime import datetime
 try:
     from repoze.zope2.publishtraverse import DefaultPublishTraverse
 except ImportError:
@@ -230,7 +232,7 @@ class ExtendedTraversal(DefaultPublishTraverse):
         a context can be searched for in other sources besides the zodb
         """
         pass
-from datetime import datetime
+
 
 class RepositoryTraverser(ExtendedTraversal):
     """
@@ -243,8 +245,8 @@ class RepositoryTraverser(ExtendedTraversal):
     def traverse(self, name):
         """
         We have several paths to a form. The main path is by name, which
-        returns you the latest published version of that form name. 
-        Second path is by a name-date combo that returns the published form with 
+        returns you the latest published version of that form name.
+        Second path is by a name-date combo that returns the published form with
         that publish date.
         The Third path is by an id number, which is the id of the form. This is how
         you arrive at a draft, or a specific form for editing.

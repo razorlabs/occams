@@ -1,48 +1,54 @@
 import unittest2 as unittest
 
+from plone.dexterity import utils
+import zExceptions
+from z3c import saconfig
 from zope.browser.interfaces import IBrowserView
-from zope.publisher.browser import TestRequest
-from zExceptions import NotFound
-from z3c.saconfig import named_scoped_session
 
 from occams.datastore import model
-from occams.form.traversal import SchemaContext
-from occams.form.traversal import AttributeContext
-from occams.form.traversal import RepositoryTraverser
-from occams.form.traversal import SchemaTraverser
-from occams.form.traversal import AttributeTraverser
-from occams.form.interfaces import ISchemaContext
-from occams.form.interfaces import IAttributeContext
-from occams.form.interfaces import DATA_KEY
-from occams.form.testing import OCCAMS_FORM_INTEGRATION_TESTING
-from occams.form.testing import SESSION_NAME
+
+from occams.form import traversal
+from occams.form import interfaces
+from occams.form import testing
 
 
-class TestTraversal(unittest.TestCase):
+class TraversalTestCase(unittest.TestCase):
 
-    layer = OCCAMS_FORM_INTEGRATION_TESTING
+    layer = testing.OCCAMS_FORM_INTEGRATION_TESTING
 
-    def testBasic(self):
-        """
+    def test_views(self):
+        u"""
         Make sure default behavior still works (i.e. views)
         """
         portal = self.layer['portal']
-        request = TestRequest()
-        repository = portal['test-repository']
-        traverser = RepositoryTraverser(repository, request)
-        with self.assertRaises(NotFound, msg='Traversed to empty context!'):
+        request = self.layer['request']
+        repository = utils.createContentInContainer(
+            checkConstraints=False,
+            container=portal,
+            portal_type=u'occams.form.repository',
+            title=u'Forms',
+            session=testing.SESSION_NAME,
+            )
+        traverser = traversal.RepositoryTraverser(repository, request)
+        with self.assertRaises(zExceptions.NotFound, msg='Traversed to empty context!'):
             traverser.publishTraverse(request, 'evil')
         view = traverser.publishTraverse(request, 'view')
         self.assertTrue(IBrowserView.providedBy(view), 'Invalid view!')
 
-    def testFromRepository(self):
-        """
+    def test_from_repository(self):
+        u"""
         Tests schema lookups from a repository context
         """
         portal = self.layer['portal']
-        request = TestRequest()
-        repository = portal['test-repository']
-        traverser = RepositoryTraverser(repository, request)
+        request = self.layer['request']
+        repository = utils.createContentInContainer(
+            checkConstraints=False,
+            container=portal,
+            portal_type=u'occams.form.repository',
+            title=u'Forms',
+            session=testing.SESSION_NAME,
+            )
+        traverser = traversal.RepositoryTraverser(repository, request)
 
         # Make sure we can't traverse to anything that doesn't exist
         context = traverser.traverse('Evil')
@@ -50,59 +56,52 @@ class TestTraversal(unittest.TestCase):
 
         # Now add some data, we should be able to traverse to it
         # Note that it is up to the views on how to display expired data
-        session = named_scoped_session(SESSION_NAME)
+        session = saconfig.named_scoped_session(testing.SESSION_NAME)
         schema = model.Schema(name='Foo', title=u'Foo Form', storage='eav')
         session.add(schema)
         session.flush()
 
         context = traverser.traverse('Foo')
         self.assertIsNotNone(context, 'Traversal failed!')
-        self.assertTrue(ISchemaContext.providedBy(context), 'Invalid context!')
+        self.assertTrue(interfaces.ISchemaContext.providedBy(context), 'Invalid context!')
 
-    def testFromSchema(self):
-        """
+    def test_from_schema(self):
+        u"""
         Tests field lookups from a form context
         Note that beyond a repository context is pure form annotation data
         since it's assumed that we'll be editing the form.
         """
-        request = TestRequest()
+        request = self.layer['request']
 
         fieldData = dict(name='bar', title=u'Bar Field')
         formData = dict(name='Test', title=u'Test Form', fields=dict(bar=fieldData))
 
-        browserSession = ISession(request)
-        browserSession[DATA_KEY] = {formData['name']: formData}
-        browserSession.save()
-
-        traverser = SchemaTraverser(SchemaContext(data=formData), request)
+        traverser = traversal.SchemaTraverser(traversal.SchemaContext(data=formData), request)
 
         context = traverser.traverse('evil')
         self.assertIsNone(context, 'Traversed to empty context!')
 
         context = traverser.traverse('bar')
         self.assertIsNotNone(context, 'Traversal failed!')
-        self.assertTrue(IAttributeContext.providedBy(context), 'Invalid context!')
+        self.assertTrue(interfaces.IAttributeContext.providedBy(context), 'Invalid context!')
 
-    def testFromAttrubute(self):
-        """
+    def test_from_attribute(self):
+        u"""
         Tests sub-field lookups from a field context
         """
-        request = TestRequest()
+        request = self.layer['request']
 
         subFieldData = dict(name='baz', title=u'Baz Field')
         subFormData = dict(name='Sub', title=u'Sub Form', fields=dict(baz=subFieldData))
         fieldData = dict(name='bar', title=u'Bar Field', schema=subFormData)
         formData = dict(name='Test', title=u'Test Form', fields=dict(bar=fieldData))
 
-        browserSession = ISession(request)
-        browserSession[DATA_KEY] = {formData['name']: formData}
-        browserSession.save()
-
-        traverser = AttributeTraverser(AttributeContext(data=fieldData), request)
+        traverser = traversal.AttributeTraverser(traversal.AttributeContext(data=fieldData), request)
 
         context = traverser.traverse('evil')
         self.assertIsNone(context, 'Traversed to empty context!')
 
         context = traverser.traverse('baz')
         self.assertIsNotNone(context, 'Traversal failed!')
-        self.assertTrue(IAttributeContext.providedBy(context), 'Invalid context!')
+        self.assertTrue(interfaces.IAttributeContext.providedBy(context), 'Invalid context!')
+
