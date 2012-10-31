@@ -73,6 +73,6 @@ def handle_login(event):
                 user = model.User(key=principal)
                 session.add(user)
                 session.flush()
-            except sa.exc.ProgrammingError, sa.exc.OperationalError:
+            except (sa.exc.ProgrammingError, sa.exc.OperationalError) as e:
                 # no occams repository, ignore
                 pass
