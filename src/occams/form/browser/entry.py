@@ -321,7 +321,6 @@ class DataAddForm(z3c.form.group.GroupForm, DataForm, z3c.form.form.AddForm):
     def add(self, object):
         context = self.context.closestModel()
         notify(EntityMovedEvent(context, object))
-        modified(closest(self.context, interfaces.IClinicalObject))
         return object
 
     def nextURL(self):
