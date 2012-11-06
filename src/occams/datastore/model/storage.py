@@ -87,46 +87,48 @@ class Context(Model, AutoNamed, Referenceable, Modifiable, Auditable):
             )
 
 
-class DictionaryListCollection(object):
+class GroupedCollection(object):
     u"""
-    Collects relationship values as dicitonary of lists
+    Collects relationship values into a dictionary grouped by a discriminator
     """
 
-    def __init__(self, data=None):
-        self._data = data or dict()
+    def __init__(self, keyfunc):
+        self._keyfunc = keyfunc
+        self._groups = dict()
 
     @collection.appender
-    def _append(self, value_entry):
-        if value_entry.attribute.is_collection:
-            self._data.setdefault(value_entry.attribute.name, []).append(value_entry)
-        else:
-            self._data[value_entry.attribute.name] = [value_entry]
+    def _append(self, value):
+        self._groups.setdefault(self._keyfunc(value), []).append(value)
 
-    def __setitem__(self, attribute_name, value_entry):
-        self._append(value_entry)
+    def __setitem__(self, key, value):
+        self._append(value)
 
-    def __getitem__(self, attribute_name):
-        return tuple(value_entry for value_entry in self._data.get(attribute_name, []))
+    def __getitem__(self, key):
+        return tuple(value for value in self._groups.get(key, []))
 
-    def __delitem__(self, attribute_name):
-        if attribute_name in self._data:
-            map(self._remove, self[attribute_name])
+    def __delitem__(self, key):
+        if key in self._groups:
+            map(self._remove, self[key])
 
-    def __contains__(self, attribute_name):
-        return attribute_name in self._data
+    def __contains__(self, key):
+        return key in self._groups
 
     @collection.remover
-    def _remove(self, value_entry):
-        self._data[value_entry.attribute.name].remove(value_entry)
+    def _remove(self, value):
+        self._groups[self._keyfunc(value)].remove(value)
 
     @collection.iterator
     def _iterator(self):
-        for value_entries in self._data.itervalues():
-            for value_entry in value_entries:
-                yield value_entry
+        for group in self._groups.itervalues():
+            for value in group:
+                yield value
 
     def __repr__(self):
-        return '%s(%r)' % (type(self).__name__, self._data)
+        return '%s(%r)' % (type(self).__name__, self._groups)
+
+
+def grouped_collection(keyfunc):
+    return lambda: GroupedCollection(keyfunc)
 
 
 class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
@@ -308,7 +310,7 @@ def TypeMappingClass(className, tableName, valueType):
                 primaryjoin='%s.entity_id == Entity.id' % cls.__name__,
                 backref=backref(
                     name='_%s_values' % cls.__tablename__,
-                    collection_class=DictionaryListCollection,
+                    collection_class=grouped_collection(lambda v: v.attribute.name),
                     cascade='all, delete-orphan',
                     )
                 )
