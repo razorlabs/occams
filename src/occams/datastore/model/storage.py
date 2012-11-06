@@ -6,6 +6,7 @@ from datetime import date
 from datetime import datetime
 import re
 
+from sqlalchemy.orm.collections import collection
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy import event
@@ -86,6 +87,48 @@ class Context(Model, AutoNamed, Referenceable, Modifiable, Auditable):
             )
 
 
+class DictionaryListCollection(object):
+    u"""
+    Collects relationship values as dicitonary of lists
+    """
+
+    def __init__(self, data=None):
+        self._data = data or dict()
+
+    @collection.appender
+    def _append(self, value_entry):
+        if value_entry.attribute.is_collection:
+            self._data.setdefault(value_entry.attribute.name, []).append(value_entry)
+        else:
+            self._data[value_entry.attribute.name] = [value_entry]
+
+    def __setitem__(self, attribute_name, value_entry):
+        self._append(value_entry)
+
+    def __getitem__(self, attribute_name):
+        return tuple(value_entry for value_entry in self._data.get(attribute_name, []))
+
+    def __delitem__(self, attribute_name):
+        if attribute_name in self._data:
+            map(self._remove, self[attribute_name])
+
+    def __contains__(self, attribute_name):
+        return attribute_name in self._data
+
+    @collection.remover
+    def _remove(self, value_entry):
+        self._data[value_entry.attribute.name].remove(value_entry)
+
+    @collection.iterator
+    def _iterator(self):
+        for value_entries in self._data.itervalues():
+            for value_entry in value_entries:
+                yield value_entry
+
+    def __repr__(self):
+        return '%s(%r)' % (type(self).__name__, self._data)
+
+
 class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
     implements(IEntity)
 
@@ -142,7 +185,6 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
     def __getitem__(self, key):
         collector = self._getCollector(key)
         attribute = self.schema[key]
-        query = collector.filter_by(attribute=attribute)
 
         def convert(container):
             if container.value is None:
@@ -157,11 +199,11 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
             return value
 
         if attribute.is_collection:
-            value = [convert(v) for v in iter(query)]
+            value = [convert(v) for v in iter(collector[attribute.name])]
         else:
             try:
-                wrappedValue = query.one()
-            except NoResultFound:
+                wrappedValue = collector[attribute.name][0]
+            except IndexError:
                 value = None
             else:
                 value = convert(wrappedValue)
@@ -176,7 +218,7 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         params = lambda a, v: dict(zip(('attribute', 'value'), (a, v)))
 
         # Helper methot to add an item to the value collector
-        append = lambda v: collector.append(wrapperFactory(**params(attribute, v)))
+        collect = lambda v: collector.__setitem__(attribute.name, wrapperFactory(**params(attribute, v)))
 
         def convert(value, type_):
             if value is None:
@@ -188,26 +230,22 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
             return converted
 
         if attribute.is_collection:
-            # Don't even bother to try and get a diff, just remove it and set it
+            # don't even bother getting a diff and updating, just create a new list
             del self[key]
-
-            map(append, map(lambda v: convert(v, attribute.type), value))
+            map(collect, map(lambda v: convert(v, attribute.type), value))
         else:
             # For scalars, we're only dealing with one value, so it's OK to
             # try and update it
             convertedValue = convert(value, attribute.type)
-
-            try:
-                entry = collector.filter_by(attribute=attribute).one()
-            except NoResultFound:
-                append(convertedValue)
+            value_entries = collector[key]
+            if value_entries:
+                value_entries[0].value = convertedValue
             else:
-                entry.value = convertedValue
+                collect(convertedValue)
 
     def __delitem__(self, key):
         collector = self._getCollector(key)
-        attribute = self.schema[key]
-        collector.filter_by(attribute=attribute).delete('fetch')
+        del collector[key]
 
     def items(self):
         return list(self.iteritems())
@@ -270,8 +308,8 @@ def TypeMappingClass(className, tableName, valueType):
                 primaryjoin='%s.entity_id == Entity.id' % cls.__name__,
                 backref=backref(
                     name='_%s_values' % cls.__tablename__,
+                    collection_class=DictionaryListCollection,
                     cascade='all, delete-orphan',
-                    lazy='dynamic',
                     )
                 )
 
