@@ -386,6 +386,7 @@ class IEntity(IDataBaseItem):
             'pending-entry', 'pending-review',
             'complete', 'not-done', 'inline',
             'error',
+            'inaccurate',
             ]),
         default='pending-entry',
         )
