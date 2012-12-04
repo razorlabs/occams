@@ -1,39 +1,40 @@
 from setuptools import setup, find_packages
 import os
 
-version = '0.4.3'
+version = u'1.0.0b1'
 
 setup(
-    name='hive.roster',
+    name=u'occams.roster',
     version=version,
-    description='',
+    description=u'',
     classifiers=[
-        'Development Status :: 4 - Beta'
-        'Framework :: Plone',
-        'Intended Audience :: Developers'
-        'Operating System :: OS Independent'
-        'Programming Language :: Python',
-        'Topic :: Database',
-        'Topic :: Scientific/Engineering :: Bio-Informatics',
-        'Topic :: Scientific/Engineering :: Information Analysis',
-        'Topic :: Scientific/Engineering :: Medical Science Apps.',
-        'Topic :: Software Development :: Libraries',
-        'Topic :: Utilities',
+        u'Development Status :: 4 - Beta'
+        u'Framework :: Plone',
+        u'Intended Audience :: Developers'
+        u'Operating System :: OS Independent'
+        u'Programming Language :: Python',
+        u'Topic :: Database',
+        u'Topic :: Scientific/Engineering :: Bio-Informatics',
+        u'Topic :: Scientific/Engineering :: Information Analysis',
+        u'Topic :: Scientific/Engineering :: Medical Science Apps.',
+        u'Topic :: Software Development :: Libraries',
+        u'Topic :: Utilities',
         ],
-    keywords='HIVe BEAST database roster clinical sqlalchemy',
-    author='BEAST Core Development Team',
-    author_email='beast@ucsd.edu',
-    url='https://github.com/beastcore/hive.roster',
-    license='GPL',
+    keywords=u'OCCAMS HIVe BEAST database roster clinical sqlalchemy',
+    author=u'BIT Core Development Team',
+    author_email=u'bitcore@ucsd.edu',
+    url=u'https://github.com/beastcore/occams.roster.git',
+    license=u'GPL',
     packages=find_packages('src', exclude=['ez_setup']),
     package_dir={'':'src'},
-    namespace_packages=['hive'],
+    namespace_packages=['occams'],
     include_package_data=True,
     zip_safe=False,
     install_requires=[
         'setuptools',
-        'SQLAlchemy',
-        'sqlalchemy-migrate',
+        'plone.behavior',
+        'SQLAlchemy>0.7.3',
+        'sqlalchemy-migrate>0.7.0',
         'z3c.saconfig',
         ],
     extras_require=dict(
@@ -46,3 +47,4 @@ setup(
     target = plone
     """,
     )
+

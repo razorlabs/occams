@@ -2,28 +2,29 @@
     xmlns="http://namespaces.zope.org/zope"
     xmlns:five="http://namespaces.zope.org/five"
     xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
-    i18n_domain="hive.roster">
+    xmlns:plone="http://namespaces.plone.org/plone"
+    i18n_domain="occams.roster">
 
   <includeDependencies package="." />
 
   <genericsetup:registerProfile
       name="default"
       directory="profiles/default"
-      title="HIVe: Roster Management"
+      title="OCCAMS: Roster Management"
       description="Tool for assigning and managing OUR numbers."
       provides="Products.GenericSetup.interfaces.EXTENSION"
       />
-      
+
   <genericsetup:importStep
-      name="hive_roster_install"
+      name="occams_roster_install"
       title="Additional product setup."
       description="Installs groups."
-      handler="hive.roster.setuphandlers.importVarious"
+      handler=".setuphandlers.import_various"
       />
-      
-  <!-- Upgrade support for existing installations -->    
-  <include package=".upgrades" />  
 
-  <utility provides=".interfaces.IRegistry"  component=".OurNumberFactory" />
+  <!-- upgrade support for existing installations -->
+  <include package=".upgrades" />
+
+  <adapter factory='.support.OurNumberSupport' />
 
 </configure>
