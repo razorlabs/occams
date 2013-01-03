@@ -6,6 +6,7 @@ from datetime import date
 from datetime import datetime
 import re
 
+from sqlalchemy.orm.collections import collection
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy import event
@@ -86,6 +87,50 @@ class Context(Model, AutoNamed, Referenceable, Modifiable, Auditable):
             )
 
 
+class GroupedCollection(object):
+    u"""
+    Collects relationship values into a dictionary grouped by a discriminator
+    """
+
+    def __init__(self, keyfunc):
+        self._keyfunc = keyfunc
+        self._groups = dict()
+
+    @collection.appender
+    def _append(self, value):
+        self._groups.setdefault(self._keyfunc(value), []).append(value)
+
+    def __setitem__(self, key, value):
+        self._append(value)
+
+    def __getitem__(self, key):
+        return tuple(value for value in self._groups.get(key, []))
+
+    def __delitem__(self, key):
+        if key in self._groups:
+            map(self._remove, self[key])
+
+    def __contains__(self, key):
+        return key in self._groups
+
+    @collection.remover
+    def _remove(self, value):
+        self._groups[self._keyfunc(value)].remove(value)
+
+    @collection.iterator
+    def _iterator(self):
+        for group in self._groups.itervalues():
+            for value in group:
+                yield value
+
+    def __repr__(self):
+        return '%s(%r)' % (type(self).__name__, self._groups)
+
+
+def grouped_collection(keyfunc):
+    return lambda: GroupedCollection(keyfunc)
+
+
 class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
     implements(IEntity)
 
@@ -142,7 +187,6 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
     def __getitem__(self, key):
         collector = self._getCollector(key)
         attribute = self.schema[key]
-        query = collector.filter_by(attribute=attribute)
 
         def convert(container):
             if container.value is None:
@@ -157,11 +201,11 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
             return value
 
         if attribute.is_collection:
-            value = [convert(v) for v in iter(query)]
+            value = [convert(v) for v in iter(collector[attribute.name])]
         else:
             try:
-                wrappedValue = query.one()
-            except NoResultFound:
+                wrappedValue = collector[attribute.name][0]
+            except IndexError:
                 value = None
             else:
                 value = convert(wrappedValue)
@@ -176,7 +220,7 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         params = lambda a, v: dict(zip(('attribute', 'value'), (a, v)))
 
         # Helper methot to add an item to the value collector
-        append = lambda v: collector.append(wrapperFactory(**params(attribute, v)))
+        collect = lambda v: collector.__setitem__(attribute.name, wrapperFactory(**params(attribute, v)))
 
         def convert(value, type_):
             if value is None:
@@ -188,26 +232,22 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
             return converted
 
         if attribute.is_collection:
-            # Don't even bother to try and get a diff, just remove it and set it
+            # don't even bother getting a diff and updating, just create a new list
             del self[key]
-
-            map(append, map(lambda v: convert(v, attribute.type), value))
+            map(collect, map(lambda v: convert(v, attribute.type), value))
         else:
             # For scalars, we're only dealing with one value, so it's OK to
             # try and update it
             convertedValue = convert(value, attribute.type)
-
-            try:
-                entry = collector.filter_by(attribute=attribute).one()
-            except NoResultFound:
-                append(convertedValue)
+            value_entries = collector[key]
+            if value_entries:
+                value_entries[0].value = convertedValue
             else:
-                entry.value = convertedValue
+                collect(convertedValue)
 
     def __delitem__(self, key):
         collector = self._getCollector(key)
-        attribute = self.schema[key]
-        collector.filter_by(attribute=attribute).delete('fetch')
+        del collector[key]
 
     def items(self):
         return list(self.iteritems())
@@ -270,8 +310,8 @@ def TypeMappingClass(className, tableName, valueType):
                 primaryjoin='%s.entity_id == Entity.id' % cls.__name__,
                 backref=backref(
                     name='_%s_values' % cls.__tablename__,
+                    collection_class=grouped_collection(lambda v: v.attribute.name),
                     cascade='all, delete-orphan',
-                    lazy='dynamic',
                     )
                 )
 
