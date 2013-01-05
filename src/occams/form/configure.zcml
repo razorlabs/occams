@@ -19,7 +19,7 @@
 
    <subscriber
     for="Products.PluggableAuthService.interfaces.events.IUserLoggedInEvent"
-    handler=".saconfig.registerUser"
+    handler=".saconfig.handle_login"
     />
 
   <adapter factory="occams.datastore.schema.attributeToField" />
