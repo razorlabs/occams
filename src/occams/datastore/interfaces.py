@@ -387,6 +387,7 @@ class IEntity(IDataBaseItem):
             'complete', 'not-done', 'inline',
             'error',
             'inaccurate',
+            'not-applicable',
             ]),
         default='pending-entry',
         )
