@@ -63,7 +63,7 @@ def schemaToReportById(session, schema_name, use_choice_title=False):
     Builds a sub-query for a schema using the ID split algorithm
     """
     header = getHeaderById(session, schema_name)
-    table = buildReportTable(session, schema_name, header, use_choice_title=use_choice_title)
+    table = buildReportTable(session, schema_name, header, use_choice_title)
     return header, table
 
 
@@ -72,7 +72,7 @@ def schemaToReportByName(session, schema_name, use_choice_title=False):
     Builds a sub-query for a schema using the NAME split algorithm
     """
     header = getHeaderByName(session, schema_name)
-    table = buildReportTable(session, schema_name, header, use_choice_title=use_choice_title)
+    table = buildReportTable(session, schema_name, header, use_choice_title)
     return header, table
 
 
@@ -81,7 +81,7 @@ def schemaToReportByChecksum(session, schema_name, use_choice_title=False):
     Builds a sub-query for a schema using the CHECKSUM split algorithm
     """
     header = getHeaderByChecksum(session, schema_name)
-    table = buildReportTable(session, schema_name, header, use_choice_title=use_choice_title)
+    table = buildReportTable(session, schema_name, header, use_choice_title)
     return header, table
 
 
@@ -128,7 +128,8 @@ def buildReportTable(session, schema_name, header, use_choice_title):
         ``header``
             The column plan tha will be used for aligning the data
         ``use_choice_title``
-            True/False - Use the choice titles, instead of choice values, if the attribute has choices
+            True/False - Use the choice titles, instead of choice values,
+            if the attribute has choices
     Returns
         A SQLAlchemy aliased sub-query.
 
@@ -153,7 +154,8 @@ def buildReportTable(session, schema_name, header, use_choice_title):
         elif checkObject(attributes):
             entity_query = addObject(entity_query, path, attributes, joined)
         else:
-            entity_query = addScalar(entity_query, path, attributes, use_choice_title=use_choice_title)
+            entity_query = addScalar(entity_query, path, attributes,
+                                    use_choice_title)
 
     if checkSqlite(session):
         # sqlite does not support common table expressions
@@ -284,7 +286,8 @@ def addScalar(entity_query, path, attributes, use_choice_title):
         ``attributes``
             The attributes in the ancestry for the the path
         ``use_choice_title``
-            True/False - Use the choice titles, instead of choice values, if the attribute has choices
+            True/False - Use the choice titles, instead of choice values,
+             if the attribute has choices
 
     Returns
         The modified entity_query
@@ -295,7 +298,8 @@ def addScalar(entity_query, path, attributes, use_choice_title):
         (value_class.entity_id == datastore.Entity.id)
         & value_class.attribute_id.in_([a.id for a in attributes])
         ))
-    if use_choice_title and reduce(operator.or_, [bool(len(a.choices)) for a in attributes]):
+    if (use_choice_title and
+            reduce(operator.or_, [bool(len(a.choices)) for a in attributes])):
         session = entity_query.session
         attribute_choice = orm.aliased(datastore.Choice, name=column_name + '_choice')
         choice_title_query = (
