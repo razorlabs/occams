@@ -486,6 +486,24 @@ class SchemaToQueryTestCase(unittest.TestCase):
         result = session.query(report).filter_by(entity_id=entity1.id).one()
         self.assertEqual(entity1[u'value'], result.value)
 
+    def testScalarChoiceValues(self):
+        session = self.layer[u'session']
+
+        # first version of the sample schema
+        schema1 = testing.createSchema(session, u'Sample', t1, dict(
+            value=datastore.Attribute(type=u'string', order=0, choices=[datastore.Choice(name="foovalue", title=u"Foo", value=u"foovalue")]),
+            ))
+
+        # add some entries for the schema
+        entity1 = testing.createEntity(schema1, u'Foo', t1, dict(
+            value=u'foovalue',
+            ))
+
+        # generate report by name, should be able to access attributes as columns
+        plan, report = reporting.schemaToReportByName(session, u'Sample', use_choice_title=True)
+        result = session.query(report).filter_by(entity_id=entity1.id).one()
+        self.assertEqual("Foo", result.value)
+
     @unittest.skipIf(u'postgres' not in testing.DEFAULT_URI, u'Not using postgres')
     def testArrayCollectionValues(self):
         session = self.layer[u'session']

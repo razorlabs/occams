@@ -58,30 +58,30 @@ from occams.datastore import model as datastore
 from occams.datastore.model import storage
 
 
-def schemaToReportById(session, schema_name):
+def schemaToReportById(session, schema_name, use_choice_title=False):
     u"""
     Builds a sub-query for a schema using the ID split algorithm
     """
     header = getHeaderById(session, schema_name)
-    table = buildReportTable(session, schema_name, header)
+    table = buildReportTable(session, schema_name, header, use_choice_title)
     return header, table
 
 
-def schemaToReportByName(session, schema_name):
+def schemaToReportByName(session, schema_name, use_choice_title=False):
     u"""
     Builds a sub-query for a schema using the NAME split algorithm
     """
     header = getHeaderByName(session, schema_name)
-    table = buildReportTable(session, schema_name, header)
+    table = buildReportTable(session, schema_name, header, use_choice_title)
     return header, table
 
 
-def schemaToReportByChecksum(session, schema_name):
+def schemaToReportByChecksum(session, schema_name, use_choice_title=False):
     u"""
     Builds a sub-query for a schema using the CHECKSUM split algorithm
     """
     header = getHeaderByChecksum(session, schema_name)
-    table = buildReportTable(session, schema_name, header)
+    table = buildReportTable(session, schema_name, header, use_choice_title)
     return header, table
 
 
@@ -114,7 +114,7 @@ def checkPostgres(session):
     return session.bind.url.drivername in (u'postgres', u'postgresql')
 
 
-def buildReportTable(session, schema_name, header):
+def buildReportTable(session, schema_name, header, use_choice_title):
     u"""
     Builds a schema entity data report table as an aliased sub-query.
 
@@ -127,7 +127,9 @@ def buildReportTable(session, schema_name, header):
             The schema to use for building the sub-query
         ``header``
             The column plan tha will be used for aligning the data
-
+        ``use_choice_title``
+            True/False - Use the choice titles, instead of choice values,
+            if the attribute has choices
     Returns
         A SQLAlchemy aliased sub-query.
 
@@ -152,7 +154,8 @@ def buildReportTable(session, schema_name, header):
         elif checkObject(attributes):
             entity_query = addObject(entity_query, path, attributes, joined)
         else:
-            entity_query = addScalar(entity_query, path, attributes)
+            entity_query = addScalar(entity_query, path, attributes,
+                                    use_choice_title)
 
     if checkSqlite(session):
         # sqlite does not support common table expressions
@@ -269,7 +272,7 @@ def addObject(entity_query, path, attributes, joined=None):
     return entity_query
 
 
-def addScalar(entity_query, path, attributes):
+def addScalar(entity_query, path, attributes, use_choice_title):
     u"""
     Helper method to add scalar column to the entity query
 
@@ -282,16 +285,33 @@ def addScalar(entity_query, path, attributes):
             The column plan path
         ``attributes``
             The attributes in the ancestry for the the path
+        ``use_choice_title``
+            True/False - Use the choice titles, instead of choice values,
+             if the attribute has choices
 
     Returns
         The modified entity_query
     """
+    column_name = u'_'.join(path)
     value_class, value_column = getValueColumn(path, attributes)
     entity_query = entity_query.outerjoin(value_class, (
         (value_class.entity_id == datastore.Entity.id)
         & value_class.attribute_id.in_([a.id for a in attributes])
         ))
-    column_part = value_column.label(u'_'.join(path))
+    if (use_choice_title and
+            reduce(operator.or_, [bool(len(a.choices)) for a in attributes])):
+        session = entity_query.session
+        attribute_choice = orm.aliased(datastore.Choice, name=column_name + '_choice')
+        choice_title_query = (
+            session.query(attribute_choice.title)
+            .select_from(value_class)
+            .filter(attribute_choice.id == value_class.choice_id)
+            .correlate(value_class)
+            .as_scalar()
+            )
+        column_part = choice_title_query.label(column_name)
+    else:
+        column_part = value_column.label(column_name)
     entity_query = entity_query.add_column(column_part)
     return entity_query
 
