@@ -646,7 +646,7 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
             description=data['description'],
             type=self.getType(),
             is_collection=data.get('is_collection', False),
-            is_required=data.get('is_collection', False),
+            is_required=data.get('is_required', False),
             )
 
         # create a new sub-schema if the new field is an object
