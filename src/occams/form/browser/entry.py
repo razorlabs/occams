@@ -465,7 +465,6 @@ class UberEditForm(z3c.form.group.GroupForm, UberForm, z3c.form.form.EditForm):
             if data.has_key(key):
                 if type(data[key]) == dict:
                     if value is None:
-                        import pdb; pdb.set_trace( )
                         subschema = entity.schema[key].object_schema
                         subtitle = "%s%s%s" % (entity.title, subschema.name, datetime.now())
                         value = model.Entity(schema=subschema, name=subtitle, title=subtitle, state=u'inline', collect_date=collect_date)
