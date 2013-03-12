@@ -9,9 +9,6 @@
   <adapter factory=".editor.ConstraintValidator" />
   <adapter factory=".workflow.StateNameValidator" />
 
-  <adapter for="zope.schema.Choice zope.publisher.interfaces.http.IHTTPRequest"
-                 provides="z3c.form.interfaces.IFieldWidget"
-                 factory=".entry.DynamicChoiceWidget" />
   <!--            -->
   <!-- ENTRY  -->
   <!--            -->
