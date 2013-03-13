@@ -28,18 +28,6 @@ from occams.form import interfaces
 from occams.datastore import model
 from occams.form.entry import EntityMovedEvent
 
-def DynamicChoiceWidget(field, request):
-    """
-    An Adapter that returns a Radio Widget if the number of choices is less
-    than 4, otherwise returns a Select Widget
-    """
-    try:
-        if hasattr(field, 'vocabulary') and field.vocabulary and len(field.vocabulary) < 4:
-            return z3c.form.browser.radio.RadioFieldWidget(field, request)
-        return z3c.form.browser.select.SelectFieldWidget(field, request)
-    except TypeError:
-        ## This vocabulary has no length?!?!
-        return z3c.form.browser.select.SelectFieldWidget(field, request)
 
 class DataEntryGroup(z3c.form.group.Group):
     """
