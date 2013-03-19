@@ -59,58 +59,43 @@ from occams.datastore.model import storage
 
 
 def schemaToReportById(session, schema_name, use_choice_title=False):
-    u"""
-    Builds a sub-query for a schema using the ID split algorithm
-    """
+    u""" Builds a sub-query for a schema using the ID split algorithm """
     header = getHeaderById(session, schema_name)
     table = buildReportTable(session, schema_name, header, use_choice_title)
     return header, table
 
 
 def schemaToReportByName(session, schema_name, use_choice_title=False):
-    u"""
-    Builds a sub-query for a schema using the NAME split algorithm
-    """
+    u""" Builds a sub-query for a schema using the NAME split algorithm """
     header = getHeaderByName(session, schema_name)
     table = buildReportTable(session, schema_name, header, use_choice_title)
     return header, table
 
 
 def schemaToReportByChecksum(session, schema_name, use_choice_title=False):
-    u"""
-    Builds a sub-query for a schema using the CHECKSUM split algorithm
-    """
+    u""" Builds a sub-query for a schema using the CHECKSUM split algorithm """
     header = getHeaderByChecksum(session, schema_name)
     table = buildReportTable(session, schema_name, header, use_choice_title)
     return header, table
 
 
 def checkCollection(attributes):
-    u"""
-    Checks if the attribute list is ever a collection type
-    """
-
+    u""" Checks if the attribute list is ever a collection type """
     return reduce(operator.or_, [bool(a.is_collection) for a in attributes])
 
 
 def checkObject(attributes):
-    u"""
-    Checks if the attribute list is ever an object type
-    """
+    u""" Checks if the attribute list is ever an object type """
     return reduce(operator.or_, [bool(a.schema.is_inline) for a in attributes])
 
 
 def checkSqlite(session):
-    u"""
-    Checks if the session is using sqlite
-    """
+    u""" Checks if the session is using sqlite """
     return session.bind.url.drivername == u'sqlite'
 
 
 def checkPostgres(session):
-    u"""
-    Checks if the session is using postgresql
-    """
+    u""" Checks if the session is using postgresql """
     return session.bind.url.drivername in (u'postgres', u'postgresql')
 
 
