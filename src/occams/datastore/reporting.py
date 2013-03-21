@@ -28,7 +28,7 @@ Some key terms to keep in mind for this documentation:
         encouraged, especially when joining different reports (which
         the subquery result doesn't handle very well)
 
-Because of the nature of how datastore handles schema versions, this module
+Because of the nature of how model.handles schema versions, this module
 offers difference kinds of reporting granularity in the form of
 *attribute splitting*, meaning that the attribute metdata is inpected to
 determine how the final report columns show up in the query.
@@ -53,28 +53,30 @@ import operator
 
 import sqlalchemy as sa
 from sqlalchemy import orm
+from sqlalchemy.sql.expression import true, exists, bindparam
+from zope.schema.vocabulary import SimpleVocabulary, SimpleTerm
 
-from occams.datastore import model as datastore
-from occams.datastore.model import storage
+from . import model
+from .model import storage
 
 
 def schemaToReportById(session, schema_name, use_choice_title=False):
     u""" Builds a sub-query for a schema using the ID split algorithm """
-    header = getHeaderById(session, schema_name)
+    header = getHeader(session, schema_name, lambda a: (a.name, a.id))
     table = buildReportTable(session, schema_name, header, use_choice_title)
     return header, table
 
 
 def schemaToReportByName(session, schema_name, use_choice_title=False):
     u""" Builds a sub-query for a schema using the NAME split algorithm """
-    header = getHeaderByName(session, schema_name)
+    header = getHeader(session, schema_name, lambda a: (a.name,))
     table = buildReportTable(session, schema_name, header, use_choice_title)
     return header, table
 
 
 def schemaToReportByChecksum(session, schema_name, use_choice_title=False):
     u""" Builds a sub-query for a schema using the CHECKSUM split algorithm """
-    header = getHeaderByChecksum(session, schema_name)
+    header = getHeader(session, schema_name, lambda a: (a.name, a.checksum))
     table = buildReportTable(session, schema_name, header, use_choice_title)
     return header, table
 
@@ -99,7 +101,8 @@ def checkPostgres(session):
     return session.bind.url.drivername in (u'postgres', u'postgresql')
 
 
-def buildReportTable(session, schema_name, header, use_choice_title):
+def buildReportTable(session, schema_name, header,
+                    use_choice_title=False, expand_collection=False):
     u"""
     Builds a schema entity data report table as an aliased sub-query.
 
@@ -127,15 +130,15 @@ def buildReportTable(session, schema_name, header, use_choice_title):
     joined = dict()
 
     entity_query = (
-        session.query(datastore.Entity.id.label(u'entity_id'))
-        .join(datastore.Entity.schema)
-        .filter(datastore.Schema.name == schema_name)
-        .filter(datastore.Schema.publish_date != None)
+        session.query(model.Entity.id.label(u'entity_id'))
+        .join(model.Entity.schema)
+        .filter(model.Schema.name == schema_name)
+        .filter(model.Schema.publish_date != None)
         )
 
-    for path, attributes in header.iteritems():
+    for path, (attributes, choice) in header.iteritems():
         if checkCollection(attributes):
-            entity_query = addCollection(entity_query, path, attributes)
+            entity_query = addCollection(entity_query, path, attributes, choice)
         elif checkObject(attributes):
             entity_query = addObject(entity_query, path, attributes, joined)
         else:
@@ -151,7 +154,7 @@ def buildReportTable(session, schema_name, header, use_choice_title):
     return report_table
 
 
-def addCollection(entity_query, path, attributes):
+def addCollection(entity_query, path, attributes, choice=None):
     u"""
     Helper method to add collection column to the entity query
 
@@ -175,25 +178,35 @@ def addCollection(entity_query, path, attributes):
     value_class, value_column = getValueColumn(path, attributes)
     session = entity_query.session
 
-    if not checkPostgres(session):
-        # aggregate subquery results into comma-delimited list
-        value_column = sa.func.group_concat(value_column)
+    if choice is None:
+        if not checkPostgres(session):
+            # aggregate subquery results into comma-delimited list
+            value_column = sa.func.group_concat(value_column)
 
-    column_part = (
-        session.query(value_column)
-        .filter(value_class.entity_id == datastore.Entity.id)
-        .filter(value_class.attribute_id.in_([a.id for a in attributes]))
-        .correlate(datastore.Entity)
-        .as_scalar()
-        )
+        column_part = (
+            session.query(value_column)
+            .filter(value_class.entity_id == model.Entity.id)
+            .filter(value_class.attribute_id.in_([a.id for a in attributes]))
+            .correlate(model.Entity)
+            .as_scalar())
 
-    if checkPostgres(session):
-        # use postgres' native array support if available
-        column_part = sa.func.array(column_part)
+        if checkPostgres(session):
+            # use postgres' native array support if available
+            column_part = sa.func.array(column_part)
+
+    else:
+        column_part = (
+            session.query(true())
+            .filter(value_class.entity_id == model.Entity.id)
+            .filter(value_class.attribute_id.in_([a.id for a in attributes]))
+            .filter(value_column._value == choice.value)
+            .correlate(model.Entity)
+            .as_scalar())
 
     column_name = u'_'.join(path)
     column_part = column_part.label(column_name)
     entity_query = entity_query.add_column(column_part)
+
     return entity_query
 
 
@@ -233,10 +246,10 @@ def addObject(entity_query, path, attributes, joined=None):
         associate_class = joined[parent_name]
     else:
         # need to do an extra left join for the sub-object assocation table
-        associate_class = orm.aliased(datastore.ValueObject, name=parent_name)
+        associate_class = orm.aliased(model.ValueObject, name=parent_name)
         # do a single join to the sub-object
         entity_query = entity_query.outerjoin(associate_class, (
-            (datastore.Entity.id == associate_class.entity_id)
+            (model.Entity.id == associate_class.entity_id)
             & associate_class.attribute_id.in_(
                 [a.schema.parent_attribute.id for a in attributes]
                 )
@@ -280,13 +293,13 @@ def addScalar(entity_query, path, attributes, use_choice_title):
     column_name = u'_'.join(path)
     value_class, value_column = getValueColumn(path, attributes)
     entity_query = entity_query.outerjoin(value_class, (
-        (value_class.entity_id == datastore.Entity.id)
+        (value_class.entity_id == model.Entity.id)
         & value_class.attribute_id.in_([a.id for a in attributes])
         ))
     if (use_choice_title and
             reduce(operator.or_, [bool(len(a.choices)) for a in attributes])):
         session = entity_query.session
-        attribute_choice = orm.aliased(datastore.Choice, name=column_name + '_choice')
+        attribute_choice = orm.aliased(model.Choice, name=column_name + '_choice')
         choice_title_query = (
             session.query(attribute_choice.title)
             .select_from(value_class)
@@ -334,59 +347,59 @@ def getValueColumn(path, attributes):
     return value_class, value_column
 
 
-def getHeaderByName(session, schema_name, path=()):
+# aliased so we don't get naming ambiguity
+RecentAttribute = orm.aliased(model.Attribute, name=u'recent_attribute')
+
+attribute_query = (
+    orm.Query(model.Attribute)
+    .options(
+        orm.joinedload(model.Attribute.schema),
+        orm.joinedload(model.Attribute.choices))
+    .join(model.Attribute.schema)
+    .filter(model.Schema.name == bindparam('schema_name'))
+    .filter(model.Schema.publish_date != None)
+    .order_by(
+        # lineage order
+        # build a subquery that determines an attribute's most recent order
+        (orm.Query(RecentAttribute.order)
+            .join(RecentAttribute.schema)
+            .filter(model.Schema.name == bindparam('schema_name'))
+            .filter(model.Schema.publish_date != None)
+            .filter(RecentAttribute.name == model.Attribute.name)
+            .order_by(model.Schema.publish_date.desc())
+            .limit(1)
+            .correlate(model.Attribute)
+            .as_scalar()).asc(),
+        # oldest to newest within the lineage
+        model.Schema.publish_date.asc()))
+
+
+def getHeader(session, schema_name, splitter, path=(), expand_multi_choice=False):
     u"""
-    Builds a column header for the schema hierarchy using the NAME algorithm.
+    Builds a column header for the schema hierarchy.
     The header columns reported are only the basic data types.
 
     Note that the final columns are ordered by most recent order number within
     the parent, then by the parent's publication date (oldest to newest).
 
-    Arguments
-        ``session``
-            The session to query plan from
-        ``name``
-            The name of the schema to get columns plans for
-        ``path``
-            (Optional)  current traversing path in the hierarchy.
-            This is useful if you want to prepend additional column
-            prefixes.
-
-    Returns
-        An ordered dictionary using the path to the attribute as the key,
-        and the associated attribute list as the value.
-    """
-    plan = ordereddict.OrderedDict()
-    attribute_query = getAttributeQuery(session, schema_name)
-    for attribute in attribute_query:
-        if attribute.type == u'object':
-            sub_name = attribute.object_schema.name
-            sub_path = (attribute.name,)
-            sub_plan = getHeaderByName(session, sub_name, sub_path)
-            plan.update(sub_plan)
-        else:
-            column_path = path + (attribute.name,)
-            plan.setdefault(column_path, []).append(attribute)
-    return plan
-
-
-def getHeaderByChecksum(session, schema_name, path=()):
-    u"""
-    Builds a column header for the schema hierarchy using the CHECKSUM algorithm.
-    The header columns reported are only the basic data types.
-
-    Note that the final columns are ordered by most recent order number within
-    the parent, then by the parent's publication date (oldest to newest).
+    Attribute lineages are are ordered by their most recent position in the
+    schema, then by oldest to newest within the lineage.
 
     Arguments
         ``session``
             The session to query plan from
-        ``name``
+        ``schema_name``
             The name of the schema to get columns plans for
+        ``splitter``
+            The splitting algorithm to use, this is a callback that will
+            return a tuple based on the passed attribute. The tuple should
+            specific the group that the attribute value belongs in.
         ``path``
-            (Optional)  current traversing path in the hierarchy.
+            (Optional) current traversing path in the hierarchy.
             This is useful if you want to prepend additional column
             prefixes.
+        ``expand_multi_choice``
+            (Optional) Further expands multiple choiced attributes
 
     Returns
         An ordered dictionary using the path to the attribute as the key,
@@ -394,105 +407,125 @@ def getHeaderByChecksum(session, schema_name, path=()):
         also contain the attribute's checksum.
     """
     plan = ordereddict.OrderedDict()
-    attribute_query = getAttributeQuery(session, schema_name)
-    for attribute in attribute_query:
+    bound_attribute_query = (attribute_query
+        .params(schema_name=schema_name)
+        .with_session(session))
+
+    for attribute in bound_attribute_query:
         if attribute.type == u'object':
             sub_name = attribute.object_schema.name
             sub_path = (attribute.name,)
-            sub_plan = getHeaderByChecksum(session, sub_name, sub_path)
+            sub_plan = getHeader(session, sub_name, splitter, sub_path, expand_multi_choice)
             plan.update(sub_plan)
         else:
-            column_path = path + (attribute.name, attribute.checksum)
-            plan.setdefault(column_path, []).append(attribute)
+            group = splitter(attribute)
+            if expand_multi_choice:
+                for choice in attribute.choices:
+                    column_path = path + (choice.value,) + group
+                    plan.setdefault(column_path, []).append(attribute)
+            else:
+                column_path = path + group
+                plan.setdefault(column_path, []).append(attribute)
+
     return plan
 
 
-def getHeaderById(session, schema_name, path=()):
-    u"""
-    Builds a column header for the schema hierarchy using the ID algorithm.
-    The header columns reported are only the basic data types.
+class DataDictionary(object):
 
-    Note that the final columns are ordered by most recent order number within
-    the parent, then by the parent's publication date (oldest to newest).
+    @property
+    def name(self):
+        return self.__schema_name
 
-    Arguments
-        ``session``
-            The session to query plan from
-        ``name``
-            The name of the schema to get columns plans for
-        ``path``
-            (Optional)  current traversing path in the hierarchy.
-            This is useful if you want to prepend additional column
-            prefixes.
+    @property
+    def columns(self):
+        return self.__columns
 
-    Returns
-        An ordered dictionary using the path to the attribute as the key,
-        and the associated attribute list as the value. The path will
-        also contain the attribute's id.
-    """
-    plan = ordereddict.OrderedDict()
-    attribute_query = getAttributeQuery(session, schema_name)
-    for attribute in attribute_query:
-        if attribute.type == u'object':
-            sub_name = attribute.object_schema.name
-            sub_path = (attribute.name,)
-            sub_plan = getHeaderById(session, sub_name, sub_path)
-            plan.update(sub_plan)
-        else:
-            column_path = path + (attribute.name, attribute.id)
-            plan.setdefault(column_path, []).append(attribute)
-    return plan
+    @property
+    def schemata(self):
+        return self.__schemata
+
+    @property
+    def recentSchema(self):
+        if self.schemata:
+            return self.schemata[-1]
+
+    def __init__(self, schema_name):
+        self.__schema_name = schema_name
+        self.__columns = OrderedDict()
+        self.__schemata = []
+
+    def get(key, default=None):
+        return self.columns.get(key, default)
+
+    def add(column):
+        self.columns[column.name] = column
+
+    def __getitem__(self, key, default=None):
+        return self.columns[key]
+
+    def __contains__(self, key):
+        return key in self.columns
+
+    def iteritems(self):
+        return self.columns.iteritems()
+
+    def iterkeys(self):
+        return self.columns.iterkeys()
+
+    def itervalues(self):
+        return self.columns.itervalues()
 
 
-def getAttributeQuery(session, schema_name):
-    u"""
-    Builds a subquery for the all attributes ever contained in the schema.
-    This does not include sub-attributes.
+class DataColumn(object):
 
-    Arguments:
-        ``session``
-            The SQLAlchemy session to use
-        ``schema_name``
-            The schema to search for in the session
+    @property
+    def datadictionary(self):
+        return self.__datadictionary
 
-    Returns:
-        A subquery for all the attributes every contained in the schema.
-        Attribute lineages are are ordered by their most recent position in the
-        schema, then by oldest to newest within the lineage.
-    """
+    @property
+    def name(self):
+        return self.__name
 
-    # aliased so we don't get naming ambiguity
-    RecentAttribute = orm.aliased(datastore.Attribute, name=u'recent_attribute')
+    @property
+    def path(self):
+        return self.__path
 
-    # build a subquery that determines an attribute's most recent order
-    recent_order_subquery = (
-        session.query(RecentAttribute.order)
-        .join(RecentAttribute.schema)
-        .filter(datastore.Schema.name == schema_name)
-        .filter(datastore.Schema.publish_date != None)
-        .filter(RecentAttribute.name == datastore.Attribute.name)
-        .order_by(datastore.Schema.publish_date.desc())
-        .limit(1)
-        .correlate(datastore.Attribute)
-        .as_scalar()
-        )
+    @property
+    def attributes(self):
+        return self.__attributes
 
-    attribute_query = (
-        session.query(datastore.Attribute)
-        .options(
-            orm.joinedload(datastore.Attribute.schema),
-            orm.joinedload(datastore.Attribute.choices),
-            )
-        .join(datastore.Attribute.schema)
-        .filter(datastore.Schema.name == schema_name)
-        .filter(datastore.Schema.publish_date != None)
-        .order_by(
-            # lineage order
-            recent_order_subquery.asc(),
-            # oldest to newest within the lineage
-            datastore.Schema.publish_date.asc(),
-            )
-        )
+    @property
+    def selection(self):
+        return self.__selection
 
-    return attribute_query
+    @selection.setter
+    def selection(self, value):
+        self.__selection = value
+
+    @property
+    def vocabulary(self):
+        return  SimpleVocabulary([SimpleTerm(c.value, title=c.title)
+                                                for a in self.attributes
+                                                for c in a.choices])
+
+    @property
+    def type(self):
+        if self.attribtues:
+            return self.attributes[-1].type
+
+    @property
+    def is_nested(self):
+        if self.attributes:
+            subschema_name = self.attributes[-1].schema.name
+            schema_name = self.datadictionary.schemata[-1].name
+            return subschema_name == schema_name
+
+    def __init__(self, datadictionary, path, attributes):
+        self.__datadictionary = datadictionary
+        self.__name = '_'.join(path)
+        self.__path = path
+        self.__attributes = attributes
+
+    def __getitem__(self, key):
+        return self.vocabulary.getTerm(key)
 
