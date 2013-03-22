@@ -10,7 +10,7 @@ import unittest2 as unittest
 import sqlalchemy as sa
 from sqlalchemy import orm
 
-from occams.datastore import model as datastore
+from occams.datastore import model
 from occams.datastore import reporting
 from occams.datastore import testing
 
@@ -22,9 +22,7 @@ t4 = datetime.date(2012, 5, 1)
 
 
 class UtilitiesTestCase(unittest.TestCase):
-    u"""
-    Ensures the helper utilities are working properly
-    """
+    u""" Ensures the helper utilities are working properly """
 
     def testCheckPostgres(self):
         engine = sa.create_engine(testing.PSQL_URI)
@@ -49,11 +47,11 @@ class UtilitiesTestCase(unittest.TestCase):
         # if the attribte in question was ever a collection
 
         # does not contain collection
-        attributes = [datastore.Attribute(name=u'foo')]
+        attributes = [model.Attribute(name=u'foo')]
         self.assertFalse(reporting.checkCollection(attributes))
 
         # does contain collection
-        attributes.append(datastore.Attribute(name=u'foo', is_collection=True))
+        attributes.append(model.Attribute(name=u'foo', is_collection=True))
         self.assertTrue(reporting.checkCollection(attributes))
 
     def testCheckObject(self):
@@ -61,25 +59,23 @@ class UtilitiesTestCase(unittest.TestCase):
         # if the attribute in question was ever a sub-attribute
 
         # was not a sub-attribute
-        attributes = [datastore.Attribute(
+        attributes = [model.Attribute(
             name=u'foo',
-            schema=datastore.Schema(name=u'Foo')
+            schema=model.Schema(name=u'Foo')
             )]
         self.assertFalse(reporting.checkObject(attributes))
 
-        attributes.append(datastore.Attribute(
+        attributes.append(model.Attribute(
             name=u'foo',
-            schema=datastore.Schema(name=u'Foo', is_inline=True)
+            schema=model.Schema(name=u'Foo', is_inline=True)
             ))
         self.assertTrue(reporting.checkObject(attributes))
 
 
 class HeaderTestCase(unittest.TestCase):
-    u"""
-    Ensures that column headers can be properly generated.
-    """
+    u""" Ensures that column headers can be properly generated.  """
 
-    layer = testing.OCCAMS_DATASTORE_FIXTURE
+    layer = testing.OCCAMS_model_FIXTURE
 
     def testEmptyPublishedSchema(self):
         session = self.layer[u'session']
@@ -100,7 +96,7 @@ class HeaderTestCase(unittest.TestCase):
     def testKeysFromSingleForm(self):
         session = self.layer[u'session']
         schema = testing.createSchema(session, u'A', t1, dict(
-            a=datastore.Attribute(type=u'string', order=0)
+            a=model.Attribute(type=u'string', order=0)
             ))
 
         # by NAME
@@ -125,7 +121,7 @@ class HeaderTestCase(unittest.TestCase):
     def testKeysFromMultpleVersions(self):
         session = self.layer[u'session']
         schema1 = testing.createSchema(session, u'A', t1, dict(
-            a=datastore.Attribute(type=u'string', order=0)
+            a=model.Attribute(type=u'string', order=0)
             ))
 
         schema2 = copy.deepcopy(schema1)
@@ -165,14 +161,14 @@ class HeaderTestCase(unittest.TestCase):
 
     def testKeysFromSubSchema(self):
         session = self.layer[u'session']
-        schema = datastore.Schema(name=u'A', title=u'', state=u'published')
-        schema[u'a'] = datastore.Attribute(title=u'', type=u'string', order=0)
-        schema[u'b'] = datastore.Attribute(title=u'', type=u'object', order=1)
-        schema[u'b'].object_schema = datastore.Schema(name=u'B', title=u'', state=u'published')
-        schema[u'b'][u'x'] = datastore.Attribute(title=u'', type=u'string', order=0)
-        schema[u'b'][u'y'] = datastore.Attribute(title=u'', type=u'string', order=1)
-        schema[u'b'][u'z'] = datastore.Attribute(title=u'', type=u'string', order=2)
-        schema[u'c'] = datastore.Attribute(title=u'', type=u'string', order=2)
+        schema = model.Schema(name=u'A', title=u'', state=u'published')
+        schema[u'a'] = model.Attribute(title=u'', type=u'string', order=0)
+        schema[u'b'] = model.Attribute(title=u'', type=u'object', order=1)
+        schema[u'b'].object_schema = model.Schema(name=u'B', title=u'', state=u'published')
+        schema[u'b'][u'x'] = model.Attribute(title=u'', type=u'string', order=0)
+        schema[u'b'][u'y'] = model.Attribute(title=u'', type=u'string', order=1)
+        schema[u'b'][u'z'] = model.Attribute(title=u'', type=u'string', order=2)
+        schema[u'c'] = model.Attribute(title=u'', type=u'string', order=2)
         session.add(schema)
         session.flush()
 
@@ -251,14 +247,14 @@ class HeaderTestCase(unittest.TestCase):
                 z
         """
         session = self.layer[u'session']
-        schema1 = datastore.Schema(name=u'A', title=u'', state=u'published', publish_date=t1)
-        schema1[u'a'] = datastore.Attribute(title=u'', type=u'string', order=0)
-        schema1[u'b'] = datastore.Attribute(title=u'', type=u'object', order=1)
-        schema1[u'b'].object_schema = datastore.Schema(name=u'B', title=u'', state=u'published', publish_date=t1)
-        schema1[u'b'][u'x'] = datastore.Attribute(title=u'', type=u'string', order=0)
-        schema1[u'b'][u'y'] = datastore.Attribute(title=u'', type=u'string', order=1)
-        schema1[u'b'][u'z'] = datastore.Attribute(title=u'', type=u'string', order=2)
-        schema1[u'c'] = datastore.Attribute(title=u'', type=u'string', order=2)
+        schema1 = model.Schema(name=u'A', title=u'', state=u'published', publish_date=t1)
+        schema1[u'a'] = model.Attribute(title=u'', type=u'string', order=0)
+        schema1[u'b'] = model.Attribute(title=u'', type=u'object', order=1)
+        schema1[u'b'].object_schema = model.Schema(name=u'B', title=u'', state=u'published', publish_date=t1)
+        schema1[u'b'][u'x'] = model.Attribute(title=u'', type=u'string', order=0)
+        schema1[u'b'][u'y'] = model.Attribute(title=u'', type=u'string', order=1)
+        schema1[u'b'][u'z'] = model.Attribute(title=u'', type=u'string', order=2)
+        schema1[u'c'] = model.Attribute(title=u'', type=u'string', order=2)
 
         schema2 = copy.deepcopy(schema1)
         schema2.state = schema2[u'b'].object_schema.state = u'published'
@@ -272,11 +268,11 @@ class HeaderTestCase(unittest.TestCase):
         schema3 = copy.deepcopy(schema2)
         schema3.state = schema3[u'b'].object_schema.state = u'published'
         schema3.publish_date = schema3[u'b'].object_schema.publish_date = t3
-        schema3[u'a'] = datastore.Attribute(name=u'a', title=u'', type=u'string', order=0)
+        schema3[u'a'] = model.Attribute(name=u'a', title=u'', type=u'string', order=0)
         del schema3[u'b'][u'x']
         del schema3[u'b'][u'y']
         del schema3[u'c']
-        schema3[u'y'] = datastore.Attribute(name=u'y', title=u'', type=u'string', order=2,)
+        schema3[u'y'] = model.Attribute(name=u'y', title=u'', type=u'string', order=2,)
 
         session.add_all([schema1, schema2, schema3])
         session.flush()
@@ -344,12 +340,12 @@ class ValueColumnTestCase(unittest.TestCase):
     separation algorithm used.
     """
 
-    layer = testing.OCCAMS_DATASTORE_FIXTURE
+    layer = testing.OCCAMS_model_FIXTURE
 
     def testStringColumn(self):
         session = self.layer[u'session']
         testing.createSchema(session, u'A', t1, dict(
-            a=datastore.Attribute(type=u'string', order=0),
+            a=model.Attribute(type=u'string', order=0),
             ))
         plan = reporting.getHeaderByName(session, u'A')
         path, attributes = plan.items()[0]
@@ -360,7 +356,7 @@ class ValueColumnTestCase(unittest.TestCase):
     def testTextColumn(self):
         session = self.layer[u'session']
         testing.createSchema(session, u'A', t1, dict(
-            a=datastore.Attribute(type=u'text', order=0),
+            a=model.Attribute(type=u'text', order=0),
             ))
         plan = reporting.getHeaderByName(session, u'A')
         path, attributes = plan.items()[0]
@@ -371,7 +367,7 @@ class ValueColumnTestCase(unittest.TestCase):
     def testIntegerColumn(self):
         session = self.layer[u'session']
         testing.createSchema(session, u'A', t1, dict(
-            a=datastore.Attribute(type=u'integer', order=0),
+            a=model.Attribute(type=u'integer', order=0),
             ))
         plan = reporting.getHeaderByName(session, u'A')
         path, attributes = plan.items()[0]
@@ -382,7 +378,7 @@ class ValueColumnTestCase(unittest.TestCase):
     def testDecimalColumn(self):
         session = self.layer[u'session']
         testing.createSchema(session, u'A', t1, dict(
-            a=datastore.Attribute(type=u'decimal', order=0),
+            a=model.Attribute(type=u'decimal', order=0),
             ))
         plan = reporting.getHeaderByName(session, u'A')
         path, attributes = plan.items()[0]
@@ -394,7 +390,7 @@ class ValueColumnTestCase(unittest.TestCase):
     def testDateColumn(self):
         session = self.layer[u'session']
         testing.createSchema(session, u'A', t1, dict(
-            a=datastore.Attribute(type=u'date', order=0),
+            a=model.Attribute(type=u'date', order=0),
             ))
         plan = reporting.getHeaderByName(session, u'A')
         path, attributes = plan.items()[0]
@@ -406,7 +402,7 @@ class ValueColumnTestCase(unittest.TestCase):
     def testStringDateColumn(self):
         session = self.layer[u'session']
         testing.createSchema(session, u'A', t1, dict(
-            a=datastore.Attribute(type=u'date', order=0),
+            a=model.Attribute(type=u'date', order=0),
             ))
         plan = reporting.getHeaderByName(session, u'A')
         path, attributes = plan.items()[0]
@@ -418,7 +414,7 @@ class ValueColumnTestCase(unittest.TestCase):
     def testDatetimeColumn(self):
         session = self.layer[u'session']
         testing.createSchema(session, u'A', t1, dict(
-            a=datastore.Attribute(type=u'datetime', order=0),
+            a=model.Attribute(type=u'datetime', order=0),
             ))
         plan = reporting.getHeaderByName(session, u'A')
         path, attributes = plan.items()[0]
@@ -430,7 +426,7 @@ class ValueColumnTestCase(unittest.TestCase):
     def testStringDatetimeColumn(self):
         session = self.layer[u'session']
         testing.createSchema(session, u'A', t1, dict(
-            a=datastore.Attribute(type=u'datetime', order=0),
+            a=model.Attribute(type=u'datetime', order=0),
             ))
         plan = reporting.getHeaderByName(session, u'A')
         path, attributes = plan.items()[0]
@@ -439,11 +435,9 @@ class ValueColumnTestCase(unittest.TestCase):
         self.assertEquals(u'datetime', value_column.name)
 
 class SchemaToQueryTestCase(unittest.TestCase):
-    u"""
-    Ensures that schema queries can by properly generated
-    """
+    u""" Ensures that schema queries can by properly generated """
 
-    layer = testing.OCCAMS_DATASTORE_FIXTURE
+    layer = testing.OCCAMS_model_FIXTURE
 
     def testExpectedMetadataColumns(self):
         session = self.layer[u'session']
@@ -473,7 +467,7 @@ class SchemaToQueryTestCase(unittest.TestCase):
 
         # first version of the sample schema
         schema1 = testing.createSchema(session, u'Sample', t1, dict(
-            value=datastore.Attribute(type=u'string', order=0),
+            value=model.Attribute(type=u'string', order=0),
             ))
 
         # add some entries for the schema
@@ -491,7 +485,7 @@ class SchemaToQueryTestCase(unittest.TestCase):
 
         # first version of the sample schema
         schema1 = testing.createSchema(session, u'Sample', t1, dict(
-            value=datastore.Attribute(type=u'string', order=0, choices=[datastore.Choice(name="foovalue", title=u"Foo", value=u"foovalue")]),
+            value=model.Attribute(type=u'string', order=0, choices=[model.Choice(name="foovalue", title=u"Foo", value=u"foovalue")]),
             ))
 
         # add some entries for the schema
@@ -509,7 +503,7 @@ class SchemaToQueryTestCase(unittest.TestCase):
         session = self.layer[u'session']
 
         schema1 = testing.createSchema(session, u'Sample', t1, dict(
-            value=datastore.Attribute(type=u'string', is_collection=True, order=0),
+            value=model.Attribute(type=u'string', is_collection=True, order=0),
             ))
 
         entity1 = testing.createEntity(schema1, u'Foo', t1, dict(
@@ -525,7 +519,7 @@ class SchemaToQueryTestCase(unittest.TestCase):
         session = self.layer[u'session']
 
         schema1 = testing.createSchema(session, u'Sample', t1, dict(
-            value=datastore.Attribute(type=u'string', is_collection=True, order=0),
+            value=model.Attribute(type=u'string', is_collection=True, order=0),
             ))
 
         entity1 = testing.createEntity(schema1, u'Foo', t1, dict(
@@ -541,28 +535,28 @@ class SchemaToQueryTestCase(unittest.TestCase):
     def testObjectValues(self):
         session = self.layer[u'session']
 
-        schema1 = datastore.Schema(
+        schema1 = model.Schema(
             name=u'Sample',
             title=u'',
             state=u'published',
             publish_date=t1
             )
-        schema1[u'sub'] = datastore.Attribute(title=u'', type=u'object', order=0)
-        schema1[u'sub'].object_schema = datastore.Schema(
+        schema1[u'sub'] = model.Attribute(title=u'', type=u'object', order=0)
+        schema1[u'sub'].object_schema = model.Schema(
             name=u'Sub',
             title=u'',
             state=u'published',
             publish_date=schema1.publish_date,
             is_inline=True
             )
-        schema1[u'sub']['value'] = datastore.Attribute(title=u'', type=u'string', order=0)
+        schema1[u'sub']['value'] = model.Attribute(title=u'', type=u'string', order=0)
         session.add(schema1)
         session.flush()
 
-        entity1 = datastore.Entity(schema=schema1, name=u'Foo', title=u'', collect_date=t1)
+        entity1 = model.Entity(schema=schema1, name=u'Foo', title=u'', collect_date=t1)
         session.add(entity1)
         session.flush()
-        entity1[u'sub'] = datastore.Entity(
+        entity1[u'sub'] = model.Entity(
             schema=schema1['sub'].object_schema, name=u'SubFoo', title=u'', collect_date=t1)
         session.flush()
         entity1[u'sub'][u'value'] = u'foovalue'
