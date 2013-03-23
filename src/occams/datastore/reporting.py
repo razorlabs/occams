@@ -35,21 +35,13 @@ determine how the final report columns show up in the query.
 So far, three types of attribute splitting are available:
 
     **NAME**
-        No splitting should occur, all attributes are grouped by their name
     **CHECKSUM**
-        All attribute in a lineage are grouped by their checksum
     **ID**
-        Aggressively split by attribute id
-
-For typical usage, see:
-    ``schemaToReportById``
-    ``schematoReportByName``
-    ``schemaToReportByChecksum``
 
 """
 
-import ordereddict
-import operator
+from ordereddict import OrderedDict
+from operator import or_
 
 import sqlalchemy as sa
 from sqlalchemy import orm
@@ -61,19 +53,28 @@ from .model import storage
 
 
 def schemaToReportById(session, schema_name, expand_choice=False):
-    u""" Builds a sub-query for a schema using the ID split algorithm """
+    u"""
+    Builds a sub-query for a schema using the ID split algorithm
+    ID Algorithm: Aggressively split by attribute id
+    """
     groupfunc = lambda a: (a.name, a.id)
     return schemaToReport(session, schema_name, groupfunc, expand_choice)
 
 
 def schemaToReportByName(session, schema_name, expand_choice=False):
-    u""" Builds a sub-query for a schema using the NAME split algorithm """
+    u"""
+    Builds a sub-query for a schema using the NAME split algorithm
+    NAME: All attribute in a lineage are grouped by their checksum
+    """
     groupfunc = lambda a: (a.name,)
     return schemaToReport(session, schema_name, groupfunc, expand_choice)
 
 
 def schemaToReportByChecksum(session, schema_name, expand_choice=False):
-    u""" Builds a sub-query for a schema using the CHECKSUM split algorithm """
+    u"""
+    Builds a sub-query for a schema using the CHECKSUM split algorithm
+    CHECKSUM
+    """
     groupfunc = lambda a: (a.name, a.checksum)
     return schemaToReport(session, schema_name, groupfunc, expand_choice)
 
@@ -97,11 +98,11 @@ def schemaToReport(session, schema_name, groupfunc, expand_choice=False):
             individual "flag" boolean columns.
 
     Returns:
-        A ``DataDictionary`` and ``Query`` pair.
+        A ``data_dict`` and ``Query`` pair.
     """
-    header = buildDataDictionary(session, schema_name, groupfunc, expand_choice)
-    table = buildReportTable(session, schema_name, header)
-    return header, table
+    data_dict = buildDataDict(session, schema_name, groupfunc, expand_choice)
+    table = buildReportTable(session, data_dict)
+    return data_dict, table
 
 
 def queryAttributes(session, schema_name):
@@ -149,7 +150,7 @@ def queryAttributes(session, schema_name):
     return attribute_query.params(schema_name=schema_name)
 
 
-def buildDataDictionary(session, schema_name, groupfunc, expand_choice=False):
+def buildDataDict(session, schema_name, groupfunc, expand_choice=False):
     u"""
     Builds a column header for the schema hierarchy.
     The header columns reported are only the basic data types.
@@ -178,31 +179,29 @@ def buildDataDictionary(session, schema_name, groupfunc, expand_choice=False):
         and the associated attribute list as the value. The path will
         also contain the attribute's checksum.
     """
-    #plan = DataDictionary(schema_name)
-    plan = ordereddict.OrderedDict()
+    data_dict = DataDict(schema_name)
 
-    def inspect(current_schema, path=()):
+    def populateFrom(current_schema, path=()):
         for attribute in queryAttributes(session, current_schema):
             if attribute.type == u'object':
-                sub_name = attribute.object_schema.name
-                sub_path = (attribute.name,)
-                sub_plan = inspect(sub_name, sub_path)
-                plan.update(sub_plan)
+                populateFrom(attribute.object_schema.name, (attribute.name,))
             else:
                 group = groupfunc(attribute)
-                if expand_choice:
+                if expand_choice and attribute.is_collection and attribute.choices:
                     for choice in attribute.choices:
                         column_path = path + (choice.value,) + group
-                        plan.setdefault(column_path, []).append(attribute)
+                        data_dict.add(column_path, attribute, choice)
                 else:
                     column_path = path + group
-                    plan.setdefault(column_path, []).append(attribute)
-        return plan
+                    data_dict.add(column_path, attribute)
 
-    return inspect(schema_name)
+    populateFrom(schema_name)
+    map(lambda dc: dc.updateVocabulary(), data_dict.itervalues())
+
+    return data_dict
 
 
-def buildReportTable(session, schema_name, header):
+def buildReportTable(session, data_dict):
     u"""
     Builds a schema entity data report table as an aliased sub-query.
 
@@ -223,35 +222,34 @@ def buildReportTable(session, schema_name, header):
         named tuples of each result using the names of the naming schema as the
         property names.
     """
+    # helper expressions
+    is_sqlite = session.bind.url.drivername == 'sqlite'
+    is_collection =  lambda xs: reduce(or_, [bool(a.is_collection) for a in xs])
+    is_object = lambda xs: reduce(or_, [bool(a.schema.is_inline) for a in xs])
+    subquery = lambda q, n: q.subquery(n) if is_sqlite else q.cte(n)
 
     # sub objects that have been joined so we don't rejoin
     joined = dict()
+    schema_name = data_dict.name
 
     entity_query = (
         session.query(model.Entity.id.label(u'entity_id'))
         .join(model.Entity.schema)
         .filter(model.Schema.name == schema_name)
-        .filter(model.Schema.publish_date != None)
-        )
+        .filter(model.Schema.publish_date != None))
 
-    for path, (attributes, choice) in header.iteritems():
-        if _checkCollection(attributes):
-            entity_query = _addCollection(entity_query, path, attributes, choice)
-        elif _checkObject(attributes):
-            entity_query = _addObject(entity_query, path, attributes, joined)
+    for data_column in data_dict.itervalues():
+        if is_collection(data_column.attributes):
+            entity_query = _addCollection(entity_query, data_column)
+        elif is_object(data_column.attributes):
+            entity_query = _addObject(entity_query, data_column, joined)
         else:
-            entity_query = _addScalar(entity_query, path, attributes)
+            entity_query = _addScalar(entity_query, data_column)
 
-    if _checkSqlite(session):
-        # sqlite does not support common table expressions
-        report_table = entity_query.subquery(schema_name)
-    else:
-        report_table = entity_query.cte(schema_name)
-
-    return report_table
+    return subquery(entity_query, schema_name)
 
 
-class DataDictionary(object):
+class DataDict(object):
 
     @property
     def name(self):
@@ -261,31 +259,47 @@ class DataDictionary(object):
     def columns(self):
         return self.__columns
 
-    @property
-    def schemata(self):
-        return self.__schemata
-
-    @property
-    def recentSchema(self):
-        if self.schemata:
-            return self.schemata[-1]
-
     def __init__(self, schema_name):
         self.__schema_name = schema_name
         self.__columns = OrderedDict()
         self.__schemata = []
 
-    def get(key, default=None):
-        return self.columns.get(key, default)
+    def get(self, name, default=None):
+        return self.columns.get(name, default)
 
-    def add(column):
-        self.columns[column.name] = column
+    def add(self, path, attributes, selection=None):
+        if not isinstance(attributes, list):
+            attributes = [attributes]
+        column_name = '_'.join(path)
+        column = self.columns.get(column_name)
+        if column is None:
+            column = DataColumn(self, column_name, path)
+            self.columns[column_name] = column
+        column.selection = selection
+        column.attributes.extend(attributes)
 
     def __getitem__(self, key, default=None):
+        if isinstance(key, list):
+            key = '_'.join(key)
         return self.columns[key]
 
     def __contains__(self, key):
         return key in self.columns
+
+    def __len__(self):
+        return len(self.columns)
+
+    def items(self):
+        return self.columns.items()
+
+    def keys(self):
+        return self.columns.keys()
+
+    def paths(self):
+        return [c.path for c in self.columns.itervalues()]
+
+    def values(self):
+        return self.columns.value()
 
     def iteritems(self):
         return self.columns.iteritems()
@@ -296,12 +310,16 @@ class DataDictionary(object):
     def itervalues(self):
         return self.columns.itervalues()
 
+    def iterpaths(self):
+        for c in self.columns.itervalues():
+            yield c.path
+
 
 class DataColumn(object):
 
     @property
-    def datadictionary(self):
-        return self.__datadictionary
+    def data_dict(self):
+        return self.__data_dict
 
     @property
     def name(self):
@@ -325,9 +343,7 @@ class DataColumn(object):
 
     @property
     def vocabulary(self):
-        return  SimpleVocabulary([SimpleTerm(c.value, title=c.title)
-                                                for a in self.attributes
-                                                for c in a.choices])
+        return  self.__vocabulary
 
     @property
     def type(self):
@@ -338,40 +354,29 @@ class DataColumn(object):
     def is_nested(self):
         if self.attributes:
             subschema_name = self.attributes[-1].schema.name
-            schema_name = self.datadictionary.schemata[-1].name
+            schema_name = self.data_dict.schemata[-1].name
             return subschema_name == schema_name
 
-    def __init__(self, datadictionary, path, attributes):
-        self.__datadictionary = datadictionary
-        self.__name = '_'.join(path)
+    def __init__(self, data_dict, name, path):
+        self.__data_dict = data_dict
+        self.__name = name
         self.__path = path
-        self.__attributes = attributes
+        self.__attributes = []
+        self.__vocabulary = None
+
+    def updateVocabulary(self):
+        self.__vocabulary =  SimpleVocabulary([SimpleTerm(c.value, title=c.title)
+                                                for a in self.attributes
+                                                for c in a.choices])
 
     def __getitem__(self, key):
-        return self.vocabulary.getTerm(key)
+        if self.vocabulary:
+            return self.vocabulary.getTerm(key)
+        raise KeyError(key)
 
 
-def _checkCollection(attributes):
-    u""" Checks if the attribute list is ever a collection type """
-    return reduce(operator.or_, [bool(a.is_collection) for a in attributes])
 
-
-def _checkObject(attributes):
-    u""" Checks if the attribute list is ever an object type """
-    return reduce(operator.or_, [bool(a.schema.is_inline) for a in attributes])
-
-
-def _checkSqlite(session):
-    u""" Checks if the session is using sqlite """
-    return session.bind.url.drivername == u'sqlite'
-
-
-def _checkPostgres(session):
-    u""" Checks if the session is using postgresql """
-    return session.bind.url.drivername in (u'postgres', u'postgresql')
-
-
-def _addCollection(entity_query, path, attributes, choice=None):
+def _addCollection(entity_query, data_column):
     u"""
     Helper method to add collection column to the entity query
 
@@ -392,11 +397,14 @@ def _addCollection(entity_query, path, attributes, choice=None):
     Returns
         The modified entity_query
     """
-    value_class, value_column = _getValueColumn(path, attributes)
+    value_class, value_column = _getValueColumn(data_column)
     session = entity_query.session
+    is_postgres = 'postgres' in session.bind.url.drivername
+    attributes = data_column.attributes
+    path = data_column.path
 
-    if choice is None:
-        if not _checkPostgres(session):
+    if data_column.selection is None:
+        if not is_postgres:
             # aggregate subquery results into comma-delimited list
             value_column = sa.func.group_concat(value_column)
 
@@ -407,7 +415,7 @@ def _addCollection(entity_query, path, attributes, choice=None):
             .correlate(model.Entity)
             .as_scalar())
 
-        if _checkPostgres(session):
+        if is_postgres:
             # use postgres' native array support if available
             column_part = sa.func.array(column_part)
 
@@ -416,18 +424,17 @@ def _addCollection(entity_query, path, attributes, choice=None):
             session.query(true())
             .filter(value_class.entity_id == model.Entity.id)
             .filter(value_class.attribute_id.in_([a.id for a in attributes]))
-            .filter(value_column._value == choice.value)
+            .filter(value_column._value == data_column.selection.value)
             .correlate(model.Entity)
             .as_scalar())
 
-    column_name = u'_'.join(path)
-    column_part = column_part.label(column_name)
+    column_part = column_part.label(data_column.name)
     entity_query = entity_query.add_column(column_part)
 
     return entity_query
 
 
-def _addObject(entity_query, path, attributes, joined=None):
+def _addObject(entity_query, data_column, joined=None):
     u"""
     Helper method to add object column to the entity query
 
@@ -454,7 +461,9 @@ def _addObject(entity_query, path, attributes, joined=None):
     Returns
         The modified entity_query
     """
-    value_class, value_column = _getValueColumn(path, attributes)
+    value_class, value_column = _getValueColumn(data_column)
+    attributes = data_column.attributes
+    path = data_column.path
 
     # we're going to use this as a key in the lookup table of joined objects
     parent_name = path[0]
@@ -481,13 +490,12 @@ def _addObject(entity_query, path, attributes, joined=None):
         & value_class.attribute_id.in_([a.id for a in attributes])
         ))
 
-    column_name = u'_'.join(path)
-    column_part = value_column.label(column_name)
+    column_part = value_column.label(data_column.name)
     entity_query = entity_query.add_column(column_part)
     return entity_query
 
 
-def _addScalar(entity_query, path, attributes):
+def _addScalar(entity_query, data_column):
     u"""
     Helper method to add scalar column to the entity query
 
@@ -504,17 +512,18 @@ def _addScalar(entity_query, path, attributes):
     Returns
         The modified entity_query
     """
-    value_class, value_column = getValueColumn(path, attributes)
+    attributes = data_column.attributes
+    value_class, value_column = getValueColumn(data_column)
     entity_query = entity_query.outerjoin(value_class, (
         (value_class.entity_id == datastore.Entity.id)
         & value_class.attribute_id.in_([a.id for a in attributes])
         ))
-    column_part = value_column.label(u'_'.join(path))
+    column_part = value_column.label(data_column.name)
     entity_query = entity_query.add_column(column_part)
     return entity_query
 
 
-def _getValueColumn(path, attributes):
+def _getValueColumn(data_column):
     u"""
     Determines the value class and column for the attributes
     Uses the most recent type used for the attribute
@@ -529,17 +538,20 @@ def _getValueColumn(path, attributes):
         A tuple consisting of the value_class to query from as well
         as the casted column containing the actual stored value.
     """
+    path = data_column.path
+    attributes = data_column.attributes
     # the attribute listing should give a hint as to which session
     session = orm.object_session(attributes[-1])
+    is_sqlite = session.bind.url.drivername == 'sqlite'
     # find the correct value class and alias it (for mulitple joins)
     type_name = attributes[-1].type
     source_class = storage.nameModelMap[type_name]
     value_name = u'_'.join(path + (type_name,))
     value_class = orm.aliased(source_class, name=value_name)
     # sqlite is very finicky about dates: must be function result
-    if _checkSqlite(session) and type_name == u'date':
+    if is_sqlite and type_name == u'date':
         value_column = sa.func.date(value_class._value)
-    elif _checkSqlite(session) and type_name == u'datetime':
+    elif is_sqlite and type_name == u'datetime':
         value_column = sa.func.datetime(value_class._value)
     else:
         cast_type = storage.nameCastMap[type_name]

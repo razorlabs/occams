@@ -20,109 +20,46 @@ t2 = datetime.date(2010, 9, 1)
 t3 = datetime.date(2011, 8, 1)
 t4 = datetime.date(2012, 5, 1)
 
-
-class UtilitiesTestCase(unittest.TestCase):
-    u""" Ensures the helper utilities are working properly """
-
-    def testCheckPostgres(self):
-        engine = sa.create_engine(testing.PSQL_URI)
-        session = orm.scoped_session(orm.sessionmaker(engine))
-        self.assertTrue(reporting.checkPostgres(session))
-
-        engine = sa.create_engine(testing.SQLITE_URI)
-        session = orm.scoped_session(orm.sessionmaker(engine))
-        self.assertFalse(reporting.checkPostgres(session))
-
-    def testCheckSqlite(self):
-        engine = sa.create_engine(testing.SQLITE_URI)
-        session = orm.scoped_session(orm.sessionmaker(engine))
-        self.assertTrue(reporting.checkSqlite(session))
-
-        engine = sa.create_engine(testing.PSQL_URI)
-        session = orm.scoped_session(orm.sessionmaker(engine))
-        self.assertFalse(reporting.checkSqlite(session))
-
-    def testCheckCollection(self):
-        # typical usage will be on history of attributes and we will want to know
-        # if the attribte in question was ever a collection
-
-        # does not contain collection
-        attributes = [model.Attribute(name=u'foo')]
-        self.assertFalse(reporting.checkCollection(attributes))
-
-        # does contain collection
-        attributes.append(model.Attribute(name=u'foo', is_collection=True))
-        self.assertTrue(reporting.checkCollection(attributes))
-
-    def testCheckObject(self):
-        # typical usage will be on history of attributes and we will want to know
-        # if the attribute in question was ever a sub-attribute
-
-        # was not a sub-attribute
-        attributes = [model.Attribute(
-            name=u'foo',
-            schema=model.Schema(name=u'Foo')
-            )]
-        self.assertFalse(reporting.checkObject(attributes))
-
-        attributes.append(model.Attribute(
-            name=u'foo',
-            schema=model.Schema(name=u'Foo', is_inline=True)
-            ))
-        self.assertTrue(reporting.checkObject(attributes))
+BY_ID = lambda a: (a.name, a.id)
+BY_NAME = lambda a: (a.name,)
+BY_CHECKSUM = lambda a: (a.name, a.checksum)
 
 
-class HeaderTestCase(unittest.TestCase):
-    u""" Ensures that column headers can be properly generated.  """
+class BuildDataDicTestCase(unittest.TestCase):
 
-    layer = testing.OCCAMS_model_FIXTURE
+    layer = testing.OCCAMS_DATASTORE_FIXTURE
 
     def testEmptyPublishedSchema(self):
         session = self.layer[u'session']
         testing.createSchema(session, u'A', t1)
-
-        # by NAME
-        plan = reporting.getHeaderByName(session, u'A')
-        self.assertEqual(0, len(plan))
-
-        # by CHECKSUM
-        plan = reporting.getHeaderByChecksum(session, u'A')
-        self.assertEqual(0, len(plan))
-
-        # by ID
-        plan = reporting.getHeaderById(session, u'A')
-        self.assertEqual(0, len(plan))
+        data_dict = reporting.buildDataDict(session, u'A', BY_NAME)
+        self.assertEqual(0, len(data_dict))
 
     def testKeysFromSingleForm(self):
         session = self.layer[u'session']
         schema = testing.createSchema(session, u'A', t1, dict(
-            a=model.Attribute(type=u'string', order=0)
-            ))
+            a=model.Attribute(type=u'string', order=0)))
 
-        # by NAME
-        plan = reporting.getHeaderByName(session, u'A')
+        data_dict = reporting.buildDataDict(session, u'A', BY_NAME)
         expected = [(u'a',)]
-        self.assertListEqual(expected, plan.keys())
-        self.assertEqual(1, len(plan[expected[0]]))
+        self.assertListEqual(expected, data_dict.paths())
+        self.assertEqual(1, len(data_dict[expected[0]]))
 
-        # by CHECKSUM
-        plan = reporting.getHeaderByChecksum(session, u'A')
+        data_dict = reporting.buildDataDict(session, u'A', BY_CHECKSUM)
         expected = [(u'a', schema[u'a'].checksum)]
-        self.assertListEqual(expected, plan.keys())
-        self.assertEqual(1, len(plan[expected[0]]))
+        self.assertListEqual(expected, data_dict.paths())
+        self.assertEqual(1, len(data_dict[expected[0]]))
 
-        # by ID
-        plan = reporting.getHeaderById(session, u'A')
+        data_dict = reporting.buildDataDict(session, u'A', BY_ID)
         expected = [(u'a', schema[u'a'].id)]
-        self.assertListEqual(expected, plan.keys())
+        self.assertListEqual(expected, data_dict.paths())
         for e in expected:
-            self.assertEqual(1, len(plan[e]))
+            self.assertEqual(1, len(data_dict[e]))
 
     def testKeysFromMultpleVersions(self):
         session = self.layer[u'session']
         schema1 = testing.createSchema(session, u'A', t1, dict(
-            a=model.Attribute(type=u'string', order=0)
-            ))
+            a=model.Attribute(type=u'string', order=0)))
 
         schema2 = copy.deepcopy(schema1)
         schema2.state = u'published'
@@ -135,29 +72,27 @@ class HeaderTestCase(unittest.TestCase):
 
         session.add_all([schema1, schema2, schema3])
 
-        # by NAME
-        plan = reporting.getHeaderByName(session, u'A')
+        data_dict = reporting.buildDataDict(session, u'A', BY_NAME)
         expected = [(u'a',)]
-        self.assertListEqual(expected, plan.keys())
-        self.assertEqual(3, len(plan[expected[0]]))
+        self.assertListEqual(expected, data_dict.paths())
+        self.assertEqual(3, len(data_dict[expected[0]]))
 
-        # by CHECKSUM
-        plan = reporting.getHeaderByChecksum(session, u'A')
+        data_dict = reporting.buildDataDict(session, u'A', BY_CHECKSUM)
         expected = [(u'a', schema1[u'a'].checksum), (u'a', schema3[u'a'].checksum)]
-        self.assertListEqual(expected, plan.keys())
-        self.assertEqual(2, len(plan[expected[0]]))
-        self.assertEqual(1, len(plan[expected[1]]))
+        self.assertListEqual(expected, data_dict.paths())
+        self.assertEqual(2, len(data_dict[expected[0]]))
+        self.assertEqual(1, len(data_dict[expected[1]]))
 
         # by ID
-        plan = reporting.getHeaderById(session, u'A')
+        data_dict = reporting.buildDataDict(session, u'A', BY_ID)
         expected = [
             (u'a', schema1[u'a'].id),
             (u'a', schema2[u'a'].id),
             (u'a', schema3[u'a'].id)
             ]
-        self.assertListEqual(expected, plan.keys())
+        self.assertListEqual(expected, data_dict.paths())
         for e in expected:
-            self.assertEqual(1, len(plan[e]))
+            self.assertEqual(1, len(data_dict[e]))
 
     def testKeysFromSubSchema(self):
         session = self.layer[u'session']
@@ -173,17 +108,17 @@ class HeaderTestCase(unittest.TestCase):
         session.flush()
 
         # by NAME
-        plan = reporting.getHeaderByName(session, u'A')
+        data_dict = reporting.buildDataDict(session, u'A')
         expected = [(u'a',), (u'b', u'x'), (u'b', u'y'), (u'b', u'z'), (u'c',)]
-        self.assertListEqual(expected, plan.keys())
-        self.assertEqual(1, len(plan[expected[0]]))
-        self.assertEqual(1, len(plan[expected[1]]))
-        self.assertEqual(1, len(plan[expected[2]]))
-        self.assertEqual(1, len(plan[expected[3]]))
-        self.assertEqual(1, len(plan[expected[4]]))
+        self.assertListEqual(expected, data_dict.paths())
+        self.assertEqual(1, len(data_dict[expected[0]]))
+        self.assertEqual(1, len(data_dict[expected[1]]))
+        self.assertEqual(1, len(data_dict[expected[2]]))
+        self.assertEqual(1, len(data_dict[expected[3]]))
+        self.assertEqual(1, len(data_dict[expected[4]]))
 
         # by CHECKSUM
-        plan = reporting.getHeaderByChecksum(session, u'A')
+        data_dict = reporting.getHeaderByChecksum(session, u'A')
         expected = [
             (u'a', schema[u'a'].checksum),
             (u'b', u'x', schema[u'b'][u'x'].checksum),
@@ -191,15 +126,15 @@ class HeaderTestCase(unittest.TestCase):
             (u'b', u'z', schema[u'b'][u'z'].checksum),
             (u'c', schema[u'c'].checksum),
             ]
-        self.assertListEqual(expected, plan.keys())
-        self.assertEqual(1, len(plan[expected[0]]))
-        self.assertEqual(1, len(plan[expected[1]]))
-        self.assertEqual(1, len(plan[expected[2]]))
-        self.assertEqual(1, len(plan[expected[3]]))
-        self.assertEqual(1, len(plan[expected[4]]))
+        self.assertListEqual(expected, data_dict.paths())
+        self.assertEqual(1, len(data_dict[expected[0]]))
+        self.assertEqual(1, len(data_dict[expected[1]]))
+        self.assertEqual(1, len(data_dict[expected[2]]))
+        self.assertEqual(1, len(data_dict[expected[3]]))
+        self.assertEqual(1, len(data_dict[expected[4]]))
 
         # By id
-        plan = reporting.getHeaderById(session, u'A')
+        data_dict = reporting.getHeaderById(session, u'A')
         expected = [
             (u'a', schema[u'a'].id),
             (u'b', u'x', schema[u'b'][u'x'].id),
@@ -207,9 +142,9 @@ class HeaderTestCase(unittest.TestCase):
             (u'b', u'z', schema[u'b'][u'z'].id),
             (u'c', schema[u'c'].id),
             ]
-        self.assertListEqual(expected, plan.keys())
+        self.assertListEqual(expected, data_dict.paths())
         for e in expected:
-            self.assertEqual(1, len(plan[e]))
+            self.assertEqual(1, len(data_dict[e]))
 
     def testKeysFromSubSchemaMultipleVersions(self):
         u"""
@@ -278,18 +213,18 @@ class HeaderTestCase(unittest.TestCase):
         session.flush()
 
         # by NAME
-        plan = reporting.getHeaderByName(session, u'A')
+        data_dict = reporting.buildDataDict(session, u'A')
         expected = [(u'a',), (u'b', u'z'), (u'b', u'x'), (u'b', u'y'), (u'c',), (u'y',)]
-        self.assertListEqual(expected, plan.keys())
-        self.assertEqual(3, len(plan[expected[0]]))
-        self.assertEqual(3, len(plan[expected[1]]))
-        self.assertEqual(2, len(plan[expected[2]]))
-        self.assertEqual(2, len(plan[expected[3]]))
-        self.assertEqual(2, len(plan[expected[4]]))
-        self.assertEqual(1, len(plan[expected[5]]))
+        self.assertListEqual(expected, data_dict.paths())
+        self.assertEqual(3, len(data_dict[expected[0]]))
+        self.assertEqual(3, len(data_dict[expected[1]]))
+        self.assertEqual(2, len(data_dict[expected[2]]))
+        self.assertEqual(2, len(data_dict[expected[3]]))
+        self.assertEqual(2, len(data_dict[expected[4]]))
+        self.assertEqual(1, len(data_dict[expected[5]]))
 
         # by CHECKSUM
-        plan = reporting.getHeaderByChecksum(session, u'A')
+        data_dict = reporting.getHeaderByChecksum(session, u'A')
         expected = [
             (u'a', schema1[u'a'].checksum),
             (u'a', schema2[u'a'].checksum),
@@ -300,18 +235,18 @@ class HeaderTestCase(unittest.TestCase):
             (u'c', schema1[u'c'].checksum),
             (u'y', schema3[u'y'].checksum),
             ]
-        self.assertListEqual(expected, plan.keys())
-        self.assertEqual(2, len(plan[expected[0]]))
-        self.assertEqual(1, len(plan[expected[1]]))
-        self.assertEqual(3, len(plan[expected[2]]))
-        self.assertEqual(2, len(plan[expected[3]]))
-        self.assertEqual(1, len(plan[expected[4]]))
-        self.assertEqual(1, len(plan[expected[5]]))
-        self.assertEqual(2, len(plan[expected[6]]))
-        self.assertEqual(1, len(plan[expected[7]]))
+        self.assertListEqual(expected, data_dict.paths())
+        self.assertEqual(2, len(data_dict[expected[0]]))
+        self.assertEqual(1, len(data_dict[expected[1]]))
+        self.assertEqual(3, len(data_dict[expected[2]]))
+        self.assertEqual(2, len(data_dict[expected[3]]))
+        self.assertEqual(1, len(data_dict[expected[4]]))
+        self.assertEqual(1, len(data_dict[expected[5]]))
+        self.assertEqual(2, len(data_dict[expected[6]]))
+        self.assertEqual(1, len(data_dict[expected[7]]))
 
         # by ID
-        plan = reporting.getHeaderById(session, u'A')
+        data_dict = reporting.getHeaderById(session, u'A')
         expected = [
             (u'a', schema1[u'a'].id),
             (u'a', schema2[u'a'].id),
@@ -327,9 +262,9 @@ class HeaderTestCase(unittest.TestCase):
             (u'c', schema2[u'c'].id),
             (u'y', schema3[u'y'].id),
             ]
-        self.assertListEqual(expected, plan.keys())
+        self.assertListEqual(expected, data_dict.paths())
         for e in expected:
-            self.assertEqual(1, len(plan[e]))
+            self.assertEqual(1, len(data_dict[e]))
 
 
 class ValueColumnTestCase(unittest.TestCase):
@@ -340,15 +275,15 @@ class ValueColumnTestCase(unittest.TestCase):
     separation algorithm used.
     """
 
-    layer = testing.OCCAMS_model_FIXTURE
+    layer = testing.OCCAMS_DATASTORE_FIXTURE
 
     def testStringColumn(self):
         session = self.layer[u'session']
         testing.createSchema(session, u'A', t1, dict(
             a=model.Attribute(type=u'string', order=0),
             ))
-        plan = reporting.getHeaderByName(session, u'A')
-        path, attributes = plan.items()[0]
+        data_dict = reporting.buildDataDict(session, u'A')
+        path, attributes = data_dict.items()[0]
         value_class, value_column = reporting.getValueColumn(path, attributes)
         self.assertEquals(u'string', value_class.__tablename__)
         self.assertTrue(isinstance(value_column.type, sa.Unicode))
@@ -358,8 +293,8 @@ class ValueColumnTestCase(unittest.TestCase):
         testing.createSchema(session, u'A', t1, dict(
             a=model.Attribute(type=u'text', order=0),
             ))
-        plan = reporting.getHeaderByName(session, u'A')
-        path, attributes = plan.items()[0]
+        data_dict = reporting.buildDataDict(session, u'A')
+        path, attributes = data_dict.items()[0]
         value_class, value_column = reporting.getValueColumn(path, attributes)
         self.assertEquals(u'string', value_class.__tablename__)
         self.assertTrue(isinstance(value_column.type, sa.Unicode))
@@ -369,8 +304,8 @@ class ValueColumnTestCase(unittest.TestCase):
         testing.createSchema(session, u'A', t1, dict(
             a=model.Attribute(type=u'integer', order=0),
             ))
-        plan = reporting.getHeaderByName(session, u'A')
-        path, attributes = plan.items()[0]
+        data_dict = reporting.buildDataDict(session, u'A')
+        path, attributes = data_dict.items()[0]
         value_class, value_column = reporting.getValueColumn(path, attributes)
         self.assertEquals(u'integer', value_class.__tablename__)
         self.assertTrue(isinstance(value_column.type, sa.Integer))
@@ -380,8 +315,8 @@ class ValueColumnTestCase(unittest.TestCase):
         testing.createSchema(session, u'A', t1, dict(
             a=model.Attribute(type=u'decimal', order=0),
             ))
-        plan = reporting.getHeaderByName(session, u'A')
-        path, attributes = plan.items()[0]
+        data_dict = reporting.buildDataDict(session, u'A')
+        path, attributes = data_dict.items()[0]
         value_class, value_column = reporting.getValueColumn(path, attributes)
         self.assertEquals(u'decimal', value_class.__tablename__)
         self.assertTrue(isinstance(value_column.type, sa.Numeric))
@@ -392,8 +327,8 @@ class ValueColumnTestCase(unittest.TestCase):
         testing.createSchema(session, u'A', t1, dict(
             a=model.Attribute(type=u'date', order=0),
             ))
-        plan = reporting.getHeaderByName(session, u'A')
-        path, attributes = plan.items()[0]
+        data_dict = reporting.buildDataDict(session, u'A')
+        path, attributes = data_dict.items()[0]
         value_class, value_column = reporting.getValueColumn(path, attributes)
         self.assertEquals(u'datetime', value_class.__tablename__)
         self.assertTrue(isinstance(value_column.type, sa.Date))
@@ -404,8 +339,8 @@ class ValueColumnTestCase(unittest.TestCase):
         testing.createSchema(session, u'A', t1, dict(
             a=model.Attribute(type=u'date', order=0),
             ))
-        plan = reporting.getHeaderByName(session, u'A')
-        path, attributes = plan.items()[0]
+        data_dict = reporting.buildDataDict(session, u'A')
+        path, attributes = data_dict.items()[0]
         value_class, value_column = reporting.getValueColumn(path, attributes)
         self.assertEquals(u'datetime', value_class.__tablename__)
         self.assertEquals(u'date', value_column.name)
@@ -416,8 +351,8 @@ class ValueColumnTestCase(unittest.TestCase):
         testing.createSchema(session, u'A', t1, dict(
             a=model.Attribute(type=u'datetime', order=0),
             ))
-        plan = reporting.getHeaderByName(session, u'A')
-        path, attributes = plan.items()[0]
+        data_dict = reporting.buildDataDict(session, u'A')
+        path, attributes = data_dict.items()[0]
         value_class, value_column = reporting.getValueColumn(path, attributes)
         self.assertEquals(u'datetime', value_class.__tablename__)
         self.assertTrue(isinstance(value_column.type, sa.DateTime))
@@ -428,35 +363,36 @@ class ValueColumnTestCase(unittest.TestCase):
         testing.createSchema(session, u'A', t1, dict(
             a=model.Attribute(type=u'datetime', order=0),
             ))
-        plan = reporting.getHeaderByName(session, u'A')
-        path, attributes = plan.items()[0]
+        data_dict = reporting.buildDataDict(session, u'A')
+        path, attributes = data_dict.items()[0]
         value_class, value_column = reporting.getValueColumn(path, attributes)
         self.assertEquals(u'datetime', value_class.__tablename__)
         self.assertEquals(u'datetime', value_column.name)
 
+
 class SchemaToQueryTestCase(unittest.TestCase):
     u""" Ensures that schema queries can by properly generated """
 
-    layer = testing.OCCAMS_model_FIXTURE
+    layer = testing.OCCAMS_DATASTORE_FIXTURE
 
     def testExpectedMetadataColumns(self):
         session = self.layer[u'session']
         testing.createSchema(session, u'A', t1)
 
-        plan, report = reporting.schemaToReportById(session, u'A')
+        data_dict, report = reporting.schemaToReportById(session, u'A')
         self.assertIn(u'entity_id', report.c)
 
-        plan, report = reporting.schemaToReportByName(session, u'A')
+        data_dict, report = reporting.schemaToReportByName(session, u'A')
         self.assertIn(u'entity_id', report.c)
 
-        plan, report = reporting.schemaToReportByChecksum(session, u'A')
+        data_dict, report = reporting.schemaToReportByChecksum(session, u'A')
         self.assertIn(u'entity_id', report.c)
 
     def testEmptySchema(self):
         session = self.layer[u'session']
         schema = testing.createSchema(session, u'A', t1)
 
-        plan, report = reporting.schemaToReportByName(session, u'A')
+        data_dict, report = reporting.schemaToReportByName(session, u'A')
         self.assertEqual(0, session.query(report).count())
 
         testing.createEntity(schema, u'Sample', None)
@@ -476,7 +412,7 @@ class SchemaToQueryTestCase(unittest.TestCase):
             ))
 
         # generate report by name, should be able to access attributes as columns
-        plan, report = reporting.schemaToReportByName(session, u'Sample')
+        data_dict, report = reporting.schemaToReportByName(session, u'Sample')
         result = session.query(report).filter_by(entity_id=entity1.id).one()
         self.assertEqual(entity1[u'value'], result.value)
 
@@ -494,7 +430,7 @@ class SchemaToQueryTestCase(unittest.TestCase):
             ))
 
         # generate report by name, should be able to access attributes as columns
-        plan, report = reporting.schemaToReportByName(session, u'Sample', use_choice_title=True)
+        data_dict, report = reporting.schemaToReportByName(session, u'Sample', use_choice_title=True)
         result = session.query(report).filter_by(entity_id=entity1.id).one()
         self.assertEqual("Foo", result.value)
 
@@ -510,7 +446,7 @@ class SchemaToQueryTestCase(unittest.TestCase):
             value=[u'one', u'two'],
             ))
 
-        plan, report = reporting.schemaToReportByName(session, u'Sample')
+        data_dict, report = reporting.schemaToReportByName(session, u'Sample')
         result = session.query(report).filter_by(entity_id=entity1.id).one()
         self.assertListEqual(entity1[u'value'], result.value)
 
@@ -526,7 +462,7 @@ class SchemaToQueryTestCase(unittest.TestCase):
             value=[u'one', u'two'],
             ))
 
-        plan, report = reporting.schemaToReportByName(session, u'Sample')
+        data_dict, report = reporting.schemaToReportByName(session, u'Sample')
         result = session.query(report).filter_by(entity_id=entity1.id).one()
         expected_value = ','.join(entity1[u'value'])
         result_value = ','.join(entity1[u'value'])
@@ -562,7 +498,7 @@ class SchemaToQueryTestCase(unittest.TestCase):
         entity1[u'sub'][u'value'] = u'foovalue'
         session.flush()
 
-        plan, report = reporting.schemaToReportByName(session, u'Sample')
+        data_dict, report = reporting.schemaToReportByName(session, u'Sample')
         result = session.query(report).filter_by(entity_id=entity1.id).one()
         self.assertEqual(entity1[u'sub'][u'value'], result.sub_value)
 
