@@ -35,8 +35,10 @@ determine how the final report columns show up in the query.
 
 """
 
+from itertools import imap
 from ordereddict import OrderedDict
 from operator import or_
+from copy import copy
 
 import sqlalchemy as sa
 from sqlalchemy import orm
@@ -141,7 +143,6 @@ def queryAttributes(session, schema_name):
                 .as_scalar()).asc(),
             # oldest to newest within the lineage
             model.Schema.publish_date.asc()))
-
     return attribute_query.params(schema_name=schema_name)
 
 
@@ -174,26 +175,36 @@ def buildDataDict(session, schema_name, groupfunc, expand_choice=False):
         and the associated attribute list as the value. The path will
         also contain the attribute's checksum.
     """
-    data_dict = DataDict(schema_name)
-
-    def populateFrom(current_schema, path=()):
+    def inspect(current_schema, path=()):
+        plan = OrderedDict()
+        selected = dict()
         for attribute in queryAttributes(session, current_schema):
             if attribute.type == u'object':
-                populateFrom(attribute.object_schema.name, (attribute.name,))
+                subschema_name = attribute.object_schema.name
+                subschema_path = (attribute.name,)
+                subplan, subselected = inspect(subschema_name, subschema_path)
+                plan.update(subplan)
+                selected.update(subselected)
             else:
                 group = groupfunc(attribute)
-                if expand_choice and attribute.is_collection and attribute.choices:
+                if (expand_choice
+                        and attribute.is_collection
+                        and attribute.choices):
                     for choice in attribute.choices:
                         column_path = path + (choice.value,) + group
-                        data_dict.add(column_path, attribute, choice)
+                        plan.setdefault(column_path, []).append(attribute)
+                        selected[path] = choice
                 else:
                     column_path = path + group
-                    data_dict.add(column_path, attribute)
+                    plan.setdefault(column_path, []).append(attribute)
+        return plan, selected
 
-    populateFrom(schema_name)
-    map(lambda dc: dc.updateVocabulary(), data_dict.itervalues())
-
-    return data_dict
+    plan, selected = inspect(schema_name)
+    columns = OrderedDict()
+    for path, attributes in plan.iteritems():
+        data_column = DataColumn(path, attributes, selected.get(path))
+        columns[data_column.name]  = data_column
+    return  DataDict(schema_name, columns)
 
 
 def buildReportTable(session, data_dict):
@@ -250,69 +261,50 @@ class DataDict(object):
     def name(self):
         return self.__schema_name
 
-    @property
-    def columns(self):
-        return self.__columns
-
-    def __init__(self, schema_name):
+    def __init__(self, schema_name, columns):
         self.__schema_name = schema_name
-        self.__columns = OrderedDict()
-        self.__schemata = []
+        self.__columns = copy(columns)
 
     def get(self, name, default=None):
         return self.columns.get(name, default)
 
-    def add(self, path, attribute, selection=None):
-        column_name = '_'.join(map(str, path))
-        column = self.columns.get(column_name)
-        if column is None:
-            column = DataColumn(self, column_name, path)
-            self.columns[column_name] = column
-        column.selection = selection
-        column.attributes.append(attribute)
-
     def __getitem__(self, key, default=None):
         if not isinstance(key, basestring):
             key = '_'.join(map(str, key))
-        return self.columns[key]
+        return self.__columns[key]
 
     def __contains__(self, key):
-        return key in self.columns
+        return key in self.__columns
 
     def __len__(self):
-        return len(self.columns)
+        return len(self.__columns)
 
     def items(self):
-        return self.columns.items()
+        return self.__columns.items()
 
     def keys(self):
-        return self.columns.keys()
+        return self.__columns.keys()
 
     def paths(self):
-        return [c.path for c in self.columns.itervalues()]
+        return [c.path for c in self.__columns.itervalues()]
 
     def values(self):
-        return self.columns.value()
+        return self.__columns.values()
 
     def iteritems(self):
-        return self.columns.iteritems()
+        return self.__columns.iteritems()
 
     def iterkeys(self):
-        return self.columns.iterkeys()
+        return self.__columns.iterkeys()
 
     def itervalues(self):
-        return self.columns.itervalues()
+        return self.__columns.itervalues()
 
     def iterpaths(self):
-        for c in self.columns.itervalues():
-            yield c.path
+        return imap(lambda c: c.path, self.__columns.itervalues())
 
 
 class DataColumn(object):
-
-    @property
-    def data_dict(self):
-        return self.__data_dict
 
     @property
     def name(self):
@@ -330,35 +322,26 @@ class DataColumn(object):
     def selection(self):
         return self.__selection
 
-    @selection.setter
-    def selection(self, value):
-        self.__selection = value
-
     @property
     def vocabulary(self):
         return  self.__vocabulary
 
     @property
     def type(self):
-        if self.attribtues:
-            return self.attributes[-1].type
+        return self.__type
 
     @property
     def is_nested(self):
-        if self.attributes:
-            subschema_name = self.attributes[-1].schema.name
-            schema_name = self.data_dict.schemata[-1].name
-            return subschema_name == schema_name
+        return self.__is_nested
 
-    def __init__(self, data_dict, name, path):
-        self.__data_dict = data_dict
-        self.__name = name
-        self.__path = path
-        self.__attributes = []
-        self.__vocabulary = None
-
-    def updateVocabulary(self):
-        self.__vocabulary =  SimpleVocabulary([SimpleTerm(c.value, title=c.title)
+    def __init__(self, path, attributes, selection=None):
+        self.__name = '_'.join(map(str, path))
+        self.__path = tuple(path)
+        self.__type = attributes[-1].type
+        self.__attributes = tuple(attributes)
+        self.__is_nested = attributes[-1].schema.parent_attribute is not None
+        self.__selection = selection
+        self.__vocabulary = SimpleVocabulary([SimpleTerm(c.value, title=c.title)
                                                 for a in self.attributes
                                                 for c in a.choices])
 
