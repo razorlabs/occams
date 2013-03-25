@@ -43,18 +43,18 @@ class BuildDataDicTestCase(unittest.TestCase):
         data_dict = reporting.buildDataDict(session, u'A', BY_NAME)
         expected = [(u'a',)]
         self.assertListEqual(expected, data_dict.paths())
-        self.assertEqual(1, len(data_dict[expected[0]]))
+        self.assertEqual(1, len(data_dict[expected[0]].attributes))
 
         data_dict = reporting.buildDataDict(session, u'A', BY_CHECKSUM)
         expected = [(u'a', schema[u'a'].checksum)]
         self.assertListEqual(expected, data_dict.paths())
-        self.assertEqual(1, len(data_dict[expected[0]]))
+        self.assertEqual(1, len(data_dict[expected[0]].attributes))
 
         data_dict = reporting.buildDataDict(session, u'A', BY_ID)
         expected = [(u'a', schema[u'a'].id)]
         self.assertListEqual(expected, data_dict.paths())
         for e in expected:
-            self.assertEqual(1, len(data_dict[e]))
+            self.assertEqual(1, len(data_dict[e].attributes))
 
     def testKeysFromMultpleVersions(self):
         session = self.layer[u'session']
@@ -75,13 +75,13 @@ class BuildDataDicTestCase(unittest.TestCase):
         data_dict = reporting.buildDataDict(session, u'A', BY_NAME)
         expected = [(u'a',)]
         self.assertListEqual(expected, data_dict.paths())
-        self.assertEqual(3, len(data_dict[expected[0]]))
+        self.assertEqual(3, len(data_dict[expected[0]].attributes))
 
         data_dict = reporting.buildDataDict(session, u'A', BY_CHECKSUM)
         expected = [(u'a', schema1[u'a'].checksum), (u'a', schema3[u'a'].checksum)]
         self.assertListEqual(expected, data_dict.paths())
-        self.assertEqual(2, len(data_dict[expected[0]]))
-        self.assertEqual(1, len(data_dict[expected[1]]))
+        self.assertEqual(2, len(data_dict[expected[0]].attributes))
+        self.assertEqual(1, len(data_dict[expected[1]].attributes))
 
         # by ID
         data_dict = reporting.buildDataDict(session, u'A', BY_ID)
@@ -92,7 +92,7 @@ class BuildDataDicTestCase(unittest.TestCase):
             ]
         self.assertListEqual(expected, data_dict.paths())
         for e in expected:
-            self.assertEqual(1, len(data_dict[e]))
+            self.assertEqual(1, len(data_dict[e].attributes))
 
     def testKeysFromSubSchema(self):
         session = self.layer[u'session']
@@ -108,17 +108,17 @@ class BuildDataDicTestCase(unittest.TestCase):
         session.flush()
 
         # by NAME
-        data_dict = reporting.buildDataDict(session, u'A')
+        data_dict = reporting.buildDataDict(session, u'A', BY_NAME)
         expected = [(u'a',), (u'b', u'x'), (u'b', u'y'), (u'b', u'z'), (u'c',)]
         self.assertListEqual(expected, data_dict.paths())
-        self.assertEqual(1, len(data_dict[expected[0]]))
-        self.assertEqual(1, len(data_dict[expected[1]]))
-        self.assertEqual(1, len(data_dict[expected[2]]))
-        self.assertEqual(1, len(data_dict[expected[3]]))
-        self.assertEqual(1, len(data_dict[expected[4]]))
+        self.assertEqual(1, len(data_dict[expected[0]].attributes))
+        self.assertEqual(1, len(data_dict[expected[1]].attributes))
+        self.assertEqual(1, len(data_dict[expected[2]].attributes))
+        self.assertEqual(1, len(data_dict[expected[3]].attributes))
+        self.assertEqual(1, len(data_dict[expected[4]].attributes))
 
         # by CHECKSUM
-        data_dict = reporting.getHeaderByChecksum(session, u'A')
+        data_dict = reporting.buildDataDict(session, u'A', BY_CHECKSUM)
         expected = [
             (u'a', schema[u'a'].checksum),
             (u'b', u'x', schema[u'b'][u'x'].checksum),
@@ -127,14 +127,14 @@ class BuildDataDicTestCase(unittest.TestCase):
             (u'c', schema[u'c'].checksum),
             ]
         self.assertListEqual(expected, data_dict.paths())
-        self.assertEqual(1, len(data_dict[expected[0]]))
-        self.assertEqual(1, len(data_dict[expected[1]]))
-        self.assertEqual(1, len(data_dict[expected[2]]))
-        self.assertEqual(1, len(data_dict[expected[3]]))
-        self.assertEqual(1, len(data_dict[expected[4]]))
+        self.assertEqual(1, len(data_dict[expected[0]].attributes))
+        self.assertEqual(1, len(data_dict[expected[1]].attributes))
+        self.assertEqual(1, len(data_dict[expected[2]].attributes))
+        self.assertEqual(1, len(data_dict[expected[3]].attributes))
+        self.assertEqual(1, len(data_dict[expected[4]].attributes))
 
-        # By id
-        data_dict = reporting.getHeaderById(session, u'A')
+        # By ID
+        data_dict = reporting.buildDataDict(session, u'A', BY_ID)
         expected = [
             (u'a', schema[u'a'].id),
             (u'b', u'x', schema[u'b'][u'x'].id),
@@ -144,7 +144,7 @@ class BuildDataDicTestCase(unittest.TestCase):
             ]
         self.assertListEqual(expected, data_dict.paths())
         for e in expected:
-            self.assertEqual(1, len(data_dict[e]))
+            self.assertEqual(1, len(data_dict[e].attributes))
 
     def testKeysFromSubSchemaMultipleVersions(self):
         u"""
@@ -213,18 +213,18 @@ class BuildDataDicTestCase(unittest.TestCase):
         session.flush()
 
         # by NAME
-        data_dict = reporting.buildDataDict(session, u'A')
+        data_dict = reporting.buildDataDict(session, u'A', BY_NAME)
         expected = [(u'a',), (u'b', u'z'), (u'b', u'x'), (u'b', u'y'), (u'c',), (u'y',)]
         self.assertListEqual(expected, data_dict.paths())
-        self.assertEqual(3, len(data_dict[expected[0]]))
-        self.assertEqual(3, len(data_dict[expected[1]]))
-        self.assertEqual(2, len(data_dict[expected[2]]))
-        self.assertEqual(2, len(data_dict[expected[3]]))
-        self.assertEqual(2, len(data_dict[expected[4]]))
-        self.assertEqual(1, len(data_dict[expected[5]]))
+        self.assertEqual(3, len(data_dict[expected[0]].attributes))
+        self.assertEqual(3, len(data_dict[expected[1]].attributes))
+        self.assertEqual(2, len(data_dict[expected[2]].attributes))
+        self.assertEqual(2, len(data_dict[expected[3]].attributes))
+        self.assertEqual(2, len(data_dict[expected[4]].attributes))
+        self.assertEqual(1, len(data_dict[expected[5]].attributes))
 
         # by CHECKSUM
-        data_dict = reporting.getHeaderByChecksum(session, u'A')
+        data_dict = reporting.buildDataDict(session, u'A', BY_CHECKSUM)
         expected = [
             (u'a', schema1[u'a'].checksum),
             (u'a', schema2[u'a'].checksum),
@@ -236,17 +236,17 @@ class BuildDataDicTestCase(unittest.TestCase):
             (u'y', schema3[u'y'].checksum),
             ]
         self.assertListEqual(expected, data_dict.paths())
-        self.assertEqual(2, len(data_dict[expected[0]]))
-        self.assertEqual(1, len(data_dict[expected[1]]))
-        self.assertEqual(3, len(data_dict[expected[2]]))
-        self.assertEqual(2, len(data_dict[expected[3]]))
-        self.assertEqual(1, len(data_dict[expected[4]]))
-        self.assertEqual(1, len(data_dict[expected[5]]))
-        self.assertEqual(2, len(data_dict[expected[6]]))
-        self.assertEqual(1, len(data_dict[expected[7]]))
+        self.assertEqual(2, len(data_dict[expected[0]].attributes))
+        self.assertEqual(1, len(data_dict[expected[1]].attributes))
+        self.assertEqual(3, len(data_dict[expected[2]].attributes))
+        self.assertEqual(2, len(data_dict[expected[3]].attributes))
+        self.assertEqual(1, len(data_dict[expected[4]].attributes))
+        self.assertEqual(1, len(data_dict[expected[5]].attributes))
+        self.assertEqual(2, len(data_dict[expected[6]].attributes))
+        self.assertEqual(1, len(data_dict[expected[7]].attributes))
 
         # by ID
-        data_dict = reporting.getHeaderById(session, u'A')
+        data_dict = reporting.buildDataDict(session, u'A', BY_ID)
         expected = [
             (u'a', schema1[u'a'].id),
             (u'a', schema2[u'a'].id),
@@ -264,110 +264,110 @@ class BuildDataDicTestCase(unittest.TestCase):
             ]
         self.assertListEqual(expected, data_dict.paths())
         for e in expected:
-            self.assertEqual(1, len(data_dict[e]))
+            self.assertEqual(1, len(data_dict[e].attributes))
 
 
-class ValueColumnTestCase(unittest.TestCase):
-    u"""
-    Collection of tests for scalar column generation
-    *Note* that these tests only use the header data to generate the
-    appropriately typed column, they assume nothing about the
-    separation algorithm used.
-    """
+#class ValueColumnTestCase(unittest.TestCase):
+    #u"""
+    #Collection of tests for scalar column generation
+    #*Note* that these tests only use the header data to generate the
+    #appropriately typed column, they assume nothing about the
+    #separation algorithm used.
+    #"""
 
-    layer = testing.OCCAMS_DATASTORE_FIXTURE
+    #layer = testing.OCCAMS_DATASTORE_FIXTURE
 
-    def testStringColumn(self):
-        session = self.layer[u'session']
-        testing.createSchema(session, u'A', t1, dict(
-            a=model.Attribute(type=u'string', order=0),
-            ))
-        data_dict = reporting.buildDataDict(session, u'A')
-        path, attributes = data_dict.items()[0]
-        value_class, value_column = reporting.getValueColumn(path, attributes)
-        self.assertEquals(u'string', value_class.__tablename__)
-        self.assertTrue(isinstance(value_column.type, sa.Unicode))
+    #def testStringColumn(self):
+        #session = self.layer[u'session']
+        #testing.createSchema(session, u'A', t1, dict(
+            #a=model.Attribute(type=u'string', order=0),
+            #))
+        #data_dict = reporting.buildDataDict(session, u'A', BY_NAME)
+        #path, attributes = data_dict.items()[0]
+        #value_class, value_column = reporting.getValueColumn(path, attributes)
+        #self.assertEquals(u'string', value_class.__tablename__)
+        #self.assertTrue(isinstance(value_column.type, sa.Unicode))
 
-    def testTextColumn(self):
-        session = self.layer[u'session']
-        testing.createSchema(session, u'A', t1, dict(
-            a=model.Attribute(type=u'text', order=0),
-            ))
-        data_dict = reporting.buildDataDict(session, u'A')
-        path, attributes = data_dict.items()[0]
-        value_class, value_column = reporting.getValueColumn(path, attributes)
-        self.assertEquals(u'string', value_class.__tablename__)
-        self.assertTrue(isinstance(value_column.type, sa.Unicode))
+    #def testTextColumn(self):
+        #session = self.layer[u'session']
+        #testing.createSchema(session, u'A', t1, dict(
+            #a=model.Attribute(type=u'text', order=0),
+            #))
+        #data_dict = reporting.buildDataDict(session, u'A', BY_NAME)
+        #path, attributes = data_dict.items()[0]
+        #value_class, value_column = reporting.getValueColumn(path, attributes)
+        #self.assertEquals(u'string', value_class.__tablename__)
+        #self.assertTrue(isinstance(value_column.type, sa.Unicode))
 
-    def testIntegerColumn(self):
-        session = self.layer[u'session']
-        testing.createSchema(session, u'A', t1, dict(
-            a=model.Attribute(type=u'integer', order=0),
-            ))
-        data_dict = reporting.buildDataDict(session, u'A')
-        path, attributes = data_dict.items()[0]
-        value_class, value_column = reporting.getValueColumn(path, attributes)
-        self.assertEquals(u'integer', value_class.__tablename__)
-        self.assertTrue(isinstance(value_column.type, sa.Integer))
+    #def testIntegerColumn(self):
+        #session = self.layer[u'session']
+        #testing.createSchema(session, u'A', t1, dict(
+            #a=model.Attribute(type=u'integer', order=0),
+            #))
+        #data_dict = reporting.buildDataDict(session, u'A', BY_NAME)
+        #path, attributes = data_dict.items()[0]
+        #value_class, value_column = reporting.getValueColumn(path, attributes)
+        #self.assertEquals(u'integer', value_class.__tablename__)
+        #self.assertTrue(isinstance(value_column.type, sa.Integer))
 
-    def testDecimalColumn(self):
-        session = self.layer[u'session']
-        testing.createSchema(session, u'A', t1, dict(
-            a=model.Attribute(type=u'decimal', order=0),
-            ))
-        data_dict = reporting.buildDataDict(session, u'A')
-        path, attributes = data_dict.items()[0]
-        value_class, value_column = reporting.getValueColumn(path, attributes)
-        self.assertEquals(u'decimal', value_class.__tablename__)
-        self.assertTrue(isinstance(value_column.type, sa.Numeric))
+    #def testDecimalColumn(self):
+        #session = self.layer[u'session']
+        #testing.createSchema(session, u'A', t1, dict(
+            #a=model.Attribute(type=u'decimal', order=0),
+            #))
+        #data_dict = reporting.buildDataDict(session, u'A', BY_NAME)
+        #path, attributes = data_dict.items()[0]
+        #value_class, value_column = reporting.getValueColumn(path, attributes)
+        #self.assertEquals(u'decimal', value_class.__tablename__)
+        #self.assertTrue(isinstance(value_column.type, sa.Numeric))
 
-    @unittest.skipIf('sqlite' in testing.DEFAULT_URI, u'Vendor does not support date/time')
-    def testDateColumn(self):
-        session = self.layer[u'session']
-        testing.createSchema(session, u'A', t1, dict(
-            a=model.Attribute(type=u'date', order=0),
-            ))
-        data_dict = reporting.buildDataDict(session, u'A')
-        path, attributes = data_dict.items()[0]
-        value_class, value_column = reporting.getValueColumn(path, attributes)
-        self.assertEquals(u'datetime', value_class.__tablename__)
-        self.assertTrue(isinstance(value_column.type, sa.Date))
+    #@unittest.skipIf('sqlite' in testing.DEFAULT_URI, u'Vendor does not support date/time')
+    #def testDateColumn(self):
+        #session = self.layer[u'session']
+        #testing.createSchema(session, u'A', t1, dict(
+            #a=model.Attribute(type=u'date', order=0),
+            #))
+        #data_dict = reporting.buildDataDict(session, u'A', BY_NAME)
+        #path, attributes = data_dict.items()[0]
+        #value_class, value_column = reporting.getValueColumn(path, attributes)
+        #self.assertEquals(u'datetime', value_class.__tablename__)
+        #self.assertTrue(isinstance(value_column.type, sa.Date))
 
-    @unittest.skipIf('sqlite' not in testing.DEFAULT_URI, u'Vendor supports date/time')
-    def testStringDateColumn(self):
-        session = self.layer[u'session']
-        testing.createSchema(session, u'A', t1, dict(
-            a=model.Attribute(type=u'date', order=0),
-            ))
-        data_dict = reporting.buildDataDict(session, u'A')
-        path, attributes = data_dict.items()[0]
-        value_class, value_column = reporting.getValueColumn(path, attributes)
-        self.assertEquals(u'datetime', value_class.__tablename__)
-        self.assertEquals(u'date', value_column.name)
+    #@unittest.skipIf('sqlite' not in testing.DEFAULT_URI, u'Vendor supports date/time')
+    #def testStringDateColumn(self):
+        #session = self.layer[u'session']
+        #testing.createSchema(session, u'A', t1, dict(
+            #a=model.Attribute(type=u'date', order=0),
+            #))
+        #data_dict = reporting.buildDataDict(session, u'A', BY_NAME)
+        #path, attributes = data_dict.items()[0]
+        #value_class, value_column = reporting.getValueColumn(path, attributes)
+        #self.assertEquals(u'datetime', value_class.__tablename__)
+        #self.assertEquals(u'date', value_column.name)
 
-    @unittest.skipIf('sqlite' in testing.DEFAULT_URI, u'Vendor does not support date/time')
-    def testDatetimeColumn(self):
-        session = self.layer[u'session']
-        testing.createSchema(session, u'A', t1, dict(
-            a=model.Attribute(type=u'datetime', order=0),
-            ))
-        data_dict = reporting.buildDataDict(session, u'A')
-        path, attributes = data_dict.items()[0]
-        value_class, value_column = reporting.getValueColumn(path, attributes)
-        self.assertEquals(u'datetime', value_class.__tablename__)
-        self.assertTrue(isinstance(value_column.type, sa.DateTime))
+    #@unittest.skipIf('sqlite' in testing.DEFAULT_URI, u'Vendor does not support date/time')
+    #def testDatetimeColumn(self):
+        #session = self.layer[u'session']
+        #testing.createSchema(session, u'A', t1, dict(
+            #a=model.Attribute(type=u'datetime', order=0),
+            #))
+        #data_dict = reporting.buildDataDict(session, u'A', BY_NAME)
+        #path, attributes = data_dict.items()[0]
+        #value_class, value_column = reporting.getValueColumn(path, attributes)
+        #self.assertEquals(u'datetime', value_class.__tablename__)
+        #self.assertTrue(isinstance(value_column.type, sa.DateTime))
 
-    @unittest.skipIf('sqlite' not in testing.DEFAULT_URI, u'Vendor supports date/time')
-    def testStringDatetimeColumn(self):
-        session = self.layer[u'session']
-        testing.createSchema(session, u'A', t1, dict(
-            a=model.Attribute(type=u'datetime', order=0),
-            ))
-        data_dict = reporting.buildDataDict(session, u'A')
-        path, attributes = data_dict.items()[0]
-        value_class, value_column = reporting.getValueColumn(path, attributes)
-        self.assertEquals(u'datetime', value_class.__tablename__)
-        self.assertEquals(u'datetime', value_column.name)
+    #@unittest.skipIf('sqlite' not in testing.DEFAULT_URI, u'Vendor supports date/time')
+    #def testStringDatetimeColumn(self):
+        #session = self.layer[u'session']
+        #testing.createSchema(session, u'A', t1, dict(
+            #a=model.Attribute(type=u'datetime', order=0),
+            #))
+        #data_dict = reporting.buildDataDict(session, u'A', BY_NAME)
+        #path, attributes = data_dict.items()[0]
+        #value_class, value_column = reporting.getValueColumn(path, attributes)
+        #self.assertEquals(u'datetime', value_class.__tablename__)
+        #self.assertEquals(u'datetime', value_column.name)
 
 
 class SchemaToQueryTestCase(unittest.TestCase):
@@ -415,24 +415,6 @@ class SchemaToQueryTestCase(unittest.TestCase):
         data_dict, report = reporting.schemaToReportByName(session, u'Sample')
         result = session.query(report).filter_by(entity_id=entity1.id).one()
         self.assertEqual(entity1[u'value'], result.value)
-
-    def testScalarChoiceValues(self):
-        session = self.layer[u'session']
-
-        # first version of the sample schema
-        schema1 = testing.createSchema(session, u'Sample', t1, dict(
-            value=model.Attribute(type=u'string', order=0, choices=[model.Choice(name="foovalue", title=u"Foo", value=u"foovalue")]),
-            ))
-
-        # add some entries for the schema
-        entity1 = testing.createEntity(schema1, u'Foo', t1, dict(
-            value=u'foovalue',
-            ))
-
-        # generate report by name, should be able to access attributes as columns
-        data_dict, report = reporting.schemaToReportByName(session, u'Sample', use_choice_title=True)
-        result = session.query(report).filter_by(entity_id=entity1.id).one()
-        self.assertEqual("Foo", result.value)
 
     @unittest.skipIf(u'postgres' not in testing.DEFAULT_URI, u'Not using postgres')
     def testArrayCollectionValues(self):

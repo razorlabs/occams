@@ -32,11 +32,6 @@ Because of the nature of how model.handles schema versions, this module
 offers difference kinds of reporting granularity in the form of
 *attribute splitting*, meaning that the attribute metdata is inpected to
 determine how the final report columns show up in the query.
-So far, three types of attribute splitting are available:
-
-    **NAME**
-    **CHECKSUM**
-    **ID**
 
 """
 
@@ -98,7 +93,7 @@ def schemaToReport(session, schema_name, groupfunc, expand_choice=False):
             individual "flag" boolean columns.
 
     Returns:
-        A ``data_dict`` and ``Query`` pair.
+        A (``DataDict``, ``Query``) pair.
     """
     data_dict = buildDataDict(session, schema_name, groupfunc, expand_choice)
     table = buildReportTable(session, data_dict)
@@ -267,20 +262,18 @@ class DataDict(object):
     def get(self, name, default=None):
         return self.columns.get(name, default)
 
-    def add(self, path, attributes, selection=None):
-        if not isinstance(attributes, list):
-            attributes = [attributes]
-        column_name = '_'.join(path)
+    def add(self, path, attribute, selection=None):
+        column_name = '_'.join(map(str, path))
         column = self.columns.get(column_name)
         if column is None:
             column = DataColumn(self, column_name, path)
             self.columns[column_name] = column
         column.selection = selection
-        column.attributes.extend(attributes)
+        column.attributes.append(attribute)
 
     def __getitem__(self, key, default=None):
-        if isinstance(key, list):
-            key = '_'.join(key)
+        if not isinstance(key, basestring):
+            key = '_'.join(map(str, key))
         return self.columns[key]
 
     def __contains__(self, key):
@@ -424,7 +417,7 @@ def _addCollection(entity_query, data_column):
             session.query(true())
             .filter(value_class.entity_id == model.Entity.id)
             .filter(value_class.attribute_id.in_([a.id for a in attributes]))
-            .filter(value_column._value == data_column.selection.value)
+            .filter(value_class._value == data_column.selection.value)
             .correlate(model.Entity)
             .as_scalar())
 
@@ -513,9 +506,9 @@ def _addScalar(entity_query, data_column):
         The modified entity_query
     """
     attributes = data_column.attributes
-    value_class, value_column = getValueColumn(data_column)
+    value_class, value_column = _getValueColumn(data_column)
     entity_query = entity_query.outerjoin(value_class, (
-        (value_class.entity_id == datastore.Entity.id)
+        (value_class.entity_id == model.Entity.id)
         & value_class.attribute_id.in_([a.id for a in attributes])
         ))
     column_part = value_column.label(data_column.name)
