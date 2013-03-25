@@ -22,6 +22,12 @@
     handler=".saconfig.handle_login"
     />
 
+    <subscriber
+      handler=".saconfig.saconnectionUpdated"
+      for="collective.saconnect.interfaces.ISQLAlchemyConnectionStrings
+           zope.lifecycleevent.interfaces.IObjectModifiedEvent"
+      />
+
   <adapter factory="occams.datastore.schema.attributeToField" />
   <adapter factory="occams.datastore.item.entityToDictionary" />
 

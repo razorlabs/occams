@@ -8,8 +8,8 @@ from z3c import saconfig
 from zope import component
 
 from occams.datastore import model as datastore
-from occams.form.saconfig import EventAwareScopedSession
-
+from occams.form.saconfig import EventAwareScopedSessionEngineFactory
+from collective.saconnect.saconfig import ISiteScopedSessionEngineFactory
 
 ENGINE_NAME = u'occams.form.testing.Engine'
 SESSION_NAME = u'occams.form.testing.Session'
@@ -25,9 +25,13 @@ class OccamsFormSandBoxLayer(plone.app.testing.PloneSandboxLayer):
 
         # setup the database utilities
         engine_utility = saconfig.EngineFactory('sqlite://')
-        component.provideUtility(engine_utility, name=ENGINE_NAME)
-        session_utility = EventAwareScopedSession(engine=ENGINE_NAME)
-        component.provideUtility(session_utility, name=SESSION_NAME)
+        component.provideUtility(engine_utility, name=SESSION_NAME)
+        session_utility = EventAwareScopedSessionEngineFactory(name=SESSION_NAME)
+
+        component.provideUtility(
+                session_utility,
+                ISiteScopedSessionEngineFactory,
+                name=SESSION_NAME)
 
         # add the test users
         session = saconfig.named_scoped_session(SESSION_NAME)
@@ -38,6 +42,11 @@ class OccamsFormSandBoxLayer(plone.app.testing.PloneSandboxLayer):
     def setUpPloneSite(self, portal):
         plone.app.testing.applyProfile(portal, 'occams.form:default')
 
+
+        # session = saconfig.named_scoped_session(SESSION_NAME)
+        # datastore.DataStoreModel.metadata.create_all(session.bind)
+        # session.add(datastore.User(key=plone.app.testing.TEST_USER_ID))
+        # session.flush()
 
 OCCAMS_FORM_FIXTURE = OccamsFormSandBoxLayer()
 

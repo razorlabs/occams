@@ -9,23 +9,43 @@ from zope import component
 
 from occams.datastore.model.session import DataStoreSession
 from occams.datastore import model
+from zope.component import getSiteManager
 
 from occams.form import interfaces
+from collective.saconnect.saconfig import ISiteScopedSessionEngineFactory
+from collective.saconnect.saconfig import SiteScopedSessionEngineFactory
+
+def saconnectionUpdated(connections, event):
+    """
+    This is an event listener fo collective.saconnect. It replaces the
+    default factory with our own factory that includes User information
+    in the session.
+    """
+    sm = getSiteManager()
+    for key in event.descriptions:
+        if key in connections.keys():
+            factory = sm.queryUtility(ISiteScopedSessionEngineFactory, name=key)
+            if factory is not None:
+                factory.reset()
+                sm.unregisterUtility(factory, name=key,
+                    provided=ISiteScopedSessionEngineFactory) # delete
+            factory = EventAwareScopedSessionEngineFactory(key)
+            sm.registerUtility(factory, name=key,
+                provided=ISiteScopedSessionEngineFactory) # add
 
 
-class EventAwareScopedSession(saconfig.GloballyScopedSession):
-    u"""A globally scoped session.
+class EventAwareScopedSessionEngineFactory(SiteScopedSessionEngineFactory):
+    u"""A scoped session.
 
-    Register this as a global utility to have just one kind of session
+    Register this as a utility to have just one kind of session
     per Zope instance. All applications in this instance will share the
     same session.
 
-    To register as a global utility you may need to register it with
+    To register as a utility you may need to register it with
     a custom factory, or alternatively subclass it and override __init__
     to pass the right arguments to the superclasses __init__.
     """
-    interface.implements(sa_interfaces.IScopedSession)
-
+    interface.implements(ISiteScopedSessionEngineFactory)
     def sessionFactory(self):
         kw = self.kw.copy()
         if 'bind' not in kw:
