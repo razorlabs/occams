@@ -193,7 +193,7 @@ def buildDataDict(session, schema_name, groupfunc, expand_choice=False):
                     for choice in attribute.choices:
                         column_path =  path + group + (choice.value,)
                         plan.setdefault(column_path, []).append(attribute)
-                        selected[path] = choice
+                        selected[column_path] = choice
                 else:
                     column_path = path + group
                     plan.setdefault(column_path, []).append(attribute)
@@ -397,10 +397,12 @@ def _addCollection(entity_query, data_column):
 
     else:
         column_part = (
-            session.query(true())
-            .filter(value_class.entity_id == model.Entity.id)
-            .filter(value_class.attribute_id.in_([a.id for a in attributes]))
-            .filter(value_class._value == data_column.selection.value)
+            session.query(
+                exists()
+                .where(
+                    (value_class.entity_id == model.Entity.id)
+                    & (value_class.attribute_id.in_([a.id for a in attributes]))
+                    & (value_class._value == data_column.selection.value)))
             .correlate(model.Entity)
             .as_scalar())
 
