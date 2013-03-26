@@ -191,7 +191,7 @@ def buildDataDict(session, schema_name, groupfunc, expand_choice=False):
                         and attribute.is_collection
                         and attribute.choices):
                     for choice in attribute.choices:
-                        column_path = path + (choice.value,) + group
+                        column_path =  path + group + (choice.value,)
                         plan.setdefault(column_path, []).append(attribute)
                         selected[path] = choice
                 else:

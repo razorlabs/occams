@@ -266,6 +266,23 @@ class BuildDataDicTestCase(unittest.TestCase):
         for e in expected:
             self.assertEqual(1, len(data_dict[e].attributes))
 
+    def testExpandedChoices(self):
+        session = self.layer[u'session']
+        schema1 = model.Schema(name=u'A', title=u'', state=u'published', publish_date=t1)
+        schema1[u'a'] = model.Attribute(title=u'', type=u'string', order=0,
+                is_collection=True, choices=[
+                    model.Choice(name=u'foo', title=u'Foo', value='foo', order=0),
+                    model.Choice(name=u'bar', title=u'Bar', value='bar', order=1),])
+        session.add(schema1)
+        session.flush()
+
+        data_dict = reporting.buildDataDict(session, u'A', BY_NAME, expand_choice=True)
+        expected = [
+            ('a', 'foo'),
+            ('a', 'bar'),
+            ]
+        self.assertListEqual(expected, data_dict.paths())
+
 
 #class ValueColumnTestCase(unittest.TestCase):
     #u"""
@@ -483,4 +500,22 @@ class SchemaToQueryTestCase(unittest.TestCase):
         data_dict, report = reporting.schemaToReportByName(session, u'Sample')
         result = session.query(report).filter_by(entity_id=entity1.id).one()
         self.assertEqual(entity1[u'sub'][u'value'], result.sub_value)
+
+    def testExpandedChoices(self):
+        session = self.layer[u'session']
+        schema1 = model.Schema(name=u'A', title=u'', state=u'published', publish_date=t1)
+        schema1[u'a'] = model.Attribute(title=u'', type=u'string', order=0,
+                is_collection=True, choices=[
+                    model.Choice(name=u'foo', title=u'Foo', value='foo', order=0),
+                    model.Choice(name=u'bar', title=u'Bar', value='bar', order=1),])
+
+        entity1 = model.Entity(schema=schema1, name=u'Foo', title=u'', collect_date=t1)
+        entity1['a'] = ['bar']
+        session.add(entity1)
+        session.flush()
+
+        data_dict, report = reporting.schemaToReportByName(session, u'A', expand_choice=True)
+        result = session.query(report).filter_by(entity_id=entity1.id).one()
+        self.assertFalse(result.a_foo)
+        self.assertTrue(result.a_bar)
 
