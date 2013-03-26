@@ -5,6 +5,7 @@ Tests the schema report converter module
 import datetime
 import decimal
 import copy
+from ordereddict import OrderedDict
 import unittest2 as unittest
 
 import sqlalchemy as sa
@@ -282,6 +283,64 @@ class BuildDataDicTestCase(unittest.TestCase):
             ('a', 'bar'),
             ]
         self.assertListEqual(expected, data_dict.paths())
+
+
+class DataDictTestCase(unittest.TestCase):
+
+    def testName(self):
+        name = u'MyForm'
+        data_dict = reporting.DataDict(name, None)
+        self.assertEqual(name, data_dict.name)
+
+    def testGet(self):
+        data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=object()))
+        # returns None by default
+        self.assertIsNone(data_dict.get('x'))
+        # explicitly specify default
+        self.assertEqual('nothing', data_dict.get('x', 'nothing'))
+        self.assertIsNotNone(data_dict.get('a'))
+
+    def testGetItem(self):
+        data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=object()))
+        with self.assertRaises(KeyError):
+            data_dict['x']
+        self.assertIsNotNone(data_dict['a'])
+        # test paths also
+        self.assertIsNotNone(data_dict[('a',)])
+
+    def testContains(self):
+        data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=object()))
+        self.assertNotIn('x', data_dict)
+        self.assertIn('a', data_dict)
+
+    def testLen(self):
+        data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=object()))
+        self.assertEqual(1, len(data_dict))
+
+    def testItems(self):
+        expected = [('a', object())]
+        data_dict = reporting.DataDict(u'MyForm', OrderedDict(expected))
+        self.assertListEqual(expected, data_dict.items())
+        self.assertListEqual(expected, list(data_dict.iteritems()))
+
+    def testKeys(self):
+        data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=object()))
+        self.assertListEqual(['a'], data_dict.keys())
+        self.assertListEqual(['a'], list(data_dict.iterkeys()))
+
+    def testKeys(self):
+        class FakeColumn(object):
+            def __init__(self, path):
+                self.path = path
+        data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=FakeColumn(['a'])))
+        self.assertListEqual([['a']], data_dict.paths())
+        self.assertListEqual([['a']], list(data_dict.iterpaths()))
+
+    def testValues(self):
+        column = object()
+        data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=column))
+        self.assertListEqual([column], data_dict.values())
+        self.assertListEqual([column], list(data_dict.itervalues()))
 
 
 class SchemaToQueryTestCase(unittest.TestCase):

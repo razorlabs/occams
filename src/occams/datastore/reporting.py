@@ -256,6 +256,8 @@ def buildReportTable(session, data_dict):
 
 
 class DataDict(object):
+    u"""
+    """
 
     @property
     def name(self):
@@ -266,7 +268,7 @@ class DataDict(object):
         self.__columns = copy(columns)
 
     def get(self, name, default=None):
-        return self.columns.get(name, default)
+        return self.__columns.get(name, default)
 
     def __getitem__(self, key, default=None):
         if not isinstance(key, basestring):
@@ -297,14 +299,16 @@ class DataDict(object):
     def iterkeys(self):
         return self.__columns.iterkeys()
 
-    def itervalues(self):
-        return self.__columns.itervalues()
-
     def iterpaths(self):
         return imap(lambda c: c.path, self.__columns.itervalues())
 
+    def itervalues(self):
+        return self.__columns.itervalues()
+
 
 class DataColumn(object):
+    u"""
+    """
 
     @property
     def name(self):
@@ -349,7 +353,6 @@ class DataColumn(object):
         if self.vocabulary:
             return self.vocabulary.getTerm(key)
         raise KeyError(key)
-
 
 
 def _addCollection(entity_query, data_column):
@@ -397,12 +400,10 @@ def _addCollection(entity_query, data_column):
 
     else:
         column_part = (
-            session.query(
-                exists()
-                .where(
-                    (value_class.entity_id == model.Entity.id)
-                    & (value_class.attribute_id.in_([a.id for a in attributes]))
-                    & (value_class._value == data_column.selection.value)))
+            session.query(true())
+            .filter(value_class.entity_id == model.Entity.id)
+            .filter(value_class.attribute_id.in_([a.id for a in attributes]))
+            .filter(value_class._value == data_column.selection.value)
             .correlate(model.Entity)
             .as_scalar())
 
