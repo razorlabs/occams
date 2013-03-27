@@ -229,33 +229,74 @@ def buildReportTable(session, data_dict):
         named tuples of each result using the names of the naming schema as the
         property names.
     """
-    # helper expressions
-    is_sqlite = session.bind.url.drivername == 'sqlite'
-    is_collection =  lambda xs: reduce(or_, [bool(a.is_collection) for a in xs])
-    in_object = lambda xs: reduce(or_, [bool(a.schema.is_inline) for a in xs])
-    subquery = lambda q, n: q.subquery(n) if is_sqlite else q.cte(n)
+    is_sqlite = 'sqlite' == session.bind.url.drivername
+    is_postgres = 'postgres' in session.bind.url.drivername
 
-    # sub objects that have been joined so we don't rejoin
-    schema_name = data_dict.name
-    joined = dict(schema_name=model.Entity)
+    # native array helper expressions
+    collect = lambda q: q if not is_postgres else sa.func.array(q)
+    aggregate = lambda c: c if is_postgres else sa.func.group_concat(c)
 
-    entity_query = (
+    # keep track of the subentity joins so we can join subattribute values
+    report_name = data_dict.name
+    joins = {report_name: model.Entity}
+
+    query = (
         session.query(model.Entity.id.label(u'entity_id'))
         .join(model.Entity.schema)
-        .filter(model.Schema.name == schema_name)
+        .filter(model.Schema.name == report_name)
         .filter(model.Schema.publish_date != None))
 
-    for data_column in data_dict.itervalues():
+    for column in data_dict.itervalues():
+        attributes = column.attributes
+        schema_name = attributes[-1].schema.name
 
-        if in_object(data_column.attributes):
-            entity_query = _addObject(entity_query, data_column, joined)
+        # evaluate the target mapped class and cast value column
+        type_ = attributes[-1].type
+        alias_name = u'_'.join(column.path + (type_,))
+        value_class = orm.aliased(storage.nameModelMap[type_], name=alias_name)
+        value_casted = sa.cast(value_class._value, storage.nameCastMap[type_])
 
-        if is_collection(data_column.attributes):
-            entity_query = _addCollection(entity_query, data_column, joined)
+        if 'date' in type_:
+            # sqlite doesn't have very good support of dates
+            value_casted = value_casted if not is_sqlite else getattr(sa.func, type_)(value_class._value)
+
+        if schema_name not in joins:
+            # need to do an extra left join for the sub-object assocation table
+            join_class = orm.aliased(model.ValueObject, name=schema_name + '_join')
+            entity_class = orm.aliased(model.Entity, name=schema_name)
+            # do a single join to the sub-object
+            query = query.outerjoin(join_class, (
+                    (model.Entity.id == join_class.entity_id)
+                        & join_class.attribute_id.in_(
+                            [a.schema.parent_attribute.id for a in attributes])))
+            query = query.outerjoin(entity_class, entity_class.id == join_class._value)
+            joins[schema_name] = entity_class
+
+        entity_class = joins[schema_name]
+        filter_expression = (
+            (value_class.entity_id == entity_class.id)
+            & (value_class.attribute_id.in_([a.id for a in attributes])))
+
+        if reduce(or_, imap(lambda a: bool(a.is_collection), attributes)):
+            if column.selection is None:
+                column_part = collect(
+                    session.query(aggregate(value_casted))
+                    .filter(filter_expression)
+                    .correlate(entity_class)
+                    .as_scalar())
+            else:
+                column_part = (
+                    session.query(true())
+                    .filter(filter_expression & (value_casted == column.selection.value))
+                    .correlate(entity_class)
+                    .as_scalar())
         else:
-            entity_query = _addScalar(entity_query, data_column, joined)
+            column_part = value_casted
+            query = query.outerjoin(value_class, filter_expression)
 
-    return subquery(entity_query, schema_name)
+        query = query.add_column(column_part.label(column.name))
+
+    return query.subquery(report_name) if is_sqlite else query.cte(report_name)
 
 
 class DataDict(object):
@@ -391,9 +432,7 @@ def _addObject(entity_query, data_column, joined):
     # we're going to use this as a key in the lookup table of joined objects
     parent_name = attributes[-1].schema.name
 
-    if parent_name in joined:
-        associate_class = joined[parent_name]
-    else:
+    if parent_name not in joined:
         # need to do an extra left join for the sub-object assocation table
         associate_class = orm.aliased(model.ValueObject, name=parent_name)
         # do a single join to the sub-object
@@ -403,9 +442,10 @@ def _addObject(entity_query, data_column, joined):
                 [a.schema.parent_attribute.id for a in attributes]
                 )
             ))
-        if joined is not None:
-            # keep a reference in the lookup table
-            joined[parent_name] = associate_class
+        # keep a reference in the lookup table
+        joined[parent_name] = associate_class
+
+    associate_class = joined[parent_name]
 
     # each subsequent join should be using the lookup table
     entity_query = entity_query.outerjoin(value_class, (
