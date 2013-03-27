@@ -32,7 +32,6 @@ Because of the nature of how model.handles schema versions, this module
 offers difference kinds of reporting granularity in the form of
 *attribute splitting*, meaning that the attribute metdata is inpected to
 determine how the final report columns show up in the query.
-
 """
 
 from itertools import imap
@@ -130,8 +129,7 @@ def queryAttributes(session, schema_name):
         .filter(model.Schema.name == bindparam('schema_name'))
         .filter(model.Schema.publish_date != None)
         .order_by(
-            # lineage order
-            # build a subquery that determines an attribute's most recent order
+            # determines an attribute's most recent order
             (session.query(RecentAttribute.order)
                 .join(RecentAttribute.schema)
                 .filter(model.Schema.name == bindparam('schema_name'))
@@ -191,6 +189,8 @@ def buildDataDict(session, schema_name, groupfunc, expand_choice=False):
                         and attribute.is_collection
                         and attribute.choices):
                     for choice in attribute.choices:
+                        # the actual value of the choice is more reliable than
+                        # the name as the name for choices is simply a token
                         column_path =  path + group + (choice.value,)
                         plan.setdefault(column_path, []).append(attribute)
                         selected[column_path] = choice
@@ -204,6 +204,7 @@ def buildDataDict(session, schema_name, groupfunc, expand_choice=False):
     for path, attributes in plan.iteritems():
         data_column = DataColumn(path, attributes, selected.get(path))
         columns[data_column.name]  = data_column
+
     return  DataDict(schema_name, columns)
 
 
@@ -231,12 +232,12 @@ def buildReportTable(session, data_dict):
     # helper expressions
     is_sqlite = session.bind.url.drivername == 'sqlite'
     is_collection =  lambda xs: reduce(or_, [bool(a.is_collection) for a in xs])
-    is_object = lambda xs: reduce(or_, [bool(a.schema.is_inline) for a in xs])
+    in_object = lambda xs: reduce(or_, [bool(a.schema.is_inline) for a in xs])
     subquery = lambda q, n: q.subquery(n) if is_sqlite else q.cte(n)
 
     # sub objects that have been joined so we don't rejoin
-    joined = dict()
     schema_name = data_dict.name
+    joined = dict(schema_name=model.Entity)
 
     entity_query = (
         session.query(model.Entity.id.label(u'entity_id'))
@@ -245,19 +246,19 @@ def buildReportTable(session, data_dict):
         .filter(model.Schema.publish_date != None))
 
     for data_column in data_dict.itervalues():
-        if is_collection(data_column.attributes):
-            entity_query = _addCollection(entity_query, data_column)
-        elif is_object(data_column.attributes):
+
+        if in_object(data_column.attributes):
             entity_query = _addObject(entity_query, data_column, joined)
+
+        if is_collection(data_column.attributes):
+            entity_query = _addCollection(entity_query, data_column, joined)
         else:
-            entity_query = _addScalar(entity_query, data_column)
+            entity_query = _addScalar(entity_query, data_column, joined)
 
     return subquery(entity_query, schema_name)
 
 
 class DataDict(object):
-    u"""
-    """
 
     @property
     def name(self):
@@ -307,8 +308,6 @@ class DataDict(object):
 
 
 class DataColumn(object):
-    u"""
-    """
 
     @property
     def name(self):
@@ -345,9 +344,12 @@ class DataColumn(object):
         self.__attributes = tuple(attributes)
         self.__is_nested = attributes[-1].schema.parent_attribute is not None
         self.__selection = selection
-        self.__vocabulary = SimpleVocabulary([SimpleTerm(c.value, title=c.title)
-                                                for a in self.attributes
-                                                for c in a.choices])
+        if selection is None:
+            self.__vocabulary = None
+        else:
+            self.__vocabulary = SimpleVocabulary([SimpleTerm(c.value, title=c.title)
+                                                    for a in self.attributes
+                                                    for c in a.choices])
 
     def __getitem__(self, key):
         if self.vocabulary:
@@ -355,65 +357,7 @@ class DataColumn(object):
         raise KeyError(key)
 
 
-def _addCollection(entity_query, data_column):
-    u"""
-    Helper method to add collection column to the entity query
-
-    Collection attributes are added via correlated sub-queries to the parent
-    entity.
-
-    Attempts to use postgres' native array support, otherwise the column is
-    generated as a comma-delimited string column.
-
-    Arguments
-        ``entity_query``
-            The pending query being generated
-        ``path``
-            The column plan path
-        ``attributes``
-            The attributes in the ancestry for the the path
-
-    Returns
-        The modified entity_query
-    """
-    value_class, value_column = _getValueColumn(data_column)
-    session = entity_query.session
-    is_postgres = 'postgres' in session.bind.url.drivername
-    attributes = data_column.attributes
-    path = data_column.path
-
-    if data_column.selection is None:
-        if not is_postgres:
-            # aggregate subquery results into comma-delimited list
-            value_column = sa.func.group_concat(value_column)
-
-        column_part = (
-            session.query(value_column)
-            .filter(value_class.entity_id == model.Entity.id)
-            .filter(value_class.attribute_id.in_([a.id for a in attributes]))
-            .correlate(model.Entity)
-            .as_scalar())
-
-        if is_postgres:
-            # use postgres' native array support if available
-            column_part = sa.func.array(column_part)
-
-    else:
-        column_part = (
-            session.query(true())
-            .filter(value_class.entity_id == model.Entity.id)
-            .filter(value_class.attribute_id.in_([a.id for a in attributes]))
-            .filter(value_class._value == data_column.selection.value)
-            .correlate(model.Entity)
-            .as_scalar())
-
-    column_part = column_part.label(data_column.name)
-    entity_query = entity_query.add_column(column_part)
-
-    return entity_query
-
-
-def _addObject(entity_query, data_column, joined=None):
+def _addObject(entity_query, data_column, joined):
     u"""
     Helper method to add object column to the entity query
 
@@ -440,14 +384,14 @@ def _addObject(entity_query, data_column, joined=None):
     Returns
         The modified entity_query
     """
-    value_class, value_column = _getValueColumn(data_column)
-    attributes = data_column.attributes
     path = data_column.path
+    attributes = data_column.attributes
+    value_class, value_column = _getValueColumn(data_column)
 
     # we're going to use this as a key in the lookup table of joined objects
-    parent_name = path[0]
+    parent_name = attributes[-1].schema.name
 
-    if joined is not None and parent_name in joined:
+    if parent_name in joined:
         associate_class = joined[parent_name]
     else:
         # need to do an extra left join for the sub-object assocation table
@@ -474,10 +418,65 @@ def _addObject(entity_query, data_column, joined=None):
     return entity_query
 
 
-def _addScalar(entity_query, data_column):
+def _addCollection(entity_query, data_column, joined):
+    u"""
+    Helper method to add collection column to the entity query
+
+    Collection attributes are added via correlated sub-queries to the parent
+    entity.
+
+    Attempts to use postgres' native array support, otherwise the column is
+    generated as a comma-delimited string column.
+
+    Arguments
+        ``entity_query``
+            The pending query being generated
+        ``path``
+            The column plan path
+        ``attributes``
+            The attributes in the ancestry for the the path
+
+    Returns
+        The modified entity_query
+    """
+    session = entity_query.session
+    attributes = data_column.attributes
+    path = data_column.path
+    value_class, value_column = _getValueColumn(data_column)
+    is_postgres = 'postgres' in session.bind.url.drivername
+    entity_class = joined[attributes[-1].schema.name]
+
+    # uses native arrays if possible
+    collect = lambda q: q if not is_postgres else sa.func.array(q)
+
+    # falls back to group concatenation if no native array is available
+    aggregate = lambda c: c if is_postgres else sa.func.group_concat(c)
+
+    if data_column.selection is None:
+        column_part = collect(
+            session.query(aggregate(value_column))
+            .filter(value_class.entity_id == entity_class.id)
+            .filter(value_class.attribute_id.in_([a.id for a in attributes]))
+            .correlate(entity_class)
+            .as_scalar())
+    else:
+        column_part = (
+            session.query(true())
+            .filter(value_class.entity_id == entity_class.id)
+            .filter(value_class.attribute_id.in_([a.id for a in attributes]))
+            .filter(value_class._value == data_column.selection.value)
+            .correlate(entity_class)
+            .as_scalar())
+
+    column_part = column_part.label(data_column.name)
+    entity_query = entity_query.add_column(column_part)
+
+    return entity_query
+
+
+def _addScalar(entity_query, data_column, joined):
     u"""
     Helper method to add scalar column to the entity query
-
     Scalar columns are added via LEFT OUTER JOIN
 
     Arguments
@@ -492,9 +491,10 @@ def _addScalar(entity_query, data_column):
         The modified entity_query
     """
     attributes = data_column.attributes
+    entity_class = joined[attributes[-1].schema.name]
     value_class, value_column = _getValueColumn(data_column)
     entity_query = entity_query.outerjoin(value_class, (
-        (value_class.entity_id == model.Entity.id)
+        (value_class.entity_id == entity_class.id.id)
         & value_class.attribute_id.in_([a.id for a in attributes])
         ))
     column_part = value_column.label(data_column.name)
@@ -504,14 +504,11 @@ def _addScalar(entity_query, data_column):
 
 def _getValueColumn(data_column):
     u"""
-    Determines the value class and column for the attributes
-    Uses the most recent type used for the attribute
+    Determines the value class and column for the attributes.
 
     Arguments
-        ``path``
-            The column plan path
-        ``attributes``
-            The attributes in the ancestry for the given path
+        ``data_column``
+            The data dictionary column
 
     Returns
         A tuple consisting of the value_class to query from as well
@@ -519,21 +516,21 @@ def _getValueColumn(data_column):
     """
     path = data_column.path
     attributes = data_column.attributes
-    # the attribute listing should give a hint as to which session
+
     session = orm.object_session(attributes[-1])
     is_sqlite = session.bind.url.drivername == 'sqlite'
+
     # find the correct value class and alias it (for mulitple joins)
     type_name = attributes[-1].type
     source_class = storage.nameModelMap[type_name]
-    value_name = u'_'.join(path + (type_name,))
-    value_class = orm.aliased(source_class, name=value_name)
-    # sqlite is very finicky about dates: must be function result
-    if is_sqlite and type_name == u'date':
-        value_column = sa.func.date(value_class._value)
-    elif is_sqlite and type_name == u'datetime':
-        value_column = sa.func.datetime(value_class._value)
-    else:
-        cast_type = storage.nameCastMap[type_name]
-        value_column = sa.cast(value_class._value, cast_type)
+    cast_type = storage.nameCastMap[type_name]
+    alias_name = u'_'.join(path + (type_name,))
+    value_class = orm.aliased(source_class, name=alias_name)
+    value_column = sa.cast(value_class._value, cast_type)
+
+    if 'date' in type_name:
+       # sqlite is very finicky about dates: must be function result
+       value_column = value_column if not is_sqlite else getattr(sa.func, type_name)
+
     return value_class, value_column
 

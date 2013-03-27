@@ -328,7 +328,7 @@ class DataDictTestCase(unittest.TestCase):
         self.assertListEqual(['a'], data_dict.keys())
         self.assertListEqual(['a'], list(data_dict.iterkeys()))
 
-    def testKeys(self):
+    def testPaths(self):
         class FakeColumn(object):
             def __init__(self, path):
                 self.path = path
