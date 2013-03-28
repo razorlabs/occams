@@ -12,9 +12,9 @@ Some key terms to keep in mind for this documentation:
         The attributes location in the schema
         (e.q. Form -> attribute -> sub-attribute)
 
-    ``column plan`` or ``header``
-        Thee concept of inspect a schema's history in order to flatten it
-        into an exportable table. A plan contains information about what
+    ``column plan`` or ``header`` or ``data dict``
+        The concept of inspecting a schema's history in order to flatten it
+        into an exportable table. A data dict contains information about what
         information each column in the report should contain and how to
         render it (e.g. types/objects/collections)
 
@@ -28,10 +28,13 @@ Some key terms to keep in mind for this documentation:
         encouraged, especially when joining different reports (which
         the subquery result doesn't handle very well)
 
-Because of the nature of how model.handles schema versions, this module
-offers difference kinds of reporting granularity in the form of
-*attribute splitting*, meaning that the attribute metdata is inpected to
-determine how the final report columns show up in the query.
+    ``grouping``
+        Because of the nature of how datastore handles schema versions, this module
+        offers different kinds of reporting granularity in the form of
+        *attribute grouping*, meaning that the attribute metdata is inpected to
+        determine how the final report columns show up in the query. This module
+        ships with ID/NAME/CHECKSUM built in, with the ability to specify
+        any other grouping algorithm the client wishes.
 """
 
 from itertools import imap
@@ -50,8 +53,8 @@ from .model import storage
 
 def schemaToReportById(session, schema_name, expand_choice=False):
     u"""
-    Builds a sub-query for a schema using the ID split algorithm
-    ID Algorithm: Aggressively split by attribute id
+    Builds a sub-query for a schema using the ID grouping algorithm.
+    ID: Aggresively split by attribute name and id
     """
     groupfunc = lambda a: (a.name, a.id)
     return schemaToReport(session, schema_name, groupfunc, expand_choice)
@@ -59,8 +62,8 @@ def schemaToReportById(session, schema_name, expand_choice=False):
 
 def schemaToReportByName(session, schema_name, expand_choice=False):
     u"""
-    Builds a sub-query for a schema using the NAME split algorithm
-    NAME: All attribute in a lineage are grouped by their checksum
+    Builds a sub-query for a schema using the NAME grouping algorithm
+    NAME: All attributes in a lineage are grouped by their name
     """
     groupfunc = lambda a: (a.name,)
     return schemaToReport(session, schema_name, groupfunc, expand_choice)
@@ -68,8 +71,8 @@ def schemaToReportByName(session, schema_name, expand_choice=False):
 
 def schemaToReportByChecksum(session, schema_name, expand_choice=False):
     u"""
-    Builds a sub-query for a schema using the CHECKSUM split algorithm
-    CHECKSUM
+    Builds a sub-query for a schema using the CHECKSUM grouping algorithm
+    CHECKSUM: All attributes in a lineage are grouped by their name and checksum
     """
     groupfunc = lambda a: (a.name, a.checksum)
     return schemaToReport(session, schema_name, groupfunc, expand_choice)
@@ -146,8 +149,9 @@ def queryAttributes(session, schema_name):
 
 def buildDataDict(session, schema_name, groupfunc, expand_choice=False):
     u"""
-    Builds a column header for the schema hierarchy.
-    The header columns reported are only the basic data types.
+    Builds a ``DataDict`` for the schema hierarchy
+
+    The columns reported are only the basic data types.
 
     Note that the final columns are ordered by most recent order number within
     the parent, then by the parent's publication date (oldest to newest).
@@ -161,7 +165,7 @@ def buildDataDict(session, schema_name, groupfunc, expand_choice=False):
         ``schema_name``
             The name of the schema to get columns plans for
         ``groupfunc``
-            The splitting algorithm to use, this is a callback that will
+            The grouping algorithm to use, this is a callback that will
             return a tuple based on the passed attribute. The tuple should
             specific the group that the attribute value belongs in.
         ``expand_choice``
@@ -254,12 +258,14 @@ def buildReportTable(session, data_dict):
         type_ = column.type
         alias_name = type_ + '_' + column.name
         value_class = orm.aliased(storage.nameModelMap[type_], name=alias_name)
-        value_column = sa.cast(value_class._value, storage.nameCastMap[type_])
-
-        if 'date' in type_:
-            # sqlite sucks at datetimes so we have to fallback functions
+        value_column = value_class._value
+        if type_ == 'boolean':
+            value_column = sa.cast(value_class._value, sa.Boolean)
+        elif type_ == 'date':
+            # sqlite handles datetimes weirdly
             value_column = (getattr(sa.func, type_)(value_class._value)
-                            if is_sqlite else value_column)
+                            if is_sqlite
+                            else sa.cast(value_class._value, sa.Date))
 
         if schema_name not in joins:
             # Sub attributes are added via LEFT OUTER JOIN using the object
@@ -309,6 +315,9 @@ class DataDict(object):
     A representation (or plan) of what a report table will look like.
     Objects of this class can be used as a reference for report table
     output (or generation, see ``buildReportTable``)
+
+    Note that this type is intended to be read-only.
+
     This type also behaves as a dictionary, granting access to data
     columns as key values.
     """
@@ -322,6 +331,7 @@ class DataDict(object):
         self.__columns = copy(columns)
 
     def __makekey(self, key):
+        u""" The key master """
         return  key if isinstance(key, basestring) else '_'.join(map(str, key))
 
     def get(self, key, default=None):
@@ -367,6 +377,9 @@ class DataDict(object):
 class DataColumn(object):
     u"""
     A data dictionary column for reference when inspecting a report column.
+
+    Note that this type is intended to be read-only.
+
     This type also behaves as a dictionary, granting access to vocabulary
     terms (if the underlying attributes have specified choices).
     """
@@ -406,7 +419,7 @@ class DataColumn(object):
         self.__attributes = tuple(attributes)
         self.__is_nested = attributes[-1].schema.parent_attribute is not None
         self.__selection = selection
-        if selection is None:
+        if selection is not None:
             self.__vocabulary = None
         else:
             self.__vocabulary = SimpleVocabulary([SimpleTerm(c.value, title=c.title)
@@ -414,7 +427,8 @@ class DataColumn(object):
                                                     for c in a.choices])
 
     def __getitem__(self, key):
-        if self.vocabulary:
+        try:
             return self.vocabulary.getTerm(key)
-        raise KeyError(key)
+        except (LookupError, AttributeError) as e:
+            raise KeyError(key)
 

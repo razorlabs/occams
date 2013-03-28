@@ -281,6 +281,28 @@ class BuildDataDicTestCase(unittest.TestCase):
         for e in expected:
             self.assertEqual(1, len(data_dict.get(e).attributes))
 
+    def testChoices(self):
+        session = self.layer[u'session']
+        schema1 = model.Schema(name=u'A', title=u'', state=u'published', publish_date=t1)
+        schema1[u'a'] = model.Attribute(title=u'', type=u'string', order=0,
+                is_collection=True, choices=[
+                    model.Choice(name=u'foo', title=u'Foo', value='foo', order=0),
+                    model.Choice(name=u'bar', title=u'Bar', value='bar', order=1),])
+        session.add(schema1)
+        session.flush()
+
+        data_dict = reporting.buildDataDict(session, u'A', BY_NAME, expand_choice=False)
+        expected = [('a',)]
+        self.assertEqual(u'A', data_dict.name)
+        self.assertIsNotNone(data_dict['a'].vocabulary)
+        self.assertIn('foo', data_dict['a'].vocabulary)
+        self.assertIn('bar', data_dict['a'].vocabulary)
+        self.assertIsNotNone(data_dict['a']['foo'])
+        self.assertIsNotNone(data_dict['a']['bar'])
+        with self.assertRaises(KeyError):
+            data_dict['a']['nonexistent']
+        self.assertListEqual(expected, data_dict.paths())
+
     def testExpandedChoices(self):
         session = self.layer[u'session']
         schema1 = model.Schema(name=u'A', title=u'', state=u'published', publish_date=t1)
@@ -297,60 +319,116 @@ class BuildDataDicTestCase(unittest.TestCase):
             ('a', 'bar'),
             ]
         self.assertEqual(u'A', data_dict.name)
+        self.assertEqual('foo', data_dict['a_foo'].selection.value)
+        self.assertEqual('bar', data_dict['a_bar'].selection.value)
         self.assertListEqual(expected, data_dict.paths())
 
 
-#class DataDictTestCase(unittest.TestCase):
+class DataDictTestCase(unittest.TestCase):
+    u""" Tests various dict-like methods that DataDict supports """
 
-    #def testGet(self):
-        #data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=object()))
-        ## returns None by default
-        #self.assertIsNone(data_dict.get('x'))
-        ## explicitly specify default
-        #self.assertEqual('nothing', data_dict.get('x', 'nothing'))
-        #self.assertIsNotNone(data_dict.get('a'))
+    def testGet(self):
+        data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=object()))
+        # returns None by default
+        self.assertIsNone(data_dict.get('x'))
+        # explicitly specify default
+        self.assertEqual('nothing', data_dict.get('x', 'nothing'))
+        self.assertIsNotNone(data_dict.get('a'))
 
-    #def testGetItem(self):
-        #data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=object()))
-        #with self.assertRaises(KeyError):
-            #data_dict['x']
-        #self.assertIsNotNone(data_dict['a'])
-        ## test paths also
-        #self.assertIsNotNone(data_dict[('a',)])
+    def testGetItem(self):
+        data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=object()))
+        with self.assertRaises(KeyError):
+            data_dict['x']
+        self.assertIsNotNone(data_dict['a'])
+        # test paths also
+        self.assertIsNotNone(data_dict[('a',)])
 
-    #def testContains(self):
-        #data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=object()))
-        #self.assertNotIn('x', data_dict)
-        #self.assertIn('a', data_dict)
+    def testContains(self):
+        data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=object()))
+        self.assertNotIn('x', data_dict)
+        self.assertIn('a', data_dict)
 
-    #def testLen(self):
-        #data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=object()))
-        #self.assertEqual(1, len(data_dict))
+    def testLen(self):
+        data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=object()))
+        self.assertEqual(1, len(data_dict))
 
-    #def testItems(self):
-        #expected = [('a', object())]
-        #data_dict = reporting.DataDict(u'MyForm', OrderedDict(expected))
-        #self.assertListEqual(expected, data_dict.items())
-        #self.assertListEqual(expected, list(data_dict.iteritems()))
+    def testItems(self):
+        expected = [('a', object())]
+        data_dict = reporting.DataDict(u'MyForm', OrderedDict(expected))
+        self.assertListEqual(expected, data_dict.items())
+        self.assertListEqual(expected, list(data_dict.iteritems()))
 
-    #def testKeys(self):
-        #data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=object()))
-        #self.assertListEqual(['a'], data_dict.keys())
-        #self.assertListEqual(['a'], list(data_dict.iterkeys()))
+    def testKeys(self):
+        data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=object()))
+        self.assertListEqual(['a'], data_dict.keys())
+        self.assertListEqual(['a'], list(data_dict.iterkeys()))
 
-    #def testPaths(self):
-        #class FakeColumn(object):
-            #def __init__(self, path):
-                #self.path = path
-        #data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=FakeColumn(['a'])))
-        #self.assertListEqual([['a']], data_dict.paths())
-        #self.assertListEqual([['a']], list(data_dict.iterpaths()))
+    def testPaths(self):
+        class FakeColumn(object):
+            def __init__(self, path):
+                self.path = path
+        data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=FakeColumn(['a'])))
+        self.assertListEqual([['a']], data_dict.paths())
+        self.assertListEqual([['a']], list(data_dict.iterpaths()))
 
-    #def testValues(self):
-        #column = object()
-        #data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=column))
-        #self.assertListEqual([column], data_dict.values())
-        #self.assertListEqual([column], list(data_dict.itervalues()))
+    def testValues(self):
+        column = object()
+        data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=column))
+        self.assertListEqual([column], data_dict.values())
+        self.assertListEqual([column], list(data_dict.itervalues()))
+
+
+class ValueColumnTestCase(unittest.TestCase):
+    u""" Tests that appropriately typed value columns are generated """
+
+    layer = testing.OCCAMS_DATASTORE_FIXTURE
+
+    def testStringColumn(self):
+        session = self.layer[u'session']
+        testing.createSchema(session, u'A', t1, dict(
+            a=model.Attribute(type=u'string', order=0),
+            ))
+        data_dict, report = reporting.schemaToReportByName(session, u'A')
+        column_type = session.query(report.c.a).column_descriptions[0]['type']
+        self.assertIsInstance(column_type, sa.Unicode)
+
+    def testTextColumn(self):
+        session = self.layer[u'session']
+        testing.createSchema(session, u'A', t1, dict(
+            a=model.Attribute(type=u'text', order=0),
+            ))
+        data_dict, report = reporting.schemaToReportByName(session, u'A')
+        column_type = session.query(report.c.a).column_descriptions[0]['type']
+        self.assertIsInstance(column_type, sa.Unicode)
+
+    def testIntegerColumn(self):
+        session = self.layer[u'session']
+        testing.createSchema(session, u'A', t1, dict(
+            a=model.Attribute(type=u'integer', order=0),
+            ))
+        data_dict, report = reporting.schemaToReportByName(session, u'A')
+        column_type = session.query(report.c.a).column_descriptions[0]['type']
+        self.assertIsInstance(column_type, sa.Integer)
+
+    def testBooleanColumn(self):
+        session = self.layer[u'session']
+        testing.createSchema(session, u'A', t1, dict(
+            a=model.Attribute(type=u'boolean', order=0),
+            ))
+        data_dict, report = reporting.schemaToReportByName(session, u'A')
+        column_type = session.query(report.c.a).column_descriptions[0]['type']
+        self.assertIsInstance(column_type, sa.Boolean)
+
+    def testDecimalColumn(self):
+        session = self.layer[u'session']
+        testing.createSchema(session, u'A', t1, dict(
+            a=model.Attribute(type=u'decimal', order=0),
+            ))
+        data_dict, report = reporting.schemaToReportByName(session, u'A')
+        column_type = session.query(report.c.a).column_descriptions[0]['type']
+        self.assertIsInstance(column_type, sa.Numeric)
+
+    ### Date/Datetimes aren't easy to test in SQLite...
 
 
 class SchemaToQueryTestCase(unittest.TestCase):
