@@ -30,34 +30,39 @@ class BuildDataDicTestCase(unittest.TestCase):
 
     layer = testing.OCCAMS_DATASTORE_FIXTURE
 
-    def testEmptyPublishedSchema(self):
+    def testPublishedSchema(self):
         session = self.layer[u'session']
         testing.createSchema(session, u'A', t1)
         data_dict = reporting.buildDataDict(session, u'A', BY_NAME)
+        self.assertEqual(u'A', data_dict.name)
         self.assertEqual(0, len(data_dict))
+        self.assertIsNone(data_dict.get('a'))
 
-    def testKeysFromSingleForm(self):
+    def testSingleForm(self):
         session = self.layer[u'session']
         schema = testing.createSchema(session, u'A', t1, dict(
             a=model.Attribute(type=u'string', order=0)))
 
         data_dict = reporting.buildDataDict(session, u'A', BY_NAME)
         expected = [(u'a',)]
+        self.assertEqual(u'A', data_dict.name)
         self.assertListEqual(expected, data_dict.paths())
-        self.assertEqual(1, len(data_dict[expected[0]].attributes))
+        self.assertEqual(1, len(data_dict.get(expected[0]).attributes))
 
         data_dict = reporting.buildDataDict(session, u'A', BY_CHECKSUM)
         expected = [(u'a', schema[u'a'].checksum)]
+        self.assertEqual(u'A', data_dict.name)
         self.assertListEqual(expected, data_dict.paths())
-        self.assertEqual(1, len(data_dict[expected[0]].attributes))
+        self.assertEqual(1, len(data_dict.get(expected[0]).attributes))
 
         data_dict = reporting.buildDataDict(session, u'A', BY_ID)
         expected = [(u'a', schema[u'a'].id)]
+        self.assertEqual(u'A', data_dict.name)
         self.assertListEqual(expected, data_dict.paths())
         for e in expected:
-            self.assertEqual(1, len(data_dict[e].attributes))
+            self.assertEqual(1, len(data_dict.get(e).attributes))
 
-    def testKeysFromMultpleVersions(self):
+    def testMultpleVersions(self):
         session = self.layer[u'session']
         schema1 = testing.createSchema(session, u'A', t1, dict(
             a=model.Attribute(type=u'string', order=0)))
@@ -75,14 +80,16 @@ class BuildDataDicTestCase(unittest.TestCase):
 
         data_dict = reporting.buildDataDict(session, u'A', BY_NAME)
         expected = [(u'a',)]
+        self.assertEqual(u'A', data_dict.name)
         self.assertListEqual(expected, data_dict.paths())
-        self.assertEqual(3, len(data_dict[expected[0]].attributes))
+        self.assertEqual(3, len(data_dict.get(expected[0]).attributes))
 
         data_dict = reporting.buildDataDict(session, u'A', BY_CHECKSUM)
         expected = [(u'a', schema1[u'a'].checksum), (u'a', schema3[u'a'].checksum)]
+        self.assertEqual(u'A', data_dict.name)
         self.assertListEqual(expected, data_dict.paths())
-        self.assertEqual(2, len(data_dict[expected[0]].attributes))
-        self.assertEqual(1, len(data_dict[expected[1]].attributes))
+        self.assertEqual(2, len(data_dict.get(expected[0]).attributes))
+        self.assertEqual(1, len(data_dict.get(expected[1]).attributes))
 
         # by ID
         data_dict = reporting.buildDataDict(session, u'A', BY_ID)
@@ -91,11 +98,12 @@ class BuildDataDicTestCase(unittest.TestCase):
             (u'a', schema2[u'a'].id),
             (u'a', schema3[u'a'].id)
             ]
+        self.assertEqual(u'A', data_dict.name)
         self.assertListEqual(expected, data_dict.paths())
         for e in expected:
-            self.assertEqual(1, len(data_dict[e].attributes))
+            self.assertEqual(1, len(data_dict.get(e).attributes))
 
-    def testKeysFromSubSchema(self):
+    def testSubSchema(self):
         session = self.layer[u'session']
         schema = model.Schema(name=u'A', title=u'', state=u'published')
         schema[u'a'] = model.Attribute(title=u'', type=u'string', order=0)
@@ -111,12 +119,13 @@ class BuildDataDicTestCase(unittest.TestCase):
         # by NAME
         data_dict = reporting.buildDataDict(session, u'A', BY_NAME)
         expected = [(u'a',), (u'b', u'x'), (u'b', u'y'), (u'b', u'z'), (u'c',)]
+        self.assertEqual(u'A', data_dict.name)
         self.assertListEqual(expected, data_dict.paths())
-        self.assertEqual(1, len(data_dict[expected[0]].attributes))
-        self.assertEqual(1, len(data_dict[expected[1]].attributes))
-        self.assertEqual(1, len(data_dict[expected[2]].attributes))
-        self.assertEqual(1, len(data_dict[expected[3]].attributes))
-        self.assertEqual(1, len(data_dict[expected[4]].attributes))
+        self.assertEqual(1, len(data_dict.get(expected[0]).attributes))
+        self.assertEqual(1, len(data_dict.get(expected[1]).attributes))
+        self.assertEqual(1, len(data_dict.get(expected[2]).attributes))
+        self.assertEqual(1, len(data_dict.get(expected[3]).attributes))
+        self.assertEqual(1, len(data_dict.get(expected[4]).attributes))
 
         # by CHECKSUM
         data_dict = reporting.buildDataDict(session, u'A', BY_CHECKSUM)
@@ -127,12 +136,13 @@ class BuildDataDicTestCase(unittest.TestCase):
             (u'b', u'z', schema[u'b'][u'z'].checksum),
             (u'c', schema[u'c'].checksum),
             ]
+        self.assertEqual(u'A', data_dict.name)
         self.assertListEqual(expected, data_dict.paths())
-        self.assertEqual(1, len(data_dict[expected[0]].attributes))
-        self.assertEqual(1, len(data_dict[expected[1]].attributes))
-        self.assertEqual(1, len(data_dict[expected[2]].attributes))
-        self.assertEqual(1, len(data_dict[expected[3]].attributes))
-        self.assertEqual(1, len(data_dict[expected[4]].attributes))
+        self.assertEqual(1, len(data_dict.get(expected[0]).attributes))
+        self.assertEqual(1, len(data_dict.get(expected[1]).attributes))
+        self.assertEqual(1, len(data_dict.get(expected[2]).attributes))
+        self.assertEqual(1, len(data_dict.get(expected[3]).attributes))
+        self.assertEqual(1, len(data_dict.get(expected[4]).attributes))
 
         # By ID
         data_dict = reporting.buildDataDict(session, u'A', BY_ID)
@@ -143,11 +153,12 @@ class BuildDataDicTestCase(unittest.TestCase):
             (u'b', u'z', schema[u'b'][u'z'].id),
             (u'c', schema[u'c'].id),
             ]
+        self.assertEqual(u'A', data_dict.name)
         self.assertListEqual(expected, data_dict.paths())
         for e in expected:
-            self.assertEqual(1, len(data_dict[e].attributes))
+            self.assertEqual(1, len(data_dict.get(e).attributes))
 
-    def testKeysFromSubSchemaMultipleVersions(self):
+    def testSubSchemaMultipleVersions(self):
         u"""
         From the discussion Jennifer and I had:
         Time t1:
@@ -216,13 +227,14 @@ class BuildDataDicTestCase(unittest.TestCase):
         # by NAME
         data_dict = reporting.buildDataDict(session, u'A', BY_NAME)
         expected = [(u'a',), (u'b', u'z'), (u'b', u'x'), (u'b', u'y'), (u'c',), (u'y',)]
+        self.assertEqual(u'A', data_dict.name)
         self.assertListEqual(expected, data_dict.paths())
-        self.assertEqual(3, len(data_dict[expected[0]].attributes))
-        self.assertEqual(3, len(data_dict[expected[1]].attributes))
-        self.assertEqual(2, len(data_dict[expected[2]].attributes))
-        self.assertEqual(2, len(data_dict[expected[3]].attributes))
-        self.assertEqual(2, len(data_dict[expected[4]].attributes))
-        self.assertEqual(1, len(data_dict[expected[5]].attributes))
+        self.assertEqual(3, len(data_dict.get(expected[0]).attributes))
+        self.assertEqual(3, len(data_dict.get(expected[1]).attributes))
+        self.assertEqual(2, len(data_dict.get(expected[2]).attributes))
+        self.assertEqual(2, len(data_dict.get(expected[3]).attributes))
+        self.assertEqual(2, len(data_dict.get(expected[4]).attributes))
+        self.assertEqual(1, len(data_dict.get(expected[5]).attributes))
 
         # by CHECKSUM
         data_dict = reporting.buildDataDict(session, u'A', BY_CHECKSUM)
@@ -236,15 +248,16 @@ class BuildDataDicTestCase(unittest.TestCase):
             (u'c', schema1[u'c'].checksum),
             (u'y', schema3[u'y'].checksum),
             ]
+        self.assertEqual(u'A', data_dict.name)
         self.assertListEqual(expected, data_dict.paths())
-        self.assertEqual(2, len(data_dict[expected[0]].attributes))
-        self.assertEqual(1, len(data_dict[expected[1]].attributes))
-        self.assertEqual(3, len(data_dict[expected[2]].attributes))
-        self.assertEqual(2, len(data_dict[expected[3]].attributes))
-        self.assertEqual(1, len(data_dict[expected[4]].attributes))
-        self.assertEqual(1, len(data_dict[expected[5]].attributes))
-        self.assertEqual(2, len(data_dict[expected[6]].attributes))
-        self.assertEqual(1, len(data_dict[expected[7]].attributes))
+        self.assertEqual(2, len(data_dict.get(expected[0]).attributes))
+        self.assertEqual(1, len(data_dict.get(expected[1]).attributes))
+        self.assertEqual(3, len(data_dict.get(expected[2]).attributes))
+        self.assertEqual(2, len(data_dict.get(expected[3]).attributes))
+        self.assertEqual(1, len(data_dict.get(expected[4]).attributes))
+        self.assertEqual(1, len(data_dict.get(expected[5]).attributes))
+        self.assertEqual(2, len(data_dict.get(expected[6]).attributes))
+        self.assertEqual(1, len(data_dict.get(expected[7]).attributes))
 
         # by ID
         data_dict = reporting.buildDataDict(session, u'A', BY_ID)
@@ -263,9 +276,10 @@ class BuildDataDicTestCase(unittest.TestCase):
             (u'c', schema2[u'c'].id),
             (u'y', schema3[u'y'].id),
             ]
+        self.assertEqual(u'A', data_dict.name)
         self.assertListEqual(expected, data_dict.paths())
         for e in expected:
-            self.assertEqual(1, len(data_dict[e].attributes))
+            self.assertEqual(1, len(data_dict.get(e).attributes))
 
     def testExpandedChoices(self):
         session = self.layer[u'session']
@@ -282,65 +296,61 @@ class BuildDataDicTestCase(unittest.TestCase):
             ('a', 'foo'),
             ('a', 'bar'),
             ]
+        self.assertEqual(u'A', data_dict.name)
         self.assertListEqual(expected, data_dict.paths())
 
 
-class DataDictTestCase(unittest.TestCase):
+#class DataDictTestCase(unittest.TestCase):
 
-    def testName(self):
-        name = u'MyForm'
-        data_dict = reporting.DataDict(name, None)
-        self.assertEqual(name, data_dict.name)
+    #def testGet(self):
+        #data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=object()))
+        ## returns None by default
+        #self.assertIsNone(data_dict.get('x'))
+        ## explicitly specify default
+        #self.assertEqual('nothing', data_dict.get('x', 'nothing'))
+        #self.assertIsNotNone(data_dict.get('a'))
 
-    def testGet(self):
-        data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=object()))
-        # returns None by default
-        self.assertIsNone(data_dict.get('x'))
-        # explicitly specify default
-        self.assertEqual('nothing', data_dict.get('x', 'nothing'))
-        self.assertIsNotNone(data_dict.get('a'))
+    #def testGetItem(self):
+        #data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=object()))
+        #with self.assertRaises(KeyError):
+            #data_dict['x']
+        #self.assertIsNotNone(data_dict['a'])
+        ## test paths also
+        #self.assertIsNotNone(data_dict[('a',)])
 
-    def testGetItem(self):
-        data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=object()))
-        with self.assertRaises(KeyError):
-            data_dict['x']
-        self.assertIsNotNone(data_dict['a'])
-        # test paths also
-        self.assertIsNotNone(data_dict[('a',)])
+    #def testContains(self):
+        #data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=object()))
+        #self.assertNotIn('x', data_dict)
+        #self.assertIn('a', data_dict)
 
-    def testContains(self):
-        data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=object()))
-        self.assertNotIn('x', data_dict)
-        self.assertIn('a', data_dict)
+    #def testLen(self):
+        #data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=object()))
+        #self.assertEqual(1, len(data_dict))
 
-    def testLen(self):
-        data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=object()))
-        self.assertEqual(1, len(data_dict))
+    #def testItems(self):
+        #expected = [('a', object())]
+        #data_dict = reporting.DataDict(u'MyForm', OrderedDict(expected))
+        #self.assertListEqual(expected, data_dict.items())
+        #self.assertListEqual(expected, list(data_dict.iteritems()))
 
-    def testItems(self):
-        expected = [('a', object())]
-        data_dict = reporting.DataDict(u'MyForm', OrderedDict(expected))
-        self.assertListEqual(expected, data_dict.items())
-        self.assertListEqual(expected, list(data_dict.iteritems()))
+    #def testKeys(self):
+        #data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=object()))
+        #self.assertListEqual(['a'], data_dict.keys())
+        #self.assertListEqual(['a'], list(data_dict.iterkeys()))
 
-    def testKeys(self):
-        data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=object()))
-        self.assertListEqual(['a'], data_dict.keys())
-        self.assertListEqual(['a'], list(data_dict.iterkeys()))
+    #def testPaths(self):
+        #class FakeColumn(object):
+            #def __init__(self, path):
+                #self.path = path
+        #data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=FakeColumn(['a'])))
+        #self.assertListEqual([['a']], data_dict.paths())
+        #self.assertListEqual([['a']], list(data_dict.iterpaths()))
 
-    def testPaths(self):
-        class FakeColumn(object):
-            def __init__(self, path):
-                self.path = path
-        data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=FakeColumn(['a'])))
-        self.assertListEqual([['a']], data_dict.paths())
-        self.assertListEqual([['a']], list(data_dict.iterpaths()))
-
-    def testValues(self):
-        column = object()
-        data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=column))
-        self.assertListEqual([column], data_dict.values())
-        self.assertListEqual([column], list(data_dict.itervalues()))
+    #def testValues(self):
+        #column = object()
+        #data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=column))
+        #self.assertListEqual([column], data_dict.values())
+        #self.assertListEqual([column], list(data_dict.itervalues()))
 
 
 class SchemaToQueryTestCase(unittest.TestCase):
@@ -455,6 +465,7 @@ class SchemaToQueryTestCase(unittest.TestCase):
 
         data_dict, report = reporting.schemaToReportByName(session, u'Sample')
         result = session.query(report).filter_by(entity_id=entity1.id).one()
+        self.assertTrue(data_dict['sub_value'].is_nested)
         self.assertEqual(entity1[u'sub'][u'value'], result.sub_value)
 
     def testExpandedChoices(self):
