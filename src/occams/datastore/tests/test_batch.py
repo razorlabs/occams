@@ -24,12 +24,6 @@ class Sample(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False, unique=True)
 
-    def objectify(self):
-        """
-        Make sure the legacy crap still works...
-        """
-        return self
-
 
 class BatchingTestCase(unittest.TestCase):
     """

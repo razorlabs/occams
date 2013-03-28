@@ -481,14 +481,3 @@ nameModelMap = dict(
     object=ValueObject,
     )
 
-
-# When retrieving values from storage, cast to these
-nameCastMap = dict(
-    integer=Integer,
-    boolean=Boolean,
-    string=Unicode,
-    text=Unicode,
-    date=Date,
-    datetime=DateTime,
-    decimal=Numeric,
-    )
