@@ -399,7 +399,7 @@ class ValueColumnTestCase(unittest.TestCase):
             ))
         data_dict, report = reporting.schemaToReportByName(session, u'A')
         column_type = session.query(report.c.a).column_descriptions[0]['type']
-        self.assertIsInstance(column_type, sa.Unicode)
+        self.assertIsInstance(column_type, sa.UnicodeText)
 
     def testIntegerColumn(self):
         session = self.layer[u'session']

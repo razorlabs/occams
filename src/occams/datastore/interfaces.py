@@ -27,6 +27,7 @@ typesVocabulary = SimpleVocabulary([
         SimpleTerm(value=zope.schema.TextLine, token='string', title='String'),
         SimpleTerm(value=zope.schema.Text, token='text', title='Text'),
         SimpleTerm(value=zope.schema.Object, token='object', title='Object'),
+        SimpleTerm(value=zope.schema.Bytes, token='blob', title='Blob'),
     ],
     IVocabulary
     )
