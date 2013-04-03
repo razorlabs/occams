@@ -88,6 +88,7 @@ def upgrade(migrate_engine):
 
         results = connection.execute(text_query)
 
+        # move string values to their new text table home
         for result in results:
             insert_query = text_table.insert().values(
                 entity_id=result.entity_id,
@@ -106,6 +107,7 @@ def upgrade(migrate_engine):
         text_audit_query = select([string_audit_table]).where(string_audit_table.c.id.in_(ids))
         results = connection.execute(text_audit_query)
 
+        # move string audit values to their new text audit table home
         for result in results:
             insert_query = text_audit_table.insert().values(
                 id=key_map[result.id],
@@ -119,6 +121,7 @@ def upgrade(migrate_engine):
                 revision=result.revision)
             connection.execute(insert_query)
 
+        # remove the old locations
         connection.execute(string_table.delete().where(string_table.c.id.in_(ids)))
         connection.execute(string_audit_table.delete().where(string_audit_table.c.id.in_(ids)))
 
@@ -140,8 +143,9 @@ def downgrade(migrate_engine):
 
     with migrate_engine.begin() as connection:
         results = connection.execute(select([text_table]))
+        # move text values back to the string table
         for result in results:
-            insert_query = text_table.insert().values(
+            insert_query = string_table.insert().values(
                 entity_id=result.entity_id,
                 attribute_id=result.attribute_id,
                 value=result.value,
@@ -158,8 +162,9 @@ def downgrade(migrate_engine):
         text_audit_query = select([text_audit_table]) .where(text_audit_table.c.id.in_(ids))
         results = connection.execute(text_audit_query)
 
+        # move text audit values back to the string audit table
         for result in results:
-            insert_query = text_audit_table.insert().values(
+            insert_query = string_audit_table.insert().values(
                 id=key_map[result.id],
                 entity_id=result.entity_id,
                 attribute_id=result.attribute_id,
@@ -171,6 +176,7 @@ def downgrade(migrate_engine):
                 revision=result.revision)
             connection.execute(insert_query)
 
+        # the text tables are no longer needed since their values have been moved
         text_audit_table.drop(bind=connection)
         text_table.drop(bind=connection)
 
