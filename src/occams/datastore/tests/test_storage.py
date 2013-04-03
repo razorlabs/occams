@@ -3,6 +3,7 @@ Tests for storage implementations and services
 """
 
 import time
+import os
 import unittest2 as unittest
 from datetime import date
 from datetime import datetime
@@ -225,6 +226,30 @@ class EntityModelTestCase(unittest.TestCase):
             self.assertItemsEqual(collection, entity['sub'][collectionName])
 
             order += 1
+
+    def testBlobType(self):
+        u"""
+        Simple test for file storage support
+        Note that for large files, ``memoryview`` should be investigated
+        as a buffer so that large files aren't read into memor when being
+        stored in the database.
+        """
+        session = self.layer['session']
+        schema = model.Schema(name='HasBlob', title=u'', state='published')
+        schema['theblob'] = model.Attribute(title=u'', type='blob', order=0)
+        entity = model.Entity(schema=schema, name='blobish', title=u'')
+        contents = os.urandom(1000)
+        entity['theblob'] = contents
+        session.add(entity)
+        session.flush()
+        entity_id = entity.id
+        # remove all isntances from the session so we can see if they are
+        # properly fetched
+        session.expunge_all()
+
+        entity = session.query(model.Entity).get(entity_id)
+        self.assertEqual(contents, entity['theblob'])
+        self.assertEqual(1, session.query(model.ValueBlob).count())
 
     def testAttributeRequiredConstraint(self):
         # An attribute is required to set a value

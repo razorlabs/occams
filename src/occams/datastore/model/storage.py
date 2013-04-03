@@ -184,6 +184,8 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
             return self._decimal_values
         elif type_ == 'object':
             return self._object_values
+        elif type_ == 'blob':
+            return self._blob_values
         else: # pragma: no cover
             # Extreme edge case that is actually a programming error
             raise NotImplementedError(type_)
