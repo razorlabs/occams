@@ -108,6 +108,8 @@ def upgrade(migrate_engine):
         results = connection.execute(text_audit_query)
 
         # move string audit values to their new text audit table home
+        # NOTE there will be some data loss if string values have been
+        # previously deleted
         for result in results:
             insert_query = text_audit_table.insert().values(
                 id=key_map[result.id],
@@ -124,6 +126,19 @@ def upgrade(migrate_engine):
         # remove the old locations
         connection.execute(string_table.delete().where(string_table.c.id.in_(ids)))
         connection.execute(string_audit_table.delete().where(string_audit_table.c.id.in_(ids)))
+
+        # remove orphaned audit entries
+        connection.execute(
+            string_audit_table
+            .delete()
+            .where(string_audit_table.c.id.in_(
+                select([string_audit_table.c.id])
+                .select_from(
+                    string_audit_table
+                    .outerjoin(attribute_table,
+                                attribute_table.c.id == string_audit_table.c.attribute_id))
+                .where(attribute_table.c.type == 'text'))))
+
 
 
 def downgrade(migrate_engine):
