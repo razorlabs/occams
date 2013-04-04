@@ -48,6 +48,8 @@ from occams.datastore.model.storage import ValueString
 from occams.datastore.model.storage import ValueObject
 from occams.datastore.model.storage import ValueDecimal
 from occams.datastore.model.storage import ValueDatetime
+from occams.datastore.model.storage import ValueText
+from occams.datastore.model.storage import ValueBlob
 
 from occams.datastore.model.session import DataStoreSession
 
@@ -72,6 +74,8 @@ __all__ = (
     'ValueObject',
     'ValueDecimal',
     'ValueDatetime',
+    'ValueText',
+    'ValueBlob',
     'Context',
     'DataStoreSession',
     )

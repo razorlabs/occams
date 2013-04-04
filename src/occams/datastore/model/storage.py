@@ -22,9 +22,11 @@ from sqlalchemy.types import Date
 from sqlalchemy.types import DateTime
 from sqlalchemy.types import Boolean
 from sqlalchemy.types import Enum
+from sqlalchemy.types import LargeBinary
 from sqlalchemy.types import Numeric
 from sqlalchemy.types import Integer
 from sqlalchemy.types import Unicode
+from sqlalchemy.types import UnicodeText
 from sqlalchemy.types import String
 from sqlalchemy.orm import object_session
 from zope.interface import implements
@@ -170,8 +172,10 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
 
     def _getCollector(self, key):
         type_ = self.schema[key].type
-        if type_ in ('string', 'text',):
+        if type_ == 'string':
             return self._string_values
+        elif type_ == 'text':
+            return self._text_values
         elif type_ in ('integer', 'boolean'):
             return self._integer_values
         elif type_ in ('datetime', 'date'):
@@ -180,6 +184,8 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
             return self._decimal_values
         elif type_ == 'object':
             return self._object_values
+        elif type_ == 'blob':
+            return self._blob_values
         else: # pragma: no cover
             # Extreme edge case that is actually a programming error
             raise NotImplementedError(type_)
@@ -289,7 +295,7 @@ class HasEntities(object):
             )
 
 
-def TypeMappingClass(className, tableName, valueType):
+def TypeMappingClass(className, tableName, valueType, index=True):
     """
     Helper method to generate value mappings
     """
@@ -359,7 +365,6 @@ def TypeMappingClass(className, tableName, valueType):
                 Index('ix_%s_entity_id' % cls.__tablename__, 'entity_id'),
                 Index('ix_%s_attribute_id' % cls.__tablename__, 'attribute_id'),
                 Index('ix_%s_choice_id' % cls.__tablename__, 'choice_id'),
-                Index('ix_%s_value' % cls.__tablename__, 'value')
                 )
 
             if cls.__tablename__ == 'object':
@@ -374,10 +379,15 @@ def TypeMappingClass(className, tableName, valueType):
 
             return constraints
 
-    return type(className, (Model, _ValueBaseMixin), dict(
+    class_ = type(className, (Model, _ValueBaseMixin), dict(
         __tablename__=tableName,
         __valuetype__=valueType,
         ))
+
+    if index:
+        Index('ix_%s_value' % tableName, class_._value)
+
+    return class_
 
 
 ValueDatetime = TypeMappingClass('ValueDatetime', 'datetime', DateTime)
@@ -388,16 +398,22 @@ ValueDecimal = TypeMappingClass('ValueDecimal', 'decimal', Numeric)
 
 ValueString = TypeMappingClass('ValueString', 'string', Unicode)
 
+ValueText = TypeMappingClass('ValueText', 'text', UnicodeText, index=False)
+
 ValueObject = TypeMappingClass('ValueObject', 'object', Integer)
+
+ValueBlob = TypeMappingClass('ValueBlob', 'blob', LargeBinary, index=False)
 
 # Specify how the ``value`` properties behave, pretty much they're synonymns
 # of the ``_value`` property, except for objects, which behave as relationships
-scalarValuePropety = hybrid_property(lambda self: self._value, lambda self, value: setattr(self, '_value', value))
-ValueDatetime.value = scalarValuePropety
-ValueInteger.value = scalarValuePropety
-ValueDecimal.value = scalarValuePropety
-ValueString.value = scalarValuePropety
+valueProperty = hybrid_property(lambda self: self._value, lambda self, value: setattr(self, '_value', value))
+ValueDatetime.value = valueProperty
+ValueInteger.value = valueProperty
+ValueDecimal.value = valueProperty
+ValueString.value = valueProperty
+ValueText.value = valueProperty
 ValueObject.value = Relationship(Entity, primaryjoin='Entity.id == ValueObject._value')
+ValueBlob.value = valueProperty
 
 
 def validateValue(target, value, oldvalue, initiator):
@@ -466,7 +482,9 @@ event.listen(ValueDatetime.value, 'set', validateValue)
 event.listen(ValueInteger.value, 'set', validateValue)
 event.listen(ValueDecimal.value, 'set', validateValue)
 event.listen(ValueString.value, 'set', validateValue)
+event.listen(ValueText.value, 'set', validateValue)
 event.listen(ValueObject.value, 'set', validateValue)
+event.listen(ValueBlob.value, 'set', validateValue)
 
 
 # Where the types are stored
@@ -474,10 +492,11 @@ nameModelMap = dict(
     integer=ValueInteger,
     boolean=ValueInteger,
     string=ValueString,
-    text=ValueString,
+    text=ValueText,
     decimal=ValueDecimal,
     date=ValueDatetime,
     datetime=ValueDatetime,
     object=ValueObject,
+    blob=ValueBlob,
     )
 

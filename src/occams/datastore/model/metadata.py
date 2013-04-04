@@ -154,3 +154,4 @@ class Modifiable(object):
     def modify_user(cls):
         return Relationship(User,
             primaryjoin='%s.modify_user_id == User.id' % cls.__name__)
+
