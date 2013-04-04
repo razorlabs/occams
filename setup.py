@@ -45,6 +45,7 @@ setup(
         'zope.globalrequest',
         'z3c.saconfig',
         'z3c.form',
+        'collective.saconnect'
         ],
     extras_require=dict(
         postgresql=['psycopg2'],
