@@ -303,6 +303,36 @@ class BuildDataDicTestCase(unittest.TestCase):
             data_dict['a']['nonexistent']
         self.assertListEqual(expected, data_dict.paths())
 
+    def testDuplicateVocabularyTerm(self):
+        u"""This will usually happen for multi-versioned forms"""
+        session = self.layer[u'session']
+        schema1 = model.Schema(name=u'A', title=u'', state=u'published', publish_date=t1)
+        schema1[u'a'] = model.Attribute(title=u'', type=u'string', order=0,
+                is_collection=True, choices=[
+                    model.Choice(name=u'foo', title=u'Foo', value='foo', order=0),
+                    model.Choice(name=u'bar', title=u'Bar', value='bar', order=1),])
+
+        schema2 = copy.deepcopy(schema1)
+        schema2.state = u'published'
+        schema2.publish_date = t2
+        for choice in schema2['a'].choices:
+            choice.title = 'New ' + choice.title
+
+        session.add_all([schema1, schema2])
+        session.flush()
+
+        data_dict = reporting.buildDataDict(session, u'A', BY_NAME, expand_choice=False)
+        expected = [('a',)]
+        self.assertEqual(u'A', data_dict.name)
+        self.assertIsNotNone(data_dict['a'].vocabulary)
+        self.assertIn('foo', data_dict['a'].vocabulary)
+        self.assertIn('bar', data_dict['a'].vocabulary)
+        self.assertEqual('New Foo', data_dict['a']['foo'].title)
+        self.assertEqual('New Bar', data_dict['a']['bar'].title)
+        with self.assertRaises(KeyError):
+            data_dict['a']['nonexistent']
+        self.assertListEqual(expected, data_dict.paths())
+
     def testExpandedChoices(self):
         session = self.layer[u'session']
         schema1 = model.Schema(name=u'A', title=u'', state=u'published', publish_date=t1)

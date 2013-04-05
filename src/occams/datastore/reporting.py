@@ -422,9 +422,11 @@ class DataColumn(object):
         if selection is not None:
             self.__vocabulary = None
         else:
-            self.__vocabulary = SimpleVocabulary([SimpleTerm(c.value, title=c.title)
-                                                    for a in self.attributes
-                                                    for c in a.choices])
+            consolidated = dict([(c.value, c.title)
+                                for a in self.attributes
+                                for c in a.choices])
+            terms = [SimpleTerm(v, title=t) for v, t in consolidated.items()]
+            self.__vocabulary = SimpleVocabulary(terms)
 
     def __getitem__(self, key):
         try:
