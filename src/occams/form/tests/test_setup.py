@@ -31,3 +31,5 @@ class SetupTestCase(unittest.TestCase):
     def test_datagrid_field_installed(self):
         self.assert_installed('collective.z3cform.datagridfield')
 
+    def test_saconnect_installed(self):
+        self.assert_installed('collective.saconnect')
