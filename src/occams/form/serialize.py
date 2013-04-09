@@ -21,7 +21,7 @@ from occams.datastore.interfaces import typesVocabulary
 # Copied from Python documentation
 reservedWords = """
 and     assert     break     class     continue     choice
-def     del     elif     else     except 
+def     del     elif     else     except
 exec     finally     for     from     global
 if     import     in     is     lambda
 not     or     pass     print     raise
@@ -84,7 +84,7 @@ def serializeField(field):
             result['choices'].append(dict(
                 name=choice.name,
                 title=choice.title,
-                value=choice._value,
+                value=choice.value,
                 order=choice.order,
                 ))
 
