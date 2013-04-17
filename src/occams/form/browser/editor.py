@@ -59,7 +59,7 @@ def applyChoiceChanges(field, choiceData):
             return None
 
         for choice in field.choices:
-            choice.order = choice.order+100
+            choice.order = choice.order + 1000000
 
         subSession.flush()
         removable = []
