@@ -249,6 +249,12 @@
     background-image: url(++resource++occams.form/images/ui-text-area.png);
 }
 
+.of-blob .of-type,
+#of-new a.of-blob {
+    background-image: url(++resource++occams.form/images/document-binary.png);
+}
+
+
 .of-item .of-version {
 	float: right;
 	padding-right: 1em;

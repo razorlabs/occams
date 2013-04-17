@@ -1,4 +1,5 @@
 from collective.z3cform.datagridfield import DictRow
+from plone.namedfile.field import NamedFile
 import zope.interface
 import zope.schema
 from zope.schema.vocabulary import SimpleTerm
@@ -22,6 +23,7 @@ typesVocabulary = SimpleVocabulary(terms=[
         SimpleTerm(value=zope.schema.Datetime, token='datetime', title=_(u'Date and Time')),
         SimpleTerm(value=zope.schema.TextLine, token='string', title=_(u'Text')),
         SimpleTerm(value=zope.schema.Text, token='text', title=_(u'Paragraph')),
+        SimpleTerm(value=NamedFile, token='blob', title=_(u'File')),
         SimpleTerm(value=zope.schema.Object, token='object', title=_(u'Field Set')),
     ])
 
@@ -240,6 +242,11 @@ class IEditableTextField(IEditableField, IRequireable):
     pass
 
 
+class IEditableBlobField(IEditableField, IRequireable):
+
+    pass
+
+
 class IEditableObjectField(IEditableField):
 
     pass
@@ -253,6 +260,7 @@ typeInputSchemaMap = dict(
     integer=IEditableIntegerField,
     string=IEditableStringField,
     text=IEditableTextField,
+    blob=IEditableBlobField,
     object=IEditableObjectField,
     )
 
