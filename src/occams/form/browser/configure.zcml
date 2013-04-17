@@ -128,6 +128,14 @@
       permission="occams.form.ModifyForm"
       />
 
+   <browser:page
+      for="occams.form.interfaces.ISchemaContext"
+      name="add-blob"
+      class=".editor.FieldAddForm"
+      permission="occams.form.ModifyForm"
+      />
+
+
   <browser:page
       for="occams.form.interfaces.ISchemaContext"
       name="add-object"
@@ -189,6 +197,13 @@
    <browser:page
       for="occams.form.interfaces.IAttributeContext"
       name="add-text"
+      class=".editor.FieldAddForm"
+      permission="occams.form.ModifyForm"
+      />
+
+   <browser:page
+      for="occams.form.interfaces.IAttributeContext"
+      name="add-blob"
       class=".editor.FieldAddForm"
       permission="occams.form.ModifyForm"
       />

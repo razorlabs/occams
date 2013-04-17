@@ -59,7 +59,7 @@ def applyChoiceChanges(field, choiceData):
             return None
 
         for choice in field.choices:
-            choice.order = choice.order+100
+            choice.order = choice.order + 1000000
 
         subSession.flush()
         removable = []
@@ -71,17 +71,21 @@ def applyChoiceChanges(field, choiceData):
             else:
                 removable.append(choice)
         for choice in removable:
-            field.choices.remove(choice)
+            # Remove the choice directly since doing so from the
+            # choices collection causes bizarre ordering behavior
+            subSession.delete(choice)
         subSession.flush()
 
     for new_choice in choiceData:
         newChoice = model.Choice(
+            attribute=field,
             name = str(new_choice['name']),
             title = unicode(new_choice['title']),
             order = new_choice['order'],
             value = unicode(new_choice['value'])
             )
-        field.choices.append(newChoice)
+        # Don't interfere with the collection
+        subSession.add(newChoice)
     subSession.flush()
     return field
 
