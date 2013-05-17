@@ -1,21 +1,51 @@
-from setuptools import find_packages
-from setuptools import setup
+import os
+import re
+from setuptools import find_packages, setup
 
 
-# Working release version
-version = '1.0.0b1'
+here = os.path.abspath(os.path.dirname(__file__))
+read = lambda *args: open(os.path.join(*args)).read()
 
+README = read(here, 'README.rst')
+CHANGES = read(here, 'CHANGES.rst')
+VERSION = re.compile(r'.*__version__\s*=\s*\'(.+?)\'', re.S).match(
+        read(here, 'src', 'occams', 'form', '__init__.py')).group(1)
+
+REQUIRES = [
+    'argparse',
+    'colander',
+    'deform',
+    'pyramid',
+    'SQLAlchemy',
+    'transaction',
+    'pyramid_beaker',
+    'pyramid_deform',
+    'pyramid_mailer',
+    'pyramid_layout',
+    'pyramid_tm',
+    'pyramid_debugtoolbar',
+    'pyramid_rewrite',
+    'xlutils',
+    'zope.sqlalchemy',
+    'waitress',
+    'webhelpers',
+    'occams.datastore',
+    ]
+
+EXTRAS = {
+    'postgresql': ['psycopg2'],
+    'test': [ 'nose', 'rudolf', 'WebTest', 'coverage', ]
+    }
 
 setup(
     name='occams.form',
-    version=version,
-    description='A tool for managing dynamic forms in Plone.',
+    version=VERSION,
+    description='A web application for managing dynamic forms',
     classifiers=[
-        'Development Status :: 4 - Beta'
-        'Framework :: Zope3',
-        'Intended Audience :: Developers'
-        'Operating System :: OS Independent'
         'Programming Language :: Python',
+        'Framework :: Pyramid',
+        'Topic :: Internet :: WWW/HTTP',
+        'Topic :: Internet :: WWW/HTTP :: WSGI :: Application',
         'Topic :: Database',
         'Topic :: Scientific/Engineering :: Bio-Informatics',
         'Topic :: Scientific/Engineering :: Information Analysis',
@@ -23,36 +53,24 @@ setup(
         'Topic :: Software Development :: Libraries',
         'Topic :: Utilities',
         ],
-    keywords='OCCAMS datastore database eav sqlalchemy relational clinical',
-    author='BEAST Core Development Team',
-    author_email='beast@ucsd.edu',
-    url='https://github.com/beastcore/occams.form',
+    keywords='OCCAMS datastore database eav sqlalchemy relational clinical pyramid',
+    author='UCSD BIT Core Team',
+    author_email='bitcore@ucsd.edu',
+    url='https://bitbutcket.org/ucsdbitcore/occams.clinical',
     license='GPL',
     packages=find_packages('src', exclude=['ez_setup']),
     package_dir={'':'src'},
     namespace_packages=['occams'],
     include_package_data=True,
     zip_safe=False,
-    install_requires=[
-        'setuptools',
-        'occams.datastore',
-        'collective.z3cform.datagridfield',
-        'plone.app.dexterity[grok]',
-        'plone.app.z3cform',
-        'plone.directives.form',
-        'plone.z3cform',
-        'SQLAlchemy',
-        'zope.globalrequest',
-        'z3c.saconfig',
-        'z3c.form',
-        'collective.saconnect'
-        ],
-    extras_require=dict(
-        postgresql=['psycopg2'],
-        test=['Pillow', 'plone.app.testing'],
-        ),
-    entry_points="""
-    [z3c.autoinclude.plugin]
-    target = plone
+    install_requires=REQUIRES,
+    extras_require=EXTRAS,
+    tests_require=EXTRAS['test'],
+    entry_points="""\
+    [paste.app_factory]
+    main = occams.form:main
+    [console_scripts]
+    initialize_form_db = occams.form.scripts.initializedb:main
     """,
     )
+
