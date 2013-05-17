@@ -40,7 +40,7 @@ def main(global_config, **settings):
 
     # Bind URLs
     config_routes(config)
-    config.scan('occams.form.views.form')
+    config.scan(ignore='occams.form.tests')
 
     app = config.make_wsgi_app()
     return app
