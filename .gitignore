@@ -85,6 +85,7 @@ develop.cfg
 development.ini
 production.ini
 res
+refs
 
 ##### Translations
 *.mo
