@@ -11,11 +11,7 @@ from occams.datastore.model import DataStoreSession
 
 __version__ = '1.0.0g1'
 
-TranslationString = TranslationStringFactory(__name__)
-
-# XXX Used as a central point for i18n translations
-import zope.i18nmessageid
-MessageFactory = zope.i18nmessageid.MessageFactory(__name__)
+_ = TranslationStringFactory(__name__)
 
 # Central logging utility
 Logger = logging.getLogger(__name__)
@@ -40,7 +36,7 @@ def main(global_config, **settings):
 
     # Bind URLs
     config_routes(config)
-    config.scan(ignore='occams.form.tests')
+    config.scan('.views')
 
     app = config.make_wsgi_app()
     return app

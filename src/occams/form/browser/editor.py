@@ -113,8 +113,8 @@ class FormEditForm(StandardWidgetsMixin, z3c.form.form.EditForm):
     """
     Renders the form for editing, using a subform for the fields editor.
     """
-
-    template = ViewPageTemplateFile('editor_templates/schema_edit.pt')
+#
+#    template = ViewPageTemplateFile('editor_templates/schema_edit.pt')
 
     # Certain sub-form components (*cough* datagridfield) don't handle inline
     # validation very well, so we're turning it off on the entire edit for.
@@ -259,7 +259,7 @@ class FieldsetsForm(z3c.form.group.GroupForm, z3c.form.form.Form):
     Uses Browser Session for data.
     """
 
-    template = ViewPageTemplateFile('editor_templates/schema_fields.pt')
+#    template = ViewPageTemplateFile('editor_templates/schema_fields.pt')
 
     # This we're rendering disabled fields, we don't need context data or kss
     ignoreContext = True
@@ -421,7 +421,7 @@ class FieldDeleteForm(StandardWidgetsMixin, z3c.form.form.Form):
     Delete confirmation form for fields.
     """
 
-    template = ViewPageTemplateFile('editor_templates/field_delete.pt')
+#    template = ViewPageTemplateFile('editor_templates/field_delete.pt')
 
     prefix = 'delete'
 

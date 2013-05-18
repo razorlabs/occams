@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+      xmlns:tal="http://xml.zope.org/namespaces/tal"
+      xmlns:metal="http://xml.zope.org/namespaces/metal"
+      xml:lang="en"
+      lang="en"
+      i18n:domain="occams.form"
+      metal:use-macro="main_template">
+  <metal:content-slot fill-slot="content-slot">
+    <div class="well"
+        tal:condition="not:forms_count">
+      No forms in the system!
+    </div>
+    <table class="table table-bordered table-hover table-striped"
+        tal:condition="forms_count">
+      <thead>
+        <tr>
+          <th class="select"><input type="checkbox" class="selectall" /></th>
+          <th class="current"></th>
+          <th class="title">Title</th>
+          <th class="publish_date">Published</th>
+          <th class="state">State</th>
+          <th class="field_count">Fields</th>
+          <th class="create_user">Creator</th>
+          <th class="create_date">Created</th>
+          <th class="modify_user">Modifier</th>
+          <th class="modify_date">Modified</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr tal:repeat="form forms">
+          <td class="select"><input type="checkbox" class="selectall" /></td>
+          <td class="current"><i class="icon-star" tal:condition="form.is_current"></i></td>
+          <td class="title">
+            <a href="#form"
+                tal:attributes="href request.current_route_path(
+                                      _route_name='form_view',
+                                      form_name=form.name)"
+                tal:content="form.title">TITLE</a>
+          </td>
+          <td class="publish_date" tal:content="form.publish_date">PUBLISHED</td>
+          <td class="state" tal:content="form.state">STATE</td>
+          <td class="field_count" tal:content="form.field_count">FIELDS</td>
+          <td class="create_user" tal:content="form.create_user">CREATOR</td>
+          <td class="create_date" tal:content="form.create_date.date().isoformat()">CREATED</td>
+          <td class="modify_user" tal:content="form.modify_user">MODIFIER</td>
+          <td class="modify_date" tal:content="form.modify_date.date().isoformat()">MODIFIED</td>
+        </tr>
+      </tbody>
+    </table>
+  </metal:content-slot>
+</html>
+

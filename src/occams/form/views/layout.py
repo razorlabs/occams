@@ -7,10 +7,10 @@ from pyramid_layout.panel import panel_config
     template='occams.form:/templates/layout/master.pt')
 @layout_config(
     name='ajax_layout',
-    template='occams.form:/templates/layout/layout.pt')
+    template='occams.form:/templates/layout/ajax.pt')
 @layout_config(
     name='modal_layout',
-    template='occams.form:/templates/layout/layout.pt')
+    template='occams.form:/templates/layout/modal.pt')
 class Layout(object):
     """ Master layout for the application
     """
@@ -19,3 +19,5 @@ class Layout(object):
         self.context = context
         self.request = request
 
+        self.content_title = ''
+        self.content_type = ''
