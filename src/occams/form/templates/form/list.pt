@@ -12,11 +12,10 @@
         tal:condition="not:forms_count">
       No forms in the system!
     </div>
-    <table class="table table-bordered table-hover table-striped"
+    <table class="table table-hover table-striped"
         tal:condition="forms_count">
       <thead>
         <tr>
-          <th class="select"><input type="checkbox" class="selectall" /></th>
           <th class="current"></th>
           <th class="title">Title</th>
           <th class="publish_date">Published</th>
@@ -30,10 +29,9 @@
       </thead>
       <tbody>
         <tr tal:repeat="form forms">
-          <td class="select"><input type="checkbox" class="selectall" /></td>
           <td class="current"><i class="icon-star" tal:condition="form.is_current"></i></td>
           <td class="title">
-            <a href="#form"
+            <a href=""
                 tal:attributes="href request.current_route_path(
                                       _route_name='form_view',
                                       form_name=form.name)"

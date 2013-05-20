@@ -13,7 +13,6 @@ __version__ = '1.0.0g1'
 
 _ = TranslationStringFactory(__name__)
 
-# Central logging utility
 Logger = logging.getLogger(__name__)
 
 Session = orm.scoped_session(orm.sessionmaker(

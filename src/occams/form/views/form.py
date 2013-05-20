@@ -8,8 +8,7 @@ from sqlalchemy import func, orm
 
 from occams.datastore import model as datastore
 
-from .. import Session
-from .. import _
+from .. import _, Session, Logger
 
 
 @view_config(
@@ -83,6 +82,5 @@ def query_summary(session):
             SummarySchema.title.asc(),
             (SummarySchema.publish_date != None).desc(),
             SummarySchema.publish_date.desc()))
-
     return query
 
