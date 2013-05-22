@@ -16,34 +16,22 @@
         tal:condition="forms_count">
       <thead>
         <tr>
-          <th class="current"></th>
           <th class="title">Title</th>
-          <th class="publish_date">Published</th>
-          <th class="state">State</th>
-          <th class="field_count">Fields</th>
-          <th class="create_user">Creator</th>
-          <th class="create_date">Created</th>
-          <th class="modify_user">Modifier</th>
-          <th class="modify_date">Modified</th>
+          <th class="name">Name</th>
+          <th class="start_date">Started</th>
+          <th class="publish_date">Current</th>
+          <th class="version_count">Versions</th>
         </tr>
       </thead>
       <tbody>
         <tr tal:repeat="form forms">
-          <td class="current"><i class="icon-star" tal:condition="form.is_current"></i></td>
           <td class="title">
-            <a href=""
-                tal:attributes="href request.current_route_path(
-                                      _route_name='form_view',
-                                      form_name=form.name)"
-                tal:content="form.title">TITLE</a>
+            <a href="${request.current_route_path(_route_name='form_view', form_name=form.name)}">${form.title}</a>
           </td>
-          <td class="publish_date" tal:content="form.publish_date">PUBLISHED</td>
-          <td class="state" tal:content="form.state">STATE</td>
-          <td class="field_count" tal:content="form.field_count">FIELDS</td>
-          <td class="create_user" tal:content="form.create_user">CREATOR</td>
-          <td class="create_date" tal:content="form.create_date.date().isoformat()">CREATED</td>
-          <td class="modify_user" tal:content="form.modify_user">MODIFIER</td>
-          <td class="modify_date" tal:content="form.modify_date.date().isoformat()">MODIFIED</td>
+          <td class="name">${form.name}</td>
+          <td class="start_date">${form.start_date}</td>
+          <td class="publish_date">${form.publish_date}</td>
+          <td class="version_count">${form.version_count}</td>
         </tr>
       </tbody>
     </table>

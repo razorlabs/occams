@@ -1,3 +1,5 @@
+import datetime
+
 import colander
 import deform
 import deform.widget
@@ -12,7 +14,7 @@ from .. import _, Session, Logger
 
 
 @view_config(
-    route_name='form_list',
+    route_name='home',
     renderer='occams.form:/templates/form/list.pt',
     layout='master_layout')
 def list_(request):
@@ -20,7 +22,7 @@ def list_(request):
     """
     layout = request.layout_manager.layout
     layout.content_title = _(u'Forms')
-    query = query_summary(Session)
+    query = query_names(Session)
     return {
         'forms': iter(query),
         'forms_count': query.count()}
@@ -34,6 +36,47 @@ def view(request):
     """ Displays information about the current publication of the form
     """
     return {}
+
+
+def query_names(session):
+    """ Generates an iterable summary of the form names in the system
+    """
+    SummarySchema = orm.aliased(datastore.Schema, name='_summary_schema')
+    query = (
+        session.query(SummarySchema.name)
+        .distinct()
+        .add_column(
+            session.query(datastore.Schema.title)
+            .filter(datastore.Schema.name == SummarySchema.name)
+            .order_by(
+                (datastore.Schema.publish_date != None).desc(),
+                datastore.Schema.publish_date.desc())
+            .limit(1)
+            .correlate(SummarySchema)
+            .as_scalar()
+            .label('title'))
+        .add_column(
+            session.query(func.min(datastore.Schema.publish_date))
+            .filter(datastore.Schema.name == SummarySchema.name)
+            .correlate(SummarySchema)
+            .as_scalar()
+            .label('start_date'))
+        .add_column(
+            session.query(func.max(datastore.Schema.publish_date))
+            .filter(datastore.Schema.name == SummarySchema.name)
+            .correlate(SummarySchema)
+            .as_scalar()
+            .label('publish_date'))
+        .add_column(
+            session.query(func.count())
+            .filter(datastore.Schema.name == SummarySchema.name)
+            .filter(datastore.Schema.publish_date != None)
+            .correlate(SummarySchema)
+            .as_scalar()
+            .label('version_count'))
+        .filter(~SummarySchema.is_inline)
+        .order_by(SummarySchema.title.asc()))
+    return query
 
 
 def query_summary(session):
