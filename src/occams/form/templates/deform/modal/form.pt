@@ -1,0 +1,71 @@
+<div id="modal" class="modal" data-backdrop="static">
+  <form
+    tal:define="title title|field.title;
+                css_class css_class|field.css_class;
+                autocomplete autocomplete|field.autocomplete;
+                formid formid|field.formid;
+                errormsg errormsg|field.errormsg;
+                description description|field.description;
+                item_template item_template|field.widget.item_template;
+                buttons buttons|field.buttons;
+                use_ajax use_ajax|field.use_ajax;
+                ajax_options ajax_options|field.ajax_options;
+                formid formid|field.formid;
+                action action|field.action;
+                method method|field.method;"
+    tal:attributes="class css_class; autocomplete autocomplete"
+    id="${formid}"
+    action="${action}"
+    method="${method}"
+    enctype="multipart/form-data"
+    accept-charset="utf-8"
+    i18n:domain="occams.form">
+
+    <!--! This is an override of deforms default form template so
+          that we can render the form as a bootstrap modal window -->
+
+    <div class="modal-header">
+      <button
+          type="button"
+          class="close"
+          data-dismiss="modal"
+          aria-hidden="true">&times;</button>
+      <h3>${title|nothing}</h3>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" name="_charset_" />
+      <input type="hidden" name="__formid__" value="${formid}"/>
+      <ul>
+        <li class="errorLi" tal:condition="field.error">
+          <h3 class="errorMsgLbl" i18n:translate=""
+              >There was a problem with your submission</h3>
+          <p class="errorMsg" i18n:translate="" i18n:domain="deform"
+             >Errors have been highlighted below</p>
+          <p class="errorMsg">${errormsg}</p>
+        </li>
+        <li class="section first" tal:condition="description">
+          ${description}
+        </li>
+        <div tal:repeat="child field"
+             tal:replace="structure child.render_template(item_template)"/>
+      </ul>
+    </div>
+    <div class="modal-footer">
+      <ul>
+        <li class="buttons">
+          <tal:block repeat="button buttons">
+            <button
+                tal:attributes="disabled button.disabled"
+                id="${formid+button.name}"
+                name="${button.name}"
+                type="${button.type}"
+                class="btnText submit ${button.css_class}"
+                value="${button.value}">
+              <span>${button.title}</span>
+            </button>
+          </tal:block>
+        </li>
+      </ul>
+    </div>
+  </form>
+</div>

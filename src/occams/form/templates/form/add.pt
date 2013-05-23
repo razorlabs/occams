@@ -6,14 +6,10 @@
     xmlns:metal="http://xml.zope.org/namespaces/metal"
     xml:lang="en"
     lang="en"
-    i18n:domain="occams.form">
-  <head>
-    <meta charset="utf-8">
-  </head>
-  <body>
-    <metal:content-slot define-slot="content-slot">
-      RELEASE ME
-    </metal:content-slot>
-  </body>
+    i18n:domain="occams.form"
+    metal:use-macro="main_template">
+  <metal:content-slot fill-slot="content-slot">
+    <form tal:replace="structure form.render()"></form>
+  </metal:content-slot>
 </html>
 

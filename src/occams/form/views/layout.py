@@ -3,14 +3,11 @@ from pyramid_layout.panel import panel_config
 
 
 @layout_config(
-    name='master_layout',
-    template='occams.form:/templates/layout/master.pt')
+    name='web_layout',
+    template='occams.form:/templates/layout/web.pt')
 @layout_config(
     name='ajax_layout',
     template='occams.form:/templates/layout/ajax.pt')
-@layout_config(
-    name='modal_layout',
-    template='occams.form:/templates/layout/modal.pt')
 class Layout(object):
     """ Master layout for the application
     """
@@ -21,3 +18,19 @@ class Layout(object):
 
         self.content_title = ''
         self.content_type = ''
+
+        self.toolbar = None
+
+    def set_toolbar(self, name, *args, **kw):
+        self.toolbar = (name, args, kw)
+
+
+@panel_config(name='toolbar')
+def toolbar(context, request):
+    lm = request.layout_manager
+    panel = lm.layout.toolbar
+    if panel:
+        (name, args, kw) = panel
+        return lm.render_panel(name, *args, **kw)
+    return ''
+

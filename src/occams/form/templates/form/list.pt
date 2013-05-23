@@ -8,33 +8,40 @@
       i18n:domain="occams.form"
       metal:use-macro="main_template">
   <metal:content-slot fill-slot="content-slot">
-    <div class="well"
-        tal:condition="not:forms_count">
-      No forms in the system!
+    <p class="well" tal:condition="not:forms_count">
+      The system does not contain any forms.
+      <a href="${request.current_route_path(_route_name='form_add')}">Add one.</a>
+    </p>
+    <div tal:condition="forms_count">
+      <p tal:condition="python: forms_count > 1">
+        There are <strong>${forms_count}</strong> forms in the system.
+      </p>
+      <table id="forms" class="table table-hover table-striped"
+          tal:condition="forms_count">
+        <thead>
+          <tr>
+            <th class="title">Title</th>
+            <th class="name">Schema</th>
+            <th class="publish_date">Current</th>
+            <th class="start_date">Original</th>
+            <th class="version_count">Versions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr tal:repeat="form forms">
+            <td class="title">
+              <a href="${request.current_route_path(_route_name='form_view',
+                                                    form_name=form.name)}
+                ">${form.title}</a>
+            </td>
+            <td class="name">${form.name}</td>
+            <td class="publish_date">${form.publish_date}</td>
+            <td class="start_date">${form.start_date}</td>
+            <td class="version_count">${form.version_count}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-    <table class="table table-hover table-striped"
-        tal:condition="forms_count">
-      <thead>
-        <tr>
-          <th class="title">Title</th>
-          <th class="name">Name</th>
-          <th class="start_date">Started</th>
-          <th class="publish_date">Current</th>
-          <th class="version_count">Versions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr tal:repeat="form forms">
-          <td class="title">
-            <a href="${request.current_route_path(_route_name='form_view', form_name=form.name)}">${form.title}</a>
-          </td>
-          <td class="name">${form.name}</td>
-          <td class="start_date">${form.start_date}</td>
-          <td class="publish_date">${form.publish_date}</td>
-          <td class="version_count">${form.version_count}</td>
-        </tr>
-      </tbody>
-    </table>
   </metal:content-slot>
 </html>
 

@@ -6,22 +6,67 @@ import deform.widget
 from pyramid.httpexceptions import HTTPFound, HTTPNotFound
 from pyramid.view import view_config
 from pyramid_deform import CSRFSchema
+from pyramid_layout.panel import panel_config
 from sqlalchemy import func, orm
 
 from occams.datastore import model as datastore
 
 from .. import _, Session, Logger
+from . import widgets
+
+
+def check_unique_form_name(node, value):
+    """ Checks that the form name is unique.
+        Raises colander ``Invalid`` if the form name is already in use.
+    """
+    exists = (
+        Session.query(
+            exists()
+            .where(datastore.Schema.name == value))
+        .scalar())
+    if not exists:
+        raise colander.Invalid(node, _(u'Already exists!'))
+
+
+class CreateFormSchema(colander.MappingSchema):
+
+    name = colander.SchemaNode(
+        colander.String(),
+        title=_('Schema Name'),
+        description=_(
+            u'The form\'s system name. '
+            u'In SQL parlance this is the \'table\' name. '
+            u'Note that this value is case sensitive and is used in the URL, '
+            u'so choosing a concise and convenient name is encouraged. '
+            u'Also note that this value cannot be changed once the form is '
+            u'published.'),
+        validator=check_unique_form_name)
+
+    title = colander.SchemaNode(
+        colander.String(),
+        title=_(u'Form Title'),
+        description=_(
+            u'The human readable name that users will see when entering data.'))
+
+    copyfrom = colander.SchemaNode(
+        colander.String(),
+        title=_(u'Copy From'),
+        description=_(
+            u'Optionally, you can copy fields from another form into the '
+            u'newly created form'),
+        missing=colander.null)
 
 
 @view_config(
     route_name='home',
     renderer='occams.form:/templates/form/list.pt',
-    layout='master_layout')
+    layout='web_layout')
 def list_(request):
     """ Lists all forms used by instance.
     """
     layout = request.layout_manager.layout
     layout.content_title = _(u'Forms')
+    layout.set_toolbar('form_list_toolbar')
     query = query_names(Session)
     return {
         'forms': iter(query),
@@ -29,12 +74,57 @@ def list_(request):
 
 
 @view_config(
+    route_name='form_add',
+    renderer='occams.form:/templates/form/add.pt',
+    xhr=True,
+    layout='ajax_layout')
+@view_config(
+    route_name='form_add',
+    renderer='occams.form:/templates/form/add.pt',
+    layout='web_layout')
+def add(request):
+    """ Allows a user to create a new type of form.
+    """
+    layout = request.layout_manager.layout
+    layout.content_title = _(u'Create New Form')
+    form_renderer = widgets.WEB_FORM_RENDERER
+    if request.is_xhr:
+        # Use the ajax version instead of the default
+        form_renderer = widgets.AJAX_FORM_RENDERER
+    form = deform.Form(
+        action=request.current_route_path(),
+        schema=CreateFormSchema(title=_(u'Create Form')),
+        renderer=form_renderer,
+        buttons=[
+            deform.Button('cancel', title=_('Cancel'), type='button', css_class='btn'),
+            deform.Button('submit', title=_('Create'), css_class='btn btn-primary')])
+    if 'cancel' in request.POST:
+        return HTTPFound(location=request.current_route_path(_route_name='home'))
+    if 'submit' in request.POST:
+        try:
+            data = form.validate(request.POST.items())
+        except deform.ValidationFailure as e:
+            return {'form': e}
+        #schema = datastore.Schema(name=data['name'], title=['title'])
+        #Session.add(schema)
+        return HTTPFound(location=request.current_route_path(_route_name='home'))
+    return {'form': form}
+
+
+@view_config(
     route_name='form_view',
-    renderer='occams.form/templates/form/view.pt',
-    layout='master_layout')
+    renderer='occams.form:/templates/form/view.pt',
+    layout='web_layout')
 def view(request):
     """ Displays information about the current publication of the form
     """
+    return {}
+
+
+@panel_config(
+    name='form_list_toolbar',
+    renderer='occams.form:/templates/form/panels/list_toolbar.pt')
+def list_toolbar(context, request):
     return {}
 
 
