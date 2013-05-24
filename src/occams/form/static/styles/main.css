@@ -13,6 +13,15 @@ form label .req {
   color: #b94a48;
 }
 
+form ul {
+  margin: 0;
+  padding: 0;
+  list-style-type: none;
+}
+
+form li {
+}
+
 form .status {
   font-weight: bold;
 }
@@ -26,14 +35,5 @@ form .status {
   margin: 0;
 }
 
-/** Deform overrides **/
 
-.deform ul {
-  margin: 0;
-  padding: 0;
-  list-style-type: none;
-}
-
-.deform li {
-}
 

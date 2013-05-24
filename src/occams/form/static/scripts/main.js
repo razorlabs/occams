@@ -7,7 +7,6 @@
   var Modal = {
 
       init: function() {
-        $(document.body).append('<div id="modal" class="modal hide" data-backrop="status"></div>');
         $(document.body).on('click', '.overlay', Modal.onOverlayClick);
         $('#modal').on('click', 'button[name="cancel"]', Modal.onCancelClick);
         $('#modal').on('click', 'button[type="submit"]', Modal.onSubmitClick);
@@ -15,7 +14,6 @@
 
       onOverlayClick: function(event) {
         event.preventDefault();
-        console.log('asdfasfsadf');
         $('#modal').load(event.target.href, Modal.onPanelLoad);
       },
 
@@ -47,6 +45,7 @@
 
       onFormError: function(xhr, status, error){
         $('#modal').html(xhr.responseText);
+        Modal.show();
       },
 
       onFormSuccess: function(text, status, xhr) {
@@ -54,7 +53,20 @@
       },
 
       onPanelLoad: function(text, status, xhr) {
-        $('#modal').modal('show');
+        Modal.show()
+      },
+
+      show: function() {
+        var headerHeight = $('#modal .modal-header').height();
+        var footerHeight = $('#modal .modal-footer').height();
+        var windowHeight = $(window).height()
+        var maxBodyHeight = windowHeight - (headerHeight + footerHeight);
+        var hasForm = $('#modal form').length > 0;
+        $('#modal .modal-body').css('max-height', maxBodyHeight + 'px');
+        $('#modal').modal({
+          show: true,
+          backdrop: hasForm ? 'static' : True
+        });
       }
 
     };

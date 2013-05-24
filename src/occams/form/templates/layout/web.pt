@@ -52,6 +52,7 @@
       </div>
     </div> <!-- /.container -->
     <div tal:replace="structure panel('footer')"></div>
+    <div id="modal" class="modal hide"></div>
 
     <!--! Load scripts at the end so we don't block rendering -->
     <script type="text/javascript" src="${request.static_path('occams.form:static/libraries/jquery-2.0.0.min.js')}"></script>
