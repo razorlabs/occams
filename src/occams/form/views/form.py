@@ -1,4 +1,5 @@
 import datetime
+import re
 
 import colander
 import deform
@@ -7,7 +8,7 @@ from pyramid.httpexceptions import HTTPFound, HTTPNotFound
 from pyramid.view import view_config
 from pyramid_deform import CSRFSchema
 from pyramid_layout.panel import panel_config
-from sqlalchemy import func, orm
+from sqlalchemy import func, orm, sql
 
 from occams.datastore import model as datastore
 
@@ -15,17 +16,11 @@ from .. import _, Session, Logger
 from . import widgets
 
 
-def check_unique_form_name(node, value):
-    """ Checks that the form name is unique.
-        Raises colander ``Invalid`` if the form name is already in use.
+def is_unique_name(name):
+    """ Returns ``True`` if the name is not in use, ``False`` otherwise.
     """
-    exists = (
-        Session.query(
-            exists()
-            .where(datastore.Schema.name == value))
-        .scalar())
-    if not exists:
-        raise colander.Invalid(node, _(u'Already exists!'))
+    name_exists = sql.exists().where(datastore.Schema.name == name)
+    return not Session.query(name_exists).scalar()
 
 
 class CreateFormSchema(colander.MappingSchema):
@@ -40,13 +35,19 @@ class CreateFormSchema(colander.MappingSchema):
             u'so choosing a concise and convenient name is encouraged. '
             u'Also note that this value cannot be changed once the form is '
             u'published.'),
-        validator=check_unique_form_name)
+        validator=colander.All(
+            colander.Length(3, 32),
+            colander.Regex(r'[a-zA-Z_][a-zA-Z0-9_]+'),
+            colander.Function(is_unique_name, _(u'Already exists'))))
 
     title = colander.SchemaNode(
         colander.String(),
         title=_(u'Form Title'),
         description=_(
-            u'The human readable name that users will see when entering data.'))
+            u'The human readable name that users will see when entering data.'),
+        preparer=[
+            lambda v: v.replace('\n', '') if v else v],
+        validator=colander.Length(3, 32))
 
     copyfrom = colander.SchemaNode(
         colander.String(),
@@ -55,6 +56,7 @@ class CreateFormSchema(colander.MappingSchema):
             u'Optionally, you can copy fields from another form into the '
             u'newly created form'),
         missing=colander.null)
+
 
 
 @view_config(
@@ -78,10 +80,6 @@ def list_(request):
     renderer='occams.form:/templates/form/add.pt',
     xhr=True,
     layout='ajax_layout')
-@view_config(
-    route_name='form_add',
-    renderer='occams.form:/templates/form/add.pt',
-    layout='web_layout')
 def add(request):
     """ Allows a user to create a new type of form.
     """
@@ -98,16 +96,16 @@ def add(request):
         buttons=[
             deform.Button('cancel', title=_('Cancel'), type='button', css_class='btn'),
             deform.Button('submit', title=_('Create'), css_class='btn btn-primary')])
-    if 'cancel' in request.POST:
-        return HTTPFound(location=request.current_route_path(_route_name='home'))
     if 'submit' in request.POST:
         try:
             data = form.validate(request.POST.items())
         except deform.ValidationFailure as e:
+            request.response.status = '400 Bad Request'
             return {'form': e}
-        #schema = datastore.Schema(name=data['name'], title=['title'])
-        #Session.add(schema)
-        return HTTPFound(location=request.current_route_path(_route_name='home'))
+        schema = datastore.Schema(name=data['name'], title=['title'])
+        Session.add(schema)
+        request.response.status = '201 Created'
+        return {}
     return {'form': form}
 
 

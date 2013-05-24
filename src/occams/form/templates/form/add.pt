@@ -9,7 +9,7 @@
     i18n:domain="occams.form"
     metal:use-macro="main_template">
   <metal:content-slot fill-slot="content-slot">
-    <form tal:replace="structure form.render()"></form>
+    <form tal:condition="form" tal:replace="structure form.render()"></form>
   </metal:content-slot>
 </html>
 

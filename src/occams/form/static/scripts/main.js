@@ -2,52 +2,61 @@
   'use strict';
 
   /**
-   * Modal window service
+   * Modal window controller
    */
   var Modal = {
+
       init: function() {
-        $(document.body).append('<div id="modal-container"></div>');
+        $(document.body).append('<div id="modal" class="modal hide" data-backrop="status"></div>');
         $(document.body).on('click', '.overlay', Modal.onOverlayClick);
-        $('#modal-container').on('submit', 'form', Modal.onSubmit);
-        $('#modal-container').on('click', 'button[name="cancel"]', Modal.onCancelClick);
+        $('#modal').on('click', 'button[name="cancel"]', Modal.onCancelClick);
+        $('#modal').on('click', 'button[type="submit"]', Modal.onSubmitClick);
       },
+
       onOverlayClick: function(event) {
         event.preventDefault();
-        var href = event.target.href + ' #modal';
-        $('#modal-container').load(href, Modal.onPanelLoad);
+        console.log('asdfasfsadf');
+        $('#modal').load(event.target.href, Modal.onPanelLoad);
       },
-      onSubmit: function(event) {
+
+      onCancelClick: function(event){
         event.preventDefault();
-        var form = $(event.target);
-        var request = {
-          type: form.prop('method'),
-          url: form.prop('action'),
-          data: form.serialize(),
-          success: Modal.onFormSuccess
-        };
-        $.ajax(request);
+        $('#modal').modal('hide').empty();
       },
-      onCancelClick: function(event) {
+
+      onSubmitClick: function(event) {
         event.preventDefault();
-        $('#modal').modal('hide');
+
+        var button = $(event.currentTarget);
+        var form = $(button.prop('form'));
+        var data = form.serializeArray();
+
+        data.push({name: button.attr('name'), value: button.val()});
+
+        $.ajax({
+          type: form.attr('method'),
+          url: form.attr('action'),
+          data: data,
+          statusCode: {
+            200: Modal.onFormSuccess,
+            302: Modal.onFormSuccess,
+            400: Modal.onFormError,
+          }
+        });
       },
+
+      onFormError: function(xhr, status, error){
+        $('#modal').html(xhr.responseText);
+      },
+
       onFormSuccess: function(text, status, xhr) {
-        if (xhr.status == 302) {
-          $('#modal').modal('hide');
-          return;
-        }
-        var contents = $(text).find('#modal');
-        if (contents.length < 1) {
-          alert('An error occurred while trying to load results');
-          console.log(text);
-          console.log(contents);
-          return;
-        }
-        $('#modal-container').empty().append(contents);
+        $('#modal').modal('hide').empty();
       },
+
       onPanelLoad: function(text, status, xhr) {
         $('#modal').modal('show');
       }
+
     };
 
   /* Initialize services */

@@ -4,10 +4,36 @@
   vertical-align: middle;
   }
 
-#modal-container form {
+form label {
+  font-weight: bold;
+}
+
+form label .req {
+  /* Match bootstrap's red */
+  color: #b94a48;
+}
+
+form .status {
+  font-weight: bold;
+}
+
+/** Bootstrap Overrides **/
+
+#modal form {
   /* Disable form margins inside the modal container so
    * that we don't get unwanted whitespace
    */
   margin: 0;
+}
+
+/** Deform overrides **/
+
+.deform ul {
+  margin: 0;
+  padding: 0;
+  list-style-type: none;
+}
+
+.deform li {
 }
 

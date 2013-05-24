@@ -6,7 +6,7 @@
                 category category|field.widget.category;
                 required required|field.required;
                 "
-    class="field${field.error and ' ' + (error_class or '')}"
+    class="field control-group ${field.error and ' ' + (error_class or '')}"
     title="${description}"
     id="item-${oid}"
     tal:omit-tag="hidden"
@@ -19,14 +19,13 @@
   <!-- mapping_item -->
 
   <label tal:condition="not (hidden or category == 'structural')"
-         class="desc"
-         title="${description}"
+         class="control-label"
          for="${oid}"
          >${title}<sup tal:condition="required" class="req"
                         id="req-${oid}">&#9632;</sup>
   </label>
 
-  <p class="description help-block" tal:condition="description">${description}</p>
+  <span class="description help-block" tal:condition="description">${description}</span>
 
   <span tal:replace="structure field.serialize(cstruct)"/>
 
@@ -35,7 +34,7 @@
      tal:repeat="msg field.error.messages()"
      tal:attributes="id repeat.msg.index==0 and errstr or
      ('%s-%s' % (errstr, repeat.msg.index))"
-     class="${error_class}"
+     class="status help-block ${error_class}"
      i18n:translate="">${msg}</p>
 
   <!-- /mapping_item -->
