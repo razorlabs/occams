@@ -1,12 +1,13 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml"
-      xmlns:i18n="http://xml.zope.org/namespaces/i18n"
-      xmlns:tal="http://xml.zope.org/namespaces/tal"
-      xmlns:metal="http://xml.zope.org/namespaces/metal"
-      xml:lang="en"
-      lang="en"
-      i18n:domain="occams.form"
-      metal:use-macro="main_template">
+<html
+    xmlns="http://www.w3.org/1999/xhtml"
+    xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+    xmlns:tal="http://xml.zope.org/namespaces/tal"
+    xmlns:metal="http://xml.zope.org/namespaces/metal"
+    xml:lang="en"
+    lang="en"
+    i18n:domain="occams.form"
+    metal:use-macro="main_template">
   <metal:content-slot fill-slot="content-slot">
     <p class="well" tal:condition="not:forms_count">
       The system does not contain any forms.

@@ -37,7 +37,7 @@ tal:define="title title|field.title;
     <ul>
       <li tal:condition="field.error">
         <div class="alert alert-error">
-          <strong>Error</strong> There were problems with your submission.
+          <strong>Error!</strong> There were problems with your submission.
           <p tal:condition="errormsg">${errormsg}</p>
         </div>
       </li>

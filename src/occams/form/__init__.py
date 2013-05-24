@@ -23,7 +23,8 @@ Session = orm.scoped_session(orm.sessionmaker(
 
 
 def main(global_config, **settings):
-    """ This function returns a Pyramid WSGI application.
+    """
+    This function returns a Pyramid WSGI application.
     """
     config = Configurator(settings=settings)
 
@@ -39,11 +40,14 @@ def main(global_config, **settings):
 
 
 def config_routes(config):
-    """ Helper method to configure available routes for the application
+    """
+    Helper method to configure available routes for the application
     """
     config.add_static_view('static', 'static', cache_max_age=3600)
 
     config.add_route('home', '/')
+    config.add_route('about', '/about')
+    config.add_route('contact', '/contact')
 
     config.add_route('account_login', '/login')
     config.add_route('account_logout', '/logout')
@@ -76,7 +80,8 @@ def config_routes(config):
 
 
 def parse_dates(*segment_names):
-    """ Creates function to parse date segments in URL on dispatch.
+    """
+    Creates function to parse date segments in URL on dispatch.
     """
     def predicate(info, request):
         match = info['match']

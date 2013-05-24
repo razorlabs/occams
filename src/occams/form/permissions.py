@@ -1,5 +1,6 @@
-""" Permission constants
-    All permissions are declared here for easier overview
+"""
+Permission constants
+All permissions are declared here for easier overview
 """
 
 # Form management permissions

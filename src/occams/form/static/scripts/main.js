@@ -65,7 +65,8 @@
         $('#modal .modal-body').css('max-height', maxBodyHeight + 'px');
         $('#modal').modal({
           show: true,
-          backdrop: hasForm ? 'static' : True
+          keyboard: !hasForm,
+          backdrop: hasForm ? 'static' : true
         });
       }
 

@@ -9,7 +9,8 @@ from pyramid_layout.panel import panel_config
     name='ajax_layout',
     template='occams.form:/templates/layout/ajax.pt')
 class Layout(object):
-    """ Master layout for the application
+    """
+    Master layout for the application
     """
 
     def __init__(self, context, request):
@@ -33,4 +34,18 @@ def toolbar(context, request):
         (name, args, kw) = panel
         return lm.render_panel(name, *args, **kw)
     return ''
+
+
+@panel_config(
+    name='global_header',
+    renderer='occams.form:templates/layout/panels/global_header.pt')
+def global_header(context, request):
+    return {}
+
+
+@panel_config(
+    name='global_footer',
+    renderer='occams.form:templates/layout/panels/global_footer.pt')
+def global_footer(context, request):
+    return {}
 
