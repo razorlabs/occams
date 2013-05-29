@@ -1,5 +1,5 @@
 <div class="pull-right">
-  <a class="btn overlay"
+  <a class="btn modal-trigger"
       href="${request.current_route_path(_route_name='form_add')}"
       ><i class="icon-plus"></i>Create Form</a>
 </div>

@@ -27,6 +27,7 @@
   </head>
 
   <body>
+
     <div id="wrap">
       <div tal:replace="structure panel('global_header')"></div>
       <div class="container">
@@ -51,11 +52,13 @@
           </div>
         </div>
       </div> <!-- /.container -->
+      <!--! Used in CSS to "push" the margin to make room for the sticky footer -->
       <div id="push"></div>
     </div> <!-- /#wrap -->
 
     <div tal:replace="structure panel('global_footer')"></div>
 
+    <!--? Modal window placeholder -->
     <div id="modal" class="modal hide"></div>
 
     <!--! Load scripts at the end so we don't block rendering -->
@@ -65,7 +68,8 @@
     <script type="text/javascript" src="${request.static_path('occams.form:static/libraries/select2-3.3.2/select2.min.js')}"></script>
     <script type="text/javascript" src="${request.static_path('deform:static/scripts/jquery.form-3.09.js')}"></script>
     <script type="text/javascript" src="${request.static_path('deform:static/scripts/deform.js')}"></script>
-    <script type="text/javascript" src="${request.static_path('occams.form:static/scripts/main.js')}"></script>
+    <script type="text/javascript" src="${request.static_path('occams.form:static/scripts/modal.js')}"></script>
+    <script type="text/javascript" src="${request.static_path('occams.form:static/scripts/app.js')}"></script>
 
   </body>
 </html>
