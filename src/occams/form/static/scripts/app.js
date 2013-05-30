@@ -4,11 +4,14 @@
 (function($){
   'use strict';
 
-  var init = function() {
-    $('#modal').modalize();
-  };
-
-  $(document).ready(init);
+  $(document).ready(function(){
+    // Create the container and modalize it
+    $('<div id="modal" class="modal hide"></div>')
+        .appendTo(document.body)
+        .modalize()
+        .on('cancel', function(){ console.log('cancelled'); })
+        .on('success', function(){ console.log('success'); });
+  });
 
 })(jQuery);
 

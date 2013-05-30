@@ -29,7 +29,9 @@
           </tr>
         </thead>
         <tbody>
-          <tr tal:repeat="form forms">
+          <tr tal:define="highlight highlight|nothing"
+              tal:repeat="form forms"
+              tal:attributes="class python:'success' if form.name == highlight else ''">
             <td class="title">
               <a href="${request.current_route_path(_route_name='form_view',
                                                     form_name=form.name)}

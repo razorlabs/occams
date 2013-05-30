@@ -58,9 +58,6 @@
 
     <div tal:replace="structure panel('global_footer')"></div>
 
-    <!--? Modal window placeholder -->
-    <div id="modal" class="modal hide"></div>
-
     <!--! Load scripts at the end so we don't block rendering -->
     <script type="text/javascript" src="${request.static_path('occams.form:static/libraries/jquery-2.0.0.min.js')}"></script>
     <script type="text/javascript" src="${request.static_path('occams.form:static/libraries/jquery-ui-1.10.2/ui/jquery-ui.min.js')}"></script>

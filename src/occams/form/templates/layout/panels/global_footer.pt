@@ -1,7 +1,7 @@
 <div id="footer">
   <div class="container">
     <p class="muted credit">
-      Developed by the <a href="http://cfar.ucsd.edu/bit">UCSD Bit Core Development Team</a>. &copy; 2013. Distributed under Some Fancy License.
+      Developed by the <a href="http://cfar.ucsd.edu/bit">UCSD Bit Core Development Team</a>. &copy; 2013. Distributed under <a href="#">Some Fancy License</a>.
     </p>
   </div>
 </div>

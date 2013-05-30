@@ -23,8 +23,16 @@ def is_unique_name(name):
     name_exists = sql.exists().where(datastore.Schema.name == name)
     return not Session.query(name_exists).scalar()
 
+class TestSchema(colander.MappingSchema):
+
+    title = u'adfasdfsadf';
+    css_class = 'adfasdfasdfasd'
+
+    test = colander.SchemaNode(
+        colander.String())
 
 class CreateFormSchema(colander.MappingSchema):
+
 
     name = colander.SchemaNode(
         colander.String(),
@@ -59,12 +67,20 @@ class CreateFormSchema(colander.MappingSchema):
             u'newly created form'),
         missing=colander.null)
 
+    test = TestSchema(
+        css_class='asdfasdfasfasdfasfasd')
+
 
 
 @view_config(
     route_name='home',
     renderer='occams.form:templates/form/list.pt',
     layout='web_layout')
+@view_config(
+    route_name='home',
+    xhr=True,
+    renderer='occams.form:templates/form/list.pt',
+    layout='ajax_layout')
 def list_(request):
     """
     Lists all forms used by instance.
@@ -75,7 +91,8 @@ def list_(request):
     query = query_names(Session)
     return {
         'forms': iter(query),
-        'forms_count': query.count()}
+        'forms_count': query.count(),
+        'highlight': request.GET.get('highlight')}
 
 
 @view_config(
@@ -124,6 +141,7 @@ def view(request):
     name = request.matchdict['form_name']
     form = query_form(Session, name).one()
     categories = query_categories(Session, name)
+    versions = query_versions(Session, name)
 
     # Configure the layout and render the results
     layout = request.layout_manager.layout
@@ -131,7 +149,9 @@ def view(request):
     return {
         'form': form,
         'categories_count': categories.count(),
-        'categories': iter(categories)}
+        'categories': iter(categories),
+        'versions_count': versions.count(),
+        'versions': iter(versions)}
 
 
 @panel_config(
@@ -220,7 +240,7 @@ def query_names(session):
     return query
 
 
-def query_versions(session):
+def query_versions(session, name):
     """
     Generates an iterable summary listing of forms in the system
     """
@@ -266,7 +286,7 @@ def query_versions(session):
         .filter(OuterSchema.name == sql.bindparam('name'))
         .order_by(
             OuterSchema.title.asc(),
-            (OuterSchema.publish_date != None).desc(),
+            (OuterSchema.publish_date != None).asc(),
             OuterSchema.publish_date.desc()))
-    return query
+    return query.params(name=name)
 

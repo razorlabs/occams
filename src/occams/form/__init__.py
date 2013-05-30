@@ -10,7 +10,7 @@ from zope.sqlalchemy import ZopeTransactionExtension
 from occams.datastore.model import DataStoreSession
 
 
-__version__ = '1.0.0g1'
+__version__ = '2.0.0'
 
 _ = TranslationStringFactory(__name__)
 

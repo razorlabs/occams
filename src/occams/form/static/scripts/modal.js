@@ -23,6 +23,7 @@
     var onCancelClick = function(event){
       event.preventDefault();
       $(this).modal('hide');
+      $(this).trigger('cancel');
     };
 
     /**
@@ -61,6 +62,7 @@
      */
     var onFormSuccess = function(text, status, xhr) {
       $(this).modal('hide');
+      $(this).trigger('success', text, status, xhr);
     };
 
     /**
