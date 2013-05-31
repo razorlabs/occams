@@ -13,12 +13,23 @@ class Layout(object):
     Master layout for the application
     """
 
+    @property
+    def scripts(self):
+        return self.request.webassets_env[self.scripts_bundle].urls()
+
+    @property
+    def styles(self):
+        return self.request.webassets_env[self.styles_bundle].urls()
+
     def __init__(self, context, request):
         self.context = context
         self.request = request
 
         self.content_title = ''
         self.content_type = ''
+
+        self.styles_bundle = 'default_css'
+        self.scripts_bundle = 'default_js'
 
         self.toolbar = None
 

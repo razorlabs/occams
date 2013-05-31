@@ -86,6 +86,8 @@ development.ini
 production.ini
 res
 refs
+gen
+webassets-external
 
 ##### Translations
 *.mo

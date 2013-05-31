@@ -23,16 +23,8 @@ def is_unique_name(name):
     name_exists = sql.exists().where(datastore.Schema.name == name)
     return not Session.query(name_exists).scalar()
 
-class TestSchema(colander.MappingSchema):
-
-    title = u'adfasdfsadf';
-    css_class = 'adfasdfasdfasd'
-
-    test = colander.SchemaNode(
-        colander.String())
 
 class CreateFormSchema(colander.MappingSchema):
-
 
     name = colander.SchemaNode(
         colander.String(),
@@ -66,10 +58,6 @@ class CreateFormSchema(colander.MappingSchema):
             u'Optionally, you can copy fields from another form into the '
             u'newly created form'),
         missing=colander.null)
-
-    test = TestSchema(
-        css_class='asdfasdfasfasdfasfasd')
-
 
 
 @view_config(

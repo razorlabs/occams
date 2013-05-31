@@ -13,15 +13,10 @@
     <title>${layout.content_title}</title>
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <meta name="description" content="${description|nothing}" />
-    <meta name="author" content="${author|nothing}" />
 
-    <link href="${request.static_path('occams.form:static/libraries/bootstrap-2.3.1/css/bootstrap.min.css')}" rel="stylesheet"/>
-    <link href="${request.static_path('occams.form:static/libraries/jquery-ui-1.10.2/themes/jquery-ui.min.css')}" rel="stylesheet"/>
-    <link href="${request.static_path('occams.form:static/libraries/select2-3.3.2/select2.css')}" rel="stylesheet"/>
-    <link href="${request.static_path('occams.form:static/styles/main.css')}" rel="stylesheet"/>
-    <!--! Load responsive bootsrap at the end per documentation guidelines -->
-    <link href="${request.static_path('occams.form:static/libraries/bootstrap-2.3.1/css/bootstrap-responsive.min.css')}" rel="stylesheet"/>
+    <tal:styles repeat="url layout.styles">
+      <link href="${url}" rel="stylesheet" />
+    </tal:styles>
 
     <link rel="shortcut icon" href="${request.static_path('occams.form:static/images/database.png')}"/>
   </head>
@@ -35,9 +30,7 @@
         <div tal:replace="structure panel('alert')"></div>
         <div class="page-header row-fluid">
           <div id="header" class="span6">
-            <h1>
-              <span>${layout.content_title}</span>
-            </h1>
+            <h1><span>${layout.content_title}</span></h1>
           </div>
           <div id="toolbar" class="span6" tal:content="structure panel('toolbar')"></div>
         </div>
@@ -46,7 +39,9 @@
             <div tal:replace="structure panel('navigation')"></div>
             <div id="content">
               <metal:content-slot define-slot="content-slot">
-                RELEASE ME
+
+                <!--! View content goes here -->
+
               </metal:content-slot>
             </div>
           </div>
@@ -59,14 +54,9 @@
     <div tal:replace="structure panel('global_footer')"></div>
 
     <!--! Load scripts at the end so we don't block rendering -->
-    <script type="text/javascript" src="${request.static_path('occams.form:static/libraries/jquery-2.0.0.min.js')}"></script>
-    <script type="text/javascript" src="${request.static_path('occams.form:static/libraries/jquery-ui-1.10.2/ui/jquery-ui.min.js')}"></script>
-    <script type="text/javascript" src="${request.static_path('occams.form:static/libraries/bootstrap-2.3.1/js/bootstrap.min.js')}"></script>
-    <script type="text/javascript" src="${request.static_path('occams.form:static/libraries/select2-3.3.2/select2.min.js')}"></script>
-    <script type="text/javascript" src="${request.static_path('deform:static/scripts/jquery.form-3.09.js')}"></script>
-    <script type="text/javascript" src="${request.static_path('deform:static/scripts/deform.js')}"></script>
-    <script type="text/javascript" src="${request.static_path('occams.form:static/scripts/modal.js')}"></script>
-    <script type="text/javascript" src="${request.static_path('occams.form:static/scripts/app.js')}"></script>
+    <tal:scripts repeat="url layout.scripts">
+      <script src="${url}" type="text/javascript"> </script>
+    </tal:scripts>
 
   </body>
 </html>
