@@ -37,7 +37,7 @@
                                                     form_name=form.name)}
                 ">${form.title}</a>
             </td>
-            <td class="name">${form.name}</td>
+            <td class="name"><code>${form.name}</code></td>
             <td class="publish_date">${form.publish_date}</td>
             <td class="start_date">${form.start_date}</td>
             <td class="version_count">${form.version_count}</td>
