@@ -1,7 +1,6 @@
 from pkg_resources import resource_filename
 
 from webassets import Bundle
-from webassets.filter import get_filter
 from webassets.loaders import PythonLoader
 
 
@@ -15,17 +14,8 @@ def config_assets(config):
     return config
 
 
-bootstrap_css = Bundle(
-    'styles/bootstrap-2.3.1.min.css',
-    debug=False,
-    filters=get_filter('cssrewrite',
-        replace=lambda url: url.replace('/img/', '/images/')),
-    output='gen/bootstrap.css')
-bootstrap_js = Bundle('scripts/bootstrap-2.3.1.min.js')
-
-# GOTCHA: The bootstrap responsive sheet needs to be specified at the
-# very end in order to take into effect properly
-bootstrap_responsive = Bundle('styles/bootstrap-responsive-2.3.1.min.css')
+bootstrap_css = Bundle('styles/bootstrap-2.3.2.min.css')
+bootstrap_js = Bundle('scripts/bootstrap-2.3.2.min.js')
 
 jquery = Bundle('scripts/jquery-2.0.0.min.js')
 
@@ -55,7 +45,6 @@ default_css = Bundle(
     bootstrap_css,
     select2_css,
     app_css,
-    bootstrap_responsive,
     output='gen/default.css')
 
 default_js = Bundle(
