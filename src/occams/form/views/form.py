@@ -124,10 +124,16 @@ def add(request):
     renderer='occams.form:templates/form/view.pt',
     layout='web_layout')
 def view(request):
-    """ Displays information about the current publication of the form
+    """
+    Displays information about the current publication of the form
     """
     name = request.matchdict['form_name']
-    form = query_form(Session, name).one()
+
+    try:
+        form = query_form(Session, name).one()
+    except orm.exc.NoResultFound:
+        raise HTTPNotFound
+
     categories = query_categories(Session, name)
     versions = query_versions(Session, name)
 
