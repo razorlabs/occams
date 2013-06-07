@@ -1,7 +1,14 @@
 """
-API base classes for rendering forms in certain contexts.
+Toolset for rendering datastore forms.
 """
-from AccessControl import getSecurityManager
+
+from pkg_resources import resource_filename
+
+import datetime
+
+import colander
+import deform
+import deform.widget
 
 from zope.schema.interfaces import IChoice
 from zope.schema.interfaces import IList
@@ -14,98 +21,112 @@ from z3c.form.browser.radio import RadioFieldWidget
 from z3c.form.browser.checkbox import CheckBoxFieldWidget
 from z3c.form.browser.textlines import TextLinesFieldWidget
 from zope.schema.interfaces import IField
-from z3c.saconfig import named_scoped_session
-from occams.datastore import model
 
-from occams.form.interfaces import TEXTAREA_SIZE
+from occams.datastore import model as datastore
 
-def TextAreaFieldWidget(field, request):
+from .interfaces import TEXTAREA_SIZE
+
+
+widgets = {
+    'text': deform.widget.TextAreaWidget(),
+    'date': deform.widget.DateInputWidget(type_name='date', css_class='datepicker') }
+
+
+types = {
+    'boolean': colander.Bool,
+    'integer': colander.Int,
+    'decimal': colander.Decimal,
+    'string': colander.String,
+    'text': colander.String,
+    'date': colander.Date,
+    'datetime': colander.DateTime}
+
+
+# Define application-local renderers so we don't
+# affect the entire python environment.
+
+WEB_FORM_RENDERER = deform.ZPTRendererFactory([
+    resource_filename('occams.form', 'templates/deform/overrides'),
+    resource_filename('deform', 'templates')])
+
+
+AJAX_FORM_RENDERER = deform.ZPTRendererFactory([
+    resource_filename('occams.form', 'templates/deform/modal'),
+    resource_filename('occams.form', 'templates/deform/overrides'),
+    resource_filename('deform', 'templates')])
+
+
+
+def custom_select_widget(multiple, values):
+    if len(values) <= 5:
+        if multiple:
+            return deform.widget.CheckboxChoiceWidget(values = values)
+        else:
+            return deform.widget.RadioChoiceWidget(values = values)
+    return deform.widget.SelectWidget(
+            css_class='select2',
+            template='select',
+            multiple=multiple,
+            values = values)
+
+
+def schema2colander(schema):
     """
-    Forms should use a slightly bigger textarea
-
-    z3c.form doesn't allow configuring of rows so we must subclass it.
-
-    Unfortunately there is no way to register this, so every view that wants
-    to use this factory must specify it in the ``widgetFactory`` property
-    of the ``z3c.form.field.Field`` instance.
-    """
-    widget = z3c.form.browser.textarea.TextAreaFieldWidget(field, request)
-    widget.rows = TEXTAREA_SIZE
-    return widget
-
-
-class StandardWidgetsMixin(object):
-    """
-    Updates form widgets to use basic widgets that make it easy for the user
-    to distinguish available options.
-    """
-
-    def update(self):
-        for field in self.fields.values():
-            if IChoice.providedBy(field.field):
-                field.widgetFactory = RadioFieldWidget
-            elif IList.providedBy(field.field):
-                if IChoice.providedBy(field.field.value_type):
-                    field.widgetFactory = CheckBoxFieldWidget
-                elif ITextLine.providedBy(field.field.value_type):
-                    field.widgetFactory = TextLinesFieldWidget
-            elif IText.providedBy(field.field) and not ITextLine.providedBy(field.field):
-                field.widgetFactory = TextAreaFieldWidget
-        super(StandardWidgetsMixin, self).update()
-
-
-class Group(StandardWidgetsMixin, z3c.form.group.Group):
-    """
-    A datastore-specific group
-    """
-
-    @property
-    def prefix(self):
-        return str(self.context.name)
-
-    @property
-    def label(self):
-        return self.context.title
-
-    @property
-    def description(self):
-        return self.context.description
-
-    def update(self):
-        self.fields = z3c.form.field.Fields()
-        for name, field in self.context.object_schema.items():
-            self.fields += z3c.form.field.Fields(IField(field))
-        super(Group, self).update()
-
-
-class Form(StandardWidgetsMixin, z3c.form.group.GroupForm, z3c.form.form.Form):
-    """
-    A datastore-specific form
+    Converta a DataStore schema to a colander form schema
     """
 
-    ignoreContext = True
-    ignoreRequest = True
-    enable_form_tabbing = False
+    node = colander.SchemaNode(
+        colander.Mapping(),
+        name=schema.name,
+        title=schema.title,
+        description=schema.description)
 
-    iface = None
-    groupFactory = Group
-
-    @property
-    def label(self):
-        return self.iface['title']
-
-    @property
-    def description(self):
-        return self.iface['description']
-
-    def update(self):
-        self.request.set('disable_border', True)
-        # TODO: should be context-agnostic
-        self.fields = z3c.form.field.Fields()
-        self.groups = []
-        for name, field in self.context.item.items():
-            if field.type == 'object':
-                self.groups.append(self.groupFactory(field, self.request, self))
+    for attribute in schema.itervalues():
+        if attribute.type == 'object':
+            subnode = schema2colander(attribute.object_schema)
+            subnode.name = attribute.name
+            subnode.title = attribute.title
+            subnode.description = attribute.description
+            node.add(subnode)
+        else:
+            if attribute.is_collection:
+                attribute_type = colander.Sequence
+                missing=[]
             else:
-                self.fields += z3c.form.field.Fields(IField(field))
-        super(Form, self).update()
+                attribute_type = types[attribute.type]
+                missing=None
+            field = colander.SchemaNode(
+                attribute_type(),
+                name=attribute.name,
+                title=attribute.title,
+                description=attribute.description,
+                missing=(colander.required if attribute.is_required else missing),
+                )
+            if attribute.is_collection:
+                subnode = colander.SchemaNode(types[attribute.type]())
+                field.add(subnode)
+            if attribute.type =='boolean':
+                value_list = []
+                value_list.extend([(at.value and 'true' or 'false', at.title) for at in attribute.choices])
+                field.widget = custom_select_widget(attribute.is_collection, value_list)
+            elif attribute.choices:
+                value_list = []
+                value_list.extend([(at.value, at.title) for at in attribute.choices])
+                field.widget = custom_select_widget(attribute.is_collection, value_list)
+            elif attribute.type in widgets:
+                field.widget = widgets[attribute.type]
+            node.add(field)
+    return node
+
+
+class Form(deform.Form):
+    """
+    """
+
+    default_renderer = WEB_FORM_RENDERER
+
+    def __init__(self, *args, **kw):
+        if isinstance(kw['schema'], datastore.Schema):
+            kw['schema'] = schema2colander(kw['schema'])
+        super(Form, self).__init__(*args, **kw)
+

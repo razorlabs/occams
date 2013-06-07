@@ -10,7 +10,7 @@
     metal:use-macro="main_template">
   <metal:content-slot fill-slot="content-slot">
 
-    SOmething
+    <form tal:replace="structure form"></form>
 
   </metal:content-slot>
 </html>
