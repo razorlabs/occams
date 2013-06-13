@@ -22,9 +22,6 @@ from occams.datastore.interfaces import ConstraintError
 
 
 class WorkflowModelTestCase(unittest.TestCase):
-    """
-    duh
-    """
 
     layer = OCCAMS_DATASTORE_FIXTURE
 
