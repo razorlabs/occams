@@ -156,7 +156,7 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
             )
         )
 
-    state_id = Column(Integer, nullable=False)
+    state_id = Column(Integer)
 
     state = Relationship(
         State,
