@@ -40,6 +40,7 @@ from occams.datastore.model.schema import Category
 from occams.datastore.model.schema import Attribute
 from occams.datastore.model.schema import Choice
 
+from occams.datastore.model.storage import State
 from occams.datastore.model.storage import Context
 from occams.datastore.model.storage import Entity
 from occams.datastore.model.storage import HasEntities
@@ -67,6 +68,7 @@ __all__ = (
     'Category',
     'Attribute',
     'Choice',
+    'State',
     'Entity',
     'HasEntities',
     'ValueInteger',
