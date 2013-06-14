@@ -164,7 +164,7 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
             name='entities',
             lazy='dynamic'))
 
-    is_null = Column(Boolean, nullable=False, server_default=True)
+    is_null = Column(Boolean, nullable=False, server_default=False)
 
     collect_date = Column(Date, nullable=False, default=date.today)
 
