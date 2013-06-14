@@ -10,6 +10,7 @@ from sqlalchemy.orm.collections import collection
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy import event
+from sqlalchemy import text
 from sqlalchemy.orm import relationship as Relationship
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import backref
@@ -164,7 +165,7 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
             name='entities',
             lazy='dynamic'))
 
-    is_null = Column(Boolean, nullable=False, server_default=text('FALSE'))
+    is_null = Column(Boolean, nullable=False, default=False, server_default=text('FALSE'))
 
     collect_date = Column(Date, nullable=False, default=date.today)
 
