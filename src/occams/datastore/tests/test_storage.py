@@ -40,7 +40,7 @@ class WorkflowModelTestCase(unittest.TestCase):
 
     def testEntityRelationship(self):
         session = self.layer['session']
-        schema = model.Schema(name=u'Foo', title=u'', state=u'published')
+        schema = model.Schema(name=u'Foo', title=u'Foo', state=u'published')
         pending_entry = model.State(name=u'pending-entry', title=u'Pending Entry')
         entity = model.Entity(schema=schema, name='foo', title=u'Foo')
         session.add_all([pending_entry, entity])
@@ -93,6 +93,7 @@ class EntityModelTestCase(unittest.TestCase):
 
         # Check that all properties are working properly
         self.assertIsNotNone(entity.schema)
+        self.assertEqual(entity.is_null, False)
         self.assertIsNotNone(entity.create_date)
         self.assertIsNotNone(entity.create_user)
         self.assertIsNotNone(entity.modify_date)
