@@ -164,6 +164,8 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
             name='entities',
             lazy='dynamic'))
 
+    is_not_done = Column(Boolean, nullable=False, server_default=False)
+
     collect_date = Column(Date, nullable=False, default=date.today)
 
     @declared_attr

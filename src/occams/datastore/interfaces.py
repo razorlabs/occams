@@ -389,7 +389,13 @@ class IEntity(IDataBaseItem):
 
     state = zope.schema.Object(
         title=_(u'The current workflow state'),
-        schema=IState
+        schema=IState,
+        required=False
+        )
+
+    is_not_done = zope.schema.Bool(
+        title=_(u'Not Done'),
+        description=_(u'Flag to indicate if the entity is intentionally blank')
         )
 
     collect_date = zope.schema.Date(
