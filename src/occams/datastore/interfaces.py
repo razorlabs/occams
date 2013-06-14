@@ -393,9 +393,10 @@ class IEntity(IDataBaseItem):
         required=False
         )
 
-    is_not_done = zope.schema.Bool(
-        title=_(u'Not Done'),
-        description=_(u'Flag to indicate if the entity is intentionally blank')
+    is_null = zope.schema.Bool(
+        title=_(u'Empty'),
+        description=_(u'Flag to indicate if the entity is intentionally blank'),
+        default=False,
         )
 
     collect_date = zope.schema.Date(
