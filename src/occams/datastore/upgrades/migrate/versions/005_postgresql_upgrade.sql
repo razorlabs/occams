@@ -3,9 +3,7 @@
 -- to do a bit of hacking to get this to work properly.
 BEGIN;
 
-
 -- Prepare the live/audit tables for the upgrade
-
 
 ALTER TABLE "entity"
   ALTER COLUMN "state" DROP DEFAULT,
@@ -15,8 +13,8 @@ ALTER TABLE "entity_audit"
   ALTER COLUMN "state" DROP DEFAULT,
   ALTER COLUMN "state" DROP NOT NULL;
 
-UPDATE "entity" SET "state" = NULL WHERE "state" = 'inline';
-UPDATE "entity_audit" SET "state" = NULL WHERE "state" = 'inline';
+UPDATE "entity" SET "state" = NULL WHERE "state" IN ('inline', 'error', 'inaccurate');
+UPDATE "entity_audit" SET "state" = NULL WHERE "state" IN ('inline', 'error', 'inaccurate');
 
 
 -- Swap out enum types with the new one.
@@ -29,9 +27,7 @@ CREATE TYPE "entity_state" AS ENUM (
   'in-progress',
   'pending-review',
   'pending-correction',
-  'complete',
-  'error',
-  'inaccurate');
+  'complete');
 
 ALTER TABLE "entity"
   ALTER COLUMN "state" TYPE "entity_state" USING "state"::text::"entity_state";

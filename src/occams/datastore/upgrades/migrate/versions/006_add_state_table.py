@@ -91,10 +91,7 @@ def upgrade(migrate_engine):
             {'name': u'in-progress', 'title': u'In Progress'},
             {'name': u'pending-review', 'title': u'Pending Review'},
             {'name': u'pending-correction', 'title': u'Pending Correction'},
-            {'name': u'complete', 'title': u'Complete'},
-            # TODO: what to do with these:
-            {'name': u'error', 'title': u'Error'},
-            {'name': u'inaccurate', 'title': u'Inaccurate'}])
+            {'name': u'complete', 'title': u'Complete'}])
         connection.execute(build_update(entity_table))
         connection.execute(build_update(entity_audit_table))
 
