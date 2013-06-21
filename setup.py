@@ -45,8 +45,8 @@ setup(
         'lxml',
 
         # ORM utilities and upgrade tools
-        'SQLAlchemy >=0.7.0,<0.7.99',
-        'sqlalchemy-migrate >=0.7.0,<0.7.99',
+        'SQLAlchemy',
+        'sqlalchemy-migrate',
 
         # Component specification/documentation
         # Note that these packages do not install the entire Zope ecosystem,
