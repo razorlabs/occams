@@ -22,6 +22,7 @@ typesVocabulary = SimpleVocabulary([
         SimpleTerm(value=zope.schema.Bool, token='boolean', title='Boolean'),
         SimpleTerm(value=zope.schema.Decimal, token='decimal', title='Decimal'),
         SimpleTerm(value=zope.schema.Int, token='integer', title='Integer'),
+        SimpleTerm(value=zope.schema.Choice, token='choice', title='Choice'),
         SimpleTerm(value=zope.schema.Date, token='date', title='Date'),
         SimpleTerm(value=zope.schema.Datetime, token='datetime', title='Datetime'),
         SimpleTerm(value=zope.schema.TextLine, token='string', title='String'),
@@ -302,6 +303,11 @@ class IAttribute(IDataBaseItem):
         default=False,
         )
 
+    is_auto_choice = zope.schema.Bool(
+        title=_(u'Are attribute choices auto-numbered?'),
+        required=False
+        )
+
     object_schema = zope.schema.Object(
         title=_(u'The object\'s schema'),
         description=_(u'Only applies to attributes of type "object". '),
@@ -357,11 +363,6 @@ class IChoice(IDataBaseItem):
         title=_(u'Attribute'),
         description=_(u'The attribute that will be constrained.'),
         schema=IAttribute
-        )
-
-    value = zope.schema.TextLine(
-        title=_(u'Value'),
-        description=_(u'The value will be coerced when stored.')
         )
 
     order = zope.schema.Int(

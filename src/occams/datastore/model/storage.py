@@ -15,6 +15,7 @@ from sqlalchemy.orm import relationship as Relationship
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import backref
 from sqlalchemy.schema import Column
+from sqlalchemy.schema import ForeignKey
 from sqlalchemy.schema import ForeignKeyConstraint
 from sqlalchemy.schema import Index
 from sqlalchemy.schema import UniqueConstraint
@@ -192,21 +193,13 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
 
     def _getCollector(self, key):
         type_ = self.schema[key].type
-        if type_ == 'string':
-            return self._string_values
-        elif type_ == 'text':
-            return self._text_values
-        elif type_ in ('integer', 'boolean'):
-            return self._integer_values
-        elif type_ in ('datetime', 'date'):
-            return self._datetime_values
-        elif type_ == 'decimal':
-            return self._decimal_values
-        elif type_ == 'object':
-            return self._object_values
-        elif type_ == 'blob':
-            return self._blob_values
-        else: # pragma: no cover
+        if type_ == 'boolean':
+            type_ = 'integer'
+        elif type_ == 'date':
+            type_ = 'datetime'
+        try:
+            return getattr(self, '_%s_values' % type_)
+        except AttributeError: # pragma: no cover
             # Extreme edge case that is actually a programming error
             raise NotImplementedError(type_)
 
@@ -315,10 +308,11 @@ class HasEntities(object):
             )
 
 
-def TypeMappingClass(className, tableName, valueType, index=True):
+def TypeMappingClass(typeName, className, tableName, valueType, index=True):
     """
     Helper method to generate value mappings
     """
+
     class _ValueBaseMixin(Referenceable, Modifiable, Auditable):
         implements(IValue)
 
@@ -327,7 +321,14 @@ def TypeMappingClass(className, tableName, valueType, index=True):
 
         @declared_attr
         def entity_id(cls):
-            return Column(Integer, nullable=False)
+            return Column(
+                Integer,
+                ForeignKey(
+                    column='entity.id',
+                    name='fk_%s_entity_id' % cls.__tablename__,
+                    ondelete='CASCADE',
+                    ),
+                nullable=False)
 
         @declared_attr
         def entity(cls):
@@ -335,94 +336,59 @@ def TypeMappingClass(className, tableName, valueType, index=True):
                 Entity,
                 primaryjoin='%s.entity_id == Entity.id' % cls.__name__,
                 backref=backref(
-                    name='_%s_values' % cls.__tablename__,
+                    name='_%s_values' % cls.__typename__,
                     collection_class=grouped_collection(lambda v: v.attribute.name),
-                    cascade='all, delete-orphan',
-                    )
-                )
+                    cascade='all, delete-orphan'))
 
         @declared_attr
         def attribute_id(cls):
-            return Column(Integer, nullable=False)
+            return Column(
+                Integer,
+                ForeignKey(
+                    column='attribute.id',
+                    name='fk_%s_attribute_id' % cls.__tablename__,
+                    ondelete='CASCADE'),
+                nullable=False)
 
         @declared_attr
         def attribute(cls):
             return Relationship(Attribute)
 
         @declared_attr
-        def choice_id(cls):
-            return Column(Integer)
-
-        @declared_attr
-        def choice(cls):
-            return Relationship(Choice)
-
-        @declared_attr
         def _value(cls):
             return Column('value', cls.__valuetype__)
-
-        @declared_attr
-        def __table_args__(cls):
-            constraints = (
-                ForeignKeyConstraint(
-                    columns=['entity_id'],
-                    refcolumns=['entity.id'],
-                    name='fk_%s_entity_id' % cls.__tablename__,
-                    ondelete='CASCADE',
-                    ),
-                ForeignKeyConstraint(
-                    columns=['attribute_id'],
-                    refcolumns=['attribute.id'],
-                    name='fk_%s_attribute_id' % cls.__tablename__,
-                    ondelete='CASCADE',
-                    ),
-                ForeignKeyConstraint(
-                    columns=['choice_id'],
-                    refcolumns=['choice.id'],
-                    name='fk_%s_choice_id' % cls.__tablename__,
-                    ondelete='CASCADE',
-                    ),
-                Index('ix_%s_entity_id' % cls.__tablename__, 'entity_id'),
-                Index('ix_%s_attribute_id' % cls.__tablename__, 'attribute_id'),
-                Index('ix_%s_choice_id' % cls.__tablename__, 'choice_id'),
-                )
-
-            if cls.__tablename__ == 'object':
-                constraints += (
-                    ForeignKeyConstraint(
-                        columns=['value'],
-                        refcolumns=['entity.id'],
-                        name='fk_%s_value' % cls.__tablename__,
-                        ondelete='CASCADE'
-                        ),
-                    )
-
-            return constraints
 
     class_ = type(className, (Model, _ValueBaseMixin), dict(
         __tablename__=tableName,
         __valuetype__=valueType,
-        ))
+        __typename__=typeName))
+
+    Index('ix_%s_entity_id' % class_.__tablename__, class_.entity_id)
+    Index('ix_%s_attribute_id' % class_.__tablename__, class_.attribute_id)
 
     if index:
-        Index('ix_%s_value' % tableName, class_._value)
+        Index('ix_%s_value' % class_.__tablename__, class_._value)
 
     return class_
 
 
-ValueDatetime = TypeMappingClass('ValueDatetime', 'datetime', DateTime)
+ValueDatetime = TypeMappingClass('datetime', 'ValueDatetime', 'value_datetime', DateTime)
 
-ValueInteger = TypeMappingClass('ValueInteger', 'integer', Integer)
+ValueInteger = TypeMappingClass('integer', 'ValueInteger', 'value_integer', Integer)
 
-ValueDecimal = TypeMappingClass('ValueDecimal', 'decimal', Numeric)
+ValueDecimal = TypeMappingClass('decimal', 'ValueDecimal', 'value_decimal', Numeric)
 
-ValueString = TypeMappingClass('ValueString', 'string', Unicode)
+ValueString = TypeMappingClass('string', 'ValueString', 'value_string', Unicode)
 
-ValueText = TypeMappingClass('ValueText', 'text', UnicodeText, index=False)
+ValueText = TypeMappingClass('text', 'ValueText', 'value_text', UnicodeText, index=False)
 
-ValueObject = TypeMappingClass('ValueObject', 'object', Integer)
+ValueChoice = TypeMappingClass('choice', 'ValueChoice', 'value_choice',
+    ForeignKey('choice.id', name='fk_value_choice_value', ondelete='CASCADE'))
 
-ValueBlob = TypeMappingClass('ValueBlob', 'blob', LargeBinary, index=False)
+ValueObject = TypeMappingClass('object', 'ValueObject', 'value_object',
+    ForeignKey('entity.id', name='fk_value_object_value', ondelete='CASCADE'))
+
+ValueBlob = TypeMappingClass('blob', 'ValueBlob', 'value_blob', LargeBinary, index=False)
 
 # Specify how the ``value`` properties behave, pretty much they're synonymns
 # of the ``_value`` property, except for objects, which behave as relationships
@@ -433,6 +399,7 @@ ValueDecimal.value = valueProperty
 ValueString.value = valueProperty
 ValueText.value = valueProperty
 ValueObject.value = Relationship(Entity, primaryjoin='Entity.id == ValueObject._value')
+ValueChoice.value = Relationship(Choice, primaryjoin='Choice.id == ValueChoice._value')
 ValueBlob.value = valueProperty
 
 
@@ -503,6 +470,7 @@ event.listen(ValueInteger.value, 'set', validateValue)
 event.listen(ValueDecimal.value, 'set', validateValue)
 event.listen(ValueString.value, 'set', validateValue)
 event.listen(ValueText.value, 'set', validateValue)
+event.listen(ValueChoice.value, 'set', validateValue)
 event.listen(ValueObject.value, 'set', validateValue)
 event.listen(ValueBlob.value, 'set', validateValue)
 
@@ -516,6 +484,7 @@ nameModelMap = dict(
     decimal=ValueDecimal,
     date=ValueDatetime,
     datetime=ValueDatetime,
+    choice=ValueChoice,
     object=ValueObject,
     blob=ValueBlob,
     )

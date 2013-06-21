@@ -279,6 +279,8 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
 
     is_required = Column(Boolean, nullable=False, default=IS_REQUIRED_DEFAULT)
 
+    is_auto_choice = Column(Boolean)
+
     object_schema_id = Column(Integer)
 
     object_schema = Relationship(
@@ -359,6 +361,16 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
                 END
                 """,
                 name='ck_%s_valid_object_bind' % cls.__tablename__,
+                ),
+            CheckConstraint(
+                """
+                CASE WHEN type = 'choice' THEN
+                    is_auto_choice IS NOT NULL
+                ELSE
+                    is_auto_choice IS NULL
+                END
+                """,
+                name='ck_%s_valid_auto_choice' % cls.__tablename__,
                 ),
             )
 
