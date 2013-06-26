@@ -10,6 +10,7 @@ from sqlalchemy.orm.collections import collection
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy import event
+from sqlalchemy import text
 from sqlalchemy.orm import relationship as Relationship
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import backref
@@ -33,6 +34,7 @@ from zope.interface import implements
 
 from occams.datastore.interfaces import IEntity
 from occams.datastore.interfaces import IValue
+from occams.datastore.interfaces import IState
 from occams.datastore.interfaces import InvalidEntitySchemaError
 from occams.datastore.interfaces import ConstraintError
 from occams.datastore.model import DataStoreModel as Model
@@ -46,8 +48,6 @@ from occams.datastore.model.schema import Attribute
 from occams.datastore.model.schema import Choice
 
 
-ENTITY_STATE_NAMES = sorted([term.token for term in IEntity['state'].vocabulary])
-
 
 def enforceSchemaState(entity):
     """
@@ -55,6 +55,7 @@ def enforceSchemaState(entity):
     """
     if entity.schema.state != 'published':
         raise InvalidEntitySchemaError(entity.schema.name, entity.schema.state)
+
 
 class Context(Model, AutoNamed, Referenceable, Modifiable, Auditable):
 
@@ -133,6 +134,14 @@ def grouped_collection(keyfunc):
     return lambda: GroupedCollection(keyfunc)
 
 
+class State(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
+    implements(IState)
+
+    @declared_attr
+    def __table_args__(cls):
+        return (UniqueConstraint('name'),)
+
+
 class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
     implements(IEntity)
 
@@ -148,11 +157,15 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
             )
         )
 
-    state = Column(
-        Enum(*ENTITY_STATE_NAMES, name='entity_state'),
-        nullable=False,
-        server_default=IEntity['state'].default
-        )
+    state_id = Column(Integer)
+
+    state = Relationship(
+        State,
+        backref=backref(
+            name='entities',
+            lazy='dynamic'))
+
+    is_null = Column(Boolean, nullable=False, default=False, server_default=text('FALSE'))
 
     collect_date = Column(Date, nullable=False, default=date.today)
 
@@ -165,8 +178,15 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
                 name='fk_%s_schema_id' % cls.__tablename__,
                 ondelete='CASCADE',
                 ),
+            ForeignKeyConstraint(
+                columns=['state_id'],
+                refcolumns=['state.id'],
+                name='fk_%s_state_id' % cls.__tablename__,
+                ondelete='CASCADE',
+                ),
             UniqueConstraint('schema_id', 'name'),
             Index('ix_%s_schema_id' % cls.__tablename__, 'schema_id'),
+            Index('ix_%s_state_id' % cls.__tablename__, 'state_id'),
             Index('ix_%s_collect_date' % cls.__tablename__, 'collect_date'),
             )
 

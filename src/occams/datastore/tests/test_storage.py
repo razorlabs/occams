@@ -20,6 +20,42 @@ from occams.datastore.interfaces import  IEntity
 from occams.datastore.interfaces import InvalidEntitySchemaError
 from occams.datastore.interfaces import ConstraintError
 
+
+class WorkflowModelTestCase(unittest.TestCase):
+
+    layer = OCCAMS_DATASTORE_FIXTURE
+
+    def testImplementation(self):
+        self.assertTrue(verifyClass(IEntity, model.Entity))
+        self.assertTrue(verifyObject(IEntity, model.Entity()))
+
+    def testUniquName(self):
+        session = self.layer['session']
+        session.add(model.State(name=u'pending-entry', title=u'Pending Entry'))
+        session.flush()
+
+        with self.assertRaises(sqlalchemy.exc.IntegrityError):
+            session.add(model.State(name=u'pending-entry', title=u'Pending Entry'))
+            session.flush()
+
+    def testEntityRelationship(self):
+        session = self.layer['session']
+        schema = model.Schema(name=u'Foo', title=u'Foo', state=u'published')
+        pending_entry = model.State(name=u'pending-entry', title=u'Pending Entry')
+        entity = model.Entity(schema=schema, name='foo', title=u'Foo')
+        session.add_all([pending_entry, entity])
+        session.flush()
+
+        self.assertIsNone(entity.state)
+        self.assertEqual(0, pending_entry.entities.count())
+
+        entity.state = pending_entry
+        session.flush()
+
+        self.assertIsNotNone(entity.state)
+        self.assertEqual(1, pending_entry.entities.count())
+
+
 class EntityModelTestCase(unittest.TestCase):
     """
     Verifies entity model
@@ -57,6 +93,7 @@ class EntityModelTestCase(unittest.TestCase):
 
         # Check that all properties are working properly
         self.assertIsNotNone(entity.schema)
+        self.assertEqual(entity.is_null, False)
         self.assertIsNotNone(entity.create_date)
         self.assertIsNotNone(entity.create_user)
         self.assertIsNotNone(entity.modify_date)
@@ -466,3 +503,4 @@ class EntityModelTestCase(unittest.TestCase):
         items = entity.items()
         self.assertEqual(2, len(items))
         self.assertListEqual([('foo', 5), ('bar', [1, 2, 3])], items)
+
