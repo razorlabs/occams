@@ -1,4 +1,6 @@
+--
 -- Renames value tables to make them easier to locate
+--
 BEGIN;
 
 ALTER TABLE "decimal" RENAME TO "value_decimal";

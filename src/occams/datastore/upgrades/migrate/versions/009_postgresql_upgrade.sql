@@ -1,4 +1,6 @@
+--
 -- Creates a new choice value table and migrate all the data
+--
 BEGIN;
 
 CREATE TABLE "value_choice" (
@@ -97,6 +99,10 @@ INSERT INTO "value_choice" (entity_id, attribute_id, value, create_date, create_
 ;
 
 -- data loss, unfortunately...
+-- reason: there will be entries from records that were deleted on the live
+-- tables that will be unable to be mapped, rather than retrofitting audit
+-- data it's simpler to just purge this set since we don't have a view
+-- for it anyway.
 DELETE FROM "value_decimal_audit" WHERE choice_id IS NULL;
 DELETE FROM "value_datetime_audit" WHERE choice_id IS NULL;
 DELETE FROM "value_integer_audit" WHERE choice_id IS NULL;
@@ -119,4 +125,3 @@ ALTER TABLE "value_text_audit" DROP COLUMN "choice_id";
 ALTER TABLE "value_blob_audit" DROP COLUMN "choice_id";
 
 COMMIT;
-
