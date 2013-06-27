@@ -22,6 +22,7 @@ typesVocabulary = SimpleVocabulary([
         SimpleTerm(value=zope.schema.Bool, token='boolean', title='Boolean'),
         SimpleTerm(value=zope.schema.Decimal, token='decimal', title='Decimal'),
         SimpleTerm(value=zope.schema.Int, token='integer', title='Integer'),
+        SimpleTerm(value=zope.schema.Choice, token='choice', title='Choice'),
         SimpleTerm(value=zope.schema.Date, token='date', title='Date'),
         SimpleTerm(value=zope.schema.Datetime, token='datetime', title='Datetime'),
         SimpleTerm(value=zope.schema.TextLine, token='string', title='String'),
@@ -302,6 +303,11 @@ class IAttribute(IDataBaseItem):
         default=False,
         )
 
+    is_auto_choice = zope.schema.Bool(
+        title=_(u'Are attribute choices auto-numbered?'),
+        required=False
+        )
+
     object_schema = zope.schema.Object(
         title=_(u'The object\'s schema'),
         description=_(u'Only applies to attributes of type "object". '),
@@ -359,20 +365,21 @@ class IChoice(IDataBaseItem):
         schema=IAttribute
         )
 
-    value = zope.schema.TextLine(
-        title=_(u'Value'),
-        description=_(u'The value will be coerced when stored.')
-        )
-
     order = zope.schema.Int(
         title=_(u'Display Order')
         )
 
 
+class IState(IDataBaseItem):
+    """
+    An entity state to keep track of the entity's progress through some
+    externally defined work flow.
+    """
+
+
 class IEntity(IDataBaseItem):
     """
     An object that describes how an EAV object is generated.
-    Note that work flow states may be assigned to class entities.
     """
 
     schema = zope.schema.Object(
@@ -381,16 +388,16 @@ class IEntity(IDataBaseItem):
         schema=ISchema
         )
 
-    state = zope.schema.Choice(
+    state = zope.schema.Object(
         title=_(u'The current workflow state'),
-        values=sorted([
-            'pending-entry', 'pending-review',
-            'complete', 'not-done', 'inline',
-            'error',
-            'inaccurate',
-            'not-applicable',
-            ]),
-        default='pending-entry',
+        schema=IState,
+        required=False
+        )
+
+    is_null = zope.schema.Bool(
+        title=_(u'Empty'),
+        description=_(u'Flag to indicate if the entity is intentionally blank'),
+        default=False,
         )
 
     collect_date = zope.schema.Date(
