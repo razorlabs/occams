@@ -1,5 +1,5 @@
 --
--- Creates a new choice value table and migrate all the data
+-- Creates a new choice value table AND migrate all the data
 --
 BEGIN;
 
@@ -89,22 +89,71 @@ ALTER TABLE ONLY "value_choice"
 
 
 INSERT INTO "value_choice" (entity_id, attribute_id, value, create_date, create_user_id, modify_date, modify_user_id, revision)
-    SELECT entity_id, attribute_id, choice_id, create_date, create_user_id, modify_date, modify_user_id, revision FROM "value_decimal" WHERE choice_id IS NOT NULL
-    UNION
-    SELECT entity_id, attribute_id, choice_id, create_date, create_user_id, modify_date, modify_user_id, revision FROM "value_datetime" WHERE choice_id IS NOT NULL
-    UNION
-    SELECT entity_id, attribute_id, choice_id, create_date, create_user_id, modify_date, modify_user_id, revision FROM "value_integer" WHERE choice_id IS NOT NULL
-    UNION
-    SELECT entity_id, attribute_id, choice_id, create_date, create_user_id, modify_date, modify_user_id, revision FROM "value_string" WHERE choice_id IS NOT NULL
+  SELECT
+    value.entity_id
+    ,value.attribute_id
+    ,choice.id AS choice_id
+    ,value.create_date
+    ,value.create_user_id
+    ,value.modify_date
+    ,value.modify_user_id
+    ,value.revision
+  FROM "value_decimal" AS "value"
+  JOIN "choice"
+    ON "choice"."attribute_id" = "value"."attribute_id"
+    AND "value"."value"::text = choice.value
+  UNION
+  SELECT
+    value.entity_id
+    ,value.attribute_id
+    ,choice.id AS choice_id
+    ,value.create_date
+    ,value.create_user_id
+    ,value.modify_date
+    ,value.modify_user_id
+    ,value.revision
+  FROM "value_integer" AS "value"
+   JOIN "choice"
+    ON "choice"."attribute_id" = "value"."attribute_id"
+    AND "value"."value"::text = choice.value
+  UNION
+  SELECT
+    value.entity_id
+    ,value.attribute_id
+    ,choice.id AS choice_id
+    ,value.create_date
+    ,value.create_user_id
+    ,value.modify_date
+    ,value.modify_user_id
+    ,value.revision
+  FROM "value_string" AS "value"
+  JOIN "choice"
+    ON "choice"."attribute_id" = "value"."attribute_id"
+    AND "value"."value"::text = choice.value
+  UNION
+  SELECT
+    value.entity_id
+    ,value.attribute_id
+    ,choice.id AS choice_id
+    ,value.create_date
+    ,value.create_user_id
+    ,value.modify_date
+    ,value.modify_user_id
+    ,value.revision
+  FROM "value_datetime" AS "value"
+  JOIN "choice"
+    ON "choice"."attribute_id" = "value"."attribute_id"
+    AND "value"."value"::text = choice.value
 ;
 
 -- Delete the moved values
-DELETE FROM "value_decimal" WHERE choice_id IS NOT NULL;
-DELETE FROM "value_datetime" WHERE choice_id IS NOT NULL;
-DELETE FROM "value_integer" WHERE choice_id IS NOT NULL;
-DELETE FROM "value_string" WHERE choice_id IS NOT NULL;
-DELETE FROM "value_text" WHERE choice_id IS NOT  NULL;
-DELETE FROM "value_blob" WHERE choice_id IS NOT NULL;
+DELETE FROM "value_decimal" AS value USING choice AS choice WHERE value.attribute_id = choice.attribute_id;;
+DELETE FROM "value_integer" AS value USING choice AS choice WHERE value.attribute_id = choice.attribute_id;;
+DELETE FROM "value_string" AS value USING choice AS choice WHERE value.attribute_id = choice.attribute_id;;
+DELETE FROM "value_datetime" AS value USING choice AS choice WHERE value.attribute_id = choice.attribute_id;;
+DELETE FROM "value_blob" AS value USING choice AS choice WHERE value.attribute_id = choice.attribute_id;;
+DELETE FROM "value_text" AS value USING choice AS choice WHERE value.attribute_id = choice.attribute_id;;
+
 
 -- delete the audit values
 -- data loss, unfortunately...
@@ -112,12 +161,16 @@ DELETE FROM "value_blob" WHERE choice_id IS NOT NULL;
 -- tables that will be unable to be mapped, rather than retrofitting audit
 -- data it's simpler to just purge this set since we don't have a view
 -- for it anyway.
-DELETE FROM "value_decimal_audit" WHERE choice_id IS NOT NULL;
-DELETE FROM "value_datetime_audit" WHERE choice_id IS NOT NULL;
-DELETE FROM "value_integer_audit" WHERE choice_id IS NOT NULL;
-DELETE FROM "value_string_audit" WHERE choice_id IS NOT NULL;
-DELETE FROM "value_text_audit" WHERE choice_id IS NOT  NULL;
-DELETE FROM "value_blob_audit" WHERE choice_id IS NOT NULL;
+DELETE FROM "value_decimal_audit" AS value USING choice_audit AS choice WHERE value.attribute_id = choice.attribute_id;;
+DELETE FROM "value_integer_audit" AS value USING choice_audit AS choice WHERE value.attribute_id = choice.attribute_id;;
+DELETE FROM "value_string_audit" AS value USING choice_audit AS choice WHERE value.attribute_id = choice.attribute_id;;
+DELETE FROM "value_datetime_audit" AS value USING choice_audit AS choice WHERE value.attribute_id = choice.attribute_id;;
+DELETE FROM "value_blob_audit" AS value USING choice_audit AS choice WHERE value.attribute_id = choice.attribute_id;;
+DELETE FROM "value_text_audit" AS value USING choice_audit AS choice WHERE value.attribute_id = choice.attribute_id;;
+
+
+-- drop the old columns
+
 
 ALTER TABLE "value_decimal" DROP COLUMN "choice_id";
 ALTER TABLE "value_datetime" DROP COLUMN "choice_id";
