@@ -3,6 +3,25 @@
 --
 BEGIN;
 
+
+-- Remove nulled entries
+
+
+DELETE FROM "decimal" AS v WHERE v.value IS NULL;
+DELETE FROM "integer" AS v WHERE v.value IS NULL;
+DELETE FROM "string" AS v WHERE v.value IS NULL;
+DELETE FROM "datetime" AS v WHERE v.value IS NULL;
+DELETE FROM "text" AS v WHERE v.value IS NULL;
+DELETE FROM "blob" AS v WHERE v.value IS NULL;
+
+DELETE FROM "decimal_audit" AS v WHERE v.value IS NULL;
+DELETE FROM "integer_audit" AS v WHERE v.value IS NULL;
+DELETE FROM "string_audit" AS v WHERE v.value IS NULL;
+DELETE FROM "datetime_audit" AS v WHERE v.value IS NULL;
+DELETE FROM "text_audit" AS v WHERE v.value IS NULL;
+DELETE FROM "blob_audit" AS v WHERE v.value IS NULL;
+
+
 ALTER TABLE "decimal" RENAME TO "value_decimal";
 ALTER TABLE "value_decimal"
   DROP CONSTRAINT "fk_decimal_entity_id"
@@ -17,6 +36,7 @@ ALTER TABLE "value_decimal"
   ,ADD CONSTRAINT "fk_value_decimal_create_user_id" FOREIGN KEY (create_user_id) REFERENCES "user"(id) ON DELETE RESTRICT
   ,ADD CONSTRAINT "fk_value_decimal_modify_user_id" FOREIGN KEY (modify_user_id) REFERENCES "user"(id) ON DELETE RESTRICT
   ,ADD CONSTRAINT "ck_value_decimal_valid_timeline" CHECK (create_date <= modify_date)
+  ,ALTER COLUMN "value" SET NOT NULL
 ;
 ALTER SEQUENCE "decimal_id_seq"  RENAME TO "value_decimal_id_seq";
 ALTER INDEX "ix_decimal_entity_id" RENAME TO "ix_value_decimal_entity_id";
@@ -31,6 +51,7 @@ ALTER TABLE "decimal_audit" RENAME TO "value_decimal_audit";
 ALTER TABLE "value_decimal_audit"
   DROP CONSTRAINT "ck_decimal_valid_timeline"
   ,ADD CONSTRAINT "ck_value_decimal_valid_timeline" CHECK (create_date <= modify_date)
+  ,ALTER COLUMN "value" SET NOT NULL
 ;
 ALTER SEQUENCE "decimal_audit_id_seq"  RENAME TO "value_decimal_audit_id_seq";
 ALTER INDEX "ix_decimal_audit_create_user_id" RENAME TO "ix_value_decimal_audit_create_user_id";
@@ -51,6 +72,7 @@ ALTER TABLE "value_datetime"
   ,ADD CONSTRAINT "fk_value_datetime_create_user_id" FOREIGN KEY (create_user_id) REFERENCES "user"(id) ON DELETE RESTRICT
   ,ADD CONSTRAINT "fk_value_datetime_modify_user_id" FOREIGN KEY (modify_user_id) REFERENCES "user"(id) ON DELETE RESTRICT
   ,ADD CONSTRAINT "ck_value_datetime_valid_timeline" CHECK (create_date <= modify_date)
+  ,ALTER COLUMN "value" SET NOT NULL
 ;
 ALTER SEQUENCE "datetime_id_seq"  RENAME TO "value_datetime_id_seq";
 ALTER INDEX "ix_datetime_entity_id" RENAME TO "ix_value_datetime_entity_id";
@@ -65,6 +87,7 @@ ALTER TABLE "datetime_audit" RENAME TO "value_datetime_audit";
 ALTER TABLE "value_datetime_audit"
   DROP CONSTRAINT "ck_datetime_valid_timeline"
   ,ADD CONSTRAINT "ck_value_datetime_valid_timeline" CHECK (create_date <= modify_date)
+  ,ALTER COLUMN "value" SET NOT NULL
 ;
 ALTER SEQUENCE "datetime_audit_id_seq"  RENAME TO "value_datetime_audit_id_seq";
 ALTER INDEX "ix_datetime_audit_create_user_id" RENAME TO "ix_value_datetime_audit_create_user_id";
@@ -85,6 +108,7 @@ ALTER TABLE "value_integer"
   ,ADD CONSTRAINT "fk_value_integer_create_user_id" FOREIGN KEY (create_user_id) REFERENCES "user"(id) ON DELETE RESTRICT
   ,ADD CONSTRAINT "fk_value_integer_modify_user_id" FOREIGN KEY (modify_user_id) REFERENCES "user"(id) ON DELETE RESTRICT
   ,ADD CONSTRAINT "ck_value_integer_valid_timeline" CHECK (create_date <= modify_date)
+  ,ALTER COLUMN "value" SET NOT NULL
 ;
 ALTER SEQUENCE "integer_id_seq"  RENAME TO "value_integer_id_seq";
 ALTER INDEX "ix_integer_entity_id" RENAME TO "ix_value_integer_entity_id";
@@ -99,6 +123,7 @@ ALTER TABLE "integer_audit" RENAME TO "value_integer_audit";
 ALTER TABLE "value_integer_audit"
   DROP CONSTRAINT "ck_integer_valid_timeline"
   ,ADD CONSTRAINT "ck_value_integer_valid_timeline" CHECK (create_date <= modify_date)
+  ,ALTER COLUMN "value" SET NOT NULL
 ;
 ALTER SEQUENCE "integer_audit_id_seq"  RENAME TO "value_integer_audit_id_seq";
 ALTER INDEX "ix_integer_audit_create_user_id" RENAME TO "ix_value_integer_audit_create_user_id";
@@ -119,6 +144,7 @@ ALTER TABLE "value_string"
   ,ADD CONSTRAINT "fk_value_string_create_user_id" FOREIGN KEY (create_user_id) REFERENCES "user"(id) ON DELETE RESTRICT
   ,ADD CONSTRAINT "fk_value_string_modify_user_id" FOREIGN KEY (modify_user_id) REFERENCES "user"(id) ON DELETE RESTRICT
   ,ADD CONSTRAINT "ck_value_string_valid_timeline" CHECK (create_date <= modify_date)
+  ,ALTER COLUMN "value" SET NOT NULL
 ;
 ALTER SEQUENCE "string_id_seq"  RENAME TO "value_string_id_seq";
 ALTER INDEX "ix_string_entity_id" RENAME TO "ix_value_string_entity_id";
@@ -133,6 +159,7 @@ ALTER TABLE "string_audit" RENAME TO "value_string_audit";
 ALTER TABLE "value_string_audit"
   DROP CONSTRAINT "ck_string_valid_timeline"
   ,ADD CONSTRAINT "ck_value_string_valid_timeline" CHECK (create_date <= modify_date)
+  ,ALTER COLUMN "value" SET NOT NULL
 ;
 ALTER SEQUENCE "string_audit_id_seq"  RENAME TO "value_string_audit_id_seq";
 ALTER INDEX "ix_string_audit_create_user_id" RENAME TO "ix_value_string_audit_create_user_id";
@@ -153,6 +180,7 @@ ALTER TABLE "value_blob"
   ,ADD CONSTRAINT "fk_value_blob_create_user_id" FOREIGN KEY (create_user_id) REFERENCES "user"(id) ON DELETE RESTRICT
   ,ADD CONSTRAINT "fk_value_blob_modify_user_id" FOREIGN KEY (modify_user_id) REFERENCES "user"(id) ON DELETE RESTRICT
   ,ADD CONSTRAINT "ck_value_blob_valid_timeline" CHECK (create_date <= modify_date)
+  ,ALTER COLUMN "value" SET NOT NULL
 ;
 ALTER SEQUENCE "blob_id_seq"  RENAME TO "value_blob_id_seq";
 ALTER INDEX "ix_blob_entity_id" RENAME TO "ix_value_blob_entity_id";
@@ -167,6 +195,7 @@ ALTER TABLE "blob_audit" RENAME TO "value_blob_audit";
 ALTER TABLE "value_blob_audit"
   DROP CONSTRAINT "ck_blob_audit_valid_timeline"
   ,ADD CONSTRAINT "ck_value_blob_valid_timeline" CHECK (create_date <= modify_date)
+  ,ALTER COLUMN "value" SET NOT NULL
 ;
 ALTER SEQUENCE "blob_audit_id_seq"  RENAME TO "value_blob_audit_id_seq";
 ALTER INDEX "ix_blob_audit_create_user_id" RENAME TO "ix_value_blob_audit_create_user_id";
@@ -187,6 +216,7 @@ ALTER TABLE "value_text"
   ,ADD CONSTRAINT "fk_value_text_create_user_id" FOREIGN KEY (create_user_id) REFERENCES "user"(id) ON DELETE RESTRICT
   ,ADD CONSTRAINT "fk_value_text_modify_user_id" FOREIGN KEY (modify_user_id) REFERENCES "user"(id) ON DELETE RESTRICT
   ,ADD CONSTRAINT "ck_value_text_valid_timeline" CHECK (create_date <= modify_date)
+  ,ALTER COLUMN "value" SET NOT NULL
 ;
 ALTER SEQUENCE "text_id_seq"  RENAME TO "value_text_id_seq";
 ALTER INDEX "ix_text_entity_id" RENAME TO "ix_value_text_entity_id";
@@ -202,6 +232,7 @@ ALTER TABLE "value_text_audit"
   -- keep things consistent with the values
   DROP CONSTRAINT "ck_text_audit_valid_timeline"
   ,ADD CONSTRAINT "ck_value_text_valid_timeline" CHECK (create_date <= modify_date)
+  ,ALTER COLUMN "value" SET NOT NULL
 ;
 ALTER SEQUENCE "text_audit_id_seq"  RENAME TO "value_text_audit_id_seq";
 ALTER INDEX "ix_text_audit_create_user_id" RENAME TO "ix_value_text_audit_create_user_id";
