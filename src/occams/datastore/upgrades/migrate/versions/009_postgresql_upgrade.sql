@@ -98,17 +98,26 @@ INSERT INTO "value_choice" (entity_id, attribute_id, value, create_date, create_
     SELECT entity_id, attribute_id, choice_id, create_date, create_user_id, modify_date, modify_user_id, revision FROM "value_string" WHERE choice_id IS NOT NULL
 ;
 
+-- Delete the moved values
+DELETE FROM "value_decimal" WHERE choice_id IS NOT NULL;
+DELETE FROM "value_datetime" WHERE choice_id IS NOT NULL;
+DELETE FROM "value_integer" WHERE choice_id IS NOT NULL;
+DELETE FROM "value_string" WHERE choice_id IS NOT NULL;
+DELETE FROM "value_text" WHERE choice_id IS NOT  NULL;
+DELETE FROM "value_blob" WHERE choice_id IS NOT NULL;
+
+-- delete the audit values
 -- data loss, unfortunately...
 -- reason: there will be entries from records that were deleted on the live
 -- tables that will be unable to be mapped, rather than retrofitting audit
 -- data it's simpler to just purge this set since we don't have a view
 -- for it anyway.
-DELETE FROM "value_decimal_audit" WHERE choice_id IS NULL;
-DELETE FROM "value_datetime_audit" WHERE choice_id IS NULL;
-DELETE FROM "value_integer_audit" WHERE choice_id IS NULL;
-DELETE FROM "value_string_audit" WHERE choice_id IS NULL;
-DELETE FROM "value_text_audit" WHERE choice_id IS NULL;
-DELETE FROM "value_blob_audit" WHERE choice_id IS NULL;
+DELETE FROM "value_decimal_audit" WHERE choice_id IS NOT NULL;
+DELETE FROM "value_datetime_audit" WHERE choice_id IS NOT NULL;
+DELETE FROM "value_integer_audit" WHERE choice_id IS NOT NULL;
+DELETE FROM "value_string_audit" WHERE choice_id IS NOT NULL;
+DELETE FROM "value_text_audit" WHERE choice_id IS NOT  NULL;
+DELETE FROM "value_blob_audit" WHERE choice_id IS NOT NULL;
 
 ALTER TABLE "value_decimal" DROP COLUMN "choice_id";
 ALTER TABLE "value_datetime" DROP COLUMN "choice_id";
