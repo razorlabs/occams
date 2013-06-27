@@ -19,13 +19,7 @@ ALTER TABLE "choice" DROP COLUMN "value";
 ALTER TABLE "choice_audit" DROP COLUMN "value";
 
 
--- set choice type
-
-
-
-
--- update choice codes
-
+-- update choice codes for booleans
 
 UPDATE "choice" SET
   "name" = CASE "name" WHEN 'False' THEN '0' WHEN 'True' THEN '1' END
@@ -36,7 +30,9 @@ WHERE EXISTS(
   AND "attribute"."type" = 'boolean')
 ;
 
--- update all non-numeric values to the order value
+-- update all string codes to use the order number
+-- note that there are some numeric strings that we need to watch out for
+-- (e.g. 00332, in this case leave those alone)
 UPDATE "choice" SET
   "name" = CAST("order" AS VARCHAR)
 WHERE EXISTS(
