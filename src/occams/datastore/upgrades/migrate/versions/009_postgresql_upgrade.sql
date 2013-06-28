@@ -88,6 +88,9 @@ ALTER TABLE ONLY "value_choice"
     ADD CONSTRAINT fk_value_choice_modify_user_id FOREIGN KEY (modify_user_id) REFERENCES "user"(id) ON DELETE RESTRICT;
 
 
+-- Migrate all the choice selections to the new table
+
+
 INSERT INTO "value_choice" (entity_id, attribute_id, value, create_date, create_user_id, modify_date, modify_user_id, revision)
   SELECT
     value.entity_id
@@ -146,7 +149,10 @@ INSERT INTO "value_choice" (entity_id, attribute_id, value, create_date, create_
     AND "value"."value"::text = choice.value
 ;
 
+
 -- Delete the moved values
+
+
 DELETE FROM "value_decimal" AS value USING choice AS choice WHERE value.attribute_id = choice.attribute_id;;
 DELETE FROM "value_integer" AS value USING choice AS choice WHERE value.attribute_id = choice.attribute_id;;
 DELETE FROM "value_string" AS value USING choice AS choice WHERE value.attribute_id = choice.attribute_id;;
