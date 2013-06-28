@@ -1,61 +1,286 @@
 --
--- Modifies schema to use choice type where necessary
+-- Flattens entities by removing sub-objects
+-- Moving forward 'fieldsets' are purely cosmetic and supported via the
+-- section table
 --
 BEGIN;
 
--- move value to name
--- not will not break checksum since it uses value anyway,
--- which will be configured in the algorithm
+--
+-- Add the new section table
+--
 
+CREATE TABLE section (
+    id INTEGER NOT NULL,
+    name VARCHAR NOT NULL,
+    title VARCHAR NOT NULL,
+    description VARCHAR,
+    schema_id INTEGER NOT NULL,
+    "order" INTEGER NOT NULL,
+    create_user_id INTEGER NOT NULL,
+    modify_user_id INTEGER NOT NULL,
+    modify_date TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW() NOT NULL,
+    create_date TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW() NOT NULL,
+    revision INTEGER NOT NULL,
+    CONSTRAINT ck_section_valid_timeline CHECK ((create_date <= modify_date))
+);
 
-UPDATE "choice" SET "name" = "value";
-UPDATE "choice_audit" SET "name" = "value";
+CREATE TABLE section_audit (
+    id INTEGER NOT NULL,
+    name VARCHAR NOT NULL,
+    title VARCHAR NOT NULL,
+    description VARCHAR,
+    schema_id INTEGER NOT NULL,
+    "order" INTEGER NOT NULL,
+    create_user_id INTEGER NOT NULL,
+    modify_user_id INTEGER NOT NULL,
+    modify_date TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW() NOT NULL,
+    create_date TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW() NOT NULL,
+    revision INTEGER NOT NULL,
+    CONSTRAINT ck_section_valid_timeline CHECK ((create_date <= modify_date))
+);
 
+CREATE SEQUENCE section_audit_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MAXVALUE
+    NO MINVALUE
+    CACHE 1;
 
--- drop the cold column
+ALTER SEQUENCE section_audit_id_seq OWNED BY section_audit.id;
 
+CREATE SEQUENCE section_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MAXVALUE
+    NO MINVALUE
+    CACHE 1;
 
-ALTER TABLE "choice" DROP COLUMN "value";
-ALTER TABLE "choice_audit" DROP COLUMN "value";
+ALTER SEQUENCE section_id_seq OWNED BY section.id;
 
+ALTER TABLE ONLY section ALTER COLUMN id SET DEFAULT nextval('section_id_seq'::regclass);
 
--- update choice codes for booleans
+ALTER TABLE ONLY section_audit ALTER COLUMN id SET DEFAULT nextval('section_audit_id_seq'::regclass);
 
-UPDATE "choice" SET
-  "name" = CASE "name" WHEN 'False' THEN '0' WHEN 'True' THEN '1' END
-WHERE EXISTS(
-  SELECT 1
-  FROM "attribute"
-  WHERE "attribute"."id" = "choice"."attribute_id"
-  AND "attribute"."type" = 'boolean')
+ALTER TABLE ONLY section_audit
+    ADD CONSTRAINT section_audit_pkey PRIMARY KEY (id, revision);
+
+ALTER TABLE ONLY section
+    ADD CONSTRAINT section_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY section
+    ADD CONSTRAINT uq_section_name UNIQUE (schema_id, name);
+
+ALTER TABLE ONLY section
+    ADD CONSTRAINT uq_section_order UNIQUE (schema_id, "order");
+
+CREATE INDEX ix_section_audit_create_user_id ON section_audit USING btree (create_user_id);
+
+CREATE INDEX ix_section_audit_modify_user_id ON section_audit USING btree (modify_user_id);
+
+CREATE INDEX ix_section_create_user_id ON section USING btree (create_user_id);
+
+CREATE INDEX ix_section_modify_user_id ON section USING btree (modify_user_id);
+
+ALTER TABLE ONLY section
+    ADD CONSTRAINT fk_section_schema_id FOREIGN KEY (schema_id) REFERENCES schema(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY section
+    ADD CONSTRAINT fk_section_create_user_id FOREIGN KEY (create_user_id) REFERENCES "user"(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY section
+    ADD CONSTRAINT fk_section_modify_user_id FOREIGN KEY (modify_user_id) REFERENCES "user"(id) ON DELETE RESTRICT;
+
+--
+-- Add a reference to the setion table in attribute
+--
+
+ALTER TABLE attribute
+  ADD COLUMN section_id INTEGER
+  ,DROP CONSTRAINT uq_attribute_order
+  ,ADD CONSTRAINT uq_attribute_order UNIQUE (section_id, "order")
+;
+ALTER TABLE attribute_audit ADD COLUMN section_id INTEGER;
+
+CREATE INDEX ix_attribute_section_id ON attribute(section_id);
+
+ALTER TABLE attribute
+  ADD CONSTRAINT fk_attribute_section_id FOREIGN KEY (section_id) REFERENCES section(id) ON DELETE CASCADE;
+
+--
+-- Move object attributes to sections
+--
+
+INSERT INTO section (schema_id, name, title, description, "order", create_user_id, modify_user_id, revision)
+  SELECT
+    schema_id
+    ,name
+    ,title
+    ,description
+    ,"order"
+    ,(SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
+    ,(SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
+    ,1
+  FROM attribute
+  WHERE type = 'object';
+
+UPDATE attribute
+SET
+  schema_id = section.schema_id
+  ,name = section.name || '_' || attribute.name
+  ,section_id = section.id
+  ,modify_user_id = (SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
+  ,modify_date = NOW()
+FROM section
+WHERE section.schema_id = attribute.object_schema_id
 ;
 
--- update all string codes to use the order number
--- note that there are some numeric strings that we need to watch out for
--- (e.g. 00332, in this case leave those alone)
-UPDATE "choice" SET
-  "name" = CAST("order" AS VARCHAR)
-WHERE EXISTS(
-  SELECT 1
-  FROM "attribute"
-  WHERE "attribute"."id" = "choice"."attribute_id"
-  AND "attribute"."type" = 'string')
-AND EXISTS(
-  SELECT 1
-  FROM "choice" as "group"
-  WHERE "group"."attribute_id" = "choice"."attribute_id"
-  AND "name" ~ '[^0-9]')
+DELETE FROM attribute WHERE type = 'object';
+DELETE FROM attribute_audit WHERE type = 'object';
+
+--
+-- Update attributes with no sections
+-- These attributes where part of subobjects in the first place
+--
+INSERT INTO section (schema_id, name, title, "order", create_user_id, modify_user_id, revision)
+  SELECT
+    schema.id
+    ,'default'
+    ,''
+    ,1
+    ,(SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
+    ,(SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
+    ,1
+  FROM schema
+  WHERE NOT EXISTS(
+    SELECT 1
+    FROM section
+    WHERE section.schema_id = schema.id)
+;
+
+UPDATE attribute
+SET section_id = section.id
+FROM section
+WHERE section.schema_id = attribute.schema_id
+AND attribute.section_id IS NULL
 ;
 
 
-UPDATE "attribute" SET
-  -- map numeric string to auto_choice=False
-  "type" =
-    CASE
-      WHEN EXISTS(SELECT 1 FROM "choice" WHERE "choice"."attribute_id" = "attribute"."id") THEN 'choice'
-      ELSE "type"
-      END
+--
+-- Lock the section_id column
+--
+
+ALTER TABLE attribute
+  ALTER COLUMN section_id SET NOT NULL
 ;
+
+ALTER TABLE schema
+  DROP COLUMN base_schema_id
+  ,DROP COLUMN is_inline
+  ;
+
+ALTER TABLE schema_audit
+  DROP COLUMN base_schema_id
+  ,DROP COLUMN is_inline
+  ;
+
+--
+-- Move entity instances
+--
+
+UPDATE "value_decimal" AS "value"
+SET
+  entity_id = object.entity_id
+  ,modify_user_id = (SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
+  ,modify_date = NOW()
+FROM object
+WHERE value.entity_id = object.value
+;
+
+UPDATE "value_datetime" AS "value"
+SET
+  entity_id = object.entity_id
+  ,modify_user_id = (SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
+  ,modify_date = NOW()
+FROM object
+WHERE value.entity_id = object.value
+;
+
+UPDATE "value_integer" AS "value"
+SET
+  entity_id = object.entity_id
+  ,modify_user_id = (SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
+  ,modify_date = NOW()
+FROM object
+WHERE value.entity_id = object.value
+;
+
+UPDATE "value_string" AS "value"
+SET
+  entity_id = object.entity_id
+  ,modify_user_id = (SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
+  ,modify_date = NOW()
+FROM object
+WHERE value.entity_id = object.value
+;
+
+UPDATE "value_text" AS "value"
+SET
+  entity_id = object.entity_id
+  ,modify_user_id = (SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
+  ,modify_date = NOW()
+FROM object
+WHERE value.entity_id = object.value
+;
+
+UPDATE "value_blob" AS "value"
+SET
+  entity_id = object.entity_id
+  ,modify_user_id = (SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
+  ,modify_date = NOW()
+FROM object
+WHERE value.entity_id = object.value
+;
+
+UPDATE "value_choice" AS "value"
+SET
+  entity_id = object.entity_id
+  ,modify_user_id = (SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
+  ,modify_date = NOW()
+FROM object
+WHERE value.entity_id = object.value
+;
+
+DELETE FROM entity
+USING object
+WHERE entity.id = object.entity_id;
+
+DROP TABLE object;
+DROP TABLE object_audit;
+
+--
+-- Remove "object" as a supported type
+--
+
+-- Backup the old ENUM
+ALTER TYPE "attribute_type" RENAME TO "attribute_type_old";
+
+-- Declare the new ENUM
+CREATE TYPE "attribute_type" AS ENUM ( 'blob', 'boolean', 'choice', 'date', 'datetime', 'decimal', 'integer', 'string', 'text');
+
+-- Drop references to the ENUM
+ALTER TABLE "attribute"
+  DROP CONSTRAINT "ck_attribute_valid_object_bind"
+  ,DROP COLUMN "object_schema_id"
+  ,ALTER COLUMN "type" TYPE "attribute_type" USING "type"::text::"attribute_type";
+;
+
+-- Replace the type (also in the audit table)
+ALTER TABLE "attribute_audit"
+  DROP COLUMN "object_schema_id"
+  ,ALTER COLUMN "type" TYPE "attribute_type" USING "type"::text::"attribute_type"
+;
+
+-- Delete the old ENUM
+DROP TYPE "attribute_type_old";
 
 COMMIT;
-

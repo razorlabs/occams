@@ -27,7 +27,6 @@ typesVocabulary = SimpleVocabulary([
         SimpleTerm(value=zope.schema.Datetime, token='datetime', title='Datetime'),
         SimpleTerm(value=zope.schema.TextLine, token='string', title='String'),
         SimpleTerm(value=zope.schema.Text, token='text', title='Text'),
-        SimpleTerm(value=zope.schema.Object, token='object', title='Object'),
         SimpleTerm(value=zope.schema.Bytes, token='blob', title='Blob'),
     ],
     IVocabulary
@@ -203,11 +202,6 @@ class ISchema(IDataBaseItem):
     Zope-style interfaces.
     """
 
-    sub_schemata = zope.schema.Iterable(
-        title=_(u'Sub Schemata'),
-        description=_(u'Listing of schemata that subclass the Zope-style interface.'),
-        )
-
     categories = zope.schema.Set(
         title=_(u'Categories'),
         description=_(u'Listing of schema categories.'),
@@ -245,26 +239,6 @@ class ISchema(IDataBaseItem):
         required=False,
         )
 
-    is_inline = zope.schema.Bool(
-        title=_(u'Is the resulting object inline?'),
-        description=_(
-            u'If set and True, the schema should be rendered inline to other '
-            u'container schemata. '
-            ),
-        required=False,
-        )
-
-
-# Needs to be defined here, because it's type refers to itself.
-ISchema.base_schema = zope.schema.Object(
-    title=_(u'Base schema'),
-    description=_(
-        u'A base schema for this schema to extend, thus emulating OO-concepts.'
-        ),
-    schema=ISchema,
-    required=False,
-    )
-
 
 class IAttribute(IDataBaseItem):
     """
@@ -301,18 +275,6 @@ class IAttribute(IDataBaseItem):
     is_required = zope.schema.Bool(
         title=_(u'Is the attribute a required field?'),
         default=False,
-        )
-
-    is_auto_choice = zope.schema.Bool(
-        title=_(u'Are attribute choices auto-numbered?'),
-        required=False
-        )
-
-    object_schema = zope.schema.Object(
-        title=_(u'The object\'s schema'),
-        description=_(u'Only applies to attributes of type "object". '),
-        schema=ISchema,
-        required=False
         )
 
     value_min = zope.schema.Int(
@@ -419,20 +381,6 @@ class IValue(IDataBaseItem):
     attribute = zope.schema.Object(
         title=_(u'Property'),
         schema=IAttribute
-        )
-
-    choice = zope.schema.Object(
-        title=_('Choice'),
-        description=_(
-            u'Used for book keeping purposes as to where the value was '
-            u'assigned from.'
-            ),
-        schema=IChoice,
-        required=False
-        )
-
-    value = zope.schema.Field(
-        title=_(u'Assigned Value'),
         )
 
 

@@ -149,14 +149,6 @@ schema_category_table = Table('schema_category', Model.metadata,
 class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
     implements(ISchema)
 
-    base_schema_id = Column(Integer)
-
-    @declared_attr
-    def base_schema(cls):
-        return Relationship('Schema', remote_side='%s.id' % cls.__name__)
-
-    sub_schemata = Relationship('Schema', remote_side=base_schema_id)
-
     categories = Relationship(
         Category,
         secondary=schema_category_table,
@@ -184,19 +176,10 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
 
     is_association = Column(Boolean)
 
-    is_inline = Column(Boolean, nullable=False, default=False)
-
     @declared_attr
     def __table_args__(cls):
         return (
-            ForeignKeyConstraint(
-                columns=['base_schema_id'],
-                refcolumns=['schema.id'],
-                name='fk_%s_base_schema_id' % cls.__tablename__,
-                ondelete='CASCADE',
-                ),
             UniqueConstraint('name', 'publish_date'),
-            Index('ix_%s_base_schema_id' % cls.__tablename__, 'base_schema_id'),
             CheckConstraint(
                 """
                 CASE
@@ -246,7 +229,7 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
             yield attribute.name, attribute
 
     def __copy__(self):
-        keys = ('name', 'title', 'description', 'storage', 'is_inline')
+        keys = ('name', 'title', 'description', 'storage')
         return self.__class__(**dict([(k, getattr(self, k)) for k in keys]))
 
     def __deepcopy__(self, memo):
@@ -279,17 +262,6 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
 
     is_required = Column(Boolean, nullable=False, default=IS_REQUIRED_DEFAULT)
 
-    object_schema_id = Column(Integer)
-
-    object_schema = Relationship(
-        'Schema',
-        primaryjoin=(object_schema_id == Schema.id),
-        backref=backref(
-            name=u'parent_attribute',
-            uselist=False,
-            )
-        )
-
     _checksum = Column('checksum', String(32), nullable=False)
 
     checksum = Synonym('_checksum', descriptor=property(lambda self: self._checksum))
@@ -316,15 +288,8 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
                 name='fk_%s_schema_id' % cls.__tablename__,
                 ondelete='CASCADE',
                 ),
-            ForeignKeyConstraint(
-                columns=['object_schema_id'],
-                refcolumns=['schema.id'],
-                name='fk_%s_object_schema_id' % cls.__tablename__,
-                ondelete='SET NULL',
-                ),
             UniqueConstraint('schema_id', 'name', name='uq_%s_name' % cls.__tablename__),
             UniqueConstraint('schema_id', 'order', name='uq_%s_order' % cls.__tablename__),
-            Index('ix_%s_object_schema_id' % cls.__tablename__, 'object_schema_id'),
             Index('ix_%s_checksum' % cls.__tablename__, 'checksum'),
             CheckConstraint(
                 "collection_min IS NULL OR collection_min >= 0",
@@ -350,48 +315,7 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
                 "value_min < value_max",
                 name='ck_%s_valid_value' % cls.__tablename__,
                 ),
-            CheckConstraint(
-                """
-                CASE WHEN type = 'object' THEN
-                    object_schema_id IS NOT NULL
-                ELSE
-                    object_schema_id IS NULL
-                END
-                """,
-                name='ck_%s_valid_object_bind' % cls.__tablename__,
-                ),
             )
-
-    def __getitem__(self, key):
-        return self.object_schema[key]
-
-    def __setitem__(self, key, value):
-        self.object_schema[key] = value
-
-    def __delitem__(self, key):
-        del self.object_schema[key]
-
-    def __contains__(self, key):
-        return key in self.object_schema
-
-    def keys(self):
-        return list(self.iterkeys())
-
-    def iterkeys(self):
-        return self.object_schema.iterkeys()
-
-    def values(self):
-        return list(self.itervalues())
-
-    def itervalues(self):
-        return self.object_schema.itervalues()
-
-    def items(self):
-        return list(self.iteritems())
-
-    def iteritems(self):
-        return self.object_schema.iteritems()
-
     def __copy__(self):
         keys = (
             'name', 'title', 'description', 'type', 'is_collection', 'is_required',
@@ -402,7 +326,6 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
 
     def __deepcopy__(self, memo):
         duplicate = copy(self)
-        duplicate.object_schema = deepcopy(self.object_schema)
         duplicate.choices = [deepcopy(c) for c in iter(self.choices)]
         return duplicate
 

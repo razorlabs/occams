@@ -385,20 +385,16 @@ ValueText = TypeMappingClass('text', 'ValueText', 'value_text', UnicodeText, ind
 ValueChoice = TypeMappingClass('choice', 'ValueChoice', 'value_choice',
     ForeignKey('choice.id', name='fk_value_choice_value', ondelete='CASCADE'))
 
-ValueObject = TypeMappingClass('object', 'ValueObject', 'value_object',
-    ForeignKey('entity.id', name='fk_value_object_value', ondelete='CASCADE'))
-
 ValueBlob = TypeMappingClass('blob', 'ValueBlob', 'value_blob', LargeBinary, index=False)
 
 # Specify how the ``value`` properties behave, pretty much they're synonymns
-# of the ``_value`` property, except for objects, which behave as relationships
+# of the ``_value`` property,
 valueProperty = hybrid_property(lambda self: self._value, lambda self, value: setattr(self, '_value', value))
 ValueDatetime.value = valueProperty
 ValueInteger.value = valueProperty
 ValueDecimal.value = valueProperty
 ValueString.value = valueProperty
 ValueText.value = valueProperty
-ValueObject.value = Relationship(Entity, primaryjoin='Entity.id == ValueObject._value')
 ValueChoice.value = Relationship(Choice, primaryjoin='Choice.id == ValueChoice._value')
 ValueBlob.value = valueProperty
 
@@ -471,7 +467,6 @@ event.listen(ValueDecimal.value, 'set', validateValue)
 event.listen(ValueString.value, 'set', validateValue)
 event.listen(ValueText.value, 'set', validateValue)
 event.listen(ValueChoice.value, 'set', validateValue)
-event.listen(ValueObject.value, 'set', validateValue)
 event.listen(ValueBlob.value, 'set', validateValue)
 
 
@@ -485,7 +480,6 @@ nameModelMap = dict(
     date=ValueDatetime,
     datetime=ValueDatetime,
     choice=ValueChoice,
-    object=ValueObject,
     blob=ValueBlob,
     )
 
