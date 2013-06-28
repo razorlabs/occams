@@ -87,9 +87,9 @@ ALTER TABLE ONLY "value_choice"
 ALTER TABLE ONLY "value_choice"
     ADD CONSTRAINT fk_value_choice_modify_user_id FOREIGN KEY (modify_user_id) REFERENCES "user"(id) ON DELETE RESTRICT;
 
-
+--
 -- Migrate all the choice selections to the new table
-
+--
 
 INSERT INTO "value_choice" (entity_id, attribute_id, value, create_date, create_user_id, modify_date, modify_user_id, revision)
   SELECT
@@ -177,5 +177,61 @@ ALTER TABLE "value_integer_audit" DROP COLUMN "choice_id";
 ALTER TABLE "value_string_audit" DROP COLUMN "choice_id";
 ALTER TABLE "value_text_audit" DROP COLUMN "choice_id";
 ALTER TABLE "value_blob_audit" DROP COLUMN "choice_id";
+
+
+--
+-- Use the choice name as the code value
+--
+
+
+UPDATE "choice" SET "name" = "value";
+UPDATE "choice_audit" SET "name" = "value";
+
+--
+-- drop the cold column
+--
+
+
+ALTER TABLE "choice" DROP COLUMN "value";
+ALTER TABLE "choice_audit" DROP COLUMN "value";
+
+--
+-- update choice codes for booleans
+--
+
+UPDATE "choice" SET
+  "name" = CASE "name" WHEN 'False' THEN '0' WHEN 'True' THEN '1' END
+WHERE EXISTS(
+  SELECT 1
+  FROM "attribute"
+  WHERE "attribute"."id" = "choice"."attribute_id"
+  AND "attribute"."type" = 'boolean')
+;
+
+-- update all string codes to use the order number
+-- note that there are some numeric strings that we need to watch out for
+-- (e.g. 00332, in this case leave those alone)
+UPDATE "choice" SET
+  "name" = CAST("order" AS VARCHAR)
+WHERE EXISTS(
+  SELECT 1
+  FROM "attribute"
+  WHERE "attribute"."id" = "choice"."attribute_id"
+  AND "attribute"."type" = 'string')
+AND EXISTS(
+  SELECT 1
+  FROM "choice" as "group"
+  WHERE "group"."attribute_id" = "choice"."attribute_id"
+  AND "name" ~ '[^0-9]')
+;
+
+UPDATE "attribute" SET
+  -- map numeric string to auto_choice=False
+  "type" =
+    CASE
+      WHEN EXISTS(SELECT 1 FROM "choice" WHERE "choice"."attribute_id" = "attribute"."id") THEN 'choice'
+      ELSE "type"
+      END
+;
 
 COMMIT;
