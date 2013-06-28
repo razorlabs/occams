@@ -149,9 +149,9 @@ INSERT INTO "value_choice" (entity_id, attribute_id, value, create_date, create_
     AND "value"."value"::text = choice.value
 ;
 
-
+--
 -- Delete the moved values
-
+--
 
 DELETE FROM "value_decimal" AS value USING choice AS choice WHERE value.attribute_id = choice.attribute_id;;
 DELETE FROM "value_integer" AS value USING choice AS choice WHERE value.attribute_id = choice.attribute_id;;
@@ -160,23 +160,9 @@ DELETE FROM "value_datetime" AS value USING choice AS choice WHERE value.attribu
 DELETE FROM "value_blob" AS value USING choice AS choice WHERE value.attribute_id = choice.attribute_id;;
 DELETE FROM "value_text" AS value USING choice AS choice WHERE value.attribute_id = choice.attribute_id;;
 
-
--- delete the audit values
--- data loss, unfortunately...
--- reason: there will be entries from records that were deleted on the live
--- tables that will be unable to be mapped, rather than retrofitting audit
--- data it's simpler to just purge this set since we don't have a view
--- for it anyway.
-DELETE FROM "value_decimal_audit" AS value USING choice_audit AS choice WHERE value.attribute_id = choice.attribute_id;;
-DELETE FROM "value_integer_audit" AS value USING choice_audit AS choice WHERE value.attribute_id = choice.attribute_id;;
-DELETE FROM "value_string_audit" AS value USING choice_audit AS choice WHERE value.attribute_id = choice.attribute_id;;
-DELETE FROM "value_datetime_audit" AS value USING choice_audit AS choice WHERE value.attribute_id = choice.attribute_id;;
-DELETE FROM "value_blob_audit" AS value USING choice_audit AS choice WHERE value.attribute_id = choice.attribute_id;;
-DELETE FROM "value_text_audit" AS value USING choice_audit AS choice WHERE value.attribute_id = choice.attribute_id;;
-
-
--- drop the old columns
-
+--
+-- Drop the old columns
+--
 
 ALTER TABLE "value_decimal" DROP COLUMN "choice_id";
 ALTER TABLE "value_datetime" DROP COLUMN "choice_id";

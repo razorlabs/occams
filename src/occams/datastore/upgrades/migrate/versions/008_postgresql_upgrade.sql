@@ -3,9 +3,9 @@
 --
 BEGIN;
 
-
+--
 -- Remove nulled entries
-
+--
 
 DELETE FROM "decimal" AS v WHERE v.value IS NULL;
 DELETE FROM "integer" AS v WHERE v.value IS NULL;
@@ -14,6 +14,7 @@ DELETE FROM "datetime" AS v WHERE v.value IS NULL;
 DELETE FROM "text" AS v WHERE v.value IS NULL;
 DELETE FROM "blob" AS v WHERE v.value IS NULL;
 
+-- Need to delete them since we're going to lock it
 DELETE FROM "decimal_audit" AS v WHERE v.value IS NULL;
 DELETE FROM "integer_audit" AS v WHERE v.value IS NULL;
 DELETE FROM "string_audit" AS v WHERE v.value IS NULL;
