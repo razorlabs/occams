@@ -110,78 +110,73 @@ ALTER TABLE attribute
 -- Move object attributes to sections
 --
 
+-- Schemata with sub objects
 INSERT INTO section (schema_id, name, title, description, "order", create_user_id, modify_user_id, revision)
   SELECT
     schema_id
     ,name
     ,title
     ,description
-    ,"order"
+    -- avoid collisions by using a larger order number
+    ,100 + "order"
     ,(SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
     ,(SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
     ,1
   FROM attribute
-  WHERE type = 'object';
+  WHERE type = 'object'
+;
 
+-- Move all sub-attributes to the parent
 UPDATE attribute
 SET
-  schema_id = section.schema_id
-  ,name = section.name || '_' || attribute.name
+  schema_id = parent.schema_id
+  ,name = parent.name || '_' || attribute.name
   ,section_id = section.id
   ,modify_user_id = (SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
   ,modify_date = NOW()
-FROM section
-WHERE section.schema_id = attribute.object_schema_id
-;
+FROM
+  attribute AS parent
+  ,section
+WHERE
+  parent.object_schema_id = attribute.schema_id
+  AND parent.schema_id = section.schema_id
+  AND parent.name = section.name
+  ;
 
-DELETE FROM attribute WHERE type = 'object';
-DELETE FROM attribute_audit WHERE type = 'object';
-
---
--- Update attributes with no sections
--- These attributes where part of subobjects in the first place
---
+---- Create a default section for any top-level non-object attributes
+---- NOTE: that some schemata contain a combination of both,
 INSERT INTO section (schema_id, name, title, "order", create_user_id, modify_user_id, revision)
-  SELECT
-    schema.id
+  SELECT DISTINCT
+    schema_id
     ,'default'
-    ,''
-    ,1
+    ,'Default'
+    ,0
     ,(SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
     ,(SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
     ,1
-  FROM schema
-  WHERE NOT EXISTS(
-    SELECT 1
-    FROM section
-    WHERE section.schema_id = schema.id)
+  FROM
+    attribute
+    , schema
+  WHERE
+    schema.id = attribute.schema_id
+    AND NOT schema.is_inline
+    AND section_id IS NULL
+    AND "type" != 'object'
 ;
 
+-- Finally, attach the non-sectioned scalars
 UPDATE attribute
-SET section_id = section.id
-FROM section
-WHERE section.schema_id = attribute.schema_id
-AND attribute.section_id IS NULL
+SET
+  section_id = (
+    SELECT section.id
+    FROM section
+    WHERE
+      section.schema_id = attribute.schema_id
+      AND section.name = 'default')
+WHERE
+  section_id IS NULL
+  AND "type" != 'object'
 ;
-
-
---
--- Lock the section_id column
---
-
-ALTER TABLE attribute
-  ALTER COLUMN section_id SET NOT NULL
-;
-
-ALTER TABLE schema
-  DROP COLUMN base_schema_id
-  ,DROP COLUMN is_inline
-  ;
-
-ALTER TABLE schema_audit
-  DROP COLUMN base_schema_id
-  ,DROP COLUMN is_inline
-  ;
 
 --
 -- Move entity instances
@@ -250,12 +245,51 @@ FROM object
 WHERE value.entity_id = object.value
 ;
 
-DELETE FROM entity
-USING object
-WHERE entity.id = object.entity_id;
+-- Disable because it gets in the way
+ALTER TABLE attribute DROP CONSTRAINT "ck_attribute_valid_object_bind";
+
+-- Delete sub-schemata
+DELETE
+FROM schema
+USING attribute
+WHERE schema.id = attribute.object_schema_id
+;
+
+-- Delete all object-atributes
+DELETE FROM attribute WHERE type = 'object';
+DELETE FROM attribute_audit WHERE type = 'object';
 
 DROP TABLE object;
 DROP TABLE object_audit;
+
+--
+-- Lock the section_id column
+--
+
+-- Delete unmatched attributes, these are likely orphans
+-- (sub attrinbtes with no parent attribtues
+DELETE FROM attribute WHERE section_id IS NULL;
+
+-- Finally lock it
+ALTER TABLE attribute ALTER COLUMN section_id SET NOT NULL
+;
+
+--
+-- No longer support sub objects
+--
+
+ALTER TABLE schema
+  DROP COLUMN base_schema_id
+  ,DROP COLUMN is_inline
+  ;
+
+ALTER TABLE schema_audit
+  DROP COLUMN base_schema_id
+  ,DROP COLUMN is_inline
+  ;
+
+ALTER TABLE "attribute" DROP COLUMN "object_schema_id";
+ALTER TABLE "attribute_audit" DROP COLUMN "object_schema_id";
 
 --
 -- Remove "object" as a supported type
@@ -269,15 +303,12 @@ CREATE TYPE "attribute_type" AS ENUM ( 'blob', 'boolean', 'choice', 'date', 'dat
 
 -- Drop references to the ENUM
 ALTER TABLE "attribute"
-  DROP CONSTRAINT "ck_attribute_valid_object_bind"
-  ,DROP COLUMN "object_schema_id"
-  ,ALTER COLUMN "type" TYPE "attribute_type" USING "type"::text::"attribute_type";
+  ALTER COLUMN "type" TYPE "attribute_type" USING "type"::text::"attribute_type";
 ;
 
 -- Replace the type (also in the audit table)
 ALTER TABLE "attribute_audit"
-  DROP COLUMN "object_schema_id"
-  ,ALTER COLUMN "type" TYPE "attribute_type" USING "type"::text::"attribute_type"
+  ALTER COLUMN "type" TYPE "attribute_type" USING "type"::text::"attribute_type"
 ;
 
 -- Delete the old ENUM
