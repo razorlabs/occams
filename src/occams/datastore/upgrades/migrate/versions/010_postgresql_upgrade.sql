@@ -2,6 +2,7 @@
 -- Flattens entities by removing sub-objects
 -- Moving forward 'fieldsets' are purely cosmetic and supported via the
 -- section table
+-- WARNING: this process will remove any orphaned subforms instances
 --
 BEGIN;
 
@@ -126,7 +127,7 @@ INSERT INTO section (schema_id, name, title, description, "order", create_user_i
   WHERE type = 'object'
 ;
 
--- Move all sub-attributes to the parent
+-- Move all sub-attributes to the parent, prepending the parent's name
 UPDATE attribute
 SET
   schema_id = parent.schema_id
@@ -167,14 +168,13 @@ INSERT INTO section (schema_id, name, title, "order", create_user_id, modify_use
 -- Finally, attach the non-sectioned scalars
 UPDATE attribute
 SET
-  section_id = (
-    SELECT section.id
-    FROM section
-    WHERE
-      section.schema_id = attribute.schema_id
-      AND section.name = 'default')
+  section_id = section.id
+FROM
+  section
 WHERE
-  section_id IS NULL
+  section.schema_id = attribute.schema_id
+  AND section.name = 'default'
+  AND section_id IS NULL
   AND "type" != 'object'
 ;
 
@@ -253,6 +253,7 @@ DELETE
 FROM schema
 USING attribute
 WHERE schema.id = attribute.object_schema_id
+OR schema.is_inline
 ;
 
 -- Delete all object-atributes
@@ -292,7 +293,7 @@ ALTER TABLE "attribute" DROP COLUMN "object_schema_id";
 ALTER TABLE "attribute_audit" DROP COLUMN "object_schema_id";
 
 --
--- Remove "object" as a supported type
+-- Remove "object" as a selectable type
 --
 
 -- Backup the old ENUM

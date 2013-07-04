@@ -106,13 +106,13 @@ and attribute."type" != 'object';
 drop database if exists _choice; create database _choice template _choice_009 owner plone;
 \c _choice
 select
-  (select count(*) from value_decimal) as decimal_count,
-  (select count(*) from value_integer) as integer_count,
-  (select count(*) from value_datetime) as datetime_count,
-  (select count(*) from value_string) as string_count,
-  (select count(*) from value_choice) as choice_count,
-  (select count(*) from value_text) as text_count,
-  (select count(*) from value_blob) as blob_count
+  (select count(*) from value_decimal) as decimal
+  ,(select count(*) from value_integer) as integer
+  ,(select count(*) from value_datetime) as datetime
+  ,(select count(*) from value_string) as string
+  ,(select count(*) from value_choice) as choice
+  ,(select count(*) from value_text) as text
+  ,(select count(*) from value_blob) as blob
 ;
 
 -- Delete sub-schemata
@@ -124,6 +124,32 @@ WHERE schema.id = attribute.object_schema_id
 RETURNING schema.id
 ;
 ROLLBACK;
+
+-- Find orphaned child objects
+-- (RESULT: turns out they are indeed orphaned, so we'll just purge them)
+--WTF happend on 2012-06-16!!?
+-- 2012-06-16
+-- 2012-12-06
+-- 2013-03-22
+WITH wtf as (
+SELECT
+  value.id
+  ,value.entity_id
+  ,schema.id AS schema_id
+  ,schema.name AS schema_name
+  ,attribute.id AS attribute_id
+  ,attribute.name AS attribute_name
+  ,value.create_date
+FROM "value_choice" AS value
+JOIN attribute on attribute.id = value.attribute_id
+JOIN schema on schema.id = attribute.schema_id
+JOIN entity on entity.id = value.entity_id
+WHERE
+  (is_inline OR EXISTS(SELECT 1 FROM attribute AS parent where parent.object_schema_id = schema.id))
+  AND NOT EXISTS (SELECT 1 FROM object where object.value = value.entity_id)
+  )
+select distinct cast(create_date as date) from wtf
+;
 
 
 
