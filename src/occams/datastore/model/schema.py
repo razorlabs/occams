@@ -159,13 +159,6 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
             )
         )
 
-    state = Column(
-        Enum(*SCHEMA_STATE_NAMES, name='schema_state'),
-        nullable=False,
-        default=ISchema['state'].default,
-        server_default=ISchema['state'].default
-        )
-
     storage = Column(
         Enum(*SCHEMA_STORAGE_NAMES, name='schema_storage'),
         nullable=False,
@@ -174,6 +167,8 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
 
     publish_date = Column(Date, nullable=True, default=defaultPublishDate)
 
+    retract_date = Column(Date)
+
     is_association = Column(Boolean)
 
     @declared_attr
@@ -181,14 +176,7 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         return (
             UniqueConstraint('name', 'publish_date'),
             CheckConstraint(
-                """
-                CASE
-                    WHEN state = 'draft' OR state='review' THEN
-                        publish_date IS NULL
-                    WHEN state = 'published' OR state = 'retracted' THEN
-                        publish_date IS NOT NULL
-                END
-                """,
+                'publish_date <= retract_date',
                 name='ck_%s_valid_publication' % cls.__tablename__
                 ),
             )
@@ -239,6 +227,31 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         return duplicate
 
 
+class Section(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
+
+    schema_id = Column(Integer, nullable=False)
+
+    schema = Relationship(
+        Schema,
+        backref=backref(
+            name='sections',
+            order_by='Section.order',
+            cascade='all, delete, delete-orphan'))
+
+    order = Column(Integer, nullable=False)
+
+    @declared_attr
+    def __table_args__(cls):
+        return (
+            ForeignKeyConstraint(
+                columns=['schema_id'],
+                refcolumns=['schema.id'],
+                name='fk_%s_schema_id' % cls.__tablename__,
+                ondelete='CASCADE'),
+            UniqueConstraint('schema_id', 'name', name='uq_%s_name' % cls.__tablename__),
+            UniqueConstraint('schema_id', 'order', name='uq_%s_order' % cls.__tablename__))
+
+
 class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
     implements(IAttribute)
 
@@ -248,13 +261,20 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
         Schema,
         backref=backref(
             name='attributes',
-            primaryjoin='Schema.id == Attribute.schema_id',
             collection_class=attribute_mapped_collection('name'),
             order_by='Attribute.order',
-            cascade='all, delete, delete-orphan',
-            ),
-        primaryjoin=(schema_id == Schema.id),
-        )
+            cascade='all, delete, delete-orphan'))
+
+    section_id = Column(Integer, nullable=False,)
+
+    section = Relationship(
+        Section,
+        backref=backref(
+            name='attributes',
+            collection_class=attribute_mapped_collection('name'),
+            order_by='Attribute.order',
+            cascade='all, delete, delete-orphan'))
+
 
     type = Column(Enum(*ATTRIBUTE_TYPE_NAMES, name='attribute_type'), nullable=False)
 
@@ -286,10 +306,14 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
                 columns=['schema_id'],
                 refcolumns=['schema.id'],
                 name='fk_%s_schema_id' % cls.__tablename__,
-                ondelete='CASCADE',
-                ),
+                ondelete='CASCADE'),
+            ForeignKeyConstraint(
+                columns=['section_id'],
+                refcolumns=['section.id'],
+                name='fk_%s_section_id' % cls.__tablename__,
+                ondelete='CASCADE'),
             UniqueConstraint('schema_id', 'name', name='uq_%s_name' % cls.__tablename__),
-            UniqueConstraint('schema_id', 'order', name='uq_%s_order' % cls.__tablename__),
+            UniqueConstraint('section_id', 'order', name='uq_%s_order' % cls.__tablename__),
             Index('ix_%s_checksum' % cls.__tablename__, 'checksum'),
             CheckConstraint(
                 "collection_min IS NULL OR collection_min >= 0",
@@ -316,6 +340,7 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
                 name='ck_%s_valid_value' % cls.__tablename__,
                 ),
             )
+
     def __copy__(self):
         keys = (
             'name', 'title', 'description', 'type', 'is_collection', 'is_required',
@@ -332,7 +357,7 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
 
 class Choice(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
     implements(IChoice)
-    # TODO: when a value is assigned and no name is yet given, autopopulate one
+
     attribute_id = Column(Integer, nullable=False,)
 
     attribute = Relationship(
@@ -344,30 +369,6 @@ class Choice(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
             cascade="all, delete, delete-orphan"
             )
         )
-
-    def get_value(self):
-        value = self._value
-        # Try and be helpful by auto-converting the value
-        if value is not None and self.attribute is not None:
-            type_ = self.attribute.type
-            if type_ == 'boolean':
-                value = (self._value == 'True')
-            elif type_ == 'integer':
-                value = int(self._value)
-            elif type_ == 'decimal':
-                value = Decimal(self._value)
-            else:
-                value = unicode(self._value)
-        return value
-
-    def set_value(self, value):
-        if value is not None:
-            value = unicode(value)
-        self._value = value
-
-    _value = Column('value', Unicode, nullable=False)
-
-    value = Synonym('_value', descriptor=property(get_value, set_value))
 
     order = Column(Integer, nullable=False)
 
@@ -382,11 +383,10 @@ class Choice(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
                 ),
             UniqueConstraint('attribute_id', 'name', name='uq_%s_name' % cls.__tablename__),
             UniqueConstraint('attribute_id', 'order', name='uq_%s_order' % cls.__tablename__),
-            UniqueConstraint('attribute_id', 'value', name='uq_%s_value' % cls.__tablename__),
             )
 
     def __copy__(self):
-        keys = ('name', 'title', 'description', 'value', 'order')
+        keys = ('name', 'title', 'description', 'order')
         return self.__class__(**dict([(k, getattr(self, k)) for k in keys]))
 
     def __deepcopy__(self, memo):

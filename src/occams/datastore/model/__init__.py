@@ -46,7 +46,6 @@ from occams.datastore.model.storage import Entity
 from occams.datastore.model.storage import HasEntities
 from occams.datastore.model.storage import ValueInteger
 from occams.datastore.model.storage import ValueString
-from occams.datastore.model.storage import ValueObject
 from occams.datastore.model.storage import ValueDecimal
 from occams.datastore.model.storage import ValueDatetime
 from occams.datastore.model.storage import ValueText
@@ -73,7 +72,6 @@ __all__ = (
     'HasEntities',
     'ValueInteger',
     'ValueString',
-    'ValueObject',
     'ValueDecimal',
     'ValueDatetime',
     'ValueText',
