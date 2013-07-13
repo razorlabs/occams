@@ -149,8 +149,8 @@ WHERE
 INSERT INTO section (schema_id, name, title, "order", create_user_id, modify_user_id, revision)
   SELECT DISTINCT
     schema_id
-    ,'default'
-    ,'Default'
+    ,''
+    ,''
     ,0
     ,(SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
     ,(SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
@@ -173,7 +173,7 @@ FROM
   section
 WHERE
   section.schema_id = attribute.schema_id
-  AND section.name = 'default'
+  AND section.name = ''
   AND section_id IS NULL
   AND "type" != 'object'
 ;
