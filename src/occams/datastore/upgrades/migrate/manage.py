@@ -1,5 +1,8 @@
-#!/usr/bin/env python
-from migrate.versioning.shell import main
+import os
 
-if __name__ == '__main__':
-    main(debug='False')
+from migrate.versioning.shell import main as migrate_main
+
+def main():
+    migrate_main(
+        repository=os.path.dirname(os.path.abspath(__file__)),
+        debug='False')

@@ -66,4 +66,8 @@ setup(
         test=['plone.testing'], # Required for layers, does not install Plone
         ),
     tests_require=['plone.testing'],
+    entry_points="""\
+    [console_scripts]
+    datastore_migrate = occams.datastore.upgrades.migrate.manage:main
+    """,
     )
