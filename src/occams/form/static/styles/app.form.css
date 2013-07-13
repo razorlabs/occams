@@ -1,3 +1,7 @@
+form .control-label {
+  font-weight: bold;
+}
+
 form label .req {
   /* Match bootstrap's red */
   color: #b94a48;

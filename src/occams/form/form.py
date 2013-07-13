@@ -2,40 +2,41 @@
 Toolset for rendering datastore forms.
 """
 
-from pkg_resources import resource_filename
-
 import datetime
+from pkg_resources import resource_filename
 
 import colander
 import deform
 import deform.widget
 
-from zope.schema.interfaces import IChoice
-from zope.schema.interfaces import IList
-from zope.schema.interfaces import ITextLine
-from zope.schema.interfaces import IText
-import z3c.form.form
-import z3c.form.group
-import z3c.form.browser.textarea
-from z3c.form.browser.radio import RadioFieldWidget
-from z3c.form.browser.checkbox import CheckBoxFieldWidget
-from z3c.form.browser.textlines import TextLinesFieldWidget
-from zope.schema.interfaces import IField
-
 from occams.datastore import model as datastore
 
-from .interfaces import TEXTAREA_SIZE
+
+def choice_widget_factory(attribute):
+    choices = [(choice.name, choice.title) for choice in attribute.choices]
+    if len(choices) <= 5:
+        if attribute.is_collection:
+            return deform.widget.CheckboxChoiceWidget(values=choices)
+        else:
+            return deform.widget.RadioChoiceWidget(values=choices)
+    return deform.widget.SelectWidget(
+        css_class='select2',
+        template='select',
+        multiple=attribute.is_collection,
+        values=choices)
 
 
 widgets = {
-    'text': deform.widget.TextAreaWidget(),
-    'date': deform.widget.DateInputWidget(type_name='date', css_class='datepicker') }
+    'text': lambda a: deform.widget.TextAreaWidget(rows=5),
+    'date': lambda a: deform.widget.DateInputWidget(type_name='date', css_class='datepicker'),
+    'choice': choice_widget_factory }
 
 
 types = {
     'boolean': colander.Bool,
     'integer': colander.Int,
     'decimal': colander.Decimal,
+    'choice': colander.String,
     'string': colander.String,
     'text': colander.String,
     'date': colander.Date,
@@ -56,66 +57,36 @@ AJAX_FORM_RENDERER = deform.ZPTRendererFactory([
     resource_filename('deform', 'templates')])
 
 
-
-def custom_select_widget(multiple, values):
-    if len(values) <= 5:
-        if multiple:
-            return deform.widget.CheckboxChoiceWidget(values = values)
-        else:
-            return deform.widget.RadioChoiceWidget(values = values)
-    return deform.widget.SelectWidget(
-            css_class='select2',
-            template='select',
-            multiple=multiple,
-            values = values)
-
-
 def schema2colander(schema):
     """
     Converta a DataStore schema to a colander form schema
     """
-
     node = colander.SchemaNode(
         colander.Mapping(),
         name=schema.name,
         title=schema.title,
         description=schema.description)
-
-    for attribute in schema.itervalues():
-        if attribute.type == 'object':
-            subnode = schema2colander(attribute.object_schema)
-            subnode.name = attribute.name
-            subnode.title = attribute.title
-            subnode.description = attribute.description
-            node.add(subnode)
-        else:
-            if attribute.is_collection:
-                attribute_type = colander.Sequence
-                missing=[]
+    for section in schema.sections:
+        subnode = colander.SchemaNode(
+            colander.Mapping(),
+            name=section.name,
+            title=section.title,
+            description=section.description)
+        node.add(subnode)
+        for attribute in section.attributes.itervalues():
+            if not attribute.is_collection:
+                type_ = types[attribute.type]()
             else:
-                attribute_type = types[attribute.type]
-                missing=None
+                type_ = colander.Set()
             field = colander.SchemaNode(
-                attribute_type(),
+                type_,
                 name=attribute.name,
                 title=attribute.title,
                 description=attribute.description,
-                missing=(colander.required if attribute.is_required else missing),
-                )
-            if attribute.is_collection:
-                subnode = colander.SchemaNode(types[attribute.type]())
-                field.add(subnode)
-            if attribute.type =='boolean':
-                value_list = []
-                value_list.extend([(at.value and 'true' or 'false', at.title) for at in attribute.choices])
-                field.widget = custom_select_widget(attribute.is_collection, value_list)
-            elif attribute.choices:
-                value_list = []
-                value_list.extend([(at.value, at.title) for at in attribute.choices])
-                field.widget = custom_select_widget(attribute.is_collection, value_list)
-            elif attribute.type in widgets:
-                field.widget = widgets[attribute.type]
-            node.add(field)
+                missing=(colander.required if attribute.is_required else None))
+            subnode.add(field)
+            if attribute.type in widgets:
+                field.widget = widgets[attribute.type](attribute)
     return node
 
 

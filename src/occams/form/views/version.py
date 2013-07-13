@@ -40,14 +40,8 @@ def view(request):
 
 
 def get_version(session, name, version):
+    query = session.query(datastore.Schema)
     if isinstance(version, int):
-        schema = Session.query(datastore.Schema).get(version)
-        if schema is None:
-            raise orm.exc.NoResultFound
-        return schema
-    else:
-        query = (
-            session.query(datastore.Schema)
-            .filter_by(name=name, publish_date=version))
-        return  query.one()
+        return query.filter_by(id=version).one()
+    return query.filter_by(name=name, publish_date=version).one()
 

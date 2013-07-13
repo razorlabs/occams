@@ -33,19 +33,6 @@ REQUIRES = [
     'waitress',
     'webhelpers',
     'occams.datastore',
-
-    # Need these packages for the app to start,
-    # we'll be removing them as we transition to Pyramid
-    'collective.z3cform.datagridfield',
-    'plone.app.dexterity[grok]',
-    'plone.app.z3cform',
-    'plone.directives.form',
-    'plone.z3cform',
-    'zope.globalrequest',
-    'z3c.saconfig',
-    'z3c.form',
-    'collective.saconnect',
-    'plone.app.testing',
     ]
 
 EXTRAS = {

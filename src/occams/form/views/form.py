@@ -229,7 +229,6 @@ def query_names(session):
             .correlate(OuterSchema)
             .as_scalar()
             .label('version_count'))
-        .filter(~OuterSchema.is_inline)
         .order_by(OuterSchema.title.asc()))
     return query
 
@@ -249,8 +248,8 @@ def query_versions(session, name):
             OuterSchema.name.label('name'),
             OuterSchema.title.label('title'),
             OuterSchema.revision.label('revision'),
-            OuterSchema.state.label('state'),
             OuterSchema.publish_date.label('publish_date'),
+            OuterSchema.retract_date.label('retract_date'),
             OuterSchema.create_date.label('create_date'),
             CreateUser.key.label('create_user'),
             OuterSchema.modify_date.label('modify_date'),
@@ -260,23 +259,18 @@ def query_versions(session, name):
             .select_from(datastore.Schema)
             .outerjoin(datastore.Attribute,
                 datastore.Attribute.schema_id == datastore.Schema.id)
-            .outerjoin(SubSchema,
-                SubSchema.id == datastore.Attribute.object_schema_id)
-            .outerjoin(SubAttribute, SubAttribute.schema_id == SubSchema.id)
             .filter(datastore.Schema.id == OuterSchema.id)
             .correlate(OuterSchema)
             .as_scalar()
             .label('field_count'))
         .add_column((OuterSchema.publish_date == (
             session.query(func.max(datastore.Schema.publish_date))
-            .filter(datastore.Schema.state == 'published')
             .filter(datastore.Schema.publish_date < datastore.NOW)
             .filter(datastore.Schema.name == OuterSchema.name)
             .correlate(OuterSchema)
             .as_scalar())).label('is_current'))
         .join(CreateUser, OuterSchema.create_user_id == CreateUser.id)
         .join(ModifyUser, OuterSchema.modify_user_id == ModifyUser.id)
-        .filter(~OuterSchema.is_inline)
         .filter(OuterSchema.name == sql.bindparam('name'))
         .order_by(
             OuterSchema.title.asc(),
