@@ -412,7 +412,11 @@ ValueInteger.value = valueProperty
 ValueDecimal.value = valueProperty
 ValueString.value = valueProperty
 ValueText.value = valueProperty
-ValueObject.value = Relationship(Entity, primaryjoin='Entity.id == ValueObject._value')
+ValueObject.value = Relationship(
+    Entity,
+    primaryjoin='Entity.id == ValueObject._value',
+    single_parent=True,
+    cascade='all,delete-orphan')
 ValueBlob.value = valueProperty
 
 
