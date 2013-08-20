@@ -61,32 +61,31 @@ def schema2colander(schema):
     """
     Converta a DataStore schema to a colander form schema
     """
-    node = colander.SchemaNode(
-        colander.Mapping(),
-        name=schema.name,
-        title=schema.title,
-        description=schema.description)
+
+    def nodify(item, type_=None):
+        """ Helper method to create nodes from named records """
+        return colander.SchemaNode(
+            (type_ or colander.Mapping)(),
+            name=item.name,
+            title=item.title,
+            description=item.description)
+
+    node = nodify(schema)
     for section in schema.sections:
-        subnode = colander.SchemaNode(
-            colander.Mapping(),
-            name=section.name,
-            title=section.title,
-            description=section.description)
+        subnode = nodify(section)
         node.add(subnode)
         for attribute in section.attributes.itervalues():
-            if not attribute.is_collection:
-                type_ = types[attribute.type]()
+            if attribute.is_collection:
+                type_ = colander.Set
             else:
-                type_ = colander.Set()
-            field = colander.SchemaNode(
-                type_,
-                name=attribute.name,
-                title=attribute.title,
-                description=attribute.description,
-                missing=(colander.required if attribute.is_required else None))
-            subnode.add(field)
+                type_ = types[attribute.type]
+            field = nodify(attribute, type_)
+            if attribute.is_required:
+                field.missing = colander.required
             if attribute.type in widgets:
                 field.widget = widgets[attribute.type](attribute)
+            subnode.add(field)
+
     return node
 
 
