@@ -1,5 +1,7 @@
 """
-Utility to remove forms.
+Utility to permanently delete schemata.
+
+The current system does not have a GUI for this and it is a much needed feature.
 """
 
 import argparse
@@ -15,12 +17,15 @@ Session = orm.scoped_session(orm.sessionmaker(
         class_=model.DataStoreSession))
 
 
-def form_arg(str):
-    name, publish_date = str.split('@')
-    return name, datetime.date.strftime('%Y-%m-%d', publish_date)
+def schema_arg(str):
+    try:
+        return int(str)
+    except ValueError:
+        name, date = str.split('@')
+        return name, datetime.datetime.strptime(date, '%Y-%m-%d').date()
 
 
-cli_parser = argparse.ArgumentParser(description='Delete a form')
+cli_parser = argparse.ArgumentParser(description='Delete a schema')
 
 cli_parser.add_argument(
     '-b','--blame',
@@ -32,18 +37,27 @@ cli_parser.add_argument(
     metavar='URI',
     help='A database URI (vendor://user:pw@host/db')
 
-
 cli_parser.add_argument(
     '-f', '--force',
     action='store_true',
     help='Force delete without promp')
 
 cli_parser.add_argument(
-    'forms',
+    'schemata',
     nargs='+',
-    type=lambda s: s.split('@'),
-    metavar='FORM',
-    help='The form(s) to delete (Format: name@yyyy-mm-dd)')
+    type=schema_arg,
+    metavar='SCHEMA',
+    help='The schemata to delete (Format: id or name@yyyy-mm-dd)')
+
+
+def get_schema(session, id_or_name):
+    query = session.query(model.Schema)
+    if isinstance(id_or_name, int):
+        query = query.filter_by(id=id_or_name)
+    else:
+        name, date = id_or_name
+        query = query.filter_by(name=name, publish_date=date)
+    return query.one()
 
 
 def main():
@@ -53,24 +67,21 @@ def main():
         user=lambda: args.blame,
         bind=create_engine(args.uri))
 
-    print ('Deleting the following forms:')
+    print ('Deleting the following schemata:')
 
-    for name, date in args.forms:
+    for id_or_name in args.schemata:
         try:
-            schema = (
-                Session.query(model.Schema)
-                .filter_by(name=name, publish_date=date)
-                .one())
-            msg = '{schema.name}, {schema.title}, {schema.state}, {schema.publish_date}'
+            schema = get_schema(Session, id_or_name)
+            msg = '{schema.id} {schema.name}, {schema.title}, {schema.state}, {schema.publish_date}'
             print msg.format(schema=schema)
         except orm.exc.NoResultFound:
-            print ('FATAL: Not found: {0} {1}'.format(name, date))
+            print ('FATAL: Not found: {0}'.format(id_or_name))
             continue
 
         count = Session.query(model.Entity).filter_by(schema=schema).count()
 
         if count > 0:
-            msg = 'FATAL: {0} has {1} entries!!! Aborting...'
+            msg = 'WARNING: {0} has {1} entries!!! Aborting...'
             print(msg.format(schema.name, count))
             Session.rollback()
             exit()
