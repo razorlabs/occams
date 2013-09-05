@@ -7,4 +7,4 @@
     tal:attributes="
       size size|field.widget.size;
       required required|field.required;
-      placeholder placeholder|field.widget.placeholder" />
+      placeholder placeholder|field.widget.placeholder|nothing;" />
