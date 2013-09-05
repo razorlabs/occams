@@ -45,7 +45,8 @@
 
     <div tal:replace="structure panel('global_footer')"></div>
 
-    <div id="modal"></div>
+    <!--! Placeholder for loaded modal content -->
+    <div id="modal fade" class="modal" role="dialog" aria-hidden="true"></div>
 
     <!--! Load scripts at the end so we don't block rendering -->
     <tal:scripts repeat="url layout.scripts.urls()">

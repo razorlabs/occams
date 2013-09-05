@@ -119,9 +119,37 @@ def view(request):
 @view_config(
     route_name='study_add',
     permission='study_add',
+    renderer='occams.clinical:templates/form.pt')
+@view_config(
+    route_name='study_add',
+    permission='study_add',
     xhr=True,
     renderer='occams.clinical:templates/form.pt',
     layout='ajax_layout')
 def add(request):
-    return {}
+    schema = StudySchema(title=_(u'Add Study'))
+    form = deform.Form(
+        schema=schema.bind(request=request),
+        buttons=[
+            deform.Button('cancel', _(u'Cancel'), css_class='btn'),
+            deform.Button('submit', _(u'Add'), css_class='btn btn-primary')])
+
+    if 'cancel' in request.POST:
+        request.session.flash(_(u'Changes canceled'), 'info')
+        return HTTPFound(location=request.route_path('study_list'))
+
+    if 'submit' in request.POST:
+        try:
+            appstruct = form.validate(request.POST.items())
+        except deform.ValidationFailure as e:
+            return {'form': e.render()}
+        study = models.apply(models.Study(), appstruct)
+        FiaSession.add(study)
+        FiaSession.flush()
+        study_url = request.current_route_path(_route_name='study_view',
+                                                    study_name=study.name)
+        request.session.flash(_(u'New study added!', 'success'))
+        return HTTPFound(location=study_url)
+
+    return {'form': form.render()}
 
