@@ -1,0 +1,15 @@
+<table class="table table-bordered table-hover table-striped table-small">
+  <caption>Totals</caption>
+  <thead>
+    <tr>
+      <th>All</th>
+      <th>Ongoing</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td tal:content="all_count">ALL</td>
+      <td tal:content="active_count">ONGOING</td>
+    </tr>
+  </tbody>
+</table>

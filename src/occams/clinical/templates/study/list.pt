@@ -1,0 +1,45 @@
+<html metal:use-macro="main_template">
+  <metal:content-slot fill-slot="content-slot">
+    <div class="page-header">
+      <a href="${request.route_path('study_add')}"
+          class="btn btn-default pull-right"
+          data-toggle="modal"
+          data-backdrop="static"
+          data-target="#modal"
+          type="button"><span class="glyphicon glyphicon-plus"></span> Add Study</a>
+      <h1>Studies</h1>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-bordered table-striped">
+        <thead>
+          <tr>
+            <th>Study</th>
+            <th>Code</th>
+            <th>Consent Date</th>
+            <th>Created</th>
+            <th>Creator</th>
+            <th>Modified</th>
+            <th>Modifier</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr tal:repeat="study studies">
+            <td>
+              <a href="${request.current_route_path(
+                    _route_name='study_view',
+                    study_name=study.name)}">${study.title}</a>
+            </td>
+            <td>${study.code}</td>
+            <td>${study.consent_date.isoformat()}</td>
+            <td>${study.create_date.date().isoformat()}</td>
+            <td>${study.create_user.key}</td>
+            <td>${study.modify_date.date().isoformat()}</td>
+            <td>${study.modify_user.key}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </metal:content-slot>
+</html>

@@ -1,0 +1,6 @@
+<!--! Renders only the content portion of the request.
+      This is useful for AJAX request that need to refresh
+      portions of an document. -->
+<metal:content-slot define-slot="content-slot">
+  RELEASE ME
+</metal:content-slot>

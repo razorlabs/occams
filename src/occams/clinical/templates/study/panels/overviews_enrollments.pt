@@ -1,0 +1,21 @@
+<table class="table table-bordered table-hover table-striped table-small">
+  <caption>Enrollments</caption>
+  <thead>
+    <tr>
+      <th></th>
+      <th>New</th>
+      <th>Terminations</th>
+    </tr>
+  </thead>
+  <tbody >
+    <tr>
+      <td>This Month</td>
+      <td tal:content="start_this_month">START</td>
+      <td tal:content="end_this_month">END</td>
+    <tr>
+      <td>Last Month</td>
+      <td tal:content="start_last_month">START</td>
+      <td tal:content="end_last_month">END</td>
+    </tr>
+  </tbody>
+</table>

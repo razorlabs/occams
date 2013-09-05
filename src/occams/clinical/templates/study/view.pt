@@ -1,0 +1,29 @@
+<html metal:use-macro="main_template">
+
+  <metal:content-slot fill-slot="content-slot">
+    <form>
+      <label>Screening Form</label>
+       <span class="help-block">Select a screening form, or leave blank if this study doesn't require a screening form.</span>
+      <select class="select2">
+        <option>
+          Form 1
+        </option>
+        <option>
+          Form 2
+        </option>
+      </select>
+      <label>Termination Form</label>
+       <span class="help-block">Select a termination form, or leave blank if this study doesn't require a termination form.</span>
+      <select class="select2">
+        <option>
+          Form 1
+        </option>
+        <option>
+          Form 2
+        </option>
+      </select>
+
+    </form>
+  </metal:content-slot>
+
+</html>

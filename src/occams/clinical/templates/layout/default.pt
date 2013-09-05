@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html
+    xmlns="http://www.w3.org/1999/xhtml"
+    xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+    xmlns:tal="http://xml.zope.org/namespaces/tal"
+    xmlns:metal="http://xml.zope.org/namespaces/metal"
+    xml:lang="en"
+    lang="en"
+    i18n:domain="occams.clinical">
+
+  <head>
+    <meta charset="utf-8">
+    <title>${layout.content_title}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <tal:styles repeat="url layout.styles.urls()">
+      <link href="${url}" rel="stylesheet" />
+    </tal:styles>
+    <link
+        rel="shortcut icon"
+        href="${request.static_path('occams.clinical:static/images/favicon.ico')}"/>
+  </head>
+
+  <body>
+
+    <div id="wrap">
+      <div tal:replace="structure panel('global_header')"></div>
+      <div class="container">
+        <div tal:replace="structure panel('breadcrumb')"></div>
+        <div tal:replace="structure panel('alert')"></div>
+        <div tal:replace="structure panel('page_header')"></div>
+        <div id="body" class="row">
+          <div class="col-md-12">
+            <div tal:replace="structure panel('navigation')"></div>
+            <div id="content">
+
+              <metal:content-slot define-slot="content-slot">
+                <!--! View content goes here -->
+              </metal:content-slot>
+
+            </div>
+          </div>
+        </div>
+      </div> <!-- /.container -->
+    </div> <!-- /#wrap -->
+
+    <div tal:replace="structure panel('global_footer')"></div>
+
+    <div id="modal"></div>
+
+    <!--! Load scripts at the end so we don't block rendering -->
+    <tal:scripts repeat="url layout.scripts.urls()">
+      <script src="${url}" type="text/javascript"> </script>
+    </tal:scripts>
+
+  </body>
+</html>
+
