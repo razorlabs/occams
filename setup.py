@@ -1,6 +1,7 @@
 import os
 import re
 from setuptools import find_packages, setup
+import sys
 
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -8,11 +9,10 @@ read = lambda *args: open(os.path.join(*args)).read()
 
 README = read(here, 'README.rst')
 CHANGES = read(here, 'CHANGES.rst')
-VERSION = re.compile(r'.*__version__\s*=\s*\'(.+?)\'', re.S).match(
-        read(here, 'src', 'occams', 'form', '__init__.py')).group(1)
+
+version = '1.0.0'
 
 REQUIRES = [
-    'argparse',
     'colander',
     'deform',
     'pyramid',
@@ -26,8 +26,6 @@ REQUIRES = [
     'pyramid_debugtoolbar',
     'pyramid_rewrite',
     'pyramid_webassets',
-    'cssmin',
-    'jsmin',
     'xlutils',
     'zope.sqlalchemy',
     'waitress',
@@ -40,9 +38,13 @@ EXTRAS = {
     'test': [ 'nose', 'rudolf', 'WebTest', 'coverage', ]
     }
 
+if sys.version_info < (2, 7):
+    REQUIRES += ['argparse',]
+
+
 setup(
     name='occams.form',
-    version=VERSION,
+    version=version,
     description='A web application for managing dynamic forms',
     classifiers=[
         'Programming Language :: Python',

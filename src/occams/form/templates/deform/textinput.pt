@@ -1,0 +1,10 @@
+<input
+    id="${oid|field.oid}"
+    type="text"
+    name="${name|field.name}"
+    value="${cstruct}"
+    class="form-control ${css_class|field.widget.css_class}"
+    tal:attributes="
+      size size|field.widget.size;
+      required required|field.required;
+      placeholder placeholder|field.widget.placeholder" />

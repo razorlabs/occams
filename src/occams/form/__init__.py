@@ -1,6 +1,7 @@
 import logging
 from pkg_resources import resource_filename
 
+import deform
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.config import Configurator
@@ -23,6 +24,9 @@ Session = orm.scoped_session(orm.sessionmaker(
     user=lambda: 'ghost@shell',
     class_=DataStoreSession,
     extension=ZopeTransactionExtension()))
+
+deform.Form.set_zpt_renderer((
+    resource_filename('occams.form', 'templates/deform'),))
 
 
 def main(global_config, **settings):
