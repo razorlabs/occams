@@ -31,17 +31,13 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=[
-        'setuptools',
-        'plone.behavior',
-        'SQLAlchemy>0.7.3',
-        'sqlalchemy-migrate>0.7.0',
-        'z3c.saconfig',
+        'SQLAlchemy',
+        'sqlalchemy-migrate',
         ],
-    extras_require=dict(
-        postgresql=['psycopg2'],
-        test=['plone.app.testing'],
-        ),
-
+    extras_require={
+        'postgres': ['psycopg2'],
+        'test': [ 'nose', 'rudolf', 'WebTest', 'coverage', ]
+        },
     entry_points="""
     [z3c.autoinclude.plugin]
     target = plone
