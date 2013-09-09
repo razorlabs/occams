@@ -5,6 +5,7 @@ from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.config import Configurator
 from pyramid.i18n import TranslationStringFactory
 from pyramid.path import DottedNameResolver
+from pyramid.security import has_permission
 from pyramid_ldap import groupfinder
 from sqlalchemy import engine_from_config
 
@@ -68,6 +69,11 @@ def main(global_config, **settings):
         settings['ldap.user.name_attr'])
 
     config.add_request_method(get_user,'user', reify=True)
+
+    # Wrap has_permission to make it less cumbersome
+    config.add_request_method(
+        lambda r, n: has_permission(n, r.context, r),
+        'has_permission')
 
     return config.make_wsgi_app()
 
