@@ -49,8 +49,8 @@ def login(request):
     request.layout_manager.layout.content_title = _(u'Log In')
 
     # Figure out where the user came from so we can redirect afterwards
-    referrer = request.GET.get('referrer')
-    if referrer is None or referrer == request.route_path('account_login'):
+    referrer = request.GET.get('referrer', request.current_route_path())
+    if not referrer or referrer == request.route_path('account_login'):
         # Never use the login as the referrer
         referrer = request.route_path('home')
 
