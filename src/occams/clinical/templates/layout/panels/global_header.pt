@@ -27,11 +27,8 @@
         <li tal:condition="request.has_permission('study_view')">
           <a href="${request.route_path('study_list')}">Studies</a>
         </li>
-        <li tal:condition="request.has_permission('personnel_edit')">
-          <a href="${request.route_path('home')}">Personnel</a>
-        </li>
         <li tal:condition="request.has_permission('data_view')">
-          <a href="${request.route_path('home')}">Data</a>
+          <a href="${request.route_path('data_list')}">Data</a>
         </li>
       </ul>
 

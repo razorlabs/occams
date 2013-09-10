@@ -1,0 +1,46 @@
+<html metal:use-macro="main_template">
+  <metal:content-slot fill-slot="content-slot">
+
+    <div class="page-header">
+      <a href="${request.route_path('data_download')}"
+          class="btn btn-default pull-right"
+          type="button"
+          i18n:translate=""
+        ><span class="glyphicon glyphicon-download-alt"></span> Download all</a>
+      <h1 i18n:translate="">Data Downloads</h1>
+    </div>
+
+    <p i18n:translate="">Please select the files you would like to download. All downloads include a data dictionary.</p>
+
+    <tal:exports switch="exports_count > 0">
+      <div tal:case="True" class="table-responsive">
+        <table class="table table-bordered table-striped">
+          <thead>
+            <tr>
+              <th><input type="checkbox" /></th>
+              <th i18n:translate="">Name</th>
+              <th i18n:translate="">Title</th>
+              <th i18n:translate="">Published</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr tal:repeat="export exports">
+              <td><input type="checkbox" /></td>
+              <td>${export.name}</td>
+              <td>${export.title}</td>
+              <td>${export.publish_date.isoformat()}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div tal:case="default" class="alert alert-warning">
+        There are no forms to report
+      </div>
+    </tal:exports>
+
+    <hr />
+
+    <a href="#" class="btn btn-primary">Download Selection</a>
+
+  </metal:content-slot>
+</html>
