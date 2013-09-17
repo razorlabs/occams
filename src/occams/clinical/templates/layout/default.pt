@@ -20,7 +20,7 @@
         href="${request.static_path('occams.clinical:static/images/favicon.ico')}"/>
   </head>
 
-  <body>
+  <body class="${request.matched_route.name}">
 
     <div id="wrap">
       <div tal:replace="structure panel('global_header')"></div>

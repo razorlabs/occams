@@ -1,0 +1,85 @@
+<html i18n:domain="occams.clinical" metal:use-macro="main_template">
+  <metal:content-slot fill-slot="content-slot">
+
+    <div class="page-header">
+      <a href="${request.route_path('export_download', _query={'all': 1})}"
+          class="btn btn-default pull-right"
+          type="button"
+          i18n:translate=""
+        ><span class="glyphicon glyphicon-export"></span> Download all</a>
+      <h1 i18n:translate="">Exports</h1>
+    </div>
+
+    <p i18n:translate="">
+      Please select the files you would like to download.
+      All exports include a data dictionary.
+    </p>
+
+    <tal:ecrfs switch="ecrfs_count > 0">
+
+      <form
+          tal:case="True"
+          role="form"
+          action="${request.route_path('export_download')}">
+        <div class="table-responsive">
+          <table id="ecrf" class="table table-bordered">
+            <thead>
+              <tr>
+                <th class="select">
+                  <input type="checkbox" data-toggle="selectall" />
+                </th>
+                <th class="name" i18n:translate="">Name</th>
+                <th class="title" i18n:translate="">Title</th>
+                <th class="publsished" i18n:translate="">Published</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="active">
+                <th></th>
+                <th colspan="3">System Tables</th>
+              </tr>
+              <tr tal:repeat="builtin builtins">
+                <td class="select">
+                  <input
+                      type="checkbox"
+                      name="ids"
+                      value="${builtin}"
+                      data-toggle="select"
+                      data-class="warning" />
+                </td>
+                <td class="name" colspan="3">${builtin}</td>
+              </tr>
+              <tr class="active">
+                <th></th>
+                <th colspan="3">eCRF Data Types</th>
+              </tr>
+              <tr tal:repeat="ecrf ecrfs">
+                <td class="select">
+                  <input
+                      type="checkbox"
+                      name="ids"
+                      value="${ecrf.id}"
+                      data-toggle="select"
+                      data-class="warning" />
+                </td>
+                <td class="name">${ecrf.name}</td>
+                <td class="title">${ecrf.title}</td>
+                <td class="published">${ecrf.publish_date.isoformat()}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <hr />
+        <p>
+          <button type="submit" class="btn btn-primary">Download</button>
+        </p>
+      </form>
+
+      <div tal:case="default" class="alert alert-warning">
+        There are no forms to report
+      </div>
+
+    </tal:ecrfs>
+
+  </metal:content-slot>
+</html>

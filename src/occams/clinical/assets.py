@@ -29,6 +29,7 @@ def config_assets(config):
     config.add_webasset('default_js', Bundle(
         env['jquery'],
         env['bootstrap_js'],
+        'scripts/lib.selectall.js',
         filters='jsmin',
         output='gen/default.%(version)s.js'))
 

@@ -258,6 +258,8 @@ class Patient(ClinicalModel, AutoNamed, Referenceable,  Auditable, Modifiable, H
 
     our = schema.Column(types.Unicode, nullable=False)
 
+    pid = orm.synonym('our')
+
     # A secondary reference, to help people verify they are viewing the correct patient
     initials = schema.Column(types.Unicode)
 
@@ -350,9 +352,7 @@ class Enrollment(ClinicalModel, AutoNamed, Referenceable,  Auditable, Modifiable
         backref=orm.backref(
             name='enrollments',
             cascade='all, delete-orphan',
-            order_by='Enrollment.consent_date.asc()'
-            ),
-        )
+            lazy='dynamic'))
 
     study_id = schema.Column(types.Integer, nullable=False,)
 
@@ -395,8 +395,7 @@ class Enrollment(ClinicalModel, AutoNamed, Referenceable,  Auditable, Modifiable
     def is_termination_overdue(self):
         return (
             self.termination_date is None
-            and self.consent_date + self.study.duration < datetime.date.today()
-            )
+            and self.consent_date + self.study.duration < datetime.date.today())
 
     @declarative.declared_attr
     def __table_args__(cls):
@@ -405,14 +404,12 @@ class Enrollment(ClinicalModel, AutoNamed, Referenceable,  Auditable, Modifiable
                 columns=['patient_id'],
                 refcolumns=['patient.id'],
                 name='fk_%s_patient_id' % cls.__tablename__,
-                ondelete='CASCADE',
-                ),
+                ondelete='CASCADE'),
             schema.ForeignKeyConstraint(
                 columns=['study_id'],
                 refcolumns=['study.id'],
                 name='fk_%s_study_id' % cls.__tablename__,
-                ondelete='CASCADE',
-                ),
+                ondelete='CASCADE'),
             schema.Index('ix_%s_patient_id' % cls.__tablename__, 'patient_id'),
             schema.Index('ix_%s_study_id' % cls.__tablename__, 'study_id'),
             # A patient may enroll only once in the study per day
@@ -423,25 +420,21 @@ class Enrollment(ClinicalModel, AutoNamed, Referenceable,  Auditable, Modifiable
 
 class Visit(ClinicalModel, AutoNamed, Referenceable,  Auditable, Modifiable, HasEntities, Zopeable):
 
-    patient_id = schema.Column(types.Integer, nullable=False,)
+    patient_id = schema.Column(types.Integer, nullable=False)
 
     patient = orm.relationship(
         Patient,
         backref=orm.backref(
             name='visits',
             cascade='all, delete-orphan',
-            order_by='Visit.visit_date.desc()'
-            ),
-        )
+            lazy='dynamic'))
 
     cycles = orm.relationship(
         Cycle,
         secondary=visit_cycle_table,
         backref=orm.backref(
             name='visits',
-            lazy='dynamic',
-            ),
-        )
+            lazy='dynamic'))
 
     visit_date = schema.Column(types.Date, nullable=False)
 
@@ -466,9 +459,7 @@ class Arm(ClinicalModel, AutoNamed, Referenceable, Describeable, Auditable, Modi
         Study,
         backref=orm.backref(
             name='arms',
-            cascade='all,delete-orphan',
-            )
-        )
+            cascade='all,delete-orphan'))
 
     @declarative.declared_attr
     def __table_args__(cls):

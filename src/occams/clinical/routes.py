@@ -96,8 +96,8 @@ def config_routes(config):
         '/patients/{pid}/visits/{visit_date}/logs',
         custom_predicates=(visit_date,))
 
-    config.add_route('data_list', '/data')
-    config.add_route('data_download', '/data/download')
+    config.add_route('export_list', '/exports')
+    config.add_route('export_download', '/exports/download')
 
     config.scan()
 

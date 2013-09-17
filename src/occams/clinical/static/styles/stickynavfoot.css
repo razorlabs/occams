@@ -25,7 +25,7 @@ body {
 
 /* the first container inside the wrapper needs to take into account the navbar */
 #wrap > .container {
-  padding: 60px 15px 0;
+  padding: 60px 15px 15px;
 }
 
 #footer .credit {

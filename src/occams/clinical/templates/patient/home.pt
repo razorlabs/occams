@@ -1,0 +1,73 @@
+<html i18n:domain="occams.clinical" metal:use-macro="main_template">
+  <metal:content-slot fill-slot="content-slot">
+
+    <!--! Search Box -->
+
+    <div class="row">
+      <div class="well">
+        <form
+            class="form-inline"
+            action="${request.current_route_path()}"
+            method="POST"
+            role="form">
+          <div class="input-group input-group-lg">
+            <input
+                type="search"
+                class="form-control"
+                placeholder="Search for a patient..."
+                autofocus="true"
+                i18n:attributes="placeholder"/>
+            <span class="input-group-btn">
+              <button
+                  class="btn btn-primary"
+                  type="submit"
+                  name="search"
+                  value="${search|nothing}"
+                  i18n:translate=""
+                ><span class="glyphicon glyphicon-search"></span> Search</button>
+            </span>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!--! Recent Patients -->
+
+    <div class="row" tal:switch="recent_count > 0">
+      <h3 i18n:translate="">Recently Updated</h3>
+      <table tal:case="True" class="table table-bordered table-striped">
+        <thead>
+          <tr>
+            <th i18n:translate="">Patient</th>
+            <th i18n:translate="">Site</th>
+            <th i18n:translate="">Enrollments</th>
+            <th i18n:translate="">Modified</th>
+            <th i18n:translate="">Modifier</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr tal:repeat="recent recent_list">
+            <td>${recent.Patient.our}</td>
+            <td>${recent.Patient.site.title}</td>
+            <td
+              tal:define="
+                enrollments recent.Patient.enrollments;
+                codes sorted(list(set([e.study.code for e in enrollments])));">
+              <span
+                  tal:repeat="code codes"
+                  class="label label-default">${code}</span>
+            </td>
+            <td>${recent.access_date.date()}</td>
+            <td>${recent.Patient.modify_user.key}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div tal:case="False" class="alert alert-info" i18n:translate="">
+        No recent activity!
+      </div>
+    </div>
+
+    <!-- Search Results -->
+
+  </metal:content-slot>
+</html>

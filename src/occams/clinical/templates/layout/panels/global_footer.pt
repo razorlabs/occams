@@ -1,11 +1,7 @@
 <div id="footer">
   <div class="container">
-    <p class="muted credit"
-        tal:define="
-          date import: datetime.date;
-          year python:date.today().year;">
-      Copyright &copy; ${year},
-      <a href="http://cfar.ucsd.edu/bit">UCSD Bit Core Development Team</a><br/>
+    <p class="muted credit">
+      Developed by <a href="http://cfar.ucsd.edu/bit">UCSD Bit Core</a><br/>
       Distributed under <a href="/about/license">Some Fancy License</a>
     </p>
   </div>
