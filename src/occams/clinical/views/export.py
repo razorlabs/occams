@@ -67,42 +67,49 @@ BUILTINS = {
     renderer='occams.clinical:templates/export/list.pt')
 def list_(request):
     request.layout_manager.layout.content_title = _(u'Downloads')
-    ecrfs_query = query_ecrfs()
-    return {
+
+    ecrfs_query = query_published_ecrfs()
+
+    values = {
         'builtins': sorted(BUILTINS.keys()),
         'ecrfs': ecrfs_query,
         'ecrfs_count': ecrfs_query.count()}
 
+    if 'download' not in request.GET:
+        return values
 
-@view_config(
-    route_name='export_download',
-    permission='fia_view',
-    request_method='GET')
-def download(request):
+    selected = set(request.GET.getall('ids'))
 
-    if 'all' in request.GET:
-        tables = BUILTINS.keys()
-        ecrfs = query_ecrfs()
-    else:
-        names, ids = partition(lambda s: s.isdigit(), request.GET.getall('ids'))
-        tables = filter(lambda s: s in BUILTINS, names)
-        ecrfs = query_ecrfs().filter(datastore.Schema.id.in_(map(int, ids)))
+    if not selected:
+        request.session.flash(_(u'No items selected!'), 'error')
+        return values
 
-    with tempfile.NamedTemporaryFile('wb') as temp_file:
-        with closing(zipfile.ZipFile(temp_file, 'w')) as zip_file:
-            for name in tables:
-                with tempfile.NamedTemporaryFile('wb') as form_file:
-                    cols = BUILTINS[name]
-                    query2csv(form_file, Session.query(*cols).order_by(cols[0]))
-                    zip_file.write(form_file.name, '{0}.csv'.format(name))
+    valid_names = set(BUILTINS.keys())
+    valid_ids = set(get_published_ecrf_ids())
+    names, ids = partition(lambda s: s.isdigit(), selected)
+    names, ids = set(names), set(map(int, ids))
 
-        response = FileResponse(temp_file.name, request)
+    if not names <= valid_names or not ids <= valid_ids:
+        request.session.flash(_(u'Invalid selection!'), 'error')
+        return values
+
+    with tempfile.NamedTemporaryFile() as attachment_file:
+        with closing(zipfile.ZipFile(attachment_file, 'w')) as zip_file:
+            for name, cols in filter(lambda n, c: n in names, BUILTINS.items()):
+                query = Session.query(*cols).order_by(cols[0])
+                dump_query(zip_file, name + '.csv', query)
+
+            for id in ids:
+                with tempfile.NamedTemporaryFile() as archive_file:
+                    pass
+
+        response = FileResponse(attachment_file.name, request)
         response.headers['Content-Disposition'] = \
-            'attachment;filename=occams.clinical.zip'
+            'attachment;filename=occams.clinical.export.zip'
         return response
 
 
-def query_ecrfs():
+def query_published_ecrfs():
     return (
         Session.query(datastore.Schema)
         .filter(datastore.Schema.publish_date != None)
@@ -111,13 +118,26 @@ def query_ecrfs():
             datastore.Schema.publish_date.desc()))
 
 
-def query2csv(file, query):
-    writer = csv.writer(file)
-    writer.writerow([d['name'] for d in query.column_descriptions])
-    writer.writerows(query)
-    file.flush()
+def get_published_ecrf_ids():
+    query = (
+        Session.query(datastore.Schema.id)
+        .filter(datastore.Schema.publish_date != None))
+    return [r.id for r in query]
+
+
+def dump_table_datadic(zipe_file, arcname, query):
+    pass
+
+
+def dump_query(zip_file, arcname, query):
+    with tempfile.NamedTemporaryFile() as file:
+        writer = csv.writer(file)
+        writer.writerow([d['name'] for d in query.column_descriptions])
+        writer.writerows(query)
+        file.flush()
+        zip_file.write(file.name, arcname)
 
 
 def query_ecrf(id):
-    []
+    return []
 

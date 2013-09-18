@@ -97,7 +97,6 @@ def config_routes(config):
         custom_predicates=(visit_date,))
 
     config.add_route('export_list', '/exports')
-    config.add_route('export_download', '/exports/download')
 
     config.scan()
 
