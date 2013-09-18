@@ -51,103 +51,25 @@ from . import model
 from .model import storage
 
 
-def schemaToReportById(session, schema_name, expand_choice=False):
-    u"""
-    Builds a sub-query for a schema using the ID grouping algorithm.
-    ID: Aggresively split by attribute name and id
+def schemaToReport(session, id_or_name):
     """
-    groupfunc = lambda a: (a.name, a.id)
-    return schemaToReport(session, schema_name, groupfunc, expand_choice)
-
-
-def schemaToReportByName(session, schema_name, expand_choice=False):
-    u"""
-    Builds a sub-query for a schema using the NAME grouping algorithm
-    NAME: All attributes in a lineage are grouped by their name
-    """
-    groupfunc = lambda a: (a.name,)
-    return schemaToReport(session, schema_name, groupfunc, expand_choice)
-
-
-def schemaToReportByChecksum(session, schema_name, expand_choice=False):
-    u"""
-    Builds a sub-query for a schema using the CHECKSUM grouping algorithm
-    CHECKSUM: All attributes in a lineage are grouped by their name and checksum
-    """
-    groupfunc = lambda a: (a.name, a.checksum)
-    return schemaToReport(session, schema_name, groupfunc, expand_choice)
-
-
-def schemaToReport(session, schema_name, groupfunc, expand_choice=False):
-    u"""
     Generates a report for the schema based on the given splitting algorithm
 
     Arguments:
         ``session``
             The SQLAlchemy session to use
-        ``schema_name``
-            The schema to search for in the session
-        ``groupfunc``
-            The grouping algorithm to use. This method is a callback that
-            takes  an attribute as a parameter and returns a tuple
-            that will be used to "group" attributes that return the
-            same tuple. Results may vary.
-        ``expand_choice``
-            (Optional) Also expands multiple choice attributes into
-            individual "flag" boolean columns.
+        ``id_or_name``
+            The schema's id or (name, publish_date) tuple
 
     Returns:
         A (``DataDict``, ``Query``) pair.
     """
-    data_dict = buildDataDict(session, schema_name, groupfunc, expand_choice)
+    data_dict = buildDataDict(session, schema_name)
     table = buildReportTable(session, data_dict)
     return data_dict, table
 
 
-def queryAttributes(session, schema_name):
-    u"""
-    Builds a subquery for the all attributes ever contained in the schema.
-    This does not include sub-attributes.
-
-    Arguments:
-        ``session``
-            The SQLAlchemy session to use
-        ``schema_name``
-            The schema to search for in the session
-
-    Returns:
-        A subquery for all the attributes every contained in the schema.
-        Attribute lineages are are ordered by their most recent position in the
-        schema, then by oldest to newest within the lineage.
-    """
-    # aliased so we don't get naming ambiguity
-    RecentAttribute = orm.aliased(model.Attribute, name=u'recent_attribute')
-
-    attribute_query = (
-        session.query(model.Attribute)
-        .options(
-            orm.joinedload(model.Attribute.schema),
-            orm.joinedload(model.Attribute.choices))
-        .join(model.Attribute.schema)
-        .filter(model.Schema.name == bindparam('schema_name'))
-        .filter(model.Schema.publish_date != None)
-        .order_by(
-            # determines an attribute's most recent order
-            (session.query(RecentAttribute.order)
-                .join(RecentAttribute.schema)
-                .filter(model.Schema.name == bindparam('schema_name'))
-                .filter(model.Schema.publish_date != None)
-                .filter(RecentAttribute.name == model.Attribute.name)
-                .order_by(model.Schema.publish_date.desc())
-                .limit(1)
-                .correlate(model.Attribute)
-                .as_scalar()).asc(),
-            # oldest to newest within the lineage
-            model.Schema.publish_date.asc()))
-    return attribute_query.params(schema_name=schema_name)
-
-
-def buildDataDict(session, schema_name, groupfunc, expand_choice=False):
+def buildDataDict(session, id_or_name):
     u"""
     Builds a ``DataDict`` for the schema hierarchy
 
@@ -177,33 +99,38 @@ def buildDataDict(session, schema_name, groupfunc, expand_choice=False):
         and the associated attribute list as the value. The path will
         also contain the attribute's checksum.
     """
-    def inspect(current_schema, path=()):
-        plan = OrderedDict()
-        selected = dict()
-        for attribute in queryAttributes(session, current_schema):
-            if attribute.type == u'object':
-                subschema_name = attribute.object_schema.name
-                subschema_path = (attribute.name,)
-                subplan, subselected = inspect(subschema_name, subschema_path)
-                plan.update(subplan)
-                selected.update(subselected)
-            else:
-                group = groupfunc(attribute)
-                if (expand_choice
-                        and attribute.is_collection
-                        and attribute.choices):
-                    for choice in attribute.choices:
-                        # the actual value of the choice is more reliable than
-                        # the name as the name for choices is simply a token
-                        column_path =  path + group + (choice.value,)
-                        plan.setdefault(column_path, []).append(attribute)
-                        selected[column_path] = choice
-                else:
-                    column_path = path + group
-                    plan.setdefault(column_path, []).append(attribute)
-        return plan, selected
 
-    plan, selected = inspect(schema_name)
+    attribute_query = (
+        session.query(model.Attribute)
+        .options(
+            orm.joinedload(model.Attribute.schema),
+            orm.joinedload(model.Attribute.choices))
+        .join(model.Attribute.schema))
+
+    if isinstance(id_or_name, int):
+        attribute_query = attribute_query.filter_by(id=id_or_name)
+    else:
+        (name, publish_date) = id_or_name
+        attribute_query = \
+            attribute_query.filter_by(name=name, publish_date=publish_date)
+
+    attribute_query = attribute_query.order_by(model.Attribute.order)
+
+    plan = OrderedDict()
+    selected = dict()
+
+    for attribute in attribute_query:
+        if attribute.is_collection and attribute.choices:
+            for choice in attribute.choices:
+                # the actual value of the choice is more reliable than
+                # the name as the name for choices is simply a token
+                column_path =  path + group + (choice.value,)
+                plan.setdefault(column_path, []).append(attribute)
+                selected[column_path] = choice
+        else:
+            column_path = path + group
+            plan.setdefault(column_path, []).append(attribute)
+
     columns = OrderedDict()
     for path, attributes in plan.iteritems():
         data_column = DataColumn(path, attributes, selected.get(path))

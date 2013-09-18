@@ -121,8 +121,7 @@ class Modifiable(object):
 
     @declared_attr
     def create_user(cls):
-        return Relationship(User,
-            primaryjoin='%s.create_user_id == User.id' % cls.__name__)
+        return Relationship(User, foreign_keys=lambda:cls.create_user_id)
 
     @declared_attr
     def modify_date(cls):
@@ -152,6 +151,5 @@ class Modifiable(object):
 
     @declared_attr
     def modify_user(cls):
-        return Relationship(User,
-            primaryjoin='%s.modify_user_id == User.id' % cls.__name__)
+        return Relationship(User, foreign_keys=lambda:cls.modify_user_id)
 
