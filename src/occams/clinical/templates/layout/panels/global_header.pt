@@ -33,12 +33,28 @@
       </ul>
 
       <ul class="nav navbar-nav navbar-right"
-          tal:define="user request.user|nothing;"
+          tal:define="user request.user|nothing"
           tal:condition="user">
-        <li><p class="navbar-text">${user.fullname}</p></li>
+        <li><a href="#" class="disabled"
+          ><span class="glyphicon glyphicon-user"></span> ${user.fullname}</a></li>
+        <li class="dropdown">
+          <a href="#"
+            role="button"
+            class="dropdown-toggle"
+            data-toggle="dropdown"
+            ><span class="glyphicon glyphicon-th"></span> Apps<span class="caret"></span></a>
+          <ul class="dropdown-menu" role="menu" aria-labelledby="Apps Menu">
+            <li role="presentation" class="dropdown-header">OCCAMS</li>
+            <li role="presentation"><a href="#" role="menuitem">Form</a></li>
+            <li role="presentation"><a href="#" role="menuitem">Lab</a></li>
+            <li role="presentation"><a href="#" role="menuitem">Roster</a></li>
+            <li role="presentation" class="divider"></li>
+            <li role="presentation" class="dropdown-header">CNICS</li>
+            <li role="presentation"><a href="#" role="menuitem">HIV Sequence</a></li>
+          </ul>
         <li>
           <a href="${request.route_path('account_logout')}
-            "><i class="glyphicon glyphicon-log-out"></i> Log Out</a>
+            "><span class="glyphicon glyphicon-log-out"></span> Log Out</a>
         </li>
       </ul>
 
