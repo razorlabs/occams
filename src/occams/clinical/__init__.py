@@ -62,7 +62,9 @@ def main(global_config, **settings):
     config.include('pyramid_rewrite')
     config.add_rewrite_rule(r'/(?P<path>.*)/', r'/%(path)s')
 
-    config_routes(config)
+    config.add_static_view('static', 'static', cache_max_age=3600)
+    config.include(config_routes, route_prefix='/clinical')
+    config.scan()
 
     get_user = make_get_user(
         settings['ldap.user.userid_attr'],

@@ -67,21 +67,15 @@ BUILTINS = {
     renderer='occams.clinical:templates/export/list.pt')
 def list_(request):
     request.layout_manager.layout.content_title = _(u'Downloads')
-
     ecrfs_query = query_published_ecrfs()
-
     values = {
         'builtins': sorted(BUILTINS.keys()),
         'ecrfs': ecrfs_query,
         'ecrfs_count': ecrfs_query.count()}
-
-    if 'download' not in request.GET:
-        return values
-
     selected = set(request.GET.getall('ids'))
 
+    # Nothing submitted
     if not selected:
-        request.session.flash(_(u'No items selected!'), 'error')
         return values
 
     valid_names = set(BUILTINS.keys())
@@ -89,13 +83,15 @@ def list_(request):
     names, ids = partition(lambda s: s.isdigit(), selected)
     names, ids = set(names), set(map(int, ids))
 
+    # Submitted, but some items aren't even in the valid choices
     if not names <= valid_names or not ids <= valid_ids:
         request.session.flash(_(u'Invalid selection!'), 'error')
         return values
 
+    # Sanitized and ready to export!
     with tempfile.NamedTemporaryFile() as attachment_file:
         with closing(zipfile.ZipFile(attachment_file, 'w')) as zip_file:
-            for name, cols in filter(lambda n, c: n in names, BUILTINS.items()):
+            for name, cols in filter(lambda i: i[0] in names, BUILTINS.items()):
                 query = Session.query(*cols).order_by(cols[0])
                 dump_query(zip_file, name + '.csv', query)
 

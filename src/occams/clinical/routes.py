@@ -98,7 +98,6 @@ def config_routes(config):
 
     config.add_route('export_list', '/exports')
 
-    config.scan()
 
     return config
 
