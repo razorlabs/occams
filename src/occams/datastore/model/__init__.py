@@ -1,87 +1,35 @@
-import sqlalchemy
-import sqlalchemy.ext.declarative
+from sqlalchemy import MetaData
+from sqlalchemy.ext import declarative
 
 
-class ModelClassFactory(object):
-    u"""
-    Utility class for creating new inheritable SQLAlchemy base model class
+def get_class_factory():
+    """
+    Utility for creating new inheritable SQLAlchemy base model class
     with a common declarative base.
     """
 
-    declarative_base = sqlalchemy.ext.declarative.declarative_base()
-
-    def __call__(self, class_name):
-        u"""
-        Creates a new abstract base model class.
-        """
-        return type(str(class_name), (self.declarative_base,), dict(
-            __abstract__=True,
-            metadata=sqlalchemy.MetaData()
-            ))
+    declarative_base = declarative.declarative_base()
+    def ModelClassFactory(class_name):
+        return type(str(class_name), (declarative_base,), {
+            '__abstract__': True,
+            'metadata': MetaData()
+            })
+    return ModelClassFactory
 
 
 # This is the method to use in client modules
-ModelClass = ModelClassFactory()
+ModelClass = get_class_factory()
 
 # Useful example
 DataStoreModel = ModelClass(u'DataStoreModel')
 
-
-from occams.datastore.model.metadata import User
-from occams.datastore.model.metadata import NOW
-from occams.datastore.model.metadata import AutoNamed
-from occams.datastore.model.metadata import Describeable
-from occams.datastore.model.metadata import Modifiable
-from occams.datastore.model.metadata import Referenceable
-from occams.datastore.model.auditing import Auditable
-
-from occams.datastore.model.schema import Schema
-from occams.datastore.model.schema import Category
-from occams.datastore.model.schema import Attribute
-from occams.datastore.model.schema import Choice
-
-from occams.datastore.model.storage import State
-from occams.datastore.model.storage import Context
-from occams.datastore.model.storage import Entity
-from occams.datastore.model.storage import HasEntities
-from occams.datastore.model.storage import ValueInteger
-from occams.datastore.model.storage import ValueString
-from occams.datastore.model.storage import ValueDecimal
-from occams.datastore.model.storage import ValueDatetime
-from occams.datastore.model.storage import ValueText
-from occams.datastore.model.storage import ValueBlob
-
-from occams.datastore.model.session import DataStoreSession
-
-
-__all__ = (
-    'ModelClass',
-    'DataStoreModel',
-    'User',
-    'AutoNamed',
-    'Describeable',
-    'Modifiable',
-    'Referenceable',
-    'Auditable',
-    'Schema',
-    'Category',
-    'Attribute',
-    'Choice',
-    'State',
-    'Entity',
-    'HasEntities',
-    'ValueInteger',
-    'ValueString',
-    'ValueDecimal',
-    'ValueDatetime',
-    'ValueText',
-    'ValueBlob',
-    'Context',
-    'DataStoreSession',
-    )
-
-
-if __name__ == '__main__': # pragma: no cover
-    # A convenient way for checking the model even correctly loads the tables
-    Model.metadata.create_all(bind=sqlalchemy.create_engine('sqlite://', echo=True))
+from .auditing import Auditable
+from .metadata import User, NOW, AutoNamed, Describeable, Modifiable, Referenceable
+from .schema import Schema, Category, Attribute, Choice
+from .storage import (
+    nameModelMap,
+    State, Context, Entity,
+    HasEntities,
+    ValueInteger, ValueString, ValueDecimal, ValueDatetime, ValueText, ValueBlob)
+from .session import DataStoreSession
 
