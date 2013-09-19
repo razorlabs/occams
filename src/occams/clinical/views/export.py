@@ -93,11 +93,13 @@ def list_(request):
         with closing(zipfile.ZipFile(attachment_file, 'w')) as zip_file:
             for name, cols in filter(lambda i: i[0] in names, BUILTINS.items()):
                 query = Session.query(*cols).order_by(cols[0])
+                dump_table_datadict(zip_file, name + 'datadict.csv', query)
                 dump_query(zip_file, name + '.csv', query)
 
-            for id in ids:
-                with tempfile.NamedTemporaryFile() as archive_file:
-                    pass
+            for schema in ecrfs_query.filter(datastore.Schema.id.in_(ids)):
+                query = Session.query(reporting.export(schema))
+                arcname = schema.name + '-' + str(schema.publish_date) + '.csv'
+                dump_query(zip_file, arcname, query)
 
         response = FileResponse(attachment_file.name, request)
         response.headers['Content-Disposition'] = \
@@ -121,10 +123,6 @@ def get_published_ecrf_ids():
     return [r.id for r in query]
 
 
-def dump_table_datadic(zipe_file, arcname, query):
-    pass
-
-
 def dump_query(zip_file, arcname, query):
     with tempfile.NamedTemporaryFile() as file:
         writer = csv.writer(file)
@@ -134,6 +132,10 @@ def dump_query(zip_file, arcname, query):
         zip_file.write(file.name, arcname)
 
 
-def query_ecrf(id):
-    return []
+def dump_table_datadict(zip_file, arcname, query):
+    pass
+
+
+def dump_ecrf_datadict(zip_file, arcname, query):
+    pass
 
