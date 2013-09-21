@@ -7,7 +7,7 @@ from itertools import imap as map
 from ordereddict import OrderedDict
 
 import sqlalchemy as sa
-from sqlalchemy import orm
+from sqlalchemy import and_, orm
 
 from . import model
 
@@ -30,54 +30,40 @@ def export(schema):
         property names.
     """
     session = orm.object_session(schema)
-    is_sqlite = 'sqlite' == session.bind.url.drivername
-    is_postgres = 'postgres' in session.bind.url.drivername
     query = (
         session.query(
             model.Entity.id,
             model.Entity.state_id,
             model.Entity.collect_date,
-            model.Entity.is_null)
+            sa.cast(model.Entity.is_null, sa.Integer).label('is_null'))
         .filter_by(schema=schema))
 
     for attribute in schema.itervalues():
-        value_class = orm.aliased(
-            model.nameModelMap[attribute.type], name=attribute.name)
-
-        if attribute.type == 'date':
-            # sqlite handles date/datetime weirdly
-            value_column = (getattr(sa.func, attribute.type)(value_class._value)
-                            if is_sqlite
-                            else sa.cast(value_class._value, sa.Date))
-        else:
-            value_column = value_class._value
-
-        filter_expression = (
-            (model.Entity.id == value_class.entity_id)
-            & (value_class.attribute_id == attribute.id))
-
-        # Collections are added via correlated sub-queries to the report
+        value_alias = orm.aliased(model.nameModelMap[attribute.type])
         if attribute.is_collection and attribute.choices:
             for choice in attribute.choices:
                 query = query.add_column(
-                    session.query(
-                        session
-                        .query(value_class)
-                        .filter(filter_expression & (value_column == choice.id))
-                        .exists())
-                    .correlate(model.Entity)
-                    .as_scalar()
+                    sa.cast(
+                        session.query(value_alias)
+                        .filter(value_alias.entity_id == model.Entity.id)
+                        .filter(value_alias._value == choice.id)
+                        .correlate(model.Entity)
+                        .exists(),
+                        sa.Integer)
                     .label(attribute.name + '-' + str(choice.name)))
-        # Scalar columns are added via LEFT OUTER JOIN
         else:
-            query = query.outerjoin(value_class, filter_expression)
+            query = (
+                query
+                .outerjoin(value_alias, and_(
+                    (value_alias.entity_id == model.Entity.id),
+                    (value_alias.attribute_id == attribute.id))))
             if attribute.choices:
-                choice_alias = orm.aliased(model.Choice, name=attribute.name + '-choice')
+                choice_alias = orm.aliased(model.Choice)
                 query = (
-                    query.outerjoin(choice_alias, value_column == choice_alias.id)
+                    query.outerjoin(choice_alias, value_alias._value == choice_alias.id)
                     .add_column(choice_alias.name.label(attribute.name)))
             else:
-                query = query.add_column(value_column.label(attribute.name))
+                query = query.add_column(value_alias._value.label(attribute.name))
 
     query = (
         query.add_columns(
@@ -87,5 +73,5 @@ def export(schema):
             model.Entity.modify_user_id)
         .order_by(model.Entity.id))
 
-    return query.cte(schema.name) if not is_sqlite else query.subquery(schema.name)
+    return query.cte(schema.name)
 
