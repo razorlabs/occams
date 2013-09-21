@@ -25,9 +25,6 @@
         <li tal:condition="request.has_permission('view')">
           <a href="${request.route_path('clinical_home')}">Home</a>
         </li>
-        <li tal:condition="request.has_permission('site_view')">
-          <a href="${request.route_path('site_list')}">Sites</a>
-        </li>
         <li tal:condition="request.has_permission('study_view')">
           <a href="${request.route_path('study_list')}">Studies</a>
         </li>
@@ -36,9 +33,20 @@
         </li>
       </ul>
 
+      <form class="navbar-form navbar-left" role="search"
+          tal:condition="request.has_permission('patient_view')">
+        <div class="input-group">
+          <input type="text" class="form-control" placeholder="Search for Patient">
+          <span class="input-group-btn">
+            <button type="submit" class="btn btn-default"
+              ><span class="glyphicon glyphicon-search"></span></button>
+          </span>
+        </div>
+      </form>
+
       <ul class="nav navbar-nav navbar-right" tal:condition="user">
         <li><a href="${request.route_path('account')}" class="disabled"
-          ><span class="glyphicon glyphicon-user"></span> ${user.fullname}</a></li>
+          >${user.fullname}</a></li>
         <li class="dropdown">
           <a href="${request.route_path('apps')}"
             role="button"

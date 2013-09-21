@@ -1,39 +1,57 @@
 <html i18n:domain="occams.clinical" metal:use-macro="main_template">
   <metal:content-slot fill-slot="content-slot">
 
-    <!--! Search Box -->
-
-    <div class="row">
-      <div class="well">
-        <form
-            class="form-inline"
-            action="${request.current_route_path()}"
-            method="POST"
-            role="form">
-          <div class="input-group input-group-lg">
-            <input
-                type="search"
-                class="form-control"
-                placeholder="Search for a patient..."
-                autofocus="true"
-                i18n:attributes="placeholder"/>
-            <span class="input-group-btn">
-              <button
-                  class="btn btn-primary"
-                  type="submit"
-                  name="search"
-                  value="${search|nothing}"
-                  i18n:translate=""
-                ><span class="glyphicon glyphicon-search"></span> Search</button>
-            </span>
-          </div>
-        </form>
-      </div>
+    <div class="page-header">
+      <p class="pull-right">
+        <a href="#add-visit" class="btn btn-default"
+            data-toggle="modal"
+          ><span class="glyphicon glyphicon-calendar"></span> Add Visit</a>
+        <a href="#" class="btn btn-default"
+          ><span class="glyphicon glyphicon-cog"></span></a>
+      </p>
+      <h1>Home</h1>
     </div>
+
+    <!--! PROTOTYPE -->
+    <div id="add-visit" class="modal fade">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h4 class="modal-title">Add Visit</h4>
+          </div>
+          <div class="modal-body">
+            <form>
+              <div class="form-group">
+                <label for="patient">Patient</label>
+                <div class="input-group">
+                  <span class="input-group-addon">
+                    <input type="checkbox" /> New
+                  </span>
+                  <input type="text" class="form-control" placeholder="PID">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="visit_date">Visit Date</label>
+                <input type"date" class="form-control" />
+              </div>
+              <div class="form-group">
+                <label for="visit_date">Schedules</label>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-primary">Save</button>
+          </div>
+        </div><!-- /.modal-content -->
+      </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
 
     <!--! Recent Patients -->
 
-    <div class="row" tal:switch="recent_count > 0">
+    <div tal:switch="recent_count > 0">
       <h3 i18n:translate="">Recently Updated</h3>
       <table tal:case="True" class="table table-bordered table-striped">
         <thead>
