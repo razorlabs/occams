@@ -10,13 +10,6 @@ def config_routes(config):
     Helper method to configure available routes for the application
     """
 
-    config.add_static_view('static', 'static', cache_max_age=3600)
-
-    config.add_route('home', '')
-
-    config.add_route('account_login', '/login')
-    config.add_route('account_logout', '/logout')
-
     config.add_route('site_list', '/sites')
     config.add_route('site_add', '/sites/add')
     config.add_route('site_view', '/sites/{site_name}')
@@ -36,7 +29,6 @@ def config_routes(config):
     config.add_route('study_edit', '/studies/{study_name}/edit')
     config.add_route('study_delete', '/studies/{study_name}/delete')
 
-    config.add_route('patient_search', '')
     config.add_route('patient_add', '/patients/add')
     config.add_route('patient_view', '/patients/{pid}')
     config.add_route('patient_phi', '/patients/{pid}/phi_ecrfs')
@@ -98,8 +90,8 @@ def config_routes(config):
 
     config.add_route('export_list', '/exports')
 
-
     return config
+
 
 
 def parse_dates(*segment_names):

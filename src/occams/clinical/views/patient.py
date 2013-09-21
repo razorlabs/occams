@@ -127,7 +127,7 @@ def search_recent():
 
 
 @view_config(
-    route_name='home',
+    route_name='clinical_home',
     permission='view',
     renderer='occams.clinical:templates/patient/home.pt')
 def home(request):

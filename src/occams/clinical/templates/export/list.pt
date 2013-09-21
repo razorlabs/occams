@@ -9,7 +9,7 @@
         class="alert alert-danger"
         tal:repeat="msg request.session.pop_flash('error')">${msg}</div>
 
-    <p i18n:translate="">
+    <p i18n:translate="" class="alert alert-info">
       Please select the files you would like to download.
       All exports include a data dictionary.
     </p>
