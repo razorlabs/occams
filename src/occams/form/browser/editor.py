@@ -657,6 +657,8 @@ class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
         if newAttribute.type == 'object':
             newAttribute.object_schema = model.Schema(
                 name=form.name + camelize(data['title']),
+                state=form.state,
+                publish_date=form.publish_date,
                 title=data['title'],
                 description=data['description'],
                 is_inline=True
