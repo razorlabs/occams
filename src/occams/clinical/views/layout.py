@@ -13,8 +13,8 @@ class Layout(object):
     Master layout for the application
     """
 
-    content_title = ''
-    content_type = ''
+    title = ''
+    section = ''
 
     styles_bundle = 'default_css'
     scripts_bundle = 'default_js'
@@ -27,26 +27,12 @@ class Layout(object):
     def styles(self):
         return self.request.webassets_env[self.styles_bundle]
 
-    def config_toolbar(self, name, *args, **kw):
-        self._toolbar = (name, args, kw)
-
-    @property
-    def toolbar(self):
-        return getattr(self, '_toolbar')
+    def set_header(self, name, *args, **kw):
+        self._header = (name, args, kw)
 
     def __init__(self, context, request):
         self.context = context
         self.request = request
-
-
-@panel_config(name='toolbar')
-def toolbar(context, request):
-    lm = request.layout_manager
-    panel = lm.layout.toolbar
-    if panel:
-        (name, args, kw) = panel
-        return lm.render_panel(name, *args, **kw)
-    return ''
 
 
 @panel_config(
@@ -61,4 +47,17 @@ def global_header(context, request):
     renderer='occams.clinical:templates/layout/panels/global_footer.pt')
 def global_footer(context, request):
     return {}
+
+
+@panel_config(name='header')
+def header(context, request):
+    """
+    Rederst the registered content header
+    """
+    lm = request.layout_manager
+    panel = getattr(lm.layout, '_header', None)
+    if panel:
+        (name, args, kw) = panel
+        return lm.render_panel(name, *args, **kw)
+    return ''
 

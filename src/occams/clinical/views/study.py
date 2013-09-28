@@ -98,8 +98,8 @@ class ScheduleSchema(CSRFSchema):
     renderer='occams.clinical:templates/study/list.pt')
 def list_(request):
     layout = request.layout_manager.layout
-    layout.content_title = _(u'Studies')
-    layout.config_toolbar('study_toolbar_list')
+    layout.title = _(u'Studies')
+    layout.section = 'study'
     studies_query = (
         Session.query(models.Study)
         .order_by(models.Study.title.asc()))
@@ -113,7 +113,114 @@ def list_(request):
     permission='study_view',
     renderer='occams.clinical:templates/study/view.pt')
 def view(request):
-    return {}
+    study = find_study(request)
+    layout = request.layout_manager.layout
+    layout.title = study.title
+    layout.set_header('study_header', study=study)
+    return {'study': study}
+
+
+@view_config(
+    route_name='study_ecrfs',
+    permission='study_view',
+    renderer='occams.clinical:templates/study/ecrfs.pt')
+def ecrfs(request):
+    study = find_study(request)
+    layout = request.layout_manager.layout
+    layout.title = study.title
+    layout.set_header('study_header', study=study)
+    return {'study': study}
+
+
+@view_config(
+    route_name='study_schedule',
+    permission='study_view',
+    renderer='occams.clinical:templates/study/schedule.pt')
+def schedule(request):
+    study = find_study(request)
+    layout = request.layout_manager.layout
+    layout.title = study.title
+    layout.section = 'study'
+    layout.set_header('study_header', study=study)
+
+    cycles_query = (
+        Session.query(models.Cycle)
+        .filter(models.Cycle.study == study)
+        .order_by(models.Cycle.week.nullslast()))
+
+    OuterSchema = orm.aliased(datastore.Schema, name='OuterSchema')
+
+    ecrfs_query = (
+        Session.query(OuterSchema.title)
+        .add_columns(*[
+            sql.exists([datastore.Schema.id])
+            .where((datastore.Schema.name == OuterSchema.name)
+                    & datastore.Schema.categories.contains(cycle.category))
+            .label(cycle.name)
+            for cycle in cycles_query])
+        .filter(OuterSchema.categories.contains(study.category))
+        .filter(OuterSchema.publish_date == (
+            Session.query(datastore.Schema.publish_date)
+            .filter(datastore.Schema.publish_date != None)
+            .filter(datastore.Schema.name == OuterSchema.name)
+            .order_by(datastore.Schema.publish_date.desc())
+            .limit(1)
+            .correlate(OuterSchema)
+            .as_scalar()))
+        .order_by(OuterSchema.title.asc()))
+
+    return {
+        'study': study,
+        'cycles': cycles_query,
+        'has_cycles': cycles_query.count() > 0,
+        'ecrfs': ecrfs_query }
+
+
+
+@view_config(
+    route_name='study_progress',
+    permission='study_view',
+    renderer='occams.clinical:templates/study/progress.pt')
+def progress(request):
+    study = find_study(request)
+
+    layout = request.layout_manager.layout
+    layout.title = study.title
+    layout.section = 'study'
+    layout.set_header('study_header', study=study)
+
+    states_query = Session.query(datastore.State)
+
+    VisitCycle = orm.aliased(models.Cycle)
+
+    cycles_query = (
+        Session.query(models.Cycle)
+        .filter_by(study=study)
+        .add_column(
+            Session.query(func.count(models.Visit.id))
+            .join(VisitCycle, models.Visit.cycles)
+            .filter(VisitCycle.id == models.Cycle.id)
+            .correlate(models.Cycle)
+            .label('visits_count')))
+
+    for state in states_query:
+        cycles_query = cycles_query.add_column(
+            Session.query(func.count(models.Visit.id))
+            .join(VisitCycle, models.Visit.cycles)
+            .filter(models.Visit.entities.any(state=state))
+            .filter(VisitCycle.id == models.Cycle.id)
+            .correlate(models.Cycle)
+            .label(state.name))
+
+    cycles_query = cycles_query.order_by(models.Cycle.week.asc())
+    cycles_count = study.cycles.count()
+
+    return {
+        'study': study,
+        'states': states_query,
+        'cycles': cycles_query,
+        'cycles_count': cycles_count,
+        'has_cycles': cycles_count > 0 }
 
 
 @view_config(
@@ -152,4 +259,43 @@ def add(request):
         return HTTPFound(location=study_url)
 
     return {'form': form.render()}
+
+
+@panel_config(
+    name='study_header',
+    renderer='occams.clinical:templates/study/panels/header.pt')
+def header(context, request, **kw):
+    kw.setdefault('section', request.current_route_path())
+    return kw
+
+
+
+def query_enabled_ecrfs(study):
+    StudySchema = orm.aliased(datastore.Schema, name='StudySchema')
+    CurrentSchema = orm.aliased(datastore.Schema, name='CurrentSchema')
+
+    study_schemata_query = (
+        FiaSession.query(datastore.Schema)
+        .filter(datastore.Schema.categories.contains(study.category))
+        .subquery('study_schemata'))
+
+    ecrfs_query = (
+        FiaSession.query(
+            StudySchema.id,
+            StudySchema.name,
+            StudySchema.title)
+        .add_column((study_schemata_query.c.id != None).label('is_enabled'))
+        .outerjoin(study_schemata_query, study_schemata_query.c.id == StudySchema.id)
+        .filter(~StudySchema.is_inline)
+        .filter(StudySchema.publish_date == (
+            FiaSession.query(CurrentSchema.publish_date)
+            .filter(CurrentSchema.name == StudySchema.name)
+            .filter(CurrentSchema.state == 'published')
+            .order_by(CurrentSchema.publish_date.desc())
+            .limit(1)
+            .correlate(StudySchema)
+            .as_scalar()))
+        .order_by(StudySchema.title.asc()))
+
+    return ecrfs_query
 

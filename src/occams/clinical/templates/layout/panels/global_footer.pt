@@ -1,9 +1,9 @@
-<div id="footer">
+<footer i18n:domain="occams.clinical" id="footer">
   <div class="container">
     <p class="muted credit">
-      Developed by <a href="http://cfar.ucsd.edu/bit">UCSD Bit Core</a><br/>
+      Developed by <a href="http://cfar.ucsd.edu/bit">UCSD Bit Core</a>.
       Distributed under <a href="/about/license">Some Fancy License</a>
     </p>
   </div>
-</div>
+</footer>
 

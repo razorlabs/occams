@@ -21,8 +21,12 @@ def config_assets(config):
 
     config.add_webasset('default_css', Bundle(
         env['bootstrap_css'],
+        'styles/overrides.css',
+        'styles/helpers.css',
+        'styles/nav.css',
         'styles/stickynavfoot.css',
         'styles/login.css',
+        'styles/schedule.css',
         filters='cssmin',
         output='gen/default.%(version)s.css'))
 
@@ -30,6 +34,7 @@ def config_assets(config):
         env['jquery'],
         env['bootstrap_js'],
         'scripts/lib.selectall.js',
+        'scripts/lib.rotate.js',
         filters='jsmin',
         output='gen/default.%(version)s.js'))
 

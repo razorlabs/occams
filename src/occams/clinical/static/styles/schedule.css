@@ -1,0 +1,32 @@
+#study_schedule #schedule .ecrf {
+  width: 16em;
+}
+
+#study_schedule #schedule .ecrf span{
+  display: block;
+  width: 16em;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+#study_schedule #schedule thead th.cycle span {
+  display: block;
+
+  writing-mode: vertical-rl;
+
+  height: 8em;
+  width: 1em;
+
+  white-space: nowrap;
+  overflow: hidden;
+
+  -webkit-transform-origin: center center;
+  -moz-transform-origin:    center center;
+  -ms-transform-origin:     center center;
+  -o-transform-origin:      center center;
+
+  -webkit-transform: rotate(-90deg);
+  -moz-transform:    rotate(-90deg);
+  -ms-transform:     rotate(-90deg);
+  -o-transform:      rotate(-90deg);
+}

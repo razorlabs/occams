@@ -34,6 +34,7 @@ BUILTINS = {
     'enrollment': (
         Enrollment.id,
         Enrollment.patient_id,
+        Enrollment.reference_number,
         Enrollment.consent_date, Enrollment.latest_consent_date, Enrollment.termination_date,
         Enrollment.create_date, Enrollment.create_user_id,
         Enrollment.modify_date, Enrollment.modify_date),
@@ -66,7 +67,9 @@ BUILTINS = {
     permission='fia_view',
     renderer='occams.clinical:templates/export/list.pt')
 def list_(request):
-    request.layout_manager.layout.content_title = _(u'Downloads')
+    layout = request.layout_manager.layout
+    layout.title = _(u'Downloads')
+    layout.section = 'export'
     ecrfs_query = query_published_ecrfs()
     values = {
         'builtins': sorted(BUILTINS.keys()),

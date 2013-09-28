@@ -14,6 +14,8 @@ from .. import _, log, models, Session
     permission='visit_view',
     renderer='occams.clinical:templates/visit/list.pt')
 def list_(request):
+    layout = request.layout_manager.layout
+    layout.title = _(u'Welcome to OCCAMS!')
     return {}
 
 

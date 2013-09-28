@@ -23,18 +23,12 @@ body {
   background-color: #f5f5f5;
 }
 
-/* the first container inside the wrapper needs to take into account the navbar */
-#wrap > .container {
-  padding: 60px 15px 15px;
-}
-
 #footer .credit {
-  margin: 10px 0;
+  margin: 20px 0;
 }
 
 #footer > .container {
-  padding-left: 15px;
-  padding-right: 15px;
+  padding: 0 15px;
   text-align: center;
 }
 

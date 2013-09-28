@@ -18,7 +18,9 @@ class LoginSchema(colander.MappingSchema):
     email = colander.SchemaNode(
         colander.String(),
         title=None,
-        validator=colander.Email(),
+        validator=colander.All(
+            colander.Email(),
+            colander.Length(max=32)),
         widget=deform.widget.TextInputWidget(
             autofocus=True,
             placeholder=_(u'Email')))
@@ -26,6 +28,7 @@ class LoginSchema(colander.MappingSchema):
     password = colander.SchemaNode(
         colander.String(),
         title=None,
+        validator=colander.Length(min=5, max=32),
         widget=deform.widget.PasswordWidget(
             placeholder=_(u'Password')))
 
@@ -52,7 +55,7 @@ def login(request):
     referrer = request.GET.get('referrer', request.current_route_path())
     if not referrer or referrer == request.route_path('account_login'):
         # Never use the login as the referrer
-        referrer = request.route_path('home')
+        referrer = request.route_path('clinical')
 
     form = deform.Form(
         schema=LoginSchema(title=_(u'Please log in')).bind(request=request),
@@ -89,5 +92,5 @@ def login(request):
 @view_config(route_name='account_logout')
 def logout(request):
     headers = forget(request)
-    return HTTPFound(location=request.route_path('home'), headers=headers)
+    return HTTPFound(location=request.route_path('clinical'), headers=headers)
 

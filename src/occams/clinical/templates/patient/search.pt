@@ -1,5 +1,32 @@
-<html metal:use-macro="main_template">
+<html i18n:domain="occams.clinical" metal:use-macro="main_template">
   <metal:content-slot fill-slot="content-slot">
+
+    <div class="page-header">
+      <h1 i18n:translate="">Patients</h1>
+    </div>
+
+    <tal:results switch="page.item_count > 0">
+      <div tal:case="False" i18n:translate="" class="alert alert-warning">
+        <strong>No results found!</strong> Please refine your search and try again.
+      </div>
+      <div tal:case="True">
+        <div class="pagination">${structure:page.pager()}</div>
+        <div class="table-responsive">
+          <table class="table table-bordered table-hover table-striped">
+            <thead>
+              <tr>
+                <th>Patient</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr tal:repeat="patient page">
+                <td>${patient.pid}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </tal:results>
 
   </metal:content-slot>
 </html>

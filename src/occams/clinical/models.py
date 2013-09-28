@@ -180,9 +180,8 @@ class Cycle(ClinicalModel, AutoNamed, Referenceable, Describeable,  Auditable, M
         Study,
         backref=orm.backref(
             name='cycles',
-            cascade='all, delete-orphan',
-            ),
-        )
+            lazy='dynamic',
+            cascade='all, delete-orphan'))
 
     # week number
     week = schema.Column(types.Integer)

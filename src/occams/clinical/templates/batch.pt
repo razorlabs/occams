@@ -1,0 +1,5 @@
+<ul class="pagination" tal:define="batch batch|nothing">
+  <li><a href="#">&laquo;</a></li>
+  <li tal:repeat="page batch.pages"><a href="#">{</a></li>
+  <li><a href="#">&raquo;</a></li>
+</li>

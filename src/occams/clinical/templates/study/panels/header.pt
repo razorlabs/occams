@@ -1,0 +1,50 @@
+<header class="page-header">
+  <menu class="pull-right">
+    <a href="#" class="btn btn-default"><span class="glyphicon glyphicon-random"></span> Upload RIDs</a>
+    <a href="#" class="btn btn-default"><span class="glyphicon glyphicon-edit"></span> Edit</a>
+    <a href="#" class="btn btn-default"><span class="glyphicon glyphicon-trash"></span> Delete</a>
+  </menu>
+  <h1>${study.title}</h1>
+  <ul class="details list-inline">
+    <li>
+      <span class="text-muted" i18n:translate="">Code:</span>
+      <span>${study.code}</span>
+    </li>
+    <li>
+      <span class="text-muted" i18n:translate="">Label:</span>
+      <span>${study.short_title}</span>
+    </li>
+    <li>
+      <span class="text-muted" i18n:translate="">Blinded:</span>
+      <span tal:switch="bool(study.is_blinded)">
+        <span tal:case="True" tal:omit-tag="" i18n:translate="">Yes</span>
+        <span tal:case="False" tal:omit-tag="" i18n:translate="">No</span>
+      </span>
+    </li>
+    <li>
+      <span class="text-muted" i18n:translate="">Consent Date:</span>
+      <span>${study.consent_date}<span>
+    </li>
+  </ul>
+  <nav>
+    <ul class="nav nav-header">
+      <li tal:define="url request.current_route_path(_route_name='study_view')"
+          tal:attributes="class python:'active' if section == url else ''">
+        <a href="${url}">About</a>
+      </li>
+      <li tal:define="url request.current_route_path(_route_name='study_schedule')"
+          tal:attributes="class python:'active' if section == url else ''">
+        <a href="${url}">Schedule</a>
+      </li>
+      <li tal:define="url request.current_route_path(_route_name='study_ecrfs')"
+          tal:attributes="class python:'active' if section == url else ''">
+        <a href="${url}">Other eCRFS</a>
+      </li>
+      <li tal:define="url request.current_route_path(_route_name='study_progress')"
+          tal:attributes="class python:'active' if section == url else ''">
+        <a href="${url}">Progress</a>
+      </li>
+    </ul>
+  </nav>
+</header>
+

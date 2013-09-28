@@ -62,8 +62,6 @@ def main(global_config, **settings):
     config.include('pyramid_rewrite')
     config.add_rewrite_rule(r'/(?P<path>.*)/', r'/%(path)s')
 
-    config.add_static_view('static', 'static', cache_max_age=3600)
-
     # builtins views (move to core)
     config.add_route('account_login', '/login')
     config.add_route('account_logout', '/logout')
@@ -71,7 +69,7 @@ def main(global_config, **settings):
     config.add_route('apps', '/apps')
 
     # app-specific views
-    config.add_route('clinical_home', '/clinical')
+    config.add_route('clinical', '/clinical')
     config.include(config_routes, route_prefix='/clinical')
 
     config.scan()

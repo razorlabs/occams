@@ -10,27 +10,22 @@
 
   <head>
     <meta charset="utf-8">
-    <title>${layout.content_title}</title>
+    <title>${layout.title}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <tal:styles repeat="url layout.styles.urls()">
-      <link href="${url}" rel="stylesheet" />
-    </tal:styles>
+    <link tal:repeat="url layout.styles.urls()" href="${url}" rel="stylesheet" />
     <link
         rel="shortcut icon"
         href="${request.static_path('occams.clinical:static/images/favicon.ico')}"/>
   </head>
 
-  <body class="${request.matched_route.name}">
+  <body id="${request.matched_route.name}">
 
     <div id="wrap">
       <div tal:replace="structure panel('global_header')"></div>
       <div class="container">
-        <div tal:replace="structure panel('breadcrumb')"></div>
-        <div tal:replace="structure panel('alert')"></div>
-        <div tal:replace="structure panel('page_header')"></div>
         <div id="body" class="row">
+          <header tal:replace="structure panel('header')" />
           <div class="col-md-12">
-            <div tal:replace="structure panel('navigation')"></div>
             <div id="content">
 
               <metal:content-slot define-slot="content-slot">
@@ -49,9 +44,10 @@
     <div id="modal fade" class="modal" role="dialog" aria-hidden="true"></div>
 
     <!--! Load scripts at the end so we don't block rendering -->
-    <tal:scripts repeat="url layout.scripts.urls()">
-      <script src="${url}" type="text/javascript"> </script>
-    </tal:scripts>
+    <script
+        tal:repeat="url layout.scripts.urls()"
+        src="${url}"
+        type="text/javascript"> </script>
 
   </body>
 </html>
