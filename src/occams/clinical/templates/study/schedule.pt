@@ -1,23 +1,23 @@
 <html i18n:domain="occams.clinical" metal:use-macro="main_template">
   <metal:content-slot fill-slot="content-slot">
 
-    <div class="table-responsive">
+    <div class="table-responsive table-scrollable">
       <table
           id="schedule"
-          class="table table-bordered table-striped">
+          class="table table-bordered table-striped table-dimensional">
         <thead>
           <tr>
             <th class="ecrf"></th>
-            <tal:cycles repeat="cycle cycles">
-              <th class="cycle">
-                <span>${cycle.title}</span>
-              </th>
-            </tal:cycles>
+            <th tal:repeat="cycle cycles">
+              <span class="rotated-text">
+                <span class="rotated-text__inner">${cycle.title}</span>
+              </span>
+            </th>
           </tr>
         </thead>
         <tbody>
           <tr tal:repeat="ecrf ecrfs">
-            <td class="ecrf"><span>${ecrf.title}</span></td>
+            <th class="ecrf"><span>${ecrf.title}</span></th>
             <!--! The rest of the columns are the cycles,
                   just loop through them (skip the first since
                   it's the ecrf) -->

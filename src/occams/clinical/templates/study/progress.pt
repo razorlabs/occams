@@ -5,7 +5,7 @@
       No cycle information has been added yet
     </div>
 
-    <div class="table-responsive" tal:condition="has_cycles">
+    <div class="table-responsive table-scrollable" tal:condition="has_cycles">
       <table class="table table-bordered table-striped">
         <thead>
           <tr>

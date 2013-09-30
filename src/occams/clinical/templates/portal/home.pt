@@ -65,7 +65,7 @@
         </thead>
         <tbody>
           <tr tal:repeat="recent recent_list">
-            <td>${recent.Patient.our}</td>
+            <td><a href="${request.route_path('patient_view', pid=recent.Patient.our)}">${recent.Patient.our}</a></td>
             <td>${recent.Patient.site.title}</td>
             <td
               tal:define="

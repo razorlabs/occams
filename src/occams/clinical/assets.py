@@ -11,30 +11,21 @@ def config_assets(config):
     """
     env = config.get_webassets_env()
 
-    # Third-Party libraries
-
-    config.add_webasset('jquery', Bundle('scripts/jquery.min.js'))
-    config.add_webasset('bootstrap_js', Bundle('scripts/bootstrap.min.js'))
-    config.add_webasset('bootstrap_css', Bundle('styles/bootstrap.min.css'))
-
-    # Default
-
     config.add_webasset('default_css', Bundle(
-        env['bootstrap_css'],
-        'styles/overrides.css',
-        'styles/helpers.css',
-        'styles/nav.css',
-        'styles/stickynavfoot.css',
-        'styles/login.css',
-        'styles/schedule.css',
-        filters='cssmin',
+        'styles/main.less',
+        filters='less,cssmin',
+        depends='styles/*.less',
         output='gen/default.%(version)s.css'))
 
     config.add_webasset('default_js', Bundle(
-        env['jquery'],
-        env['bootstrap_js'],
-        'scripts/lib.selectall.js',
-        'scripts/lib.rotate.js',
+        'libs/jquery.min.js',
+        'libs/bootstrap/js/affix.js',
+        'libs/bootstrap/js/button.js',
+        'libs/bootstrap/js/dropdown.js',
+        'libs/bootstrap/js/modal.js',
+        'libs/bootstrap/js/tooltip.js',
+        'libs/bootstrap/js/transition.js',
+        'scripts/selectall.js',
         filters='jsmin',
         output='gen/default.%(version)s.js'))
 

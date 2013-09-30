@@ -1,0 +1,32 @@
+/**
+ * Navigation components
+ */
+
+
+@nav-header-bg:            #f8f8f8;
+@nav-header-border-color:  @nav-tabs-border-color;
+@nav-header-active-bg:     @component-active-bg;
+@nav-header-active-color:  @text-color;
+
+
+/**
+ * Specialized navigation for content headers
+ */
+.nav-header {
+  background-color:  @nav-header-bg;
+  border-top:        1px solid @nav-header-border-color;
+  margin-bottom:     -9px;
+
+  li {
+    display: inline-block;
+  }
+
+  .active a {
+    color:          @text-color;
+    font-weight:    bold;
+    margin-bottom:  -3px;
+    border-bottom:  3px solid @nav-header-active-bg;
+  }
+}
+
+
