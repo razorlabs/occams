@@ -24,8 +24,6 @@ from occams.datastore.model import (
         HasEntities,
         ModelClass, DataStoreSession)
 
-from occams import roster
-
 
 RE_WS = re.compile('\s+')
 RE_NON_ASCII = re.compile('[^a-z0-9_-]', re.I)

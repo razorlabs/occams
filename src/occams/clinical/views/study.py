@@ -99,7 +99,7 @@ class ScheduleSchema(CSRFSchema):
 def list_(request):
     layout = request.layout_manager.layout
     layout.title = _(u'Studies')
-    layout.section = 'study'
+    layout.set_menu('study_list_menu')
     studies_query = (
         Session.query(models.Study)
         .order_by(models.Study.title.asc()))
@@ -116,7 +116,9 @@ def view(request):
     study = find_study(request)
     layout = request.layout_manager.layout
     layout.title = study.title
-    layout.set_header('study_header', study=study)
+    layout.set_menu('study_view_menu', study=study)
+    layout.set_details('study_details', study=study)
+    layout.set_nav('study_nav', study=study)
     return {'study': study}
 
 
@@ -128,7 +130,9 @@ def ecrfs(request):
     study = find_study(request)
     layout = request.layout_manager.layout
     layout.title = study.title
-    layout.set_header('study_header', study=study)
+    layout.set_menu('study_view_menu', study=study)
+    layout.set_details('study_details', study=study)
+    layout.set_nav('study_nav', study=study)
     return {'study': study}
 
 
@@ -140,9 +144,9 @@ def schedule(request):
     study = find_study(request)
     layout = request.layout_manager.layout
     layout.title = study.title
-    layout.section = 'study'
-    layout.set_header('study_header', study=study)
-
+    layout.set_menu('study_view_menu', study=study)
+    layout.set_details('study_details', study=study)
+    layout.set_nav('study_nav', study=study)
     cycles_query = (
         Session.query(models.Cycle)
         .filter(models.Cycle.study == study)
@@ -176,7 +180,6 @@ def schedule(request):
         'ecrfs': ecrfs_query }
 
 
-
 @view_config(
     route_name='study_progress',
     permission='study_view',
@@ -186,8 +189,9 @@ def progress(request):
 
     layout = request.layout_manager.layout
     layout.title = study.title
-    layout.section = 'study'
-    layout.set_header('study_header', study=study)
+    layout.set_menu('study_view_menu', study=study)
+    layout.set_details('study_details', study=study)
+    layout.set_nav('study_nav', study=study)
 
     states_query = Session.query(datastore.State)
 
@@ -261,24 +265,13 @@ def add(request):
     return {'form': form.render()}
 
 
-@panel_config(
-    name='study_header',
-    renderer='occams.clinical:templates/study/panels/header.pt')
-def header(context, request, **kw):
-    kw.setdefault('section', request.current_route_path())
-    return kw
-
-
-
 def query_enabled_ecrfs(study):
     StudySchema = orm.aliased(datastore.Schema, name='StudySchema')
     CurrentSchema = orm.aliased(datastore.Schema, name='CurrentSchema')
-
     study_schemata_query = (
         FiaSession.query(datastore.Schema)
         .filter(datastore.Schema.categories.contains(study.category))
         .subquery('study_schemata'))
-
     ecrfs_query = (
         FiaSession.query(
             StudySchema.id,
@@ -296,6 +289,5 @@ def query_enabled_ecrfs(study):
             .correlate(StudySchema)
             .as_scalar()))
         .order_by(StudySchema.title.asc()))
-
     return ecrfs_query
 

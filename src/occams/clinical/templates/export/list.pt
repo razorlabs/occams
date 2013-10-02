@@ -1,15 +1,10 @@
 <html i18n:domain="occams.clinical" metal:use-macro="main_template">
   <metal:content-slot fill-slot="content-slot">
-
-    <div class="page-header">
-      <h1 i18n:translate="">Exports</h1>
-    </div>
-
     <div
         class="alert alert-danger"
         tal:repeat="msg request.session.pop_flash('error')">${msg}</div>
 
-    <p i18n:translate="" class="alert alert-info">
+    <p i18n:translate="" class="lead">
       Please select the files you would like to download.
       All exports include a data dictionary.
     </p>

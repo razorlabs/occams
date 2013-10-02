@@ -1,17 +1,6 @@
 <html i18n:domain="occams.clinical" metal:use-macro="main_template">
   <metal:content-slot fill-slot="content-slot">
 
-    <div class="page-header">
-      <p class="pull-right">
-        <a href="#add-visit" class="btn btn-default"
-            data-toggle="modal"
-          ><span class="glyphicon glyphicon-calendar"></span> Add Visit</a>
-        <a href="#" class="btn btn-default"
-          ><span class="glyphicon glyphicon-cog"></span></a>
-      </p>
-      <h1>Home</h1>
-    </div>
-
     <!--! PROTOTYPE -->
     <div id="add-visit" class="modal fade">
       <div class="modal-dialog">

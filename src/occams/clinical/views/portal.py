@@ -14,12 +14,14 @@ from .. import _, log, models, Session
     permission='view',
     renderer='occams.clinical:templates/portal/home.pt')
 def home(request):
-    request.layout_manager.layout.content_title = _(u'Welcome to OCCAMS!')
+    layout = request.layout_manager.layout
+    layout.title = _(u'Welcome to OCCAMS!')
+    layout.set_menu('home_menu')
+
     recent_query = search_recent()
     return {
         'recent_list': recent_query,
-        'recent_count': recent_query.count(),
-        }
+        'recent_count': recent_query.count() }
 
 
 def search_recent():

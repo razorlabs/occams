@@ -69,7 +69,6 @@ BUILTINS = {
 def list_(request):
     layout = request.layout_manager.layout
     layout.title = _(u'Downloads')
-    layout.section = 'export'
     ecrfs_query = query_published_ecrfs()
     values = {
         'builtins': sorted(BUILTINS.keys()),

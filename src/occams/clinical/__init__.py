@@ -72,7 +72,9 @@ def main(global_config, **settings):
     config.add_route('clinical', '/clinical')
     config.include(config_routes, route_prefix='/clinical')
 
-    config.scan()
+    config.scan('.layouts')
+    config.scan('.panels')
+    config.scan('.views')
 
     get_user = make_get_user(
         settings['ldap.user.userid_attr'],
