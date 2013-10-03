@@ -8,7 +8,7 @@ import zipfile
 from pyramid.httpexceptions import HTTPFound
 from pyramid_layout.layout import layout_config
 from pyramid_layout.panel import panel_config
-from pyramid.response import FileResponse
+from pyramid.response import FileResponse, FileIter
 from pyramid.view import view_config
 from sqlalchemy import func, orm, sql
 import transaction
@@ -61,24 +61,40 @@ BUILTINS = {
         Cycle.modify_date, Cycle.modify_user_id),
     'visit_cycle': (visit_cycle_table.c.visit_id, visit_cycle_table.c.cycle_id)}
 
-
 @view_config(
-    route_name='export_list',
+    route_name='data_list',
     permission='fia_view',
-    renderer='occams.clinical:templates/export/list.pt')
+    renderer='occams.clinical:templates/data/list.pt')
 def list_(request):
     layout = request.layout_manager.layout
-    layout.title = _(u'Downloads')
-    ecrfs_query = query_published_ecrfs()
-    values = {
-        'builtins': sorted(BUILTINS.keys()),
-        'ecrfs': ecrfs_query,
-        'ecrfs_count': ecrfs_query.count()}
-    selected = set(request.GET.getall('ids'))
+    layout.title = _(u'Data')
+    layout.set_nav('data_nav')
+    return {}
+
+
+@view_config(
+    route_name='data_export',
+    permission='fia_view',
+    renderer='occams.clinical:templates/data/export.pt')
+def export(request):
+    layout = request.layout_manager.layout
+    layout.title = _(u'Data')
+    layout.set_nav('data_nav')
+
+    def default_values():
+        ecrfs_query = query_published_ecrfs()
+        ecrfs_count = ecrfs_query.count()
+        return {
+            'builtins': sorted(BUILTINS.keys()),
+            'ecrfs': ecrfs_query,
+            'has_ecrfs': ecrfs_count > 0,
+            'ecrfs_count': ecrfs_count}
+
+    selected = set(request.POST.getall('ids'))
 
     # Nothing submitted
     if not selected:
-        return values
+        return default_values()
 
     valid_names = set(BUILTINS.keys())
     valid_ids = set(get_published_ecrf_ids())
@@ -88,25 +104,29 @@ def list_(request):
     # Submitted, but some items aren't even in the valid choices
     if not names <= valid_names or not ids <= valid_ids:
         request.session.flash(_(u'Invalid selection!'), 'error')
-        return values
+        return default_values()
 
-    # Sanitized and ready to export!
-    with tempfile.NamedTemporaryFile() as attachment_file:
-        with closing(zipfile.ZipFile(attachment_file, 'w')) as zip_file:
-            for name, cols in filter(lambda i: i[0] in names, BUILTINS.items()):
-                query = Session.query(*cols).order_by(cols[0])
-                dump_table_datadict(zip_file, name + 'datadict.csv', query)
-                dump_query(zip_file, name + '.csv', query)
+    attachment_fp = tempfile.NamedTemporaryFile()
+    zip_fp = zipfile.ZipFile(attachment_fp, 'w', zipfile.ZIP_DEFLATED)
 
-            for schema in ecrfs_query.filter(datastore.Schema.id.in_(ids)):
-                query = Session.query(reporting.export(schema))
-                arcname = schema.name + '-' + str(schema.publish_date) + '.csv'
-                dump_query(zip_file, arcname, query)
+    for name, cols in filter(lambda i: i[0] in names, BUILTINS.items()):
+        query = Session.query(*cols).order_by(cols[0])
+        dump_table_datadict(zip_fp, name + 'datadict.csv', query)
+        dump_query(zip_fp, name + '.csv', query)
 
-        response = FileResponse(attachment_file.name, request)
-        response.headers['Content-Disposition'] = \
-            'attachment;filename=occams.clinical.export.zip'
-        return response
+    for schema in ecrfs_query.filter(datastore.Schema.id.in_(ids)):
+        query = Session.query(reporting.export(schema))
+        arcname = schema.name + '-' + str(schema.publish_date) + '.csv'
+        dump_query(zip_fp, arcname, query)
+
+    zip_fp.close()
+
+    attachment_fp.seek(0)
+
+    response = request.response
+    response.app_iter = FileIter(attachment_fp)
+    response.content_disposition = 'attachment;filename=clinical.zip'
+    return response
 
 
 def query_published_ecrfs():
@@ -125,19 +145,19 @@ def get_published_ecrf_ids():
     return [r.id for r in query]
 
 
-def dump_query(zip_file, arcname, query):
-    with tempfile.NamedTemporaryFile() as file:
-        writer = csv.writer(file)
+def dump_query(zip_fp, arcname, query):
+    with tempfile.NamedTemporaryFile() as fp:
+        writer = csv.writer(fp)
         writer.writerow([d['name'] for d in query.column_descriptions])
         writer.writerows(query)
-        file.flush()
-        zip_file.write(file.name, arcname)
+        fp.flush()
+        zip_fp.write(fp.name, arcname)
 
 
-def dump_table_datadict(zip_file, arcname, query):
+def dump_table_datadict(zip_fp, arcname, query):
     pass
 
 
-def dump_ecrf_datadict(zip_file, arcname, query):
+def dump_ecrf_datadict(zip_fp, arcname, query):
     pass
 

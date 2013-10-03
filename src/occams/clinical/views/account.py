@@ -49,6 +49,9 @@ class LoginSchema(colander.MappingSchema):
 @forbidden_view_config(
     renderer='occams.clinical:templates/account/login.pt')
 def login(request):
+    request.layout_manager.layout.title = _('Log In')
+    request.layout_manager.layout.show_header = False
+
     # Figure out where the user came from so we can redirect afterwards
     referrer = request.GET.get('referrer', request.current_route_path())
     if not referrer or referrer == request.route_path('account_login'):

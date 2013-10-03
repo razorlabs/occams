@@ -1,4 +1,5 @@
 import logging
+from pkg_resources import resource_filename
 
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
@@ -8,11 +9,11 @@ from pyramid.path import DottedNameResolver
 from pyramid.security import has_permission
 from pyramid_ldap import groupfinder
 from sqlalchemy import engine_from_config
+from webassets.loaders import YAMLLoader
 
 # wake up!
 import occams.form
 
-from .assets import config_assets
 from .models import Session, RosterSession
 from .permissions import make_root_factory, make_get_user
 from .routes import config_routes
@@ -57,7 +58,9 @@ def main(global_config, **settings):
         scope=DottedNameResolver().resolve(settings['ldap.group.scope']),
         cache_period=int(settings['ldap.group.cache_period']))
 
-    config_assets(config)
+    loader = YAMLLoader(resource_filename('occams.clinical', 'assets.yml'))
+    bundles = loader.load_bundles()
+    map(lambda i: config.add_webasset(*i), bundles.items())
 
     config.include('pyramid_rewrite')
     config.add_rewrite_rule(r'/(?P<path>.*)/', r'/%(path)s')

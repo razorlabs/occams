@@ -15,10 +15,10 @@ class Layout(object):
     title = None
     subtitle = None
 
-    section = None
+    show_header = True
 
-    styles_bundle = 'default_css'
-    scripts_bundle = 'default_js'
+    styles_bundle = 'default-css'
+    scripts_bundle = 'default-js'
 
     menu = None
     details = None

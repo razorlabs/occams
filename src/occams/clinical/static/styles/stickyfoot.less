@@ -2,7 +2,8 @@
  * Sticky footer styles
  */
 
-@footer-height: 60px;
+@footer-margin-top:  (2 * @line-height-computed);
+@footer-height:      60px;
 
 html,
 body {
@@ -15,14 +16,15 @@ body {
   min-height:  100%;
   height:      auto !important;
   height:      100%;
-  margin:      0 auto -@footer-height; // negative indent footer by its height
-  padding:     0 0 @footer-height; // pad bottom footer height
+  margin:      0 auto -(@footer-height + @footer-margin-top); // negative indent footer by its height
+  padding:     0 0 (@footer-height + @footer-margin-top); // pad bottom footer height
 }
 
 // Set the fixed height of the footer here
 #footer {
   height:            @footer-height;
   background-color:  #f5f5f5;
+  margin-top:        @footer-margin-top;
 }
 
 #footer .credit {
@@ -30,7 +32,6 @@ body {
 }
 
 #footer > .container {
-  padding:     0 15px;
   text-align:  center;
 }
 

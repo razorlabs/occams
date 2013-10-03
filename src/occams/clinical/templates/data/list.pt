@@ -1,0 +1,16 @@
+<html i18n:domain="occams.clinical" metal:use-macro="main_template">
+  <metal:content-slot fill-slot="content-slot">
+
+  <div class="media">
+    <a class="pull-left" href="#">
+      <img class="media-object" src="..." alt="...">
+    </a>
+    <div class="media-body">
+      <h4 class="media-heading">Media heading</h4>
+      ...
+    </div>
+  </div>
+
+
+  </metal:content-slot>
+</html>

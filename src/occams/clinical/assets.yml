@@ -1,0 +1,40 @@
+# CSS
+default-css:
+  filters:   less,cssmin
+  output:    gen/default.%(version)s.css
+  depends:   styles/*.less
+  contents:
+    - styles/main.less
+
+# JavaScripts
+
+jquery-js:
+  contents:
+    - libs/jquery.min.js
+
+bootstrap-js:
+  contents:
+    - libs/bootstrap/js/affix.js
+    - libs/bootstrap/js/button.js
+    - libs/bootstrap/js/dropdown.js
+    - libs/bootstrap/js/modal.js
+    - libs/bootstrap/js/tooltip.js
+    - libs/bootstrap/js/transition.js
+
+socketio-js:
+  contents:
+    - libs/socket.io-client.js
+
+components-js:
+  contents:
+    - scripts/selectall.js
+
+default-js:
+  filters:   jsmin
+  output:    gen/default.%(version)s.js
+  contents:
+    - jquery-js
+    - bootstrap-js
+    - socketio-js
+    - components-js
+

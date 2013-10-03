@@ -10,7 +10,8 @@
  * Additionally, a ``data-class`` attribute is required. This value is the CSS class
  * that will be applied to the parent row of the slave.
  */
-(function($){
+
++function($){
   'use strict';
 
   /**
@@ -42,4 +43,4 @@
     $('input[data-toggle=selectall]').change();
   });
 
-})(jQuery);
+}(jQuery);

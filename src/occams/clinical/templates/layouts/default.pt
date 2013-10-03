@@ -25,10 +25,9 @@
       <!--! Keep the app navbar separate from the content container -->
       <header tal:replace="panel('app_header')" />
       <div class="container">
-        <header class="page-header">
+        <header class="page-header" tal:condition="layout.show_header">
           <menu class="pull-right"><button tal:replace="panel('menu')" /></menu>
-          <h1>
-            ${layout.title}
+          <h1>${layout.title}
             <small tal:condition="layout.subtitle">${layout.subtitle}</small>
           </h1>
           <ul tal:replace="panel('details')" />
