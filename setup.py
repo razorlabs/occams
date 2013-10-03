@@ -35,6 +35,7 @@ setup(
     zip_safe=False,
     install_requires=[
         'setuptools',
+        'argparse',
 
         # Useful tool for result sets
         'ordereddict',
