@@ -59,15 +59,33 @@
           ><span class="glyphicon glyphicon-search"></span></button>
       </form>
 
+      <a href="#add-visit" class="btn btn-primary navbar-btn navbar-left"
+          data-toggle="modal"
+        ><span class="glyphicon glyphicon-plus-sign"></span> Add Event</a>
+
       <ul class="nav navbar-nav navbar-right" tal:condition="user">
         <li><a href="${request.route_path('account')}" class="disabled"
           >${user.fullname}</a></li>
+        <li>
+          <a href="#"
+            rel="tooltip"
+            data-placement="bottom"
+            data-container="body"
+            data-animation="false"
+            title="Configure"
+            ><span class="glyphicon glyphicon-cog"></span></a>
+        </li>
         <li class="dropdown">
           <a href="${request.route_path('apps')}"
             role="button"
             class="dropdown-toggle"
+            rel="tooltip"
             data-toggle="dropdown"
-            ><span class="glyphicon glyphicon-th"></span> Apps<span class="caret"></span></a>
+            data-placement="bottom"
+            data-container="body"
+            data-animation="false"
+            title="Services"
+            ><span class="glyphicon glyphicon-th"></span><span class="caret"></span></a>
           <ul class="dropdown-menu" role="menu" aria-labelledby="Apps Menu">
             <li role="presentation" class="dropdown-header">OCCAMS</li>
             <li role="presentation"><a href="#" role="menuitem">Form</a></li>
@@ -78,8 +96,13 @@
             <li role="presentation"><a href="#" role="menuitem">HIV Sequence</a></li>
           </ul>
         <li>
-          <a href="${request.route_path('account_logout')}
-            "><span class="glyphicon glyphicon-log-out"></span> Log Out</a>
+          <a href="${request.route_path('account_logout')}"
+              rel="tooltip"
+              data-placement="bottom"
+              data-container="body"
+              data-animation="false"
+              title="Log Out"
+            ><span class="glyphicon glyphicon-log-out"></span></a>
         </li>
       </ul>
 

@@ -16,7 +16,6 @@ from .. import _, log, models, Session
 def home(request):
     layout = request.layout_manager.layout
     layout.title = _(u'Welcome to OCCAMS!')
-    layout.set_menu('home_menu')
 
     recent_query = search_recent()
     return {

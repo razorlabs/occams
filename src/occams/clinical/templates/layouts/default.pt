@@ -10,15 +10,21 @@
 
   <head>
     <meta charset="utf-8">
-    <title>${layout.title}${' - ' + layout.subtitle if layout.subtitle else ''}</title>
+    <title>${request.settings.app_title|'OCCAMS Clinical'}</title>
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <link tal:repeat="url layout.styles.urls()" href="${url}" rel="stylesheet" />
+    <!--! Shortcut icons -->
     <link
         rel="shortcut icon"
         href="${request.static_path('occams.clinical:static/images/favicon.ico')}"/>
+    <link rel="shortcut icon" sizes="1024x1024" href="favicon-highres.png">
+    <link rel="shortcut icon" sizes="128x128" href="favicon.png">
+    <link rel="apple-touch-icon" sizes="128x128" href="favicon.png">
+    <link rel="apple-touch-icon-precomposed" sizes="128x128" href="favicon.png">
   </head>
 
-  <body id="${request.matched_route.name}">
+  <body>
 
     <!--! Wrap the content so we can push the footer to the bottom of the page -->
     <div id="wrap">
@@ -33,14 +39,13 @@
           <ul tal:replace="panel('details')" />
           <nav tal:replace="panel('nav')" />
         </header>
-        <metal:content-slot define-slot="content-slot" />
+        <main id="${request.matched_route.name}">
+          <metal:content-slot define-slot="content-slot" />
+        </main>
       </div> <!-- /.container -->
     </div> <!-- /#wrap -->
 
     <div tal:replace="panel('app_footer')" />
-
-    <!--! Placeholder for loaded modal content -->
-    <div id="modal fade" class="modal" role="dialog" aria-hidden="true"></div>
 
     <!--! Load scripts at the end so we don't block rendering -->
     <script
