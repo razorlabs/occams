@@ -1,0 +1,34 @@
+<html i18n:domain="occams.clinical" metal:use-macro="main_template">
+  <metal:content-slot fill-slot="content-slot">
+
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <p class="pull-right">Generating...</p>
+        <p class="panel-title">
+          <span class="text-muted">Created on:</span>
+          <strong>2013-13-13 13:13</strong>
+        </p>
+      </div>
+      <div class="panel-footer">Panel footer</div>
+    </div>
+
+    <div class="panel panel-success">
+      <div class="panel-heading">
+        <p class="pull-right">Complete!</p>
+        <p class="panel-title">
+          <span class="text-muted">Created on:</span>
+          <strong>2013-13-13 13:13</strong>
+        </p>
+      </div>
+      <ul class="list-group">
+        <li class="list-group-item">Cras justo odio</li>
+        <li class="list-group-item">Dapibus ac facilisis in</li>
+        <li class="list-group-item">Morbi leo risus</li>
+        <li class="list-group-item">Porta ac consectetur ac</li>
+        <li class="list-group-item">Vestibulum at eros</li>
+      </ul>
+      <div class="panel-footer">Panel footer</div>
+    </div>
+
+  </metal:content-slot>
+</html>

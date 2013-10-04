@@ -1,16 +1,83 @@
 <html i18n:domain="occams.clinical" metal:use-macro="main_template">
   <metal:content-slot fill-slot="content-slot">
+    <div
+        class="alert alert-danger"
+        tal:repeat="msg request.session.pop_flash('error')">${msg}</div>
 
-  <div class="media">
-    <a class="pull-left" href="#">
-      <img class="media-object" src="..." alt="...">
-    </a>
-    <div class="media-body">
-      <h4 class="media-heading">Media heading</h4>
-      ...
-    </div>
-  </div>
+    <p i18n:translate="" class="lead">
+      Please select the files you would like to download.
+      All exports include a data dictionary.
+    </p>
 
+    <form
+        role="form"
+        method="POST"
+        target="_blank"
+        action="${request.current_route_path()}">
+
+      <div class="table-responsive">
+        <table class="table table-bordered">
+          <thead>
+            <tr>
+              <th class="select">
+                <input type="checkbox" data-toggle="selectall" />
+              </th>
+              <th class="name" i18n:translate="">Name</th>
+              <th class="title" i18n:translate="">Title</th>
+              <th class="publsished" i18n:translate="">Published</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="active">
+              <th></th>
+              <th colspan="3">System Tables</th>
+            </tr>
+            <tr tal:repeat="builtin builtins">
+              <td class="select">
+                <input
+                    type="checkbox"
+                    name="ids"
+                    value="${builtin}"
+                    data-toggle="select"
+                    data-class="warning" />
+              </td>
+              <td class="name" colspan="3">${builtin}</td>
+            </tr>
+            <tr class="active">
+              <th></th>
+              <th colspan="3">eCRF Data Types</th>
+            </tr>
+            <tr tal:repeat="ecrf ecrfs">
+              <td class="select">
+                <input
+                    type="checkbox"
+                    name="ids"
+                    value="${ecrf.id}"
+                    data-toggle="select"
+                    data-class="warning" />
+              </td>
+              <td class="name">${ecrf.name}</td>
+              <td class="title">${ecrf.title}</td>
+              <td class="published">${ecrf.publish_date.isoformat()}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="alert alert-warning">
+        <strong i18n:translate="">Please note:</strong>
+        <span i18n:translate="">Depending on the size of your data, this may take time so be patient.</span>
+      </div>
+
+      <p>
+        <button
+          type="submit"
+          name="download"
+          class="pull-right btn btn-lg btn-primary"
+          i18n:translate="">Download</button>
+      </p>
+
+    </form>
 
   </metal:content-slot>
 </html>

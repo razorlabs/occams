@@ -61,6 +61,7 @@
 
       <a href="#add-visit" class="btn btn-primary navbar-btn navbar-left"
           data-toggle="modal"
+          tal:condition="request.has_permission('visit_add')"
         ><span class="glyphicon glyphicon-plus-sign"></span> Add Event</a>
 
       <ul class="nav navbar-nav navbar-right" tal:condition="user">

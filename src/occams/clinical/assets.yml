@@ -30,11 +30,6 @@ components-js:
 ### Views
 
 
-views-js:
-  contents:
-    - scripts/export.js
-
-
 ### App bundles
 
 default-js:
@@ -45,7 +40,6 @@ default-js:
     - bootstrap-js
     - socketio-js
     - components-js
-    - views-js
 
 default-css:
   filters:   less,cssmin

@@ -1,0 +1,18 @@
+/**
+ * Export view stylings
+ */
+#data_list {
+
+  iframe {
+    display: none;
+  }
+
+  .export-status {
+    // don't show the status until the user actually triggers the download
+    display: none;
+
+    &.active {
+      display: block;
+    }
+  }
+}

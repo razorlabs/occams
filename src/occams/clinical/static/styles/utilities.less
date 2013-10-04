@@ -14,10 +14,18 @@
   line-height:            1.5;
 
   .rotated-text__inner {
-    display:              inline-block;
-    white-space:          nowrap;
-    transform:            translate(0,100%) rotate(-90deg);
-    transform-origin:     0 0;
+    display:                   inline-block;
+    white-space:               nowrap;
+    transform:                 translate(0,100%) rotate(-90deg);  // CSS3 Standard
+    -webkit-transform:         translate(0, 100%) rotate(-90deg); // Safari/Chrome
+    -moz-transform:            translate(0, 100%) rotate(-90deg); // Firefox
+    -ms-transform:             translate(0, 100%) rotate(-90deg); // IE
+    -o-transform:              translate(0, 100%) rotate(-90deg); // Opera
+    transform-origin:          0 0; // CSS3 Standard
+    -webkit-transform-origin:  0 0; // Safari/Chrome
+    -moz-transform-origin:     0 0; // Firefix
+    -ms-transform-origin:      0 0; // IE
+    -o-transform-origin:       0 0; // Opera
 
     &:after {
        content:           "";

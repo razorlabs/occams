@@ -39,8 +39,8 @@ def config_routes(config):
     route('visit_delete', '/patients/{pid}/visits/{visit_date}/delete', custom_predicates=[ymd])
 
     route('data_list', '/data')
-    route('data_export', '/data/export')
     route('data_custom', '/data/custom')
+    route('data_download', '/data/download')
 
     route('socket_io', '/socket.io/*')
 

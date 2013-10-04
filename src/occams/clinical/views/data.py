@@ -61,6 +61,7 @@ BUILTINS = {
         Cycle.modify_date, Cycle.modify_user_id),
     'visit_cycle': (visit_cycle_table.c.visit_id, visit_cycle_table.c.cycle_id)}
 
+
 @view_config(
     route_name='data_list',
     permission='fia_view',
@@ -69,27 +70,29 @@ def list_(request):
     layout = request.layout_manager.layout
     layout.title = _(u'Data')
     layout.set_nav('data_nav')
-    return {}
+
+    ecrfs_query = query_published_ecrfs()
+    ecrfs_count = ecrfs_query.count()
+
+    return {
+        'builtins': sorted(BUILTINS.keys()),
+        'ecrfs': ecrfs_query,
+        'has_ecrfs': ecrfs_count > 0,
+        'ecrfs_count': ecrfs_count}
 
 
 @view_config(
-    route_name='data_export',
+    route_name='data_download',
     permission='fia_view',
-    renderer='occams.clinical:templates/data/export.pt')
-def export(request):
+    renderer='occams.clinical:templates/data/download.pt')
+def download(request):
     layout = request.layout_manager.layout
     layout.title = _(u'Data')
     layout.set_nav('data_nav')
 
-    def default_values():
-        ecrfs_query = query_published_ecrfs()
-        ecrfs_count = ecrfs_query.count()
-        return {
-            'builtins': sorted(BUILTINS.keys()),
-            'ecrfs': ecrfs_query,
-            'has_ecrfs': ecrfs_count > 0,
-            'ecrfs_count': ecrfs_count}
+    return {}
 
+def process(request):
     selected = set(request.POST.getall('ids'))
 
     # Nothing submitted
@@ -127,7 +130,6 @@ def export(request):
     response.app_iter = FileIter(attachment_fp)
     response.content_disposition = 'attachment;filename=clinical.zip'
     return response
-
 
 def query_published_ecrfs():
     return (
