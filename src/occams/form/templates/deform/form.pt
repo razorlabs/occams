@@ -40,17 +40,19 @@
     <div tal:repeat="child field"
          tal:replace="structure child.render_template(item_template)"/>
 
-    <tal:block repeat="button buttons">
-      <button
-          tal:attributes="disabled button.disabled"
-          id="${formid + button.name}"
-          name="${button.name}"
-          type="${button.type}"
-          class="btn ${button.css_class}"
-          value="${button.value}">
-        ${button.title}
-      </button>
-    </tal:block>
+    <div class="buttons clearfix">
+      <tal:block repeat="button buttons">
+        <button
+            tal:attributes="disabled button.disabled"
+            id="${formid + button.name}"
+            name="${button.name}"
+            type="${button.type}"
+            class="${button.css_class}"
+            value="${button.value}">
+          ${button.title}
+        </button>
+      </tal:block>
+    </div>
 
   </fieldset>
 

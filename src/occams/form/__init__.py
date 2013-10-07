@@ -25,9 +25,6 @@ Session = orm.scoped_session(orm.sessionmaker(
     class_=DataStoreSession,
     extension=ZopeTransactionExtension()))
 
-deform.Form.set_zpt_renderer((
-    resource_filename('occams.form', 'templates/deform'),))
-
 
 def main(global_config, **settings):
     """

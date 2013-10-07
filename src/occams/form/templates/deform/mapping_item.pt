@@ -13,15 +13,17 @@
     i18n:domain="occams.form">
 
   <!-- mapping_item -->
-
   <label
-      tal:condition="not (hidden or category == 'structural')"
-      tal:condition="title"
+      tal:condition="
+        not (hidden or category == 'structural') and title"
       title="${title}"
       for="${oid}"
       >${title}</label>
 
-  <p tal:condition="description" class="help-block">${description}</p>
+  <p tal:condition="
+        not field.typ.__class__.__name__=='Mapping'
+        and description"
+      class="help-block">${description}</p>
 
   <p tal:condition="field.error and not hidden and not field.typ.__class__.__name__=='Mapping'"
      tal:define="errstr 'error-%s' % oid"
