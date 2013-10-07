@@ -30,16 +30,14 @@ def config_routes(config):
     route('patient_search', '/patients')
     route('patient_view', '/patients/{pid}')
 
-    route('quick_add', '/add')
+    route('event_add', '/events/add')
 
-    route('visit_list', '/patients/{pid}/visits')
-    route('visit_add', '/patients/{pid}/visits/add')
-    route('visit_view', '/patients/{pid}/visits/{vist_date}', custom_predicates=[ymd])
-    route('visit_edit', '/patients/{pid}/visits/{visit_date}/edit', custom_predicates=[ymd])
-    route('visit_delete', '/patients/{pid}/visits/{visit_date}/delete', custom_predicates=[ymd])
+    route('event_list', '/patients/{pid}/events')
+    route('event_view', '/patients/{pid}/events/{vist_date}', custom_predicates=[ymd])
+    route('event_edit', '/patients/{pid}/events/{event_date}/edit', custom_predicates=[ymd])
+    route('event_delete', '/patients/{pid}/events/{event_date}/delete', custom_predicates=[ymd])
 
     route('data_list', '/data')
-    route('data_custom', '/data/custom')
     route('data_download', '/data/download')
 
     route('socket_io', '/socket.io/*')

@@ -1,6 +1,7 @@
 import logging
 from pkg_resources import resource_filename
 
+import deform
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.config import Configurator
@@ -10,9 +11,6 @@ from pyramid.security import has_permission
 from pyramid_ldap import groupfinder
 from sqlalchemy import engine_from_config
 from webassets.loaders import YAMLLoader
-
-# wake up!
-import occams.form
 
 from .models import Session, RosterSession
 from .permissions import make_root_factory, make_get_user
@@ -78,6 +76,10 @@ def main(global_config, **settings):
     config.scan('.layouts')
     config.scan('.panels')
     config.scan('.views')
+
+    deform.Form.set_zpt_renderer((
+        resource_filename('occams.form', 'templates/widgets'),
+        resource_filename('occams.form', 'templates/deform')))
 
     get_user = make_get_user(
         settings['ldap.user.userid_attr'],
