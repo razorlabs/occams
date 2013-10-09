@@ -15,7 +15,7 @@ bootstrap-js:
 
 socketio-js:
   contents:
-    - libs/socket.io-client.js
+    - libs/socket.io.min.js
 
 
 ### Project libraries

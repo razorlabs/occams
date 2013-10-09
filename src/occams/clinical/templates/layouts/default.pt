@@ -39,6 +39,11 @@
           <ul tal:replace="panel('details')" />
           <nav tal:replace="panel('nav')" />
         </header>
+        <tal:alerts repeat="type ('error', 'warning', 'info', 'success')">
+          <div
+              class="alert alert-${type}"
+              tal:repeat="msg request.session.pop_flash(type)">${msg}</div>
+        </tal:alerts>
         <main id="${request.matched_route.name}">
           <metal:content-slot define-slot="content-slot" />
         </main>

@@ -6,9 +6,7 @@ import tempfile
 import zipfile
 
 from pyramid.httpexceptions import HTTPFound
-from pyramid_layout.layout import layout_config
-from pyramid_layout.panel import panel_config
-from pyramid.response import FileResponse, FileIter
+from pyramid.response import FileIter
 from pyramid.view import view_config
 from sqlalchemy import func, orm, sql
 import transaction
@@ -70,15 +68,44 @@ def list_(request):
     layout = request.layout_manager.layout
     layout.title = _(u'Data')
     layout.set_nav('data_nav')
+    csrf = request.session.get_csrf_token()
 
-    ecrfs_query = query_published_ecrfs()
-    ecrfs_count = ecrfs_query.count()
+    def default_values():
+        ecrfs_query = query_published_ecrfs()
+        ecrfs_count = ecrfs_query.count()
+        return {
+            'csrf': csrf,
+            'builtins': sorted(BUILTINS.keys()),
+            'ecrfs': ecrfs_query,
+            'has_ecrfs': ecrfs_count > 0,
+            'ecrfs_count': ecrfs_count}
 
-    return {
-        'builtins': sorted(BUILTINS.keys()),
-        'ecrfs': ecrfs_query,
-        'has_ecrfs': ecrfs_count > 0,
-        'ecrfs_count': ecrfs_count}
+    if 'submit' in request.POST:
+        if csrf != request.POST['csrf']:
+            request.session.flash(_(u'CSRF token mismatch!!'), 'error')
+            return default_values()
+
+        selected = set(request.POST.getall('ids'))
+
+        # Nothing submitted
+        if not selected:
+            request.session.flash(_(u'No values selected!!'), 'error')
+            return default_values()
+
+        valid_names = set(BUILTINS.keys())
+        valid_ids = set(get_published_ecrf_ids())
+        names, ids = partition(lambda s: s.isdigit(), selected)
+        names, ids = set(names), set(map(int, ids))
+
+        # Submitted, but some items aren't even in the valid choices
+        if not names <= valid_names or not ids <= valid_ids:
+            request.session.flash(_(u'Invalid selection!'), 'error')
+            return default_values()
+
+        request.session.flash(_(u'Success! Your export is being processed...'), 'success')
+        return HTTPFound(location=request.route_path('data_download'))
+
+    return default_values()
 
 
 @view_config(
@@ -89,26 +116,10 @@ def download(request):
     layout = request.layout_manager.layout
     layout.title = _(u'Data')
     layout.set_nav('data_nav')
-
     return {}
 
+
 def process(request):
-    selected = set(request.POST.getall('ids'))
-
-    # Nothing submitted
-    if not selected:
-        return default_values()
-
-    valid_names = set(BUILTINS.keys())
-    valid_ids = set(get_published_ecrf_ids())
-    names, ids = partition(lambda s: s.isdigit(), selected)
-    names, ids = set(names), set(map(int, ids))
-
-    # Submitted, but some items aren't even in the valid choices
-    if not names <= valid_names or not ids <= valid_ids:
-        request.session.flash(_(u'Invalid selection!'), 'error')
-        return default_values()
-
     attachment_fp = tempfile.NamedTemporaryFile()
     zip_fp = zipfile.ZipFile(attachment_fp, 'w', zipfile.ZIP_DEFLATED)
 
@@ -130,6 +141,7 @@ def process(request):
     response.app_iter = FileIter(attachment_fp)
     response.content_disposition = 'attachment;filename=clinical.zip'
     return response
+
 
 def query_published_ecrfs():
     return (

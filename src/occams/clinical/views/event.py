@@ -25,11 +25,13 @@ class EventAddSchema(CSRFSchema):
 
         is_new = colander.SchemaNode(
             colander.Bool(),
+            title=None,
             widget=deform.widget.CheckboxWidget(),
-            label=_(u'New'))
+            label=_(u'Create'))
 
         pid = colander.SchemaNode(
             colander.String(),
+            title=None,
             missing=None)
 
     event_date = colander.SchemaNode(
@@ -39,6 +41,7 @@ class EventAddSchema(CSRFSchema):
         required=True)
 
     @colander.instantiate(
+        title=_(u'Schedules'),
         description=_(
             u'(Optional) The study schedule that applies to this event'),
         missing=None)
@@ -48,10 +51,12 @@ class EventAddSchema(CSRFSchema):
         class schedule(colander.MappingSchema):
 
             study = colander.SchemaNode(
-                colander.String())
+                colander.String(),
+                title=_(u'Study'))
 
             schedule = colander.SchemaNode(
-                colander.String())
+                colander.String(),
+                title=_(u'Schedule'))
 
 
 @view_config(

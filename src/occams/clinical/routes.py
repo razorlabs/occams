@@ -40,8 +40,6 @@ def config_routes(config):
     route('data_list', '/data')
     route('data_download', '/data/download')
 
-    route('socket_io', '/socket.io/*')
-
     return config
 
 

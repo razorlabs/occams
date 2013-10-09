@@ -13,7 +13,7 @@ from occams.datastore import model as datastore
 from .. import _, log, models, Session
 
 
-class ChatNamespace(BaseNamespace):
+class ExportNamespace(BaseNamespace):
     def listener(self):
         r = redis.StrictRedis()
         r = r.pubsub()
@@ -33,9 +33,8 @@ class ChatNamespace(BaseNamespace):
         r.publish('chat', dumps(msg))
 
 
-@view_config(name='socket.io')
+@view_config(route_name='socket_io')
 def socketio_service(request):
-    retval = socketio_manage(
-        request.environ, {'': ChatNamespace}, request=request)
-    return retval
+    return socketio_manage(request.environ, {
+        '/export': ExportNamespace })
 

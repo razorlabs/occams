@@ -1,2 +1,3 @@
 include *.txt *.ini *.cfg *.rst
-recursive-include occamsclinical *.ico *.png *.css *.gif *.jpg *.pt *.txt *.mak *.mako *.js *.html *.xml
+include VERSION
+recursive-include occams.clinical *.ico *.png *.css *.gif *.jpg *.pt *.txt *.mak *.mako *.js *.html *.xml

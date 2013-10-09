@@ -1,8 +1,5 @@
 <html i18n:domain="occams.clinical" metal:use-macro="main_template">
   <metal:content-slot fill-slot="content-slot">
-    <div
-        class="alert alert-danger"
-        tal:repeat="msg request.session.pop_flash('error')">${msg}</div>
 
     <p i18n:translate="" class="lead">
       Please select the files you would like to download.
@@ -11,8 +8,8 @@
 
     <form
         role="form"
+        name="export"
         method="POST"
-        target="_blank"
         action="${request.current_route_path()}">
 
       <div class="table-responsive">
@@ -64,17 +61,21 @@
         </table>
       </div>
 
-      <div class="alert alert-warning">
+      <div class="alert alert-info">
         <strong i18n:translate="">Please note:</strong>
-        <span i18n:translate="">Depending on the size of your data, this may take time so be patient.</span>
+        <span i18n:translate="">
+          Depending on the size of your data, this may take time so be patient.
+        </span>
       </div>
+
+      <input type="hidden" name="csrf" value="${csrf}" />
 
       <p>
         <button
-          type="submit"
-          name="download"
-          class="pull-right btn btn-lg btn-primary"
-          i18n:translate="">Download</button>
+            type="submit"
+            name="submit"
+            class="pull-right btn btn-lg btn-primary"
+            i18n:translate="">Export</button>
       </p>
 
     </form>

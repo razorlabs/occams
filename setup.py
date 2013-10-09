@@ -1,16 +1,17 @@
 import os
+from subprocess import Popen, PIPE
 import sys
 
 from setuptools import setup, find_packages
 
-here = os.path.abspath(os.path.dirname(__file__))
-README = open(os.path.join(here, 'README.txt')).read()
-CHANGES = open(os.path.join(here, 'CHANGES.txt')).read()
+HERE = os.path.abspath(os.path.dirname(__file__))
+README = open(os.path.join(HERE, 'README.txt')).read()
+CHANGES = open(os.path.join(HERE, 'CHANGES.txt')).read()
 
 requires = [
     'alembic',
     'beaker',
-    'colander==1.0a5',
+    'colander',
     'cssmin',
     'gevent-socketio',
     'jsmin',
@@ -33,9 +34,31 @@ requires = [
     'occams.roster',
     ]
 
+
+def get_version():
+    version_file = os.path.join(HERE, 'VERSION')
+
+    # read fallback file
+    with open(version_file, 'r') as fp:
+        version_txt = fp.read().strip()
+
+    # read git version (if available)
+    version_git = (
+        Popen(['git', 'describe'], stdout=PIPE, stderr=PIPE)
+        .communicate()[0]
+        .strip())
+
+    # update fallback file if necessary
+    if version_git and version_git != version_txt:
+        with open(version_file, 'w') as fp:
+            fp.write(version_git)
+
+    return version_git or version_txt
+
+
 setup(
     name='occams.clinical',
-    version='1.0.0',
+    version=get_version(),
     description='occams.clinical',
     long_description=README + '\n\n' + CHANGES,
     classifiers=[
@@ -66,3 +89,4 @@ setup(
     initialize_occams_clinical_db = occams.clinical.scripts.initializedb:main
     """,
     )
+

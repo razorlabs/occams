@@ -2,6 +2,7 @@ import logging
 from pkg_resources import resource_filename
 
 import deform
+#from gevent import monkey; monkey.patch_all()
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.config import Configurator
@@ -73,6 +74,9 @@ def main(global_config, **settings):
     config.add_route('clinical', '/clinical')
     config.include(config_routes, route_prefix='/clinical')
 
+    # instnance-wide views
+    config.add_route('socket_io', '/socket.io/*')
+
     config.scan('.layouts')
     config.scan('.panels')
     config.scan('.views')
@@ -93,5 +97,4 @@ def main(global_config, **settings):
         'has_permission')
 
     return config.make_wsgi_app()
-
 
