@@ -75,11 +75,9 @@ def main(global_config, **settings):
     config.include(config_routes, route_prefix='/clinical')
 
     # instnance-wide views
-    config.add_route('socket_io', '/socket.io/*')
+    config.add_route('socket_io', '/socket.io/*remaining')
 
-    config.scan('.layouts')
-    config.scan('.panels')
-    config.scan('.views')
+    config.scan()
 
     deform.Form.set_zpt_renderer((
         resource_filename('occams.form', 'templates/widgets'),

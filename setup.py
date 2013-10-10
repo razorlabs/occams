@@ -34,26 +34,36 @@ requires = [
     'occams.roster',
     ]
 
-
 def get_version():
     version_file = os.path.join(HERE, 'VERSION')
 
     # read fallback file
-    with open(version_file, 'r') as fp:
-        version_txt = fp.read().strip()
+    try:
+        with open(version_file, 'r+') as fp:
+            version_txt = fp.read().strip()
+    except:
+        version_txt = None
 
     # read git version (if available)
-    version_git = (
-        Popen(['git', 'describe'], stdout=PIPE, stderr=PIPE)
-        .communicate()[0]
-        .strip())
+    try:
+        version_git = (
+            Popen(['git', 'describe'], stdout=PIPE, stderr=PIPE, cwd=HERE)
+            .communicate()[0]
+            .strip())
+    except:
+        version_git = None
+
+    version = version_git or version_txt
+
+    if not version:
+        raise ValueError('Could not determine version')
 
     # update fallback file if necessary
-    if version_git and version_git != version_txt:
+    if version != version_txt:
         with open(version_file, 'w') as fp:
-            fp.write(version_git)
+            fp.write(version)
 
-    return version_git or version_txt
+    return version
 
 
 setup(
@@ -86,7 +96,7 @@ setup(
     [paste.app_factory]
     main = occams.clinical:main
     [console_scripts]
-    initialize_occams_clinical_db = occams.clinical.scripts.initializedb:main
+    initialize_occams_clinical_db = occams.clinical.cli.initializedb:main
     """,
     )
 
