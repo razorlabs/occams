@@ -11,18 +11,19 @@ CHANGES = open(os.path.join(HERE, 'CHANGES.txt')).read()
 requires = [
     'alembic',
     'beaker',
+    'celery',
     'colander',
     'cssmin',
     'gevent-socketio',
     'jsmin',
     'pyramid>=1.4.0,<1.4.99',
+    'pyramid_celery',
     'pyramid_debugtoolbar',
     'pyramid_layout',
     'pyramid_ldap',
     'pyramid_tm',
     'pyramid_webassets',
     'PyYAML',
-    'SQLAlchemy',
     'SQLAlchemy>=0.8.0,<0.8.99',
     'transaction',
     'waitress',
@@ -33,6 +34,7 @@ requires = [
     'occams.form',
     'occams.roster',
     ]
+
 
 def get_version():
     version_file = os.path.join(HERE, 'VERSION')
@@ -89,7 +91,7 @@ setup(
     test_suite='occams.clinical',
     install_requires=requires,
     extras_require=dict(
-        postgresql=['psycopg2'],
+        postgresql=['psycopg2', 'psycogreen'],
         test=['plone.testing'], # Required for layers, does not install Plone
         ),
     entry_points="""\

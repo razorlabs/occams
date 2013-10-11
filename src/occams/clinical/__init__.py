@@ -2,7 +2,6 @@ import logging
 from pkg_resources import resource_filename
 
 import deform
-#from gevent import monkey; monkey.patch_all()
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.config import Configurator
@@ -12,6 +11,11 @@ from pyramid.security import has_permission
 from pyramid_ldap import groupfinder
 from sqlalchemy import engine_from_config
 from webassets.loaders import YAMLLoader
+
+try:
+    import psycogreen.gevent; psycogreen.gevent.patch_psycopg()
+except ImportError:
+    pass
 
 from .models import Session, RosterSession
 from .permissions import make_root_factory, make_get_user

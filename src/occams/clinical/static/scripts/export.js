@@ -3,25 +3,23 @@
 
   $(document).ready(function(){
 
+    // Only execute in specific views
     if ( !$('#data_list, #data_download').length ){
       return;
     }
 
     var socket = io.connect('/export');
 
-    socket.on('connect', function(){
-      console.log('Connected!!!')
-    });
-
-    socket.on('hello', function(msg){
+    socket.on('progress', function(msg){
       console.log(msg)
     });
 
-    $('form[name=export]').on('submit', function(event){
-      event.preventDefault();
-      socket.emit('wtf', 1234)
+    socket.on('done', function(){
     });
 
+    socket.on('error', function(msg){
+      console.log(msg)
+    });
 
   });
 
