@@ -9,7 +9,7 @@ import transaction
 
 from occams.datastore import model as datastore
 
-from .. import _, log, models, Session, tasks
+from .. import _, log, models, Session, tasks, redis
 
 
 @colander.deferred
@@ -77,8 +77,8 @@ def list_(request):
                 request.session.flash(error, 'error')
         else:
             ### TODO: create archive file blob entry
-            tasks.export.delay(request.user, appstruct['tables'], appstruct['ecrfs'])
-            request.session.flash(_(u'Your request has been received and will be processed'), 'success')
+            tasks.make_export.delay(1337, appstruct['tables'], appstruct['ecrfs'])
+            request.session.flash(_(u'Your request has been received!'), 'success')
             return HTTPFound(location=request.route_path('data_download'))
 
     layout = request.layout_manager.layout

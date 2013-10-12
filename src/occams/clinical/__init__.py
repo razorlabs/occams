@@ -9,13 +9,9 @@ from pyramid.i18n import TranslationStringFactory
 from pyramid.path import DottedNameResolver
 from pyramid.security import has_permission
 from pyramid_ldap import groupfinder
+from redis import StrictRedis
 from sqlalchemy import engine_from_config
 from webassets.loaders import YAMLLoader
-
-try:
-    import psycogreen.gevent; psycogreen.gevent.patch_psycopg()
-except ImportError:
-    pass
 
 from .models import Session, RosterSession
 from .permissions import make_root_factory, make_get_user
@@ -27,10 +23,15 @@ _ = TranslationStringFactory(__name__)
 log = logging.getLogger(__name__)
 
 
+#TODO configure later
+redis = StrictRedis()
+
+
 def main(global_config, **settings):
     """
     This function returns a Pyramid WSGI application.
     """
+
     Session.configure(bind=engine_from_config(settings, 'clinicaldb.'))
     RosterSession.configure(bind=engine_from_config(settings, 'rosterdb.'))
 
@@ -79,7 +80,7 @@ def main(global_config, **settings):
     config.include(config_routes, route_prefix='/clinical')
 
     # instnance-wide views
-    config.add_route('socket_io', '/socket.io/*remaining')
+    config.add_route('socketio', '/socket.io/*remaining')
 
     config.scan()
 

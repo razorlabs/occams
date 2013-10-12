@@ -4,7 +4,10 @@ occams.clinical README
 Requirements
 ---------------
 python 2.6+
+# asynchrounous processes
 rabbitmq-server
+# message broker
+redis
 
 
 Getting Started

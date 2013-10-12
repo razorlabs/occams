@@ -5,8 +5,8 @@ import sys
 from setuptools import setup, find_packages
 
 HERE = os.path.abspath(os.path.dirname(__file__))
-README = open(os.path.join(HERE, 'README.txt')).read()
-CHANGES = open(os.path.join(HERE, 'CHANGES.txt')).read()
+README = open(os.path.join(HERE, 'README.md')).read()
+CHANGES = open(os.path.join(HERE, 'CHANGES.md')).read()
 
 requires = [
     'alembic',
@@ -24,6 +24,7 @@ requires = [
     'pyramid_tm',
     'pyramid_webassets',
     'PyYAML',
+    'redis',
     'SQLAlchemy>=0.8.0,<0.8.99',
     'transaction',
     'waitress',
