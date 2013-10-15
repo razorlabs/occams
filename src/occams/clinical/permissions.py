@@ -40,8 +40,12 @@ def make_get_user(userid_attr, name_attr):
     # Use the ldap connector to issue a search query for the exact DN
     # of the user that authenticated.
     def get_user(request):
+        if request is None:
+            return
         with get_ldap_connector(request).manager.connection() as connection:
             user_dn = authenticated_userid(request)
+            if user_dn is None:
+                return
             dn, record = connection.search_s(user_dn, ldap.SCOPE_BASE)[0]
             return User(record[userid_attr][0], record[name_attr][0])
     return get_user

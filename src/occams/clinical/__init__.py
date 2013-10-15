@@ -31,7 +31,6 @@ def main(global_config, **settings):
     """
     This function returns a Pyramid WSGI application.
     """
-
     Session.configure(bind=engine_from_config(settings, 'clinicaldb.'))
     RosterSession.configure(bind=engine_from_config(settings, 'rosterdb.'))
 

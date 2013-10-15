@@ -1,3 +1,6 @@
+/**
+ * Listens for export notifications and updates the page progress bars.
+ */
 +function($){
   'use strict';
 
@@ -10,18 +13,39 @@
 
     var socket = io.connect('/export');
 
+    /**
+     * Connects to the socket resource and registers listeners
+     */
     socket.on('connect', function(){
 
-      socket.on('progress', function(msg){
-        console.log(msg);
+      /**
+       * Listens for progress noticiations.
+       */
+      socket.on('progress', function(data){
+        var $panel = $('#export-' + data['export_id'])
+
+        // update the progress bar percentage
+        $panel.find('.progress-bar').css({width: data['progress'] + '%'});
+        $panel.find('.progress-bar .sr-only').text(data['progress'] + '%');
+
+        // remove the progress bar if complete and enable the download link
+        if (data['status'] == 'complete') {
+          // TODO: need to i18n this.
+          $panel.find('.panel-title .status').text('Complete');
+          $panel.removeClass('panel-default').addClass('panel-success');
+          $panel.find('.panel-body').remove();
+          $panel.find('.panel-footer .btn-primary').removeClass('disabled');
+        }
       });
 
+      /**
+       * Closes the conenction when the user is navigating away
+       */
       $(window).on('beforeunload', function(){
         socket.disconnect();
       });
 
     });
-
 
   });
 

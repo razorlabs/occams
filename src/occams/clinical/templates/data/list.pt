@@ -27,7 +27,7 @@
           <tbody>
             <tr class="active">
               <th></th>
-              <th colspan="3">System Tables</th>
+              <th colspan="3" i18n:translate="">System Tables</th>
             </tr>
             <tr tal:repeat="builtin builtins">
               <td class="select">
@@ -42,7 +42,7 @@
             </tr>
             <tr class="active">
               <th></th>
-              <th colspan="3">eCRF Data Types</th>
+              <th colspan="3" i18n:translate="">eCRF Data Types</th>
             </tr>
             <tr tal:repeat="ecrf ecrfs">
               <td class="select">

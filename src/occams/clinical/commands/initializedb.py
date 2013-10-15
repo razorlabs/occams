@@ -5,7 +5,7 @@ import transaction
 from pyramid.paster import get_appsettings, setup_logging
 from sqlalchemy import engine_from_config
 
-from ..models import Session, ClinicalModel
+from ..models import ClinicalModel
 
 
 def usage(argv):
@@ -21,7 +21,6 @@ def main(argv=sys.argv):
     config_uri = argv[1]
     setup_logging(config_uri)
     settings = get_appsettings(config_uri)
-    engine = engine_from_config(settings, 'sqlalchemy.')
-    Session.configure(bind=engine)
-    ClinicalModel.metadata.create_all(engine)
+    engine = engine_from_config(settings, 'clinicaldb.')
+    ClinicalModel.metadata.create_all(engine, checkfirst=True)
 

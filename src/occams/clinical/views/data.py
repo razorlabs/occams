@@ -1,8 +1,12 @@
+from datetime import datetime, timedelta
+import os.path
+from pkg_resources import resource_filename
+
 import colander
 import deform
 from pyramid_deform import CSRFSchema
-from pyramid.httpexceptions import HTTPFound
-from pyramid.response import FileIter
+from pyramid.httpexceptions import HTTPFound, HTTPNotFound
+from pyramid.response import FileResponse
 from pyramid.view import view_config
 from sqlalchemy import func, orm, sql
 import transaction
@@ -76,8 +80,20 @@ def list_(request):
             for error in e.error.asdict().values():
                 request.session.flash(error, 'error')
         else:
-            ### TODO: create archive file blob entry
-            tasks.make_export.delay(1337, appstruct['tables'], appstruct['ecrfs'])
+            user = (
+                Session.query(datastore.User)
+                .filter_by(key=request.user.email)
+                .one())
+            export = models.Export(
+                owner_user=user,
+                expire_date=datetime.now() + timedelta(days=7))
+            for table in appstruct['tables']:
+                export.items.append(models.ExportItem(table_name=table))
+            for ecrf_id in appstruct['ecrfs']:
+                export.items.append(models.ExportItem(schema_id=ecrf_id))
+            Session.add(export)
+            Session.commit()
+            tasks.make_export.delay(export.id)
             request.session.flash(_(u'Your request has been received!'), 'success')
             return HTTPFound(location=request.route_path('data_download'))
 
@@ -116,16 +132,44 @@ def download(request):
     layout = request.layout_manager.layout
     layout.title = _(u'Data')
     layout.set_nav('data_nav')
-    exports = []
 
-    if 'id' not in request.GET:
-        return {
-            'duration': '1 week',
-            'exports': exports,
-            'has_exports': len(exports)}
+    exports_query = (
+        Session.query(models.Export)
+        .filter(models.Export.owner_user.has(key=request.user.email))
+        .order_by(models.Export.expire_date.desc()))
 
-    response = request.response
-    response.app_iter = FileIter(attachment_fp)
-    response.content_disposition = 'attachment;filename=clinical.zip'
+    exports_count = exports_query.count()
+
+    return {
+        'duration': '1 week',
+        'exports': exports_query,
+        'exports_count': exports_count,
+        'has_exports': exports_count > 0}
+
+
+@view_config(
+    route_name='data_download',
+    permission='fia_view',
+    request_method='GET',
+    request_param='id')
+def attachement(request):
+    """
+    Returns specific download attachement
+    The user should only be allowed to download their exports.
+    """
+    try:
+        export = (
+            Session.query(models.Export)
+            .filter_by(id=request.GET['id'], status='complete')
+            .filter(models.Export.owner_user.has(key=request.user.email))
+            .one())
+    except orm.exc.NoResultFound:
+        raise HTTPNotFound
+
+    export_dir = resource_filename('occams.clinical', 'exports')
+    path = os.path.join(export_dir, '%s.zip' % export.id)
+
+    response = FileResponse(path)
+    response.content_disposition = 'attachment;filename=clinical-%d.zip' % export.id
     return response
 

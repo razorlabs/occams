@@ -1,93 +1,109 @@
+"""
+Contains long-running tasks that cannot interrupt the user experience.
+
+Tasks in this module will be run in a separate process so the user
+can continue to use the application and download their exports at a
+later time.
+"""
+
+from contextlib import closing
+import csv
 import json
+import os.path
 import tempfile
 import zipfile
-import csv
+from pkg_resources import resource_filename
 
 import celery
-from celery.utils.log import get_task_logger
-import transaction
 
 from occams.datastore import model as datastore, reporting
 
 from . import models, Session, redis
 
 
-# Need to use a separate logger for celery threads
-log = get_task_logger(__name__)
-
-
 @celery.task
-def make_export(export_id, table_names, ecrf_ids):
+def make_export(export_id):
+    """
+    Handles generating exports in a separate process.
+
+    Because the export is handled in a different process, this method
+    can only accept the id of the entry.
+
+    All progress will be broadcast to the redis **export** channel with the
+    following dictionary:
+    ``export_id`` -- the export being processed
+    ``owner_user`` -- the user who this export belongs to
+    ``progress`` -- the percent complete
+    ``is_ready`` -- flag that indicates that the export can be used
+
+    Parameters:
+    ``export_id`` -- export to process
+
+    """
     # Get the export instance attached to this thread
-    #export = Session.query(models.Export).get(export_id)
+    export = Session.query(models.Export).get(export_id)
 
-    user = 'foo@bar.com'
+    export_dir = resource_filename('occams.clinical', 'exports')
+    path = os.path.join(export_dir, '%s.zip' % export.id)
 
-    total = float(len(table_names) + len(ecrf_ids))
-    count = 0
+    total = float(len(export.items))
 
-    redis.hset(user, export_id, count/total)
+    redis.hmset(export.id, {
+        'export_id': export.id,
+        'owner_user': export.owner_user.key,
+        'status': export.status,
+        'progress': 0})
+    redis.publish('export', json.dumps(redis.hgetall(export.id)))
 
-    print('Starting...')
+    with closing(zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED)) as zfp:
+        for count, item in enumerate(export.items, start=1):
+            if item.table_name:
+                arcname = item.table_name
+                cols = models.BUILTINS[item.table_name]
+                query = Session.query(*cols).order_by(cols[0])
+                dump_table_datadict(zfp, arcname + 'datadict.csv', query)
+            else:
+                ecrf = item.schema
+                arcname = ecrf.name + '-' + str(ecrf.publish_date)
+                query = Session.query(reporting.export(ecrf))
 
-    progress = {'user': user, 'export_id': export_id, 'progress': 0}
+            with tempfile.NamedTemporaryFile() as tfp:
+                writer = csv.writer(tfp)
+                writer.writerow([d['name'] for d in query.column_descriptions])
+                writer.writerows(query)
+                tfp.flush()
+                zfp.write(tfp.name, arcname + '.csv')
 
-    attachment_fp = tempfile.NamedTemporaryFile()
-    zip_fp = zipfile.ZipFile(attachment_fp, 'w', zipfile.ZIP_DEFLATED)
+            progress = int((count / total) * 100)
 
-    for name in table_names:
-        cols = models.BUILTINS[name]
-        print('Generating %s' % name)
-        query = Session.query(*cols).order_by(cols[0])
-        dump_table_datadict(zip_fp, name + 'datadict.csv', query)
-        dump_query(zip_fp, name + '.csv', query)
-        count += 1
-        redis.hset(user, export_id, count/total)
-        progress['progress'] = count/total
-        redis.publish('export', json.dumps(progress))
+            # celery treats ``print` statements as log messages
+            print(arcname, progress)
 
-    ecrfs_query = (
-        Session.query(datastore.Schema)
-        .filter(datastore.Schema.id.in_(ecrf_ids)))
+            redis.hset(export_id, 'progress', progress)
+            redis.publish('export', json.dumps(redis.hgetall(export.id)))
 
-    for ecrf in ecrfs_query:
-        print('Generating %s' % ecrf.name)
-        query = Session.query(reporting.export(ecrf))
-        arcname = ecrf.name + '-' + str(ecrf.publish_date) + '.csv'
-        dump_query(zip_fp, arcname, query)
-        count += 1
-        redis.hset(user, export_id, count/total)
-        progress['progress'] = count/total
-        redis.publish('export', json.dumps(progress))
-
-    redis.hdel(user, export_id)
-    print('Done...')
-
-    zip_fp.close()
-
-    attachment_fp.seek(0)
+    # File has been closed/flushed, it's ready for consumption
+    export.status = 'complete'
+    Session.commit()
+    redis.hset(export_id, 'status', export.status)
+    redis.publish('export', json.dumps(redis.hgetall(export.id)))
 
 
 @celery.task
-def cleanup_export():
+def cleanup_export(expire_date):
     """
-    Cleans up the database of expired exports
+    Cleans up the database of expired exports.
+
+    Parameters:
+    ``expire_date`` -- the cut-off date for removal
     """
+    raise NotImplementedError
 
 
-def dump_query(zip_fp, arcname, query):
-    with tempfile.NamedTemporaryFile() as fp:
-        writer = csv.writer(fp)
-        writer.writerow([d['name'] for d in query.column_descriptions])
-        writer.writerows(query)
-        fp.flush()
-        zip_fp.write(fp.name, arcname)
-
-
-def dump_table_datadict(zip_fp, arcname, query):
+def dump_table_datadict(zfp, arcname, query):
     pass
 
 
-def dump_ecrf_datadict(zip_fp, arcname, query):
+def dump_ecrf_datadict(zfp, arcname, query):
     pass
 

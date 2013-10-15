@@ -12,7 +12,6 @@ import time
 from pyramid.threadlocal import get_current_request
 from sqlalchemy import orm, schema, sql, types
 from sqlalchemy.ext import declarative, hybrid
-from zope.sqlalchemy import ZopeTransactionExtension
 
 from occams import roster
 
@@ -23,20 +22,28 @@ from occams.datastore.model import (
         Category,
         HasEntities,
         ModelClass, DataStoreSession,
-        User)
+        User,
+        Schema)
 
 
 RE_WS = re.compile('\s+')
 RE_NON_ASCII = re.compile('[^a-z0-9_-]', re.I)
 
+def get_user():
+    # This might be called from a process that is not a request,
+    # we need to figure out a way to reliable determine the user...
+    request = get_current_request()
+    user = getattr(request, 'user', None)
+    email = getattr(user, 'email', None)
+    return email if email else 'bitcore@ucsd.edu'
+
+
 Session = orm.scoped_session(orm.sessionmaker(
-        user=lambda: get_current_request().user.email,
-        class_=DataStoreSession,
-        extension=ZopeTransactionExtension()))
+        user=get_user,
+        class_=DataStoreSession))
 
 # roster depends on ZCA, so we have to kindof monkeypatch it...
-RosterSession = orm.scoped_session(orm.sessionmaker(
-        extension=ZopeTransactionExtension()))
+RosterSession = orm.scoped_session(orm.sessionmaker())
 roster.Session = RosterSession
 
 ClinicalModel = ModelClass(u'ClinicalModel')
@@ -556,6 +563,82 @@ class Stratum(ClinicalModel, AutoNamed, Referenceable, Auditable, Modifiable, Ha
             schema.Index('ix_%s_patient_id' % cls.__tablename__, cls.block_number),
             schema.Index('ix_%s_arm_id' % cls.__tablename__, cls.arm_id),
             )
+
+
+class Export(ClinicalModel, Referenceable, Auditable, Modifiable):
+    """
+    Metadata about an export, such as file contents and experation date.
+    """
+
+    __tablename__ = 'export'
+
+    owner_user_id = schema.Column(types.Integer, nullable=False)
+
+    owner_user = orm.relationship(User, foreign_keys=[owner_user_id])
+
+    expire_date = schema.Column(types.DateTime, nullable=False)
+
+    notify = schema.Column(types.Boolean, nullable=False, default=False)
+
+    status = schema.Column(
+        types.Enum('failed', 'pending', 'complete', name='export_status'),
+        nullable=False,
+        default='pending')
+
+    def tables(self):
+        return sorted([i for i in self.items if i.table_name], key=lambda i: i.table_name)
+
+    def schemata(self):
+        return sorted([i for i in self.items if i.schema], key=lambda i : i.schema.name)
+
+    @declarative.declared_attr
+    def __table_args__(cls):
+        return (
+            schema.ForeignKeyConstraint(
+                columns=[cls.owner_user_id],
+                refcolumns=[User.id],
+                name=u'fk_%s_owner_user_id' % cls.__tablename__,
+                ondelete='CASCADE'),
+            schema.Index('ix_%s_owner_user_id' % cls.__tablename__, cls.owner_user_id))
+
+
+class ExportItem(ClinicalModel, Referenceable):
+
+    __tablename__ = 'export_item'
+
+    export_id = schema.Column(types.Integer, nullable=False)
+
+    export = orm.relationship(Export, backref=orm.backref('items'))
+
+    table_name = schema.Column(types.String(32))
+
+    schema_id = schema.Column(types.Integer)
+
+    schema = orm.relationship(Schema)
+
+    @declarative.declared_attr
+    def __table_args__(cls):
+        return (
+            schema.ForeignKeyConstraint(
+                columns=[cls.export_id],
+                refcolumns=[Export.id],
+                name=u'fk_%s_export_id' % cls.__tablename__,
+                ondelete='CASCADE'),
+            schema.ForeignKeyConstraint(
+                columns=[cls.schema_id],
+                refcolumns=[Schema.id],
+                name=u'fk_%s_schema_id' % cls.__tablename__,
+                ondelete='CASCADE'),
+            schema.UniqueConstraint(
+                cls.export_id, cls.schema_id,
+                name=u'uq_%s_schema_id' % cls.__tablename__),
+            schema.UniqueConstraint(
+                cls.export_id, cls.table_name,
+                name=u'uq_%s_table_name' % cls.__tablename__),
+            schema.CheckConstraint(
+                # table_name XOR shcema_id (there can only be one)
+                'table_name IS NULL != schema_id IS NULL',
+                name=u'ck_%s' % cls.__tablename__))
 
 
 # Export profiles for builtin data tables

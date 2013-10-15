@@ -99,7 +99,7 @@ setup(
     [paste.app_factory]
     main = occams.clinical:main
     [console_scripts]
-    initialize_occams_clinical_db = occams.clinical.cli.initializedb:main
+    initialize_occams_clinical_db = occams.clinical.commands.initializedb:main
     """,
     )
 

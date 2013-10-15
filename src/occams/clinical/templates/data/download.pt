@@ -9,22 +9,41 @@
       You have no exports pending.
     </div>
 
-    <tal:exports condition="has_exports" repeat="export exports">
-      <div class="panel panel-default">
-        <div class="panel-heading">
-          <h3 class="panel-title">
-            <strong class="pull-right">Generating...</strong>
-            <span class="text-muted">Created on:</span>
-            <strong>2013-13-13 13:13</strong>
-          </h3>
-        </div>
-        <div class="panel-body">
-          <div class="progress">
-            <div class="progress-bar" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" style="width: 60%;">
-              <span class="sr-only">60% Complete</span>
-            </div>
+    <div
+        class=""
+        tal:condition="has_exports"
+        tal:repeat="export exports"
+        tal:attributes="
+          id    string:export-${export.id};
+          class string:panel panel-${'success' if export.status == 'complete' else 'default'};">
+
+      <div class="panel-heading">
+        <h3 class="panel-title">
+          <strong class="status pull-right" tal:switch="export.status == 'complete'">
+            <span tal:case="False" tal:omit-tag="" i18n:translate="">Generating...</span>
+            <span tal:case="True" tal:omit-tag="" i18n:translate="">Complete</span>
+          </strong>
+          <a class="accordion-toggle"
+              data-toggle="collapse"
+              href="#export-collapse-${export.id}"
+              ><span class="text-muted">Created on:</span> ${export.create_date.isoformat()}</a>
+        </h3>
+      </div> <!-- panel-heading -->
+
+      <div class="panel-body" tal:condition="not:export.status == 'complete'">
+        <div class="progress">
+          <div
+              class="progress-bar"
+              role="progressbar"
+              aria-valuenow="0"
+              aria-valuemin="0"
+              aria-valuemax="100">
+            <span class="sr-only"></span>
           </div>
         </div>
+      </div> <!-- panel-body -->
+
+      <div id="export-collapse-${export.id}" class="panel-collapse collapse">
         <table class="table table-bordered table-condensed">
           <thead>
             <tr>
@@ -35,59 +54,33 @@
           </thead>
           <tbody>
             <tr class="active">
-              <th colspan="3">System Tables</th>
+              <th colspan="3" i18n:translate="">System Tables</th>
             </tr>
-            <tr>
-              <td class="name" colspan="3">Cras justo odio</td>
-            </tr>
-            <tr>
-              <td class="name" colspan="3">Dapibus ac facilisis in</td>
-            </tr>
-            <tr>
-              <td class="name" colspan="3">Morbi leo risus</td>
+            <tr tal:repeat="table export.tables()">
+              <td class="name" colspan="3">${table.table_name}</td>
             </tr>
             <tr class="active">
-              <th colspan="3">eCRF Data Types</th>
+              <th colspan="3" i18n:translate="">eCRF Data Types</th>
             </tr>
-            <tr>
-              <td class="name">Cras justo odio</td>
-              <td class="title">Cras justo odio</td>
-              <td class="published">2013-13-13</td>
-            </tr>
-            <tr>
-              <td class="name">Cras justo odio</td>
-              <td class="title">Cras justo odio</td>
-              <td class="published">2013-13-13</td>
-            </tr>
-            <tr>
-              <td class="name">Cras justo odio</td>
-              <td class="title">Cras justo odio</td>
-              <td class="published">2013-13-13</td>
-            </tr>
-            <tr>
-              <td class="name">Cras justo odio</td>
-              <td class="title">Cras justo odio</td>
-              <td class="published">2013-13-13</td>
+            <tr tal:repeat="ecrf export.schemata()">
+              <td class="name">${ecrf.schema.name}</td>
+              <td class="title">${ecrf.schema.title}</td>
+              <td class="published">${ecrf.schema.publish_date.isoformat()}</td>
             </tr>
           </tbody>
         </table>
-        <div class="panel-footer clearfix">
+      </div> <!-- /panel-collapse -->
 
-          <form role="form">
-            <div class="checkbox">
-              <label>
-                <input type="checkbox"/> Email me when done.
-              </label>
-            </div>
-          </form>
-
-          <button class="btn btn-primary pull-right">Download</button>
-          <span class="text-muted">Available until:</span>
-          <strong>2013-13-13 13:13</strong>
-
-        </div>
+      <div class="panel-footer clearfix">
+          <a class="btn btn-primary pull-right ${'disabled' if export.status != 'complete' else ''}"
+              href="${request.current_route_path(_query={'id': export.id})}"
+              target="_blank"
+              i18n:translate="">Download</a>
+          <span class="text-muted" i18n:translate="">Available until:</span>
+          <strong>${export.expire_date.isoformat()}</strong>
       </div>
-    </tal:exports>
+
+    </div> <!-- /panel-footer -->
 
   </metal:content-slot>
 </html>

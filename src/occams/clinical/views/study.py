@@ -2,7 +2,7 @@ import datetime
 
 import colander
 import deform.widget
-from pyramid.httpexceptions import HTTPFound
+from pyramid.httpexceptions import HTTPFound, HTTPNotFound
 from pyramid_deform import CSRFSchema
 from pyramid_layout.layout import layout_config
 from pyramid_layout.panel import panel_config

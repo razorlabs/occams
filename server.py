@@ -1,10 +1,14 @@
+import os.path
 from socketio.server import SocketIOServer
 from pyramid.paster import get_app
 from gevent import monkey; monkey.patch_all()
 
+
+HERE = os.path.abspath(os.path.dirname(__file__))
+
 if __name__ == '__main__':
 
-    app = get_app('development.ini')
+    app = get_app(os.path.join(HERE, 'development.ini'))
 
     print 'Listening on port http://0.0.0.0:8080 and on port 10843 (flash policy server)'
 

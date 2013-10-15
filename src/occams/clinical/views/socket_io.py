@@ -7,10 +7,6 @@ from socketio.namespace import BaseNamespace
 from .. import log, redis
 
 
-PROGRESS_KEY = 'progress'
-EXPORT_ROOM_KEY = 'export'
-
-
 @view_config(route_name='socketio')
 def socketio(request):
     """
@@ -23,9 +19,8 @@ def socketio(request):
 
 class ExportNamespace(BaseNamespace):
     """
-    This thread will emit the progress of the export processes
+    This service will emit the progress of the current user's exports
     """
-
 
     def get_initial_acl(self):
         """
@@ -35,17 +30,29 @@ class ExportNamespace(BaseNamespace):
 
     def initialize(self):
         """
-        Determines from the request if this socket has can accept events
+        Determines from the request if this socket can accept events
         """
         if self.request.has_permission('fia_view'):
             self.lift_acl_restrictions()
-        self.session['user'] = self.request.user.email
-        self.spawn(self.listener)
+            self.session['user'] = self.request.user.email
+            self.spawn(self.listener)
 
     def listener(self):
+        """
+        Main process that listens for export porgress broadcasts.
+        All progress relating to the current user will be sent back.
+        """
         pubsub = redis.pubsub()
-        pubsub.subscribe(EXPORT_ROOM_KEY)
+        pubsub.subscribe('export')
+
+        # TODO: Need to send back iniital progress
+
         for message in pubsub.listen():
-            if message['type'] == 'message':
-                self.emit(PROGRESS_KEY, json.loads(message['data']))
+            if message['type'] != 'message':
+                continue
+
+            data = json.loads(message['data'])
+
+            if data['owner_user'] == self.session['user']:
+                self.emit('progress', data)
 
