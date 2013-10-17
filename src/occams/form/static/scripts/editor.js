@@ -259,7 +259,7 @@
                 url: url + '/@@order',
                 data: {
                     'form.widgets.target':
-                        $(event.target).closest('.of-item').attr('dataset').name,
+                        $($(event.target).closest('.of-item').attr('dataset')).attr('name') || '',
                     'form.widgets.after':
                         $(previous.attr('dataset')).attr('name') || '',
                     'form.buttons.apply': 1,
