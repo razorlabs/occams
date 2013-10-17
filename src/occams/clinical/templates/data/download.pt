@@ -53,19 +53,10 @@
             </tr>
           </thead>
           <tbody>
-            <tr class="active">
-              <th colspan="3" i18n:translate="">System Tables</th>
-            </tr>
-            <tr tal:repeat="table export.tables()">
-              <td class="name" colspan="3">${table.table_name}</td>
-            </tr>
-            <tr class="active">
-              <th colspan="3" i18n:translate="">eCRF Data Types</th>
-            </tr>
-            <tr tal:repeat="ecrf export.schemata()">
-              <td class="name">${ecrf.schema.name}</td>
-              <td class="title">${ecrf.schema.title}</td>
-              <td class="published">${ecrf.schema.publish_date.isoformat()}</td>
+            <tr tal:repeat="schema export.schemata">
+              <td class="name">${schema.name}</td>
+              <td class="title">${schema.title}</td>
+              <td class="published">${schema.publish_date.isoformat()}</td>
             </tr>
           </tbody>
         </table>

@@ -4,7 +4,7 @@ from pyramid.view import view_config
 from socketio import socketio_manage
 from socketio.namespace import BaseNamespace
 
-from .. import log, redis
+from .. import log, models, redis, Session
 
 
 @view_config(route_name='socketio')
@@ -45,7 +45,16 @@ class ExportNamespace(BaseNamespace):
         pubsub = redis.pubsub()
         pubsub.subscribe('export')
 
-        # TODO: Need to send back iniital progress
+        pending_query = (
+            Session.query(models.Export.id)
+            .filter(models.Export.owner_user.has(key=self.session['user']))
+            .filter_by(status='pending'))
+
+        # emit current progress
+        for (export_id,) in pending_query:
+            data = redis.hgetall(export_id)
+            log.debug('progress', data)
+            self.emit('progress', data)
 
         for message in pubsub.listen():
             if message['type'] != 'message':
@@ -54,5 +63,6 @@ class ExportNamespace(BaseNamespace):
             data = json.loads(message['data'])
 
             if data['owner_user'] == self.session['user']:
+                log.debug('progress', data)
                 self.emit('progress', data)
 

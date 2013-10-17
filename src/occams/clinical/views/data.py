@@ -33,23 +33,13 @@ class ExportCheckoutSchema(CSRFSchema):
     Export checkout serialization schema
     """
 
-    @colander.instantiate()
-    class tables(colander.SequenceSchema):
-
-        name = colander.SchemaNode(
-            colander.String(),
-            validator=colander.OneOf(models.BUILTINS.keys()))
-
-    @colander.instantiate()
+    @colander.instantiate(
+        validator=colander.Length(min=1))
     class ecrfs(colander.SequenceSchema):
 
         id = colander.SchemaNode(
             colander.Int(),
             validator=deferred_ecrf_validator)
-
-    def validator(self, node, cstruct):
-        if not(cstruct['tables'] or cstruct['ecrfs']):
-           raise colander.Invalid(node, _(u'No values selected.'))
 
 
 @view_config(
@@ -71,7 +61,6 @@ def list_(request):
         # since we render the form manually, we gotta do this
         cstruct = {
             'csrf_token': request.POST.get('csrf_token'),
-            'tables': request.POST.getall('tables'),
             'ecrfs': request.POST.getall('ecrfs')}
         form = deform.Form(schema)
         try:
@@ -80,17 +69,14 @@ def list_(request):
             for error in e.error.asdict().values():
                 request.session.flash(error, 'error')
         else:
-            user = (
-                Session.query(datastore.User)
-                .filter_by(key=request.user.email)
-                .one())
             export = models.Export(
-                owner_user=user,
-                expire_date=datetime.now() + timedelta(days=7))
-            for table in appstruct['tables']:
-                export.items.append(models.ExportItem(table_name=table))
-            for ecrf_id in appstruct['ecrfs']:
-                export.items.append(models.ExportItem(schema_id=ecrf_id))
+                owner_user=(
+                    Session.query(datastore.User)
+                    .filter_by(key=request.user.email)
+                    .one()),
+                expire_date=datetime.now() + timedelta(days=7),
+                schemata=[Session.query(datastore.Schema).get(id)
+                            for id in appstruct['ecrfs']])
             Session.add(export)
             Session.commit()
             tasks.make_export.delay(export.id)
@@ -112,7 +98,6 @@ def list_(request):
 
     return {
         'csrf_token': request.session.get_csrf_token(),
-        'builtins': sorted(models.BUILTINS.keys()),
         'ecrfs': ecrfs_query,
         'has_ecrfs': ecrfs_count > 0,
         'ecrfs_count': ecrfs_count}

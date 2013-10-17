@@ -13,7 +13,7 @@
         action="${request.current_route_path()}">
 
       <div class="table-responsive">
-        <table class="table table-bordered">
+        <table class="table table-bordered table-striped">
           <thead>
             <tr>
               <th class="select">
@@ -25,25 +25,6 @@
             </tr>
           </thead>
           <tbody>
-            <tr class="active">
-              <th></th>
-              <th colspan="3" i18n:translate="">System Tables</th>
-            </tr>
-            <tr tal:repeat="builtin builtins">
-              <td class="select">
-                <input
-                    type="checkbox"
-                    name="tables"
-                    value="${builtin}"
-                    data-toggle="select"
-                    data-class="warning" />
-              </td>
-              <td class="name" colspan="3">${builtin}</td>
-            </tr>
-            <tr class="active">
-              <th></th>
-              <th colspan="3" i18n:translate="">eCRF Data Types</th>
-            </tr>
             <tr tal:repeat="ecrf ecrfs">
               <td class="select">
                 <input

@@ -6,8 +6,8 @@ can continue to use the application and download their exports at a
 later time.
 """
 
+from collections import defaultdict
 from contextlib import closing
-import csv
 import json
 import os.path
 import tempfile
@@ -18,7 +18,8 @@ import celery
 
 from occams.datastore import model as datastore, reporting
 
-from . import models, Session, redis
+from occams.clinical import models, Session, redis
+from occams.clinical.utils.csv import UnicodeWriter
 
 
 @celery.task
@@ -33,8 +34,9 @@ def make_export(export_id):
     following dictionary:
     ``export_id`` -- the export being processed
     ``owner_user`` -- the user who this export belongs to
-    ``progress`` -- the percent complete
-    ``is_ready`` -- flag that indicates that the export can be used
+    ``count`` -- the current number of files processed
+    ``total`` -- the total number of files that will be processed
+    ``status`` -- current status of the export
 
     Parameters:
     ``export_id`` -- export to process
@@ -46,46 +48,55 @@ def make_export(export_id):
     export_dir = resource_filename('occams.clinical', 'exports')
     path = os.path.join(export_dir, '%s.zip' % export.id)
 
-    total = float(len(export.items))
+    # Organize the forms so we know which schemata go where
+    codebooks = defaultdict(set)
+    for schema in export.schemata:
+        codebooks[schema.name].add(schema.id)
 
     redis.hmset(export.id, {
         'export_id': export.id,
         'owner_user': export.owner_user.key,
         'status': export.status,
-        'progress': 0})
-    redis.publish('export', json.dumps(redis.hgetall(export.id)))
+        'count': 0,
+        'total': len(export.schemata) + len(codebooks)})
 
     with closing(zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED)) as zfp:
-        for count, item in enumerate(export.items, start=1):
-            if item.table_name:
-                arcname = item.table_name
-                cols = models.BUILTINS[item.table_name]
-                query = Session.query(*cols).order_by(cols[0])
-                dump_table_datadict(zfp, arcname + 'datadict.csv', query)
-            else:
-                ecrf = item.schema
-                arcname = ecrf.name + '-' + str(ecrf.publish_date)
-                query = Session.query(reporting.export(ecrf))
+        # Generate the data files
+        for schema in export.schemata:
+            report = reporting.export(schema)
+            query = (
+                Session.query(report.c.entity_id)
+                .add_column(
+                    Session.query(models.Patient.pid)
+                    .distinct()
+                    .join(models.Visit)
+                    .join(datastore.Context,
+                        (datastore.Context.external == 'visit')
+                        & (datastore.Context.key == models.Visit.id))
+                    .filter(datastore.Context.entity_id == report.c.entity_id)
+                    .correlate(report)
+                    .as_scalar()
+                    .label('pid'))
+                .add_columns(*[c for c in report.columns if c.name != 'entity_id']))
 
-            with tempfile.NamedTemporaryFile() as tfp:
-                writer = csv.writer(tfp)
-                writer.writerow([d['name'] for d in query.column_descriptions])
-                writer.writerows(query)
-                tfp.flush()
-                zfp.write(tfp.name, arcname + '.csv')
-
-            progress = int((count / total) * 100)
-
-            # celery treats ``print` statements as log messages
-            print(arcname, progress)
-
-            redis.hset(export_id, 'progress', progress)
+            arcname = '{0}-{1}.csv'.format(schema.name, schema.publish_date)
+            arc_query(zfp, arcname, query)
+            redis.hincrby(export.id, 'count')
             redis.publish('export', json.dumps(redis.hgetall(export.id)))
+            print(', '.join(redis.hmget(export.id, 'count', 'total') + [arcname]))
+
+        # Generate the ecrf codebooks
+        for name, ids in codebooks.items():
+            arcname = '{0}-codebook.csv'.format(name)
+            arc_codebook(zfp, arcname, name, ids)
+            redis.hincrby(export.id, 'count')
+            redis.publish('export', json.dumps(redis.hgetall(export.id)))
+            print(', '.join(redis.hmget(export.id, 'count', 'total') + [arcname]))
 
     # File has been closed/flushed, it's ready for consumption
     export.status = 'complete'
     Session.commit()
-    redis.hset(export_id, 'status', export.status)
+    redis.hset(export.id, 'status', export.status)
     redis.publish('export', json.dumps(redis.hgetall(export.id)))
 
 
@@ -100,10 +111,83 @@ def cleanup_export(expire_date):
     raise NotImplementedError
 
 
-def dump_table_datadict(zfp, arcname, query):
-    pass
+def arc_query(zfp, arcname, query):
+    """
+    Dumps an arbitrary query to a CSV file inside an archive file
+
+    Parameters:
+    ``zfp`` -- the zip file pointer
+    ``arcname`` -- the name inside the archive
+    ``query`` -- the source query
+
+    """
+    with tempfile.NamedTemporaryFile() as tfp:
+        writer = UnicodeWriter(tfp)
+        writer.writerow([d['name'] for d in query.column_descriptions])
+        writer.writerows(query)
+        tfp.flush() # ensure everything's on disk
+        zfp.write(tfp.name, arcname)
 
 
-def dump_ecrf_datadict(zfp, arcname, query):
-    pass
+def arc_codebook(zfp, arcname, name, ids=None):
+    """
+    Dumps the ecrf into a CSV codebook file inside an archive file
+
+    Parameters:
+    ``zfp`` -- the zip file pointer
+    ``arcname`` -- the name inside the archive
+    ``name`` -- the ecrf schema name
+    ``ids`` -- (optional) the specific ids of the schema
+
+    """
+    query = (
+        Session.query(datastore.Attribute)
+        .join(datastore.Schema)
+        .filter(datastore.Schema.name == name)
+        .filter(datastore.Schema.id.in_(ids))
+        .order_by(
+            datastore.Attribute.order,
+            datastore.Schema.publish_date))
+
+    with tempfile.NamedTemporaryFile() as tfp:
+        writer = UnicodeWriter(tfp)
+        writer.writerow([
+            'form_name',
+            'form_title',
+            'form_publish_date',
+            'field_name',
+            'field_title',
+            'field_description',
+            'field_is_required',
+            'field_is_collection',
+            'field_type',
+            'field_choices',
+            'field_order',
+            'create_date',
+            'create_user',
+            'modify_date',
+            'modify_user'])
+
+        for attribute in query:
+            schema = attribute.schema
+            choices = attribute.choices
+            writer.writerow([
+                schema.name,
+                schema.title,
+                schema.publish_date,
+                attribute.name,
+                attribute.title,
+                attribute.description,
+                attribute.is_required,
+                attribute.is_collection,
+                attribute.type,
+                '\r'.join(['%s - %s' % (c.name, c.title) for c in choices]),
+                attribute.order,
+                attribute.create_date,
+                attribute.create_user.key,
+                attribute.modify_date,
+                attribute.modify_user.key ])
+
+        tfp.flush() # ensure everything's on disk
+        zfp.write(tfp.name, arcname)
 

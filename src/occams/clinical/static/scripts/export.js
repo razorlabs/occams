@@ -23,13 +23,17 @@
        */
       socket.on('progress', function(data){
         var $panel = $('#export-' + data['export_id'])
+          , progress = (data['count'] / data['total']) * 100
+          , status = data['status'] ;
+
+        console.log(data)
 
         // update the progress bar percentage
-        $panel.find('.progress-bar').css({width: data['progress'] + '%'});
-        $panel.find('.progress-bar .sr-only').text(data['progress'] + '%');
+        $panel.find('.progress-bar').css({width: progress + '%'});
+        $panel.find('.progress-bar .sr-only').text(progress + '%');
 
         // remove the progress bar if complete and enable the download link
-        if (data['status'] == 'complete') {
+        if (status == 'complete') {
           // TODO: need to i18n this.
           $panel.find('.panel-title .status').text('Complete');
           $panel.removeClass('panel-default').addClass('panel-success');

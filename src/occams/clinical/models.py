@@ -565,6 +565,25 @@ class Stratum(ClinicalModel, AutoNamed, Referenceable, Auditable, Modifiable, Ha
             )
 
 
+export_schema_table = schema.Table('export_schema', ClinicalModel.metadata,
+    schema.Column(
+        'export_id',
+        types.Integer,
+        schema.ForeignKey(
+            'export.id',
+            name='fk_export_schema_export_id',
+            ondelete='CASCADE'),
+        primary_key=True),
+    schema.Column(
+        'schema_id',
+         types.Integer,
+         schema.ForeignKey(
+            Schema.id,
+            name='fk_export_schema_schema_id',
+            ondelete='CASCADE'),
+         primary_key=True))
+
+
 class Export(ClinicalModel, Referenceable, Auditable, Modifiable):
     """
     Metadata about an export, such as file contents and experation date.
@@ -585,11 +604,7 @@ class Export(ClinicalModel, Referenceable, Auditable, Modifiable):
         nullable=False,
         default='pending')
 
-    def tables(self):
-        return sorted([i for i in self.items if i.table_name], key=lambda i: i.table_name)
-
-    def schemata(self):
-        return sorted([i for i in self.items if i.schema], key=lambda i : i.schema.name)
+    schemata = orm.relationship(Schema, secondary=export_schema_table)
 
     @declarative.declared_attr
     def __table_args__(cls):
@@ -600,83 +615,4 @@ class Export(ClinicalModel, Referenceable, Auditable, Modifiable):
                 name=u'fk_%s_owner_user_id' % cls.__tablename__,
                 ondelete='CASCADE'),
             schema.Index('ix_%s_owner_user_id' % cls.__tablename__, cls.owner_user_id))
-
-
-class ExportItem(ClinicalModel, Referenceable):
-
-    __tablename__ = 'export_item'
-
-    export_id = schema.Column(types.Integer, nullable=False)
-
-    export = orm.relationship(Export, backref=orm.backref('items'))
-
-    table_name = schema.Column(types.String(32))
-
-    schema_id = schema.Column(types.Integer)
-
-    schema = orm.relationship(Schema)
-
-    @declarative.declared_attr
-    def __table_args__(cls):
-        return (
-            schema.ForeignKeyConstraint(
-                columns=[cls.export_id],
-                refcolumns=[Export.id],
-                name=u'fk_%s_export_id' % cls.__tablename__,
-                ondelete='CASCADE'),
-            schema.ForeignKeyConstraint(
-                columns=[cls.schema_id],
-                refcolumns=[Schema.id],
-                name=u'fk_%s_schema_id' % cls.__tablename__,
-                ondelete='CASCADE'),
-            schema.UniqueConstraint(
-                cls.export_id, cls.schema_id,
-                name=u'uq_%s_schema_id' % cls.__tablename__),
-            schema.UniqueConstraint(
-                cls.export_id, cls.table_name,
-                name=u'uq_%s_table_name' % cls.__tablename__),
-            schema.CheckConstraint(
-                # table_name XOR shcema_id (there can only be one)
-                'table_name IS NULL != schema_id IS NULL',
-                name=u'ck_%s' % cls.__tablename__))
-
-
-# Export profiles for builtin data tables
-# Because the tables in the database may not be in the order we'd like
-# we use this mapping to define how to export
-BUILTINS = {
-    'patient': (
-        Patient.id,
-        Patient.pid, Patient.site_id, Patient.initials, Patient.nurse,
-        Patient.create_date, Patient.create_user_id,
-        Patient.modify_date, Patient.modify_date),
-    'enrollment': (
-        Enrollment.id,
-        Enrollment.patient_id,
-        Enrollment.reference_number,
-        Enrollment.consent_date, Enrollment.latest_consent_date, Enrollment.termination_date,
-        Enrollment.create_date, Enrollment.create_user_id,
-        Enrollment.modify_date, Enrollment.modify_date),
-    'user': (User.id, User.key.label('email'), User.create_date, User.modify_date),
-    'site': (
-        Site.id,
-        Site.name, Site.title, Site.description,
-        Site.create_date, Site.create_user_id,
-        Site.modify_date, Site.modify_user_id),
-    'visit': (
-        Visit.id,
-        Visit.patient_id, Visit.visit_date,
-        Visit.create_date, Visit.create_user_id,
-        Visit.modify_date, Visit.modify_user_id),
-    'study': (
-        Study.id,
-        Study.name, Study.title, Study.code, Study.consent_date,
-        Study.create_date, Study.create_user_id,
-        Study.modify_date, Study.modify_user_id),
-    'cycle': (
-        Cycle.id,
-        Cycle.study_id, Cycle.name, Cycle.title, Cycle.week,
-        Cycle.create_date, Cycle.create_user_id,
-        Cycle.modify_date, Cycle.modify_user_id),
-    'visit_cycle': (visit_cycle_table.c.visit_id, visit_cycle_table.c.cycle_id)}
 
