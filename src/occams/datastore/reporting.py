@@ -7,7 +7,7 @@ from itertools import imap as map
 from ordereddict import OrderedDict
 
 import sqlalchemy as sa
-from sqlalchemy import and_, orm
+from sqlalchemy import and_, func, orm
 
 from . import model
 
@@ -30,47 +30,62 @@ def export(schema):
         property names.
     """
     session = orm.object_session(schema)
+
+    is_sqlite = 'sqlite' == session.bind.url.drivername
+    is_postgres = 'postgres' in session.bind.url.drivername
+
+    aggregate = lambda c: (
+        sa.func.array_to_string(sa.func.array_agg(c), sa.literal(','))
+            if is_postgres
+            else sa.func.group_concat(c))
+
+    CreateUser = orm.aliased(model.User)
+    ModifyUser = orm.aliased(model.User)
+
     query = (
         session.query(
-            model.Entity.id,
-            model.Entity.state_id,
+            model.Entity.id.label('entity_id'),
+            model.Entity.state_id.label('state'),
             model.Entity.collect_date,
             sa.cast(model.Entity.is_null, sa.Integer).label('is_null'))
         .filter_by(schema=schema))
 
     for attribute in schema.itervalues():
-        value_alias = orm.aliased(model.nameModelMap[attribute.type])
+        Value = orm.aliased(model.nameModelMap[attribute.type])
         if attribute.is_collection and attribute.choices:
-            for choice in attribute.choices:
-                query = query.add_column(
-                    sa.cast(
-                        session.query(value_alias)
-                        .filter(value_alias.entity_id == model.Entity.id)
-                        .filter(value_alias._value == choice.id)
-                        .correlate(model.Entity)
-                        .exists(),
-                        sa.Integer)
-                    .label(attribute.name + '-' + str(choice.name)))
+            Choice = orm.aliased(model.Choice)
+            query = query.add_column(
+                session.query(aggregate(Choice.name))
+                .select_from(Value)
+                .filter(Value.entity_id == model.Entity.id)
+                .filter(Value.attribute_id == attribute.id)
+                .join(Choice, Value.value)
+                .correlate(model.Entity)
+                .as_scalar()
+                .label(attribute.name))
         else:
             query = (
                 query
-                .outerjoin(value_alias, and_(
-                    (value_alias.entity_id == model.Entity.id),
-                    (value_alias.attribute_id == attribute.id))))
+                .outerjoin(Value, and_(
+                    (Value.entity_id == model.Entity.id),
+                    (Value.attribute_id == attribute.id))))
             if attribute.choices:
-                choice_alias = orm.aliased(model.Choice)
+                Choice = orm.aliased(model.Choice)
                 query = (
-                    query.outerjoin(choice_alias, value_alias._value == choice_alias.id)
-                    .add_column(choice_alias.name.label(attribute.name)))
+                    query.outerjoin(Choice, Value._value == Choice.id)
+                    .add_column(Choice.name.label(attribute.name)))
             else:
-                query = query.add_column(value_alias._value.label(attribute.name))
+                query = query.add_column(Value._value.label(attribute.name))
 
     query = (
-        query.add_columns(
+        query
+        .join(CreateUser, model.Entity.create_user)
+        .join(ModifyUser, model.Entity.modify_user)
+        .add_columns(
             model.Entity.create_date,
-            model.Entity.create_user_id,
+            CreateUser.key.label('create_user'),
             model.Entity.modify_date,
-            model.Entity.modify_user_id)
+            ModifyUser.key.label('modify_user'))
         .order_by(model.Entity.id))
 
     return query.cte(schema.name)

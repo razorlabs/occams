@@ -9,8 +9,9 @@ def get_class_factory():
     """
 
     declarative_base = declarative.declarative_base()
-    def ModelClassFactory(class_name):
-        return type(str(class_name), (declarative_base,), {
+    def ModelClassFactory(class_name, bases=[]):
+        return type(str(class_name),
+            tuple([declarative_base] + bases), {
             '__abstract__': True,
             'metadata': MetaData()
             })
