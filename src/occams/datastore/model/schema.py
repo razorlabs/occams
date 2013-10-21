@@ -287,7 +287,6 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
         Boolean,
         nullable=False,
         default=False,
-        server_default=text('0'),
         doc='Stores Personnally Identifiable Information (PII).')
 
     _checksum = Column('checksum', String(32), nullable=False)
