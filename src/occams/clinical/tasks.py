@@ -28,7 +28,9 @@ def make_export(export_id):
     Handles generating exports in a separate process.
 
     Because the export is handled in a different process, this method
-    can only accept the id of the entry.
+    can only accept the id of the entry. This is to avoid race
+    conditions,
+    (http://docs.celeryproject.org/en/latest/userguide/tasks.html#state)
 
     All progress will be broadcast to the redis **export** channel with the
     following dictionary:
@@ -111,6 +113,14 @@ def cleanup_export(expire_date):
     raise NotImplementedError
 
 
+@celery.task
+def handle_error(uuid):
+    """
+    Handles asynchronous errors
+    """
+    print("Oh snap, there was an error")
+
+
 def arc_query(zfp, arcname, query):
     """
     Dumps an arbitrary query to a CSV file inside an archive file
@@ -162,11 +172,7 @@ def arc_codebook(zfp, arcname, name, ids=None):
             'field_is_collection',
             'field_type',
             'field_choices',
-            'field_order',
-            'create_date',
-            'create_user',
-            'modify_date',
-            'modify_user'])
+            'field_order'])
 
         for attribute in query:
             schema = attribute.schema
@@ -182,11 +188,7 @@ def arc_codebook(zfp, arcname, name, ids=None):
                 attribute.is_collection,
                 attribute.type,
                 '\r'.join(['%s - %s' % (c.name, c.title) for c in choices]),
-                attribute.order,
-                attribute.create_date,
-                attribute.create_user.key,
-                attribute.modify_date,
-                attribute.modify_user.key ])
+                attribute.order])
 
         tfp.flush() # ensure everything's on disk
         zfp.write(tfp.name, arcname)

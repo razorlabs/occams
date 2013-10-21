@@ -1,7 +1,7 @@
 <html i18n:domain="occams.clinical" metal:use-macro="main_template">
   <metal:content-slot fill-slot="content-slot">
 
-    <p i18n:translate="" class="lead">
+    <p class="lead" i18n:translate="">
       Please select the files you would like to download.
       All exports include a data dictionary.
     </p>
@@ -25,28 +25,21 @@
             </tr>
           </thead>
           <tbody>
-            <tr tal:repeat="ecrf ecrfs">
+            <tr tal:repeat="schema schemata">
               <td class="select">
                 <input
                     type="checkbox"
-                    name="ecrfs"
-                    value="${ecrf.id}"
+                    name="schemata"
+                    value="${schema.id}"
                     data-toggle="select"
                     data-class="warning" />
               </td>
-              <td class="name">${ecrf.name}</td>
-              <td class="title">${ecrf.title}</td>
-              <td class="published">${ecrf.publish_date.isoformat()}</td>
+              <td class="name">${schema.name}</td>
+              <td class="title">${schema.title}</td>
+              <td class="published">${schema.publish_date.isoformat()}</td>
             </tr>
           </tbody>
         </table>
-      </div>
-
-      <div class="alert alert-info">
-        <strong i18n:translate="">Please note:</strong>
-        <span i18n:translate="">
-          Depending on the size of your data, this may take time so be patient.
-        </span>
       </div>
 
       <input type="hidden" name="csrf_token" value="${csrf_token}" />

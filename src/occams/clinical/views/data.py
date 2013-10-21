@@ -17,9 +17,9 @@ from .. import _, log, models, Session, tasks, redis
 
 
 @colander.deferred
-def deferred_ecrf_validator(node, kw):
+def deferred_id_validator(node, kw):
     """
-    Deferred validator to determine the ecrf choices at runtime.
+    Deferred validator to determine the schema choices at request-time.
     """
     ids_query = (
         Session.query(datastore.Schema.id)
@@ -35,11 +35,11 @@ class ExportCheckoutSchema(CSRFSchema):
 
     @colander.instantiate(
         validator=colander.Length(min=1))
-    class ecrfs(colander.SequenceSchema):
+    class schemata(colander.SequenceSchema):
 
         id = colander.SchemaNode(
             colander.Int(),
-            validator=deferred_ecrf_validator)
+            validator=deferred_id_validator)
 
 
 @view_config(
@@ -61,7 +61,7 @@ def list_(request):
         # since we render the form manually, we gotta do this
         cstruct = {
             'csrf_token': request.POST.get('csrf_token'),
-            'ecrfs': request.POST.getall('ecrfs')}
+            'schemata': request.POST.getall('schemata')}
         form = deform.Form(schema)
         try:
             appstruct = form.validate(cstruct.items())
@@ -76,9 +76,11 @@ def list_(request):
                     .one()),
                 expire_date=datetime.now() + timedelta(days=7),
                 schemata=[Session.query(datastore.Schema).get(id)
-                            for id in appstruct['ecrfs']])
+                            for id in appstruct['schemata']])
             Session.add(export)
             Session.commit()
+            tasks.make_export.s(export.id).apply_async(
+                link_error=tasks.handle_error.s())
             tasks.make_export.delay(export.id)
             request.session.flash(_(u'Your request has been received!'), 'success')
             return HTTPFound(location=request.route_path('data_download'))
@@ -87,20 +89,20 @@ def list_(request):
     layout.title = _(u'Data')
     layout.set_nav('data_nav')
 
-    ecrfs_query = (
+    schemata_query = (
         Session.query(datastore.Schema)
         .filter(datastore.Schema.publish_date != None)
         .order_by(
             datastore.Schema.name.asc(),
             datastore.Schema.publish_date.desc()))
 
-    ecrfs_count = ecrfs_query.count()
+    schemata_count = schemata_query.count()
 
     return {
         'csrf_token': request.session.get_csrf_token(),
-        'ecrfs': ecrfs_query,
-        'has_ecrfs': ecrfs_count > 0,
-        'ecrfs_count': ecrfs_count}
+        'schemata': schemata_query,
+        'has_schemata': schemata_count > 0,
+        'schemata_count': schemata_count}
 
 
 @view_config(
