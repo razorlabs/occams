@@ -8,6 +8,7 @@ from decimal import Decimal
 import datetime
 import re
 
+from sqlalchemy import text
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.orderinglist import ordering_list
 from sqlalchemy.orm import relationship as Relationship
@@ -281,6 +282,13 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
     is_collection = Column(Boolean, nullable=False, default=IS_COLLECTION_DEFAULT)
 
     is_required = Column(Boolean, nullable=False, default=IS_REQUIRED_DEFAULT)
+
+    is_pii = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default=text('0'),
+        doc='Stores Personnally Identifiable Information (PII).')
 
     _checksum = Column('checksum', String(32), nullable=False)
 
