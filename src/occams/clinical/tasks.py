@@ -19,7 +19,7 @@ from redis import StrictRedis
 
 from occams.datastore import model as datastore, reporting
 
-from occams.clinical import models, Session
+from occams.clinical import models, Session, redis
 from occams.clinical.utils.csv import UnicodeWriter
 
 
@@ -55,8 +55,6 @@ def make_export(export_id):
     codebooks = defaultdict(set)
     for schema in export.schemata:
         codebooks[schema.name].add(schema.id)
-
-    redis = StrictRedis()
 
     redis.hmset(export.id, {
         'export_id': export.id,

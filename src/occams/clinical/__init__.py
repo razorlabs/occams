@@ -2,6 +2,7 @@ import logging
 from pkg_resources import resource_filename
 
 import deform
+from redis import StrictRedis
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.config import Configurator
@@ -20,6 +21,7 @@ _ = TranslationStringFactory(__name__)
 
 log = logging.getLogger(__name__)
 
+redis = StrictRedis()
 
 def main(global_config, **settings):
     """
