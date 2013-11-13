@@ -9,13 +9,11 @@ from pyramid.i18n import TranslationStringFactory
 from pyramid.path import DottedNameResolver
 from pyramid.security import has_permission
 from pyramid_ldap import groupfinder
-from redis import StrictRedis
 from sqlalchemy import engine_from_config
 from webassets.loaders import YAMLLoader
 
 from .models import Session, RosterSession
 from .permissions import make_root_factory, make_get_user
-from .routes import config_routes
 
 
 _ = TranslationStringFactory(__name__)
@@ -23,16 +21,15 @@ _ = TranslationStringFactory(__name__)
 log = logging.getLogger(__name__)
 
 
-#TODO configure later
-redis = StrictRedis()
-
-
 def main(global_config, **settings):
     """
     This function returns a Pyramid WSGI application.
     """
-    Session.configure(bind=engine_from_config(settings, 'clinicaldb.'))
-    RosterSession.configure(bind=engine_from_config(settings, 'rosterdb.'))
+    oc_engine = engine_from_config(settings, 'clinicaldb.')
+    rt_engine = engine_from_config(settings, 'rosterdb.')
+
+    Session.configure(bind=oc_engine)
+    RosterSession.configure(bind=rt_engine)
 
     config = Configurator(
         settings=settings,
@@ -44,7 +41,8 @@ def main(global_config, **settings):
             reissue_time=int(settings['auth.reissue_time']),
             http_only=True,
             callback=groupfinder),
-        authorization_policy=ACLAuthorizationPolicy())
+        authorization_policy=ACLAuthorizationPolicy()
+        )
 
     config.ldap_setup(
         settings['ldap.setup.host'],
@@ -74,12 +72,11 @@ def main(global_config, **settings):
     config.add_route('account', '/account')
     config.add_route('apps', '/apps')
 
-    # app-specific views
-    config.add_route('clinical', '/clinical')
-    config.include(config_routes, route_prefix='/clinical')
-
     # instnance-wide views
     config.add_route('socketio', '/socket.io/*remaining')
+
+    # app-specific views
+    config.include('.routes')
 
     config.scan()
 

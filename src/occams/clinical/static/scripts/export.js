@@ -22,11 +22,12 @@
        * Listens for progress noticiations.
        */
       socket.on('progress', function(data){
+        console.log(data);
+        return;
         var $panel = $('#export-' + data['export_id'])
           , progress = (data['count'] / data['total']) * 100
           , status = data['status'] ;
 
-        console.log(data)
 
         // update the progress bar percentage
         $panel.find('.progress-bar').css({width: progress + '%'});

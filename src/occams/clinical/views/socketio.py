@@ -1,11 +1,15 @@
+from __future__ import absolute_import
+import itertools
 import json
 
+import gevent
+from redis import StrictRedis
 from pyramid.view import view_config
+from pyramid.response import Response
 from socketio import socketio_manage
 from socketio.namespace import BaseNamespace
 
-from .. import log, models, redis, Session
-
+from occams.clinical import log, models, Session
 
 @view_config(route_name='socketio')
 def socketio(request):
@@ -14,7 +18,7 @@ def socketio(request):
     """
     socketio_manage(request.environ, request=request, namespaces={
         '/export': ExportNamespace})
-    return request.response
+    return Response('')
 
 
 class ExportNamespace(BaseNamespace):
@@ -42,8 +46,8 @@ class ExportNamespace(BaseNamespace):
         Main process that listens for export porgress broadcasts.
         All progress relating to the current user will be sent back.
         """
-        pubsub = redis.pubsub()
-        pubsub.subscribe('export')
+        r = StrictRedis().pubsub()
+        r.subscribe('export')
 
         pending_query = (
             Session.query(models.Export.id)
@@ -56,7 +60,9 @@ class ExportNamespace(BaseNamespace):
             log.debug('progress', data)
             self.emit('progress', data)
 
-        for message in pubsub.listen():
+        # TODO: r.listen() BREAKS socketio....
+        for message in r.listen():
+            continue
             if message['type'] != 'message':
                 continue
 
@@ -66,3 +72,6 @@ class ExportNamespace(BaseNamespace):
                 log.debug('progress', data)
                 self.emit('progress', data)
 
+        #for i in itertools.count():
+            #self.emit('progress', i)
+            #gevent.sleep(1)

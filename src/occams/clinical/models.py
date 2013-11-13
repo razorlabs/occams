@@ -42,6 +42,7 @@ Session = orm.scoped_session(orm.sessionmaker(
         user=get_user,
         class_=DataStoreSession))
 
+
 # roster depends on ZCA, so we have to kindof monkeypatch it...
 RosterSession = orm.scoped_session(orm.sessionmaker())
 roster.Session = RosterSession

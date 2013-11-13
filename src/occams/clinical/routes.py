@@ -5,7 +5,7 @@ Route Declarations
 from datetime import datetime
 
 
-def config_routes(config):
+def includeme(config):
     """
     Helper method to configure available routes for the application
     """
@@ -15,6 +15,7 @@ def config_routes(config):
     route = config.add_route
 
     config.add_static_view('occams_clinical_static', 'occams.clinical:static/')
+
 
     route('study_list', '/studies')
     route('study_add', '/studies/add')
@@ -40,7 +41,7 @@ def config_routes(config):
     route('data_list', '/data')
     route('data_download', '/data/download')
 
-    return config
+    route('clinical', '/')
 
 
 def dates(*keys):

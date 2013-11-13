@@ -13,7 +13,7 @@ import transaction
 
 from occams.datastore import model as datastore
 
-from .. import _, log, models, Session, tasks, redis
+from .. import _, log, models, Session, tasks
 
 
 @colander.deferred
