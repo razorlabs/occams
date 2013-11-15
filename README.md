@@ -22,3 +22,7 @@ Getting Started
 - $venv/bin/pserve development.ini
 
 
+Using gUnicorn (for development)
+--------------------------------
+
+- watchmedo auto-restart --pattern "*.py" --recursive --directory ./src -- gunicorn --paste src/occams.clinical/development.ini
