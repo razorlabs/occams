@@ -1,14 +1,47 @@
-from setuptools import find_packages
-from setuptools import setup
+import os
+from subprocess import Popen, PIPE
+from setuptools import setup, find_packages
+import sys
 
 
-# Working release version
-version = '1.0.0b1'
+HERE = os.path.abspath(os.path.dirname(__file__))
+
+
+def get_version():
+    version_file = os.path.join(HERE, 'VERSION')
+
+    # read fallback file
+    try:
+        with open(version_file, 'r+') as fp:
+            version_txt = fp.read().strip()
+    except:
+        version_txt = None
+
+    # read git version (if available)
+    try:
+        version_git = (
+            Popen(['git', 'describe'], stdout=PIPE, stderr=PIPE, cwd=HERE)
+            .communicate()[0]
+            .strip())
+    except:
+        version_git = None
+
+    version = version_git or version_txt
+
+    if not version:
+        raise ValueError('Could not determine version')
+
+    # update fallback file if necessary
+    if version != version_txt:
+        with open(version_file, 'w') as fp:
+            fp.write(version)
+
+    return version
 
 
 setup(
     name='occams.datastore',
-    version=version,
+    version=get_version(),
     description='Provides storage solution for sparse data.',
     classifiers=[
         'Development Status :: 4 - Beta'
@@ -23,10 +56,10 @@ setup(
         'Topic :: Software Development :: Libraries',
         'Topic :: Utilities',
         ],
-    keywords='AVRC BIT OCCAMS datastore database eav sqlalchemy relational clinical',
+    keywords='BIT OCCAMS datastore database eav sqlalchemy clinical',
     author='BIT Core Development Team',
     author_email='bitcore@ucsd.edu',
-    url='https://github.com/bitcore/occams.datastore',
+    url='https://bitbucket.org/ucsdbitcore/occams.datastore.git',
     license='GPL',
     packages=find_packages('src', exclude=['ez_setup']),
     package_dir={'':'src'},
@@ -35,18 +68,11 @@ setup(
     zip_safe=False,
     install_requires=[
         'setuptools',
-
         'argparse',
-
-        # Useful tool for result sets
+        'alembic',
         'ordereddict',
-
-        # Import/Export support via XML
         'lxml',
-
-        # ORM utilities and upgrade tools
         'SQLAlchemy',
-        'sqlalchemy-migrate',
 
         # Component specification/documentation
         # Note that these packages do not install the entire Zope ecosystem,
@@ -66,8 +92,5 @@ setup(
         test=['plone.testing'], # Required for layers, does not install Plone
         ),
     tests_require=['plone.testing'],
-    entry_points="""\
-    [console_scripts]
-    datastore_migrate = occams.datastore.upgrades.migrate.manage:main
-    """,
     )
+
