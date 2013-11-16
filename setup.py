@@ -1,8 +1,7 @@
 import os
 from subprocess import Popen, PIPE
-import sys
-
 from setuptools import setup, find_packages
+import sys
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(HERE, 'README.md')).read()
@@ -99,7 +98,7 @@ setup(
     [paste.app_factory]
     main = occams.clinical:main
     [console_scripts]
-    initialize_occams_clinical_db = occams.clinical.commands.initializedb:main
+    initialize_occams_clinical_db = occams.clinical.scripts.initializedb:main
     """,
     )
 
