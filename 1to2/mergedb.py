@@ -4,8 +4,9 @@ Merges legacy PHI and FIA databases
 The target database's attribute column will gain a ``is_private`` column in order
 to differentiate between private information.
 
-This script should be run before any upgrading takes place.
+THIS SCRIPT SOULD BE RUN BEFORE ANY UPGRADING TAKES PLACE!
 """
+
 import argparse
 import subprocess
 import tempfile

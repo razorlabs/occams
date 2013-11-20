@@ -7,6 +7,7 @@ HERE = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(HERE, 'README.md')).read()
 CHANGES = open(os.path.join(HERE, 'CHANGES.md')).read()
 
+
 requires = [
     'alembic',
     'beaker',
@@ -14,7 +15,6 @@ requires = [
     'colander',
     'cssmin',
     'gevent-socketio',
-    'gunicorn',
     'jsmin',
     'pyramid',
     'pyramid_celery',
@@ -28,7 +28,6 @@ requires = [
     'SQLAlchemy',
     'transaction',
     'webassets',
-    'watchdog',
 
     'occams.datastore',
     'occams.form',

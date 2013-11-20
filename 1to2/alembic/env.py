@@ -1,6 +1,6 @@
 from __future__ import with_statement
 from alembic import context
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import create_engine, engine_from_config, pool
 from logging.config import fileConfig
 
 # this is the Alembic Config object, which provides
@@ -34,8 +34,15 @@ def run_migrations_offline():
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
-    context.configure(url=url)
+
+    cmd_line_url = context.get_x_argument(as_dictionary=True).get('dburi')
+
+    if cmd_line_url:
+        url = cmd_line_url
+    else:
+        url = config.get_main_option("sqlalchemy.url")
+
+    context.configure(url=url, blame=config.get_main_option('blame'))
 
     with context.begin_transaction():
         context.run_migrations()
@@ -47,7 +54,12 @@ def run_migrations_online():
     and associate a connection with the context.
 
     """
-    engine = engine_from_config(
+    cmd_line_url = context.get_x_argument(as_dictionary=True).get('dburi')
+
+    if cmd_line_url:
+        engine = create_engine(cmd_line_url)
+    else:
+        engine = engine_from_config(
                 config.get_section(config.config_ini_section),
                 prefix='sqlalchemy.',
                 poolclass=pool.NullPool)
@@ -55,7 +67,8 @@ def run_migrations_online():
     connection = engine.connect()
     context.configure(
                 connection=connection,
-                target_metadata=target_metadata
+                target_metadata=target_metadata,
+                blame=context.get_main_option('blame')
                 )
 
     try:
