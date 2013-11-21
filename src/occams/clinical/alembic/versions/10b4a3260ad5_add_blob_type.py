@@ -32,7 +32,7 @@ def upgrade():
     op.drop_constraint('ck_attribute_valid_object_bind', 'attribute')
 
     for tablename in ('attribute', 'attribute_audit'):
-        op.alter_column(tablename, 'state', type_=new_attribute_type)
+        op.alter_column(tablename, 'type', type_=new_attribute_type)
 
     op.create_check_constraint(
         'ck_attribute_valid_object_bind',

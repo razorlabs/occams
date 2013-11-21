@@ -31,7 +31,7 @@ def upgrade():
 
         op.execute(
             table.update()
-            .where(table.c.state == 'retracted')
+            .where(table.c.state == op.inline_literal('retracted'))
             .values(retract_date=table.c.modify_date))
 
         op.drop_column(tablename, 'state')

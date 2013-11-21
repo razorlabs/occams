@@ -41,8 +41,9 @@ def upgrade():
         table = sql.table(tablename, sql.column('state', new_entity_state))
 
         op.execute(
-            table.update(state=None)
-            .where(table.c.state.in_(['inline', 'error', 'inaccurate'])))
+            table.update()
+            .where(table.c.state.in_(map(op.inline_literal, ['inline', 'error', 'inaccurate'])))
+            .values(state=op.inline_literal(None)))
 
         op.alter_column(tablename, 'state', type_=new_entity_state)
 

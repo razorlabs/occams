@@ -18,8 +18,6 @@ from sqlalchemy import sql
 def upgrade():
     blame = op.get_context().opts['blame']
 
-    NOW = sa.text('CURRENT_TIMESTAMP')
-
     # create the common column/constraints/indexes first
     for tablename in ('state', 'state_audit'):
         op.create_table(tablename,
@@ -28,9 +26,9 @@ def upgrade():
             sa.Column('title', sa.Unicode, nullable=False),
             sa.Column('description', sa.Unicode),
             sa.Column('create_user_id', sa.Integer, nullable=False),
-            sa.Column('create_date', sa.DateTime, nullable=False, server_default=NOW),
+            sa.Column('create_date', sa.DateTime, nullable=False, server_default=sa.text('NOW')),
             sa.Column('modify_user_id', sa.Integer, nullable=False),
-            sa.Column('modify_date', sa.DateTime, nullable=False, server_default=NOW),
+            sa.Column('modify_date', sa.DateTime, nullable=False, server_default=sa.text('NOW')),
             sa.Column('revision', sa.Integer, nullable=False),
             sa.Index('ix_%s_create_user_id' % tablename, 'create_user_id'),
             sa.Index('ix_%s_modify_user_id' % tablename, 'modify_user_id'),
@@ -73,19 +71,20 @@ def upgrade():
         sql.column('id', sa.Integer()),
         sql.column('key', sa.String()))
 
-    insert_query = state_table.insert().values(
-        name=sa.bindparam('name'),
-        title=sa.bindparam('title'),
-        create_user_id=sa.select([user_table.c.id], user_table.c.key == blame).as_scalar(),
-        modify_user_id=sa.select([user_table.c.id], user_table.c.key == blame).as_scalar(),
-        revision=1)
-
-    op.execute(insert_query, [
-        {'name': u'pending-entry', 'title': u'Pending Entry'},
+    state_values = [
+        {'name': u'pending-entry', 'title': u'Pending Entry', },
         {'name': u'in-progress', 'title': u'In Progress'},
         {'name': u'pending-review', 'title': u'Pending Review'},
         {'name': u'pending-correction', 'title': u'Pending Correction'},
-        {'name': u'complete', 'title': u'Complete'}])
+        {'name': u'complete', 'title': u'Complete'}]
+
+    for state in state_values:
+        op.execute(state_table.insert().values(
+            name=op.inline_literal(state['name']),
+            title=op.inline_literal(state['title']),
+            create_user_id=sa.select([user_table.c.id], user_table.c.key == op.inline_literal(blame)).as_scalar(),
+            modify_user_id=sa.select([user_table.c.id], user_table.c.key == op.inline_literal(blame)).as_scalar(),
+            revision=op.inline_literal(1)))
 
     for tablename in ('entity', 'entity_audit'):
         table = sql.table(tablename,

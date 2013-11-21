@@ -12,328 +12,245 @@ down_revision = '58d06f35c63f'
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import sql
 
 
 def upgrade():
-    pass
-#--
-#-- Flattens entities by removing sub-objects
-#-- Moving forward 'fieldsets' are purely cosmetic and supported via the
-#-- section table
-#-- WARNING: this process will remove any orphaned subforms instances
-#--
-#BEGIN;
+    """
+    Flattens entities by removing sub-objects
+    Moving forward 'fieldsets' are purely cosmetic and supported via the
+    section table
+    WARNING: this process will remove any orphaned subforms instances
+    """
 
-#--
-#-- Add the new section table
-#--
+    blame = op.get_context().opts['blame']
 
-#CREATE TABLE section (
-    #id INTEGER NOT NULL,
-    #name VARCHAR NOT NULL,
-    #title VARCHAR NOT NULL,
-    #description VARCHAR,
-    #schema_id INTEGER NOT NULL,
-    #"order" INTEGER NOT NULL,
-    #create_user_id INTEGER NOT NULL,
-    #modify_user_id INTEGER NOT NULL,
-    #modify_date TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW() NOT NULL,
-    #create_date TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW() NOT NULL,
-    #revision INTEGER NOT NULL,
-    #CONSTRAINT ck_section_valid_timeline CHECK ((create_date <= modify_date))
-#);
+    tablename = 'section'
+    auditname = tablename + '_audit'
 
-#CREATE TABLE section_audit (
-    #id INTEGER NOT NULL,
-    #name VARCHAR NOT NULL,
-    #title VARCHAR NOT NULL,
-    #description VARCHAR,
-    #schema_id INTEGER NOT NULL,
-    #"order" INTEGER NOT NULL,
-    #create_user_id INTEGER NOT NULL,
-    #modify_user_id INTEGER NOT NULL,
-    #modify_date TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW() NOT NULL,
-    #create_date TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW() NOT NULL,
-    #revision INTEGER NOT NULL,
-    #CONSTRAINT ck_section_valid_timeline CHECK ((create_date <= modify_date))
-#);
+    # create common attributes
+    for name in (tablename, auditname):
+        op.create_table(name,
+            sa.Column('id', sa.Integer, sa.Sequence('{0}_id_seq'.format(name)), autoincrement=True, nullable=False),
+            sa.Column('name', sa.Unicode, nullable=False),
+            sa.Column('title', sa.Unicode, nullable=False),
+            sa.Column('description', sa.Unicode, nullable=False),
+            sa.Column('schema_id', sa.Integer, nullable=False),
+            sa.Column('order', sa.Integer, nullable=False),
+            sa.Column('create_user_id', sa.Integer, nullable=False),
+            sa.Column('modify_user_id', sa.Integer, nullable=False),
+            sa.Column('create_date', sa.DateTime, server_default=sa.text('NOW'), nullable=False),
+            sa.Column('modify_date', sa.DateTime, server_default=sa.text('NOW'), nullable=False),
+            sa.Column('revision', sa.Integer, nullable=False),
+            sa.Index('ix_{0}_create_user_id'.format(name), 'create_user_id'),
+            sa.Index('ix_{0}_modify_user_id'.format(name), 'modify_user_id'),
+            sa.CheckConstraint('create_date <= modify_date',
+                name='ck_{0}_valid_timeline'.format(name)))
 
-#CREATE SEQUENCE section_audit_id_seq
-    #START WITH 1
-    #INCREMENT BY 1
-    #NO MAXVALUE
-    #NO MINVALUE
-    #CACHE 1;
+    op.create_primary_key(tablename + '_pkey', tablename, ['id'])
+    op.create_primary_key(auditname + '_pkey', auditname, ['id', 'revision'])
 
-#ALTER SEQUENCE section_audit_id_seq OWNED BY section_audit.id;
+    op.create_unique_constraint('uq_{0}_name'.format(tablename), tablename, ['schema_id', 'name'])
+    op.create_unique_constraint('uq_{0}_order'.format(tablename), tablename, ['schema_id', 'order'])
 
-#CREATE SEQUENCE section_id_seq
-    #START WITH 1
-    #INCREMENT BY 1
-    #NO MAXVALUE
-    #NO MINVALUE
-    #CACHE 1;
+    for local_col, remote, remote_col, ondelete in [
+            ('schema_id', 'schema', 'id', 'CASCADE'),
+            ('create_user_id', 'user', 'id', 'RESTRICT'),
+            ('modify_user_id', 'user', 'id', 'RESTRICT')]:
 
-#ALTER SEQUENCE section_id_seq OWNED BY section.id;
+        op.create_foreign_key('fk_{0}_{1}'.format(tablename, local_col), tablename, remote, [local_col], [remote_col], ondelete=ondelete)
 
-#ALTER TABLE ONLY section ALTER COLUMN id SET DEFAULT nextval('section_id_seq'::regclass);
+    # Add a reference to the setion table in attribute
+    op.add_column('attribute', sa.Column('section_id', sa.Integer))
+    op.add_column('attribute_audit', sa.Column('section_id', sa.Integer))
+    op.drop_constraint('uq_attribute_order', tablename)
+    op.create_unique_constraint('uq_attribute_order', tablename, ['section_id', 'order'])
+    op.create_index('ix_attribute_section_id', 'attribute', ['section_id'])
+    op.create_foreign_key('fk_attribute_section_id', 'attribute', 'section', ['section_id'], ['id'], ondelete='CASCADE')
 
-#ALTER TABLE ONLY section_audit ALTER COLUMN id SET DEFAULT nextval('section_audit_id_seq'::regclass);
+    #
+    # Move object attributes to sections
+    #
 
-#ALTER TABLE ONLY section_audit
-    #ADD CONSTRAINT section_audit_pkey PRIMARY KEY (id, revision);
+    section_table = sql.table('section',
+        sql.column('id'),
+        sql.column('schema_id'),
+        sql.column('name'),
+        sql.column('title'),
+        sql.column('description'),
+        sql.column('order'),
+        sql.column('create_user_id'),
+        sql.column('modify_user_id'),
+        sql.column('revision'))
 
-#ALTER TABLE ONLY section
-    #ADD CONSTRAINT section_pkey PRIMARY KEY (id);
+    user_table = sql.table('user',
+        sql.column('id'),
+        sql.column('key'))
 
-#ALTER TABLE ONLY section
-    #ADD CONSTRAINT uq_section_name UNIQUE (schema_id, name);
+    schema_table = sql.table('schema',
+        sql.column('id'),
+        sql.column('name'),
+        sql.column('title'),
+        sql.column('description'),
+        sql.column('is_inline'))
 
-#ALTER TABLE ONLY section
-    #ADD CONSTRAINT uq_section_order UNIQUE (schema_id, "order");
+    attribute_table = sql.table('attribute',
+        sql.column('schema_id'),
+        sql.column('name'),
+        sql.column('title'),
+        sql.column('description'),
+        sql.column('object_schema_id'),
+        sql.column('order'),
+        sql.column('type'),
+        sql.column('section_id'),
+        sql.column('modify_user_id'),
+        sql.column('modify_date'))
 
-#CREATE INDEX ix_section_audit_create_user_id ON section_audit USING btree (create_user_id);
+    sub_attribute_query = (
+        sa.select([
+            attribute_table.c.schema_id,
+            attribute_table.c.name,
+            attribute_table.c.title,
+            attribute_table.c.description,
+            # avoid collisions by using a larger order number
+            (sa.text('100') + attribute_table.c.order).label('order'),
+            sa.select([user_table.c.id], user_table.c.key == op.inline_literal(blame)).as_scalar().label('create_user_id'),
+            sa.select([user_table.c.id], user_table.c.key == op.inline_literal(blame)).as_scalar().label('modify_user_id'),
+            op.inline_literal(1).label('revision')])
+        .where(attribute_table.c.type == op.inline_literal('object')))
 
-#CREATE INDEX ix_section_audit_modify_user_id ON section_audit USING btree (modify_user_id);
+    op.execute(
+        section_table.insert()
+        .from_select([c for c in  sub_attribute_query.columns],  sub_attribute_query))
 
-#CREATE INDEX ix_section_create_user_id ON section USING btree (create_user_id);
+    parent_attribute_table = sql.alias(attribute_table, name='parent')
 
-#CREATE INDEX ix_section_modify_user_id ON section USING btree (modify_user_id);
+    # Move all sub-attributes to the parent, prepending the parent's name
+    op.execute(
+        attribute_table.update()
+        .where(
+            (parent_attribute_table.c.object_schema_id == attribute_table.c.schema_id)
+            & (parent_attribute_table.c.schema_id == section_table.c.schema_id)
+            & (parent_attribute_table.c.name == section_table.c.name))
+        .values(
+            schema_id=parent_attribute_table.c.schema_id,
+            name=sql.func.concat(parent_attribute_table.c.name, op.inline_literal('_'), attribute_table.c.name),
+            section_id=section_table.c.id,
+            modify_user_id=sa.select([user_table.c.id], user_table.c.key == op.inline_literal(blame)).as_scalar(),
+            modify_date=sa.text('NOW')))
 
-#ALTER TABLE ONLY section
-    #ADD CONSTRAINT fk_section_schema_id FOREIGN KEY (schema_id) REFERENCES schema(id) ON DELETE CASCADE;
+    # Create a default section for any top-level non-object attributes
+    # NOTE: that some schemata contain a combination of both,
+    default_section_query = (
+        sa.select([
+            attribute_table.c.schema_id,
+            schema_table.c.name,
+            schema_table.c.title,
+            op.inline_literal(0).label('order'),
+            sa.select([user_table.c.id], user_table.c.key == op.inline_literal(blame)).as_scalar().label('create_user_id'),
+            sa.select([user_table.c.id], user_table.c.key == op.inline_literal(blame)).as_scalar().label('modify_user_id'),
+            op.inline_literal(1).label('revision')])
+        .distinct()
+        .where(
+            (schema_table.c.id == attribute_table.c.schema_id)
+            & (~schema_table.c.is_inline)
+            & (attribute_table.c.section_id == op.inline_literal(None))
+            & (attribute_table.c.type != op.inline_literal('object'))))
 
-#ALTER TABLE ONLY section
-    #ADD CONSTRAINT fk_section_create_user_id FOREIGN KEY (create_user_id) REFERENCES "user"(id) ON DELETE RESTRICT;
+    op.execute(
+        section_table.insert()
+        .from_select([c for c in default_section_query.columns], default_section_query))
 
-#ALTER TABLE ONLY section
-    #ADD CONSTRAINT fk_section_modify_user_id FOREIGN KEY (modify_user_id) REFERENCES "user"(id) ON DELETE RESTRICT;
+    # Finally, attach the non-sectioned scalars to the first section in the
+    # form (it *should* be the default section...)
+    op.execute(
+        attribute_table.update()
+        .values(section_id=section_table.c.id)
+        .where(
+            (section_table.c.schema_id == attribute_table.c.schema_id)
+            & (section_table.c.order == op.inline_literal(0))
+            & (attribute_table.c.section_id == op.inline_literal(None))
+            & (attribute_table.c.type != op.inline_literal('object'))))
 
-#--
-#-- Add a reference to the setion table in attribute
-#--
+    #
+    # Move entity instances
+    #
 
-#ALTER TABLE attribute
-  #ADD COLUMN section_id INTEGER
-  #,DROP CONSTRAINT uq_attribute_order
-  #,ADD CONSTRAINT uq_attribute_order UNIQUE (section_id, "order")
-#;
-#ALTER TABLE attribute_audit ADD COLUMN section_id INTEGER;
+    object_table = sql.table('object', sql.column('entity_id'), sql.column('value'))
 
-#CREATE INDEX ix_attribute_section_id ON attribute(section_id);
+    for typename in ('decimal', 'datetime', 'integer', 'string', 'text', 'blob', 'choice'):
+        table = sql.table('value_' + typename,
+            sql.column('entity_id'),
+            sql.column('modify_user_id'),
+            sql.column('modify_date'))
 
-#ALTER TABLE attribute
-  #ADD CONSTRAINT fk_attribute_section_id FOREIGN KEY (section_id) REFERENCES section(id) ON DELETE CASCADE;
+        op.execute(
+            table.update()
+            .values(
+                entity_id=object_table.c.entity_id,
+                modify_user_id=sa.select([user_table.c.id], user_table.c.key == op.inline_literal(blame)).as_scalar(),
+                modify_date=sql.text('NOW'))
+            .where(table.c.entity_id == object_table.c.value))
 
-#--
-#-- Move object attributes to sections
-#--
+    # Disable because it gets in the way
+    op.drop_constraint('ck_attribute_valid_object_bind', 'attribute')
 
-#-- Schemata with sub objects
-#INSERT INTO section (schema_id, name, title, description, "order", create_user_id, modify_user_id, revision)
-  #SELECT
-    #schema_id
-    #,name
-    #,title
-    #,description
-    #-- avoid collisions by using a larger order number
-    #,100 + "order"
-    #,(SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
-    #,(SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
-    #,1
-  #FROM attribute
-  #WHERE type = 'object'
-#;
+    # Delete sub-schemata
+    op.execute(
+        schema_table.delete()
+        .where(
+            (schema_table.c.id == attribute_table.c.object_schema_id)
+            | (schema_table.c.is_inline)))
 
-#-- Move all sub-attributes to the parent, prepending the parent's name
-#UPDATE attribute
-#SET
-  #schema_id = parent.schema_id
-  #,name = parent.name || '_' || attribute.name
-  #,section_id = section.id
-  #,modify_user_id = (SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
-  #,modify_date = NOW()
-#FROM
-  #attribute AS parent
-  #,section
-#WHERE
-  #parent.object_schema_id = attribute.schema_id
-  #AND parent.schema_id = section.schema_id
-  #AND parent.name = section.name
-  #;
+    # Delete all object-atributes
+    for name in ('attribute', 'attribute_audit'):
+        table = sql.table(name, sql.column('type'))
+        op.execute(table.delete().where(table.c.type == op.inline_literal('object')))
 
-#---- Create a default section for any top-level non-object attributes
-#---- NOTE: that some schemata contain a combination of both,
-#INSERT INTO section (schema_id, name, title, "order", create_user_id, modify_user_id, revision)
-  #SELECT DISTINCT
-    #schema_id
-    #,''
-    #,''
-    #,0
-    #,(SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
-    #,(SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
-    #,1
-  #FROM
-    #attribute
-    #, schema
-  #WHERE
-    #schema.id = attribute.schema_id
-    #AND NOT schema.is_inline
-    #AND section_id IS NULL
-    #AND "type" != 'object'
-#;
+    op.drop_table('object')
+    op.drop_table('object_audit')
 
-#-- Finally, attach the non-sectioned scalars
-#UPDATE attribute
-#SET
-  #section_id = section.id
-#FROM
-  #section
-#WHERE
-  #section.schema_id = attribute.schema_id
-  #AND section.name = ''
-  #AND section_id IS NULL
-  #AND "type" != 'object'
-#;
+    #
+    # Lock the section_id column
+    #
 
-#--
-#-- Move entity instances
-#--
+    # Delete unmatched attributes, these are likely orphans
+    # (sub attrinbtes with no parent attribtues
+    op.execute(attribute_table.delete().where(attribute_table.c.section_id == op.inline_literal(None)))
 
-#UPDATE "value_decimal" AS "value"
-#SET
-  #entity_id = object.entity_id
-  #,modify_user_id = (SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
-  #,modify_date = NOW()
-#FROM object
-#WHERE value.entity_id = object.value
-#;
+    # Finally lock it
+    op.alter_column('attribute', 'section_id', nullable=False)
 
-#UPDATE "value_datetime" AS "value"
-#SET
-  #entity_id = object.entity_id
-  #,modify_user_id = (SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
-  #,modify_date = NOW()
-#FROM object
-#WHERE value.entity_id = object.value
-#;
+    #
+    # No longer support sub objects
+    #
 
-#UPDATE "value_integer" AS "value"
-#SET
-  #entity_id = object.entity_id
-  #,modify_user_id = (SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
-  #,modify_date = NOW()
-#FROM object
-#WHERE value.entity_id = object.value
-#;
+    for name in ('schema', 'schema_audit'):
+        op.drop_column(name, 'base_schema_id')
+        op.drop_column(name, 'is_inline')
 
-#UPDATE "value_string" AS "value"
-#SET
-  #entity_id = object.entity_id
-  #,modify_user_id = (SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
-  #,modify_date = NOW()
-#FROM object
-#WHERE value.entity_id = object.value
-#;
+    for name in ('atttribute', 'attribute_audit'):
+        op.drop_column(name, 'object_schema_id')
 
-#UPDATE "value_text" AS "value"
-#SET
-  #entity_id = object.entity_id
-  #,modify_user_id = (SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
-  #,modify_date = NOW()
-#FROM object
-#WHERE value.entity_id = object.value
-#;
+    #
+    # Remove "object" as a selectable type
+    #
 
-#UPDATE "value_blob" AS "value"
-#SET
-  #entity_id = object.entity_id
-  #,modify_user_id = (SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
-  #,modify_date = NOW()
-#FROM object
-#WHERE value.entity_id = object.value
-#;
+    # Backup the old ENUM
+    op.execute('ALTER TYPE "attribute_type" RENAME TO "attribute_type_old"')
 
-#UPDATE "value_choice" AS "value"
-#SET
-  #entity_id = object.entity_id
-  #,modify_user_id = (SELECT id FROM "user" WHERE key = 'bitcore@ucsd.edu')
-  #,modify_date = NOW()
-#FROM object
-#WHERE value.entity_id = object.value
-#;
+    # Declare the new ENUM
+    new_attribute_type = sa.Enum(
+        ['blob', 'boolean', 'choice', 'date', 'datetime', 'decimal', 'integer', 'string', 'text'],
+        name='attribute_type')
 
-#-- Disable because it gets in the way
-#ALTER TABLE attribute DROP CONSTRAINT "ck_attribute_valid_object_bind";
+    # swap the type
+    for name in ('attribute', 'attribute_audit'):
+        op.alter_column(name, 'type', type_=new_attribute_type)
 
-#-- Delete sub-schemata
-#DELETE
-#FROM schema
-#USING attribute
-#WHERE schema.id = attribute.object_schema_id
-#OR schema.is_inline
-#;
+    # Delete the old ENUM
+    op.execute('DROP TYPE "attribute_type_old"')
 
-#-- Delete all object-atributes
-#DELETE FROM attribute WHERE type = 'object';
-#DELETE FROM attribute_audit WHERE type = 'object';
-
-#DROP TABLE object;
-#DROP TABLE object_audit;
-
-#--
-#-- Lock the section_id column
-#--
-
-#-- Delete unmatched attributes, these are likely orphans
-#-- (sub attrinbtes with no parent attribtues
-#DELETE FROM attribute WHERE section_id IS NULL;
-
-#-- Finally lock it
-#ALTER TABLE attribute ALTER COLUMN section_id SET NOT NULL
-#;
-
-#--
-#-- No longer support sub objects
-#--
-
-#ALTER TABLE schema
-  #DROP COLUMN base_schema_id
-  #,DROP COLUMN is_inline
-  #;
-
-#ALTER TABLE schema_audit
-  #DROP COLUMN base_schema_id
-  #,DROP COLUMN is_inline
-  #;
-
-#ALTER TABLE "attribute" DROP COLUMN "object_schema_id";
-#ALTER TABLE "attribute_audit" DROP COLUMN "object_schema_id";
-
-#--
-#-- Remove "object" as a selectable type
-#--
-
-#-- Backup the old ENUM
-#ALTER TYPE "attribute_type" RENAME TO "attribute_type_old";
-
-#-- Declare the new ENUM
-#CREATE TYPE "attribute_type" AS ENUM ( 'blob', 'boolean', 'choice', 'date', 'datetime', 'decimal', 'integer', 'string', 'text');
-
-#-- Drop references to the ENUM
-#ALTER TABLE "attribute"
-  #ALTER COLUMN "type" TYPE "attribute_type" USING "type"::text::"attribute_type";
-#;
-
-#-- Replace the type (also in the audit table)
-#ALTER TABLE "attribute_audit"
-  #ALTER COLUMN "type" TYPE "attribute_type" USING "type"::text::"attribute_type"
-#;
-
-#-- Delete the old ENUM
-#DROP TYPE "attribute_type_old";
-
-#COMMIT;
 
 def downgrade():
     pass

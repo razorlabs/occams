@@ -33,8 +33,10 @@ def upgrade():
         op.execute(
             table
             .update()
-            .where(table.c.state.in_(['not-done', 'not-applicable']))
-            .values(state='complete', is_null=True))
+            .where(table.c.state.in_(map(op.inline_literal, ['not-done', 'not-applicable'])))
+            .values(
+                state=op.inline_literal('complete'),
+                is_null=op.inline_literal(True)))
 
 
 def downgrade():
