@@ -277,7 +277,7 @@ def buildReportTable(session, data_dict):
             query = query.outerjoin(join_class, (
                     (report_class.id == join_class.entity_id)
                         & join_class.attribute_id.in_(
-                            [a.schema.parent_attribute.id for a in attributes])))
+                            [a.schema.parent_attribute.id for a in attributes if a.schema.parent_attribute])))
             query = query.outerjoin(entity_class,
                             (entity_class.id == join_class._value))
             joins[schema_name] = entity_class
