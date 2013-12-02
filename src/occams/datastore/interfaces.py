@@ -369,16 +369,10 @@ class IChoice(IDataBaseItem):
         )
 
 
-class IState(IDataBaseItem):
-    """
-    An entity state to keep track of the entity's progress through some
-    externally defined work flow.
-    """
-
-
 class IEntity(IDataBaseItem):
     """
     An object that describes how an EAV object is generated.
+    Note that work flow states may be assigned to class entities.
     """
 
     schema = zope.schema.Object(
@@ -387,16 +381,16 @@ class IEntity(IDataBaseItem):
         schema=ISchema
         )
 
-    state = zope.schema.Object(
+    state = zope.schema.Choice(
         title=_(u'The current workflow state'),
-        schema=IState,
-        required=False
-        )
-
-    is_null = zope.schema.Bool(
-        title=_(u'Empty'),
-        description=_(u'Flag to indicate if the entity is intentionally blank'),
-        default=False,
+        values=sorted([
+            'pending-entry', 'pending-review',
+            'complete', 'not-done', 'inline',
+            'error',
+            'inaccurate',
+            'not-applicable',
+            ]),
+        default='pending-entry',
         )
 
     collect_date = zope.schema.Date(

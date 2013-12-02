@@ -241,9 +241,9 @@ Example: Auditing
     table across all row versions.
 
 
----------------------------
-Where's the user interface?
----------------------------
+----------------------
+Where's the interface?
+----------------------
 
 This module only implements the EAV system using `SQLAlchemy`_, to maintain
 the implementation vendor-agnostic as much as possible. As such, much of
@@ -254,16 +254,7 @@ used further customized on a per-institution basis. For one such example, see
 `occams.form`_
 
 .. _SQLAlchemy: http://www.sqlalchemy.org/
-.. _occams.form: https://bitbucket.org/ucsdbitcore/occams.form.git
-
-
------
-TL;DR
------
-
-TL;DR I heard you like editing tables, so we put editable tables in your tables
-so can edit tables with tables.
-
+.. _occams.form: https://github.com/beastcore/occams.form.git
 
 ------------------
 Self-Certification

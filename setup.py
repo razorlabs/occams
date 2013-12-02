@@ -37,8 +37,6 @@ setup(
         'setuptools',
         'argparse',
 
-        'argparse',
-
         # Useful tool for result sets
         'ordereddict',
 
