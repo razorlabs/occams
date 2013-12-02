@@ -3,7 +3,7 @@ from setuptools import setup
 
 
 # Working release version
-version = '1.0.0b1'
+version = '1.0.0b12'
 
 
 setup(
@@ -35,6 +35,7 @@ setup(
     zip_safe=False,
     install_requires=[
         'setuptools',
+        'argparse',
 
         'argparse',
 

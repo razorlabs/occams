@@ -38,6 +38,7 @@ Some key terms to keep in mind for this documentation:
 """
 
 from itertools import imap
+import hashlib
 from ordereddict import OrderedDict
 from operator import or_
 from copy import copy
@@ -276,7 +277,7 @@ def buildReportTable(session, data_dict):
             query = query.outerjoin(join_class, (
                     (report_class.id == join_class.entity_id)
                         & join_class.attribute_id.in_(
-                            [a.schema.parent_attribute.id for a in attributes])))
+                            [a.schema.parent_attribute.id for a in attributes if a.schema.parent_attribute])))
             query = query.outerjoin(entity_class,
                             (entity_class.id == join_class._value))
             joins[schema_name] = entity_class
@@ -398,6 +399,9 @@ class DataColumn(object):
 
     @property
     def selection(self):
+        """
+        The choices that apply to this column (if it's been expanded)
+        """
         return self.__selection
 
     @property
@@ -413,13 +417,25 @@ class DataColumn(object):
         return self.__is_nested
 
     def __init__(self, path, attributes, selection=None):
-        self.__name = '_'.join(map(str, path))
+        """
+        Parameters:
+        ``path`` -- the "path" to the variable (classname, subattr, subcolname, etc)
+        ``attribuets`` -- the attributes that make up this column
+        ``selection`` -- (optional) if expanding choices, the ones in this column
+        """
         self.__path = tuple(path)
         self.__type = attributes[-1].type
         self.__attributes = tuple(attributes)
         self.__is_nested = attributes[-1].schema.parent_attribute is not None
         self.__selection = selection
+        self.__name = '_'.join(map(str, path))
         if selection is not None:
+            # this is targeted at gui and not exports yet...
+            # Using choices as column can yield insanely long columns and
+            # thus break SQLAlchemy. For now we're going to shorten them
+            # until we can implement choice codes.
+            # NOTE exports that use the column names are going to look very weird...
+            self.__name = hashlib.md5(self.__name).hexdigest()[-8:]
             self.__vocabulary = None
         else:
             consolidated = dict([(c.value, c.title)
