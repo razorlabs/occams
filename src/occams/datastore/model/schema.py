@@ -283,7 +283,7 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
 
     is_required = Column(Boolean, nullable=False, default=IS_REQUIRED_DEFAULT)
 
-    is_pii = Column(
+    is_private = Column(
         Boolean,
         nullable=False,
         default=False,
@@ -390,6 +390,7 @@ class Choice(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
                 ),
             UniqueConstraint('attribute_id', 'name', name='uq_%s_name' % cls.__tablename__),
             UniqueConstraint('attribute_id', 'order', name='uq_%s_order' % cls.__tablename__),
+            CheckConstraint("name ~ '^[0-9]+$'", name='ck_%s_numeric_name' % cls.__tablename__),
             )
 
     def __copy__(self):
