@@ -26,10 +26,7 @@ def get_version():
     except:
         version_git = None
 
-    version = version_git or version_txt
-
-    if not version:
-        raise ValueError('Could not determine version')
+    version = version_git or version_txt or '0.0.0'
 
     # update fallback file if necessary
     if version != version_txt:
