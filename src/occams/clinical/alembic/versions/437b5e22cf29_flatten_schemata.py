@@ -241,7 +241,7 @@ def upgrade():
 
     # Declare the new ENUM
     new_attribute_type = sa.Enum(
-        ['blob', 'boolean', 'choice', 'date', 'datetime', 'decimal', 'integer', 'string', 'text'],
+        'blob', 'boolean', 'choice', 'date', 'datetime', 'decimal', 'integer', 'string', 'text',
         name='attribute_type')
 
     # swap the type

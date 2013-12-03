@@ -14,41 +14,52 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import sql
 
+from occams.clinical.migrations import alter_enum
+
 
 def upgrade():
 
-    # Modification of ENUMs is not very well supported in PostgreSQL so we have
-    # to do a bit of hacking to get this to work properly: swap the old
-    # type with a newly-created type of the same name
+    set_state_optional()
+    remove_outdated_states()
 
-    op.execute('ALTER TYPE "entity_state" RENAME TO "entity_state_old"')
+    values = [
+      'pending-entry',
+      'in-progress',
+      'pending-review',
+      'pending-correction',
+      'complete']
 
-    new_entity_state = sa.Enum([
-          'pending-entry',
-          'in-progress',
-          'pending-review',
-          'pending-correction',
-          'complete'],
-          name='entity_state')
-
-    new_entity_state.create(op.get_bind(), checkfirst=False)
-
-    for tablename in ('entity', 'entity_audit'):
-
-        op.alter_column(tablename, 'state', nullable=True, server_default=None)
-
-        # ad-hoc table for updating
-        table = sql.table(tablename, sql.column('state', new_entity_state))
-
-        op.execute(
-            table.update()
-            .where(table.c.state.in_(map(op.inline_literal, ['inline', 'error', 'inaccurate'])))
-            .values(state=op.inline_literal(None)))
-
-        op.alter_column(tablename, 'state', type_=new_entity_state)
-
-    op.execute('DROP TYPE "entity_state_old"')
+    alter_enum('entity_state', values, ['entity.state', 'entity_audit.state'])
 
 
 def downgrade():
     pass
+
+
+def set_state_optional():
+    """
+    Allows states to be null
+    """
+
+    # The changes need to happen on BOTH the live and audit tables
+    for table_name in ('entity', 'entity_audit'):
+        op.alter_column(table_name, 'state', nullable=True, server_default=None)
+
+
+def remove_outdated_states():
+    """
+    Sets deprecated states to null
+    """
+
+    # The changes need to happen on BOTH the live and audit tables
+    for table_name in ('entity', 'entity_audit'):
+
+        # ad-hoc table for updating
+        table = sql.table(table_name, sql.column('state'))
+
+        op.execute(
+            table.update()
+            .where(table.c.state.in_(
+                map(op.inline_literal, ['inline', 'error', 'inaccurate'])))
+            .values(state=op.inline_literal(None)))
+

@@ -68,7 +68,7 @@ def run_migrations_online():
     context.configure(
                 connection=connection,
                 target_metadata=target_metadata,
-                blame=context.get_main_option('blame')
+                blame=config.get_main_option('blame')
                 )
 
     try:

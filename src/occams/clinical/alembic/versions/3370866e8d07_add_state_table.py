@@ -13,50 +13,77 @@ down_revision = '3a7bb2b60182'
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import sql
+from sqlalchemy.schema import CreateSequence
+
+from occams.clinical.migrations import query_user_id
 
 
 def upgrade():
-    blame = op.get_context().opts['blame']
+    create_state_table()
+    create_entity_state()
+    initialize_state_data()
+    migrate_state_enums()
+    drop_state_column()
 
+
+def downgrade():
+    pass
+
+
+def create_state_table():
+    """
+    Installs the new state table and its corresponding audit table.
+    """
     # create the common column/constraints/indexes first
-    for tablename in ('state', 'state_audit'):
-        op.create_table(tablename,
-            sa.Column('id', sa.Integer, nullable=False),
+    for table_name in ('state', 'state_audit'):
+        op.create_table(table_name,
+            sa.Column('id', sa.Integer,
+                primary_key=True, autoincrement=True, nullable=False),
             sa.Column('name', sa.String, nullable=False),
             sa.Column('title', sa.Unicode, nullable=False),
             sa.Column('description', sa.Unicode),
             sa.Column('create_user_id', sa.Integer, nullable=False),
-            sa.Column('create_date', sa.DateTime, nullable=False, server_default=sa.text('NOW')),
+            sa.Column('create_date', sa.DateTime,
+                nullable=False, server_default=sql.func.now()),
             sa.Column('modify_user_id', sa.Integer, nullable=False),
-            sa.Column('modify_date', sa.DateTime, nullable=False, server_default=sa.text('NOW')),
-            sa.Column('revision', sa.Integer, nullable=False),
-            sa.Index('ix_%s_create_user_id' % tablename, 'create_user_id'),
-            sa.Index('ix_%s_modify_user_id' % tablename, 'modify_user_id'),
+            sa.Column('modify_date', sa.DateTime,
+                nullable=False, server_default=sql.func.now()),
+            sa.Column('revision', sa.Integer,
+                primary_key=('audit' in table_name), nullable=False),
+            sa.Index('ix_%s_create_user_id' % table_name, 'create_user_id'),
+            sa.Index('ix_%s_modify_user_id' % table_name, 'modify_user_id'),
+            # Both main/audit tables keep the same check constraint names
             sa.CheckConstraint('create_date <= modify_date',
-                            name='ck_%s_valid_timeline' % tablename))
+                name='ck_state_valid_timeline'))
 
-    op.create_primary_key('state_pkey', 'state', ['id'])
-    op.create_primary_key('state_audit_pkey', 'state_audit', ['id', 'revision'])
-
+    # The live table will have some extra data integrity constraints
     op.create_foreign_key(
         'fk_state_create_user_id',
         'state', 'user', ['create_user_id'], ['id'], ondelete='RESTRICT')
-
     op.create_foreign_key(
         'fk_state_modify_user_id',
         'state', 'user', ['modify_user_id'], ['id'], ondelete='RESTRICT')
-
     op.create_unique_constraint('uq_state_name', 'state', ['name'])
 
-    op.add_column('entity',
-        sa.Column(
-            'state_id',
-            sa.Integer,
-            sa.ForeignKey('state.id', name='fk_entity_state_id')))
+
+def create_entity_state():
+    """
+    Creates an entity-state dependency.
+    """
+    for table_name in ('entity', 'entity_audit'):
+        op.add_column(table_name, sa.Column('state_id', sa.Integer))
 
     op.create_index('ix_entity_state_id', 'entity', ['state_id'])
+    op.create_foreign_key(
+        'fk_entity_state_id', 'entity', 'state', ['state_id'], ['id'])
 
-    op.add_column('entity_audit', sa.Column('state_id', sa.Integer))
+
+def initialize_state_data():
+    """
+    Duplicates the enum types to the new state table.
+    """
+
+    blame = op.get_context().opts['blame']
 
     # ad-hoc table for updating data
     state_table = sql.table('state',
@@ -66,10 +93,6 @@ def upgrade():
         sql.column('create_user_id', sa.Integer),
         sql.column('modify_user_id', sa.Integer),
         sql.column('revision', sa.Integer))
-
-    user_table = sql.table('user',
-        sql.column('id', sa.Integer()),
-        sql.column('key', sa.String()))
 
     state_values = [
         {'name': u'pending-entry', 'title': u'Pending Entry', },
@@ -82,23 +105,37 @@ def upgrade():
         op.execute(state_table.insert().values(
             name=op.inline_literal(state['name']),
             title=op.inline_literal(state['title']),
-            create_user_id=sa.select([user_table.c.id], user_table.c.key == op.inline_literal(blame)).as_scalar(),
-            modify_user_id=sa.select([user_table.c.id], user_table.c.key == op.inline_literal(blame)).as_scalar(),
+            create_user_id=query_user_id(blame),
+            modify_user_id=query_user_id(blame),
             revision=op.inline_literal(1)))
 
-    for tablename in ('entity', 'entity_audit'):
-        table = sql.table(tablename,
+
+def migrate_state_enums():
+    """
+    Switch enum values to corresponding state table values.
+    """
+
+    state_table = sql.table('state',
+        sql.column('id'),
+        sql.column('name'))
+
+    for table_name in ('entity', 'entity_audit'):
+        table = sql.table(table_name,
             sql.column('state', sa.String()),
             sql.column('state_id', sa.Integer()))
 
         op.execute(
             table.update().values(
-                state_id=sa.select(
-                    [state_table.c.id],
-                    state_table.c.name == sa.cast(table.c.state, sa.String)).as_scalar()))
+                state_id=(
+                    sa.select([state_table.c.id])
+                    .where(state_table.c.name == sa.cast(table.c.state, sa.String))
+                    .as_scalar())))
 
-        op.drop_column(tablename, 'state')
 
+def drop_state_column():
+    """
+    Removes support for state ENUM values in favor of state table references.
+    """
+    for table_name in ('entity', 'entity_audit'):
+        op.drop_column(table_name, 'state')
 
-def downgrade():
-    pass
