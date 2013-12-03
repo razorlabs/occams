@@ -1,8 +1,7 @@
 """ Common metadata modules
 """
 
-from sqlalchemy.types import String
-from sqlalchemy.types import Unicode
+from sqlalchemy.types import String, Unicode, UnicodeText
 from sqlalchemy.schema import Column
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.declarative import has_inherited_table
@@ -70,7 +69,7 @@ class Describeable(object):
 
     title = Column(Unicode, nullable=False)
 
-    description = Column(Unicode)
+    description = Column(UnicodeText)
 
 
 class User(Model, AutoNamed, Referenceable):
