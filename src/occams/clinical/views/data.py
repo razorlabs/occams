@@ -86,7 +86,7 @@ def list_(request):
             return HTTPFound(location=request.route_path('data_download'))
 
     layout = request.layout_manager.layout
-    layout.title = _(u'Data dfafasfd')
+    layout.title = _(u'Data')
     layout.set_nav('data_nav')
 
     schemata_query = (

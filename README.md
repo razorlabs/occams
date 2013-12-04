@@ -25,4 +25,6 @@ Getting Started
 Using gUnicorn (for development)
 --------------------------------
 
-- watchmedo auto-restart --pattern "*.py" --recursive --directory ./src -- gunicorn --paste src/occams.clinical/development.ini
+  watchmedo auto-restart -i "*/alembic/*" -p "*.py" -d ./src -R -- gunicorn --paste src/occams.clinical/development.ini
+
+  watchmedo auto-restart -i "*/alembic/*" -p "*.py" -R -d ./src -- celeryd --config=src/occams.clinical/development.ini
