@@ -1,5 +1,12 @@
 """
-Helper functions for migrations
+Helper functions for migrations.
+
+Alembic isolates upgrade scripts such that it's not possible to have
+common upgrade helpers in the environment. Custom helpers are
+implemented in the client application (occams.clinical in this case)
+and then imported in the migration steps.
+
+Restrict use of these helpers to only alembic migrations.
 """
 
 from alembic import op

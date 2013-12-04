@@ -24,7 +24,6 @@ def upgrade():
     types = [
         'blob',
         'boolean',
-        'choice',
         'date',
         'datetime',
         'decimal',

@@ -14,8 +14,11 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import sql
 
+from occams.clinical.migrations import alter_enum, query_user_id
+
 
 def upgrade():
+    add_choice_type()
     create_choice_table()
     migrate_choice_values()
     drop_value_choice_id()
@@ -25,6 +28,36 @@ def upgrade():
 
 def downgrade():
     pass
+
+
+def add_choice_type():
+    # remove constraints reliant on the enum or else they are going to interfere
+    op.drop_constraint('ck_attribute_valid_object_bind', 'attribute')
+
+    types = [
+        'blob',
+        'boolean',
+        'choice',
+        'date',
+        'datetime',
+        'decimal',
+        'integer',
+        'object',
+        'string',
+        'text']
+
+    alter_enum('attribute_type', types,
+        ['attribute.type', 'attribute_audit.type'])
+
+    # reinstate the check constraint
+    op.create_check_constraint('ck_attribute_valid_object_bind', 'attribute',
+        """
+        CASE
+        WHEN type = 'object'::attribute_type
+        THEN object_schema_id IS NOT NULL
+        ELSE object_schema_id IS NULL
+        END
+        """)
 
 
 def create_choice_table():
