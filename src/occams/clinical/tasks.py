@@ -30,13 +30,26 @@ celery.user_options['worker'].add(
     Option('--ini', help='Pyramid config file'))
 
 
+class SqlAlchemyTask(celery.Task):
+    """
+    An abstract Celery Task that ensures that the connection the the
+    database is closed on task completion
+    """
+
+    abstract = True
+
+    def after_return(self, status, retval, task_id, args, kwargs, einfo):
+        Session.remove()
+
+
 @worker_init.connect
-def bootstrap_pyramid(signal, sender):
+def init(signal, sender):
+    # Have the pyramid application setup the connections
     sender.app.settings = \
         bootstrap(sender.options['ini'])['registry'].settings
 
 
-@celery.task
+@celery.task(base=SqlAlchemyTask)
 def make_export(export_id):
     """
     Handles generating exports in a separate process.
