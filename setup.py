@@ -17,7 +17,6 @@ requires = [
     'gevent-socketio',
     'jsmin',
     'pyramid',
-    'pyramid_celery',
     'pyramid_debugtoolbar',
     'pyramid_layout',
     'pyramid_ldap',

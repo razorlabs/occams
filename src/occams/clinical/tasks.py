@@ -14,13 +14,26 @@ import tempfile
 import zipfile
 from pkg_resources import resource_filename
 
-import celery
-from redis import StrictRedis
-
-from occams.datastore import model as datastore, reporting
+from celery import Celery
+from celery.bin import Option
+from celery.signals import worker_init
+from pyramid.paster import bootstrap
 
 from occams.clinical import models, Session, redis
 from occams.clinical.utils.csv import UnicodeWriter
+from occams.datastore import model as datastore, reporting
+
+
+celery = Celery(__name__)
+
+celery.user_options['worker'].add(
+    Option('--ini', help='Pyramid config file'))
+
+
+@worker_init.connect
+def bootstrap_pyramid(signal, sender):
+    sender.app.settings = \
+        bootstrap(sender.options['ini'])['registry'].settings
 
 
 @celery.task
@@ -35,14 +48,14 @@ def make_export(export_id):
 
     All progress will be broadcast to the redis **export** channel with the
     following dictionary:
-    ``export_id`` -- the export being processed
-    ``owner_user`` -- the user who this export belongs to
-    ``count`` -- the current number of files processed
-    ``total`` -- the total number of files that will be processed
-    ``status`` -- current status of the export
+    export_id -- the export being processed
+    owner_user -- the user who this export belongs to
+    count -- the current number of files processed
+    total -- the total number of files that will be processed
+    status -- current status of the export
 
     Parameters:
-    ``export_id`` -- export to process
+    export_id -- export to process
 
     """
     # Get the export instance attached to this thread
@@ -109,7 +122,7 @@ def cleanup_export(expire_date):
     Cleans up the database of expired exports.
 
     Parameters:
-    ``expire_date`` -- the cut-off date for removal
+    expire_date -- the cut-off date for removal
     """
     raise NotImplementedError
 
@@ -127,9 +140,9 @@ def arc_query(zfp, arcname, query):
     Dumps an arbitrary query to a CSV file inside an archive file
 
     Parameters:
-    ``zfp`` -- the zip file pointer
-    ``arcname`` -- the name inside the archive
-    ``query`` -- the source query
+    zfp -- the zip file pointer
+    arcname -- the name inside the archive
+    query -- the source query
 
     """
     with tempfile.NamedTemporaryFile() as tfp:
@@ -145,10 +158,10 @@ def arc_codebook(zfp, arcname, name, ids=None):
     Dumps the ecrf into a CSV codebook file inside an archive file
 
     Parameters:
-    ``zfp`` -- the zip file pointer
-    ``arcname`` -- the name inside the archive
-    ``name`` -- the ecrf schema name
-    ``ids`` -- (optional) the specific ids of the schema
+    zfp -- the zip file pointer
+    arcname -- the name inside the archive
+    name -- the ecrf schema name
+    ids -- (optional) the specific ids of the schema
 
     """
     query = (

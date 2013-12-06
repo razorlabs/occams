@@ -12,7 +12,7 @@ import transaction
 
 from occams.datastore import model as datastore
 
-from .. import _, log, models, Session
+from occams.clinical import _, log, models, Session
 
 
 def find_study(request):

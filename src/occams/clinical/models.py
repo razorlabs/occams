@@ -596,10 +596,6 @@ class Export(ClinicalModel, Referenceable, Auditable, Modifiable):
 
     owner_user = orm.relationship(User, foreign_keys=[owner_user_id])
 
-    expire_date = schema.Column(types.DateTime, nullable=False)
-
-    notify = schema.Column(types.Boolean, nullable=False, default=False)
-
     status = schema.Column(
         types.Enum('failed', 'pending', 'complete', name='export_status'),
         nullable=False,

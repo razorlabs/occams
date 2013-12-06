@@ -27,4 +27,4 @@ Using gUnicorn (for development)
 
   watchmedo auto-restart -i "*/alembic/*" -p "*.py" -d ./src -R -- gunicorn --paste src/occams.clinical/development.ini
 
-  watchmedo auto-restart -i "*/alembic/*" -p "*.py" -R -d ./src -- celeryd --config=src/occams.clinical/development.ini
+  watchmedo auto-restart -i "*/alembic/*" -p "*.py" -R -d ./src -- celery -A "occams.clinical.tasks" worker --ini src/occams.clinical/development.ini

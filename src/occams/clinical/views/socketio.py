@@ -57,11 +57,8 @@ class ExportNamespace(BaseNamespace):
         # emit current progress
         for (export_id,) in pending_query:
             data = redis.hgetall(export_id)
-            log.debug('progress', data)
             self.emit('progress', data)
 
-        # TODO: r.listen() is a blocking call
-        # gevent needs to be configured in order for this to run concurrently
         for message in client.listen():
             if message['type'] != 'message':
                 continue
@@ -69,6 +66,5 @@ class ExportNamespace(BaseNamespace):
             data = json.loads(message['data'])
 
             if data['owner_user'] == self.session['user']:
-                log.debug('progress', data)
                 self.emit('progress', data)
 

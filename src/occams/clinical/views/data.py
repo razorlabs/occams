@@ -13,7 +13,7 @@ import transaction
 
 from occams.datastore import model as datastore
 
-from .. import _, log, models, Session, tasks
+from occams.clinical import _, log, models, Session, tasks
 
 
 @colander.deferred
@@ -74,7 +74,6 @@ def list_(request):
                     Session.query(datastore.User)
                     .filter_by(key=request.user.email)
                     .one()),
-                expire_date=datetime.now() + timedelta(days=7),
                 schemata=[Session.query(datastore.Schema).get(id)
                             for id in appstruct['schemata']])
             Session.add(export)
@@ -123,7 +122,7 @@ def download(request):
     exports_query = (
         Session.query(models.Export)
         .filter(models.Export.owner_user.has(key=request.user.email))
-        .order_by(models.Export.expire_date.desc()))
+        .order_by(models.Export.create_date.desc()))
 
     exports_count = exports_query.count()
 

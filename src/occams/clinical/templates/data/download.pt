@@ -68,7 +68,7 @@
               target="_blank"
               i18n:translate="">Download</a>
           <span class="text-muted" i18n:translate="">Available until:</span>
-          <strong>${export.expire_date.isoformat()}</strong>
+          <strong>${export.create_date.isoformat()}</strong>
       </div>
 
     </div> <!-- /panel-footer -->

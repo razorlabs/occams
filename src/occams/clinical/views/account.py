@@ -10,7 +10,7 @@ import transaction
 
 from occams.datastore import model as datastore
 
-from .. import _, log, permissions, Session
+from occams.clinical import _, log, permissions, Session
 
 
 class LoginSchema(colander.MappingSchema):

@@ -19,6 +19,7 @@
               <th class="select">
                 <input type="checkbox" data-toggle="selectall" />
               </th>
+              <th class="has_private"></th>
               <th class="name" i18n:translate="">Name</th>
               <th class="title" i18n:translate="">Title</th>
               <th class="publsished" i18n:translate="">Published</th>
@@ -34,7 +35,13 @@
                     data-toggle="select"
                     data-class="warning" />
               </td>
-              <td class="name">${schema.name}</td>
+              <td>
+                <span
+                    class="glyphicon glyphicon-user"
+                    title="Has private information"
+                    tal:condition="schema.has_private"></span>
+              </td>
+              <td class="name"><code>${schema.name}</code></td>
               <td class="title">${schema.title}</td>
               <td class="published">${schema.publish_date.isoformat()}</td>
             </tr>

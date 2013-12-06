@@ -9,7 +9,7 @@ import transaction
 from occams.datastore import model as datastore
 import occams.form.widgets
 
-from .. import _, log, models, Session, widgets
+from occams.clinical import _, log, models, Session, widgets
 
 
 class EventAddSchema(CSRFSchema):
