@@ -45,8 +45,7 @@ class SqlAlchemyTask(celery.Task):
 @worker_init.connect
 def init(signal, sender):
     # Have the pyramid application setup the connections
-    sender.app.settings = \
-        bootstrap(sender.options['ini'])['registry'].settings
+    sender.app.settings = bootstrap(sender.options['ini'])['registry'].settings
 
 
 @celery.task(base=SqlAlchemyTask)
