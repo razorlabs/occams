@@ -22,7 +22,8 @@ def get_version():
         version_git = (
             Popen(['git', 'describe'], stdout=PIPE, stderr=PIPE, cwd=HERE)
             .communicate()[0]
-            .strip())
+            .strip()
+            .decode(sys.getdefaultencoding()))
     except:
         version_git = None
 
