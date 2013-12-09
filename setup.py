@@ -49,7 +49,8 @@ def get_version():
         version_git = (
             Popen(['git', 'describe'], stdout=PIPE, stderr=PIPE, cwd=HERE)
             .communicate()[0]
-            .strip())
+            .strip()
+            .decode(sys.getdefaultencoding()))
     except:
         version_git = None
 
@@ -87,7 +88,7 @@ setup(
     install_requires=requires,
     extras_require=dict(
         postgresql=['psycopg2', 'psycogreen'],
-        test=['plone.testing'], # Required for layers, does not install Plone
+        test=['nose', 'coverage'],
         ),
     entry_points="""\
     [paste.app_factory]
