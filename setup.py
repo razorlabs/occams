@@ -26,7 +26,8 @@ REQUIRES = [
     'pyramid_debugtoolbar',
     'pyramid_rewrite',
     'pyramid_webassets',
-    'xlutils',
+    # Not Python 3 compatible
+    #'xlutils',
     'zope.sqlalchemy',
     'waitress',
     'webhelpers',
