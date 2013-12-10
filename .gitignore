@@ -82,6 +82,7 @@ parts
 sdist
 var
 develop.cfg
+VERSION
 
 ##### Translations
 *.mo
