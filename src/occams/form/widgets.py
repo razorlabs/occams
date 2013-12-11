@@ -1,5 +1,24 @@
+from pkg_resources import resource_filename
+
 import colander
-import deform
+import deform.widget
+
+
+# Define application-local renderers so we don't
+# affect the entire python environment.
+
+DEFAULT_RENDERER = deform.ZPTRendererFactory([
+    resource_filename('occams.form', 'templates/deform'),
+    resource_filename('deform', 'templates')])
+
+
+class ModalFormWidget(deform.widget.FormWidget):
+    """
+    Extends deform's default form for modal containers
+    """
+
+    template = 'modal_form'
+    readonly_template = 'readonly/modal_form'
 
 
 class GroupInputWidget(deform.widget.MappingWidget):
@@ -10,4 +29,21 @@ class GroupInputWidget(deform.widget.MappingWidget):
 
     before = None
     after = None
+
+
+class FormSelectWidget(deform.widget.Widget):
+    """
+    Input widget for select a form + version
+    """
+
+    template = 'form_select'
+    readonly_template = 'readonly/form_select'
+
+    def serialize(self, field, cstruct=None, readonly=False):
+        pass
+
+    def deserialize(self, field, pstruct=None):
+        pass
+
+
 

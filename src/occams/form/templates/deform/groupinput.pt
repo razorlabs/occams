@@ -8,7 +8,7 @@
       css_class css_class|field.widget.css_class;
 
       before before|field[field.widget.before]|nothing;
-      after after|field[field.widget.after]|nothing; "
+      after after|field[field.widget.after]|nothing;"
     class="form-group ${'has-error ' + error_class if field.error else ''}"
     title="${description}"
     id="item-${oid}"
@@ -26,7 +26,7 @@ ${field.start_mapping()}
 
   <div class="input-group">
     <span class="input-group-addon" tal:condition="before">
-      <input tal:replace="structure before.render_template(before.widget.template)" />
+      <input tal:replace="structure before.serialize(before.cstruct)" />
     </span>
 
     <tal:fields repeat="child field">
@@ -34,11 +34,11 @@ ${field.start_mapping()}
           tal:condition="
             (before and before.name != child.name)
             or (after and after.name != child.name)"
-          tal:replace="structure child.render_template(child.widget.template)"/>
+          tal:replace="structure child.serialize(child.cstruct)" />
     </tal:fields>
 
     <span class="input-group-addon" tal:condition="after">
-      <input tal:replace="structure after.render_template(after.widget.template)" />
+      <input tal:replace="structure after.serialize(after.cstruct)" />
     </span>
 
   </div><!-- /input-group -->
