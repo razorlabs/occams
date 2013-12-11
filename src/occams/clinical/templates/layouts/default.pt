@@ -50,6 +50,8 @@
       </div> <!-- /.container -->
     </div> <!-- /#wrap -->
 
+    <div id="modal" class="modal face" role="dialog"></div>
+
     <div tal:replace="panel('app_footer')" />
 
     <!--! Load scripts at the end so we don't block rendering -->

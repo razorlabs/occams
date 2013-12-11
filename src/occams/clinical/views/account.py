@@ -8,9 +8,8 @@ from pyramid_ldap import get_ldap_connector
 from sqlalchemy import orm
 import transaction
 
-from occams.datastore import model as datastore
-
 from occams.clinical import _, log, permissions, Session
+from occams.datastore import model as datastore
 
 
 class LoginSchema(colander.MappingSchema):
@@ -68,7 +67,7 @@ def login(request):
                 title=_(u'Sign In'),
                 css_class='btn btn-lg btn-primary btn-block')])
 
-    if 'submit' not in request.POST:
+    if not request.POST:
         return {'form': form.render()}
 
     try:

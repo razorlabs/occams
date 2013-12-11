@@ -6,10 +6,9 @@ from pyramid.view import view_config
 from sqlalchemy import func, orm, sql
 import transaction
 
+from occams.clinical import _, log, models, Session
 from occams.datastore import model as datastore
 import occams.form.widgets
-
-from occams.clinical import _, log, models, Session
 
 
 class EventAddSchema(CSRFSchema):
@@ -62,16 +61,23 @@ class EventAddSchema(CSRFSchema):
 @view_config(
     route_name='event_add',
     permission='event_add',
-    renderer='occams.clinical:templates/event/add.pt')
+    renderer='occams.clinical:templates/static/form.pt')
+@view_config(
+    route_name='event_add',
+    permission='event_add',
+    xhr=True,
+    layout='ajax',
+    renderer='occams.clinical:templates/static/form.pt')
 def add(request):
-    schema = EventAddSchema().bind(request=request)
     form = deform.Form(
-        schema,
+        EventAddSchema(title=_(u'Add a Patient')).bind(request=request),
         buttons=[
             deform.Button('submit', _(u'Submit'),
                 css_class='btn btn-primary pull-right'),
             deform.Button('cancel', _(u'Cancel'),
                 type='button', css_class='btn btn-link pull-right')])
+    if request.is_xhr:
+        form.widget = occams.form.widgets.ModalFormWidget()
     return {'form': form.render()}
 
 

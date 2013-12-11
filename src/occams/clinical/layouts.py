@@ -5,7 +5,7 @@ from pyramid_layout.layout import layout_config
     name='',
     template='occams.clinical:templates/layouts/default.pt')
 @layout_config(
-    name='ajax_layout',
+    name='ajax',
     template='occams.clinical:templates/layouts/ajax.pt')
 class Layout(object):
     """

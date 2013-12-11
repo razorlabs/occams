@@ -25,6 +25,8 @@ components-js:
   contents:
     - scripts/selectall.js
     - scripts/tooltip.js
+    - scripts/modal.js
+    - scripts/button.js
 
 
 ### Views

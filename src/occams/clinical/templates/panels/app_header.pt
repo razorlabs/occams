@@ -58,10 +58,14 @@
           ><span class="glyphicon glyphicon-search"></span></button>
       </form>
 
-      <a href="#add-visit" class="btn btn-primary navbar-btn navbar-left"
+      <button
+          id="event-add"
           data-toggle="modal"
+          data-target="#modal"
+          data-remote="${request.route_path('event_add')}"
+          class="btn btn-primary navbar-btn navbar-left js-modal-controller"
           tal:condition="request.has_permission('visit_add')"
-        ><span class="glyphicon glyphicon-plus-sign"></span> Add Event</a>
+        ><span class="glyphicon glyphicon-plus-sign"></span> Add Event</button>
 
       <ul class="nav navbar-nav navbar-right" tal:condition="user">
         <li><a href="${request.route_path('account')}" class="disabled"

@@ -14,8 +14,9 @@ from pyramid_ldap import groupfinder
 from sqlalchemy import engine_from_config
 from webassets.loaders import YAMLLoader
 
-from .models import Session, RosterSession
-from .permissions import make_root_factory, make_get_user
+from occams.clinical.models import Session, RosterSession
+from occams.clinical.permissions import make_root_factory, make_get_user
+from occams.form.widgets import DEFAULT_RENDERER
 
 
 _ = TranslationStringFactory(__name__)
@@ -84,9 +85,7 @@ def main(global_config, **settings):
 
     config.scan()
 
-    deform.Form.set_zpt_renderer((
-        resource_filename('occams.form', 'templates/widgets'),
-        resource_filename('occams.form', 'templates/deform')))
+    deform.Form.set_default_renderer(DEFAULT_RENDERER)
 
     get_user = make_get_user(
         settings['ldap.user.userid_attr'],
@@ -95,6 +94,7 @@ def main(global_config, **settings):
     config.add_request_method(get_user,'user', reify=True)
 
     # Wrap has_permission to make it less cumbersome
+    # TODO: This is built-in to pyramid 1.5, remove when we switch
     config.add_request_method(
         lambda r, n: has_permission(n, r.context, r),
         'has_permission')
