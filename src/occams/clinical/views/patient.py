@@ -29,7 +29,7 @@ def search(request):
         search_query, current_page, item_count=search_count, url=page_url)
 
     return {
-        'page': page }
+        'page': page}
 
 
 def query_by_ids(term):
@@ -49,4 +49,3 @@ def query_by_ids(term):
             models.PatientReference.reference_number.ilike(wildcard),
             models.Patient.initials.ilike(wildcard)))
         .order_by(models.Patient.pid.asc()))
-

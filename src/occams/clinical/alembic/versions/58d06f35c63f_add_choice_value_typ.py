@@ -31,7 +31,8 @@ def downgrade():
 
 
 def add_choice_type():
-    # remove constraints reliant on the enum or else they are going to interfere
+    # remove constraints reliant on the enum or else they are going to
+    # interfere
     op.drop_constraint('ck_attribute_valid_object_bind', 'attribute')
 
     types = [
@@ -47,11 +48,11 @@ def add_choice_type():
         'text']
 
     alter_enum('attribute_type', types,
-        ['attribute.type', 'attribute_audit.type'])
+               ['attribute.type', 'attribute_audit.type'])
 
     # reinstate the check constraint
     op.create_check_constraint('ck_attribute_valid_object_bind', 'attribute',
-        """
+                               """
         CASE
         WHEN type = 'object'::attribute_type
         THEN object_schema_id IS NOT NULL
@@ -71,27 +72,45 @@ def create_choice_table():
     # Create the common attributes
     for name in (table_name, audit_name):
         op.create_table(name,
-            sa.Column('id', sa.Integer,
-                primary_key=True, autoincrement=True, nullable=False),
-            sa.Column('entity_id', sa.Integer, nullable=False),
-            sa.Column('attribute_id', sa.Integer, nullable=False),
-            sa.Column('value', sa.Integer, nullable=False),
-            sa.Column('create_user_id', sa.Integer, nullable=False),
-            sa.Column('modify_user_id', sa.Integer, nullable=False),
-            sa.Column('create_date', sa.DateTime,
-                server_default=sql.func.now(), nullable=False),
-            sa.Column('modify_date', sa.DateTime,
-                server_default=sql.func.now(), nullable=False),
-            sa.Column('revision', sa.Integer,
-                primary_key=('audit' in name), nullable=False),
-            sa.Index('ix_{0}_create_user_id'.format(name), 'create_user_id'),
-            sa.Index('ix_{0}_modify_user_id'.format(name), 'modify_user_id'),
-            # Both main/audit tables keep the same check constraint names
-            sa.CheckConstraint('create_date <= modify_date',
-                name='ck_{0}_valid_timeline'.format(table_name)))
+                        sa.Column('id', sa.Integer,
+                                  primary_key=True, autoincrement=True, nullable=False),
+                        sa.Column('entity_id', sa.Integer, nullable=False),
+                        sa.Column('attribute_id', sa.Integer, nullable=False),
+                        sa.Column('value', sa.Integer, nullable=False),
+                        sa.Column(
+                            'create_user_id',
+                            sa.Integer,
+                            nullable=False),
+                        sa.Column(
+                            'modify_user_id',
+                            sa.Integer,
+                            nullable=False),
+                        sa.Column('create_date', sa.DateTime,
+                                  server_default=sql.func.now(
+                                  ), nullable=False),
+                        sa.Column('modify_date', sa.DateTime,
+                                  server_default=sql.func.now(
+                                  ), nullable=False),
+                        sa.Column('revision', sa.Integer,
+                                  primary_key=(
+                                      'audit' in name), nullable=False),
+                        sa.Index(
+                            'ix_{0}_create_user_id'.format(name),
+                            'create_user_id'),
+                        sa.Index(
+                            'ix_{0}_modify_user_id'.format(name),
+                            'modify_user_id'),
+                        # Both main/audit tables keep the same check constraint
+                        # names
+                        sa.CheckConstraint('create_date <= modify_date',
+                                           name='ck_{0}_valid_timeline'.format(table_name)))
 
     for col in ('attribute_id', 'entity_id', 'value'):
-        op.create_index('ix_{0}_{1}'.format(table_name, col), table_name, [col])
+        op.create_index(
+            'ix_{0}_{1}'.format(table_name,
+                                col),
+            table_name,
+            [col])
 
     for local_col, remote, remote_col, ondelete in [
             ('attribute_id', 'attribute', 'id', 'CASCADE'),
@@ -112,14 +131,14 @@ def migrate_choice_values():
 
     # ad-hoc tables for querying
     value_choice_table = sql.table('value_choice',
-        sql.column('entity_id'),
-        sql.column('attribute_id'),
-        sql.column('value'),
-        sql.column('create_date'),
-        sql.column('create_user_id'),
-        sql.column('modify_date'),
-        sql.column('modify_user_id'),
-        sql.column('revision'))
+                                   sql.column('entity_id'),
+                                   sql.column('attribute_id'),
+                                   sql.column('value'),
+                                   sql.column('create_date'),
+                                   sql.column('create_user_id'),
+                                   sql.column('modify_date'),
+                                   sql.column('modify_user_id'),
+                                   sql.column('revision'))
 
     choice_table = sql.table('choice', sql.column('id'))
 
@@ -128,15 +147,15 @@ def migrate_choice_values():
     # Migrade choice selections to the new table
     for type_name in ('decimal', 'integer', 'string', 'datetime'):
         value_table = sql.table('value_' + type_name,
-            sql.column('choice_id'),
-            sql.column('entity_id'),
-            sql.column('attribute_id'),
-            sql.column('value'),
-            sql.column('create_user_id'),
-            sql.column('modify_user_id'),
-            sql.column('create_date'),
-            sql.column('modify_date'),
-            sql.column('revision'))
+                                sql.column('choice_id'),
+                                sql.column('entity_id'),
+                                sql.column('attribute_id'),
+                                sql.column('value'),
+                                sql.column('create_user_id'),
+                                sql.column('modify_user_id'),
+                                sql.column('create_date'),
+                                sql.column('modify_date'),
+                                sql.column('revision'))
 
         value_selects.append(
             sa.select([
@@ -169,7 +188,9 @@ def drop_value_choice_id():
 
     for type_name in ('decimal', 'integer', 'string', 'datetime', 'blob', 'text'):
 
-        value_table = sql.table('value_' + type_name, sql.column('attribute_id'))
+        value_table = sql.table(
+            'value_' + type_name,
+            sql.column('attribute_id'))
 
         # Delete moved values
         op.execute(
@@ -192,17 +213,17 @@ def set_name_as_code():
     # Ad-hoc tables from querying
 
     attribute_table = sql.table('attribute',
-        sql.column('id'),
-        sql.column('type'))
+                                sql.column('id'),
+                                sql.column('type'))
 
     choice_table = sql.table('choice',
-        sql.column('name'),
-        sql.column('attribute_id'),
-        sql.column('value'))
+                             sql.column('name'),
+                             sql.column('attribute_id'),
+                             sql.column('value'))
 
     choice_audit = sql.table('choice_audit',
-        sql.column('name'),
-        sql.column('value'))
+                             sql.column('name'),
+                             sql.column('value'))
 
     for table in (choice_table, choice_audit):
         op.execute(table.update().values(name=table.c.value))
@@ -228,13 +249,13 @@ def force_numeric_name():
     """
 
     attribute_table = sql.table('attribute',
-        sql.column('id'),
-        sql.column('type'))
+                                sql.column('id'),
+                                sql.column('type'))
 
     choice_table = sql.table('choice',
-        sql.column('attribute_id'),
-        sql.column('name'),
-        sql.column('order'))
+                             sql.column('attribute_id'),
+                             sql.column('name'),
+                             sql.column('order'))
 
     choice_group = sa.alias(choice_table, name='choice_group')
 
@@ -253,7 +274,7 @@ def force_numeric_name():
                     & (attribute_table.c.type == op.inline_literal('string')))
                 .correlate(choice_table))
             & (~sa.select(
-                    [sql.func.every(choice_group.c.name.op('~')(op.inline_literal('^[0-9]+$')))])
+                [sql.func.every(choice_group.c.name.op('~')(op.inline_literal('^[0-9]+$')))])
                 .where(choice_group.c.attribute_id == choice_table.c.attribute_id)
                 .group_by(choice_group.c.attribute_id)
                 .correlate(choice_table)
@@ -268,5 +289,7 @@ def force_numeric_name():
             .where(choice_table.c.attribute_id == attribute_table.c.id))))
 
     # Enforce numerical names
-    op.create_check_constraint('ck_numeric_choice', 'choice', "name ~ '^[0-9]+$'")
-
+    op.create_check_constraint(
+        'ck_numeric_choice',
+        'choice',
+        "name ~ '^[0-9]+$'")

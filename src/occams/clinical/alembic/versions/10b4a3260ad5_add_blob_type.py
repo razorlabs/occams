@@ -18,7 +18,8 @@ from occams.clinical.migrations import alter_enum
 
 def upgrade():
 
-    # remove constraints reliant on the enum or else they are going to interfere
+    # remove constraints reliant on the enum or else they are going to
+    # interfere
     op.drop_constraint('ck_attribute_valid_object_bind', 'attribute')
 
     types = [
@@ -33,11 +34,11 @@ def upgrade():
         'text']
 
     alter_enum('attribute_type', types,
-        ['attribute.type', 'attribute_audit.type'])
+               ['attribute.type', 'attribute_audit.type'])
 
     # reinstate the check constraint
     op.create_check_constraint('ck_attribute_valid_object_bind', 'attribute',
-        """
+                               """
         CASE
         WHEN type = 'object'::attribute_type
         THEN object_schema_id IS NOT NULL

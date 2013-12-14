@@ -35,8 +35,16 @@ TABLES = """
 POSTFIX = '_mrg'
 
 cli = argparse.ArgumentParser(description='Merges PHI into FIA')
-cli.add_argument('phi', metavar='PHIDB', type=create_engine, help='PHI database')
-cli.add_argument('fia', metavar='FIADB', type=create_engine, help='FIA database')
+cli.add_argument(
+    'phi',
+    metavar='PHIDB',
+    type=create_engine,
+    help='PHI database')
+cli.add_argument(
+    'fia',
+    metavar='FIADB',
+    type=create_engine,
+    help='FIA database')
 
 
 def cleanup(engine):
@@ -59,8 +67,12 @@ def prepare(engine):
         for table in TABLES:
             print '{0}...'.format(table)
             merge_name = table + POSTFIX
-            conn.execute('CREATE TABLE "{0}" (LIKE "{1}")'.format(merge_name, table))
-            conn.execute('INSERT INTO "{0}" (SELECT * FROM "{1}")'.format(merge_name, table))
+            conn.execute(
+                'CREATE TABLE "{0}" (LIKE "{1}")'.format(
+                    merge_name,
+                    table))
+            conn.execute(
+                'INSERT INTO "{0}" (SELECT * FROM "{1}")'.format(merge_name, table))
 
 
 def migrate(src_engine, dst_engine):
@@ -69,13 +81,25 @@ def migrate(src_engine, dst_engine):
     """
     print 'Moving data  {0} -> {1}'.format(src_engine.url.database, dst_engine.url.database)
     with tempfile.NamedTemporaryFile('rw+b') as fp:
-        pg_dump_args = ['pg_dump', '-O', '-U', src_engine.url.username, '-f', fp.name]
+        pg_dump_args = [
+            'pg_dump',
+            '-O',
+            '-U',
+            src_engine.url.username,
+            '-f',
+            fp.name]
         for table in TABLES:
             pg_dump_args += ['-t', table + POSTFIX]
         pg_dump_args += [src_engine.url.database]
 
         subprocess.call(pg_dump_args)
-        subprocess.call(['psql', '-U', dst_engine.url.username, '-f', fp.name, dst_engine.url.database])
+        subprocess.call(
+            ['psql',
+             '-U',
+             dst_engine.url.username,
+             '-f',
+             fp.name,
+             dst_engine.url.database])
 
 
 def integrate(engine):
@@ -85,16 +109,20 @@ def integrate(engine):
     print 'Integrating data at {0}'.format(engine.url.database)
     with engine.begin() as conn:
         for table in TABLES:
-            conn.execute('ALTER TABLE "{0}" ADD COLUMN mrg_id INT UNIQUE'.format(table))
+            conn.execute(
+                'ALTER TABLE "{0}" ADD COLUMN mrg_id INT UNIQUE'.format(table))
 
         conn.execute('ALTER TABLE "attribute" ADD COLUMN is_private BOOLEAN')
-        conn.execute('ALTER TABLE "attribute_audit" ADD COLUMN is_private BOOLEAN')
+        conn.execute(
+            'ALTER TABLE "attribute_audit" ADD COLUMN is_private BOOLEAN')
         conn.execute('UPDATE "attribute" SET is_private = FALSE')
         conn.execute('UPDATE "attribute_audit" SET is_private = FALSE')
         conn.execute('ALTER TABLE "attribute" ALTER is_private SET NOT NULL')
-        conn.execute('ALTER TABLE "attribute_audit" ALTER is_private SET NOT NULL')
+        conn.execute(
+            'ALTER TABLE "attribute_audit" ALTER is_private SET NOT NULL')
 
-        # User/patient are shared in both systems, so just update the mapping key
+        # User/patient are shared in both systems, so just update the mapping
+        # key
         print 'user...'
         conn.execute("""
             UPDATE "user"
@@ -131,7 +159,6 @@ def integrate(engine):
                 (SELECT id FROM "user" WHERE mrg_id = modify_user_id)
             FROM "partner_mrg"
             """)
-
 
         print 'schema...'
         conn.execute("""
@@ -258,6 +285,7 @@ def integrate(engine):
         for table in TABLES:
             conn.execute('ALTER TABLE "{0}" DROP COLUMN mrg_id'.format(table))
 
+
 def main():
     args = cli.parse_args()
 
@@ -274,4 +302,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

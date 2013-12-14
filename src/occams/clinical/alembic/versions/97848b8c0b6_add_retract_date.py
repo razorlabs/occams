@@ -14,6 +14,7 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import sql
 
+
 def upgrade():
     """
     Remove form workflow in favor of simple publish/retract dates
@@ -25,9 +26,9 @@ def upgrade():
         op.add_column(tablename, sa.Column('retract_date', sa.Date))
 
         table = sql.table(tablename,
-            sql.column('state'),
-            sql.column('retract_date'),
-            sql.column('modify_date'))
+                          sql.column('state'),
+                          sql.column('retract_date'),
+                          sql.column('modify_date'))
 
         op.execute(
             table.update()
@@ -36,7 +37,10 @@ def upgrade():
 
         op.drop_column(tablename, 'state')
 
-    op.create_check_constraint('ck_schema_valid_publication', 'schema', 'publish_date <= retract_date')
+    op.create_check_constraint(
+        'ck_schema_valid_publication',
+        'schema',
+        'publish_date <= retract_date')
 
 
 def downgrade():

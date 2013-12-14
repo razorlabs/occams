@@ -47,7 +47,7 @@ def main(global_config, **settings):
             http_only=True,
             callback=groupfinder),
         authorization_policy=ACLAuthorizationPolicy()
-        )
+    )
 
     config.ldap_setup(
         settings['ldap.setup.host'],
@@ -91,7 +91,7 @@ def main(global_config, **settings):
         settings['ldap.user.userid_attr'],
         settings['ldap.user.name_attr'])
 
-    config.add_request_method(get_user,'user', reify=True)
+    config.add_request_method(get_user, 'user', reify=True)
 
     # Wrap has_permission to make it less cumbersome
     # TODO: This is built-in to pyramid 1.5, remove when we switch
@@ -100,4 +100,3 @@ def main(global_config, **settings):
         'has_permission')
 
     return config.make_wsgi_app()
-

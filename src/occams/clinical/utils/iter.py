@@ -18,5 +18,3 @@ def partition(predicate, iterable):
     """
     t1, t2 = tee(iterable)
     return filterfalse(predicate, t1), filter(predicate, t2)
-
-

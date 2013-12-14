@@ -2,6 +2,7 @@ from math import ceil
 
 
 class Batch(object):
+
     """
     A no-frills paginator
     """
@@ -24,11 +25,12 @@ class Batch(object):
         self.page = page
         self.per_page = per_page
 
-    def pages(self, left_edge=2, left_current=2, right_current=5, right_edge=2):
+    def pages(self, left_edge=2, left_current=2,
+              right_current=5, right_edge=2):
         last = 0
         for i in xrange(1, self.pages_count + 1):
             if (i <= left_edge
-                    or (i > self.page - left_current - 1 and  i < self.page + right_current)
+                    or (i > self.page - left_current - 1 and i < self.page + right_current)
                     or i > self.pages - right_edge):
                 if last + 1 != i:
                     yield None
@@ -37,4 +39,3 @@ class Batch(object):
 
     def items(self):
         return self.iterable
-

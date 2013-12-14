@@ -60,7 +60,9 @@ def login(request):
     form = deform.Form(
         schema=LoginSchema(title=_(u'Please log in')).bind(request=request),
         css_class='form-login',
-        action=request.route_path('account_login', _query={'referrer': referrer}),
+        action=request.route_path(
+            'account_login',
+            _query={'referrer': referrer}),
         buttons=[
             deform.Button(
                 'submit',
@@ -93,4 +95,3 @@ def login(request):
 def logout(request):
     headers = forget(request)
     return HTTPFound(location=request.route_path('clinical'), headers=headers)
-

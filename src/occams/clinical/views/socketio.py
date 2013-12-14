@@ -11,6 +11,7 @@ from socketio.namespace import BaseNamespace
 
 from occams.clinical import log, models, Session, redis
 
+
 @view_config(route_name='socketio')
 def socketio(request):
     """
@@ -22,6 +23,7 @@ def socketio(request):
 
 
 class ExportNamespace(BaseNamespace):
+
     """
     This service will emit the progress of the current user's exports
     """
@@ -67,4 +69,3 @@ class ExportNamespace(BaseNamespace):
 
             if data['owner_user'] == self.session['user']:
                 self.emit('progress', data)
-

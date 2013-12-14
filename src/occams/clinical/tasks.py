@@ -31,6 +31,7 @@ celery.user_options['worker'].add(
 
 
 class SqlAlchemyTask(celery.Task):
+
     """
     An abstract Celery Task that ensures that the connection the the
     database is closed on task completion
@@ -99,8 +100,8 @@ def make_export(export_id):
                     .distinct()
                     .join(models.Visit)
                     .join(datastore.Context,
-                        (datastore.Context.external == 'visit')
-                        & (datastore.Context.key == models.Visit.id))
+                          (datastore.Context.external == 'visit')
+                          & (datastore.Context.key == models.Visit.id))
                     .filter(datastore.Context.entity_id == report.c.entity_id)
                     .correlate(report)
                     .as_scalar()
@@ -111,7 +112,8 @@ def make_export(export_id):
             arc_query(zfp, arcname, query)
             redis.hincrby(export.id, 'count')
             redis.publish('export', json.dumps(redis.hgetall(export.id)))
-            print(', '.join(redis.hmget(export.id, 'count', 'total') + [arcname]))
+            print(
+                ', '.join(redis.hmget(export.id, 'count', 'total') + [arcname]))
 
         # Generate the ecrf codebooks
         for name, ids in codebooks.items():
@@ -119,7 +121,8 @@ def make_export(export_id):
             arc_codebook(zfp, arcname, name, ids)
             redis.hincrby(export.id, 'count')
             redis.publish('export', json.dumps(redis.hgetall(export.id)))
-            print(', '.join(redis.hmget(export.id, 'count', 'total') + [arcname]))
+            print(
+                ', '.join(redis.hmget(export.id, 'count', 'total') + [arcname]))
 
     # File has been closed/flushed, it's ready for consumption
     export.status = 'complete'
@@ -161,7 +164,7 @@ def arc_query(zfp, arcname, query):
         writer = UnicodeWriter(tfp)
         writer.writerow([d['name'] for d in query.column_descriptions])
         writer.writerows(query)
-        tfp.flush() # ensure everything's on disk
+        tfp.flush()  # ensure everything's on disk
         zfp.write(tfp.name, arcname)
 
 
@@ -216,6 +219,5 @@ def arc_codebook(zfp, arcname, name, ids=None):
                 '\r'.join(['%s - %s' % (c.name, c.title) for c in choices]),
                 attribute.order])
 
-        tfp.flush() # ensure everything's on disk
+        tfp.flush()  # ensure everything's on disk
         zfp.write(tfp.name, arcname)
-

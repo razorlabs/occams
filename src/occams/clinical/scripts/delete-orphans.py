@@ -12,13 +12,14 @@ Logger = logging.getLogger(__name__)
 
 Session = orm.scoped_session(orm.sessionmaker(class_=DataStoreSession))
 
-parser = argparse.ArgumentParser(description='Removes orphans from the database')
+parser = argparse.ArgumentParser(
+    description='Removes orphans from the database')
 parser.add_argument('-c', metavar='URI', dest='uri', required=True,
-                   help='Database connection string')
+                    help='Database connection string')
 parser.add_argument('-u', metavar='BLAME', dest='blame', required=True,
-                   help='User to blame')
+                    help='User to blame')
 parser.add_argument('-d', '--dry', dest='dry', action='store_true',
-                   help='Dry run')
+                    help='Dry run')
 
 
 def main():
@@ -44,8 +45,7 @@ def main():
         print ('Saving changes')
         Session.commit()
     else:
-        print( 'Changes not saved, disable dry run')
-
+        print('Changes not saved, disable dry run')
 
 
 if __name__ == '__main__':

@@ -23,12 +23,13 @@ def deferred_id_validator(node, kw):
     """
     ids_query = (
         Session.query(datastore.Schema.id)
-        .filter(datastore.Schema.publish_date != None))
+        .filter(datastore.Schema.publish_date is not None))
     valid_ids = set([r.id for r in ids_query])
     return colander.OneOf(valid_ids)
 
 
 class ExportCheckoutSchema(CSRFSchema):
+
     """
     Export checkout serialization schema
     """
@@ -75,13 +76,15 @@ def list_(request):
                     .filter_by(key=request.user.email)
                     .one()),
                 schemata=[Session.query(datastore.Schema).get(id)
-                            for id in appstruct['schemata']])
+                          for id in appstruct['schemata']])
             Session.add(export)
             Session.commit()
             tasks.make_export.s(export.id).apply_async(
                 link_error=tasks.handle_error.s())
             tasks.make_export.delay(export.id)
-            request.session.flash(_(u'Your request has been received!'), 'success')
+            request.session.flash(
+                _(u'Your request has been received!'),
+                'success')
             return HTTPFound(location=request.route_path('data_download'))
 
     layout = request.layout_manager.layout
@@ -90,7 +93,7 @@ def list_(request):
 
     schemata_query = (
         Session.query(datastore.Schema)
-        .filter(datastore.Schema.publish_date != None)
+        .filter(datastore.Schema.publish_date is not None)
         .order_by(
             datastore.Schema.name.asc(),
             datastore.Schema.publish_date.desc()))
@@ -158,4 +161,3 @@ def attachement(request):
     response = FileResponse(path)
     response.content_disposition = 'attachment;filename=clinical-%d.zip' % export.id
     return response
-

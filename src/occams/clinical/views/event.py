@@ -73,9 +73,9 @@ def add(request):
         EventAddSchema(title=_(u'Add a Patient')).bind(request=request),
         buttons=[
             deform.Button('submit', _(u'Submit'),
-                css_class='btn btn-primary pull-right'),
+                          css_class='btn btn-primary pull-right'),
             deform.Button('cancel', _(u'Cancel'),
-                type='button', css_class='btn btn-link pull-right')])
+                          type='button', css_class='btn btn-link pull-right')])
     if request.is_xhr:
         form.widget = occams.form.widgets.ModalFormWidget()
     return {'form': form.render()}
@@ -87,4 +87,3 @@ def add(request):
     renderer='occams.clinical:templates/event/list.pt')
 def list_(request):
     return {}
-

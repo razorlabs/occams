@@ -31,7 +31,7 @@ requires = [
     'occams.datastore',
     'occams.form',
     'occams.roster',
-    ]
+]
 
 
 def get_version():
@@ -70,17 +70,17 @@ setup(
     description='occams.clinical',
     long_description=README + '\n\n' + CHANGES,
     classifiers=[
-    "Programming Language :: Python",
-    "Framework :: Pyramid",
-    "Topic :: Internet :: WWW/HTTP",
-    "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
+        "Programming Language :: Python",
+        "Framework :: Pyramid",
+        "Topic :: Internet :: WWW/HTTP",
+        "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
     ],
     author='',
     author_email='',
     url='',
     keywords='web wsgi bfg pylons pyramid',
     packages=find_packages('src', exclude=['ez_setup']),
-    package_dir={'':'src'},
+    package_dir={'': 'src'},
     namespace_packages=['occams'],
     include_package_data=True,
     zip_safe=False,
@@ -89,12 +89,11 @@ setup(
     extras_require=dict(
         postgresql=['psycopg2', 'psycogreen'],
         test=['nose', 'coverage', 'rednose', 'WebTest'],
-        ),
+    ),
     entry_points="""\
     [paste.app_factory]
     main = occams.clinical:main
     [console_scripts]
     cl_init = occams.clinical.scripts.initializedb:main
     """,
-    )
-
+)

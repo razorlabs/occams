@@ -37,24 +37,40 @@ def create_state_table():
     # create the common column/constraints/indexes first
     for table_name in ('state', 'state_audit'):
         op.create_table(table_name,
-            sa.Column('id', sa.Integer,
-                primary_key=True, autoincrement=True, nullable=False),
-            sa.Column('name', sa.String, nullable=False),
-            sa.Column('title', sa.Unicode, nullable=False),
-            sa.Column('description', sa.Unicode),
-            sa.Column('create_user_id', sa.Integer, nullable=False),
-            sa.Column('create_date', sa.DateTime,
-                nullable=False, server_default=sql.func.now()),
-            sa.Column('modify_user_id', sa.Integer, nullable=False),
-            sa.Column('modify_date', sa.DateTime,
-                nullable=False, server_default=sql.func.now()),
-            sa.Column('revision', sa.Integer,
-                primary_key=('audit' in table_name), nullable=False),
-            sa.Index('ix_%s_create_user_id' % table_name, 'create_user_id'),
-            sa.Index('ix_%s_modify_user_id' % table_name, 'modify_user_id'),
-            # Both main/audit tables keep the same check constraint names
-            sa.CheckConstraint('create_date <= modify_date',
-                name='ck_state_valid_timeline'))
+                        sa.Column('id', sa.Integer,
+                                  primary_key=True, autoincrement=True, nullable=False),
+                        sa.Column('name', sa.String, nullable=False),
+                        sa.Column('title', sa.Unicode, nullable=False),
+                        sa.Column('description', sa.Unicode),
+                        sa.Column(
+                            'create_user_id',
+                            sa.Integer,
+                            nullable=False),
+                        sa.Column('create_date', sa.DateTime,
+                                  nullable=False, server_default=sql.func.now(
+                                  )),
+                        sa.Column(
+                            'modify_user_id',
+                            sa.Integer,
+                            nullable=False),
+                        sa.Column('modify_date', sa.DateTime,
+                                  nullable=False, server_default=sql.func.now(
+                                  )),
+                        sa.Column('revision', sa.Integer,
+                                  primary_key=(
+                                      'audit' in table_name), nullable=False),
+                        sa.Index(
+                            'ix_%s_create_user_id' %
+                            table_name,
+                            'create_user_id'),
+                        sa.Index(
+                            'ix_%s_modify_user_id' %
+                            table_name,
+                            'modify_user_id'),
+                        # Both main/audit tables keep the same check constraint
+                        # names
+                        sa.CheckConstraint('create_date <= modify_date',
+                                           name='ck_state_valid_timeline'))
 
     # The live table will have some extra data integrity constraints
     op.create_foreign_key(
@@ -87,12 +103,12 @@ def initialize_state_data():
 
     # ad-hoc table for updating data
     state_table = sql.table('state',
-        sql.column('id', sa.Integer),
-        sql.column('name', sa.String()),
-        sql.column('title', sa.String()),
-        sql.column('create_user_id', sa.Integer),
-        sql.column('modify_user_id', sa.Integer),
-        sql.column('revision', sa.Integer))
+                            sql.column('id', sa.Integer),
+                            sql.column('name', sa.String()),
+                            sql.column('title', sa.String()),
+                            sql.column('create_user_id', sa.Integer),
+                            sql.column('modify_user_id', sa.Integer),
+                            sql.column('revision', sa.Integer))
 
     state_values = [
         {'name': u'pending-entry', 'title': u'Pending Entry', },
@@ -116,13 +132,13 @@ def migrate_state_enums():
     """
 
     state_table = sql.table('state',
-        sql.column('id'),
-        sql.column('name'))
+                            sql.column('id'),
+                            sql.column('name'))
 
     for table_name in ('entity', 'entity_audit'):
         table = sql.table(table_name,
-            sql.column('state', sa.String()),
-            sql.column('state_id', sa.Integer()))
+                          sql.column('state', sa.String()),
+                          sql.column('state_id', sa.Integer()))
 
         op.execute(
             table.update().values(
@@ -138,4 +154,3 @@ def drop_state_column():
     """
     for table_name in ('entity', 'entity_audit'):
         op.drop_column(table_name, 'state')
-

@@ -20,7 +20,7 @@ def home(request):
     recent_query = search_recent()
     return {
         'recent_list': recent_query,
-        'recent_count': recent_query.count() }
+        'recent_count': recent_query.count()}
 
 
 def search_recent():
@@ -38,13 +38,8 @@ def search_recent():
                     .correlate(models.Patient)
                     .as_scalar()),
                 models.Patient.modify_date,
-                ).label('access_date'))
+            ).label('access_date'))
         .order_by(
             'access_date DESC',
             models.Patient.our.asc())
         .limit(10))
-
-
-
-
-

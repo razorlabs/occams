@@ -8,6 +8,7 @@ from pyramid_layout.layout import layout_config
     name='ajax',
     template='occams.clinical:templates/layouts/ajax.pt')
 class Layout(object):
+
     """
     Master layout for the application
     """
@@ -44,4 +45,3 @@ class Layout(object):
 
     def set_menu(self, name, *args, **kw):
         self.menu = (name, args, kw)
-

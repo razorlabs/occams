@@ -20,7 +20,7 @@ def upgrade():
     Renames all the value tables and their corresponding constraints
     """
 
-    for type_name in  ['decimal', 'integer', 'string', 'datetime', 'text', 'blob']:
+    for type_name in ['decimal', 'integer', 'string', 'datetime', 'text', 'blob']:
 
         # Take care of the common behavior between the main and audit tables
         for table_name in (type_name, type_name + '_audit'):
@@ -28,7 +28,9 @@ def upgrade():
             # blob/text were created incorrectly and so we must fix the
             # timeline check name here (audit checks constraints
             # apparently use the main table name in their own name generatoin)
-            ck_name = table_name if type_name in ('text', 'blob') else type_name
+            ck_name = table_name if type_name in (
+                'text',
+                'blob') else type_name
 
             # Modify time constraints
             op.drop_constraint(
@@ -87,4 +89,3 @@ def upgrade():
 
 def downgrade():
     pass
-

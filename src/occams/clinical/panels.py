@@ -1,5 +1,6 @@
 from pyramid_layout.panel import panel_config
 
+
 @panel_config(name='app_header', renderer='occams.clinical:templates/panels/app_header.pt')
 @panel_config(name='app_footer', renderer='occams.clinical:templates/panels/app_footer.pt')
 @panel_config(name='study_details', renderer='occams.clinical:templates/study/panels/details.pt')
@@ -36,5 +37,3 @@ def render_layout_panel(context, request, panel):
         return ''
     else:
         return lm.render_panel(name, *args, **kw) or ''
-
-

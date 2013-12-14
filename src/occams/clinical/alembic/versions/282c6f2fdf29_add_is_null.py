@@ -31,9 +31,8 @@ def upgrade():
 
         # ad-hoc table for updating values
         table = sql.table(tablename,
-            sql.column('state', sa.String),
-            sql.column('is_null', sa.Boolean))
-
+                          sql.column('state', sa.String),
+                          sql.column('is_null', sa.Boolean))
 
         # "Not Done" and "Not Applicable" states should not contain any data.
         op.execute(

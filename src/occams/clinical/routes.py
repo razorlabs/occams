@@ -16,7 +16,6 @@ def includeme(config):
 
     config.add_static_view('occams_clinical_static', 'occams.clinical:static/')
 
-
     route('study_list', '/studies')
     route('study_add', '/studies/add')
     route('study_view', '/studies/{study_name}')
@@ -34,9 +33,18 @@ def includeme(config):
     route('event_add', '/events/add')
 
     route('event_list', '/patients/{pid}/events')
-    route('event_view', '/patients/{pid}/events/{vist_date}', custom_predicates=[ymd])
-    route('event_edit', '/patients/{pid}/events/{event_date}/edit', custom_predicates=[ymd])
-    route('event_delete', '/patients/{pid}/events/{event_date}/delete', custom_predicates=[ymd])
+    route(
+        'event_view',
+        '/patients/{pid}/events/{vist_date}',
+        custom_predicates=[ymd])
+    route(
+        'event_edit',
+        '/patients/{pid}/events/{event_date}/edit',
+        custom_predicates=[ymd])
+    route(
+        'event_delete',
+        '/patients/{pid}/events/{event_date}/delete',
+        custom_predicates=[ymd])
 
     route('data_list', '/data')
     route('data_download', '/data/download')
@@ -60,4 +68,3 @@ def dates(*keys):
         return True
 
     return predicate
-

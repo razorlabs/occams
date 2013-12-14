@@ -52,6 +52,7 @@ def make_get_user(userid_attr, name_attr):
 
 
 class User(object):
+
     """
     Convenient access of crucial user identification properties
     """
@@ -59,4 +60,3 @@ class User(object):
     def __init__(self, email, fullname):
         self.email = email
         self.fullname = fullname
-

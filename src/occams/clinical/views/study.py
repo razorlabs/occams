@@ -159,13 +159,13 @@ def schedule(request):
         .add_columns(*[
             sql.exists([datastore.Schema.id])
             .where((datastore.Schema.name == OuterSchema.name)
-                    & datastore.Schema.categories.contains(cycle.category))
+                   & datastore.Schema.categories.contains(cycle.category))
             .label(cycle.name)
             for cycle in cycles_query])
         .filter(OuterSchema.categories.contains(study.category))
         .filter(OuterSchema.publish_date == (
             Session.query(datastore.Schema.publish_date)
-            .filter(datastore.Schema.publish_date != None)
+            .filter(datastore.Schema.publish_date is not None)
             .filter(datastore.Schema.name == OuterSchema.name)
             .order_by(datastore.Schema.publish_date.desc())
             .limit(1)
@@ -177,7 +177,7 @@ def schedule(request):
         'study': study,
         'cycles': cycles_query,
         'has_cycles': cycles_query.count() > 0,
-        'ecrfs': ecrfs_query }
+        'ecrfs': ecrfs_query}
 
 
 @view_config(
@@ -224,7 +224,7 @@ def progress(request):
         'states': states_query,
         'cycles': cycles_query,
         'cycles_count': cycles_count,
-        'has_cycles': cycles_count > 0 }
+        'has_cycles': cycles_count > 0}
 
 
 @view_config(
@@ -258,7 +258,7 @@ def add(request):
         FiaSession.add(study)
         FiaSession.flush()
         study_url = request.current_route_path(_route_name='study_view',
-                                                    study_name=study.name)
+                                               study_name=study.name)
         request.session.flash(_(u'New study added!', 'success'))
         return HTTPFound(location=study_url)
 
@@ -277,7 +277,7 @@ def query_enabled_ecrfs(study):
             StudySchema.id,
             StudySchema.name,
             StudySchema.title)
-        .add_column((study_schemata_query.c.id != None).label('is_enabled'))
+        .add_column((study_schemata_query.c.id is not None).label('is_enabled'))
         .outerjoin(study_schemata_query, study_schemata_query.c.id == StudySchema.id)
         .filter(~StudySchema.is_inline)
         .filter(StudySchema.publish_date == (
@@ -290,4 +290,3 @@ def query_enabled_ecrfs(study):
             .as_scalar()))
         .order_by(StudySchema.title.asc()))
     return ecrfs_query
-

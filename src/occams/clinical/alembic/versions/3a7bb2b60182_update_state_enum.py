@@ -23,11 +23,11 @@ def upgrade():
     remove_outdated_states()
 
     values = [
-      'pending-entry',
-      'in-progress',
-      'pending-review',
-      'pending-correction',
-      'complete']
+        'pending-entry',
+        'in-progress',
+        'pending-review',
+        'pending-correction',
+        'complete']
 
     alter_enum('entity_state', values, ['entity.state', 'entity_audit.state'])
 
@@ -43,7 +43,11 @@ def set_state_optional():
 
     # The changes need to happen on BOTH the live and audit tables
     for table_name in ('entity', 'entity_audit'):
-        op.alter_column(table_name, 'state', nullable=True, server_default=None)
+        op.alter_column(
+            table_name,
+            'state',
+            nullable=True,
+            server_default=None)
 
 
 def remove_outdated_states():
@@ -62,4 +66,3 @@ def remove_outdated_states():
             .where(table.c.state.in_(
                 map(op.inline_literal, ['inline', 'error', 'inaccurate'])))
             .values(state=op.inline_literal(None)))
-

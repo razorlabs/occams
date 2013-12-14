@@ -45,26 +45,40 @@ def create_section_table():
     # create common attributes
     for name in (table_name, audit_name):
         op.create_table(name,
-            sa.Column('id', sa.Integer,
-                primary_key=True, autoincrement=True, nullable=False),
-            sa.Column('schema_id', sa.Integer, nullable=False),
-            sa.Column('name', sa.Unicode, nullable=False),
-            sa.Column('title', sa.Unicode, nullable=False),
-            sa.Column('description', sa.Unicode),
-            sa.Column('order', sa.Integer, nullable=False),
-            sa.Column('create_user_id', sa.Integer, nullable=False),
-            sa.Column('modify_user_id', sa.Integer, nullable=False),
-            sa.Column('create_date', sa.DateTime,
-                server_default=sql.func.now(), nullable=False),
-            sa.Column('modify_date', sa.DateTime,
-                server_default=sql.func.now(), nullable=False),
-            sa.Column('revision', sa.Integer,
-                primary_key=('audit' in name), nullable=False),
-            sa.Index('ix_{0}_create_user_id'.format(name), 'create_user_id'),
-            sa.Index('ix_{0}_modify_user_id'.format(name), 'modify_user_id'),
-            # Both main/audit tables keep the same check constraint names
-            sa.CheckConstraint('create_date <= modify_date',
-                name='ck_{0}_valid_timeline'.format(table_name)))
+                        sa.Column('id', sa.Integer,
+                                  primary_key=True, autoincrement=True, nullable=False),
+                        sa.Column('schema_id', sa.Integer, nullable=False),
+                        sa.Column('name', sa.Unicode, nullable=False),
+                        sa.Column('title', sa.Unicode, nullable=False),
+                        sa.Column('description', sa.Unicode),
+                        sa.Column('order', sa.Integer, nullable=False),
+                        sa.Column(
+                            'create_user_id',
+                            sa.Integer,
+                            nullable=False),
+                        sa.Column(
+                            'modify_user_id',
+                            sa.Integer,
+                            nullable=False),
+                        sa.Column('create_date', sa.DateTime,
+                                  server_default=sql.func.now(
+                                  ), nullable=False),
+                        sa.Column('modify_date', sa.DateTime,
+                                  server_default=sql.func.now(
+                                  ), nullable=False),
+                        sa.Column('revision', sa.Integer,
+                                  primary_key=(
+                                      'audit' in name), nullable=False),
+                        sa.Index(
+                            'ix_{0}_create_user_id'.format(name),
+                            'create_user_id'),
+                        sa.Index(
+                            'ix_{0}_modify_user_id'.format(name),
+                            'modify_user_id'),
+                        # Both main/audit tables keep the same check constraint
+                        # names
+                        sa.CheckConstraint('create_date <= modify_date',
+                                           name='ck_{0}_valid_timeline'.format(table_name)))
 
     op.create_unique_constraint(
         'uq_{0}_name'.format(table_name), table_name, ['schema_id', 'name'])
@@ -103,34 +117,34 @@ def migrate_subschemata():
     blame = op.get_context().opts['blame']
 
     section_table = sql.table('section',
-        sql.column('id'),
-        sql.column('schema_id'),
-        sql.column('name'),
-        sql.column('title'),
-        sql.column('description'),
-        sql.column('order'),
-        sql.column('create_user_id'),
-        sql.column('modify_user_id'),
-        sql.column('revision'))
+                              sql.column('id'),
+                              sql.column('schema_id'),
+                              sql.column('name'),
+                              sql.column('title'),
+                              sql.column('description'),
+                              sql.column('order'),
+                              sql.column('create_user_id'),
+                              sql.column('modify_user_id'),
+                              sql.column('revision'))
 
     schema_table = sql.table('schema',
-        sql.column('id'),
-        sql.column('name'),
-        sql.column('title'),
-        sql.column('description'),
-        sql.column('is_inline'))
+                             sql.column('id'),
+                             sql.column('name'),
+                             sql.column('title'),
+                             sql.column('description'),
+                             sql.column('is_inline'))
 
     attribute_table = sql.table('attribute',
-        sql.column('schema_id'),
-        sql.column('name'),
-        sql.column('title'),
-        sql.column('description'),
-        sql.column('object_schema_id'),
-        sql.column('order'),
-        sql.column('type'),
-        sql.column('section_id'),
-        sql.column('modify_user_id'),
-        sql.column('modify_date'))
+                                sql.column('schema_id'),
+                                sql.column('name'),
+                                sql.column('title'),
+                                sql.column('description'),
+                                sql.column('object_schema_id'),
+                                sql.column('order'),
+                                sql.column('type'),
+                                sql.column('section_id'),
+                                sql.column('modify_user_id'),
+                                sql.column('modify_date'))
 
     sub_attribute_query = (
         sa.select([
@@ -147,7 +161,7 @@ def migrate_subschemata():
 
     op.execute(
         section_table.insert()
-        .from_select(sub_attribute_query.columns,  sub_attribute_query))
+        .from_select(sub_attribute_query.columns, sub_attribute_query))
 
     parent_attribute_table = sql.alias(attribute_table, name='parent')
 
@@ -160,11 +174,13 @@ def migrate_subschemata():
             & (parent_attribute_table.c.name == section_table.c.name))
         .values(
             schema_id=parent_attribute_table.c.schema_id,
-            name=parent_attribute_table.c.name + op.inline_literal('_') + attribute_table.c.name,
+            name=parent_attribute_table.c.name +
+            op.inline_literal('_') + attribute_table.c.name,
             section_id=section_table.c.id,
             # Mainintain distinct order as much as possible
             # to prevent constraint errors
-            order=(section_table.c.id * op.inline_literal(1000)) + attribute_table.c.order,
+            order=(section_table.c.id * op.inline_literal(1000)) +
+            attribute_table.c.order,
             modify_user_id=query_user_id(blame),
             modify_date=sql.func.now()))
 
@@ -209,15 +225,22 @@ def migrate_subobjects():
 
     blame = op.get_context().opts['blame']
 
-    schema_table = sql.table('schema', sql.column('id'), sql.column('type'), sql.column('is_inline'))
+    schema_table = sql.table(
+        'schema',
+        sql.column('id'),
+        sql.column('type'),
+        sql.column('is_inline'))
     attribute_table = sql.table('attribute', sql.column('object_schema_id'))
-    object_table = sql.table('object', sql.column('entity_id'), sql.column('value'))
+    object_table = sql.table(
+        'object',
+        sql.column('entity_id'),
+        sql.column('value'))
 
     for typename in ('decimal', 'datetime', 'integer', 'string', 'text', 'blob', 'choice'):
         table = sql.table('value_' + typename,
-            sql.column('entity_id'),
-            sql.column('modify_user_id'),
-            sql.column('modify_date'))
+                          sql.column('entity_id'),
+                          sql.column('modify_user_id'),
+                          sql.column('modify_date'))
 
         op.execute(
             table.update()
@@ -243,7 +266,8 @@ def migrate_subobjects():
     # Delete all object-atributes
     for name in ('attribute', 'attribute_audit'):
         table = sql.table(name, sql.column('type'))
-        op.execute(table.delete().where(table.c.type == op.inline_literal('object')))
+        op.execute(table.delete()
+                   .where(table.c.type == op.inline_literal('object')))
 
     op.drop_table('object')
     op.drop_table('object_audit')
@@ -258,7 +282,8 @@ def finalize_section():
 
     # Delete unmatched attributes, these are likely orphans
     # (sub attrinbtes with no parent attribtues
-    op.execute(attribute_table.delete().where(attribute_table.c.section_id == sa.sql.null()))
+    op.execute(attribute_table.delete()
+               .where(attribute_table.c.section_id == sa.sql.null()))
 
     # Finally lock it
     op.alter_column('attribute', 'section_id', nullable=False)
@@ -288,5 +313,4 @@ def remove_object_type():
         'text']
 
     alter_enum('attribute_type', types,
-        ['attribute.type', 'attribute_audit.type'])
-
+               ['attribute.type', 'attribute_audit.type'])

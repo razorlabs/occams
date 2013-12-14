@@ -47,11 +47,10 @@ def query_user_id(user):
     Returns a subquery for the specified user.
     """
     user_table = sql.table('user',
-        sql.column('id', sa.Integer()),
-        sql.column('key', sa.String()))
+                           sql.column('id', sa.Integer()),
+                           sql.column('key', sa.String()))
 
     return (
         sa.select([user_table.c.id])
         .where(user_table.c.key == op.inline_literal(user))
         .as_scalar())
-
