@@ -84,11 +84,11 @@ setup(
     namespace_packages=['occams'],
     include_package_data=True,
     zip_safe=False,
-    test_suite='occams.clinical',
+    test_suite='nose.collector',
     install_requires=requires,
     extras_require=dict(
         postgresql=['psycopg2', 'psycogreen'],
-        test=['nose', 'coverage'],
+        test=['nose', 'coverage', 'rednose', 'WebTest'],
         ),
     entry_points="""\
     [paste.app_factory]
