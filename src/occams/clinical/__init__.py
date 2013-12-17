@@ -1,7 +1,6 @@
 import logging
 from pkg_resources import resource_filename
 
-
 import deform
 from redis import StrictRedis
 from pyramid.authentication import AuthTktAuthenticationPolicy
@@ -95,8 +94,9 @@ def main(global_config, **settings):
 
     # Wrap has_permission to make it less cumbersome
     # TODO: This is built-in to pyramid 1.5, remove when we switch
-    config.add_request_method(
-        lambda r, n: has_permission(n, r.context, r),
-        'has_permission')
+    def has_permission_wrap(request, name):
+        return has_permission(name, request.context, request)
+
+    config.add_request_method(has_permission_wrap, 'has_permission')
 
     return config.make_wsgi_app()

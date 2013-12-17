@@ -9,11 +9,9 @@ from pyramid.httpexceptions import HTTPFound, HTTPNotFound
 from pyramid.response import FileResponse
 from pyramid.view import view_config
 from sqlalchemy import func, orm, sql
-import transaction
-
-from occams.datastore import model as datastore
 
 from occams.clinical import _, log, models, Session, tasks
+from occams.datastore import model as datastore
 
 
 @colander.deferred
@@ -93,7 +91,7 @@ def list_(request):
 
     schemata_query = (
         Session.query(datastore.Schema)
-        .filter(datastore.Schema.publish_date is not None)
+        .filter(datastore.Schema.publish_date != None)
         .order_by(
             datastore.Schema.name.asc(),
             datastore.Schema.publish_date.desc()))
