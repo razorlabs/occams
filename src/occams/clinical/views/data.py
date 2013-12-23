@@ -1,4 +1,3 @@
-from datetime import datetime, timedelta
 import os.path
 from pkg_resources import resource_filename
 
@@ -8,9 +7,9 @@ from pyramid_deform import CSRFSchema
 from pyramid.httpexceptions import HTTPFound, HTTPNotFound
 from pyramid.response import FileResponse
 from pyramid.view import view_config
-from sqlalchemy import func, orm, sql
+from sqlalchemy import orm, null
 
-from occams.clinical import _, log, models, Session, tasks
+from occams.clinical import _, models, Session, tasks
 from occams.datastore import model as datastore
 
 
@@ -91,7 +90,14 @@ def list_(request):
 
     schemata_query = (
         Session.query(datastore.Schema)
-        .filter(datastore.Schema.publish_date != None)
+        .filter(datastore.Schema.publish_date != null())
+        .order_by(
+            datastore.Schema.name.asc(),
+            datastore.Schema.publish_date.desc()))
+
+    schemata_query = (
+        Session.query(datastore.Schema)
+        .filter(datastore.Schema.publish_date != null())
         .order_by(
             datastore.Schema.name.asc(),
             datastore.Schema.publish_date.desc()))
@@ -113,8 +119,8 @@ def download(request):
     """
     Lists current export jobs.
 
-    This is where the user can view the progress of the exports and download them
-    at a later time.
+    This is where the user can view the progress of the exports and download
+    them at a later time.
     """
     layout = request.layout_manager.layout
     layout.title = _(u'Data')
@@ -157,5 +163,6 @@ def attachement(request):
     path = os.path.join(export_dir, '%s.zip' % export.id)
 
     response = FileResponse(path)
-    response.content_disposition = 'attachment;filename=clinical-%d.zip' % export.id
+    response.content_disposition = (
+        'attachment;filename=clinical-%d.zip' % export.id)
     return response
