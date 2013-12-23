@@ -8,9 +8,10 @@ from decimal import Decimal
 import datetime
 import re
 
-from sqlalchemy import text
+from sqlalchemy import text, select, exists
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.orderinglist import ordering_list
+from sqlalchemy.ext import hybrid
 from sqlalchemy.orm import relationship as Relationship
 from sqlalchemy.orm import synonym as Synonym
 from sqlalchemy.orm import backref
@@ -171,6 +172,13 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
     retract_date = Column(Date)
 
     is_association = Column(Boolean)
+
+    @hybrid.hybrid_property
+    def has_private(self):
+        for attribute in self.attributes.itervalues():
+            if attribute.is_private:
+                return True
+        return False
 
     @declared_attr
     def __table_args__(cls):
