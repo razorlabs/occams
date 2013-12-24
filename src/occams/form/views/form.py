@@ -8,12 +8,11 @@ from pyramid.httpexceptions import HTTPFound, HTTPNotFound
 from pyramid.view import view_config
 from pyramid_deform import CSRFSchema
 from pyramid_layout.panel import panel_config
-from sqlalchemy import func, orm, sql
+from sqlalchemy import func, orm, sql, null
 
 from occams.datastore import model as datastore
 
-from .. import _, Session, Logger
-from . import widgets
+from occams.form import _, Session, log, widgets
 
 
 def is_unique_name(name):
@@ -45,7 +44,7 @@ class CreateFormSchema(colander.MappingSchema):
         colander.String(),
         title=_(u'Form Title'),
         description=_(
-            u'The human readable name that users will see when entering data.'),
+            u'The human readable name users will see when entering data.'),
         preparer=[
             lambda v: v.replace('\n', '') if v else v],
         validator=colander.Length(3, 32))
@@ -63,12 +62,8 @@ class CreateFormSchema(colander.MappingSchema):
 @view_config(
     route_name='home',
     renderer='occams.form:templates/form/list.pt',
+    permission='form_view',
     layout='web_layout')
-@view_config(
-    route_name='home',
-    xhr=True,
-    renderer='occams.form:templates/form/list.pt',
-    layout='ajax_layout')
 def list_(request):
     """
     Lists all forms used by instance.
@@ -87,6 +82,7 @@ def list_(request):
     route_name='form_add',
     renderer='occams.form:templates/form/add.pt',
     xhr=True,
+    permission='form_add',
     layout='ajax_layout')
 def add(request):
     """
@@ -122,6 +118,7 @@ def add(request):
 @view_config(
     route_name='form_view',
     renderer='occams.form:templates/form/view.pt',
+    permission='form_view',
     layout='web_layout')
 def view(request):
     """
@@ -166,7 +163,7 @@ def query_form(session, name):
             session.query(datastore.Schema.title)
             .filter(datastore.Schema.name == OuterSchema.name)
             .order_by(
-                (datastore.Schema.publish_date != None).desc(),
+                (datastore.Schema.publish_date != null()).desc(),
                 datastore.Schema.publish_date.desc())
             .limit(1)
             .correlate(OuterSchema)
@@ -204,7 +201,7 @@ def query_names(session):
             session.query(datastore.Schema.title)
             .filter(datastore.Schema.name == OuterSchema.name)
             .order_by(
-                (datastore.Schema.publish_date != None).desc(),
+                (datastore.Schema.publish_date != null()).desc(),
                 datastore.Schema.publish_date.desc())
             .limit(1)
             .correlate(OuterSchema)
@@ -225,7 +222,7 @@ def query_names(session):
         .add_column(
             session.query(func.count())
             .filter(datastore.Schema.name == OuterSchema.name)
-            .filter(datastore.Schema.publish_date != None)
+            .filter(datastore.Schema.publish_date != null())
             .correlate(OuterSchema)
             .as_scalar()
             .label('version_count'))
@@ -240,8 +237,6 @@ def query_versions(session, name):
     OuterSchema = orm.aliased(datastore.Schema, name='_summary_schema')
     CreateUser = orm.aliased(datastore.User, name='_create_user')
     ModifyUser = orm.aliased(datastore.User, name='_modify_user')
-    SubSchema = orm.aliased(datastore.Schema, name='_sub_schema')
-    SubAttribute = orm.aliased(datastore.Attribute, name='_sub_attribute')
     query = (
         session.query(
             OuterSchema.id.label('id'),
@@ -258,7 +253,7 @@ def query_versions(session, name):
             session.query(func.count())
             .select_from(datastore.Schema)
             .outerjoin(datastore.Attribute,
-                datastore.Attribute.schema_id == datastore.Schema.id)
+                       datastore.Attribute.schema_id == datastore.Schema.id)
             .filter(datastore.Schema.id == OuterSchema.id)
             .correlate(OuterSchema)
             .as_scalar()
@@ -274,7 +269,6 @@ def query_versions(session, name):
         .filter(OuterSchema.name == sql.bindparam('name'))
         .order_by(
             OuterSchema.title.asc(),
-            (OuterSchema.publish_date != None).asc(),
+            (OuterSchema.publish_date != null()).asc(),
             OuterSchema.publish_date.desc()))
     return query.params(name=name)
-

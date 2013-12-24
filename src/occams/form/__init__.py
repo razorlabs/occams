@@ -1,46 +1,52 @@
 import logging
-from pkg_resources import resource_filename
+import pkg_resources
 
-import deform
-from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.config import Configurator
 from pyramid.i18n import TranslationStringFactory
+from pyramid.path import DottedNameResolver
+from pyramid_who.whov2 import WhoV2AuthenticationPolicy
+from repoze.who.config import make_middleware_with_config
 from sqlalchemy import orm, engine_from_config
-from zope.sqlalchemy import ZopeTransactionExtension
 
 from occams.datastore.model import DataStoreSession
 
-from .assets import config_assets
-from .routes import config_routes
-
-__version__ = '2.0.0'
+__version__ = pkg_resources.require(__name__)[0].version
 
 _ = TranslationStringFactory(__name__)
 
-Logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 Session = orm.scoped_session(orm.sessionmaker(
     user=lambda: 'ghost@shell',
-    class_=DataStoreSession,
-    extension=ZopeTransactionExtension()))
+    class_=DataStoreSession))
 
 
 def main(global_config, **settings):
     """
     This function returns a Pyramid WSGI application.
     """
-    config = Configurator(settings=settings)
+    config = Configurator(
+        settings=settings,
+        root_factory='occams.form.auth.RootFactory',
+        authentication_policy=WhoV2AuthenticationPolicy(
+            settings.get('who.config_file'),
+            settings.get('who.auth_tkt'),
+            callback=DottedNameResolver().maybe_resolve(
+                settings.get('who.callback'))),
+        authorization_policy=ACLAuthorizationPolicy())
 
     Session.configure(bind=engine_from_config(settings, 'sqlalchemy.'))
 
-    config.include('pyramid_rewrite')
-    config.add_rewrite_rule(r'/(?P<path>.*)/', r'/%(path)s')
+    config.include('occams.form.assets')
+    config.include('occams.form.routes')
+    config.include('occams.form.widgets')
+    config.commit()
 
-    config_assets(config)
-    config_routes(config).scan('.views')
+    app = config.make_wsgi_app()
+    app = make_middleware_with_config(
+        app,
+        global_config,
+        settings.get('who.config_file'))
 
-    return config.make_wsgi_app()
-
-
-
+    return app

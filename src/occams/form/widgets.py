@@ -46,4 +46,6 @@ class FormSelectWidget(deform.widget.Widget):
         pass
 
 
-
+def includeme(config):
+    deform.Form.set_default_renderer(DEFAULT_RENDERER)
+    return config

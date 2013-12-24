@@ -6,7 +6,6 @@ import datetime
 from pkg_resources import resource_filename
 
 import colander
-import deform
 import deform.widget
 
 from occams.datastore import model as datastore
@@ -73,16 +72,3 @@ def schema2colander(schema):
             subnode.add(field)
 
     return node
-
-
-class Form(deform.Form):
-    """
-    """
-
-    default_renderer = WEB_FORM_RENDERER
-
-    def __init__(self, *args, **kw):
-        if isinstance(kw['schema'], datastore.Schema):
-            kw['schema'] = schema2colander(kw['schema'])
-        super(Form, self).__init__(*args, **kw)
-

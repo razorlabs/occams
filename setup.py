@@ -1,51 +1,74 @@
 import os
-import re
+from subprocess import Popen, PIPE
 from setuptools import find_packages, setup
 import sys
 
-
-here = os.path.abspath(os.path.dirname(__file__))
-read = lambda *args: open(os.path.join(*args)).read()
-
-README = read(here, 'README.rst')
-CHANGES = read(here, 'CHANGES.rst')
-
-version = '1.0.0'
+HERE = os.path.abspath(os.path.dirname(__file__))
+README = open(os.path.join(HERE, 'README.rst')).read()
+CHANGES = open(os.path.join(HERE, 'CHANGES.rst')).read()
 
 REQUIRES = [
+    'alembic',
+    'beaker',
     'colander',
+    'configobj',
+    'cssmin',
     'deform',
+    'jsmin',
     'pyramid',
-    'SQLAlchemy',
-    'transaction',
-    'pyramid_beaker',
+    'pyramid_debugtoolbar',
     'pyramid_deform',
     'pyramid_mailer',
     'pyramid_layout',
     'pyramid_tm',
-    'pyramid_debugtoolbar',
     'pyramid_rewrite',
     'pyramid_webassets',
-    # Not Python 3 compatible
-    #'xlutils',
-    'zope.sqlalchemy',
-    'waitress',
+    'pyramid_who',
+    'SQLAlchemy',
     'webhelpers',
+
     'occams.datastore',
-    ]
+]
 
 EXTRAS = {
     'postgresql': ['psycopg2'],
-    'test': [ 'nose', 'rudolf', 'WebTest', 'coverage', ]
-    }
+    'test': ['nose', 'WebTest', 'coverage']
+}
 
-if sys.version_info < (2, 7):
-    REQUIRES += ['argparse',]
+
+def get_version():
+    version_file = os.path.join(HERE, 'VERSION')
+
+    # read fallback file
+    try:
+        with open(version_file, 'r+') as fp:
+            version_txt = fp.read().strip()
+    except:
+        version_txt = None
+
+    # read git version (if available)
+    try:
+        version_git = (
+            Popen(['git', 'describe'], stdout=PIPE, stderr=PIPE, cwd=HERE)
+            .communicate()[0]
+            .strip()
+            .decode(sys.getdefaultencoding()))
+    except:
+        version_git = None
+
+    version = version_git or version_txt or '0.0.0'
+
+    # update fallback file if necessary
+    if version != version_txt:
+        with open(version_file, 'w') as fp:
+            fp.write(version)
+
+    return version
 
 
 setup(
     name='occams.form',
-    version=version,
+    version=get_version(),
     description='A web application for managing dynamic forms',
     classifiers=[
         'Programming Language :: Python',
@@ -58,14 +81,14 @@ setup(
         'Topic :: Scientific/Engineering :: Medical Science Apps.',
         'Topic :: Software Development :: Libraries',
         'Topic :: Utilities',
-        ],
-    keywords='OCCAMS datastore database eav sqlalchemy relational clinical pyramid',
+    ],
+    keywords='OCCAMS datastore database eav',
     author='UCSD BIT Core Team',
     author_email='bitcore@ucsd.edu',
-    url='https://bitbutcket.org/ucsdbitcore/occams.clinical',
+    url='https://bitbutcket.org/ucsdbitcore/occams.form',
     license='GPL',
     packages=find_packages('src', exclude=['ez_setup']),
-    package_dir={'':'src'},
+    package_dir={'': 'src'},
     namespace_packages=['occams'],
     include_package_data=True,
     zip_safe=False,
@@ -76,7 +99,6 @@ setup(
     [paste.app_factory]
     main = occams.form:main
     [console_scripts]
-    initialize_form_db = occams.form.scripts.initializedb:main
+    of_init = occams.form.scripts.initializedb:main
     """,
-    )
-
+)

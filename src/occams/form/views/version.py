@@ -10,11 +10,8 @@ from pyramid_deform import CSRFSchema
 from pyramid_layout.panel import panel_config
 from sqlalchemy import func, orm, sql
 
+from occams.form import _, Session, log, widgets
 from occams.datastore import model as datastore
-
-from .. import _, Session, Logger
-from ..form import Form
-from . import widgets
 
 
 @view_config(

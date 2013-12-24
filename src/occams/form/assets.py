@@ -4,7 +4,7 @@ from webassets import Bundle
 from webassets.loaders import PythonLoader
 
 
-def config_assets(config):
+def includeme(config):
     """
     Loads web assets
     """
@@ -70,4 +70,3 @@ default_js = Bundle(
     deform_js,
     app_js,
     output='gen/default.%(version)s.js')
-

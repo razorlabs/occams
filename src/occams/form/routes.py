@@ -1,20 +1,17 @@
 import datetime
 
 
-def config_routes(config):
+def includeme(config):
     """
     Helper method to configure available routes for the application
     """
+    #config.include('pyramid_rewrite')
+    #config.add_rewrite_rule(r'/(?P<path>.*)/', r'/%(path)s')
+
     str_to_version = versions('version')
     config.add_static_view('static', 'static', cache_max_age=3600)
-    config.add_static_view('static/deform', 'deform:static', cache_max_age=3600)
 
     config.add_route('home', '/')
-    config.add_route('about', '/about')
-    config.add_route('contact', '/contact')
-
-    config.add_route('account_login', '/login')
-    config.add_route('account_logout', '/logout')
 
     config.add_route('category_add', '/categories/add')
     config.add_route('category_list', '/categories')
@@ -51,6 +48,9 @@ def config_routes(config):
     config.add_route('field_delete', '/{form_name}/{version}/{group_name}/{field_name}/delete',
         custom_predicates=(str_to_version,))
 
+    config.scan('occams.form.layouts')
+    config.scan('occams.form.views')
+
     return config
 
 
@@ -70,4 +70,3 @@ def versions(*segment_names):
                 return False
         return True
     return predicate
-

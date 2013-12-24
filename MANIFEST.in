@@ -1,2 +1,2 @@
-include *.txt *.ini *.cfg *.rst
-recursive-include occamsclinical *.ico *.png *.css *.gif *.jpg *.pt *.txt *.mak *.mako *.js *.html *.xml
+include *.txt *.ini *.cfg *.rst VERSION
+recursive-include occams.form *.ico *.png *.css *.gif *.jpg *.pt *.txt *.mak *.mako *.js *.html *.xml
