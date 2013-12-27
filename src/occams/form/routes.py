@@ -1,12 +1,15 @@
 import datetime
 
+from occams.form import log
 
 def includeme(config):
     """
     Helper method to configure available routes for the application
     """
-    #config.include('pyramid_rewrite')
-    #config.add_rewrite_rule(r'/(?P<path>.*)/', r'/%(path)s')
+    log.debug('Registering views...')
+
+    config.include('pyramid_rewrite')
+    config.add_rewrite_rule(r'/(?P<path>.*)/', r'/%(path)s')
 
     str_to_version = versions('version')
     config.add_static_view('static', 'static', cache_max_age=3600)
@@ -55,8 +58,8 @@ def includeme(config):
         custom_predicates=(str_to_version,))
 
     config.scan('occams.form.views')
-
-    return config
+    config.scan('occams.form.layouts')
+    config.scan('occams.form.panels')
 
 
 def versions(*segment_names):

@@ -53,7 +53,8 @@
             title="Configure"
             ><span class="glyphicon glyphicon-cog"></span></a>
         </li>
-        <li class="dropdown">
+        <li class="dropdown"
+            tal:condition="request.apps">
           <a href="#apps"
             role="button"
             class="dropdown-toggle"
@@ -65,13 +66,18 @@
             title="Services"
             ><span class="glyphicon glyphicon-th"></span><span class="caret"></span></a>
           <ul class="dropdown-menu" role="menu" aria-labelledby="Apps Menu">
-            <li role="presentation" class="dropdown-header">OCCAMS</li>
-            <li role="presentation"><a href="#" role="menuitem">Form</a></li>
-            <li role="presentation"><a href="#" role="menuitem">Lab</a></li>
-            <li role="presentation"><a href="#" role="menuitem">Roster</a></li>
-            <li role="presentation" class="divider"></li>
-            <li role="presentation" class="dropdown-header">CNICS</li>
-            <li role="presentation"><a href="#" role="menuitem">HIV Sequence</a></li>
+            <tal:suites repeat="suite request.apps">
+              <li role="presentation" class="dropdown-header">
+                ${suite['title']}
+              </li>
+              <tal:apps repeat="app suite['apps']">
+                <li role="presentation">
+                  <a href="${app['url']}" role="menuitem">${app['title']}</a>
+                </li>
+              </tal:apps>
+              <li role="presentation" class="divider"
+                  tal:condition="not:repeat.suite.end"></li>
+            </tal:suites>
           </ul>
         <li>
           <a href="${request.route_path('account_logout')}"

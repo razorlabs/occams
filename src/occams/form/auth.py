@@ -8,6 +8,8 @@ from pyramid.security import (
     has_permission, Allow, Authenticated, ALL_PERMISSIONS)
 from zope.interface import directlyProvides
 
+from occams.form import log
+
 
 def challenge_decider(environ, status, headers):
     """
@@ -53,6 +55,7 @@ def groupfinder(identity, request):
 
 
 def includeme(config):
+    log.debug('Initializing auth helpers...')
     user = User('foobatio@localhost', 'Foo', 'Bario')
     config.add_request_method(lambda r: user, 'user', reify=True)
 
@@ -62,5 +65,3 @@ def includeme(config):
         return has_permission(name, request.context, request)
 
     config.add_request_method(has_permission_wrap, 'has_permission')
-
-    return config

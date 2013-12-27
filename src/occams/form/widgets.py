@@ -3,6 +3,8 @@ from pkg_resources import resource_filename
 import colander
 import deform.widget
 
+from occams.form import log
+
 
 # Define application-local renderers so we don't
 # affect the entire python environment.
@@ -47,5 +49,5 @@ class FormSelectWidget(deform.widget.Widget):
 
 
 def includeme(config):
+    log.debug('Overriding deform templates...')
     deform.Form.set_default_renderer(DEFAULT_RENDERER)
-    return config

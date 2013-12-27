@@ -1,10 +1,14 @@
 from webassets import Bundle
 
+from occams.form import log
+
 
 def includeme(config):
     """
     Loads web assets
     """
+    log.debug('Initializing assets...')
+
     config.add_webasset('default-js', Bundle(
         Bundle('libs/jquery.min.js'),
         Bundle('libs/jquery-ui.min.js'),
@@ -32,8 +36,3 @@ def includeme(config):
             depends='styles/*.less',
             output='gen/main.%(version)s.min.css'),
         output='gen/default.%(version)s.css'))
-
-    config.scan('occams.form.layouts')
-    config.scan('occams.form.panels')
-
-    return config
