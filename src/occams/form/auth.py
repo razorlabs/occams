@@ -4,7 +4,8 @@ All permissions are declared here for easier overview
 """
 
 from repoze.who.interfaces import IChallengeDecider
-from pyramid.security import Allow, Authenticated, ALL_PERMISSIONS
+from pyramid.security import (
+    has_permission, Allow, Authenticated, ALL_PERMISSIONS)
 from zope.interface import directlyProvides
 
 
@@ -34,6 +35,10 @@ class User(object):
         self.first_name = first_name
         self.last_name = last_name
 
+    @property
+    def fullname(self):
+        return self.first_name + ' ' + self.last_name
+
 
 def pydb2user(result):
     return User(*result[0])
@@ -45,3 +50,17 @@ def ldap2user(result):
 
 def groupfinder(identity, request):
     return ['admin']
+
+
+def includeme(config):
+    user = User('foobatio@localhost', 'Foo', 'Bario')
+    config.add_request_method(lambda r: user, 'user', reify=True)
+
+    # Wrap has_permission to make it less cumbersome
+    # TODO: This is built-in to pyramid 1.5, remove when we switch
+    def has_permission_wrap(request, name):
+        return has_permission(name, request.context, request)
+
+    config.add_request_method(has_permission_wrap, 'has_permission')
+
+    return config

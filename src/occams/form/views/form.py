@@ -1,6 +1,3 @@
-import datetime
-import re
-
 import colander
 import deform
 import deform.widget
@@ -11,7 +8,6 @@ from pyramid_layout.panel import panel_config
 from sqlalchemy import func, orm, sql, null
 
 from occams.datastore import model as datastore
-
 from occams.form import _, Session, log, widgets
 
 
@@ -62,15 +58,14 @@ class CreateFormSchema(colander.MappingSchema):
 @view_config(
     route_name='home',
     renderer='occams.form:templates/form/list.pt',
-    permission='form_view',
-    layout='web_layout')
+    permission='form_view')
 def list_(request):
     """
     Lists all forms used by instance.
     """
     layout = request.layout_manager.layout
-    layout.content_title = _(u'Forms')
-    layout.set_toolbar('form_list_toolbar')
+    layout.title = _(u'Forms')
+    #layout.set_toolbar('form_list_toolbar')
     query = query_names(Session)
     return {
         'forms': iter(query),
@@ -118,8 +113,7 @@ def add(request):
 @view_config(
     route_name='form_view',
     renderer='occams.form:templates/form/view.pt',
-    permission='form_view',
-    layout='web_layout')
+    permission='form_view')
 def view(request):
     """
     Displays information about the current publication of the form

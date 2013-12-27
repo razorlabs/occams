@@ -13,6 +13,12 @@ def includeme(config):
 
     config.add_route('home', '/')
 
+    config.add_route('account_login', '/login')
+    config.add_route('account_logout', '/logout')
+    config.add_route('account', '/account')
+
+    config.add_route('workflow_list', '/workflows')
+
     config.add_route('category_add', '/categories/add')
     config.add_route('category_list', '/categories')
     config.add_route('category_view', '/categories/{category_name}')
@@ -48,7 +54,6 @@ def includeme(config):
     config.add_route('field_delete', '/{form_name}/{version}/{group_name}/{field_name}/delete',
         custom_predicates=(str_to_version,))
 
-    config.scan('occams.form.layouts')
     config.scan('occams.form.views')
 
     return config

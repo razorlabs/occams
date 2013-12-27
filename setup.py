@@ -15,8 +15,9 @@ REQUIRES = [
     'cssmin',
     'deform',
     'jsmin',
+    'occams.datastore',
     'pyramid',
-    'pyramid_debugtoolbar',
+    'pyramid_beaker',
     'pyramid_deform',
     'pyramid_mailer',
     'pyramid_layout',
@@ -26,13 +27,13 @@ REQUIRES = [
     'pyramid_who',
     'SQLAlchemy',
     'webhelpers',
-
-    'occams.datastore',
 ]
 
 EXTRAS = {
     'postgresql': ['psycopg2'],
-    'test': ['nose', 'WebTest', 'coverage']
+    'test': [
+        'pyramid_debugtoolbar',
+        'nose', 'WebTest', 'coverage']
 }
 
 

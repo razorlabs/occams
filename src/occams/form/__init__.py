@@ -39,6 +39,7 @@ def main(global_config, **settings):
     Session.configure(bind=engine_from_config(settings, 'sqlalchemy.'))
 
     config.include('occams.form.assets')
+    config.include('occams.form.auth')
     config.include('occams.form.routes')
     config.include('occams.form.widgets')
     config.commit()

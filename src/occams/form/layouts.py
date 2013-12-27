@@ -1,61 +1,47 @@
 from pyramid_layout.layout import layout_config
-from pyramid_layout.panel import panel_config
 
 
 @layout_config(
-    name='web_layout',
-    template='occams.form:/templates/layouts/web.pt')
+    name='',
+    template='occams.form:/templates/layouts/default.pt')
 @layout_config(
     name='ajax_layout',
     template='occams.form:/templates/layouts/ajax.pt')
 class Layout(object):
+
     """
     Master layout for the application
     """
 
+    title = None
+    subtitle = None
+
+    show_header = True
+
+    styles_bundle = 'default-css'
+    scripts_bundle = 'default-js'
+
+    menu = None
+    details = None
+    nav = None
+
     @property
     def scripts(self):
-        return self.request.webassets_env[self.scripts_bundle].urls()
+        return self.request.webassets_env[self.scripts_bundle]
 
     @property
     def styles(self):
-        return self.request.webassets_env[self.styles_bundle].urls()
+        return self.request.webassets_env[self.styles_bundle]
 
     def __init__(self, context, request):
         self.context = context
         self.request = request
 
-        self.content_title = ''
-        self.content_type = ''
+    def set_nav(self, name, *args, **kw):
+        self.nav = (name, args, kw)
 
-        self.styles_bundle = 'default_css'
-        self.scripts_bundle = 'default_js'
+    def set_details(self, name, *args, **kw):
+        self.details = (name, args, kw)
 
-        self.toolbar = None
-
-    def set_toolbar(self, name, *args, **kw):
-        self.toolbar = (name, args, kw)
-
-
-@panel_config(name='toolbar')
-def toolbar(context, request):
-    lm = request.layout_manager
-    panel = lm.layout.toolbar
-    if panel:
-        (name, args, kw) = panel
-        return lm.render_panel(name, *args, **kw)
-    return ''
-
-
-@panel_config(
-    name='global_header',
-    renderer='occams.form:templates/panels/global_header.pt')
-def global_header(context, request):
-    return {}
-
-
-@panel_config(
-    name='global_footer',
-    renderer='occams.form:templates/panels/global_footer.pt')
-def global_footer(context, request):
-    return {}
+    def set_menu(self, name, *args, **kw):
+        self.menu = (name, args, kw)
