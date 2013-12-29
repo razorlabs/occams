@@ -16,6 +16,7 @@
   <label
       tal:condition="
         not (hidden or category == 'structural') and title"
+      class="control-label ${'required' if field.required else ''}"
       title="${title}"
       for="${oid}"
       >${title}</label>

@@ -1,10 +1,8 @@
-form .control-label {
-  font-weight: bold;
-}
-
-form label .req {
+form label.required:after {
   /* Match bootstrap's red */
-  color: #b94a48;
+  color: #e32;
+  content: ' \25A0';
+  vertical-align: super;
 }
 
 /** Default form styling **/
