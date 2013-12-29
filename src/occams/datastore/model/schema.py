@@ -114,11 +114,6 @@ def setChecksum(attribute):
     attribute._checksum = generateChecksum(attribute)
 
 
-def defaultPublishDate(context):
-    if context.current_parameters['state'] == 'published':
-        return datetime.date.today()
-
-
 class Category(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
     implements(ICategory)
 
@@ -167,7 +162,7 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         server_default=ISchema['storage'].default
         )
 
-    publish_date = Column(Date, nullable=True, default=defaultPublishDate)
+    publish_date = Column(Date)
 
     retract_date = Column(Date)
 
