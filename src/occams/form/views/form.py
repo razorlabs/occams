@@ -65,7 +65,7 @@ def list_(request):
     """
     layout = request.layout_manager.layout
     layout.title = _(u'Forms')
-    #layout.set_toolbar('form_list_toolbar')
+    layout.set_menu('form_list_menu')
     query = query_names(Session)
     return {
         'forms': iter(query),
@@ -137,13 +137,6 @@ def view(request):
         'categories': iter(categories),
         'versions_count': versions.count(),
         'versions': iter(versions)}
-
-
-@panel_config(
-    name='form_list_toolbar',
-    renderer='occams.form:templates/form/panels/list_toolbar.pt')
-def list_toolbar(context, request):
-    return {}
 
 
 def query_form(session, name):

@@ -1,0 +1,7 @@
+<div class="pull-right">
+  <button class="btn btn-default modal-trigger"
+      href="${request.current_route_path(_route_name='form_add')}">
+    <span class="glyphicon glyphicon-plus"></span>
+    <span>Create Form</span>
+  </button>
+</div>

@@ -7,6 +7,9 @@ from pyramid_layout.panel import panel_config
 @panel_config(
     name='app_footer',
     renderer='occams.form:templates/panels/app_footer.pt')
+@panel_config(
+    name='form_list_menu',
+    renderer='occams.form:templates/form/panels/list_menu.pt')
 def panel(context, request, **kw):
     return kw
 
