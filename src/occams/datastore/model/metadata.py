@@ -26,8 +26,7 @@ NOW = text('CURRENT_TIMESTAMP')
 
 def updateMetadata(instance, created):
     session = object_session(instance)
-
-    key = session.userCallback()
+    key = session.info['user']
 
     try:
         user = session.query(User).filter_by(key=key).one()
