@@ -2,10 +2,12 @@ import colander
 import deform
 import deform.widget
 from pyramid.httpexceptions import HTTPFound, HTTPNotFound
+from pyramid.response import Response
 from pyramid.view import view_config
 from pyramid_deform import CSRFSchema
 from pyramid_layout.panel import panel_config
 from sqlalchemy import func, orm, sql, null
+import transaction
 
 from occams.datastore import model as datastore
 from occams.form import _, Session, log, widgets
@@ -25,12 +27,8 @@ class CreateFormSchema(colander.MappingSchema):
         colander.String(),
         title=_('Schema Name'),
         description=_(
-            u'The form\'s system name. '
-            u'In SQL parlance this is the \'table\' name. '
-            u'Note that this value is case sensitive and is used in the URL, '
-            u'so choosing a concise and convenient name is encouraged. '
-            u'Also note that this value cannot be changed once the form is '
-            u'published.'),
+            u'The form\'s case-sensitive system name. '
+            u'This name cannot be changed once the form is  published.'),
         validator=colander.All(
             colander.Length(3, 32),
             colander.Regex(r'[a-zA-Z_][a-zA-Z0-9_]+'),
@@ -40,19 +38,10 @@ class CreateFormSchema(colander.MappingSchema):
         colander.String(),
         title=_(u'Form Title'),
         description=_(
-            u'The human readable name users will see when entering data.'),
+            u'The human-readable name users will see when entering data.'),
         preparer=[
             lambda v: v.replace('\n', '') if v else v],
         validator=colander.Length(3, 32))
-
-    # TODO: this is still being worked out
-    copyfrom = colander.SchemaNode(
-        colander.String(),
-        title=_(u'Copy From'),
-        description=_(
-            u'Optionally, you can copy fields from another form into the '
-            u'newly created form'),
-        missing=colander.null)
 
 
 @view_config(
@@ -75,7 +64,7 @@ def list_(request):
 
 @view_config(
     route_name='form_add',
-    renderer='occams.form:templates/form/add.pt',
+    renderer='occams.form:templates/static/form.pt',
     xhr=True,
     permission='form_add',
     layout='ajax_layout')
@@ -85,8 +74,7 @@ def add(request):
     """
     form = deform.Form(
         action=request.current_route_path(),
-        schema=CreateFormSchema(title=_(u'Create Form')),
-        renderer=widgets.AJAX_FORM_RENDERER,
+        schema=CreateFormSchema(title=_(u'Create Form')).bind(request=request),
         buttons=[
             deform.Button(
                 name='cancel',
@@ -97,17 +85,21 @@ def add(request):
                 name='submit',
                 title=_('Create'),
                 css_class='btn btn-primary')])
-    if 'submit' in request.POST:
+    if request.is_xhr:
+        form.widget = widgets.ModalFormWidget()
+    if request.POST:
         try:
             data = form.validate(request.POST.items())
         except deform.ValidationFailure as e:
             request.response.status = '400 Bad Request'
-            return {'form': e}
-        schema = datastore.Schema(name=data['name'], title=['title'])
-        Session.add(schema)
-        request.response.status = '201 Created'
-        return {}
-    return {'form': form}
+            return {'form': e.render()}
+        with transaction.manager:
+            schema = datastore.Schema(name=data['name'], title=data['title'])
+            Session.add(schema)
+            return HTTPFound(
+                location=request.route_path('form_view',
+                                            form_name=schema.name))
+    return {'form': form.render()}
 
 
 @view_config(

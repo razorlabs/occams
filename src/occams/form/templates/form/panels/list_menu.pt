@@ -1,6 +1,10 @@
 <div class="pull-right">
-  <button class="btn btn-default modal-trigger"
-      href="${request.current_route_path(_route_name='form_add')}">
+  <button
+      data-toggle="modal"
+      data-target="#modal"
+      data-remote="${request.current_route_path(_route_name='form_add')}"
+      class="btn btn-default"
+      tal:condition="request.has_permission('form_add')">
     <span class="glyphicon glyphicon-plus"></span>
     <span>Create Form</span>
   </button>

@@ -27,9 +27,9 @@ def includeme(config):
     config.add_route('category_view', '/categories/{category_name}')
     config.add_route('category_delete', '/categories/{category_name}/delete')
 
-    config.add_route('form_add', '/add')
-    config.add_route('form_view', '/{form_name}')
-    config.add_route('form_delete', '/{form_name}/delete')
+    config.add_route('form_add', '/forms/add')
+    config.add_route('form_view', '/forms/{form_name}')
+    config.add_route('form_delete', '/forms/{form_name}/delete')
 
     config.add_route('version_add', '/{form_name}/add')
     config.add_route('version_view', '/{form_name}/{version}',

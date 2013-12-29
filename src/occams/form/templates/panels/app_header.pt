@@ -44,7 +44,7 @@
           tal:define="user request.environ['repoze.who.identity']['properties']|nothing;"
           tal:condition="user">
         <li><a href="${request.route_path('account')}" class="disabled"
-          >${user['first_name']}</a></li>
+          >${user['first_name']|user['email']}</a></li>
         <li>
           <a href="#"
             rel="tooltip"

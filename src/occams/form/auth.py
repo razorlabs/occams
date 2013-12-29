@@ -3,12 +3,16 @@ Permission constants
 All permissions are declared here for easier overview
 """
 
+
 from repoze.who.interfaces import IChallengeDecider
+from pyramid.events import subscriber, NewRequest
 from pyramid.security import (
     has_permission, Allow, Authenticated, ALL_PERMISSIONS)
 from zope.interface import directlyProvides
+import transaction
 
-from occams.form import log
+from occams.form import log, Session
+from occams.datastore import model as datastore
 
 
 def challenge_decider(environ, status, headers):
@@ -25,6 +29,13 @@ directlyProvides(challenge_decider, IChallengeDecider)
 
 
 class RootFactory(object):
+    """
+    Default root that enforces application permissions.
+
+    Client applications with their own principles should define
+    their own ``who.callback`` that maps client groups to application
+    groups.
+    """
 
     __acl__ = [
         (Allow, 'administrator', ALL_PERMISSIONS),
@@ -66,6 +77,27 @@ def groupfinder(identity, request):
     return identity.get('groups', [])
 
 
+@subscriber(NewRequest)
+def track_user(event):
+    """
+    Annotates the database session with the current user.
+    """
+    identity = event.request.environ.get('repoze.who.identity')
+
+    if not identity:
+        return
+
+    login = identity['login']
+
+    if not Session.query(datastore.User).filter_by(key=login).count():
+        with transaction.manager:
+            Session.add(datastore.User(key=login))
+
+    # update the current scoped session's infor attribute
+    session = Session()
+    session.info['user'] = login
+
+
 def includeme(config):
     log.debug('Initializing auth helpers...')
 
@@ -74,3 +106,5 @@ def includeme(config):
     config.add_request_method(
         lambda r, n: has_permission(n, r.context, r),
         'has_permission')
+
+    config.scan('occams.form.auth')

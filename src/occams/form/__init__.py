@@ -12,8 +12,9 @@ from pyramid.path import DottedNameResolver
 from pyramid_who.whov2 import WhoV2AuthenticationPolicy
 from repoze.who.config import make_middleware_with_config
 from sqlalchemy import orm, engine_from_config
+import zope.sqlalchemy
 
-from occams.datastore.model import DataStoreSession
+import occams.datastore.model.events
 
 __version__ = pkg_resources.require(__name__)[0].version
 
@@ -21,9 +22,11 @@ _ = TranslationStringFactory(__name__)
 
 log = logging.getLogger(__name__)
 
+# TODO: use ``register`` intstead when it becomes available
 Session = orm.scoped_session(orm.sessionmaker(
-    user=lambda: 'ghost@shell',
-    class_=DataStoreSession))
+    extension=zope.sqlalchemy.ZopeTransactionExtension()))
+
+occams.datastore.model.events.register(Session)
 
 
 def main(global_config, **settings):

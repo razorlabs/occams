@@ -27,6 +27,7 @@ REQUIRES = [
     'pyramid_who',
     'SQLAlchemy',
     'webhelpers',
+    'zope.sqlalchemy',
 ]
 
 EXTRAS = {
