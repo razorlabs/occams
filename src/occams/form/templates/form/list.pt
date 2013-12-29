@@ -9,9 +9,8 @@
     i18n:domain="occams.form"
     metal:use-macro="main_template">
   <metal:content-slot fill-slot="content-slot">
-    <p class="well" tal:condition="not:forms_count">
-      The system does not contain any forms.
-      <a href="${request.current_route_path(_route_name='form_add')}">Add one.</a>
+    <p class="well well-lg" tal:condition="not:forms_count">
+      No forms have been created yet.
     </p>
     <div tal:condition="forms_count">
       <p tal:condition="python: forms_count > 1">

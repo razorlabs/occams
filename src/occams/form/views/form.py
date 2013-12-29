@@ -43,6 +43,13 @@ class CreateFormSchema(colander.MappingSchema):
             lambda v: v.replace('\n', '') if v else v],
         validator=colander.Length(3, 32))
 
+    description = colander.SchemaNode(
+        colander.String(),
+        title=_(u'Form Description'),
+        missing=None,
+        description=_(u'Brief information about the purpose of the form'),
+        widget=deform.widget.TextAreaWidget())
+
 
 @view_config(
     route_name='home',
@@ -80,7 +87,7 @@ def add(request):
                 name='cancel',
                 title=_('Cancel'),
                 type='button',
-                css_class='btn'),
+                css_class='btn btn-link'),
             deform.Button(
                 name='submit',
                 title=_('Create'),
