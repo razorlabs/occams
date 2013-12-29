@@ -1,8 +1,7 @@
 <nav
     class="navbar navbar-default navbar-static-top"
     role="navigation"
-    i18n:domain="occams.form"
-    tal:define="user request.user|nothing;">
+    i18n:domain="occams.form">
 
   <div class="container">
 
@@ -41,9 +40,11 @@
         </li>
       </ul>
 
-      <ul class="nav navbar-nav navbar-right" tal:condition="user">
+      <ul class="nav navbar-nav navbar-right"
+          tal:define="user request.environ['repoze.who.identity']['properties']|nothing;"
+          tal:condition="user">
         <li><a href="${request.route_path('account')}" class="disabled"
-          >${user.fullname}</a></li>
+          >${user['first_name']}</a></li>
         <li>
           <a href="#"
             rel="tooltip"

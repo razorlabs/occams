@@ -13,55 +13,64 @@ from occams.form import log
 
 def challenge_decider(environ, status, headers):
     """
-    Repoze.who expects 401, but pyramid will raise 403 when FORBIDDEN
+    Backwards-compatibility fix to trigger challenge an authorized user.
+
+    Repoze.who expects a status code of 401 to trigger the challenge UI,
+    but pyramid will only raise 403 when the user has not authenticated.
     """
     return status.startswith('403') or status.startswith('401')
+
+
 directlyProvides(challenge_decider, IChallengeDecider)
 
 
 class RootFactory(object):
 
     __acl__ = [
+        (Allow, 'administrator', ALL_PERMISSIONS),
+        (Allow, 'manager', (
+            'form_add', 'form_edit', 'form_delete',
+            'form_amend', 'form_retract', 'form_publish',
+            'form_export',
+            'workflow_add', 'work_edit', 'workflow_delete',
+            )),
+        (Allow, 'editor', (
+            'form_add', 'form_edit', 'form_delete',
+            'form_export',
+            )),
         (Allow, Authenticated, 'view'),
-        (Allow, 'admin', ALL_PERMISSIONS)
         ]
 
     def __init__(self, request):
         self.request = request
 
 
-class User(object):
-
-    def __init__(self, email, first_name, last_name):
-        self.email = email
-        self.first_name = first_name
-        self.last_name = last_name
-
-    @property
-    def fullname(self):
-        return self.first_name + ' ' + self.last_name
+def list2properties(results):
+    return dict(zip(('email', 'first_name', 'last_name'), results[0]))
 
 
-def pydb2user(result):
-    return User(*result[0])
+def list2groups(results):
+    return [name for (name,) in results]
 
 
 def ldap2user(result):
-    return User(result['mail'], result['cn'], result['sn'])
+    return {
+        'email': result['mail'],
+        'first_name': result['cn'],
+        'last_name': result['sn']}
 
 
 def groupfinder(identity, request):
-    return ['admin']
+    if 'groups' not in identity:
+        log.warn('groups has not been set in the repoze identity!')
+    return identity.get('groups', [])
 
 
 def includeme(config):
     log.debug('Initializing auth helpers...')
-    user = User('foobatio@localhost', 'Foo', 'Bario')
-    config.add_request_method(lambda r: user, 'user', reify=True)
 
     # Wrap has_permission to make it less cumbersome
     # TODO: This is built-in to pyramid 1.5, remove when we switch
-    def has_permission_wrap(request, name):
-        return has_permission(name, request.context, request)
-
-    config.add_request_method(has_permission_wrap, 'has_permission')
+    config.add_request_method(
+        lambda r, n: has_permission(n, r.context, r),
+        'has_permission')

@@ -78,9 +78,13 @@ def make_app_listing(file_name):
     Returns:
     A listing of dictionaries.
     """
+    listing = []
+
+    if not file_name:
+        return listing
+
     config = configparser.SafeConfigParser()
     config.read(file_name)
-    listing = []
 
     if not config.has_section('main'):
         return listing
@@ -92,7 +96,7 @@ def make_app_listing(file_name):
             'title': config.get(suite_section, 'title'),
             'apps': [],
             }
-        for app_name in config.get(suite_section, 'apps', '').split():
+        for app_name in config.get(suite_section, 'apps').split():
             app_section = 'app:' + app_name
             app = {
                 'name': app_name,
