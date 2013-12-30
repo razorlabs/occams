@@ -1,16 +1,14 @@
 import colander
 import deform
 import deform.widget
-from pyramid.httpexceptions import HTTPFound, HTTPNotFound
-from pyramid.response import Response
+from pyramid import httpexceptions as codes
 from pyramid.view import view_config
 from pyramid_deform import CSRFSchema
-from pyramid_layout.panel import panel_config
 from sqlalchemy import func, orm, sql, null
 import transaction
 
 from occams.datastore import model as datastore
-from occams.form import _, Session, log, widgets
+from occams.form import _, Session, widgets
 
 
 def is_unique_name(name):
@@ -21,7 +19,7 @@ def is_unique_name(name):
     return not Session.query(name_exists).scalar()
 
 
-class CreateFormSchema(colander.MappingSchema):
+class CreateFormSchema(CSRFSchema):
 
     name = colander.SchemaNode(
         colander.String(),
@@ -87,13 +85,12 @@ def add(request):
                 name='cancel',
                 title=_('Cancel'),
                 type='button',
-                css_class='btn btn-link'),
+                css_class='btn btn-link js-modal-dismiss'),
             deform.Button(
                 name='submit',
                 title=_('Create'),
                 css_class='btn btn-primary')])
-    if request.is_xhr:
-        form.widget = widgets.ModalFormWidget()
+    form.widget = widgets.ModalFormWidget()
     if request.POST:
         try:
             data = form.validate(request.POST.items())
@@ -103,7 +100,9 @@ def add(request):
         with transaction.manager:
             schema = datastore.Schema(name=data['name'], title=data['title'])
             Session.add(schema)
-            return HTTPFound(
+            return codes.HTTPCreated(
+                # Can't send redirect because of same-origin-policy
+                # But add the location so the client javascript can take action
                 location=request.route_path('form_view',
                                             form_name=schema.name))
     return {'form': form.render()}
@@ -120,9 +119,9 @@ def view(request):
     name = request.matchdict['form_name']
 
     try:
-        form = query_form(Session, name).one()
+        form = Session.query(datastore.Schema).filter_by(name=name).one()
     except orm.exc.NoResultFound:
-        raise HTTPNotFound
+        raise codes.HTTPNotFound
 
     categories = query_categories(Session, name)
     versions = query_versions(Session, name)
