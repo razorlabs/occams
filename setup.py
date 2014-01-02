@@ -28,13 +28,14 @@ REQUIRES = [
     'SQLAlchemy',
     'webhelpers',
     'zope.sqlalchemy',
+    'zope.dottedname',
 ]
 
 EXTRAS = {
     'postgresql': ['psycopg2'],
     'test': [
         'pyramid_debugtoolbar',
-        'nose', 'WebTest', 'coverage']
+        'nose', 'WebTest', 'coverage', 'beautifulsoup4']
 }
 
 

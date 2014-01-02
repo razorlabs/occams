@@ -8,10 +8,10 @@ import pkg_resources
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.config import Configurator
 from pyramid.i18n import TranslationStringFactory
-from pyramid.path import DottedNameResolver
 from pyramid_who.whov2 import WhoV2AuthenticationPolicy
 from repoze.who.config import make_middleware_with_config
 from sqlalchemy import orm, engine_from_config
+from zope.dottedname.resolve import resolve
 import zope.sqlalchemy
 
 import occams.datastore.model.events
@@ -39,9 +39,8 @@ def main(global_config, **settings):
         root_factory='occams.form.auth.RootFactory',
         authentication_policy=WhoV2AuthenticationPolicy(
             settings.get('who.config_file'),
-            settings.get('who.auth_tkt'),
-            callback=DottedNameResolver().maybe_resolve(
-                settings.get('who.callback'))),
+            settings.get('who.identifier_id'),
+            callback=resolve(settings.get('who.callback'))),
         authorization_policy=ACLAuthorizationPolicy())
 
     log.debug('Connecting to database...')
