@@ -1,13 +1,12 @@
 import colander
-from pyramid.httpexceptions import HTTPFound
+from pyramid.httpexceptions import HTTPFound, HTTPNotFound
 from pyramid.view import view_config
 from sqlalchemy import bindparam, or_, func, orm, sql
 import transaction
 from webhelpers import paginate
 
-from occams.datastore import model as datastore
-
 from occams.clinical import _, log, models, Session
+from occams.datastore import model as datastore
 
 
 @view_config(
@@ -30,6 +29,31 @@ def search(request):
 
     return {
         'page': page}
+
+
+@view_config(
+    route_name='patient_view',
+    permission='patient_view',
+    renderer='occams.clinical:templates/patient/view.pt')
+def search(request):
+    patient = find_patient(request)
+    request.layout_manager.layout.title = patient.our
+
+    return {
+        'patient': patient}
+
+
+def find_patient(request):
+    """
+    Uses the URL dispatch matching dictionary to find a study
+    """
+    try:
+        return (
+            Session.query(models.Patient)
+            .filter_by(pid=request.matchdict['pid'])
+            .one())
+    except orm.exc.NoResultFound:
+        raise HTTPNotFound
 
 
 def query_by_ids(term):

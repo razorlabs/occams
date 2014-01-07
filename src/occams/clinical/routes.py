@@ -18,15 +18,12 @@ def includeme(config):
 
     config.add_static_view('occams_clinical_static', 'occams.clinical:static/')
 
+    route('account_login', '/login')
+    route('account_logout', '/logout')
+    route('account', '/account')
+    route('apps', '/apps')
 
-    # builtins views (move to core)
-    config.add_route('account_login', '/login')
-    config.add_route('account_logout', '/logout')
-    config.add_route('account', '/account')
-    config.add_route('apps', '/apps')
-
-    # instnance-wide views
-    config.add_route('socketio', '/socket.io/*remaining')
+    route('socketio', '/socket.io/*remaining')
 
     route('study_list', '/studies')
     route('study_add', '/studies/add')
