@@ -1,6 +1,6 @@
 import os
-from subprocess import Popen, PIPE
 from setuptools import find_packages, setup
+from subprocess import Popen, PIPE
 import sys
 
 HERE = os.path.abspath(os.path.dirname(__file__))
@@ -11,7 +11,6 @@ REQUIRES = [
     'alembic',
     'beaker',
     'colander',
-    'configobj',
     'cssmin',
     'deform',
     'jsmin',
@@ -26,6 +25,7 @@ REQUIRES = [
     'pyramid_webassets',
     'pyramid_who',
     'SQLAlchemy',
+    'transaction',
     'webhelpers',
     'zope.sqlalchemy',
     'zope.dottedname',
@@ -35,7 +35,10 @@ EXTRAS = {
     'postgresql': ['psycopg2'],
     'test': [
         'pyramid_debugtoolbar',
-        'nose', 'WebTest', 'coverage', 'beautifulsoup4']
+        'nose', 'rednose',
+        'coverage',
+        'WebTest',
+        'beautifulsoup4'],
 }
 
 
@@ -98,6 +101,7 @@ setup(
     install_requires=REQUIRES,
     extras_require=EXTRAS,
     tests_require=EXTRAS['test'],
+    test_suite='nose.collector',
     entry_points="""\
     [paste.app_factory]
     main = occams.form:main

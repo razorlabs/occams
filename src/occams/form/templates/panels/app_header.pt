@@ -42,9 +42,9 @@
 
       <ul class="nav navbar-nav navbar-right"
           tal:define="user request.environ['repoze.who.identity']['properties']|nothing;"
-          tal:condition="user">
+            tal:condition="user">
         <li><a href="${request.route_path('account')}" class="disabled"
-          >${user['first_name']|user['email']}</a></li>
+          >${user['first_name']}</a></li>
         <li class="dropdown"
             tal:condition="request.apps">
           <a href="#apps"

@@ -36,7 +36,7 @@ def main(global_config, **settings):
     log.debug('Initializing configuration...')
     config = Configurator(
         settings=settings,
-        root_factory='occams.form.auth.RootFactory',
+        root_factory='occams.form.resources.RootFactory',
         authentication_policy=WhoV2AuthenticationPolicy(
             settings.get('who.config_file'),
             settings.get('who.identifier_id'),
