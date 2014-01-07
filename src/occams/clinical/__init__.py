@@ -1,22 +1,21 @@
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
 import logging
-from pkg_resources import resource_filename
+import pkg_resources
 
-import deform
 from redis import StrictRedis
-from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.config import Configurator
 from pyramid.i18n import TranslationStringFactory
-from pyramid.path import DottedNameResolver
-from pyramid.security import has_permission
-from pyramid_ldap import groupfinder
+from pyramid_who.whov2 import WhoV2AuthenticationPolicy
+from repoze.who.config import make_middleware_with_config
 from sqlalchemy import engine_from_config
-from webassets.loaders import YAMLLoader
-
+from zope.dottedname.resolve import resolve
 from occams.clinical.models import Session, RosterSession
-from occams.clinical.permissions import make_root_factory, make_get_user
-from occams.form.widgets import DEFAULT_RENDERER
 
+__version__ = pkg_resources.require(__name__)[0].version
 
 _ = TranslationStringFactory(__name__)
 
@@ -29,74 +28,78 @@ def main(global_config, **settings):
     """
     This function returns a Pyramid WSGI application.
     """
-    oc_engine = engine_from_config(settings, 'clinicaldb.')
-    rt_engine = engine_from_config(settings, 'rosterdb.')
-
-    Session.configure(bind=oc_engine)
-    RosterSession.configure(bind=rt_engine)
-
+    log.debug('Initializing configuration...')
     config = Configurator(
         settings=settings,
-        root_factory=make_root_factory(settings),
-        authentication_policy=AuthTktAuthenticationPolicy(
-            secret=settings['auth.secret'],
-            hashalg=settings['auth.hashalg'],
-            timeout=int(settings['auth.timeout']),
-            reissue_time=int(settings['auth.reissue_time']),
-            http_only=True,
-            callback=groupfinder),
-        authorization_policy=ACLAuthorizationPolicy()
-    )
+        root_factory='.resources.RootFactory',
+        authentication_policy=WhoV2AuthenticationPolicy(
+            settings.get('who.config_file'),
+            settings.get('who.identifier_id'),
+            callback=resolve(settings.get('who.callback'))),
+        authorization_policy=ACLAuthorizationPolicy())
 
-    config.ldap_setup(
-        settings['ldap.setup.host'],
-        bind=settings['ldap.setup.bind'],
-        passwd=settings['ldap.setup.passwd'],
-        timeout=int(settings['ldap.setup.timeout']))
-    config.ldap_set_login_query(
-        base_dn=settings['ldap.user.base_dn'],
-        filter_tmpl=settings['ldap.user.filter_tmpl'].format(percent='%'),
-        scope=DottedNameResolver().resolve(settings['ldap.user.scope']))
-    config.ldap_set_groups_query(
-        base_dn=settings['ldap.group.base_dn'],
-        filter_tmpl=settings['ldap.group.filter_tmpl'].format(percent='%'),
-        scope=DottedNameResolver().resolve(settings['ldap.group.scope']),
-        cache_period=int(settings['ldap.group.cache_period']))
+    log.debug('Connecting to database...')
+    Session.configure(bind=engine_from_config(settings, 'clinicaldb.'))
+    RosterSession.configure(bind=engine_from_config(settings, 'rosterdb.'))
 
-    loader = YAMLLoader(resource_filename('occams.clinical', 'assets.yml'))
-    bundles = loader.load_bundles()
-    map(lambda i: config.add_webasset(*i), bundles.items())
+    apps = make_app_listing(settings.get('apps.config_file'))
+    config.add_request_method(
+        lambda r: apps,
+        name='apps',
+        reify=True)
 
-    config.include('pyramid_rewrite')
-    config.add_rewrite_rule(r'/(?P<path>.*)/', r'/%(path)s')
-
-    # builtins views (move to core)
-    config.add_route('account_login', '/login')
-    config.add_route('account_logout', '/logout')
-    config.add_route('account', '/account')
-    config.add_route('apps', '/apps')
-
-    # instnance-wide views
-    config.add_route('socketio', '/socket.io/*remaining')
-
-    # app-specific views
+    log.debug('Loading components...')
+    config.include('.assets')
+    config.include('.auth')
     config.include('.routes')
+    config.include('occams.form.widgets')
+    config.commit()
 
-    config.scan()
+    log.debug('Loading middleware...')
+    app = config.make_wsgi_app()
+    app = make_middleware_with_config(
+        app,
+        global_config,
+        settings.get('who.config_file'))
 
-    deform.Form.set_default_renderer(DEFAULT_RENDERER)
+    return app
 
-    get_user = make_get_user(
-        settings['ldap.user.userid_attr'],
-        settings['ldap.user.name_attr'])
 
-    config.add_request_method(get_user, 'user', reify=True)
+def make_app_listing(file_name):
+    """
+    Generates a listing of additional services as specified in the config file.
 
-    # Wrap has_permission to make it less cumbersome
-    # TODO: This is built-in to pyramid 1.5, remove when we switch
-    def has_permission_wrap(request, name):
-        return has_permission(name, request.context, request)
+    Parameters:
+    file_name -- The config file specifing external services
 
-    config.add_request_method(has_permission_wrap, 'has_permission')
+    Returns:
+    A listing of dictionaries.
+    """
+    listing = []
 
-    return config.make_wsgi_app()
+    if not file_name:
+        return listing
+
+    config = configparser.SafeConfigParser()
+    config.read(file_name)
+
+    if not config.has_section('main'):
+        return listing
+
+    for suite_name in config.get('main', 'suites').split():
+        suite_section = 'suite:' + suite_name
+        suite = {
+            'name': suite_name,
+            'title': config.get(suite_section, 'title'),
+            'apps': [],
+            }
+        for app_name in config.get(suite_section, 'apps').split():
+            app_section = 'app:' + app_name
+            app = {
+                'name': app_name,
+                'title': config.get(app_section, 'title'),
+                'url': config.get(app_section, 'url')}
+            suite['apps'].append(app)
+        listing.append(suite)
+
+    return listing

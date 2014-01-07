@@ -13,8 +13,20 @@ def includeme(config):
 
     # short-hand way to declare the routes
     route = config.add_route
+    config.include('pyramid_rewrite')
+    config.add_rewrite_rule(r'/(?P<path>.*)/', r'/%(path)s')
 
     config.add_static_view('occams_clinical_static', 'occams.clinical:static/')
+
+
+    # builtins views (move to core)
+    config.add_route('account_login', '/login')
+    config.add_route('account_logout', '/logout')
+    config.add_route('account', '/account')
+    config.add_route('apps', '/apps')
+
+    # instnance-wide views
+    config.add_route('socketio', '/socket.io/*remaining')
 
     route('study_list', '/studies')
     route('study_add', '/studies/add')
@@ -50,6 +62,10 @@ def includeme(config):
     route('data_download', '/data/download')
 
     route('clinical', '/')
+
+    config.scan('occams.clinical.layouts')
+    config.scan('occams.clinical.panels')
+    config.scan('occams.clinical.views')
 
 
 def dates(*keys):

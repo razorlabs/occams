@@ -8,30 +8,45 @@ README = open(os.path.join(HERE, 'README.md')).read()
 CHANGES = open(os.path.join(HERE, 'CHANGES.md')).read()
 
 
-requires = [
+REQUIRES = [
     'alembic',
     'beaker',
     'celery',
     'colander',
     'cssmin',
+    'deform',
     'gevent-socketio',
     'jsmin',
     'pyramid',
-    'pyramid_debugtoolbar',
+    'pyramid_beaker',
+    'pyramid_deform',
     'pyramid_layout',
-    'pyramid_ldap',
+    'pyramid_mailer',
     'pyramid_tm',
+    'pyramid_rewrite',
     'pyramid_webassets',
-    'PyYAML',
+    'pyramid_who',
     'redis',
     'SQLAlchemy',
     'transaction',
     'webassets',
+    'zope.sqlalchemy',
+    'zope.dottedname',
 
     'occams.datastore',
     'occams.form',
     'occams.roster',
 ]
+
+EXTRAS = {
+    'postgresql': ['psycopg2', 'psycogreen'],
+    'test': [
+        'pyramid_debugtoolbar',
+        'nose', 'rednose',
+        'coverage',
+        'WebTest',
+        'beautifulsoup4'],
+}
 
 
 def get_version():
@@ -75,21 +90,19 @@ setup(
         "Topic :: Internet :: WWW/HTTP",
         "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
     ],
-    author='',
-    author_email='',
-    url='',
+    author='UCSD BIT Core Team',
+    author_email='bitcore@ucsd.edu',
+    url='https://bitbutcket.org/ucsdbitcore/occams.clinical',
     keywords='web wsgi bfg pylons pyramid',
     packages=find_packages('src', exclude=['ez_setup']),
     package_dir={'': 'src'},
     namespace_packages=['occams'],
     include_package_data=True,
     zip_safe=False,
+    install_requires=REQUIRES,
+    extras_require=EXTRAS,
+    tests_require=EXTRAS['test'],
     test_suite='nose.collector',
-    install_requires=requires,
-    extras_require=dict(
-        postgresql=['psycopg2', 'psycogreen'],
-        test=['nose', 'coverage', 'rednose', 'WebTest'],
-    ),
     entry_points="""\
     [paste.app_factory]
     main = occams.clinical:main

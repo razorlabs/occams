@@ -9,19 +9,19 @@ import datetime
 import re
 import time
 
-from pyramid.threadlocal import get_current_request
 from sqlalchemy import orm, schema, sql, types
 from sqlalchemy.ext import declarative, hybrid
+import zope.sqlalchemy
 
 from occams import roster
-
+import occams.datastore.model.events
 # import everything so we can also use DS models from this module
 from occams.datastore.model import (
     Auditable,
     AutoNamed, Referenceable, Describeable, Modifiable,
     Category,
     HasEntities,
-    ModelClass, DataStoreSession,
+    ModelClass,
     User,
     Schema)
 
@@ -29,20 +29,10 @@ from occams.datastore.model import (
 RE_WS = re.compile('\s+')
 RE_NON_ASCII = re.compile('[^a-z0-9_-]', re.I)
 
-
-def get_user():
-    # This might be called from a process that is not a request,
-    # we need to figure out a way to reliable determine the user...
-    request = get_current_request()
-    user = getattr(request, 'user', None)
-    email = getattr(user, 'email', None)
-    return email if email else 'bitcore@ucsd.edu'
-
-
 Session = orm.scoped_session(orm.sessionmaker(
-    user=get_user,
-    class_=DataStoreSession))
+    extension=zope.sqlalchemy.ZopeTransactionExtension()))
 
+occams.datastore.model.events.register(Session)
 
 # roster depends on ZCA, so we have to kindof monkeypatch it...
 RosterSession = orm.scoped_session(orm.sessionmaker())
