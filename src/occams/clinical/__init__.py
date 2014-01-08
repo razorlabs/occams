@@ -13,7 +13,9 @@ from pyramid_who.whov2 import WhoV2AuthenticationPolicy
 from repoze.who.config import make_middleware_with_config
 from sqlalchemy import engine_from_config
 from zope.dottedname.resolve import resolve
+
 from occams.clinical.models import Session, RosterSession
+
 
 __version__ = pkg_resources.require(__name__)[0].version
 
@@ -33,9 +35,10 @@ def main(global_config, **settings):
         settings=settings,
         root_factory='.resources.RootFactory',
         authentication_policy=WhoV2AuthenticationPolicy(
-            settings.get('who.config_file'),
-            settings.get('who.identifier_id'),
-            callback=resolve(settings.get('who.callback'))),
+            settings['who.config_file'],
+            settings['who.identifier_id'],
+            resolve(settings.get('who.callback',
+                                 'occams.clinical.auth.groupfinder'))),
         authorization_policy=ACLAuthorizationPolicy())
 
     log.debug('Connecting to database...')
@@ -60,7 +63,7 @@ def main(global_config, **settings):
     app = make_middleware_with_config(
         app,
         global_config,
-        settings.get('who.config_file'))
+        settings['who.config_file'])
 
     return app
 

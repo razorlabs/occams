@@ -5,10 +5,10 @@ class RootFactory(object):
 
     __acl__ = [
         (Allow, 'administrators', ALL_PERMISSIONS),
-        (Allow, 'managers', 'view'),
-        (Allow, 'primary_investigators', 'view'),
-        (Allow, 'data_enterers', 'view'),
-        (Allow, 'assistants', 'view'),
+        (Allow, 'managers', ('view',)),
+        (Allow, 'primary_investigators', ('view',)),
+        (Allow, 'data_enterers', ('view',)),
+        (Allow, 'assistants', ('view',)),
         (Allow, 'nurses', (
             'view'
             'site_view',

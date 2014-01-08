@@ -28,6 +28,12 @@ directlyProvides(challenge_decider, IChallengeDecider)
 
 
 def groupfinder(identity, request):
+    if 'groups' not in identity:
+        log.warn('groups has not been set in the repoze identity!')
+    return identity.get('groups', [])
+
+
+def occams_groupfinder(identity, request):
 
     if 'groups' not in identity:
         log.warn('groups has not been set in the repoze identity!')
@@ -47,20 +53,18 @@ def track_user(event):
     """
     Annotates the database session with the current user.
     """
-    identity = event.request.environ.get('repoze.who.identity')
+    userid = event.request.environ.get('REMOTE_USER')
 
-    if not identity:
+    if not userid:
         return
 
-    login = identity['login']
-
-    if not Session.query(datastore.User).filter_by(key=login).count():
+    if not Session.query(datastore.User).filter_by(key=userid).count():
         with transaction.manager:
-            Session.add(datastore.User(key=login))
+            Session.add(datastore.User(key=userid))
 
     # update the current scoped session's infor attribute
     session = Session()
-    session.info['user'] = login
+    session.info['user'] = userid
 
 
 def includeme(config):
