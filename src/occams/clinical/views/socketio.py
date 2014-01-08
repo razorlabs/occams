@@ -40,7 +40,7 @@ class ExportNamespace(BaseNamespace):
         """
         if self.request.has_permission('fia_view'):
             self.lift_acl_restrictions()
-            self.session['user'] = self.request.user.email
+            self.session['user'] = self.request.environ['REMOTE_USER']
             self.spawn(self.listener)
 
     def listener(self):

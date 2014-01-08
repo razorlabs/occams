@@ -8,6 +8,7 @@ from pyramid.httpexceptions import HTTPFound, HTTPNotFound
 from pyramid.response import FileResponse
 from pyramid.view import view_config
 from sqlalchemy import orm, null
+import transaction
 
 from occams.clinical import _, models, Session, tasks
 from occams.datastore import model as datastore
@@ -54,7 +55,7 @@ def list_(request):
     isn't left with an unresponsive page.
     """
 
-    if 'submit' in request.POST:
+    if request.POST:
         schema = ExportCheckoutSchema().bind(request=request)
         # since we render the form manually, we gotta do this
         cstruct = {
@@ -67,18 +68,19 @@ def list_(request):
             for error in e.error.asdict().values():
                 request.session.flash(error, 'error')
         else:
-            export = models.Export(
-                owner_user=(
-                    Session.query(datastore.User)
-                    .filter_by(key=request.user.email)
-                    .one()),
-                schemata=[Session.query(datastore.Schema).get(id)
-                          for id in appstruct['schemata']])
-            Session.add(export)
-            Session.commit()
-            tasks.make_export.s(export.id).apply_async(
+            with transaction.manager:
+                export = models.Export(
+                    owner_user=(
+                        Session.query(datastore.User)
+                        .filter_by(key=request.environ['REMOTE_USER'])
+                        .one()),
+                    schemata=[Session.query(datastore.Schema).get(id)
+                              for id in appstruct['schemata']])
+                Session.add(export)
+                Session.flush()
+                export_id = export.id
+            tasks.make_export.s(export_id).apply_async(
                 link_error=tasks.handle_error.s())
-            tasks.make_export.delay(export.id)
             request.session.flash(
                 _(u'Your request has been received!'),
                 'success')
@@ -87,13 +89,6 @@ def list_(request):
     layout = request.layout_manager.layout
     layout.title = _(u'Data')
     layout.set_nav('data_nav')
-
-    schemata_query = (
-        Session.query(datastore.Schema)
-        .filter(datastore.Schema.publish_date != null())
-        .order_by(
-            datastore.Schema.name.asc(),
-            datastore.Schema.publish_date.desc()))
 
     schemata_query = (
         Session.query(datastore.Schema)
@@ -125,10 +120,11 @@ def download(request):
     layout = request.layout_manager.layout
     layout.title = _(u'Data')
     layout.set_nav('data_nav')
+    userid = request.environ['REMOTE_USER']
 
     exports_query = (
         Session.query(models.Export)
-        .filter(models.Export.owner_user.has(key=request.user.email))
+        .filter(models.Export.owner_user.has(key=userid))
         .order_by(models.Export.create_date.desc()))
 
     exports_count = exports_query.count()
@@ -150,11 +146,12 @@ def attachement(request):
     Returns specific download attachement
     The user should only be allowed to download their exports.
     """
+    userid = request.environ['REMOTE_USER']
     try:
         export = (
             Session.query(models.Export)
             .filter_by(id=request.GET['id'], status='complete')
-            .filter(models.Export.owner_user.has(key=request.user.email))
+            .filter(models.Export.owner_user.has(key=userid))
             .one())
     except orm.exc.NoResultFound:
         raise HTTPNotFound

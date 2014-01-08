@@ -18,6 +18,7 @@ from celery import Celery
 from celery.bin import Option
 from celery.signals import worker_init
 from pyramid.paster import bootstrap
+import transaction
 
 from occams.clinical import models, Session, redis
 from occams.clinical.utils.csv import UnicodeWriter
@@ -125,10 +126,13 @@ def make_export(export_id):
                 ', '.join(redis.hmget(export.id, 'count', 'total') + [arcname]))
 
     # File has been closed/flushed, it's ready for consumption
-    export.status = 'complete'
-    Session.commit()
-    redis.hset(export.id, 'status', export.status)
-    redis.publish('export', json.dumps(redis.hgetall(export.id)))
+    with transaction.manager:
+        Session.query(models.Export).filter_by(id=export_id).update({
+            'status': u'complete'
+            }, 'fetch')
+
+    redis.hset(export_id, 'status', 'complete')
+    redis.publish('export', json.dumps(redis.hgetall(export_id)))
 
 
 @celery.task
