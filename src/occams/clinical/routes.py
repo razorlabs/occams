@@ -60,10 +60,6 @@ def includeme(config):
 
     route('clinical', '/')
 
-    config.scan('occams.clinical.layouts')
-    config.scan('occams.clinical.panels')
-    config.scan('occams.clinical.views')
-
 
 def dates(*keys):
     """

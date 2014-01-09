@@ -56,6 +56,9 @@ def main(global_config, **settings):
     config.include('.auth')
     config.include('.routes')
     config.include('occams.form.widgets')
+    config.scan('.layouts')
+    config.scan('.panels')
+    config.scan('.views')
     config.commit()
 
     log.debug('Loading middleware...')

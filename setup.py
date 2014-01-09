@@ -45,7 +45,8 @@ EXTRAS = {
         'nose', 'rednose',
         'coverage',
         'WebTest',
-        'beautifulsoup4'],
+        'beautifulsoup4',
+        'ddt'],
 }
 
 
