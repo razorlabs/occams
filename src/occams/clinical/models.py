@@ -23,7 +23,7 @@ from occams.datastore.model import (
     HasEntities,
     ModelClass,
     User,
-    Schema)
+    Schema, Entity, Context)
 
 
 RE_WS = re.compile('\s+')

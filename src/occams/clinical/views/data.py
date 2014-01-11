@@ -6,39 +6,39 @@ import deform
 from pyramid_deform import CSRFSchema
 from pyramid.httpexceptions import HTTPFound, HTTPNotFound
 from pyramid.response import FileResponse
+from pyramid.security import authenticated_userid
 from pyramid.view import view_config
 from sqlalchemy import orm, null
 import transaction
 
 from occams.clinical import _, models, Session, tasks
-from occams.datastore import model as datastore
 
 
-@colander.deferred
-def deferred_id_validator(node, kw):
+def existent_schema_validator(value):
     """
     Deferred validator to determine the schema choices at request-time.
     """
+    if not value:
+        return _(u'No schemata specified')
     ids_query = (
-        Session.query(datastore.Schema.id)
-        .filter(datastore.Schema.publish_date is not None))
-    valid_ids = set([r.id for r in ids_query])
-    return colander.OneOf(valid_ids)
+        Session.query(models.Schema.id)
+        .filter(models.Schema.publish_date != null())
+        .filter(models.Schema.id.in_(value)))
+    if ids_query.count() != len(value):
+        return _(u'Invalid schemata chosen')
+    return True
 
 
 class ExportCheckoutSchema(CSRFSchema):
-
     """
     Export checkout serialization schema
     """
 
     @colander.instantiate(
-        validator=colander.Length(min=1))
+        validator=colander.Function(existent_schema_validator))
     class schemata(colander.SequenceSchema):
 
-        id = colander.SchemaNode(
-            colander.Int(),
-            validator=deferred_id_validator)
+        id = colander.SchemaNode(colander.Int())
 
 
 @view_config(
@@ -54,36 +54,33 @@ def list_(request):
     The actual exporting process is then queued in a another thread so the user
     isn't left with an unresponsive page.
     """
+    userid = authenticated_userid(request)
+    schema = ExportCheckoutSchema().bind(request=request)
+    form = deform.Form(schema)
 
-    if request.POST:
-        schema = ExportCheckoutSchema().bind(request=request)
-        # since we render the form manually, we gotta do this
-        cstruct = {
-            'csrf_token': request.POST.get('csrf_token'),
-            'schemata': request.POST.getall('schemata')}
-        form = deform.Form(schema)
+    if request.method == 'POST':
         try:
-            appstruct = form.validate(cstruct.items())
-        except deform.exception.ValidationFailure as e:
-            for error in e.error.asdict().values():
-                request.session.flash(error, 'error')
+            appstruct = form.validate(request.POST.items())
+        except deform.ValidationFailure as form:
+            pass
         else:
             with transaction.manager:
                 export = models.Export(
                     owner_user=(
-                        Session.query(datastore.User)
-                        .filter_by(key=request.environ['REMOTE_USER'])
+                        Session.query(models.User)
+                        .filter_by(key=userid)
                         .one()),
-                    schemata=[Session.query(datastore.Schema).get(id)
-                              for id in appstruct['schemata']])
+                    schemata=(
+                        Session.query(models.Schema)
+                        .filter(models.Schema.id.in_(appstruct['schemata']))
+                        .all()))
                 Session.add(export)
                 Session.flush()
                 export_id = export.id
             tasks.make_export.s(export_id).apply_async(
                 link_error=tasks.handle_error.s())
             request.session.flash(
-                _(u'Your request has been received!'),
-                'success')
+                _(u'Your request has been received!'), 'success')
             return HTTPFound(location=request.route_path('data_download'))
 
     layout = request.layout_manager.layout
@@ -91,16 +88,17 @@ def list_(request):
     layout.set_nav('data_nav')
 
     schemata_query = (
-        Session.query(datastore.Schema)
-        .filter(datastore.Schema.publish_date != null())
+        Session.query(models.Schema)
+        .filter(models.Schema.publish_date != null())
         .order_by(
-            datastore.Schema.name.asc(),
-            datastore.Schema.publish_date.desc()))
+            models.Schema.name.asc(),
+            models.Schema.publish_date.desc()))
 
     schemata_count = schemata_query.count()
 
     return {
         'csrf_token': request.session.get_csrf_token(),
+        'form': form,
         'schemata': schemata_query,
         'has_schemata': schemata_count > 0,
         'schemata_count': schemata_count}
@@ -120,7 +118,7 @@ def download(request):
     layout = request.layout_manager.layout
     layout.title = _(u'Data')
     layout.set_nav('data_nav')
-    userid = request.environ['REMOTE_USER']
+    userid = authenticated_userid(request)
 
     exports_query = (
         Session.query(models.Export)
@@ -146,7 +144,7 @@ def attachement(request):
     Returns specific download attachement
     The user should only be allowed to download their exports.
     """
-    userid = request.environ['REMOTE_USER']
+    userid = authenticated_userid(request)
     try:
         export = (
             Session.query(models.Export)
