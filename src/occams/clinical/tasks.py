@@ -6,6 +6,10 @@ can continue to use the application and download their exports at a
 later time.
 """
 
+try:
+    import unicodecsv as csv
+except ImportError:
+    import csv  # NOQA (py3, hopefully)
 from collections import defaultdict
 from contextlib import closing
 import json
@@ -21,7 +25,6 @@ from pyramid.paster import bootstrap
 import transaction
 
 from occams.clinical import models, Session, redis
-from occams.clinical.utils.csv import UnicodeWriter
 from occams.datastore import model as datastore, reporting
 
 
@@ -165,7 +168,7 @@ def arc_query(zfp, arcname, query):
 
     """
     with tempfile.NamedTemporaryFile() as tfp:
-        writer = UnicodeWriter(tfp)
+        writer = csv.writer(tfp)
         writer.writerow([d['name'] for d in query.column_descriptions])
         writer.writerows(query)
         tfp.flush()  # ensure everything's on disk
@@ -193,7 +196,7 @@ def arc_codebook(zfp, arcname, name, ids=None):
             datastore.Schema.publish_date))
 
     with tempfile.NamedTemporaryFile() as tfp:
-        writer = UnicodeWriter(tfp)
+        writer = csv.writer(tfp)
         writer.writerow([
             'form_name',
             'form_title',

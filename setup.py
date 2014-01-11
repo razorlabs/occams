@@ -46,8 +46,13 @@ EXTRAS = {
         'coverage',
         'WebTest',
         'beautifulsoup4',
+        'mock',
         'ddt'],
 }
+
+
+if sys.version_info < (3, 0):
+    REQUIRES.append('unicodecsv')
 
 
 def get_version():
