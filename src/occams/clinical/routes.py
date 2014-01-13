@@ -56,7 +56,8 @@ def includeme(config):
         custom_predicates=[ymd])
 
     route('data_list', '/data')
-    route('data_download', '/data/download')
+    route('data_export', '/data/exports')
+    route('data_download', '/data/exports/{export_id}')
 
     route('clinical', '/')
 

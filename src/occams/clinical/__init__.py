@@ -3,6 +3,7 @@ try:
 except ImportError:
     import ConfigParser as configparser
 import logging
+import os
 import pkg_resources
 
 from redis import StrictRedis
@@ -26,10 +27,25 @@ log = logging.getLogger(__name__)
 redis = StrictRedis()
 
 
+def resolve_path(spec):
+    """
+    Resolves an asset descriptor
+    """
+    if ':' not in spec:
+        return spec
+
+    package, path = spec.split(':')
+    return pkg_resources.resource_filename(package, path)
+
+
 def main(global_config, **settings):
     """
     This function returns a Pyramid WSGI application.
     """
+    settings['app.export_dir'] = resolve_path(settings['app.export_dir'])
+    assert os.path.exists(settings['app.export_dir']), \
+        'Export directory does not exist'
+
     log.debug('Initializing configuration...')
     config = Configurator(
         settings=settings,

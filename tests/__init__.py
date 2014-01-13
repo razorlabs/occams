@@ -5,7 +5,6 @@ from pyramid import testing
 from pyramid.paster import get_appsettings, get_app
 from webtest import TestApp
 from sqlalchemy import engine_from_config
-import transaction
 
 from occams.clinical import Session, RosterSession, models
 from occams.datastore import model as datastore
@@ -55,9 +54,10 @@ class IntegrationFixture(unittest.TestCase):
         disconnect_db()
 
     def add_user(self, userid):
-        with transaction.manager:
-            Session.add(datastore.User(key=userid))
-        Session().info['user'] = userid
+        session = Session()
+        session.add(datastore.User(key=userid))
+        session.flush()
+        session.info['user'] = userid
 
 
 class FunctionalFixture(unittest.TestCase):
@@ -78,6 +78,12 @@ class FunctionalFixture(unittest.TestCase):
         drop_db()
         disconnect_db()
 
+    def add_user(self, userid):
+        session = Session()
+        session.add(datastore.User(key=userid))
+        session.flush()
+        session.info['user'] = userid
+
     def make_environ(self, userid='testuser', properties={}, groups=()):
         """
         Creates dummy environ variables for mock-authentication
@@ -91,6 +97,16 @@ class FunctionalFixture(unittest.TestCase):
                 'repoze.who.userid': userid,
                 'properties': properties,
                 'groups': groups}}
+
+    def assertCanView(self, url, environ=None, msg=None):
+        response = self.app.get(url, extra_environ=environ)
+        if response.status_code != 200:
+            raise AssertionError(msg or 'Cannot view %s' % url)
+
+    def assertCannotView(self, url, environ=None, msg=None):
+        response = self.app.get(url, extra_environ=environ, status='*')
+        if response.status_code not in (401, 403):
+            raise AssertionError(msg or 'Can view %s' % url)
 
 
 def create_db():

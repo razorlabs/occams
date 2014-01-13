@@ -1,5 +1,4 @@
 import os.path
-from pkg_resources import resource_filename
 
 import colander
 import deform
@@ -81,7 +80,7 @@ def list_(request):
                 link_error=tasks.handle_error.s())
             request.session.flash(
                 _(u'Your request has been received!'), 'success')
-            return HTTPFound(location=request.route_path('data_download'))
+            return HTTPFound(location=request.route_path('data_export'))
 
     layout = request.layout_manager.layout
     layout.title = _(u'Data')
@@ -105,10 +104,10 @@ def list_(request):
 
 
 @view_config(
-    route_name='data_download',
+    route_name='data_export',
     permission='fia_view',
-    renderer='occams.clinical:templates/data/download.pt')
-def download(request):
+    renderer='occams.clinical:templates/data/export.pt')
+def export(request):
     """
     Lists current export jobs.
 
@@ -136,25 +135,24 @@ def download(request):
 
 @view_config(
     route_name='data_download',
-    permission='fia_view',
-    request_method='GET',
-    request_param='id')
-def attachement(request):
+    permission='fia_view')
+def download(request):
     """
     Returns specific download attachement
     The user should only be allowed to download their exports.
     """
     userid = authenticated_userid(request)
+
     try:
         export = (
             Session.query(models.Export)
-            .filter_by(id=request.GET['id'], status='complete')
+            .filter_by(id=request.matchdict['export_id'], status='complete')
             .filter(models.Export.owner_user.has(key=userid))
             .one())
     except orm.exc.NoResultFound:
         raise HTTPNotFound
 
-    export_dir = resource_filename('occams.clinical', 'exports')
+    export_dir = request.registry.settings['app.export_dir']
     path = os.path.join(export_dir, '%s.zip' % export.id)
 
     response = FileResponse(path)
