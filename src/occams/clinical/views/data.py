@@ -23,7 +23,9 @@ def existent_schema_validator(value):
         Session.query(models.Schema.id)
         .filter(models.Schema.publish_date != null())
         .filter(models.Schema.id.in_(value)))
-    if ids_query.count() != len(value):
+    ids = set([id for id, in ids_query])
+    value = set(value)
+    if ids != value:
         return _(u'Invalid schemata chosen')
     return True
 
@@ -59,7 +61,7 @@ def list_(request):
 
     if request.method == 'POST':
         try:
-            appstruct = form.validate(request.POST.items())
+            appstruct = form.validate(request.POST.mixed().items())
         except deform.ValidationFailure as form:
             pass
         else:

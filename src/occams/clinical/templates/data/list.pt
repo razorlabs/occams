@@ -1,6 +1,13 @@
 <html i18n:domain="occams.clinical" metal:use-macro="main_template">
   <metal:content-slot fill-slot="content-slot">
 
+    <div class="alert alert-danger" tal:condition="form.error|nothing">
+    <strong>Error!</strong> Your request failed for the following reasons:
+      <ul>
+        <li tal:repeat="error form.error.children">${error.msg}</li>
+      </ul>
+    </div>
+
     <p class="lead" i18n:translate="">
       Please select the files you would like to download.
       All exports include a data dictionary.
