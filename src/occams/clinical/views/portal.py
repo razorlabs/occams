@@ -15,7 +15,7 @@ from occams.clinical import _, log, models, Session
     renderer='occams.clinical:templates/portal/home.pt')
 def home(request):
     layout = request.layout_manager.layout
-    layout.title = _(u'Welcome to OCCAMS!')
+    layout.title = request.registry.settings['app.org_title']
 
     recent_query = search_recent()
     return {

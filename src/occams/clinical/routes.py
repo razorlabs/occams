@@ -25,6 +25,8 @@ def includeme(config):
 
     route('socketio', '/socket.io/*remaining')
 
+    route('site_list', '/sites')
+
     route('study_list', '/studies')
     route('study_add', '/studies/add')
     route('study_view', '/studies/{study_name}')
