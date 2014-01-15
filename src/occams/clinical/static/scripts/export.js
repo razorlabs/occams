@@ -7,7 +7,7 @@
   $(document).ready(function(){
 
     // Only execute in specific views
-    if ( !$('#data_download').length ){
+    if ( !$('#data_export').length ){
       return;
     }
 
@@ -26,6 +26,8 @@
           , progress = (data['count'] / data['total']) * 100
           , status = data['status'] ;
 
+
+        console.log(data);
 
         // update the progress bar percentage
         $panel.find('.progress-bar').css({width: progress + '%'});

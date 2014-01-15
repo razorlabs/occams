@@ -50,7 +50,7 @@ def list_(request):
     """
     List data that is available for download
 
-    Becuase the exports can take a while to generate, this view serves
+    Because the exports can take a while to generate, this view serves
     as a "checkout" page so that the user can select which files they want.
     The actual exporting process is then queued in a another thread so the user
     isn't left with an unresponsive page.
@@ -78,7 +78,8 @@ def list_(request):
                 Session.add(export)
                 Session.flush()
                 export_id = export.id
-            tasks.make_export.s(export_id).apply_async(
+            tasks.make_export.apply_async(
+                args=(export_id,),
                 link_error=tasks.handle_error.s())
             request.session.flash(
                 _(u'Your request has been received!'), 'success')
@@ -141,6 +142,7 @@ def export(request):
 def download(request):
     """
     Returns specific download attachement
+
     The user should only be allowed to download their exports.
     """
     userid = authenticated_userid(request)

@@ -24,8 +24,6 @@ _ = TranslationStringFactory(__name__)
 
 log = logging.getLogger(__name__)
 
-redis = StrictRedis()
-
 
 def resolve_path(spec):
     """
@@ -46,6 +44,10 @@ def main(global_config, **settings):
     assert os.path.exists(settings['app.export_dir']), \
         'Export directory does not exist'
 
+    log.debug('Connecting to database...')
+    Session.configure(bind=engine_from_config(settings, 'clinicaldb.'))
+    RosterSession.configure(bind=engine_from_config(settings, 'rosterdb.'))
+
     log.debug('Initializing configuration...')
     config = Configurator(
         settings=settings,
@@ -57,14 +59,18 @@ def main(global_config, **settings):
                                  'occams.clinical.auth.groupfinder'))),
         authorization_policy=ACLAuthorizationPolicy())
 
-    log.debug('Connecting to database...')
-    Session.configure(bind=engine_from_config(settings, 'clinicaldb.'))
-    RosterSession.configure(bind=engine_from_config(settings, 'rosterdb.'))
-
+    log.debug('Loadings apps listing...')
     apps = make_app_listing(settings.get('apps.config_file'))
     config.add_request_method(
         lambda r: apps,
         name='apps',
+        reify=True)
+
+    log.debug('Connecting redis...')
+    redis = StrictRedis.from_url(settings['redis.url'])
+    config.add_request_method(
+        lambda r: redis,
+        name='redis',
         reify=True)
 
     log.debug('Loading components...')

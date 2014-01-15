@@ -10,35 +10,38 @@ try:
     import unicodecsv as csv
 except ImportError:
     import csv  # NOQA (py3, hopefully)
-from collections import defaultdict
 from contextlib import closing
 import json
-import os.path
+import os
 import tempfile
 import zipfile
-from pkg_resources import resource_filename
 
-from celery import Celery
+from celery import Celery, Task
 from celery.bin import Option
 from celery.signals import worker_init
+from celery.utils.log import get_task_logger
 from pyramid.paster import bootstrap
+from webob.multidict import MultiDict
 import transaction
 
-from occams.clinical import models, Session, redis
-from occams.datastore import model as datastore, reporting
+from occams.clinical import _, models, Session
+from occams.datastore import reporting
 
 
-celery = Celery(__name__)
+app = Celery(__name__)
 
-celery.user_options['worker'].add(
+app.user_options['worker'].add(
     Option('--ini', help='Pyramid config file'))
 
+log = get_task_logger(__name__)
 
-class SqlAlchemyTask(celery.Task):
 
+class SqlAlchemyTask(Task):
     """
-    An abstract Celery Task that ensures that the connection the the
-    database is closed on task completion
+    Base class for tasks that use SQLAlchemy.
+
+    This abstract class ensures that the connection the the database is
+    closed on task completion to prevent leaked open connections
     """
 
     abstract = True
@@ -49,11 +52,16 @@ class SqlAlchemyTask(celery.Task):
 
 @worker_init.connect
 def init(signal, sender):
-    # Have the pyramid application setup the connections
-    sender.app.settings = bootstrap(sender.options['ini'])['registry'].settings
+    """
+    Configure the database connections when the celery daemon starts
+    """
+    # Have the pyramid app initialize all settings
+    env = bootstrap(sender.options['ini'])
+    sender.app.settings = env['registry'].settings
+    sender.app.redis = env['request'].redis
 
 
-@celery.task(base=SqlAlchemyTask)
+@app.task(base=SqlAlchemyTask)
 def make_export(export_id):
     """
     Handles generating exports in a separate process.
@@ -75,89 +83,85 @@ def make_export(export_id):
     export_id -- export to process
 
     """
-    # Get the export instance attached to this thread
-    export = Session.query(models.Export).get(export_id)
+    export = Session.query(models.Export).filter_by(id=export_id).one()
+    export_dir = app.settings['app.export_dir']
 
-    export_dir = resource_filename('occams.clinical', 'exports')
-    path = os.path.join(export_dir, '%s.zip' % export.id)
+    assert export.schemata, \
+        _(u'The specified export job has no schemata: %s' % export)
+    assert export.status not in ('complete', 'failed'), \
+        _(u'The specified export is not pending: %s' % export)
 
     # Organize the forms so we know which schemata go where
-    codebooks = defaultdict(set)
-    for schema in export.schemata:
-        codebooks[schema.name].add(schema.id)
+    codebooks = MultiDict([(s.name, s.id) for s in export.schemata])
+
+    redis = app.redis
 
     redis.hmset(export.id, {
         'export_id': export.id,
         'owner_user': export.owner_user.key,
         'status': export.status,
         'count': 0,
-        'total': len(export.schemata) + len(codebooks)})
+        'total': len(export.schemata) + len(set(codebooks.keys()))})
+
+    path = os.path.join(export_dir, '%s.zip' % export.id)
+
+    def publish_done(arcname):
+        redis.hincrby(export.id, 'count')
+        redis.publish('export', json.dumps(redis.hgetall(export.id)))
+        count, total = redis.hmget(export.id, 'count', 'total')
+        log.info(', '.join([count, total, arcname]))
 
     with closing(zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED)) as zfp:
         # Generate the data files
         for schema in export.schemata:
-            report = reporting.export(schema)
-            query = (
-                Session.query(report.c.entity_id)
-                .add_column(
-                    Session.query(models.Patient.pid)
-                    .distinct()
-                    .join(models.Visit)
-                    .join(datastore.Context,
-                          (datastore.Context.external == 'visit')
-                          & (datastore.Context.key == models.Visit.id))
-                    .filter(datastore.Context.entity_id == report.c.entity_id)
-                    .correlate(report)
-                    .as_scalar()
-                    .label('pid'))
-                .add_columns(*[c for c in report.columns if c.name != 'entity_id']))
-
             arcname = '{0}-{1}.csv'.format(schema.name, schema.publish_date)
-            arc_query(zfp, arcname, query)
-            redis.hincrby(export.id, 'count')
-            redis.publish('export', json.dumps(redis.hgetall(export.id)))
-            print(
-                ', '.join(redis.hmget(export.id, 'count', 'total') + [arcname]))
+            archive_query(zfp, arcname, query_report(schema))
+            publish_done(arcname)
 
         # Generate the ecrf codebooks
-        for name, ids in codebooks.items():
+        for name, ids in codebooks.dict_of_lists().items():
             arcname = '{0}-codebook.csv'.format(name)
-            arc_codebook(zfp, arcname, name, ids)
-            redis.hincrby(export.id, 'count')
-            redis.publish('export', json.dumps(redis.hgetall(export.id)))
-            print(
-                ', '.join(redis.hmget(export.id, 'count', 'total') + [arcname]))
+            archive_codebook(zfp, arcname, name, ids)
+            publish_done(arcname)
 
     # File has been closed/flushed, it's ready for consumption
     with transaction.manager:
-        Session.query(models.Export).filter_by(id=export_id).update({
-            'status': u'complete'
-            }, 'fetch')
+        update_query = Session.query(models.Export).filter_by(id=export_id)
+        update_query.update({'status': u'complete'}, 'fetch')
 
     redis.hset(export_id, 'status', 'complete')
     redis.publish('export', json.dumps(redis.hgetall(export_id)))
 
 
-@celery.task
-def cleanup_export(expire_date):
-    """
-    Cleans up the database of expired exports.
-
-    Parameters:
-    expire_date -- the cut-off date for removal
-    """
-    raise NotImplementedError
-
-
-@celery.task
+@app.task
 def handle_error(uuid):
     """
     Handles asynchronous errors
     """
-    print("Oh snap, there was an error")
+    log.error('Oh snap, there was an error')
 
 
-def arc_query(zfp, arcname, query):
+def query_report(schema):
+    report = reporting.export(schema)
+    query = (
+        Session.query(report.c.entity_id)
+        .add_column(
+            Session.query(models.Patient.pid)
+            .distinct()
+            .join(models.Visit)
+            .join(models.Context,
+                  (models.Context.external == 'visit')
+                  & (models.Context.key == models.Visit.id))
+            .filter(models.Context.entity_id == report.c.entity_id)
+            .correlate(report)
+            .as_scalar()
+            .label('pid'))
+        .add_columns(
+            *[c for c in report.columns if c.name != 'entity_id']))
+    return query
+
+
+def archive_query(zfp, arcname, query):
     """
     Dumps an arbitrary query to a CSV file inside an archive file
 
@@ -175,7 +179,7 @@ def arc_query(zfp, arcname, query):
         zfp.write(tfp.name, arcname)
 
 
-def arc_codebook(zfp, arcname, name, ids=None):
+def archive_codebook(zfp, arcname, name, ids=None):
     """
     Dumps the ecrf into a CSV codebook file inside an archive file
 
@@ -187,13 +191,13 @@ def arc_codebook(zfp, arcname, name, ids=None):
 
     """
     query = (
-        Session.query(datastore.Attribute)
-        .join(datastore.Schema)
-        .filter(datastore.Schema.name == name)
-        .filter(datastore.Schema.id.in_(ids))
+        Session.query(models.Attribute)
+        .join(models.Schema)
+        .filter(models.Schema.name == name)
+        .filter(models.Schema.id.in_(ids))
         .order_by(
-            datastore.Attribute.order,
-            datastore.Schema.publish_date))
+            models.Attribute.order,
+            models.Schema.publish_date))
 
     with tempfile.NamedTemporaryFile() as tfp:
         writer = csv.writer(tfp)

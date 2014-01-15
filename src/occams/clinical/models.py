@@ -23,7 +23,7 @@ from occams.datastore.model import (
     HasEntities,
     ModelClass,
     User,
-    Schema, Entity, Context)
+    Schema, Attribute, Choice, Entity, Context)
 
 
 RE_WS = re.compile('\s+')
@@ -672,6 +672,11 @@ class Export(ClinicalModel, Referenceable, Auditable, Modifiable):
         default='pending')
 
     schemata = orm.relationship(Schema, secondary=export_schema_table)
+
+    def __repr__(self):
+        return '<{0}(id={o.id}, owner_user={o.owner_user.key})>'.format(
+            self.__module__ + '.' + self.__class__.__name__,
+            o=self)
 
     @declarative.declared_attr
     def __table_args__(cls):
