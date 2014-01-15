@@ -64,11 +64,11 @@
 
       <div class="panel-footer clearfix">
           <a class="btn btn-primary pull-right ${'disabled' if export.status != 'complete' else ''}"
-              href="${request.current_route_path(_query={'id': export.id})}"
+              href="${request.route_path('data_download', export_id=export.id)}"
               target="_blank"
               i18n:translate="">Download</a>
           <span class="text-muted" i18n:translate="">Available until:</span>
-          <strong>${export.create_date.isoformat()}</strong>
+          <strong tal:define="timedelta import: datetime.timedelta">${(export.create_date + timedelta(7)).isoformat()}</strong>
       </div>
 
     </div> <!-- /panel-footer -->

@@ -26,9 +26,6 @@
           , progress = (data['count'] / data['total']) * 100
           , status = data['status'] ;
 
-
-        console.log(data);
-
         // update the progress bar percentage
         $panel.find('.progress-bar').css({width: progress + '%'});
         $panel.find('.progress-bar .sr-only').text(progress + '%');
