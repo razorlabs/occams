@@ -8,7 +8,6 @@ from pyramid_layout.layout import layout_config
 from pyramid_layout.panel import panel_config
 from pyramid.view import view_config
 from sqlalchemy import func, orm, sql
-import transaction
 
 from occams.datastore import model as datastore
 

@@ -6,12 +6,10 @@ All permissions are declared here for easier overview
 
 from repoze.who.interfaces import IChallengeDecider
 from pyramid.events import subscriber, NewRequest
-from pyramid.security import has_permission
+from pyramid.security import has_permission, authenticated_userid
 from zope.interface import directlyProvides
-import transaction
 
-from occams.clinical import log, Session
-from occams.datastore import model as datastore
+from occams.clinical import log, Session, models
 
 
 def challenge_decider(environ, status, headers):
@@ -53,18 +51,16 @@ def track_user(event):
     """
     Annotates the database session with the current user.
     """
-    userid = event.request.environ.get('REMOTE_USER')
+    userid = authenticated_userid(event.request)
 
     if not userid:
         return
 
-    if not Session.query(datastore.User).filter_by(key=userid).count():
-        with transaction.manager:
-            Session.add(datastore.User(key=userid))
+    if not Session.query(models.User).filter_by(key=userid).count():
+        Session.add(models.User(key=userid))
 
     # update the current scoped session's infor attribute
-    session = Session()
-    session.info['user'] = userid
+    Session.info['user'] = userid
 
 
 def includeme(config):

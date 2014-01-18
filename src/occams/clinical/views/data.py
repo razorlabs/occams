@@ -55,32 +55,32 @@ def list_(request):
     The actual exporting process is then queued in a another thread so the user
     isn't left with an unresponsive page.
     """
-    userid = authenticated_userid(request)
-    schema = ExportCheckoutSchema().bind(request=request)
-    form = deform.Form(schema)
+    form = deform.Form(ExportCheckoutSchema().bind(request=request))
 
     if request.method == 'POST':
         try:
             appstruct = form.validate(request.POST.mixed().items())
-        except deform.ValidationFailure as form:
-            pass
+        except deform.ValidationFailure as e:
+            form = e
         else:
-            with transaction.manager:
-                export = models.Export(
-                    owner_user=(
-                        Session.query(models.User)
-                        .filter_by(key=userid)
-                        .one()),
-                    schemata=(
-                        Session.query(models.Schema)
-                        .filter(models.Schema.id.in_(appstruct['schemata']))
-                        .all()))
-                Session.add(export)
-                Session.flush()
-                export_id = export.id
-            tasks.make_export.apply_async(
-                args=(export_id,),
-                link_error=tasks.handle_error.s())
+            export = models.Export(
+                owner_user=(
+                    Session.query(models.User)
+                    .filter_by(key=authenticated_userid(request))
+                    .one()),
+                schemata=(
+                    Session.query(models.Schema)
+                    .filter(models.Schema.id.in_(appstruct['schemata']))
+                    .all()))
+            Session.add(export)
+            Session.flush()
+            task = tasks.make_export.subtask(
+                args=(export.id,),
+                link_error=tasks.handle_error.subtask())
+            # Avoid race-conditions by executing the task after
+            # the current request completes successfully
+            transaction.get().addAfterCommitHook(
+                lambda success: success and task.apply_async())
             request.session.flash(
                 _(u'Your request has been received!'), 'success')
             return HTTPFound(location=request.route_path('data_export'))
@@ -96,14 +96,11 @@ def list_(request):
             models.Schema.name.asc(),
             models.Schema.publish_date.desc()))
 
-    schemata_count = schemata_query.count()
-
     return {
         'csrf_token': request.session.get_csrf_token(),
         'form': form,
         'schemata': schemata_query,
-        'has_schemata': schemata_count > 0,
-        'schemata_count': schemata_count}
+        'schemata_count': schemata_query.count()}
 
 
 @view_config(

@@ -4,7 +4,6 @@ from pyramid_deform import CSRFSchema
 from pyramid.httpexceptions import HTTPFound
 from pyramid.view import view_config
 from sqlalchemy import func, orm, sql
-import transaction
 
 from occams.clinical import _, log, models, Session
 from occams.datastore import model as datastore

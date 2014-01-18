@@ -1,10 +1,12 @@
 import os.path
+import threading
 import unittest
 
 from pyramid import testing
 from pyramid.paster import get_appsettings, get_app
 from webtest import TestApp
 from sqlalchemy import engine_from_config
+import transaction
 
 from occams.clinical import Session, RosterSession, models
 from occams.datastore import model as datastore
@@ -12,24 +14,11 @@ from occams.roster import model as roster
 
 
 HERE = os.path.abspath(os.path.dirname(__file__))
-TEST_INI = os.path.join(HERE, 'etc', 'app.ini')
+TEST_INI = os.path.join(HERE, 'app.ini')
 
-
-class ModelFixture(unittest.TestCase):
-    """
-    Fixture for testing the database models only.
-    """
-
-    @classmethod
-    def setUpClass(cls):
-        settings = get_appsettings(TEST_INI)
-        Session.configure(bind=engine_from_config(settings, 'clinical.'))
-
-    def setUp(self):
-        Session.begin()
-
-    def tearDown(self):
-        Session.rollback()
+REDIS_URL = 'redis://localhost:6379/9'
+CLINICAL_URL = 'sqlite://'
+ROSTER_URL = 'sqlite://'
 
 
 class IntegrationFixture(unittest.TestCase):
@@ -39,25 +28,27 @@ class IntegrationFixture(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.settings = get_appsettings(TEST_INI)
-
-    def setUp(self):
-        settings = self.settings
-        self.config = testing.setUp()
+        cls.settings = settings = get_appsettings(TEST_INI)
         Session.configure(bind=engine_from_config(settings, 'clinicaldb.'))
         RosterSession.configure(bind=engine_from_config(settings, 'rosterdb.'))
         create_db()
 
-    def tearDown(self):
-        testing.tearDown()
+    @classmethod
+    def tearDownClass(cls):
         drop_db()
         disconnect_db()
 
+    def setUp(self):
+        self.config = testing.setUp()
+
+    def tearDown(self):
+        testing.tearDown()
+        transaction.abort()
+
     def add_user(self, userid):
-        session = Session()
-        session.add(datastore.User(key=userid))
-        session.flush()
-        session.info['user'] = userid
+        Session.add(datastore.User(key=userid))
+        Session.flush()
+        Session.info['user'] = userid
 
 
 class FunctionalFixture(unittest.TestCase):
@@ -79,10 +70,9 @@ class FunctionalFixture(unittest.TestCase):
         disconnect_db()
 
     def add_user(self, userid):
-        session = Session()
-        session.add(datastore.User(key=userid))
-        session.flush()
-        session.info['user'] = userid
+        Session.add(datastore.User(key=userid))
+        Session.flush()
+        Session.info['user'] = userid
 
     def make_environ(self, userid='testuser', properties={}, groups=()):
         """
@@ -107,6 +97,33 @@ class FunctionalFixture(unittest.TestCase):
         response = self.app.get(url, extra_environ=environ, status='*')
         if response.status_code not in (401, 403):
             raise AssertionError(msg or 'Can view %s' % url)
+
+
+class PubSubListener(threading.Thread):
+    """
+    Helper class to listen for redis channel broadcasts in separate thread.
+    To close the thread, any channel must publish a "KILL" data value
+    """
+
+    def __init__(self, r, *channels):
+        """
+        Parameters:
+        r -- the redis instance
+        channels -- the channel(s) to subscribe
+        """
+        super(PubSubListener, self).__init__()
+        assert len(channels)
+        self.redis = r
+        self.pubsub = self.redis.pubsub()
+        self.pubsub.subscribe(channels)
+        self.messages = []
+
+    def run(self):
+        for item in self.pubsub.listen():
+            if item['data'] == 'KILL':
+                break
+            if item['type'] == 'message':
+                self.messages.append(item['data'])
 
 
 def create_db():

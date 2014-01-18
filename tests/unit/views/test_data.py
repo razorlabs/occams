@@ -4,103 +4,9 @@ from ddt import ddt, data
 import mock
 from pyramid import testing
 from webob.multidict import MultiDict
-import transaction
 
 from occams.clinical import Session, models
-from tests import FunctionalFixture, IntegrationFixture
-
-
-@ddt
-class TestListViewPermissions(FunctionalFixture):
-
-    url = '/data'
-
-    @data('administrator', 'investigator', 'statistician', 'researcher',
-          'nurse')
-    def test_allowed(self, principal):
-        """
-        It should allow administrative personnel to view form listings
-        """
-        self.assertCanView(self.url, self.make_environ(groups=[principal]))
-
-    @data('assistant', 'student', None)
-    def test_not_allowed(self, principal):
-        """
-        It should not allow data entry prinicipals to view form listings
-        """
-        self.assertCannotView(self.url, self.make_environ(groups=[principal]))
-
-    def test_unauthenticated_not_allowed(self):
-        """
-        It should not allow unauthenticated users to view form listings
-        """
-        self.assertCannotView(self.url)
-
-
-@ddt
-class TestExportViewPermissions(FunctionalFixture):
-
-    url = '/data/exports'
-
-    @data('administrator', 'investigator', 'statistician', 'researcher',
-          'nurse')
-    def test_allowed(self, principal):
-        """
-        It should allow administrative personnel to view downloads
-        """
-        self.assertCanView(self.url, self.make_environ(groups=[principal]))
-
-    @data('assistant', 'student', None)
-    def test_not_allowed(self, principal):
-        """
-        It should not allow data entry prinicipals to view downloads
-        """
-        self.assertCannotView(self.url, self.make_environ(groups=[principal]))
-
-    def test_unauthenticated_not_allowed(self):
-        """
-        It should not allow unauthenticated users to view downloads
-        """
-        self.assertCannotView(self.url)
-
-
-@ddt
-class TestDownloadViewPersmissions(FunctionalFixture):
-
-    url = '/data/exports/123'
-
-    @data('administrator', 'investigator', 'statistician', 'researcher',
-          'nurse')
-    def test_allowed(self, principal):
-        """
-        It should allow administrative personnel to download exports
-        """
-        environ = self.make_environ(groups=[principal])
-        # Add the the export zip file and database record
-        with open('/tmp/123.zip', 'wb+'):
-            with transaction.manager:
-                self.add_user(environ['REMOTE_USER'])
-                Session.add(models.Export(
-                    id=123,
-                    owner_user=(
-                        Session.query(models.User)
-                        .filter_by(key=environ['REMOTE_USER'])
-                        .one()),
-                    status='complete'))
-            self.assertCanView(self.url, environ)
-
-    @data('assistant', 'student', None)
-    def test_not_allowed(self, principal):
-        """
-        It should not allow data entry prinicipals to download exports
-        """
-        self.assertCannotView(self.url, self.make_environ(groups=[principal]))
-
-    def test_unauthenticated_not_allowed(self):
-        """
-        It should not allow unauthenticated users to download exports
-        """
-        self.assertCannotView(self.url)
+from tests import IntegrationFixture
 
 
 class TestList(IntegrationFixture):
@@ -121,7 +27,7 @@ class TestList(IntegrationFixture):
         request = testing.DummyRequest(
             layout_manager=mock.Mock())
         response = self.view_func(request)
-        self.assertFalse(response['has_schemata'])
+        self.assertEquals(response['schemata_count'], 0)
 
         self.add_user('joe')
 
@@ -133,7 +39,7 @@ class TestList(IntegrationFixture):
         request = testing.DummyRequest(
             layout_manager=mock.Mock())
         response = self.view_func(request)
-        self.assertFalse(response['has_schemata'])
+        self.assertEquals(response['schemata_count'], 0)
 
         # Published schemata
         schema.publish_date = date.today()
@@ -141,7 +47,7 @@ class TestList(IntegrationFixture):
         request = testing.DummyRequest(
             layout_manager=mock.Mock())
         response = self.view_func(request)
-        self.assertTrue(response['has_schemata'])
+        self.assertEquals(response['schemata_count'], 1)
 
     def test_post_empty(self):
         """
@@ -173,11 +79,16 @@ class TestList(IntegrationFixture):
         response = self.view_func(request)
         self.assertIsNotNone(response['form'].field['csrf_token'].error.msg)
 
-    def test_valid(self):
+    # Don't actually invoke the subtasks
+    @mock.patch('occams.clinical.tasks.make_export')
+    @mock.patch('occams.clinical.tasks.handle_error')
+    def test_valid(self, make_export, handle_error):
         """
         It should add an export record and initiate an async task
         """
+        import transaction
         self.config.add_route('data_export', '/data/exports')
+        self.config.registry.settings['app.export_dir'] = '/tmp'
         with transaction.manager:
             self.add_user('joe')
             schema = models.Schema(
@@ -192,10 +103,7 @@ class TestList(IntegrationFixture):
                 ('schemata', str(schema_id))
                 ]))
         request.POST['csrf_token'] = request.session.get_csrf_token()
-        # Don't actually trigger the asynchrnous task,
-        # that will be tested elsewhere
-        with mock.patch('occams.clinical.tasks.make_export.s'):
-            response = self.view_func(request)
+        response = self.view_func(request)
 
         self.assertEqual(response.location, request.route_path('data_export'))
         export = Session.query(models.Export).one()

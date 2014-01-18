@@ -6,7 +6,6 @@
 #from pyramid.view import view_config, forbidden_view_config
 #from pyramid_ldap import get_ldap_connector
 #from sqlalchemy import orm
-#import transaction
 
 #from occams.clinical import _, log, permissions, Session
 #from occams.datastore import model as datastore
@@ -80,8 +79,8 @@
     #try:
         #Session.query(datastore.User).filter_by(key=appstruct['email']).one()
     #except orm.NoResultFound as e:
-        #with transaction.manager:
-            #Session.add(datastore.User(key=appstruct['email']))
+        #Session.add(datastore.User(key=appstruct['email']))
+        #Session.flush()
 
     #connector = get_ldap_connector(request)
     #with connector.manager.connection() as conn:

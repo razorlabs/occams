@@ -8,7 +8,7 @@ later time.
 
 try:
     import unicodecsv as csv
-except ImportError:
+except ImportError:  # pragma: nocover
     import csv  # NOQA (py3, hopefully)
 from contextlib import closing
 import json
@@ -16,7 +16,7 @@ import os
 import tempfile
 import zipfile
 
-from celery import Celery, Task
+from celery import Celery
 from celery.bin import Option
 from celery.signals import worker_init
 from celery.utils.log import get_task_logger
@@ -36,18 +36,22 @@ app.user_options['worker'].add(
 log = get_task_logger(__name__)
 
 
-class SqlAlchemyTask(Task):
+def in_transaction(func):
     """
-    Base class for tasks that use SQLAlchemy.
+    Function decoratator that commits on successul execution, aborts otherwise.
 
-    This abstract class ensures that the connection the the database is
-    closed on task completion to prevent leaked open connections
+    Also releases connection to prevent leaked open connections.
+
+    The pyramid application-portion relies on ``pyramid_tm`` to commit at
+    the end of each request. Tasks don't have this luxury and must
+    be committed manually after each successful call.
     """
-
-    abstract = True
-
-    def after_return(self, status, retval, task_id, args, kwargs, einfo):
+    def decorated(*args, **kw):
+        with transaction.manager:
+            result = func(*args, **kw)
         Session.remove()
+        return result
+    return decorated
 
 
 @worker_init.connect
@@ -61,7 +65,8 @@ def init(signal, sender):
     sender.app.redis = env['request'].redis
 
 
-@app.task(base=SqlAlchemyTask)
+@app.task(ignore_result=True)
+@in_transaction
 def make_export(export_id):
     """
     Handles generating exports in a separate process.
@@ -124,12 +129,11 @@ def make_export(export_id):
             archive_codebook(zfp, arcname, name, ids)
             publish_done(arcname)
 
-    # File has been closed/flushed, it's ready for consumption
-    with transaction.manager:
-        update_query = Session.query(models.Export).filter_by(id=export_id)
-        update_query.update({'status': u'complete'}, 'fetch')
+    # Need to commit this somehow...
+    export.status = 'complete'
+    Session.flush()
 
-    redis.hset(export_id, 'status', 'complete')
+    redis.hset(export_id, 'status', export.status)
     redis.publish('export', json.dumps(redis.hgetall(export_id)))
 
 
