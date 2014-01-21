@@ -8,7 +8,6 @@
 #from sqlalchemy import orm
 
 #from occams.clinical import _, log, permissions, Session
-#from occams.datastore import model as datastore
 
 
 #class LoginSchema(colander.MappingSchema):
@@ -77,9 +76,9 @@
         #return {'form': e.field.render({'email': request.POST['email']})}
 
     #try:
-        #Session.query(datastore.User).filter_by(key=appstruct['email']).one()
+        #Session.query(models.User).filter_by(key=appstruct['email']).one()
     #except orm.NoResultFound as e:
-        #Session.add(datastore.User(key=appstruct['email']))
+        #Session.add(models.User(key=appstruct['email']))
         #Session.flush()
 
     #connector = get_ldap_connector(request)

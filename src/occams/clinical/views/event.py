@@ -6,7 +6,6 @@ from pyramid.view import view_config
 from sqlalchemy import func, orm, sql
 
 from occams.clinical import _, log, models, Session
-from occams.datastore import model as datastore
 import occams.form.widgets
 
 

@@ -1,17 +1,11 @@
-import datetime
-
 import colander
 import deform.widget
 from pyramid.httpexceptions import HTTPFound, HTTPNotFound
 from pyramid_deform import CSRFSchema
-from pyramid_layout.layout import layout_config
-from pyramid_layout.panel import panel_config
 from pyramid.view import view_config
 from sqlalchemy import func, orm, sql
 
-from occams.datastore import model as datastore
-
-from occams.clinical import _, log, models, Session
+from occams.clinical import _, models, Session
 
 
 def find_study(request):
@@ -33,6 +27,11 @@ class StudySchema(CSRFSchema):
         colander.Int(),
         widget=deform.widget.HiddenWidget(),
         missing=None)
+
+    name = colander.SchemaNode(
+        colander.String(),
+        title=_(u'URL Name'),
+        description=_(u'ID for user (e.g. /studies/my-study)'))
 
     title = colander.SchemaNode(
         colander.String(),
@@ -57,9 +56,9 @@ class StudySchema(CSRFSchema):
         title=_(u'Consent Date'))
 
     def validator(self, node, struct):
-        name = tokenize(struct['title'])
+        name = struct['name']
         name_query = Session.query(models.Study).filter_by(name=name)
-        if value['id'] is not None:
+        if struct['id'] is not None:
             name_query = name_query.filter(models.Study.id != struct['id'])
         count = name_query.count()
         if count > 0:
@@ -151,22 +150,22 @@ def schedule(request):
         .filter(models.Cycle.study == study)
         .order_by(models.Cycle.week.nullslast()))
 
-    OuterSchema = orm.aliased(datastore.Schema, name='OuterSchema')
+    OuterSchema = orm.aliased(models.Schema, name='OuterSchema')
 
     ecrfs_query = (
         Session.query(OuterSchema.title)
         .add_columns(*[
-            sql.exists([datastore.Schema.id])
-            .where((datastore.Schema.name == OuterSchema.name)
-                   & datastore.Schema.categories.contains(cycle.category))
+            sql.exists([models.Schema.id])
+            .where((models.Schema.name == OuterSchema.name)
+                   & models.Schema.categories.contains(cycle.category))
             .label(cycle.name)
             for cycle in cycles_query])
         .filter(OuterSchema.categories.contains(study.category))
         .filter(OuterSchema.publish_date == (
-            Session.query(datastore.Schema.publish_date)
-            .filter(datastore.Schema.publish_date is not None)
-            .filter(datastore.Schema.name == OuterSchema.name)
-            .order_by(datastore.Schema.publish_date.desc())
+            Session.query(models.Schema.publish_date)
+            .filter(models.Schema.publish_date is not None)
+            .filter(models.Schema.name == OuterSchema.name)
+            .order_by(models.Schema.publish_date.desc())
             .limit(1)
             .correlate(OuterSchema)
             .as_scalar()))
@@ -192,7 +191,7 @@ def progress(request):
     layout.set_details('study_details', study=study)
     layout.set_nav('study_nav', study=study)
 
-    states_query = Session.query(datastore.State)
+    states_query = Session.query(models.State)
 
     VisitCycle = orm.aliased(models.Cycle)
 
@@ -254,8 +253,8 @@ def add(request):
         except deform.ValidationFailure as e:
             return {'form': e.render()}
         study = models.apply(models.Study(), appstruct)
-        FiaSession.add(study)
-        FiaSession.flush()
+        Session.add(study)
+        Session.flush()
         study_url = request.current_route_path(_route_name='study_view',
                                                study_name=study.name)
         request.session.flash(_(u'New study added!', 'success'))
@@ -265,22 +264,24 @@ def add(request):
 
 
 def query_enabled_ecrfs(study):
-    StudySchema = orm.aliased(datastore.Schema, name='StudySchema')
-    CurrentSchema = orm.aliased(datastore.Schema, name='CurrentSchema')
+    StudySchema = orm.aliased(models.Schema, name='StudySchema')
+    CurrentSchema = orm.aliased(models.Schema, name='CurrentSchema')
     study_schemata_query = (
-        FiaSession.query(datastore.Schema)
-        .filter(datastore.Schema.categories.contains(study.category))
+        Session.query(models.Schema)
+        .filter(models.Schema.categories.contains(study.category))
         .subquery('study_schemata'))
     ecrfs_query = (
-        FiaSession.query(
+        Session.query(
             StudySchema.id,
             StudySchema.name,
             StudySchema.title)
-        .add_column((study_schemata_query.c.id is not None).label('is_enabled'))
-        .outerjoin(study_schemata_query, study_schemata_query.c.id == StudySchema.id)
+        .add_column(
+            (study_schemata_query.c.id is not None).label('is_enabled'))
+        .outerjoin(study_schemata_query,
+                   study_schemata_query.c.id == StudySchema.id)
         .filter(~StudySchema.is_inline)
         .filter(StudySchema.publish_date == (
-            FiaSession.query(CurrentSchema.publish_date)
+            Session.query(CurrentSchema.publish_date)
             .filter(CurrentSchema.name == StudySchema.name)
             .filter(CurrentSchema.state == 'published')
             .order_by(CurrentSchema.publish_date.desc())

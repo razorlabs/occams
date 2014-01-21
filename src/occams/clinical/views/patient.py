@@ -5,7 +5,6 @@ from sqlalchemy import bindparam, or_, func, orm, sql
 from webhelpers import paginate
 
 from occams.clinical import _, log, models, Session
-from occams.datastore import model as datastore
 
 
 @view_config(
