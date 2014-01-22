@@ -81,21 +81,19 @@ class TestList(IntegrationFixture):
 
     # Don't actually invoke the subtasks
     @mock.patch('occams.clinical.tasks.make_export')
-    @mock.patch('occams.clinical.tasks.handle_error')
-    def test_valid(self, make_export, handle_error):
+    def test_valid(self, make_export):
         """
         It should add an export record and initiate an async task
         """
-        import transaction
         self.config.add_route('data_export', '/data/exports')
         self.config.registry.settings['app.export_dir'] = '/tmp'
-        with transaction.manager:
-            self.add_user('joe')
-            schema = models.Schema(
-                name=u'vitals', title=u'Vitals', publish_date=date.today())
-            Session.add(schema)
-            Session.flush()
-            schema_id = schema.id
+
+        self.add_user('joe')
+        schema = models.Schema(
+            name=u'vitals', title=u'Vitals', publish_date=date.today())
+        Session.add(schema)
+        Session.flush()
+        schema_id = schema.id
 
         request = testing.DummyRequest(
             layout_manager=mock.Mock(),

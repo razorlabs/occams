@@ -90,16 +90,7 @@ visit_cycle_table = schema.Table('visit_cycle', ClinicalModel.metadata,
                                  )
 
 
-class Zopeable(object):
-
-    zid = schema.Column(
-        types.Integer,
-        nullable=False,
-        unique=True,
-        default=lambda: int(time.time()))
-
-
-class Study(ClinicalModel, AutoNamed, Referenceable, Describeable, Auditable, Modifiable, Zopeable):
+class Study(ClinicalModel, AutoNamed, Referenceable, Describeable, Auditable, Modifiable):
 
     short_title = schema.Column(types.Unicode, nullable=False)
 
@@ -201,7 +192,7 @@ class Study(ClinicalModel, AutoNamed, Referenceable, Describeable, Auditable, Mo
         )
 
 
-class Cycle(ClinicalModel, AutoNamed, Referenceable, Describeable, Auditable, Modifiable, Zopeable):
+class Cycle(ClinicalModel, AutoNamed, Referenceable, Describeable, Auditable, Modifiable):
 
     study_id = schema.Column(types.Integer, nullable=False)
 
@@ -266,7 +257,7 @@ class Cycle(ClinicalModel, AutoNamed, Referenceable, Describeable, Auditable, Mo
         )
 
 
-class Site(ClinicalModel, AutoNamed, Referenceable, Describeable, Auditable, Modifiable, Zopeable):
+class Site(ClinicalModel, AutoNamed, Referenceable, Describeable, Auditable, Modifiable):
 
     # patients is backref'ed in the Patient class
 
@@ -280,7 +271,7 @@ class Site(ClinicalModel, AutoNamed, Referenceable, Describeable, Auditable, Mod
         )
 
 
-class Patient(ClinicalModel, AutoNamed, Referenceable, Auditable, Modifiable, HasEntities, Zopeable):
+class Patient(ClinicalModel, AutoNamed, Referenceable, Auditable, Modifiable, HasEntities):
 
     # Read-only OUR# alias that will be useful for traversal
     name = hybrid.hybrid_property(lambda self: self.our)
@@ -402,7 +393,7 @@ class PatientReference(ClinicalModel, AutoNamed, Referenceable, Auditable, Modif
         )
 
 
-class Enrollment(ClinicalModel, AutoNamed, Referenceable, Auditable, Modifiable, HasEntities, Zopeable):
+class Enrollment(ClinicalModel, AutoNamed, Referenceable, Auditable, Modifiable, HasEntities):
 
     patient_id = schema.Column(types.Integer, nullable=False,)
 
@@ -481,7 +472,7 @@ class Enrollment(ClinicalModel, AutoNamed, Referenceable, Auditable, Modifiable,
         )
 
 
-class Visit(ClinicalModel, AutoNamed, Referenceable, Auditable, Modifiable, HasEntities, Zopeable):
+class Visit(ClinicalModel, AutoNamed, Referenceable, Auditable, Modifiable, HasEntities):
 
     patient_id = schema.Column(types.Integer, nullable=False)
 

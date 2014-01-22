@@ -74,9 +74,7 @@ def list_(request):
                     .all()))
             Session.add(export)
             Session.flush()
-            task = tasks.make_export.subtask(
-                args=(export.id,),
-                link_error=tasks.handle_error.subtask())
+            task = tasks.make_export.subtask(args=(export.id,))
             # Avoid race-conditions by executing the task after
             # the current request completes successfully
             transaction.get().addAfterCommitHook(

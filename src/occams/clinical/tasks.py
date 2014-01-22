@@ -21,6 +21,7 @@ from celery.bin import Option
 from celery.signals import worker_init
 from celery.utils.log import get_task_logger
 from pyramid.paster import bootstrap
+from sqlalchemy import orm, func, literal
 from webob.multidict import MultiDict
 import transaction
 
@@ -137,31 +138,76 @@ def make_export(export_id):
     redis.publish('export', json.dumps(redis.hgetall(export_id)))
 
 
-@app.task
-def handle_error(uuid):
-    """
-    Handles asynchronous errors
-    """
-    log.error('Oh snap, there was an error')
-
-
 def query_report(schema):
+    """
+    Generates a clinical report containing the patient's metadata
+    that relates to the form.
+
+    Clinical metadadata includes:
+        * site -- Patient's site
+        * pid -- Patient's PID number
+        * enrollment -- The applicable enrollment
+        * cycles - The applicable visit's cycles
+
+    Parameters:
+    schema -- The schema to generate the report for
+
+    Returns:
+    A SQLAlchemy query
+    """
+
+    def aggregate(expr):
+        if Session.bind.url.drivername == 'postgresql':
+            return func.array_to_string(func.array_agg(expr), literal(','))
+        else:
+            return func.group_concat(expr)
+
     report = reporting.export(schema)
     query = (
         Session.query(report.c.entity_id)
         .add_column(
+            Session.query(models.Site.name)
+            .select_from(models.Patient)
+            .join(models.Site)
+            .join(models.Context,
+                  (models.Context.external == 'patient')
+                  & (models.Context.key == models.Patient.id))
+            .filter(models.Context.entity_id == report.c.entity_id)
+            .correlate(report)
+            .as_scalar()
+            .label('site'))
+        .add_column(
             Session.query(models.Patient.pid)
-            .distinct()
-            .join(models.Visit)
+            .join(models.Context,
+                  (models.Context.external == 'patient')
+                  & (models.Context.key == models.Patient.id))
+            .filter(models.Context.entity_id == report.c.entity_id)
+            .correlate(report)
+            .as_scalar()
+            .label('pid'))
+        .add_column(
+            Session.query(models.Study.name)
+            .select_from(models.Enrollment)
+            .join(models.Study)
+            .join(models.Context,
+                  (models.Context.external == 'enrollment')
+                  & (models.Context.key == models.Enrollment.id))
+            .filter(models.Context.entity_id == report.c.entity_id)
+            .correlate(report)
+            .as_scalar()
+            .label('enrollment'))
+        .add_column(
+            Session.query(aggregate(models.Cycle.name))
+            .select_from(models.Visit)
+            .join(models.Visit.cycles)
             .join(models.Context,
                   (models.Context.external == 'visit')
                   & (models.Context.key == models.Visit.id))
             .filter(models.Context.entity_id == report.c.entity_id)
             .correlate(report)
             .as_scalar()
-            .label('pid'))
-        .add_columns(
-            *[c for c in report.columns if c.name != 'entity_id']))
+            .label('cycles'))
+        .add_columns(*[c for c in report.columns if c.name != 'entity_id']))
     return query
 
 

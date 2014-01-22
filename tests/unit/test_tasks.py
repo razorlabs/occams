@@ -3,6 +3,9 @@ from tests import PubSubListener, IntegrationFixture, REDIS_URL, CLINICAL_URL
 
 
 class TestInTransaction(unittest.TestCase):
+    """
+    Functional-ish test that ensures tasks can be completed in a transaction.
+    """
 
     def setUp(self):
         from sqlalchemy import create_engine
@@ -247,3 +250,141 @@ class TestMakeExport(IntegrationFixture):
              'total': '3'})
 
         self.assertEqual(len(self.client.messages), 4)
+
+
+class QueryReport(IntegrationFixture):
+
+    def test_patient(self):
+        """
+        It should add patient-specific metdata to the report
+        """
+        from datetime import date
+        from occams.clinical import Session, models
+        from occams.clinical.tasks import query_report
+
+        self.add_user(u'joe')
+        entity = models.Entity(
+            name=u'sample',
+            title=u'',
+            collect_date=date.today(),
+            schema=models.Schema(
+                name=u'vitals',
+                title=u'Vitals',
+                publish_date=date.today()))
+        visit = models.Visit(
+            patient=models.Patient(
+                site=models.Site(name='ucsd', title=u'UCSD'),
+                our=u'12345',
+                entities=[entity]),
+            visit_date=date.today(),
+            entities=[entity])
+        Session.add(visit)
+
+        schema = Session.query(models.Schema).one()
+        report = query_report(schema)
+        entry = report.one()
+        self.assertEquals(entry.site, 'ucsd')
+        self.assertEquals(entry.pid, '12345')
+        self.assertIsNone(entry.enrollment)
+        self.assertIsNone(entry.cycles, None)
+        self.assertEquals(entry.collect_date, date.today())
+
+    def test_enrollment(self):
+        """
+        It should add enrollment-specific metdata to the report
+        """
+        from datetime import date, timedelta
+        from occams.clinical import Session, models
+        from occams.clinical.tasks import query_report
+
+        self.add_user(u'joe')
+        entity = models.Entity(
+            name=u'sample',
+            title=u'',
+            collect_date=date.today(),
+            schema=models.Schema(
+                name=u'vitals',
+                title=u'Vitals',
+                publish_date=date.today()))
+        enrollment = models.Enrollment(
+            patient=models.Patient(
+                site=models.Site(name='ucsd', title=u'UCSD'),
+                our=u'12345',
+                entities=[entity]),
+            study=models.Study(
+                name=u'cooties',
+                short_title=u'CTY',
+                code=u'999',
+                consent_date=date.today() - timedelta(365),
+                title=u'Cooties'),
+            consent_date=date.today() - timedelta(5),
+            latest_consent_date=date.today() - timedelta(3),
+            termination_date=date.today(),
+            entities=[entity])
+        Session.add(enrollment)
+
+        schema = Session.query(models.Schema).one()
+        report = query_report(schema)
+        entry = report.one()
+        self.assertEquals(entry.site, 'ucsd')
+        self.assertEquals(entry.pid, '12345')
+        self.assertEquals(entry.enrollment, 'cooties')
+        self.assertIsNone(entry.cycles, None)
+        self.assertEquals(entry.collect_date, date.today())
+
+    def test_visit(self):
+        """
+        It should add visit-specific metdata to the report
+        """
+        from datetime import date, timedelta
+        from occams.clinical import Session, models
+        from occams.clinical.tasks import query_report
+
+        self.add_user(u'joe')
+        entity = models.Entity(
+            name=u'sample',
+            title=u'',
+            collect_date=date.today(),
+            schema=models.Schema(
+                name=u'vitals',
+                title=u'Vitals',
+                publish_date=date.today()))
+        visit = models.Visit(
+            visit_date=date.today(),
+            patient=models.Patient(
+                site=models.Site(name='ucsd', title=u'UCSD'),
+                our=u'12345',
+                entities=[entity]),
+            cycles=[
+                models.Cycle(
+                    name=u'study1-scr',
+                    title=u'Study 1 Screening',
+                    study=models.Study(
+                        name=u'study1',
+                        short_title=u'S1',
+                        code=u'001',
+                        consent_date=date.today() - timedelta(365),
+                        title=u'Study 1')),
+                models.Cycle(
+                    name=u'study2-wk1',
+                    title=u'Study 2 Week 1',
+                    study=models.Study(
+                        name=u'study21',
+                        short_title=u'S2',
+                        code=u'002',
+                        consent_date=date.today() - timedelta(365),
+                        title=u'Study 2'))],
+            entities=[entity])
+        Session.add(visit)
+
+        schema = Session.query(models.Schema).one()
+        report = query_report(schema)
+        entry = report.one()
+
+        self.assertEquals(entry.site, 'ucsd')
+        self.assertEquals(entry.pid, '12345')
+        self.assertIsNone(entry.enrollment)
+        self.assertItemsEqual(
+            entry.cycles.split(','),
+            ['study1-scr', 'study2-wk1'])
+        self.assertEquals(entry.collect_date, date.today())
