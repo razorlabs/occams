@@ -21,7 +21,7 @@ from celery.bin import Option
 from celery.signals import worker_init
 from celery.utils.log import get_task_logger
 from pyramid.paster import bootstrap
-from sqlalchemy import orm, func, literal
+from sqlalchemy import func, literal, null
 from webob.multidict import MultiDict
 import transaction
 
@@ -121,13 +121,17 @@ def make_export(export_id):
         # Generate the data files
         for schema in export.schemata:
             arcname = '{0}-{1}.csv'.format(schema.name, schema.publish_date)
-            archive_query(zfp, arcname, query_report(schema))
+            with tempfile.NamedTemporaryFile() as tfp:
+                dump_query(tfp, query_report(schema))
+                zfp.write(tfp.name, arcname)
             publish_done(arcname)
 
         # Generate the ecrf codebooks
         for name, ids in codebooks.dict_of_lists().items():
             arcname = '{0}-codebook.csv'.format(name)
-            archive_codebook(zfp, arcname, name, ids)
+            with tempfile.NamedTemporaryFile() as tfp:
+                dump_codebook(tfp, name, *ids)
+                zfp.write(tfp.name, arcname)
             publish_done(arcname)
 
     # Need to commit this somehow...
@@ -155,12 +159,11 @@ def query_report(schema):
     Returns:
     A SQLAlchemy query
     """
-
-    def aggregate(expr):
-        if Session.bind.url.drivername == 'postgresql':
-            return func.array_to_string(func.array_agg(expr), literal(','))
-        else:
-            return func.group_concat(expr)
+    # Helper method that returns the proper group concat function
+    aggregate = (
+        lambda e: func.array_to_string(func.array_agg(e), literal(','))
+        if Session.bind.url.drivername == 'postgresql'
+        else func.group_concat(e))
 
     report = reporting.export(schema)
     query = (
@@ -211,74 +214,74 @@ def query_report(schema):
     return query
 
 
-def archive_query(zfp, arcname, query):
+def dump_query(fp, query):
     """
-    Dumps an arbitrary query to a CSV file inside an archive file
+    Dumps an arbitrary query to a CSV file
 
     Parameters:
-    zfp -- the zip file pointer
-    arcname -- the name inside the archive
+    fp -- file pointer for target stream to write results to
     query -- the source query
 
     """
-    with tempfile.NamedTemporaryFile() as tfp:
-        writer = csv.writer(tfp)
-        writer.writerow([d['name'] for d in query.column_descriptions])
-        writer.writerows(query)
-        tfp.flush()  # ensure everything's on disk
-        zfp.write(tfp.name, arcname)
+    writer = csv.writer(fp)
+    writer.writerow([unicode(d['name']) for d in query.column_descriptions])
+    writer.writerows(query)
+    fp.flush()
 
 
-def archive_codebook(zfp, arcname, name, ids=None):
+def dump_codebook(fp, name, *ids):
     """
-    Dumps the ecrf into a CSV codebook file inside an archive file
+    Dumps the ecrf into a CSV codebook file
 
     Parameters:
-    zfp -- the zip file pointer
-    arcname -- the name inside the archive
+    fp -- file pointer for the target stream to write results to
     name -- the ecrf schema name
-    ids -- (optional) the specific ids of the schema
+    *ids -- (optional) the specific ids of the schema
 
     """
     query = (
         Session.query(models.Attribute)
         .join(models.Schema)
         .filter(models.Schema.name == name)
-        .filter(models.Schema.id.in_(ids))
-        .order_by(
+        .filter(models.Schema.publish_date != null())
+        .filter(models.Schema.retract_date == null()))
+
+    if ids:
+        query = query.filter(models.Schema.id.in_(ids))
+
+    query = (
+        query.order_by(
             models.Attribute.order,
             models.Schema.publish_date))
 
-    with tempfile.NamedTemporaryFile() as tfp:
-        writer = csv.writer(tfp)
+    writer = csv.writer(fp)
+    writer.writerow([
+        'form_name',
+        'form_title',
+        'form_publish_date',
+        'field_name',
+        'field_title',
+        'field_description',
+        'field_is_required',
+        'field_is_collection',
+        'field_type',
+        'field_choices',
+        'field_order'])
+
+    for attribute in query:
+        schema = attribute.schema
+        choices = attribute.choices
         writer.writerow([
-            'form_name',
-            'form_title',
-            'form_publish_date',
-            'field_name',
-            'field_title',
-            'field_description',
-            'field_is_required',
-            'field_is_collection',
-            'field_type',
-            'field_choices',
-            'field_order'])
+            schema.name,
+            schema.title,
+            schema.publish_date,
+            attribute.name,
+            attribute.title,
+            attribute.description,
+            attribute.is_required,
+            attribute.is_collection,
+            attribute.type,
+            '\r'.join(['%s - %s' % (c.name, c.title) for c in choices]),
+            attribute.order])
 
-        for attribute in query:
-            schema = attribute.schema
-            choices = attribute.choices
-            writer.writerow([
-                schema.name,
-                schema.title,
-                schema.publish_date,
-                attribute.name,
-                attribute.title,
-                attribute.description,
-                attribute.is_required,
-                attribute.is_collection,
-                attribute.type,
-                '\r'.join(['%s - %s' % (c.name, c.title) for c in choices]),
-                attribute.order])
-
-        tfp.flush()  # ensure everything's on disk
-        zfp.write(tfp.name, arcname)
+    fp.flush()

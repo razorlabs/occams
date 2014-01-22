@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import unittest
 from tests import PubSubListener, IntegrationFixture, REDIS_URL, CLINICAL_URL
 
@@ -252,7 +253,7 @@ class TestMakeExport(IntegrationFixture):
         self.assertEqual(len(self.client.messages), 4)
 
 
-class QueryReport(IntegrationFixture):
+class TestQueryReport(IntegrationFixture):
 
     def test_patient(self):
         """
@@ -388,3 +389,192 @@ class QueryReport(IntegrationFixture):
             entry.cycles.split(','),
             ['study1-scr', 'study2-wk1'])
         self.assertEquals(entry.collect_date, date.today())
+
+
+class TestDumpQuery(IntegrationFixture):
+
+    def test_unicode(self):
+        """
+        It should be able to export unicode strings
+        """
+        from contextlib import closing
+        import io
+        from sqlalchemy import literal_column, Integer, Unicode
+        from occams.clinical import Session
+        from occams.clinical.tasks import dump_query, csv
+
+        query = Session.query(
+            literal_column(u'"420"', Integer).label(u'anumeric'),
+            literal_column(u'"¿Qué pasa?"', Unicode).label(u'astring'),
+            )
+
+        with closing(io.BytesIO()) as fp:
+            dump_query(fp, query)
+            fp.seek(0)
+            rows = [r for r in csv.reader(fp)]
+
+        self.assertItemsEqual(['anumeric', 'astring'], rows[0])
+        self.assertItemsEqual([u'420', u'¿Qué pasa?'], rows[1])
+
+
+class TestDumpCodeBook(IntegrationFixture):
+
+    def test_header(self):
+        """
+        It should have the standard codebook header.
+        """
+        from contextlib import closing
+        import io
+        from occams.clinical.tasks import dump_codebook, csv
+
+        with closing(io.BytesIO()) as fp:
+            dump_codebook(fp, u'does_no_exist')
+            fp.seek(0)
+            rows = [r for r in csv.reader(fp)]
+
+        self.assertEquals(rows[0], [
+            'form_name',
+            'form_title',
+            'form_publish_date',
+            'field_name',
+            'field_title',
+            'field_description',
+            'field_is_required',
+            'field_is_collection',
+            'field_type',
+            'field_choices',
+            'field_order'])
+
+    def test_ignore_retract_data(self):
+        """
+        It should not include retracted forms
+        """
+        from contextlib import closing
+        from datetime import date, timedelta
+        import io
+        from occams.clinical import models, Session
+        from occams.clinical.tasks import dump_codebook, csv
+
+        self.add_user('joe')
+        Session.add_all([
+            models.Schema(
+                name=u'sample',
+                title=u'Sample',
+                publish_date=date.today() - timedelta(10),
+                attributes={
+                    'myvar': models.Attribute(
+                        name=u'myvar',
+                        title=u'My Var',
+                        type=u'string',
+                        order=0)
+                }),
+            models.Schema(
+                name=u'sample',
+                title=u'Sample v2',
+                publish_date=date.today(),
+                retract_date=date.today(),
+                attributes={
+                    'myvar': models.Attribute(
+                        name=u'myvar',
+                        title=u'My Updated Variable',
+                        type=u'string',
+                        order=0)
+                })])
+
+        with closing(io.BytesIO()) as fp:
+            dump_codebook(fp, u'sample')
+            fp.seek(0)
+            rows = [r for r in csv.reader(fp)]
+            self.assertItemsEqual(
+                ['sample', 'Sample', str(date.today() - timedelta(10)),
+                 'myvar', 'My Var', '',
+                 'False', 'False', 'string', '', '0'],
+                rows[1])
+
+    def test_ignore_with_ids(self):
+        """
+        It should only include specified ids
+        """
+        from contextlib import closing
+        from datetime import date, timedelta
+        import io
+        from occams.clinical import models, Session
+        from occams.clinical.tasks import dump_codebook, csv
+
+        self.add_user('joe')
+        Session.add_all([
+            models.Schema(
+                name=u'sample',
+                title=u'Sample',
+                publish_date=date.today() - timedelta(10),
+                attributes={
+                    'myvar': models.Attribute(
+                        name=u'myvar',
+                        title=u'My Var',
+                        type=u'string',
+                        order=0)
+                }),
+            models.Schema(
+                name=u'sample',
+                title=u'Sample v2',
+                publish_date=date.today(),
+                attributes={
+                    'myvar': models.Attribute(
+                        name=u'myvar',
+                        title=u'My Updated Variable',
+                        type=u'string',
+                        order=0)
+                })])
+
+        id = (
+            Session.query(models.Schema)
+            .filter_by(publish_date=date.today())
+            .one()
+            .id)
+
+        with closing(io.BytesIO()) as fp:
+            dump_codebook(fp, u'sample', id)
+            fp.seek(0)
+            rows = [r for r in csv.reader(fp)]
+            self.assertItemsEqual(
+                ['sample', 'Sample v2', str(date.today()),
+                 'myvar', 'My Updated Variable', '',
+                 'False', 'False', 'string', '', '0'],
+                rows[1])
+
+    def test_with_choices(self):
+        from contextlib import closing
+        from datetime import date, timedelta
+        import io
+        from occams.clinical import models, Session
+        from occams.clinical.tasks import dump_codebook, csv
+
+        self.add_user('joe')
+        Session.add_all([
+            models.Schema(
+                name=u'sample',
+                title=u'Sample',
+                publish_date=date.today() - timedelta(10),
+                attributes={
+                    'myvar': models.Attribute(
+                        name=u'myvar',
+                        title=u'My Var',
+                        type=u'string',
+                        order=0,
+                        choices=[
+                            models.Choice(
+                                name=u'000', title=u'Cheese', order=0),
+                            models.Choice(
+                                name=u'001', title=u'Salami', order=1),
+                            ])
+                })])
+
+        with closing(io.BytesIO()) as fp:
+            dump_codebook(fp, u'sample')
+            fp.seek(0)
+            rows = [r for r in csv.reader(fp)]
+            self.assertItemsEqual(
+                ['sample', 'Sample', str(date.today() - timedelta(10)),
+                 'myvar', 'My Var', '000 - Cheese\r001 - Salami',
+                 'False', 'False', 'string', '', '0'],
+                rows[1])
