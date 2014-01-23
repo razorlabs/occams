@@ -13,7 +13,6 @@ class TestList(IntegrationFixture):
 
     def setUp(self):
         super(TestList, self).setUp()
-        self.config.include('pyramid_beaker')
         # Use permissive since we're using functional tests for permissions
         self.config.testing_securitypolicy(userid='joe', permissive=True)
         from occams.clinical.views.data import list_

@@ -3,6 +3,7 @@ import threading
 import unittest
 
 from pyramid import testing
+from pyramid.security import has_permission
 from pyramid.paster import get_appsettings, get_app
 from webtest import TestApp
 from sqlalchemy import engine_from_config
@@ -40,6 +41,9 @@ class IntegrationFixture(unittest.TestCase):
 
     def setUp(self):
         self.config = testing.setUp()
+        self.config.add_request_method(
+            lambda r, n: has_permission(n, r.context, r),
+            'has_permission')
 
     def tearDown(self):
         testing.tearDown()

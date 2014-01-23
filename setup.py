@@ -19,6 +19,7 @@ REQUIRES = [
     'jsmin',
     'pyramid',
     'pyramid_beaker',
+    # TODO: use pyramid_redis_sessions, since beaker is no longer maintained
     'pyramid_deform',
     'pyramid_layout',
     'pyramid_mailer',

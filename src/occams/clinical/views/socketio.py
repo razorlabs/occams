@@ -11,18 +11,25 @@ from occams.clinical import log, models, Session
 
 
 @view_config(route_name='socketio')
-def socketio(request):
+def socketio(request):  # pragma: nocover: don't need to unittest socketio.io
     """
     Main socket.io handler for the application
+    Pretty much registers socket.io namespaces
     """
     socketio_manage(request.environ, request=request, namespaces={
         '/export': ExportNamespace})
-    return Response()
+    return Response(u'OK')
 
 
 class ExportNamespace(BaseNamespace):
     """
     This service will emit the progress of the current user's exports
+
+    Note that this service is just a pass-through for export broadcasts,
+    it simply takes what is published in the export channel and emits
+    progress data with the message that was broadcast. The only key
+    in the message that this service depends on is the ``owner_user``
+    key (to ensure the broadcast goes to the appropriate user).
     """
 
     def get_initial_acl(self):
@@ -35,7 +42,7 @@ class ExportNamespace(BaseNamespace):
         """
         Determines from the request if this socket can accept events
         """
-        log.debug('INITIALIZING SOCKET IO SERVICE')
+        log.debug('Initializing socket.io service')
         if self.request.has_permission('fia_view'):
             self.lift_acl_restrictions()
             self.session['user'] = authenticated_userid(self.request)
@@ -45,30 +52,30 @@ class ExportNamespace(BaseNamespace):
 
     def listener(self):
         """
-        Main process that listens for export porgress broadcasts.
+        Main process that listens for export progress broadcasts.
         All progress relating to the current user will be sent back.
         """
+        userid = self.session['user']
         redis = self.session['redis']
-        client = redis.pubsub()
-        client.subscribe('export')
 
         pending_query = (
             Session.query(models.Export.id)
-            .filter(models.Export.owner_user.has(key=self.session['user']))
+            .filter(models.Export.owner_user.has(key=userid))
             .filter_by(status='pending'))
 
         # emit current progress
-        for (export_id,) in pending_query:
+        for export_id, in pending_query:
             data = redis.hgetall(export_id)
+            log.debug(data)
             self.emit('progress', data)
 
-        for message in client.listen():
-            if message['type'] != 'message':
-                continue
+        pubsub = redis.pubsub()
+        pubsub.subscribe('export')
 
-            data = json.loads(message['data'])
-
-            log.debug(data)
-
-            if data['owner_user'] == self.session['user']:
-                self.emit('progress', data)
+        # emit subsequent progress
+        for message in pubsub.listen():
+            if message['type'] == 'message':
+                data = json.loads(message['data'])
+                if data['owner_user'] == userid:
+                    log.debug(data)
+                    self.emit('progress', data)
