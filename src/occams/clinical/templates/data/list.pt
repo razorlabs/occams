@@ -63,6 +63,7 @@
             type="submit"
             name="submit"
             class="pull-right btn btn-lg btn-primary"
+            tal:attributes="disabled exceeded"
             i18n:translate="">Export</button>
       </p>
 

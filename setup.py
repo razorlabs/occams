@@ -10,13 +10,14 @@ CHANGES = open(os.path.join(HERE, 'CHANGES.md')).read()
 
 REQUIRES = [
     'alembic',
-    'beaker',
+    'babel',
     'celery',
     'colander',
     'cssmin',
     'deform',
     'gevent-socketio',
     'jsmin',
+    'lingua',
     'pyramid',
     'pyramid_beaker',
     # TODO: use pyramid_redis_sessions, since beaker is no longer maintained

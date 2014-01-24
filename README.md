@@ -25,6 +25,7 @@ Getting Started
 Using gUnicorn (for development)
 --------------------------------
 
-  watchmedo auto-restart -i "*/alembic/*;*/tests/*" -p "*.py;*.ini;*.yml" -d ./src -R -- gunicorn --paste src/occams.clinical/development.ini
+watchmedo auto-restart -i "*/alembic/*;*/tests/*" -p "*.py;*.ini;*.yml" -d ./src -R -- gunicorn --paste etc/clinical.ini
 
-  watchmedo auto-restart -i "*/alembic/*;*/tests/*" -p "*.py;*.ini" -R -d ./src -- celery -A "occams.clinical.tasks" worker --ini src/occams.clinical/development.ini
+watchmedo auto-restart -i "*/alembic/*;*/tests/*" -p "*.py;*.ini" -R -d ./src -- celery -A "occams.clinical.tasks" worker -l info --ini etc/clinical.ini
+

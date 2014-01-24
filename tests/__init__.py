@@ -49,10 +49,11 @@ class IntegrationFixture(unittest.TestCase):
         testing.tearDown()
         transaction.abort()
 
-    def add_user(self, userid):
+    def add_user(self, userid, is_current=True):
         Session.add(datastore.User(key=userid))
         Session.flush()
-        Session.info['user'] = userid
+        if is_current:
+            Session.info['user'] = userid
 
 
 class FunctionalFixture(unittest.TestCase):

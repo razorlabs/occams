@@ -1,8 +1,11 @@
+from datetime import datetime, timedelta
 import os.path
 
+from babel.dates import format_timedelta
 import colander
 import deform
 from pyramid_deform import CSRFSchema
+from pyramid.i18n import negotiate_locale_name
 from pyramid.httpexceptions import HTTPFound, HTTPNotFound
 from pyramid.response import FileResponse
 from pyramid.security import authenticated_userid
@@ -30,6 +33,21 @@ def existent_schema_validator(value):
     return True
 
 
+@colander.deferred
+def limit_validator(node, kw):
+    request = kw['request']
+
+    def validator(schema, value):
+        limit = request.registry.settings.get('app.export_limit')
+        if not limit:
+            return
+        exports_query = query_exports(request)
+        exports_count = exports_query.count()
+        if exports_count >= int(limit):
+            raise colander.Invalid(schema, _(u'Export limit exceeded'))
+    return validator
+
+
 class ExportCheckoutSchema(CSRFSchema):
     """
     Export checkout serialization schema
@@ -55,7 +73,8 @@ def list_(request):
     The actual exporting process is then queued in a another thread so the user
     isn't left with an unresponsive page.
     """
-    form = deform.Form(ExportCheckoutSchema().bind(request=request))
+    form = deform.Form(
+        ExportCheckoutSchema(validator=limit_validator).bind(request=request))
 
     if request.method == 'POST':
         try:
@@ -94,7 +113,20 @@ def list_(request):
             models.Schema.name.asc(),
             models.Schema.publish_date.desc()))
 
+    limit = request.registry.settings.get('app.export_limit')
+    exceeded = False
+
+    if limit:
+        exports_count = query_exports(request).count()
+        if exports_count >= int(limit):
+            exceeded = True
+            request.session.flash(
+                _(u'You have exceed your export limit of ${limit}',
+                    mapping={'limit': limit}),
+                'warning')
+
     return {
+        'exceeded': exceeded,
         'csrf_token': request.session.get_csrf_token(),
         'form': form,
         'schemata': schemata_query,
@@ -115,20 +147,44 @@ def export(request):
     layout = request.layout_manager.layout
     layout.title = _(u'Data')
     layout.set_nav('data_nav')
-    userid = authenticated_userid(request)
 
-    exports_query = (
-        Session.query(models.Export)
-        .filter(models.Export.owner_user.has(key=userid))
-        .order_by(models.Export.create_date.desc()))
+    export_expire = request.registry.settings.get('app.export_expire')
+    duration = None
 
+    if export_expire:
+        delta = timedelta(int(export_expire))
+        locale_name = negotiate_locale_name(request)
+        duration = format_timedelta(delta, threshold=1, locale=locale_name)
+
+    exports_query = query_exports(request)
     exports_count = exports_query.count()
 
     return {
-        'duration': '1 week',
+        'duration': duration,
         'exports': exports_query,
-        'exports_count': exports_count,
-        'has_exports': exports_count > 0}
+        'exports_count': exports_count}
+
+
+def query_exports(request):
+    """
+    Helper method to query current exports for the authenticated user
+    """
+    userid = authenticated_userid(request)
+    export_expire = request.registry.settings.get('app.export_expire')
+
+    exports_query = (
+        Session.query(models.Export)
+        .filter(models.Export.owner_user.has(key=userid)))
+
+    if export_expire:
+        cutoff = datetime.now() - timedelta(int(export_expire))
+        exports_query = (
+            exports_query.filter(models.Export.create_date >= cutoff))
+
+    exports_query = (
+        exports_query.order_by(models.Export.create_date.desc()))
+
+    return exports_query
 
 
 @view_config(

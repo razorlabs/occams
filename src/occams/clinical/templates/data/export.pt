@@ -1,17 +1,17 @@
 <html i18n:domain="occams.clinical" metal:use-macro="main_template">
   <metal:content-slot fill-slot="content-slot">
 
-    <p class="lead" i18n:translate="">
+    <p class="lead" tal:condition="duration" i18n:translate="">
       Download your data. All your data are available for <strong>${duration}</strong>
     </p>
 
-    <div class="well well-lg" tal:condition="not:has_exports" i18n:translate="">
+    <div class="well well-lg" tal:condition="not:exports_count" i18n:translate="">
       You have no exports pending.
     </div>
 
     <div
         class=""
-        tal:condition="has_exports"
+        tal:condition="exports_count"
         tal:repeat="export exports"
         tal:attributes="
           id    string:export-${export.id};
