@@ -686,4 +686,7 @@ class Export(ClinicalModel, Referenceable, Auditable, Modifiable):
                 refcolumns=[User.id],
                 name=u'fk_%s_owner_user_id' % cls.__tablename__,
                 ondelete='CASCADE'),
+            schema.UniqueConstraint(
+                cls.file_name,
+                name=u'uq_%s_file_name' % cls.__tablename__),
             schema.Index('ix_%s_owner_user_id' % cls.__tablename__, cls.owner_user_id))

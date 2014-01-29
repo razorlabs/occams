@@ -101,8 +101,8 @@ def make_export(export_id):
     export = Session.query(models.Export).filter_by(id=export_id).one()
     export_dir = app.settings['app.export_dir']
 
-    expand_collections = False
-    use_choice_labels = False
+    expand_collections = export.expand_collections
+    use_choice_labels = export.use_choice_labels
 
     assert export.schemata, \
         _(u'The specified export job has no schemata: %s' % export)
@@ -121,7 +121,7 @@ def make_export(export_id):
         'count': 0,
         'total': len(set(files.keys()))})
 
-    path = os.path.join(export_dir, '%s.zip' % export.id)
+    path = os.path.join(export_dir, '%s.zip' % export.file_name)
 
     with closing(zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED)) as zfp:
         for schema_name, ids in files.dict_of_lists().items():

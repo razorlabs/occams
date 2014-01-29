@@ -68,6 +68,9 @@ def upgrade():
             sa.CheckConstraint('create_date <= modify_date',
                                name='ck_%s_valid_timeline' % table_name))
 
+    op.create_unique_constraint(
+        'uq_export_file_name', 'export', ['file_name'])
+
     # The live table will have some extra data integrity constraints
     op.create_foreign_key(
         'fk_%s_create_user_id' % table_name,

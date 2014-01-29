@@ -1,6 +1,7 @@
 from collections import defaultdict
 from datetime import datetime, timedelta
 import os.path
+import uuid
 
 from babel.dates import format_timedelta
 import colander
@@ -79,16 +80,22 @@ def list_(request):
         ExportCheckoutSchema(validator=limit_validator).bind(request=request))
 
     if request.method == 'POST':
+        # Organize inputs since we're manually rendering forms
+        inputs = {
+            'schemata': request.POST.getall('schemata'),
+            'csrf_token': request.POST.getone('csrf_token'),
+            'expand_collections': request.POST.getone('expand_collections'),
+            'use_choice_labels': request.POST.getone('use_choice_labels')}
+
         try:
-            # Organize inputs since we're manually rendering forms
-            controls = {
-                'schemata': request.POST.getall('schemata'),
-                'csrf_token': request.POST.getone('csrf_token')}
-            appstruct = form.validate(controls.items())
+            appstruct = form.validate(inputs.items())
         except deform.ValidationFailure as e:
             form = e
         else:
             export = models.Export(
+                expand_collections=appstruct['expand_collections'],
+                use_choice_labels=appstruct['use_choice_labels'],
+                file_name=uuid.uuid4(),
                 owner_user=(
                     Session.query(models.User)
                     .filter_by(key=authenticated_userid(request))
@@ -269,9 +276,9 @@ def download(request):
         raise HTTPNotFound
 
     export_dir = request.registry.settings['app.export_dir']
-    path = os.path.join(export_dir, '%s.zip' % export.id)
+    path = os.path.join(export_dir, export.file_name)
 
     response = FileResponse(path)
     response.content_disposition = (
-        'attachment;filename=clinical-%d.zip' % export.id)
+        'attachment;filename=clinical-%s.zip' % export.file_name)
     return response
