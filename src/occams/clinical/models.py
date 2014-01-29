@@ -7,7 +7,6 @@ as we transition towards a SQL-driven application.
 
 import datetime
 import re
-import time
 
 from sqlalchemy import orm, schema, sql, types
 from sqlalchemy.ext import declarative, hybrid
@@ -656,6 +655,16 @@ class Export(ClinicalModel, Referenceable, Auditable, Modifiable):
     owner_user_id = schema.Column(types.Integer, nullable=False)
 
     owner_user = orm.relationship(User, foreign_keys=[owner_user_id])
+
+    expand_collections = schema.Column(types.Boolean,
+                                       nullable=False,
+                                       default=False)
+
+    use_choice_labels = schema.Column(types.Boolean,
+                                      nullable=False,
+                                      default=False)
+
+    file_name = schema.Column(types.Unicode, nullable=False)
 
     status = schema.Column(
         types.Enum('failed', 'pending', 'complete', name='export_status'),

@@ -21,47 +21,52 @@ def upgrade():
     audit_name = table_name + '_audit'
 
     for name in (table_name, audit_name):
-        op.create_table(name,
-                        sa.Column('id', sa.Integer,
-                                  primary_key=True, autoincrement=True, nullable=False),
-                        sa.Column('owner_user_id', sa.Integer, nullable=False),
-                        sa.Column('status',
-                                  sa.Enum(
-                                      'failed',
-                                      'pending',
-                                      'complete',
-                                      name='export_status'),
-                                  nullable=False,
-                                  default='pending'),
-                        sa.Column(
-                            'create_user_id',
-                            sa.Integer,
-                            nullable=False),
-                        sa.Column('create_date', sa.DateTime,
-                                  nullable=False, server_default=sql.func.now(
-                                  )),
-                        sa.Column(
-                            'modify_user_id',
-                            sa.Integer,
-                            nullable=False),
-                        sa.Column('modify_date', sa.DateTime,
-                                  nullable=False, server_default=sql.func.now(
-                                  )),
-                        sa.Column('revision', sa.Integer,
-                                  primary_key=(
-                                      'audit' in name), nullable=False),
-                        sa.Index(
-                            'ix_%s_create_user_id' %
-                            name,
-                            'create_user_id'),
-                        sa.Index(
-                            'ix_%s_modify_user_id' %
-                            name,
-                            'modify_user_id'),
-                        # Both main/audit tables keep the same check constraint
-                        # names
-                        sa.CheckConstraint('create_date <= modify_date',
-                                           name='ck_%s_valid_timeline' % table_name))
+        op.create_table(
+            name,
+            sa.Column('id', sa.Integer,
+                      primary_key=True, autoincrement=True, nullable=False),
+            sa.Column('owner_user_id', sa.Integer, nullable=False),
+            sa.Column('expand_collections', sa.Boolean, nullable=False),
+            sa.Column('use_choice_labels', sa.Boolean, nullable=False),
+            sa.Column('file_name', sa.Unicode, nulleable=False),
+            sa.Column('owner_user_id', sa.Integer, nullable=False),
+            sa.Column('status',
+                      sa.Enum(
+                          'failed',
+                          'pending',
+                          'complete',
+                          name='export_status'),
+                      nullable=False,
+                      default='pending'),
+            sa.Column(
+                'create_user_id',
+                sa.Integer,
+                nullable=False),
+            sa.Column('create_date', sa.DateTime,
+                      nullable=False, server_default=sql.func.now(
+                      )),
+            sa.Column(
+                'modify_user_id',
+                sa.Integer,
+                nullable=False),
+            sa.Column('modify_date', sa.DateTime,
+                      nullable=False, server_default=sql.func.now(
+                      )),
+            sa.Column('revision', sa.Integer,
+                      primary_key=(
+                          'audit' in name), nullable=False),
+            sa.Index(
+                'ix_%s_create_user_id' %
+                name,
+                'create_user_id'),
+            sa.Index(
+                'ix_%s_modify_user_id' %
+                name,
+                'modify_user_id'),
+            # Both main/audit tables keep the same check constraint
+            # names
+            sa.CheckConstraint('create_date <= modify_date',
+                               name='ck_%s_valid_timeline' % table_name))
 
     # The live table will have some extra data integrity constraints
     op.create_foreign_key(

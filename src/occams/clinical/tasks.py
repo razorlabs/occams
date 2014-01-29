@@ -101,7 +101,7 @@ def make_export(export_id):
     export = Session.query(models.Export).filter_by(id=export_id).one()
     export_dir = app.settings['app.export_dir']
 
-    expand_collection = False
+    expand_collections = False
     use_choice_labels = False
 
     assert export.schemata, \
@@ -128,7 +128,7 @@ def make_export(export_id):
 
             with tempfile.NamedTemporaryFile() as tfp:
                 dump_query(tfp, schema_name, ids,
-                           expand_collection=expand_collection,
+                           expand_collections=expand_collections,
                            use_choice_labels=use_choice_labels)
                 zfp.write(tfp.name, '{0}.csv'.format(schema_name))
 
@@ -151,7 +151,7 @@ def make_export(export_id):
 def dump_query(fp,
                schema_name,
                ids,
-               expand_collection=False,
+               expand_collections=False,
                use_choice_labels=False):
     """
     Generates a clinical report containing the patient's metadata
@@ -175,7 +175,7 @@ def dump_query(fp,
         else func.group_concat(e))
 
     report = reporting.build_report(Session, schema_name, ids,
-                                    expand_collection,
+                                    expand_collections,
                                     use_choice_labels)
     query = (
         Session.query(report.c.entity_id)
