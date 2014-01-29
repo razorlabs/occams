@@ -54,7 +54,7 @@ def enforceSchemaState(entity):
     """
     Makes sure an entity cannot be added to an unpublished schema
     """
-    if entity.schema.state != 'published':
+    if not entity.schema.publish_date or entity.schema.retract_date:
         raise InvalidEntitySchemaError(entity.schema.name, entity.schema.state)
 
 

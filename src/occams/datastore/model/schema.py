@@ -105,7 +105,7 @@ def generateChecksum(attribute):
     for choice in attribute.choices:
         # Choice name does not matter because it's only used for communication
         # between the user interface and the data dictionary
-        values.extend([choice.order, choice.title, choice.value])
+        values.extend([choice.order, choice.title, choice.name])
 
     return checksum(*values)
 
@@ -393,7 +393,9 @@ class Choice(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
                 ),
             UniqueConstraint('attribute_id', 'name', name='uq_%s_name' % cls.__tablename__),
             UniqueConstraint('attribute_id', 'order', name='uq_%s_order' % cls.__tablename__),
-            CheckConstraint("name ~ '^[0-9]+$'", name='ck_%s_numeric_name' % cls.__tablename__),
+            # XXX: this is alsmost impossible to do in a database-agnostic way
+            #CheckConstraint("name ~ '^[0-9]+$'",
+                            #name='ck_%s_numeric_name' % cls.__tablename__),
             )
 
     def __copy__(self):
