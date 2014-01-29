@@ -8,28 +8,32 @@
       </ul>
     </div>
 
-    <p class="lead" i18n:translate="">
-      Please select the files you would like to download.
-      All exports include a data dictionary.
-    </p>
-
     <form
         role="form"
         name="export"
         method="POST"
         action="${request.current_route_path()}">
 
+      <h3>Step 1</h3>
+
+      <p class="lead" i18n:translate="">
+        Select the files you would like to download.
+        All exports include a data dictionary.
+      </p>
+
       <div class="table-responsive">
-        <table class="table table-bordered table-striped">
+        <table class="table table-striped">
           <thead>
             <tr>
               <th class="select">
                 <input type="checkbox" data-toggle="selectall" />
               </th>
-              <th class="has_private"></th>
-              <th class="name" i18n:translate="">Name</th>
+              <th class="has_private">
+                <span class="glyphicon glyphicon-user"></span>
+              </th>
               <th class="title" i18n:translate="">Title</th>
-              <th class="publsished" i18n:translate="">Published</th>
+              <th class="name" i18n:translate="">Name</th>
+              <th class="version" i18n:translate="">Version</th>
             </tr>
           </thead>
           <tbody>
@@ -38,7 +42,7 @@
                 <input
                     type="checkbox"
                     name="schemata"
-                    value="${schema.id}"
+                    value="${schema.name}"
                     data-toggle="select"
                     data-class="warning" />
               </td>
@@ -48,15 +52,53 @@
                     title="Has private information"
                     tal:condition="schema.has_private"></span>
               </td>
-              <td class="name"><code>${schema.name}</code></td>
               <td class="title">${schema.title}</td>
-              <td class="published">${schema.publish_date.isoformat()}</td>
+              <td class="name"><code>${schema.name}</code></td>
+              <td class="version">
+                <p tal:repeat="version versions[schema.name]">${version.isoformat()}</p>
+              </td>
             </tr>
           </tbody>
         </table>
       </div>
 
+      <hr />
+
+      <h3>Step 2</h3>
+
+      <p class="lead" i18n:translate="">
+        Select list style.
+      </p>
+
+      <div class="form-group">
+        <div class="radio">
+          <label><input type="radio" name="list" value="delimitted"/> Single column with comma-delimted values.</label>
+        </div>
+        <div class="radio">
+          <label><input type="radio" name="list" value="seperated"/> Separate colum for each possible answer choice.</label>
+        </div>
+      </div>
+
+      <hr/>
+
+      <h3>Step 3</h3>
+
+      <p class="lead" i18n:translate="">
+        Select answer choice style.
+      </p>
+
+      <div class="form-group">
+        <div class="radio">
+          <label><input type="radio" name="choice" value="codes"/> Use key codes.</label>
+        </div>
+        <div class="radio">
+          <label><input type="radio" name="choice" value="labels"/> Use labels.</label>
+        </div>
+      </div>
+
       <input type="hidden" name="csrf_token" value="${csrf_token}" />
+
+      <hr />
 
       <p>
         <button

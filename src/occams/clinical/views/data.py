@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import datetime, timedelta
 import os.path
 
@@ -22,13 +23,14 @@ def existent_schema_validator(value):
     """
     if not value:
         return _(u'No schemata specified')
-    ids_query = (
-        Session.query(models.Schema.id)
+    names_query = (
+        Session.query(models.Schema.name)
         .filter(models.Schema.publish_date != null())
-        .filter(models.Schema.id.in_(value)))
-    ids = set([id for id, in ids_query])
+        .filter(models.Schema.retract_date == null())
+        .filter(models.Schema.name.in_(value)))
+    names = set([name for name, in names_query])
     value = set(value)
-    if ids != value:
+    if names != value:
         return _(u'Invalid schemata chosen')
     return True
 
@@ -57,7 +59,7 @@ class ExportCheckoutSchema(CSRFSchema):
         validator=colander.Function(existent_schema_validator))
     class schemata(colander.SequenceSchema):
 
-        id = colander.SchemaNode(colander.Int())
+        id = colander.SchemaNode(colander.String())
 
 
 @view_config(
@@ -78,7 +80,11 @@ def list_(request):
 
     if request.method == 'POST':
         try:
-            appstruct = form.validate(request.POST.mixed().items())
+            # Organize inputs since we're manually rendering forms
+            controls = {
+                'schemata': request.POST.getall('schemata'),
+                'csrf_token': request.POST.getone('csrf_token')}
+            appstruct = form.validate(controls.items())
         except deform.ValidationFailure as e:
             form = e
         else:
@@ -89,7 +95,9 @@ def list_(request):
                     .one()),
                 schemata=(
                     Session.query(models.Schema)
-                    .filter(models.Schema.id.in_(appstruct['schemata']))
+                    .filter(models.Schema.name.in_(appstruct['schemata']))
+                    .filter(models.Schema.publish_date != null())
+                    .filter(models.Schema.retract_date == null())
                     .all()))
             Session.add(export)
             Session.flush()
@@ -106,13 +114,6 @@ def list_(request):
     layout.title = _(u'Data')
     layout.set_nav('data_nav')
 
-    schemata_query = (
-        Session.query(models.Schema)
-        .filter(models.Schema.publish_date != null())
-        .order_by(
-            models.Schema.name.asc(),
-            models.Schema.publish_date.desc()))
-
     limit = request.registry.settings.get('app.export_limit')
     exceeded = False
 
@@ -125,12 +126,72 @@ def list_(request):
                     mapping={'limit': limit}),
                 'warning')
 
+    schemata_query = query_schemata()
+    versions = get_versions()
+
     return {
         'exceeded': exceeded,
         'csrf_token': request.session.get_csrf_token(),
         'form': form,
         'schemata': schemata_query,
+        'versions': versions,
         'schemata_count': schemata_query.count()}
+
+
+def query_schemata():
+    """
+    Helper function to fetch schemata summary
+    """
+    InnerSchema = orm.aliased(models.Schema)
+    OuterSchema = orm.aliased(models.Schema)
+    schemata_query = (
+        Session.query(OuterSchema.name)
+        .add_column(
+            Session.query(
+                Session.query(models.Attribute)
+                .filter(models.Attribute.is_private)
+                .join(InnerSchema)
+                .filter(InnerSchema.name == OuterSchema.name)
+                .correlate(OuterSchema)
+                .exists())
+            .as_scalar()
+            .label('has_private'))
+        .add_column(
+            Session.query(InnerSchema.title)
+            .select_from(InnerSchema)
+            .filter(InnerSchema.name == OuterSchema.name)
+            .filter(InnerSchema.publish_date != null())
+            .filter(InnerSchema.retract_date == null())
+            .order_by(InnerSchema.publish_date.desc())
+            .limit(1)
+            .correlate(OuterSchema)
+            .as_scalar()
+            .label('title'))
+        .filter(OuterSchema.publish_date != null())
+        .filter(OuterSchema.retract_date == null())
+        .group_by(OuterSchema.name)
+        .order_by('title'))
+    return schemata_query
+
+
+def get_versions():
+    """
+    Helper function to build a dictionary of all schemata's versions
+    """
+    version_query = (
+        Session.query(models.Schema.name, models.Schema.publish_date)
+        .filter(models.Schema.publish_date != null())
+        .filter(models.Schema.retract_date == null())
+        .order_by(
+            models.Schema.name.asc(),
+            models.Schema.publish_date.desc()))
+
+    versions = defaultdict(list)
+
+    for name, publish_date in version_query:
+        versions[name].append(publish_date)
+
+    return versions
 
 
 @view_config(

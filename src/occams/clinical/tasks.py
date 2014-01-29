@@ -65,6 +65,15 @@ def init(signal, sender):
     sender.app.settings = env['registry'].settings
     sender.app.redis = env['request'].redis
 
+    userid = sender.app.settings['app.export_user']
+
+    with transaction.manager:
+        if not Session.query(models.User).filter_by(key=userid).count():
+            Session.add(models.User(key=userid))
+
+    # update the current scoped session's infor attribute
+    Session.info['user'] = userid
+
 
 @app.task(ignore_result=True)
 @in_transaction
@@ -92,13 +101,16 @@ def make_export(export_id):
     export = Session.query(models.Export).filter_by(id=export_id).one()
     export_dir = app.settings['app.export_dir']
 
+    expand_collection = False
+    use_choice_labels = False
+
     assert export.schemata, \
         _(u'The specified export job has no schemata: %s' % export)
     assert export.status not in ('complete', 'failed'), \
         _(u'The specified export is not pending: %s' % export)
 
     # Organize the forms so we know which schemata go where
-    codebooks = MultiDict([(s.name, s.id) for s in export.schemata])
+    files = MultiDict([(s.name, s.id) for s in export.schemata])
 
     redis = app.redis
 
@@ -107,42 +119,40 @@ def make_export(export_id):
         'owner_user': export.owner_user.key,
         'status': export.status,
         'count': 0,
-        'total': len(export.schemata) + len(set(codebooks.keys()))})
+        'total': len(set(files.keys()))})
 
     path = os.path.join(export_dir, '%s.zip' % export.id)
 
-    def publish_done(arcname):
-        redis.hincrby(export.id, 'count')
-        redis.publish('export', json.dumps(redis.hgetall(export.id)))
-        count, total = redis.hmget(export.id, 'count', 'total')
-        log.info(', '.join([count, total, arcname]))
-
     with closing(zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED)) as zfp:
-        # Generate the data files
-        for schema in export.schemata:
-            arcname = '{0}-{1}.csv'.format(schema.name, schema.publish_date)
-            with tempfile.NamedTemporaryFile() as tfp:
-                dump_query(tfp, query_report(schema))
-                zfp.write(tfp.name, arcname)
-            publish_done(arcname)
+        for schema_name, ids in files.dict_of_lists().items():
 
-        # Generate the ecrf codebooks
-        for name, ids in codebooks.dict_of_lists().items():
-            arcname = '{0}-codebook.csv'.format(name)
             with tempfile.NamedTemporaryFile() as tfp:
-                dump_codebook(tfp, name, *ids)
-                zfp.write(tfp.name, arcname)
-            publish_done(arcname)
+                dump_query(tfp, schema_name, ids,
+                           expand_collection=expand_collection,
+                           use_choice_labels=use_choice_labels)
+                zfp.write(tfp.name, '{0}.csv'.format(schema_name))
 
-    # Need to commit this somehow...
+            with tempfile.NamedTemporaryFile() as tfp:
+                dump_codebook(tfp, schema_name, ids)
+                zfp.write(tfp.name, '{0}-codebook.csv'.format(schema_name))
+
+            redis.hincrby(export.id, 'count')
+            redis.publish('export', json.dumps(redis.hgetall(export.id)))
+            count, total = redis.hmget(export.id, 'count', 'total')
+            log.info(', '.join([count, total, schema_name]))
+
     export.status = 'complete'
-    Session.flush()
+    Session.flush()  # flush so we know everything went smoothly
 
     redis.hset(export_id, 'status', export.status)
     redis.publish('export', json.dumps(redis.hgetall(export_id)))
 
 
-def query_report(schema):
+def dump_query(fp,
+               schema_name,
+               ids,
+               expand_collection=False,
+               use_choice_labels=False):
     """
     Generates a clinical report containing the patient's metadata
     that relates to the form.
@@ -159,90 +169,77 @@ def query_report(schema):
     Returns:
     A SQLAlchemy query
     """
-    # Helper method that returns the proper group concat function
     aggregate = (
         lambda e: func.array_to_string(func.array_agg(e), literal(','))
         if Session.bind.url.drivername == 'postgresql'
         else func.group_concat(e))
 
-    report = reporting.export(schema)
+    report = reporting.build_report(Session, schema_name, ids,
+                                    expand_collection,
+                                    use_choice_labels)
     query = (
         Session.query(report.c.entity_id)
-        .add_column(
-            Session.query(models.Site.name)
-            .select_from(models.Patient)
-            .join(models.Site)
-            .join(models.Context,
-                  (models.Context.external == 'patient')
-                  & (models.Context.key == models.Patient.id))
-            .filter(models.Context.entity_id == report.c.entity_id)
-            .correlate(report)
-            .as_scalar()
-            .label('site'))
-        .add_column(
-            Session.query(models.Patient.pid)
-            .join(models.Context,
-                  (models.Context.external == 'patient')
-                  & (models.Context.key == models.Patient.id))
-            .filter(models.Context.entity_id == report.c.entity_id)
-            .correlate(report)
-            .as_scalar()
-            .label('pid'))
-        .add_column(
-            Session.query(models.Study.name)
-            .select_from(models.Enrollment)
-            .join(models.Study)
-            .join(models.Context,
-                  (models.Context.external == 'enrollment')
-                  & (models.Context.key == models.Enrollment.id))
-            .filter(models.Context.entity_id == report.c.entity_id)
-            .correlate(report)
-            .as_scalar()
-            .label('enrollment'))
-        .add_column(
-            Session.query(aggregate(models.Cycle.name))
-            .select_from(models.Visit)
-            .join(models.Visit.cycles)
-            .join(models.Context,
-                  (models.Context.external == 'visit')
-                  & (models.Context.key == models.Visit.id))
-            .filter(models.Context.entity_id == report.c.entity_id)
-            .correlate(report)
-            .as_scalar()
-            .label('cycles'))
+        #.add_column(
+            #Session.query(models.Site.name)
+            #.select_from(models.Patient)
+            #.join(models.Site)
+            #.join(models.Context,
+                  #(models.Context.external == 'patient')
+                  #& (models.Context.key == models.Patient.id))
+            #.filter(models.Context.entity_id == report.c.entity_id)
+            #.correlate(report)
+            #.as_scalar()
+            #.label('site'))
+        #.add_column(
+            #Session.query(models.Patient.pid)
+            #.join(models.Context,
+                  #(models.Context.external == 'patient')
+                  #& (models.Context.key == models.Patient.id))
+            #.filter(models.Context.entity_id == report.c.entity_id)
+            #.correlate(report)
+            #.as_scalar()
+            #.label('pid'))
+        #.add_column(
+            #Session.query(models.Study.name)
+            #.select_from(models.Enrollment)
+            #.join(models.Study)
+            #.join(models.Context,
+                  #(models.Context.external == 'enrollment')
+                  #& (models.Context.key == models.Enrollment.id))
+            #.filter(models.Context.entity_id == report.c.entity_id)
+            #.correlate(report)
+            #.as_scalar()
+            #.label('enrollment'))
+        #.add_column(
+            #Session.query(aggregate(models.Cycle.name))
+            #.select_from(models.Visit)
+            #.join(models.Visit.cycles)
+            #.join(models.Context,
+                  #(models.Context.external == 'visit')
+                  #& (models.Context.key == models.Visit.id))
+            #.filter(models.Context.entity_id == report.c.entity_id)
+            #.correlate(report)
+            #.as_scalar()
+            #.label('cycles'))
         .add_columns(*[c for c in report.columns if c.name != 'entity_id']))
-    return query
-
-
-def dump_query(fp, query):
-    """
-    Dumps an arbitrary query to a CSV file
-
-    Parameters:
-    fp -- file pointer for target stream to write results to
-    query -- the source query
-
-    """
     writer = csv.writer(fp)
     writer.writerow([unicode(d['name']) for d in query.column_descriptions])
     writer.writerows(query)
     fp.flush()
 
 
-def dump_codebook(fp, name, *ids):
+def dump_codebook(fp, schema_name, ids=None):
     """
     Dumps the ecrf into a CSV codebook file
 
     Parameters:
     fp -- file pointer for the target stream to write results to
     name -- the ecrf schema name
-    *ids -- (optional) the specific ids of the schema
-
     """
     query = (
         Session.query(models.Attribute)
         .join(models.Schema)
-        .filter(models.Schema.name == name)
+        .filter(models.Schema.name == schema_name)
         .filter(models.Schema.publish_date != null())
         .filter(models.Schema.retract_date == null()))
 
