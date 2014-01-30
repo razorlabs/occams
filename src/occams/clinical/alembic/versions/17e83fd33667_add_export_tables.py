@@ -28,7 +28,7 @@ def upgrade():
             sa.Column('owner_user_id', sa.Integer, nullable=False),
             sa.Column('expand_collections', sa.Boolean, nullable=False),
             sa.Column('use_choice_labels', sa.Boolean, nullable=False),
-            sa.Column('file_name', sa.Unicode, nulleable=False),
+            sa.Column('file_name', sa.Unicode, nullable=False),
             sa.Column('owner_user_id', sa.Integer, nullable=False),
             sa.Column('status',
                       sa.Enum(

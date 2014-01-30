@@ -199,7 +199,7 @@ def migrate_subschemata():
         .where(
             (schema_table.c.id == attribute_table.c.schema_id)
             & (~schema_table.c.is_inline)
-            & (attribute_table.c.section_id == op.inline_literal(None))
+            & (attribute_table.c.section_id == sa.sql.null())
             & (attribute_table.c.type != op.inline_literal('object'))))
 
     op.execute(
@@ -214,7 +214,7 @@ def migrate_subschemata():
         .where(
             (section_table.c.schema_id == attribute_table.c.schema_id)
             & (section_table.c.order == op.inline_literal(0))
-            & (attribute_table.c.section_id == op.inline_literal(None))
+            & (attribute_table.c.section_id == sa.sql.null())
             & (attribute_table.c.type != op.inline_literal('object'))))
 
 
