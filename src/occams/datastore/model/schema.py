@@ -269,7 +269,7 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
             order_by='Attribute.order',
             cascade='all, delete, delete-orphan'))
 
-    section_id = Column(Integer)
+    section_id = Column(Integer, nullable=False)
 
     section = Relationship(
         Section,
