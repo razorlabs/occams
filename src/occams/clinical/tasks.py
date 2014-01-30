@@ -121,7 +121,7 @@ def make_export(export_id):
         'count': 0,
         'total': len(set(files.keys()))})
 
-    path = os.path.join(export_dir, '%s.zip' % export.file_name)
+    path = os.path.join(export_dir, export.file_name)
 
     with closing(zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED)) as zfp:
         for schema_name, ids in files.dict_of_lists().items():

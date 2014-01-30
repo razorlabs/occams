@@ -57,10 +57,31 @@ class ExportCheckoutSchema(CSRFSchema):
     """
 
     @colander.instantiate(
+        title=_(
+            u'Select the files you would like to download.'
+            u'All exports include a data dictionary.'),
         validator=colander.Function(existent_schema_validator))
     class schemata(colander.SequenceSchema):
 
-        id = colander.SchemaNode(colander.String())
+        name = colander.SchemaNode(colander.String())
+
+    expand_collections = colander.SchemaNode(
+        colander.Boolean(),
+        title=_(u'Select collection styles.'),
+        widget=deform.widget.RadioChoiceWidget(values=[
+            ('false', _(u'Single column with comma-delimitted values.')),
+            ('true', _(u'Separate column for each possible answer choice.'))
+            ]),
+        default=False)
+
+    use_choice_labels = colander.SchemaNode(
+        colander.Boolean(),
+        title=_(u'Select answer choice style'),
+        widget=deform.widget.RadioChoiceWidget(values=[
+            ('false', _(u'Use key codes.')),
+            ('true', _(u'Use choice labels'))
+            ]),
+        default=False)
 
 
 @view_config(
@@ -84,8 +105,8 @@ def list_(request):
         inputs = {
             'schemata': request.POST.getall('schemata'),
             'csrf_token': request.POST.getone('csrf_token'),
-            'expand_collections': request.POST.getone('expand_collections'),
-            'use_choice_labels': request.POST.getone('use_choice_labels')}
+            'expand_collections': request.POST.get('expand_collections'),
+            'use_choice_labels': request.POST.get('use_choice_labels')}
 
         try:
             appstruct = form.validate(inputs.items())
@@ -95,7 +116,7 @@ def list_(request):
             export = models.Export(
                 expand_collections=appstruct['expand_collections'],
                 use_choice_labels=appstruct['use_choice_labels'],
-                file_name=uuid.uuid4(),
+                file_name=str(uuid.uuid4()),
                 owner_user=(
                     Session.query(models.User)
                     .filter_by(key=authenticated_userid(request))
