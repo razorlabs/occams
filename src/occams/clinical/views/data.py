@@ -5,7 +5,6 @@ import uuid
 
 from babel.dates import format_timedelta
 import colander
-import deform
 from pyramid_deform import CSRFSchema
 from pyramid.i18n import negotiate_locale_name
 from pyramid.httpexceptions import HTTPFound, HTTPNotFound
@@ -57,31 +56,16 @@ class ExportCheckoutSchema(CSRFSchema):
     """
 
     @colander.instantiate(
-        title=_(
-            u'Select the files you would like to download.'
-            u'All exports include a data dictionary.'),
         validator=colander.Function(existent_schema_validator))
     class schemata(colander.SequenceSchema):
 
         name = colander.SchemaNode(colander.String())
 
     expand_collections = colander.SchemaNode(
-        colander.Boolean(),
-        title=_(u'Select collection styles.'),
-        widget=deform.widget.RadioChoiceWidget(values=[
-            ('false', _(u'Single column with comma-delimitted values.')),
-            ('true', _(u'Separate column for each possible answer choice.'))
-            ]),
-        default=False)
+        colander.Boolean())
 
     use_choice_labels = colander.SchemaNode(
-        colander.Boolean(),
-        title=_(u'Select answer choice style'),
-        widget=deform.widget.RadioChoiceWidget(values=[
-            ('false', _(u'Use key codes.')),
-            ('true', _(u'Use choice labels'))
-            ]),
-        default=False)
+        colander.Boolean())
 
 
 @view_config(
@@ -97,21 +81,22 @@ def list_(request):
     The actual exporting process is then queued in a another thread so the user
     isn't left with an unresponsive page.
     """
-    form = deform.Form(
-        ExportCheckoutSchema(validator=limit_validator).bind(request=request))
+    errors = {}
+    cstruct = {
+        # Organize inputs since we're manually rendering forms
+        'schemata': request.POST.getall('schemata'),
+        'csrf_token': request.POST.get('csrf_token'),
+        'expand_collections': request.POST.get('expand_collections', 'false'),
+        'use_choice_labels': request.POST.get('use_choice_labels', 'false')}
+    form = (
+        ExportCheckoutSchema(validator=limit_validator)
+        .bind(request=request))
 
     if request.method == 'POST':
-        # Organize inputs since we're manually rendering forms
-        inputs = {
-            'schemata': request.POST.getall('schemata'),
-            'csrf_token': request.POST.getone('csrf_token'),
-            'expand_collections': request.POST.get('expand_collections'),
-            'use_choice_labels': request.POST.get('use_choice_labels')}
-
         try:
-            appstruct = form.validate(inputs.items())
-        except deform.ValidationFailure as e:
-            form = e
+            appstruct = form.deserialize(cstruct)
+        except colander.Invalid as e:
+            errors = e.asdict()
         else:
             export = models.Export(
                 expand_collections=appstruct['expand_collections'],
@@ -159,8 +144,8 @@ def list_(request):
 
     return {
         'exceeded': exceeded,
-        'csrf_token': request.session.get_csrf_token(),
-        'form': form,
+        'errors': errors,
+        'cstruct': cstruct,
         'schemata': schemata_query,
         'versions': versions,
         'schemata_count': schemata_query.count()}
@@ -300,6 +285,5 @@ def download(request):
     path = os.path.join(export_dir, export.file_name)
 
     response = FileResponse(path)
-    response.content_disposition = (
-        'attachment;filename=clinical-%s.zip' % export.file_name)
+    response.content_disposition = 'attachment;filename=export.zip'
     return response
