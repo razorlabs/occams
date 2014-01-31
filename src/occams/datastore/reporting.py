@@ -7,7 +7,7 @@ try:
 except ImportError:
     from ordereddict import OrderedDict
 
-from sqlalchemy import func, orm, cast, null, true, Date, Integer
+from sqlalchemy import func, orm, cast, null, true, literal, Date, Integer
 
 from occams.datastore import model
 
@@ -43,8 +43,8 @@ def build_report(session, schema_name,
     query = (
         session.query(
             model.Entity.id.label('entity_id'),
-            model.Schema.name.label('schema_name'),
-            model.Schema.publish_date.label('schema_version'),
+            model.Schema.name.label('form_name'),
+            model.Schema.publish_date.label('form_publish_date'),
             model.State.name.label('state'),
             model.Entity.collect_date,
             cast(model.Entity.is_null, Integer).label('is_null'))
@@ -77,24 +77,38 @@ def build_report(session, schema_name,
         if column.is_collection:
             # Collections are added via correlated sub-queries to the entity
             if column.choices:
+                Choice = orm.aliased(model.Choice)
+
+                if use_choice_labels:
+                    value_column = Choice.title
+                else:
+                    value_column = Choice.name
+
                 if not is_postgres:
                     value_column = func.group.concat(value_column)
 
                 value_column = (
                     session.query(value_column)
+                    .select_from(Value)
                     .filter(filter_expression)
+                    .outerjoin(Choice, Value._value == Choice.id)
                     .correlate(model.Entity)
                     .as_scalar())
 
                 if is_postgres:
-                    value_column = func.array(value_column)
+                    value_column = func.array_to_string(
+                        func.array(value_column),
+                        literal(','))
 
             else:
                 value_column = (
-                    session.query(true())
-                    .filter(filter_expression)
-                    .filter(value_column == column.choice.name)
-                    .correlate(model.Entity)
+                    session.query(cast(
+                        session.query(Value)
+                        .join(Choice, Value._value == Choice.id)
+                        .filter(filter_expression)
+                        .filter(Choice.name == column.choice.name)
+                        .correlate(model.Entity)
+                        .exists(), Integer))
                     .as_scalar())
         else:
             # Scalar columns are added via LEFT OUTER JOIN
