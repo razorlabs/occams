@@ -1,10 +1,10 @@
 <html i18n:domain="occams.clinical" metal:use-macro="main_template">
   <metal:content-slot fill-slot="content-slot">
 
-    <div class="alert alert-danger" tal:condition="form.error|nothing">
+    <div class="alert alert-danger" tal:condition="errors|nothing">
     <strong>Error!</strong> Your request failed for the following reasons:
       <ul>
-        <li tal:repeat="error form.error.children">${error.msg}</li>
+        <li tal:repeat="error errors.itervalues()">${error}</li>
       </ul>
     </div>
 
@@ -16,7 +16,10 @@
 
       <h3>Step 1</h3>
 
-      <p class="lead">${structure:form['schemata'].title}</p>
+      <p class="lead" i18n:translate="">
+        Select the files you would like to download.
+        All exports include a data dictionary.
+      </p>
 
       <div class="table-responsive">
         <table class="table table-striped">
@@ -63,19 +66,53 @@
 
       <h3>Step 2</h3>
 
-      <p class="lead">${structure:form['expand_collections'].title}</p>
+      <p class="lead" i18n:translate="">
+        Select list style.
+      </p>
 
-      ${structure:form['expand_collections'].serialize()}
+      <div class="form-group">
+        <div class="radio">
+          <label>
+            <input type="radio" name="expand_collections" value="false"
+                checked="${cstruct['expand_collections'] == 'false'}" />
+            <span tal:omit-tag="" i18n:translate="">Single column with comma-delimted values.</span>
+          </label>
+        </div>
+        <div class="radio">
+          <label>
+            <input type="radio" name="expand_collections" value="true"
+                checked="${cstruct['expand_collections'] == 'true'}"/>
+            <span tal:omit-tag="" i18n:translate="">Separate colum for each possible answer choice.</span>
+          </label>
+        </div>
+      </div>
 
       <hr/>
 
       <h3>Step 3</h3>
 
-      <p class="lead">${structure:form['use_choice_labels'].title}</p>
+      <p class="lead" i18n:translate="">
+        Select answer choice style.
+      </p>
 
-      ${structure:form['use_choice_labels'].serialize()}
+      <div class="form-group">
+        <div class="radio">
+          <label>
+            <input type="radio" name="use_choice_labels" value="false"
+                checked="${cstruct['use_choice_labels'] == 'false'}"/>
+            <span tal:omit-tag="" i18n:translate="">Use codes.</span>
+          </label>
+        </div>
+        <div class="radio">
+          <label>
+            <input type="radio" name="use_choice_labels" value="true"
+                checked="${cstruct['use_choice_labels'] == 'true'}"/>
+            <span tal:omit-tag="" i18n:translate="">Use labels.</span>
+          </label>
+        </div>
+      </div>
 
-      ${structure:form['csrf_token'].serialize()}
+      <input type="hidden" name="csrf_token" value="${request.session.get_csrf_token()}" />
 
       <hr />
 
