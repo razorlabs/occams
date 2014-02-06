@@ -6,8 +6,9 @@ try:
     from collections import OrderedDict
 except ImportError:
     from ordereddict import OrderedDict
+from operator import or_
 
-from sqlalchemy import func, orm, cast, null, true, literal, Date, Integer
+from sqlalchemy import func, orm, cast, null, literal, Date, Integer
 
 from occams.datastore import model
 
@@ -15,7 +16,8 @@ from occams.datastore import model
 def build_report(session, schema_name,
                  ids=None,
                  expand_collections=False,
-                 use_choice_labels=False):
+                 use_choice_labels=False,
+                 ignore_private=True):
     """
     Builds a schema entity data report query table from the data dictioanry.
 
@@ -60,6 +62,9 @@ def build_report(session, schema_name,
     columns = build_columns(session, schema_name, ids, expand_collections)
 
     for column in columns.itervalues():
+        if column.is_private and ignore_private:
+            query = query.add_column(literal(u'[PRIVATE]').label(column.name))
+            continue
 
         # evaluate the target mapped class and casted value column
         Value = orm.aliased(model.nameModelMap[column.type])
@@ -245,6 +250,7 @@ class DataColumn:
         self.name = name
         self.type = types.pop()
         self.is_collection = collections.pop()
+        self.is_private = reduce(or_, [a.is_private for a in attributes])
         self.attributes = tuple(attributes)
         self.choice = choice
         if choice is not None:
