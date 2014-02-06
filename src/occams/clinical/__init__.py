@@ -25,24 +25,44 @@ _ = TranslationStringFactory(__name__)
 log = logging.getLogger(__name__)
 
 
-def resolve_path(spec):
+def resolve_path(spec, validate=False):
     """
     Resolves an asset descriptor
     """
-    if ':' not in spec:
-        return spec
+    if ':' in spec:
+        package, path = spec.split(':')
+        spec = pkg_resources.resource_filename(package, path)
 
-    package, path = spec.split(':')
-    return pkg_resources.resource_filename(package, path)
+    if validate:
+        assert os.path.exists(spec), 'Path does not exist: %s' % spec
+
+
+def cast_maybe(value, type_):
+    if value is not None:
+        return type_(value)
+
+
+def sanitize_settings(settings):
+    """
+    Parses application-specific settings values
+    """
+
+    assert 'app.export_user' in settings, 'Must specify an export user'
+
+    settings['app.export_dir'] = \
+        resolve_path(settings['app.export_dir'], validate=True)
+
+    settings['app.export_limit'] = \
+        cast_maybe(settings.get('app.export_limit'), int)
+    settings['app.export_expire'] = \
+        cast_maybe(settings.get('app.export_expire'), int)
 
 
 def main(global_config, **settings):
     """
     This function returns a Pyramid WSGI application.
     """
-    settings['app.export_dir'] = resolve_path(settings['app.export_dir'])
-    assert os.path.exists(settings['app.export_dir']), \
-        'Export directory does not exist'
+    sanitize_settings(settings)
 
     log.debug('Connecting to database...')
     Session.configure(bind=engine_from_config(settings, 'clinicaldb.'))
