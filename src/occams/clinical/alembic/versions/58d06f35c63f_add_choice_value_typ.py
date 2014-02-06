@@ -22,6 +22,7 @@ def upgrade():
     create_choice_table()
     migrate_choice_values()
     drop_value_choice_id()
+    normalize_order()
     set_name_as_code()
     force_numeric_name()
 
@@ -203,6 +204,32 @@ def drop_value_choice_id():
         # drop the old columns
         op.drop_column('value_' + type_name, 'choice_id')
         op.drop_column('value_' + type_name + '_audit', 'choice_id')
+
+
+def normalize_order():
+    """
+    Normalize choice ordering so that choices get a clean 1,2,3,4... value
+    """
+    choice_table = sql.table('choice', sql.column('order'))
+
+    op.execute(
+        choice_table.update()
+        .values(order=op.inline_literal(1000000000) + choice_table.c.order))
+
+    op.execute("""
+        UPDATE choice
+        SET "order" = "sorted"."new_order"
+        FROM (
+
+          SELECT id, row_number() OVER (
+                PARTITION BY attribute_id
+                ORDER BY "order"
+                ) AS new_order
+          FROM choice
+
+        ) AS "sorted"
+        WHERE "sorted".id = choice.id
+    """)
 
 
 def set_name_as_code():

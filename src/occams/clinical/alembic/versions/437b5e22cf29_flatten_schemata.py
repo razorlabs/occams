@@ -17,7 +17,7 @@ down_revision = '58d06f35c63f'
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy import sql
+from sqlalchemy import sql, func, select
 
 from occams.clinical.migrations import alter_enum, query_user_id
 
@@ -29,6 +29,7 @@ def upgrade():
     migrate_subobjects()
     finalize_section()
     remove_object_type()
+    resort_tables()
 
 
 def downgrade():
@@ -163,19 +164,25 @@ def migrate_subschemata():
         section_table.insert()
         .from_select(sub_attribute_query.columns, sub_attribute_query))
 
+    # avoid name collisions with object attributes
+    op.execute(
+        attribute_table.update()
+        .values(name=op.inline_literal('__') + attribute_table.c.name)
+        .where(attribute_table.c.type == op.inline_literal('object')))
+
     parent_attribute_table = sql.alias(attribute_table, name='parent')
 
-    # Move all sub-attributes to the parent, prepending the parent's name
+    # Move all sub-attributes to the parent
     op.execute(
         attribute_table.update()
         .where(
             (parent_attribute_table.c.object_schema_id == attribute_table.c.schema_id)
             & (parent_attribute_table.c.schema_id == section_table.c.schema_id)
-            & (parent_attribute_table.c.name == section_table.c.name))
+            & (parent_attribute_table.c.name ==
+                op.inline_literal('__') + section_table.c.name))
         .values(
             schema_id=parent_attribute_table.c.schema_id,
-            name=parent_attribute_table.c.name +
-            op.inline_literal('_') + attribute_table.c.name,
+            name=attribute_table.c.name,
             section_id=section_table.c.id,
             # Mainintain distinct order as much as possible
             # to prevent constraint errors
@@ -218,6 +225,54 @@ def migrate_subschemata():
             & (attribute_table.c.type != op.inline_literal('object'))))
 
 
+def resort_tables():
+    """
+    Normalizes section/attribute/choice table orderings
+
+    Uses postgres-specific functionality: window functions
+    """
+
+    section_table = sql.table('section', sql.column('order'))
+    attribute_table = sql.table('attribute', sql.column('order'))
+
+    for table in (section_table, attribute_table, ):
+        op.execute(
+            table.update()
+            .values(order=op.inline_literal(1000000000) + table.c.order))
+
+    # UPDATE FROM is very difficult to do in sqlalchemy...
+
+    op.execute("""
+        UPDATE section
+        SET "order" = "sorted"."new_order"
+        FROM (
+
+          SELECT id,row_number() OVER (
+                PARTITION BY schema_id
+                ORDER BY "order"
+                ) AS new_order
+          FROM section
+
+        ) AS "sorted"
+        WHERE "sorted".id = section.id
+    """)
+
+    op.execute("""
+        UPDATE attribute
+        SET "order" = "sorted"."new_order"
+        FROM (
+
+          SELECT id , row_number() OVER (
+                PARTITION BY schema_id
+                ORDER BY "order"
+                ) AS new_order
+          FROM attribute
+
+        ) AS "sorted"
+        WHERE "sorted".id = attribute.id
+    """)
+
+
 def migrate_subobjects():
     """
     Move entity instances
@@ -230,7 +285,7 @@ def migrate_subobjects():
         sql.column('id'),
         sql.column('type'),
         sql.column('is_inline'))
-    attribute_table = sql.table('attribute', sql.column('object_schema_id'))
+
     object_table = sql.table(
         'object',
         sql.column('entity_id'),
@@ -254,14 +309,7 @@ def migrate_subobjects():
     op.drop_constraint('ck_attribute_valid_object_bind', 'attribute')
 
     # Delete sub-schemata
-    op.execute(
-        schema_table.delete()
-        .where(
-            schema_table.c.is_inline
-            & schema_table.c.id.in_(
-                sa.select([attribute_table.c.object_schema_id])
-                .where(schema_table.c.id == attribute_table.c.object_schema_id)
-                .correlate(schema_table))))
+    op.execute(schema_table.delete().where(schema_table.c.is_inline))
 
     # Delete all object-atributes
     for name in ('attribute', 'attribute_audit'):
