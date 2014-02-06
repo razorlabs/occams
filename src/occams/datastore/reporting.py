@@ -106,15 +106,20 @@ def build_report(session, schema_name,
                         literal(','))
 
             else:
-                value_column = (
-                    session.query(cast(
-                        session.query(Value)
-                        .join(Choice, Value._value == Choice.id)
-                        .filter(filter_expression)
-                        .filter(Choice.name == column.choice.name)
-                        .correlate(model.Entity)
-                        .exists(), Integer))
-                    .as_scalar())
+                exists = (
+                    session.query(Value)
+                    .join(Choice, Value._value == Choice.id)
+                    .filter(filter_expression)
+                    .filter(Choice.name == column.choice.name)
+                    .correlate(model.Entity)
+                    .exists())
+                if use_choice_labels:
+                    value_column = (
+                        session.query(literal(column.choice.title))
+                        .filter(exists))
+                else:
+                    value_column = (
+                        session.query(cast(exists, Integer)).as_scalar())
         else:
             # Scalar columns are added via LEFT OUTER JOIN
             query = query.outerjoin(Value, filter_expression)
