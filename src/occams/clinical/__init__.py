@@ -36,6 +36,8 @@ def resolve_path(spec, validate=False):
     if validate:
         assert os.path.exists(spec), 'Path does not exist: %s' % spec
 
+    return spec
+
 
 def cast_maybe(value, type_):
     if value is not None:
