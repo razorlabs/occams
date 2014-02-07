@@ -24,12 +24,48 @@
 
       <ul class="nav navbar-nav"
           tal:define="section request.current_route_path()">
+        <li tal:define="url request.route_path('site_list')"
+            tal:attributes="class python:'active' if url == section else ''"
+            tal:condition="request.has_permission('site_view')">
+          <a href="${url}">Sites</a>
+        </li>
+        <li tal:define="url request.route_path('study_list')"
+            tal:attributes="class python:'active' if url in section else ''"
+            tal:condition="request.has_permission('study_view')">
+          <a href="${url}">Studies</a>
+        </li>
         <li tal:define="url request.route_path('data_list')"
             tal:attributes="class python:'active' if url in section else ''"
             tal:condition="request.has_permission('fia_view')">
           <a href="${url}">Data</a>
         </li>
       </ul>
+
+      <form class="navbar-form navbar-left" role="search"
+          method="GET"
+          action="${request.route_path('patient_search')}"
+          tal:condition="request.has_permission('patient_view')">
+        <div class="form-group">
+          <label class="sr-only" for="search">Search</label>
+          <input
+              type="text"
+              class="form-control"
+              name="search"
+              value="${request.GET['search']|nothing}"
+              placeholder="Search for Patient">
+        </div>
+        <button type="submit" class="btn btn-default"
+          ><span class="glyphicon glyphicon-search"></span></button>
+      </form>
+
+      <button
+          id="event-add"
+          data-toggle="modal"
+          data-target="#modal"
+          data-remote="${request.route_path('event_add')}"
+          class="btn btn-primary navbar-btn navbar-left js-modal-controller"
+          tal:condition="request.has_permission('visit_add')"
+        ><span class="glyphicon glyphicon-plus-sign"></span> Add Event</button>
 
       <ul class="nav navbar-nav navbar-right"
           tal:define="user request.environ['repoze.who.identity']['properties']|nothing;"

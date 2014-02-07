@@ -1,0 +1,34 @@
+<html i18n:domain="occams.clinical" metal:use-macro="main_template">
+  <metal:content-slot fill-slot="content-slot">
+    <div class="table-responsive">
+      <table class="table table-bordered table-striped">
+        <thead>
+          <tr>
+            <th>Study</th>
+            <th>Code</th>
+            <th>Consent Date</th>
+            <th>Created</th>
+            <th>Creator</th>
+            <th>Modified</th>
+            <th>Modifier</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr tal:repeat="study studies">
+            <td>
+              <a href="${request.current_route_path(
+                    _route_name='study_view',
+                    study_name=study.name)}">${study.title}</a>
+            </td>
+            <td>${study.code}</td>
+            <td>${study.consent_date.isoformat()}</td>
+            <td>${study.create_date.date().isoformat()}</td>
+            <td>${study.create_user.key}</td>
+            <td>${study.modify_date.date().isoformat()}</td>
+            <td>${study.modify_user.key}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </metal:content-slot>
+</html>

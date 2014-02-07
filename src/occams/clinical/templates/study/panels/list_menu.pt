@@ -1,0 +1,7 @@
+<a href="${request.route_path('study_add')}"
+    class="btn btn-default pull-right"
+    data-toggle="modal"
+    data-backdrop="static"
+    data-target="#modal"
+    type="button"><span class="glyphicon glyphicon-plus"></span> Add Study</a>
+

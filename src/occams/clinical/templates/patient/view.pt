@@ -1,0 +1,197 @@
+<html i18n:domain="occams.clinical" metal:use-macro="main_template">
+  <metal:content-slot fill-slot="content-slot">
+
+    <div id="patient-references">
+      <h4>Alternate PIDs</h4>
+      <table class="listing">
+        <thead>
+          <th>Type</th>
+          <th>PID</th>
+        </thead>
+        <tbody>
+          <!--! TODO (mmartinez): can't hard code this, need to somehow
+                annotate this in the database to keep it institute-agnostic -->
+          <tr tal:condition="patient.legacy_number">
+            <td>Legacy Number</td>
+            <td>${patient.legacy_number}</td>
+          </tr>
+          <tr tal:repeat="reference patient.reference_numbers">
+            <td>${reference.reftype.title}</td>
+            <td>${reference.reference_number|nothing}</td>
+          </tr>
+          <!-- TODO (mmartinez): Again, we can't do this, see above -->
+          <metal:enrollments
+              tal:condition="request.has_permission('enrollment_view')"
+              tal:repeat="enrollment patient.enrollments">
+              <tr tal:condition="enrollment.reference_number|nothing">
+                <td>${enrollment.study.title} Number</td>
+                <td>${enrollment.reference_number}</td>
+              </tr>
+          </metal:enrollments>
+        </tbody>
+      </table>
+    </div>
+<!--!
+    <div id="patient-enrollments" tal:condition="view/canViewEnrollments">
+      <h4>Enrollments</h4>
+      <div class="empty-container" tal:condition="not:patient/enrollments">
+        This patient is currently not enrolled in any studies
+        <a href=""
+            tal:attributes="href string:${context/absolute_url}/++add++avrc.aeh.enrollment">Add one.</a>
+      </div>
+      <table class="listing" tal:condition="patient/enrollments">
+        <thead>
+          <tr>
+            <th class="study">Study</th>
+            <th class="consent-date">Consent</th>
+            <th class="status">Status</th>
+            <th class="reference-number">Enrollment#</th>
+            <th class="strat-number">RANDID</th>
+            <th class="arm">Arm</th>
+            <th></th>
+        </thead>
+        <tbody>
+          <tr tal:repeat="enrollment patient/enrollments"
+              tal:attributes="
+                class python:'odd' if repeat['enrollment'].odd else 'even';">
+            <td class="study" tal:content="enrollment/study/title">STUDY</td>
+            <td class="consent-date"
+                tal:content="enrollment/consent_date/isoformat">CONSENT DATE</td>
+            <td class="status">
+              <span
+                  tal:condition="enrollment/is_consent_overdue"
+                  style="color:red">
+                Consent is out of date
+              </span>
+              <span
+                  tal:condition="enrollment/termination_date">
+                  Terminated on
+                  <span tal:replace="enrollment/termination_date/isoformat" >TERMINATION DATE</span></span>
+              <span
+                  tal:condition="enrollment/is_termination_overdue"
+                  style="color:red">
+                Termination overdue
+              </span>
+            </td>
+            <td class="reference-number" tal:content="enrollment/reference_number">REF #</td>
+            <tal:block define="stratum enrollment/stratum">
+              <td class="strat-number" tal:content="stratum/reference_number|nothing">STRAT #</td>
+              <td class="arm">
+                <tal:block condition="stratum">
+                  <em tal:condition="stratum/study/is_blinded">blinded</em>
+                  <span
+                      tal:condition="not:stratum/study/is_blinded"
+                      tal:content="stratum/arm/title">
+                    ARM
+                  </span>
+                </tal:block>
+              </td>
+            </tal:block>
+            <td>
+              <a href="" class="view"
+                  tal:define="url enrollment/zobject/absolute_url | nothing"
+                  tal:attributes="href url"
+                  tal:condition="url">View</a>
+            </td>
+           </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="patient-visits">
+      <h4>Patient Visits</h4>
+      <table class="listing">
+          <thead>
+              <tr>
+                  <th class="visit">Visit Date </th>
+                  <th class="cycles">Cycles</th>
+                  <th class="pending-entry">Forms Pending Entry</th>
+                  <th class="pending-review">Forms Pending Review</th>
+                  <th class="complete">Forms Complete </th>
+                  <th class="not-done">Forms Skipped </th>
+                  <th></th>
+              </tr>
+          </thead>
+
+          <tbody>
+              <tal:block tal:repeat="visit view/visits">
+              <tr tal:define="odd repeat/visit/odd"
+                  tal:attributes="class python: odd and 'odd' or 'even'">
+                  <td class="visit" tal:content="visit/visit_date">VISIT DATE</td>
+                  <td class="cycles">
+                      <span
+                          tal:repeat="cycle visit/cycles" tal:omit-tag="">
+                              <span tal:replace="cycle" />
+                              <br />
+                      </span>
+                  </td>
+                  <td class=""
+                      tal:define="value visit/form_pending_entry|nothing"
+                      tal:attributes="class python: value and 'pending-entry populated' or 'pending-entry empty'" tal:content="value"/>
+                  <td class=""
+                      tal:define="value visit/form_pending_review|nothing" tal:attributes="class python: value and 'pending-review populated' or 'pending-review empty'" tal:content="value" />
+                  <td class=""
+                      tal:define="value visit/form_complete|nothing"
+                      tal:attributes="class python: value and 'complete populated' or 'complete empty'"
+                      tal:content="value" />
+                  <td class=""
+                      tal:define="value visit/form_not_done|nothing"
+                      tal:attributes="class python: value and 'not-done populated' or 'not-done empty'"
+                      tal:content="value" />
+                  <td>
+                    <a href="" class="view"
+                        tal:attributes="href visit/visit_url">View</a>
+                  </td>
+              </tr>
+              </tal:block>
+          </tbody>
+      </table>
+    </div>
+
+    <div id="patient-forms">
+      <h4>Patient Forms</h4>
+      <table class="listing">
+          <thead>
+              <tr>
+                  <th class="form">Form Name</th>
+                  <th class="pending-entry">Forms Pending Entry</th>
+                  <th class="pending-review">Forms Pending Review</th>
+                  <th class="complete">Forms Complete</th>
+                  <th class="not-done">Forms Skipped</th>
+                  <th></th>
+              </tr>
+          </thead>
+
+          <tbody>
+            <tal:block tal:repeat="formtype view/getFormTypes">
+
+              <tr tal:define="odd repeat/formtype/odd"
+                  tal:attributes="class python: odd and 'odd' or 'even'">
+                  <td class="form" tal:content="formtype/title">FORM NAME</td>
+                  <td class=""
+                      tal:define="value formtype/pending_entry|nothing"
+                      tal:attributes="class python: value and 'pending-entry populated' or 'pending-entry empty'" tal:content="value"/>
+                  <td class=""
+                      tal:define="value formtype/pending_review|nothing" tal:attributes="class python: value and 'pending-review populated' or 'pending-review empty'" tal:content="value" />
+                  <td class=""
+                      tal:define="value formtype/complete|nothing"
+                      tal:attributes="class python: value and 'complete populated' or 'complete empty'"
+                      tal:content="value" />
+                  <td class=""
+                      tal:define="value formtype/not_done|nothing"
+                      tal:attributes="class python: value and 'not-done populated' or 'not-done empty'"
+                      tal:content="value" />
+                  <td>
+                    <a href="" class="view"
+                        tal:attributes="href string:${here/absolute_url}/${formtype/name}">View</a>
+                  </td>
+              </tr>
+            </tal:block>
+          </tbody>
+      </table>
+    </div>
+    <div tal:condition="view/canAddFormsOrTests" tal:content="structure view/form_requestor" />
+-->
+  </metal:content-slot>
+</html>
+
