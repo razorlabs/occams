@@ -26,11 +26,10 @@ DataStoreModel = ModelClass(u'DataStoreModel')
 
 from .auditing import Auditable
 from .metadata import User, NOW, AutoNamed, Describeable, Modifiable, Referenceable
-from .schema import Schema, Category, Attribute, Choice
+from .schema import Schema, Section, Category, Attribute, Choice
 from .storage import (
     nameModelMap,
     State, Context, Entity,
     HasEntities,
     ValueInteger, ValueString, ValueDecimal, ValueDatetime, ValueText, ValueBlob)
 from .session import DataStoreSession
-

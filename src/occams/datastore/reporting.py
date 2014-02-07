@@ -90,7 +90,7 @@ def build_report(session, schema_name,
                     value_column = Choice.name
 
                 if not is_postgres:
-                    value_column = func.group.concat(value_column)
+                    value_column = func.group_concat(value_column)
 
                 value_column = (
                     session.query(value_column)
