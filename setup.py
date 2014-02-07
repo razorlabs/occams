@@ -44,7 +44,7 @@ EXTRAS = {
     'postgresql': ['psycopg2', 'psycogreen'],
     'test': [
         'pyramid_debugtoolbar',
-        'nose', 'rednose',
+        'nose',
         'coverage',
         'WebTest',
         'beautifulsoup4',

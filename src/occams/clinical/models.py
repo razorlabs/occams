@@ -7,6 +7,7 @@ as we transition towards a SQL-driven application.
 
 import datetime
 import re
+import uuid
 
 from sqlalchemy import orm, schema, sql, types
 from sqlalchemy.ext import declarative, hybrid
@@ -22,7 +23,7 @@ from occams.datastore.model import (
     HasEntities,
     ModelClass,
     User,
-    Schema, Attribute, Choice, Entity, Context)
+    Schema, Section, Attribute, Choice, Entity, Context)
 
 
 RE_WS = re.compile('\s+')
@@ -664,7 +665,10 @@ class Export(ClinicalModel, Referenceable, Auditable, Modifiable):
                                       nullable=False,
                                       default=False)
 
-    file_name = schema.Column(types.Unicode, nullable=False)
+    file_name = schema.Column(
+        types.Unicode,
+        nullable=False,
+        default=lambda: unicode(uuid.uuid4()))
 
     status = schema.Column(
         types.Enum('failed', 'pending', 'complete', name='export_status'),

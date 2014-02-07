@@ -131,9 +131,10 @@ def make_export(export_id):
         for schema_name, ids in files.dict_of_lists().items():
 
             with tempfile.NamedTemporaryFile() as tfp:
-                dump_query(tfp, schema_name, ids,
-                           expand_collections=expand_collections,
-                           use_choice_labels=use_choice_labels)
+                query = query_report(schema_name, ids,
+                                     expand_collections=expand_collections,
+                                     use_choice_labels=use_choice_labels)
+                dump_query(tfp, query)
                 zfp.write(tfp.name, '{0}.csv'.format(schema_name))
 
             with tempfile.NamedTemporaryFile() as tfp:
@@ -152,11 +153,10 @@ def make_export(export_id):
     redis.publish('export', json.dumps(redis.hgetall(export_id)))
 
 
-def dump_query(fp,
-               schema_name,
-               ids,
-               expand_collections=False,
-               use_choice_labels=False):
+def query_report(schema_name,
+                 ids,
+                 expand_collections=False,
+                 use_choice_labels=False):
     """
     Generates a clinical report containing the patient's metadata
     that relates to the form.
@@ -173,12 +173,13 @@ def dump_query(fp,
     Returns:
     A SQLAlchemy query
     """
+
     pglist = (
         lambda e: func.array_to_string(func.array(e), literal(','))
         if Session.bind.url.drivername == 'postgresql'
         else e)
     selist = (
-        lambda e: func.group_concate(e)
+        lambda e: func.group_concat(e)
         if Session.bind.url.drivername == 'sqlite'
         else e)
 
@@ -232,6 +233,13 @@ def dump_query(fp,
                 .as_scalar())
             .label('cycles'))
         .add_columns(*[c for c in report.columns if c.name != 'entity_id']))
+    return query
+
+
+def dump_query(fp, query):
+    """
+    Helper function to dump and arbitrary SQL query to CSV
+    """
     writer = csv.writer(fp)
     writer.writerow([unicode(d['name']) for d in query.column_descriptions])
     writer.writerows(query)

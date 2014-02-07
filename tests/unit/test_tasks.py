@@ -282,7 +282,7 @@ class TestQueryReport(IntegrationFixture):
         Session.add(visit)
 
         schema = Session.query(models.Schema).one()
-        report = query_report(schema)
+        report = query_report(schema.name, [schema.id])
         entry = report.one()
         self.assertEquals(entry.site, 'ucsd')
         self.assertEquals(entry.pid, '12345')
@@ -463,6 +463,7 @@ class TestDumpCodeBook(IntegrationFixture):
                 publish_date=date.today() - timedelta(10),
                 attributes={
                     'myvar': models.Attribute(
+                        section=models.Section(name='foo', title=u''),
                         name=u'myvar',
                         title=u'My Var',
                         type=u'string',
@@ -473,13 +474,17 @@ class TestDumpCodeBook(IntegrationFixture):
                 title=u'Sample v2',
                 publish_date=date.today(),
                 retract_date=date.today(),
-                attributes={
-                    'myvar': models.Attribute(
-                        name=u'myvar',
-                        title=u'My Updated Variable',
-                        type=u'string',
-                        order=0)
-                })])
+                sections=[
+                    models.Section(
+                        name='foo',
+                        title=u'',
+                        attributes={
+                            'myvar': models.Attribute(
+                                name=u'myvar',
+                                title=u'My Updated Variable',
+                                type=u'string',
+                                order=0)
+                        })])])
 
         with closing(io.BytesIO()) as fp:
             dump_codebook(fp, u'sample')
@@ -509,6 +514,7 @@ class TestDumpCodeBook(IntegrationFixture):
                 publish_date=date.today() - timedelta(10),
                 attributes={
                     'myvar': models.Attribute(
+                        section=models.Section(name='foo', title=u''),
                         name=u'myvar',
                         title=u'My Var',
                         type=u'string',
@@ -520,6 +526,7 @@ class TestDumpCodeBook(IntegrationFixture):
                 publish_date=date.today(),
                 attributes={
                     'myvar': models.Attribute(
+                        section=models.Section(name='foo', title=u''),
                         name=u'myvar',
                         title=u'My Updated Variable',
                         type=u'string',
@@ -557,6 +564,7 @@ class TestDumpCodeBook(IntegrationFixture):
                 publish_date=date.today() - timedelta(10),
                 attributes={
                     'myvar': models.Attribute(
+                        section=models.Section(name='foo', title=u''),
                         name=u'myvar',
                         title=u'My Var',
                         type=u'string',
