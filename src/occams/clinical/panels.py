@@ -8,7 +8,7 @@ from pyramid_layout.panel import panel_config
 @panel_config(name='study_view_menu', renderer='occams.clinical:templates/study/panels/view_menu.pt')
 @panel_config(name='study_list_menu', renderer='occams.clinical:templates/study/panels/list_menu.pt')
 @panel_config(name='home_menu', renderer='occams.clinical:templates/portal/panels/home_menu.pt')
-@panel_config(name='data_nav', renderer='occams.clinical:templates/data/panels/nav.pt')
+@panel_config(name='export_nav', renderer='occams.clinical:templates/export/panels/nav.pt')
 def panel(context, request, **kw):
     return kw
 

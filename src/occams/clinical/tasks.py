@@ -20,10 +20,11 @@ import os
 import tempfile
 import zipfile
 
-from celery import Celery
+from celery import Celery, Task
 from celery.bin import Option
 from celery.signals import worker_init
 from celery.utils.log import get_task_logger
+import humanize
 from pyramid.paster import bootstrap
 from sqlalchemy import func, literal, null
 from webob.multidict import MultiDict
@@ -75,11 +76,29 @@ def init(signal, sender):
         if not Session.query(models.User).filter_by(key=userid).count():
             Session.add(models.User(key=userid))
 
-    # update the current scoped session's infor attribute
-    Session.info['user'] = userid
+    # Cleare the registry so we ALWAYS get the correct userid
+    Session.remove()
+    Session.configure(info={'user': userid})
 
 
-@app.task(ignore_result=True)
+class ExportTask(Task):
+
+    abstract = True
+
+    @in_transaction
+    def on_failure(self, exc, task_id, args, kwargs, einfo):
+        log.error('Task {0} raised exception: {1!r}\n{2!r}'.format(
+                  task_id, exc, einfo))
+        redis = app.redis
+        export_id, = args
+        export = Session.query(models.Export).filter_by(id=export_id).one()
+        export.status = 'failed'
+        Session.flush()
+        redis.hset(export_id, 'status', export.status)
+        redis.publish('export', json.dumps(redis.hgetall(export_id)))
+
+
+@app.task(base=ExportTask, ignore_result=True)
 @in_transaction
 def make_export(export_id):
     """
@@ -125,7 +144,7 @@ def make_export(export_id):
         'count': 0,
         'total': len(set(files.keys()))})
 
-    path = os.path.join(export_dir, export.file_name)
+    path = os.path.join(export_dir, export.name)
 
     with closing(zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED)) as zfp:
         for schema_name, ids in files.dict_of_lists().items():
@@ -147,9 +166,11 @@ def make_export(export_id):
             log.info(', '.join([count, total, schema_name]))
 
     export.status = 'complete'
-    Session.flush()  # flush so we know everything went smoothly
-
     redis.hset(export_id, 'status', export.status)
+    redis.hset(export_id, 'file_size',
+               humanize.naturalsize(os.path.getsize(path)))
+
+    Session.flush()  # flush so we know everything went smoothly
     redis.publish('export', json.dumps(redis.hgetall(export_id)))
 
 

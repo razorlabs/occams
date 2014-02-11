@@ -1,0 +1,10 @@
+<ul class="pager" tal:condition="pager.total_count">
+  <li class="previous ${'disabled' if not pager.has_previous else ''}">
+    <a href="${url(pager.previous)}">&larr; Newer</a>
+  </li>
+  <li class="next ${'disabled' if not pager.has_next else ''}">
+    <a href="${url(pager.next)}">Older &rarr;</a>
+  </li>
+</ul>
+
+

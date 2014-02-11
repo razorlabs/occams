@@ -57,9 +57,12 @@ def includeme(config):
         '/patients/{pid}/events/{event_date}/delete',
         custom_predicates=[ymd])
 
-    route('data_list', '/data')
-    route('data_export', '/data/exports')
-    route('data_download', '/data/exports/{export_id}')
+    route('export_home',        '/exports')
+    route('export_faq',         '/exports/faq')
+    route('export_add',         '/exports/add')
+    route('export_status',      '/exports/status')
+    route('export_download',    '/exports/{id:\d+}/download')
+    route('export_delete',      '/exports/{id:\d+}/delete')
 
     route('clinical', '/')
 

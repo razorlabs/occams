@@ -16,6 +16,7 @@ REQUIRES = [
     'cssmin',
     'deform',
     'gevent-socketio',
+    'humanize',
     'jsmin',
     'lingua',
     'pyramid',
@@ -51,6 +52,10 @@ EXTRAS = {
         'mock',
         'ddt'],
 }
+
+
+if sys.version_info < (2, 7):
+    raise Exception('This module is only compatible with Python 2.7')
 
 
 if sys.version_info < (3, 0):

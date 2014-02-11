@@ -18,23 +18,39 @@
       url: $form.attr('action'),
       data: $form.serialize(),
       statusCode: {
-        302: function(xhr, status, error) {
-          window.location.href = xhr.getResponseHeader('Location');
+        200: function(data, status, xhr) {
+          var location = xhr.getResponseHeader('Location');
+          if (location) {
+            window.location = location
+            return;
+          }
+          $this.modal('hide');
         },
         400: function(xhr, status, error) {
-          $this.html(data)
+          $this.html(xhr.responseText)
         }
       }
     });
   });
 
+
+  /**
+   * Clears modal container contents.
+   */
+  $('#modal').on('hidden.bs.modal', function(){
+    $(this).find('.modal-content').empty();
+    // Ensure the remote content can be reloaded
+    $(this).removeData('bs.modal');
+    return this;
+  });
+
+
   /**
    * Allows buttons inside the modal to be able to close it.
    */
-  $('#modal').on('click', '.js-close', function(event){
+  $('#modal').on('click', '.js-modal-dismiss', function(event){
     event.preventDefault();
-    return $(this).toggle('hide').empty()
+    return $('#modal').modal('hide');
   });
 
 }(jQuery);
-
