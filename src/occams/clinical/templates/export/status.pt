@@ -35,8 +35,8 @@
 
           <div class="panel-heading clearfix">
             <div class="pull-right export-status">
-              <strong data-bind="if:status() == 'pending'" i18n:translate="">In Progess</strong>
-              <strong data-bind="if:status() == 'failed'" i18n:translate="">Failed</strong>
+              <span class="label label-warning" data-bind="if:status() == 'pending'" i18n:translate="">In Progess</span>
+              <span class="label label-danger" data-bind="if:status() == 'failed'" i18n:translate="">Failed</span>
               <div data-bind="if:status() == 'complete'" class="text-muted">
                 <small>
                   <span>Created on <span data-bind="text:create_date"></span></span><br/>
@@ -52,29 +52,30 @@
 
           <div class="panel-body">
             <!-- ko if: status() == 'pending' -->
-            <div class="progress">
-              <div
-                  class="progress-bar"
-                  role="progressbar"
-                  aria-valuenow="0"
-                  aria-valuemin="0"
-                  aria-valuemax="100"
-                  data-bind="
-                    attr: {'aria-valuenow': progress()},
-                    style: {'width': progress() + '%'}">
-                <span class="sr-only" data-bind="text: progress()"></span>
+              <div class="progress">
+                <div
+                    class="progress-bar"
+                    role="progressbar"
+                    aria-valuenow="0"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    data-bind="
+                      attr: {'aria-valuenow': progress()},
+                      style: {'width': progress() + '%'}">
+                  <span class="sr-only" data-bind="text: progress()"></span>
+                </div>
               </div>
-            </div>
+              <hr />
             <!-- /ko -->
-            <div data-bind="if:status() == 'complete'">
+            <!-- ko if: status() == 'complete' -->
               <a  target="_blank"
                   i18n:translate=""
                   class="btn btn-primary"
                   data-bind="attr: {href: download_url}"
                   ><span class="glyphicon glyphicon-download-alt"></span> Download</a>
-              <span class="export-file">export.zip &bull; <span data-bind="text:file_size"></span>
-            </div>
-            <hr />
+              <span class="export-file">export.zip &bull; <span data-bind="text:file_size"></span></span>
+              <hr />
+            <!-- /ko -->
             <div class="export-controls">
               <button
                   class="btn btn-link export-details-toggle collapsed"

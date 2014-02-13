@@ -76,7 +76,7 @@ def init(signal, sender):
         if not Session.query(models.User).filter_by(key=userid).count():
             Session.add(models.User(key=userid))
 
-    # Cleare the registry so we ALWAYS get the correct userid
+    # Clear the registry so we ALWAYS get the correct userid
     Session.remove()
     Session.configure(info={'user': userid})
 
