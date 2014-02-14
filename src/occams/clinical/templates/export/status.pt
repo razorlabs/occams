@@ -1,6 +1,11 @@
 <html i18n:domain="occams.clinical" metal:use-macro="main_template">
   <metal:content-slot fill-slot="content-slot">
 
+    <p class="text-center" data-bind="visible:!ready()">
+      <span i18n:translate="">Loading...</span>
+      <img src="${request.static_path('occams.clinical:static/images/spinner-small.png')}" />
+    </p>
+
     <!--! Evaluate Knockout bindings only there is content to display -->
     <div style="display: none;" data-bind="visible:ready()">
 
