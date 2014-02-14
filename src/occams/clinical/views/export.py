@@ -223,6 +223,7 @@ def status_json(request):
     locale = negotiate_locale_name(request)
 
     result = {
+        'csrf_token': request.session.get_csrf_token(),
         'pager': pager.serialize(),
         'exports': []
     }
@@ -272,77 +273,28 @@ def status_json(request):
     return result
 
 
-@colander.deferred
-def delete_prompt(node, kw):
-    """
-    Renders the prompt once we know more about the export
-    """
-    export = kw['export']
-    request = kw['request']
-    localizer = get_localizer(request)
-    count = len(export.schemata)
-
-    return _(
-        u'You are about to delete the export containing ${count} ${plural}. '
-        u'This action will cancel the process if it has not completed. '
-        u'Are your sure you want to continue?',
-        mapping={
-            'count': count,
-            'plural': localizer.pluralize('item', 'items', count,
-                                          'occams.clincal')
-            })
-
-
-class DeleteConfirmSchema(CSRFSchema):
-    """
-    Data structure representing confirmation by the user to cancel an export
-    """
-
-    config = colander.SchemaNode(
-        colander.Boolean(),
-        description=delete_prompt,
-        widget=deform.widget.HiddenWidget(),
-        default=True)
-
-
 @view_config(
     route_name='export_delete',
     permission='fia_view',
-    layout='ajax',
-    renderer='occams.clinical:templates/static/form.pt',
+    request_method='POST',
     xhr=True
     )
 def delete(request):
     """
-    Prompts the user with a confirmation dialog before cancelling the export
+    Handles delete delete AJAX request
     """
     export = Session.query(models.Export).get(request.matchdict['id'])
+    csrf_token = request.POST.get('csrf_token')
 
-    if not export:
+    if not export or csrf_token != request.session.get_csrf_token():
         raise HTTPNotFound
 
-    form = deform.Form(
-        schema=DeleteConfirmSchema(title=_(u'Delete Export')).bind(
-            export=export,
-            request=request),
-        buttons=[
-            deform.Button('cancel', _(u'Cancel'),
-                          css_class='btn btn-link js-modal-dismiss'),
-            deform.Button('submit', _(u'Yes, I\'m sure'),
-                          css_class='btn btn-danger')])
-    form.widget = ModalFormWidget()
+    Session.delete(export)
+    Session.flush()
 
-    if request.method == 'POST':
-        try:
-            deform.validate(request.items())
-        except deform.ValidationFailure as e:
-            form = e
-        else:
-            tasks.app.control.revoke(export.file)
-            Session.delete(export)
-            return HTTPOk()
+    tasks.app.control.revoke(export.name)
 
-    return {'form': form.render()}
+    return HTTPOk()
 
 
 @view_config(
