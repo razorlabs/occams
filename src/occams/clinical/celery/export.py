@@ -20,65 +20,14 @@ import os
 import tempfile
 import zipfile
 
-from celery import Celery, Task
-from celery.bin import Option
-from celery.signals import worker_init
-from celery.utils.log import get_task_logger
+from celery import Task
 import humanize
-from pyramid.paster import bootstrap
 from sqlalchemy import func, literal, null
 from webob.multidict import MultiDict
-import transaction
 
 from occams.clinical import _, models, Session
 from occams.datastore import reporting
-
-
-app = Celery(__name__)
-
-app.user_options['worker'].add(
-    Option('--ini', help='Pyramid config file'))
-
-log = get_task_logger(__name__)
-
-
-def in_transaction(func):
-    """
-    Function decoratator that commits on successul execution, aborts otherwise.
-
-    Also releases connection to prevent leaked open connections.
-
-    The pyramid application-portion relies on ``pyramid_tm`` to commit at
-    the end of each request. Tasks don't have this luxury and must
-    be committed manually after each successful call.
-    """
-    def decorated(*args, **kw):
-        with transaction.manager:
-            result = func(*args, **kw)
-        Session.remove()
-        return result
-    return decorated
-
-
-@worker_init.connect
-def init(signal, sender):
-    """
-    Configure the database connections when the celery daemon starts
-    """
-    # Have the pyramid app initialize all settings
-    env = bootstrap(sender.options['ini'])
-    sender.app.settings = env['registry'].settings
-    sender.app.redis = env['request'].redis
-
-    userid = sender.app.settings['app.export_user']
-
-    with transaction.manager:
-        if not Session.query(models.User).filter_by(key=userid).count():
-            Session.add(models.User(key=userid))
-
-    # Clear the registry so we ALWAYS get the correct userid
-    Session.remove()
-    Session.configure(info={'user': userid})
+from occams.clinical.celery import app, in_transaction, log
 
 
 class ExportTask(Task):
@@ -122,7 +71,7 @@ def make_export(export_id):
 
     """
     export = Session.query(models.Export).filter_by(id=export_id).one()
-    export_dir = app.settings['app.export_dir']
+    export_dir = app.settings['app.export.dir']
 
     expand_collections = export.expand_collections
     use_choice_labels = export.use_choice_labels

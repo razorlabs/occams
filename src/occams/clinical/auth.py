@@ -6,7 +6,7 @@ All permissions are declared here for easier overview
 
 from repoze.who.interfaces import IChallengeDecider
 from pyramid.events import subscriber, NewRequest
-from pyramid.security import has_permission, authenticated_userid
+from pyramid.security import authenticated_userid
 from zope.interface import directlyProvides
 
 from occams.clinical import log, Session, models
@@ -47,11 +47,17 @@ def occams_groupfinder(identity, request):
 
 
 @subscriber(NewRequest)
-def track_user(event):
+def track_user_on_request(event):
     """
     Annotates the database session with the current user.
     """
-    userid = authenticated_userid(event.request)
+    track_user(authenticated_userid(event.request))
+
+
+def track_user(userid):
+    """
+    Helper function to add a user to the database
+    """
 
     if not userid:
         return
@@ -60,16 +66,4 @@ def track_user(event):
         Session.add(models.User(key=userid))
 
     # update the current scoped session's infor attribute
-    Session.info['user'] = userid
-
-
-def includeme(config):
-    log.debug('Initializing auth helpers...')
-
-    # Wrap has_permission to make it less cumbersome
-    # TODO: This is built-in to pyramid 1.5, remove when we switch
-    config.add_request_method(
-        lambda r, n: has_permission(n, r.context, r),
-        'has_permission')
-
-    config.scan('.auth')
+    Session.configure(info={'user': userid})

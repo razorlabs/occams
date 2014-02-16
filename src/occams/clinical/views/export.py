@@ -5,8 +5,6 @@ import uuid
 
 from babel.dates import format_datetime
 import colander
-import deform
-import deform.widget
 import humanize
 from pyramid_deform import CSRFSchema
 from pyramid.i18n import get_localizer, negotiate_locale_name
@@ -17,9 +15,9 @@ from pyramid.view import view_config
 from sqlalchemy import orm, null
 import transaction
 
-from occams.clinical import _, models, Session, tasks
+from occams.clinical import _, models, Session
+from occams.clinical.celery.export import make_export
 from occams.clinical.utils.pager import Pager
-from occams.form.widgets import ModalFormWidget
 
 
 @view_config(
@@ -73,7 +71,7 @@ def limit_validator(node, kw):
     request = kw['request']
 
     def validator(schema, value):
-        limit = request.registry.settings.get('app.export_limit')
+        limit = request.registry.settings.get('app.export.limit')
         if not limit:
             return
         exports_query = query_exports(request)
@@ -148,7 +146,7 @@ def add(request):
             Session.add(export)
             Session.flush()
             task_id = export.name
-            task = tasks.make_export.subtask(args=(export.id,))
+            task = make_export.subtask(args=(export.id,))
             # Avoid race-conditions by executing the task after
             # the current request completes successfully
             transaction.get().addAfterCommitHook(
@@ -161,7 +159,7 @@ def add(request):
     layout.title = _(u'Exports')
     layout.set_nav('export_nav')
 
-    limit = request.registry.settings.get('app.export_limit')
+    limit = request.registry.settings.get('app.export.limit')
     exceeded = False
 
     if limit:
@@ -214,7 +212,7 @@ def status_json(request):
     exports_query = query_exports(request)
     exports_count = exports_query.count()
     versions = get_versions()
-    export_dir = request.registry.settings['app.export_dir']
+    export_dir = request.registry.settings['app.export.dir']
 
     pager = Pager(request.GET.get('page', 1), 5, exports_count)
     exports_query = exports_query[pager.slice_start:pager.slice_end]
@@ -229,7 +227,7 @@ def status_json(request):
     }
 
     try:
-        delta = timedelta(request.registry.settings.get('app.export_expire'))
+        delta = timedelta(request.registry.settings.get('app.export.expire'))
     except ValueError:
         delta = None
 
@@ -317,7 +315,7 @@ def download(request):
     except orm.exc.NoResultFound:
         raise HTTPNotFound
 
-    export_dir = request.registry.settings['app.export_dir']
+    export_dir = request.registry.settings['app.export.dir']
     path = os.path.join(export_dir, export.name)
 
     response = FileResponse(path)
@@ -330,7 +328,7 @@ def query_exports(request):
     Helper method to query current exports for the authenticated user
     """
     userid = authenticated_userid(request)
-    export_expire = request.registry.settings.get('app.export_expire')
+    export_expire = request.registry.settings.get('app.export.expire')
 
     exports_query = (
         Session.query(models.Export)

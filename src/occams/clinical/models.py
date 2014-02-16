@@ -9,7 +9,7 @@ import datetime
 import re
 import uuid
 
-from sqlalchemy import orm, schema, sql, types
+from sqlalchemy import engine_from_config, orm, schema, sql, types
 from sqlalchemy.ext import declarative, hybrid
 import zope.sqlalchemy
 
@@ -41,6 +41,12 @@ roster.Session = RosterSession
 ClinicalModel = ModelClass(u'ClinicalModel')
 
 NOW = sql.text('CURRENT_TIMESTAMP')
+
+
+def includeme(config):
+    settings = config.registry.settings
+    Session.configure(bind=engine_from_config(settings, 'sa.clinicaldb.'))
+    RosterSession.configure(bind=engine_from_config(settings, 'sa.rosterdb.'))
 
 
 def tokenize(value):

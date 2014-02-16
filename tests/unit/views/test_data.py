@@ -85,7 +85,7 @@ class TestList(IntegrationFixture):
         It should add an export record and initiate an async task
         """
         self.config.add_route('data_export', '/data/exports')
-        self.config.registry.settings['app.export_dir'] = '/tmp'
+        self.config.registry.settings['app.export.dir'] = '/tmp'
 
         self.add_user('joe')
         schema = models.Schema(
@@ -112,7 +112,7 @@ class TestList(IntegrationFixture):
         It should not let the user exceed their allocated export limit
         """
         import deform
-        self.config.registry.settings['app.export_limit'] = '1'
+        self.config.registry.settings['app.export.limit'] = '1'
 
         self.add_user('joe')
         previous_export = models.Export(
@@ -187,7 +187,7 @@ class TestExport(IntegrationFixture):
         from datetime import datetime, timedelta
 
         EXPIRE_DAYS = 10
-        self.config.registry.settings['app.export_expire'] = '10'
+        self.config.registry.settings['app.export.expire'] = '10'
         self.add_user('joe')
         now = datetime.now()
         Session.add_all([
@@ -229,7 +229,7 @@ class TestDownload(IntegrationFixture):
         """
         It should only allow owners of the export to download it
         """
-        self.config.registry.settings['app.export_dir'] = '/tmp'
+        self.config.registry.settings['app.export.dir'] = '/tmp'
         self.add_user('joe')
         self.add_user('jane')
         Session.add(models.Export(
