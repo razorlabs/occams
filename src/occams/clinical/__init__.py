@@ -33,7 +33,7 @@ def main(global_config, **settings):
         authorization_policy=ACLAuthorizationPolicy())
 
     config.include('.assets')
-    config.include('.celery')
+    config.include('.tasks')
     config.include('.links')
     config.include('.models')
     config.include('.routes')

@@ -66,4 +66,4 @@ def track_user(userid):
         Session.add(models.User(key=userid))
 
     # update the current scoped session's infor attribute
-    Session.configure(info={'user': userid})
+    Session.info['user'] = userid
