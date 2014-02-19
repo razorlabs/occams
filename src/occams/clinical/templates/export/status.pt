@@ -12,7 +12,7 @@
       <!--! Top Pager -->
       <div data-bind="template: { name: 'pager-template',
                                   data: pager(),
-                                  if: pager() }"></div>
+                                  if: pager() && pager().total_count > pager().per_page }"></div>
 
       <!--! Status messsag to display if no content -->
       <div data-bind="ifnot:exports().length > 0">
@@ -140,8 +140,9 @@
       <!--! Bottom pager -->
       <div data-bind="template: { name: 'pager-template',
                                   data: pager(),
-                                  if: pager() }"></div>
-    </div> <!-- /visible -->
+                                  if: pager() && pager().total_count > pager().per_page }"></div>
+
+     </div> <!-- /visible -->
 
 
     <!--! Modal for confirming that the user wants to cancel an export -->

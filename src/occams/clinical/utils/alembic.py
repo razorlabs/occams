@@ -9,6 +9,7 @@ and then imported in the migration steps.
 Restrict use of these helpers to only alembic migrations.
 """
 
+from __future__ import absolute_import
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import sql

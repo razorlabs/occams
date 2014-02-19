@@ -16,7 +16,8 @@ from sqlalchemy import orm, null
 import transaction
 
 from occams.clinical import _, models, Session
-from occams.clinical import tasks
+from occams.clinical.celery import app
+from occams.clinical.celery.export import make_export
 from occams.clinical.utils.pager import Pager
 
 
@@ -146,7 +147,7 @@ def add(request):
             Session.add(export)
             Session.flush()
             task_id = export.name
-            task = tasks.make_export.subtask(args=(export.id,))
+            task = make_export.subtask(args=(export.id,))
             # Avoid race-conditions by executing the task after
             # the current request completes successfully
             transaction.get().addAfterCommitHook(
@@ -290,7 +291,7 @@ def delete(request):
     Session.delete(export)
     Session.flush()
 
-    tasks.app.control.revoke(export.name)
+    app.control.revoke(export.name)
 
     return HTTPOk()
 

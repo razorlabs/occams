@@ -2,7 +2,7 @@ from __future__ import absolute_import
 import json
 
 from pyramid.view import view_config
-from pyramid.httpexceptions import HTTPOk
+from pyramid.response import Response
 from pyramid.security import authenticated_userid
 from socketio import socketio_manage
 from socketio.namespace import BaseNamespace
@@ -18,7 +18,7 @@ def socketio(request):  # pragma: nocover: don't need to unittest socketio.io
     """
     socketio_manage(request.environ, request=request, namespaces={
         '/export': ExportNamespace})
-    return HTTPOk()
+    return Response('OK')
 
 
 class ExportNamespace(BaseNamespace):
@@ -43,6 +43,7 @@ class ExportNamespace(BaseNamespace):
         Determines from the request if this socket can accept events
         """
         log.debug('Initializing socket.io service')
+        log.debug(self.request.has_permission('fia_view'))
         if self.request.has_permission('fia_view'):
             self.lift_acl_restrictions()
             self.session['user'] = authenticated_userid(self.request)

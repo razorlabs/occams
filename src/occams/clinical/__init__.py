@@ -24,16 +24,16 @@ def main(global_config, **settings):
 
     config = Configurator(
         settings=settings,
-        root_factory='.resources.RootFactory',
+        root_factory='occams.clinical.security.RootFactory',
         authentication_policy=WhoV2AuthenticationPolicy(
             settings['who.config_file'],
             settings['who.identifier_id'],
             resolve(settings.get('who.callback',
-                                 'occams.clinical.auth.groupfinder'))),
+                                 'occams.clinical.security.groupfinder'))),
         authorization_policy=ACLAuthorizationPolicy())
 
     config.include('.assets')
-    config.include('.tasks')
+    config.include('.celery')
     config.include('.links')
     config.include('.models')
     config.include('.routes')

@@ -88,6 +88,98 @@
     </div>
   </div>
 
+  <div class="panel panel-default" id="export-style">
+    <div class="panel-heading">
+      <h3 class="panel-title" i18n:translate="">
+        How will data values in responses to form questions be aligned if they have changed over time?
+      </h3>
+    </div>
+    <div class="panel-body">
+      Exercitation assumenda deep v, labore American Apparel polaroid Echo Park. Ugh
+      whatever Tumblr, aute artisan mollit quinoa fingerstache four loko. Eiusmod
+      synth sartorial cornhole, typewriter single-origin coffee nisi pickled.
+      Sapiente kitsch shabby chic drinking vinegar pop-up. Master cleanse occupy
+      Tumblr tote bag Echo Park. Wolf ut Tumblr, excepteur placeat High Life
+      letterpress occaecat ad nisi bicycle rights. Occupy quis minim consectetur,
+      cliche vegan ethnic pug actually proident.
+    </div>
+  </div>
+
+  <div class="panel panel-default" id="export-style">
+    <div class="panel-heading">
+      <h3 class="panel-title" i18n:translate="">
+        How will elements that have moved between forms over time be aligned?
+      </h3>
+    </div>
+    <div class="panel-body">
+      Make sure you have a proper form editing workflow so that changed
+      variables don't change key codes... Or you could amend published forms to
+      fix the discrepancies (Potentially harmful to collected non-choice data).
+
+      Exercitation assumenda deep v, labore American Apparel polaroid Echo Park. Ugh
+      whatever Tumblr, aute artisan mollit quinoa fingerstache four loko. Eiusmod
+      synth sartorial cornhole, typewriter single-origin coffee nisi pickled.
+      Sapiente kitsch shabby chic drinking vinegar pop-up. Master cleanse occupy
+      Tumblr tote bag Echo Park. Wolf ut Tumblr, excepteur placeat High Life
+      letterpress occaecat ad nisi bicycle rights. Occupy quis minim consectetur,
+      cliche vegan ethnic pug actually proident.
+    </div>
+  </div>
+
+  <div class="panel panel-default" id="export-style">
+    <div class="panel-heading">
+      <h3 class="panel-title" i18n:translate="">
+        My software isn't sophisticated enough for lists, can I export one column
+        per possible answer choice?
+      </h3>
+    </div>
+    <div class="panel-body">
+      Exercitation assumenda deep v, labore American Apparel polaroid Echo Park. Ugh
+      whatever Tumblr, aute artisan mollit quinoa fingerstache four loko. Eiusmod
+      synth sartorial cornhole, typewriter single-origin coffee nisi pickled.
+      Sapiente kitsch shabby chic drinking vinegar pop-up. Master cleanse occupy
+      Tumblr tote bag Echo Park. Wolf ut Tumblr, excepteur placeat High Life
+      letterpress occaecat ad nisi bicycle rights. Occupy quis minim consectetur,
+      cliche vegan ethnic pug actually proident.
+    </div>
+  </div>
+
+  <div class="panel panel-default" id="export-style">
+    <div class="panel-heading">
+      <h3 class="panel-title" i18n:translate="">
+        How will we know what differences exist between forms?
+      </h3>
+    </div>
+    <div class="panel-body">
+      Data dictionaries...
+
+      Exercitation assumenda deep v, labore American Apparel polaroid Echo Park. Ugh
+      whatever Tumblr, aute artisan mollit quinoa fingerstache four loko. Eiusmod
+      synth sartorial cornhole, typewriter single-origin coffee nisi pickled.
+      Sapiente kitsch shabby chic drinking vinegar pop-up. Master cleanse occupy
+      Tumblr tote bag Echo Park. Wolf ut Tumblr, excepteur placeat High Life
+      letterpress occaecat ad nisi bicycle rights. Occupy quis minim consectetur,
+      cliche vegan ethnic pug actually proident.
+    </div>
+  </div>
+
+  <div class="panel panel-default" id="export-style">
+    <div class="panel-heading">
+      <h3 class="panel-title" i18n:translate="">
+        What will data dictionaries look like?
+      </h3>
+    </div>
+    <div class="panel-body">
+      Exercitation assumenda deep v, labore American Apparel polaroid Echo Park. Ugh
+      whatever Tumblr, aute artisan mollit quinoa fingerstache four loko. Eiusmod
+      synth sartorial cornhole, typewriter single-origin coffee nisi pickled.
+      Sapiente kitsch shabby chic drinking vinegar pop-up. Master cleanse occupy
+      Tumblr tote bag Echo Park. Wolf ut Tumblr, excepteur placeat High Life
+      letterpress occaecat ad nisi bicycle rights. Occupy quis minim consectetur,
+      cliche vegan ethnic pug actually proident.
+    </div>
+  </div>
+
   <div class="panel panel-default" id="custom-reports">
     <div class="panel-heading">
       <h3 class="panel-title" i18n:translate="">

@@ -10,6 +10,8 @@ def resolve_path(spec, validate=False):
         package, path = spec.split(':')
         spec = pkg_resources.resource_filename(package, path)
 
+    spec = os.path.abspath(spec)
+
     if validate:
         assert os.path.exists(spec), 'Path does not exist: %s' % spec
 
