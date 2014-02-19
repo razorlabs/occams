@@ -91,7 +91,7 @@ class TestMakeExport(IntegrationFixture):
         from occams.clinical.tasks import app
         self.app = app
         self.app.redis = StrictRedis.from_url(REDIS_URL)
-        self.app.settings = {'app.export_dir': tempfile.mkdtemp()}
+        self.app.settings = {'app.export.dir': tempfile.mkdtemp()}
 
         # Need a listener on another thread for publish notifications
         self.client = PubSubListener(StrictRedis.from_url(REDIS_URL), 'export')
@@ -105,7 +105,7 @@ class TestMakeExport(IntegrationFixture):
         super(TestMakeExport, self).tearDown()
         import shutil
         self.app.redis.publish('export', 'KILL')
-        shutil.rmtree(self.app.settings['app.export_dir'])
+        shutil.rmtree(self.app.settings['app.export.dir'])
         self.patch.stop()
 
     def test_empty(self):
@@ -180,7 +180,7 @@ class TestMakeExport(IntegrationFixture):
 
         make_export(export.id)
         export_file = os.path.join(
-            self.app.settings['app.export_dir'], '%s.zip' % export.id)
+            self.app.settings['app.export.dir'], '%s.zip' % export.id)
 
         with closing(zipfile.ZipFile(export_file)) as zfp:
             self.assertItemsEqual(
@@ -233,7 +233,7 @@ class TestMakeExport(IntegrationFixture):
 
         make_export(export.id)
         export_file = os.path.join(
-            self.app.settings['app.export_dir'], '%s.zip' % export.id)
+            self.app.settings['app.export.dir'], '%s.zip' % export.id)
 
         with closing(zipfile.ZipFile(export_file)) as zfp:
             self.assertItemsEqual(

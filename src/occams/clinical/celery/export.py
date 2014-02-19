@@ -20,66 +20,34 @@ import os
 import tempfile
 import zipfile
 
-from celery import Celery
-from celery.bin import Option
-from celery.signals import worker_init
-from celery.utils.log import get_task_logger
-from pyramid.paster import bootstrap
+from celery import Task
+import humanize
 from sqlalchemy import func, literal, null
 from webob.multidict import MultiDict
-import transaction
 
 from occams.clinical import _, models, Session
+from occams.clinical.celery import app, log, in_transaction
 from occams.datastore import reporting
 
 
-app = Celery(__name__)
+class ExportTask(Task):
 
-app.user_options['worker'].add(
-    Option('--ini', help='Pyramid config file'))
+    abstract = True
 
-log = get_task_logger(__name__)
-
-
-def in_transaction(func):
-    """
-    Function decoratator that commits on successul execution, aborts otherwise.
-
-    Also releases connection to prevent leaked open connections.
-
-    The pyramid application-portion relies on ``pyramid_tm`` to commit at
-    the end of each request. Tasks don't have this luxury and must
-    be committed manually after each successful call.
-    """
-    def decorated(*args, **kw):
-        with transaction.manager:
-            result = func(*args, **kw)
-        Session.remove()
-        return result
-    return decorated
+    @in_transaction
+    def on_failure(self, exc, task_id, args, kwargs, einfo):
+        log.error('Task {0} raised exception: {1!r}\n{2!r}'.format(
+                  task_id, exc, einfo))
+        redis = app.redis
+        export_id, = args
+        export = Session.query(models.Export).filter_by(id=export_id).one()
+        export.status = 'failed'
+        Session.flush()
+        redis.hset(export_id, 'status', export.status)
+        redis.publish('export', json.dumps(redis.hgetall(export_id)))
 
 
-@worker_init.connect
-def init(signal, sender):
-    """
-    Configure the database connections when the celery daemon starts
-    """
-    # Have the pyramid app initialize all settings
-    env = bootstrap(sender.options['ini'])
-    sender.app.settings = env['registry'].settings
-    sender.app.redis = env['request'].redis
-
-    userid = sender.app.settings['app.export_user']
-
-    with transaction.manager:
-        if not Session.query(models.User).filter_by(key=userid).count():
-            Session.add(models.User(key=userid))
-
-    # update the current scoped session's infor attribute
-    Session.info['user'] = userid
-
-
-@app.task(ignore_result=True)
+@app.task(name='make_export', base=ExportTask, ignore_result=True)
 @in_transaction
 def make_export(export_id):
     """
@@ -103,7 +71,7 @@ def make_export(export_id):
 
     """
     export = Session.query(models.Export).filter_by(id=export_id).one()
-    export_dir = app.settings['app.export_dir']
+    export_dir = app.settings['app.export.dir']
 
     expand_collections = export.expand_collections
     use_choice_labels = export.use_choice_labels
@@ -125,7 +93,7 @@ def make_export(export_id):
         'count': 0,
         'total': len(set(files.keys()))})
 
-    path = os.path.join(export_dir, export.file_name)
+    path = os.path.join(export_dir, export.name)
 
     with closing(zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED)) as zfp:
         for schema_name, ids in files.dict_of_lists().items():
@@ -147,9 +115,11 @@ def make_export(export_id):
             log.info(', '.join([count, total, schema_name]))
 
     export.status = 'complete'
-    Session.flush()  # flush so we know everything went smoothly
-
     redis.hset(export_id, 'status', export.status)
+    redis.hset(export_id, 'file_size',
+               humanize.naturalsize(os.path.getsize(path)))
+
+    Session.flush()  # flush so we know everything went smoothly
     redis.publish('export', json.dumps(redis.hgetall(export_id)))
 
 

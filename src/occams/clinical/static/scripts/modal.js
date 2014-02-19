@@ -18,23 +18,54 @@
       url: $form.attr('action'),
       data: $form.serialize(),
       statusCode: {
-        302: function(xhr, status, error) {
-          window.location.href = xhr.getResponseHeader('Location');
+        200: function(data, status, xhr) {
+          var location = xhr.getResponseHeader('Location');
+          if (location) {
+            window.location = location
+            return;
+          }
+          $this.modal('hide');
         },
         400: function(xhr, status, error) {
-          $this.html(data)
+          $this.html(xhr.responseText)
         }
       }
     });
   });
 
+
+  /**
+   * Clears modal container contents.
+   */
+  $('#modal').on('hidden.bs.modal', function(){
+    $(this).find('.modal-content').empty();
+    // Ensure the remote content can be reloaded
+    $(this).removeData('bs.modal');
+    return this;
+  });
+
+
   /**
    * Allows buttons inside the modal to be able to close it.
    */
-  $('#modal').on('click', '.js-close', function(event){
+  $('#modal').on('click', '.js-modal-dismiss', function(event){
     event.preventDefault();
-    return $(this).toggle('hide').empty()
+    return $('#modal').modal('hide');
   });
 
-}(jQuery);
+  // http://stackoverflow.com/q/14683953/148781
+  ko.bindingHandlers.showModal = {
+    init: function (element, valueAccessor) { },
+    update: function (element, valueAccessor) {
+      var value = valueAccessor();
+      if (ko.utils.unwrapObservable(value)) {
+        $(element).modal('show');
+        // this is to focus input field inside dialog
+        $('input', element).focus();
+      } else {
+        $(element).modal('hide');
+      }
+    }
+  };
 
+}(jQuery);

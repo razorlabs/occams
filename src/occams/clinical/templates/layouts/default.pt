@@ -42,7 +42,11 @@
         <tal:alerts repeat="type ('error', 'warning', 'info', 'success')">
           <div
               class="alert alert-${type}"
-              tal:repeat="msg request.session.pop_flash(type)">${msg}</div>
+              tal:repeat="msg request.session.pop_flash(type)">
+            <button type="button" class="close" data-dismiss="alert"
+                aria-hidden="true">&times;</button>
+            ${msg}
+          </div>
         </tal:alerts>
         <main id="${request.matched_route.name}">
           <metal:content-slot define-slot="content-slot" />
@@ -50,7 +54,14 @@
       </div> <!-- /.container -->
     </div> <!-- /#wrap -->
 
-    <div id="modal" class="modal face" role="dialog"></div>
+    <div
+        id="modal"
+        class="modal fade"
+        tabindex="-1"
+        role="dialog"
+        aria-hidden="true">
+      <div class="modal-dialog"><div class="modal-content"></div></div>
+    </div>
 
     <div tal:replace="panel('app_footer')" />
 

@@ -9,7 +9,7 @@ import datetime
 import re
 import uuid
 
-from sqlalchemy import orm, schema, sql, types
+from sqlalchemy import engine_from_config, orm, schema, sql, types
 from sqlalchemy.ext import declarative, hybrid
 import zope.sqlalchemy
 
@@ -41,6 +41,12 @@ roster.Session = RosterSession
 ClinicalModel = ModelClass(u'ClinicalModel')
 
 NOW = sql.text('CURRENT_TIMESTAMP')
+
+
+def includeme(config):
+    settings = config.registry.settings
+    Session.configure(bind=engine_from_config(settings, 'sa.clinicaldb.'))
+    RosterSession.configure(bind=engine_from_config(settings, 'sa.rosterdb.'))
 
 
 def tokenize(value):
@@ -657,6 +663,11 @@ class Export(ClinicalModel, Referenceable, Auditable, Modifiable):
 
     owner_user = orm.relationship(User, foreign_keys=[owner_user_id])
 
+    name = schema.Column(
+        types.Unicode,
+        nullable=False,
+        default=lambda: unicode(uuid.uuid4()))
+
     expand_collections = schema.Column(types.Boolean,
                                        nullable=False,
                                        default=False)
@@ -664,11 +675,6 @@ class Export(ClinicalModel, Referenceable, Auditable, Modifiable):
     use_choice_labels = schema.Column(types.Boolean,
                                       nullable=False,
                                       default=False)
-
-    file_name = schema.Column(
-        types.Unicode,
-        nullable=False,
-        default=lambda: unicode(uuid.uuid4()))
 
     status = schema.Column(
         types.Enum('failed', 'pending', 'complete', name='export_status'),
@@ -691,6 +697,6 @@ class Export(ClinicalModel, Referenceable, Auditable, Modifiable):
                 name=u'fk_%s_owner_user_id' % cls.__tablename__,
                 ondelete='CASCADE'),
             schema.UniqueConstraint(
-                cls.file_name,
-                name=u'uq_%s_file_name' % cls.__tablename__),
+                cls.name,
+                name=u'uq_%s_name' % cls.__tablename__),
             schema.Index('ix_%s_owner_user_id' % cls.__tablename__, cls.owner_user_id))

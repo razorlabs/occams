@@ -3,10 +3,10 @@ Permission constants
 All permissions are declared here for easier overview
 """
 
-
 from repoze.who.interfaces import IChallengeDecider
 from pyramid.events import subscriber, NewRequest
-from pyramid.security import has_permission, authenticated_userid
+from pyramid.security import Allow, Authenticated, ALL_PERMISSIONS
+from pyramid.security import authenticated_userid
 from zope.interface import directlyProvides
 
 from occams.clinical import log, Session, models
@@ -47,11 +47,17 @@ def occams_groupfinder(identity, request):
 
 
 @subscriber(NewRequest)
-def track_user(event):
+def track_user_on_request(event):
     """
     Annotates the database session with the current user.
     """
-    userid = authenticated_userid(event.request)
+    track_user(authenticated_userid(event.request))
+
+
+def track_user(userid):
+    """
+    Helper function to add a user to the database
+    """
 
     if not userid:
         return
@@ -63,13 +69,39 @@ def track_user(event):
     Session.info['user'] = userid
 
 
-def includeme(config):
-    log.debug('Initializing auth helpers...')
+class RootFactory(object):
 
-    # Wrap has_permission to make it less cumbersome
-    # TODO: This is built-in to pyramid 1.5, remove when we switch
-    config.add_request_method(
-        lambda r, n: has_permission(n, r.context, r),
-        'has_permission')
+    __acl__ = [
+        (Allow, 'administrator', ALL_PERMISSIONS),
+        (Allow, 'investigator', (
+            'view',
+            'fia_view')),
+        (Allow, 'coordinator', (
+            'view',
+            'fia_view')),
+        (Allow, 'statistician', (
+            'view',
+            'fia_view')),
+        (Allow, 'researcher', (
+            'view',
+            'fia_view')),
+        (Allow, 'nurse', (
+            'view'
+            'site_view',
+            'patient_add',  'patient_view',  'patient_edit',
+            'enrollment_add',  'enrollment_view',  'enrollment_edit',
+            'enrollment_delete',
+            'visit_add',  'visit_view',  'visit_edit',  'visit_delete',
+            'fia_view')),
+        (Allow, 'assistant', ('view',)),
+        (Allow, 'student', ('view',)),
+        (Allow, Authenticated, 'view'),
+        ]
 
-    config.scan('.auth')
+    def __init__(self, request):
+        self.request = request
+
+
+class SiteFactory(object):
+    # TODO: future location of per-site access
+    pass

@@ -11,20 +11,22 @@ CHANGES = open(os.path.join(HERE, 'CHANGES.md')).read()
 REQUIRES = [
     'alembic',
     'babel',
-    'celery',
+    'celery[redis]',
     'colander',
     'cssmin',
     'deform',
     'gevent-socketio',
+    'humanize',
     'jsmin',
     'lingua',
     'pyramid',
-    'pyramid_beaker',
-    # TODO: use pyramid_redis_sessions, since beaker is no longer maintained
+    'pyramid_chameleon',
     'pyramid_deform',
     'pyramid_layout',
     'pyramid_mailer',
     'pyramid_tm',
+    'pyramid_redis_sessions',
+    'pyramid_redis',
     'pyramid_rewrite',
     'pyramid_webassets',
     'pyramid_who',
@@ -51,6 +53,10 @@ EXTRAS = {
         'mock',
         'ddt'],
 }
+
+
+if sys.version_info < (2, 7):
+    raise Exception('This module is only compatible with Python 2.7')
 
 
 if sys.version_info < (3, 0):

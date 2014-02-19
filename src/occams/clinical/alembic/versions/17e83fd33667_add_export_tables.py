@@ -28,7 +28,7 @@ def upgrade():
             sa.Column('owner_user_id', sa.Integer, nullable=False),
             sa.Column('expand_collections', sa.Boolean, nullable=False),
             sa.Column('use_choice_labels', sa.Boolean, nullable=False),
-            sa.Column('file_name', sa.Unicode, nullable=False),
+            sa.Column('name', sa.Unicode, nullable=False),
             sa.Column('owner_user_id', sa.Integer, nullable=False),
             sa.Column('status',
                       sa.Enum(
@@ -69,7 +69,7 @@ def upgrade():
                                name='ck_%s_valid_timeline' % table_name))
 
     op.create_unique_constraint(
-        'uq_export_file_name', 'export', ['file_name'])
+        'uq_export_name', 'export', ['name'])
 
     # The live table will have some extra data integrity constraints
     op.create_foreign_key(

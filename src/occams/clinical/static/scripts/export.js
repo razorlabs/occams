@@ -1,54 +1,126 @@
 /**
- * Listens for export notifications and updates the page progress bars.
+ * Export status page view models
+ *
+ * Registers Knockout obervables to update progress of each export task.
  */
 +function($){
   'use strict';
 
-  $(document).ready(function(){
+  /**
+   * An individual Export model
+   */
+  function Export(data) {
+    var self = this;
 
-    // Only execute in specific views
-    if ( !$('#data_export').length ){
-      return;
-    }
-
-    var socket = io.connect('/export');
+    ko.mapping.fromJS(data,  {
+        // select only the items we want to observe
+        observe: ['status', 'count', 'total', 'file_size']
+    }, self);
 
     /**
-     * Connects to the socket resource and registers listeners
+     * Calculates this export's current progress
      */
-    socket.on('connect', function(){
+    self.progress = ko.computed(function(){
+      return (self.count() / self.total()) * 100;
+    }).extend({ throttle: 1 });
+  }
 
-      /**
-       * Listens for progress noticiations.
-       */
-      socket.on('progress', function(data){
-        var $panel = $('#export-' + data['export_id'])
-          , progress = (data['count'] / data['total']) * 100
-          , status = data['status'] ;
+  /**
+   * Application view model
+   */
+  function StatusViewModel() {
+    var self = this;
 
-        // update the progress bar percentage
-        $panel.find('.progress-bar').css({width: progress + '%'});
-        $panel.find('.progress-bar .sr-only').text(progress + '%');
+    self.ready = ko.observable(false);      // Used for display when AJAX is done
+    self.pager = ko.observable();           // Pagination
+    self.exports = ko.observableArray([]);  // Current exports in the view
 
-        // remove the progress bar if complete and enable the download link
-        if (status == 'complete') {
-          // TODO: need to i18n this.
-          $panel.find('.panel-title .status').text('Complete');
-          $panel.removeClass('panel-default').addClass('panel-success');
-          $panel.find('.panel-body').remove();
-          $panel.find('.panel-footer .btn-primary').removeClass('disabled');
+    self.csrf_token = ko.observable();      // Prevent XSS attacks
+
+    self.selectedExport = ko.observable();  // Current export being deleted
+
+    /**
+     * Marks the export as a candidate for deletion
+     */
+    self.confirmDelete = function(export_){
+      self.selectedExport(export_);
+    };
+
+    /**
+     * Sends delete request to the server
+     */
+    self.deleteExport = function(export_) {
+      $.post(export_.delete_url, {csrf_token: self.csrf_token()}, function(data){
+        // Refresh the current page
+        self.selectedExport(null);
+        self.exports.remove(export_);
+        location.hash = '/' + self.pager().page();
+      });
+    };
+
+    /**
+     * Handles an element being shown by "sliding" it in.
+     * (Necessary DOM manipulation evil...)
+     */
+    self.showElement = function(e) {
+      if (self.ready() && e.nodeType === 1) {
+        $(e).hide().slideDown();
+      }
+    };
+
+    /**
+     * Handles an element being hidden  by "sliding" it out.
+     * (Necessary DOM manipulation evil...)
+     */
+    self.hideElement = function(e) {
+      if (self.ready() && e.nodeType === 1){
+        $(e).slideUp(function() {
+          $(e).remove();
+        })
+      };
+    }
+
+    /**
+     * Configures Socket.io to listen for progress notifications
+     */
+    var socket = io.connect('/export');
+    socket.on('progress', function(data){
+      $.each(self.exports(), function(i, export_) {
+        // find the appropriate export and update it's data
+        if (export_.id == data['export_id']) {
+          ko.mapping.fromJS(data, {}, export_);
+          return false; // "break"
         }
       });
-
-      /**
-       * Closes the conenction when the user is navigating away
-       */
-      $(window).on('beforeunload', function(){
-        socket.disconnect();
-      });
-
     });
 
+    // Client-side routes
+    Sammy(function() {
+        /**
+         * Fetches the specified  page contents and updates the view model
+         */
+        this.get('#/:page', function() {
+          $.get("/exports/status", {page: this.params.page}, function(data){
+            self.csrf_token(data.csrf_token);
+            self.pager(ko.mapping.fromJS(data.pager));
+            self.exports($.map(data.exports, function(item){
+              return new Export(item);
+            }));
+            self.ready(true);
+          });
+        });
+    }).run('#/1');
+
+  }
+
+  /**
+   * Registers the view model only if we're in the export page
+   */
+  $(document).ready(function(){
+    var $view = $('#export_status');
+    if ( $view.length > 0) {
+      ko.applyBindings(new StatusViewModel(), $view[0]);
+    }
   });
 
 }(jQuery);

@@ -11,6 +11,9 @@ def includeme(config):
 
     config.add_webasset('default-js', Bundle(
         Bundle('libs/jquery.min.js'),
+        Bundle('libs/knockout.min.js'),
+        Bundle('libs/knockout.mapping.min.js'),
+        Bundle('libs/sammy.min.js'),
         Bundle(
             'libs/bootstrap/js/transition.js',
             'libs/bootstrap/js/collapse.js',
@@ -18,6 +21,7 @@ def includeme(config):
             'libs/bootstrap/js/dropdown.js',
             'libs/bootstrap/js/modal.js',
             'libs/bootstrap/js/tooltip.js',
+            'libs/bootstrap/js/alert.js',
             filters='jsmin',
             output='bootstrap.%(version)s.min.js'),
         Bundle('libs/socket.io.min.js'),
