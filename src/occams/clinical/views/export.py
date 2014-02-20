@@ -18,7 +18,7 @@ import transaction
 from occams.clinical import _, models, Session
 from occams.clinical.celery import app
 from occams.clinical.celery.export import make_export
-from occams.clinical.utils.pager import Pager
+from occams.clinical.widgets.pager import Pager
 
 
 @view_config(
@@ -266,7 +266,7 @@ def status_json(request):
                 'name': schema.name,
                 'title': schema.title,
                 'has_private': schema.has_private,
-                'versions': map(str, versions[schema.name]),
+                'versions': list(map(str, versions[schema.name])),
                 })
         result['exports'].append(serialized)
     return result

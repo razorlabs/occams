@@ -5,20 +5,28 @@ SQL Database persisted clinical data that will become the heart of this module
 as we transition towards a SQL-driven application.
 """
 
-import datetime
-import re
+from datetime import date, timedelta
 import uuid
 
-from sqlalchemy import engine_from_config, orm, schema, sql, types
-from sqlalchemy.ext import declarative, hybrid
+from six import u
+from sqlalchemy import (
+    engine_from_config,
+    Table, Column, ForeignKey, ForeignKeyConstraint, UniqueConstraint, Index,
+    Boolean, Date, Enum, Integer, Unicode)
+from sqlalchemy.orm import (
+    sessionmaker, scoped_session, object_session,
+    backref, relationship)
+from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.ext.hybrid import hybrid_property
 import zope.sqlalchemy
 
 from occams import roster
 import occams.datastore.model.events
 # import everything so we can also use DS models from this module
-from occams.datastore.model import (
+from occams.datastore.model import (  # NOQA
     Auditable,
-    AutoNamed, Referenceable, Describeable, Modifiable,
+    Referenceable, Describeable, Modifiable,
     Category,
     HasEntities,
     ModelClass,
@@ -26,21 +34,16 @@ from occams.datastore.model import (
     Schema, Section, Attribute, Choice, Entity, Context)
 
 
-RE_WS = re.compile('\s+')
-RE_NON_ASCII = re.compile('[^a-z0-9_-]', re.I)
-
-Session = orm.scoped_session(orm.sessionmaker(
+Session = scoped_session(sessionmaker(
     extension=zope.sqlalchemy.ZopeTransactionExtension()))
 
 occams.datastore.model.events.register(Session)
 
 # roster depends on ZCA, so we have to kindof monkeypatch it...
-RosterSession = orm.scoped_session(orm.sessionmaker())
+RosterSession = scoped_session(sessionmaker())
 roster.Session = RosterSession
 
-ClinicalModel = ModelClass(u'ClinicalModel')
-
-NOW = sql.text('CURRENT_TIMESTAMP')
+Base = ModelClass(u'Base')
 
 
 def includeme(config):
@@ -49,88 +52,58 @@ def includeme(config):
     RosterSession.configure(bind=engine_from_config(settings, 'sa.rosterdb.'))
 
 
-def tokenize(value):
-    """ Converts the value into a vocabulary token value """
-    return RE_NON_ASCII.sub('', RE_WS.sub('-', str(value).strip().lower()))
+visit_cycle_table = Table(
+    'visit_cycle',
+    Base.metadata,
+    Column('visit_id',
+           Integer,
+           ForeignKey('visit.id',
+                      name='fk_visit_cycle_visit_id',
+                      ondelete='CASCADE'),
+           primary_key=True),
+    Column('cycle_id',
+           Integer,
+           ForeignKey('cycle.id',
+                      name='fk_visit_cycle_cycle_id',
+                      ondelete='CASCADE'),
+           primary_key=True))
 
 
-def serialize(record, deep=False):
-    """ Converts a database record to a dictionary """
-    # TODO: actually inspect the object and serialize all the values
-    # possibly using SQ 0.8 inspect() method
-    return (
-        dict([(k, record.__dict__[k])
-             for k in sorted(record.__dict__) if '_sa_' != k[:4]])
-    )
+class Study(Base, Referenceable, Describeable, Modifiable, Auditable):
 
+    __tablename__ = 'study'
 
-def apply(record, data):
-    """ Applies a dictionary of values to database record """
-    # not allowed to change the id
-    data.pop('id')
-    map(lambda k: setattr(record, k, data[k]), data.iterkeys())
-    return record
+    short_title = Column(Unicode, nullable=False)
 
+    code = Column(Unicode, nullable=False)
 
-visit_cycle_table = schema.Table('visit_cycle', ClinicalModel.metadata,
-                                 schema.Column(
-                                     'visit_id',
-                                     types.Integer,
-                                     schema.ForeignKey(
-                                         'visit.id',
-                                         name='fk_visit_cycle_visit_id',
-                                         ondelete='CASCADE',
-                                     ),
-                                     primary_key=True
-                                 ),
-                                 schema.Column(
-                                     'cycle_id',
-                                     types.Integer,
-                                     schema.ForeignKey(
-                                         'cycle.id',
-                                         name='fk_visit_cycle_cycle_id',
-                                         ondelete='CASCADE',
-                                     ),
-                                     primary_key=True
-                                 ),
-                                 )
+    consent_date = Column(Date, nullable=False)
 
-
-class Study(ClinicalModel, AutoNamed, Referenceable, Describeable, Auditable, Modifiable):
-
-    short_title = schema.Column(types.Unicode, nullable=False)
-
-    code = schema.Column(types.Unicode, nullable=False)
-
-    consent_date = schema.Column(types.Date, nullable=False)
-
-    is_blinded = schema.Column(types.Boolean)
+    is_blinded = Column(Boolean)
 
     @property
     def duration(self):
-        Session = orm.object_session(self)
+        Session = object_session(self)
         query = (
             Session.query(Cycle)
             .filter((Cycle.study == self))
             .order_by(
                 # Nulls last (vendor-agnostic)
                 (Cycle.week is not None).desc(),
-                Cycle.week.desc()
-            )
-            .limit(1)
-        )
+                Cycle.week.desc())
+            .limit(1))
         try:
             cycle = query.one()
-        except orm.exc.NoResultFound:
+        except NoResultFound:
             # There are no results, so this study has no length
-            duration = datetime.timedelta()
+            duration = timedelta()
         else:
             # No exception thrown, process result
             if cycle.week >= 0:
-                duration = datetime.timedelta(cycle.week * 7)
+                duration = timedelta(cycle.week * 7)
             else:
                 # No valid week data, give a lot of time
-                duration = datetime.timedelta.max
+                duration = timedelta.max
         return duration
 
     # cycles is backref'ed in the Cycle class
@@ -139,173 +112,153 @@ class Study(ClinicalModel, AutoNamed, Referenceable, Describeable, Auditable, Mo
 
     # TODO: verify why this is nullable if the add event handler sets this
     # anyway
-    category_id = schema.Column(types.Integer)
+    category_id = Column(Integer)
 
-    category = orm.relationship(
+    category = relationship(
         Category,
         single_parent=True,
         cascade='all,delete-orphan',
-        primaryjoin=(category_id == Category.id)
-    )
+        primaryjoin=(category_id == Category.id))
 
     # BBB: nullable because category_id is nullable
-    log_category_id = schema.Column(types.Integer)
+    log_category_id = Column(Integer)
 
-    log_category = orm.relationship(
+    log_category = relationship(
         Category,
         single_parent=True,
         cascade='all,delete-orphan',
-        primaryjoin=(log_category_id == Category.id)
-    )
+        primaryjoin=(log_category_id == Category.id))
 
-    @declarative.declared_attr
+    @declared_attr
     def __table_args__(cls):
         return (
-            schema.ForeignKeyConstraint(
+            ForeignKeyConstraint(
                 columns=['category_id'],
                 refcolumns=[Category.id],
                 name='fk_%s_category_id' % cls.__tablename__,
-                ondelete='SET NULL',
-            ),
-
-            schema.ForeignKeyConstraint(
+                ondelete='SET NULL'),
+            ForeignKeyConstraint(
                 columns=['log_category_id'],
                 refcolumns=[Category.id],
                 name='fk_%s_log_category_id' % cls.__tablename__,
-                ondelete='SET NULL',
-            ),
-
+                ondelete='SET NULL'),
             # One category per table
-            schema.UniqueConstraint(
+            UniqueConstraint(
                 'category_id',
                 name='uq_%s_category_id' %
-                cls.__tablename__,
-            ),
-
-            schema.UniqueConstraint(
-                'name',
-                name='uq_%s_name' %
-                cls.__tablename__),
-            schema.Index('ix_%s_code' % cls.__tablename__, 'code'),
-            schema.Index(
-                'ix_%s_category_id' %
-                cls.__tablename__,
-                'category_id'),
-            schema.Index(
-                'ix_%s_log_category_id' %
-                cls.__tablename__,
-                'log_category_id'),
-        )
+                cls.__tablename__,),
+            UniqueConstraint('name', name='uq_%s_name' % cls.__tablename__),
+            Index('ix_%s_code' % cls.__tablename__, 'code'),
+            Index('ix_%s_category_id' % cls.__tablename__, 'category_id'),
+            Index('ix_%s_log_category_id' % cls.__tablename__,
+                  'log_category_id'))
 
 
-class Cycle(ClinicalModel, AutoNamed, Referenceable, Describeable, Auditable, Modifiable):
+class Cycle(Base, Referenceable, Describeable, Modifiable, Auditable):
 
-    study_id = schema.Column(types.Integer, nullable=False)
+    __tablename__ = 'cycle'
 
-    study = orm.relationship(
+    study_id = Column(Integer, nullable=False)
+
+    study = relationship(
         Study,
-        backref=orm.backref(
+        backref=backref(
             name='cycles',
             lazy='dynamic',
             cascade='all, delete-orphan'))
 
     # week number
-    week = schema.Column(types.Integer)
+    week = Column(Integer)
 
     # future-proof field for exempting cycles
-    threshold = schema.Column(types.Integer)
+    threshold = Column(Integer)
 
     # visits is backref'ed in the Visit class
 
-    category_id = schema.Column(types.Integer)
+    category_id = Column(Integer)
 
-    category = orm.relationship(
+    category = relationship(
         Category,
         single_parent=True,
-        cascade='all,delete-orphan',
-    )
+        cascade='all,delete-orphan')
 
-    @declarative.declared_attr
+    @declared_attr
     def __table_args__(cls):
         return (
-            schema.ForeignKeyConstraint(
+            ForeignKeyConstraint(
                 columns=['study_id'],
                 refcolumns=['study.id'],
                 name='fk_%s_study_id' % cls.__tablename__,
-                ondelete='CASCADE',
-            ),
-            schema.ForeignKeyConstraint(
+                ondelete='CASCADE'),
+            ForeignKeyConstraint(
                 columns=['category_id'],
                 refcolumns=[Category.id],
                 name='fk_%s_category_id' % cls.__tablename__,
-                ondelete='SET NULL',
-            ),
+                ondelete='SET NULL'),
 
-            schema.Index('ix_%s_study_id' % cls.__tablename__, 'study_id'),
+            Index('ix_%s_study_id' % cls.__tablename__, 'study_id'),
 
             # One category per table
-            schema.UniqueConstraint(
+            UniqueConstraint(
                 'category_id',
                 name='uq_%s_category_id' %
                 cls.__tablename__),
 
             # Names and weeks are unique within a cycle
-            schema.UniqueConstraint(
+            UniqueConstraint(
                 'study_id',
                 'name',
                 name='uq_%s_name' %
                 cls.__tablename__),
-            schema.UniqueConstraint(
+            UniqueConstraint(
                 'study_id',
                 'week',
                 name='uq_%s_week' %
-                cls.__tablename__),
-        )
+                cls.__tablename__))
 
 
-class Site(ClinicalModel, AutoNamed, Referenceable, Describeable, Auditable, Modifiable):
+class Site(Base,  Referenceable, Describeable, Modifiable, Auditable):
+
+    __tablename__ = 'site'
 
     # patients is backref'ed in the Patient class
 
-    @declarative.declared_attr
+    @declared_attr
     def __table_args__(cls):
         return (
-            schema.UniqueConstraint(
-                'name',
-                name='uq_%s_name' %
-                cls.__tablename__),
-        )
+            UniqueConstraint('name', name='uq_%s_name' % cls.__tablename__),)
 
 
-class Patient(ClinicalModel, AutoNamed, Referenceable, Auditable, Modifiable, HasEntities):
+class Patient(Base, Referenceable, Modifiable, HasEntities, Auditable):
+
+    __tablename__ = 'patient'
 
     # Read-only OUR# alias that will be useful for traversal
-    name = hybrid.hybrid_property(lambda self: self.our)
+    name = hybrid_property(lambda self: self.our)
 
-    title = hybrid.hybrid_property(lambda self: self.our)
+    title = hybrid_property(lambda self: self.our)
 
-    site_id = schema.Column(types.Integer, nullable=False)
+    site_id = Column(Integer, nullable=False)
 
-    site = orm.relationship(
+    site = relationship(
         Site,
-        backref=orm.backref(
+        backref=backref(
             name='patients',
             cascade='all, delete-orphan',
-            lazy=u'dynamic',
-        )
-    )
+            lazy=u'dynamic'))
 
-    our = schema.Column(types.Unicode, nullable=False)
+    our = Column(Unicode, nullable=False)
 
-    pid = orm.synonym('our')
+    pid = hybrid_property(lambda self: self.our,
+                          lambda self, value: setattr(self, 'our', value))
 
     # A secondary reference, to help people verify they are viewing the
     # correct patient
-    initials = schema.Column(types.Unicode)
+    initials = Column(Unicode)
 
-    legacy_number = schema.Column(types.Unicode)
+    legacy_number = Column(Unicode)
 
-    nurse = schema.Column(types.Unicode)
+    nurse = Column(Unicode)
 
     # partners is backref'ed in the Partner class
 
@@ -313,390 +266,344 @@ class Patient(ClinicalModel, AutoNamed, Referenceable, Auditable, Modifiable, Ha
 
     # visits is backref'ed in the Visit class
 
-    @declarative.declared_attr
+    @declared_attr
     def __table_args__(cls):
         return (
-            schema.ForeignKeyConstraint(
+            ForeignKeyConstraint(
                 columns=['site_id'],
                 refcolumns=['site.id'],
                 name='fk_%s_site_id' % cls.__tablename__,
-                ondelete='CASCADE',
-            ),
-            schema.UniqueConstraint(
-                'our',
-                name='uq_%s_our' %
-                cls.__tablename__),
+                ondelete='CASCADE'),
+            UniqueConstraint('our', name='uq_%s_our' % cls.__tablename__),
             # Ideally this should be unique, but due to inevitably legacy
             # issues with ANYTHING, we'll just keep this indexed.
-            schema.Index(
-                'ix_%s_legacy_number' %
-                cls.__tablename__,
-                'legacy_number'),
-            schema.Index('ix_%s_site_id' % cls.__tablename__, 'site_id'),
-            schema.Index('ix_%s_initials' % cls.__tablename__, 'initials'),
-        )
+            Index('ix_%s_legacy_number' % cls.__tablename__, 'legacy_number'),
+            Index('ix_%s_site_id' % cls.__tablename__, 'site_id'),
+            Index('ix_%s_initials' % cls.__tablename__, 'initials'))
 
 
-class RefType(ClinicalModel, AutoNamed, Referenceable, Describeable, Modifiable):
+class RefType(Base, Referenceable, Describeable, Modifiable):
 
-    @declarative.declared_attr
+    __tablename__ = 'reftype'
+
+    @declared_attr
     def __table_args__(cls):
         return (
-            schema.UniqueConstraint(
-                u'name',
-                name=u'uq_%s_name' %
-                cls.__tablename__),
-        )
+            UniqueConstraint('name', name='uq_%s_name' % cls.__tablename__),)
 
 
-class PatientReference(ClinicalModel, AutoNamed, Referenceable, Auditable, Modifiable):
+class PatientReference(Base, Referenceable, Modifiable, Auditable):
 
-    patient_id = schema.Column(types.Integer, nullable=False,)
+    __tablename__ = 'patientreference'
 
-    patient = orm.relationship(
+    patient_id = Column(Integer, nullable=False)
+
+    patient = relationship(
         Patient,
-        backref=orm.backref(
+        backref=backref(
             name='reference_numbers',
-            cascade='all, delete-orphan',
-        ),
-        primaryjoin=(patient_id == Patient.id)
-    )
+            cascade='all, delete-orphan'),
+        primaryjoin=(patient_id == Patient.id))
 
-    reftype_id = schema.Column(types.Integer, nullable=False,)
+    reftype_id = Column(Integer, nullable=False,)
 
-    reftype = orm.relationship(
+    reftype = relationship(
         RefType,
-        primaryjoin=(reftype_id == RefType.id)
-    )
+        primaryjoin=(reftype_id == RefType.id))
 
-    reference_number = schema.Column(types.Unicode, nullable=False,)
+    reference_number = Column(Unicode, nullable=False,)
 
-    @declarative.declared_attr
+    @declared_attr
     def __table_args__(cls):
         return (
-            schema.ForeignKeyConstraint(
+            ForeignKeyConstraint(
                 columns=['patient_id'],
                 refcolumns=['patient.id'],
                 name='fk_%s_patient_id' % cls.__tablename__,
-                ondelete='CASCADE',
-            ),
-            schema.ForeignKeyConstraint(
+                ondelete='CASCADE'),
+            ForeignKeyConstraint(
                 columns=['reftype_id'],
                 refcolumns=['reftype.id'],
                 name='fk_%s_reftype_id' % cls.__tablename__,
-                ondelete='CASCADE',
-            ),
-            schema.Index('ix_%s_patient_id' % cls.__tablename__, 'patient_id'),
-            schema.Index(
-                'ix_%s_reference_number' %
-                cls.__tablename__,
-                'reference_number'),
-            schema.UniqueConstraint(
+                ondelete='CASCADE'),
+            Index('ix_%s_patient_id' % cls.__tablename__, 'patient_id'),
+            Index('ix_%s_reference_number' % cls.__tablename__,
+                  'reference_number'),
+            UniqueConstraint(
                 'patient_id',
                 'reftype_id',
                 'reference_number',
-                name=u'uq_%s_reference'),
-        )
+                name=u'uq_%s_reference'))
 
 
-class Enrollment(ClinicalModel, AutoNamed, Referenceable, Auditable, Modifiable, HasEntities):
+class Enrollment(Base,  Referenceable, Modifiable, HasEntities, Auditable):
 
-    patient_id = schema.Column(types.Integer, nullable=False,)
+    __tablename__ = 'enrollment'
 
-    patient = orm.relationship(
+    patient_id = Column(Integer, nullable=False,)
+
+    patient = relationship(
         Patient,
-        backref=orm.backref(
+        backref=backref(
             name='enrollments',
             cascade='all, delete-orphan',
             lazy='dynamic'))
 
-    study_id = schema.Column(types.Integer, nullable=False,)
+    study_id = Column(Integer, nullable=False,)
 
-    study = orm.relationship(
+    study = relationship(
         Study,
-        backref=orm.backref(
+        backref=backref(
             name='enrollments',
-            # The list of enrollments from the study perspective can get quite long,
-            # so we implement as query to allow filtering/limit-offset
+            # The list of enrollments from the study perspective can get quite
+            # long, so we implement as query to allow filtering/limit-offset
             lazy='dynamic',
-            cascade='all, delete-orphan',
-        ),
-    )
+            cascade='all, delete-orphan'))
 
     # First consent date (i.e. date of enrollment)
-    consent_date = schema.Column(types.Date, nullable=False)
+    consent_date = Column(Date, nullable=False)
 
     # Latest consent date
     # Note that some consent dates may be acqured AFTER the patient has
     # terminated
-    latest_consent_date = schema.Column(
-        types.Date,
+    latest_consent_date = Column(
+        Date,
         nullable=False,
-        default=lambda c: c.current_parameters['consent_date']
-    )
+        default=lambda c: c.current_parameters['consent_date'])
 
     # Termination date
-    termination_date = schema.Column(types.Date)
+    termination_date = Column(Date)
 
     # A reference specifically for this enrollment (blinded studies, etc)
-    reference_number = schema.Column(types.Unicode)
+    reference_number = Column(Unicode)
 
     @property
     def is_consent_overdue(self):
         return (
             self.termination_date is None
-            and self.latest_consent_date < self.study.consent_date
-        )
+            and self.latest_consent_date < self.study.consent_date)
 
     @property
     def is_termination_overdue(self):
-        return (
-            self.termination_date is None
-            and self.consent_date + self.study.duration < datetime.date.today())
+        return (self.termination_date is None
+                and self.consent_date + self.study.duration < date.today())
 
-    @declarative.declared_attr
+    @declared_attr
     def __table_args__(cls):
         return (
-            schema.ForeignKeyConstraint(
+            ForeignKeyConstraint(
                 columns=['patient_id'],
                 refcolumns=['patient.id'],
                 name='fk_%s_patient_id' % cls.__tablename__,
                 ondelete='CASCADE'),
-            schema.ForeignKeyConstraint(
+            ForeignKeyConstraint(
                 columns=['study_id'],
                 refcolumns=['study.id'],
                 name='fk_%s_study_id' % cls.__tablename__,
                 ondelete='CASCADE'),
-            schema.Index('ix_%s_patient_id' % cls.__tablename__, 'patient_id'),
-            schema.Index('ix_%s_study_id' % cls.__tablename__, 'study_id'),
+            Index('ix_%s_patient_id' % cls.__tablename__, 'patient_id'),
+            Index('ix_%s_study_id' % cls.__tablename__, 'study_id'),
             # A patient may enroll only once in the study per day
-            schema.UniqueConstraint('patient_id', 'study_id', 'consent_date'),
-            schema.Index(
-                'ix_%s_reference_number' %
-                cls.__tablename__,
-                'reference_number'),
-        )
+            UniqueConstraint('patient_id', 'study_id', 'consent_date'),
+            Index('ix_%s_reference_number' % cls.__tablename__,
+                  'reference_number'))
 
 
-class Visit(ClinicalModel, AutoNamed, Referenceable, Auditable, Modifiable, HasEntities):
+class Visit(Base, Referenceable, Modifiable, HasEntities, Auditable):
 
-    patient_id = schema.Column(types.Integer, nullable=False)
+    __tablename__ = 'visit'
 
-    patient = orm.relationship(
+    patient_id = Column(Integer, nullable=False)
+
+    patient = relationship(
         Patient,
-        backref=orm.backref(
+        backref=backref(
             name='visits',
             cascade='all, delete-orphan',
             lazy='dynamic'))
 
-    cycles = orm.relationship(
+    cycles = relationship(
         Cycle,
         secondary=visit_cycle_table,
-        backref=orm.backref(
+        backref=backref(
             name='visits',
             lazy='dynamic'))
 
-    visit_date = schema.Column(types.Date, nullable=False)
+    visit_date = Column(Date, nullable=False)
 
-    @declarative.declared_attr
+    @declared_attr
     def __table_args__(cls):
         return (
-            schema.ForeignKeyConstraint(
+            ForeignKeyConstraint(
                 columns=['patient_id'],
                 refcolumns=['patient.id'],
                 name='fk_%s_patient_id' % cls.__tablename__,
-                ondelete='CASCADE',
-            ),
-            schema.Index('ix_%s_patient' % cls.__tablename__, 'patient_id'),
-        )
+                ondelete='CASCADE'),
+            Index('ix_%s_patient' % cls.__tablename__, 'patient_id'))
 
 
-class Arm(ClinicalModel, AutoNamed, Referenceable, Describeable, Auditable, Modifiable):
+class Arm(Base, Referenceable, Describeable,  Modifiable, Auditable):
 
-    study_id = schema.Column(types.Integer, nullable=False)
+    __tablename__ = 'arm'
 
-    study = orm.relationship(
+    study_id = Column(Integer, nullable=False)
+
+    study = relationship(
         Study,
-        backref=orm.backref(
+        backref=backref(
             name='arms',
             cascade='all,delete-orphan'))
 
-    @declarative.declared_attr
+    @declared_attr
     def __table_args__(cls):
         return (
-            schema.ForeignKeyConstraint(
+            ForeignKeyConstraint(
                 columns=[cls.study_id],
                 refcolumns=[Study.id],
                 name=u'fk_%s_study_id' % cls.__tablename__,
-                ondelete='CASCADE',
-            ),
-            schema.UniqueConstraint(
+                ondelete='CASCADE'),
+            UniqueConstraint(
                 'study_id',
                 'name',
                 name=u'uq_%s_name' %
-                cls.__tablename__),
-        )
+                cls.__tablename__))
 
 
-class Stratum(ClinicalModel, AutoNamed, Referenceable, Auditable, Modifiable, HasEntities):
+class Stratum(Base, Referenceable, Modifiable, HasEntities, Auditable):
 
-    study_id = schema.Column(types.Integer, nullable=False)
+    __tablename__ = 'stratum'
 
-    study = orm.relationship(
+    study_id = Column(Integer, nullable=False)
+
+    study = relationship(
         Study,
-        backref=orm.backref(
+        backref=backref(
             name='strata',
             lazy='dynamic',
-            cascade='all,delete-orphan',
-        )
-    )
+            cascade='all,delete-orphan'))
 
-    arm_id = schema.Column(types.Integer, nullable=False)
+    arm_id = Column(Integer, nullable=False)
 
-    arm = orm.relationship(
+    arm = relationship(
         Arm,
-        backref=orm.backref(
+        backref=backref(
             name='strata',
             lazy='dynamic',
-            cascade='all,delete-orphan',
-        )
-    )
+            cascade='all,delete-orphan'))
 
-    label = schema.Column(types.Unicode)
+    label = Column(Unicode)
 
-    block_number = schema.Column(types.Integer, nullable=False)
+    block_number = Column(Integer, nullable=False)
 
-    reference_number = schema.Column(types.Unicode, nullable=False)
+    reference_number = Column(Unicode, nullable=False)
 
-    patient_id = schema.Column(types.Integer)
+    patient_id = Column(Integer)
 
-    patient = orm.relationship(
+    patient = relationship(
         Patient,
-        backref=orm.backref(
-            name='strata',
-        )
-    )
+        backref=backref(
+            name='strata'))
 
-    enrollments = orm.relationship(
+    enrollments = relationship(
         Enrollment,
         viewonly=True,
         primaryjoin=(
             study_id == Enrollment.study_id) & (
             patient_id == Enrollment.patient_id),
         foreign_keys=[Enrollment.study_id, Enrollment.patient_id],
-        backref=orm.backref(
+        backref=backref(
             name='stratum',
             uselist=False,
-            viewonly=True,
-        )
-    )
+            viewonly=True))
 
-    @declarative.declared_attr
+    @declared_attr
     def __table_args__(cls):
         return (
-            schema.ForeignKeyConstraint(
+            ForeignKeyConstraint(
                 columns=[cls.study_id],
                 refcolumns=[Study.id],
                 name=u'fk_%s_study_id' % cls.__tablename__,
-                ondelete='CASCADE',
-            ),
-            schema.ForeignKeyConstraint(
+                ondelete='CASCADE'),
+            ForeignKeyConstraint(
                 columns=[cls.arm_id],
                 refcolumns=[Arm.id],
                 name=u'fk_%s_arm_id' % cls.__tablename__,
-                ondelete='CASCADE',
-            ),
-            schema.ForeignKeyConstraint(
+                ondelete='CASCADE'),
+            ForeignKeyConstraint(
                 columns=[cls.patient_id],
                 refcolumns=[Patient.id],
                 name=u'fk_%s_patient_id' % cls.__tablename__,
-                ondelete='SET NULL',
-            ),
-            schema.UniqueConstraint(
+                ondelete='SET NULL'),
+            UniqueConstraint(
                 cls.study_id, cls.reference_number,
-                name=u'uq_%s_reference_number' % cls.__tablename__,
-            ),
-            schema.UniqueConstraint(
+                name=u'uq_%s_reference_number' % cls.__tablename__),
+            UniqueConstraint(
                 cls.study_id, cls.patient_id,
-                name=u'uq_%s_patient_id' % cls.__tablename__
-            ),
-            schema.Index(
-                'ix_%s_block_number' %
-                cls.__tablename__,
-                cls.block_number),
-            schema.Index(
-                'ix_%s_patient_id' %
-                cls.__tablename__,
-                cls.block_number),
-            schema.Index('ix_%s_arm_id' % cls.__tablename__, cls.arm_id),
-        )
+                name=u'uq_%s_patient_id' % cls.__tablename__),
+            Index('ix_%s_block_number' % cls.__tablename__, cls.block_number),
+            Index('ix_%s_patient_id' % cls.__tablename__, cls.block_number),
+            Index('ix_%s_arm_id' % cls.__tablename__, cls.arm_id))
 
 
-export_schema_table = schema.Table('export_schema', ClinicalModel.metadata,
-                                   schema.Column(
-                                       'export_id',
-                                       types.Integer,
-                                       schema.ForeignKey(
-                                           'export.id',
-                                           name='fk_export_schema_export_id',
-                                           ondelete='CASCADE'),
-                                       primary_key=True),
-                                   schema.Column(
-                                       'schema_id',
-                                       types.Integer,
-                                       schema.ForeignKey(
-                                           Schema.id,
-                                           name='fk_export_schema_schema_id',
-                                           ondelete='CASCADE'),
-                                       primary_key=True))
+export_schema_table = Table(
+    'export_schema',
+    Base.metadata,
+    Column('export_id',
+           Integer,
+           ForeignKey('export.id',
+                      name='fk_export_schema_export_id',
+                      ondelete='CASCADE'),
+           primary_key=True),
+    Column('schema_id',
+           Integer,
+           ForeignKey(Schema.id,
+                      name='fk_export_schema_schema_id',
+                      ondelete='CASCADE'),
+           primary_key=True))
 
 
-class Export(ClinicalModel, Referenceable, Auditable, Modifiable):
-
+class Export(Base, Referenceable, Modifiable, Auditable):
     """
     Metadata about an export, such as file contents and experation date.
     """
 
     __tablename__ = 'export'
 
-    owner_user_id = schema.Column(types.Integer, nullable=False)
+    owner_user_id = Column(Integer, nullable=False)
 
-    owner_user = orm.relationship(User, foreign_keys=[owner_user_id])
+    owner_user = relationship(User, foreign_keys=[owner_user_id])
 
-    name = schema.Column(
-        types.Unicode,
+    name = Column(
+        Unicode,
         nullable=False,
-        default=lambda: unicode(uuid.uuid4()))
+        default=lambda: u(uuid.uuid4()))
 
-    expand_collections = schema.Column(types.Boolean,
-                                       nullable=False,
-                                       default=False)
+    expand_collections = Column(Boolean, nullable=False, default=False)
 
-    use_choice_labels = schema.Column(types.Boolean,
-                                      nullable=False,
-                                      default=False)
+    use_choice_labels = Column(Boolean, nullable=False, default=False)
 
-    status = schema.Column(
-        types.Enum('failed', 'pending', 'complete', name='export_status'),
+    status = Column(
+        Enum('failed', 'pending', 'complete', name='export_status'),
         nullable=False,
         default='pending')
 
-    schemata = orm.relationship(Schema, secondary=export_schema_table)
+    schemata = relationship(Schema, secondary=export_schema_table)
 
     def __repr__(self):
         return '<{0}(id={o.id}, owner_user={o.owner_user.key})>'.format(
             self.__module__ + '.' + self.__class__.__name__,
             o=self)
 
-    @declarative.declared_attr
+    @declared_attr
     def __table_args__(cls):
         return (
-            schema.ForeignKeyConstraint(
+            ForeignKeyConstraint(
                 columns=[cls.owner_user_id],
                 refcolumns=[User.id],
                 name=u'fk_%s_owner_user_id' % cls.__tablename__,
                 ondelete='CASCADE'),
-            schema.UniqueConstraint(
+            UniqueConstraint(
                 cls.name,
                 name=u'uq_%s_name' % cls.__tablename__),
-            schema.Index('ix_%s_owner_user_id' % cls.__tablename__, cls.owner_user_id))
+            Index('ix_%s_owner_user_id' % cls.__tablename__,
+                  cls.owner_user_id))

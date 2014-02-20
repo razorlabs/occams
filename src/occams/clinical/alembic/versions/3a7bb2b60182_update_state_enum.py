@@ -64,5 +64,5 @@ def remove_outdated_states():
         op.execute(
             table.update()
             .where(table.c.state.in_(
-                map(op.inline_literal, ['inline', 'error', 'inaccurate'])))
+                list(map(op.inline_literal, ['inline', 'error', 'inaccurate']))))
             .values(state=sa.sql.null()))

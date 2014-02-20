@@ -14,6 +14,7 @@ try:
     from collections import OrderedDict
 except ImportError:
     from ordereddict import OrderedDict  # NOQA
+import os
 
 from celery import Celery
 from celery.bin import Option
@@ -24,8 +25,6 @@ import transaction
 
 from occams.clinical import Session
 from occams.clinical.auth import track_user
-from occams.clinical.utils.pkg import resolve_path
-from occams.clinical.utils.types import cast_maybe
 
 
 app = Celery(
@@ -43,13 +42,14 @@ def includeme(config):
 
     assert 'app.export.user' in settings, 'Must specify an export user'
 
-    settings['app.export.dir'] = \
-        resolve_path(settings['app.export.dir'], validate=True)
+    settings['app.export.dir'] = os.path.abspath(settings['app.export.dir'])
+    assert os.path.exists(settings['app.export.dir'])
 
-    settings['app.export.limit'] = \
-        cast_maybe(settings.get('app.export.limit'), int)
-    settings['app.export.expire'] = \
-        cast_maybe(settings.get('app.export.expire'), int)
+    if 'app.export.limit' in settings:
+        settings['app.export.limit'] = int(settings['app.export.limit'])
+
+    if 'app.export.expire' in settings:
+        settings['app.export.expire'] = int(settings['app.export.expire'])
 
 
 @worker_init.connect

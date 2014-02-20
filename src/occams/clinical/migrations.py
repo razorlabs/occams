@@ -10,9 +10,11 @@ Restrict use of these helpers to only alembic migrations.
 """
 
 from __future__ import absolute_import
+
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import sql
+from six import string_types
 
 
 def alter_enum(name, new_values, cols, new_name=None):
@@ -28,7 +30,7 @@ def alter_enum(name, new_values, cols, new_name=None):
 
     sa.Enum(*new_values, name=new_name).create(op.get_bind(), checkfirst=False)
 
-    if isinstance(cols, basestring):
+    if isinstance(cols, string_types):
         cols = [cols]
 
     for col in cols:

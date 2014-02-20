@@ -1,7 +1,4 @@
-try:
-    import configparser
-except ImportError:
-    import ConfigParser as configparser
+from six.moves.configparser import SafeConfigParser
 
 from occams.clinical import log
 
@@ -28,7 +25,7 @@ def make_app_listing(file_name):
     if not file_name:
         return listing
 
-    config = configparser.SafeConfigParser()
+    config = SafeConfigParser()
     config.read(file_name)
 
     if not config.has_section('main'):

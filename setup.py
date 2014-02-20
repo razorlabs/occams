@@ -32,6 +32,7 @@ REQUIRES = [
     'pyramid_who',
     'redis',
     'SQLAlchemy',
+    'six',
     'transaction',
     'webassets',
     'zope.sqlalchemy',
