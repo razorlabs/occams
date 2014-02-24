@@ -75,11 +75,23 @@ class Study(Base, Referenceable, Describeable, Modifiable, Auditable):
 
     short_title = Column(Unicode, nullable=False)
 
-    code = Column(Unicode, nullable=False)
+    code = Column(
+        Unicode,
+        nullable=False,
+        doc='The Code for this study. Multiple studies may share the same '
+            'code, if they are different arms of the same study.')
 
-    consent_date = Column(Date, nullable=False)
+    consent_date = Column(
+        Date,
+        nullable=False,
+        doc='The date that the latest consent was produced for this study.')
 
-    is_blinded = Column(Boolean)
+    is_blinded = Column(
+        Boolean,
+        doc='Flag for randomized studies to indicate that '
+            'they are also blinded')
+
+    # TODO: add is_randomized
 
     @property
     def duration(self):
@@ -155,6 +167,9 @@ class Study(Base, Referenceable, Describeable, Modifiable, Auditable):
 
 
 class Cycle(Base, Referenceable, Describeable, Modifiable, Auditable):
+    """
+    Study schedule represented as week cycles
+    """
 
     __tablename__ = 'cycle'
 
@@ -167,11 +182,13 @@ class Cycle(Base, Referenceable, Describeable, Modifiable, Auditable):
             lazy='dynamic',
             cascade='all, delete-orphan'))
 
-    # week number
-    week = Column(Integer)
+    week = Column(Integer, doc='Week number')
 
     # future-proof field for exempting cycles
-    threshold = Column(Integer)
+    threshold = Column(
+        Integer,
+        doc='The outer limit, in days, that this cycle may follow the '
+            'previous schema before it is skipped as a missed visit.')
 
     # visits is backref'ed in the Visit class
 
@@ -218,6 +235,9 @@ class Cycle(Base, Referenceable, Describeable, Modifiable, Auditable):
 
 
 class Site(Base,  Referenceable, Describeable, Modifiable, Auditable):
+    """
+    A facility within an organization
+    """
 
     __tablename__ = 'site'
 
@@ -245,12 +265,20 @@ class Patient(Base, Referenceable, Modifiable, HasEntities, Auditable):
         backref=backref(
             name='patients',
             cascade='all, delete-orphan',
-            lazy=u'dynamic'))
+            lazy=u'dynamic'),
+        doc='The facility that the patient is visiting')
 
-    our = Column(Unicode, nullable=False)
+    # This is the old way and should be renamed to PID to make it
+    # applicable to other organizations.
+    # In the future we should have PID generators
+    our = Column(
+        Unicode,
+        nullable=False,
+        doc='Patient identification number.')
 
-    pid = hybrid_property(lambda self: self.our,
-                          lambda self, value: setattr(self, 'our', value))
+    pid = hybrid_property(
+        lambda self: self.our,
+        lambda self, value: setattr(self, 'our', value))
 
     # A secondary reference, to help people verify they are viewing the
     # correct patient
@@ -283,6 +311,9 @@ class Patient(Base, Referenceable, Modifiable, HasEntities, Auditable):
 
 
 class RefType(Base, Referenceable, Describeable, Modifiable):
+    """
+    Reference type sources
+    """
 
     __tablename__ = 'reftype'
 
@@ -293,6 +324,9 @@ class RefType(Base, Referenceable, Describeable, Modifiable):
 
 
 class PatientReference(Base, Referenceable, Modifiable, Auditable):
+    """
+    References to a clinical subject from other sources
+    """
 
     __tablename__ = 'patientreference'
 
@@ -337,7 +371,9 @@ class PatientReference(Base, Referenceable, Modifiable, Auditable):
 
 
 class Enrollment(Base,  Referenceable, Modifiable, HasEntities, Auditable):
-
+    """
+    A patient's participation in a study.
+    """
     __tablename__ = 'enrollment'
 
     patient_id = Column(Integer, nullable=False,)
@@ -375,7 +411,9 @@ class Enrollment(Base,  Referenceable, Modifiable, HasEntities, Auditable):
     termination_date = Column(Date)
 
     # A reference specifically for this enrollment (blinded studies, etc)
-    reference_number = Column(Unicode)
+    reference_number = Column(
+        Unicode,
+        doc='Identification number within study')
 
     @property
     def is_consent_overdue(self):
@@ -443,6 +481,9 @@ class Visit(Base, Referenceable, Modifiable, HasEntities, Auditable):
 
 
 class Arm(Base, Referenceable, Describeable,  Modifiable, Auditable):
+    """
+    A group of study strata
+    """
 
     __tablename__ = 'arm'
 
@@ -452,7 +493,8 @@ class Arm(Base, Referenceable, Describeable,  Modifiable, Auditable):
         Study,
         backref=backref(
             name='arms',
-            cascade='all,delete-orphan'))
+            cascade='all,delete-orphan'),
+        doc='The study theis pool belongs to')
 
     @declared_attr
     def __table_args__(cls):
@@ -470,6 +512,10 @@ class Arm(Base, Referenceable, Describeable,  Modifiable, Auditable):
 
 
 class Stratum(Base, Referenceable, Modifiable, HasEntities, Auditable):
+    """
+    A possible study enrollment assignement.
+    Useful for enrolling randomized patients.
+    """
 
     __tablename__ = 'stratum'
 
@@ -495,7 +541,12 @@ class Stratum(Base, Referenceable, Modifiable, HasEntities, Auditable):
 
     block_number = Column(Integer, nullable=False)
 
-    reference_number = Column(Unicode, nullable=False)
+    # Rename to randid
+    reference_number = Column(
+        Unicode,
+        nullable=False,
+        doc='A pregenerated value assigned to the patient per-study. '
+            'This is not a Study ID, this is only for statistician. ')
 
     patient_id = Column(Integer)
 
