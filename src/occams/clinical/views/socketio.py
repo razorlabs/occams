@@ -10,14 +10,17 @@ from socketio.namespace import BaseNamespace
 from occams.clinical import log, models, Session
 
 
-@view_config(route_name='socketio')
+@view_config(route_name='socket.io')
 def socketio(request):  # pragma: nocover: don't need to unittest socketio.io
     """
     Main socket.io handler for the application
     Pretty much registers socket.io namespaces
     """
-    socketio_manage(request.environ, request=request, namespaces={
-        '/export': ExportNamespace})
+    socketio_manage(
+        request.environ,
+        request=request,
+        namespaces={
+            '/export': ExportNamespace})
     return Response('OK')
 
 

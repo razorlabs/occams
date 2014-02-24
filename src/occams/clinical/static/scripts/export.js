@@ -83,14 +83,20 @@
     /**
      * Configures Socket.io to listen for progress notifications
      */
-    var socket = io.connect('/export');
-    socket.on('progress', function(data){
-      $.each(self.exports(), function(i, export_) {
-        // find the appropriate export and update it's data
-        if (export_.id == data['export_id']) {
-          ko.mapping.fromJS(data, {}, export_);
-          return false; // "break"
-        }
+    // Use the template-embedded socket.io URL
+    var socket = io.connect('/export', {
+      resource: $('body').data('socket-io-resource')});
+    //$('body').data('socket-io-path')})
+    socket.on('connect', function(){
+      console.log('connected!');
+      socket.on('progress', function(data){
+        $.each(self.exports(), function(i, export_) {
+          // find the appropriate export and update it's data
+          if (export_.id == data['export_id']) {
+            ko.mapping.fromJS(data, {}, export_);
+            return false; // "break"
+          }
+        });
       });
     });
 
@@ -100,7 +106,8 @@
          * Fetches the specified  page contents and updates the view model
          */
         this.get('#/:page', function() {
-          $.get("/exports/status", {page: this.params.page}, function(data){
+          // Use current window location so we don't hard-code app URLs
+          $.get(window.location, {page: this.params.page}, function(data){
             self.csrf_token(data.csrf_token);
             self.pager(ko.mapping.fromJS(data.pager));
             self.exports($.map(data.exports, function(item){
@@ -115,6 +122,7 @@
 
   /**
    * Registers the view model only if we're in the export page
+   * TODO: would be nice to figure this out in RequireJS
    */
   $(document).ready(function(){
     var $view = $('#export_status');

@@ -10,7 +10,7 @@
 
   <head>
     <meta charset="utf-8">
-    <title>${request.settings.app_title|'OCCAMS Clinical'}</title>
+    <title>${request.settings.app.title|'OCCAMS Clinical'}</title>
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <link tal:repeat="url layout.styles.urls()" href="${url}" rel="stylesheet" />
@@ -24,7 +24,11 @@
     <link rel="apple-touch-icon-precomposed" sizes="128x128" href="favicon.png">
   </head>
 
-  <body>
+  <!--! socket.io HATES leading-following slashes in resource paths... -->
+  <body
+      data-view-name="${request.matched_route.name}"
+      data-view-path="${request.current_route_path()}"
+      data-socket-io-resource="${request.route_path('socket.io', remaining='').strip('/')}">
 
     <!--! Wrap the content so we can push the footer to the bottom of the page -->
     <div id="wrap">

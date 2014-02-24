@@ -16,14 +16,12 @@ def includeme(config):
     config.include('pyramid_rewrite')
     config.add_rewrite_rule(r'/(?P<path>.*)/', r'/%(path)s')
 
-    config.add_static_view('occams_clinical_static', 'occams.clinical:static/')
+    config.add_static_view('static', 'occams.clinical:static/')
 
-    route('socketio', '/socket.io/*remaining')
+    route('socket.io', '/socket.io/*remaining')
 
     route('account_login', '/login')
     route('account_logout', '/logout')
-    route('account', '/account')
-    route('apps', '/apps')
 
     route('site_list', '/sites')
 
