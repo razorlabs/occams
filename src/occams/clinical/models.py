@@ -22,9 +22,9 @@ from sqlalchemy.ext.hybrid import hybrid_property
 import zope.sqlalchemy
 
 from occams import roster
-import occams.datastore.model.events
+import occams.datastore.models.events
 # import everything so we can also use DS models from this module
-from occams.datastore.model import (  # NOQA
+from occams.datastore.models import (  # NOQA
     Auditable,
     Referenceable, Describeable, Modifiable,
     Category,
@@ -37,7 +37,7 @@ from occams.datastore.model import (  # NOQA
 Session = scoped_session(sessionmaker(
     extension=zope.sqlalchemy.ZopeTransactionExtension()))
 
-occams.datastore.model.events.register(Session)
+occams.datastore.models.events.register(Session)
 
 # roster depends on ZCA, so we have to kindof monkeypatch it...
 RosterSession = scoped_session(sessionmaker())
