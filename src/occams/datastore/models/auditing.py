@@ -8,18 +8,11 @@ refers to as ``versioning``)
 
 Credit to **zzzeek** et al.
 """
-from itertools import ifilter
 
-from sqlalchemy import Column
-from sqlalchemy import ForeignKeyConstraint
-from sqlalchemy import Integer
-from sqlalchemy import Table
-from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm import mapper
-from sqlalchemy.orm import attributes
-from sqlalchemy.orm import object_mapper
-from sqlalchemy.orm import object_session
+from sqlalchemy import Table, Column, ForeignKeyConstraint, Integer
+from sqlalchemy.orm import mapper, attributes, object_mapper, object_session
 from sqlalchemy.orm.exc import UnmappedColumnError
+from sqlalchemy.ext.declarative import declared_attr
 
 
 class Auditable(object):
@@ -41,8 +34,8 @@ class Auditable(object):
 def auditMapper(live_mapper):
     """
     Creates an identical mapper for auditing purposes
-    This method should only be called when the 'live' table's mapper is complete
-    so that it can properly replicate all the corresponding columns.
+    This method should only be called when the 'live' table's mapper is
+    complete so that it can properly replicate all the corresponding columns.
     """
 
     # Set the 'active_history' flag only on column-mapped attributes so that
@@ -51,12 +44,15 @@ def auditMapper(live_mapper):
         getattr(live_mapper.class_, prop.key).impl.active_history = True
 
     super_mapper = live_mapper.inherits
-    super_history_mapper = getattr(live_mapper.class_, '__audit_mapper__', None)
+    super_history_mapper = getattr(live_mapper.class_,
+                                   '__audit_mapper__',
+                                   None)
 
     polymorphic_on = None
 
     # Work on inheritance
-    if not super_mapper or live_mapper.local_table is not super_mapper.local_table:
+    if not super_mapper \
+            or live_mapper.local_table is not super_mapper.local_table:
         super_fks = []
         cols = []
 
@@ -66,13 +62,18 @@ def auditMapper(live_mapper):
                     return True
             return False
 
-        for column in ifilter(lambda c: c.name != 'revision', live_mapper.local_table.c):
+        for column in live_mapper.local_table.c:
+            if column.name == 'revision':
+                continue
 
             col = column.copy()
             col.unique = False
 
-            if super_mapper and col_references_table(column, super_mapper.local_table):
-                super_fks.append((col.key, list(super_history_mapper.local_table.primary_key)[0]))
+            if super_mapper and col_references_table(column,
+                                                     super_mapper.local_table):
+                super_fks.append((
+                    col.key,
+                    list(super_history_mapper.local_table.primary_key)[0]))
 
             cols.append(col)
 
@@ -80,19 +81,20 @@ def auditMapper(live_mapper):
                 polymorphic_on = col
 
         if super_mapper:
-            super_fks.append(('revision', super_history_mapper.base_mapper.local_table.c.revision))
+            super_fks.append(
+                ('revision',
+                 super_history_mapper.base_mapper.local_table.c.revision))
             cols.append(Column('revision', Integer, primary_key=True))
         else:
             cols.append(Column('revision', Integer, primary_key=True))
 
         if super_fks:
-            cols.append(ForeignKeyConstraint(*zip(*super_fks)))
+            cols.append(ForeignKeyConstraint(*list(zip(*super_fks))))
 
         table = Table(
             live_mapper.local_table.name + '_audit',
             live_mapper.local_table.metadata,
-           *cols
-           )
+            *cols)
     else:
         # single table inheritance.  take any additional columns that may have
         # been added and add them to the history table.
@@ -112,17 +114,20 @@ def auditMapper(live_mapper):
     # Create the final audit mapper and attach it to the live mapper class
     # for convenient reference
     live_mapper.class_.__audit_mapper__ = mapper(
-        class_=type.__new__(type, '%sAudit' % live_mapper.class_.__name__, bases, {}),
+        class_=type.__new__(type,
+                            '%sAudit' % live_mapper.class_.__name__,
+                            bases,
+                            {}),
         local_table=table,
         inherits=super_history_mapper,
         polymorphic_on=polymorphic_on,
-        polymorphic_identity=live_mapper.polymorphic_identity
-        )
+        polymorphic_identity=live_mapper.polymorphic_identity)
 
     if not super_history_mapper:
         revisionColumn = Column('revision', Integer, default=1, nullable=False)
         live_mapper.local_table.append_column(revisionColumn)
-        live_mapper.add_property('revision', live_mapper.local_table.c.revision)
+        live_mapper.add_property('revision',
+                                 live_mapper.local_table.c.revision)
 
 
 def createRevision(instance, deleted=False):
@@ -138,9 +143,13 @@ def createRevision(instance, deleted=False):
     values = dict()
     changed = False
 
-    for lm, am in zip(liveMapper.iterate_to_root(), auditMapper.iterate_to_root()):
+    for lm, am in zip(liveMapper.iterate_to_root(),
+                      auditMapper.iterate_to_root()):
         if not am.single:
-            for auditColumn in ifilter(lambda c: c.key != 'revision', am.local_table.c):
+            for auditColumn in am.local_table.c:
+                if auditColumn == 'revision':
+                    continue
+
                 liveColumn = lm.local_table.c[auditColumn.key]
 
                 # get the value of the attribute based on the MapperProperty
@@ -148,7 +157,8 @@ def createRevision(instance, deleted=False):
                 # MapperProperties that have a different keyname than that
                 # of the mapped column.
                 try:
-                    liveProperty = liveMapper.get_property_by_column(liveColumn)
+                    liveProperty = \
+                        liveMapper.get_property_by_column(liveColumn)
                 except UnmappedColumnError:
                     # in the case of single table inheritance, there may be
                     # columns on the mapped table intended for the subclass
@@ -164,7 +174,8 @@ def createRevision(instance, deleted=False):
                     getattr(instance, liveProperty.key)
 
                 # (new value for live table / unchanged value / previous value)
-                (new, unchanged, previous) = attributes.get_history(instance, liveProperty.key)
+                (new, unchanged, previous) = \
+                    attributes.get_history(instance, liveProperty.key)
 
                 if unchanged:
                     # Value was not modified

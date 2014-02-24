@@ -8,9 +8,10 @@ except ImportError:
     from ordereddict import OrderedDict
 from operator import or_
 
+from six import itervalues, iteritems
 from sqlalchemy import func, orm, cast, null, literal, Date, Integer
 
-from occams.datastore import model
+from occams.datastore import models
 
 
 def build_report(session, schema_name,
@@ -44,30 +45,30 @@ def build_report(session, schema_name,
 
     query = (
         session.query(
-            model.Entity.id.label('entity_id'),
-            model.Schema.name.label('form_name'),
-            model.Schema.publish_date.label('form_publish_date'),
-            model.State.name.label('state'),
-            model.Entity.collect_date,
-            cast(model.Entity.is_null, Integer).label('is_null'))
-        .join(model.State)
-        .join(model.Schema)
-        .filter(model.Schema.name == schema_name)
-        .filter(model.Schema.publish_date != null())
-        .filter(model.Schema.retract_date == null()))
+            models.Entity.id.label('entity_id'),
+            models.Schema.name.label('form_name'),
+            models.Schema.publish_date.label('form_publish_date'),
+            models.State.name.label('state'),
+            models.Entity.collect_date,
+            cast(models.Entity.is_null, Integer).label('is_null'))
+        .join(models.State)
+        .join(models.Schema)
+        .filter(models.Schema.name == schema_name)
+        .filter(models.Schema.publish_date != null())
+        .filter(models.Schema.retract_date == null()))
 
     if ids:
-        query = query.filter(model.Schema.id.in_(ids))
+        query = query.filter(models.Schema.id.in_(ids))
 
     columns = build_columns(session, schema_name, ids, expand_collections)
 
-    for column in columns.itervalues():
+    for column in itervalues(columns):
         if column.is_private and ignore_private:
             query = query.add_column(literal(u'[PRIVATE]').label(column.name))
             continue
 
         # evaluate the target mapped class and casted value column
-        Value = orm.aliased(model.nameModelMap[column.type])
+        Value = orm.aliased(models.nameModelMap[column.type])
         value_column = Value._value
 
         if column.type == 'date':
@@ -76,13 +77,14 @@ def build_report(session, schema_name,
                             if is_sqlite else cast(Value._value, Date))
 
         filter_expression = (
-            (model.Entity.id == Value.entity_id)
+            (models.Entity.id == Value.entity_id)
             & (Value.attribute_id.in_([a.id for a in column.attributes])))
+
+        Choice = orm.aliased(models.Choice)
 
         if column.is_collection:
             # Collections are added via correlated sub-queries to the entity
             if column.choices:
-                Choice = orm.aliased(model.Choice)
 
                 if use_choice_labels:
                     value_column = Choice.title
@@ -97,7 +99,7 @@ def build_report(session, schema_name,
                     .select_from(Value)
                     .filter(filter_expression)
                     .outerjoin(Choice, Value._value == Choice.id)
-                    .correlate(model.Entity)
+                    .correlate(models.Entity)
                     .as_scalar())
 
                 if is_postgres:
@@ -111,7 +113,7 @@ def build_report(session, schema_name,
                     .join(Choice, Value._value == Choice.id)
                     .filter(filter_expression)
                     .filter(Choice.name == column.choice.name)
-                    .correlate(model.Entity)
+                    .correlate(models.Entity)
                     .exists())
                 if use_choice_labels:
                     value_column = (
@@ -125,7 +127,7 @@ def build_report(session, schema_name,
             query = query.outerjoin(Value, filter_expression)
 
             if column.choices:
-                Choice = orm.aliased(model.Choice)
+                Choice = orm.aliased(models.Choice)
                 query = query.outerjoin(Choice, Value._value == Choice.id)
                 if use_choice_labels:
                     value_column = Choice.title
@@ -134,19 +136,19 @@ def build_report(session, schema_name,
 
         query = query.add_column(value_column.label(column.name))
 
-    CreateUser = orm.aliased(model.User)
-    ModifyUser = orm.aliased(model.User)
+    CreateUser = orm.aliased(models.User)
+    ModifyUser = orm.aliased(models.User)
 
     query = (
         query
-        .join(CreateUser, model.Entity.create_user)
-        .join(ModifyUser, model.Entity.modify_user)
+        .join(CreateUser, models.Entity.create_user)
+        .join(ModifyUser, models.Entity.modify_user)
         .add_columns(
-            model.Entity.create_date,
+            models.Entity.create_date,
             CreateUser.key.label('create_user'),
-            model.Entity.modify_date,
+            models.Entity.modify_date,
             ModifyUser.key.label('modify_user'))
-        .order_by(model.Entity.id))
+        .order_by(models.Entity.id))
 
     if is_sqlite:
         return query.subquery(schema_name)
@@ -180,32 +182,32 @@ def build_columns(session, schema_name, ids=None, expand_collections=False):
     """
 
     query = (
-        session.query(model.Attribute)
-        .join(model.Attribute.schema)
-        .filter(model.Schema.name == schema_name)
-        .filter(model.Schema.publish_date != null())
-        .filter(model.Schema.retract_date == null()))
+        session.query(models.Attribute)
+        .join(models.Attribute.schema)
+        .filter(models.Schema.name == schema_name)
+        .filter(models.Schema.publish_date != null())
+        .filter(models.Schema.retract_date == null()))
 
     if ids:
-        query = query.filter(model.Schema.id.in_(ids))
+        query = query.filter(models.Schema.id.in_(ids))
 
     # aliased so we don't get naming ambiguity
-    RecentAttribute = orm.aliased(model.Attribute)
+    RecentAttribute = orm.aliased(models.Attribute)
 
     query = (
         query.order_by(
             (session.query(RecentAttribute.order)
                 .join(RecentAttribute.schema)
-                .filter(model.Schema.name == schema_name)
-                .filter(model.Schema.publish_date != null())
-                .filter(RecentAttribute.name == model.Attribute.name)
-                .order_by(model.Schema.publish_date.desc())
+                .filter(models.Schema.name == schema_name)
+                .filter(models.Schema.publish_date != null())
+                .filter(RecentAttribute.name == models.Attribute.name)
+                .order_by(models.Schema.publish_date.desc())
                 .limit(1)
-                .correlate(model.Attribute)
+                .correlate(models.Attribute)
                 .as_scalar()
                 .label('most_recent_attribute')).asc(),
             # oldest to newest within the lineage
-            model.Schema.publish_date.asc()))
+            models.Schema.publish_date.asc()))
 
     plan = OrderedDict()
     selected = dict()
@@ -224,7 +226,7 @@ def build_columns(session, schema_name, ids=None, expand_collections=False):
             plan.setdefault(attribute.name, []).append(attribute)
 
     # Build the final plan
-    for name, attributes in plan.iteritems():
+    for name, attributes in iteritems(plan):
         columns[name] = DataColumn(name, attributes, selected.get(name))
 
     return columns
@@ -264,6 +266,3 @@ class DataColumn:
             self.choices = dict([(c.name, c.title)
                                 for a in attributes
                                 for c in a.choices])
-
-    def __getitem__(self, key):
-        return self.choices[key]

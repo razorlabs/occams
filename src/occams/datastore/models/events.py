@@ -1,9 +1,9 @@
 from sqlalchemy import event
 
-from occams.datastore.model.metadata import updateMetadata, Modifiable
-from occams.datastore.model.auditing import createRevision, Auditable
-from occams.datastore.model.schema import setChecksum, Attribute
-from occams.datastore.model.storage import Entity, enforceSchemaState
+from occams.datastore.models.metadata import updateMetadata, Modifiable
+from occams.datastore.models.auditing import createRevision, Auditable
+from occams.datastore.models.schema import setChecksum, Attribute
+from occams.datastore.models.storage import Entity, enforceSchemaState
 
 
 def onBeforeFlush(session, flush_context, instances):

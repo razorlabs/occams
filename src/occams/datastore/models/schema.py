@@ -1,54 +1,27 @@
-""" Database Definitions
+"""
+Metadata definitions
 """
 
-from copy import copy
-from copy import deepcopy
+from copy import copy, deepcopy
 import hashlib
-from decimal import Decimal
-import datetime
 import re
 
-from sqlalchemy import text, select, exists
+from six import u
+from sqlalchemy import(
+    Table, Column,
+    PrimaryKeyConstraint,
+    CheckConstraint, UniqueConstraint, ForeignKeyConstraint, Index,
+    Boolean, Enum, Date, Integer, String)
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.orderinglist import ordering_list
-from sqlalchemy.ext import hybrid
-from sqlalchemy.orm import relationship as Relationship
-from sqlalchemy.orm import synonym as Synonym
-from sqlalchemy.orm import backref
+from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.orm import backref, relationship
 from sqlalchemy.orm.collections import attribute_mapped_collection
-from sqlalchemy.schema import Table
-from sqlalchemy.schema import Column
-from sqlalchemy.schema import PrimaryKeyConstraint
-from sqlalchemy.schema import CheckConstraint
-from sqlalchemy.schema import UniqueConstraint
-from sqlalchemy.schema import ForeignKeyConstraint
-from sqlalchemy.schema import Index
-from sqlalchemy.types import Boolean
-from sqlalchemy.types import Enum
-from sqlalchemy.types import Date
-from sqlalchemy.types import Integer
-from sqlalchemy.types import String
-from sqlalchemy.types import Unicode
-from zope.interface import implements
 
-from occams.datastore.interfaces import ISchema
-from occams.datastore.interfaces import ICategory
-from occams.datastore.interfaces import IAttribute
-from occams.datastore.interfaces import IChoice
-from occams.datastore.model import DataStoreModel as Model
-from occams.datastore.model.metadata import AutoNamed
-from occams.datastore.model.metadata import Referenceable
-from occams.datastore.model.metadata import Describeable
-from occams.datastore.model.metadata import Modifiable
-from occams.datastore.model.auditing import Auditable
-
-
-SCHEMA_STORAGE_NAMES = sorted([term.token for term in ISchema['storage'].vocabulary])
-SCHEMA_STATE_NAMES = sorted([term.token for term in ISchema['state'].vocabulary])
-ATTRIBUTE_TYPE_NAMES = sorted([term.token for term in IAttribute['type'].vocabulary])
-
-IS_REQUIRED_DEFAULT = False
-IS_COLLECTION_DEFAULT = False
+from occams.datastore.models import DataStoreModel as Model
+from occams.datastore.models.metadata import (
+    Referenceable, Describeable, Modifiable)
+from occams.datastore.models.auditing import Auditable
 
 
 def checksum(*args):
@@ -58,7 +31,7 @@ def checksum(*args):
     # Finds any unicode whitespace in a string
     rex = re.compile('\s+', re.MULTILINE | re.UNICODE)
     # Condense all whitespace and strip trailing whitespace
-    values = [rex.sub(u' ', unicode(a)).strip() for a in args if a is not None]
+    values = [rex.sub(u' ', u(a)).strip() for a in args if a is not None]
     # encode and generate checksum
     return hashlib.md5(u''.join(values).encode('utf-8')).hexdigest()
 
@@ -83,19 +56,19 @@ def generateChecksum(attribute):
         # itself
         attribute.name,
         attribute.title,
-        attribute.description, # None != '', let the values behave naturally
+        attribute.description,  # None != '', let the values behave naturally
         attribute.type,
         ]
 
     # is_collection and is_required could potentially not have been set at this
     # point, so assume their future default values
     if attribute.is_collection is None:
-        values.append(IS_COLLECTION_DEFAULT)
+        values.append(Attribute.is_collection.default)
     else:
         values.append(attribute.is_collection)
 
     if attribute.is_required is None:
-        values.append(IS_REQUIRED_DEFAULT)
+        values.append(Attribute.is_required.default)
     else:
         values.append(attribute.is_required)
 
@@ -114,17 +87,22 @@ def setChecksum(attribute):
     attribute._checksum = generateChecksum(attribute)
 
 
-class Category(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
-    implements(ICategory)
+class Category(Model, Referenceable, Describeable, Modifiable, Auditable):
+    """
+    Logical categories for schemata in order to be able to group them.
+    """
+
+    __tablename__ = 'category'
 
     @declared_attr
     def __table_args__(cls):
         return (
-            UniqueConstraint('name', name='uq_%s_name' % cls.__tablename__),
-            )
+            UniqueConstraint('name', name='uq_%s_name' % cls.__tablename__),)
 
 
-schema_category_table = Table('schema_category', Model.metadata,
+schema_category_table = Table(
+    'schema_category',
+    Model.metadata,
     Column('schema_id', Integer),
     Column('category_id', Integer),
     PrimaryKeyConstraint('schema_id', 'category_id'),
@@ -132,45 +110,57 @@ schema_category_table = Table('schema_category', Model.metadata,
         columns=['schema_id'],
         refcolumns=['schema.id'],
         name='fk_schema_category_schema_id',
-        ondelete='CASCADE',
-        ),
+        ondelete='CASCADE'),
     ForeignKeyConstraint(
         columns=['category_id'],
         refcolumns=['category.id'],
         name='fk_schema_category_category_id',
-        ondelete='CASCADE',
-        ),
-    )
+        ondelete='CASCADE'))
 
 
-class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
-    implements(ISchema)
+class Schema(Model, Referenceable, Describeable, Modifiable, Auditable):
+    """
+    An object that describes how an EAV schema is generated.
+    Typically, an EAV schema represents a group of attributes that represent
+    a meaningful data set. (e.g. contact details, name, test result.)
+    Resulting schema objects can then be used to produce forms such as
+    Zope-style interfaces.
+    """
 
-    categories = Relationship(
+    __tablename__ = 'schema'
+
+    categories = relationship(
         Category,
         secondary=schema_category_table,
         collection_class=set,
         backref=backref(
             'schemata',
-            collection_class=set,
-            )
-        )
+            collection_class=set),
+        doc='Listing of schema categories')
 
     storage = Column(
-        Enum(*SCHEMA_STORAGE_NAMES, name='schema_storage'),
+        Enum(*sorted(['eav', 'resource', 'table']), name='schema_storage'),
         nullable=False,
-        server_default=ISchema['storage'].default
-        )
+        server_default='eav',
+        doc='How the generated objects will be stored. Storage methods are: '
+            'eav - values are stored in a type-sharded set of tables; '
+            'resource - the object exists in an external service; '
+            'table - the object is stored in a conventional SQL table;')
 
-    publish_date = Column(Date)
+    publish_date = Column(
+        Date,
+        doc='The date the schema was published for data collection')
 
     retract_date = Column(Date)
 
-    is_association = Column(Boolean)
+    is_association = Column(
+        Boolean,
+        doc='If set and True, the schema is an defines an association for '
+            'multiple schemata.')
 
-    @hybrid.hybrid_property
+    @hybrid_property
     def has_private(self):
-        for attribute in self.attributes.itervalues():
+        for attribute in self.attributes.values():
             if attribute.is_private:
                 return True
         return False
@@ -181,9 +171,7 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
             UniqueConstraint('name', 'publish_date'),
             CheckConstraint(
                 'publish_date <= retract_date',
-                name='ck_%s_valid_publication' % cls.__tablename__
-                ),
-            )
+                name='ck_%s_valid_publication' % cls.__tablename__))
 
     def __getitem__(self, key):
         return self.attributes[key]
@@ -200,24 +188,18 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         return key in self.attributes
 
     def keys(self):
-        return list(self.iterkeys())
-
-    def iterkeys(self):
-        for attribute in sorted(self.attributes.values(), key=lambda a: a.order):
+        sortfunc = lambda a: a.order
+        for attribute in sorted(self.attributes.values(), key=sortfunc):
             yield attribute.name
 
     def values(self):
-        return list(self.itervalues())
-
-    def itervalues(self):
-        for attribute in sorted(self.attributes.values(), key=lambda a: a.order):
+        sortfunc = lambda a: a.order
+        for attribute in sorted(self.attributes.values(), key=sortfunc):
             yield attribute
 
     def items(self):
-        return list(self.iteritems())
-
-    def iteritems(self):
-        for attribute in sorted(self.attributes.values(), key=lambda a: a.order):
+        sortfunc = lambda a: a.order
+        for attribute in sorted(self.attributes.values(), key=sortfunc):
             yield attribute.name, attribute
 
     def __copy__(self):
@@ -227,15 +209,18 @@ class Schema(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
     def __deepcopy__(self, memo):
         duplicate = copy(self)
         duplicate.categories = set([c for c in self.categories])
-        duplicate.attributes = dict([(n, deepcopy(a)) for n, a in self.attributes.iteritems()])
+        duplicate.attributes = dict([(n, deepcopy(a))
+                                    for n, a in self.attributes.items()])
         return duplicate
 
 
-class Section(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
+class Section(Model, Referenceable, Describeable, Modifiable, Auditable):
+
+    __tablename__ = 'section'
 
     schema_id = Column(Integer, nullable=False)
 
-    schema = Relationship(
+    schema = relationship(
         Schema,
         backref=backref(
             name='sections',
@@ -252,26 +237,40 @@ class Section(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditab
                 refcolumns=['schema.id'],
                 name='fk_%s_schema_id' % cls.__tablename__,
                 ondelete='CASCADE'),
-            UniqueConstraint('schema_id', 'name', name='uq_%s_name' % cls.__tablename__),
-            UniqueConstraint('schema_id', 'order', name='uq_%s_order' % cls.__tablename__))
+            UniqueConstraint('schema_id', 'name',
+                             name='uq_%s_name' % cls.__tablename__),
+            UniqueConstraint('schema_id', 'order',
+                             name='uq_%s_order' % cls.__tablename__))
 
 
-class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
-    implements(IAttribute)
+class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
+    """
+    An object that describes how an EAV attribute is generated.
+    Typically, an attribute is a meaningful property in the class data set.
+    (e.g. user.firstname, user.lastname, contact.address, etc..)
+    Note that if the attribute's type is an object, an object_class must
+    be specified as well as a flag setting whether the object is to be
+    rendered inline.
+    Resulting attribute objects can then be used to produce forms such as
+    Zope-style schema field.
+    """
+
+    __tablename__ = 'attribute'
 
     schema_id = Column(Integer, nullable=False,)
 
-    schema = Relationship(
+    schema = relationship(
         Schema,
         backref=backref(
             name='attributes',
             collection_class=attribute_mapped_collection('name'),
             order_by='Attribute.order',
-            cascade='all, delete, delete-orphan'))
+            cascade='all, delete, delete-orphan'),
+        doc=u'The schema that this attribute belongs to')
 
     section_id = Column(Integer, nullable=False)
 
-    section = Relationship(
+    section = relationship(
         Section,
         backref=backref(
             name='attributes',
@@ -279,12 +278,25 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
             order_by='Attribute.order',
             cascade='all, delete, delete-orphan'))
 
+    type = Column(
+        Enum(*sorted(['boolean', 'decimal', 'integer', 'choice',
+                      'date', 'datetime',
+                      'string', 'text',
+                      'blob']),
+             name='attribute_type'),
+        nullable=False)
 
-    type = Column(Enum(*ATTRIBUTE_TYPE_NAMES, name='attribute_type'), nullable=False)
+    is_collection = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        doc='Enables attribute values to be stored multiple times (i.e. list)')
 
-    is_collection = Column(Boolean, nullable=False, default=IS_COLLECTION_DEFAULT)
-
-    is_required = Column(Boolean, nullable=False, default=IS_REQUIRED_DEFAULT)
+    is_required = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        doc='Forces attribute value to be required')
 
     is_private = Column(
         Boolean,
@@ -294,20 +306,19 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
 
     _checksum = Column('checksum', String(32), nullable=False)
 
-    checksum = Synonym('_checksum', descriptor=property(lambda self: self._checksum))
+    checksum = hybrid_property(lambda self: self._checksum)
 
-    # TODO: these should be something, they work for almost every type except decimal
-    value_min = Column(Integer)
+    value_min = Column(Integer, doc='Minimum length or value')
 
-    value_max = Column(Integer)
+    value_max = Column(Integer, doc='Maximum length or value')
 
-    collection_min = Column(Integer)
+    collection_min = Column(Integer, doc='Minimum list length')
 
-    collection_max = Column(Integer)
+    collection_max = Column(Integer, doc='Maximum list length')
 
-    validator = Column(String)
+    validator = Column(String, doc='Regular expression validator')
 
-    order = Column(Integer, nullable=False)
+    order = Column(Integer, nullable=False, doc='Display order')
 
     @declared_attr
     def __table_args__(cls):
@@ -322,41 +333,36 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
                 refcolumns=['section.id'],
                 name='fk_%s_section_id' % cls.__tablename__,
                 ondelete='CASCADE'),
-            UniqueConstraint('schema_id', 'name', name='uq_%s_name' % cls.__tablename__),
-            UniqueConstraint('section_id', 'order', name='uq_%s_order' % cls.__tablename__),
+            UniqueConstraint('schema_id', 'name',
+                             name='uq_%s_name' % cls.__tablename__),
+            UniqueConstraint('section_id', 'order',
+                             name='uq_%s_order' % cls.__tablename__),
             Index('ix_%s_checksum' % cls.__tablename__, 'checksum'),
             CheckConstraint(
                 "collection_min IS NULL OR collection_min >= 0",
-                name='ck_%s_unsigned_collection_min' % cls.__tablename__,
-                ),
+                name='ck_%s_unsigned_collection_min' % cls.__tablename__),
             CheckConstraint(
                 "collection_max IS NULL OR collection_max >= 0",
-                name='ck_%s_unsigned_collection_max' % cls.__tablename__,
-                ),
+                name='ck_%s_unsigned_collection_max' % cls.__tablename__),
             CheckConstraint(
                 "collection_min < collection_max",
-                name='ck_%s_valid_collection' % cls.__tablename__,
-                ),
+                name='ck_%s_valid_collection' % cls.__tablename__),
             CheckConstraint(
                 "value_min IS NULL OR value_min >= 0",
-                name='ck_%s_unsigned_value_min' % cls.__tablename__,
-                ),
+                name='ck_%s_unsigned_value_min' % cls.__tablename__),
             CheckConstraint(
                 "value_max IS NULL OR value_max >= 0",
-                name='ck_%s_unsigned_value_max' % cls.__tablename__,
-                ),
+                name='ck_%s_unsigned_value_max' % cls.__tablename__),
             CheckConstraint(
                 "value_min < value_max",
-                name='ck_%s_valid_value' % cls.__tablename__,
-                ),
-            )
+                name='ck_%s_valid_value' % cls.__tablename__))
 
     def __copy__(self):
         keys = (
-            'name', 'title', 'description', 'type', 'is_collection', 'is_required',
+            'name', 'title', 'description', 'type', 'is_collection',
+            'is_required',
             'collection_min', 'collection_max', 'value_min', 'value_max',
-            'validator', 'order'
-            )
+            'validator', 'order')
         return self.__class__(**dict([(k, getattr(self, k)) for k in keys]))
 
     def __deepcopy__(self, memo):
@@ -365,22 +371,29 @@ class Attribute(Model, AutoNamed, Referenceable, Describeable, Modifiable, Audit
         return duplicate
 
 
-class Choice(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
-    implements(IChoice)
+class Choice(Model, Referenceable, Describeable, Modifiable, Auditable):
+    """
+    Possible value constraints for an attribute.
+    Note objects of this type are not versioned, as they are merely an
+    extension of the IAttribute objects. So if the choice constraints
+    are to be modified, a new version of the IAttribute object
+    should be created.
+    """
+
+    __tablename__ = 'choice'
 
     attribute_id = Column(Integer, nullable=False,)
 
-    attribute = Relationship(
+    attribute = relationship(
         Attribute,
         backref=backref(
             name='choices',
             order_by='Choice.order',
             collection_class=ordering_list('order'),
-            cascade="all, delete, delete-orphan"
-            )
-        )
+            cascade='all, delete, delete-orphan'),
+        doc='The attribute this choice belongs to')
 
-    order = Column(Integer, nullable=False)
+    order = Column(Integer, nullable=False, doc='Display order')
 
     @declared_attr
     def __table_args__(cls):
@@ -389,14 +402,14 @@ class Choice(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
                 columns=['attribute_id'],
                 refcolumns=['attribute.id'],
                 name='fk_%s_attribute_id' % cls.__tablename__,
-                ondelete='CASCADE',
-                ),
-            UniqueConstraint('attribute_id', 'name', name='uq_%s_name' % cls.__tablename__),
-            UniqueConstraint('attribute_id', 'order', name='uq_%s_order' % cls.__tablename__),
+                ondelete='CASCADE'),
+            UniqueConstraint('attribute_id', 'name',
+                             name='uq_%s_name' % cls.__tablename__),
+            UniqueConstraint('attribute_id', 'order',
+                             name='uq_%s_order' % cls.__tablename__))
             # XXX: this is alsmost impossible to do in a database-agnostic way
             #CheckConstraint("name ~ '^[0-9]+$'",
-                            #name='ck_%s_numeric_name' % cls.__tablename__),
-            )
+                            #name='ck_%s_numeric_name' % cls.__tablename__))
 
     def __copy__(self):
         keys = ('name', 'title', 'description', 'order')

@@ -10,7 +10,7 @@ from lxml.builder import ElementMaker
 from sqlalchemy.exc import IntegrityError
 
 from occams.datastore import model
-from occams.datastore.interfaces import AlreadyExistsError
+from occams.datastore.exc import AlreadyExistsError
 
 
 E = ElementMaker(nsmap={None : 'http://bitcore.ucsd.edu/occams/datastore'})

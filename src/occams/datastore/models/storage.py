@@ -1,4 +1,5 @@
-""" Database Definitions
+"""
+Storage models
 """
 
 from decimal import Decimal
@@ -6,48 +7,25 @@ from datetime import date
 from datetime import datetime
 import re
 
+from sqlalchemy import (
+    event,
+    text,
+    Column,
+    ForeignKey, ForeignKeyConstraint, Index, UniqueConstraint,
+    Date, DateTime, Boolean, LargeBinary, Numeric, Integer,
+    Unicode, UnicodeText, String)
+from sqlalchemy.orm import backref, relationship
 from sqlalchemy.orm.collections import collection
-from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
-from sqlalchemy import event
-from sqlalchemy import text
-from sqlalchemy.orm import relationship as Relationship
-from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.orm import backref
-from sqlalchemy.schema import Column
-from sqlalchemy.schema import ForeignKey
-from sqlalchemy.schema import ForeignKeyConstraint
-from sqlalchemy.schema import Index
-from sqlalchemy.schema import UniqueConstraint
+from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.types import Date
-from sqlalchemy.types import DateTime
-from sqlalchemy.types import Boolean
-from sqlalchemy.types import Enum
-from sqlalchemy.types import LargeBinary
-from sqlalchemy.types import Numeric
-from sqlalchemy.types import Integer
-from sqlalchemy.types import Unicode
-from sqlalchemy.types import UnicodeText
-from sqlalchemy.types import String
-from sqlalchemy.orm import object_session
-from zope.interface import implements
 
-from occams.datastore.interfaces import IEntity
-from occams.datastore.interfaces import IValue
-from occams.datastore.interfaces import IState
-from occams.datastore.interfaces import InvalidEntitySchemaError
-from occams.datastore.interfaces import ConstraintError
-from occams.datastore.model import DataStoreModel as Model
-from occams.datastore.model.metadata import AutoNamed
-from occams.datastore.model.metadata import Referenceable
-from occams.datastore.model.metadata import Describeable
-from occams.datastore.model.metadata import Modifiable
-from occams.datastore.model.auditing import Auditable
-from occams.datastore.model.schema import Schema
-from occams.datastore.model.schema import Attribute
-from occams.datastore.model.schema import Choice
-
+from occams.datastore.exc import ConstraintError, InvalidEntitySchemaError
+from occams.datastore.models import DataStoreModel as Model
+from occams.datastore.models.auditing import Auditable
+from occams.datastore.models.metadata import (
+    Referenceable, Describeable, Modifiable)
+from occams.datastore.models.schema import Schema, Attribute, Choice
 
 
 def enforceSchemaState(entity):
@@ -58,7 +36,9 @@ def enforceSchemaState(entity):
         raise InvalidEntitySchemaError(entity.schema.name, entity.schema.state)
 
 
-class Context(Model, AutoNamed, Referenceable, Modifiable, Auditable):
+class Context(Model, Referenceable, Modifiable, Auditable):
+
+    __tablename__ = 'context'
 
     entity_id = Column(Integer, nullable=False)
 
@@ -70,11 +50,9 @@ class Context(Model, AutoNamed, Referenceable, Modifiable, Auditable):
         """
         Provide a 'creator' function to use with the association proxy.
         """
-
         return lambda entity: Context(
             entity=entity,
-            external=external,
-            )
+            external=external,)
 
     key = Column(Integer, nullable=False)
 
@@ -85,10 +63,8 @@ class Context(Model, AutoNamed, Referenceable, Modifiable, Auditable):
                 columns=['entity_id'],
                 refcolumns=['entity.id'],
                 name='fk_%s_entity_id' % cls.__tablename__,
-                ondelete='CASCADE',
-                ),
-            UniqueConstraint('entity_id', 'external', 'key'),
-            )
+                ondelete='CASCADE'),
+            UniqueConstraint('entity_id', 'external', 'key'))
 
 
 class GroupedCollection(object):
@@ -112,7 +88,7 @@ class GroupedCollection(object):
 
     def __delitem__(self, key):
         if key in self._groups:
-            map(self._remove, self[key])
+            list(map(self._remove, self[key]))
 
     def __contains__(self, key):
         return key in self._groups
@@ -123,7 +99,7 @@ class GroupedCollection(object):
 
     @collection.iterator
     def _iterator(self):
-        for group in self._groups.itervalues():
+        for group in self._groups.values():
             for value in group:
                 yield value
 
@@ -135,40 +111,59 @@ def grouped_collection(keyfunc):
     return lambda: GroupedCollection(keyfunc)
 
 
-class State(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
-    implements(IState)
+class State(Model, Referenceable, Describeable, Modifiable, Auditable):
+    """
+    An entity state to keep track of the entity's progress through some
+    externally defined work flow.
+    """
+
+    __tablename__ = 'state'
 
     @declared_attr
     def __table_args__(cls):
         return (UniqueConstraint('name'),)
 
 
-class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditable):
-    implements(IEntity)
+class Entity(Model, Referenceable, Describeable, Modifiable, Auditable):
+    """
+    An object that describes how an EAV object is generated.
+    """
+
+    __tablename__ = 'entity'
 
     schema_id = Column(Integer, nullable=False)
 
-    schema = Relationship(Schema)
+    schema = relationship(
+        Schema,
+        doc='The scheme the object will provide once generated.')
 
-    contexts = Relationship(
+    contexts = relationship(
         Context,
         cascade='all, delete-orphan',
         backref=backref(
-            name='entity',
-            )
-        )
+            name='entity'))
 
     state_id = Column(Integer)
 
-    state = Relationship(
+    state = relationship(
         State,
         backref=backref(
             name='entities',
-            lazy='dynamic'))
+            lazy='dynamic'),
+        doc='The current workflow state')
 
-    is_null = Column(Boolean, nullable=False, default=False, server_default=text('FALSE'))
+    is_null = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default=text('FALSE'),
+        doc='Flag to indicate if the entity is intentionally blank')
 
-    collect_date = Column(Date, nullable=False, default=date.today)
+    collect_date = Column(
+        Date,
+        nullable=False,
+        default=date.today,
+        doc='The date that the information was physically collected')
 
     @declared_attr
     def __table_args__(cls):
@@ -177,19 +172,16 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
                 columns=['schema_id'],
                 refcolumns=['schema.id'],
                 name='fk_%s_schema_id' % cls.__tablename__,
-                ondelete='CASCADE',
-                ),
+                ondelete='CASCADE'),
             ForeignKeyConstraint(
                 columns=['state_id'],
                 refcolumns=['state.id'],
                 name='fk_%s_state_id' % cls.__tablename__,
-                ondelete='CASCADE',
-                ),
+                ondelete='CASCADE'),
             UniqueConstraint('schema_id', 'name'),
             Index('ix_%s_schema_id' % cls.__tablename__, 'schema_id'),
             Index('ix_%s_state_id' % cls.__tablename__, 'state_id'),
-            Index('ix_%s_collect_date' % cls.__tablename__, 'collect_date'),
-            )
+            Index('ix_%s_collect_date' % cls.__tablename__, 'collect_date'))
 
     def _getCollector(self, key):
         type_ = self.schema[key].type
@@ -199,7 +191,7 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
             type_ = 'datetime'
         try:
             return getattr(self, '_%s_values' % type_)
-        except AttributeError: # pragma: no cover
+        except AttributeError:  # pragma: no cover
             # Extreme edge case that is actually a programming error
             raise NotImplementedError(type_)
 
@@ -210,8 +202,10 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         def convert(container):
             if container.value is None:
                 value = None
-            elif container.attribute.type == 'date' and isinstance(container.value, datetime):
-                # Sometimes it's converted to datetime and so we need to convert it back
+            elif container.attribute.type == 'date' \
+                    and isinstance(container.value, datetime):
+                # Sometimes it's converted to datetime and so we need to
+                # convert it back
                 value = container.value.date()
             elif container.attribute.type == 'boolean':
                 value = bool(container.value)
@@ -235,11 +229,13 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         attribute = self.schema[key]
         wrapperFactory = nameModelMap[attribute.type]
 
-        # Helper method for getting the appropriate parameters for an attribute/value
-        params = lambda a, v: dict(zip(('attribute', 'value'), (a, v)))
+        # Helper method for getting the appropriate parameters for
+        # an attribute/value
+        params = lambda a, v: dict(list(zip(('attribute', 'value'), (a, v))))
 
         # Helper methot to add an item to the value collector
-        collect = lambda v: collector.__setitem__(attribute.name, wrapperFactory(**params(attribute, v)))
+        collect = lambda v: collector.__setitem__(
+            attribute.name, wrapperFactory(**params(attribute, v)))
 
         def convert(value, type_):
             if value is None:
@@ -251,9 +247,10 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
             return converted
 
         if attribute.is_collection:
-            # don't even bother getting a diff and updating, just create a new list
+            # don't even bother getting a diff, just create a new list
             del self[key]
-            map(collect, map(lambda v: convert(v, attribute.type), value))
+            for v in value:
+                collect(convert(v, attribute.type))
         else:
             # For scalars, we're only dealing with one value, so it's OK to
             # try and update it
@@ -269,11 +266,31 @@ class Entity(Model, AutoNamed, Referenceable, Describeable, Modifiable, Auditabl
         del collector[key]
 
     def items(self):
-        return list(self.iteritems())
-
-    def iteritems(self):
-        for key in self.schema.iterkeys():
+        for key in self.schema.keys():
             yield (key, self[key])
+
+    def serialize(self):
+        result = dict(
+            __metadata__=dict(
+                id=self.id,
+                state=self.state,
+                collect_date=self.collect_date,
+                create_date=self.create_date,
+                create_user=getattr(self.create_user, 'name', None),
+                modify_date=self.modify_date,
+                modify_user=getattr(self.create_user, 'name', None)))
+
+        # TODO: might be better to user a subquery table instead of
+        # accessing as dictionary
+        for key, value in self.items():
+            if self.schema[key].type == 'object':
+                if self[key] is not None:
+                    value = self[key].serialize()
+                else:
+                    value = {}
+            result[key] = value
+
+        return result
 
 
 class HasEntities(object):
@@ -292,20 +309,19 @@ class HasEntities(object):
 
         cls.entities = association_proxy(
             'contexts', 'entity',
-            creator=Context.creator(name)
-            )
+            creator=Context.creator(name))
 
-        return Relationship(
+        return relationship(
             Context,
-            primaryjoin='(%s.id == Context.key) & (Context.external == "%s")' % (cls.__name__, name),
+            primaryjoin=(
+                '(%s.id == Context.key) & (Context.external == "%s")'
+                % (cls.__name__, name)),
             foreign_keys=[Context.key, Context.external],
             cascade='all, delete-orphan',
             collection_class=set,
             backref=backref(
                 '%s_parent' % name,
-                uselist=False
-                )
-            )
+                uselist=False))
 
 
 def TypeMappingClass(typeName, className, tableName, valueType, index=True):
@@ -314,7 +330,9 @@ def TypeMappingClass(typeName, className, tableName, valueType, index=True):
     """
 
     class _ValueBaseMixin(Referenceable, Modifiable, Auditable):
-        implements(IValue)
+        """
+        An object that records values assigned to an EAV Entity.
+        """
 
         __tablename__ = None
         __valuetype__ = None
@@ -326,18 +344,18 @@ def TypeMappingClass(typeName, className, tableName, valueType, index=True):
                 ForeignKey(
                     column='entity.id',
                     name='fk_%s_entity_id' % cls.__tablename__,
-                    ondelete='CASCADE',
-                    ),
+                    ondelete='CASCADE'),
                 nullable=False)
 
         @declared_attr
         def entity(cls):
-            return Relationship(
+            return relationship(
                 Entity,
                 primaryjoin='%s.entity_id == Entity.id' % cls.__name__,
                 backref=backref(
                     name='_%s_values' % cls.__typename__,
-                    collection_class=grouped_collection(lambda v: v.attribute.name),
+                    collection_class=grouped_collection(
+                        lambda v: v.attribute.name),
                     cascade='all, delete-orphan'))
 
         @declared_attr
@@ -352,7 +370,7 @@ def TypeMappingClass(typeName, className, tableName, valueType, index=True):
 
         @declared_attr
         def attribute(cls):
-            return Relationship(Attribute)
+            return relationship(Attribute)
 
         @declared_attr
         def _value(cls):
@@ -372,30 +390,39 @@ def TypeMappingClass(typeName, className, tableName, valueType, index=True):
     return class_
 
 
-ValueDatetime = TypeMappingClass('datetime', 'ValueDatetime', 'value_datetime', DateTime)
+ValueDatetime = TypeMappingClass(
+    'datetime', 'ValueDatetime', 'value_datetime', DateTime)
 
-ValueInteger = TypeMappingClass('integer', 'ValueInteger', 'value_integer', Integer)
+ValueInteger = TypeMappingClass(
+    'integer', 'ValueInteger', 'value_integer', Integer)
 
-ValueDecimal = TypeMappingClass('decimal', 'ValueDecimal', 'value_decimal', Numeric)
+ValueDecimal = TypeMappingClass(
+    'decimal', 'ValueDecimal', 'value_decimal', Numeric)
 
-ValueString = TypeMappingClass('string', 'ValueString', 'value_string', Unicode)
+ValueString = TypeMappingClass(
+    'string', 'ValueString', 'value_string', Unicode)
 
-ValueText = TypeMappingClass('text', 'ValueText', 'value_text', UnicodeText, index=False)
+ValueText = TypeMappingClass(
+    'text', 'ValueText', 'value_text', UnicodeText, index=False)
 
-ValueChoice = TypeMappingClass('choice', 'ValueChoice', 'value_choice',
+ValueChoice = TypeMappingClass(
+    'choice', 'ValueChoice', 'value_choice',
     ForeignKey('choice.id', name='fk_value_choice_value', ondelete='CASCADE'))
 
-ValueBlob = TypeMappingClass('blob', 'ValueBlob', 'value_blob', LargeBinary, index=False)
+ValueBlob = TypeMappingClass(
+    'blob', 'ValueBlob', 'value_blob', LargeBinary, index=False)
 
 # Specify how the ``value`` properties behave, pretty much they're synonymns
 # of the ``_value`` property,
-valueProperty = hybrid_property(lambda self: self._value, lambda self, value: setattr(self, '_value', value))
+valueProperty = hybrid_property(lambda s: s._value,
+                                lambda s, v: setattr(s, '_value', v))
 ValueDatetime.value = valueProperty
 ValueInteger.value = valueProperty
 ValueDecimal.value = valueProperty
 ValueString.value = valueProperty
 ValueText.value = valueProperty
-ValueChoice.value = Relationship(Choice, primaryjoin='Choice.id == ValueChoice._value')
+ValueChoice.value = relationship(Choice,
+                                 primaryjoin='Choice.id == ValueChoice._value')
 ValueBlob.value = valueProperty
 
 
@@ -429,25 +456,34 @@ def validateValue(target, value, oldvalue, initiator):
         elif type_ in ('datetime'):
             check = datetime.fromtimestamp(check)
         else:
-            raise NotImplementedError('Cannot coerce limit for type: %s' % type_)
+            raise NotImplementedError(
+                'Cannot coerce limit for type: %s' % type_)
         return check, interpreted
 
     if attribute.value_min is not None:
-        check, interpreted = compareable(attribute.type, attribute.value_min, value)
+        check, interpreted = compareable(
+            attribute.type, attribute.value_min, value)
 
         if interpreted < check:
-            raise ConstraintError(attribute.schema.name, attribute.name, check, '<', interpreted, value)
+            raise ConstraintError(
+                attribute.schema.name, attribute.name, check, '<', interpreted,
+                value)
 
     if attribute.value_max is not None:
-        check, interpreted = compareable(attribute.type, attribute.value_max, value)
+        check, interpreted = compareable(
+            attribute.type, attribute.value_max, value)
 
         if interpreted > check:
-            raise ConstraintError(attribute.schema.name, attribute.name, check, '>', interpreted, value)
+            raise ConstraintError(
+                attribute.schema.name, attribute.name, check, '>', interpreted,
+                value)
 
     # TODO: collections
 
-    if attribute.validator is not None and not re.match(attribute.validator, str(value)):
-        raise ConstraintError(attribute.schema.name, attribute.name, attribute.validator, value)
+    if attribute.validator is not None \
+            and not re.match(attribute.validator, str(value)):
+        raise ConstraintError(
+            attribute.schema.name, attribute.name, attribute.validator, value)
 
     if attribute.choices:
         found = None
@@ -456,7 +492,9 @@ def validateValue(target, value, oldvalue, initiator):
                 found = choice
                 break
         if not found:
-            raise ConstraintError(attribute.schema.name, attribute.name, [c.value for c in attribute.choices], value)
+            raise ConstraintError(attribute.schema.name,
+                                  attribute.name,
+                                  [c.value for c in attribute.choices], value)
 
         target.choice = choice
 
@@ -482,4 +520,3 @@ nameModelMap = dict(
     choice=ValueChoice,
     blob=ValueBlob,
     )
-
