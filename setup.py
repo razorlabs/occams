@@ -13,7 +13,7 @@ REQUIRES = [
     'SQLAlchemy']
 
 EXTRAS = {
-    'postgresql': ['pyscopg2'],
+    'postgresql': ['psycopg2'],
     'test': [
         'nose',
         'coverage',

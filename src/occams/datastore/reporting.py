@@ -16,8 +16,10 @@ from occams.datastore import models
 
 def build_report(session, schema_name,
                  ids=None,
+                 attributes=None,
                  expand_collections=False,
                  use_choice_labels=False,
+                 context=None,
                  ignore_private=True):
     """
     Builds a schema entity data report query table from the data dictioanry.
@@ -26,6 +28,8 @@ def build_report(session, schema_name,
     session -- The database session to use
     schema_name -- The name of the schema
     ids -- (Optional) The spcific ids to include in the report
+    attributes -- (Optional) Only include the specified attribute names
+                  (default: if None, all attributes will be used)
     expand_collections -- (Optional) Expands collections to their own column
                          (default is False)
     use_choice_labels -- (Optional) Uses choice labels instead of codes
@@ -60,9 +64,22 @@ def build_report(session, schema_name,
     if ids:
         query = query.filter(models.Schema.id.in_(ids))
 
+    if context:
+        query = (
+            query
+            .join(models.Context, (
+                (models.Context.external == context)
+                & (models.Context.entity_id == models.Entity.id)))
+            .add_column(models.Context.key.label('context_key')))
+
     columns = build_columns(session, schema_name, ids, expand_collections)
 
+    attributes = None if attributes is None else set(attributes)
+
     for column in itervalues(columns):
+        if attributes is not None and column.name not in attributes:
+            continue
+
         if column.is_private and ignore_private:
             query = query.add_column(literal(u'[PRIVATE]').label(column.name))
             continue
