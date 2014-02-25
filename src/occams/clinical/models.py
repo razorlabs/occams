@@ -548,6 +548,10 @@ class Stratum(Base, Referenceable, Modifiable, HasEntities, Auditable):
         doc='A pregenerated value assigned to the patient per-study. '
             'This is not a Study ID, this is only for statistician. ')
 
+    randid = hybrid_property(
+        lambda self: self.reference_number,
+        lambda self, value: setattr(self, 'reference_number', value))
+
     patient_id = Column(Integer)
 
     patient = relationship(

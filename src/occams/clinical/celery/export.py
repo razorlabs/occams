@@ -22,7 +22,6 @@ import zipfile
 
 from celery import Task
 import humanize
-from six import u
 from sqlalchemy import func, literal, null
 from webob.multidict import MultiDict
 
@@ -212,7 +211,8 @@ def dump_query(fp, query):
     Helper function to dump and arbitrary SQL query to CSV
     """
     writer = csv.writer(fp)
-    writer.writerow([u(d['name']) for d in query.column_descriptions])
+    writer.writerow([d['name'] for d in query.column_descriptions])
+    # possible use list(map(lambda r: dict(r.items()), query))
     writer.writerows(query)
     fp.flush()
 

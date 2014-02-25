@@ -24,7 +24,7 @@ from pyramid.paster import bootstrap
 import transaction
 
 from occams.clinical import Session
-from occams.clinical.auth import track_user
+from occams.clinical.security import track_user
 
 
 app = Celery(
