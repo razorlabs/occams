@@ -771,17 +771,35 @@ class VariableNameValidator(z3c.form.validator.SimpleFieldValidator):
         if value != symbolize(value):
             raise zope.interface.Invalid(_(u'Not a valid variable name'))
 
-        if IAttributeContext.providedBy(self.context):
-            schemaData = self.context.data['schema']
-        else:
-            schemaData = self.context.data
 
         if value in reservedWords:
             raise zope.interface.Invalid(_(u'Can\'t use reserved programming word'))
 
-        # Avoid duplicate variable names
+        # Avoid duplicate variable names in the subform
+        if IAttributeContext.providedBy(self.context):
+            schemaData = self.context.data['schema']
+        else:
+            schemaData = self.context.data
         if value in schemaData['fields']:
+            raise zope.interface.Invalid(_(u'Variable name already exists in this subform'))
+
+        # Avaid duplicate names for scalars
+        if IAttributeContext.providedBy(self.context):
+            schemaData = self.context.aq_parent.data
+        else:
+            schemaData = self.context.data
+        def get_scalar_fields(schema):
+            names = set()
+            for key, field in schema['fields'].items():
+                if field['type'] == 'object':
+                    names.update(get_scalar_fields(field['schema']))
+                else:
+                    names.add(key)
+            return names
+        names = get_scalar_fields(schemaData)
+        if value in names:
             raise zope.interface.Invalid(_(u'Variable name already exists in this form'))
+
 
 
 # Limit variable name validation only to add forms, since that's the only time
