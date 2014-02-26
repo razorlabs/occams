@@ -443,6 +443,8 @@ class FieldDeleteForm(StandardWidgetsMixin, z3c.form.form.Form):
     @z3c.form.button.buttonAndHandler(_(u'Yes, I\'m sure'), name='delete')
     def handleDelete(self, action):
         Session = named_scoped_session(self.context.session)
+        if self.context.item.object_schema:
+            Session.delete(self.context.item.object_schema)
         Session.delete(self.context.item)
         Session.flush()
         self.context._data = None
