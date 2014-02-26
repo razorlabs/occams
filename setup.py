@@ -1,14 +1,45 @@
-from setuptools import find_packages
-from setuptools import setup
+from setuptools import find_packages, setup
+from subprocess import Popen, PIPE
+import os.path
+import sys
 
 
-# Working release version
-version = '1.0.0b11'
+HERE = os.path.abspath(os.path.dirname(__file__))
+
+
+def get_version():
+    version_file = os.path.join(HERE, 'VERSION')
+
+    # read fallback file
+    try:
+        with open(version_file, 'r+') as fp:
+            version_txt = fp.read().strip()
+    except:
+        version_txt = None
+
+    # read git version (if available)
+    try:
+        version_git = (
+            Popen(['git', 'describe'], stdout=PIPE, stderr=PIPE, cwd=HERE)
+            .communicate()[0]
+            .strip()
+            .decode(sys.getdefaultencoding()))
+    except:
+        version_git = None
+
+    version = version_git or version_txt or '0.0.0'
+
+    # update fallback file if necessary
+    if version != version_txt:
+        with open(version_file, 'w') as fp:
+            fp.write(version)
+
+    return version
 
 
 setup(
     name='occams.form',
-    version=version,
+    version=get_version(),
     description='A tool for managing dynamic forms in Plone.',
     classifiers=[
         'Development Status :: 4 - Beta'
@@ -25,8 +56,8 @@ setup(
         ],
     keywords='OCCAMS datastore database eav sqlalchemy relational clinical',
     author='BEAST Core Development Team',
-    author_email='beast@ucsd.edu',
-    url='https://github.com/beastcore/occams.form',
+    author_email='bitcore@ucsd.edu',
+    url='https://bitbucket.org/ucsdbitcore/occams.form',
     license='GPL',
     packages=find_packages('src', exclude=['ez_setup']),
     package_dir={'':'src'},
