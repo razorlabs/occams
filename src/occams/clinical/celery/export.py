@@ -22,12 +22,11 @@ import zipfile
 
 from celery import Task
 import humanize
-from sqlalchemy import func, literal, null
 from webob.multidict import MultiDict
 
 from occams.clinical import _, models, Session
 from occams.clinical.celery import app, log, in_transaction
-from occams.datastore import reporting
+from occams.clinical import reports
 
 
 class ExportTask(Task):
@@ -99,14 +98,24 @@ def make_export(export_id):
         for schema_name, ids in files.dict_of_lists().items():
 
             with tempfile.NamedTemporaryFile() as tfp:
-                query = query_report(schema_name, ids,
-                                     expand_collections=expand_collections,
-                                     use_choice_labels=use_choice_labels)
-                dump_query(tfp, query)
+                query = reports.form.query_report(
+                    schema_name, ids,
+                    expand_collections=expand_collections,
+                    use_choice_labels=use_choice_labels)
+                fieldnames = [d['name'] for d in query.column_descriptions]
+                writer = csv.DictWriter(tfp, fieldnames=fieldnames)
+                writer.writeheader()
+                # namedtuple uses leading "_" to prevent name collisions
+                writer.writerows([r._asdict() for r in query])
+                tfp.flush()
                 zfp.write(tfp.name, '{0}.csv'.format(schema_name))
 
             with tempfile.NamedTemporaryFile() as tfp:
-                dump_codebook(tfp, schema_name, ids)
+                writer = csv.DictWriter(
+                    tfp, fieldnames=reports.codebook.HEADER)
+                writer.writeheader()
+                writer.writerows(reports.form.codebook(schema_name, ids))
+                tfp.flush()
                 zfp.write(tfp.name, '{0}-codebook.csv'.format(schema_name))
 
             redis.hincrby(export.id, 'count')
@@ -121,273 +130,3 @@ def make_export(export_id):
 
     Session.flush()  # flush so we know everything went smoothly
     redis.publish('export', json.dumps(redis.hgetall(export_id)))
-
-
-def query_report(schema_name,
-                 ids,
-                 expand_collections=False,
-                 use_choice_labels=False):
-    """
-    Generates a clinical report containing the patient's metadata
-    that relates to the form.
-
-    Clinical metadadata includes:
-        * site -- Patient's site
-        * pid -- Patient's PID number
-        * enrollment -- The applicable enrollment
-        * cycles - The applicable visit's cycles
-
-    Parameters:
-    schema -- The schema to generate the report for
-
-    Returns:
-    A SQLAlchemy query
-    """
-
-    pglist = (
-        lambda e: func.array_to_string(func.array(e), literal(','))
-        if Session.bind.url.drivername == 'postgresql'
-        else e)
-    selist = (
-        lambda e: func.group_concat(e)
-        if Session.bind.url.drivername == 'sqlite'
-        else e)
-
-    report = reporting.build_report(Session, schema_name, ids,
-                                    expand_collections,
-                                    use_choice_labels)
-    query = (
-        Session.query(report.c.entity_id.label('oid'))
-        .add_column(
-            Session.query(models.Site.name)
-            .select_from(models.Patient)
-            .join(models.Site)
-            .join(models.Context,
-                  (models.Context.external == 'patient')
-                  & (models.Context.key == models.Patient.id))
-            .filter(models.Context.entity_id == report.c.entity_id)
-            .correlate(report)
-            .as_scalar()
-            .label('site'))
-        .add_column(
-            Session.query(models.Patient.pid)
-            .join(models.Context,
-                  (models.Context.external == 'patient')
-                  & (models.Context.key == models.Patient.id))
-            .filter(models.Context.entity_id == report.c.entity_id)
-            .correlate(report)
-            .as_scalar()
-            .label('pid'))
-        .add_column(
-            pglist(
-                Session.query(selist(models.Study.name))
-                .select_from(models.Enrollment)
-                .join(models.Study)
-                .join(models.Context,
-                      (models.Context.external == 'enrollment')
-                      & (models.Context.key == models.Enrollment.id))
-                .filter(models.Context.entity_id == report.c.entity_id)
-                .correlate(report)
-                .as_scalar())
-            .label('enrollment'))
-        .add_column(
-            pglist(
-                Session.query(selist(models.Cycle.name))
-                .select_from(models.Visit)
-                .join(models.Visit.cycles)
-                .join(models.Context,
-                      (models.Context.external == 'visit')
-                      & (models.Context.key == models.Visit.id))
-                .filter(models.Context.entity_id == report.c.entity_id)
-                .correlate(report)
-                .as_scalar())
-            .label('cycles'))
-        .add_columns(*[c for c in report.columns if c.name != 'entity_id']))
-    return query
-
-
-def dump_query(fp, query):
-    """
-    Helper function to dump and arbitrary SQL query to CSV
-    """
-    writer = csv.writer(fp)
-    writer.writerow([d['name'] for d in query.column_descriptions])
-    # possible use list(map(lambda r: dict(r.items()), query))
-    writer.writerows(query)
-    fp.flush()
-
-
-def dump_codebook(fp, schema_name, ids=None):
-    """
-    Dumps the form into a CSV codebook file
-
-    Parameters:
-    fp -- file pointer for the target stream to write results to
-    name -- the ecrf schema name
-    """
-    query = (
-        Session.query(models.Attribute)
-        .join(models.Schema)
-        .filter(models.Schema.name == schema_name)
-        .filter(models.Schema.publish_date != null())
-        .filter(models.Schema.retract_date == null()))
-
-    if ids:
-        query = query.filter(models.Schema.id.in_(ids))
-
-    query = (
-        query.order_by(
-            models.Attribute.order,
-            models.Schema.publish_date))
-
-    fieldnames = """
-        form_name
-        form_title
-        form_publish_date
-        field_name
-        field_title
-        field_description
-        field_is_required
-        field_is_collection
-        field_type
-        field_choices
-        field_order""".split()
-
-    writer = csv.writer(fp)
-    writer.writerow(fieldnames)
-
-    def write_builtin(**kw):
-        row = OrderedDict.fromkeys(fieldnames, u'')
-        row.update(kw)
-        writer.writerow(row.values())
-
-    write_builtin(**{
-        'form_name': schema_name,
-        'field_name': u'oid',
-        'field_title': u'Object Identifier',
-        'field_type': u'integer',
-        'field_is_required': True,
-        'field_is_collection': False})
-
-    write_builtin(**{
-        'form_name': schema_name,
-        'field_name': u'pid',
-        'field_title': u'Patient Identifier',
-        'field_type': u'string',
-        'field_is_required': True,
-        'field_is_collection': False})
-
-    write_builtin(**{
-        'form_name': schema_name,
-        'field_name': u'site',
-        'field_title': u'Site',
-        'field_type': u'string',
-        'field_is_required': True,
-        'field_is_collection': False})
-
-    write_builtin(**{
-        'form_name': schema_name,
-        'field_name': 'enrollments',
-        'field_title': u'Applicable enrollments',
-        'field_type': u'string',
-        'field_is_required': False,
-        'field_is_collection': True})
-
-    write_builtin(**{
-        'form_name': schema_name,
-        'field_name': u'cycles',
-        'field_title': u'Applicable visit cycles',
-        'field_type': u'string',
-        'field_is_required': False,
-        'field_is_collection': True})
-
-    write_builtin(**{
-        'form_name': schema_name,
-        'field_name': u'form_name',
-        'field_title': u'Form Name',
-        'field_type': u'string',
-        'field_is_required': True,
-        'field_is_collection': False})
-
-    write_builtin(**{
-        'form_name': schema_name,
-        'field_name': u'form_publish_Date',
-        'field_title': u'Form Publish Date',
-        'field_type': u'date',
-        'field_is_required': True,
-        'field_is_collection': False})
-
-    write_builtin(**{
-        'form_name': schema_name,
-        'field_name': u'state',
-        'field_title': u'Workflow State',
-        'field_type': u'string',
-        'field_is_required': True,
-        'field_is_collection': False})
-
-    write_builtin(**{
-        'form_name': schema_name,
-        'field_name': u'collect_date',
-        'field_title': u'Collect Date',
-        'field_type': u'date',
-        'field_is_required': True,
-        'field_is_collection': False})
-
-    write_builtin(**{
-        'form_name': schema_name,
-        'field_name': u'is_null',
-        'field_title': u'Ignore values?',
-        'field_description': u'If set for values should be ignored',
-        'field_type': u'boolean',
-        'field_is_required': True,
-        'field_is_collection': False})
-
-    for attribute in query:
-        schema = attribute.schema
-        choices = attribute.choices
-        writer.writerow([
-            schema.name,
-            schema.title,
-            schema.publish_date,
-            attribute.name,
-            attribute.title,
-            attribute.description,
-            attribute.is_required,
-            attribute.is_collection,
-            attribute.type,
-            '\r'.join(['%s - %s' % (c.name, c.title) for c in choices]),
-            attribute.order])
-
-    write_builtin(**{
-        'form_name': schema_name,
-        'field_name': u'create_date',
-        'field_title': u'Create Date',
-        'field_type': u'datetime',
-        'field_is_required': True,
-        'field_is_collection': False})
-
-    write_builtin(**{
-        'form_name': schema_name,
-        'field_name': u'create_user',
-        'field_title': u'Created By',
-        'field_type': u'string',
-        'field_is_required': True,
-        'field_is_collection': False})
-
-    write_builtin(**{
-        'form_name': schema_name,
-        'field_name': u'modify_date',
-        'field_title': u'Modify Date',
-        'field_type': u'datetime',
-        'field_is_required': True,
-        'field_is_collection': False})
-
-    write_builtin(**{
-        'form_name': schema_name,
-        'field_name': u'modify_user',
-        'field_title': u'Modified By',
-        'field_type': u'string',
-        'field_is_required': True,
-        'field_is_collection': False})
-
-    fp.flush()

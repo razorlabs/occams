@@ -31,7 +31,7 @@ from occams.datastore.models import (  # NOQA
     HasEntities,
     ModelClass,
     User,
-    Schema, Section, Attribute, Choice, Entity, Context)
+    Schema, Section, Attribute, Choice, State, Entity, Context)
 
 
 Session = scoped_session(sessionmaker(
