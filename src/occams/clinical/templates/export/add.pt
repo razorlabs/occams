@@ -17,8 +17,8 @@
       <h3>Step 1</h3>
 
       <p class="lead" i18n:translate="">
-        Select the de-identified form data you would like to download.
-        All exports include a data dictionary.
+        Select the de-identified data you would like to download.
+        All exports include a code book.
       </p>
 
       <div class="table-responsive">

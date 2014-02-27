@@ -23,6 +23,21 @@
     </div>
   </div>
 
+  <div class="panel panel-default" id="randomization-data">
+    <div class="panel-heading">
+      <h3 class="panel-title" i18n:translate="">
+        Will randomization data be included?
+      </h3>
+    </div>
+    <div class="panel-body">
+      <p i18n:translate="">
+        No because randomization data is intended for analysts only and t
+        thus considered classified. If you need acess please contact
+        your system administrator.
+      </p>
+    </div>
+  </div>
+
   <div class="panel panel-default" id="download-location">
     <div class="panel-heading">
       <h3 class="panel-title" i18n:translate="">

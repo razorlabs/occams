@@ -349,6 +349,7 @@ def query_schemata(ids=None):
     """
     Helper function to fetch schemata summary
     """
+
     InnerSchema = orm.aliased(models.Schema)
     OuterSchema = orm.aliased(models.Schema)
     schemata_query = (
@@ -375,7 +376,16 @@ def query_schemata(ids=None):
             .as_scalar()
             .label('title'))
         .filter(OuterSchema.publish_date != null())
-        .filter(OuterSchema.retract_date == null()))
+        .filter(OuterSchema.retract_date == null())
+        .filter(
+            # Do not include forms that are used for randomization
+            ~Session.query(models.Entity.schema_id)
+            .join(models.Entity.contexts)
+            .filter(models.Context.external == 'stratum')
+            .join(models.Stratum, models.Context.key == models.Stratum.id)
+            .filter(models.Entity.schema_id == OuterSchema.id)
+            .correlate(OuterSchema)
+            .exists()))
 
     if ids:
         schemata_query = (
