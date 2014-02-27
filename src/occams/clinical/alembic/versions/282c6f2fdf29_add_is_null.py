@@ -19,7 +19,6 @@ def upgrade():
     """
     Allows entities to be able to be set to 'nil'
     """
-
     for tablename in ('entity', 'entity_audit'):
 
         op.add_column(tablename, sa.Column(

@@ -6,7 +6,6 @@ All permissions are declared here for easier overview
 from repoze.who.interfaces import IChallengeDecider
 from pyramid.events import subscriber, NewRequest
 from pyramid.security import Allow, Authenticated, ALL_PERMISSIONS
-from pyramid.security import authenticated_userid
 from zope.interface import directlyProvides
 
 from occams.clinical import log, Session, models
@@ -51,7 +50,7 @@ def track_user_on_request(event):
     """
     Annotates the database session with the current user.
     """
-    track_user(authenticated_userid(event.request))
+    track_user(event.request.authenticated_userid)
 
 
 def track_user(userid):

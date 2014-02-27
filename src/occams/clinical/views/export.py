@@ -10,7 +10,6 @@ from pyramid_deform import CSRFSchema
 from pyramid.i18n import get_localizer, negotiate_locale_name
 from pyramid.httpexceptions import HTTPFound, HTTPNotFound, HTTPOk
 from pyramid.response import FileResponse
-from pyramid.security import authenticated_userid
 from pyramid.view import view_config
 from sqlalchemy import orm, null
 import transaction
@@ -136,7 +135,7 @@ def add(request):
                 name=str(uuid.uuid4()),
                 owner_user=(
                     Session.query(models.User)
-                    .filter_by(key=authenticated_userid(request))
+                    .filter_by(key=request.authenticated_userid)
                     .one()),
                 schemata=(
                     Session.query(models.Schema)
@@ -305,7 +304,7 @@ def download(request):
 
     The user should only be allowed to download their exports.
     """
-    userid = authenticated_userid(request)
+    userid = request.authenticated_userid
 
     try:
         export = (
@@ -328,7 +327,7 @@ def query_exports(request):
     """
     Helper method to query current exports for the authenticated user
     """
-    userid = authenticated_userid(request)
+    userid = request.authenticated_userid
     export_expire = request.registry.settings.get('app.export.expire')
 
     exports_query = (

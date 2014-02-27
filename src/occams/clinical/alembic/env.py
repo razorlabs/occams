@@ -2,7 +2,6 @@ from __future__ import with_statement
 from alembic import context
 from sqlalchemy import create_engine, engine_from_config, pool
 from logging.config import fileConfig
-import occams.clinical.utils.alemebic as migrations
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -23,6 +22,8 @@ target_metadata = None
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
+cmd_line_url = context.get_x_argument(as_dictionary=True).get('uri')
+
 
 def run_migrations_offline():
     """Run migrations in 'offline' mode.
@@ -36,8 +37,6 @@ def run_migrations_offline():
     script output.
 
     """
-
-    cmd_line_url = context.get_x_argument(as_dictionary=True).get('dburi')
 
     if cmd_line_url:
         url = cmd_line_url
@@ -57,7 +56,6 @@ def run_migrations_online():
     and associate a connection with the context.
 
     """
-    cmd_line_url = context.get_x_argument(as_dictionary=True).get('dburi')
 
     if cmd_line_url:
         engine = create_engine(cmd_line_url)

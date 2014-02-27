@@ -14,7 +14,7 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import sql
 
-from occams.clinical.utils.alembic import alter_enum
+from occams.clinical.migrations import alter_enum
 
 
 def upgrade():

@@ -86,8 +86,6 @@ def migrate(src_engine, dst_engine):
             '-O',
             '-U',
             src_engine.url.username,
-            '-p',
-            str(src_engine.url.port),
             '-f',
             fp.name]
         for table in TABLES:
@@ -99,8 +97,6 @@ def migrate(src_engine, dst_engine):
             ['psql',
              '-U',
              dst_engine.url.username,
-             '-p',
-             str(src_engine.url.port),
              '-f',
              fp.name,
              dst_engine.url.database])
