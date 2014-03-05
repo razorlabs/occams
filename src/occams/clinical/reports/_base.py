@@ -5,6 +5,8 @@ class Report(object):
     has_private = False
     has_rand = False
 
+    publications = []
+
     def codebook(self):
         raise NotImplemented
 

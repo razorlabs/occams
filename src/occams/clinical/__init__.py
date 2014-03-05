@@ -41,12 +41,14 @@ def main(global_config, **settings):
     config.include('pyramid_rewrite')
     config.include('pyramid_tm')
     config.include('pyramid_webassets')
+
+    config.include('occams.form.widgets')
+
     config.include('.assets')
     config.include('.celery')
     config.include('.links')
     config.include('.models')
     config.include('.routes')
-    config.include('occams.form.widgets')
 
     config.scan()
     config.commit()

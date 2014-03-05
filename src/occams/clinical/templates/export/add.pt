@@ -55,7 +55,7 @@
               <td class="title">${schema.title}</td>
               <td class="name"><code>${schema.name}</code></td>
               <td class="version">
-                <p tal:repeat="version versions[schema.name]">${version.isoformat()}</p>
+                <p tal:repeat="version schema.publications">${version.isoformat()}</p>
               </td>
             </tr>
           </tbody>
