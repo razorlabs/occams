@@ -15,74 +15,93 @@ Secondary IDs are identication numbers assigned in external  systems.
 Formerly: avrcdataexport/sql/additional/OurEarlyTest.sql
 """
 
+from pyramid.decorator import reify
 from sqlalchemy import literal_column
 from sqlalchemy.orm import aliased
 
 from occams.clinical import models, Session
+from occams.clinical.reports._base import Report
 from occams.clinical.reports.codebook import row, types
 from occams.datastore.utils.sql import list_concat
 
 
-NAME = 'pid'
+class PidReport(Report):
 
+    name = 'pid'
 
-def codebook():
+    title = 'Patient Identifiers'
 
-    sites_query = Session.query(models.Site).order_by(models.Site.id)
-    sites = [(s.id, s.title) for s in sites_query]
+    @reify
+    def reftypes(self):
+        return list(
+            Session.query(models.RefType)
+            .order_by(models.RefType.name))
 
-    yield row('id', NAME, types.NUMERIC, is_required=True)
-    yield row('siteid', NAME, types.CHOICE, choices=sites, is_required=True)
-    yield row('pid', NAME, types.STRING, is_required=True)
-    yield row('our', NAME, types.STRING)
-    yield row('earlyid', NAME, types.STRING)
+    @reify
+    def sites(self):
+        sites_query = Session.query(models.Site).order_by(models.Site.id)
+        sites = [(s.id, s.title) for s in sites_query]
+        return sites
 
-    for reftype in Session.query(models.RefType).order_by(models.RefType.name):
-        yield row(reftype.name, NAME, types.STRING, is_collection=True)
+    def codebook(self):
+        name = self.name
+        knowns = [
+            row('id', name, types.NUMERIC, is_required=True),
+            row('siteid', name, types.CHOICE,
+                choices=self.sites, is_required=True),
+            row('pid', name, types.STRING, is_required=True),
+            row('our', name, types.STRING),
+            row('earlyid', name, types.STRING)]
 
+        for known in knowns:
+            yield known
 
-def query_report():
+        for reftype in self.reftypes:
+            yield row(reftype.name, name, types.STRING, is_collection=True)
 
-    query = (
-        Session.query(
-            models.Patient.id.label('id'),
-            models.Site.id.label('siteid'),
-            models.Patient.pid.label('pid'))
-        .join(models.Site))
+    def data(self):
 
-    # BBB 2014-02-20 (Marco): AEH needs OUR and aeh_num
-    # New organizations SHOULD NOT USE legacy number, use ref tables
-    query = query.add_columns(
-        models.Patient.our.label('our'),
-        models.Patient.legacy_number.label('aeh_num'))
+        query = (
+            Session.query(
+                models.Patient.id.label('id'),
+                models.Site.id.label('siteid'),
+                models.Patient.pid.label('pid'))
+            .join(models.Site))
 
-    # BBB 2014-02-20 (Marco): AEH needs Early Test
-    EarlyTest = aliased(models.Enrollment)
-    subquery = (
-        Session.query(EarlyTest.patient_id, EarlyTest.reference_number)
-        .filter(EarlyTest.study.has(
-            models.Study.code.in_([literal_column("'ET'"),
-                                   literal_column("'LTW'"),
-                                   literal_column("'CVCT'")])))
-        .subquery())
-    query = (
-        query
-        .outerjoin(subquery, subquery.c.patient_id == models.Patient.id)
-        .add_column(subquery.c.reference_number.label('early_id')))
+        # BBB 2014-02-20 (Marco): AEH needs OUR and aeh_num
+        # New organizations SHOULD NOT USE legacy number, use ref tables
+        query = query.add_columns(
+            models.Patient.our.label('our'),
+            models.Patient.legacy_number.label('aeh_num'))
 
-    # Add every known reference number
-    for reftype in Session.query(models.RefType).order_by(models.RefType.name):
-        query = query.add_column(
-            Session.query(list_concat(
-                Session.query(models.PatientReference.reference_number)
-                .filter(
-                    models.PatientReference.patient_id == models.Patient.id)
-                .filter(models.PatientReference.reftype_id == reftype.id)
-                .correlate(models.Patient)
-                .subquery()
-                .as_scalar(),
-                literal_column("';'"))).as_scalar().label(reftype.name))
+        # BBB 2014-02-20 (Marco): AEH needs Early Test
+        EarlyTest = aliased(models.Enrollment)
+        subquery = (
+            Session.query(EarlyTest.patient_id, EarlyTest.reference_number)
+            .filter(EarlyTest.study.has(
+                models.Study.code.in_([literal_column("'ET'"),
+                                       literal_column("'LTW'"),
+                                       literal_column("'CVCT'")])))
+            .subquery())
+        query = (
+            query
+            .outerjoin(subquery, subquery.c.patient_id == models.Patient.id)
+            .add_column(subquery.c.reference_number.label('early_id')))
 
-    query = query.order_by(models.Patient.pid)
+        # Add every known reference number
+        for reftype in self.reftypes:
+            query = query.add_column(
+                Session.query(list_concat(
+                    Session.query(models.PatientReference.reference_number)
+                    .filter(
+                        models.PatientReference.patient_id
+                        == models.Patient.id)
+                    .filter(models.PatientReference.reftype_id == reftype.id)
+                    .correlate(models.Patient)
+                    .subquery()
+                    .as_scalar(),
+                    literal_column("';'"))).as_scalar().label(reftype.name))
 
-    return query
+        query = query.order_by(models.Patient.pid)
+
+        return query

@@ -1,1 +1,3 @@
-# package
+"""
+Command-line scripts
+"""

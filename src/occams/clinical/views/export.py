@@ -1,4 +1,3 @@
-from collections import defaultdict
 from datetime import datetime, timedelta
 import os
 import uuid
@@ -14,7 +13,7 @@ from pyramid.view import view_config
 from sqlalchemy import orm, null
 import transaction
 
-from occams.clinical import _, models, Session
+from occams.clinical import _, models, Session, reports
 from occams.clinical.celery import app
 from occams.clinical.celery.export import make_export
 from occams.clinical.widgets.pager import Pager
@@ -171,16 +170,12 @@ def add(request):
                     mapping={'limit': limit}),
                 'warning')
 
-    schemata_query = query_schemata()
-    versions = get_versions()
-
     return {
         'exceeded': exceeded,
         'errors': errors,
         'cstruct': cstruct,
-        'schemata': schemata_query,
-        'versions': versions,
-        'schemata_count': schemata_query.count()}
+        'schemata': reports.list_all(),
+        'schemata_count': 0}
 
 
 @view_config(
@@ -211,7 +206,6 @@ def status_json(request):
 
     exports_query = query_exports(request)
     exports_count = exports_query.count()
-    versions = get_versions()
     export_dir = request.registry.settings['app.export.dir']
 
     pager = Pager(request.GET.get('page', 1), 5, exports_count)
@@ -260,12 +254,12 @@ def status_json(request):
             'expire_date': expire_date(export),
             'items': []
             }
-        for schema in query_schemata([s.id for s in export.schemata]):
+        for schema in export.items:
             serialized['items'].append({
                 'name': schema.name,
                 'title': schema.title,
                 'has_private': schema.has_private,
-                'versions': list(map(str, versions[schema.name])),
+                #'versions': list(map(str, versions[schema.name])),
                 })
         result['exports'].append(serialized)
     return result
@@ -343,78 +337,3 @@ def query_exports(request):
         exports_query.order_by(models.Export.create_date.desc()))
 
     return exports_query
-
-
-def query_schemata(ids=None):
-    """
-    Helper function to fetch schemata summary
-    """
-
-    InnerSchema = orm.aliased(models.Schema)
-    OuterSchema = orm.aliased(models.Schema)
-    schemata_query = (
-        Session.query(OuterSchema.name)
-        .add_column(
-            Session.query(
-                Session.query(models.Attribute)
-                .filter(models.Attribute.is_private)
-                .join(InnerSchema)
-                .filter(InnerSchema.name == OuterSchema.name)
-                .correlate(OuterSchema)
-                .exists())
-            .as_scalar()
-            .label('has_private'))
-        .add_column(
-            Session.query(InnerSchema.title)
-            .select_from(InnerSchema)
-            .filter(InnerSchema.name == OuterSchema.name)
-            .filter(InnerSchema.publish_date != null())
-            .filter(InnerSchema.retract_date == null())
-            .order_by(InnerSchema.publish_date.desc())
-            .limit(1)
-            .correlate(OuterSchema)
-            .as_scalar()
-            .label('title'))
-        .filter(OuterSchema.publish_date != null())
-        .filter(OuterSchema.retract_date == null())
-        .filter(
-            # Do not include forms that are used for randomization
-            ~Session.query(models.Entity.schema_id)
-            .join(models.Entity.contexts)
-            .filter(models.Context.external == 'stratum')
-            .join(models.Stratum, models.Context.key == models.Stratum.id)
-            .filter(models.Entity.schema_id == OuterSchema.id)
-            .correlate(OuterSchema)
-            .exists()))
-
-    if ids:
-        schemata_query = (
-            schemata_query
-            .filter(OuterSchema.id.in_(ids)))
-
-    schemata_query = (
-        schemata_query
-        .group_by(OuterSchema.name)
-        .order_by('title'))
-
-    return schemata_query
-
-
-def get_versions():
-    """
-    Helper function to build a dictionary of all schemata's versions
-    """
-    version_query = (
-        Session.query(models.Schema.name, models.Schema.publish_date)
-        .filter(models.Schema.publish_date != null())
-        .filter(models.Schema.retract_date == null())
-        .order_by(
-            models.Schema.name.asc(),
-            models.Schema.publish_date.desc()))
-
-    versions = defaultdict(list)
-
-    for name, publish_date in version_query:
-        versions[name].append(publish_date)
-
-    return versions

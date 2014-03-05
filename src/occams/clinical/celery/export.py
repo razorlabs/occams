@@ -7,10 +7,6 @@ later time.
 """
 
 try:
-    import unicodecsv as csv
-except ImportError:  # pragma: nocover
-    import csv  # NOQA (py3, hopefully)
-try:
     from collections import OrderedDict
 except ImportError:
     from ordereddict import OrderedDict  # NOQA
@@ -24,7 +20,7 @@ from celery import Task
 import humanize
 from webob.multidict import MultiDict
 
-from occams.clinical import _, models, Session
+from occams.clinical import models, Session
 from occams.clinical.celery import app, log, in_transaction
 from occams.clinical import reports
 
@@ -70,15 +66,6 @@ def make_export(export_id):
 
     """
     export = Session.query(models.Export).filter_by(id=export_id).one()
-    export_dir = app.settings['app.export.dir']
-
-    expand_collections = export.expand_collections
-    use_choice_labels = export.use_choice_labels
-
-    assert export.schemata, \
-        _(u'The specified export job has no schemata: %s' % export)
-    assert export.status not in ('complete', 'failed'), \
-        _(u'The specified export is not pending: %s' % export)
 
     # Organize the forms so we know which schemata go where
     files = MultiDict([(s.name, s.id) for s in export.schemata])
@@ -92,30 +79,23 @@ def make_export(export_id):
         'count': 0,
         'total': len(set(files.keys()))})
 
-    path = os.path.join(export_dir, export.name)
+    path = os.path.join(app.settings['app.export.dir'], export.name)
 
     with closing(zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED)) as zfp:
         for schema_name, ids in files.dict_of_lists().items():
 
             with tempfile.NamedTemporaryFile() as tfp:
                 query = reports.form.query_report(
-                    schema_name, ids,
-                    expand_collections=expand_collections,
-                    use_choice_labels=use_choice_labels)
-                fieldnames = [d['name'] for d in query.column_descriptions]
-                writer = csv.DictWriter(tfp, fieldnames=fieldnames)
-                writer.writeheader()
-                # namedtuple uses leading "_" to prevent name collisions
-                writer.writerows([r._asdict() for r in query])
-                tfp.flush()
+                    schema_name,
+                    ids,
+                    expand_collections=export.expand_collections,
+                    use_choice_labels=export.use_choice_labels)
+                reports.io.query2csv(query, tfp)
                 zfp.write(tfp.name, '{0}.csv'.format(schema_name))
 
             with tempfile.NamedTemporaryFile() as tfp:
-                writer = csv.DictWriter(
-                    tfp, fieldnames=reports.codebook.HEADER)
-                writer.writeheader()
-                writer.writerows(reports.form.codebook(schema_name, ids))
-                tfp.flush()
+                rows = reports.form.codebook(schema_name, ids)
+                reports.io.codebook2csv(rows)
                 zfp.write(tfp.name, '{0}-codebook.csv'.format(schema_name))
 
             redis.hincrby(export.id, 'count')

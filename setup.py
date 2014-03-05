@@ -31,8 +31,10 @@ REQUIRES = [
     'pyramid_webassets',
     'pyramid_who',
     'redis',
+    'streamio',
     'SQLAlchemy',
     'six',
+    'tabulate',
     'transaction',
     'webassets',
     'zope.sqlalchemy',
@@ -122,6 +124,8 @@ setup(
     [paste.app_factory]
     main = occams.clinical:main
     [console_scripts]
-    cl_init = occams.clinical.scripts.initializedb:main
+    oc_initdb = occams.clinical.scripts.initdb:main
+    oc_mergedb = occams.clinical.scripts.mergedb:main
+    oc_export = occams.clinical.scripts.export:main
     """,
 )

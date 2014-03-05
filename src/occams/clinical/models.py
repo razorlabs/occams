@@ -11,7 +11,8 @@ import uuid
 from six import u
 from sqlalchemy import (
     engine_from_config,
-    Table, Column, ForeignKey, ForeignKeyConstraint, UniqueConstraint, Index,
+    Table, Column,
+    ForeignKey, ForeignKeyConstraint, UniqueConstraint, Index, CheckConstraint,
     Boolean, Date, Enum, Integer, Unicode)
 from sqlalchemy.orm import (
     sessionmaker, scoped_session, object_session,
@@ -600,23 +601,6 @@ class Stratum(Base, Referenceable, Modifiable, HasEntities, Auditable):
             Index('ix_%s_arm_id' % cls.__tablename__, cls.arm_id))
 
 
-export_schema_table = Table(
-    'export_schema',
-    Base.metadata,
-    Column('export_id',
-           Integer,
-           ForeignKey('export.id',
-                      name='fk_export_schema_export_id',
-                      ondelete='CASCADE'),
-           primary_key=True),
-    Column('schema_id',
-           Integer,
-           ForeignKey(Schema.id,
-                      name='fk_export_schema_schema_id',
-                      ondelete='CASCADE'),
-           primary_key=True))
-
-
 class Export(Base, Referenceable, Modifiable, Auditable):
     """
     Metadata about an export, such as file contents and experation date.
@@ -642,7 +626,7 @@ class Export(Base, Referenceable, Modifiable, Auditable):
         nullable=False,
         default='pending')
 
-    schemata = relationship(Schema, secondary=export_schema_table)
+    # items backref'ed in ExportItem
 
     def __repr__(self):
         return '<{0}(id={o.id}, owner_user={o.owner_user.key})>'.format(
@@ -662,3 +646,54 @@ class Export(Base, Referenceable, Modifiable, Auditable):
                 name=u'uq_%s_name' % cls.__tablename__),
             Index('ix_%s_owner_user_id' % cls.__tablename__,
                   cls.owner_user_id))
+
+
+class ExportItem(Base, Referenceable):
+
+    __tablename__ = 'export_item'
+
+    export_id = Column(Integer, nullable=False)
+
+    export = relationship(
+        Export,
+        backref=backref(name='items'))
+
+    type = Column(
+        Enum('schema', 'system', name='export_item_type'),
+        nullable=False)
+
+    schema_id = Column(Integer)
+
+    schema = relationship(Schema)
+
+    system = Column(
+        Enum('pid', 'visit', 'enrollment', 'lab',
+             name='export_item_system_type'))
+
+    @declared_attr
+    def __table_args__(cls):
+        return (
+            ForeignKeyConstraint(
+                columns=[cls.export_id],
+                refcolumns=[Export.id],
+                name=u'fk_%s_export_id' % cls.__tablename__,
+                ondelete='CASCADE'),
+            ForeignKeyConstraint(
+                columns=[cls.schema_id],
+                refcolumns=[Schema.id],
+                name=u'fk_%s_schema_id' % cls.__tablename__,
+                ondelete='CASCADE'),
+            UniqueConstraint(
+                cls.export_id, cls.schema_id,
+                name=u'uq_%s_schema_id' % cls.__tablename__),
+            UniqueConstraint(
+                cls.export_id, cls.system,
+                name=u'uq_%s_system' % cls.__tablename__),
+            Index('ix_%s_schema_id' % cls.__tablename__, cls.schema_id),
+            CheckConstraint(
+                """
+                CASE type
+                WHEN 'schema' THEN schema_id IS NOT NULL AND system IS NULL
+                WHEN 'system' THEN schema IS NULL AND system IS NOT NULL
+                END""",
+                name='ck_valid_item'))

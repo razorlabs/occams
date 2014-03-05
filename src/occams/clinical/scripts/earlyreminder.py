@@ -1,10 +1,16 @@
 """
 Generate a patient's test results with their contact information.
+Incredibly-one-off-script-that-we-must-support
+
+Not included as part of the standard export system so
+as not to confuse users.
 
 Formerly:
     avrcdataexport/sql/extractContactInfo.sql
     avrcdataexport/sql/extracttHivTestResults.sql
+
 """
+
 import re
 
 from sqlalchemy import cast, func, null, or_, Unicode
@@ -15,6 +21,8 @@ from occams.datastore.reporting import build_report
 
 
 NAME = 'EarlyReminder'
+
+TITLE = 'Early Test Reminder'
 
 
 RE_NONASCII = re.compile(r'[^a-z]+', re.I)
