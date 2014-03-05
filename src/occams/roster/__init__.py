@@ -22,6 +22,6 @@ def includeme(config):
     Include as a pyramid application add-on
     """
     settings = config.registry.settings
-    Session.configure(bind=engine_from_config(settings, 'sa.rosterdb.'))
+    Session.configure(bind=engine_from_config(settings, 'pid.db.'))
     log.debug('Roster connected to: "%s"'
               % obfuscate_url_pw(Session.bind.url))

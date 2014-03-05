@@ -35,6 +35,6 @@ class PyramidIntegrationTestCase(unittest.TestCase):
         from occams.roster import Session
         with NamedTemporaryFile() as fp:
             url = 'sqlite:///' + fp.name
-            self.config.registry.settings['sa.rosterdb.url'] = url
+            self.config.registry.settings['pid.db.url'] = url
             self.config.include('occams.roster')
             self.assertEqual(url, str(Session.bind.url))
