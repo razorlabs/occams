@@ -32,12 +32,22 @@ def main(global_config, **settings):
                                  'occams.clinical.security.groupfinder'))),
         authorization_policy=ACLAuthorizationPolicy())
 
+    config.include('pyramid_chameleon')
+    config.include('pyramid_deform')
+    config.include('pyramid_layout')
+    config.include('pyramid_mailer')
+    config.include('pyramid_redis')
+    config.include('pyramid_redis_sessions')
+    config.include('pyramid_rewrite')
+    config.include('pyramid_tm')
+    config.include('pyramid_webassets')
     config.include('.assets')
     config.include('.celery')
     config.include('.links')
     config.include('.models')
     config.include('.routes')
     config.include('occams.form.widgets')
+
     config.scan()
     config.commit()
 
