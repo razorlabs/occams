@@ -26,6 +26,7 @@
 
   <!--! socket.io HATES leading-following slashes in resource paths... -->
   <body
+      id="body"
       data-view-name="${request.matched_route.name}"
       data-view-path="${request.current_route_path()}"
       data-socket-io-resource="${request.route_path('socket.io', remaining='').strip('/')}">

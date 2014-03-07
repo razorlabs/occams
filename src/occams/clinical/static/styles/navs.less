@@ -29,4 +29,24 @@
   }
 }
 
+.sidebar {
 
+  .nav {
+    > li > a {
+      padding: 4px 10px;
+    }
+
+    .active {
+      font-weight: bold;
+      border-right: 4px @component-active-bg solid;
+    }
+  }
+
+  a.back-to-top {
+    border-top: 1px solid @gray-lighter;
+    font-weight: bold;
+    display: block;
+    padding: 4px 10px;
+  }
+
+}

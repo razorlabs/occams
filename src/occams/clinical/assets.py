@@ -21,6 +21,8 @@ def includeme(config):
             'libs/bootstrap/js/modal.js',
             'libs/bootstrap/js/tooltip.js',
             'libs/bootstrap/js/alert.js',
+            'libs/bootstrap/js/affix.js',
+            'libs/bootstrap/js/scrollspy.js',
             filters='jsmin',
             output='bootstrap.%(version)s.min.js'),
         Bundle('libs/socket.io.min.js'),
@@ -29,7 +31,8 @@ def includeme(config):
             'scripts/tooltip.js',
             'scripts/modal.js',
             'scripts/button.js',
-            'scripts/export.js',
+            'scripts/export-status.js',
+            'scripts/export-faq.js',
             filters='jsmin'),
         output='gen/default.%(version)s.min.js'))
 

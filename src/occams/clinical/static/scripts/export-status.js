@@ -125,9 +125,10 @@
    */
   $(document).ready(function(){
     var $view = $('#export_status');
-    if ( $view.length > 0) {
+    if ( $view.length > 0 ) {
       ko.applyBindings(new StatusViewModel(), $view[0]);
     }
+
   });
 
 }(jQuery);

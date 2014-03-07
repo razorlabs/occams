@@ -12,7 +12,7 @@
       <strong i18n:translate="">
         All private data will be de-identified.
       </strong>
-      <a href="${request.route_path('export_faq', _anchor='private-data')}"
+      <a href="${request.route_path('export_faq', _anchor='private')}"
         ><span class="glyphicon glyphicon-info-sign"></span></a>
 
     </p>
@@ -21,7 +21,7 @@
       <span tal:omit-tag="" i18n:translate="">
         The most up-to-date records will be used.
       </span>
-      <a href="${request.route_path('export_faq', _anchor='record-version')}"
+      <a href="${request.route_path('export_faq', _anchor='version')}"
         ><span class="glyphicon glyphicon-info-sign"></span></a>
 
     </p>
@@ -30,7 +30,7 @@
       <span tal:omit-tag="" i18n:translate="">
         Select export-styles that suit your needs.
       </span>
-      <a href="${request.route_path('export_faq', _anchor='export-style')}"
+      <a href="${request.route_path('export_faq', _anchor='process')}"
         ><span class="glyphicon glyphicon-info-sign"></span></a>
     </p>
     <p>
