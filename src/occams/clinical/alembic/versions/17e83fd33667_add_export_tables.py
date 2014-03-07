@@ -26,12 +26,10 @@ def upgrade():
             name,
             sa.Column('id', sa.Integer,
                       primary_key=True, autoincrement=True, nullable=False),
-            sa.Column('task_id', sa.Unicode, nullable=False),
-            sa.Column('dir', sa.Unicode, nullable=False),
+            sa.Column('name', sa.Unicode, nullable=False),
             sa.Column('owner_user_id', sa.Integer, nullable=False),
             sa.Column('expand_collections', sa.Boolean, nullable=False),
             sa.Column('use_choice_labels', sa.Boolean, nullable=False),
-            sa.Column('expire_date', sa.DateTime),
             sa.Column('notify', sa.Boolean, nullable=False),
             sa.Column('status',
                       sa.Enum('failed', 'pending', 'complete',
@@ -61,7 +59,7 @@ def upgrade():
 
     # The live table will have some extra data integrity constraints
     op.create_unique_constraint(
-        'uq_%s_task_id' % table_name, 'export', ['task_id'])
+        'uq_%s_name' % table_name, 'export', ['name'])
     op.create_index('ix_%s_owner_user_id' % table_name,
                     table_name, ['owner_user_id'])
     op.create_foreign_key(

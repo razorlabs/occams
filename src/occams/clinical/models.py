@@ -15,7 +15,7 @@ from sqlalchemy import (
     engine_from_config,
     Table, Column,
     ForeignKey, ForeignKeyConstraint, UniqueConstraint, Index,
-    Boolean, Date, DateTime, Enum, Integer, Unicode)
+    Boolean, Date, Enum, Integer, Unicode)
 from sqlalchemy.dialects.postgres import JSON
 from sqlalchemy.orm import object_session, backref, relationship
 from sqlalchemy.orm.exc import NoResultFound
@@ -599,20 +599,11 @@ class Export(Base, Referenceable, Modifiable, Auditable):
 
     __tablename__ = 'export'
 
-    task_id = Column(
+    name = Column(
         Unicode,
         nullable=False,
         default=lambda: u(uuid.uuid4()),
         doc='System name, useful for keep track of asynchronous progress')
-
-    path = Column(
-        Unicode,
-        nullable=False,
-        doc="""
-            Location in the filesytem of the export data files.
-            This path is relative to the starting point specified
-            in the configuration.
-            """)
 
     owner_user_id = Column(Integer, nullable=False)
 
@@ -621,8 +612,6 @@ class Export(Base, Referenceable, Modifiable, Auditable):
     expand_collections = Column(Boolean, nullable=False, default=False)
 
     use_choice_labels = Column(Boolean, nullable=False, default=False)
-
-    expire_date = Column(DateTime)
 
     notify = Column(
         Boolean,
@@ -648,7 +637,7 @@ class Export(Base, Referenceable, Modifiable, Auditable):
 
     @property
     def redis_key(self):
-        return self.__tablename__ + ':' + self.task_id
+        return self.__tablename__ + ':' + self.name
 
     def __repr__(self):
         return '<{0}(id={o.id}, owner_user={o.owner_user.key})>'.format(
@@ -663,8 +652,6 @@ class Export(Base, Referenceable, Modifiable, Auditable):
                 refcolumns=[User.id],
                 name=u'fk_%s_owner_user_id' % cls.__tablename__,
                 ondelete='CASCADE'),
-            UniqueConstraint(cls.task_id,
-                             name=u'uq_%s_task_id' % cls.__tablename__),
+            UniqueConstraint(cls.name, name=u'uq_%s_name' % cls.__tablename__),
             Index('ix_%s_owner_user_id' % cls.__tablename__,
-                  cls.owner_user_id),
-            Index('ix_%s_expire_date' % cls.__tablename__, cls.expire_date))
+                  cls.owner_user_id))

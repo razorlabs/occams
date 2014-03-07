@@ -10,16 +10,18 @@ try:
     from collections import OrderedDict
 except ImportError:
     from ordereddict import OrderedDict  # NOQA
+from contextlib import closing
 from itertools import chain
 import json
 import os
+import tempfile
+import zipfile
 
 from celery import Task
 import humanize
 
-from occams.clinical import models, Session
+from occams.clinical import models, Session, reports
 from occams.clinical.celery import app, log, in_transaction
-from occams.clinical import reports
 
 
 class ExportTask(Task):
@@ -31,7 +33,7 @@ class ExportTask(Task):
         log.error('Task {0} raised exception: {1!r}\n{2!r}'.format(
                   task_id, exc, einfo))
         redis = app.redis
-        export = Session.query(models.Export).filter_by(task_id=task_id).one()
+        export = Session.query(models.Export).filter_by(name=task_id).one()
         export.status = 'failed'
         Session.flush()
         redis.hset(export.redis_key, 'status', export.status)
@@ -40,7 +42,7 @@ class ExportTask(Task):
 
 @app.task(name='make_export', base=ExportTask, ignore_result=True)
 @in_transaction
-def make_export(task_id):
+def make_export(name):
     """
     Handles generating exports in a separate process.
 
@@ -61,11 +63,12 @@ def make_export(task_id):
     export_id -- export to process
 
     """
-    export = Session.query(models.Export).filter_by(task_id=task_id).one()
+    export = Session.query(models.Export).filter_by(name=name).one()
 
     redis = app.redis
+    redis_key = export.redis_key
 
-    redis.hmset(export.redis_key, {
+    redis.hmset(redis_key, {
         'export_id': export.id,
         'owner_user': export.owner_user.key,
         'status': export.status,
@@ -74,33 +77,30 @@ def make_export(task_id):
 
     exportables = reports.list_all()
 
-    path = os.path.join(app.settings['app.export.dir'], export.path)
-    os.makedirs(path)
+    path = os.path.join(app.settings['app.export.dir'], export.name)
 
-    codebook_chain = []
-
-    for item in export.contents:
-
-        with open(os.path.join(path, item['name'] + '.csv'), 'w+b') as fp:
+    with closing(zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED)) as zfp:
+        codebook_chain = []
+        for item in export.contents:
             report = exportables[item['name']]
-            data = report.data()
-            codebook = report.codebook()
-            codebook_chain.append(codebook)
-            reports.write_data(fp, data)
+            codebook_chain.append(report.codebook())
+            with tempfile.NamedTemporaryFile() as tfp:
+                reports.write_data(tfp, report.data())
+                zfp.write(tfp.name, '{0}.csv'.format(item['name']))
 
-        redis.hincrby(export.redis_key, 'count')
-        redis.publish('export', json.dumps(redis.hgetall(export.redis_key)))
-        count, total = redis.hmget(export.redis_key, 'count', 'total')
-        log.info(', '.join([count, total, item['name']]))
+            redis.hincrby(redis_key, 'count')
+            redis.publish('export', json.dumps(redis.hgetall(redis_key)))
+            count, total = redis.hmget(redis_key, 'count', 'total')
+            log.info(', '.join([count, total, item['name']]))
 
-    with open(os.path.join(path, 'codebook.csv'), 'w+b') as fp:
-        reports.write_codebook(fp, chain.from_iterable(codebook_chain))
-        log.info('codebook')
+        with tempfile.NamedTemporaryFile() as tfp:
+            reports.write_codebook(tfp, chain.from_iterable(codebook_chain))
+            zfp.write(tfp.name, 'codebook.csv')
 
     export.status = 'complete'
-    redis.hset(export.redis_key, 'status', export.status)
-    redis.hset(export.redis_key, 'file_size',
-               humanize.naturalsize(os.path.getsize(path)))
+    redis.hmset(redis_key, {
+        'status': export.status,
+        'file_size': humanize.naturalsize(os.path.getsize(path))})
 
     Session.flush()  # flush so we know everything went smoothly
-    redis.publish('export', json.dumps(redis.hgetall(export.redis_key)))
+    redis.publish('export', json.dumps(redis.hgetall(redis_key)))

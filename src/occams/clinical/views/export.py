@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import uuid
 
@@ -11,7 +11,7 @@ from pyramid.httpexceptions import HTTPFound, HTTPNotFound, HTTPOk
 from pyramid.response import FileResponse
 from pyramid.view import view_config
 import six
-from sqlalchemy import orm, or_, null
+from sqlalchemy import orm
 import transaction
 
 from occams.clinical import _, models, Session, reports
@@ -124,10 +124,9 @@ def add(request):
         except colander.Invalid as e:
             errors = e.asdict()
         else:
-            task_id = str(uuid.uuid4())
+            task_id = six.u(uuid.uuid4())
             Session.add(models.Export(
-                task_id=task_id,
-                path=task_id.replace('-', '/'),
+                name=task_id,
                 expand_collections=appstruct['expand_collections'],
                 use_choice_labels=appstruct['use_choice_labels'],
                 owner_user=(Session.query(models.User)
@@ -199,10 +198,19 @@ def status_json(request):
     locale = negotiate_locale_name(request)
     localizer = get_localizer(request)
 
+    try:
+        delta = timedelta(request.registry.settings.get('app.export.expire'))
+    except ValueError:
+        delta = None
+
     def file_size(export):
         if export.status == 'complete':
-            path = os.path.join(export_dir, export.path)
+            path = os.path.join(export_dir, export.name)
             return humanize.naturalsize(os.path.getsize(path))
+
+    def expire_date(export):
+        if delta:
+            return format_datetime(export.modify_date + delta, locale=locale)
 
     def export2json(export):
         count = len(export.contents)
@@ -212,7 +220,7 @@ def status_json(request):
                 _(u'Export containing ${count} item'),
                 _(u'Export containing ${count} items'),
                 count, 'occams.clinical', mapping={'count': count}),
-            'task_id': export.task_id,
+            'name': export.name,
             'status': export.status,
             'use_choice_labels': export.use_choice_labels,
             'expand_collections': export.expand_collections,
@@ -224,7 +232,7 @@ def status_json(request):
                                                id=export.id),
             'delete_url': request.route_path('export_delete', id=export.id),
             'create_date': format_datetime(export.create_date, locale=locale),
-            'expire_date': format_datetime(export.expire_date)}
+            'expire_date': expire_date(export)}
 
     return {
         'csrf_token': request.session.get_csrf_token(),
@@ -288,11 +296,17 @@ def query_exports(request):
     """
     Helper method to query current exports for the authenticated user
     """
+    userid = request.authenticated_userid
+    export_expire = request.registry.settings.get('app.export.expire')
+
     query = (
         Session.query(models.Export)
-        .filter(or_(models.Export.expire_date == null(),
-                    models.Export.expire_date > datetime.now()))
-        .filter(models.Export.owner_user.has(
-            key=request.authenticated_userid))
-        .order_by(models.Export.create_date.desc()))
+        .filter(models.Export.owner_user.has(key=userid)))
+
+    if export_expire:
+        cutoff = datetime.now() - timedelta(int(export_expire))
+        query = query.filter(models.Export.modify_date >= cutoff)
+
+    query = query.order_by(models.Export.create_date.desc())
+
     return query
