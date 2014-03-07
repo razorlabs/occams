@@ -5,25 +5,24 @@ SQL Database persisted clinical data that will become the heart of this module
 as we transition towards a SQL-driven application.
 """
 
+from __future__ import absolute_import
 from datetime import date, timedelta
 import uuid
 
+from alembic.util import obfuscate_url_pw
 from six import u
 from sqlalchemy import (
     engine_from_config,
     Table, Column,
-    ForeignKey, ForeignKeyConstraint, UniqueConstraint, Index, CheckConstraint,
-    Boolean, Date, Enum, Integer, Unicode)
-from sqlalchemy.orm import (
-    sessionmaker, scoped_session, object_session,
-    backref, relationship)
+    ForeignKey, ForeignKeyConstraint, UniqueConstraint, Index,
+    Boolean, Date, DateTime, Enum, Integer, Unicode)
+from sqlalchemy.dialects.postgres import JSON
+from sqlalchemy.orm import object_session, backref, relationship
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import hybrid_property
-import zope.sqlalchemy
 
-from occams import roster
-import occams.datastore.models.events
+from occams.clinical import log, Session
 # import everything so we can also use DS models from this module
 from occams.datastore.models import (  # NOQA
     Auditable,
@@ -35,22 +34,14 @@ from occams.datastore.models import (  # NOQA
     Schema, Section, Attribute, Choice, State, Entity, Context)
 
 
-Session = scoped_session(sessionmaker(
-    extension=zope.sqlalchemy.ZopeTransactionExtension()))
-
-occams.datastore.models.events.register(Session)
-
-# roster depends on ZCA, so we have to kindof monkeypatch it...
-RosterSession = scoped_session(sessionmaker())
-roster.Session = RosterSession
-
 Base = ModelClass(u'Base')
 
 
 def includeme(config):
     settings = config.registry.settings
     Session.configure(bind=engine_from_config(settings, 'sa.clinicaldb.'))
-    RosterSession.configure(bind=engine_from_config(settings, 'sa.rosterdb.'))
+    log.debug('Clinical connected to: "%s"'
+              % obfuscate_url_pw(Session.bind.url))
 
 
 visit_cycle_table = Table(
@@ -608,25 +599,56 @@ class Export(Base, Referenceable, Modifiable, Auditable):
 
     __tablename__ = 'export'
 
+    task_id = Column(
+        Unicode,
+        nullable=False,
+        default=lambda: u(uuid.uuid4()),
+        doc='System name, useful for keep track of asynchronous progress')
+
+    path = Column(
+        Unicode,
+        nullable=False,
+        doc="""
+            Location in the filesytem of the export data files.
+            This path is relative to the starting point specified
+            in the configuration.
+            """)
+
     owner_user_id = Column(Integer, nullable=False)
 
     owner_user = relationship(User, foreign_keys=[owner_user_id])
 
-    name = Column(
-        Unicode,
-        nullable=False,
-        default=lambda: u(uuid.uuid4()))
-
     expand_collections = Column(Boolean, nullable=False, default=False)
 
     use_choice_labels = Column(Boolean, nullable=False, default=False)
+
+    expire_date = Column(DateTime)
+
+    notify = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        doc='If set, notify the user that the export has completed')
 
     status = Column(
         Enum('failed', 'pending', 'complete', name='export_status'),
         nullable=False,
         default='pending')
 
-    # items backref'ed in ExportItem
+    contents = Column(
+        JSON,
+        nullable=False,
+        doc="""
+            A snapshot of the contents of this export with some metadata.
+            Since we do not want to pollute a whole other table with
+            meaninless names. This also helps preserve file names
+            if tables/schemata change names, and keeps names preserved
+            AT THE TIME this export was generated.
+            """)
+
+    @property
+    def redis_key(self):
+        return self.__tablename__ + ':' + self.task_id
 
     def __repr__(self):
         return '<{0}(id={o.id}, owner_user={o.owner_user.key})>'.format(
@@ -641,59 +663,8 @@ class Export(Base, Referenceable, Modifiable, Auditable):
                 refcolumns=[User.id],
                 name=u'fk_%s_owner_user_id' % cls.__tablename__,
                 ondelete='CASCADE'),
-            UniqueConstraint(
-                cls.name,
-                name=u'uq_%s_name' % cls.__tablename__),
+            UniqueConstraint(cls.task_id,
+                             name=u'uq_%s_task_id' % cls.__tablename__),
             Index('ix_%s_owner_user_id' % cls.__tablename__,
-                  cls.owner_user_id))
-
-
-class ExportItem(Base, Referenceable):
-
-    __tablename__ = 'export_item'
-
-    export_id = Column(Integer, nullable=False)
-
-    export = relationship(
-        Export,
-        backref=backref(name='items'))
-
-    type = Column(
-        Enum('schema', 'system', name='export_item_type'),
-        nullable=False)
-
-    schema_id = Column(Integer)
-
-    schema = relationship(Schema)
-
-    system = Column(
-        Enum('pid', 'visit', 'enrollment', 'lab',
-             name='export_item_system_type'))
-
-    @declared_attr
-    def __table_args__(cls):
-        return (
-            ForeignKeyConstraint(
-                columns=[cls.export_id],
-                refcolumns=[Export.id],
-                name=u'fk_%s_export_id' % cls.__tablename__,
-                ondelete='CASCADE'),
-            ForeignKeyConstraint(
-                columns=[cls.schema_id],
-                refcolumns=[Schema.id],
-                name=u'fk_%s_schema_id' % cls.__tablename__,
-                ondelete='CASCADE'),
-            UniqueConstraint(
-                cls.export_id, cls.schema_id,
-                name=u'uq_%s_schema_id' % cls.__tablename__),
-            UniqueConstraint(
-                cls.export_id, cls.system,
-                name=u'uq_%s_system' % cls.__tablename__),
-            Index('ix_%s_schema_id' % cls.__tablename__, cls.schema_id),
-            CheckConstraint(
-                """
-                CASE type
-                WHEN 'schema' THEN schema_id IS NOT NULL AND system IS NULL
-                WHEN 'system' THEN schema IS NULL AND system IS NOT NULL
-                END""",
-                name='ck_valid_item'))
+                  cls.owner_user_id),
+            Index('ix_%s_expire_date' % cls.__tablename__, cls.expire_date))

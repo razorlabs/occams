@@ -62,15 +62,15 @@ class ExportNamespace(BaseNamespace):
         redis = self.session['redis']
 
         pending_query = (
-            Session.query(models.Export.id)
+            Session.query(models.Export)
             .filter(models.Export.owner_user.has(key=userid))
             .filter_by(status='pending'))
 
         # emit current progress
-        for export_id, in pending_query:
-            data = redis.hgetall(export_id)
+        for export in pending_query:
+            data = redis.hgetall(export.redis_key)
             log.debug(data)
-            self.emit('progress', data)
+            self.emit('export', data)
 
         pubsub = redis.pubsub()
         pubsub.subscribe('export')
@@ -81,4 +81,4 @@ class ExportNamespace(BaseNamespace):
                 data = json.loads(message['data'])
                 if data['owner_user'] == userid:
                     log.debug(data)
-                    self.emit('progress', data)
+                    self.emit('export', data)

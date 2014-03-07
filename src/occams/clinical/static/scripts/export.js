@@ -86,10 +86,9 @@
     // Use the template-embedded socket.io URL
     var socket = io.connect('/export', {
       resource: $('body').data('socket-io-resource')});
-    //$('body').data('socket-io-path')})
     socket.on('connect', function(){
       console.log('connected!');
-      socket.on('progress', function(data){
+      socket.on('export', function(data){
         $.each(self.exports(), function(i, export_) {
           // find the appropriate export and update it's data
           if (export_.id == data['export_id']) {

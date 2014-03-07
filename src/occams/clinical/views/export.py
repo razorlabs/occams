@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 import os
 import uuid
 
@@ -10,7 +10,8 @@ from pyramid.i18n import get_localizer, negotiate_locale_name
 from pyramid.httpexceptions import HTTPFound, HTTPNotFound, HTTPOk
 from pyramid.response import FileResponse
 from pyramid.view import view_config
-from sqlalchemy import orm, null
+import six
+from sqlalchemy import orm, or_, null
 import transaction
 
 from occams.clinical import _, models, Session, reports
@@ -47,35 +48,20 @@ def faq(request):
     return {}
 
 
-def existent_schema_validator(value):
+@colander.deferred
+def contents_validator(node, kw):
     """
     Deferred validator to determine the schema choices at request-time.
     """
-    if not value:
-        return _(u'No schemata specified')
-    names_query = (
-        Session.query(models.Schema.name)
-        .filter(models.Schema.publish_date != null())
-        .filter(models.Schema.retract_date == null())
-        .filter(models.Schema.name.in_(value)))
-    names = set([name for name, in names_query])
-    value = set(value)
-    if names != value:
-        return _(u'Invalid schemata chosen')
-    return True
+    return colander.All(
+        colander.Length(min=1),
+        colander.ContainsOnly(kw['allowed_names']), )
 
 
 @colander.deferred
-def limit_validator(node, kw):
-    request = kw['request']
-
+def schema_validator(node, kw):
     def validator(schema, value):
-        limit = request.registry.settings.get('app.export.limit')
-        if not limit:
-            return
-        exports_query = query_exports(request)
-        exports_count = exports_query.count()
-        if exports_count >= int(limit):
+        if kw['limit_exceeded']:
             raise colander.Invalid(schema, _(u'Export limit exceeded'))
     return validator
 
@@ -85,17 +71,19 @@ class ExportCheckoutSchema(CSRFSchema):
     Export checkout serialization schema
     """
 
-    @colander.instantiate(
-        validator=colander.Function(existent_schema_validator))
-    class schemata(colander.SequenceSchema):
-
-        name = colander.SchemaNode(colander.String())
+    contents = colander.SchemaNode(
+        colander.Set(),
+        # Currently does nothing as colander 1.0b1 is hard-coded to "Required"
+        missing_msg=_(u'Please select an item'),
+        validator=contents_validator)
 
     expand_collections = colander.SchemaNode(
-        colander.Boolean())
+        colander.Boolean(),
+        default=False)
 
     use_choice_labels = colander.SchemaNode(
-        colander.Boolean())
+        colander.Boolean(),
+        default=False)
 
 
 @view_config(
@@ -111,71 +99,62 @@ def add(request):
     The actual exporting process is then queued in a another thread so the user
     isn't left with an unresponsive page.
     """
-    errors = {}
-    cstruct = {
-        # Organize inputs since we're manually rendering forms
-        'schemata': request.POST.getall('schemata'),
-        'csrf_token': request.POST.get('csrf_token'),
-        'expand_collections': request.POST.get('expand_collections', 'false'),
-        'use_choice_labels': request.POST.get('use_choice_labels', 'false')}
-    form = (
-        ExportCheckoutSchema(validator=limit_validator)
-        .bind(request=request))
-
-    if request.method == 'POST':
-        try:
-            appstruct = form.deserialize(cstruct)
-        except colander.Invalid as e:
-            errors = e.asdict()
-        else:
-            export = models.Export(
-                expand_collections=appstruct['expand_collections'],
-                use_choice_labels=appstruct['use_choice_labels'],
-                name=str(uuid.uuid4()),
-                owner_user=(
-                    Session.query(models.User)
-                    .filter_by(key=request.authenticated_userid)
-                    .one()),
-                schemata=(
-                    Session.query(models.Schema)
-                    .filter(models.Schema.name.in_(appstruct['schemata']))
-                    .filter(models.Schema.publish_date != null())
-                    .filter(models.Schema.retract_date == null())
-                    .all()))
-            Session.add(export)
-            Session.flush()
-            task_id = export.name
-            task = make_export.subtask(args=(export.id,))
-            # Avoid race-conditions by executing the task after
-            # the current request completes successfully
-            transaction.get().addAfterCommitHook(
-                lambda success: success and task.apply_async(task_id=task_id))
-            request.session.flash(
-                _(u'Your request has been received!'), 'success')
-            return HTTPFound(location=request.route_path('export_status'))
-
     layout = request.layout_manager.layout
     layout.title = _(u'Exports')
     layout.set_nav('export_nav')
 
+    errors = None
+    cstruct = None
+    exportables = reports.list_all(include_rand=False)
     limit = request.registry.settings.get('app.export.limit')
-    exceeded = False
+    exceeded = limit and query_exports(request).count() > limit
 
-    if limit:
-        exports_count = query_exports(request).count()
-        if exports_count >= int(limit):
-            exceeded = True
-            request.session.flash(
-                _(u'You have exceed your export limit of ${limit}',
-                    mapping={'limit': limit}),
-                'warning')
+    cschema = ExportCheckoutSchema(validator=schema_validator).bind(
+        request=request,
+        limit_exceeded=exceeded,
+        allowed_names=exportables.keys())
+
+    if request.method == 'POST':
+        try:
+            cstruct = request.POST.mixed()
+            # Force list of contents
+            if isinstance(cstruct['contents'], six.string_types):
+                cstruct['contents'] = set([cstruct['contents']])
+            appstruct = cschema.deserialize(cstruct)
+        except colander.Invalid as e:
+            errors = e.asdict()
+        else:
+            task_id = str(uuid.uuid4())
+            Session.add(models.Export(
+                task_id=task_id,
+                path=task_id.replace('-', '/'),
+                expand_collections=appstruct['expand_collections'],
+                use_choice_labels=appstruct['use_choice_labels'],
+                owner_user=(Session.query(models.User)
+                            .filter_by(key=request.authenticated_userid)
+                            .one()),
+                contents=[exportables[k].to_json()
+                          for k in appstruct['contents']]))
+
+            def apply_after_commit(success):
+                if success:
+                    make_export.apply_async(args=[task_id], task_id=task_id)
+
+            # Avoid race-condition by executing the task after succesful commit
+            transaction.get().addAfterCommitHook(apply_after_commit)
+
+            msg = _(u'Your request has been received!')
+            request.session.flash(msg, 'success')
+
+            return HTTPFound(location=request.route_path('export_status'))
 
     return {
+        'cstruct': cstruct or cschema.serialize(),
         'exceeded': exceeded,
         'errors': errors,
-        'cstruct': cstruct,
-        'schemata': reports.list_all(),
-        'schemata_count': 0}
+        'limit': limit,
+        'exportables': exportables,
+        'schemata_count': len(exportables)}
 
 
 @view_config(
@@ -199,6 +178,12 @@ def status(request):
     permission='fia_view',
     xhr=True,
     renderer='json')
+@view_config(
+    # For quick debbuging
+    route_name='export_status',
+    permission='fia_view',
+    request_param='xhr',
+    renderer='json')
 def status_json(request):
     """
     Returns the current exports statuses.
@@ -211,39 +196,27 @@ def status_json(request):
     pager = Pager(request.GET.get('page', 1), 5, exports_count)
     exports_query = exports_query[pager.slice_start:pager.slice_end]
 
-    localizer = get_localizer(request)
     locale = negotiate_locale_name(request)
-
-    result = {
-        'csrf_token': request.session.get_csrf_token(),
-        'pager': pager.serialize(),
-        'exports': []
-    }
-
-    try:
-        delta = timedelta(request.registry.settings.get('app.export.expire'))
-    except ValueError:
-        delta = None
+    localizer = get_localizer(request)
 
     def file_size(export):
         if export.status == 'complete':
-            path = os.path.join(export_dir, export.name)
+            path = os.path.join(export_dir, export.path)
             return humanize.naturalsize(os.path.getsize(path))
 
-    def expire_date(export):
-        if delta:
-            return format_datetime(export.create_date + delta, locale=locale)
-
-    for export in exports_query:
-        count = len(export.schemata)
-        serialized = {
+    def export2json(export):
+        count = len(export.contents)
+        return {
             'id': export.id,
-            'name': export.name,
             'title': localizer.pluralize(
                 _(u'Export containing ${count} item'),
                 _(u'Export containing ${count} items'),
                 count, 'occams.clinical', mapping={'count': count}),
+            'task_id': export.task_id,
             'status': export.status,
+            'use_choice_labels': export.use_choice_labels,
+            'expand_collections': export.expand_collections,
+            'contents': sorted(export.contents, key=lambda v: v['title']),
             'count': None,
             'total': None,
             'file_size': file_size(export),
@@ -251,18 +224,12 @@ def status_json(request):
                                                id=export.id),
             'delete_url': request.route_path('export_delete', id=export.id),
             'create_date': format_datetime(export.create_date, locale=locale),
-            'expire_date': expire_date(export),
-            'items': []
-            }
-        for schema in export.items:
-            serialized['items'].append({
-                'name': schema.name,
-                'title': schema.title,
-                'has_private': schema.has_private,
-                #'versions': list(map(str, versions[schema.name])),
-                })
-        result['exports'].append(serialized)
-    return result
+            'expire_date': format_datetime(export.expire_date)}
+
+    return {
+        'csrf_token': request.session.get_csrf_token(),
+        'pager': pager.serialize(),
+        'exports': list(map(export2json, exports_query))}
 
 
 @view_config(
@@ -321,19 +288,11 @@ def query_exports(request):
     """
     Helper method to query current exports for the authenticated user
     """
-    userid = request.authenticated_userid
-    export_expire = request.registry.settings.get('app.export.expire')
-
-    exports_query = (
+    query = (
         Session.query(models.Export)
-        .filter(models.Export.owner_user.has(key=userid)))
-
-    if export_expire:
-        cutoff = datetime.now() - timedelta(int(export_expire))
-        exports_query = (
-            exports_query.filter(models.Export.create_date >= cutoff))
-
-    exports_query = (
-        exports_query.order_by(models.Export.create_date.desc()))
-
-    return exports_query
+        .filter(or_(models.Export.expire_date == null(),
+                    models.Export.expire_date > datetime.now()))
+        .filter(models.Export.owner_user.has(
+            key=request.authenticated_userid))
+        .order_by(models.Export.create_date.desc()))
+    return query

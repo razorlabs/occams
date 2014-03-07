@@ -1,11 +1,12 @@
 <html i18n:domain="occams.clinical" metal:use-macro="main_template">
   <metal:content-slot fill-slot="content-slot">
 
+    <div class="alert alert-warning" tal:condition="exceeded|nothing">
+      <strong>You have exceed your export limit of ${limit}</strong>
+    </div>
+
     <div class="alert alert-danger" tal:condition="errors|nothing">
-    <strong>Error!</strong> Your request failed for the following reasons:
-      <ul>
-        <li tal:repeat="error errors.itervalues()">${error}</li>
-      </ul>
+      <strong>Error!</strong> Your request failed for the following reasons
     </div>
 
     <form
@@ -20,6 +21,8 @@
         Select the de-identified data you would like to download.
         All exports include a code book.
       </p>
+
+      <p class="text-danger" tal:define="error errors['contents']|nothing" tal:condition="error">${error}</p>
 
       <div class="table-responsive">
         <table class="table table-striped">
@@ -37,12 +40,12 @@
             </tr>
           </thead>
           <tbody>
-            <tr tal:repeat="schema schemata">
+            <tr tal:repeat="item exportables.values()">
               <td class="select">
                 <input
                     type="checkbox"
-                    name="schemata"
-                    value="${schema.name}"
+                    name="contents"
+                    value="${item.name}"
                     data-toggle="select"
                     data-class="warning" />
               </td>
@@ -50,12 +53,12 @@
                 <span
                     class="glyphicon glyphicon-user"
                     title="Has private information"
-                    tal:condition="schema.has_private"></span>
+                    tal:condition="item.has_private"></span>
               </td>
-              <td class="title">${schema.title}</td>
-              <td class="name"><code>${schema.name}</code></td>
+              <td class="title">${item.title}</td>
+              <td class="name"><code>${item.name}</code></td>
               <td class="version">
-                <p tal:repeat="version schema.publications">${version.isoformat()}</p>
+                <p tal:repeat="version item.versions">${version.isoformat()}</p>
               </td>
             </tr>
           </tbody>
@@ -70,18 +73,23 @@
         Select list style.
       </p>
 
-      <div class="form-group">
+
+      <div class="form-group"
+          tal:define="
+            field_name  string:expand_collections;
+            cvalue      cstruct[field_name]">
+        <p class="text-danger" tal:define="error errors[field_name]|nothing" tal:condition="error">${error}</p>
         <div class="radio">
           <label>
-            <input type="radio" name="expand_collections" value="false"
-                checked="${cstruct['expand_collections'] == 'false'}" />
+            <input type="radio" name="${field_name}" value="false"
+                checked="${cvalue == 'false'}" />
             <span tal:omit-tag="" i18n:translate="">Single column with comma-delimted values.</span>
           </label>
         </div>
         <div class="radio">
           <label>
-            <input type="radio" name="expand_collections" value="true"
-                checked="${cstruct['expand_collections'] == 'true'}"/>
+            <input type="radio" name="${field_name}" value="true"
+                checked="${cvalue == 'true'}"/>
             <span tal:omit-tag="" i18n:translate="">Separate colum for each possible answer choice.</span>
           </label>
         </div>
@@ -95,24 +103,28 @@
         Select answer choice style.
       </p>
 
-      <div class="form-group">
+      <div class="form-group"
+          tal:define="
+            field_name  string:use_choice_labels;
+            cvalue      cstruct[field_name]">
+        <p class="text-danger" tal:define="error errors[field_name]|nothing" tal:condition="error">${error}</p>
         <div class="radio">
           <label>
-            <input type="radio" name="use_choice_labels" value="false"
-                checked="${cstruct['use_choice_labels'] == 'false'}"/>
+            <input type="radio" name="${field_name}" value="false"
+                checked="${cvalue == 'false'}"/>
             <span tal:omit-tag="" i18n:translate="">Use codes.</span>
           </label>
         </div>
         <div class="radio">
           <label>
-            <input type="radio" name="use_choice_labels" value="true"
-                checked="${cstruct['use_choice_labels'] == 'true'}"/>
+            <input type="radio" name="${field_name}" value="true"
+                checked="${cvalue == 'true'}"/>
             <span tal:omit-tag="" i18n:translate="">Use labels.</span>
           </label>
         </div>
       </div>
 
-      <input type="hidden" name="csrf_token" value="${request.session.get_csrf_token()}" />
+      <input type="hidden" name="csrf_token" value="${cstruct['csrf_token']}" />
 
       <hr />
 

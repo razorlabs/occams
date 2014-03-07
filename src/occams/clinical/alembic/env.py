@@ -22,7 +22,7 @@ target_metadata = None
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
-cmd_line_url = context.get_x_argument(as_dictionary=True).get('uri')
+cmd_line_url = context.get_x_argument(as_dictionary=True).get('db')
 
 
 def run_migrations_offline():

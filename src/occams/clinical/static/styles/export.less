@@ -7,13 +7,12 @@
 
   .panel-heading {
 
-    .export-title {
-      // Increase the line-height so the title is vertically centered
-      line-height: @font-size-small * 3;
-    }
-
     .export-status {
       text-align: right;
+    }
+
+    ul.details {
+      margin-bottom: 0;
     }
 
   }
@@ -23,17 +22,17 @@
     margin-left: @font-size-base;;
   }
 
-  .export-details-toggle:after {
+  .export-contents-toggle:after {
     .glyphicon();
     content: " \e114";
   }
 
-  .export-details-toggle.collapsed:after {
+  .export-contents-toggle.collapsed:after {
     .glyphicon();
     content: " \e080";
   }
 
-  .export-details {
+  .export-contents {
     background-color: @gray-lighter;
   }
 

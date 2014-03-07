@@ -12,7 +12,7 @@
       <!--! Top Pager -->
       <div data-bind="template: { name: 'pager-template',
                                   data: pager(),
-                                  if: pager() && pager().total_count() > pager().per_page() }"></div>
+                                  if: pager()}"></div>
 
       <!--! Status messsag to display if no content -->
       <div data-bind="ifnot:exports().length > 0">
@@ -52,6 +52,26 @@
               </div>
             </div>
             <h3 class="panel-title export-title" data-bind="text:title"></h3>
+            <ul class="details list-inline">
+              <li>
+                <small class="text-muted" i18n:translate="">Choices:</small>
+                <!-- ko if: use_choice_labels -->
+                  <small>Labels</small>
+                <!-- /ko -->
+                <!-- ko ifnot: use_choice_labels -->
+                  <small>Codes</small>
+                <!-- /ko -->
+              </li>
+              <li>
+                <small class="text-muted" i18n:translate="">Multi-Selects:</small>
+                <!-- ko if: expand_collections -->
+                  <small>Split</small>
+                <!-- /ko -->
+                <!-- ko ifnot: expand_collections -->
+                  <small>Delimited</small>
+                <!-- /ko -->
+              </li>
+            </ul>
           </div> <!-- panel-heading -->
           <div class="panel-body">
             <!-- ko if: status() == 'pending' -->
@@ -83,14 +103,14 @@
             <!-- /ko -->
             <div class="export-controls">
               <button
-                  class="btn btn-link export-details-toggle collapsed"
+                  class="btn btn-link export-contents-toggle collapsed"
                   data-toggle="collapse"
                   data-bind="
                     attr: {
                       'data-target': '#export-collapse-' + id
                     }"
                   i18n:translate=""
-                >Details</button>
+                >Contents</button>
               <button
                   class="btn btn-link pull-right"
                   data-bind="click: $root.confirmDelete"
@@ -99,7 +119,7 @@
             </div>
           </div> <!-- /panel-body -->
           <div
-              class="collapse table-responsive export-details"
+              class="collapse table-responsive export-contents"
               data-bind="attr: {id: 'export-collapse-' + id}">
             <table class="table table-condensed">
               <thead>
@@ -113,7 +133,7 @@
                 </tr>
               </thead>
               <tbody>
-                <!-- ko foreach: items -->
+                <!-- ko foreach: contents -->
                   <tr>
                     <td>
                       <!-- ko if: has_private -->
@@ -140,7 +160,7 @@
       <!--! Bottom pager -->
       <div data-bind="template: { name: 'pager-template',
                                   data: pager(),
-                                  if: pager() && pager().total_count() > pager().per_page() }"></div>
+                                  if: pager()}"></div>
 
 
      </div> <!-- /visible -->
@@ -181,6 +201,7 @@
 
     <!--! Pager template -->
     <script type="text/html" id="pager-template">
+      <!-- ko if: total_count() > per_page() -->
       <ul class="pager">
         <li data-bind="attr: {'class': has_previous() ? 'previous'
                                                       : 'previous disabled'}">
@@ -195,6 +216,7 @@
           </a>
         </li>
       </ul>
+      <!-- /ko -->
     </script>
 
  </metal:content-slot>

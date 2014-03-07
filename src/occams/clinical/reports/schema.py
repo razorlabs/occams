@@ -15,20 +15,15 @@ class SchemaReport(Report):
     expand_collections = False
     use_choice_labels = False
     ids = None
-    versions = []
-
-    def __init__(self, name, title, has_private=False, has_rand=False):
-        self.name = name
-        self.title = title
-        self.has_private = has_private
-        self.has_rand = has_rand
 
     @classmethod
     def from_sql(cls, record):
-        report = cls(record.name, record.title,
-                     has_private=record.has_private,
-                     has_rand=record.has_rand)
-        report.publications = record.publications
+        report = cls()
+        report.name = record.name
+        report.title = record.title
+        report.has_private = record.has_private
+        report.has_rand = record.has_rand
+        report.versions = record.versions
         return report
 
     def codebook(self):

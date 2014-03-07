@@ -10,15 +10,12 @@ try:
     from collections import OrderedDict
 except ImportError:
     from ordereddict import OrderedDict  # NOQA
-from contextlib import closing
+from itertools import chain
 import json
 import os
-import tempfile
-import zipfile
 
 from celery import Task
 import humanize
-from webob.multidict import MultiDict
 
 from occams.clinical import models, Session
 from occams.clinical.celery import app, log, in_transaction
@@ -34,17 +31,16 @@ class ExportTask(Task):
         log.error('Task {0} raised exception: {1!r}\n{2!r}'.format(
                   task_id, exc, einfo))
         redis = app.redis
-        export_id, = args
-        export = Session.query(models.Export).filter_by(id=export_id).one()
+        export = Session.query(models.Export).filter_by(task_id=task_id).one()
         export.status = 'failed'
         Session.flush()
-        redis.hset(export_id, 'status', export.status)
-        redis.publish('export', json.dumps(redis.hgetall(export_id)))
+        redis.hset(export.redis_key, 'status', export.status)
+        redis.publish('export', json.dumps(redis.hgetall(export.redis_key)))
 
 
 @app.task(name='make_export', base=ExportTask, ignore_result=True)
 @in_transaction
-def make_export(export_id):
+def make_export(task_id):
     """
     Handles generating exports in a separate process.
 
@@ -65,48 +61,46 @@ def make_export(export_id):
     export_id -- export to process
 
     """
-    export = Session.query(models.Export).filter_by(id=export_id).one()
-
-    # Organize the forms so we know which schemata go where
-    files = MultiDict([(s.name, s.id) for s in export.schemata])
+    export = Session.query(models.Export).filter_by(task_id=task_id).one()
 
     redis = app.redis
 
-    redis.hmset(export.id, {
+    redis.hmset(export.redis_key, {
         'export_id': export.id,
         'owner_user': export.owner_user.key,
         'status': export.status,
         'count': 0,
-        'total': len(set(files.keys()))})
+        'total': len(export.contents)})
 
-    path = os.path.join(app.settings['app.export.dir'], export.name)
+    exportables = reports.list_all()
 
-    with closing(zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED)) as zfp:
-        for schema_name, ids in files.dict_of_lists().items():
+    path = os.path.join(app.settings['app.export.dir'], export.path)
+    os.makedirs(path)
 
-            with tempfile.NamedTemporaryFile() as tfp:
-                query = reports.form.query_report(
-                    schema_name,
-                    ids,
-                    expand_collections=export.expand_collections,
-                    use_choice_labels=export.use_choice_labels)
-                reports.io.query2csv(query, tfp)
-                zfp.write(tfp.name, '{0}.csv'.format(schema_name))
+    codebook_chain = []
 
-            with tempfile.NamedTemporaryFile() as tfp:
-                rows = reports.form.codebook(schema_name, ids)
-                reports.io.codebook2csv(rows)
-                zfp.write(tfp.name, '{0}-codebook.csv'.format(schema_name))
+    for item in export.contents:
 
-            redis.hincrby(export.id, 'count')
-            redis.publish('export', json.dumps(redis.hgetall(export.id)))
-            count, total = redis.hmget(export.id, 'count', 'total')
-            log.info(', '.join([count, total, schema_name]))
+        with open(os.path.join(path, item['name'] + '.csv'), 'w+b') as fp:
+            report = exportables[item['name']]
+            data = report.data()
+            codebook = report.codebook()
+            codebook_chain.append(codebook)
+            reports.write_data(fp, data)
+
+        redis.hincrby(export.redis_key, 'count')
+        redis.publish('export', json.dumps(redis.hgetall(export.redis_key)))
+        count, total = redis.hmget(export.redis_key, 'count', 'total')
+        log.info(', '.join([count, total, item['name']]))
+
+    with open(os.path.join(path, 'codebook.csv'), 'w+b') as fp:
+        reports.write_codebook(fp, chain.from_iterable(codebook_chain))
+        log.info('codebook')
 
     export.status = 'complete'
-    redis.hset(export_id, 'status', export.status)
-    redis.hset(export_id, 'file_size',
+    redis.hset(export.redis_key, 'status', export.status)
+    redis.hset(export.redis_key, 'file_size',
                humanize.naturalsize(os.path.getsize(path)))
 
     Session.flush()  # flush so we know everything went smoothly
-    redis.publish('export', json.dumps(redis.hgetall(export_id)))
+    redis.publish('export', json.dumps(redis.hgetall(export.redis_key)))

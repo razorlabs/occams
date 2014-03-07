@@ -9,10 +9,13 @@ try:
     import unicodecsv as csv
 except ImportError:  # pragma: nocover
     import csv  # NOQA (py3, hopefully)
+try:
+    from ordereddict import OrderedDict
+except ImportError:
+    from collections import OrderedDict
 from itertools import chain
 import os
 
-from streamio.sort import merge
 from sqlalchemy import orm, null, func, literal_column
 
 from occams.clinical import Session, models
@@ -24,7 +27,7 @@ from occams.clinical.reports.schema import SchemaReport
 from occams.clinical.reports.visit import VisitReport
 
 
-def list_all():
+def list_all(include_rand=True, include_private=True):
     """
     Lists all available data files
 
@@ -81,20 +84,29 @@ def list_all():
                 .order_by(InnerSchema.publish_date.desc())
                 .correlate(OuterSchema)
                 .as_scalar())
-            .label('publications'))
+            .label('versions'))
         .filter(OuterSchema.publish_date != null())
         .filter(OuterSchema.retract_date == null()))
 
     schemata_query = (
         schemata_query
         .group_by(OuterSchema.name)
-        .order_by('title'))
+        .from_self())
+
+    if not include_rand:
+        schemata_query = schemata_query.filter('NOT has_rand')
+
+    if not include_private:
+        schemata_query = schemata_query.filter('NOT has_private')
+
+    schemata_query = schemata_query.order_by('title')
 
     # Precooked reports
     tables = [EnrollmentReport(), PidReport(), LabReport(), VisitReport()]
-    schemata = iter(map(SchemaReport.from_sql, schemata_query))
-
-    return merge(tables, schemata, key=lambda v: v.title)
+    schemata = list(map(SchemaReport.from_sql, schemata_query))
+    merged = sorted(tables + schemata, key=lambda v: v.title)
+    all = OrderedDict((i.name, i) for i in merged)
+    return all
 
 
 def write_reports(path, items):

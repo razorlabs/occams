@@ -31,18 +31,15 @@ REQUIRES = [
     'pyramid_webassets',
     'pyramid_who',
     'redis',
-    'streamio',
     'SQLAlchemy',
     'six',
     'tabulate',
     'transaction',
     'webassets',
     'zope.sqlalchemy',
-    'zope.dottedname',
 
     'occams.datastore',
     'occams.form',
-    'occams.roster',
 ]
 
 EXTRAS = {
