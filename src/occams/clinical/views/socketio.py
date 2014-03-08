@@ -6,7 +6,7 @@ from pyramid.response import Response
 from socketio import socketio_manage
 from socketio.namespace import BaseNamespace
 
-from occams.clinical import log, models, Session
+from .. import log, models, Session
 
 
 @view_config(route_name='socket.io')

@@ -14,10 +14,9 @@ import six
 from sqlalchemy import orm
 import transaction
 
-from occams.clinical import _, models, Session, reports
-from occams.clinical.celery import app
-from occams.clinical.celery.export import make_export
-from occams.clinical.widgets.pager import Pager
+from .. import _, models, Session, exports
+from ..tasks import celery,  make_export
+from ..widgets.pager import Pager
 
 
 @view_config(
@@ -105,7 +104,7 @@ def add(request):
 
     errors = None
     cstruct = None
-    exportables = reports.list_all(include_rand=False)
+    exportables = exports.list_all(include_rand=False)
     limit = request.registry.settings.get('app.export.limit')
     exceeded = limit and query_exports(request).count() > limit
 
@@ -124,7 +123,7 @@ def add(request):
         except colander.Invalid as e:
             errors = e.asdict()
         else:
-            task_id = six.u(uuid.uuid4())
+            task_id = six.u(str(uuid.uuid4()))
             Session.add(models.Export(
                 name=task_id,
                 expand_collections=appstruct['expand_collections'],
@@ -259,7 +258,7 @@ def delete(request):
     Session.delete(export)
     Session.flush()
 
-    app.control.revoke(export.name)
+    celery.control.revoke(export.name)
 
     return HTTPOk()
 
@@ -273,13 +272,12 @@ def download(request):
 
     The user should only be allowed to download their exports.
     """
-    userid = request.authenticated_userid
-
     try:
         export = (
             Session.query(models.Export)
             .filter_by(id=request.matchdict['id'], status='complete')
-            .filter(models.Export.owner_user.has(key=userid))
+            .filter(models.Export.owner_user.has(
+                key=request.authenticated_userid))
             .one())
     except orm.exc.NoResultFound:
         raise HTTPNotFound

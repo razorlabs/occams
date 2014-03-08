@@ -9,7 +9,7 @@ from six.moves import map, filter
 from sqlalchemy import create_engine
 from tabulate import tabulate
 
-from occams.clinical import Session, reports
+from .. import Session, exports
 
 
 def parse_args(argv=sys.argv):
@@ -101,7 +101,7 @@ def print_list(args):
         return star(row.has_private), star(row.has_rand), row.name, row.title
 
     header = ['priv', 'rand', 'name', 'title']
-    rows = iter(map(format, reports.list_all()))
+    rows = iter(map(format, exports.list_all()))
     print(tabulate(rows, header, tablefmt='simple'))
 
 
@@ -124,8 +124,8 @@ def make_export(args):
         elif args.names:
             return item.name in args.names
 
-    items = iter(filter(is_valid_target, reports.list_all()))
-    reports.write_reports(args.dir, items)
+    items = iter(filter(is_valid_target, exports.list_all()))
+    exports.write_reports(args.dir, items)
 
 
 if __name__ == '__main__':

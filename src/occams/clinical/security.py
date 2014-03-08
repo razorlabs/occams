@@ -8,7 +8,7 @@ from pyramid.events import subscriber, NewRequest
 from pyramid.security import Allow, Authenticated, ALL_PERMISSIONS
 from zope.interface import directlyProvides
 
-from occams.clinical import log, Session, models
+from . import log, Session, models
 
 
 def challenge_decider(environ, status, headers):

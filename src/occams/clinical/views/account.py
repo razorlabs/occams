@@ -7,7 +7,7 @@
 #from pyramid_ldap import get_ldap_connector
 #from sqlalchemy import orm
 
-#from occams.clinical import _, log, permissions, Session
+#from .. import _, log, permissions, Session
 
 
 #class LoginSchema(colander.MappingSchema):

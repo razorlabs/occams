@@ -3,7 +3,7 @@ from pyramid.httpexceptions import HTTPFound
 from pyramid.view import view_config
 from sqlalchemy import func, orm, sql
 
-from occams.clinical import _, log, models, Session
+from .. import _, log, models, Session
 
 
 @view_config(

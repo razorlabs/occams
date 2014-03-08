@@ -4,7 +4,7 @@ import sys
 from pyramid.paster import get_appsettings, setup_logging
 from sqlalchemy import engine_from_config
 
-from occams.clinical.models import Base
+from .. import models
 
 
 def usage(argv):
@@ -21,4 +21,4 @@ def main(argv=sys.argv):
     setup_logging(config_uri)
     settings = get_appsettings(config_uri)
     engine = engine_from_config(settings, 'clinicaldb.')
-    Base.metadata.create_all(engine, checkfirst=True)
+    models.Base.metadata.create_all(engine, checkfirst=True)

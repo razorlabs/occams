@@ -56,10 +56,10 @@ def main(global_config, **settings):
 
     # App-specific configurations
     config.include('.assets')
-    config.include('.celery')
     config.include('.links')
     config.include('.models')
     config.include('.routes')
+    config.include('.tasks')
 
     config.scan()
     config.commit()

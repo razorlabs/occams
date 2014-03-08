@@ -1,6 +1,6 @@
 from webassets import Bundle
 
-from occams.clinical import log
+from . import log
 
 
 def includeme(config):

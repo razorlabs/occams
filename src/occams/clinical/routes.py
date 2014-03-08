@@ -4,7 +4,7 @@ Route Declarations
 
 from datetime import datetime
 
-from occams.clinical import log
+from . import log
 
 
 def includeme(config):

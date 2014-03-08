@@ -22,7 +22,6 @@ from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import hybrid_property
 
-from occams.clinical import log, Session
 # import everything so we can also use DS models from this module
 from occams.datastore.models import (  # NOQA
     Auditable,
@@ -32,6 +31,8 @@ from occams.datastore.models import (  # NOQA
     ModelClass,
     User,
     Schema, Section, Attribute, Choice, State, Entity, Context)
+
+from . import log, Session
 
 
 Base = ModelClass(u'Base')
