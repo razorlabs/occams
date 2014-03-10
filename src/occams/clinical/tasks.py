@@ -160,7 +160,9 @@ def make_export(name):
             plan = exportables[item['name']]
             codebook_chain.append(plan.codebook())
             with tempfile.NamedTemporaryFile() as tfp:
-                exports.write_data(tfp, plan.data())
+                exports.write_data(tfp, plan.data(
+                    use_choice_labels=export.use_choice_labels,
+                    expand_collections=export.expand_collections))
                 zfp.write(tfp.name, plan.file_name)
 
             redis.hincrby(redis_key, 'count')

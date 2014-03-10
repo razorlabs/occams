@@ -89,7 +89,6 @@ res
 refs
 gen
 webassets-external
-exports/
 
 ##### Translations
 *.mo
