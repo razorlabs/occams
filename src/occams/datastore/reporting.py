@@ -4,17 +4,19 @@ in a SQL table-like fashion.
 """
 try:
     from collections import OrderedDict
-except ImportError:
+except ImportError:  # pragma: nocover
     from ordereddict import OrderedDict
 from operator import or_
 
 from six import itervalues, iteritems
-from sqlalchemy import func, orm, cast, null, literal, Date, Integer
+from sqlalchemy import orm, cast, null, literal, Integer
 
-from occams.datastore import models
+from . import models
+from .utils.sql import group_concat, to_date, to_datetime
 
 
-def build_report(session, schema_name,
+def build_report(session,
+                 schema_name,
                  ids=None,
                  attributes=None,
                  expand_collections=False,
@@ -45,17 +47,16 @@ def build_report(session, schema_name,
     property names.
     """
     is_sqlite = 'sqlite' == session.bind.url.drivername
-    is_postgres = 'postgres' in session.bind.url.drivername
 
     query = (
         session.query(
-            models.Entity.id.label('entity_id'),
+            models.Entity.id.label('id'),
             models.Schema.name.label('form_name'),
-            models.Schema.publish_date.label('form_publish_date'),
+            models.Schema.publish_date.label('publish_date'),
             models.State.name.label('state'),
-            models.Entity.collect_date,
+            models.Entity.collect_date.label('collect_date'),
             cast(models.Entity.is_null, Integer).label('is_null'))
-        .join(models.State)
+        .outerjoin(models.State)
         .join(models.Schema)
         .filter(models.Schema.name == schema_name)
         .filter(models.Schema.publish_date != null())
@@ -88,10 +89,10 @@ def build_report(session, schema_name,
         Value = orm.aliased(models.nameModelMap[column.type])
         value_column = Value._value
 
-        if column.type == 'date':
-            # sqlite handles datetimes weirdly
-            value_column = (getattr(func, column.type)(Value._value)
-                            if is_sqlite else cast(Value._value, Date))
+        if column.type in ('date', 'datetime'):
+            # Cast datetimes to match their attribute types
+            conv = to_date if column.type == 'date' else to_datetime
+            value_column = conv(Value._value)
 
         filter_expression = (
             (models.Entity.id == Value.entity_id)
@@ -101,28 +102,23 @@ def build_report(session, schema_name,
 
         if column.is_collection:
             # Collections are added via correlated sub-queries to the entity
-            if column.choices:
+            if not expand_collections:
 
                 if use_choice_labels:
                     value_column = Choice.title
                 else:
                     value_column = Choice.name
 
-                if not is_postgres:
-                    value_column = func.group_concat(value_column)
-
+                # Not all vendors suppoar ARRAY, so we just concatenate the
+                # and let clients deal with spliting
                 value_column = (
-                    session.query(value_column)
+                    session.query(group_concat(value_column, ';'))
                     .select_from(Value)
                     .filter(filter_expression)
-                    .outerjoin(Choice, Value._value == Choice.id)
+                    .join(Choice)
+                    .group_by(Value.attribute_id)
                     .correlate(models.Entity)
                     .as_scalar())
-
-                if is_postgres:
-                    value_column = func.array_to_string(
-                        func.array(value_column),
-                        literal(','))
 
             else:
                 exists = (
@@ -143,7 +139,7 @@ def build_report(session, schema_name,
             # Scalar columns are added via LEFT OUTER JOIN
             query = query.outerjoin(Value, filter_expression)
 
-            if column.choices:
+            if column.type == 'choice':
                 Choice = orm.aliased(models.Choice)
                 query = query.outerjoin(Choice, Value._value == Choice.id)
                 if use_choice_labels:
@@ -167,15 +163,13 @@ def build_report(session, schema_name,
             ModifyUser.key.label('modify_user'))
         .order_by(models.Entity.id))
 
-    if is_sqlite:
-        return query.subquery(schema_name)
-    else:
-        return query.cte(schema_name)
+    return query.cte(schema_name) \
+        if not is_sqlite else query.subquery(schema_name)
 
 
 def build_columns(session, schema_name, ids=None, expand_collections=False):
     """
-    Builds a ``DataDict`` for all attributes that ever existed in a schema
+    Helper method to determine the columns of the report to generate
 
     The columns reported are only the basic data types.
 
@@ -235,7 +229,7 @@ def build_columns(session, schema_name, ids=None, expand_collections=False):
         if (expand_collections
                 and attribute.is_collection
                 and attribute.choices):
-            for choice in attribute.choices:
+            for choice in itervalues(attribute.choices):
                 name = attribute.name + '_' + choice.name
                 plan.setdefault(name, []).append(attribute)
                 selected[name] = choice
@@ -249,7 +243,7 @@ def build_columns(session, schema_name, ids=None, expand_collections=False):
     return columns
 
 
-class DataColumn:
+class DataColumn(object):
     """
     A data dictionary column for reference when inspecting a report column.
 
@@ -282,4 +276,4 @@ class DataColumn:
         else:
             self.choices = dict([(c.name, c.title)
                                 for a in attributes
-                                for c in a.choices])
+                                for c in itervalues(a.choices)])

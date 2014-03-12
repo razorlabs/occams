@@ -32,4 +32,4 @@ from .storage import (  # NOQA
     State, Context, Entity,
     HasEntities,
     ValueInteger, ValueString, ValueDecimal, ValueDatetime, ValueText,
-    ValueBlob)
+    ValueChoice, ValueBlob)

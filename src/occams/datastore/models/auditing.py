@@ -63,7 +63,7 @@ def auditMapper(live_mapper):
             return False
 
         for column in live_mapper.local_table.c:
-            if column.name == 'revision':
+            if column.name == 'revision':  # pragma: nocover (not in sample)
                 continue
 
             col = column.copy()
@@ -147,7 +147,7 @@ def createRevision(instance, deleted=False):
                       auditMapper.iterate_to_root()):
         if not am.single:
             for auditColumn in am.local_table.c:
-                if auditColumn == 'revision':
+                if auditColumn.name == 'revision':
                     continue
 
                 liveColumn = lm.local_table.c[auditColumn.key]

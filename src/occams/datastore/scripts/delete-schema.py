@@ -1,20 +1,22 @@
 """
 Utility to permanently delete schemata.
 
-The current system does not have a GUI for this and it is a much needed feature.
+The current system does not have a GUI for this and
+it is a much needed feature.
 """
 
 import argparse
 import datetime
 
+from six.moves import input
 from sqlalchemy import create_engine, orm
 
-from occams.datastore import model
+from .. import models
+from ..models.events import register
 
 
-Session = orm.scoped_session(orm.sessionmaker(
-        user=None,
-        class_=model.DataStoreSession))
+Session = orm.scoped_session(orm.sessionmaker())
+register(Session)
 
 
 def schema_arg(str):
@@ -28,12 +30,12 @@ def schema_arg(str):
 cli_parser = argparse.ArgumentParser(description='Delete a schema')
 
 cli_parser.add_argument(
-    '-b','--blame',
+    '-b', '--blame',
     metavar='USER',
     help='The user to blame')
 
 cli_parser.add_argument(
-    '-u','--uri',
+    '-u', '--uri',
     metavar='URI',
     help='A database URI (vendor://user:pw@host/db')
 
@@ -51,7 +53,7 @@ cli_parser.add_argument(
 
 
 def get_schema(session, id_or_name):
-    query = session.query(model.Schema)
+    query = session.query(models.Schema)
     if isinstance(id_or_name, int):
         query = query.filter_by(id=id_or_name)
     else:
@@ -64,21 +66,24 @@ def main():
     args = cli_parser.parse_args()
 
     Session.configure(
-        user=lambda: args.blame,
-        bind=create_engine(args.uri))
+        bind=create_engine(args.uri),
+        info={'user': args.blame})
 
     print ('Deleting the following schemata:')
 
     for id_or_name in args.schemata:
         try:
             schema = get_schema(Session, id_or_name)
-            msg = '{schema.id} {schema.name}, {schema.title}, {schema.state}, {schema.publish_date}'
-            print msg.format(schema=schema)
+            msg = ('{schema.id} {schema.name}, '
+                   '{schema.title}, '
+                   '{schema.state}, '
+                   '{schema.publish_date}')
+            print(msg.format(schema=schema))
         except orm.exc.NoResultFound:
             print ('FATAL: Not found: {0}'.format(id_or_name))
             continue
 
-        count = Session.query(model.Entity).filter_by(schema=schema).count()
+        count = Session.query(models.Entity).filter_by(schema=schema).count()
 
         if count > 0:
             msg = 'WARNING: {0} has {1} entries!!! Aborting...'
@@ -88,7 +93,7 @@ def main():
 
         Session.delete(schema)
 
-    if args.force or raw_input('\nContinue? (y/n): ').lower().startswith('y'):
+    if args.force or input('\nContinue? (y/n): ').lower().startswith('y'):
         print('Saving changes')
         Session.commit()
     else:
@@ -98,4 +103,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

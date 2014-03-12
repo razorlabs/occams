@@ -1,596 +1,669 @@
-u"""
+"""
 Tests the schema report converter module
 """
-
-import datetime
-import decimal
-import copy
-from ordereddict import OrderedDict
-import unittest2 as unittest
-
-import sqlalchemy as sa
-from sqlalchemy import orm
-
-from occams.datastore import model
-from occams.datastore import reporting
-from occams.datastore import testing
-
-
-t1 = datetime.date(2010, 3, 1)
-t2 = datetime.date(2010, 9, 1)
-t3 = datetime.date(2011, 8, 1)
-t4 = datetime.date(2012, 5, 1)
-
-BY_ID = lambda a: (a.name, a.id)
-BY_NAME = lambda a: (a.name,)
-BY_CHECKSUM = lambda a: (a.name, a.checksum)
-
-
-class BuildDataDicTestCase(unittest.TestCase):
-
-    layer = testing.OCCAMS_DATASTORE_FIXTURE
-
-    def testPublishedSchema(self):
-        session = self.layer[u'session']
-        testing.createSchema(session, u'A', t1)
-        data_dict = reporting.buildDataDict(session, u'A', BY_NAME)
-        self.assertEqual(u'A', data_dict.name)
-        self.assertEqual(0, len(data_dict))
-        self.assertIsNone(data_dict.get('a'))
-
-    def testSingleForm(self):
-        session = self.layer[u'session']
-        schema = testing.createSchema(session, u'A', t1, dict(
-            a=model.Attribute(type=u'string', order=0)))
-
-        data_dict = reporting.buildDataDict(session, u'A', BY_NAME)
-        expected = [(u'a',)]
-        self.assertEqual(u'A', data_dict.name)
-        self.assertListEqual(expected, data_dict.paths())
-        self.assertEqual(1, len(data_dict.get(expected[0]).attributes))
-
-        data_dict = reporting.buildDataDict(session, u'A', BY_CHECKSUM)
-        expected = [(u'a', schema[u'a'].checksum)]
-        self.assertEqual(u'A', data_dict.name)
-        self.assertListEqual(expected, data_dict.paths())
-        self.assertEqual(1, len(data_dict.get(expected[0]).attributes))
-
-        data_dict = reporting.buildDataDict(session, u'A', BY_ID)
-        expected = [(u'a', schema[u'a'].id)]
-        self.assertEqual(u'A', data_dict.name)
-        self.assertListEqual(expected, data_dict.paths())
-        for e in expected:
-            self.assertEqual(1, len(data_dict.get(e).attributes))
-
-    def testMultpleVersions(self):
-        session = self.layer[u'session']
-        schema1 = testing.createSchema(session, u'A', t1, dict(
-            a=model.Attribute(type=u'string', order=0)))
-
-        schema2 = copy.deepcopy(schema1)
-        schema2.state = u'published'
-        schema2.publish_date = t2
-
-        schema3 = copy.deepcopy(schema1)
-        schema3.state = u'published'
-        schema3.publish_date = t3
-        schema3[u'a'].title = u'prime'
-
-        session.add_all([schema1, schema2, schema3])
-
-        data_dict = reporting.buildDataDict(session, u'A', BY_NAME)
-        expected = [(u'a',)]
-        self.assertEqual(u'A', data_dict.name)
-        self.assertListEqual(expected, data_dict.paths())
-        self.assertEqual(3, len(data_dict.get(expected[0]).attributes))
-
-        data_dict = reporting.buildDataDict(session, u'A', BY_CHECKSUM)
-        expected = [(u'a', schema1[u'a'].checksum), (u'a', schema3[u'a'].checksum)]
-        self.assertEqual(u'A', data_dict.name)
-        self.assertListEqual(expected, data_dict.paths())
-        self.assertEqual(2, len(data_dict.get(expected[0]).attributes))
-        self.assertEqual(1, len(data_dict.get(expected[1]).attributes))
-
-        # by ID
-        data_dict = reporting.buildDataDict(session, u'A', BY_ID)
-        expected = [
-            (u'a', schema1[u'a'].id),
-            (u'a', schema2[u'a'].id),
-            (u'a', schema3[u'a'].id)
-            ]
-        self.assertEqual(u'A', data_dict.name)
-        self.assertListEqual(expected, data_dict.paths())
-        for e in expected:
-            self.assertEqual(1, len(data_dict.get(e).attributes))
-
-    def testSubSchema(self):
-        session = self.layer[u'session']
-        schema = model.Schema(name=u'A', title=u'', state=u'published')
-        schema[u'a'] = model.Attribute(title=u'', type=u'string', order=0)
-        schema[u'b'] = model.Attribute(title=u'', type=u'object', order=1)
-        schema[u'b'].object_schema = model.Schema(name=u'B', title=u'', state=u'published')
-        schema[u'b'][u'x'] = model.Attribute(title=u'', type=u'string', order=0)
-        schema[u'b'][u'y'] = model.Attribute(title=u'', type=u'string', order=1)
-        schema[u'b'][u'z'] = model.Attribute(title=u'', type=u'string', order=2)
-        schema[u'c'] = model.Attribute(title=u'', type=u'string', order=2)
-        session.add(schema)
-        session.flush()
-
-        # by NAME
-        data_dict = reporting.buildDataDict(session, u'A', BY_NAME)
-        expected = [(u'a',), (u'b', u'x'), (u'b', u'y'), (u'b', u'z'), (u'c',)]
-        self.assertEqual(u'A', data_dict.name)
-        self.assertListEqual(expected, data_dict.paths())
-        self.assertEqual(1, len(data_dict.get(expected[0]).attributes))
-        self.assertEqual(1, len(data_dict.get(expected[1]).attributes))
-        self.assertEqual(1, len(data_dict.get(expected[2]).attributes))
-        self.assertEqual(1, len(data_dict.get(expected[3]).attributes))
-        self.assertEqual(1, len(data_dict.get(expected[4]).attributes))
-
-        # by CHECKSUM
-        data_dict = reporting.buildDataDict(session, u'A', BY_CHECKSUM)
-        expected = [
-            (u'a', schema[u'a'].checksum),
-            (u'b', u'x', schema[u'b'][u'x'].checksum),
-            (u'b', u'y', schema[u'b'][u'y'].checksum),
-            (u'b', u'z', schema[u'b'][u'z'].checksum),
-            (u'c', schema[u'c'].checksum),
-            ]
-        self.assertEqual(u'A', data_dict.name)
-        self.assertListEqual(expected, data_dict.paths())
-        self.assertEqual(1, len(data_dict.get(expected[0]).attributes))
-        self.assertEqual(1, len(data_dict.get(expected[1]).attributes))
-        self.assertEqual(1, len(data_dict.get(expected[2]).attributes))
-        self.assertEqual(1, len(data_dict.get(expected[3]).attributes))
-        self.assertEqual(1, len(data_dict.get(expected[4]).attributes))
-
-        # By ID
-        data_dict = reporting.buildDataDict(session, u'A', BY_ID)
-        expected = [
-            (u'a', schema[u'a'].id),
-            (u'b', u'x', schema[u'b'][u'x'].id),
-            (u'b', u'y', schema[u'b'][u'y'].id),
-            (u'b', u'z', schema[u'b'][u'z'].id),
-            (u'c', schema[u'c'].id),
-            ]
-        self.assertEqual(u'A', data_dict.name)
-        self.assertListEqual(expected, data_dict.paths())
-        for e in expected:
-            self.assertEqual(1, len(data_dict.get(e).attributes))
-
-    def testSubSchemaMultipleVersions(self):
-        u"""
-        From the discussion Jennifer and I had:
-        Time t1:
-                A
-              / | \
-             a  b  c
-              / | \
-             x  y  z
-
-        Time t2:
-            ``a`` is modifiied
-            ``y`` is modified
-            ``b`` children are reordered (doesn't affect checksums, but
-                considered on output
-
-                A
-              / | \
-             a' b  c
-              / | \
-             z  x  y'
-
-        Time t3:
-            ``a`` is restored
-            ``x`` is removed
-            ``y`` is removed
-            ``y*`` is added to the parent schema (interpreted as new attribute
-                because it belongs to a new partent)
-
-                A
-              / | \
-             a  b  y*
-                |
-                z
-        """
-        session = self.layer[u'session']
-        schema1 = model.Schema(name=u'A', title=u'', state=u'published', publish_date=t1)
-        schema1[u'a'] = model.Attribute(title=u'', type=u'string', order=0)
-        schema1[u'b'] = model.Attribute(title=u'', type=u'object', order=1)
-        schema1[u'b'].object_schema = model.Schema(name=u'B', title=u'', state=u'published', publish_date=t1)
-        schema1[u'b'][u'x'] = model.Attribute(title=u'', type=u'string', order=0)
-        schema1[u'b'][u'y'] = model.Attribute(title=u'', type=u'string', order=1)
-        schema1[u'b'][u'z'] = model.Attribute(title=u'', type=u'string', order=2)
-        schema1[u'c'] = model.Attribute(title=u'', type=u'string', order=2)
-
-        schema2 = copy.deepcopy(schema1)
-        schema2.state = schema2[u'b'].object_schema.state = u'published'
-        schema2.publish_date = schema2[u'b'].object_schema.publish_date = t2
-        schema2[u'a'].title = u'prime'
-        schema2[u'b'][u'y'].title = u'prime'
-        schema2[u'b'][u'z'].order = 0
-        schema2[u'b'][u'x'].order = 1
-        schema2[u'b'][u'y'].order = 2
-
-        schema3 = copy.deepcopy(schema2)
-        schema3.state = schema3[u'b'].object_schema.state = u'published'
-        schema3.publish_date = schema3[u'b'].object_schema.publish_date = t3
-        schema3[u'a'] = model.Attribute(name=u'a', title=u'', type=u'string', order=0)
-        del schema3[u'b'][u'x']
-        del schema3[u'b'][u'y']
-        del schema3[u'c']
-        schema3[u'y'] = model.Attribute(name=u'y', title=u'', type=u'string', order=2,)
-
-        session.add_all([schema1, schema2, schema3])
-        session.flush()
-
-        # by NAME
-        data_dict = reporting.buildDataDict(session, u'A', BY_NAME)
-        expected = [(u'a',), (u'b', u'z'), (u'b', u'x'), (u'b', u'y'), (u'c',), (u'y',)]
-        self.assertEqual(u'A', data_dict.name)
-        self.assertListEqual(expected, data_dict.paths())
-        self.assertEqual(3, len(data_dict.get(expected[0]).attributes))
-        self.assertEqual(3, len(data_dict.get(expected[1]).attributes))
-        self.assertEqual(2, len(data_dict.get(expected[2]).attributes))
-        self.assertEqual(2, len(data_dict.get(expected[3]).attributes))
-        self.assertEqual(2, len(data_dict.get(expected[4]).attributes))
-        self.assertEqual(1, len(data_dict.get(expected[5]).attributes))
-
-        # by CHECKSUM
-        data_dict = reporting.buildDataDict(session, u'A', BY_CHECKSUM)
-        expected = [
-            (u'a', schema1[u'a'].checksum),
-            (u'a', schema2[u'a'].checksum),
-            (u'b', u'z', schema1[u'b'][u'z'].checksum),
-            (u'b', u'x', schema1[u'b'][u'x'].checksum),
-            (u'b', u'y', schema1[u'b'][u'y'].checksum),
-            (u'b', u'y', schema2[u'b'][u'y'].checksum),
-            (u'c', schema1[u'c'].checksum),
-            (u'y', schema3[u'y'].checksum),
-            ]
-        self.assertEqual(u'A', data_dict.name)
-        self.assertListEqual(expected, data_dict.paths())
-        self.assertEqual(2, len(data_dict.get(expected[0]).attributes))
-        self.assertEqual(1, len(data_dict.get(expected[1]).attributes))
-        self.assertEqual(3, len(data_dict.get(expected[2]).attributes))
-        self.assertEqual(2, len(data_dict.get(expected[3]).attributes))
-        self.assertEqual(1, len(data_dict.get(expected[4]).attributes))
-        self.assertEqual(1, len(data_dict.get(expected[5]).attributes))
-        self.assertEqual(2, len(data_dict.get(expected[6]).attributes))
-        self.assertEqual(1, len(data_dict.get(expected[7]).attributes))
-
-        # by ID
-        data_dict = reporting.buildDataDict(session, u'A', BY_ID)
-        expected = [
-            (u'a', schema1[u'a'].id),
-            (u'a', schema2[u'a'].id),
-            (u'a', schema3[u'a'].id),
-            (u'b', u'z', schema1[u'b'][u'z'].id),
-            (u'b', u'z', schema2[u'b'][u'z'].id),
-            (u'b', u'z', schema3[u'b'][u'z'].id),
-            (u'b', u'x', schema1[u'b'][u'x'].id),
-            (u'b', u'x', schema2[u'b'][u'x'].id),
-            (u'b', u'y', schema1[u'b'][u'y'].id),
-            (u'b', u'y', schema2[u'b'][u'y'].id),
-            (u'c', schema1[u'c'].id),
-            (u'c', schema2[u'c'].id),
-            (u'y', schema3[u'y'].id),
-            ]
-        self.assertEqual(u'A', data_dict.name)
-        self.assertListEqual(expected, data_dict.paths())
-        for e in expected:
-            self.assertEqual(1, len(data_dict.get(e).attributes))
-
-    def testChoices(self):
-        session = self.layer[u'session']
-        schema1 = model.Schema(name=u'A', title=u'', state=u'published', publish_date=t1)
-        schema1[u'a'] = model.Attribute(title=u'', type=u'string', order=0,
-                is_collection=True, choices=[
-                    model.Choice(name=u'foo', title=u'Foo', value='foo', order=0),
-                    model.Choice(name=u'bar', title=u'Bar', value='bar', order=1),])
-        session.add(schema1)
-        session.flush()
-
-        data_dict = reporting.buildDataDict(session, u'A', BY_NAME, expand_choice=False)
-        expected = [('a',)]
-        self.assertEqual(u'A', data_dict.name)
-        self.assertIsNotNone(data_dict['a'].vocabulary)
-        self.assertIn('foo', data_dict['a'].vocabulary)
-        self.assertIn('bar', data_dict['a'].vocabulary)
-        self.assertIsNotNone(data_dict['a']['foo'])
-        self.assertIsNotNone(data_dict['a']['bar'])
-        with self.assertRaises(KeyError):
-            data_dict['a']['nonexistent']
-        self.assertListEqual(expected, data_dict.paths())
-
-    def testDuplicateVocabularyTerm(self):
-        u"""This will usually happen for multi-versioned forms"""
-        session = self.layer[u'session']
-        schema1 = model.Schema(name=u'A', title=u'', state=u'published', publish_date=t1)
-        schema1[u'a'] = model.Attribute(title=u'', type=u'string', order=0,
-                is_collection=True, choices=[
-                    model.Choice(name=u'foo', title=u'Foo', value='foo', order=0),
-                    model.Choice(name=u'bar', title=u'Bar', value='bar', order=1),])
-
-        schema2 = copy.deepcopy(schema1)
-        schema2.state = u'published'
-        schema2.publish_date = t2
-        for choice in schema2['a'].choices:
-            choice.title = 'New ' + choice.title
-
-        session.add_all([schema1, schema2])
-        session.flush()
-
-        data_dict = reporting.buildDataDict(session, u'A', BY_NAME, expand_choice=False)
-        expected = [('a',)]
-        self.assertEqual(u'A', data_dict.name)
-        self.assertIsNotNone(data_dict['a'].vocabulary)
-        self.assertIn('foo', data_dict['a'].vocabulary)
-        self.assertIn('bar', data_dict['a'].vocabulary)
-        self.assertEqual('New Foo', data_dict['a']['foo'].title)
-        self.assertEqual('New Bar', data_dict['a']['bar'].title)
-        with self.assertRaises(KeyError):
-            data_dict['a']['nonexistent']
-        self.assertListEqual(expected, data_dict.paths())
-
-    def testExpandedChoices(self):
-        session = self.layer[u'session']
-        schema1 = model.Schema(name=u'A', title=u'', state=u'published', publish_date=t1)
-        schema1[u'a'] = model.Attribute(title=u'', type=u'string', order=0,
-                is_collection=True, choices=[
-                    model.Choice(name=u'foo', title=u'Foo', value='foo', order=0),
-                    model.Choice(name=u'bar', title=u'Bar', value='bar', order=1),])
-        session.add(schema1)
-        session.flush()
-
-        data_dict = reporting.buildDataDict(session, u'A', BY_NAME, expand_choice=True)
-        expected = [
-            ('a', 'foo'),
-            ('a', 'bar'),
-            ]
-        self.assertEqual(u'A', data_dict.name)
-        self.assertEqual('foo', data_dict['a_foo'].selection.value)
-        self.assertEqual('bar', data_dict['a_bar'].selection.value)
-        self.assertListEqual(expected, data_dict.paths())
-
-
-class DataDictTestCase(unittest.TestCase):
-    u""" Tests various dict-like methods that DataDict supports """
-
-    def testGet(self):
-        data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=object()))
-        # returns None by default
-        self.assertIsNone(data_dict.get('x'))
-        # explicitly specify default
-        self.assertEqual('nothing', data_dict.get('x', 'nothing'))
-        self.assertIsNotNone(data_dict.get('a'))
-
-    def testGetItem(self):
-        data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=object()))
-        with self.assertRaises(KeyError):
-            data_dict['x']
-        self.assertIsNotNone(data_dict['a'])
-        # test paths also
-        self.assertIsNotNone(data_dict[('a',)])
-
-    def testContains(self):
-        data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=object()))
-        self.assertNotIn('x', data_dict)
-        self.assertIn('a', data_dict)
-
-    def testLen(self):
-        data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=object()))
-        self.assertEqual(1, len(data_dict))
-
-    def testItems(self):
-        expected = [('a', object())]
-        data_dict = reporting.DataDict(u'MyForm', OrderedDict(expected))
-        self.assertListEqual(expected, data_dict.items())
-        self.assertListEqual(expected, list(data_dict.iteritems()))
-
-    def testKeys(self):
-        data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=object()))
-        self.assertListEqual(['a'], data_dict.keys())
-        self.assertListEqual(['a'], list(data_dict.iterkeys()))
-
-    def testPaths(self):
-        class FakeColumn(object):
-            def __init__(self, path):
-                self.path = path
-        data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=FakeColumn(['a'])))
-        self.assertListEqual([['a']], data_dict.paths())
-        self.assertListEqual([['a']], list(data_dict.iterpaths()))
-
-    def testValues(self):
-        column = object()
-        data_dict = reporting.DataDict(u'MyForm', OrderedDict(a=column))
-        self.assertListEqual([column], data_dict.values())
-        self.assertListEqual([column], list(data_dict.itervalues()))
-
-
-class ValueColumnTestCase(unittest.TestCase):
-    u""" Tests that appropriately typed value columns are generated """
-
-    layer = testing.OCCAMS_DATASTORE_FIXTURE
-
-    def testStringColumn(self):
-        session = self.layer[u'session']
-        testing.createSchema(session, u'A', t1, dict(
-            a=model.Attribute(type=u'string', order=0),
-            ))
-        data_dict, report = reporting.schemaToReportByName(session, u'A')
-        column_type = session.query(report.c.a).column_descriptions[0]['type']
-        self.assertIsInstance(column_type, sa.Unicode)
-
-    def testTextColumn(self):
-        session = self.layer[u'session']
-        testing.createSchema(session, u'A', t1, dict(
-            a=model.Attribute(type=u'text', order=0),
-            ))
-        data_dict, report = reporting.schemaToReportByName(session, u'A')
-        column_type = session.query(report.c.a).column_descriptions[0]['type']
-        self.assertIsInstance(column_type, sa.UnicodeText)
-
-    def testIntegerColumn(self):
-        session = self.layer[u'session']
-        testing.createSchema(session, u'A', t1, dict(
-            a=model.Attribute(type=u'integer', order=0),
-            ))
-        data_dict, report = reporting.schemaToReportByName(session, u'A')
-        column_type = session.query(report.c.a).column_descriptions[0]['type']
-        self.assertIsInstance(column_type, sa.Integer)
-
-    def testBooleanColumn(self):
-        session = self.layer[u'session']
-        testing.createSchema(session, u'A', t1, dict(
-            a=model.Attribute(type=u'boolean', order=0),
-            ))
-        data_dict, report = reporting.schemaToReportByName(session, u'A')
-        column_type = session.query(report.c.a).column_descriptions[0]['type']
-        self.assertIsInstance(column_type, sa.Boolean)
-
-    def testDecimalColumn(self):
-        session = self.layer[u'session']
-        testing.createSchema(session, u'A', t1, dict(
-            a=model.Attribute(type=u'decimal', order=0),
-            ))
-        data_dict, report = reporting.schemaToReportByName(session, u'A')
-        column_type = session.query(report.c.a).column_descriptions[0]['type']
-        self.assertIsInstance(column_type, sa.Numeric)
-
-    ### Date/Datetimes aren't easy to test in SQLite...
-
-
-class SchemaToQueryTestCase(unittest.TestCase):
-    u""" Ensures that schema queries can by properly generated """
-
-    layer = testing.OCCAMS_DATASTORE_FIXTURE
-
-    def testExpectedMetadataColumns(self):
-        session = self.layer[u'session']
-        testing.createSchema(session, u'A', t1)
-
-        data_dict, report = reporting.schemaToReportById(session, u'A')
-        self.assertIn(u'entity_id', report.c)
-
-        data_dict, report = reporting.schemaToReportByName(session, u'A')
-        self.assertIn(u'entity_id', report.c)
-
-        data_dict, report = reporting.schemaToReportByChecksum(session, u'A')
-        self.assertIn(u'entity_id', report.c)
-
-    def testEmptySchema(self):
-        session = self.layer[u'session']
-        schema = testing.createSchema(session, u'A', t1)
-
-        data_dict, report = reporting.schemaToReportByName(session, u'A')
-        self.assertEqual(0, session.query(report).count())
-
-        testing.createEntity(schema, u'Sample', None)
-        self.assertEqual(1, session.query(report).count())
-
-    def testScalarValues(self):
-        session = self.layer[u'session']
-
-        # first version of the sample schema
-        schema1 = testing.createSchema(session, u'Sample', t1, dict(
-            value=model.Attribute(type=u'string', order=0),
-            ))
-
-        # add some entries for the schema
-        entity1 = testing.createEntity(schema1, u'Foo', t1, dict(
-            value=u'foovalue',
-            ))
-
-        # generate report by name, should be able to access attributes as columns
-        data_dict, report = reporting.schemaToReportByName(session, u'Sample')
-        result = session.query(report).filter_by(entity_id=entity1.id).one()
-        self.assertEqual(entity1[u'value'], result.value)
-
-    @unittest.skipIf(u'postgres' not in testing.DEFAULT_URI, u'Not using postgres')
-    def testArrayCollectionValues(self):
-        session = self.layer[u'session']
-
-        schema1 = testing.createSchema(session, u'Sample', t1, dict(
-            value=model.Attribute(type=u'string', is_collection=True, order=0),
-            ))
-
-        entity1 = testing.createEntity(schema1, u'Foo', t1, dict(
-            value=[u'one', u'two'],
-            ))
-
-        data_dict, report = reporting.schemaToReportByName(session, u'Sample')
-        result = session.query(report).filter_by(entity_id=entity1.id).one()
-        self.assertListEqual(entity1[u'value'], result.value)
-
-    @unittest.skipIf(u'postgres' in testing.DEFAULT_URI, u'Using ARRAY type')
-    def testDelimitedCollectionValues(self):
-        session = self.layer[u'session']
-
-        schema1 = testing.createSchema(session, u'Sample', t1, dict(
-            value=model.Attribute(type=u'string', is_collection=True, order=0),
-            ))
-
-        entity1 = testing.createEntity(schema1, u'Foo', t1, dict(
-            value=[u'one', u'two'],
-            ))
-
-        data_dict, report = reporting.schemaToReportByName(session, u'Sample')
-        result = session.query(report).filter_by(entity_id=entity1.id).one()
-        expected_value = ','.join(entity1[u'value'])
-        result_value = ','.join(entity1[u'value'])
-        self.assertEqual(expected_value, result_value)
-
-    def testObjectValues(self):
-        session = self.layer[u'session']
-
-        schema1 = model.Schema(
-            name=u'Sample',
-            title=u'',
-            state=u'published',
-            publish_date=t1
-            )
-        schema1[u'sub'] = model.Attribute(title=u'', type=u'object', order=0)
-        schema1[u'sub'].object_schema = model.Schema(
-            name=u'Sub',
-            title=u'',
-            state=u'published',
-            publish_date=schema1.publish_date,
-            is_inline=True
-            )
-        schema1[u'sub']['value'] = model.Attribute(title=u'', type=u'string', order=0)
-        session.add(schema1)
-        session.flush()
-
-        entity1 = model.Entity(schema=schema1, name=u'Foo', title=u'', collect_date=t1)
-        session.add(entity1)
-        session.flush()
-        entity1[u'sub'] = model.Entity(
-            schema=schema1['sub'].object_schema, name=u'SubFoo', title=u'', collect_date=t1)
-        session.flush()
-        entity1[u'sub'][u'value'] = u'foovalue'
-        session.flush()
-
-        data_dict, report = reporting.schemaToReportByName(session, u'Sample')
-        result = session.query(report).filter_by(entity_id=entity1.id).one()
-        self.assertTrue(data_dict['sub_value'].is_nested)
-        self.assertEqual(entity1[u'sub'][u'value'], result.sub_value)
-
-    def testExpandedChoices(self):
-        session = self.layer[u'session']
-        schema1 = model.Schema(name=u'A', title=u'', state=u'published', publish_date=t1)
-        schema1[u'a'] = model.Attribute(title=u'', type=u'string', order=0,
-                is_collection=True, choices=[
-                    model.Choice(name=u'foo', title=u'Foo', value='foo', order=0),
-                    model.Choice(name=u'bar', title=u'Bar', value='bar', order=1),])
-
-        entity1 = model.Entity(schema=schema1, name=u'Foo', title=u'', collect_date=t1)
-        entity1['a'] = ['bar']
-        session.add(entity1)
-        session.flush()
-
-        data_dict, report = reporting.schemaToReportByName(session, u'A', expand_choice=True)
-        result = session.query(report).filter_by(entity_id=entity1.id).one()
-        self.assertFalse(result.a_foo)
-        self.assertTrue(result.a_bar)
-
+from nose.tools import with_setup
+
+from tests import Session, begin_func, rollback_func
+
+
+@with_setup(begin_func, rollback_func)
+def test_datadict_published_schema():
+    """
+    It should only generate a report for published schemata
+    """
+
+    from datetime import date, timedelta
+    from nose.tools import assert_in, assert_not_in
+    from occams.datastore import models, reporting
+
+    schema = models.Schema(
+        name=u'A',
+        title=u'A',
+        sections={
+            's1': models.Section(
+                name=u's1',
+                title=u'S1',
+                order=0,
+                attributes={
+                    'a': models.Attribute(
+                        name=u'a',
+                        title=u'',
+                        type='string',
+                        order=0)})})
+
+    Session.add(schema)
+    Session.flush()
+    columns = reporting.build_columns(Session, u'A')
+    assert_not_in('a', columns)
+
+    schema.publish_date = date.today()
+    Session.flush()
+    columns = reporting.build_columns(Session, u'A')
+    assert_in('a', columns)
+
+    schema.retract_date = date.today() + timedelta(1)
+    Session.flush()
+    columns = reporting.build_columns(Session, u'A')
+    assert_not_in('a', columns)
+
+
+@with_setup(begin_func, rollback_func)
+def test_datadict_multpile_versions():
+    """
+    It should keep track of schema versions while generating column plans
+    """
+
+    from copy import deepcopy
+    from datetime import date, timedelta
+    from nose.tools import assert_in, assert_equals
+    from occams.datastore import models, reporting
+
+    today = date.today()
+
+    schema1 = models.Schema(
+        name=u'A',
+        title=u'A',
+        publish_date=today,
+        sections={
+            's1': models.Section(
+                name=u's1',
+                title=u'S1',
+                order=0,
+                attributes={
+                    'a': models.Attribute(
+                        name=u'a',
+                        title=u'',
+                        type='string',
+                        order=0)})})
+
+    schema2 = deepcopy(schema1)
+    schema2.publish_date = today + timedelta(1)
+
+    schema3 = deepcopy(schema2)
+    schema3.publish_date = today + timedelta(2)
+    schema3.sections['s1'].attributes[u'a'].title = u'prime'
+
+    Session.add_all([schema1, schema2, schema3])
+    Session.flush()
+
+    columns = reporting.build_columns(Session, u'A')
+    assert_in('a', columns)
+    assert_equals(len(columns['a'].attributes), 3)
+
+
+@with_setup(begin_func, rollback_func)
+def test_datadict_multiple_choice():
+    """
+    It should retain answer choices in the columns dictionary
+    """
+
+    from copy import deepcopy
+    from datetime import date, timedelta
+    from nose.tools import assert_in, assert_items_equal
+    from six import iterkeys
+    from occams.datastore import models, reporting
+
+    today = date.today()
+
+    schema1 = models.Schema(
+        name=u'A',
+        title=u'A',
+        publish_date=today,
+        sections={
+            's1': models.Section(
+                name=u's1',
+                title=u'S1',
+                order=0,
+                attributes={
+                    'a': models.Attribute(
+                        name=u'a',
+                        title=u'',
+                        type='string',
+                        is_collection=True,
+                        order=0,
+                        choices={
+                            '001': models.Choice(
+                                name=u'001',
+                                title=u'Foo',
+                                order=0),
+                            '002': models.Choice(
+                                name=u'002',
+                                title=u'Bar',
+                                order=1)})})})
+
+    Session.add(schema1)
+    Session.flush()
+
+    columns = reporting.build_columns(Session, u'A')
+    assert_in('a', columns)
+    assert_items_equal(['001', '002'], list(iterkeys(columns['a'].choices)))
+
+    schema2 = deepcopy(schema1)
+    schema2.publish_date = today + timedelta(1)
+    schema2.sections['s1'].attributes['a'].choices['003'] = \
+        models.Choice(name=u'003', title=u'Baz', order=3)
+    Session.add(schema2)
+    Session.flush()
+    columns = reporting.build_columns(Session, u'A')
+    assert_items_equal(['001', '002', '003'],
+                       list(iterkeys(columns['a'].choices)))
+
+
+@with_setup(begin_func, rollback_func)
+def test_datadict_duplicate_vocabulary_term():
+    """
+    It should use the most recent version of a choice label
+    """
+
+    from copy import deepcopy
+    from datetime import date, timedelta
+    from nose.tools import assert_equals, assert_in
+    from six import itervalues
+    from occams.datastore import models, reporting
+
+    today = date.today()
+
+    schema1 = models.Schema(
+        name=u'A',
+        title=u'A',
+        publish_date=today,
+        sections={
+            's1': models.Section(
+                name=u's1',
+                title=u'S1',
+                order=0,
+                attributes={
+                    'a': models.Attribute(
+                        name=u'a',
+                        title=u'',
+                        type='string',
+                        is_collection=True,
+                        order=0,
+                        choices={
+                            '001': models.Choice(
+                                name=u'001',
+                                title=u'Foo',
+                                order=0),
+                            '002': models.Choice(
+                                name=u'002',
+                                title=u'Bar',
+                                order=1)})})})
+
+    schema2 = deepcopy(schema1)
+    schema2.state = u'published'
+    schema2.publish_date = today + timedelta(1)
+    for choice in itervalues(schema2.sections['s1'].attributes['a'].choices):
+        choice.title = 'New ' + choice.title
+
+    Session.add_all([schema1, schema2])
+    Session.flush()
+
+    columns = reporting.build_columns(Session, u'A')
+    assert_in('001', columns['a'].choices)
+    assert_in('002', columns['a'].choices)
+    assert_equals('New Foo', columns['a'].choices['001'])
+    assert_equals('New Bar', columns['a'].choices['002'])
+
+
+def test_report_column_type():
+    """
+    It should normalize datastore types to SQL types
+    """
+
+    import sqlalchemy as sa
+
+    data = [
+        ('choice', sa.String),
+        ('string', sa.Unicode),
+        ('text', sa.UnicodeText),
+        ('integer', sa.Integer),
+        ('boolean', sa.Integer),
+        ('decimal', sa.Numeric)]
+
+    #### Date/Datetimes aren't easy to test in SQLite...
+
+    for args in data:
+        yield tuple([check_report_column_type]) + args
+
+
+@with_setup(begin_func, rollback_func)
+def check_report_column_type(ds_type, sa_type):
+    """
+    Assert function to check datastore type to sql type conversion
+    """
+
+    from datetime import date
+    from nose.tools import assert_is_instance
+    from occams.datastore import models, reporting
+
+    schema = models.Schema(name=u'A', title=u'A', publish_date=date.today())
+    section = models.Section(schema=schema, name=u's1', title=u'S1', order=0)
+    attribute = models.Attribute(
+        schema=schema, section=section, name=u'a', title=u'', type=ds_type,
+        order=0)
+    Session.add(attribute)
+    Session.flush()
+
+    report = reporting.build_report(Session, u'A')
+    column_type = Session.query(report.c.a).column_descriptions[0]['type']
+
+    assert_is_instance(
+        column_type,
+        sa_type,
+        '%s did not covert to %s, got %s'
+        % (ds_type, str(sa_type), column_type))
+
+
+@with_setup(begin_func, rollback_func)
+def test_build_report_expected_metadata_columns():
+    """
+    It should always include entity metdata in the final report query
+    """
+
+    from datetime import date
+    from nose.tools import assert_in
+    from occams.datastore import models, reporting
+
+    today = date.today()
+
+    schema = models.Schema(name=u'A', title=u'A', publish_date=today)
+    Session.add(schema)
+    Session.flush()
+
+    report = reporting.build_report(Session, u'A')
+    assert_in(u'id', report.c)
+    assert_in(u'form_name', report.c)
+    assert_in(u'publish_date', report.c)
+    assert_in(u'state', report.c)
+    assert_in(u'collect_date', report.c)
+    assert_in(u'is_null', report.c)
+    assert_in(u'create_date', report.c)
+    assert_in(u'create_user', report.c)
+    assert_in(u'modify_date', report.c)
+    assert_in(u'modify_user', report.c)
+
+
+@with_setup(begin_func, rollback_func)
+def test_build_report_scalar_values():
+    """
+    It should properly report scalar values
+    """
+
+    from datetime import date
+    from nose.tools import assert_equals
+    from occams.datastore import models, reporting
+
+    today = date.today()
+
+    schema1 = models.Schema(
+        name=u'A',
+        title=u'A',
+        publish_date=today,
+        sections={
+            's1': models.Section(
+                name=u's1',
+                title=u'S1',
+                order=0,
+                attributes={
+                    'a': models.Attribute(
+                        name=u'a',
+                        title=u'',
+                        type='string',
+                        order=0)})})
+
+    Session.add(schema1)
+    Session.flush()
+
+    # add some entries for the schema
+    entity1 = models.Entity(schema=schema1, name=u'Foo', title=u'')
+    entity1['a'] = u'foovalue'
+    Session.add(entity1)
+    Session.flush()
+
+    report = reporting.build_report(Session, u'A')
+    result = Session.query(report).one()
+    assert_equals(entity1[u'a'], result.a)
+
+
+@with_setup(begin_func, rollback_func)
+def test_build_report_sqlite_datetime():
+    """
+    It should accomodate SQLite's shoddy datetime support
+    """
+    from datetime import date
+    from nose.tools import assert_equals
+    from nose.plugins.skip import SkipTest
+    from occams.datastore import models, reporting
+
+    today = date.today()
+
+    if Session.bind.url.drivername != 'sqlite':
+        raise SkipTest('Not using Sqlite')
+
+    schema1 = models.Schema(
+        name=u'A',
+        title=u'A',
+        publish_date=today,
+        sections={
+            's1': models.Section(
+                name=u's1',
+                title=u'S1',
+                order=0,
+                attributes={
+                    'a': models.Attribute(
+                        name=u'a',
+                        title=u'',
+                        type='date',
+                        order=0)})})
+    Session.add(schema1)
+    Session.flush()
+
+    # add some entries for the schema
+    entity1 = models.Entity(schema=schema1, name=u'Foo', title=u'')
+    entity1['a'] = date(1976, 7, 4)
+    Session.add(entity1)
+    Session.flush()
+
+    report = reporting.build_report(Session, u'A')
+    result = Session.query(report).one()
+    assert_equals(str(result.a), '1976-07-04')
+
+    schema1.sections['s1'].attributes['a'].type = 'datetime'
+    Session.flush()
+    report = reporting.build_report(Session, u'A')
+    result = Session.query(report).one()
+    assert_equals(str(result.a), '1976-07-04 00:00:00')
+
+
+@with_setup(begin_func, rollback_func)
+def test_build_report_choice_types():
+    """
+    It should be able to use choice labels instead of codes.
+    (for human readibily)
+    """
+
+    from datetime import date
+    from nose.tools import assert_is_none, assert_equals, assert_items_equal
+    from occams.datastore import models, reporting
+
+    today = date.today()
+
+    schema1 = models.Schema(
+        name=u'A',
+        title=u'A',
+        publish_date=today,
+        sections={
+            's1': models.Section(
+                name=u's1',
+                title=u'S1',
+                order=0,
+                attributes={
+                    'a': models.Attribute(
+                        name=u'a',
+                        title=u'',
+                        type='choice',
+                        is_collection=False,
+                        order=0,
+                        choices={
+                            '001': models.Choice(
+                                name=u'001',
+                                title=u'Green',
+                                order=0),
+                            '002': models.Choice(
+                                name=u'002',
+                                title=u'Red',
+                                order=1),
+                            '003': models.Choice(
+                                name=u'003',
+                                title=u'Blue',
+                                order=2)
+                            })})})
+    Session.add(schema1)
+    Session.flush()
+
+    entity1 = models.Entity(schema=schema1, name=u'Foo', title=u'')
+    entity1['a'] = u'002'
+    Session.add(entity1)
+    Session.flush()
+
+    # labels off
+    report = reporting.build_report(Session, u'A', use_choice_labels=False)
+    result = Session.query(report).one()
+    assert_equals(result.a, '002')
+
+    # labels on
+    report = reporting.build_report(Session, u'A', use_choice_labels=True)
+    result = Session.query(report).one()
+    assert_equals(result.a, 'Red')
+
+    # switch to multiple-choice
+    schema1.attributes['a'].is_collection = True
+    entity1['a'] = ['002', '003']
+    Session.flush()
+
+    # delimited multiple-choice, labels off
+    report = reporting.build_report(Session, u'A',
+                                    expand_collections=False,
+                                    use_choice_labels=False)
+    result = Session.query(report).one()
+    assert_items_equal(result.a.split(';'), ['002', '003'])
+
+    # delimited multiple-choice, labels on
+    report = reporting.build_report(Session, u'A',
+                                    expand_collections=False,
+                                    use_choice_labels=True)
+    result = Session.query(report).one()
+    assert_items_equal(result.a.split(';'), ['Red', 'Blue'])
+
+    # expanded multiple-choice, labels off
+    report = reporting.build_report(Session, u'A',
+                                    expand_collections=True,
+                                    use_choice_labels=False)
+    result = Session.query(report).one()
+    assert_equals(result.a_001, 0)
+    assert_equals(result.a_002, 1)
+    assert_equals(result.a_003, 1)
+
+    # expanded multiple-choice, labels on
+    report = reporting.build_report(Session, u'A',
+                                    expand_collections=True,
+                                    use_choice_labels=True)
+    result = Session.query(report).one()
+    assert_is_none(result.a_001)
+    assert_equals(result.a_002, 'Red')
+    assert_equals(result.a_003, 'Blue')
+
+
+@with_setup(begin_func, rollback_func)
+def test_build_report_ids():
+    """
+    It should be able to include only the schemata with the specified ids
+    """
+
+    from copy import deepcopy
+    from datetime import date, timedelta
+    from nose.tools import assert_in, assert_not_in
+    from occams.datastore import models, reporting
+
+    today = date.today()
+
+    schema1 = models.Schema(
+        name=u'A',
+        title=u'A',
+        publish_date=today,
+        sections={
+            's1': models.Section(
+                name=u's1',
+                title=u'S1',
+                order=0,
+                attributes={
+                    'a': models.Attribute(
+                        name=u'a',
+                        title=u'',
+                        type='string',
+                        is_private=True,
+                        order=0)})})
+    Session.add(schema1)
+    Session.flush()
+
+    schema2 = deepcopy(schema1)
+    schema2.publish_date = today + timedelta(1)
+    schema2.sections['s1'].attributes['b'] = models.Attribute(
+        name=u'b',
+        title=u'',
+        type='string',
+        is_private=True,
+        order=1)
+    Session.add(schema2)
+    Session.flush()
+
+    # all
+    report = reporting.build_report(Session, u'A')
+    assert_in('a', report.c)
+    assert_in('b', report.c)
+
+    # Only v1
+    report = reporting.build_report(Session, u'A', ids=[schema1.id])
+    assert_in('a', report.c)
+    assert_not_in('b', report.c)
+
+
+@with_setup(begin_func, rollback_func)
+def test_build_report_context():
+    """
+    It should be able to associate with a context. (for easier joins)
+    """
+
+    from datetime import date
+    from nose.tools import assert_in, assert_not_in, assert_equals
+    from occams.datastore import models, reporting
+
+    today = date.today()
+
+    schema1 = models.Schema(
+        name=u'A',
+        title=u'A',
+        publish_date=today,
+        sections={
+            's1': models.Section(
+                name=u's1',
+                title=u'S1',
+                order=0,
+                attributes={
+                    'a': models.Attribute(
+                        name=u'a',
+                        title=u'',
+                        type='string',
+                        is_private=True,
+                        order=0)})})
+    Session.add(schema1)
+    Session.flush()
+
+    entity1 = models.Entity(schema=schema1, name=u'Foo', title=u'')
+    entity1['a'] = u'002'
+    Session.add(entity1)
+    Session.flush()
+
+    Session.add(models.Context(external='sometable', key=123, entity=entity1))
+    Session.flush()
+
+    # not specified
+    report = reporting.build_report(Session, u'A')
+    assert_not_in('context_key', report.c)
+
+    # specified
+    report = reporting.build_report(Session, u'A', context='sometable')
+    result = Session.query(report).one()
+    assert_in('context_key', report.c)
+    assert_equals(result.context_key, 123)
+
+
+@with_setup(begin_func, rollback_func)
+def test_build_report_attributes():
+    """
+    It should only include the specified columns (useful for large forms)
+    """
+    from datetime import date
+    from nose.tools import assert_in, assert_not_in
+    from occams.datastore import models, reporting
+
+    today = date.today()
+
+    schema1 = models.Schema(
+        name=u'A',
+        title=u'A',
+        publish_date=today,
+        sections={
+            's1': models.Section(
+                name=u's1',
+                title=u'S1',
+                order=0,
+                attributes={
+                    'a': models.Attribute(
+                        name=u'a',
+                        title=u'',
+                        type='string',
+                        is_private=True,
+                        order=0),
+                    'b': models.Attribute(
+                        name=u'b',
+                        title=u'',
+                        type='string',
+                        is_private=True,
+                        order=1)})})
+
+    Session.add(schema1)
+    Session.flush()
+
+    report = reporting.build_report(Session, u'A', attributes=['b'])
+    assert_not_in('a', report.c)
+    assert_in('b', report.c)
+
+
+@with_setup(begin_func, rollback_func)
+def test_build_report_ignore_private():
+    """
+    It should be able to de-identify private data upon request
+    """
+
+    from datetime import date
+    from nose.tools import assert_equals
+    from occams.datastore import models, reporting
+
+    today = date.today()
+
+    schema1 = models.Schema(
+        name=u'A',
+        title=u'A',
+        publish_date=today,
+        sections={
+            's1': models.Section(
+                name=u's1',
+                title=u'S1',
+                order=0,
+                attributes={
+                    'name': models.Attribute(
+                        name=u'name',
+                        title=u'',
+                        type='string',
+                        is_private=True,
+                        order=0)})})
+
+    Session.add(schema1)
+    Session.flush()
+
+    # add some entries for the schema
+    entity1 = models.Entity(schema=schema1, name=u'Foo', title=u'')
+    entity1['name'] = u'Jane Doe'
+    Session.add(entity1)
+    Session.flush()
+
+    # not de-identified
+    report = reporting.build_report(Session, u'A', ignore_private=False)
+    result = Session.query(report).one()
+    assert_equals(entity1[u'name'], result.name)
+
+    # de-identified
+    report = reporting.build_report(Session, u'A', ignore_private=True)
+    result = Session.query(report).one()
+    assert_equals('[PRIVATE]', result.name)

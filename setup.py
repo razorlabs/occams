@@ -9,23 +9,15 @@ HERE = os.path.abspath(os.path.dirname(__file__))
 REQUIRES = [
     'alembic',
     'six',
-    'lxml',
     'SQLAlchemy']
 
 EXTRAS = {
     'postgresql': ['psycopg2'],
-    'test': [
-        'nose',
-        'coverage',
-        'WebTest',
-        'beautifulsoup4',
-        'mock',
-        'ddt']}
+    'test': ['nose', 'coverage']}
 
 
 if sys.version_info < (2, 7):
     REQUIRES.extend('argparse', 'ordereddict')
-    EXTRAS['test'].extend(['unittest2'])
 
 
 def get_version():

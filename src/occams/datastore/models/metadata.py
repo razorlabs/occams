@@ -11,8 +11,8 @@ from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import object_session, relationship
 
-from occams.datastore.models import DataStoreModel as Model
-from occams.datastore.exc import NonExistentUserError
+from . import DataStoreModel as Model
+from ..exc import NonExistentUserError
 
 
 def updateMetadata(instance, created):

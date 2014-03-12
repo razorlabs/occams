@@ -1,105 +1,96 @@
-import datetime
-import unittest2 as unittest
+from nose.tools import with_setup
 
-import sqlalchemy.exc
-from sqlalchemy import create_engine
-from sqlalchemy import Column
-from sqlalchemy import Integer
-from sqlalchemy import String
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import scoped_session
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import Column, Integer
+from sqlalchemy.orm import scoped_session, sessionmaker
 
-from occams.datastore import model
-from occams.datastore.model.metadata import AutoNamed
-from occams.datastore.interfaces import NonExistentUserError
-from occams.datastore.testing import OCCAMS_DATASTORE_FIXTURE
+from occams.datastore.models import ModelClass, Modifiable
 
 
-class AutoNamingTestCase(unittest.TestCase):
+Session = scoped_session(sessionmaker())
 
-    def testBasic(self):
-        Base = declarative_base(bind=create_engine('sqlite://'))
-
-        class SomeClass(AutoNamed, Base):
-            id = Column(Integer, primary_key=True)
-            name = Column(String(50))
-
-        Base.metadata.create_all()
-
-        self.assertEqual('someclass', SomeClass.__table__.name)
-
-    def testInherited(self):
-        Base = declarative_base(bind=create_engine('sqlite://'))
-
-        class BaseClass(AutoNamed, Base):
-            id = Column(Integer, primary_key=True)
-            name = Column(String(50))
-            type = Column(String(50))
-            __mapper_args__ = {'polymorphic_on':type, 'polymorphic_identity':'base'}
-
-        class SubClass(BaseClass):
-            subname = Column(String(50), unique=True)
-            __mapper_args__ = {'polymorphic_identity':'sub'}
-
-        Base.metadata.create_all()
-        self.assertEqual('baseclass', BaseClass.__table__.name)
-        self.assertEqual('baseclass', SubClass.__table__.name)
+Base = ModelClass('Base')
 
 
-class ModifiableMixinTestCase(unittest.TestCase):
+class ModifiableClass(Base, Modifiable):
     """
-    Verifies modifiable extensions
+    Sample case of a class using ``Modifiable``'s functionality
     """
+    __tablename__ = 'modifiable'
+    id = Column(Integer, primary_key=True)
 
-    # TODO: it would be nice to be able to test this as a datastore-unaware
-    # class, but there are too many moving parts that modifiable depends on,
-    # such as the ``User`` table, which is attached to the product's model
-    # and would be dangerous to extend in this module as it's sitting
-    # alongside the production code. Perhaps one day we can move these tests
-    # into their own separate package and then extend ``Model`` in a test sample.
 
-    layer = OCCAMS_DATASTORE_FIXTURE
+def setup_modifiable():
+    """
+    Create sandbox for a database that would be using modifiable
+    """
+    from sqlalchemy import create_engine
+    from occams.datastore.models import DataStoreModel
+    from occams.datastore.models.events import register
+    Session.configure(bind=create_engine('sqlite://'),
+                      info={'user': 'bitcore@ucsd.edu'})
+    register(Session)
+    DataStoreModel.metadata.create_all(Session.bind)
+    Base.metadata.create_all(Session.bind)
 
-    def testBasic(self):
-        """
-        Test is new mappings obey the modifiable extension properly
-        """
-        session = self.layer['session']
-        schema = model.Schema(name='Foo', title=u'')
-        session.add(schema)
-        session.flush()
 
-        message = 'No metadata added to '
-        for check in ('create_date', 'create_user_id', 'modify_date', 'modify_user_id'):
-            self.assertIsNotNone(getattr(schema, check), message)
+def teardown_modifiable():
+    from occams.datastore.models import DataStoreModel
+    DataStoreModel.metadata.drop_all(Session.bind)
+    Base.metadata.drop_all(Session.bind)
+    Session.remove()
 
-    def testInvalidDate(self):
-        session = self.layer['session']
-        schema = model.Schema(name='Foo', title=u'')
-        session.add(schema)
-        session.flush()
 
-        # Make sure we can't use an incorrect timeline
-        schema.create_date += datetime.timedelta(1)
+@with_setup(setup_modifiable, teardown_modifiable)
+def test_modifiable_basic():
+    """
+    It should annotate the record with modification dates
+    """
+    from nose.tools import assert_is_not_none
+    from occams.datastore.models import User
+    Session.add(User(key=u'bitcore@ucsd.edu'))
+    Session.commit()
 
-        with self.assertRaises(sqlalchemy.exc.IntegrityError):
-            session.flush()
+    record = ModifiableClass()
+    Session.add(record)
+    Session.commit()
 
-    def testNonExistentUser(self):
-        # Use the current connection
-        engine = self.layer['session'].bind
+    assert_is_not_none(record.create_date)
+    assert_is_not_none(record.create_user_id)
+    assert_is_not_none(record.modify_date)
+    assert_is_not_none(record.modify_user_id)
 
-        # Use a separate session that pools users from an "unknown" source
-        renegadeSession = scoped_session(sessionmaker(
-            bind=engine,
-            class_=model.DataStoreSession,
-            user=lambda: 'nonexistent@trollolol.com'
-        ))
 
-        schema = model.Schema(name='Foo', title=u'')
-        renegadeSession.add(schema)
+@with_setup(setup_modifiable, teardown_modifiable)
+def test_modifiable_invalid_date():
+    """
+    It should not allow use of inconsitent timelines
+    """
+    from nose.tools import assert_raises
+    import datetime
+    from sqlalchemy.exc import IntegrityError
+    from occams.datastore.models import User
+    Session.add(User(key=u'bitcore@ucsd.edu'))
+    Session.commit()
 
-        with self.assertRaises(NonExistentUserError):
-            renegadeSession.flush()
+    record = ModifiableClass()
+    Session.add(record)
+    Session.commit()
 
+    record.create_date += datetime.timedelta(1)
+    with assert_raises(IntegrityError):
+        Session.commit()
+
+
+@with_setup(setup_modifiable, teardown_modifiable)
+def test_modifable_non_existent_user():
+    """
+    It should fail if a non-existent user attemts to make a commti
+    """
+    from nose.tools import assert_raises
+    from occams.datastore.exc import NonExistentUserError
+
+    record = ModifiableClass()
+    Session.add(record)
+
+    with assert_raises(NonExistentUserError):
+        Session.commit()

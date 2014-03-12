@@ -2,505 +2,690 @@
 Tests for storage implementations and services
 """
 
-import time
-import os
-import unittest2 as unittest
-from datetime import date
-from datetime import datetime
-from decimal import Decimal
+from nose.tools import with_setup
 
-import sqlalchemy.exc
-from zope.interface.verify import verifyClass
-from zope.interface.verify import verifyObject
-
-from occams.datastore import model
-from occams.datastore.model.storage import nameModelMap
-from occams.datastore.testing import OCCAMS_DATASTORE_FIXTURE
-from occams.datastore.interfaces import  IEntity
-from occams.datastore.interfaces import InvalidEntitySchemaError
-from occams.datastore.interfaces import ConstraintError
+from tests import Session, begin_func, rollback_func
 
 
-class WorkflowModelTestCase(unittest.TestCase):
-
-    layer = OCCAMS_DATASTORE_FIXTURE
-
-    def testImplementation(self):
-        self.assertTrue(verifyClass(IEntity, model.Entity))
-        self.assertTrue(verifyObject(IEntity, model.Entity()))
-
-    def testUniquName(self):
-        session = self.layer['session']
-        session.add(model.State(name=u'pending-entry', title=u'Pending Entry'))
-        session.flush()
-
-        with self.assertRaises(sqlalchemy.exc.IntegrityError):
-            session.add(model.State(name=u'pending-entry', title=u'Pending Entry'))
-            session.flush()
-
-    def testEntityRelationship(self):
-        session = self.layer['session']
-        schema = model.Schema(name=u'Foo', title=u'Foo', state=u'published')
-        pending_entry = model.State(name=u'pending-entry', title=u'Pending Entry')
-        entity = model.Entity(schema=schema, name='foo', title=u'Foo')
-        session.add_all([pending_entry, entity])
-        session.flush()
-
-        self.assertIsNone(entity.state)
-        self.assertEqual(0, pending_entry.entities.count())
-
-        entity.state = pending_entry
-        session.flush()
-
-        self.assertIsNotNone(entity.state)
-        self.assertEqual(1, pending_entry.entities.count())
-
-
-class EntityModelTestCase(unittest.TestCase):
+@with_setup(begin_func, rollback_func)
+def test_state_unique_name():
     """
-    Verifies entity model
+    It should only allow states with unique names
+    """
+    from nose.tools import assert_raises
+    import sqlalchemy.exc
+    from occams.datastore import models
+
+    Session.add(models.State(name=u'pending-entry', title=u'Pending Entry'))
+    Session.flush()
+
+    Session.add(models.State(name=u'pending-entry', title=u'Pending Entry'))
+    assert_raises(sqlalchemy.exc.IntegrityError, Session.flush)
+
+
+@with_setup(begin_func, rollback_func)
+def test_state_entity_relationship():
+    """
+    It should implement state/entity relationship
+    """
+    from datetime import date
+    from nose.tools import assert_is_none, assert_is_not_none, assert_equals
+    from occams.datastore import models
+
+    schema = models.Schema(name=u'Foo', title=u'Foo',
+                           publish_date=date(2000, 1, 1))
+    pending_entry = models.State(name=u'pending-entry', title=u'Pending Entry')
+    entity = models.Entity(schema=schema, name='foo', title=u'Foo')
+    Session.add_all([pending_entry, entity])
+    Session.flush()
+
+    assert_is_none(entity.state)
+    assert_equals(pending_entry.entities.count(), 0)
+
+    entity.state = pending_entry
+    Session.flush()
+
+    assert_is_not_none(entity.state)
+    assert_equals(pending_entry.entities.count(), 1)
+
+
+@with_setup(begin_func, rollback_func)
+def test_entity_add_unpublished_schema():
+    """
+    It should not allow adding entities related to unpublished schemata
+    """
+    from nose.tools import assert_raises
+    from occams.datastore import models
+    from occams.datastore.exc import InvalidEntitySchemaError
+
+    schema = models.Schema(name=u'Foo', title=u'')
+    entity = models.Entity(schema=schema, name=u'Foo', title=u'')
+    Session.add(entity)
+    with assert_raises(InvalidEntitySchemaError):
+        Session.flush()
+
+
+@with_setup(begin_func, rollback_func)
+def test_entity_default_collect_date():
+    """
+    It should default to today's date as the collect_date if not is provided
+    """
+    from datetime import date
+    from nose.tools import assert_equals
+    from occams.datastore import models
+    # Make sure the system can auto-assign a collect date for the entry
+
+    schema = models.Schema(name=u'Foo', title=u'',
+                           publish_date=date(2000, 1, 1))
+    entity = models.Entity(schema=schema, name=u'Foo', title=u'')
+    Session.add(entity)
+    Session.flush()
+    assert_equals(date.today(), entity.collect_date)
+
+    # If one is supplied by the user, don't do anything
+    collect_date = date(2010, 9, 1)
+    entity = models.Entity(
+        schema=schema,
+        name=u'Entry 2',
+        title=u'Entry 2',
+        collect_date=collect_date)
+    Session.add(entity)
+    Session.flush()
+    assert_equals(entity.collect_date, collect_date)
+
+
+def test_entity_types():
+    """
+    It should properly handle supported types
     """
 
-    layer = OCCAMS_DATASTORE_FIXTURE
-
-    def testImplementation(self):
-        self.assertTrue(verifyClass(IEntity, model.Entity))
-        self.assertTrue(verifyObject(IEntity, model.Entity()))
-
-    def testAdd(self):
-        session = self.layer['session']
-        schema = model.Schema(name=u'Foo', title=u'', state=u'published')
-        entity = model.Entity(schema=schema, name=u'Foo', title=u'')
-        session.add(entity)
-        session.flush()
-        count = session.query(model.Entity).count()
-        self.assertEquals(1, count)
-
-    def testAddUnpublishedSchema(self):
-        session = self.layer['session']
-        schema = model.Schema(name=u'Foo', title=u'')
-        entity = model.Entity(schema=schema, name=u'Foo', title=u'')
-        session.add(entity)
-        with self.assertRaises(InvalidEntitySchemaError):
-            session.flush()
-
-    def testProperties(self):
-        session = self.layer['session']
-        schema = model.Schema(name=u'Foo', title=u'', state=u'published')
-        entity = model.Entity(schema=schema, name=u'Foo', title=u'')
-        session.add(entity)
-        session.flush()
-
-        # Check that all properties are working properly
-        self.assertIsNotNone(entity.schema)
-        self.assertEqual(entity.is_null, False)
-        self.assertIsNotNone(entity.create_date)
-        self.assertIsNotNone(entity.create_user)
-        self.assertIsNotNone(entity.modify_date)
-        self.assertIsNotNone(entity.modify_user)
-
-    def testDefaultCollectDate(self):
-        # Make sure the system can auto-assign a collect date for the entry
-        session = self.layer['session']
-        schema = model.Schema(name=u'Foo', title=u'', state=u'published')
-        entity = model.Entity(schema=schema, name=u'Foo', title=u'')
-        session.add(entity)
-        session.flush()
-        self.assertEqual(date.today(), entity.collect_date)
-
-        # If one is supplied by the user, don't do anything
-        collect_date = date(2010, 9, 1)
-        entity = model.Entity(
-            schema=schema,
-            name=u'Entry 2',
-            title=u'Entry 2',
-            collect_date=collect_date
-            )
-        session.add(entity)
-        session.flush()
-        self.assertEqual(entity.collect_date, collect_date)
-
-    def testMissingTitle(self):
-        session = self.layer['session']
-        schema = model.Schema(name=u'Foo', title=u'', state=u'published')
-        with self.assertRaises(sqlalchemy.exc.IntegrityError):
-            session.add(model.Entity(schema=schema, name=u'Entry'))
-            session.flush()
-
-    def testTypes(self):
-        session = self.layer['session']
-        sample = [
-            ('integer', 5, 8, [1, 2, 3]),
-            ('decimal', Decimal('16.4'), Decimal('12.3'),
-                    [Decimal('1.5'), Decimal('12.1'), Decimal('3.0')]),
-            ('boolean', True, False, [True, False]),
-            ('string', u'foo', u'bar', [u'foo', u'bar', u'baz']),
-            ('text', u'foo\nbar', u'foo\nbario', [u'par\n1', u'par\n2', u'par\n3']),
-            ('date', date(2010, 3, 1), date(2010, 4, 1),
-                [date(2010, 1, 1), date(2010, 2, 1), date(2010, 3, 1)]),
-            ('datetime', datetime(2010, 3, 1, 5, 3, 0), datetime(2011, 3, 1, 5, 3, 0),
-                [
-                datetime(2010, 3, 1, 5, 3, 0),
-                datetime(2010, 5, 1, 5, 3, 0),
-                datetime(2010, 8, 1, 5, 3, 0),
-                ]),
-            ]
-
-        schema = model.Schema(name=u'Foo', title=u'', state=u'published')
-        entity = model.Entity(schema=schema, name=u'Foo', title=u'')
-        session.add(entity)
-        session.flush()
-
-        order = 0
-
-        for typeName, simple, update, collection in sample:
-            ModelClass = nameModelMap[typeName]
-
-            # Do simple values
-            simpleName = typeName + 'simple'
-            schema[simpleName] = model.Attribute(title=u'', type=typeName, is_required=False, order=order)
-            entity[simpleName] = None
-            session.flush()
-            self.assertEqual(None, entity[simpleName])
-
-            entity[simpleName] = simple
-            session.flush()
-            self.assertEqual(simple, entity[simpleName])
-
-            # Double check auditing
-            valueQuery = session.query(ModelClass).filter_by(attribute=schema[simpleName])
-            valueObject = valueQuery.one()
-            self.assertEqual(2, valueObject.revision)
-
-            # Try updating
-            entity[simpleName] = update
-            session.flush()
-            self.assertEqual(update, entity[simpleName])
-
-            # Triple check auditing
-            valueObject = valueQuery.one()
-            self.assertEqual(3, valueObject.revision)
-
-            order += 1
-
-            # Now try collections
-            collectionName = typeName + 'collection'
-            schema[collectionName] = model.Attribute(title=u'', type=typeName, is_collection=True, order=order)
-            entity[collectionName] = collection
-            session.flush()
-            self.assertItemsEqual(collection, entity[collectionName])
-
-            valueQuery = session.query(ModelClass).filter_by(attribute=schema[collectionName])
-
-            order += 1
-
-            # Make sure we can also update
-            entity[collectionName] = collection[:2]
-            session.flush()
-            self.assertItemsEqual(collection[:2], entity[collectionName])
-            self.assertEqual(2, valueQuery.count())
-
-            # Lists are not audited, they're just removed and a new one is
-            # set
-            self.assertItemsEqual([1, 1], [v.revision for v in valueQuery])
-
-    def testSubObject(self):
-        session = self.layer['session']
-        schema = model.Schema(name=u'Foo', title=u'', state=u'published')
-        entity = model.Entity(schema=schema, name=u'Foo', title=u'')
-        session.add(entity)
-        session.flush()
-
-        subschema = model.Schema(name=u'Sub', title=u'', state=u'published')
-        model.Attribute(schema=schema, name=u'sub', title=u'', type=u'object', order=0, object_schema=subschema)
-        session.flush()
-        self.assertIsNone(entity['sub'])
-
-        subentity = model.Entity(schema=subschema, name=u'Sub', title=u'')
-        entity['sub'] = subentity
-        session.flush()
-        self.assertEqual(subentity.id, entity['sub'].id)
-
-        # Update the subentity, should be ok
-        subentity = model.Entity(schema=subschema, name=u'NewSub', title=u'')
-        entity['sub'] = subentity
-        session.flush()
-        self.assertEqual(subentity.id, entity['sub'].id)
-
-        # Because there is not enough confidence in subobjects, try every
-        # single possible type
-        sample = [
-            ('integer', 5, [1, 2, 3]),
-            ('decimal', Decimal('16.4'), [Decimal('1.5'), Decimal('12.1'), Decimal('3.0')]),
-            ('boolean', True, [True, False]),
-            ('string', u'foo', [u'foo', u'bar', u'baz']),
-            ('text', u'foo\nbar', [u'par\n1', u'par\n2', u'par\n3']),
-            ('date', date(2010, 3, 1), [date(2010, 1, 1), date(2010, 2, 1), date(2010, 3, 1)]),
-            ('datetime', datetime(2010, 3, 1, 5, 3, 0), [
-                datetime(2010, 3, 1, 5, 3, 0),
-                datetime(2010, 5, 1, 5, 3, 0),
-                datetime(2010, 8, 1, 5, 3, 0),
-                ]),
-            ]
-
-        order = 0
-
-        for typeName, simple, collection in sample:
-            # Do simple values
-            simpleName = typeName + 'simple'
-            subschema[simpleName] = model.Attribute(title=u'', type=typeName, order=order)
-            entity['sub'][simpleName] = simple
-            session.flush()
-            self.assertEqual(simple, entity['sub'][simpleName])
-
-            order += 1
-
-            # Now try collections
-            collectionName = typeName + 'collection'
-            subschema[collectionName] = model.Attribute(title=u'', type=typeName, is_collection=True, order=order)
-            entity['sub'][collectionName] = collection
-            session.flush()
-            self.assertItemsEqual(collection, entity['sub'][collectionName])
-
-            order += 1
-
-    def testBlobType(self):
-        u"""
-        Simple test for file storage support
-        Note that for large files, ``memoryview`` should be investigated
-        as a buffer so that large files aren't read into memor when being
-        stored in the database.
-        """
-        session = self.layer['session']
-        schema = model.Schema(name='HasBlob', title=u'', state='published')
-        schema['theblob'] = model.Attribute(title=u'', type='blob', order=0)
-        entity = model.Entity(schema=schema, name='blobish', title=u'')
-        contents = os.urandom(1000)
-        entity['theblob'] = contents
-        session.add(entity)
-        session.flush()
-        entity_id = entity.id
-        # remove all isntances from the session so we can see if they are
-        # properly fetched
-        session.expunge_all()
-
-        entity = session.query(model.Entity).get(entity_id)
-        self.assertEqual(contents, entity['theblob'])
-        self.assertEqual(1, session.query(model.ValueBlob).count())
-
-    def testAttributeRequiredConstraint(self):
-        # An attribute is required to set a value
-        with self.assertRaises(ConstraintError):
-            value = model.ValueString(value=u'Foo')
-
-    def testValueMinConstraint(self):
-        session = self.layer['session']
-        tests = (
-            # (type, limit, below, equal, over)
-            ('string', 5, u'foo', u'foooo', u'foobario'),
-            ('integer', 5, 2, 5, 10),
-            ('decimal', 5, Decimal('2.0'), Decimal('5.0'), Decimal('10.0')),
-            ('date', time.mktime(date(2009, 5, 6).timetuple()), date(2001, 2, 8), date(2009, 5, 6), date(2010, 4, 6)),
-            ('datetime', time.mktime(date(2009, 5, 6).timetuple()), datetime(2001, 2, 8), datetime(2009, 5, 6), datetime(2010, 4, 6)),
-            )
-
-        schema = model.Schema(name=u'Foo', title=u'', state=u'published')
-        entity = model.Entity(schema=schema, name=u'Foo', title=u'')
-        session.add(entity)
-        session.flush()
-
-        for i, test in enumerate(tests):
-            type_, limit, below, equal, over = test
-            model.Attribute(schema=schema, name=type_, title=u'', type=type_, is_required=False, value_min=limit, order=i)
-
-            with self.assertRaises(ConstraintError):
-                entity[type_] = below
-
-            entity[type_] = None
-            entity[type_] = equal
-            entity[type_] = over
-
-        model.Attribute(schema=schema, name=u'boolean', title=u'', type=u'boolean', value_min=10, order=100)
-        with self.assertRaises(NotImplementedError):
-            entity['boolean'] = True
-
-    def testValueMaxConstraint(self):
-        session = self.layer['session']
-        tests = (
-            # (type, limit, below, equal, over)
-            ('string', 5, u'foo', u'foooo', u'foobario'),
-            ('integer', 5, 2, 5, 10),
-            ('decimal', 5, Decimal('2.0'), Decimal('5.0'), Decimal('10.0')),
-            ('date', time.mktime(date(2009, 5, 6).timetuple()), date(2001, 2, 8), date(2009, 5, 6), date(2010, 4, 6)),
-            ('datetime', time.mktime(date(2009, 5, 6).timetuple()), datetime(2001, 2, 8), datetime(2009, 5, 6), datetime(2010, 4, 6)),
-            )
-
-        schema = model.Schema(name=u'Foo', title=u'', state=u'published')
-        entity = model.Entity(schema=schema, name=u'Foo', title=u'')
-        session.add(entity)
-        session.flush()
-
-        for i, test in enumerate(tests):
-            type_, limit, below, equal, over = test
-            model.Attribute(schema=schema, name=type_, title=u'', type=type_, is_required=False, value_max=limit, order=i)
-
-            entity[type_] = None
-            entity[type_] = below
-            entity[type_] = equal
-
-            with self.assertRaises(ConstraintError):
-                entity[type_] = over
-
-        model.Attribute(schema=schema, name=u'boolean', title=u'', type=u'boolean', value_max=10, order=100)
-        with self.assertRaises(NotImplementedError):
-            entity['boolean'] = True
-
-    def testValidatorConstraint(self):
-        session = self.layer['session']
-        schema = model.Schema(name=u'Foo', title=u'', state=u'published')
-        model.Attribute(
-            schema=schema,
-            name=u'test',
-            title=u'',
-            type=u'string',
-            is_required=False,
-            # Valid US phone number
-            validator=r'\d{3}-\d{3}-\d{4}',
-            order=0
-            )
-        session.add(schema)
-        session.flush()
-
-        entity = model.Entity(schema=schema, name=u'Foo', title=u'')
-        session.add(entity)
-
-        entity['test'] = None
-
-        with self.assertRaises(ConstraintError):
-            entity['test'] = u'trollol'
-
-        entity['test'] = u'123-456-7890'
-        session.flush()
-        self.assertEqual('123-456-7890', entity['test'])
-
-    def testChoiceConstraint(self):
-        session = self.layer['session']
-        schema = model.Schema(name=u'Foo', title=u'', state=u'published')
-        model.Attribute(schema=schema, name=u'test', title=u'', type=u'string', is_required=False, order=0, choices=[
-            model.Choice(name=u'foo', title=u'Foo', value=u'foo', order=0),
-            model.Choice(name=u'bar', title=u'Bar', value=u'bar', order=1),
-            model.Choice(name=u'baz', title=u'Baz', value=u'baz', order=2),
-            ])
-        session.add(schema)
-        session.flush()
-
-        entity = model.Entity(schema=schema, name=u'FooEntry', title=u'')
-        session.add(entity)
-
-        entity['test'] = None
-        entity['test'] = u'foo'
-        session.flush()
-
-        entry = session.query(model.ValueString).filter_by(value=u'foo').one()
-        self.assertIsNotNone(entry.choice, u'Choice not set')
-
-        # Should not be able to set it to something outside of the specified
-        # choice constraints
-
-        with self.assertRaises(ConstraintError):
-            entity['test'] = u'umadbro?'
-
-    def testDictLike(self):
-        session = self.layer['session']
-        schema = model.Schema(name=u'Foo', title=u'', state=u'published')
-        entity = model.Entity(schema=schema, name=u'Foo', title=u'')
-        session.add(entity)
-        session.flush()
-
-        # The schema does not define the target attribute, so it should error
-        with self.assertRaises(KeyError):
-            entity['foo'] = 5
-
-        # Basic datatypes
-        schema['foo'] = model.Attribute(title=u'', type=u'integer', order=0)
-        self.assertIsNone(entity['foo'])
-        entity['foo'] = 5
-        session.flush()
-        self.assertEqual(5, entity['foo'])
-
-        schema['bar'] = model.Attribute(title=u'', type=u'integer', is_collection=True, order=1)
-        self.assertListEqual([], entity['bar'])
-        entity['bar'] = [1, 2, 3]
-        session.flush()
-        self.assertListEqual(entity['bar'], [1, 2, 3])
-
-    def testDelete(self):
-        # Test deleting an attribute via dict-like API
-        session = self.layer['session']
-        schema = model.Schema(name=u'Foo', title=u'', state=u'published')
-        entity = model.Entity(schema=schema, name=u'Foo', title=u'')
-        session.add(entity)
-
-        with self.assertRaises(KeyError):
-            del entity['foo']
-
-        schema['foo'] = model.Attribute(title=u'', type=u'integer', order=0)
-        session.flush()
-
-        # Nothing happens
-        del entity['foo']
-        session.flush()
-
-        entity['foo'] = 5
-        session.flush()
-
-        # The attribute should have been committed
-        result = session.query(model.ValueInteger).filter_by(attribute=schema['foo']).count()
-        self.assertEqual(1, result)
-        # Delete it like you would a dictionary
-        del entity['foo']
-        session.flush()
-        # Should have been deleted
-        result = session.query(model.ValueInteger).filter_by(attribute=schema['foo']).count()
-        self.assertEqual(0, result)
-
-        # Now try it with something that can have more than one value..
-        schema['bar'] = model.Attribute(title=u'', type=u'integer', is_collection=True, order=1)
-        entity['bar'] = [1, 2, 3]
-        session.flush()
-
-        # The attribute should have been committed
-        result = session.query(model.ValueInteger).filter_by(attribute=schema['bar']).count()
-        self.assertEqual(3, result)
-        # Delete it like you would a dictionary
-        del entity['bar']
-        session.flush()
-        # Should have been deleted
-        result = session.query(model.ValueInteger).filter_by(attribute=schema['bar']).count()
-        self.assertEqual(0, result)
-
-
-    def testItems(self):
-        # Make sure we can enumerate the key/value pairs of the schema
-        session = self.layer['session']
-        schema = model.Schema(name=u'Foo', title=u'', state=u'published')
-        entity = model.Entity(schema=schema, name=u'Foo', title=u'')
-        session.add(entity)
-        session.flush()
-        items = entity.items()
-        self.assertEqual([], items)
-
-        schema['foo'] = model.Attribute(title=u'', type=u'integer', order=0)
-        entity['foo'] = 5
-        session.flush()
-        items = entity.items()
-        self.assertEqual(1, len(items))
-        self.assertListEqual([('foo', 5)], items)
-
-        schema['bar'] = model.Attribute(title=u'', type=u'integer', is_collection=True, order=1)
-        entity['bar'] = [1, 2, 3]
-        session.flush()
-        items = entity.items()
-        self.assertEqual(2, len(items))
-        self.assertListEqual([('foo', 5), ('bar', [1, 2, 3])], items)
-
+    from datetime import date, datetime
+    from decimal import Decimal
+
+    data = [
+        ('integer', 5, 8, [1, 2, 3]),
+        ('decimal',
+            Decimal('16.4'),
+            Decimal('12.3'),
+            [Decimal('1.5'), Decimal('12.1'), Decimal('3.0')]),
+        ('boolean', True, False, [True, False]),
+        ('string', u'foo', u'bar', [u'foo', u'bar', u'baz']),
+        ('text', u'foo\nbar', u'foo\nbario',
+            [u'par\n1', u'par\n2', u'par\n3']),
+        ('date', date(2010, 3, 1), date(2010, 4, 1),
+            [date(2010, 1, 1), date(2010, 2, 1), date(2010, 3, 1)]),
+        ('datetime',
+            datetime(2010, 3, 1, 5, 3, 0),
+            datetime(2011, 3, 1, 5, 3, 0),
+            [datetime(2010, 3, 1, 5, 3, 0),
+             datetime(2010, 5, 1, 5, 3, 0),
+             datetime(2010, 8, 1, 5, 3, 0)])]
+
+    for args in data:
+        yield (check_entity_types,) + args
+
+
+@with_setup(begin_func, rollback_func)
+def check_entity_types(type, simple, update, collection):
+    """
+    Assert method to stress-test a spcific type
+    """
+    from datetime import date
+    from nose.tools import assert_is_none, assert_equals, assert_items_equal
+    from occams.datastore import models
+
+    schema = models.Schema(name=u'Foo', title=u'',
+                           publish_date=date(2000, 1, 1))
+    section = models.Section(
+        schema=schema, name='section', title=u'Section 1', order=0)
+    entity = models.Entity(schema=schema, name=u'Foo', title=u'')
+    Session.add(entity)
+    Session.flush()
+
+    order = 0
+
+    ModelClass = models.nameModelMap[type]
+
+    # Do simple values
+    simpleName = type + 'simple'
+
+    schema.attributes[simpleName] = models.Attribute(
+        name=simpleName,
+        section=section,
+        title=u'', type=type, is_required=False, order=order)
+    assert_is_none(entity[simpleName])
+    entity[simpleName] = None
+    Session.flush()
+    assert_is_none(entity[simpleName])
+
+    entity[simpleName] = simple
+    Session.flush()
+    assert_equals(simple, entity[simpleName])
+
+    # Double check auditing
+    valueQuery = (
+        Session.query(ModelClass)
+        .filter_by(attribute=schema.attributes[simpleName]))
+    valueObject = valueQuery.one()
+    assert_equals(2, valueObject.revision)
+
+    # Try updating
+    entity[simpleName] = update
+    Session.flush()
+    assert_equals(update, entity[simpleName])
+
+    # Triple check auditing
+    valueObject = valueQuery.one()
+    assert_equals(3, valueObject.revision)
+
+    order += 1
+
+    # Now try collections
+    collectionName = type + 'collection'
+    schema.attributes[collectionName] = models.Attribute(
+        name=collectionName,
+        schema=schema,
+        section=section,
+        title=u'', type=type, is_collection=True, order=order)
+    entity[collectionName] = collection
+    Session.flush()
+    assert_equals(set(collection), set(entity[collectionName]))
+
+    valueQuery = (
+        Session.query(ModelClass)
+        .filter_by(attribute=schema.attributes[collectionName]))
+
+    order += 1
+
+    # Make sure we can also update
+    entity[collectionName] = collection[:2]
+    Session.flush()
+    assert_equals(set(collection[:2]), set(entity[collectionName]))
+    assert_equals(2, valueQuery.count())
+
+    # Lists are not audited, they're just removed and a new one is
+    # set
+    assert_items_equal([1, 1], [v.revision for v in valueQuery])
+
+
+def test_entity_force_date():
+    """
+    It should maintain a date object for date types.
+    (Sometimes applications will blindly assign datetimes...)
+    """
+    from datetime import date, datetime
+    from nose.tools import assert_equals, assert_is_instance
+    from occams.datastore import models
+
+    schema = models.Schema(name=u'Foo', title=u'',
+                           publish_date=date(2000, 1, 1))
+    section = models.Section(
+        schema=schema, name='section', title=u'Section 1', order=0)
+    entity = models.Entity(schema=schema, name=u'Foo', title=u'')
+
+    # Do simple values
+    simpleName = 'choicesimple'
+    schema.attributes[simpleName] = models.Attribute(
+        schema=schema,
+        section=section,
+        title=u'', type='date', is_required=False, order=1)
+
+    now = datetime.now()
+    today = now.date()
+
+    entity[simpleName] = now
+    Session.flush()
+    assert_is_instance(entity[simpleName], date)
+    assert_equals(today, entity[simpleName])
+
+
+@with_setup(begin_func, rollback_func)
+def test_entity_choices():
+    """
+    It should properly handle choices
+    """
+    from datetime import date
+    from nose.tools import assert_is_none, assert_equals, assert_items_equal
+    from occams.datastore import models
+
+    schema = models.Schema(name=u'Foo', title=u'',
+                           publish_date=date(2000, 1, 1))
+    section = models.Section(
+        schema=schema, name='section', title=u'Section 1', order=0)
+    entity = models.Entity(schema=schema, name=u'Foo', title=u'')
+    Session.add(entity)
+    Session.flush()
+
+    # Do simple values
+    simpleName = 'choicesimple'
+    schema.attributes[simpleName] = models.Attribute(
+        schema=schema,
+        section=section,
+        name=simpleName,
+        title=u'', type='choice', is_required=False, order=1,
+        choices={
+            '001': models.Choice(name=u'001', title=u'Foo', order=1),
+            '002': models.Choice(name=u'002', title=u'Bar', order=2),
+            '003': models.Choice(name=u'003', title=u'Baz', order=3),
+            '004': models.Choice(name=u'004', title=u'Caz', order=4),
+            '005': models.Choice(name=u'005', title=u'Jaz', order=5),
+            })
+    entity[simpleName] = None
+    Session.flush()
+    assert_is_none(entity[simpleName])
+
+    entity[simpleName] = u'002'
+    Session.flush()
+    assert_equals(u'002', entity[simpleName])
+
+    # Now try collections
+    collectionName = 'choicecollection'
+    schema.attributes[collectionName] = models.Attribute(
+        schema=schema,
+        section=section,
+        name=collectionName,
+        title=u'', type='choice', is_collection=True, order=2,
+        choices={
+            '001': models.Choice(name=u'001', title=u'Foo', order=1),
+            '002': models.Choice(name=u'002', title=u'Bar', order=2),
+            '003': models.Choice(name=u'003', title=u'Baz', order=3),
+            '004': models.Choice(name=u'004', title=u'Caz', order=4),
+            '005': models.Choice(name=u'005', title=u'Jaz', order=5)})
+    entity[collectionName] = [u'001', u'002', u'005']
+    Session.flush()
+    assert_items_equal([u'001', u'002', u'005'], entity['choicecollection'])
+
+
+@with_setup(begin_func, rollback_func)
+def test_entity_blob_type():
+    """
+    It should support files storage
+    """
+
+    from occams.datastore import models
+    from datetime import date
+    import os
+    from nose.tools import assert_equals
+
+    schema = models.Schema(name='HasBlob', title=u'',
+                           publish_date=date(2000, 1, 1))
+    section = models.Section(
+        schema=schema, name='section', title=u'Section 1', order=0)
+    schema.attributes['theblob'] = models.Attribute(
+        section=section, name=u'theblob', title=u'', type='blob', order=0)
+    entity = models.Entity(schema=schema, name='blobish', title=u'')
+    contents = os.urandom(1000)
+    entity['theblob'] = contents
+    Session.add(entity)
+    Session.flush()
+    entity_id = entity.id
+    # remove all isntances from the Session so we can see if they are
+    # properly fetched
+    Session.expunge_all()
+
+    entity = Session.query(models.Entity).get(entity_id)
+    assert_equals(contents, entity['theblob'])
+    assert_equals(1, Session.query(models.ValueBlob).count())
+
+
+def test_value_min_constraint():
+    """
+    It should validate against minimum constratins
+    """
+    from datetime import date, datetime
+    from decimal import Decimal
+    import time
+
+    data = [
+        ('string', 5, u'foo', u'foooo', u'foobario'),
+        ('integer', 5, 2, 5, 10),
+        ('decimal', 5, Decimal('2.0'), Decimal('5.0'), Decimal('10.0')),
+        ('date',
+            time.mktime(date(2009, 5, 6).timetuple()),
+            date(2001, 2, 8), date(2009, 5, 6),
+            date(2010, 4, 6)),
+        ('datetime',
+            time.mktime(date(2009, 5, 6).timetuple()),
+            datetime(2001, 2, 8),
+            datetime(2009, 5, 6),
+            datetime(2010, 4, 6))]
+
+    for args in data:
+        yield (check_value_min_constraint,) + args
+
+
+@with_setup(begin_func, rollback_func)
+def check_value_min_constraint(type_, limit, below, equal, over):
+    """
+    Assert method to stress-test minimum constraints
+    """
+    from datetime import date
+    from nose.tools import assert_raises
+    from occams.datastore import models
+    from occams.datastore.exc import ConstraintError
+
+    schema = models.Schema(
+        name=u'Foo', title=u'', publish_date=date(2000, 1, 1))
+    section = models.Section(
+        schema=schema, name='section', title=u'Section 1', order=0)
+    entity = models.Entity(schema=schema, name=u'Foo', title=u'')
+    Session.add(entity)
+    Session.flush()
+
+    models.Attribute(
+        schema=schema, section=section,
+        name=type_, title=u'',
+        type=type_, is_required=False, value_min=limit, order=0)
+
+    with assert_raises(ConstraintError):
+        entity[type_] = below
+
+    entity[type_] = None
+    entity[type_] = equal
+    entity[type_] = over
+
+    models.Attribute(
+        schema=schema, section=section,
+        name=u'boolean', title=u'', type=u'boolean', value_min=10, order=1)
+
+    with assert_raises(NotImplementedError):
+        entity['boolean'] = True
+
+
+def test_value_max_constraint():
+    """
+    It should validate against maximum constraints
+    """
+    import time
+    from datetime import date, datetime
+    from decimal import Decimal
+
+    data = [
+        # (type, limit, below, equal, over)
+        ('string', 5, u'foo', u'foooo', u'foobario'),
+        ('integer', 5, 2, 5, 10),
+        ('decimal', 5, Decimal('2.0'), Decimal('5.0'), Decimal('10.0')),
+        ('date',
+            time.mktime(date(2009, 5, 6).timetuple()),
+            date(2001, 2, 8), date(2009, 5, 6),
+            date(2010, 4, 6)),
+        ('datetime',
+            time.mktime(date(2009, 5, 6).timetuple()),
+            datetime(2001, 2, 8),
+            datetime(2009, 5, 6),
+            datetime(2010, 4, 6))]
+
+    for args in data:
+        yield (check_value_max_constraint,) + args
+
+
+@with_setup(begin_func, rollback_func)
+def check_value_max_constraint(type_, limit, below, equal, over):
+    """
+    Assert method to stress-test max constraint values
+    """
+    from datetime import date
+    from nose.tools import assert_raises
+    from occams.datastore import models
+    from occams.datastore.exc import ConstraintError
+
+    schema = models.Schema(name=u'Foo', title=u'',
+                           publish_date=date(2000, 1, 1))
+    section = models.Section(
+        schema=schema, name='section', title=u'Section 1', order=0)
+    entity = models.Entity(schema=schema, name=u'Foo', title=u'')
+    Session.add(entity)
+    Session.flush()
+
+    models.Attribute(
+        schema=schema, section=section,
+        name=type_, title=u'', type=type_, is_required=False,
+        value_max=limit, order=0)
+
+    entity[type_] = None
+    entity[type_] = below
+    entity[type_] = equal
+
+    with assert_raises(ConstraintError):
+        entity[type_] = over
+
+    models.Attribute(
+        schema=schema, section=section,
+        name=u'boolean', title=u'', type=u'boolean', value_max=10, order=1)
+    with assert_raises(NotImplementedError):
+        entity['boolean'] = True
+
+
+@with_setup(begin_func, rollback_func)
+def test_validator_constraint():
+    """
+    It should validate against string pattern constraints
+    """
+    from datetime import date
+    from nose.tools import assert_raises, assert_equals
+    from occams.datastore import models
+    from occams.datastore.exc import ConstraintError
+
+    schema = models.Schema(name=u'Foo', title=u'',
+                           publish_date=date(2000, 1, 1))
+    section = models.Section(
+        schema=schema, name='section', title=u'Section 1', order=0)
+    models.Attribute(
+        schema=schema,
+        section=section,
+        name=u'test',
+        title=u'',
+        type=u'string',
+        is_required=False,
+        # Valid US phone number
+        validator=r'\d{3}-\d{3}-\d{4}',
+        order=0)
+    Session.add(schema)
+    Session.flush()
+
+    entity = models.Entity(schema=schema, name=u'Foo', title=u'')
+    Session.add(entity)
+
+    entity['test'] = None
+
+    with assert_raises(ConstraintError):
+        entity['test'] = u'trollol'
+
+    entity['test'] = u'123-456-7890'
+    Session.flush()
+    assert_equals('123-456-7890', entity['test'])
+
+
+@with_setup(begin_func, rollback_func)
+def test_choice_constraint():
+    """
+    It should validate against choice constraints
+    """
+    from datetime import date
+    from nose.tools import assert_raises, assert_equals
+    from occams.datastore import models
+    from occams.datastore.exc import ConstraintError
+
+    schema = models.Schema(name=u'Foo', title=u'',
+                           publish_date=date(2000, 1, 1))
+    section = models.Section(
+        schema=schema, name='section', title=u'Section 1', order=0)
+    models.Attribute(
+        schema=schema, section=section,
+        name=u'test', title=u'', type=u'choice', is_required=False, order=0,
+        choices={
+            '001': models.Choice(name=u'001', title=u'Foo', order=0),
+            '002': models.Choice(name=u'002', title=u'Bar', order=1),
+            '003': models.Choice(name=u'003', title=u'Baz', order=2)})
+    Session.add(schema)
+    Session.flush()
+
+    entity = models.Entity(schema=schema, name=u'FooEntry', title=u'')
+    Session.add(entity)
+
+    entity['test'] = None
+    entity['test'] = u'002'
+    Session.flush()
+
+    entry = (
+        Session.query(models.ValueChoice)
+        .filter(models.ValueChoice.value.has(name=u'002'))
+        .one())
+    assert_equals(entry.value.name, '002')
+
+    # Should not be able to set it to something outside of the specified
+    # choice constraints
+
+    with assert_raises(ConstraintError):
+        entity['test'] = u'999'
+
+
+def test_has_entities():
+    """
+    It should allow any table to be associated with entities (yuk!)
+    """
+    from datetime import date
+    from nose.tools import (
+        assert_is_not_none, assert_equals, assert_items_equal)
+    from sqlalchemy import create_engine, Column, Integer, String
+    from sqlalchemy.orm import scoped_session, sessionmaker
+    from occams.datastore import models
+    from occams.datastore.models.events import register
+
+    Session = scoped_session(sessionmaker(
+        bind=create_engine('sqlite://'),
+        info={'user': 'foo@foo.com'}))
+    register(Session)
+
+    class SampleClass1(models.DataStoreModel, models.HasEntities):
+        __tablename__ = 'sampleclass1'
+
+        id = Column(Integer, primary_key=True)
+
+        name = Column(String, nullable=False)
+
+    class SampleClass2(models.DataStoreModel, models.HasEntities):
+        __tablename__ = 'sampleclass2'
+
+        id = Column(Integer, primary_key=True)
+
+        name = Column(String, nullable=False)
+
+    # Register a default user
+    models.DataStoreModel.metadata.create_all(Session.bind)
+    Session.add(models.User(key='foo@foo.com'))
+    Session.flush()
+
+    # Sample schemata
+    schemaA = models.Schema(name=u'A', title=u'',
+                            publish_date=date(2000, 1, 1))
+    schemaB = models.Schema(name=u'B', title=u'',
+                            publish_date=date(2000, 1, 1))
+
+    Session.add_all([
+        SampleClass1(
+            name='Foo',
+            entities=[
+                models.Entity(schema=schemaA, name='foo', title=u''),
+                models.Entity(schema=schemaA, name='bar', title=u''),
+                models.Entity(schema=schemaB, name='baz', title=u'')]),
+        SampleClass2(
+            name='Bar',
+            entities=[
+                models.Entity(schema=schemaA, name='caz', title=u''),
+                models.Entity(schema=schemaB, name='raz', title=u'')])])
+
+    Session.flush()
+
+    # Verify that the data was correctly associated
+    sc1 = Session.query(SampleClass1).filter_by(name='Foo').one()
+    assert_equals(3, len(sc1.entities))
+    assert_items_equal(['foo', 'bar', 'baz'], [e.name for e in sc1.entities])
+
+    # Add one more to verify collection_class is of type "set"
+    sc1.entities.add(models.Entity(schema=schemaB, name='car', title=u''),)
+    Session.flush()
+    assert_items_equal(['foo', 'bar', 'baz', 'car'],
+                       [e.name for e in sc1.entities])
+
+    sc2 = Session.query(SampleClass2).filter_by(name='Bar').one()
+    assert_equals(2, len(sc2.entities))
+    assert_items_equal(['raz', 'caz'], [e.name for e in sc2.entities])
+
+    # I want a SampleClass1 that contains specific schemata
+    query = (
+        Session.query(SampleClass1)
+        .filter(SampleClass1.name == 'Foo')
+        .filter(SampleClass1.entities.any(models.Schema.name == u'A')))
+
+    sc1 = query.one()
+    assert_is_not_none(sc1)
+
+    # Now suppose that we only have an fooEntity and want to know its parents
+    # Example: get all the SomeClassX references of an fooEntity
+
+    fooEntity = Session.query(models.Entity).filter_by(name=u'foo').one()
+
+    sc1list = [c.sampleclass1_parent.name
+               for c in fooEntity.contexts if c.sampleclass1_parent]
+    assert_items_equal(['Foo'], sc1list)
+
+    # Querying them directly
+    # There is no clean way of querying for an fooEntity by context in
+    # a generic association setting, as it would have to know about
+    # all ``HasEntities`` classes that reference it
+    sc1EntitiesQuery = (
+        Session.query(models.Entity)
+        .join(models.Entity.contexts)
+        .filter(models.Context.external == u'sampleclass1')
+        .join(SampleClass1, (SampleClass1.id == models.Context.key))
+        .filter(SampleClass1.name == 'Foo'))
+
+    entitylist = [e.name for e in sc1EntitiesQuery]
+    assert_items_equal(['foo', 'bar', 'car', 'baz'], entitylist)
+
+    # Now try adding the fooEntity to an additional context
+    Session.add(SampleClass1(name='Jar', entities=[fooEntity]))
+    Session.flush()
+
+    sc1list = [c.sampleclass1_parent.name
+               for c in fooEntity.contexts if c.sampleclass1_parent]
+    assert_items_equal(['Foo', 'Jar'], sc1list)
+
+    # But what if you want to query them directly? Same as above, query
+    # for a SampleClass that contains the specific schemata you want
+    hasFooQuery = (
+        Session.query(SampleClass1)
+        .filter(SampleClass1.entities.any(models.Entity.name == u'foo')))
+
+    sc1list = [i.name for i in hasFooQuery]
+    assert_items_equal(['Foo', 'Jar'], sc1list)
+
+    # Now try deleting a context object
+    sc1 = Session.query(SampleClass1).filter_by(name=u'Foo').one()
+    Session.delete(sc1)
+    Session.flush()
+
+    assert_equals(0, sc1EntitiesQuery.count())
+
+    # Make sure we didn't accidentally remote the data from 'Jar'
+    sc1list = [i.name for i in hasFooQuery]
+    assert_items_equal(['Jar'], sc1list)
+
+    # Double check just in case
+    count = (
+        Session.query(models.Context)
+        .filter_by(external='sampleclass1')
+        .count())
+    assert_equals(count, 1)
+
+    count = (
+        Session.query(models.Entity)
+        .filter_by(name=u'foo')
+        .count())
+    assert_equals(1, count)
+
+    # TODO Currently there is absolutely no way to remove orphans. The
+    # application must do this manually. This is because assocation proxies
+    # cannot delete orphans and the way the relationships are setup, it
+    # does not allow this..

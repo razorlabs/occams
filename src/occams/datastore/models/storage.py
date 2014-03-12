@@ -20,12 +20,11 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import hybrid_property
 
-from occams.datastore.exc import ConstraintError, InvalidEntitySchemaError
-from occams.datastore.models import DataStoreModel as Model
-from occams.datastore.models.auditing import Auditable
-from occams.datastore.models.metadata import (
-    Referenceable, Describeable, Modifiable)
-from occams.datastore.models.schema import Schema, Attribute, Choice
+from ..exc import ConstraintError, InvalidEntitySchemaError
+from . import DataStoreModel as Model
+from .auditing import Auditable
+from .metadata import Referenceable, Describeable, Modifiable
+from .schema import Schema, Attribute, Choice
 
 
 def enforceSchemaState(entity):
@@ -33,7 +32,7 @@ def enforceSchemaState(entity):
     Makes sure an entity cannot be added to an unpublished schema
     """
     if not entity.schema.publish_date or entity.schema.retract_date:
-        raise InvalidEntitySchemaError(entity.schema.name, entity.schema.state)
+        raise InvalidEntitySchemaError(entity.schema.name)
 
 
 class Context(Model, Referenceable, Modifiable, Auditable):
@@ -68,7 +67,7 @@ class Context(Model, Referenceable, Modifiable, Auditable):
 
 
 class GroupedCollection(object):
-    u"""
+    """
     Collects relationship values into a dictionary grouped by a discriminator
     """
 
@@ -90,9 +89,6 @@ class GroupedCollection(object):
         if key in self._groups:
             list(map(self._remove, self[key]))
 
-    def __contains__(self, key):
-        return key in self._groups
-
     @collection.remover
     def _remove(self, value):
         self._groups[self._keyfunc(value)].remove(value)
@@ -102,9 +98,6 @@ class GroupedCollection(object):
         for group in self._groups.values():
             for value in group:
                 yield value
-
-    def __repr__(self):
-        return '%s(%r)' % (type(self).__name__, self._groups)
 
 
 def grouped_collection(keyfunc):
@@ -184,7 +177,7 @@ class Entity(Model, Referenceable, Describeable, Modifiable, Auditable):
             Index('ix_%s_collect_date' % cls.__tablename__, 'collect_date'))
 
     def _getCollector(self, key):
-        type_ = self.schema[key].type
+        type_ = self.schema.attributes[key].type
         if type_ == 'boolean':
             type_ = 'integer'
         elif type_ == 'date':
@@ -197,7 +190,7 @@ class Entity(Model, Referenceable, Describeable, Modifiable, Auditable):
 
     def __getitem__(self, key):
         collector = self._getCollector(key)
-        attribute = self.schema[key]
+        attribute = self.schema.attributes[key]
 
         def convert(container):
             if container.value is None:
@@ -209,6 +202,8 @@ class Entity(Model, Referenceable, Describeable, Modifiable, Auditable):
                 value = container.value.date()
             elif container.attribute.type == 'boolean':
                 value = bool(container.value)
+            elif container.attribute.type == 'choice':
+                value = container.value.name
             else:
                 value = container.value
             return value
@@ -226,7 +221,7 @@ class Entity(Model, Referenceable, Describeable, Modifiable, Auditable):
 
     def __setitem__(self, key, value):
         collector = self._getCollector(key)
-        attribute = self.schema[key]
+        attribute = self.schema.attributes[key]
         wrapperFactory = nameModelMap[attribute.type]
 
         # Helper method for getting the appropriate parameters for
@@ -242,6 +237,14 @@ class Entity(Model, Referenceable, Describeable, Modifiable, Auditable):
                 converted = None
             elif type_ == 'boolean':
                 converted = int(value)
+            elif type_ == 'choice':
+                try:
+                    converted = attribute.choices[value]
+                except KeyError:
+                    raise ConstraintError(
+                        attribute.schema.name,
+                        attribute.name,
+                        [n for n in attribute.choices], value)
             else:
                 converted = value
             return converted
@@ -264,33 +267,6 @@ class Entity(Model, Referenceable, Describeable, Modifiable, Auditable):
     def __delitem__(self, key):
         collector = self._getCollector(key)
         del collector[key]
-
-    def items(self):
-        for key in self.schema.keys():
-            yield (key, self[key])
-
-    def serialize(self):
-        result = dict(
-            __metadata__=dict(
-                id=self.id,
-                state=self.state,
-                collect_date=self.collect_date,
-                create_date=self.create_date,
-                create_user=getattr(self.create_user, 'name', None),
-                modify_date=self.modify_date,
-                modify_user=getattr(self.create_user, 'name', None)))
-
-        # TODO: might be better to user a subquery table instead of
-        # accessing as dictionary
-        for key, value in self.items():
-            if self.schema[key].type == 'object':
-                if self[key] is not None:
-                    value = self[key].serialize()
-                else:
-                    value = {}
-            result[key] = value
-
-        return result
 
 
 class HasEntities(object):
@@ -409,6 +385,9 @@ ValueChoice = TypeMappingClass(
     'choice', 'ValueChoice', 'value_choice',
     ForeignKey('choice.id', name='fk_value_choice_value', ondelete='CASCADE'))
 
+# TODO: Note that for large files, ``memoryview`` should be investigated
+#       as a buffer so that large files aren't read into memor when being
+#       stored in the database.
 ValueBlob = TypeMappingClass(
     'blob', 'ValueBlob', 'value_blob', LargeBinary, index=False)
 
@@ -431,9 +410,6 @@ def validateValue(target, value, oldvalue, initiator):
     Attempts to make sure that valid values are set to an entity
     """
     attribute = target.attribute
-
-    if attribute is None:
-        raise ConstraintError('No attribute assigned for value: %s' % value)
 
     # Don't check None values, as the user may want to create empty/placeholder
     # scheamta
@@ -484,19 +460,6 @@ def validateValue(target, value, oldvalue, initiator):
             and not re.match(attribute.validator, str(value)):
         raise ConstraintError(
             attribute.schema.name, attribute.name, attribute.validator, value)
-
-    if attribute.choices:
-        found = None
-        for choice in attribute.choices:
-            if choice.value == value:
-                found = choice
-                break
-        if not found:
-            raise ConstraintError(attribute.schema.name,
-                                  attribute.name,
-                                  [c.value for c in attribute.choices], value)
-
-        target.choice = choice
 
 
 event.listen(ValueDatetime.value, 'set', validateValue)

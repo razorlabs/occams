@@ -3,25 +3,24 @@ Metadata definitions
 """
 
 from copy import copy, deepcopy
+from datetime import datetime
 import hashlib
 import re
 
-from six import u
+import six
 from sqlalchemy import(
     Table, Column,
     PrimaryKeyConstraint,
     CheckConstraint, UniqueConstraint, ForeignKeyConstraint, Index,
     Boolean, Enum, Date, Integer, String)
 from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.ext.orderinglist import ordering_list
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import backref, relationship
+from sqlalchemy.orm import backref, relationship, validates
 from sqlalchemy.orm.collections import attribute_mapped_collection
 
-from occams.datastore.models import DataStoreModel as Model
-from occams.datastore.models.metadata import (
-    Referenceable, Describeable, Modifiable)
-from occams.datastore.models.auditing import Auditable
+from . import DataStoreModel as Model
+from .metadata import Referenceable, Describeable, Modifiable
+from .auditing import Auditable
 
 
 def checksum(*args):
@@ -29,11 +28,19 @@ def checksum(*args):
     Returns a checksum of the combined arguments
     """
     # Finds any unicode whitespace in a string
-    rex = re.compile('\s+', re.MULTILINE | re.UNICODE)
+    rex = re.compile(r'\s+', re.MULTILINE | re.UNICODE)
+
     # Condense all whitespace and strip trailing whitespace
-    values = [rex.sub(u' ', u(a)).strip() for a in args if a is not None]
+    def condense_whitespace(value):
+        if not isinstance(value, six.string_types):
+            value = str(value)
+        return rex.sub(u' ', value).strip()
+
+    nonnulls = six.moves.filter(lambda v: v is not None, args)
+    strings = six.moves.map(condense_whitespace, nonnulls)
+
     # encode and generate checksum
-    return hashlib.md5(u''.join(values).encode('utf-8')).hexdigest()
+    return hashlib.md5(u''.join(strings).encode('utf-8')).hexdigest()
 
 
 def generateChecksum(attribute):
@@ -43,13 +50,14 @@ def generateChecksum(attribute):
 
     # This attribute has not been assigned a parent schema yet, let the
     # database handle this issue
-    if attribute.schema is None:
+    schema = attribute.schema or getattr(attribute.section, 'schema', None)
+    if schema is None:
         return None
 
     values = [
         # Consider ONLY the schema name, as descriptions would create a new
         # checksum for all attributes
-        attribute.schema.name,
+        schema.name,
 
         # Attribute properties to consider, note object_schema_id is not
         # considered because only its fields matter not the actual sub form
@@ -63,22 +71,21 @@ def generateChecksum(attribute):
     # is_collection and is_required could potentially not have been set at this
     # point, so assume their future default values
     if attribute.is_collection is None:
-        values.append(Attribute.is_collection.default)
+        values.append(Attribute.is_collection.default.arg)
     else:
         values.append(attribute.is_collection)
 
     if attribute.is_required is None:
-        values.append(Attribute.is_required.default)
+        values.append(Attribute.is_required.default.arg)
     else:
         values.append(attribute.is_required)
 
     # Consider choices as well, but order them alphabetically instead of
     # by order in case things were just rearranged, which apparently
     # should never affect the checksum
-    for choice in attribute.choices:
-        # Choice name does not matter because it's only used for communication
-        # between the user interface and the data dictionary
-        values.extend([choice.order, choice.title, choice.name])
+    for choice in sorted(six.itervalues(attribute.choices),
+                         key=lambda c: c.order):
+        values.extend([choice.name, choice.title])
 
     return checksum(*values)
 
@@ -142,10 +149,12 @@ class Schema(Model, Referenceable, Describeable, Modifiable, Auditable):
         Enum(*sorted(['eav', 'resource', 'table']), name='schema_storage'),
         nullable=False,
         server_default='eav',
-        doc='How the generated objects will be stored. Storage methods are: '
-            'eav - values are stored in a type-sharded set of tables; '
-            'resource - the object exists in an external service; '
-            'table - the object is stored in a conventional SQL table;')
+        doc="""
+            How the generated objects will be stored. Storage methods are:
+                eav - values are stored in a type-sharded set of tables;
+                resource - the object exists in an external service;
+                table - the object is stored in a conventional SQL table;
+            """)
 
     publish_date = Column(
         Date,
@@ -155,8 +164,10 @@ class Schema(Model, Referenceable, Describeable, Modifiable, Auditable):
 
     is_association = Column(
         Boolean,
-        doc='If set and True, the schema is an defines an association for '
-            'multiple schemata.')
+        doc="""
+            If set and True, the schema is an defines an association for
+            multiple schemata.
+            """)
 
     @hybrid_property
     def has_private(self):
@@ -173,35 +184,6 @@ class Schema(Model, Referenceable, Describeable, Modifiable, Auditable):
                 'publish_date <= retract_date',
                 name='ck_%s_valid_publication' % cls.__tablename__))
 
-    def __getitem__(self, key):
-        return self.attributes[key]
-
-    def __setitem__(self, key, value):
-        if key != value.name:
-            value.name = key
-        self.attributes[value.name] = value
-
-    def __delitem__(self, key):
-        del self.attributes[key]
-
-    def __contains__(self, key):
-        return key in self.attributes
-
-    def keys(self):
-        sortfunc = lambda a: a.order
-        for attribute in sorted(self.attributes.values(), key=sortfunc):
-            yield attribute.name
-
-    def values(self):
-        sortfunc = lambda a: a.order
-        for attribute in sorted(self.attributes.values(), key=sortfunc):
-            yield attribute
-
-    def items(self):
-        sortfunc = lambda a: a.order
-        for attribute in sorted(self.attributes.values(), key=sortfunc):
-            yield attribute.name, attribute
-
     def __copy__(self):
         keys = ('name', 'title', 'description', 'storage')
         return self.__class__(**dict([(k, getattr(self, k)) for k in keys]))
@@ -209,9 +191,62 @@ class Schema(Model, Referenceable, Describeable, Modifiable, Auditable):
     def __deepcopy__(self, memo):
         duplicate = copy(self)
         duplicate.categories = set([c for c in self.categories])
-        duplicate.attributes = dict([(n, deepcopy(a))
-                                    for n, a in self.attributes.items()])
+        for section in six.itervalues(self.sections):
+            duplicate.sections[section.name] = deepcopy(section)
         return duplicate
+
+    @classmethod
+    def from_json(cls, data):
+        """
+        Loads a schema from parsed JSON data
+
+        Parameters:
+        data -- parsed json data (i.e. a dict)
+        """
+        sections = data.pop('sections')
+
+        schema = cls(**data)
+        schema.publish_date = \
+            datetime.strptime(data['publish_date'], '%Y-%m-%d').date()
+
+        if sections:
+            for key, section in six.iteritems(sections):
+                schema.sections[key] = Section.from_json(section)
+            schema.attributes.update(schema.sections[key].attributes)
+
+        return schema
+
+    def to_json(self):
+        """
+        Serializes to a JSON-ready dictionary
+        """
+        return {
+            'name': self.name,
+            'title': self.title,
+            'description': self.description,
+            'storage': self.storage,
+            'published': self.publish_date.isoformat(),
+            'sections': dict([(s.name, s.to_json())
+                             for s in six.itervalues(self.sections)])}
+
+
+section_attribute_table = Table(
+    'section_attribute',
+    Model.metadata,
+    Column('section_id', Integer),
+    Column('attribute_id', Integer),
+    PrimaryKeyConstraint('section_id', 'attribute_id'),
+    ForeignKeyConstraint(
+        columns=['section_id'],
+        refcolumns=['section.id'],
+        name='fk_section_attribute_section_id',
+        ondelete='CASCADE'),
+    ForeignKeyConstraint(
+        columns=['attribute_id'],
+        refcolumns=['attribute.id'],
+        name='fk_section_attribute_attribute_id',
+        ondelete='CASCADE'),
+    UniqueConstraint('attribute_id', name='uq_section_attribute_attribute_id'))
 
 
 class Section(Model, Referenceable, Describeable, Modifiable, Auditable):
@@ -224,6 +259,7 @@ class Section(Model, Referenceable, Describeable, Modifiable, Auditable):
         Schema,
         backref=backref(
             name='sections',
+            collection_class=attribute_mapped_collection('name'),
             order_by='Section.order',
             cascade='all, delete, delete-orphan'))
 
@@ -241,6 +277,54 @@ class Section(Model, Referenceable, Describeable, Modifiable, Auditable):
                              name='uq_%s_name' % cls.__tablename__),
             UniqueConstraint('schema_id', 'order',
                              name='uq_%s_order' % cls.__tablename__))
+
+    @validates('schema')
+    def validate_attribute(self, key, schema):
+        """
+        Switches all attributes to the assigned schema
+        """
+        for attribute in six.itervalues(self.attributes):
+            attribute.schema = schema
+        return schema
+
+    def __copy__(self):
+        keys = ('name', 'title', 'description', 'order')
+        return self.__class__(**dict([(k, getattr(self, k)) for k in keys]))
+
+    def __deepcopy__(self, memo):
+        duplicate = copy(self)
+        for attribute in six.itervalues(self.attributes):
+            duplicate.attributes[attribute.name] = deepcopy(attribute)
+        return duplicate
+
+    @classmethod
+    def from_json(cls, data):
+        """
+        Loads a section from parsed JSON data
+
+        Parameters:
+        data -- parsed json data (i.e. a dict)
+        """
+        attributes = data.pop('attributes')
+
+        section = cls(**data)
+
+        if attributes:
+            for key, attribute in six.iteritems(attributes):
+                section.attributes[key] = Attribute.from_json(attribute)
+
+        return section
+
+    def to_json(self):
+        """
+        Serializes to a JSON-ready dictionary
+        """
+        return {
+            'name': self.name,
+            'title': self.title,
+            'description': self.description,
+            'attributes': dict([(a.name, a.to_json())
+                               for a in six.itervalues(self.attributes)])}
 
 
 class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
@@ -268,14 +352,15 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
             cascade='all, delete, delete-orphan'),
         doc=u'The schema that this attribute belongs to')
 
-    section_id = Column(Integer, nullable=False)
-
     section = relationship(
         Section,
+        secondary=section_attribute_table,
+        uselist=False,
         backref=backref(
             name='attributes',
             collection_class=attribute_mapped_collection('name'),
             order_by='Attribute.order',
+            single_parent=True,
             cascade='all, delete, delete-orphan'))
 
     type = Column(
@@ -328,14 +413,9 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
                 refcolumns=['schema.id'],
                 name='fk_%s_schema_id' % cls.__tablename__,
                 ondelete='CASCADE'),
-            ForeignKeyConstraint(
-                columns=['section_id'],
-                refcolumns=['section.id'],
-                name='fk_%s_section_id' % cls.__tablename__,
-                ondelete='CASCADE'),
             UniqueConstraint('schema_id', 'name',
                              name='uq_%s_name' % cls.__tablename__),
-            UniqueConstraint('section_id', 'order',
+            UniqueConstraint('schema_id', 'order',
                              name='uq_%s_order' % cls.__tablename__),
             Index('ix_%s_checksum' % cls.__tablename__, 'checksum'),
             CheckConstraint(
@@ -367,8 +447,61 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
 
     def __deepcopy__(self, memo):
         duplicate = copy(self)
-        duplicate.choices = [deepcopy(c) for c in iter(self.choices)]
+        for choice in six.itervalues(self.choices):
+            duplicate.choices[choice.name] = deepcopy(choice)
         return duplicate
+
+    @validates('section')
+    def validate_section(self, key, section):
+        """
+        Sets the schema of the attribute to the assigned section
+        This happens when a section is assigned directly to an attribute.
+        Need to switch over to the section's schema.
+        """
+        self.schema = section.schema
+        return section
+
+    @classmethod
+    def from_json(cls, data):
+        """
+        Loads a attribute from parsed JSON data
+
+        Parameters:
+        data -- parsed json data (i.e. a dict)
+        """
+
+        choices = data.pop('choices')
+
+        attribute = cls(**data)
+
+        if choices is not None:
+            for key, choice in six.iteritems(choices):
+                attribute.choices[key] = Choice.from_json(choice)
+
+        return attribute
+
+    def to_json(self):
+        """
+        Serializes to a JSON-ready dictionary
+        """
+
+        return {
+            'name': self.name,
+            'title': self.title,
+            'description': self.description,
+            'type': self.type,
+            'is_required': self.is_required,
+            'is_collection': self.is_collection,
+            'is_private': self.is_private,
+            'checksum': self.checksum,
+            'value_min': self.value_min,
+            'value_max': self.value_max,
+            'validator': self.validator,
+            'collection_min': self.collection_min,
+            'collection_max': self.collection_max,
+            'order': self.order,
+            'choices': dict([(c.name, c.to_json())
+                            for c in six.itervalues(self.choices)])}
 
 
 class Choice(Model, Referenceable, Describeable, Modifiable, Auditable):
@@ -388,8 +521,8 @@ class Choice(Model, Referenceable, Describeable, Modifiable, Auditable):
         Attribute,
         backref=backref(
             name='choices',
+            collection_class=attribute_mapped_collection('name'),
             order_by='Choice.order',
-            collection_class=ordering_list('order'),
             cascade='all, delete, delete-orphan'),
         doc='The attribute this choice belongs to')
 
@@ -417,3 +550,22 @@ class Choice(Model, Referenceable, Describeable, Modifiable, Auditable):
 
     def __deepcopy__(self, memo):
         return copy(self)
+
+    @classmethod
+    def from_json(cls, data):
+        """
+        Loads a choice from parsed JSON data
+
+        Parameters:
+        data -- parsed json data (i.e. a dict)
+        """
+        return cls(**data)
+
+    def to_json(self):
+        """
+        Serializes to a JSON-ready dictionary
+        """
+        return {
+            'name': self.name,
+            'title': self.title,
+            'order': self.order}
