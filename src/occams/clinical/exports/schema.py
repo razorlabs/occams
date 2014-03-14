@@ -3,8 +3,9 @@ Generate form exports with contextual information.
 """
 from sqlalchemy import null
 
+from six import itervalues
 from occams.datastore.reporting import build_report
-from occams.datastore.utils.sql import list_concat
+from occams.datastore.utils.sql import group_concat
 
 from .. import Session, models
 from .plan import ExportPlan
@@ -70,7 +71,8 @@ class SchemaPlan(ExportPlan):
                       is_collection=attribute.is_collection,
                       order=attribute.order,
                       is_private=attribute.is_private,
-                      choices=[(c.name, c.title) for c in attribute.choices])
+                      choices=[(c.name, c.title)
+                               for c in itervalues(attribute.choices)])
 
     def data(self, use_choice_labels=False, expand_collections=False):
         """
@@ -103,7 +105,7 @@ class SchemaPlan(ExportPlan):
             use_choice_labels=use_choice_labels)
 
         query = (
-            Session.query(report.c.entity_id.label('id'))
+            Session.query(report.c.id.label('id'))
             .add_column(
                 Session.query(
                     models.Site.name
@@ -113,7 +115,7 @@ class SchemaPlan(ExportPlan):
                 .join(models.Context,
                       (models.Context.external == 'patient')
                       & (models.Context.key == models.Patient.id))
-                .filter(models.Context.entity_id == report.c.entity_id)
+                .filter(models.Context.entity_id == report.c.id)
                 .correlate(report)
                 .as_scalar()
                 .label('site'))
@@ -122,34 +124,34 @@ class SchemaPlan(ExportPlan):
                 .join(models.Context,
                       (models.Context.external == 'patient')
                       & (models.Context.key == models.Patient.id))
-                .filter(models.Context.entity_id == report.c.entity_id)
+                .filter(models.Context.entity_id == report.c.id)
                 .correlate(report)
                 .as_scalar()
                 .label('pid'))
             .add_column(
-                list_concat(
-                    Session.query(models.Study.name)
-                    .select_from(models.Enrollment)
-                    .join(models.Study)
-                    .join(models.Context,
-                          (models.Context.external == 'enrollment')
-                          & (models.Context.key == models.Enrollment.id))
-                    .filter(models.Context.entity_id == report.c.entity_id)
-                    .correlate(report)
-                    .as_scalar(), ';')
+                Session.query(group_concat(models.Study.name, ';'))
+                .select_from(models.Enrollment)
+                .join(models.Study)
+                .join(models.Context,
+                      (models.Context.external == 'enrollment')
+                      & (models.Context.key == models.Enrollment.id))
+                .filter(models.Context.entity_id == report.c.id)
+                .group_by(report.c.id)
+                .correlate(report)
+                .as_scalar()
                 .label('enrollment'))
             .add_column(
-                list_concat(
-                    Session.query(models.Cycle.name)
-                    .select_from(models.Visit)
-                    .join(models.Visit.cycles)
-                    .join(models.Context,
-                          (models.Context.external == 'visit')
-                          & (models.Context.key == models.Visit.id))
-                    .filter(models.Context.entity_id == report.c.entity_id)
-                    .correlate(report)
-                    .as_scalar(), ';')
+                Session.query(group_concat(models.Cycle.name, ';'))
+                .select_from(models.Visit)
+                .join(models.Visit.cycles)
+                .join(models.Context,
+                      (models.Context.external == 'visit')
+                      & (models.Context.key == models.Visit.id))
+                .filter(models.Context.entity_id == report.c.id)
+                .group_by(report.c.id)
+                .correlate(report)
+                .as_scalar()
                 .label('cycles'))
             .add_columns(
-                *[c for c in report.columns if c.name != 'entity_id']))
+                *[c for c in report.columns if c.name != 'id']))
         return query

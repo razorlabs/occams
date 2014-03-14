@@ -19,7 +19,7 @@ from pyramid.decorator import reify
 from sqlalchemy import literal_column
 from sqlalchemy.orm import aliased
 
-from occams.datastore.utils.sql import list_concat
+from occams.datastore.utils.sql import group_concat
 
 from .. import models, Session
 from .plan import ExportPlan
@@ -92,16 +92,16 @@ class PidPlan(ExportPlan):
         # Add every known reference number
         for reftype in self.reftypes:
             query = query.add_column(
-                Session.query(list_concat(
-                    Session.query(models.PatientReference.reference_number)
-                    .filter(
-                        models.PatientReference.patient_id
-                        == models.Patient.id)
-                    .filter(models.PatientReference.reftype_id == reftype.id)
-                    .correlate(models.Patient)
-                    .subquery()
-                    .as_scalar(),
-                    literal_column("';'"))).as_scalar().label(reftype.name))
+                Session.query(
+                    group_concat(
+                        models.PatientReference.reference_number, ';'))
+                .filter(
+                    models.PatientReference.patient_id == models.Patient.id)
+                .filter(models.PatientReference.reftype_id == reftype.id)
+                .group_by(models.PatientReference.patient_id)
+                .correlate(models.Patient)
+                .as_scalar()
+                .label(reftype.name))
 
         query = query.order_by(models.Patient.pid)
 

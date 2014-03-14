@@ -75,7 +75,7 @@
           </div> <!-- panel-heading -->
           <div class="panel-body">
             <!-- ko if: status() == 'pending' -->
-              <div class="progress">
+              <div class="progress progress-striped active">
                 <div
                     class="progress-bar"
                     role="progressbar"

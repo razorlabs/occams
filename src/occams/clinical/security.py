@@ -37,11 +37,11 @@ def occams_groupfinder(identity, request):
 
     # TODO: move to externa bitcore auth module
     mapping = {
-        'aeh-admin': 'administrator',
+        'aeh-admins': 'administrator',
         'aeh-nurses': 'nurse',
         'aeh-primary_investigators': 'primariy_investicagor'}
 
-    groups = [mapping[g] for g in identity.get('groups', [])]
+    groups = [mapping[g] for g in identity.get('groups', []) if g in mapping]
     return groups
 
 
