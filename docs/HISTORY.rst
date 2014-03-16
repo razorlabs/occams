@@ -2,9 +2,38 @@
 Change Log
 ==========
 
-------------
-1.0.0a (???)
-------------
+
+-----------------------------
+2.0.0 (2014-03-31 [Reporting]
+-----------------------------
+
+*Goal*: Production-ready reporting
+
+- General
+    - Upgraded reporting module to the following rendering options:
+        - Split collections: Split multiple choice to one column per possible
+            answer choice
+        - Use choice labels: Uses human-readable choice labels instead of codes
+        - Ignore private: de-identifies private data
+        - BY_NAME is the only behavior moving forward, BY_ID and BY_CHECKSUM
+            are just too confusing for the analysts
+    - XML Schema import/export removed in favor of JSON
+    - Schema/Attribute can no longer be accessed like dictionaries, please use
+        the ``attributes``/``sections``/``choices`` properties
+
+- Managers
+  - Removed in favor of query the models directly
+
+- Database
+  - Added new ``choice`` datatype speciccally for singly/multi choice questions
+  - Removed ``object`` type as it is extremely difficult  and slow to generate
+      queries. All sub-objects and sub-schemata have been flattened.
+  - Added new ``section`` table to assist with visual subform-rendering.
+
+
+-------------------
+1.0.0a (2012-06-14)
+-------------------
 
 - General
     - Rebranded to ``occams.datastore``
@@ -52,9 +81,9 @@ Change Log
     - ``Category`` a new mapping for tagging forms rather than creating subclasses.
 
 
------------
-0.5.0 (???)
------------
+------------------
+0.5.0 (2012-03-20)
+------------------
 
 - General
     - Add support for collect_date (backwards compatible)
