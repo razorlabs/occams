@@ -326,19 +326,15 @@ def test_build_report_scalar_values():
 
 
 @with_setup(begin_func, rollback_func)
-def test_build_report_sqlite_datetime():
+def test_build_report_datetime():
     """
-    It should accomodate SQLite's shoddy datetime support
+    It should be able to cast DATE/DATETIME
     """
     from datetime import date
     from nose.tools import assert_equals
-    from nose.plugins.skip import SkipTest
     from occams.datastore import models, reporting
 
     today = date.today()
-
-    if Session.bind.url.drivername != 'sqlite':
-        raise SkipTest('Not using Sqlite')
 
     schema1 = models.Schema(
         name=u'A',
