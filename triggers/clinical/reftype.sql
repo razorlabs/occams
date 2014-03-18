@@ -20,19 +20,47 @@ SERVER trigger_target
 OPTIONS (table_name 'reftype');
 
 
+CREATE OR REPLACE FUNCTION ext_reftype_id(id) RETURNS SETOF integer AS $$
+  BEGIN
+    RETURN QUERY
+        SELECT "reftype_ext".id
+        FROM "retype_ext"
+        WHERE name = SELECT name FROM "reftype" WHERE id = $1;
+  END;
+$$ LANGUAGE plpgsql;
+
+
 CREATE OR REPLACE FUNCTION reftype_mirror() RETURNS TRIGGER AS $patient_mirror$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
-        INSERT INTO reftype_ext SELECT NEW.*;
+        INSERT INTO reftype_ext (
+            name
+          , title
+          , description
+          , create_date
+          , create_user_id
+          , modify_date
+          , modify_user_id
+          , revision
+        )
+        VALUES (
+            NEW.name
+          , NEW.title
+          , NEW.description
+          , NEW.create_date
+          , ext_user_id(NEW.create_user_id)
+          , NEW.modify_date
+          , ext_user_id(NEW.modify_user_id)
+          , NEW.revision
+        );
       WHEN 'DELETE' THEN
-        DELETE FROM reftype_ext WHERE id = OLD.id;
+        DELETE FROM reftype_ext WHERE name = OLD.name;
       WHEN 'TRUNCATE' THEN
         TRUNCATE reftype_ext;
       WHEN 'UPDATE' THEN
         UPDATE reftype_ext
-        SET id = NEW.id
-          , name = NEW.name
+        SET name = NEW.name
           , title = NEW.title
           , description = NEW.description
           , create_date = NEW.create_date
@@ -40,7 +68,7 @@ CREATE OR REPLACE FUNCTION reftype_mirror() RETURNS TRIGGER AS $patient_mirror$
           , modify_date = NEW.modify_date
           , modify_user_id = ext_user_id(NEW.modify_user_id)
           , revision = NEW.revision
-        WHERE id = OLD.id;
+        WHERE name = OLD.name;
     END CASE;
     RETURN NULL;
   END;

@@ -21,16 +21,13 @@ CREATE FOREIGN TABLE patient_ext (
 SERVER trigger_target
 OPTIONS (table_name 'patient');
 
---
--- Helper function to find the context id in the new system using
--- the old system id number
---
+
 CREATE OR REPLACE FUNCTION ext_patient_id(id) RETURNS SETOF integer AS $$
   BEGIN
     RETURN QUERY
         SELECT "patient_ext".id
         FROM "patient_ext"
-        WHERE our = SELECT our FROM "patient" WHERE id = $1;
+        WHERE zid = SELECT zid FROM "patient" WHERE id = $1;
   END;
 $$ LANGUAGE plpgsql;
 
@@ -40,15 +37,16 @@ CREATE OR REPLACE FUNCTION patient_mirror() RETURNS TRIGGER AS $patient_mirror$
     CASE TG_OP
       WHEN 'INSERT' THEN
         INSERT INTO patient_ext (
-          site_id,
-          zid,
-          nurse,
-          our,
-          legacy_number,
-          create_date,
-          modify_date,
-          create_user_id,
-          revision)
+            site_id
+          , zid
+          , nurse
+          , our
+          , legacy_number
+          , create_date
+          , modify_date
+          , create_user_id
+          , revision
+        )
         VALUES (
             ext_site_id(NEW.site_id)
           , NEW.zid
@@ -60,15 +58,14 @@ CREATE OR REPLACE FUNCTION patient_mirror() RETURNS TRIGGER AS $patient_mirror$
           , NEW.modify_date
           , ext_user_id(NEW.modify_user_id)
           , NEW.revision
-          )
+          );
       WHEN 'DELETE' THEN
-        DELETE FROM patient_ext WHERE id = ext_user_id(OLD.id);
+        DELETE FROM patient_ext WHERE zid = OLD.zid;
       WHEN 'TRUNCATE' THEN
         TRUNCATE patient_ext;
       WHEN 'UPDATE' THEN
         UPDATE patient_ext
-        SET id = NEW.id
-          , site_id = NEW.site_id
+        SET site_id = ext_site_id(NEW.site_id)
           , zid = NEW.zid
           , nurse = NEW.nurse
           , our = NEW.our
@@ -78,7 +75,7 @@ CREATE OR REPLACE FUNCTION patient_mirror() RETURNS TRIGGER AS $patient_mirror$
           , modify_date = NEW.modify_date
           , modify_user_id = ext_user_id(NEW.modify_user_id)
           , revision = NEW.revision
-        WHERE id = OLD.id;
+        WHERE zid = OLD.zid;
     END CASE;
     RETURN NULL;
   END;

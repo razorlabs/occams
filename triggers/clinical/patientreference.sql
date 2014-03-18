@@ -24,16 +24,40 @@ CREATE OR REPLACE FUNCTION patientreference_mirror() RETURNS TRIGGER AS $patient
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
-        INSERT INTO patientreference_ext SELECT NEW.*;
+        INSERT INTO patientreference_ext (
+          , patient_id
+          , reftype_id
+          , reference_number
+
+          , create_date
+          , create_user_id
+          , modify_date
+          , modify_user_id
+          , revision
+        )
+        VALUES (
+            ext_patient_id(NEW.patient_id)
+          , ext_reftype_id(NEW.reftype_id)
+          , NEW.reference_number
+          , NEW.legacy_number
+          , create_date = NEW.create_date
+          , create_user_id = ext_user_id(NEW.create_user_id)
+          , modify_date = NEW.modify_date
+          , modify_user_id = ext_user_id(NEW.modify_user_id)
+          , revision = NEW.revision
+        );
       WHEN 'DELETE' THEN
-        DELETE FROM patientreference_ext WHERE id = OLD.id;
+        DELETE FROM patientreference_ext
+        WHERE (patient_id, reftype_id, reference_number) =
+          (ext_patient_id(OLD.patient_id),
+           ext_reftype_id(OLD.reftype_id),
+           OLD.reference_number);
       WHEN 'TRUNCATE' THEN
         TRUNCATE patientreference_ext;
       WHEN 'UPDATE' THEN
         UPDATE patientreference_ext
-        SET id = NEW.id
-          , patient_id = NEW.patient_id
-          , reftype_id = NEW.reftype_id
+        SET patient_id = ext_patient_id(NEW.patient_id)
+          , reftype_id = ext_reftype_id(NEW.reftype_id)
           , reference_number = NEW.reference_number
           , legacy_number = NEW.legacy_number
           , create_date = NEW.create_date
@@ -41,7 +65,10 @@ CREATE OR REPLACE FUNCTION patientreference_mirror() RETURNS TRIGGER AS $patient
           , modify_date = NEW.modify_date
           , modify_user_id = ext_user_id(NEW.modify_user_id)
           , revision = NEW.revision
-        WHERE id = OLD.id;
+        WHERE (patient_id, reftype_id, reference_number) =
+          (ext_patient_id(OLD.patient_id),
+           ext_reftype_id(OLD.reftype_id),
+           OLD.reference_number);
     END CASE;
     RETURN NULL;
   END;

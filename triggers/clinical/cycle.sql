@@ -25,20 +25,57 @@ SERVER trigger_target
 OPTIONS (table_name 'cycle');
 
 
+CREATE OR REPLACE FUNCTION ext_cycle_id(id) RETURNS SETOF integer AS $$
+  BEGIN
+    RETURN QUERY
+        SELECT "cycle_ext".id
+        FROM "cycle_ext"
+        WHERE zid = SELECT zid FROM "cycle" where id = $1;
+  END;
+$$ LANGUAGE plpgsql;
+
+
 CREATE OR REPLACE FUNCTION cycle_mirror() RETURNS TRIGGER AS $cycle_mirror$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
-        INSERT INTO cycle_ext SELECT NEW.*;
+        INSERT INTO cycle_ext (
+            zid
+          , study_id
+          , name
+          , title
+          , description
+          , week
+          , threshold
+          , category_id
+          , create_date
+          , modify_date
+          , create_user_id
+          , revision
+        )
+        VALUES (
+            NEW.zid
+          , ext_study_id(NEW.study_id)
+          , NEW.name
+          , NEW.title
+          , NEW.description
+          , NEW.week
+          , NEW.threshold
+          , ext_category_id(NEW.category_id)
+          , NEW.create_date
+          , ext_user_id(NEW.create_user_id)
+          , NEW.modify_date
+          , ext_user_id(NEW.modify_user_id)
+          , NEW.revision
+          );
       WHEN 'DELETE' THEN
-        DELETE FROM cycle_ext WHERE id = OLD.id;
+        DELETE FROM cycle_ext WHERE zid = OLD.zid;
       WHEN 'TRUNCATE' THEN
         TRUNCATE cycle_ext;
       WHEN 'UPDATE' THEN
         UPDATE cycle_ext
-        SET id = NEW.id
-          , zid = NEW.zid
-          , study_id = NEW.study_id
+        SET zid = NEW.zid
+          , study_id = ext_study_id(NEW.study_id)
           , name = NEW.name
           , title = NEW.title
           , description = NEW.description
@@ -50,7 +87,7 @@ CREATE OR REPLACE FUNCTION cycle_mirror() RETURNS TRIGGER AS $cycle_mirror$
           , modify_date = NEW.modify_date
           , modify_user_id = ext_user_id(NEW.modify_user_id)
           , revision = NEW.revision
-        WHERE id = OLD.id;
+        WHERE zid = OLD.zid;
     END CASE;
     RETURN NULL;
   END;
