@@ -4,7 +4,7 @@
 
 
 CREATE FOREIGN TABLE site_ext (
-    id              INTEGER NOT NULL
+    id              SERIAL NOT NULL
 
   , zid             INTEGER NOT NULL
   , name            VARCHAR NOT NULL

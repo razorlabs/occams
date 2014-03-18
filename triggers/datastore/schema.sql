@@ -4,7 +4,7 @@
 
 
 CREATE FOREIGN TABLE schema_ext (
-    id              INTEGER NOT NULL
+    id              SERIAL NOT NULL
 
   , name            VARCHAR NOT NULL
   , title           VARCHAR NOT NULL
@@ -27,6 +27,8 @@ OPTIONS (table_name 'schema');
 --
 -- Helper function to find the schema id in the new system using
 -- the old system id number
+--
+-- TODO: NEEDS PUBLISH_DATE!!!
 --
 CREATE OR REPLACE FUNCTION ext_schema_id(id) RETURNS SETOF integer AS $$
   BEGIN

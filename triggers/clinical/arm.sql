@@ -4,7 +4,7 @@
 
 
 CREATE FOREIGN TABLE arm_ext (
-    id              INTEGER NOT NULL
+    id              SERIAL NOT NULL
 
   , name            INTEGER NOT NULL
   , title           INTEGER NOT NULL

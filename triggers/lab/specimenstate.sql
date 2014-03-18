@@ -4,7 +4,7 @@
 
 
 CREATE FOREIGN TABLE specimenstate_ext (
-    id              INTEGER NOT NULL
+    id              SERIAL NOT NULL
 
   , name            VARCHAR NOT NULL
   , title           VARCHAR NOT NULL

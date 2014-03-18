@@ -4,7 +4,7 @@
 
 
 CREATE FOREIGN TABLE patient_ext (
-    id              INTEGER NOT NULL
+    id              SERIAL NOT NULL
 
   , site_id         INTEGER NOT NULL
   , zid             INTEGER NOT NULL
@@ -21,14 +21,48 @@ CREATE FOREIGN TABLE patient_ext (
 SERVER trigger_target
 OPTIONS (table_name 'patient');
 
+--
+-- Helper function to find the context id in the new system using
+-- the old system id number
+--
+CREATE OR REPLACE FUNCTION ext_patient_id(id) RETURNS SETOF integer AS $$
+  BEGIN
+    RETURN QUERY
+        SELECT "patient_ext".id
+        FROM "patient_ext"
+        WHERE our = SELECT our FROM "patient" WHERE id = $1;
+  END;
+$$ LANGUAGE plpgsql;
+
 
 CREATE OR REPLACE FUNCTION patient_mirror() RETURNS TRIGGER AS $patient_mirror$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
-        INSERT INTO patient_ext SELECT NEW.*;
+        INSERT INTO patient_ext (
+          site_id,
+          zid,
+          nurse,
+          our,
+          legacy_number,
+          create_date,
+          modify_date,
+          create_user_id,
+          revision)
+        VALUES (
+            ext_site_id(NEW.site_id)
+          , NEW.zid
+          , NEW.nurse
+          , NEW.our
+          , NEW.legacy_number
+          , NEW.create_date
+          , ext_user_id(NEW.create_user_id)
+          , NEW.modify_date
+          , ext_user_id(NEW.modify_user_id)
+          , NEW.revision
+          )
       WHEN 'DELETE' THEN
-        DELETE FROM patient_ext WHERE id = OLD.id;
+        DELETE FROM patient_ext WHERE id = ext_user_id(OLD.id);
       WHEN 'TRUNCATE' THEN
         TRUNCATE patient_ext;
       WHEN 'UPDATE' THEN

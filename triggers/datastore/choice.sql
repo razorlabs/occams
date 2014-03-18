@@ -1,10 +1,11 @@
 ---
 --- avrc_data/choice -> pirc/choice
+--- TODO: Needs to figure out it's order...
 ---
 
 
 CREATE FOREIGN TABLE choice_ext (
-    id              INTEGER NOT NULL
+    id              SERIAL NOT NULL
 
   , name            VARCHAR NOT NULL
   , title           VARCHAR NOT NULL
@@ -23,6 +24,23 @@ SERVER trigger_target
 OPTIONS (table_name 'choice');
 
 
+CREATE FOREIGN TABLE value_choice_ext (
+    id              SERIAL NOT NULL
+
+  , entity_id       INTEGER NOT NULL
+  , attribute_id    INTEGER NOT NULL
+  , value           INTEGER NOT NULL
+
+  , create_date     DATETIME NOT NULL
+  , create_user_id  INTEGER NOT NULL
+  , modify_date     DATETIME NOT NULL
+  , modify_user_id  INTEGER NOT NULL
+  , revision        INTEGER NOT NULL
+)
+SERVER trigger_target
+OPTIONS (table_name 'value_choice');
+
+
 --
 -- Helper function to find the choice id in the new system using
 -- the old system id number
@@ -36,7 +54,6 @@ CREATE OR REPLACE FUNCTION ext_choice_id(id) RETURNS SETOF integer AS $$
         (SELECT ext_attribute_id(attribute_id), name FROM choice WHERE id = $1)
   END;
 $$ LANGUAGE plpgsql;
-
 
 
 CREATE OR REPLACE FUNCTION choice_mirror() RETURNS TRIGGER AS $choice_mirror$

@@ -4,7 +4,7 @@
 
 
 CREATE FOREIGN TABLE aliquot_ext (
-    id                      INTEGER NOT NULL
+    id                      SERIAL NOT NULL
 
   , specimen_id             INTEGER NOT NULL
   , aliquot_type_id         INTEGER NOT NULL

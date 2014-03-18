@@ -7,7 +7,7 @@
 
 
 CREATE FOREIGN TABLE entity_ext (
-    id              INTEGER NOT NULL
+    id              SERIAL NOT NULL
 
   , name            VARCHAR NOT NULL
   , title           VARCHAR NOT NULL
@@ -29,7 +29,7 @@ OPTIONS (table_name 'entity');
 
 
 CREATE FOREIGN TABLE state_ext (
-    id              INTEGER NOT NULL
+    id              SERIAL NOT NULL
 
   , name            VARCHAR NOT NULL
   , title           VARCHAR NOT NULL
@@ -48,6 +48,7 @@ OPTIONS (table_name 'entity');
 --
 -- Helper function to find the entity id in the new system using
 -- the old system id number
+-- TODO: NEEDS TO CONSIDER IF IT'S IN A SUBOBJECT!!!
 --
 CREATE OR REPLACE FUNCTION ext_entity_id(id) RETURNS SETOF integer AS $$
   BEGIN

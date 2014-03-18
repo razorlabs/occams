@@ -4,7 +4,7 @@
 
 
 CREATE FOREIGN TABLE cycle_ext (
-    id              INTEGER NOT NULL
+    id              SERIAL NOT NULL
 
   , zid             INTEGER NOT NULL
   , study_id        INTEGER NOT NULL

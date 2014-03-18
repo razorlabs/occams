@@ -4,7 +4,7 @@
 
 
 CREATE FOREIGN TABLE patient_log_nonresponse_type_ext (
-    id              INTEGER NOT NULL
+    id              SERIAL NOT NULL
 
   , value           VARCHAR NOT NULL
   , order           INTEGER NOT NULL

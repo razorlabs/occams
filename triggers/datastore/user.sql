@@ -4,7 +4,7 @@
 
 
 CREATE FOREIGN TABLE user_ext (
-    id              INTEGER NOT NULL
+    id              SERIAL NOT NULL
 
   , key             VARCHAR
   , create_date     TIMESTAMP NOT NULL

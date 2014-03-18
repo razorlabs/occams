@@ -7,7 +7,7 @@
 
 
 CREATE FOREIGN TABLE attribute_ext (
-    id              INTEGER NOT NULL
+    id              SERIAL NOT NULL
 
   , name            VARCHAR NOT NULL
   , title           VARCHAR NOT NULL
@@ -37,7 +37,7 @@ OPTIONS (table_name 'attribute');
 
 
 CREATE FOREIGN TABLE section_ext (
-    id              INTEGER NOT NULL
+    id              SERIAL NOT NULL
 
   , name            VARCHAR NOT NULL
   , title           VARCHAR NOT NULL
@@ -213,7 +213,7 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $attribute_mirr
             , modify_date = NEW.modify_date
             , modify_user_id = ext_user_id(NEW.modify_user_id)
             , revision = NEW.revision
-          WHERE id = ext_attribute_id(OLD.id)
+          WHERE id = ext_attribute__id(OLD.id)
 
           -- Check if the attribute is supposed to be a sub-attribute
           IF EXISTS(SELECT 1 FROM "attribute" WHERE object_schema_id = NEW.schema_id) THEN
