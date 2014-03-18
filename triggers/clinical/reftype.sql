@@ -4,7 +4,7 @@
 
 
 CREATE FOREIGN TABLE reftype_ext (
-    id              INTEGER PRIMARY KEY NOT NULL
+    id              INTEGER NOT NULL
 
   , name            INTEGER NOT NULL
   , title           INTEGER NOT NULL

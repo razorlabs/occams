@@ -4,7 +4,7 @@
 
 
 CREATE FOREIGN TABLE enrollment_ext (
-    id                  INTEGER PRIMARY KEY NOT NULL
+    id                  INTEGER NOT NULL
 
   , zid                 INTEGER NOT NULL
   , patient_id          INTEGER NOT NULL

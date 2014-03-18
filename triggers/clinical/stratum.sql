@@ -4,7 +4,7 @@
 
 
 CREATE FOREIGN TABLE stratum_ext (
-    id                INTEGER PRIMARY KEY NOT NULL
+    id                INTEGER NOT NULL
 
   , study_id          INTEGER NOT NULL
   , arm_id            INTEGER NOT NULL

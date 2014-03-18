@@ -4,7 +4,7 @@
 
 
 CREATE FOREIGN TABLE study_ext (
-    id              INTEGER PRIMARY KEY NOT NULL
+    id              INTEGER NOT NULL
 
   , zid             INTEGER NOT NULL
   , name            VARCHAR NOT NULL
@@ -62,4 +62,4 @@ $study_mirror$ LANGUAGE plpgsql;
 
 
 CREATE TRIGGER study_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON study
-  FOR EACH ROW EXECUTE PROCEDURE study_mirror();
+  kFOR EACH ROW EXECUTE PROCEDURE study_mirror();

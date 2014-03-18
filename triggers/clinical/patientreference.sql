@@ -4,7 +4,7 @@
 
 
 CREATE FOREIGN TABLE patientreference_ext (
-    id                INTEGER PRIMARY KEY NOT NULL
+    id                INTEGER NOT NULL
 
   , patient_id        INTEGER NOT NULL
   , reftype_id        INTEGER NOT NULL
