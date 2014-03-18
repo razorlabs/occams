@@ -30,6 +30,7 @@ def upgrade():
     finalize_section()
     remove_object_type()
     resort_tables()
+    deprecate_subschemata()
 
 
 def downgrade():
