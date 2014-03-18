@@ -4,7 +4,7 @@
 
 
 CREATE FOREIGN TABLE partner_ext (
-    id                  INTEGER PRIMARY KEY NOT NULL
+    id                  INTEGER NOT NULL
 
   , patient_id          INTEGER NOT NULL
   , enrolled_patient_id INTEGER
