@@ -72,7 +72,7 @@ CREATE OR REPLACE FUNCTION ext_attribute_id(id) RETURNS SETOF integer AS $$
     RETURN QUERY
         SELECT "attribute_ext".id
         FROM "attribute_ext"
-        WHERE (schema_id, name) = (SELECT schema_id, name FROM "attribute" WHERE id = $1);
+        WHERE (schema_id, name) = (SELECT ext_schema_id(schema_id), name FROM "attribute" WHERE id = $1);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -213,7 +213,7 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $attribute_mirr
             , modify_date = NEW.modify_date
             , modify_user_id = ext_user_id(NEW.modify_user_id)
             , revision = NEW.revision
-          WHERE name = NEW.name;
+          WHERE id = ext_attribute_id(OLD.id)
 
           -- Check if the attribute is supposed to be a sub-attribute
           IF EXISTS(SELECT 1 FROM "attribute" WHERE object_schema_id = NEW.schema_id) THEN
@@ -239,7 +239,7 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $attribute_mirr
             , modify_date = NEW.modify_date
             , modify_user_id = ext_user_id(NEW.modify_user_id)
             , revision = NEW.revision
-          WHERE name = NEW.name;
+          WHERE id = ext_section_id(OLD.id)
 
         END IF;
 

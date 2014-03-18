@@ -42,9 +42,9 @@ CREATE OR REPLACE FUNCTION specimentype_mirror() RETURNS TRIGGER AS $specimentyp
           , default_tubes = NEW.default_tubes
           , location_id = NEW.location_id
           , create_date = NEW.create_date
-          , create_user_id = NEW.create_user_id
+          , create_user_id = ext_user_id(NEW.create_user_id)
           , modify_date = NEW.modify_date
-          , modify_user_id = NEW.modify_user_id
+          , modify_user_id = ext_user_id(NEW.modify_user_id)
           , revision = NEW.revision
         WHERE id = OLD.id;
     END CASE;

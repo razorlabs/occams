@@ -10,6 +10,8 @@ CREATE FOREIGN TABLE category_ext (
   , title           VARCHAR NOT NULL
   , description     TEXT
 
+  , attribute_id    INTEGER NOT NULL
+
   , create_date     DATETIME NOT NULL
   , create_user_id  INTEGER NOT NULL
   , modify_date     DATETIME NOT NULL
@@ -28,7 +30,8 @@ CREATE OR REPLACE FUNCTION ext_category_id(id) RETURNS SETOF integer AS $$
     RETURN QUERY
       SELECT "category_ext".id
       FROM "category_ext"
-      WHERE name = (SELECT name FROM "category" WHERE id = $1);
+      WHERE (attribute_id, oldvalue) =
+        (SELECT ext_attribute_id(attribute_id), value FROM "category" WHERE id = $1);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -41,6 +44,7 @@ CREATE OR REPLACE FUNCTION category_mirror() RETURNS TRIGGER AS $category_mirror
             name
           , title,
           , description,
+          , schema_id
           , create_date
           , create_user_id
           , modify_date
@@ -50,6 +54,7 @@ CREATE OR REPLACE FUNCTION category_mirror() RETURNS TRIGGER AS $category_mirror
             NEW.name
           , NEW.title
           , NEW.description
+          , ext_schema_id(NEW.schema_id)
           , NEW.create_date
           , ext_user_id(NEW.create_user_id)
           , NEW.modify_date
@@ -57,20 +62,22 @@ CREATE OR REPLACE FUNCTION category_mirror() RETURNS TRIGGER AS $category_mirror
           , NEW.revision
           )
       WHEN 'DELETE' THEN
-        DELETE FROM category_ext WHERE name = OLD.name;
+        DELETE FROM category_ext WHERE id = ext_category_id(OLD.id);
       WHEN 'TRUNCATE' THEN
         TRUNCATE category_ext;
       WHEN 'UPDATE' THEN
         UPDATE category_ext
-        SET name = NEW.name
+        SET name = NEW.value
           , title = NEW.title
           , description = NEW.description
+          , attribute_id = ext_schema_id(NEW.attribute_id)
+          , "order" = NEW."order"
           , create_date = NEW.create_date
           , create_user_id = ext_user_id(NEW.create_user_id)
           , modify_date = NEW.modify_date
           , modify_user_id = ext_user_id(NEW.modify_user_id)
           , revision = NEW.revision
-        WHERE name = OLD.name;
+        WHERE id = ext_category_id(OLD.id);
     END CASE;
     RETURN NULL;
   END;

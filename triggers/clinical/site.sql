@@ -38,9 +38,9 @@ CREATE OR REPLACE FUNCTION site_mirror() RETURNS TRIGGER AS $site_mirror$
           , title = NEW.title
           , description = NEW.description
           , create_date = NEW.create_date
-          , create_user_id = NEW.create_user_id
+          , create_user_id = ext_user_id(NEW.create_user_id)
           , modify_date = NEW.modify_date
-          , modify_user_id = NEW.modify_user_id
+          , modify_user_id = ext_user_id(NEW.modify_user_id)
           , revision = NEW.revision
         WHERE id = OLD.id;
     END CASE;

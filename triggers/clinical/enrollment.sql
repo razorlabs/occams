@@ -44,9 +44,9 @@ CREATE OR REPLACE FUNCTION enrollment_mirror() RETURNS TRIGGER AS $enrollment_mi
           , termination_date = NEW.termination_date
           , reference_number = NEW.reference_number
           , create_date = NEW.create_date
-          , create_user_id = NEW.create_user_id
+          , create_user_id = ext_user_id(NEW.create_user_id)
           , modify_date = NEW.modify_date
-          , modify_user_id = NEW.modify_user_id
+          , modify_user_id = ext_user_id(NEW.modify_user_id)
           , revision = NEW.revision
         WHERE id = OLD.id;
     END CASE;
