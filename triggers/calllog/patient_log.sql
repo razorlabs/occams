@@ -1,79 +1,92 @@
 ---
---- avrc_data/specimen -> pirc/specimen
+--- avrc_data/patient_log -> pirc/patient_log
 ---
 
 
-CREATE FOREIGN TABLE specimen_ext (
+CREATE FOREIGN TABLE patient_log_ext (
     id                      SERIAL NOT NULL
 
-  , specimen_id             INTEGER NOT NULL
-  , aliquot_type_id         INTEGER NOT NULL
-  , state_id                INTEGER NOT NULL
-  , labbook                 VARCHAR
-  , volume                  FLOAT
-  , cell_amount             FLOAT
-  , store_date              DATE
-  , inventory_date          DATE
-  , freezer                 VARCHAR
-  , rack                    VARCHAR
-  , box                     VARCHAR
-  , location_id             INTEGER NOT NULL
-  , thawed_num              INTEGER
-  , sent_date               DATE
-  , sent_name               VARCHAR
-  , notes                   VARCHAR
-  , special_instruction_id  INTEGER
+  , patient_id              INTEGER NOT NULL
+  , patient_contact_date    TIMESTAMP  NOT NULL
+  , last_text_date          DATE
+  , contact_reason          VARCHAR NOT NULL
+  , contact_type            VARCHAR NOT NULL
+  , non_response_other      VARCHAR
+  , message_left            BOOLEAN
+  , comments                VARCHAR
 
-  , create_date             DATETIME NOT NULL
+  , create_date             TIMESTAMP  NOT NULL
   , create_user_id          INTEGER NOT NULL
-  , modify_date             DATETIME NOT NULL
+  , modify_date             TIMESTAMP  NOT NULL
   , modify_user_id          INTEGER NOT NULL
   , revision                INTEGER NOT NULL
 )
 SERVER trigger_target
-OPTIONS (table_name 'specimen');
+OPTIONS (table_name 'patient_log');
 
 
-CREATE OR REPLACE FUNCTION specimen_mirror() RETURNS TRIGGER AS $specimen_mirror$
+CREATE OR REPLACE FUNCTION patient_log_mirror() RETURNS TRIGGER AS $patient_log_mirror$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
-        INSERT INTO specimen_ext SELECT NEW.*;
+        INSERT INTO patient_log_ext (
+            id
+          , patient_id
+          , patient_contact_date
+          , last_text_date
+          , contact_reason
+          , contact_type
+          , non_response_other
+          , message_left
+          , comments
+          , create_date
+          , create_user_id
+          , modify_date
+          , modify_user_id
+          , revision
+        )
+        VALUES (
+            NEW.id
+          , ext_patient_id(patient_id)
+          , NEW.patient_contact_date
+          , NEW.last_text_date
+          , NEW.contact_reason
+          , NEW.contact_type
+          , NEW.non_response_other
+          , NEW.message_left
+          , NEW.comments
+          , NEW.create_date
+          , ext_user_id(create_user_id)
+          , NEW.modify_date
+          , ext_user_id(modify_user_id)
+          , NEW.revision
+        );
       WHEN 'DELETE' THEN
-        DELETE FROM specimen_ext WHERE id = OLD.id;
+        DELETE FROM patient_log_ext WHERE id = OLD.id;
       WHEN 'TRUNCATE' THEN
-        TRUNCATE specimen_ext;
+        TRUNCATE patient_log_ext;
       WHEN 'UPDATE' THEN
-        UPDATE specimen_ext
-        SET id = NEW.id
-          , specimen_id = NEW.specimen_id
-          , aliquot_type_id = NEW.aliquot_type_id
-          , state_id = NEW.state_id
-          , labbook = NEW.labbook
-          , volume = NEW.volume
-          , cell_amount = NEW.cell_amount
-          , store_date = NEW.store_date
-          , inventory_date = NEW.inventory_date
-          , freezer = NEW.freezer
-          , rack = NEW.rack
-          , box = NEW.box
-          , location_id = NEW.location_id
-          , thawed_num = NEW.thawed_num
-          , sent_date = NEW.sent_date
-          , sent_name = NEW.sent_name
-          , notes = NEW.notes
-          , special_instruction_id
-          , create_date = NEW.create_date
-          , create_user_id = ext_user_id(NEW.create_user_id)
-          , modify_date = NEW.modify_date
-          , modify_user_id = ext_user_id(NEW.modify_user_id)
-          , revision = NEW.revision
-        WHERE id = OLD.id;
+          UPDATE patient_log_ext
+          SET id = NEW.id
+            , patient_id = ext_patient_id(NEW.patient_id)
+            , patient_contact_date = NEW.patient_contact_date
+            , last_text_date = NEW.last_text_date
+            , contact_reason = NEW.contact_reason
+            , contact_type = NEW.contact_type
+            , non_response_other = NEW.non_response_other
+            , message_left = NEW.message_left
+            , comments = NEW.comments
+            , create_date = NEW.create_date
+            , create_user_id = ext_user_id(NEW.create_user_id)
+            , modify_date = NEW.modify_date
+            , modify_user_id = ext_user_id(NEW.modify_user_id)
+            , revision = NEW.revision
+          WHERE id = OLD.id;
     END CASE;
     RETURN NULL;
   END;
-$specimen_mirror$ LANGUAGE plpgsql;
+$patient_log_mirror$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER specimen_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON specimen
-  FOR EACH ROW EXECUTE PROCEDURE specimen_mirror();
+CREATE TRIGGER patient_log_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON patient_log
+  FOR EACH ROW EXECUTE PROCEDURE patient_log_mirror();

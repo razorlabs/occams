@@ -26,7 +26,7 @@ CREATE OR REPLACE FUNCTION log_responses_mirror() RETURNS TRIGGER AS $log_respon
         UPDATE log_responses_ext
         SET patient_log_id = NEW.patient_log_id
           , patient_log_nonresponse_type_id = NEW.patient_log_nonresponse_type_id
-        WHERE patient_log_id = OLD.id
+        WHERE patient_log_id = OLD.patient_log_id
         AND patient_log_nonresponse_type_id = OLD.patient_log_nonresponse_type_id;
     END CASE;
     RETURN NULL;
