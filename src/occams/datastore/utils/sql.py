@@ -2,8 +2,12 @@
 Cross-vendor compatibility functions
 """
 
+import json
+
+from sqlalchemy.dialects import postgres
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.expression import FunctionElement
+from sqlalchemy.types import TypeDecorator, TEXT
 
 
 class group_concat(FunctionElement):
@@ -74,4 +78,36 @@ def to_datetime_sqlite(element, compiler, **kw):
 @compiles(to_datetime)
 @compiles(to_datetime, 'postgresql')
 def to_datetime_pg(element, compiler, **kw):
-    return 'CAST(%s AS DATETIME)' % compiler.process(element.clauses)
+    return 'CAST(%s AS TIMESTAMP)' % compiler.process(element.clauses)
+
+
+class JSON(TypeDecorator):
+    """
+    Represents an immutable structure as a json-encoded string.
+
+    To make this type mutable, use the ``sqlalchemy.ext.mutable``.
+
+    Uses PostgreSQL's native JSON types, otherwise falls back to
+    a regulart TEXT field with the encoded JSON object.
+    """
+
+    impl = TEXT
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == 'postgresql':
+            impl = postgres.JSON()
+        else:
+            impl = TEXT()
+        return dialect.type_descriptor(impl)
+
+    def process_bind_param(self, value, dialect):
+        if dialect.name != 'postgresql':
+            if value is not None:
+                value = json.dumps(value)
+        return value
+
+    def process_result_value(self, value, dialect):
+        if dialect.name != 'postgresql':
+            if value is not None:
+                value = json.loads(value)
+        return value
