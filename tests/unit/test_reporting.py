@@ -13,7 +13,7 @@ def test_datadict_published_schema():
     """
 
     from datetime import date, timedelta
-    from nose.tools import assert_in, assert_not_in
+    from tests import assert_in, assert_not_in
     from occams.datastore import models, reporting
 
     schema = models.Schema(
@@ -55,7 +55,7 @@ def test_datadict_multpile_versions():
 
     from copy import deepcopy
     from datetime import date, timedelta
-    from nose.tools import assert_in, assert_equals
+    from tests import assert_in, assert_equals
     from occams.datastore import models, reporting
 
     today = date.today()
@@ -99,7 +99,7 @@ def test_datadict_multiple_choice():
 
     from copy import deepcopy
     from datetime import date, timedelta
-    from nose.tools import assert_in, assert_items_equal
+    from tests import assert_in, assert_items_equal
     from six import iterkeys
     from occams.datastore import models, reporting
 
@@ -157,7 +157,7 @@ def test_datadict_duplicate_vocabulary_term():
 
     from copy import deepcopy
     from datetime import date, timedelta
-    from nose.tools import assert_equals, assert_in
+    from tests import assert_equals, assert_in
     from six import itervalues
     from occams.datastore import models, reporting
 
@@ -233,7 +233,7 @@ def check_report_column_type(ds_type, sa_type):
     """
 
     from datetime import date
-    from nose.tools import assert_is_instance
+    from tests import assert_is_instance
     from occams.datastore import models, reporting
 
     schema = models.Schema(name=u'A', title=u'A', publish_date=date.today())
@@ -261,7 +261,7 @@ def test_build_report_expected_metadata_columns():
     """
 
     from datetime import date
-    from nose.tools import assert_in
+    from tests import assert_in
     from occams.datastore import models, reporting
 
     today = date.today()
@@ -290,7 +290,7 @@ def test_build_report_scalar_values():
     """
 
     from datetime import date
-    from nose.tools import assert_equals
+    from tests import assert_equals
     from occams.datastore import models, reporting
 
     today = date.today()
@@ -331,7 +331,7 @@ def test_build_report_datetime():
     It should be able to cast DATE/DATETIME
     """
     from datetime import date
-    from nose.tools import assert_equals
+    from tests import assert_equals
     from occams.datastore import models, reporting
 
     today = date.today()
@@ -379,7 +379,7 @@ def test_build_report_choice_types():
     """
 
     from datetime import date
-    from nose.tools import assert_is_none, assert_equals, assert_items_equal
+    from tests import assert_is_none, assert_equals, assert_items_equal
     from occams.datastore import models, reporting
 
     today = date.today()
@@ -478,7 +478,7 @@ def test_build_report_ids():
 
     from copy import deepcopy
     from datetime import date, timedelta
-    from nose.tools import assert_in, assert_not_in
+    from tests import assert_in, assert_not_in
     from occams.datastore import models, reporting
 
     today = date.today()
@@ -531,7 +531,7 @@ def test_build_report_context():
     """
 
     from datetime import date
-    from nose.tools import assert_in, assert_not_in, assert_equals
+    from tests import assert_in, assert_not_in, assert_equals
     from occams.datastore import models, reporting
 
     today = date.today()
@@ -580,7 +580,7 @@ def test_build_report_attributes():
     It should only include the specified columns (useful for large forms)
     """
     from datetime import date
-    from nose.tools import assert_in, assert_not_in
+    from tests import assert_in, assert_not_in
     from occams.datastore import models, reporting
 
     today = date.today()
@@ -623,7 +623,7 @@ def test_build_report_ignore_private():
     """
 
     from datetime import date
-    from nose.tools import assert_equals
+    from tests import assert_equals
     from occams.datastore import models, reporting
 
     today = date.today()

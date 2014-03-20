@@ -45,7 +45,7 @@ def test_modifiable_basic():
     """
     It should annotate the record with modification dates
     """
-    from nose.tools import assert_is_not_none
+    from tests import assert_is_not_none
     from occams.datastore.models import User
     Session.add(User(key=u'bitcore@ucsd.edu'))
     Session.commit()
@@ -65,7 +65,7 @@ def test_modifiable_invalid_date():
     """
     It should not allow use of inconsitent timelines
     """
-    from nose.tools import assert_raises
+    from tests import assert_raises
     import datetime
     from sqlalchemy.exc import IntegrityError
     from occams.datastore.models import User
@@ -86,7 +86,7 @@ def test_modifable_non_existent_user():
     """
     It should fail if a non-existent user attemts to make a commti
     """
-    from nose.tools import assert_raises
+    from tests import assert_raises
     from occams.datastore.exc import NonExistentUserError
 
     record = ModifiableClass()

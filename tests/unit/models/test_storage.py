@@ -12,7 +12,7 @@ def test_state_unique_name():
     """
     It should only allow states with unique names
     """
-    from nose.tools import assert_raises
+    from tests import assert_raises
     import sqlalchemy.exc
     from occams.datastore import models
 
@@ -29,7 +29,7 @@ def test_state_entity_relationship():
     It should implement state/entity relationship
     """
     from datetime import date
-    from nose.tools import assert_is_none, assert_is_not_none, assert_equals
+    from tests import assert_is_none, assert_is_not_none, assert_equals
     from occams.datastore import models
 
     schema = models.Schema(name=u'Foo', title=u'Foo',
@@ -54,7 +54,7 @@ def test_entity_add_unpublished_schema():
     """
     It should not allow adding entities related to unpublished schemata
     """
-    from nose.tools import assert_raises
+    from tests import assert_raises
     from occams.datastore import models
     from occams.datastore.exc import InvalidEntitySchemaError
 
@@ -71,7 +71,7 @@ def test_entity_default_collect_date():
     It should default to today's date as the collect_date if not is provided
     """
     from datetime import date
-    from nose.tools import assert_equals
+    from tests import assert_equals
     from occams.datastore import models
     # Make sure the system can auto-assign a collect date for the entry
 
@@ -131,7 +131,7 @@ def check_entity_types(type, simple, update, collection):
     Assert method to stress-test a spcific type
     """
     from datetime import date
-    from nose.tools import assert_is_none, assert_equals, assert_items_equal
+    from tests import assert_is_none, assert_equals, assert_items_equal
     from occams.datastore import models
 
     schema = models.Schema(name=u'Foo', title=u'',
@@ -214,7 +214,7 @@ def test_entity_force_date():
     (Sometimes applications will blindly assign datetimes...)
     """
     from datetime import date, datetime
-    from nose.tools import assert_equals, assert_is_instance
+    from tests import assert_equals, assert_is_instance
     from occams.datastore import models
 
     schema = models.Schema(name=u'Foo', title=u'',
@@ -245,7 +245,7 @@ def test_entity_choices():
     It should properly handle choices
     """
     from datetime import date
-    from nose.tools import assert_is_none, assert_equals, assert_items_equal
+    from tests import assert_is_none, assert_equals, assert_items_equal
     from occams.datastore import models
 
     schema = models.Schema(name=u'Foo', title=u'',
@@ -305,7 +305,7 @@ def test_entity_blob_type():
     from occams.datastore import models
     from datetime import date
     import os
-    from nose.tools import assert_equals
+    from tests import assert_equals
 
     schema = models.Schema(name='HasBlob', title=u'',
                            publish_date=date(2000, 1, 1))
@@ -360,7 +360,7 @@ def check_value_min_constraint(type_, limit, below, equal, over):
     Assert method to stress-test minimum constraints
     """
     from datetime import date
-    from nose.tools import assert_raises
+    from tests import assert_raises
     from occams.datastore import models
     from occams.datastore.exc import ConstraintError
 
@@ -425,7 +425,7 @@ def check_value_max_constraint(type_, limit, below, equal, over):
     Assert method to stress-test max constraint values
     """
     from datetime import date
-    from nose.tools import assert_raises
+    from tests import assert_raises
     from occams.datastore import models
     from occams.datastore.exc import ConstraintError
 
@@ -462,7 +462,7 @@ def test_validator_constraint():
     It should validate against string pattern constraints
     """
     from datetime import date
-    from nose.tools import assert_raises, assert_equals
+    from tests import assert_raises, assert_equals
     from occams.datastore import models
     from occams.datastore.exc import ConstraintError
 
@@ -502,7 +502,7 @@ def test_choice_constraint():
     It should validate against choice constraints
     """
     from datetime import date
-    from nose.tools import assert_raises, assert_equals
+    from tests import assert_raises, assert_equals
     from occams.datastore import models
     from occams.datastore.exc import ConstraintError
 
@@ -545,7 +545,7 @@ def test_has_entities():
     It should allow any table to be associated with entities (yuk!)
     """
     from datetime import date
-    from nose.tools import (
+    from tests import (
         assert_is_not_none, assert_equals, assert_items_equal)
     from sqlalchemy import create_engine, Column, Integer, String
     from sqlalchemy.orm import scoped_session, sessionmaker

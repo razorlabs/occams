@@ -13,7 +13,7 @@ def test_group_concat_single_value():
     It should be able to handle a single value
     """
     from sqlalchemy import literal_column, cast, Unicode
-    from nose.tools import assert_items_equal
+    from tests import assert_items_equal
     from occams.datastore.utils.sql import group_concat
 
     data = (
@@ -37,7 +37,7 @@ def test_group_concat_multi_value():
     It should be able to delimit-multiple values
     """
     from sqlalchemy import literal_column, cast, Unicode
-    from nose.tools import assert_items_equal
+    from tests import assert_items_equal
     from occams.datastore.utils.sql import group_concat
 
     data = (
@@ -65,7 +65,7 @@ def test_group_concat_sqlite_one_arg():
     It should use SQLite's deafult arguments (comma delimiter)
     """
     from sqlalchemy import literal_column
-    from nose.tools import assert_items_equal
+    from tests import assert_items_equal
     from nose.plugins.skip import SkipTest
     from occams.datastore.utils.sql import group_concat
 
@@ -97,7 +97,7 @@ def test_group_concat_sqlite_invalid_args():
     It should only support at most two arguments in SQLite
     """
     from sqlalchemy import literal_column
-    from nose.tools import assert_raises
+    from tests import assert_raises
     from nose.plugins.skip import SkipTest
     from occams.datastore.utils.sql import group_concat
 
@@ -129,7 +129,7 @@ def test_group_concat_postgresql_invalid_args():
     It should only support at least two arguments in PostgreSQL
     """
     from sqlalchemy import literal_column
-    from nose.tools import assert_raises
+    from tests import assert_raises
     from nose.plugins.skip import SkipTest
     from occams.datastore.utils.sql import group_concat
 
@@ -162,7 +162,7 @@ def test_to_date():
     """
     import datetime
     from sqlalchemy import literal_column
-    from nose.tools import assert_equals
+    from tests import assert_equals
     from occams.datastore.utils.sql import to_date
 
     expected = datetime.date(1976, 7, 4)
@@ -181,7 +181,7 @@ def test_to_datetime():
     """
     import datetime
     from sqlalchemy import literal_column
-    from nose.tools import assert_equals
+    from tests import assert_equals
     from occams.datastore.utils.sql import to_datetime
 
     expected = datetime.datetime(1976, 7, 4, 5, 0)
@@ -215,7 +215,7 @@ def test_json():
     """
     It should be able to marshall JSON data
     """
-    from nose.tools import assert_is_none, assert_dict_equal
+    from tests import assert_is_none, assert_dict_equal
 
     Session.add(SomeMapping(value=None))
     record = Session.query(SomeMapping).one()
@@ -238,7 +238,7 @@ def test_json_native_postgresql():
     """
     It should use PostgreSQL's native JSON implementation
     """
-    from nose.tools import assert_equals
+    from tests import assert_equals
     from nose.plugins.skip import SkipTest
 
     if Session.bind.url.drivername != 'postgresql':

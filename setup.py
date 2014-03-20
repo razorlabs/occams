@@ -13,11 +13,13 @@ REQUIRES = [
 
 EXTRAS = {
     'postgresql': ['psycopg2'],
-    'test': ['nose', 'coverage']}
+    'test': ['nose', 'coverage']
+    }
 
 
 if sys.version_info < (2, 7):
     REQUIRES.extend(['argparse', 'ordereddict'])
+    EXTRAS['test'].extend(['unittest2'])
 
 
 def get_version():

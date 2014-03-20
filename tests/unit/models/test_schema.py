@@ -13,7 +13,7 @@ def test_schema_section_attribute():
     It should implement full schema/section/attribute heirarchies
     """
     from datetime import date
-    from nose.tools import assert_in
+    from tests import assert_in
     from occams.datastore import models
     schema = models.Schema(
         name=u'aform',
@@ -50,7 +50,7 @@ def test_schema_defaults():
     """
     It should set schema defaults
     """
-    from nose.tools import assert_is_none, assert_is_not_none, assert_equals
+    from tests import assert_is_none, assert_is_not_none, assert_equals
     from occams.datastore import models
 
     Session.add(models.Schema(name=u'sample', title=u'Sample'))
@@ -72,7 +72,7 @@ def test_schema_publish_date_unique():
     It should enforce unique publish dates
     """
 
-    from nose.tools import assert_raises
+    from tests import assert_raises
     from datetime import date
     import sqlalchemy.exc
     from occams.datastore import models
@@ -114,7 +114,7 @@ def test_schema_has_private():
     """
     It should be able to determine if a schema has private attributes
     """
-    from nose.tools import assert_true, assert_false
+    from tests import assert_true, assert_false
     from datetime import date
     from occams.datastore import models
     schema = models.Schema(
@@ -209,7 +209,7 @@ def test_section_defaults():
     """
     It should set section defaults
     """
-    from nose.tools import assert_equals
+    from tests import assert_equals
     from occams.datastore import models
 
     schema = models.Schema(name='Foo', title=u'Foo')
@@ -229,7 +229,7 @@ def test_attribute_defaults():
     """
     It should set attribute defaults
     """
-    from nose.tools import assert_equals
+    from tests import assert_equals
     from occams.datastore import models
 
     schema = models.Schema(name=u'Foo', title=u'Foo')
@@ -257,7 +257,7 @@ def test_choice_defaults():
     It should set choice defaults
     """
 
-    from nose.tools import assert_equals
+    from tests import assert_equals
     from occams.datastore import models
 
     schema = models.Schema(name=u'Foo', title=u'Foo')
@@ -292,7 +292,7 @@ def test_category_defaults():
     It should set category defaults
     """
 
-    from nose.tools import assert_equals
+    from tests import assert_equals
     from occams.datastore import models
 
     category = models.Category(name='Tests', title=u'Test Schemata')
@@ -309,7 +309,7 @@ def test_add_category_to_schema():
     Scheamta should be taggable via categories
     """
 
-    from nose.tools import assert_equals, assert_items_equal
+    from tests import assert_equals, assert_items_equal
     from occams.datastore import models
 
     schema = models.Schema(name='Foo', title=u'')
@@ -357,7 +357,7 @@ def test_checksum_generate():
     """
     It should generate a checksum based on names/settings
     """
-    from nose.tools import assert_equals, assert_is_none, assert_is_not_none
+    from tests import assert_equals, assert_is_none, assert_is_not_none
     from occams.datastore import models
     from occams.datastore.models.schema import generateChecksum
 
@@ -405,7 +405,7 @@ def test_checksum_with_choices():
     """
     It should generate a checksum using choice names
     """
-    from nose.tools import assert_equals, assert_not_equals, assert_is_not_none
+    from tests import assert_equals, assert_not_equals, assert_is_not_none
     from occams.datastore import models
     from occams.datastore.models.schema import generateChecksum
 
@@ -455,7 +455,7 @@ def test_copy_schema_basic():
     """
     It should let the user copy schemata
     """
-    from nose.tools import assert_equals, assert_not_equals
+    from tests import assert_equals, assert_not_equals
     from copy import deepcopy
     from occams.datastore import models
 
