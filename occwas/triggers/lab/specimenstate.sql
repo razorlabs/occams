@@ -15,6 +15,9 @@ CREATE FOREIGN TABLE specimenstate_ext (
   , modify_date     DATETIME NOT NULL
   , modify_user_id  INTEGER NOT NULL
   , revision        INTEGER NOT NULL
+
+  , old_db          VARCHAR NOT NULL
+  , old_id          INTEGER NOT NULL
 )
 SERVER trigger_target
 OPTIONS (table_name 'specimenstate');
@@ -24,15 +27,38 @@ CREATE OR REPLACE FUNCTION specimenstate_mirror() RETURNS TRIGGER AS $specimenst
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
-        INSERT INTO specimenstate_ext SELECT NEW.*;
+        INSERT INTO specimenstate_ext (
+            name
+          , title
+          , description
+          , create_date
+          , create_user_id
+          , modify_date
+          , modify_user_id
+          , revision
+          , old_db
+          , old_id
+        )
+        VALUES (
+            NEW.name
+          , NEW.title
+          , NEW.description
+          , NEW.create_date
+          , ext_user_id(NEW.create_user_id)
+          , NEW.modify_date
+          , ext_user_id(NEW.modify_user_id)
+          , NEW.revision
+          , SELECT current_database()
+          , NEW.id
+        );
       WHEN 'DELETE' THEN
-        DELETE FROM specimenstate_ext WHERE id = OLD.id;
+        DELETE FROM specimenstate_ext
+        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
       WHEN 'TRUNCATE' THEN
         TRUNCATE specimenstate_ext;
       WHEN 'UPDATE' THEN
         UPDATE specimenstate_ext
-        SET id = NEW.id
-          , name = NEW.name
+        SET name = NEW.name
           , title = NEW.title
           , description = NEW.description
           , create_date = NEW.create_date
@@ -40,7 +66,9 @@ CREATE OR REPLACE FUNCTION specimenstate_mirror() RETURNS TRIGGER AS $specimenst
           , modify_date = NEW.modify_date
           , modify_user_id = ext_user_id(NEW.modify_user_id)
           , revision = NEW.revision
-        WHERE id = OLD.id;
+          , old_db = SELECT current_database()
+          , old_id = NEW.id
+        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
     END CASE;
     RETURN NULL;
   END;
