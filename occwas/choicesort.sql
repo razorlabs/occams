@@ -15,15 +15,77 @@ FROM (
   FROM choice
 ) AS "sorted"
 WHERE "sorted".id = choice.id
+
+
+WITH
+  -- Determine every single choice value's original order number
+  "orders" AS (
+
+    SELECT
+        "schema"."name" AS "schema_name"
+      , MIN("schema"."publish_date") AS "original_publish_date"
+      , "attribute"."name" AS "attribute_name"
+      , "choice"."value" AS "choice_value"
+      , ( SELECT "lchoice"."order"
+          FROM "choice" AS "lchoice"
+          JOIN "attribute" AS "lattribute" ON "lattribute"."id" = "lchoice"."attribute_id"
+          JOIN "schema" AS "lschema" ON "lschema"."id" = "lattribute"."schema_id"
+          WHERE "lchoice"."value" = "choice"."value"
+          AND   "lattribute"."name" = "attribute"."name"
+          AND   "lschema"."name" = "schema"."name"
+          ORDER BY "lschema"."publish_date" ASC NULLS LAST
+          LIMIT 1) AS "original_order"
+    FROM "choice"
+    JOIN "attribute" ON "attribute"."id" = "choice"."attribute_id"
+    JOIN "schema" ON "schema"."id" = "attribute"."schema_id"
+    GROUP BY "schema"."name"
+            ,"attribute"."name"
+            ,"choice"."value"
+  )
+
+  -- Sort choice orders within an attribute scope based on their original
+  -- publish date order number
+  -- This will stack newer choice values at the end of the code list
+  ,"codes" AS (
+    SELECT
+      "orders".*
+      , row_number() OVER(PARTITION BY "schema_name"
+                                      ,"attribute_name"
+                        -- Order the partition by the choice's orginal order number
+                        ORDER BY "original_publish_date" ASC NULLS LAST
+                                ,"original_order" ASC) AS "code"
+    FROM "orders"
+  )
+-- Profit
+SELECT
+    "schema"."name"
+  , "schema"."publish_date"
+  , "attribute"."name"
+  , "choice"."title"
+  , "choice"."value"
+  , "choice"."order"
+  , ( SELECT "code"
+      FROM "codes"
+      WHERE "schema_name" = "schema"."name"
+      AND   "attribute_name" = "attribute"."name"
+      AND   "choice_value" = "choice"."value") AS "code"
+FROM "choice"
+JOIN "attribute" ON "attribute"."id" = "choice"."attribute_id"
+JOIN "schema" ON "schema"."id" = "attribute"."schema_id"
+ORDER BY "schema"."name" ASC
+        ,"schema"."publish_date" ASC NULLS LAST
+        ,"attribute"."name" ASC
+        ,"choice"."order" ASC
 ;
 
+-- Swap with above
 UPDATE "choice"
 SET value = CASE value
                 WHEN 'yes' THEN '1'
                 WHEN 'true' THEN '1'
                 WHEN 'no' THEN '0'
                 WHEN 'false' THEN '0'
-                ELSE "order"
+                ELSE "codes"."code"
             END
 WHERE EXISTS(SELECT 1
              FROM "choice" AS "lchoice"
