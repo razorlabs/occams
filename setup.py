@@ -122,7 +122,6 @@ setup(
     main = occams.clinical:main
     [console_scripts]
     oc_initdb = occams.clinical.scripts.initdb:main
-    oc_mergedb = occams.clinical.scripts.mergedb:main
     oc_export = occams.clinical.scripts.export:main
     """,
 )
