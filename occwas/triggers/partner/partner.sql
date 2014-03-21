@@ -20,7 +20,7 @@ SERVER trigger_target
 OPTIONS (table_name 'partner');
 
 
-CREATE OR REPLACE FUNCTION partner_mirror() RETURNS TRIGGER AS $partner_mirror$
+CREATE OR REPLACE FUNCTION partner_mirror() RETURNS TRIGGER AS $$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
@@ -62,7 +62,7 @@ CREATE OR REPLACE FUNCTION partner_mirror() RETURNS TRIGGER AS $partner_mirror$
     END CASE;
     RETURN NULL;
   END;
-$partner_mirror$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 
 CREATE TRIGGER partner_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON partner

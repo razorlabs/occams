@@ -34,7 +34,7 @@ CREATE OR REPLACE FUNCTION ext_enrollment_id(id) RETURNS SETOF integer AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION enrollment_mirror() RETURNS TRIGGER AS $enrollment_mirror$
+CREATE OR REPLACE FUNCTION enrollment_mirror() RETURNS TRIGGER AS $$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
@@ -88,7 +88,7 @@ CREATE OR REPLACE FUNCTION enrollment_mirror() RETURNS TRIGGER AS $enrollment_mi
     END CASE;
     RETURN NULL;
   END;
-$enrollment_mirror$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 
 CREATE TRIGGER enrollment_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON enrollment

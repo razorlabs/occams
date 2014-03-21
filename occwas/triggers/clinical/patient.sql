@@ -32,7 +32,7 @@ CREATE OR REPLACE FUNCTION ext_patient_id(id) RETURNS SETOF integer AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION patient_mirror() RETURNS TRIGGER AS $patient_mirror$
+CREATE OR REPLACE FUNCTION patient_mirror() RETURNS TRIGGER AS $$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
@@ -79,7 +79,7 @@ CREATE OR REPLACE FUNCTION patient_mirror() RETURNS TRIGGER AS $patient_mirror$
     END CASE;
     RETURN NULL;
   END;
-$patient_mirror$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 
 CREATE TRIGGER patient_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON patient

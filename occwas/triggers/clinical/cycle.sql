@@ -35,7 +35,7 @@ CREATE OR REPLACE FUNCTION ext_cycle_id(id) RETURNS SETOF integer AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION cycle_mirror() RETURNS TRIGGER AS $cycle_mirror$
+CREATE OR REPLACE FUNCTION cycle_mirror() RETURNS TRIGGER AS $$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
@@ -91,7 +91,7 @@ CREATE OR REPLACE FUNCTION cycle_mirror() RETURNS TRIGGER AS $cycle_mirror$
     END CASE;
     RETURN NULL;
   END;
-$cycle_mirror$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 
 CREATE TRIGGER cycle_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON cycle

@@ -23,7 +23,7 @@ SERVER trigger_target
 OPTIONS (table_name 'stratum');
 
 
-CREATE OR REPLACE FUNCTION stratum_mirror() RETURNS TRIGGER AS $stratum_mirror$
+CREATE OR REPLACE FUNCTION stratum_mirror() RETURNS TRIGGER AS $$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
@@ -78,7 +78,7 @@ CREATE OR REPLACE FUNCTION stratum_mirror() RETURNS TRIGGER AS $stratum_mirror$
     END CASE;
     RETURN NULL;
   END;
-$stratum_mirror$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 
 CREATE TRIGGER stratum_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON stratum

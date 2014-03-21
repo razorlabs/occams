@@ -20,7 +20,7 @@ SERVER trigger_target
 OPTIONS (table_name 'patientreference');
 
 
-CREATE OR REPLACE FUNCTION patientreference_mirror() RETURNS TRIGGER AS $patientreference_mirror$
+CREATE OR REPLACE FUNCTION patientreference_mirror() RETURNS TRIGGER AS $$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
@@ -72,7 +72,7 @@ CREATE OR REPLACE FUNCTION patientreference_mirror() RETURNS TRIGGER AS $patient
     END CASE;
     RETURN NULL;
   END;
-$patientreference_mirror$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 
 CREATE TRIGGER patientreference_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON patientreference

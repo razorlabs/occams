@@ -33,7 +33,7 @@ CREATE OR REPLACE FUNCTION ext_arm_id(id) RETURNS SETOF integer AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION arm_mirror() RETURNS TRIGGER AS $arm_mirror$
+CREATE OR REPLACE FUNCTION arm_mirror() RETURNS TRIGGER AS $$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
@@ -59,7 +59,8 @@ CREATE OR REPLACE FUNCTION arm_mirror() RETURNS TRIGGER AS $arm_mirror$
           , NEW.revision
           );
       WHEN 'DELETE' THEN
-        DELETE FROM arm_ext WHERE (study_id, name) = (ext_study_id(OLD.study_id), OLD.name);
+        DELETE FROM arm_ext
+        WHERE (study_id, name) = (ext_study_id(OLD.study_id), OLD.name);
       WHEN 'TRUNCATE' THEN
         TRUNCATE arm_ext;
       WHEN 'UPDATE' THEN
@@ -77,7 +78,7 @@ CREATE OR REPLACE FUNCTION arm_mirror() RETURNS TRIGGER AS $arm_mirror$
     END CASE;
     RETURN NULL;
   END;
-$arm_mirror$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 
 CREATE TRIGGER arm_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON arm

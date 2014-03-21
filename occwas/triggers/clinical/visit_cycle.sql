@@ -11,7 +11,7 @@ SERVER trigger_target
 OPTIONS (table_name 'visit_cycle');
 
 
-CREATE OR REPLACE FUNCTION visit_cycle_mirror() RETURNS TRIGGER AS $visit_cycle_mirror$
+CREATE OR REPLACE FUNCTION visit_cycle_mirror() RETURNS TRIGGER AS $$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
@@ -35,7 +35,7 @@ CREATE OR REPLACE FUNCTION visit_cycle_mirror() RETURNS TRIGGER AS $visit_cycle_
     END CASE;
     RETURN NULL;
   END;
-$visit_cycle_mirror$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 
 CREATE TRIGGER visit_cycle_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON visit_cycle
