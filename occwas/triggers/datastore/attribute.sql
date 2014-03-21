@@ -1,8 +1,8 @@
 ---
 --- avrc_data/attribute -> pirc/attribute + pirc/section
 ---
---- Does not handle ``is_private`` since there's not way to do this in the old system
---  ``order`` might also be a problem...
+--- Splits old attribute in to attribute/section
+--- where section is populated with object-type attributes
 ---
 
 
@@ -31,6 +31,9 @@ CREATE FOREIGN TABLE attribute_ext (
   , modify_date     DATETIME NOT NULL
   , modify_user_id  INTEGER NOT NULL
   , revision        INTEGER NOT NULL
+
+  , old_db          VARCHAR NOT NULL
+  , old_id          INTEGER NOT NULL
 )
 SERVER trigger_target
 OPTIONS (table_name 'attribute');
@@ -49,6 +52,9 @@ CREATE FOREIGN TABLE section_ext (
   , modify_date     DATETIME NOT NULL
   , modify_user_id  INTEGER NOT NULL
   , revision        INTEGER NOT NULL
+
+  , old_db          VARCHAR NOT NULL
+  , old_id          INTEGER NOT NULL
 )
 SERVER trigger_target
 OPTIONS (table_name 'attribute');
@@ -56,8 +62,7 @@ OPTIONS (table_name 'attribute');
 
 CREATE FOREIGN TABLE section_attribute_ext (
     section_id      INTEGER NOT NULL
-    attribute_id    INTEGER NOT NULL
-  , revision        INTEGER NOT NULL
+  , attribute_id    INTEGER NOT NULL
 )
 SERVER trigger_target
 OPTIONS (table_name 'section_attribute');
@@ -72,7 +77,7 @@ CREATE OR REPLACE FUNCTION ext_attribute_id(id) RETURNS SETOF integer AS $$
     RETURN QUERY
         SELECT "attribute_ext".id
         FROM "attribute_ext"
-        WHERE (schema_id, name) = (SELECT ext_schema_id(schema_id), name FROM "attribute" WHERE id = $1);
+        WHERE (old_db, old_id) = (SELECT current_database(), $1);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -80,18 +85,21 @@ $$ LANGUAGE plpgsql;
 -- Helper function to find the section  id in the new system using
 -- the old system id number
 --
-CREATE OR REPLACE FUNCTION ext_attribute_id(attribute_id) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_section_id(id) RETURNS SETOF integer AS $$
   BEGIN
     RETURN QUERY
         SELECT "section_ext".id
         FROM "section_ext"
-        WHERE (schema_id, name) = (SELECT schema_id, name FROM "attribute" WHERE id = $1 AND type = 'object');
+        WHERE (old_db, old_id) = (SELECT current_database(), $1);
   END;
 $$ LANGUAGE plpgsql;
 
 
 
-CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $attribute_mirror$
+CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
+  DECLARE
+    ext_old_id INTEGER;
+    ext_new_id INTEGER;
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
@@ -107,6 +115,7 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $attribute_mirr
             , checksum
             , is_collection
             , is_required
+            , is_private
             , value_min
             , value_max
             , collection_min
@@ -117,7 +126,10 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $attribute_mirr
             , create_user_id
             , modify_date
             , modify_user_id
-            , revision)
+            , revision
+            , old_db
+            , old_id
+          )
           VALUES (
               NEW.name
             , NEW.title
@@ -127,6 +139,7 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $attribute_mirr
             , NEW.checksum
             , NEW.is_collection
             , NEW.is_required
+            , SELECT current_database() LIKE '%phi%',
             , NEW.value_min
             , NEW.value_max
             , NEW.collection_min
@@ -138,7 +151,9 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $attribute_mirr
             , NEW.modify_date
             , ext_user_id(NEW.modify_user_id)
             , NEW.revision
-            )
+            , SELECT current_database()
+            , NEW.id
+          );
 
           -- Check if the attribute is supposed to be a sub-attribute
           IF EXISTS(SELECT 1 FROM "attribute" WHERE object_schema_id = NEW.schema_id) THEN
@@ -147,8 +162,8 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $attribute_mirr
               , attribute_id
               )
             VALUES (
-              ext_section_id(NEW.attribute_id)
-              ext_attribute_id(NEW.attribute_id)
+                ext_section_id(NEW.id)
+              , ext_attribute_id(ext_new_id)
           END IF;
 
         ELSE
@@ -163,7 +178,10 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $attribute_mirr
             , create_user_id
             , modify_date
             , modify_user_id
-            , revision)
+            , revision
+            , old_db
+            , old_id
+          )
           VALUES (
               NEW.name
             , NEW.title
@@ -175,16 +193,19 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $attribute_mirr
             , NEW.modify_date
             , ext_user_id(NEW.modify_user_id)
             , NEW.revision
-            )
-
+            , SELECT current_database()
+            , NEW.id
+          );
 
         END IF;
 
       WHEN 'DELETE' THEN
         IF OLD.object_schema_id IS NULL THEN
-          DELETE FROM attribute_ext WHERE id = ext_attribute_id(OLD.id)
+          DELETE FROM attribute_ext
+          WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
         ELSE
-          DELETE FROM section_ext WHERE id = ext_section_id(OLD.id)
+          DELETE FROM section_ext
+          WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
         END IF;
       WHEN 'TRUNCATE' THEN
         TRUNCATE attribute_ext;
@@ -193,7 +214,7 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $attribute_mirr
 
         IF NEW.object_schema_id IS NULL THEN
 
-          UPDATE attribute_ext
+          new_ext_id := UPDATE attribute_ext
           SET name = NEW.name
             , title = NEW.title
             , description = NEW.description
@@ -202,6 +223,7 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $attribute_mirr
             , checksum = NEW.checksum
             , is_collection = NEW.is_collection
             , is_required = NEW.is_required
+            , is_private = SELECT current_database() LIKE '%phi%',
             , value_min = NEW.value_min
             , value_max = NEW.value_max
             , collection_min = NEW.collection_min
@@ -213,7 +235,9 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $attribute_mirr
             , modify_date = NEW.modify_date
             , modify_user_id = ext_user_id(NEW.modify_user_id)
             , revision = NEW.revision
-          WHERE id = ext_attribute__id(OLD.id)
+            , old_db = SELECT current_database()
+            , old_id = NEW.id
+          WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
 
           -- Check if the attribute is supposed to be a sub-attribute
           IF EXISTS(SELECT 1 FROM "attribute" WHERE object_schema_id = NEW.schema_id) THEN
@@ -239,14 +263,16 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $attribute_mirr
             , modify_date = NEW.modify_date
             , modify_user_id = ext_user_id(NEW.modify_user_id)
             , revision = NEW.revision
-          WHERE id = ext_section_id(OLD.id)
+            , old_db = SELECT current_database()
+            , old_id = NEW.id
+          WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
 
         END IF;
 
     END CASE;
     RETURN NULL;
   END;
-$attribute_mirror$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 
 CREATE TRIGGER attribute_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON attribute

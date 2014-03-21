@@ -1,6 +1,9 @@
----
---- avrc_data/user -> pirc/user
----
+--
+-- avrc_data/user -> pirc/user
+--
+-- Uses ``key`` to find the user in both databases since
+-- the was reconciled from two data sources (phi/fia)
+--
 
 
 CREATE FOREIGN TABLE user_ext (
@@ -9,7 +12,6 @@ CREATE FOREIGN TABLE user_ext (
   , key             VARCHAR
   , create_date     TIMESTAMP NOT NULL
   , modify_date     TIMESTAMP NOT NULL
-
 )
 SERVER trigger_target
 OPTIONS (table_name 'user');
@@ -42,11 +44,10 @@ CREATE OR REPLACE FUNCTION user_mirror() RETURNS TRIGGER AS $$
         TRUNCATE user_ext;
       WHEN 'UPDATE' THEN
         UPDATE user_ext
-        SET id = NEW.id
-          , key = NEW.key
+        SET key = NEW.key
           , create_date = NEW.create_date
           , modify_date = NEW.modify_date
-        WHERE id = OLD.id;
+        WHERE key = OLD.key;
     END CASE;
     RETURN NULL;
   END;

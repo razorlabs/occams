@@ -17,9 +17,13 @@ CREATE FOREIGN TABLE category_ext (
   , modify_date     DATETIME NOT NULL
   , modify_user_id  INTEGER NOT NULL
   , revision        INTEGER NOT NULL
+
+  , old_db          VARCHAR NOT NULL
+  , old_id          INTEGER NOT NULL
 )
 SERVER trigger_target
 OPTIONS (table_name 'category');
+
 
 --
 -- Helper function to find the schema id in the new system using
@@ -30,13 +34,12 @@ CREATE OR REPLACE FUNCTION ext_category_id(id) RETURNS SETOF integer AS $$
     RETURN QUERY
       SELECT "category_ext".id
       FROM "category_ext"
-      WHERE (attribute_id, oldvalue) =
-        (SELECT ext_attribute_id(attribute_id), value FROM "category" WHERE id = $1);
+      WHERE (old_db, old_id) = (SELECT current_database(), $1);
   END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION category_mirror() RETURNS TRIGGER AS $category_mirror$
+CREATE OR REPLACE FUNCTION category_mirror() RETURNS TRIGGER AS $$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
@@ -50,6 +53,8 @@ CREATE OR REPLACE FUNCTION category_mirror() RETURNS TRIGGER AS $category_mirror
           , modify_date
           , modify_user_id
           , revision)
+          , old_db
+          , old_id
         VALUES (
             NEW.name
           , NEW.title
@@ -60,9 +65,12 @@ CREATE OR REPLACE FUNCTION category_mirror() RETURNS TRIGGER AS $category_mirror
           , NEW.modify_date
           , ext_user_id(NEW.modify_user_id)
           , NEW.revision
+          , SELECT current_database()
+          , NEW.id
           )
       WHEN 'DELETE' THEN
-        DELETE FROM category_ext WHERE id = ext_category_id(OLD.id);
+        DELETE FROM category_ext
+        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
       WHEN 'TRUNCATE' THEN
         TRUNCATE category_ext;
       WHEN 'UPDATE' THEN
@@ -77,11 +85,13 @@ CREATE OR REPLACE FUNCTION category_mirror() RETURNS TRIGGER AS $category_mirror
           , modify_date = NEW.modify_date
           , modify_user_id = ext_user_id(NEW.modify_user_id)
           , revision = NEW.revision
-        WHERE id = ext_category_id(OLD.id);
+          , old_db = (SELECT current_database())
+          , old_id = NEW.id
+        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
     END CASE;
     RETURN NULL;
   END;
-$category_mirror$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 
 CREATE TRIGGER category_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON category

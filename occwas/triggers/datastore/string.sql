@@ -1,72 +1,36 @@
 ---
---- avrc_data/value_integer -> pirc/value_integer + pirc/value_choice
+--- avrc_data/value_string -> pirc/value_string + pirc/value_choice
 ---
 
 
-CREATE FOREIGN TABLE value_integer_ext (
+CREATE FOREIGN TABLE value_string_ext (
     id              SERIAL NOT NULL
 
   , entity_id       INTEGER NOT NULL
   , attribute_id    INTEGER NOT NULL
-  , value           INTEGER NOT NULL
+  , value           VARCHAR NOT NULL
 
   , create_date     DATETIME NOT NULL
   , create_user_id  INTEGER NOT NULL
   , modify_date     DATETIME NOT NULL
   , modify_user_id  INTEGER NOT NULL
   , revision        INTEGER NOT NULL
+
+  , old_db          VARCHAR NOT NULL
+  , old_id          INTEGER NOT NULL
 )
 SERVER trigger_target
-OPTIONS (table_name 'value_integer');
+OPTIONS (table_name 'value_string');
 
 
---
--- Helper function to find the value_integer id in the new system using
--- the old system id number
---
-CREATE OR REPLACE FUNCTION ext_value_integer_id(id) RETURNS SETOF integer AS $$
-  BEGIN
-    RETURN QUERY
-        SELECT id
-        FROM "value_integer_ext"
-        WHERE (entity_id, attribute_id, value) = (
-          SELECT ext_entity_id(entity_id)
-                ,ext_attribute_id(attribute_id)
-                ,value
-          FROM "integer"
-          WHERE id = $1)
-  END;
-$$ LANGUAGE plpgsql;
-
-
---
--- Helper function to find the value_choice id in the new system using
--- the old system id number in the integer table
---
-CREATE OR REPLACE FUNCTION ext_integer_value_choice_id(id) RETURNS SETOF integer AS $$
-  BEGIN
-    RETURN QUERY
-        SELECT id
-        FROM "value_choice_ext"
-        WHERE (entity_id, attribute_id, value) = (
-          SELECT ext_entity_id(entity_id)
-                ,ext_attribute_id(attribute_id)
-                ,ext_choice_id(choice_id)
-          FROM "integer"
-          WHERE id = $1)
-  END;
-$$ LANGUAGE plpgsql;
-
-
-
-CREATE OR REPLACE FUNCTION value_integer_mirror() RETURNS TRIGGER AS $value_integer_mirror$
+CREATE OR REPLACE FUNCTION value_string_mirror() RETURNS TRIGGER AS $$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
 
         IF NEW.value IS NOT NULL THEN
           IF NEW.choice_id IS NULL THEN
-            INSERT INTO value_integer_ext (
+            INSERT INTO value_string_ext (
                 entity_id
               , attribute_id
               , value
@@ -74,7 +38,10 @@ CREATE OR REPLACE FUNCTION value_integer_mirror() RETURNS TRIGGER AS $value_inte
               , create_user_id
               , modify_date
               , modify_user_id
-              , revision)
+              , revision
+              , old_db
+              , old_id
+            )
             VALUES (
                 ext_user_id(NEW.entity_id)
               , ext_attribute_id(NEW.attribute_id)
@@ -84,6 +51,8 @@ CREATE OR REPLACE FUNCTION value_integer_mirror() RETURNS TRIGGER AS $value_inte
               , NEW.modify_date
               , ext_user_id(NEW.modify_user_id)
               , NEW.revision
+              , SELECT current_database()
+              , NEW.id
               );
           ELSE
              INSERT INTO value_choice_ext (
@@ -94,7 +63,10 @@ CREATE OR REPLACE FUNCTION value_integer_mirror() RETURNS TRIGGER AS $value_inte
               , create_user_id
               , modify_date
               , modify_user_id
-              , revision)
+              , revision
+              , old_db
+              , old_id
+            )
             VALUES (
                 ext_user_id(NEW.entity_id)
               , ext_attribute_id(NEW.attribute_id)
@@ -104,24 +76,28 @@ CREATE OR REPLACE FUNCTION value_integer_mirror() RETURNS TRIGGER AS $value_inte
               , NEW.modify_date
               , ext_user_id(NEW.modify_user_id)
               , NEW.revision
+              , SELECT current_database()
+              , NEW.id
               );
           END IF;
         END IF;
 
       WHEN 'DELETE' THEN
         IF OLD.choice_id IS NULL THEN
-          DELETE FROM value_integer_ext WHERE id = ext_value_integer_id(OLD.id);
+          DELETE FROM value_string_ext
+          WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
         ELSE
-          DELETE FROM value_choice_ext WHERE id = ext_integer_value_choice_id(OLD.id);
+          DELETE FROM value_choice_ext
+          WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
         END IF;
       WHEN 'TRUNCATE' THEN
-        TRUNCATE value_integer_ext;
-        -- how to truncate value_choice?!?
+        TRUNCATE value_string_ext;
+        TRUNCATE value_choice_ext;
       WHEN 'UPDATE' THEN
 
         IF NEW.value IS NOT NULL THEN
           IF NEW.choice_id IS NULL THEN
-            UPDATE value_integer_ext
+            UPDATE value_string_ext
             SET entity_id = ext_entity_id(NEW.entity_id)
               , attribute_id = ext_attribute_id(NEW.attribute_id)
               , value = NEW.value
@@ -130,7 +106,7 @@ CREATE OR REPLACE FUNCTION value_integer_mirror() RETURNS TRIGGER AS $value_inte
               , modify_date = NEW.modify_date
               , modify_user_id = ext_user_id(NEW.modify_user_id)
               , revision = NEW.revision
-            WHERE id = ext_value_integer_id(OLD.id)
+            WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
           ELSE
             UPDATE value_choice_ext
             SET entity_id = ext_entity_id(NEW.entity_id)
@@ -141,15 +117,15 @@ CREATE OR REPLACE FUNCTION value_integer_mirror() RETURNS TRIGGER AS $value_inte
               , modify_date = NEW.modify_date
               , modify_user_id = ext_user_id(NEW.modify_user_id)
               , revision = NEW.revision
-            WHERE id = ext_integer_value_choice_id(OLD.id)
+            WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
           END IF;
         END IF;
 
     END CASE;
     RETURN NULL;
   END;
-$value_integer_mirror$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER value_integer_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON value_integer
-  FOR EACH ROW EXECUTE PROCEDURE value_integer_mirror();
+CREATE TRIGGER value_string_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON string
+  FOR EACH ROW EXECUTE PROCEDURE value_string_mirror();

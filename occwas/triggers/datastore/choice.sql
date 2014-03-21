@@ -19,6 +19,9 @@ CREATE FOREIGN TABLE choice_ext (
   , modify_date     DATETIME NOT NULL
   , modify_user_id  INTEGER NOT NULL
   , revision        INTEGER NOT NULL
+
+  , old_db          VARCHAR NOT NULL
+  , old_id          INTEGER NOT NULL
 )
 SERVER trigger_target
 OPTIONS (table_name 'choice');
@@ -36,6 +39,9 @@ CREATE FOREIGN TABLE value_choice_ext (
   , modify_date     DATETIME NOT NULL
   , modify_user_id  INTEGER NOT NULL
   , revision        INTEGER NOT NULL
+
+  , old_db          VARCHAR NOT NULL
+  , old_id          INTEGER NOT NULL
 )
 SERVER trigger_target
 OPTIONS (table_name 'value_choice');
@@ -50,13 +56,12 @@ CREATE OR REPLACE FUNCTION ext_choice_id(id) RETURNS SETOF integer AS $$
     RETURN QUERY
       SELECT "choice_ext".id
       FROM "choice_ext"
-      WHERE (attribute_id, name) =
-        (SELECT ext_attribute_id(attribute_id), name FROM choice WHERE id = $1)
+      WHERE (old_db, old_id) = (SELECT current_database(), $1);
   END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION choice_mirror() RETURNS TRIGGER AS $choice_mirror$
+CREATE OR REPLACE FUNCTION choice_mirror() RETURNS TRIGGER AS $$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
@@ -70,9 +75,12 @@ CREATE OR REPLACE FUNCTION choice_mirror() RETURNS TRIGGER AS $choice_mirror$
           , create_user_id
           , modify_date
           , modify_user_id
-          , revision)
+          , revision
+          , old_db
+          , old_id
+        )
         VALUES (
-            NEW.name
+            NEW.value
           , NEW.title
           , NEW.description
           , ext_schema_id(NEW.schema_id)
@@ -82,14 +90,17 @@ CREATE OR REPLACE FUNCTION choice_mirror() RETURNS TRIGGER AS $choice_mirror$
           , NEW.modify_date
           , ext_user_id(NEW.modify_user_id)
           , NEW.revision
-          )
+          , SELECT current_database()
+          , NEW.id
+          );
       WHEN 'DELETE' THEN
-        DELETE FROM choice_ext WHERE id = ext_choice_id(OLD.id);
+        DELETE FROM choice_ext
+        WHERE (old_db, old_id) = (SELECT current_database(), $1);
       WHEN 'TRUNCATE' THEN
         TRUNCATE choice_ext;
       WHEN 'UPDATE' THEN
         UPDATE choice_ext
-        SET name = NEW.name
+        SET name = NEW.value
           , title = NEW.title
           , description = NEW.description
           , attribute_id = ext_attribute_id(NEW.attribute_id)
@@ -99,12 +110,14 @@ CREATE OR REPLACE FUNCTION choice_mirror() RETURNS TRIGGER AS $choice_mirror$
           , modify_date = NEW.modify_date
           , modify_user_id = ext_user_id(NEW.modify_user_id)
           , revision = NEW.revision
-        WHERE id = ext_choice_id(OLD.id);
+          , SELECT current_database()
+          , NEW.id
+        WHERE (old_db, old_id) = (SELECT current_database(), $1);
 
     END CASE;
     RETURN NULL;
   END;
-$choice_mirror$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 
 CREATE TRIGGER choice_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON choice

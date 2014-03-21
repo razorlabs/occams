@@ -1,6 +1,8 @@
 ---
 --- avrc_data/schema -> pirc/schema
 ---
+--- Not that this trigger can only update/modify published_schemata
+---
 
 
 CREATE FOREIGN TABLE schema_ext (
@@ -19,6 +21,9 @@ CREATE FOREIGN TABLE schema_ext (
   , modify_date     DATETIME NOT NULL
   , modify_user_id  INTEGER NOT NULL
   , revision        INTEGER NOT NULL
+
+  , old_db          VARCHAR NOT NULL
+  , old_id          INTEGER NOT NULL
 )
 SERVER trigger_target
 OPTIONS (table_name 'schema');
@@ -28,55 +33,63 @@ OPTIONS (table_name 'schema');
 -- Helper function to find the schema id in the new system using
 -- the old system id number
 --
--- TODO: NEEDS PUBLISH_DATE!!!
---
 CREATE OR REPLACE FUNCTION ext_schema_id(id) RETURNS SETOF integer AS $$
   BEGIN
     RETURN QUERY
-      SELECT "schema_ext".id FROM "schema_ext" WHERE name = COALESCE(
-          -- Check if it's a sub-attribute first...
-          SELECT name FROM "schema" JOIN "attribute" ON "id" = "attribute"."schema_id" WHERE "attribute"."object_schema_id" = $1,
-          -- Not a sub attribute, use schema id directly
-          SELECT name FROM "schema" WHERE id = $1
-          )
+      -- Always return the root schema,
+      -- since schemata are flattened in the new database
+      SELECT "schema_ext".id FROM "schema_ext"
+      WHERE (old_db, old_id) = (  SELECT current_database()
+                                , COALESCE(SELECT schema_id
+                                           FROM "attribute"
+                                           WHERE object_schema_id = $1
+                                         , $1))
+      ;
   END;
 $$ LANGUAGE plpgsql;
 
 
-
-CREATE OR REPLACE FUNCTION schema_mirror() RETURNS TRIGGER AS $schema_mirror$
+CREATE OR REPLACE FUNCTION schema_mirror() RETURNS TRIGGER AS $$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
-        INSERT INTO schema_ext (
-            name
-          , title,
-          , description,
-          , storage
-          , publish_date
-          , retract_date
-          , is_association
-          , create_date
-          , create_user_id
-          , modify_date
-          , modify_user_id
-          , revision)
-        VALUES (
-            NEW.name
-          , NEW.title
-          , NEW.description
-          , NEW.storage
-          , NEW.publish_date
-          , CASE NEW.state WHEN 'retracted' THEN NEW.modify_date ELSE NULL END
-          , NEW.is_association
-          , NEW.create_date
-          , ext_user_id(NEW.create_user_id)
-          , NEW.modify_date
-          , ext_user_id(NEW.modify_user_id)
-          , NEW.revision
+        IF NOT NEW.is_inline THEN
+          INSERT INTO schema_ext (
+              name
+            , title,
+            , description,
+            , storage
+            , publish_date
+            , retract_date
+            , is_association
+            , create_date
+            , create_user_id
+            , modify_date
+            , modify_user_id
+            , revision
+            , old_db
+            , old_id
           )
+          VALUES (
+              NEW.name
+            , NEW.title
+            , NEW.description
+            , NEW.storage
+            , NEW.publish_date
+            , CASE NEW.state WHEN 'retracted' THEN NEW.modify_date ELSE NULL END
+            , NEW.is_association
+            , NEW.create_date
+            , ext_user_id(NEW.create_user_id)
+            , NEW.modify_date
+            , ext_user_id(NEW.modify_user_id)
+            , NEW.revision
+            , SELECT current_database()
+            , NEW.id
+          );
+        END IF;
       WHEN 'DELETE' THEN
-        DELETE FROM schema_ext WHERE name = OLD.name;
+        DELETE FROM schema_ext
+        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
       WHEN 'TRUNCATE' THEN
         TRUNCATE schema_ext;
       WHEN 'UPDATE' THEN
@@ -90,19 +103,20 @@ CREATE OR REPLACE FUNCTION schema_mirror() RETURNS TRIGGER AS $schema_mirror$
             , publish_date = NEW.publish_date
             , retract_date = CASE NEW.state WHEN 'retracted' THEN NEW.modify_date ELSE NULL END
             , is_association = NEW.is_association
-
             , create_date = NEW.create_date
             , create_user_id = ext_user_id(NEW.create_user_id)
             , modify_date = NEW.modify_date
             , modify_user_id = ext_user_id(NEW.modify_user_id)
             , revision = NEW.revision
-          WHERE name = NEW.name;
+            , old_db = SELECT current_database()
+            , old_id = NEW.id
+          WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
         END IF;
 
     END CASE;
     RETURN NULL;
   END;
-$schema_mirror$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 
 CREATE TRIGGER schema_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON schema

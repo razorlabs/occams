@@ -23,6 +23,9 @@ CREATE FOREIGN TABLE entity_ext (
   , modify_date     DATETIME NOT NULL
   , modify_user_id  INTEGER NOT NULL
   , revision        INTEGER NOT NULL
+
+  , old_db          VARCHAR NOT NULL
+  , old_id          INTEGER NOT NULL
 )
 SERVER trigger_target
 OPTIONS (table_name 'entity');
@@ -48,33 +51,23 @@ OPTIONS (table_name 'entity');
 --
 -- Helper function to find the entity id in the new system using
 -- the old system id number
--- TODO: NEEDS TO CONSIDER IF IT'S IN A SUBOBJECT!!!
 --
 CREATE OR REPLACE FUNCTION ext_entity_id(id) RETURNS SETOF integer AS $$
   BEGIN
     RETURN QUERY
-        SELECT "entity_ext".id
-        FROM "entity_ext"
-        WHERE (schema_id, name) = (SELECT ext_schema_id(schema_id), name FROM "entity" WHERE id = $1);
-  END;
-$$ LANGUAGE plpgsql;
-
---
--- Helper function to find the state id in the new system using
--- the old system id number
---
-CREATE OR REPLACE FUNCTION ext_state_id(name) RETURNS SETOF integer AS $$
-  BEGIN
-    RETURN QUERY
-        SELECT "state_ext".id
-        FROM "section_ext"
-        WHERE name = $1;
-  END;
+      -- Check if it's a sub-object first
+      SELECT id FROM "entity_ext"
+      WHERE (old_db, old_id) = (  SELECT current_database(),
+                                , COALESCE(SELECT "object"."entity_id"
+                                           FROM "object"
+                                           WHERE "object"."value" = $1
+                                          ,$1))
+      ;
+    END;
 $$ LANGUAGE plpgsql;
 
 
-
-CREATE OR REPLACE FUNCTION entity_mirror() RETURNS TRIGGER AS $entity_mirror$
+CREATE OR REPLACE FUNCTION entity_mirror() RETURNS TRIGGER AS $$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
@@ -99,7 +92,7 @@ CREATE OR REPLACE FUNCTION entity_mirror() RETURNS TRIGGER AS $entity_mirror$
             , NEW.description
             , ext_schema_id(NEW.schema_id)
             , collect_date = NEW.collect_date
-            , ext_state_id(NEW.state)
+            , SELECT id FROM "ext_state" WHERE name = NEW.state
             , NEW.create_date
             , ext_user_id(NEW.create_user_id)
             , NEW.modify_date
@@ -121,7 +114,7 @@ CREATE OR REPLACE FUNCTION entity_mirror() RETURNS TRIGGER AS $entity_mirror$
           , description = NEW.description
           , schema_id = ext_schema_id(NEW.schema_id)
           , collect_date = NEW.collect_date
-          , state = ext_state_id(NEW.state)
+          , SELECT id FROM "ext_state" WHERE name = NEW.state
           , create_date = NEW.create_date
           , create_user_id = ext_user_id(NEW.create_user_id)
           , modify_date = NEW.modify_date
@@ -132,7 +125,7 @@ CREATE OR REPLACE FUNCTION entity_mirror() RETURNS TRIGGER AS $entity_mirror$
     END CASE;
     RETURN NULL;
   END;
-$entity_mirror$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 
 CREATE TRIGGER entity_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON entity
