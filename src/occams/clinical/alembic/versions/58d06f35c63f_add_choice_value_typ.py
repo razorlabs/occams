@@ -14,7 +14,7 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import sql
 
-from occams.clinical.migrations import alter_enum, query_user_id
+from occams.clinical.migrations import alter_enum
 
 
 def upgrade():
@@ -22,7 +22,6 @@ def upgrade():
     create_choice_table()
     migrate_choice_values()
     drop_value_choice_id()
-    normalize_order()
     set_name_as_code()
     force_numeric_name()
 
@@ -206,43 +205,12 @@ def drop_value_choice_id():
         op.drop_column('value_' + type_name + '_audit', 'choice_id')
 
 
-def normalize_order():
-    """
-    Normalize choice ordering so that choices get a clean 1,2,3,4... value
-    """
-    choice_table = sql.table('choice', sql.column('order'))
-
-    op.execute(
-        choice_table.update()
-        .values(order=op.inline_literal(1000000000) + choice_table.c.order))
-
-    op.execute("""
-        UPDATE choice
-        SET "order" = "sorted"."new_order"
-        FROM (
-
-          SELECT id, row_number() OVER (
-                PARTITION BY attribute_id
-                ORDER BY "order"
-                ) AS new_order
-          FROM choice
-
-        ) AS "sorted"
-        WHERE "sorted".id = choice.id
-    """)
-
-
 def set_name_as_code():
     """
-    The value column is now deprecated and we'll be using the name as the key code
+    The value column is now deprecated and we'll be using the name as the key
     """
 
     # Ad-hoc tables from querying
-
-    attribute_table = sql.table('attribute',
-                                sql.column('id'),
-                                sql.column('type'))
-
     choice_table = sql.table('choice',
                              sql.column('name'),
                              sql.column('attribute_id'),
@@ -253,21 +221,8 @@ def set_name_as_code():
                              sql.column('value'))
 
     for table in (choice_table, choice_audit):
-        op.execute(table.update().values(name=table.c.value))
+        op.execute(table.update().values(name=sql.func.lower(table.c.value)))
         op.drop_column(table.name, 'value')
-
-    # Update choice codes for booleans (which are Python booleans, not SQ)
-    op.execute(
-        choice_table.update()
-        .values(name=sa.case(value=choice_table.c.name, whens=[
-            (op.inline_literal('False'), op.inline_literal('0')),
-            (op.inline_literal('True'), op.inline_literal('1'))]))
-        .where(
-            sa.exists(
-                attribute_table.select()
-                .where(
-                    (attribute_table.c.id == choice_table.c.attribute_id)
-                    & (attribute_table.c.type == op.inline_literal('boolean'))))))
 
 
 def force_numeric_name():
@@ -275,6 +230,7 @@ def force_numeric_name():
     Choice names can only be numeric (e.g. 123, 00345)
     """
 
+    # Ad-hoc tables from querying
     attribute_table = sql.table('attribute',
                                 sql.column('id'),
                                 sql.column('type'))
@@ -283,29 +239,6 @@ def force_numeric_name():
                              sql.column('attribute_id'),
                              sql.column('name'),
                              sql.column('order'))
-
-    choice_group = sa.alias(choice_table, name='choice_group')
-
-    # update all string codes to use the order number
-    # note that there are some numeric strings that we need to watch out for
-    # (e.g. 00332, in this case leave those alone)
-    # this is a raw statement because we need regular expressions
-    op.execute(
-        choice_table.update()
-        .values(name=sa.cast(choice_table.c.order, sa.String))
-        .where(
-            sa.exists(
-                attribute_table.select()
-                .where(
-                    (attribute_table.c.id == choice_table.c.attribute_id)
-                    & (attribute_table.c.type == op.inline_literal('string')))
-                .correlate(choice_table))
-            & (~sa.select(
-                [sql.func.every(choice_group.c.name.op('~')(op.inline_literal('^[0-9]+$')))])
-                .where(choice_group.c.attribute_id == choice_table.c.attribute_id)
-                .group_by(choice_group.c.attribute_id)
-                .correlate(choice_table)
-                .as_scalar())))
 
     # Switch the attribute with choices to type 'choice'
     op.execute(
