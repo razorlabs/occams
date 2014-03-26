@@ -8,7 +8,7 @@ CREATE FOREIGN TABLE patientreference_ext (
 
   , patient_id        INTEGER NOT NULL
   , reftype_id        INTEGER NOT NULL
-  , reference_number  VARCHAR,
+  , reference_number  VARCHAR NOT NULL,
 
   , create_date       DATETIME NOT NULL
   , create_user_id    INTEGER NOT NULL
