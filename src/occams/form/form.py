@@ -8,7 +8,7 @@ from pkg_resources import resource_filename
 import colander
 import deform.widget
 
-from occams.datastore import model as datastore
+from occams.datastore import models as datastore
 
 
 def choice_widget_factory(attribute):

@@ -1,6 +1,5 @@
 from pkg_resources import resource_filename
 
-import colander
 import deform.widget
 
 from occams.form import log
@@ -9,9 +8,9 @@ from occams.form import log
 # Define application-local renderers so we don't
 # affect the entire python environment.
 
-DEFAULT_RENDERER = deform.ZPTRendererFactory([
+DEFAULT_RENDERER = deform.ZPTRendererFactory((
     resource_filename('occams.form', 'templates/deform'),
-    resource_filename('deform', 'templates')])
+    resource_filename('deform', 'templates'),))
 
 
 class ModalFormWidget(deform.widget.FormWidget):

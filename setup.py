@@ -9,17 +9,17 @@ CHANGES = open(os.path.join(HERE, 'CHANGES.rst')).read()
 
 REQUIRES = [
     'alembic',
-    'beaker',
     'colander',
     'cssmin',
     'deform',
     'jsmin',
     'occams.datastore',
     'pyramid',
-    'pyramid_beaker',
     'pyramid_deform',
     'pyramid_mailer',
     'pyramid_layout',
+    'pyramid_redis_sessions',
+    'pyramid_redis',
     'pyramid_tm',
     'pyramid_rewrite',
     'pyramid_webassets',
@@ -35,7 +35,7 @@ EXTRAS = {
     'postgresql': ['psycopg2'],
     'test': [
         'pyramid_debugtoolbar',
-        'nose', 'rednose',
+        'nose',
         'coverage',
         'WebTest',
         'beautifulsoup4'],
