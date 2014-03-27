@@ -77,8 +77,6 @@ CREATE OR REPLACE FUNCTION study_mirror() RETURNS TRIGGER AS $$
         );
       WHEN 'DELETE' THEN
         DELETE FROM study_ext WHERE zid = OLD.zid;
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE study_ext;
       WHEN 'UPDATE' THEN
         UPDATE study_ext
         SET zid = NEW.zid
@@ -103,5 +101,5 @@ CREATE OR REPLACE FUNCTION study_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER study_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON study
+CREATE TRIGGER study_mirror AFTER INSERT OR UPDATE OR DELETE ON study
   kFOR EACH ROW EXECUTE PROCEDURE study_mirror();

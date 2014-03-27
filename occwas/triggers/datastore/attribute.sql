@@ -211,9 +211,6 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
           DELETE FROM section_ext
           WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
         END IF;
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE attribute_ext;
-        TRUNCATE section_ext;
       WHEN 'UPDATE' THEN
 
         IF NEW.object_schema_id IS NULL THEN
@@ -283,5 +280,5 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER attribute_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON attribute
+CREATE TRIGGER attribute_mirror AFTER INSERT OR UPDATE OR DELETE ON attribute
   FOR EACH ROW EXECUTE PROCEDURE attribute_mirror();

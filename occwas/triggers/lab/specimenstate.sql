@@ -54,8 +54,6 @@ CREATE OR REPLACE FUNCTION specimenstate_mirror() RETURNS TRIGGER AS $specimenst
       WHEN 'DELETE' THEN
         DELETE FROM specimenstate_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE specimenstate_ext;
       WHEN 'UPDATE' THEN
         UPDATE specimenstate_ext
         SET name = NEW.name
@@ -75,5 +73,5 @@ CREATE OR REPLACE FUNCTION specimenstate_mirror() RETURNS TRIGGER AS $specimenst
 $specimenstate_mirror$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER specimenstate_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON specimenstate
+CREATE TRIGGER specimenstate_mirror AFTER INSERT OR UPDATE OR DELETE ON specimenstate
   FOR EACH ROW EXECUTE PROCEDURE specimenstate_mirror();

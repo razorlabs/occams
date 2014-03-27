@@ -58,8 +58,6 @@ CREATE OR REPLACE FUNCTION stratum_mirror() RETURNS TRIGGER AS $$
         DELETE FROM stratum_ext
         WHERE (study_id, reference_number) =
           (ext_study_id(OLD.study_id), OLD.reference_number);
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE stratum_ext;
       WHEN 'UPDATE' THEN
         UPDATE stratum_ext
         SET study_id = ext_study_id(NEW.study_id)
@@ -81,5 +79,5 @@ CREATE OR REPLACE FUNCTION stratum_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER stratum_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON stratum
+CREATE TRIGGER stratum_mirror AFTER INSERT OR UPDATE OR DELETE ON stratum
   FOR EACH ROW EXECUTE PROCEDURE stratum_mirror();

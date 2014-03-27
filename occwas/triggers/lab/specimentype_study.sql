@@ -27,8 +27,6 @@ CREATE OR REPLACE FUNCTION specimentype_study_mirror() RETURNS TRIGGER AS $$
         DELETE FROM specimentype_study_ext
         WHERE study_id = ext_study_id(OLD.study_id)
             , specimentype_id =  (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), OLD.specimentype_id))
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE specimentype_study_ext;
       WHEN 'UPDATE' THEN
         UPDATE specimentype_study_ext
         SET study_id = ext_study_id(NEW.study_id)
@@ -43,5 +41,5 @@ CREATE OR REPLACE FUNCTION specimentype_study_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER specimentype_study_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON specimentype_study
+CREATE TRIGGER specimentype_study_mirror AFTER INSERT OR UPDATE OR DELETE ON specimentype_study
   FOR EACH ROW EXECUTE PROCEDURE specimentype_study_mirror();

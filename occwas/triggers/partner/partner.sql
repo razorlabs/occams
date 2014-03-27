@@ -46,8 +46,6 @@ CREATE OR REPLACE FUNCTION partner_mirror() RETURNS TRIGGER AS $$
         );
       WHEN 'DELETE' THEN
         DELETE FROM partner_ext WHERE zid = OLD.zid;
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE partner_ext;
       WHEN 'UPDATE' THEN
         UPDATE partner_ext
         SET zid = NEW.zid
@@ -65,5 +63,5 @@ CREATE OR REPLACE FUNCTION partner_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER partner_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON partner
+CREATE TRIGGER partner_mirror AFTER INSERT OR UPDATE OR DELETE ON partner
   FOR EACH ROW EXECUTE PROCEDURE partner_mirror();

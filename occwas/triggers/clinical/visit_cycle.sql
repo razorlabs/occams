@@ -24,8 +24,6 @@ CREATE OR REPLACE FUNCTION visit_cycle_mirror() RETURNS TRIGGER AS $$
         FROM visit_cycle_ext
         WHERE visit_id = ext_visit_id(OLD.visit_id)
           AND cycle_id = ext_cycle_id(OLD.cycle_id);
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE visit_cycle_ext;
       WHEN 'UPDATE' THEN
         UPDATE visit_cycle_ext
         SET visit_id = ext_visit_id(NEW.visit_id)
@@ -38,5 +36,5 @@ CREATE OR REPLACE FUNCTION visit_cycle_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER visit_cycle_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON visit_cycle
+CREATE TRIGGER visit_cycle_mirror AFTER INSERT OR UPDATE OR DELETE ON visit_cycle
   FOR EACH ROW EXECUTE PROCEDURE visit_cycle_mirror();

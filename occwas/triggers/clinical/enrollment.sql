@@ -68,8 +68,6 @@ CREATE OR REPLACE FUNCTION enrollment_mirror() RETURNS TRIGGER AS $$
           )
       WHEN 'DELETE' THEN
         DELETE FROM enrollment_ext WHERE zid = OLD.zid;
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE enrollment_ext;
       WHEN 'UPDATE' THEN
         UPDATE enrollment_ext
         SET zid = NEW.zid
@@ -91,5 +89,5 @@ CREATE OR REPLACE FUNCTION enrollment_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER enrollment_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON enrollment
+CREATE TRIGGER enrollment_mirror AFTER INSERT OR UPDATE OR DELETE ON enrollment
   FOR EACH ROW EXECUTE PROCEDURE enrollment_mirror();

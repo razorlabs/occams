@@ -70,8 +70,6 @@ CREATE OR REPLACE FUNCTION cycle_mirror() RETURNS TRIGGER AS $$
           );
       WHEN 'DELETE' THEN
         DELETE FROM cycle_ext WHERE zid = OLD.zid;
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE cycle_ext;
       WHEN 'UPDATE' THEN
         UPDATE cycle_ext
         SET zid = NEW.zid
@@ -94,5 +92,5 @@ CREATE OR REPLACE FUNCTION cycle_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER cycle_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON cycle
+CREATE TRIGGER cycle_mirror AFTER INSERT OR UPDATE OR DELETE ON cycle
   FOR EACH ROW EXECUTE PROCEDURE cycle_mirror();

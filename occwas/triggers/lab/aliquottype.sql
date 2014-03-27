@@ -60,8 +60,6 @@ CREATE OR REPLACE FUNCTION aliquottype_mirror() RETURNS TRIGGER AS $$
       WHEN 'DELETE' THEN
         DELETE FROM aliquottype_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE aliquottype_ext;
       WHEN 'UPDATE' THEN
         UPDATE aliquottype_ext
         SET name = NEW.name
@@ -83,5 +81,5 @@ CREATE OR REPLACE FUNCTION aliquottype_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER aliquottype_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON aliquottype
+CREATE TRIGGER aliquottype_mirror AFTER INSERT OR UPDATE OR DELETE ON aliquottype
   FOR EACH ROW EXECUTE PROCEDURE aliquottype_mirror();

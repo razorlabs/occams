@@ -75,8 +75,6 @@ CREATE OR REPLACE FUNCTION context_mirror() RETURNS TRIGGER AS $$
       WHEN 'DELETE' THEN
         DELETE FROM context_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE context_ext;
       WHEN 'UPDATE' THEN
 
         UPDATE context_ext
@@ -103,5 +101,5 @@ CREATE OR REPLACE FUNCTION context_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER context_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON context
+CREATE TRIGGER context_mirror AFTER INSERT OR UPDATE OR DELETE ON context
   FOR EACH ROW EXECUTE PROCEDURE context_mirror();

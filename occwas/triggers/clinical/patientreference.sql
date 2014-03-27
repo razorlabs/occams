@@ -52,8 +52,6 @@ CREATE OR REPLACE FUNCTION patientreference_mirror() RETURNS TRIGGER AS $$
           (ext_patient_id(OLD.patient_id),
            ext_reftype_id(OLD.reftype_id),
            OLD.reference_number);
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE patientreference_ext;
       WHEN 'UPDATE' THEN
         UPDATE patientreference_ext
         SET patient_id = ext_patient_id(NEW.patient_id)
@@ -75,5 +73,5 @@ CREATE OR REPLACE FUNCTION patientreference_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER patientreference_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON patientreference
+CREATE TRIGGER patientreference_mirror AFTER INSERT OR UPDATE OR DELETE ON patientreference
   FOR EACH ROW EXECUTE PROCEDURE patientreference_mirror();

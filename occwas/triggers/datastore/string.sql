@@ -90,9 +90,6 @@ CREATE OR REPLACE FUNCTION value_string_mirror() RETURNS TRIGGER AS $$
           DELETE FROM value_choice_ext
           WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
         END IF;
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE value_string_ext;
-        TRUNCATE value_choice_ext;
       WHEN 'UPDATE' THEN
 
         IF NEW.value IS NOT NULL THEN
@@ -127,5 +124,5 @@ CREATE OR REPLACE FUNCTION value_string_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER value_string_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON string
+CREATE TRIGGER value_string_mirror AFTER INSERT OR UPDATE OR DELETE ON string
   FOR EACH ROW EXECUTE PROCEDURE value_string_mirror();

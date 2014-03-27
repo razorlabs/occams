@@ -28,8 +28,6 @@ CREATE OR REPLACE FUNCTION schema_category_mirror() RETURNS TRIGGER AS $$
         WHERE schema_id = ext_schema_id(OLD.schema_id)
           AND category_id = ext_category_id(OLD.category_id)
         ;
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE schema_category_ext;
       WHEN 'UPDATE' THEN
         UPDATE schema_category_ext
         SET schema_id = ext_schema_id(NEW.schema_id)
@@ -42,5 +40,5 @@ CREATE OR REPLACE FUNCTION schema_category_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER schema_category_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON schema_category
+CREATE TRIGGER schema_category_mirror AFTER INSERT OR UPDATE OR DELETE ON schema_category
   FOR EACH ROW EXECUTE PROCEDURE schema_category_mirror();

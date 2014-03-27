@@ -61,8 +61,6 @@ CREATE OR REPLACE FUNCTION arm_mirror() RETURNS TRIGGER AS $$
       WHEN 'DELETE' THEN
         DELETE FROM arm_ext
         WHERE (study_id, name) = (ext_study_id(OLD.study_id), OLD.name);
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE arm_ext;
       WHEN 'UPDATE' THEN
         UPDATE arm_ext
         SET name = NEW.name
@@ -81,5 +79,5 @@ CREATE OR REPLACE FUNCTION arm_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER arm_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON arm
+CREATE TRIGGER arm_mirror AFTER INSERT OR UPDATE OR DELETE ON arm
   FOR EACH ROW EXECUTE PROCEDURE arm_mirror();

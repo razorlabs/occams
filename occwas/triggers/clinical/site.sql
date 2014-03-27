@@ -61,8 +61,6 @@ CREATE OR REPLACE FUNCTION site_mirror() RETURNS TRIGGER AS $$
         );
       WHEN 'DELETE' THEN
         DELETE FROM site_ext WHERE zid = OLD.zid;
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE site_ext;
       WHEN 'UPDATE' THEN
         UPDATE site_ext
         SET zid = NEW.zid
@@ -81,5 +79,5 @@ CREATE OR REPLACE FUNCTION site_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER site_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON site
+CREATE TRIGGER site_mirror AFTER INSERT OR UPDATE OR DELETE ON site
   FOR EACH ROW EXECUTE PROCEDURE site_mirror();

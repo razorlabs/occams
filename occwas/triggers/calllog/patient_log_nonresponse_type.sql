@@ -50,8 +50,6 @@ CREATE OR REPLACE FUNCTION patient_log_nonresponse_type_mirror() RETURNS TRIGGER
       WHEN 'DELETE' THEN
         DELETE FROM patient_log_nonresponse_type_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE patient_log_nonresponse_type_ext;
       WHEN 'UPDATE' THEN
         UPDATE patient_log_nonresponse_type_ext
         SET id = NEW.id
@@ -66,5 +64,5 @@ CREATE OR REPLACE FUNCTION patient_log_nonresponse_type_mirror() RETURNS TRIGGER
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER patient_log_nonresponse_type_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON patient_log_nonresponse_type
+CREATE TRIGGER patient_log_nonresponse_type_mirror AFTER INSERT OR UPDATE OR DELETE ON patient_log_nonresponse_type
   FOR EACH ROW EXECUTE PROCEDURE patient_log_nonresponse_type_mirror();

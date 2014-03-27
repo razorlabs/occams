@@ -56,8 +56,6 @@ CREATE OR REPLACE FUNCTION reftype_mirror() RETURNS TRIGGER AS $$
         );
       WHEN 'DELETE' THEN
         DELETE FROM reftype_ext WHERE name = OLD.name;
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE reftype_ext;
       WHEN 'UPDATE' THEN
         UPDATE reftype_ext
         SET name = NEW.name
@@ -75,5 +73,5 @@ CREATE OR REPLACE FUNCTION reftype_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER reftype_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON patient
+CREATE TRIGGER reftype_mirror AFTER INSERT OR UPDATE OR DELETE ON patient
   FOR EACH ROW EXECUTE PROCEDURE reftype_mirror();

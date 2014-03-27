@@ -52,8 +52,6 @@ CREATE OR REPLACE FUNCTION specialinstruction_mirror() RETURNS TRIGGER AS $$
       WHEN 'DELETE' THEN
         DELETE FROM specialinstruction_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE specialinstruction_ext;
       WHEN 'UPDATE' THEN
         UPDATE specialinstruction_ext
         SET name = NEW.name
@@ -73,5 +71,5 @@ CREATE OR REPLACE FUNCTION specialinstruction_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER specialinstruction_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON specialinstruction
+CREATE TRIGGER specialinstruction_mirror AFTER INSERT OR UPDATE OR DELETE ON specialinstruction
   FOR EACH ROW EXECUTE PROCEDURE specialinstruction_mirror();

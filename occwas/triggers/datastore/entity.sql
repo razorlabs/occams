@@ -104,8 +104,6 @@ CREATE OR REPLACE FUNCTION entity_mirror() RETURNS TRIGGER AS $$
 
       WHEN 'DELETE' THEN
         DELETE FROM entity_ext WHERE id = ext_entity_id(OLD.id)
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE entity_ext;
       WHEN 'UPDATE' THEN
 
         UPDATE entity_ext
@@ -128,5 +126,5 @@ CREATE OR REPLACE FUNCTION entity_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER entity_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON entity
+CREATE TRIGGER entity_mirror AFTER INSERT OR UPDATE OR DELETE ON entity
   FOR EACH ROW EXECUTE PROCEDURE entity_mirror();

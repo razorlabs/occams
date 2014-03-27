@@ -59,8 +59,6 @@ CREATE OR REPLACE FUNCTION value_blob_mirror() RETURNS TRIGGER AS $$
       WHEN 'DELETE' THEN
         DELETE FROM value_blob_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE value_blob_ext;
       WHEN 'UPDATE' THEN
 
         IF NEW.value IS NOT NULL THEN
@@ -84,5 +82,5 @@ CREATE OR REPLACE FUNCTION value_blob_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER value_blob_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON blob
+CREATE TRIGGER value_blob_mirror AFTER INSERT OR UPDATE OR DELETE ON blob
   FOR EACH ROW EXECUTE PROCEDURE value_blob_mirror();

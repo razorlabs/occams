@@ -61,8 +61,6 @@ CREATE OR REPLACE FUNCTION patient_mirror() RETURNS TRIGGER AS $$
           );
       WHEN 'DELETE' THEN
         DELETE FROM patient_ext WHERE zid = OLD.zid;
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE patient_ext;
       WHEN 'UPDATE' THEN
         UPDATE patient_ext
         SET site_id = ext_site_id(NEW.site_id)
@@ -82,5 +80,5 @@ CREATE OR REPLACE FUNCTION patient_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER patient_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON patient
+CREATE TRIGGER patient_mirror AFTER INSERT OR UPDATE OR DELETE ON patient
   FOR EACH ROW EXECUTE PROCEDURE patient_mirror();

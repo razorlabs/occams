@@ -40,8 +40,6 @@ CREATE OR REPLACE FUNCTION user_mirror() RETURNS TRIGGER AS $$
         VALUES (NEW.key, NEW.create_date, NEW.modify_date);
       WHEN 'DELETE' THEN
         DELETE FROM user_ext WHERE key = OLD.key;
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE user_ext;
       WHEN 'UPDATE' THEN
         UPDATE user_ext
         SET key = NEW.key
@@ -54,6 +52,6 @@ CREATE OR REPLACE FUNCTION user_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER user_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON user
+CREATE TRIGGER user_mirror AFTER INSERT OR UPDATE OR DELETE ON user
   FOR EACH ROW EXECUTE PROCEDURE user_mirror();
 

@@ -28,8 +28,6 @@ CREATE OR REPLACE FUNCTION specimentype_cycle_mirror() RETURNS TRIGGER AS $$
         DELETE FROM specimentype_cycle_ext
         WHERE cycle_id = ext_cycle_id(OLD.cycle_id)
             , specimentype_id = (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), OLD.specimentype_id))
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE specimentype_cycle_ext;
       WHEN 'UPDATE' THEN
         UPDATE specimentype_cycle_ext
         SET cycle_id = ext_cycle_id(NEW.cycle_id)
@@ -43,5 +41,5 @@ CREATE OR REPLACE FUNCTION specimentype_cycle_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER specimentype_cycle_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON specimentype_cycle
+CREATE TRIGGER specimentype_cycle_mirror AFTER INSERT OR UPDATE OR DELETE ON specimentype_cycle
   FOR EACH ROW EXECUTE PROCEDURE specimentype_cycle_mirror();

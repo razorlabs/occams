@@ -71,8 +71,6 @@ CREATE OR REPLACE FUNCTION category_mirror() RETURNS TRIGGER AS $$
       WHEN 'DELETE' THEN
         DELETE FROM category_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE category_ext;
       WHEN 'UPDATE' THEN
         UPDATE category_ext
         SET name = NEW.value
@@ -94,5 +92,5 @@ CREATE OR REPLACE FUNCTION category_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER category_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON category
+CREATE TRIGGER category_mirror AFTER INSERT OR UPDATE OR DELETE ON category
   FOR EACH ROW EXECUTE PROCEDURE category_mirror();

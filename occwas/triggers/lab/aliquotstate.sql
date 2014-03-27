@@ -54,8 +54,6 @@ CREATE OR REPLACE FUNCTION aliquotstate_mirror() RETURNS TRIGGER AS $$
       WHEN 'DELETE' THEN
         DELETE FROM aliquotstate_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE aliquotstate_ext;
       WHEN 'UPDATE' THEN
         UPDATE aliquotstate_ext
         SET name = NEW.name
@@ -75,5 +73,5 @@ CREATE OR REPLACE FUNCTION aliquotstate_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER aliquotstate_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON aliquotstate
+CREATE TRIGGER aliquotstate_mirror AFTER INSERT OR UPDATE OR DELETE ON aliquotstate
   FOR EACH ROW EXECUTE PROCEDURE aliquotstate_mirror();

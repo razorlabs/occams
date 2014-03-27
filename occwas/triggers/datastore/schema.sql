@@ -90,8 +90,6 @@ CREATE OR REPLACE FUNCTION schema_mirror() RETURNS TRIGGER AS $$
       WHEN 'DELETE' THEN
         DELETE FROM schema_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE schema_ext;
       WHEN 'UPDATE' THEN
         -- Don't need to update subschemata as they don't exist in the new system
         IF NOT NEW.is_inline THEN
@@ -119,5 +117,5 @@ CREATE OR REPLACE FUNCTION schema_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER schema_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON schema
+CREATE TRIGGER schema_mirror AFTER INSERT OR UPDATE OR DELETE ON schema
   FOR EACH ROW EXECUTE PROCEDURE schema_mirror();

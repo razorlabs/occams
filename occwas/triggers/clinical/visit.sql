@@ -56,8 +56,6 @@ CREATE OR REPLACE FUNCTION visit_mirror() RETURNS TRIGGER AS $$
         );
       WHEN 'DELETE' THEN
         DELETE FROM visit_ext WHERE zid = OLD.zid;
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE visit_ext;
       WHEN 'UPDATE' THEN
         UPDATE visit_ext
         SET zid = NEW.zid
@@ -75,5 +73,5 @@ CREATE OR REPLACE FUNCTION visit_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER visit_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON visit
+CREATE TRIGGER visit_mirror AFTER INSERT OR UPDATE OR DELETE ON visit
   FOR EACH ROW EXECUTE PROCEDURE visit_mirror();

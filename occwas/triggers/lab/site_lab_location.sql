@@ -29,8 +29,6 @@ CREATE OR REPLACE FUNCTION site_lab_location_mirror() RETURNS TRIGGER AS $$
         WHERE site_id = SELECT id FROM site_ext WHERE zid = (SELECT zid FROM site WHERE id = OLD.site_id)
         AND   location_id = SELECT id FROM location_ext WHERE (old_db, old_id) = (SELECT current_database(), OLD.location_id)
         ;
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE site_lab_location_ext;
       WHEN 'UPDATE' THEN
         UPDATE site_lab_location_ext
         SET site_id = SELECT id FROM site_ext WHERE zid = (SELECT zid FROM site WHERE id = NEW.site_id)
@@ -44,5 +42,5 @@ CREATE OR REPLACE FUNCTION site_lab_location_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER site_lab_location_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON site_lab_location
+CREATE TRIGGER site_lab_location_mirror AFTER INSERT OR UPDATE OR DELETE ON site_lab_location
   FOR EACH ROW EXECUTE PROCEDURE site_lab_location_mirror();

@@ -54,8 +54,6 @@ CREATE OR REPLACE FUNCTION location_mirror() RETURNS TRIGGER AS $$
       WHEN 'DELETE' THEN
         DELETE FROM location_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE location_ext;
       WHEN 'UPDATE' THEN
         UPDATE location_ext
         SET name = NEW.name
@@ -75,5 +73,5 @@ CREATE OR REPLACE FUNCTION location_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER location_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON location
+CREATE TRIGGER location_mirror AFTER INSERT OR UPDATE OR DELETE ON location
   FOR EACH ROW EXECUTE PROCEDURE location_mirror();

@@ -28,8 +28,6 @@ CREATE OR REPLACE FUNCTION log_responses_mirror() RETURNS TRIGGER AS $$
         WHERE patient_log_id = ext_patient_log_id(OLD.patient_log_id)
         AND   patient_log_nonresponse_type_id = ext_patient_log_nonresponse_type_id(OLD.patient_log_nonresponse_type_id)
         ;
-      WHEN 'TRUNCATE' THEN
-        TRUNCATE log_responses_ext;
       WHEN 'UPDATE' THEN
         UPDATE log_responses_ext
         SET patient_log_id = ext_patient_log_id(NEW.patient_log_id)
@@ -43,5 +41,5 @@ CREATE OR REPLACE FUNCTION log_responses_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER log_responses_mirror AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON log_responses
+CREATE TRIGGER log_responses_mirror AFTER INSERT OR UPDATE OR DELETE ON log_responses
   FOR EACH ROW EXECUTE PROCEDURE log_responses_mirror();
