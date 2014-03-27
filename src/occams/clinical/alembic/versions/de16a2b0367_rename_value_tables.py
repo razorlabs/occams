@@ -28,13 +28,10 @@ def upgrade():
             # blob/text were created incorrectly and so we must fix the
             # timeline check name here (audit checks constraints
             # apparently use the main table name in their own name generatoin)
-            ck_name = table_name if type_name in (
-                'text',
-                'blob') else type_name
+            # (CHECK BOTH WAYS DAMMIT)
+            op.execute('ALTER TABLE {0} DROP CONSTRAINT IF EXISTS ck_value_{1}_valid_timeline'.format(table_name, type_name))
+            op.execute('ALTER TABLE {0} DROP CONSTRAINT IF EXISTS ck_value_{1}_valid_timeline'.format(table_name, table_name))
 
-            # Modify time constraints
-            op.drop_constraint(
-                'ck_{0}_valid_timeline'.format(ck_name), table_name)
             op.create_check_constraint(
                 'ck_value_{0}_valid_timeline'.format(type_name), table_name,
                 'create_date <= modify_date')

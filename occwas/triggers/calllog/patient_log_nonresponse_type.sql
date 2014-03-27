@@ -9,7 +9,7 @@ CREATE FOREIGN TABLE patient_log_nonresponse_type_ext (
     id              SERIAL NOT NULL
 
   , value           VARCHAR NOT NULL
-  , order           INTEGER NOT NULL
+  , "order"         INTEGER NOT NULL
 
   , old_db          VARCHAR NOT NULL
   , old_id          INTEGER NOT NULL
@@ -39,7 +39,7 @@ CREATE OR REPLACE FUNCTION patient_log_nonresponse_type_mirror() RETURNS TRIGGER
       WHEN 'INSERT' THEN
         INSERT INTO patient_log_nonresponse_type_ext (
             value
-          , order
+          , "order"
           , old_db
           , old_id
         )
@@ -55,7 +55,7 @@ CREATE OR REPLACE FUNCTION patient_log_nonresponse_type_mirror() RETURNS TRIGGER
       WHEN 'UPDATE' THEN
         UPDATE patient_log_nonresponse_type_ext
         SET value = NEW.value
-          , order = NEW.order
+          , "order" = NEW.order
           , old_db = (SELECT current_database())
           , old_id = NEW.id
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);

@@ -74,6 +74,13 @@ def run_migrations_online():
 
     try:
         with context.begin_transaction():
+            # Ensure the blame user exists before starting...
+            record = connection.execute(
+                'SELECT key FROM "user" WHERE key = %s',
+                config.get_main_option('blame')).fetchall()
+            if not record:
+                connection.execute('INSERT INTO "user" (key) VALUES (%s)',
+                                   config.get_main_option('blame'))
             context.run_migrations()
     finally:
         connection.close()

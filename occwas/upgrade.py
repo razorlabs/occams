@@ -28,16 +28,15 @@ def main(argv):
 
     # Switch to codes
     for url in (fia, phi):
-        check_call(['psql', '-U', url.username, '-f', FILE_CODES], shell=True)
+        check_call('psql -U {0} -f {1} -d {2}'.format(url.username, FILE_CODES, url.database), shell=True)
 
     # Merge the database
-    check_call(['python', FILE_MERGE, phi, fia, target], shell=True)
+    check_call('python {0} {1} {2} {3}'.format(FILE_MERGE, phi, fia, target), shell=True)
 
     # Upgrade the database
-    check_call(['alembic', '-c', FILE_ALEMBIC, '-x', 'db=' + target],
-               shell=True)
+    check_call('alembic -c {0} -x db="{1}" upgrade head'.format(FILE_ALEMBIC, target), shell=True)
 
-    check_call(['python', FILE_TRIGGERS, phi, fia, target], shell=True)
+    check_call('python {0} {1} {2} {3}'.format(FILE_TRIGGERS, phi, fia, target), shell=True)
 
 
 if __name__ == '__main__':
