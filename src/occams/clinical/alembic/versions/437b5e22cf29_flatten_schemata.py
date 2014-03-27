@@ -17,19 +17,15 @@ down_revision = '58d06f35c63f'
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy import sql, func, select
+from sqlalchemy import sql
 
 from occams.clinical.migrations import alter_enum, query_user_id
 
 
 def upgrade():
     create_section_table()
-    create_section_references()
-    migrate_subschemata()
     migrate_subobjects()
-    finalize_section()
-    remove_object_type()
-    resort_tables()
+    migrate_subschemata()
     deprecate_subschemata()
 
 
@@ -82,6 +78,12 @@ def create_section_table():
                         sa.CheckConstraint('create_date <= modify_date',
                                            name='ck_{0}_valid_timeline'.format(table_name)))
 
+    op.add_column(table_name, sa.Column('old_db', sa.Unicode, nullable=False))
+    op.add_column(table_name, sa.Column('old_id', sa.Integer, nullable=False))
+    op.create_unique_constraint('ck_section_old_id',
+                                table_name,
+                                ['old_db', 'old_id'])
+
     op.create_unique_constraint(
         'uq_{0}_name'.format(table_name), table_name, ['schema_id', 'name'])
     op.create_unique_constraint(
@@ -96,196 +98,27 @@ def create_section_table():
             'fk_{0}_{1}'.format(table_name, local_col),
             table_name, remote, [local_col], [remote_col], ondelete=ondelete)
 
-
-def create_section_references():
-    """
-    Adds references to section in attribute
-    """
-
-    op.add_column('attribute', sa.Column('section_id', sa.Integer))
-    op.add_column('attribute_audit', sa.Column('section_id', sa.Integer))
-
-    op.create_foreign_key(
-        'fk_attribute_section_id',
-        'attribute', 'section', ['section_id'], ['id'], ondelete='CASCADE')
-    op.create_index('ix_attribute_section_id', 'attribute', ['section_id'])
-
-
-def migrate_subschemata():
-    """
-    Move object attributes to sections
-    """
-
-    blame = op.get_context().opts['blame']
-
-    section_table = sql.table('section',
-                              sql.column('id'),
-                              sql.column('schema_id'),
-                              sql.column('name'),
-                              sql.column('title'),
-                              sql.column('description'),
-                              sql.column('order'),
-                              sql.column('create_user_id'),
-                              sql.column('modify_user_id'),
-                              sql.column('revision'))
-
-    schema_table = sql.table('schema',
-                             sql.column('id'),
-                             sql.column('name'),
-                             sql.column('title'),
-                             sql.column('description'),
-                             sql.column('is_inline'))
-
-    attribute_table = sql.table('attribute',
-                                sql.column('schema_id'),
-                                sql.column('name'),
-                                sql.column('title'),
-                                sql.column('description'),
-                                sql.column('object_schema_id'),
-                                sql.column('order'),
-                                sql.column('type'),
-                                sql.column('section_id'),
-                                sql.column('modify_user_id'),
-                                sql.column('modify_date'))
-
-    sub_attribute_query = (
-        sa.select([
-            attribute_table.c.schema_id,
-            attribute_table.c.name,
-            attribute_table.c.title,
-            attribute_table.c.description,
-            # avoid collisions by using a larger order number
-            (op.inline_literal(1000) + attribute_table.c.order).label('order'),
-            query_user_id(blame).label('create_user_id'),
-            query_user_id(blame).label('modify_user_id'),
-            op.inline_literal(1).label('revision')])
-        .where(attribute_table.c.type == op.inline_literal('object')))
-
-    op.execute(
-        section_table.insert()
-        .from_select(sub_attribute_query.columns, sub_attribute_query))
-
-    # avoid name collisions with object attributes
-    op.execute(
-        attribute_table.update()
-        .values(name=op.inline_literal('__') + attribute_table.c.name)
-        .where(attribute_table.c.type == op.inline_literal('object')))
-
-    parent_attribute_table = sql.alias(attribute_table, name='parent')
-
-    # Move all sub-attributes to the parent
-    op.execute(
-        attribute_table.update()
-        .where(
-            (parent_attribute_table.c.object_schema_id == attribute_table.c.schema_id)
-            & (parent_attribute_table.c.schema_id == section_table.c.schema_id)
-            & (parent_attribute_table.c.name ==
-                op.inline_literal('__') + section_table.c.name))
-        .values(
-            schema_id=parent_attribute_table.c.schema_id,
-            name=attribute_table.c.name,
-            section_id=section_table.c.id,
-            # Mainintain distinct order as much as possible
-            # to prevent constraint errors
-            order=(section_table.c.id * op.inline_literal(1000)) +
-            attribute_table.c.order,
-            modify_user_id=query_user_id(blame),
-            modify_date=sql.func.now()))
-
-    # Create a default section for any top-level non-object attributes
-    # NOTE: that some schemata contain a combination of both,
-    default_section_query = (
-        sa.select([
-            attribute_table.c.schema_id,
-            schema_table.c.name,
-            schema_table.c.title,
-            op.inline_literal(0).label('order'),
-            query_user_id(blame).label('create_user_id'),
-            query_user_id(blame).label('modify_user_id'),
-            op.inline_literal(1).label('revision')])
-        .distinct()
-        .where(
-            (schema_table.c.id == attribute_table.c.schema_id)
-            & (~schema_table.c.is_inline)
-            & (attribute_table.c.section_id == sa.sql.null())
-            & (attribute_table.c.type != op.inline_literal('object'))))
-
-    op.execute(
-        section_table.insert()
-        .from_select(default_section_query.columns, default_section_query))
-
-    # Finally, attach the non-sectioned scalars to the first section in the
-    # form (it *should* be the default section...)
-    op.execute(
-        attribute_table.update()
-        .values(section_id=section_table.c.id)
-        .where(
-            (section_table.c.schema_id == attribute_table.c.schema_id)
-            & (section_table.c.order == op.inline_literal(0))
-            & (attribute_table.c.section_id == sa.sql.null())
-            & (attribute_table.c.type != op.inline_literal('object'))))
-
-
-def resort_tables():
-    """
-    Normalizes section/attribute/choice table orderings
-
-    Uses postgres-specific functionality: window functions
-    """
-
-    section_table = sql.table('section', sql.column('order'))
-    attribute_table = sql.table('attribute', sql.column('order'))
-
-    for table in (section_table, attribute_table, ):
-        op.execute(
-            table.update()
-            .values(order=op.inline_literal(1000000000) + table.c.order))
-
-    # UPDATE FROM is very difficult to do in sqlalchemy...
-
-    op.execute("""
-        UPDATE section
-        SET "order" = "sorted"."new_order"
-        FROM (
-
-          SELECT id,row_number() OVER (
-                PARTITION BY schema_id
-                ORDER BY "order"
-                ) AS new_order
-          FROM section
-
-        ) AS "sorted"
-        WHERE "sorted".id = section.id
-    """)
-
-    op.execute("""
-        UPDATE attribute
-        SET "order" = "sorted"."new_order"
-        FROM (
-
-          SELECT id , row_number() OVER (
-                PARTITION BY schema_id
-                ORDER BY "order"
-                ) AS new_order
-          FROM attribute
-
-        ) AS "sorted"
-        WHERE "sorted".id = attribute.id
-    """)
+    op.create_table(
+        'section_attribute',
+        sa.Column('section_id',
+                  sa.Integer,
+                  sa.ForeignKey('section.id', ondelete='CASCADE'),
+                  nullable=False),
+        sa.Column('attribute_id',
+                  sa.Integer,
+                  sa.ForeignKey('attribute.id', ondelete='CASCADE'),
+                  nullable=False),
+        sa.PrimaryKeyConstraint('section_id', 'attribute_id'),
+        sa.UniqueConstraint('attribute_id', name='uq_section_attribute_attribute_id')
+        )
 
 
 def migrate_subobjects():
     """
-    Move entity instances
+    Move values to the parent entity
     """
 
     blame = op.get_context().opts['blame']
-
-    schema_table = sql.table(
-        'schema',
-        sql.column('id'),
-        sql.column('type'),
-        sql.column('is_inline'))
 
     object_table = sql.table(
         'object',
@@ -306,49 +139,141 @@ def migrate_subobjects():
                 modify_date=sql.func.now())
             .where(table.c.entity_id == object_table.c.value))
 
-    # Disable because it gets in the way
-    op.drop_constraint('ck_attribute_valid_object_bind', 'attribute')
+
+def migrate_subschemata():
+    """
+    Move object attributes to sections
+    """
+
+    blame = op.get_context().opts['blame']
+
+    section_table = sql.table('section',
+                              sql.column('id'),
+                              sql.column('schema_id'),
+                              sql.column('name'),
+                              sql.column('title'),
+                              sql.column('description'),
+                              sql.column('order'),
+                              sql.column('create_user_id'),
+                              sql.column('modify_user_id'),
+                              sql.column('revision'),
+                              sql.column('old_db'),
+                              sql.column('old_id'))
+
+    schema_table = sql.table('schema',
+                             sql.column('id'),
+                             sql.column('type'),
+                             sql.column('is_inline'))
+
+    attribute_table = sql.table('attribute',
+                                sql.column('id'),
+                                sql.column('schema_id'),
+                                sql.column('name'),
+                                sql.column('title'),
+                                sql.column('description'),
+                                sql.column('object_schema_id'),
+                                sql.column('order'),
+                                sql.column('type'),
+                                sql.column('section_id'),
+                                sql.column('modify_user_id'),
+                                sql.column('modify_date'),
+                                sql.column('old_db'),
+                                sql.column('old_id'))
+
+    attribute_audit_table = sql.table('attribute_audit',
+                                      sql.column('type'))
+
+    section_attribute_table = sql.table('section_attribute',
+                                        sql.column('section_id'),
+                                        sql.column('attribute_id'))
+
+    # Move parent attributes to the section table
+    sub_attribute_query = (
+        sa.select([
+            attribute_table.c.schema_id,
+            attribute_table.c.name,
+            attribute_table.c.title,
+            attribute_table.c.description,
+            attribute_table.c.order,
+            query_user_id(blame).label('create_user_id'),
+            query_user_id(blame).label('modify_user_id'),
+            op.inline_literal(1).label('revision'),
+            attribute_table.c.old_db,
+            attribute_table.c.old_id])
+        .where(attribute_table.c.type == op.inline_literal('object')))
+
+    op.execute(
+        section_table.insert()
+        .from_select(sub_attribute_query.columns, sub_attribute_query))
+
+    # Move the references to child attributes to the section_attribute table
+    parent_attribute_table = sql.alias(attribute_table, name='parent')
+
+    parent_attribute_query = (
+        sa.select([
+            sa.select([section_table.c.id.label('section_id')])
+            .select_from(
+                section_table
+                .join(parent_attribute_table,
+                      (section_table.c.old_db == parent_attribute_table.c.old_db) &
+                      (section_table.c.old_id == parent_attribute_table.c.old_id)))
+            .where(
+                parent_attribute_table.c.object_schema_id == attribute_table.c.schema_id)
+            .correlate(attribute_table)
+            .as_scalar()
+            .label('section_id'),
+            attribute_table.c.id.label('attribute_id')])
+        .select_from(
+            attribute_table
+            .join(parent_attribute_table,
+                  (parent_attribute_table.c.object_schema_id == attribute_table.c.schema_id))))
+
+    op.execute(
+        section_attribute_table.insert()
+        .from_select(parent_attribute_query.columns, parent_attribute_query))
+
+    # Rename parent attribute before moving children to avoid name collisions
+    op.execute(
+        attribute_table.update()
+        .values(
+            name=op.inline_literal('__') + attribute_table.c.name,
+            order=op.inline_literal(100000) + attribute_table.c.order)
+        .where(attribute_table.c.type == op.inline_literal('object')))
+
+    # Move all sub-attributes to the parent
+    op.execute(
+        attribute_table.update()
+        .where(
+            parent_attribute_table.c.object_schema_id == attribute_table.c.schema_id)
+        .values(
+            schema_id=parent_attribute_table.c.schema_id,
+            # Mainintain distinct order as much as possible
+            # to prevent constraint errors
+            order=(parent_attribute_table.c.order * op.inline_literal(1000)) + attribute_table.c.order,
+            modify_user_id=query_user_id(blame),
+            modify_date=sql.func.now()))
 
     # Delete sub-schemata
+    for table in (attribute_table, attribute_audit_table):
+        op.execute(table.delete().where(table.c.type == op.inline_literal('object')))
+
     op.execute(schema_table.delete().where(schema_table.c.is_inline))
-
-    # Delete all object-atributes
-    for name in ('attribute', 'attribute_audit'):
-        table = sql.table(name, sql.column('type'))
-        op.execute(table.delete()
-                   .where(table.c.type == op.inline_literal('object')))
-
-    op.drop_table('object')
-    op.drop_table('object_audit')
-
-
-def finalize_section():
-    """
-    Lock the section_id column
-    """
-
-    attribute_table = sql.table('attribute', sql.column('section_id'))
-
-    # Delete unmatched attributes, these are likely orphans
-    # (sub attrinbtes with no parent attribtues
-    op.execute(attribute_table.delete()
-               .where(attribute_table.c.section_id == sa.sql.null()))
-
-    # Finally lock it
-    op.alter_column('attribute', 'section_id', nullable=False)
 
 
 def deprecate_subschemata():
+
+    # Disable because it gets in the way
+    op.drop_constraint('ck_attribute_valid_object_bind', 'attribute')
 
     for name in ('schema', 'schema_audit'):
         op.drop_column(name, 'base_schema_id')
         op.drop_column(name, 'is_inline')
 
-    for name in ('atttribute', 'attribute_audit'):
+    for name in ('attribute', 'attribute_audit'):
         op.drop_column(name, 'object_schema_id')
 
-
-def remove_object_type():
+    op.drop_table('object')
+    op.drop_table('object_audit')
 
     types = [
         'blob',

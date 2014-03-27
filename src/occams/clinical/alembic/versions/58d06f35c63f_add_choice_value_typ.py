@@ -23,7 +23,7 @@ def upgrade():
     migrate_choice_values()
     drop_value_choice_id()
     set_name_as_code()
-    force_numeric_name()
+    switch_choice_type()
 
 
 def downgrade():
@@ -105,6 +105,12 @@ def create_choice_table():
                         sa.CheckConstraint('create_date <= modify_date',
                                            name='ck_{0}_valid_timeline'.format(table_name)))
 
+    op.add_column(table_name, sa.Column('old_db', sa.Unicode, nullable=False))
+    op.add_column(table_name, sa.Column('old_id', sa.Integer, nullable=False))
+    op.create_unique_constraint('ck_value_choice_old_id',
+                                table_name,
+                                ['old_db', 'old_id'])
+
     for col in ('attribute_id', 'entity_id', 'value'):
         op.create_index(
             'ix_{0}_{1}'.format(table_name,
@@ -138,7 +144,9 @@ def migrate_choice_values():
                                    sql.column('create_user_id'),
                                    sql.column('modify_date'),
                                    sql.column('modify_user_id'),
-                                   sql.column('revision'))
+                                   sql.column('revision'),
+                                   sql.column('old_db'),
+                                   sql.column('old_id'))
 
     choice_table = sql.table('choice', sql.column('id'))
 
@@ -155,7 +163,9 @@ def migrate_choice_values():
                                 sql.column('modify_user_id'),
                                 sql.column('create_date'),
                                 sql.column('modify_date'),
-                                sql.column('revision'))
+                                sql.column('revision'),
+                                sql.column('old_db'),
+                                sql.column('old_id'))
 
         value_selects.append(
             sa.select([
@@ -166,7 +176,9 @@ def migrate_choice_values():
                 value_table.c.create_user_id,
                 value_table.c.modify_date,
                 value_table.c.modify_user_id,
-                value_table.c.revision])
+                value_table.c.revision,
+                value_table.c.old_db,
+                value_table.c.old_id])
             .select_from(
                 value_table.join(
                     choice_table,
@@ -225,7 +237,7 @@ def set_name_as_code():
         op.drop_column(table.name, 'value')
 
 
-def force_numeric_name():
+def switch_choice_type():
     """
     Choice names can only be numeric (e.g. 123, 00345)
     """
@@ -235,10 +247,7 @@ def force_numeric_name():
                                 sql.column('id'),
                                 sql.column('type'))
 
-    choice_table = sql.table('choice',
-                             sql.column('attribute_id'),
-                             sql.column('name'),
-                             sql.column('order'))
+    choice_table = sql.table('choice', sql.column('attribute_id'))
 
     # Switch the attribute with choices to type 'choice'
     op.execute(
@@ -247,9 +256,3 @@ def force_numeric_name():
         .where(sa.exists(
             choice_table.select()
             .where(choice_table.c.attribute_id == attribute_table.c.id))))
-
-    # Enforce numerical names
-    op.create_check_constraint(
-        'ck_numeric_choice',
-        'choice',
-        "name ~ '^[0-9]+$'")

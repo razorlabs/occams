@@ -77,6 +77,7 @@ def main():
 
     cleanup(args.phi)
     cleanup(args.fia)
+    cleanup(args.target)
 
     prepare(args.phi)
 
@@ -88,6 +89,7 @@ def main():
 
     cleanup(args.phi)
     cleanup(args.fia)
+    cleanup(args.target)
 
 
 def cleanup(url):

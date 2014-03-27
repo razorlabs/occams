@@ -36,8 +36,19 @@ def main(argv):
     check_call(['alembic', '-c', FILE_ALEMBIC, '-x', 'db=' + target],
                shell=True)
 
-    # TODO: triggers
-
+    # Install triggers in old database to push data to the new database
+    for url in (fia, phi):
+        check_call(['psql', '-U', url.username,
+                   '-f', os.path.join(HERE, 'triggers', 'setup.sql')],
+                   shell=True)
+        for product in ('calllog', 'clinical', 'datastore', 'lab', 'partner'):
+            if 'cctg' in url.database and product == 'calllog':
+                continue
+            product_dir = os.path.join(HERE, 'triggers', product)
+            for file in os.listdir(product_dir):
+                check_call(['psql', '-U', url.username,
+                           '-f', os.path.join(product_dir, file)],
+                           shell=True)
 
 if __name__ == '__main__':
     main(sys.argv)

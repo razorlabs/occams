@@ -145,7 +145,11 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
             , NEW.collection_min
             , NEW.collection_max
             , NEW.validator
-            , NEW."order"
+            -- sub-attribute orders are independent of of the parent schema
+            -- in the old system
+            , ((SELECT "order"
+               FROM attribute as parent
+               WHERE parent.object_schema_id == NEW.schema_id) * 1000 ) + NEW."order"
             , NEW.create_date
             , ext_user_id(NEW.create_user_id)
             , NEW.modify_date
@@ -229,7 +233,11 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
             , collection_min = NEW.collection_min
             , collection_max = NEW.collection_max
             , validator = NEW.validator
-            , "order" = NEW."order"
+            -- sub-attribute orders are independent of of the parent schema
+            -- in the old system
+            , "order" = ((SELECT "order"
+                          FROM attribute as parent
+                          WHERE parent.object_schema_id == NEW.schema_id) * 1000 ) + NEW."order"
             , create_date = NEW.create_date
             , create_user_id = ext_user_id(NEW.create_user_id)
             , modify_date = NEW.modify_date
