@@ -81,6 +81,7 @@ lib
 parts
 sdist
 var
+VERSION
 
 ##### Translations
 *.mo
