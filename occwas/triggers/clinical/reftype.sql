@@ -2,6 +2,8 @@
 --- avrc_data/reftype -> pirc/patient
 ---
 
+DROP FOREIGN TABLE IF EXISTS reftype_ext;
+
 
 CREATE FOREIGN TABLE reftype_ext (
     id              SERIAL NOT NULL
@@ -20,12 +22,12 @@ SERVER trigger_target
 OPTIONS (table_name 'reftype');
 
 
-CREATE OR REPLACE FUNCTION ext_reftype_id(id) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_reftype_id(id INTEGER) RETURNS SETOF integer AS $$
   BEGIN
     RETURN QUERY
         SELECT "reftype_ext".id
         FROM "retype_ext"
-        WHERE name = SELECT name FROM "reftype" WHERE id = $1;
+        WHERE name = (SELECT name FROM "reftype" WHERE id = $1);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -73,5 +75,8 @@ CREATE OR REPLACE FUNCTION reftype_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER reftype_mirror AFTER INSERT OR UPDATE OR DELETE ON patient
+DROP TRIGGER IF EXISTS reftype_mirror ON reftype;
+
+
+CREATE TRIGGER reftype_mirror AFTER INSERT OR UPDATE OR DELETE ON reftype
   FOR EACH ROW EXECUTE PROCEDURE reftype_mirror();

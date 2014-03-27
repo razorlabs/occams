@@ -2,6 +2,8 @@
 --- avrc_data/arm -> pirc/arm
 ---
 
+DROP FOREIGN TABLE IF EXISTS arm_ext;
+
 
 CREATE FOREIGN TABLE arm_ext (
     id              SERIAL NOT NULL
@@ -22,13 +24,13 @@ SERVER trigger_target
 OPTIONS (table_name 'arm');
 
 
-CREATE OR REPLACE FUNCTION ext_arm_id(id) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_arm_id(id integer) RETURNS SETOF integer AS $$
   BEGIN
     RETURN QUERY
         SELECT "arm_ext".id
         FROM "arm_ext"
         WHERE (study_id, name) =
-          SELECT (ext_study_id(study_id), name) FROM "arm" WHERE id = $1;
+          (SELECT (ext_study_id(study_id), name) FROM "arm" WHERE id = $1);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -77,6 +79,9 @@ CREATE OR REPLACE FUNCTION arm_mirror() RETURNS TRIGGER AS $$
     RETURN NULL;
   END;
 $$ LANGUAGE plpgsql;
+
+
+DROP TRIGGER IF EXISTS arm_mirror ON arm;
 
 
 CREATE TRIGGER arm_mirror AFTER INSERT OR UPDATE OR DELETE ON arm

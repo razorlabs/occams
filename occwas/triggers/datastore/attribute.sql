@@ -5,6 +5,8 @@
 --- where section is populated with object-type attributes
 ---
 
+DROP FOREIGN TABLE IF EXISTS attribute_ext;
+
 
 CREATE FOREIGN TABLE attribute_ext (
     id              SERIAL NOT NULL
@@ -24,11 +26,11 @@ CREATE FOREIGN TABLE attribute_ext (
   , collection_min  INTEGER
   , collection_max  INTEGER
   , validator       VARCHAR
-  , "order"
+  , "order"         INTEGER NOT NULL
 
-  , create_date     DATETIME NOT NULL
+  , create_date     TIMESTAMP NOT NULL
   , create_user_id  INTEGER NOT NULL
-  , modify_date     DATETIME NOT NULL
+  , modify_date     TIMESTAMP NOT NULL
   , modify_user_id  INTEGER NOT NULL
   , revision        INTEGER NOT NULL
 
@@ -37,6 +39,9 @@ CREATE FOREIGN TABLE attribute_ext (
 )
 SERVER trigger_target
 OPTIONS (table_name 'attribute');
+
+
+DROP FOREIGN TABLE IF EXISTS section_ext;
 
 
 CREATE FOREIGN TABLE section_ext (
@@ -45,11 +50,11 @@ CREATE FOREIGN TABLE section_ext (
   , name            VARCHAR NOT NULL
   , title           VARCHAR NOT NULL
   , description     TEXT
-  , "order"         INTEGER
+  , "order"         INTEGER NOT NULL
 
-  , create_date     DATETIME NOT NULL
+  , create_date     TIMESTAMP NOT NULL
   , create_user_id  INTEGER NOT NULL
-  , modify_date     DATETIME NOT NULL
+  , modify_date     TIMESTAMP NOT NULL
   , modify_user_id  INTEGER NOT NULL
   , revision        INTEGER NOT NULL
 
@@ -57,7 +62,10 @@ CREATE FOREIGN TABLE section_ext (
   , old_id          INTEGER NOT NULL
 )
 SERVER trigger_target
-OPTIONS (table_name 'attribute');
+OPTIONS (table_name 'section');
+
+
+DROP FOREIGN TABLE IF EXISTS section_attribute_ext;
 
 
 CREATE FOREIGN TABLE section_attribute_ext (
@@ -72,7 +80,7 @@ OPTIONS (table_name 'section_attribute');
 -- Helper function to find the attribute id in the new system using
 -- the old system id number
 --
-CREATE OR REPLACE FUNCTION ext_attribute_id(id) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_attribute_id(id INTEGER) RETURNS SETOF integer AS $$
   BEGIN
     RETURN QUERY
         SELECT "attribute_ext".id
@@ -85,7 +93,7 @@ $$ LANGUAGE plpgsql;
 -- Helper function to find the section  id in the new system using
 -- the old system id number
 --
-CREATE OR REPLACE FUNCTION ext_section_id(id) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_section_id(id INTEGER) RETURNS SETOF integer AS $$
   BEGIN
     RETURN QUERY
         SELECT "section_ext".id
@@ -108,8 +116,8 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
 
           INSERT INTO attribute_ext (
               name
-            , title,
-            , description,
+            , title
+            , description
             , schema_id
             , type
             , checksum
@@ -139,7 +147,7 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
             , NEW.checksum
             , NEW.is_collection
             , NEW.is_required
-            , SELECT current_database() LIKE '%phi%',
+            , (SELECT current_database() LIKE '%phi%')
             , NEW.value_min
             , NEW.value_max
             , NEW.collection_min
@@ -155,7 +163,7 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
             , NEW.modify_date
             , ext_user_id(NEW.modify_user_id)
             , NEW.revision
-            , SELECT current_database()
+            , (SELECT current_database())
             , NEW.id
           );
 
@@ -166,16 +174,16 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
               , attribute_id
               )
             VALUES (
-                ext_section_id(NEW.id)
-              , ext_attribute_id(ext_new_id)
+                ext_section_id((SELECT id FROM attribute WHERE object_schema_id = NEW.schema_id))
+              , ext_attribute_id(ext_new_id));
           END IF;
 
         ELSE
 
           INSERT INTO section_ext (
               name
-            , title,
-            , description,
+            , title
+            , description
             , schema_id
             , "order"
             , create_date
@@ -197,7 +205,7 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
             , NEW.modify_date
             , ext_user_id(NEW.modify_user_id)
             , NEW.revision
-            , SELECT current_database()
+            , (SELECT current_database())
             , NEW.id
           );
 
@@ -215,7 +223,7 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
 
         IF NEW.object_schema_id IS NULL THEN
 
-          new_ext_id := UPDATE attribute_ext
+          UPDATE attribute_ext
           SET name = NEW.name
             , title = NEW.title
             , description = NEW.description
@@ -224,7 +232,7 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
             , checksum = NEW.checksum
             , is_collection = NEW.is_collection
             , is_required = NEW.is_required
-            , is_private = SELECT current_database() LIKE '%phi%',
+            , is_private = (SELECT current_database() LIKE '%phi%')
             , value_min = NEW.value_min
             , value_max = NEW.value_max
             , collection_min = NEW.collection_min
@@ -240,7 +248,7 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
             , modify_date = NEW.modify_date
             , modify_user_id = ext_user_id(NEW.modify_user_id)
             , revision = NEW.revision
-            , old_db = SELECT current_database()
+            , old_db = (SELECT current_database())
             , old_id = NEW.id
           WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
 
@@ -248,10 +256,10 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
           IF EXISTS(SELECT 1 FROM "attribute" WHERE object_schema_id = NEW.schema_id) THEN
 
             UPDATE section_attribute_ext
-            SET section_id = ext_section_id(NEW.attribute_id)
+            SET section_id = ext_section_id((SELECT id FROM attribute WHERE object_schema_id = NEW.schema_id))
               , attribute_id = ext_attribute_id(NEW.attribute_id)
-            WHERE section_id = ext_section_id(OLD.attribute_id)
-                , attribute_id = ext_attribute_id(OLD.attribute_id)
+            WHERE section_id = ext_section_id((SELECT id FROM attribute WHERE object_schema_id = OLD.schema_id))
+            AND   attribute_id = ext_attribute_id(OLD.attribute_id);
 
           END IF;
 
@@ -268,7 +276,7 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
             , modify_date = NEW.modify_date
             , modify_user_id = ext_user_id(NEW.modify_user_id)
             , revision = NEW.revision
-            , old_db = SELECT current_database()
+            , old_db = (SELECT current_database())
             , old_id = NEW.id
           WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
 
@@ -278,6 +286,9 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
     RETURN NULL;
   END;
 $$ LANGUAGE plpgsql;
+
+
+DROP TRIGGER IF EXISTS attribute_mirror ON attribute;
 
 
 CREATE TRIGGER attribute_mirror AFTER INSERT OR UPDATE OR DELETE ON attribute

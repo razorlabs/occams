@@ -2,6 +2,8 @@
 --- avrc_data/partner -> pirc/partner
 ---
 
+DROP FOREIGN TABLE IF EXISTS partner_ext;
+
 
 CREATE FOREIGN TABLE partner_ext (
     id                  SERIAL NOT NULL
@@ -61,6 +63,9 @@ CREATE OR REPLACE FUNCTION partner_mirror() RETURNS TRIGGER AS $$
     RETURN NULL;
   END;
 $$ LANGUAGE plpgsql;
+
+
+DROP TRIGGER IF EXISTS partner_mirror ON partner;
 
 
 CREATE TRIGGER partner_mirror AFTER INSERT OR UPDATE OR DELETE ON partner

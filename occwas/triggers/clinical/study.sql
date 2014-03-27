@@ -3,6 +3,9 @@
 ---
 
 
+DROP FOREIGN TABLE IF EXISTS study_ext;
+
+
 CREATE FOREIGN TABLE study_ext (
     id              SERIAL NOT NULL
 
@@ -27,12 +30,12 @@ SERVER trigger_target
 OPTIONS (table_name 'study');
 
 
-CREATE OR REPLACE FUNCTION ext_study_id(id) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_study_id(id INTEGER) RETURNS SETOF integer AS $$
   BEGIN
     RETURN QUERY
         SELECT "study_ext".id
         FROM "study_ext"
-        WHERE zid = SELECT zid FROM "study" WHERE id = $1;
+        WHERE zid = (SELECT zid FROM "study" WHERE id = $1);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -101,5 +104,8 @@ CREATE OR REPLACE FUNCTION study_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
+DROP TRIGGER IF EXISTS study_mirror ON study;
+
+
 CREATE TRIGGER study_mirror AFTER INSERT OR UPDATE OR DELETE ON study
-  kFOR EACH ROW EXECUTE PROCEDURE study_mirror();
+  FOR EACH ROW EXECUTE PROCEDURE study_mirror();

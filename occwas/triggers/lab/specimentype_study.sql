@@ -2,6 +2,8 @@
 --- avrc_data/specimentype_study -> pirc/specimentype_study
 ---
 
+DROP FOREIGN TABLE IF EXISTS specimentype_study_ext;
+
 
 CREATE FOREIGN TABLE specimentype_study_ext (
     study_id        INTEGER NOT NULL
@@ -21,24 +23,27 @@ CREATE OR REPLACE FUNCTION specimentype_study_mirror() RETURNS TRIGGER AS $$
         )
         VALUES (
             ext_study_id(NEW.study_id)
-          , SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimentype_id)
+          , (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimentype_id))
         );
       WHEN 'DELETE' THEN
         DELETE FROM specimentype_study_ext
         WHERE study_id = ext_study_id(OLD.study_id)
-            , specimentype_id =  (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), OLD.specimentype_id))
+        AND   specimentype_id =  (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), OLD.specimentype_id));
       WHEN 'UPDATE' THEN
         UPDATE specimentype_study_ext
         SET study_id = ext_study_id(NEW.study_id)
           , specimentype_id = (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimentype_id))
         WHERE study_id = ext_study_id(OLD.study_id)
-            , specimentype_id = (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), OLD.specimentype_id))
+        AND   specimentype_id = (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), OLD.specimentype_id))
         ;
 
     END CASE;
     RETURN NULL;
   END;
 $$ LANGUAGE plpgsql;
+
+
+DROP TRIGGER IF EXISTS specimentype_study_mirror ON specimentype_study;
 
 
 CREATE TRIGGER specimentype_study_mirror AFTER INSERT OR UPDATE OR DELETE ON specimentype_study

@@ -2,6 +2,8 @@
 --- avrc_data/stratum -> pirc/stratum
 ---
 
+DROP FOREIGN TABLE IF EXISTS stratum_ext;
+
 
 CREATE FOREIGN TABLE stratum_ext (
     id                SERIAL NOT NULL
@@ -77,6 +79,9 @@ CREATE OR REPLACE FUNCTION stratum_mirror() RETURNS TRIGGER AS $$
     RETURN NULL;
   END;
 $$ LANGUAGE plpgsql;
+
+
+DROP TRIGGER IF EXISTS stratum_mirror ON stratum;
 
 
 CREATE TRIGGER stratum_mirror AFTER INSERT OR UPDATE OR DELETE ON stratum

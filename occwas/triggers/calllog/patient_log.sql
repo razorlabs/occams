@@ -2,6 +2,8 @@
 --- avrc_data/patient_log -> pirc/patient_log
 ---
 
+DROP FOREIGN TABLE IF EXISTS patient_log_ext;
+
 
 CREATE FOREIGN TABLE patient_log_ext (
     id                      SERIAL NOT NULL
@@ -32,7 +34,7 @@ OPTIONS (table_name 'patient_log');
 -- Helper function to find the attribute id in the new system using
 -- the old system id number
 --
-CREATE OR REPLACE FUNCTION ext_patient_log_id(id) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_patient_log_id(id INTEGER) RETURNS SETOF integer AS $$
   BEGIN
     RETURN QUERY
         SELECT "patient_log_ext".id
@@ -47,7 +49,7 @@ CREATE OR REPLACE FUNCTION patient_log_mirror() RETURNS TRIGGER AS $$
     CASE TG_OP
       WHEN 'INSERT' THEN
         INSERT INTO patient_log_ext (
-          , patient_id
+            patient_id
           , patient_contact_date
           , last_text_date
           , contact_reason
@@ -64,8 +66,7 @@ CREATE OR REPLACE FUNCTION patient_log_mirror() RETURNS TRIGGER AS $$
           , old_id
         )
         VALUES (
-            NEW.id
-          , ext_patient_id(patient_id)
+            ext_patient_id(patient_id)
           , NEW.patient_contact_date
           , NEW.last_text_date
           , NEW.contact_reason
@@ -78,7 +79,7 @@ CREATE OR REPLACE FUNCTION patient_log_mirror() RETURNS TRIGGER AS $$
           , NEW.modify_date
           , ext_user_id(modify_user_id)
           , NEW.revision
-          , SELECT current_database()
+          , (SELECT current_database())
           , NEW.id
         );
       WHEN 'DELETE' THEN
@@ -87,7 +88,7 @@ CREATE OR REPLACE FUNCTION patient_log_mirror() RETURNS TRIGGER AS $$
       WHEN 'UPDATE' THEN
           UPDATE patient_log_ext
           SET
-            , patient_id = ext_patient_id(NEW.patient_id)
+              patient_id = ext_patient_id(NEW.patient_id)
             , patient_contact_date = NEW.patient_contact_date
             , last_text_date = NEW.last_text_date
             , contact_reason = NEW.contact_reason
@@ -100,13 +101,16 @@ CREATE OR REPLACE FUNCTION patient_log_mirror() RETURNS TRIGGER AS $$
             , modify_date = NEW.modify_date
             , modify_user_id = ext_user_id(NEW.modify_user_id)
             , revision = NEW.revision
-            , old_db = SELECT current_database()
+            , old_db = (SELECT current_database())
             , old_id = NEW.id
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
     END CASE;
     RETURN NULL;
   END;
 $$ LANGUAGE plpgsql;
+
+
+DROP TRIGGER IF EXISTS patient_log_mirror ON patient_log;
 
 
 CREATE TRIGGER patient_log_mirror AFTER INSERT OR UPDATE OR DELETE ON patient_log

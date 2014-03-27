@@ -2,6 +2,8 @@
 --- avrc_data/specimentype_cycle -> pirc/specimentype_cycle
 ---
 
+DROP FOREIGN TABLE IF EXISTS specimentype_cycle_ext;
+
 
 CREATE FOREIGN TABLE specimentype_cycle_ext (
     cycle_id        INTEGER NOT NULL
@@ -21,24 +23,27 @@ CREATE OR REPLACE FUNCTION specimentype_cycle_mirror() RETURNS TRIGGER AS $$
         )
         VALUES (
             ext_cycle_id(NEW.cycle_id)
-          , SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimentype_id)
+          , (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimentype_id))
         );
 
       WHEN 'DELETE' THEN
         DELETE FROM specimentype_cycle_ext
         WHERE cycle_id = ext_cycle_id(OLD.cycle_id)
-            , specimentype_id = (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), OLD.specimentype_id))
+        AND   specimentype_id = (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), OLD.specimentype_id));
       WHEN 'UPDATE' THEN
         UPDATE specimentype_cycle_ext
         SET cycle_id = ext_cycle_id(NEW.cycle_id)
           , specimentype_id = (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimentype_id))
         WHERE cycle_id = ext_cycle_id(OLD.cycle_id)
-            , specimentype_id = (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), OLD.specimentype_id))
+        AND   specimentype_id = (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), OLD.specimentype_id));
 
     END CASE;
     RETURN NULL;
   END;
 $$ LANGUAGE plpgsql;
+
+
+DROP TRIGGER IF EXISTS specimentype_cycle_mirror ON specimentype_cycle;
 
 
 CREATE TRIGGER specimentype_cycle_mirror AFTER INSERT OR UPDATE OR DELETE ON specimentype_cycle

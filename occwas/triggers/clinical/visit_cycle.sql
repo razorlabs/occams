@@ -2,6 +2,8 @@
 --- avrc_data/visit_cycle -> pirc/visit_cycle
 ---
 
+DROP FOREIGN TABLE IF EXISTS visit_cycle_ext;
+
 
 CREATE FOREIGN TABLE visit_cycle_ext (
     visit_id        INTEGER NOT NULL
@@ -34,6 +36,9 @@ CREATE OR REPLACE FUNCTION visit_cycle_mirror() RETURNS TRIGGER AS $$
     RETURN NULL;
   END;
 $$ LANGUAGE plpgsql;
+
+
+DROP TRIGGER IF EXISTS visit_cycle_mirror ON visit_cycle;
 
 
 CREATE TRIGGER visit_cycle_mirror AFTER INSERT OR UPDATE OR DELETE ON visit_cycle

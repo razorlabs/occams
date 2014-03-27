@@ -12,7 +12,10 @@ HERE = os.path.abspath(os.path.dirname(__file__))
 
 FILE_CODES = os.path.join(HERE, 'scripts', 'choice2codes.sql')
 FILE_MERGE = os.path.join(HERE, 'scripts', 'mergedb.py')
-FILE_ALEMBIC = os.paht.join(HERE, '..', 'alembic.ini')
+FILE_ALEMBIC = os.path.join(HERE, '..', 'alembic.ini')
+
+PRODUCTS = ('clinical', 'datastore', 'lab', 'partner')
+CCTG_PRODUCTS = PRODUCTS + ('calllog',)
 
 
 cli = argparse.ArgumentParser(description='Fully upgrades the database')
@@ -22,7 +25,7 @@ cli.add_argument('target', metavar='TARGET', type=make_url)
 
 
 def main(argv):
-    args = cli.parse_args(argv)
+    args = cli.parse_args(argv[1:])
     (fia, phi, target) = (args.fia, args.phi, args.target)
 
     # Switch to codes
@@ -38,16 +41,18 @@ def main(argv):
 
     # Install triggers in old database to push data to the new database
     for url in (fia, phi):
-        check_call(['psql', '-U', url.username,
-                   '-f', os.path.join(HERE, 'triggers', 'setup.sql')],
+        check_call('psql -U {0} -f {1} {2}'.format(
+                   'postgres',
+                   os.path.join(HERE, 'triggers', 'setup.sql'),
+                   url.database),
                    shell=True)
-        for product in ('calllog', 'clinical', 'datastore', 'lab', 'partner'):
-            if 'cctg' in url.database and product == 'calllog':
-                continue
+        for product in (PRODUCTS if 'cctg' not in url.database else CCTG_PRODUCTS):
             product_dir = os.path.join(HERE, 'triggers', product)
             for file in os.listdir(product_dir):
-                check_call(['psql', '-U', url.username,
-                           '-f', os.path.join(product_dir, file)],
+                check_call('psql -U {0} -f {1} {2}'.format(
+                           'postgres',
+                           os.path.join(product_dir, file),
+                           url.database),
                            shell=True)
 
 if __name__ == '__main__':

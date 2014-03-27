@@ -2,6 +2,8 @@
 --- avrc_data/category -> pirc/category
 ---
 
+DROP FOREIGN TABLE IF EXISTS category_ext;
+
 
 CREATE FOREIGN TABLE category_ext (
     id              SERIAL NOT NULL
@@ -29,7 +31,7 @@ OPTIONS (table_name 'category');
 -- Helper function to find the schema id in the new system using
 -- the old system id number
 --
-CREATE OR REPLACE FUNCTION ext_category_id(id) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_category_id(id INTEGER) RETURNS SETOF integer AS $$
   BEGIN
     RETURN QUERY
       SELECT "category_ext".id
@@ -45,16 +47,17 @@ CREATE OR REPLACE FUNCTION category_mirror() RETURNS TRIGGER AS $$
       WHEN 'INSERT' THEN
         INSERT INTO category_ext (
             name
-          , title,
-          , description,
+          , title
+          , description
           , schema_id
           , create_date
           , create_user_id
           , modify_date
           , modify_user_id
-          , revision)
+          , revision
           , old_db
           , old_id
+        )
         VALUES (
             NEW.name
           , NEW.title
@@ -65,9 +68,9 @@ CREATE OR REPLACE FUNCTION category_mirror() RETURNS TRIGGER AS $$
           , NEW.modify_date
           , ext_user_id(NEW.modify_user_id)
           , NEW.revision
-          , SELECT current_database()
+          , (SELECT current_database())
           , NEW.id
-          )
+          );
       WHEN 'DELETE' THEN
         DELETE FROM category_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
@@ -90,6 +93,9 @@ CREATE OR REPLACE FUNCTION category_mirror() RETURNS TRIGGER AS $$
     RETURN NULL;
   END;
 $$ LANGUAGE plpgsql;
+
+
+DROP TRIGGER IF EXISTS category_mirror ON category;
 
 
 CREATE TRIGGER category_mirror AFTER INSERT OR UPDATE OR DELETE ON category

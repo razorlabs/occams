@@ -2,6 +2,8 @@
 --- avrc_data/visit -> pirc/visit
 ---
 
+DROP FOREIGN TABLE IF EXISTS visit_ext;
+
 
 CREATE FOREIGN TABLE visit_ext (
     id              INTEGER NOT NULL
@@ -20,12 +22,12 @@ SERVER trigger_target
 OPTIONS (table_name 'visit');
 
 
-CREATE OR REPLACE FUNCTION ext_visit_id(id) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_visit_id(id INTEGER) RETURNS SETOF integer AS $$
   BEGIN
     RETURN QUERY
         SELECT "visit_ext".id
         FROM "visit_ext"
-        WHERE zid = SELECT zid FROM "visit" WHERE id = $1;
+        WHERE zid = (SELECT zid FROM "visit" WHERE id = $1);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -71,6 +73,9 @@ CREATE OR REPLACE FUNCTION visit_mirror() RETURNS TRIGGER AS $$
     RETURN NULL;
   END;
 $$ LANGUAGE plpgsql;
+
+
+DROP TRIGGER IF EXISTS visit_mirror ON visit;
 
 
 CREATE TRIGGER visit_mirror AFTER INSERT OR UPDATE OR DELETE ON visit

@@ -2,6 +2,8 @@
 --- avrc_data/log_responses -> pirc/log_responses
 ---
 
+DROP FOREIGN TABLE IF EXISTS log_responses_ext;
+
 
 CREATE FOREIGN TABLE log_responses_ext (
     patient_log_id                  INTEGER NOT NULL
@@ -39,6 +41,9 @@ CREATE OR REPLACE FUNCTION log_responses_mirror() RETURNS TRIGGER AS $$
     RETURN NULL;
   END;
 $$ LANGUAGE plpgsql;
+
+
+DROP TRIGGER IF EXISTS log_responses_mirror ON log_responses;
 
 
 CREATE TRIGGER log_responses_mirror AFTER INSERT OR UPDATE OR DELETE ON log_responses

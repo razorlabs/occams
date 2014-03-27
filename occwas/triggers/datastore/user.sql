@@ -5,6 +5,8 @@
 -- the was reconciled from two data sources (phi/fia)
 --
 
+DROP FOREIGN TABLE IF EXISTS user_ext;
+
 
 CREATE FOREIGN TABLE user_ext (
     id              SERIAL NOT NULL
@@ -21,7 +23,7 @@ OPTIONS (table_name 'user');
 -- Helper function to find the user id in the new system using
 -- the old system id number
 --
-CREATE OR REPLACE FUNCTION ext_user_id(id) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_user_id(id INTEGER) RETURNS SETOF integer AS $$
   BEGIN
     RETURN QUERY
       SELECT "user_ext".id
@@ -52,6 +54,9 @@ CREATE OR REPLACE FUNCTION user_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER user_mirror AFTER INSERT OR UPDATE OR DELETE ON user
+DROP TRIGGER IF EXISTS user_mirror ON "user";
+
+
+CREATE TRIGGER user_mirror AFTER INSERT OR UPDATE OR DELETE ON "user"
   FOR EACH ROW EXECUTE PROCEDURE user_mirror();
 

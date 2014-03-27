@@ -2,6 +2,8 @@
 --- avrc_data/aliquot -> pirc/aliquot
 ---
 
+DROP FOREIGN TABLE IF EXISTS aliquot_ext;
+
 
 CREATE FOREIGN TABLE aliquot_ext (
     id                      SERIAL NOT NULL
@@ -44,7 +46,7 @@ CREATE OR REPLACE FUNCTION aliquot_mirror() RETURNS TRIGGER AS $$
     CASE TG_OP
       WHEN 'INSERT' THEN
         INSERT INTO aliquot_ext (
-        SET specimen_id
+            specimen_id
           , aliquot_type_id
           , state_id
           , labbook
@@ -72,9 +74,9 @@ CREATE OR REPLACE FUNCTION aliquot_mirror() RETURNS TRIGGER AS $$
           , old_id
         )
         VALUES (
-            SELECT id FROM speciment_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimen_id);
-          , SELECT id FROM aliquottype_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.aliquot_type_id)
-          , SELECT id FROM aliquotstate_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.state_id)
+            (SELECT id FROM speciment_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimen_id))
+          , (SELECT id FROM aliquottype_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.aliquot_type_id))
+          , (SELECT id FROM aliquotstate_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.state_id))
           , NEW.labbook
           , NEW.volume
           , NEW.cell_amount
@@ -82,21 +84,21 @@ CREATE OR REPLACE FUNCTION aliquot_mirror() RETURNS TRIGGER AS $$
           , NEW.freezer
           , NEW.rack
           , NEW.box
-          , SELECT id FROM location_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.location_id)
+          , (SELECT id FROM location_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.location_id))
           , NEW.thawed_num
           , NEW.inventory_date
           , NEW.sent_date
           , NEW.sent_name
           , NEW.sent_notes
           , NEW.notes
-          , special_instruction_id = SELECT id FROM specialinstruction_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.special_instruction_id)
-          , previous_location_id = SELECT id FROM location_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.previous_location_id)
+          , special_instruction_id = (SELECT id FROM specialinstruction_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.special_instruction_id))
+          , previous_location_id = (SELECT id FROM location_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.previous_location_id))
           , NEW.create_date
           , ext_user_id(NEW.create_user_id)
           , NEW.modify_date
           , ext_user_id(NEW.modify_user_id)
           , NEW.revision
-          , SELECT current_database()
+          , (SELECT current_database())
           , NEW.id
         );
 
@@ -105,9 +107,9 @@ CREATE OR REPLACE FUNCTION aliquot_mirror() RETURNS TRIGGER AS $$
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
       WHEN 'UPDATE' THEN
         UPDATE aliquot_ext
-        SET specimen_id = SELECT id FROM speciment_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimen_id);
-          , aliquot_type_id = SELECT id FROM aliquottype_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.aliquot_type_id)
-          , state_id = SELECT id FROM aliquotstate_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.state_id)
+        SET specimen_id = (SELECT id FROM speciment_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimen_id))
+          , aliquot_type_id = (SELECT id FROM aliquottype_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.aliquot_type_id))
+          , state_id = (SELECT id FROM aliquotstate_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.state_id))
           , labbook = NEW.labbook
           , volume = NEW.volume
           , cell_amount = NEW.cell_amount
@@ -115,27 +117,30 @@ CREATE OR REPLACE FUNCTION aliquot_mirror() RETURNS TRIGGER AS $$
           , freezer = NEW.freezer
           , rack = NEW.rack
           , box = NEW.box
-          , location_id = SELECT id FROM location_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.location_id)
+          , location_id = (SELECT id FROM location_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.location_id))
           , thawed_num = NEW.thawed_num
           , inventory_date = NEW.inventory_date
           , sent_date = NEW.sent_date
           , sent_name = NEW.sent_name
           , sent_notes = NEW.sent_notes
           , notes = NEW.notes
-          , special_instruction_id = SELECT id FROM specialinstruction_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.special_instruction_id)
-          , previous_location_id = SELECT id FROM location_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.previous_location_id)
+          , special_instruction_id = (SELECT id FROM specialinstruction_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.special_instruction_id))
+          , previous_location_id = (SELECT id FROM location_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.previous_location_id))
           , create_date = NEW.create_date
           , create_user_id = ext_user_id(NEW.create_user_id)
           , modify_date = NEW.modify_date
           , modify_user_id = ext_user_id(NEW.modify_user_id)
           , revision = NEW.revision
-          , old_db = SELECT current_database()
+          , old_db = (SELECT current_database())
           , old_id = NEW.id
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
     END CASE;
     RETURN NULL;
   END;
 $$ LANGUAGE plpgsql;
+
+
+DROP TRIGGER IF EXISTS aliquot_mirror ON aliquot;
 
 
 CREATE TRIGGER aliquot_mirror AFTER INSERT OR UPDATE OR DELETE ON aliquot

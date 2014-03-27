@@ -2,6 +2,8 @@
 --- avrc_data/value_string -> pirc/value_string + pirc/value_choice
 ---
 
+DROP FOREIGN TABLE IF EXISTS value_string_ext;
+
 
 CREATE FOREIGN TABLE value_string_ext (
     id              SERIAL NOT NULL
@@ -51,7 +53,7 @@ CREATE OR REPLACE FUNCTION value_string_mirror() RETURNS TRIGGER AS $$
               , NEW.modify_date
               , ext_user_id(NEW.modify_user_id)
               , NEW.revision
-              , SELECT current_database()
+              , (SELECT current_database())
               , NEW.id
               );
           ELSE
@@ -76,7 +78,7 @@ CREATE OR REPLACE FUNCTION value_string_mirror() RETURNS TRIGGER AS $$
               , NEW.modify_date
               , ext_user_id(NEW.modify_user_id)
               , NEW.revision
-              , SELECT current_database()
+              , (SELECT current_database())
               , NEW.id
               );
           END IF;
@@ -124,5 +126,8 @@ CREATE OR REPLACE FUNCTION value_string_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER value_string_mirror AFTER INSERT OR UPDATE OR DELETE ON string
+DROP TRIGGER IF EXISTS value_string_mirror ON "string";
+
+
+CREATE TRIGGER value_string_mirror AFTER INSERT OR UPDATE OR DELETE ON "string"
   FOR EACH ROW EXECUTE PROCEDURE value_string_mirror();

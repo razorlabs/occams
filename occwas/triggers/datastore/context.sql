@@ -2,6 +2,8 @@
 --- avrc_data/context -> pirc/context
 ---
 
+DROP FOREIGN TABLE IF EXISTS context_ext;
+
 
 CREATE FOREIGN TABLE context_ext (
     id              SERIAL NOT NULL
@@ -27,7 +29,7 @@ OPTIONS (table_name 'context');
 -- Helper function to find the context id in the new system using
 -- the old system id number
 --
-CREATE OR REPLACE FUNCTION ext_context_id(id) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_context_id(id INTEGER) RETURNS SETOF integer AS $$
   BEGIN
     RETURN QUERY
         SELECT "context_ext".id
@@ -43,7 +45,7 @@ CREATE OR REPLACE FUNCTION context_mirror() RETURNS TRIGGER AS $$
       WHEN 'INSERT' THEN
 
         INSERT INTO context_ext (
-          , entity_id
+            entity_id
           , external
           , key
           , create_date
@@ -57,18 +59,18 @@ CREATE OR REPLACE FUNCTION context_mirror() RETURNS TRIGGER AS $$
         VALUES (
             ext_entity_id(NEW.entity_id)
           , NEW.external
-          , CASE NEW.external
-              WHEN 'patient' THEN ext_patient_id(NEW.key)
-              WHEN 'enrollment' THEN ext_enrollment_id(NEW.key)
-              WHEN 'visit' THEN ext_enrollment_id(NEW.key)
-              WHEN 'stratum' THEN ext_stratum_id(NEW.key)
+          , CASE
+              WHEN NEW.external = 'patient' THEN ext_patient_id(NEW.key)
+              WHEN NEW.external = 'enrollment' THEN ext_enrollment_id(NEW.key)
+              WHEN NEW.external = 'visit' THEN ext_enrollment_id(NEW.key)
+              WHEN NEW.external = 'stratum' THEN ext_stratum_id(NEW.key)
             END
           , NEW.create_date
           , ext_user_id(NEW.create_user_id)
           , NEW.modify_date
           , ext_user_id(NEW.modify_user_id)
           , NEW.revision
-          , SELECT current_database()
+          , (SELECT current_database())
           , NEW.id
           );
 
@@ -80,18 +82,18 @@ CREATE OR REPLACE FUNCTION context_mirror() RETURNS TRIGGER AS $$
         UPDATE context_ext
         SET entity_id = ext_entity_id(NEW.entity_id)
           , external = NEW.external
-          , CASE NEW.external
-              WHEN 'patient' THEN ext_patient_id(NEW.key)
-              WHEN 'enrollment' THEN ext_enrollment_id(NEW.key)
-              WHEN 'visit' THEN ext_enrollment_id(NEW.key)
-              WHEN 'stratum' THEN ext_stratum_id(NEW.key)
-            END
+          , key = CASE
+                    WHEN NEW.external = 'patient' THEN ext_patient_id(NEW.key)
+                    WHEN NEW.external = 'enrollment' THEN ext_enrollment_id(NEW.key)
+                    WHEN NEW.external = 'visit' THEN ext_enrollment_id(NEW.key)
+                    WHEN NEW.external = 'stratum' THEN ext_stratum_id(NEW.key)
+                  END
           , create_date = NEW.create_date
           , create_user_id = ext_user_id(NEW.create_user_id)
           , modify_date = NEW.modify_date
           , modify_user_id = ext_user_id(NEW.modify_user_id)
           , revision = NEW.revision
-          , old_db = SELECT current_database()
+          , old_db = (SELECT current_database())
           , old_id = NEW.id
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
 
@@ -99,6 +101,9 @@ CREATE OR REPLACE FUNCTION context_mirror() RETURNS TRIGGER AS $$
     RETURN NULL;
   END;
 $$ LANGUAGE plpgsql;
+
+
+DROP TRIGGER IF EXISTS context_mirror ON context;
 
 
 CREATE TRIGGER context_mirror AFTER INSERT OR UPDATE OR DELETE ON context

@@ -2,6 +2,8 @@
 --- avrc_data/enrollment -> pirc/enrollment
 ---
 
+DROP FOREIGN TABLE IF EXISTS enrollment_ext;
+
 
 CREATE FOREIGN TABLE enrollment_ext (
     id                  SERIAL NOT NULL
@@ -24,12 +26,12 @@ SERVER trigger_target
 OPTIONS (table_name 'enrollment');
 
 
-CREATE OR REPLACE FUNCTION ext_enrollment_id(id) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_enrollment_id(id INTEGER) RETURNS SETOF integer AS $$
   BEGIN
     RETURN QUERY
         SELECT "enrollment_ext".id
         FROM "enrollment_ext"
-        WHERE zid = SELECT zid FROM enrollment where id = $1;
+        WHERE zid = (SELECT zid FROM enrollment where id = $1);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -39,7 +41,7 @@ CREATE OR REPLACE FUNCTION enrollment_mirror() RETURNS TRIGGER AS $$
     CASE TG_OP
       WHEN 'INSERT' THEN
         INSERT INTO enrollment_ext(
-          , zid
+            zid
           , patient_id
           , study_id
           , consent_date
@@ -65,7 +67,7 @@ CREATE OR REPLACE FUNCTION enrollment_mirror() RETURNS TRIGGER AS $$
           , NEW.modify_date
           , ext_user_id(NEW.modify_user_id)
           , NEW.revision
-          )
+          );
       WHEN 'DELETE' THEN
         DELETE FROM enrollment_ext WHERE zid = OLD.zid;
       WHEN 'UPDATE' THEN
@@ -87,6 +89,9 @@ CREATE OR REPLACE FUNCTION enrollment_mirror() RETURNS TRIGGER AS $$
     RETURN NULL;
   END;
 $$ LANGUAGE plpgsql;
+
+
+DROP TRIGGER IF EXISTS enrollment_mirror ON enrollment;
 
 
 CREATE TRIGGER enrollment_mirror AFTER INSERT OR UPDATE OR DELETE ON enrollment

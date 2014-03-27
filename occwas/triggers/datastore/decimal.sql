@@ -3,6 +3,8 @@
 --- Note: decimals do not support choices
 ---
 
+DROP FOREIGN TABLE IF EXISTS value_decimal_ext;
+
 
 CREATE FOREIGN TABLE value_decimal_ext (
     id              SERIAL NOT NULL
@@ -51,7 +53,7 @@ CREATE OR REPLACE FUNCTION value_decimal_mirror() RETURNS TRIGGER AS $$
             , NEW.modify_date
             , ext_user_id(NEW.modify_user_id)
             , NEW.revision
-            , SELECT current_database()
+            , (SELECT current_database())
             , NEW.id
             );
         END IF;
@@ -71,7 +73,7 @@ CREATE OR REPLACE FUNCTION value_decimal_mirror() RETURNS TRIGGER AS $$
             , modify_date = NEW.modify_date
             , modify_user_id = ext_user_id(NEW.modify_user_id)
             , revision = NEW.revision
-            , old_db = SELECT current_database()
+            , old_db = (SELECT current_database())
             , old_id = NEW.id
           WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
         END IF;
@@ -82,5 +84,8 @@ CREATE OR REPLACE FUNCTION value_decimal_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER value_decimal_mirror AFTER INSERT OR UPDATE OR DELETE ON decimal
+DROP TRIGGER IF EXISTS value_decimal_mirror ON "decimal";
+
+
+CREATE TRIGGER value_decimal_mirror AFTER INSERT OR UPDATE OR DELETE ON "decimal"
   FOR EACH ROW EXECUTE PROCEDURE value_decimal_mirror();

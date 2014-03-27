@@ -4,6 +4,9 @@
 ---
 
 
+DROP FOREIGN TABLE IF EXISTS choice_ext;
+
+
 CREATE FOREIGN TABLE choice_ext (
     id              SERIAL NOT NULL
 
@@ -25,6 +28,9 @@ CREATE FOREIGN TABLE choice_ext (
 )
 SERVER trigger_target
 OPTIONS (table_name 'choice');
+
+
+DROP FOREIGN TABLE IF EXISTS value_choice_ext;
 
 
 CREATE FOREIGN TABLE value_choice_ext (
@@ -51,7 +57,7 @@ OPTIONS (table_name 'value_choice');
 -- Helper function to find the choice id in the new system using
 -- the old system id number
 --
-CREATE OR REPLACE FUNCTION ext_choice_id(id) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_choice_id(id INTEGER) RETURNS SETOF integer AS $$
   BEGIN
     RETURN QUERY
       SELECT "choice_ext".id
@@ -67,8 +73,8 @@ CREATE OR REPLACE FUNCTION choice_mirror() RETURNS TRIGGER AS $$
       WHEN 'INSERT' THEN
         INSERT INTO choice_ext (
             name
-          , title,
-          , description,
+          , title
+          , description
           , schema_id
           , "order"
           , create_date
@@ -90,7 +96,7 @@ CREATE OR REPLACE FUNCTION choice_mirror() RETURNS TRIGGER AS $$
           , NEW.modify_date
           , ext_user_id(NEW.modify_user_id)
           , NEW.revision
-          , SELECT current_database()
+          , (SELECT current_database())
           , NEW.id
           );
       WHEN 'DELETE' THEN
@@ -108,14 +114,17 @@ CREATE OR REPLACE FUNCTION choice_mirror() RETURNS TRIGGER AS $$
           , modify_date = NEW.modify_date
           , modify_user_id = ext_user_id(NEW.modify_user_id)
           , revision = NEW.revision
-          , SELECT current_database()
-          , NEW.id
+          , old_db = (SELECT current_database())
+          , old_id = NEW.id
         WHERE (old_db, old_id) = (SELECT current_database(), $1);
 
     END CASE;
     RETURN NULL;
   END;
 $$ LANGUAGE plpgsql;
+
+
+DROP TRIGGER IF EXISTS choice_mirror ON choice;
 
 
 CREATE TRIGGER choice_mirror AFTER INSERT OR UPDATE OR DELETE ON choice

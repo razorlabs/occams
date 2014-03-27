@@ -2,6 +2,8 @@
 --- avrc_data/specialinstruction -> pirc/specialinstruction
 ---
 
+DROP FOREIGN TABLE IF EXISTS specialinstruction_ext;
+
 
 CREATE FOREIGN TABLE specialinstruction_ext (
     id              SERIAL NOT NULL
@@ -28,7 +30,7 @@ CREATE OR REPLACE FUNCTION specialinstruction_mirror() RETURNS TRIGGER AS $$
     CASE TG_OP
       WHEN 'INSERT' THEN
         INSERT INTO specialinstruction_ext (
-        SET name
+            name
           , title
           , description
           , create_date
@@ -46,7 +48,7 @@ CREATE OR REPLACE FUNCTION specialinstruction_mirror() RETURNS TRIGGER AS $$
           , NEW.modify_date
           , ext_user_id(NEW.modify_user_id)
           , NEW.revision
-          , SELECT current_database()
+          , (SELECT current_database())
           , NEW.id
         );
       WHEN 'DELETE' THEN
@@ -62,13 +64,16 @@ CREATE OR REPLACE FUNCTION specialinstruction_mirror() RETURNS TRIGGER AS $$
           , modify_date = NEW.modify_date
           , modify_user_id = ext_user_id(NEW.modify_user_id)
           , revision = NEW.revision
-          , old_db = SELECT current_database()
+          , old_db = (SELECT current_database())
           , old_id = NEW.id
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
     END CASE;
     RETURN NULL;
   END;
 $$ LANGUAGE plpgsql;
+
+
+DROP TRIGGER IF EXISTS specialinstruction_mirror ON specialinstruction;
 
 
 CREATE TRIGGER specialinstruction_mirror AFTER INSERT OR UPDATE OR DELETE ON specialinstruction

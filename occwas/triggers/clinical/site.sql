@@ -2,6 +2,8 @@
 --- avrc_data/site -> pirc/site
 ---
 
+DROP FOREIGN TABLE IF EXISTS site_ext;
+
 
 CREATE FOREIGN TABLE site_ext (
     id              SERIAL NOT NULL
@@ -25,12 +27,12 @@ OPTIONS (table_name 'site');
 -- Helper function to find the site id in the new system using
 -- the old system id number
 --
-CREATE OR REPLACE FUNCTION ext_site_id(id) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_site_id(id INTEGER) RETURNS SETOF integer AS $$
   BEGIN
     RETURN QUERY
         SELECT "site_ext".id
         FROM "site_ext"
-        WHERE zid = SELECT zid FROM "site" WHERE id = $1;
+        WHERE zid = (SELECT zid FROM "site" WHERE id = $1);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -77,6 +79,9 @@ CREATE OR REPLACE FUNCTION site_mirror() RETURNS TRIGGER AS $$
     RETURN NULL;
   END;
 $$ LANGUAGE plpgsql;
+
+
+DROP TRIGGER IF EXISTS site_mirror ON site;
 
 
 CREATE TRIGGER site_mirror AFTER INSERT OR UPDATE OR DELETE ON site

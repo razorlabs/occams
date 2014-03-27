@@ -2,6 +2,8 @@
 --- avrc_data/cycle -> pirc/cycle
 ---
 
+DROP FOREIGN TABLE IF EXISTS cycle_ext;
+
 
 CREATE FOREIGN TABLE cycle_ext (
     id              SERIAL NOT NULL
@@ -11,8 +13,8 @@ CREATE FOREIGN TABLE cycle_ext (
   , name            VARCHAR NOT NULL
   , title           VARCHAR NOT NULL
   , description     TEXT
-  , week            TINYINT
-  , threshold       TINYINT
+  , week            SMALLINT
+  , threshold       SMALLINT
   , category_id     INT
 
   , create_date     DATETIME NOT NULL
@@ -25,12 +27,12 @@ SERVER trigger_target
 OPTIONS (table_name 'cycle');
 
 
-CREATE OR REPLACE FUNCTION ext_cycle_id(id) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_cycle_id(id INTEGER) RETURNS SETOF integer AS $$
   BEGIN
     RETURN QUERY
         SELECT "cycle_ext".id
         FROM "cycle_ext"
-        WHERE zid = SELECT zid FROM "cycle" where id = $1;
+        WHERE zid = (SELECT zid FROM "cycle" where id = $1);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -90,6 +92,9 @@ CREATE OR REPLACE FUNCTION cycle_mirror() RETURNS TRIGGER AS $$
     RETURN NULL;
   END;
 $$ LANGUAGE plpgsql;
+
+
+DROP TRIGGER IF EXISTS cycle_mirror ON cycle;
 
 
 CREATE TRIGGER cycle_mirror AFTER INSERT OR UPDATE OR DELETE ON cycle

@@ -2,13 +2,15 @@
 --- avrc_data/patientreference -> pirc/patientreference
 ---
 
+DROP FOREIGN TABLE IF EXISTS patientreference_ext;
+
 
 CREATE FOREIGN TABLE patientreference_ext (
     id                SERIAL NOT NULL
 
   , patient_id        INTEGER NOT NULL
   , reftype_id        INTEGER NOT NULL
-  , reference_number  VARCHAR NOT NULL,
+  , reference_number  VARCHAR NOT NULL
 
   , create_date       DATETIME NOT NULL
   , create_user_id    INTEGER NOT NULL
@@ -25,7 +27,7 @@ CREATE OR REPLACE FUNCTION patientreference_mirror() RETURNS TRIGGER AS $$
     CASE TG_OP
       WHEN 'INSERT' THEN
         INSERT INTO patientreference_ext (
-          , patient_id
+            patient_id
           , reftype_id
           , reference_number
 
@@ -71,6 +73,9 @@ CREATE OR REPLACE FUNCTION patientreference_mirror() RETURNS TRIGGER AS $$
     RETURN NULL;
   END;
 $$ LANGUAGE plpgsql;
+
+
+DROP TRIGGER IF EXISTS patientreference_mirror ON patientreference;
 
 
 CREATE TRIGGER patientreference_mirror AFTER INSERT OR UPDATE OR DELETE ON patientreference

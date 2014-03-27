@@ -2,6 +2,8 @@
 --- avrc_data/specimen -> pirc/specimen
 ---
 
+DROP FOREIGN TABLE IF EXISTS specimen_ext;
+
 
 CREATE FOREIGN TABLE specimen_ext (
     id                SERIAL NOT NULL
@@ -14,7 +16,7 @@ CREATE FOREIGN TABLE specimen_ext (
   , collect_time      TIME
   , location_id       INTEGER
   , tubes             INTEGER
-  , notes             VARCAHR
+  , notes             VARCHAR
   , study_cycle_label VARCHAR
 
   , create_date       DATETIME NOT NULL
@@ -54,13 +56,13 @@ CREATE OR REPLACE FUNCTION specimen_mirror() RETURNS TRIGGER AS $$
           , old_id
         )
         VALUES (
-            SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimen_type_id)
+            (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimen_type_id))
           , ext_patient_id(NEW.patient_id)
           , ext_cycle_id(NEW.cycle_id)
-          , SELECT id FROM specimenstate_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.state_id)
+          , (SELECT id FROM specimenstate_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.state_id))
           , NEW.collect_date
           , NEW.collect_time
-          , SELECT id FROM location_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.location_id)
+          , (SELECT id FROM location_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.location_id))
           , NEW.tubes
           , NEW.notes
           , NEW.study_cycle_label
@@ -69,7 +71,7 @@ CREATE OR REPLACE FUNCTION specimen_mirror() RETURNS TRIGGER AS $$
           , NEW.modify_date
           , ext_user_id(NEW.modify_user_id)
           , NEW.revision
-          , SELECT current_database()
+          , (SELECT current_database())
           , NEW.id
         );
       WHEN 'DELETE' THEN
@@ -77,13 +79,13 @@ CREATE OR REPLACE FUNCTION specimen_mirror() RETURNS TRIGGER AS $$
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
       WHEN 'UPDATE' THEN
         UPDATE specimen_ext
-        SET specimen_type_id = SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimen_type_id)
+        SET specimen_type_id = (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimen_type_id))
           , patient_id = ext_patient_id(NEW.patient_id)
           , cycle_id = ext_cycle_id(NEW.cycle_id)
-          , state_id = SELECT id FROM specimenstate_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.state_id)
+          , state_id = (SELECT id FROM specimenstate_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.state_id))
           , collect_date = NEW.collect_date
           , collect_time = NEW.collect_time
-          , location_id = SELECT id FROM location_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.location_id)
+          , location_id = (SELECT id FROM location_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.location_id))
           , tubes = NEW.tubes
           , notes = NEW.notes
           , study_cycle_label = NEW.study_cycle_label
@@ -97,6 +99,9 @@ CREATE OR REPLACE FUNCTION specimen_mirror() RETURNS TRIGGER AS $$
     RETURN NULL;
   END;
 $$ LANGUAGE plpgsql;
+
+
+DROP TRIGGER IF EXISTS specimen_mirror ON specimen;
 
 
 CREATE TRIGGER specimen_mirror AFTER INSERT OR UPDATE OR DELETE ON specimen
