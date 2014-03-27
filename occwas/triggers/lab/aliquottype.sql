@@ -83,7 +83,7 @@ CREATE OR REPLACE FUNCTION aliquottype_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-DROP TRIGGER IF EXISTS alquottype_mirror ON aliquottype;
+DROP TRIGGER IF EXISTS aliquottype_mirror ON aliquottype;
 
 
 CREATE TRIGGER aliquottype_mirror AFTER INSERT OR UPDATE OR DELETE ON aliquottype

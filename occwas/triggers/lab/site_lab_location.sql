@@ -44,7 +44,7 @@ CREATE OR REPLACE FUNCTION site_lab_location_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-DROP TRIGGER IF EXISTS site_lab_locatoin_mirror ON site_lab_location;
+DROP TRIGGER IF EXISTS site_lab_location_mirror ON site_lab_location;
 
 
 CREATE TRIGGER site_lab_location_mirror AFTER INSERT OR UPDATE OR DELETE ON site_lab_location
