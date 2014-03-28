@@ -16,7 +16,6 @@ from sqlalchemy import (
     Table, Column,
     ForeignKey, ForeignKeyConstraint, UniqueConstraint, Index,
     Boolean, Date, Enum, Integer, Unicode)
-from sqlalchemy.dialects.postgres import JSON
 from sqlalchemy.orm import object_session, backref, relationship
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.ext.declarative import declared_attr
@@ -31,6 +30,7 @@ from occams.datastore.models import (  # NOQA
     ModelClass,
     User,
     Schema, Section, Attribute, Choice, State, Entity, Context)
+from occams.datastore.utils.sql import JSON
 
 from . import log, Session
 
@@ -40,7 +40,7 @@ Base = ModelClass(u'Base')
 
 def includeme(config):
     settings = config.registry.settings
-    Session.configure(bind=engine_from_config(settings, 'sa.clinicaldb.'))
+    Session.configure(bind=engine_from_config(settings, 'app.db.'))
     log.debug('Clinical connected to: "%s"'
               % obfuscate_url_pw(Session.bind.url))
 

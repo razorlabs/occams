@@ -43,10 +43,12 @@ REQUIRES = [
 ]
 
 EXTRAS = {
+    'sqlite': [],
     'postgresql': ['psycopg2', 'psycogreen'],
     'test': [
         'pyramid_debugtoolbar',
         'nose',
+        'nose-testconfig',
         'coverage',
         'WebTest',
         'beautifulsoup4',
@@ -56,11 +58,12 @@ EXTRAS = {
 
 
 if sys.version_info < (2, 7):
-    raise Exception('This module is only compatible with Python 2.7')
+    REQUIRES.extend(['argparse', 'ordereddict'])
+    EXTRAS['test'].extend(['unittest2'])
 
 
 if sys.version_info < (3, 0):
-    REQUIRES.append('unicodecsv')
+    REQUIRES.extend(['unicodecsv'])
 
 
 def get_version():
