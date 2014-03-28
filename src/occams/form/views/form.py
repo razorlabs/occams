@@ -1,13 +1,16 @@
+from datetime import date
+
 import colander
 import deform
 import deform.widget
 from pyramid import httpexceptions as codes
 from pyramid.view import view_config
 from pyramid_deform import CSRFSchema
-from sqlalchemy import func, orm, sql, null
+from sqlalchemy import func, orm, sql, null, cast, Unicode
 import transaction
 
-from occams.datastore import model as datastore
+from occams.datastore.utils.sql import group_concat
+from occams.datastore import models
 from occams.form import _, Session, widgets
 
 
@@ -15,7 +18,7 @@ def is_unique_name(name):
     """
     Returns ``True`` if the name is not in use, ``False`` otherwise.
     """
-    name_exists = sql.exists().where(datastore.Schema.name == name)
+    name_exists = sql.exists().where(models.Schema.name == name)
     return not Session.query(name_exists).scalar()
 
 
@@ -60,7 +63,12 @@ def list_(request):
     layout = request.layout_manager.layout
     layout.title = _(u'Forms')
     layout.set_menu('form_list_menu')
-    query = query_names(Session)
+    query = (
+        Session.query(models.Schema)
+        .order_by(
+            models.Schema.name,
+            models.Schema.publish_date == null(),
+            models.Schema.publish_date.desc()))
     return {
         'forms': iter(query),
         'forms_count': query.count(),
@@ -98,7 +106,7 @@ def add(request):
             request.response.status = '400 Bad Request'
             return {'form': e.render()}
         with transaction.manager:
-            schema = datastore.Schema(name=data['name'], title=data['title'])
+            schema = models.Schema(name=data['name'], title=data['title'])
             Session.add(schema)
             return codes.HTTPCreated(
                 # Can't send redirect because of same-origin-policy
@@ -119,7 +127,7 @@ def view(request):
     name = request.matchdict['form_name']
 
     try:
-        form = Session.query(datastore.Schema).filter_by(name=name).one()
+        form = Session.query(models.Schema).filter_by(name=name).one()
     except orm.exc.NoResultFound:
         raise codes.HTTPNotFound
 
@@ -137,93 +145,52 @@ def view(request):
         'versions': iter(versions)}
 
 
-def query_form(session, name):
+def query_form(name):
     """
     Returns a record for the current version of the specified form.
     """
-    OuterSchema = orm.aliased(datastore.Schema, name='_outer_schema')
+    OuterSchema = orm.aliased(models.Schema, name='_outer_schema')
     query = (
-        session.query(OuterSchema.name)
+        Session.query(OuterSchema.name)
         .add_column(
-            session.query(datastore.Schema.title)
-            .filter(datastore.Schema.name == OuterSchema.name)
+            Session.query(models.Schema.title)
+            .filter(models.Schema.name == OuterSchema.name)
             .order_by(
-                (datastore.Schema.publish_date != null()).desc(),
-                datastore.Schema.publish_date.desc())
+                (models.Schema.publish_date != null()).desc(),
+                models.Schema.publish_date.desc())
             .limit(1)
             .correlate(OuterSchema)
             .as_scalar()
             .label('title'))
         .filter(OuterSchema.name == name)
-        .filter(OuterSchema.publish_date < datastore.NOW)
+        .filter(OuterSchema.publish_date < date.today())
         .order_by(OuterSchema.publish_date.desc())
         .limit(1))
     return query
 
 
-def query_categories(session, name):
+def query_categories(name):
     """
     Returns an iterable of the categories that are used
     for all versions of the specified form.
     """
     query = (
-        Session.query(datastore.Category)
+        Session.query(models.Category)
         .distinct()
-        .filter(datastore.Category.schemata.any(name=name))
-        .order_by(datastore.Category.title.asc()))
+        .filter(models.Category.schemata.any(name=name))
+        .order_by(models.Category.title.asc()))
     return query
 
 
-def query_names(session):
-    """
-    Generates an iterable summary of the form names in the system
-    """
-    OuterSchema = orm.aliased(datastore.Schema, name='_summary_schema')
-    query = (
-        session.query(OuterSchema.name)
-        .distinct()
-        .add_column(
-            session.query(datastore.Schema.title)
-            .filter(datastore.Schema.name == OuterSchema.name)
-            .order_by(
-                (datastore.Schema.publish_date != null()).desc(),
-                datastore.Schema.publish_date.desc())
-            .limit(1)
-            .correlate(OuterSchema)
-            .as_scalar()
-            .label('title'))
-        .add_column(
-            session.query(func.min(datastore.Schema.publish_date))
-            .filter(datastore.Schema.name == OuterSchema.name)
-            .correlate(OuterSchema)
-            .as_scalar()
-            .label('start_date'))
-        .add_column(
-            session.query(func.max(datastore.Schema.publish_date))
-            .filter(datastore.Schema.name == OuterSchema.name)
-            .correlate(OuterSchema)
-            .as_scalar()
-            .label('publish_date'))
-        .add_column(
-            session.query(func.count())
-            .filter(datastore.Schema.name == OuterSchema.name)
-            .filter(datastore.Schema.publish_date != null())
-            .correlate(OuterSchema)
-            .as_scalar()
-            .label('version_count'))
-        .order_by(OuterSchema.title.asc()))
-    return query
-
-
-def query_versions(session, name):
+def query_versions(name):
     """
     Generates an iterable summary listing of forms in the system
     """
-    OuterSchema = orm.aliased(datastore.Schema, name='_summary_schema')
-    CreateUser = orm.aliased(datastore.User, name='_create_user')
-    ModifyUser = orm.aliased(datastore.User, name='_modify_user')
+    OuterSchema = orm.aliased(models.Schema, name='_summary_schema')
+    CreateUser = orm.aliased(models.User, name='_create_user')
+    ModifyUser = orm.aliased(models.User, name='_modify_user')
     query = (
-        session.query(
+        Session.query(
             OuterSchema.id.label('id'),
             OuterSchema.name.label('name'),
             OuterSchema.title.label('title'),
@@ -235,18 +202,18 @@ def query_versions(session, name):
             OuterSchema.modify_date.label('modify_date'),
             ModifyUser.key.label('modify_user'))
         .add_column(
-            session.query(func.count())
-            .select_from(datastore.Schema)
-            .outerjoin(datastore.Attribute,
-                       datastore.Attribute.schema_id == datastore.Schema.id)
-            .filter(datastore.Schema.id == OuterSchema.id)
+            Session.query(func.count())
+            .select_from(models.Schema)
+            .outerjoin(models.Attribute,
+                       models.Attribute.schema_id == models.Schema.id)
+            .filter(models.Schema.id == OuterSchema.id)
             .correlate(OuterSchema)
             .as_scalar()
             .label('field_count'))
         .add_column((OuterSchema.publish_date == (
-            session.query(func.max(datastore.Schema.publish_date))
-            .filter(datastore.Schema.publish_date < datastore.NOW)
-            .filter(datastore.Schema.name == OuterSchema.name)
+            Session.query(func.max(models.Schema.publish_date))
+            .filter(models.Schema.publish_date < date.today())
+            .filter(models.Schema.name == OuterSchema.name)
             .correlate(OuterSchema)
             .as_scalar())).label('is_current'))
         .join(CreateUser, OuterSchema.create_user_id == CreateUser.id)

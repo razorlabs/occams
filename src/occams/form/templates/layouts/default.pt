@@ -24,7 +24,9 @@
     <link rel="apple-touch-icon-precomposed" sizes="128x128" href="favicon.png" />
   </head>
 
-  <body>
+  <body
+      data-view-name="${request.matched_route.name}"
+      data-view-path="${request.current_route_path()}">
 
     <!--! Wrap the content so we can push the footer to the bottom of the page -->
     <div id="wrap">

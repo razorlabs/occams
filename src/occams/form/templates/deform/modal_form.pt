@@ -25,40 +25,36 @@
   <input type="hidden" name="_charset_" />
   <input type="hidden" name="__formid__" value="${formid}"/>
 
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-        <h4 class="modal-title">${title}</h4>
-      </div>
-      <div class="modal-body">
-        <div class="alert alert-danger" tal:condition="field.error">
-          <strong i18n:translate="">There was a problem with your submission!</strong>
-          <div tal:condition="not:errormsg" i18n:translate="">Errors have been highlighted below</div>
-          <div tal:condition="errormsg">${errormsg}</div>
-        </div>
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+    <h4 class="modal-title">${title}</h4>
+  </div>
+  <div class="modal-body">
+    <div class="alert alert-danger" tal:condition="field.error">
+      <strong i18n:translate="">There was a problem with your submission!</strong>
+      <div tal:condition="not:errormsg" i18n:translate="">Errors have been highlighted below</div>
+      <div tal:condition="errormsg">${errormsg}</div>
+    </div>
 
-        <p tal:condition="description">${description}</p>
+    <p tal:condition="description">${description}</p>
 
-        <div tal:repeat="child field"
-             tal:replace="structure child.render_template(item_template)"/>
-      </div>
-      <div class="modal-footer">
-        <div class="buttons clearfix">
-          <tal:block repeat="button buttons">
-            <button
-                tal:attributes="disabled button.disabled"
-                id="${formid + button.name}"
-                name="${button.name}"
-                type="${button.type}"
-                class="${button.css_class}"
-                value="${button.value}">
-              ${button.title}
-            </button>
-          </tal:block>
-        </div>
-      </div>
-    </div><!-- /.modal-content -->
-  </div><!-- /.modal-dialog -->
+    <div tal:repeat="child field"
+         tal:replace="structure child.render_template(item_template)"/>
+  </div>
+  <div class="modal-footer">
+    <div class="buttons clearfix">
+      <tal:block repeat="button buttons">
+        <button
+            tal:attributes="disabled button.disabled"
+            id="${formid + button.name}"
+            name="${button.name}"
+            type="${button.type}"
+            class="${button.css_class}"
+            value="${button.value}">
+          ${button.title}
+        </button>
+      </tal:block>
+    </div>
+  </div>
 
 </form>

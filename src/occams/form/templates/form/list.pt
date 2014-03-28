@@ -13,33 +13,42 @@
       No forms have been created yet.
     </p>
     <div tal:condition="forms_count">
-      <p tal:condition="python: forms_count > 1">
+      <p tal:condition="python: forms_count">
         There are <strong>${forms_count}</strong> forms in the system.
       </p>
       <table id="forms" class="table table-hover table-striped"
           tal:condition="forms_count">
         <thead>
           <tr>
-            <th class="title">Title</th>
+            <th class="has_private">
+              <span class="glyphicon glyphicon-user"></span>
+            </th>
+            <th class="title">Form</th>
             <th class="name">Schema</th>
-            <th class="publish_date">Current</th>
-            <th class="start_date">Original</th>
-            <th class="version_count">Versions</th>
+            <th class="publish_date">Version</th>
           </tr>
         </thead>
         <tbody>
           <tr tal:define="highlight highlight|nothing"
               tal:repeat="form forms"
               tal:attributes="class python:'success' if form.name == highlight else ''">
-            <td class="title">
-              <a href="${request.current_route_path(_route_name='form_view',
-                                                    form_name=form.name)}
-                ">${form.title}</a>
+            <td class="has_private">
+              <span
+                  class="glyphicon glyphicon-user"
+                  title="Has private information"
+                  tal:condition="form.has_private"></span>
             </td>
+            <td class="title">${form.title}</td>
             <td class="name"><code>${form.name}</code></td>
-            <td class="publish_date">${form.publish_date}</td>
-            <td class="start_date">${form.start_date}</td>
-            <td class="version_count">${form.version_count}</td>
+            <td class="publish_date"
+                tal:define="url request.route_path('form_view',
+                                                   form=form.name,
+                                                   version=form.publish_date or form.id);">
+              <tal:switch switch="form.publish_date is not None">
+                <a href="${url}" tal:case="True">${form.publish_date}</a>
+                <a href="${url}" tal:case="False">draft</a>
+              </tal:switch>
+            </td>
           </tr>
         </tbody>
       </table>

@@ -2,6 +2,7 @@ import datetime
 
 from occams.form import log
 
+
 def includeme(config):
     """
     Helper method to configure available routes for the application
@@ -20,46 +21,20 @@ def includeme(config):
     config.add_route('account_logout', '/logout')
     config.add_route('account', '/account')
 
-    config.add_route('workflow_list', '/workflows')
+    config.add_route('form_add', '/add')
+    config.add_route('form_view', '/{form}/{version}')
+    config.add_route('form_delete', '/{form}/{version}/delete')
 
-    config.add_route('category_add', '/categories/add')
-    config.add_route('category_list', '/categories')
-    config.add_route('category_view', '/categories/{category_name}')
-    config.add_route('category_delete', '/categories/{category_name}/delete')
-
-    config.add_route('form_add', '/forms/add')
-    config.add_route('form_view', '/forms/{form_name}')
-    config.add_route('form_delete', '/forms/{form_name}/delete')
-
-    config.add_route('version_add', '/{form_name}/add')
-    config.add_route('version_view', '/{form_name}/{version}',
+    config.add_route('field_add', '/{form_name}/{version}/add',
         custom_predicates=(str_to_version,))
-    config.add_route('version_edit', '/{form_name}/{version}/edit',
+    config.add_route('field_view', '/{form_name}/{version}/{field}',
         custom_predicates=(str_to_version,))
-    config.add_route('version_copy', '/{form_name}/{version}/copy',
+    config.add_route('field_edit', '/{form_name}/{version}/{field}/edit',
         custom_predicates=(str_to_version,))
-    config.add_route('version_delete', '/{form_name}/{version}/delete',
+    config.add_route('field_move', '/{form_name}/{version}/field}/move',
         custom_predicates=(str_to_version,))
-
-    config.add_route('group_add', '/{form_name}/{version}/add',
+    config.add_route('field_delete', '/{form_name}/{version}/{field}/delete',
         custom_predicates=(str_to_version,))
-    config.add_route('group_edit', '/{form_name}/{version}/{group_name}/edit',
-        custom_predicates=(str_to_version,))
-
-    config.add_route('field_add', '/{form_name}/{version}/{group_name}/add',
-        custom_predicates=(str_to_version,))
-    config.add_route('field_view', '/{form_name}/{version}/{group_name}/{field_name}',
-        custom_predicates=(str_to_version,))
-    config.add_route('field_edit', '/{form_name}/{version}/{group_name}/{field_name}/edit',
-        custom_predicates=(str_to_version,))
-    config.add_route('field_move', '/{form_name}/{version}/{group_name}/field_name}/move',
-        custom_predicates=(str_to_version,))
-    config.add_route('field_delete', '/{form_name}/{version}/{group_name}/{field_name}/delete',
-        custom_predicates=(str_to_version,))
-
-    config.scan('occams.form.views')
-    config.scan('occams.form.layouts')
-    config.scan('occams.form.panels')
 
 
 def versions(*segment_names):

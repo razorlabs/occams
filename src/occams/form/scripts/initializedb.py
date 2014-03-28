@@ -6,7 +6,7 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import orm
 from pyramid.paster import get_appsettings, setup_logging
 
-from occams.datastore import model as datastore
+from occams.datastore import models as datastore
 
 from .. import Session
 

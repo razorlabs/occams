@@ -1,17 +1,16 @@
 """
 Permission constants
-All permissions are declared here for easier overview
+all permissions are declared here for easier overview
 """
-
 
 from repoze.who.interfaces import IChallengeDecider
 from pyramid.events import subscriber, NewRequest
-from pyramid.security import has_permission
+from pyramid.security import Allow, Authenticated, ALL_PERMISSIONS
 from zope.interface import directlyProvides
 import transaction
 
 from occams.form import log, Session
-from occams.datastore import model as datastore
+from occams.datastore import models as datastore
 
 
 def challenge_decider(environ, status, headers):
@@ -28,6 +27,14 @@ directlyProvides(challenge_decider, IChallengeDecider)
 
 
 def groupfinder(identity, request):
+
+    if 'groups' not in identity:
+        log.warn('groups has not been set in the repoze identity!')
+
+    return identity.get('groups', [])
+
+
+def occams_groupfinder(identity, request):
 
     if 'groups' not in identity:
         log.warn('groups has not been set in the repoze identity!')
@@ -63,13 +70,29 @@ def track_user(event):
     session.info['user'] = login
 
 
-def includeme(config):
-    log.debug('Initializing auth helpers...')
+class RootFactory(object):
+    """
+    Default root that enforces application permissions.
 
-    # Wrap has_permission to make it less cumbersome
-    # TODO: This is built-in to pyramid 1.5, remove when we switch
-    config.add_request_method(
-        lambda r, n: has_permission(n, r.context, r),
-        'has_permission')
+    Client applications with their own principles should define
+    their own ``who.callback`` that maps client groups to application
+    groups.
+    """
 
-    config.scan('occams.form.auth')
+    __acl__ = [
+        (Allow, 'administrators', ALL_PERMISSIONS),
+        (Allow, 'managers', (
+            'form_add', 'form_edit', 'form_delete',
+            'form_amend', 'form_retract', 'form_publish',
+            'form_export',
+            'workflow_add', 'work_edit', 'workflow_delete',
+            )),
+        (Allow, 'editors', (
+            'form_add', 'form_edit', 'form_delete',
+            'form_export',
+            )),
+        (Allow, Authenticated, 'view'),
+        ]
+
+    def __init__(self, request):
+        self.request = request
