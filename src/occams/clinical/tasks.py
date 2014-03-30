@@ -56,6 +56,8 @@ def includeme(config):
     if 'app.export.expire' in settings:
         settings['app.export.expire'] = int(settings['app.export.expire'])
 
+    celery.conf.update(BROKER_URL=settings['celery.broker.url'])
+
 
 @worker_init.connect
 def init(signal, sender):
@@ -75,9 +77,6 @@ def init(signal, sender):
     # Clear the registry so we ALWAYS get the correct userid
     Session.remove()
     Session.configure(info={'user': userid})
-
-    sender.app.conf.update(
-        BROKER_URL=settings['celery.broker.url'])
 
 
 def in_transaction(func):
