@@ -3,25 +3,10 @@ Permission constants
 All permissions are declared here for easier overview
 """
 
-from repoze.who.interfaces import IChallengeDecider
 from pyramid.events import subscriber, NewRequest
 from pyramid.security import Allow, Authenticated, ALL_PERMISSIONS
-from zope.interface import directlyProvides
 
 from . import log, Session, models
-
-
-def challenge_decider(environ, status, headers):
-    """
-    Backwards-compatibility fix to trigger challenge an authorized user.
-
-    Repoze.who expects a status code of 401 to trigger the challenge UI,
-    but pyramid will only raise 403 when the user has not authenticated.
-    """
-    return status.startswith('403') or status.startswith('401')
-
-
-directlyProvides(challenge_decider, IChallengeDecider)
 
 
 def groupfinder(identity, request):

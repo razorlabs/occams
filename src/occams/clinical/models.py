@@ -9,7 +9,6 @@ from __future__ import absolute_import
 from datetime import date, timedelta
 import uuid
 
-from alembic.util import obfuscate_url_pw
 from six import u
 from sqlalchemy import (
     engine_from_config,
@@ -41,8 +40,7 @@ Base = ModelClass(u'Base')
 def includeme(config):
     settings = config.registry.settings
     Session.configure(bind=engine_from_config(settings, 'app.db.'))
-    log.debug('Clinical connected to: "%s"'
-              % obfuscate_url_pw(Session.bind.url))
+    log.debug('Clinical connected to: "%s"' % repr(Session.bind.url))
 
 
 visit_cycle_table = Table(

@@ -1,95 +1,94 @@
-#import colander
-#import deform.widget
-#from pyramid.decorator import reify
-#from pyramid.httpexceptions import HTTPFound
-#from pyramid.security import remember, forget
-#from pyramid.view import view_config, forbidden_view_config
-#from pyramid_ldap import get_ldap_connector
-#from sqlalchemy import orm
+import colander
+import deform.widget
+from repoze.who.api import get_api
+from pyramid.httpexceptions import HTTPFound
+from pyramid.view import view_config, forbidden_view_config
 
-#from .. import _, log, permissions, Session
+from .. import _, Session, models
 
 
-#class LoginSchema(colander.MappingSchema):
+class LoginSchema(colander.MappingSchema):
 
-    #email = colander.SchemaNode(
-        #colander.String(),
-        #title=None,
-        #validator=colander.All(
-            #colander.Email(),
-            #colander.Length(max=32)),
-        #widget=deform.widget.TextInputWidget(
-            #autofocus=True,
-            #placeholder=_(u'Email')))
+    login = colander.SchemaNode(
+        colander.String(),
+        title=None,
+        validator=colander.All(
+            colander.Email(),
+            colander.Length(max=32)),
+        widget=deform.widget.TextInputWidget(
+            autofocus=True,
+            placeholder=_(u'Email')))
 
-    #password = colander.SchemaNode(
-        #colander.String(),
-        #title=None,
-        #validator=colander.Length(min=5, max=32),
-        #widget=deform.widget.PasswordWidget(
-            #placeholder=_(u'Password')))
-
-    #@colander.deferred
-    #def validator(self, kw):
-        #def callback(node, cstruct):
-            #request = kw['request']
-            #ldap = get_ldap_connector(request)
-            #record = ldap.authenticate(cstruct['email'], cstruct['password'])
-            #if record is None:
-                #raise colander.Invalid(node, _(u'Invalid credentials'))
-        #return callback
+    password = colander.SchemaNode(
+        colander.String(),
+        title=None,
+        validator=colander.Length(min=5, max=32),
+        widget=deform.widget.PasswordWidget(
+            placeholder=_(u'Password')))
 
 
-#@view_config(
-    #route_name='account_login',
-    #renderer='occams.clinical:templates/account/login.pt')
-#@forbidden_view_config(
-    #renderer='occams.clinical:templates/account/login.pt')
-#def login(request):
-    #request.layout_manager.layout.title = _('Log In')
-    #request.layout_manager.layout.show_header = False
+@view_config(
+    route_name='account_login',
+    renderer='occams.clinical:templates/account/login.pt')
+@forbidden_view_config(
+    renderer='occams.clinical:templates/account/login.pt')
+def login(request):
+    request.layout_manager.layout.title = _('Log In')
+    request.layout_manager.layout.show_header = False
 
-    ## Figure out where the user came from so we can redirect afterwards
-    #referrer = request.GET.get('referrer', request.current_route_path())
-    #if not referrer or referrer == request.route_path('account_login'):
-        ## Never use the login as the referrer
-        #referrer = request.route_path('clinical')
+    # Figure out where the user came from so we can redirect afterwards
+    referrer = request.GET.get('referrer', request.current_route_path())
+    if not referrer or referrer == request.route_path('account_login'):
+        # Never use the login as the referrer
+        referrer = request.route_path('clinical')
 
-    #form = deform.Form(
-        #schema=LoginSchema(title=_(u'Please log in')).bind(request=request),
-        #css_class='form-login',
-        #action=request.route_path(
-            #'account_login',
-            #_query={'referrer': referrer}),
-        #buttons=[
-            #deform.Button(
-                #'submit',
-                #title=_(u'Sign In'),
-                #css_class='btn btn-lg btn-primary btn-block')])
+    form = deform.Form(
+        schema=LoginSchema(title=_(u'Please log in')).bind(request=request),
+        css_class='form-login',
+        action=request.route_path(
+            'account_login',
+            _query={'referrer': referrer}),
+        buttons=[
+            deform.Button(
+                'submit',
+                title=_(u'Sign In'),
+                css_class='btn btn-lg btn-primary btn-block')])
 
-    #if not request.POST:
-        #return {'form': form.render()}
+    who_api = get_api(request.environ)
 
-    #try:
-        #appstruct = form.validate(request.POST.items())
-    #except deform.ValidationFailure as e:
-        #return {'form': e.field.render({'email': request.POST['email']})}
+    if request.method == 'POST':
+        try:
+            appstruct = form.validate(request.POST.items())
+        except deform.ValidationFailure as e:
+            form = e
+        else:
+            authenticated, headers = who_api.login({
+                'login': appstruct['login'],
+                'password': appstruct['password']})
+            if not authenticated:
+                request.session.flash(_(u'Invalid credentials'), 'error')
+            else:
+                user = (
+                    Session.query(models.User)
+                    .filter_by(key=appstruct['login'])
+                    .first())
+                if not user:
+                    Session.add(models.User(key=appstruct['login']))
+                return HTTPFound(location=referrer, headers=headers)
+    else:
+        # Forcefully forget any existing credentials.
+        __, headers = who_api.login({})
 
-    #try:
-        #Session.query(models.User).filter_by(key=appstruct['email']).one()
-    #except orm.NoResultFound as e:
-        #Session.add(models.User(key=appstruct['email']))
-        #Session.flush()
+    # clear any authenticated user for the current request.
+    request.response_headerlist = headers
+    if 'REMOTE_USER' in request.environ:
+        del request.environ['REMOTE_USER']
 
-    #connector = get_ldap_connector(request)
-    #with connector.manager.connection() as conn:
-        #search = connector.registry.ldap_login_query
-        #dn, attrs = search.execute(conn, login=appstruct['email'])[0]
-    #headers = remember(request, dn)
-    #return HTTPFound(location=referrer, headers=headers)
+    return {'form': form.render()}
 
 
-#@view_config(route_name='account_logout')
-#def logout(request):
-    #headers = forget(request)
-    #return HTTPFound(location=request.route_path('clinical'), headers=headers)
+@view_config(route_name='account_logout')
+def logout(request):
+    who_api = get_api(request.environ)
+    headers = who_api.forget()
+    return HTTPFound(location=request.route_path('clinical'), headers=headers)

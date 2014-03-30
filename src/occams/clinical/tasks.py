@@ -47,13 +47,16 @@ def includeme(config):
     assert 'app.export.user' in settings, 'Must specify an export user'
 
     settings['app.export.dir'] = os.path.abspath(settings['app.export.dir'])
-    assert os.path.exists(settings['app.export.dir'])
+    assert os.path.exists(settings['app.export.dir']), \
+        'Does not exist: %s' % settings['app.export.dir']
 
     if 'app.export.limit' in settings:
         settings['app.export.limit'] = int(settings['app.export.limit'])
 
     if 'app.export.expire' in settings:
         settings['app.export.expire'] = int(settings['app.export.expire'])
+
+    celery.conf.update(BROKER_URL=settings['celery.broker.url'])
 
 
 @worker_init.connect
@@ -74,9 +77,6 @@ def init(signal, sender):
     # Clear the registry so we ALWAYS get the correct userid
     Session.remove()
     Session.configure(info={'user': userid})
-
-    sender.app.conf.update(
-        BROKER_URL=settings['celery.broker.url'])
 
 
 def in_transaction(func):
