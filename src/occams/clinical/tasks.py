@@ -47,7 +47,8 @@ def includeme(config):
     assert 'app.export.user' in settings, 'Must specify an export user'
 
     settings['app.export.dir'] = os.path.abspath(settings['app.export.dir'])
-    assert os.path.exists(settings['app.export.dir'])
+    assert os.path.exists(settings['app.export.dir']), \
+        'Does not exist: %s' % settings['app.export.dir']
 
     if 'app.export.limit' in settings:
         settings['app.export.limit'] = int(settings['app.export.limit'])
