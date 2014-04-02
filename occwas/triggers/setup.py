@@ -24,52 +24,79 @@ Merge scenarios:
 """
 import argparse
 import os
-from subprocess import check_call
 import sys
 
-from sqlalchemy.engine.url import make_url
+import psycopg2
+from sqlalchemy.engine.url import URL
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 
-
-PRODUCTS = ('clinical', 'datastore', 'lab', 'partner')
-CCTG_PRODUCTS = PRODUCTS + ('calllog',)
-
-
-cli = argparse.ArgumentParser(description='Fully upgrades the database')
-cli.add_argument('phi', metavar='PHI', type=make_url)
-cli.add_argument('fia', metavar='FIA', type=make_url)
-cli.add_argument('target', metavar='TARGET', type=make_url)
+cli = argparse.ArgumentParser(description='Sets up triggers')
+cli.add_argument('-U', dest='user', metavar='USER:PW')
+cli.add_argument('-O', dest='owner', metavar='OWNER:PW')
+cli.add_argument('--phi', metavar='DB', help='PHI database')
+cli.add_argument('--fia', metavar='DB', help='FIA database')
+cli.add_argument('--target', metavar='DB', help='Merged database')
 
 
 def main(argv):
     args = cli.parse_args(argv[1:])
-    (fia, phi, target) = (args.fia, args.phi, args.target)
+
+    uid, upw = args.user.split(':')
+    oid, opw = args.owner.split(':')
+
+    phi = URL('postgresql', username=oid, password=opw, database=args.phi)
+    fia = URL('postgresql', username=oid, password=opw, database=args.fia)
+    target = URL('postgresql', username=oid, password=opw, database=args.target)
 
     # Install triggers in old database to push data to the new database
-    for url in (fia, phi):
-        check_call('psql -U {0} -d {1} -c "DROP EXTENSION IF EXISTS postgres_fdw CASCADE"'
-                   .format('postgres', url.database),
-                   shell=True)
+    install(uid, upw, fia, target)
+    install(uid, upw, phi, target)
 
-        check_call('psql -U {0} -d {1} -c "CREATE EXTENSION postgres_fdw"'
-                   .format('postgres', url.database),
-                   shell=True)
-        check_call('psql -U {0} -d {1} -c "CREATE SERVER trigger_target FOREIGN DATA WRAPPER postgres_fdw OPTIONS (dbname \'{2}\')"'
-                   .format('postgres', url.database, target.database),
-                   shell=True)
-        check_call('psql -U {0} -d {1} -c "CREATE USER MAPPING FOR USER SERVER trigger_target"'
-                   .format('postgres', url.database),
-                   shell=True)
 
-        for product in (PRODUCTS if 'cctg' not in url.database else CCTG_PRODUCTS):
-            product_dir = os.path.join(HERE, product)
-            for file in os.listdir(product_dir):
-                check_call('psql -U {0} -f {1} {2}'.format(
-                           'postgres',
-                           os.path.join(product_dir, file),
-                           url.database),
-                           shell=True)
+def install(suid, supw, from_url, to_url):
+
+    conn = psycopg2.connect(user=suid,
+                            password=supw,
+                            host=from_url.host,
+                            port=from_url.port,
+                            database=from_url.database)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        DROP EXTENSION IF EXISTS postgres_fdw CASCADE;
+        CREATE EXTENSION postgres_fdw;
+
+        CREATE SERVER trigger_target
+        FOREIGN DATA WRAPPER postgres_fdw
+        OPTIONS (dbname '{database}');
+
+        CREATE USER MAPPING FOR {username}
+        SERVER trigger_target
+        OPTIONS(user '{username}', password '{password}');
+    """.format(**to_url.translate_connect_args()))
+
+    products = ('clinical', 'datastore', 'lab', 'partner')
+
+    if 'cctg' in from_url.database:
+        products += ('calllog',)
+
+    for product in products:
+        product_dir = os.path.join(HERE, product)
+        for file in os.listdir(product_dir):
+            with open(os.path.join(product_dir, file)) as fp:
+                cursor.execute(fp.read())
+        cursor.execute("""
+            GRANT SELECT, INSERT, UPDATE, DELETE
+            ON ALL TABLES IN SCHEMA public
+            TO {username};
+
+            GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO {username};
+        """.format(**from_url.translate_connect_args()))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
 
 
 if __name__ == '__main__':

@@ -13,13 +13,11 @@ CREATE FOREIGN TABLE specimentype_ext (
   , description     VARCHAR
   , tube_type       VARCHAR
   , default_tubes   INTEGER
-  , location_id     INTEGER
 
-  , create_date     DATETIME NOT NULL
+  , create_date     TIMESTAMP NOT NULL
   , create_user_id  INTEGER NOT NULL
-  , modify_date     DATETIME NOT NULL
+  , modify_date     TIMESTAMP NOT NULL
   , modify_user_id  INTEGER NOT NULL
-  , revision        INTEGER NOT NULL
 
   , old_db          VARCHAR NOT NULL
   , old_id          INTEGER NOT NULL
@@ -38,12 +36,10 @@ CREATE OR REPLACE FUNCTION specimentype_mirror() RETURNS TRIGGER AS $$
           , description
           , tube_type
           , default_tubes
-          , location_id
           , create_date
           , create_user_id
           , modify_date
           , modify_user_id
-          , revision
           , old_db
           , old_id
         )
@@ -53,12 +49,10 @@ CREATE OR REPLACE FUNCTION specimentype_mirror() RETURNS TRIGGER AS $$
           , NEW.description
           , NEW.tube_type
           , NEW.default_tubes
-          , (SELECT id FROM location_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.location_id))
           , NEW.create_date
           , ext_user_id(NEW.create_user_id)
           , NEW.modify_date
           , ext_user_id(NEW.modify_user_id)
-          , NEW.revision
           , (SELECT current_database())
           , NEW.id
         );
@@ -72,12 +66,10 @@ CREATE OR REPLACE FUNCTION specimentype_mirror() RETURNS TRIGGER AS $$
           , description = NEW.description
           , tube_type = NEW.tube_type
           , default_tubes = NEW.default_tubes
-          , location_id = (SELECT id FROM location_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.location_id))
           , create_date = NEW.create_date
           , create_user_id = ext_user_id(NEW.create_user_id)
           , modify_date = NEW.modify_date
           , modify_user_id = ext_user_id(NEW.modify_user_id)
-          , revision = NEW.revision
           , old_db = (SELECT current_database())
           , old_id = NEW.id
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);

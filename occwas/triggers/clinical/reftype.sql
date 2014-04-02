@@ -8,15 +8,17 @@ DROP FOREIGN TABLE IF EXISTS reftype_ext;
 CREATE FOREIGN TABLE reftype_ext (
     id              SERIAL NOT NULL
 
-  , name            INTEGER NOT NULL
-  , title           INTEGER NOT NULL
+  , name            VARCHAR NOT NULL
+  , title           VARCHAR NOT NULL
   , description     VARCHAR
 
-  , create_date     DATETIME NOT NULL
+  , create_date     TIMESTAMP NOT NULL
   , create_user_id  INTEGER NOT NULL
-  , modify_date     DATETIME NOT NULL
+  , modify_date     TIMESTAMP NOT NULL
   , modify_user_id  INTEGER NOT NULL
-  , revision        INTEGER NOT NULL
+
+  , old_db          VARCHAR NOT NULL
+  , old_id          INTEGER NOT NULL
 )
 SERVER trigger_target
 OPTIONS (table_name 'reftype');
@@ -25,9 +27,9 @@ OPTIONS (table_name 'reftype');
 CREATE OR REPLACE FUNCTION ext_reftype_id(id INTEGER) RETURNS SETOF integer AS $$
   BEGIN
     RETURN QUERY
-        SELECT "reftype_ext".id
-        FROM "retype_ext"
-        WHERE name = (SELECT name FROM "reftype" WHERE id = $1);
+      SELECT "reftype_ext".id
+      FROM "reftype_ext"
+      WHERE (old_db, old_id) = (SELECT current_database(), $1);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -44,7 +46,8 @@ CREATE OR REPLACE FUNCTION reftype_mirror() RETURNS TRIGGER AS $$
           , create_user_id
           , modify_date
           , modify_user_id
-          , revision
+          , old_db
+          , old_id
         )
         VALUES (
             NEW.name
@@ -54,10 +57,12 @@ CREATE OR REPLACE FUNCTION reftype_mirror() RETURNS TRIGGER AS $$
           , ext_user_id(NEW.create_user_id)
           , NEW.modify_date
           , ext_user_id(NEW.modify_user_id)
-          , NEW.revision
+          , (SELECT current_database())
+          , NEW.id
         );
       WHEN 'DELETE' THEN
-        DELETE FROM reftype_ext WHERE name = OLD.name;
+        DELETE FROM reftype_ext
+        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
       WHEN 'UPDATE' THEN
         UPDATE reftype_ext
         SET name = NEW.name
@@ -67,8 +72,9 @@ CREATE OR REPLACE FUNCTION reftype_mirror() RETURNS TRIGGER AS $$
           , create_user_id = ext_user_id(NEW.create_user_id)
           , modify_date = NEW.modify_date
           , modify_user_id = ext_user_id(NEW.modify_user_id)
-          , revision = NEW.revision
-        WHERE name = OLD.name;
+          , old_db = (SELECT current_database())
+          , old_id = NEW.id
+        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
     END CASE;
     RETURN NULL;
   END;

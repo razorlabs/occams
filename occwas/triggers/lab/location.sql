@@ -12,11 +12,20 @@ CREATE FOREIGN TABLE location_ext (
   , title           VARCHAR NOT NULL
   , description     VARCHAR
 
-  , create_date     DATETIME NOT NULL
+  , active         BOOLEAN
+  , long_title1    VARCHAR
+  , long_title2    VARCHAR
+  , address_street VARCHAR
+  , address_city   VARCHAR
+  , address_state  VARCHAR
+  , address_zip    VARCHAR
+  , phone_number   VARCHAR
+  , fax_number     VARCHAR
+
+  , create_date     TIMESTAMP NOT NULL
   , create_user_id  INTEGER NOT NULL
-  , modify_date     DATETIME NOT NULL
+  , modify_date     TIMESTAMP NOT NULL
   , modify_user_id  INTEGER NOT NULL
-  , revision        INTEGER NOT NULL
 
   , old_db                  VARCHAR NOT NULL
   , old_id                  INTEGER NOT NULL
@@ -33,11 +42,19 @@ CREATE OR REPLACE FUNCTION location_mirror() RETURNS TRIGGER AS $$
             name
           , title
           , description
+          , active
+          , long_title1
+          , long_title2
+          , address_street
+          , address_city
+          , address_state
+          , address_zip
+          , phone_number
+          , fax_number
           , create_date
           , create_user_id
           , modify_date
           , modify_user_id
-          , revision
           , old_db
           , old_id
         )
@@ -45,11 +62,19 @@ CREATE OR REPLACE FUNCTION location_mirror() RETURNS TRIGGER AS $$
             NEW.name
           , NEW.title
           , NEW.description
+          , NEW.active
+          , NEW.long_title1
+          , NEW.long_title2
+          , NEW.address_street
+          , NEW.address_city
+          , NEW.address_state
+          , NEW.address_zip
+          , NEW.phone_number
+          , NEW.fax_number
           , NEW.create_date
           , ext_user_id(NEW.create_user_id)
           , NEW.modify_date
           , ext_user_id(NEW.modify_user_id)
-          , NEW.revision
           , (SELECT current_database())
           , NEW.id
         );
@@ -61,11 +86,19 @@ CREATE OR REPLACE FUNCTION location_mirror() RETURNS TRIGGER AS $$
         SET name = NEW.name
           , title = NEW.title
           , description = NEW.description
+          , active = NEW.active
+          , long_title1 = NEW.long_title1
+          , long_title2 = NEW.long_title2
+          , address_street = NEW.address_street
+          , address_city = NEW.address_city
+          , address_state = NEW.address_state
+          , address_zip = NEW.address_zip
+          , phone_number = NEW.phone_number
+          , fax_number = NEW.fax_number
           , create_date = NEW.create_date
           , create_user_id = ext_user_id(NEW.create_user_id)
           , modify_date = NEW.modify_date
           , modify_user_id = ext_user_id(NEW.modify_user_id)
-          , revision = NEW.revision
           , old_db = (SELECT current_database())
           , old_id = NEW.id
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);

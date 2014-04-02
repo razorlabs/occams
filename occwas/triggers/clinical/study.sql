@@ -20,11 +20,14 @@ CREATE FOREIGN TABLE study_ext (
   , category_id     INTEGER
   , log_category_id INTEGER
 
-  , create_date     DATETIME NOT NULL
+  , create_date     TIMESTAMP NOT NULL
   , create_user_id  INTEGER NOT NULL
-  , modify_date     DATETIME NOT NULL
+  , modify_date     TIMESTAMP NOT NULL
   , modify_user_id  INTEGER NOT NULL
   , revision        INTEGER NOT NULL
+
+  , old_db          VARCHAR NOT NULL
+  , old_id          INTEGER NOT NULL
 )
 SERVER trigger_target
 OPTIONS (table_name 'study');
@@ -33,9 +36,9 @@ OPTIONS (table_name 'study');
 CREATE OR REPLACE FUNCTION ext_study_id(id INTEGER) RETURNS SETOF integer AS $$
   BEGIN
     RETURN QUERY
-        SELECT "study_ext".id
-        FROM "study_ext"
-        WHERE zid = (SELECT zid FROM "study" WHERE id = $1);
+      SELECT "study_ext".id
+      FROM "study_ext"
+      WHERE (old_db, old_id) = (SELECT current_database(), $1);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -60,6 +63,8 @@ CREATE OR REPLACE FUNCTION study_mirror() RETURNS TRIGGER AS $$
           , modify_date
           , modify_user_id
           , revision
+          , old_db
+          , old_id
         )
         VALUES (
             NEW.zid
@@ -68,18 +73,21 @@ CREATE OR REPLACE FUNCTION study_mirror() RETURNS TRIGGER AS $$
           , NEW.description
           , NEW.short_title
           , NEW.code
-          , NEW.cosent_date
+          , NEW.consent_date
           , NEW.is_blinded
           , ext_category_id(NEW.category_id)
-          , NEW.log_category_id
+          , ext_category_id(NEW.log_category_id)
           , NEW.create_date
           , ext_user_id(NEW.create_user_id)
           , NEW.modify_date
           , ext_user_id(NEW.modify_user_id)
           , NEW.revision
+          , (SELECT current_database())
+          , NEW.id
         );
       WHEN 'DELETE' THEN
-        DELETE FROM study_ext WHERE zid = OLD.zid;
+        DELETE FROM study_ext
+        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
       WHEN 'UPDATE' THEN
         UPDATE study_ext
         SET zid = NEW.zid
@@ -88,16 +96,18 @@ CREATE OR REPLACE FUNCTION study_mirror() RETURNS TRIGGER AS $$
           , description = NEW.description
           , short_title = NEW.short_title
           , code = NEW.code
-          , consent_date = NEW.cosent_date
+          , consent_date = NEW.consent_date
           , is_blinded = NEW.is_blinded
-          , category_id = NEW.category_id
-          , log_category_id = NEW.log_category_id
+          , category_id = ext_category_id(NEW.category_id)
+          , log_category_id = ext_category_id(NEW.log_category_id)
           , create_date = NEW.create_date
           , create_user_id = ext_user_id(NEW.create_user_id)
           , modify_date = NEW.modify_date
           , modify_user_id = ext_user_id(NEW.modify_user_id)
           , revision = NEW.revision
-        WHERE zid = OLD.zid;
+          , old_db = (SELECT current_database())
+          , old_id = NEW.id
+        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
     END CASE;
     RETURN NULL;
   END;

@@ -15,14 +15,30 @@ CREATE FOREIGN TABLE stratum_ext (
   , reference_number  VARCHAR NOT NULL
   , patient_id        INTEGER
 
-  , create_date       DATETIME NOT NULL
+  , create_date       TIMESTAMP NOT NULL
   , create_user_id    INTEGER NOT NULL
-  , modify_date       DATETIME NOT NULL
+  , modify_date       TIMESTAMP NOT NULL
   , modify_user_id    INTEGER NOT NULL
   , revision          INTEGER NOT NULL
+
+  , old_db          VARCHAR NOT NULL
+  , old_id          INTEGER NOT NULL
 )
 SERVER trigger_target
 OPTIONS (table_name 'stratum');
+
+--
+-- Helper function to find the site id in the new system using
+-- the old system id number
+--
+CREATE OR REPLACE FUNCTION ext_stratum_id(id INTEGER) RETURNS SETOF integer AS $$
+  BEGIN
+    RETURN QUERY
+      SELECT "stratum_ext".id
+      FROM "stratum_ext"
+      WHERE (old_db, old_id) = (SELECT current_database(), $1);
+  END;
+$$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION stratum_mirror() RETURNS TRIGGER AS $$
@@ -42,24 +58,27 @@ CREATE OR REPLACE FUNCTION stratum_mirror() RETURNS TRIGGER AS $$
           , modify_date
           , modify_user_id
           , revision
+          , old_db
+          , old_id
         )
         VALUES (
             ext_study_id(NEW.study_id)
           , ext_arm_id(NEW.arm_id)
-          , label
-          , block_number
-          , reference_number
+          , NEW.label
+          , NEW.block_number
+          , NEW.reference_number
           , ext_patient_id(NEW.patient_id)
           , NEW.create_date
           , ext_user_id(NEW.create_user_id)
           , NEW.modify_date
           , ext_user_id(NEW.modify_user_id)
           , NEW.revision
+          , (SELECT current_database())
+          , NEW.id
         );
       WHEN 'DELETE' THEN
         DELETE FROM stratum_ext
-        WHERE (study_id, reference_number) =
-          (ext_study_id(OLD.study_id), OLD.reference_number);
+        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
       WHEN 'UPDATE' THEN
         UPDATE stratum_ext
         SET study_id = ext_study_id(NEW.study_id)
@@ -73,8 +92,9 @@ CREATE OR REPLACE FUNCTION stratum_mirror() RETURNS TRIGGER AS $$
           , modify_date = NEW.modify_date
           , modify_user_id = ext_user_id(NEW.modify_user_id)
           , revision = NEW.revision
-        WHERE (study_id, reference_number) =
-          (ext_study_id(OLD.study_id), OLD.reference_number);
+          , old_db = (SELECT current_database())
+          , old_id = NEW.id
+        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
     END CASE;
     RETURN NULL;
   END;

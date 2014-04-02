@@ -23,12 +23,12 @@ OPTIONS (table_name 'patient_log_nonresponse_type');
 -- Helper function to find the attribute id in the new system using
 -- the old system id number
 --
-CREATE OR REPLACE FUNCTION ext_patient_log_nonresponse_type_id(id INTEGER) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_patient_log_nonresponse_type_id(id INTEGER) RETURNS INTEGER AS $$
   BEGIN
-    RETURN QUERY
+    RETURN (
         SELECT "patient_log_nonresponse_type_ext".id
         FROM "patient_log_nonresponse_type_ext"
-        WHERE (old_db, old_id) = (SELECT current_database(), $1);
+        WHERE (old_db, old_id) = (SELECT current_database(), $1));
   END;
 $$ LANGUAGE plpgsql;
 

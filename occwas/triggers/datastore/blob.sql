@@ -11,11 +11,11 @@ CREATE FOREIGN TABLE value_blob_ext (
 
   , entity_id       INTEGER NOT NULL
   , attribute_id    INTEGER NOT NULL
-  , value           BLOB NOT NULL
+  , value           BYTEA NOT NULL
 
-  , create_date     DATETIME NOT NULL
+  , create_date     TIMESTAMP NOT NULL
   , create_user_id  INTEGER NOT NULL
-  , modify_date     DATETIME NOT NULL
+  , modify_date     TIMESTAMP NOT NULL
   , modify_user_id  INTEGER NOT NULL
   , revision        INTEGER NOT NULL
 
@@ -45,7 +45,7 @@ CREATE OR REPLACE FUNCTION value_blob_mirror() RETURNS TRIGGER AS $$
             , old_id
           )
           VALUES (
-              ext_user_id(NEW.entity_id)
+              ext_entity_id(NEW.entity_id)
             , ext_attribute_id(NEW.attribute_id)
             , NEW.value
             , NEW.create_date

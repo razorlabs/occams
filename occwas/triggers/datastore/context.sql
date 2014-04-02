@@ -12,9 +12,9 @@ CREATE FOREIGN TABLE context_ext (
   , external        VARCHAR
   , key             INTEGER
 
-  , create_date     DATETIME NOT NULL
+  , create_date     TIMESTAMP NOT NULL
   , create_user_id  INTEGER NOT NULL
-  , modify_date     DATETIME NOT NULL
+  , modify_date     TIMESTAMP NOT NULL
   , modify_user_id  INTEGER NOT NULL
   , revision        INTEGER NOT NULL
 

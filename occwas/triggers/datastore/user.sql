@@ -11,7 +11,7 @@ DROP FOREIGN TABLE IF EXISTS user_ext;
 CREATE FOREIGN TABLE user_ext (
     id              SERIAL NOT NULL
 
-  , key             VARCHAR
+  , key             VARCHAR NOT NULL
   , create_date     TIMESTAMP NOT NULL
   , modify_date     TIMESTAMP NOT NULL
 )
@@ -28,7 +28,7 @@ CREATE OR REPLACE FUNCTION ext_user_id(id INTEGER) RETURNS SETOF integer AS $$
     RETURN QUERY
       SELECT "user_ext".id
       FROM "user_ext"
-      WHERE key = (SELECT key FROM "user" WHERE id = $1);
+      WHERE key = (SELECT "user".key FROM "user" WHERE "user".id = $1);
   END;
 $$ LANGUAGE plpgsql;
 

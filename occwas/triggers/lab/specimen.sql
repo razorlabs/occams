@@ -17,11 +17,10 @@ CREATE FOREIGN TABLE specimen_ext (
   , location_id       INTEGER
   , tubes             INTEGER
   , notes             VARCHAR
-  , study_cycle_label VARCHAR
 
-  , create_date       DATETIME NOT NULL
+  , create_date       TIMESTAMP NOT NULL
   , create_user_id    INTEGER NOT NULL
-  , modify_date       DATETIME NOT NULL
+  , modify_date       TIMESTAMP NOT NULL
   , modify_user_id    INTEGER NOT NULL
   , revision          INTEGER NOT NULL
 
@@ -46,7 +45,6 @@ CREATE OR REPLACE FUNCTION specimen_mirror() RETURNS TRIGGER AS $$
           , location_id
           , tubes
           , notes
-          , study_cycle_label
           , create_date
           , create_user_id
           , modify_date
@@ -65,7 +63,6 @@ CREATE OR REPLACE FUNCTION specimen_mirror() RETURNS TRIGGER AS $$
           , (SELECT id FROM location_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.location_id))
           , NEW.tubes
           , NEW.notes
-          , NEW.study_cycle_label
           , NEW.create_date
           , ext_user_id(NEW.create_user_id)
           , NEW.modify_date
@@ -88,7 +85,6 @@ CREATE OR REPLACE FUNCTION specimen_mirror() RETURNS TRIGGER AS $$
           , location_id = (SELECT id FROM location_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.location_id))
           , tubes = NEW.tubes
           , notes = NEW.notes
-          , study_cycle_label = NEW.study_cycle_label
           , create_date = NEW.create_date
           , create_user_id = ext_user_id(NEW.create_user_id)
           , modify_date = NEW.modify_date

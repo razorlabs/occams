@@ -12,9 +12,9 @@ CREATE FOREIGN TABLE value_string_ext (
   , attribute_id    INTEGER NOT NULL
   , value           VARCHAR NOT NULL
 
-  , create_date     DATETIME NOT NULL
+  , create_date     TIMESTAMP NOT NULL
   , create_user_id  INTEGER NOT NULL
-  , modify_date     DATETIME NOT NULL
+  , modify_date     TIMESTAMP NOT NULL
   , modify_user_id  INTEGER NOT NULL
   , revision        INTEGER NOT NULL
 
@@ -45,7 +45,7 @@ CREATE OR REPLACE FUNCTION value_string_mirror() RETURNS TRIGGER AS $$
               , old_id
             )
             VALUES (
-                ext_user_id(NEW.entity_id)
+                ext_entity_id(NEW.entity_id)
               , ext_attribute_id(NEW.attribute_id)
               , NEW.value
               , NEW.create_date
@@ -70,7 +70,7 @@ CREATE OR REPLACE FUNCTION value_string_mirror() RETURNS TRIGGER AS $$
               , old_id
             )
             VALUES (
-                ext_user_id(NEW.entity_id)
+                ext_entity_id(NEW.entity_id)
               , ext_attribute_id(NEW.attribute_id)
               , ext_choice_id(NEW.choice_id)
               , NEW.create_date

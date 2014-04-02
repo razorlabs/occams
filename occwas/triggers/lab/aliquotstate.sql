@@ -12,11 +12,10 @@ CREATE FOREIGN TABLE aliquotstate_ext (
   , title           VARCHAR NOT NULL
   , description     VARCHAR
 
-  , create_date     DATETIME NOT NULL
+  , create_date     TIMESTAMP NOT NULL
   , create_user_id  INTEGER NOT NULL
-  , modify_date     DATETIME NOT NULL
+  , modify_date     TIMESTAMP NOT NULL
   , modify_user_id  INTEGER NOT NULL
-  , revision        INTEGER NOT NULL
 
   , old_db          VARCHAR NOT NULL
   , old_id          INTEGER NOT NULL
@@ -37,7 +36,6 @@ CREATE OR REPLACE FUNCTION aliquotstate_mirror() RETURNS TRIGGER AS $$
           , create_user_id
           , modify_date
           , modify_user_id
-          , revision
           , old_db
           , old_id
         )
@@ -49,7 +47,6 @@ CREATE OR REPLACE FUNCTION aliquotstate_mirror() RETURNS TRIGGER AS $$
           , ext_user_id(NEW.create_user_id)
           , NEW.modify_date
           , ext_user_id(NEW.modify_user_id)
-          , NEW.revision
           , (SELECT current_database())
           , NEW.id
         );
@@ -65,7 +62,6 @@ CREATE OR REPLACE FUNCTION aliquotstate_mirror() RETURNS TRIGGER AS $$
           , create_user_id = ext_user_id(NEW.create_user_id)
           , modify_date = NEW.modify_date
           , modify_user_id = ext_user_id(NEW.modify_user_id)
-          , revision = NEW.revision
           , old_db = (SELECT current_database())
           , old_id = NEW.id
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);

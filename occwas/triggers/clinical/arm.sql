@@ -8,17 +8,20 @@ DROP FOREIGN TABLE IF EXISTS arm_ext;
 CREATE FOREIGN TABLE arm_ext (
     id              SERIAL NOT NULL
 
-  , name            INTEGER NOT NULL
-  , title           INTEGER NOT NULL
+  , name            VARCHAR NOT NULL
+  , title           VARCHAR NOT NULL
   , description     VARCHAR
 
   , study_id        INTEGER NOT NULL
 
-  , create_date     DATETIME NOT NULL
+  , create_date     TIMESTAMP NOT NULL
   , create_user_id  INTEGER NOT NULL
-  , modify_date     DATETIME NOT NULL
+  , modify_date     TIMESTAMP NOT NULL
   , modify_user_id  INTEGER NOT NULL
   , revision        INTEGER NOT NULL
+
+  , old_db          VARCHAR NOT NULL
+  , old_id          INTEGER NOT NULL
 )
 SERVER trigger_target
 OPTIONS (table_name 'arm');
@@ -27,10 +30,9 @@ OPTIONS (table_name 'arm');
 CREATE OR REPLACE FUNCTION ext_arm_id(id integer) RETURNS SETOF integer AS $$
   BEGIN
     RETURN QUERY
-        SELECT "arm_ext".id
-        FROM "arm_ext"
-        WHERE (study_id, name) =
-          (SELECT (ext_study_id(study_id), name) FROM "arm" WHERE id = $1);
+      SELECT "arm_ext".id
+      FROM "arm_ext"
+      WHERE (old_db, old_id) = (SELECT current_database(), $1);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -45,9 +47,12 @@ CREATE OR REPLACE FUNCTION arm_mirror() RETURNS TRIGGER AS $$
           , description
           , study_id
           , create_date
-          , modify_date
           , create_user_id
+          , modify_date
+          , modify_user_id
           , revision
+          , old_db
+          , old_id
         )
         VALUES (
             NEW.name
@@ -59,10 +64,12 @@ CREATE OR REPLACE FUNCTION arm_mirror() RETURNS TRIGGER AS $$
           , NEW.modify_date
           , ext_user_id(NEW.modify_user_id)
           , NEW.revision
+          , (SELECT current_database())
+          , NEW.id
           );
       WHEN 'DELETE' THEN
         DELETE FROM arm_ext
-        WHERE (study_id, name) = (ext_study_id(OLD.study_id), OLD.name);
+        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
       WHEN 'UPDATE' THEN
         UPDATE arm_ext
         SET name = NEW.name
@@ -74,7 +81,9 @@ CREATE OR REPLACE FUNCTION arm_mirror() RETURNS TRIGGER AS $$
           , modify_date = NEW.modify_date
           , modify_user_id = ext_user_id(NEW.modify_user_id)
           , revision = NEW.revision
-        WHERE (study_id, name) = (ext_study_id(OLD.study_id), OLD.name);
+          , old_db = (SELECT current_database())
+          , old_id = NEW.id
+        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
     END CASE;
     RETURN NULL;
   END;

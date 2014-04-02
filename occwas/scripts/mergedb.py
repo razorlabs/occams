@@ -11,8 +11,9 @@ import argparse
 from subprocess import check_call
 import tempfile
 
+import psycopg2
 from sqlalchemy import create_engine
-from sqlalchemy.engine.url import make_url
+from sqlalchemy.engine.url import URL
 
 ECHO = False
 
@@ -39,6 +40,9 @@ TABLES = """
 # they can be easily updated without trying to figure out their unique
 # features as some of them don't have them
 TRACK = set([
+    'partner',
+    'arm', 'cycle', 'enrollment', 'patientreference',
+    'reftype', 'site', 'stratum', 'study', 'visit',
     'attribute', 'blob', 'category', 'choice',
     'datetime', 'decimal', 'entity', 'integer',
     'schema', 'string', 'text', 'object',
@@ -58,38 +62,47 @@ def mrg(table):
 
 
 cli = argparse.ArgumentParser(description='Merges PHI and FIA')
-cli.add_argument('phi', metavar='PHI', type=make_url)
-cli.add_argument('fia', metavar='FIA', type=make_url)
-cli.add_argument('target', metavar='TARGET', type=make_url)
+cli.add_argument('-U', dest='user', metavar='USER:PW')
+cli.add_argument('-O', dest='owner', metavar='OWNER:PW')
+cli.add_argument('--phi', metavar='DB', help='PHI database')
+cli.add_argument('--fia', metavar='DB', help='FIA database')
+cli.add_argument('--target', metavar='DB', help='Merged database')
 
 
 def main():
     args = cli.parse_args()
 
-    print('FIA -> {0}'.format(repr(args.fia)))
-    print('PHI -> {0}'.format(repr(args.phi)))
-    print('TARGET -> {0}'.format(repr(args.target)))
+    uid, upw = args.user.split(':')
+    oid, opw = args.owner.split(':')
 
-    if 'cctg' in args.target.database:
+    phi = URL('postgresql', username=oid, password=opw, database=args.phi)
+    fia = URL('postgresql', username=oid, password=opw, database=args.fia)
+    target = URL('postgresql', username=oid, password=opw, database=args.target)
+
+    print('FIA -> {0}'.format(repr(fia)))
+    print('PHI -> {0}'.format(repr(phi)))
+    print('TARGET -> {0}'.format(repr(target)))
+
+    if 'cctg' in target.database:
         TRACK.update(CCTG_TRACK)
 
-    copy(args.fia, args.target)
+    copy(uid, upw, fia, target)
 
-    cleanup(args.phi)
-    cleanup(args.fia)
-    cleanup(args.target)
+    cleanup(phi)
+    cleanup(fia)
+    cleanup(target)
 
-    prepare(args.phi)
+    prepare(phi)
 
-    track(args.phi,  args.phi.database, [mrg(t) for t in TABLES if t in TRACK])
-    track(args.target, args.fia.database, TRACK)
+    track(phi,  phi.database, [mrg(t) for t in TABLES if t in TRACK])
+    track(target, fia.database, TRACK)
 
-    migrate(args.phi, args.target, TABLES)
-    integrate(args.target)
+    migrate(phi, target, TABLES)
+    integrate(target)
 
-    cleanup(args.phi)
-    cleanup(args.fia)
-    cleanup(args.target)
+    cleanup(phi)
+    cleanup(fia)
+    cleanup(target)
 
 
 def cleanup(url):
@@ -143,16 +156,25 @@ def track(url, old_db, tables):
                          .format(table))
 
 
-def copy(src, dst):
+def copy(suid, supw, src, dst):
     """
     Makes a copy of the src (i.e. FIA) database to use as a base
     """
     print('Copying {0} -> {1}'.format(src.database, dst.database))
-    check_call('dropdb --if-exists -U postgres {0}'.format(dst.database),
-               shell=True)
-    check_call('createdb -U postgres -T {0} {1}'
-               .format(src.database, dst.database),
-               shell=True)
+    conn = psycopg2.connect(user=suid,
+                            password=supw,
+                            host=src.host,
+                            port=src.port,
+                            database=src.database)
+    conn.set_isolation_level(0)
+    cursor = conn.cursor()
+    cursor.execute('DROP DATABASE IF EXISTS {dstdb}'
+                   .format(dstdb=dst.database))
+    cursor.execute('CREATE DATABASE {dstdb} WITH OWNER {username} TEMPLATE {srcdb}'
+                   .format(dstdb=dst.database, srcdb=src.database, username=dst.username))
+    conn.commit()
+    cursor.close()
+    conn.close()
 
 
 def migrate(src, dst, tables):
@@ -162,13 +184,13 @@ def migrate(src, dst, tables):
     print('Moving data {0} -> {1}'.format(src.database, dst.database))
 
     with tempfile.NamedTemporaryFile('rw+b') as fp:
-        pg_dump = ['pg_dump', '-f', fp.name, '-O']
+        pg_dump = ['pg_dump', '-f', fp.name, '--no-owner']
         for table in tables:
             pg_dump += ['-t', mrg(table)]
-        pg_dump += clopts(src)
+        pg_dump += ['-d', str(src)]
 
         check_call(pg_dump)
-        check_call(['psql', '-f', fp.name] + clopts(dst))
+        check_call(['psql', '-f', fp.name, '-d', str(dst)])
 
 
 def integrate(url):
@@ -217,7 +239,8 @@ def integrate(url):
                 patient_id, enrolled_patient_id,
                 report_date,
                 create_date, modify_date, revision,
-                create_user_id, modify_user_id)
+                create_user_id, modify_user_id,
+                old_db, old_id)
             SELECT
                 id, zid,
                 (SELECT id FROM "patient" WHERE mrg_id = patient_id),
@@ -225,7 +248,8 @@ def integrate(url):
                 report_date,
                 create_date, modify_date, revision,
                 (SELECT id FROM "user" WHERE mrg_id = create_user_id),
-                (SELECT id FROM "user" WHERE mrg_id = modify_user_id)
+                (SELECT id FROM "user" WHERE mrg_id = modify_user_id),
+                old_db, old_id
             FROM "partner_mrg"
             """)
 
@@ -368,23 +392,6 @@ def integrate(url):
 
         for table in TABLES:
             conn.execute('ALTER TABLE "{0}" DROP COLUMN mrg_id'.format(table))
-
-
-def clopts(url, **overrides):
-    """
-    Helper method to generate commanline arguments for connection
-    Intended as the last arguments in a subprocess call
-    """
-    username = overrides.get('username') or getattr(url, 'username', None)
-    port = overrides.get('port') or getattr(url, 'port', None)
-    database = overrides.get('database') or getattr(url, 'database', None)
-    args = []
-    if username:
-        args.extend(['-U', str(username)])
-    if port:
-        args.extend(['-p', str(port)])
-    args += [str(database)]
-    return args
 
 
 if __name__ == '__main__':

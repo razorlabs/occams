@@ -17,9 +17,9 @@ CREATE FOREIGN TABLE choice_ext (
   , attribute_id    INTEGER NOT NULL
   , "order"         INTEGER NOT NULL
 
-  , create_date     DATETIME NOT NULL
+  , create_date     TIMESTAMP NOT NULL
   , create_user_id  INTEGER NOT NULL
-  , modify_date     DATETIME NOT NULL
+  , modify_date     TIMESTAMP NOT NULL
   , modify_user_id  INTEGER NOT NULL
   , revision        INTEGER NOT NULL
 
@@ -40,9 +40,9 @@ CREATE FOREIGN TABLE value_choice_ext (
   , attribute_id    INTEGER NOT NULL
   , value           INTEGER NOT NULL
 
-  , create_date     DATETIME NOT NULL
+  , create_date     TIMESTAMP NOT NULL
   , create_user_id  INTEGER NOT NULL
-  , modify_date     DATETIME NOT NULL
+  , modify_date     TIMESTAMP NOT NULL
   , modify_user_id  INTEGER NOT NULL
   , revision        INTEGER NOT NULL
 
@@ -75,7 +75,7 @@ CREATE OR REPLACE FUNCTION choice_mirror() RETURNS TRIGGER AS $$
             name
           , title
           , description
-          , schema_id
+          , attribute_id
           , "order"
           , create_date
           , create_user_id
@@ -89,7 +89,7 @@ CREATE OR REPLACE FUNCTION choice_mirror() RETURNS TRIGGER AS $$
             NEW.value
           , NEW.title
           , NEW.description
-          , ext_schema_id(NEW.schema_id)
+          , ext_attribute_id(NEW.attribute_id)
           , NEW."order"
           , NEW.create_date
           , ext_user_id(NEW.create_user_id)

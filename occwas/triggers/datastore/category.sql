@@ -12,11 +12,9 @@ CREATE FOREIGN TABLE category_ext (
   , title           VARCHAR NOT NULL
   , description     TEXT
 
-  , attribute_id    INTEGER NOT NULL
-
-  , create_date     DATETIME NOT NULL
+  , create_date     TIMESTAMP NOT NULL
   , create_user_id  INTEGER NOT NULL
-  , modify_date     DATETIME NOT NULL
+  , modify_date     TIMESTAMP NOT NULL
   , modify_user_id  INTEGER NOT NULL
   , revision        INTEGER NOT NULL
 
@@ -49,7 +47,6 @@ CREATE OR REPLACE FUNCTION category_mirror() RETURNS TRIGGER AS $$
             name
           , title
           , description
-          , schema_id
           , create_date
           , create_user_id
           , modify_date
@@ -62,7 +59,6 @@ CREATE OR REPLACE FUNCTION category_mirror() RETURNS TRIGGER AS $$
             NEW.name
           , NEW.title
           , NEW.description
-          , ext_schema_id(NEW.schema_id)
           , NEW.create_date
           , ext_user_id(NEW.create_user_id)
           , NEW.modify_date
@@ -76,11 +72,9 @@ CREATE OR REPLACE FUNCTION category_mirror() RETURNS TRIGGER AS $$
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
       WHEN 'UPDATE' THEN
         UPDATE category_ext
-        SET name = NEW.value
+        SET name = NEW.name
           , title = NEW.title
           , description = NEW.description
-          , attribute_id = ext_schema_id(NEW.attribute_id)
-          , "order" = NEW."order"
           , create_date = NEW.create_date
           , create_user_id = ext_user_id(NEW.create_user_id)
           , modify_date = NEW.modify_date

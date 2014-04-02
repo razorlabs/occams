@@ -16,11 +16,14 @@ CREATE FOREIGN TABLE enrollment_ext (
   , termination_date    DATE
   , reference_number    VARCHAR
 
-  , create_date         DATETIME NOT NULL
+  , create_date         TIMESTAMP NOT NULL
   , create_user_id      INTEGER NOT NULL
-  , modify_date         DATETIME NOT NULL
+  , modify_date         TIMESTAMP NOT NULL
   , modify_user_id      INTEGER NOT NULL
   , revision            INTEGER NOT NULL
+
+  , old_db          VARCHAR NOT NULL
+  , old_id          INTEGER NOT NULL
 )
 SERVER trigger_target
 OPTIONS (table_name 'enrollment');
@@ -29,9 +32,9 @@ OPTIONS (table_name 'enrollment');
 CREATE OR REPLACE FUNCTION ext_enrollment_id(id INTEGER) RETURNS SETOF integer AS $$
   BEGIN
     RETURN QUERY
-        SELECT "enrollment_ext".id
-        FROM "enrollment_ext"
-        WHERE zid = (SELECT zid FROM enrollment where id = $1);
+      SELECT "enrollment_ext".id
+      FROM "enrollment_ext"
+      WHERE (old_db, old_id) = (SELECT current_database(), $1);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -53,6 +56,8 @@ CREATE OR REPLACE FUNCTION enrollment_mirror() RETURNS TRIGGER AS $$
           , modify_date
           , modify_user_id
           , revision
+          , old_db
+          , old_id
         )
         VALUES (
             NEW.zid
@@ -67,9 +72,12 @@ CREATE OR REPLACE FUNCTION enrollment_mirror() RETURNS TRIGGER AS $$
           , NEW.modify_date
           , ext_user_id(NEW.modify_user_id)
           , NEW.revision
+          , (SELECT current_database())
+          , NEW.id
           );
       WHEN 'DELETE' THEN
-        DELETE FROM enrollment_ext WHERE zid = OLD.zid;
+        DELETE FROM enrollment_ext
+        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
       WHEN 'UPDATE' THEN
         UPDATE enrollment_ext
         SET zid = NEW.zid
@@ -84,7 +92,9 @@ CREATE OR REPLACE FUNCTION enrollment_mirror() RETURNS TRIGGER AS $$
           , modify_date = NEW.modify_date
           , modify_user_id = ext_user_id(NEW.modify_user_id)
           , revision = NEW.revision
-        WHERE zid = OLD.zid;
+          , old_db = (SELECT current_database())
+          , old_id = NEW.id
+        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
     END CASE;
     RETURN NULL;
   END;

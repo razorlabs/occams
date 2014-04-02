@@ -28,9 +28,9 @@ CREATE FOREIGN TABLE aliquot_ext (
   , special_instruction_id  INTEGER
   , previous_location_id    INTEGER
 
-  , create_date             DATETIME NOT NULL
+  , create_date             TIMESTAMP NOT NULL
   , create_user_id          INTEGER NOT NULL
-  , modify_date             DATETIME NOT NULL
+  , modify_date             TIMESTAMP NOT NULL
   , modify_user_id          INTEGER NOT NULL
   , revision                INTEGER NOT NULL
 
@@ -74,7 +74,7 @@ CREATE OR REPLACE FUNCTION aliquot_mirror() RETURNS TRIGGER AS $$
           , old_id
         )
         VALUES (
-            (SELECT id FROM speciment_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimen_id))
+            (SELECT id FROM specimen_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimen_id))
           , (SELECT id FROM aliquottype_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.aliquot_type_id))
           , (SELECT id FROM aliquotstate_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.state_id))
           , NEW.labbook
@@ -91,8 +91,8 @@ CREATE OR REPLACE FUNCTION aliquot_mirror() RETURNS TRIGGER AS $$
           , NEW.sent_name
           , NEW.sent_notes
           , NEW.notes
-          , special_instruction_id = (SELECT id FROM specialinstruction_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.special_instruction_id))
-          , previous_location_id = (SELECT id FROM location_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.previous_location_id))
+          , (SELECT id FROM specialinstruction_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.special_instruction_id))
+          , (SELECT id FROM location_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.previous_location_id))
           , NEW.create_date
           , ext_user_id(NEW.create_user_id)
           , NEW.modify_date
@@ -107,7 +107,7 @@ CREATE OR REPLACE FUNCTION aliquot_mirror() RETURNS TRIGGER AS $$
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
       WHEN 'UPDATE' THEN
         UPDATE aliquot_ext
-        SET specimen_id = (SELECT id FROM speciment_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimen_id))
+        SET specimen_id = (SELECT id FROM specimen_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimen_id))
           , aliquot_type_id = (SELECT id FROM aliquottype_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.aliquot_type_id))
           , state_id = (SELECT id FROM aliquotstate_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.state_id))
           , labbook = NEW.labbook
