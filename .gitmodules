@@ -1,0 +1,3 @@
+[submodule "src/occams/clinical/static/libs/bootstrap"]
+	path = src/occams/clinical/static/libs/bootstrap
+	url = git@github.com:twbs/bootstrap.git
