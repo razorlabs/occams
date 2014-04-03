@@ -62,7 +62,7 @@ CREATE OR REPLACE FUNCTION context_mirror() RETURNS TRIGGER AS $$
           , CASE
               WHEN NEW.external = 'patient' THEN ext_patient_id(NEW.key)
               WHEN NEW.external = 'enrollment' THEN ext_enrollment_id(NEW.key)
-              WHEN NEW.external = 'visit' THEN ext_enrollment_id(NEW.key)
+              WHEN NEW.external = 'visit' THEN ext_visit_id(NEW.key)
               WHEN NEW.external = 'stratum' THEN ext_stratum_id(NEW.key)
             END
           , NEW.create_date
@@ -85,7 +85,7 @@ CREATE OR REPLACE FUNCTION context_mirror() RETURNS TRIGGER AS $$
           , key = CASE
                     WHEN NEW.external = 'patient' THEN ext_patient_id(NEW.key)
                     WHEN NEW.external = 'enrollment' THEN ext_enrollment_id(NEW.key)
-                    WHEN NEW.external = 'visit' THEN ext_enrollment_id(NEW.key)
+                    WHEN NEW.external = 'visit' THEN ext_visit_id(NEW.key)
                     WHEN NEW.external = 'stratum' THEN ext_stratum_id(NEW.key)
                   END
           , create_date = NEW.create_date

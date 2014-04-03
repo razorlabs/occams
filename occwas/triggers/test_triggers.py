@@ -118,12 +118,13 @@ class TestTrigger(unittest.TestCase):
             with conn.begin():
                 conn.execute('TRUNCATE "user" CASCADE')
 
-    def _getRecord(self, src_table, src_id):
-        if src_table.name in set(['text', 'blob', 'integer', 'datetime',
-                                  'decimal', 'string', 'object']):
-            dst_table = self.dst_metadata.tables['value_' + src_table.name]
-        else:
-            dst_table = self.dst_metadata.tables[src_table.name]
+    def _getRecord(self, src_table, src_id, dst_table=None):
+        if dst_table is None:
+            if src_table.name in set(['text', 'blob', 'integer', 'datetime',
+                                      'decimal', 'string', 'object']):
+                dst_table = self.dst_metadata.tables['value_' + src_table.name]
+            else:
+                dst_table = self.dst_metadata.tables[src_table.name]
 
         src_data = (
             self.src_engine.execute(
@@ -257,6 +258,9 @@ class TestTrigger(unittest.TestCase):
         'visit_cycle'
     )
     def test_direct_track(self, table):
+        """
+        It should be able to directly transfer data to non-upgraded tables
+        """
         src_table = self.src_metadata.tables[table]
         dst_table = self.src_metadata.tables[table]
         overrides = {
@@ -297,23 +301,131 @@ class TestTrigger(unittest.TestCase):
         # Deletes
         self.src_conn.execute(
             src_table.delete()
-            .where(and_(*[c == i for c, i in zip(dst_table.primary_key.columns,
+            .where(and_(*[c == i for c, i in zip(src_table.primary_key.columns,
                                                  src_id)])))
         src_data, dst_data = self._getRecord(src_table, src_id)
         self.assertIsNone(src_data)
         self.assertIsNone(dst_data)
 
-    #def test_sub_objects(self):
-        #pass
+    @data('patient', 'enrollment', 'visit', 'stratum')
+    def test_context(self, external):
+        """
+        It should properly align context values
+        """
+        src_ext_table = self.src_metadata.tables[external]
+        src_table = self.src_metadata.tables['context']
+        dst_table = self.dst_metadata.tables['context']
+        overrides = {
+            'context.external': external,
+            'entity.state': 'complete',
+            'schema.state': 'published',
+            'schema.storage': 'eav',
+            'schema.is_inline': False,
+            'schema.base_schema_id': None}
 
-    #def test_attribute(self):
-        #pass
+        # Inserts
+        with self.src_engine.begin() as conn:
+            src_ext_id = populate(conn, src_ext_table)
+            overrides['context.key'] = src_ext_id[0]
+            src_id = populate(conn, src_table, overrides=overrides)
+        src_data, dst_data = self._getRecord(src_table, src_id)
+        src_data = dict(src_data.items())
+        dst_data = dict(dst_data.items())
+        src_ext_data, dst_ext_data = self._getRecord(src_ext_table, src_ext_id)
+        if external == 'user':
+            src_data['key'] = src_ext_data['our']
+            dst_data['key'] = src_ext_data['our']
+        else:
+            dst_data['key'] = src_ext_data['id']
+        self.assertRecordEqual(src_table, src_data, dst_table, dst_data)
+
+        # Updates
+        with self.src_engine.begin() as conn:
+            src_ext_id = populate(conn, src_ext_table)
+            overrides['context.key'] = src_ext_id[0]
+            src_id = populate(conn, src_table, overrides=overrides, id=src_id)
+        src_data, dst_data = self._getRecord(src_table, src_id)
+        src_data = dict(src_data.items())
+        dst_data = dict(dst_data.items())
+        src_ext_data, dst_ext_data = self._getRecord(src_ext_table, src_ext_id)
+        if external == 'user':
+            src_data['key'] = src_ext_data['our']
+            dst_data['key'] = src_ext_data['our']
+        else:
+            dst_data['key'] = src_ext_data['id']
+        self.assertRecordEqual(src_table, src_data, dst_table, dst_data)
+
+        # Deletes
+        self.src_conn.execute(
+            src_table.delete()
+            .where(and_(*[c == i for c, i in zip(src_table.primary_key.columns,
+                                                 src_id)])))
+        src_data, dst_data = self._getRecord(src_table, src_id)
+        self.assertIsNone(src_data)
+        self.assertIsNone(dst_data)
+
+    def test_value_choice(self):
+        """
+        It should redirect string choices to the value_choice table
+        """
+        src_choice_table = self.src_metadata.tables['choice']
+        src_table = self.src_metadata.tables['string']
+        dst_table = self.dst_metadata.tables['value_choice']
+        overrides = {
+            'entity.state': 'complete',
+            'schema.state': 'published',
+            'schema.storage': 'eav',
+            'schema.is_inline': False,
+            'schema.base_schema_id': None,
+            'attribute.type': 'string',
+            'attribute.is_collection': True,
+            'attribute.object_schema_id': None,
+            'attribute.value_min': None,
+            'attribute.value_max': None,
+            'attribute.collection_min': None,
+            'attribute.collection_max': None}
+
+        # Inserts
+        with self.src_engine.begin() as conn:
+            overrides['choice.value'] = value_generator[INTEGER]()
+            src_choice_id = populate(conn, src_choice_table,
+                                     overrides=overrides)
+            overrides['string.choice_id'] = src_choice_id[0]
+            overrides['string.value'] = overrides['choice.value']
+            src_id = populate(conn, src_table, overrides=overrides)
+        src_data, dst_data = self._getRecord(src_table, src_id, dst_table)
+        dst_data = dict(dst_data.items())
+        dst_data['choice_id'] = dst_data['value']
+        self.assertRecordEqual(src_table, src_data, dst_table, dst_data,
+                               ignore=['string.value'])
+
+        # Updates
+        with self.src_engine.begin() as conn:
+            overrides['choice.value'] = value_generator[INTEGER]()
+            src_choice_id = populate(conn, src_choice_table,
+                                     overrides=overrides)
+            overrides['string.choice_id'] = src_choice_id[0]
+            src_id = populate(conn, src_table, overrides=overrides, id=src_id)
+        src_data, dst_data = self._getRecord(src_table, src_id, dst_table)
+        dst_data = dict(dst_data.items())
+        dst_data['choice_id'] = dst_data['value']
+        self.assertRecordEqual(src_table, src_data, dst_table, dst_data,
+                               ignore=['string.value'])
+
+        # Deletes
+        self.src_conn.execute(
+            src_table.delete()
+            .where(and_(*[c == i for c, i in zip(src_table.primary_key.columns,
+                                                 src_id)])))
+        src_data, dst_data = self._getRecord(src_table, src_id, dst_table)
+        self.assertIsNone(src_data)
+        self.assertIsNone(dst_data)
 
     #def test_section(self):
         #pass
 
-    #def test_context(self):
+    #def test_value_object(self):
         #pass
 
-    #def test_choice(self):
+    #def test_attribute(self):
         #pass
