@@ -47,6 +47,7 @@ DROP FOREIGN TABLE IF EXISTS section_ext;
 CREATE FOREIGN TABLE section_ext (
     id              SERIAL NOT NULL
 
+  , schema_id       INTEGER NOT NULL
   , name            VARCHAR NOT NULL
   , title           VARCHAR NOT NULL
   , description     TEXT
@@ -105,9 +106,6 @@ $$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
-  DECLARE
-    ext_old_id INTEGER;
-    ext_new_id INTEGER;
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
@@ -147,7 +145,8 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
             , NEW.checksum
             , NEW.is_collection
             , NEW.is_required
-            , (SELECT current_database() LIKE '%phi%')
+            , ((SELECT current_database() LIKE '%phi%')
+                OR NEW.name = 'someone_had_early_test')
             , NEW.value_min
             , NEW.value_max
             , NEW.collection_min
@@ -175,7 +174,8 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
               )
             VALUES (
                 ext_section_id((SELECT id FROM attribute WHERE object_schema_id = NEW.schema_id))
-              , ext_attribute_id(ext_new_id));
+              , ext_attribute_id(NEW.id)
+            ) ;
           END IF;
 
         ELSE
@@ -216,6 +216,13 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
           DELETE FROM attribute_ext
           WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
         ELSE
+          -- Delete sub-attributes
+          DELETE FROM attribute_ext
+          USING section_attribute_ext, section_ext
+          WHERE section_attribute_ext.attribute_id = attribute_ext.id
+          AND   section_attribute_ext.section_id = section_ext.id
+          AND   (section_ext.old_db, section_ext.old_id) = (SELECT current_database(), OLD.id);
+          -- Finally, delete the parent attribute
           DELETE FROM section_ext
           WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
         END IF;
@@ -232,7 +239,8 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
             , checksum = NEW.checksum
             , is_collection = NEW.is_collection
             , is_required = NEW.is_required
-            , is_private = (SELECT current_database() LIKE '%phi%')
+            , is_private = ((SELECT current_database() LIKE '%phi%')
+                OR NEW.name = 'someone_had_early_test')
             , value_min = NEW.value_min
             , value_max = NEW.value_max
             , collection_min = NEW.collection_min
@@ -257,9 +265,9 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
 
             UPDATE section_attribute_ext
             SET section_id = ext_section_id((SELECT id FROM attribute WHERE object_schema_id = NEW.schema_id))
-              , attribute_id = ext_attribute_id(NEW.attribute_id)
-            WHERE section_id = ext_section_id((SELECT id FROM attribute WHERE object_schema_id = OLD.schema_id))
-            AND   attribute_id = ext_attribute_id(OLD.attribute_id);
+              , attribute_id = ext_attribute_id(NEW.id)
+            WHERE section_id = (SELECT * FROM ext_section_id((SELECT id FROM attribute WHERE object_schema_id = OLD.schema_id)))
+            AND   attribute_id = (SELECT * FROM ext_attribute_id(OLD.id));
 
           END IF;
 

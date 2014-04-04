@@ -393,6 +393,13 @@ def integrate(url):
         for table in TABLES:
             conn.execute('ALTER TABLE "{0}" DROP COLUMN mrg_id'.format(table))
 
+        # EarlyTest.someone_had_early_test is PHI, but in FIA
+        conn.execute("""
+            UPDATE attribute
+            SET is_private = TRUE
+            WHERE attribute.name = 'someone_had_early_test'
+            """)
+
 
 if __name__ == '__main__':
     main()

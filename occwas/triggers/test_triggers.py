@@ -99,24 +99,29 @@ def populate(conn, table, overrides={}, id=None):
             return id
 
 
+def truncate_all(conn):
+    # Cleanup the databaes before we begin (expensive)
+    with conn.begin():
+        conn.execute('TRUNCATE "user" CASCADE')
+
+
 @ddt
 class TestTrigger(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.src_engine = create_engine(config['src'], echo=ECHO)
-        cls.dst_engine = create_engine(config['dst'], echo=ECHO)
-        cls.src_conn = cls.src_engine.connect()
-        cls.dst_conn = cls.dst_engine.connect()
-        cls.src_metadata = MetaData(bind=cls.src_engine)
+        cls._src_engine = create_engine(config['src'], echo=ECHO)
+        cls._dst_engine = create_engine(config['dst'], echo=ECHO)
+        cls.src_conn = cls._src_engine.connect()
+        cls.dst_conn = cls._dst_engine.connect()
+        cls.src_metadata = MetaData(bind=cls._src_engine)
         cls.src_metadata.reflect()
-        cls.dst_metadata = MetaData(bind=cls.dst_engine)
+        cls.dst_metadata = MetaData(bind=cls._dst_engine)
         cls.dst_metadata.reflect()
 
-        # Cleanup the databaes before we begin (expensive)
-        for conn in (cls.src_conn, cls.dst_conn):
-            with conn.begin():
-                conn.execute('TRUNCATE "user" CASCADE')
+        # CLEAN THE DATABASE OF PREVIOUS RUNS/ERRORS/MODIFICATIONS/ETC
+        truncate_all(cls.src_conn)
+        truncate_all(cls.dst_conn)
 
     def _getRecord(self, src_table, src_id, dst_table=None):
         if dst_table is None:
@@ -127,7 +132,7 @@ class TestTrigger(unittest.TestCase):
                 dst_table = self.dst_metadata.tables[src_table.name]
 
         src_data = (
-            self.src_engine.execute(
+            self.src_conn.execute(
                 src_table.select()
                 .where(and_(*[c == i
                             for c, i in zip(src_table.primary_key.columns,
@@ -140,21 +145,21 @@ class TestTrigger(unittest.TestCase):
         # One-to-many, one-to-one
         if src_table.name == 'user':
             dst_data = (
-                self.dst_engine.execute(
+                self.dst_conn.execute(
                     dst_table.select()
                     .where(dst_table.c.key == src_data['key']))
                 .fetchone())
 
         elif dst_table.name == 'patient':
             dst_data = (
-                self.dst_engine.execute(
+                self.dst_conn.execute(
                     dst_table.select()
                     .where(dst_table.c.zid == src_data['zid']))
                 .fetchone())
 
         elif len(src_table.primary_key.columns) < 2:
             dst_data = (
-                self.dst_engine.execute(
+                self.dst_conn.execute(
                     dst_table.select()
                     .where(
                         (dst_table.c.old_db == src_table.bind.url.database) &
@@ -168,7 +173,7 @@ class TestTrigger(unittest.TestCase):
                 _, dst_data = self._getRecord(dep_table, [id])
                 dst_ids.append(dst_data['id'])
             dst_data = (
-                self.dst_engine.execute(
+                self.dst_conn.execute(
                     dst_table.select()
                     .where(and_(*[c == i
                                 for c, i in zip(dst_table.primary_key.columns,
@@ -281,8 +286,8 @@ class TestTrigger(unittest.TestCase):
             'string.choice_id': None}
 
         # Inserts
-        with self.src_engine.begin() as conn:
-            src_id = populate(conn, src_table, overrides=overrides)
+        with self.src_conn.begin():
+            src_id = populate(self.src_conn, src_table, overrides=overrides)
         src_data, dst_data = self._getRecord(src_table, src_id)
         self.assertRecordEqual(src_table, src_data, dst_table, dst_data,
                                ignore=['schema.state',
@@ -290,8 +295,9 @@ class TestTrigger(unittest.TestCase):
                                        'entity.state'])
 
         # Updates
-        with self.src_engine.begin() as conn:
-            src_id = populate(conn, src_table, overrides=overrides, id=src_id)
+        with self.src_conn.begin():
+            src_id = populate(self.src_conn, src_table,
+                              overrides=overrides, id=src_id)
         src_data, dst_data = self._getRecord(src_table, src_id)
         self.assertRecordEqual(src_table, src_data, dst_table, dst_data,
                                ignore=['schema.state',
@@ -324,10 +330,10 @@ class TestTrigger(unittest.TestCase):
             'schema.base_schema_id': None}
 
         # Inserts
-        with self.src_engine.begin() as conn:
-            src_ext_id = populate(conn, src_ext_table)
+        with self.src_conn.begin():
+            src_ext_id = populate(self.src_conn, src_ext_table)
             overrides['context.key'] = src_ext_id[0]
-            src_id = populate(conn, src_table, overrides=overrides)
+            src_id = populate(self.src_conn, src_table, overrides=overrides)
         src_data, dst_data = self._getRecord(src_table, src_id)
         src_data = dict(src_data.items())
         dst_data = dict(dst_data.items())
@@ -340,10 +346,11 @@ class TestTrigger(unittest.TestCase):
         self.assertRecordEqual(src_table, src_data, dst_table, dst_data)
 
         # Updates
-        with self.src_engine.begin() as conn:
-            src_ext_id = populate(conn, src_ext_table)
+        with self.src_conn.begin():
+            src_ext_id = populate(self.src_conn, src_ext_table)
             overrides['context.key'] = src_ext_id[0]
-            src_id = populate(conn, src_table, overrides=overrides, id=src_id)
+            src_id = populate(self.src_conn, src_table,
+                              overrides=overrides, id=src_id)
         src_data, dst_data = self._getRecord(src_table, src_id)
         src_data = dict(src_data.items())
         dst_data = dict(dst_data.items())
@@ -386,13 +393,13 @@ class TestTrigger(unittest.TestCase):
             'attribute.collection_max': None}
 
         # Inserts
-        with self.src_engine.begin() as conn:
+        with self.src_conn.begin():
             overrides['choice.value'] = value_generator[INTEGER]()
-            src_choice_id = populate(conn, src_choice_table,
+            src_choice_id = populate(self.src_conn, src_choice_table,
                                      overrides=overrides)
             overrides['string.choice_id'] = src_choice_id[0]
             overrides['string.value'] = overrides['choice.value']
-            src_id = populate(conn, src_table, overrides=overrides)
+            src_id = populate(self.src_conn, src_table, overrides=overrides)
         src_data, dst_data = self._getRecord(src_table, src_id, dst_table)
         dst_data = dict(dst_data.items())
         dst_data['choice_id'] = dst_data['value']
@@ -400,12 +407,13 @@ class TestTrigger(unittest.TestCase):
                                ignore=['string.value'])
 
         # Updates
-        with self.src_engine.begin() as conn:
+        with self.src_conn.begin():
             overrides['choice.value'] = value_generator[INTEGER]()
-            src_choice_id = populate(conn, src_choice_table,
+            src_choice_id = populate(self.src_conn, src_choice_table,
                                      overrides=overrides)
             overrides['string.choice_id'] = src_choice_id[0]
-            src_id = populate(conn, src_table, overrides=overrides, id=src_id)
+            src_id = populate(self.src_conn, src_table,
+                              overrides=overrides, id=src_id)
         src_data, dst_data = self._getRecord(src_table, src_id, dst_table)
         dst_data = dict(dst_data.items())
         dst_data['choice_id'] = dst_data['value']
@@ -421,11 +429,336 @@ class TestTrigger(unittest.TestCase):
         self.assertIsNone(src_data)
         self.assertIsNone(dst_data)
 
-    #def test_section(self):
-        #pass
+    def test_section(self):
+        """
+        It should direct parent-attribtes to sections
+        """
+        src_schema_table = self.src_metadata.tables['schema']
+        src_attr_table = self.src_metadata.tables['attribute']
+        src_user_table = self.src_metadata.tables['user']
 
-    #def test_value_object(self):
-        #pass
+        dst_attr_table = self.dst_metadata.tables['attribute']
+        dst_sect_table = self.dst_metadata.tables['section']
+        dst_sectattr_table = self.dst_metadata.tables['section_attribute']
 
-    #def test_attribute(self):
-        #pass
+        # Ignore these in the parent attribute as they aren't copied to a
+        # section
+        src_pattr_ignore = [
+            'attribute.type',
+            'attribute.checksum',
+            'attribute.is_collection',
+            'attribute.is_required',
+            'attribute.object_schema_id',
+            'attribute.value_min',
+            'attribute.value_max',
+            'attribute.collection_min',
+            'attribute.collection_max',
+            'attribute.validator']
+
+        # Inserts
+        with self.src_conn.begin():
+            src_user_id, = self.src_conn.execute(
+                src_user_table.insert().values(key=value_generator[VARCHAR]())
+                ).inserted_primary_key
+            src_pschema_id, = self.src_conn.execute(
+                src_schema_table.insert()
+                .values(
+                    name=value_generator[VARCHAR](),
+                    title=value_generator[VARCHAR](),
+                    is_inline=False,
+                    create_user_id=src_user_id,
+                    modify_user_id=src_user_id,
+                    revision=1)
+                ).inserted_primary_key
+            src_cschema_id, = self.src_conn.execute(
+                src_schema_table.insert()
+                .values(
+                    name=value_generator[VARCHAR](),
+                    title='',
+                    is_inline=True,
+                    create_user_id=src_user_id,
+                    modify_user_id=src_user_id,
+                    revision=1)
+                ).inserted_primary_key
+            src_pattr_id, = self.src_conn.execute(
+                src_attr_table.insert()
+                .values(
+                    schema_id=src_pschema_id,
+                    name=value_generator[VARCHAR](),
+                    title=value_generator[VARCHAR](),
+                    description=value_generator[VARCHAR](),
+                    type='object',
+                    checksum='',
+                    is_collection=False,
+                    is_required=True,
+                    object_schema_id=src_cschema_id,
+                    order=0,
+                    create_user_id=src_user_id,
+                    modify_user_id=src_user_id,
+                    revision=1)
+                ).inserted_primary_key
+            src_cattr_id, = self.src_conn.execute(
+                src_attr_table.insert()
+                .values(
+                    schema_id=src_cschema_id,
+                    name=value_generator[VARCHAR](),
+                    title=value_generator[VARCHAR](),
+                    type='string',
+                    checksum='',
+                    is_collection=False,
+                    is_required=True,
+                    order=0,
+                    create_user_id=src_user_id,
+                    modify_user_id=src_user_id,
+                    revision=1)
+                ).inserted_primary_key
+        # Make sure parent attribute -> section
+        src_pattr_data = self.src_conn.execute(
+            src_attr_table.select().where(
+                src_attr_table.c.id == src_pattr_id)
+            ).fetchone()
+        dst_sect_data = self.dst_conn.execute(
+            dst_sect_table.select().where(
+                dst_sect_table.c.old_id == src_pattr_id)
+            ).fetchone()
+        self.assertRecordEqual(src_attr_table, src_pattr_data,
+                               dst_sect_table, dst_sect_data,
+                               ignore=src_pattr_ignore)
+        # Sub-attributes will be listed in the join table
+        dst_attr_data = self.dst_conn.execute(
+            dst_attr_table.select().where(
+                dst_attr_table.c.old_id == src_cattr_id)
+            ).fetchone()
+        dst_sa_data = self.dst_conn.execute(
+            dst_sectattr_table.select().where(
+                (dst_sectattr_table.c.section_id == dst_sect_data['id']) &
+                (dst_sectattr_table.c.attribute_id == dst_attr_data['id']))
+            ).fetchone()
+        self.assertIsNotNone(dst_sa_data)
+
+        # Now "move" the sub-attribute to a new child schema (i.e. section)
+        with self.src_conn.begin():
+            src_cschema_id, = self.src_conn.execute(
+                src_schema_table.insert()
+                .values(
+                    name=value_generator[VARCHAR](),
+                    title='',
+                    description=value_generator[VARCHAR](),
+                    is_inline=True,
+                    create_user_id=src_user_id,
+                    modify_user_id=src_user_id,
+                    revision=1)
+                ).inserted_primary_key
+            src_pattr_id, = self.src_conn.execute(
+                src_attr_table.insert()
+                .values(
+                    schema_id=src_pschema_id,
+                    name=value_generator[VARCHAR](),
+                    title=value_generator[VARCHAR](),
+                    description=value_generator[VARCHAR](),
+                    type='object',
+                    checksum='',
+                    is_collection=False,
+                    is_required=True,
+                    object_schema_id=src_cschema_id,
+                    order=1,
+                    create_user_id=src_user_id,
+                    modify_user_id=src_user_id,
+                    revision=1)
+                ).inserted_primary_key
+            self.src_conn.execute(
+                src_attr_table.update()
+                .where(src_attr_table.c.id == src_cattr_id)
+                .values(schema_id=src_cschema_id))
+        dst_attr_data = self.dst_conn.execute(
+            dst_attr_table.select().where(
+                dst_attr_table.c.old_id == src_cattr_id)
+            ).fetchone()
+        dst_sect_data = self.dst_conn.execute(
+            dst_sect_table.select().where(
+                dst_sect_table.c.old_id == src_pattr_id)
+            ).fetchone()
+        dst_sa_data = self.dst_conn.execute(
+            dst_sectattr_table.select().where(
+                (dst_sectattr_table.c.section_id == dst_sect_data['id']) &
+                (dst_sectattr_table.c.attribute_id == dst_attr_data['id']))
+            ).fetchone()
+        self.assertIsNotNone(dst_sa_data)
+
+        # Update the actual parent attribute (which should update the section)
+        with self.src_conn.begin():
+            self.src_conn.execute(
+                src_attr_table.update()
+                .where(src_attr_table.c.id == src_pattr_id)
+                .values(
+                    title=value_generator[VARCHAR](),
+                    description=value_generator[VARCHAR]()))
+        src_pattr_data = self.src_conn.execute(
+            src_attr_table.select().where(
+                src_attr_table.c.id == src_pattr_id)
+            ).fetchone()
+        dst_sect_data = self.dst_conn.execute(
+            dst_sect_table.select().where(
+                dst_sect_table.c.old_id == src_pattr_id)
+            ).fetchone()
+        self.assertRecordEqual(src_attr_table, src_pattr_data,
+                               dst_sect_table, dst_sect_data,
+                               ignore=src_pattr_ignore)
+
+        # Delete the parent attribute
+        with self.src_conn.begin():
+            self.src_conn.execute(
+                src_attr_table.delete()
+                .where(src_attr_table.c.id == src_pattr_id))
+        dst_sect_data = self.dst_conn.execute(
+            dst_sect_table.select().where(
+                dst_sect_table.c.old_id == src_pattr_id)
+            ).fetchone()
+        dst_attr_data = self.dst_conn.execute(
+            dst_attr_table.select().where(
+                dst_sect_table.c.old_id == src_cattr_id)
+            ).fetchone()
+        self.assertIsNone(dst_sect_data)
+        self.assertIsNone(dst_attr_data)
+
+    @data('string', 'integer', 'decimal', 'datetime', 'blob', 'text')
+    def test_sub_value(self, type):
+        """
+        It should be able to keep sub-values/attributes flattened in the new
+        system
+        """
+        src_schema_table = self.src_metadata.tables['schema']
+        src_attr_table = self.src_metadata.tables['attribute']
+        src_user_table = self.src_metadata.tables['user']
+        src_entity_table = self.src_metadata.tables['entity']
+        src_object_table = self.src_metadata.tables['object']
+        src_value_table = self.src_metadata.tables[type]
+
+        dst_schema_table = self.dst_metadata.tables['schema']
+        dst_attr_table = self.dst_metadata.tables['attribute']
+        dst_entity_table = self.dst_metadata.tables['entity']
+        dst_value_table = self.dst_metadata.tables['value_' + type]
+
+        # Inserts
+        with self.src_conn.begin():
+            src_user_id, = self.src_conn.execute(
+                src_user_table.insert().values(key=value_generator[VARCHAR]())
+                ).inserted_primary_key
+            src_pschema_id, = self.src_conn.execute(
+                src_schema_table.insert()
+                .values(
+                    name=value_generator[VARCHAR](),
+                    title=value_generator[VARCHAR](),
+                    is_inline=False,
+                    create_user_id=src_user_id,
+                    modify_user_id=src_user_id,
+                    revision=1)
+                ).inserted_primary_key
+            src_cschema_id, = self.src_conn.execute(
+                src_schema_table.insert()
+                .values(
+                    name=value_generator[VARCHAR](),
+                    title=value_generator[VARCHAR](),
+                    is_inline=True,
+                    create_user_id=src_user_id,
+                    modify_user_id=src_user_id,
+                    revision=1)
+                ).inserted_primary_key
+            src_pattr_id, = self.src_conn.execute(
+                src_attr_table.insert()
+                .values(
+                    schema_id=src_pschema_id,
+                    name=value_generator[VARCHAR](),
+                    title=value_generator[VARCHAR](),
+                    description=value_generator[VARCHAR](),
+                    type='object',
+                    checksum=value_generator[VARCHAR](),
+                    is_collection=False,
+                    is_required=True,
+                    object_schema_id=src_cschema_id,
+                    order=0,
+                    create_user_id=src_user_id,
+                    modify_user_id=src_user_id,
+                    revision=1)
+                ).inserted_primary_key
+            src_cattr_id, = self.src_conn.execute(
+                src_attr_table.insert()
+                .values(
+                    schema_id=src_cschema_id,
+                    name=value_generator[VARCHAR](),
+                    title=value_generator[VARCHAR](),
+                    type=type,
+                    checksum='',
+                    is_collection=False,
+                    is_required=True,
+                    order=0,
+                    create_user_id=src_user_id,
+                    modify_user_id=src_user_id,
+                    revision=1)
+                ).inserted_primary_key
+            src_pentity_id, = self.src_conn.execute(
+                src_entity_table.insert()
+                .values(
+                    schema_id=src_pschema_id,
+                    name=value_generator[VARCHAR](),
+                    title=value_generator[VARCHAR](),
+                    collect_date=value_generator[DATE](),
+                    create_user_id=src_user_id,
+                    modify_user_id=src_user_id,
+                    revision=1)
+                ).inserted_primary_key
+            src_centity_id, = self.src_conn.execute(
+                src_entity_table.insert()
+                .values(
+                    schema_id=src_cschema_id,
+                    name=value_generator[VARCHAR](),
+                    title=value_generator[VARCHAR](),
+                    collect_date=value_generator[DATE](),
+                    create_user_id=src_user_id,
+                    modify_user_id=src_user_id,
+                    revision=1)
+                ).inserted_primary_key
+            src_object_id, = self.src_conn.execute(
+                src_object_table.insert()
+                .values(
+                    entity_id=src_pentity_id,
+                    attribute_id=src_pattr_id,
+                    value=src_centity_id,
+                    create_user_id=src_user_id,
+                    modify_user_id=src_user_id,
+                    revision=1)
+                ).inserted_primary_key
+            src_value_id, = self.src_conn.execute(
+                src_value_table.insert()
+                .values(
+                    entity_id=src_centity_id,
+                    attribute_id=src_cattr_id,
+                    value=value_generator[
+                        src_value_table.c.value.type.__class__](),
+                    create_user_id=src_user_id,
+                    modify_user_id=src_user_id,
+                    revision=1)
+                ).inserted_primary_key
+        # Ensure schema is still flat on the new system
+        dst_pschema_data = self.dst_conn.execute(
+            dst_schema_table.select().where(
+                dst_schema_table.c.old_id == src_pschema_id)
+            ).fetchone()
+        dst_cattr_data = self.dst_conn.execute(
+            dst_attr_table.select().where(
+                dst_attr_table.c.old_id == src_cattr_id)
+            ).fetchone()
+        self.assertEqual(dst_pschema_data['id'],
+                         dst_cattr_data['schema_id'])
+
+        # Ensure the data is still flat in the new system
+        dst_entity_data = self.dst_conn.execute(
+            dst_entity_table.select().where(
+                dst_entity_table.c.old_id == src_pentity_id)
+            ).fetchone()
+        dst_value_data = self.dst_conn.execute(
+            dst_value_table.select().where(
+                dst_value_table.c.old_id == src_value_id)
+            ).fetchone()
+        self.assertEqual(dst_entity_data['id'],
+                         dst_value_data['entity_id'])
