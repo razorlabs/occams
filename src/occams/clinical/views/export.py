@@ -22,7 +22,7 @@ from ..widgets.pager import Pager
 @view_config(
     route_name='export_home',
     permission='fia_view',
-    renderer='occams.clinical:templates/export/about.pt')
+    renderer='occams.clinical:templates/export/home.pt')
 def about(request):
     """
     General intro-page so users know what they're getting into.

@@ -45,6 +45,7 @@ REQUIRES = [
 EXTRAS = {
     'sqlite': [],
     'postgresql': ['psycopg2', 'psycogreen'],
+    'gunicorn': ['gunicorn'],
     'test': [
         'pyramid_debugtoolbar',
         'nose',

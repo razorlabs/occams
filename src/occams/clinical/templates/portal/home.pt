@@ -2,42 +2,22 @@
   <metal:content-slot fill-slot="content-slot">
 
     <!--! Recent Patients -->
-
-    <div tal:switch="recent_count > 0">
-      <h3 i18n:translate="">Recently Updated</h3>
-      <table tal:case="True" class="table table-bordered table-striped">
-        <thead>
-          <tr>
-            <th i18n:translate="">Patient</th>
-            <th i18n:translate="">Site</th>
-            <th i18n:translate="">Enrollments</th>
-            <th i18n:translate="">Modified</th>
-            <th i18n:translate="">Modifier</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr tal:repeat="recent recent_list">
-            <td><a href="${request.route_path('patient_view', pid=recent.Patient.our)}">${recent.Patient.our}</a></td>
-            <td>${recent.Patient.site.title}</td>
-            <td
-              tal:define="
-                enrollments recent.Patient.enrollments;
-                codes sorted(list(set([e.study.code for e in enrollments])));">
-              <span
-                  tal:repeat="code codes"
-                  class="label label-default">${code}</span>
-            </td>
-            <td>${recent.access_date.date()}</td>
-            <td>${recent.Patient.modify_user.key}</td>
-          </tr>
-        </tbody>
-      </table>
-      <div tal:case="False" class="alert alert-info" i18n:translate="">
-        No recent activity!
-      </div>
+    <div class="jumbotron">
+      <h1 i18n:translate="">Welcome!</h1>
+      <p i18n:translate="">
+        This application is currently a work in progress. In the future all OCCAMS Clinical
+        functionality will be availble from here.
+      </p>
+      <p i18n:translate="">
+        In the meantime, only exporting of data is availble.
+      </p>
+      <p>
+        <a class="btn btn-primary btn-lg"
+            role="button"
+            href="${request.route_path('export_home')}"
+            i18n:translate="">Generate an export.</a>
+      </p>
     </div>
-
-    <!-- Search Results -->
 
   </metal:content-slot>
 </html>
