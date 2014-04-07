@@ -87,7 +87,6 @@
     var socket = io.connect('/export', {
       resource: $('body').data('socket-io-resource')});
     socket.on('connect', function(){
-      console.log('connected!');
       socket.on('export', function(data){
         $.each(self.exports(), function(i, export_) {
           // find the appropriate export and update it's data

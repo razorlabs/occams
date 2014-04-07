@@ -45,21 +45,24 @@ Serving with gUnicorn (for development)
 
   watchmedo auto-restart \
             --ignore-pattern "*/alembic/*;*/tests/*" \
-            --pattern "*.py;*.ini;*.yml" \
+            --pattern "*.py;*.ini" \
             --directory ./src \
             --recursive \
             -- \
             gunicorn --paste <YOURINI>
 
-
-
 ::
-
-  celery worker \
-         --app "occams.clinical.tasks" \
-         --loglevel INFO \
-         --autoreload  \
-         --ini <YOURINI>
+  watchmedo auto-restart
+            --ignore-pattern "*/alembic/*;*/tests/*" \
+            --pattern "*.py;*.ini" \
+            --directory ./src \
+            --recursive \
+            -- \
+            celery worker \
+            --app "occams.clinical.tasks" \
+            --loglevel INFO \
+            --without-gossip \
+            --ini <YOURINI>
 
 
 Serving with gUnicorn (for production)
@@ -74,5 +77,6 @@ Serving with gUnicorn (for production)
 
   celery worker \
            --app "occams.clinical.tasks" \
+           --without-gossip \
            --loglevel INFO \
            --init <YOURINI>

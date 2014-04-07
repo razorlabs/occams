@@ -1,9 +1,10 @@
 """
 Generate form exports with contextual information.
 """
-from sqlalchemy import null
 
 from six import itervalues
+from sqlalchemy import null, cast, String
+
 from occams.datastore.reporting import build_report
 from occams.datastore.utils.sql import group_concat
 
@@ -25,20 +26,16 @@ class SchemaPlan(ExportPlan):
         return report
 
     def codebook(self):
-        sites_query = Session.query(models.Site) .order_by(models.Site.id)
-        states_query = Session.query(models.State).order_by(models.State.id)
-
         knowns = [
             row('id', self.name, types.NUMERIC, is_required=True),
             row('pid', self.name, types.STRING, is_required=True),
-            row('site', self.name, types.CHOICE, is_required=True,
-                choices=[(s.id, s.title) for s in sites_query]),
+            row('site', self.name, types.STRING, is_required=True),
             row('enrollments', self.name, types.STRING, is_collection=True),
-            row('cycles', self.name, types.STRING, is_collection=True),
+            row('visit_cycles', self.name, types.STRING, is_collection=True),
             row('form', self.name, types.STRING, is_required=True),
             row('publish_date', self.name, types.STRING, is_required=True),
-            row('state', self.name, types.STRING, is_required=True,
-                choices=[(s.id, s.title) for s in states_query]),
+            row('state', self.name, types.STRING, is_required=True),
+            row('visit_date', self.name, types.DATE),
             row('collect_date', self.name, types.DATE, is_required=True),
             row('is_null', self.name, types.BOOLEAN, is_required=True),
             row('create_date', self.name, types.DATE, is_required=True),
@@ -107,9 +104,7 @@ class SchemaPlan(ExportPlan):
         query = (
             Session.query(report.c.id.label('id'))
             .add_column(
-                Session.query(
-                    models.Site.name
-                    if use_choice_labels else models.Site.id)
+                Session.query(models.Site.name)
                 .select_from(models.Patient)
                 .join(models.Site)
                 .join(models.Context,
@@ -141,9 +136,34 @@ class SchemaPlan(ExportPlan):
                 .as_scalar()
                 .label('enrollment'))
             .add_column(
-                Session.query(group_concat(models.Cycle.name, ';'))
+                Session.query(models.Visit.id)
+                .select_from(models.Visit)
+                .join(models.Context,
+                      (models.Context.external == 'visit')
+                      & (models.Context.key == models.Visit.id))
+                .filter(models.Context.entity_id == report.c.id)
+                .correlate(report)
+                .as_scalar()
+                .label('visit_id'))
+            .add_column(
+                Session.query(models.Visit.visit_date)
+                .select_from(models.Visit)
+                .join(models.Context,
+                      (models.Context.external == 'visit')
+                      & (models.Context.key == models.Visit.id))
+                .filter(models.Context.entity_id == report.c.id)
+                .correlate(report)
+                .as_scalar()
+                .label('visit_date'))
+            .add_column(
+                Session.query(group_concat(models.Study.title
+                                           + '('
+                                           + cast(models.Cycle.week, String)
+                                           + ')',
+                                           ';'))
                 .select_from(models.Visit)
                 .join(models.Visit.cycles)
+                .join(models.Cycle.study)
                 .join(models.Context,
                       (models.Context.external == 'visit')
                       & (models.Context.key == models.Visit.id))
@@ -151,7 +171,7 @@ class SchemaPlan(ExportPlan):
                 .group_by(report.c.id)
                 .correlate(report)
                 .as_scalar()
-                .label('cycles'))
+                .label('visit_cycles'))
             .add_columns(
                 *[c for c in report.columns if c.name != 'id']))
         return query
