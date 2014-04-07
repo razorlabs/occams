@@ -4,8 +4,8 @@ from setuptools import setup, find_packages
 import sys
 
 HERE = os.path.abspath(os.path.dirname(__file__))
-README = open(os.path.join(HERE, 'README.md')).read()
-CHANGES = open(os.path.join(HERE, 'CHANGES.md')).read()
+README = open(os.path.join(HERE, 'README.rst')).read()
+CHANGES = open(os.path.join(HERE, 'CHANGES.rst')).read()
 
 
 REQUIRES = [
