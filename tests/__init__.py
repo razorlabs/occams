@@ -1,25 +1,76 @@
-import os.path
+"""
+Testing fixtures
+
+To specify a pyramid configuration use:
+
+    nosetests --tc=ini:/path/to/my/config.ini
+
+"""
 import threading
-import unittest
-
-from pyramid import testing
-from pyramid.security import has_permission
-from pyramid.paster import get_appsettings, get_app
-from webtest import TestApp
-from sqlalchemy import engine_from_config
-import transaction
-
-from occams.clinical import Session, RosterSession, models
-from occams.datastore import model as datastore
-from occams.roster import model as roster
+try:
+    import unittest2 as unittest
+except ImportError:
+    import unittest
+from testconfig import config
 
 
-HERE = os.path.abspath(os.path.dirname(__file__))
-TEST_INI = os.path.join(HERE, 'app.ini')
+INI = config['ini']
 
-REDIS_URL = 'redis://localhost:6379/9'
-CLINICAL_URL = 'sqlite://'
-ROSTER_URL = 'sqlite://'
+
+def setup_package():
+    """
+    Sets up the package-wide fixture.
+
+    Useful for installing system-wide heavy resources such as a database.
+    (Costly to do per-test or per-fixture)
+    """
+    from pyramid.paster import get_appsettings
+    from sqlalchemy import engine_from_config
+    from occams.clinical import Session, models as clinical
+    from occams.datastore import models as datastore
+    from occams.roster import Session as RosterSession
+    from occams.roster import models as roster
+
+    settings = get_appsettings(INI)
+
+    Session.configure(bind=engine_from_config(settings, 'app.db.'))
+    RosterSession.configure(bind=engine_from_config(settings, 'pid.db.'))
+
+    datastore.DataStoreModel.metadata.create_all(Session.bind)
+    clinical.Base.metadata.create_all(Session.bind)
+    roster.Base.metadata.create_all(RosterSession.bind)
+
+
+def teardown_package():
+    """
+    Releases system-wide fixtures
+    """
+    import os
+    from occams.clinical import Session, models as clinical
+    from occams.datastore import models as datastore
+    from occams.roster import Session as RosterSession
+    from occams.roster import models as roster
+
+    roster.Base.metadata.drop_all(RosterSession.bind)
+    clinical.Base.metadata.drop_all(Session.bind)
+    datastore.DataStoreModel.metadata.drop_all(Session.bind)
+
+    for session in (Session, RosterSession):
+        if session.bind.url.drivername == 'sqlite':
+            os.remove(session.bind.url.database)
+
+
+def add_user(userid, is_current=True):
+    """
+    Helper method to add a user to the database
+    Optionally sets it the "current" user so that data entry can be blamed
+    on the user id.
+    """
+    from occams.clinical import Session, models
+    Session.add(models.User(key=userid))
+    Session.flush()
+    if is_current:
+        Session.info['user'] = userid
 
 
 class IntegrationFixture(unittest.TestCase):
@@ -27,33 +78,17 @@ class IntegrationFixture(unittest.TestCase):
     Fixure for testing component integration
     """
 
-    @classmethod
-    def setUpClass(cls):
-        cls.settings = settings = get_appsettings(TEST_INI)
-        Session.configure(bind=engine_from_config(settings, 'clinicaldb.'))
-        RosterSession.configure(bind=engine_from_config(settings, 'rosterdb.'))
-        create_db()
-
-    @classmethod
-    def tearDownClass(cls):
-        drop_db()
-        disconnect_db()
-
     def setUp(self):
+        from pyramid import testing
+        #import transaction
         self.config = testing.setUp()
-        self.config.add_request_method(
-            lambda r, n: has_permission(n, r.context, r),
-            'has_permission')
+        #transaction.begin()
 
     def tearDown(self):
+        from pyramid import testing
+        import transaction
         testing.tearDown()
         transaction.abort()
-
-    def add_user(self, userid, is_current=True):
-        Session.add(datastore.User(key=userid))
-        Session.flush()
-        if is_current:
-            Session.info['user'] = userid
 
 
 class FunctionalFixture(unittest.TestCase):
@@ -64,20 +99,30 @@ class FunctionalFixture(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.app = get_app(TEST_INI)
+        from pyramid.paster import get_app
+        cls.app = get_app(INI)
 
     def setUp(self):
+        from webtest import TestApp
         self.app = TestApp(self.app)
-        create_db()
 
     def tearDown(self):
-        drop_db()
-        disconnect_db()
-
-    def add_user(self, userid):
-        Session.add(datastore.User(key=userid))
-        Session.flush()
-        Session.info['user'] = userid
+        import transaction
+        from occams.clinical import Session, models as clinical
+        from occams.datastore import models as datastore
+        from occams.roster import Session as RosterSession
+        from occams.roster import models as roster
+        with transaction.manager:
+            Session.query(clinical.Site).delete('fetch')
+            Session.query(clinical.Study).delete('fetch')
+            Session.query(clinical.Partner).delete('fetch')
+            Session.query(datastore.Schema).delete('fetch')
+            Session.query(datastore.Category).delete('fetch')
+            Session.query(datastore.User).delete('fetch')
+            Session.query(roster.Site).delete('fetch')
+            Session.query(roster.Identifier).delete('fetch')
+        Session.remove()
+        RosterSession.remove()
 
     def make_environ(self, userid='testuser', properties={}, groups=()):
         """
@@ -93,12 +138,12 @@ class FunctionalFixture(unittest.TestCase):
                 'properties': properties,
                 'groups': groups}}
 
-    def assertCanView(self, url, environ=None, msg=None):
+    def assert_can_view(self, url, environ=None, msg=None):
         response = self.app.get(url, extra_environ=environ)
         if response.status_code != 200:
             raise AssertionError(msg or 'Cannot view %s' % url)
 
-    def assertCannotView(self, url, environ=None, msg=None):
+    def assert_cannot_view(self, url, environ=None, msg=None):
         response = self.app.get(url, extra_environ=environ, status='*')
         if response.status_code not in (401, 403):
             raise AssertionError(msg or 'Can view %s' % url)
@@ -129,20 +174,3 @@ class PubSubListener(threading.Thread):
                 break
             if item['type'] == 'message':
                 self.messages.append(item['data'])
-
-
-def create_db():
-    datastore.DataStoreModel.metadata.create_all(Session.bind)
-    models.ClinicalModel.metadata.create_all(Session.bind)
-    roster.Model.metadata.create_all(RosterSession.bind)
-
-
-def drop_db():
-    roster.Model.metadata.drop_all(RosterSession.bind)
-    models.ClinicalModel.metadata.drop_all(Session.bind)
-    datastore.DataStoreModel.metadata.drop_all(Session.bind)
-
-
-def disconnect_db():
-    Session.remove()
-    RosterSession.remove()

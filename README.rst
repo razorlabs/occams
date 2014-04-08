@@ -52,7 +52,8 @@ Serving with gUnicorn (for development)
             gunicorn --paste <YOURINI>
 
 ::
-  watchmedo auto-restart
+
+  watchmedo auto-restart \
             --ignore-pattern "*/alembic/*;*/tests/*" \
             --pattern "*.py;*.ini" \
             --directory ./src \
