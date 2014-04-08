@@ -36,7 +36,8 @@ from .security import track_user
 celery = Celery(__name__)
 
 celery.user_options['worker'].add(
-    Option('--ini', help='Pyramid config file'))
+    Option('--ini', help='Pyramid config file')
+)
 
 log = get_task_logger(__name__)
 
@@ -107,10 +108,25 @@ class ExportTask(Task):
                   task_id, exc, einfo))
         redis = celery.redis
         export = Session.query(models.Export).filter_by(name=task_id).one()
-        export.status = 'failed'
+        export.status = u'failed'
         Session.flush()
         redis.hset(export.redis_key, 'status', export.status)
         redis.publish('export', json.dumps(redis.hgetall(export.redis_key)))
+
+    @in_transaction
+    def on_success(self, retval, task_id, args, kwargs):
+        export = Session.query(models.Export).filter_by(name=task_id).one()
+        export.status = 'complete'
+        path = os.path.join(celery.settings['app.export.dir'], export.name)
+        redis = celery.redis
+        redis_key = export.redis_key
+        file_size = humanize.naturalsize(os.path.getsize(path))
+        redis.hmset(redis_key, {
+            'status': export.status,
+            'file_size': file_size
+        })
+        Session.flush()
+        redis.publish('export', json.dumps(redis.hgetall(redis_key)))
 
 
 @celery.task(name='make_export', base=ExportTask, ignore_result=True)
@@ -137,6 +153,7 @@ def make_export(name):
 
     """
     export = Session.query(models.Export).filter_by(name=name).one()
+    contents = export.contents
 
     redis = celery.redis
     redis_key = export.redis_key
@@ -146,17 +163,18 @@ def make_export(name):
         'owner_user': export.owner_user.key,
         'status': export.status,
         'count': 0,
-        'total': len(export.contents)})
+        'total': len(contents)
+    })
 
     exportables = exports.list_all()
 
-    path = os.path.join(celery.settings['app.export.dir'], export.name)
+    path = os.path.join(celery.settings['app.export.dir'], name)
 
     with closing(zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED)) as zfp:
 
         codebook_chain = []
 
-        for item in export.contents:
+        for item in contents:
             plan = exportables[item['name']]
             codebook_chain.append(plan.codebook())
             with tempfile.NamedTemporaryFile() as tfp:
@@ -173,10 +191,3 @@ def make_export(name):
         with tempfile.NamedTemporaryFile() as tfp:
             exports.write_codebook(tfp, chain.from_iterable(codebook_chain))
             zfp.write(tfp.name, exports.codebook.FILE_NAME)
-
-    export.status = 'complete'
-    file_size = humanize.naturalsize(os.path.getsize(path))
-    redis.hmset(redis_key, {'status': export.status, 'file_size': file_size})
-
-    Session.flush()
-    redis.publish('export', json.dumps(redis.hgetall(redis_key)))

@@ -15,7 +15,6 @@ def includeme(config):
 
     # short-hand way to declare the routes
     route = config.add_route
-    config.add_rewrite_rule(r'/(?P<path>.*)/', r'/%(path)s')
 
     config.add_static_view('static', 'occams.clinical:static/')
 

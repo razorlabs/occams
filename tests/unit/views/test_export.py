@@ -9,26 +9,27 @@ from occams.clinical import Session, models
 from tests import IntegrationFixture
 
 
-class TestList(IntegrationFixture):
+class TestAdd(IntegrationFixture):
 
     def setUp(self):
-        super(TestList, self).setUp()
+        super(TestAdd, self).setUp()
         # Use permissive since we're using functional tests for permissions
         self.config.testing_securitypolicy(userid='joe', permissive=True)
-        from occams.clinical.views.data import list_
-        self.view_func = list_
+        from occams.clinical.views.export import add
+        self.view_func = add
 
     def test_get_schemata(self):
         """
         It should render only published schemata
         """
+        from tests import add_user
         # No schemata
         request = testing.DummyRequest(
             layout_manager=mock.Mock())
         response = self.view_func(request)
         self.assertEquals(response['schemata_count'], 0)
 
-        self.add_user('joe')
+        add_user('joe')
 
         # Not-yet-published schemata
         schema = models.Schema(
@@ -84,47 +85,48 @@ class TestList(IntegrationFixture):
         """
         It should add an export record and initiate an async task
         """
-        self.config.add_route('data_export', '/data/exports')
+        from pyramid.httpexceptions import HTTPFound
+        from tests import add_user
+        self.config.include('occams.clinical.routes')
         self.config.registry.settings['app.export.dir'] = '/tmp'
 
-        self.add_user('joe')
+        add_user('joe')
         schema = models.Schema(
             name=u'vitals', title=u'Vitals', publish_date=date.today())
         Session.add(schema)
         Session.flush()
-        schema_id = schema.id
 
         request = testing.DummyRequest(
             layout_manager=mock.Mock(),
             post=MultiDict([
-                ('schemata', str(schema_id))
-                ]))
+                ('contents', str('vitals'))
+            ]))
         request.POST['csrf_token'] = request.session.get_csrf_token()
         response = self.view_func(request)
 
-        self.assertEqual(response.location, request.route_path('data_export'))
+        self.assertIsInstance(response, HTTPFound)
+        self.assertEqual(response.location,
+                         request.route_path('export_status'))
         export = Session.query(models.Export).one()
         self.assertEqual(export.owner_user.key, 'joe')
-        self.assertEqual(export.schemata[0].id, schema_id)
 
     def test_exceed_limit(self):
         """
         It should not let the user exceed their allocated export limit
         """
         import deform
+        from tests import add_user
         self.config.registry.settings['app.export.limit'] = '1'
 
-        self.add_user('joe')
+        add_user('joe')
         previous_export = models.Export(
             owner_user=Session.query(models.User).filter_by(key='joe').one(),
-            schemata=[
-                models.Schema(
-                    name=u'vitals',
-                    title=u'Vitals',
-                    publish_date=date.today())])
+            contents=[{
+                u'name': u'vitals',
+                u'title': u'Vitals',
+                u'versions': [str(date.today())]}])
         Session.add(previous_export)
         Session.flush()
-        schema_id = previous_export.schemata[0].id
 
         # The renderer should know about it
         request = testing.DummyRequest(
@@ -136,7 +138,7 @@ class TestList(IntegrationFixture):
         request = testing.DummyRequest(
             layout_manager=mock.Mock(),
             post=MultiDict([
-                ('schemata', str(schema_id))
+                ('contents', 'vitals')
                 ]))
         request.POST['csrf_token'] = request.session.get_csrf_token()
         response = self.view_func(request)
@@ -150,15 +152,16 @@ class TestExport(IntegrationFixture):
         super(TestExport, self).setUp()
         # Use permissive since we're using functional tests for permissions
         self.config.testing_securitypolicy(userid='joe', permissive=True)
-        from occams.clinical.views.data import export
+        from occams.clinical.views.export import export
         self.view_func = export
 
     def test_get_current_user(self):
         """
         It should return the authenticated user's exports
         """
-        self.add_user('jane')
-        self.add_user('joe')
+        from tests import add_user
+        add_user('jane')
+        add_user('joe')
         Session.add_all([
             models.Export(
                 owner_user=(
@@ -185,10 +188,11 @@ class TestExport(IntegrationFixture):
         It should not render expired exports.
         """
         from datetime import datetime, timedelta
+        from tests import add_user
 
         EXPIRE_DAYS = 10
         self.config.registry.settings['app.export.expire'] = '10'
-        self.add_user('joe')
+        add_user('joe')
         now = datetime.now()
         Session.add_all([
             models.Export(
@@ -222,16 +226,20 @@ class TestDownload(IntegrationFixture):
         super(TestDownload, self).setUp()
         # Use permissive since we're using functional tests for permissions
         self.config.testing_securitypolicy(userid='joe', permissive=True)
-        from occams.clinical.views.data import download
+        from occams.clinical.views.export import download
         self.view_func = download
 
     def test_get_owner_exports(self):
         """
         It should only allow owners of the export to download it
         """
+        from pyramid.httpexceptions import HTTPNotFound
+        from pyramid.response import FileResponse
+        from tests import add_user
+
         self.config.registry.settings['app.export.dir'] = '/tmp'
-        self.add_user('joe')
-        self.add_user('jane')
+        add_user('joe')
+        add_user('jane')
         Session.add(models.Export(
             id=123,
             owner_user=(
@@ -242,14 +250,12 @@ class TestDownload(IntegrationFixture):
         Session.flush()
 
         self.config.testing_securitypolicy(userid='joe', permissive=True)
-        from pyramid.httpexceptions import HTTPNotFound
         request = testing.DummyRequest(
             layout_manager=mock.Mock(),
             matchdict={'export_id': 123})
         with self.assertRaises(HTTPNotFound):
             self.view_func(request)
 
-        from pyramid.response import FileResponse
         self.config.testing_securitypolicy(userid='jane', permissive=True)
         request = testing.DummyRequest(
             layout_manager=mock.Mock(),
@@ -262,7 +268,10 @@ class TestDownload(IntegrationFixture):
         """
         It should return 404 if the record is not ready
         """
-        self.add_user('joe')
+        from pyramid.httpexceptions import HTTPNotFound
+        from tests import add_user
+
+        add_user('joe')
         Session.add(models.Export(
             id=123,
             owner_user=(
@@ -271,7 +280,6 @@ class TestDownload(IntegrationFixture):
                 .one()),
             status=status))
 
-        from pyramid.httpexceptions import HTTPNotFound
         request = testing.DummyRequest(
             layout_manager=mock.Mock(),
             matchdict={'export_id': 123})

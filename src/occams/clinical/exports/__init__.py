@@ -16,9 +16,6 @@ except ImportError:
 from itertools import chain
 import os
 
-from sqlalchemy import orm, null, func, literal_column
-
-from .. import Session, models
 from . import codebook
 from .enrollment import EnrollmentPlan
 from .pid import PidPlan
@@ -39,71 +36,9 @@ def list_all(include_rand=True, include_private=True):
     Iterator of exportable data files.
     """
 
-    InnerSchema = orm.aliased(models.Schema)
-    OuterSchema = orm.aliased(models.Schema)
-
-    schemata_query = (
-        Session.query(OuterSchema.name)
-        .add_column(literal_column("'schema'").label('type'))
-        .add_column(
-            Session.query(models.Attribute)
-            .filter(models.Attribute.is_private)
-            .join(InnerSchema)
-            .filter(InnerSchema.name == OuterSchema.name)
-            .correlate(OuterSchema)
-            .exists()
-            .label('has_private'))
-        .add_column(
-            Session.query(models.Entity)
-            .join(models.Entity.contexts)
-            .filter(models.Context.external == 'stratum')
-            .join(models.Stratum, models.Context.key == models.Stratum.id)
-            .join(InnerSchema, models.Entity.schema)
-            .filter(InnerSchema.name == OuterSchema.name)
-            .correlate(OuterSchema)
-            .exists()
-            .label('has_rand'))
-        .add_column(
-            Session.query(InnerSchema.title)
-            .select_from(InnerSchema)
-            .filter(InnerSchema.name == OuterSchema.name)
-            .filter(InnerSchema.publish_date != null())
-            .filter(InnerSchema.retract_date == null())
-            .order_by(InnerSchema.publish_date.desc())
-            .limit(1)
-            .correlate(OuterSchema)
-            .as_scalar()
-            .label('title'))
-        .add_column(
-            func.array(
-                Session.query(InnerSchema.publish_date)
-                .distinct()
-                .filter(InnerSchema.name == OuterSchema.name)
-                .filter(InnerSchema.publish_date != null())
-                .filter(InnerSchema.retract_date == null())
-                .order_by(InnerSchema.publish_date.desc())
-                .correlate(OuterSchema)
-                .as_scalar())
-            .label('versions'))
-        .filter(OuterSchema.publish_date != null())
-        .filter(OuterSchema.retract_date == null()))
-
-    schemata_query = (
-        schemata_query
-        .group_by(OuterSchema.name)
-        .from_self())
-
-    if not include_rand:
-        schemata_query = schemata_query.filter('NOT has_rand')
-
-    if not include_private:
-        schemata_query = schemata_query.filter('NOT has_private')
-
-    schemata_query = schemata_query.order_by('title')
-
     # Precooked reports
     tables = [EnrollmentPlan(), PidPlan(), LabPlan(), VisitPlan()]
-    schemata = list(map(SchemaPlan.from_sql, schemata_query))
+    schemata = SchemaPlan.list_all(include_rand, include_private)
     merged = sorted(tables + schemata, key=lambda v: v.title)
     all = OrderedDict((i.name, i) for i in merged)
     return all

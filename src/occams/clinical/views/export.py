@@ -78,11 +78,13 @@ class ExportCheckoutSchema(CSRFSchema):
 
     expand_collections = colander.SchemaNode(
         colander.Boolean(),
-        default=False)
+        default=False,
+        missing=None)
 
     use_choice_labels = colander.SchemaNode(
         colander.Boolean(),
-        default=False)
+        default=False,
+        missing=None)
 
 
 @view_config(
