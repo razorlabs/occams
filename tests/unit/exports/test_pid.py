@@ -5,6 +5,11 @@ from tests import IntegrationFixture
 @ddt
 class TestPidPlan(IntegrationFixture):
 
+    def test_file_name(self):
+        from occams.clinical import exports
+        plan = exports.pid.PidPlan()
+        self.assertEqual(plan.file_name, 'pid.csv')
+
     def test_data_without_refs(self):
         """
         It should generate a basic listing of all the PIDs in the database
@@ -91,7 +96,7 @@ class TestPidPlan(IntegrationFixture):
             enrollments=[
                 models.Enrollment(
                     consent_date=date.today(),
-                    reference_number='76C000000',
+                    reference_number=u'76C000000',
                     study=models.Study(
                         name=u'some_study',
                         code=study_code,

@@ -21,7 +21,7 @@ from sqlalchemy.orm import aliased
 
 from occams.datastore.utils.sql import group_concat
 
-from .. import models, Session
+from .. import _, models, Session
 from .plan import ExportPlan
 from .codebook import row, types
 
@@ -30,7 +30,7 @@ class PidPlan(ExportPlan):
 
     name = 'pid'
 
-    title = 'Patient Identifiers'
+    title = _(u'Patient Identifiers')
 
     @reify
     def reftypes(self):

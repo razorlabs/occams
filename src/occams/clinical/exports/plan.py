@@ -23,7 +23,7 @@ class ExportPlan(object):
         Returns:
         An iterator or row codebook entries
         """
-        raise NotImplemented
+        raise NotImplemented  # pragma: nocover
 
     def data(self, use_choice_labels=False, expand_collections=False):
         """
@@ -39,7 +39,7 @@ class ExportPlan(object):
         Returns:
         An iterator of row data
         """
-        raise NotImplemented
+        raise NotImplemented  # pragma: nocover
 
     def to_json(self):
         """

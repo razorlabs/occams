@@ -6,16 +6,16 @@ The goal is to generate a patient's participation in a study
 Formerly: avrcdataexport/sql/additional/Enrollment.sql
 """
 
-from .. import models, Session
+from .. import _, models, Session
 from .plan import ExportPlan
 from .codebook import row, types
 
 
 class EnrollmentPlan(ExportPlan):
 
-    name = 'Enrollment'
+    name = 'enrollment'
 
-    title = 'Enrollments'
+    title = _(u'Enrollments')
 
     def codebook(self):
 
