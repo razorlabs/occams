@@ -4,16 +4,16 @@ Patient's visit history
 Formerly: avrcdataexport/sql/additional/VisitStudy.sql
 """
 
-from .. import models, Session
+from .. import _, models, Session
 from .plan import ExportPlan
 from .codebook import row, types
 
 
 class VisitPlan(ExportPlan):
 
-    name = 'VisitStudy'
+    name = 'visit'
 
-    title = 'Visits'
+    title = _(u'Visits')
 
     def codebook(self):
         return iter([

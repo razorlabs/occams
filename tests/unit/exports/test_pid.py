@@ -7,7 +7,7 @@ class TestPidPlan(IntegrationFixture):
 
     def test_file_name(self):
         from occams.clinical import exports
-        plan = exports.pid.PidPlan()
+        plan = exports.PidPlan()
         self.assertEqual(plan.file_name, 'pid.csv')
 
     def test_data_without_refs(self):
@@ -16,7 +16,7 @@ class TestPidPlan(IntegrationFixture):
         """
         from occams.clinical import exports, models, Session
         from occams.clinical.security import track_user
-        plan = exports.pid.PidPlan()
+        plan = exports.PidPlan()
 
         track_user('joe')
 
@@ -48,7 +48,7 @@ class TestPidPlan(IntegrationFixture):
         """
         from occams.clinical import exports, models, Session
         from occams.clinical.security import track_user
-        plan = exports.pid.PidPlan()
+        plan = exports.PidPlan()
 
         track_user('joe')
 
@@ -85,7 +85,7 @@ class TestPidPlan(IntegrationFixture):
         from datetime import date
         from occams.clinical import exports, models, Session
         from occams.clinical.security import track_user
-        plan = exports.pid.PidPlan()
+        plan = exports.PidPlan()
 
         track_user('joe')
 

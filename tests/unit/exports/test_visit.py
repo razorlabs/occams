@@ -1,19 +1,19 @@
 from tests import IntegrationFixture
 
 
-class TestEnrollmentPlan(IntegrationFixture):
+class TestVisitPlan(IntegrationFixture):
 
     def test_file_name(self):
         from occams.clinical import exports
-        plan = exports.enrollment.EnrollmentPlan()
-        self.assertEqual(plan.file_name, 'enrollment.csv')
+        plan = exports.VisitPlan()
+        self.assertEqual(plan.file_name, 'visit.csv')
 
     def test_columns(self):
         """
-        It should generate a table of all the enrollments in the database
+        It should generate a table of all the visits in the database
         """
         from occams.clinical import exports
-        plan = exports.enrollment.EnrollmentPlan()
+        plan = exports.VisitPlan()
 
         codebook = list(plan.codebook())
         query = plan.data()
