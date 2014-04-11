@@ -18,18 +18,19 @@ class TestAdd(IntegrationFixture):
         from occams.clinical.views.export import add
         self.view_func = add
 
-    def test_get_schemata(self):
+    def test_get_exportables(self):
         """
         It should render only published schemata
         """
-        from tests import add_user
+        from occams.clinical.security import track_user
+
+        track_user('joe')
+
         # No schemata
         request = testing.DummyRequest(
             layout_manager=mock.Mock())
         response = self.view_func(request)
-        self.assertEquals(response['schemata_count'], 0)
-
-        add_user('joe')
+        self.assertEquals(len(response['exportables']), 4)  # Only pre-cooked
 
         # Not-yet-published schemata
         schema = models.Schema(
@@ -39,7 +40,7 @@ class TestAdd(IntegrationFixture):
         request = testing.DummyRequest(
             layout_manager=mock.Mock())
         response = self.view_func(request)
-        self.assertEquals(response['schemata_count'], 0)
+        self.assertEquals(len(response['exportables']), 4)
 
         # Published schemata
         schema.publish_date = date.today()
@@ -47,7 +48,7 @@ class TestAdd(IntegrationFixture):
         request = testing.DummyRequest(
             layout_manager=mock.Mock())
         response = self.view_func(request)
-        self.assertEquals(response['schemata_count'], 1)
+        self.assertEquals(len(response['exportables']), 5)
 
     def test_post_empty(self):
         """
@@ -57,7 +58,7 @@ class TestAdd(IntegrationFixture):
             layout_manager=mock.Mock(),
             post=MultiDict())
         response = self.view_func(request)
-        self.assertIsNotNone(response['form'].field['schemata'].error.msg)
+        self.assertIsNotNone(response['errors']['contents'])
 
     def test_post_non_existent_schema(self):
         """
@@ -65,9 +66,9 @@ class TestAdd(IntegrationFixture):
         """
         request = testing.DummyRequest(
             layout_manager=mock.Mock(),
-            post=MultiDict([('schemata', '1')]))
+            post=MultiDict([('contents', 'does_not_exist')]))
         response = self.view_func(request)
-        self.assertIsNotNone(response['form'].field['schemata'].error.msg)
+        self.assertIsNotNone(response['errors']['contents'])
 
     def test_post_invalid_csrf(self):
         """
@@ -77,7 +78,7 @@ class TestAdd(IntegrationFixture):
             layout_manager=mock.Mock(),
             post=MultiDict([('csrf_token', 'd3v10us')]))
         response = self.view_func(request)
-        self.assertIsNotNone(response['form'].field['csrf_token'].error.msg)
+        self.assertIsNotNone(response['errors']['csrf_token'])
 
     # Don't actually invoke the subtasks
     @mock.patch('occams.clinical.tasks.make_export')
@@ -86,11 +87,13 @@ class TestAdd(IntegrationFixture):
         It should add an export record and initiate an async task
         """
         from pyramid.httpexceptions import HTTPFound
-        from tests import add_user
+        from occams.clinical.security import track_user
+
         self.config.include('occams.clinical.routes')
         self.config.registry.settings['app.export.dir'] = '/tmp'
 
-        add_user('joe')
+        track_user('joe')
+
         schema = models.Schema(
             name=u'vitals', title=u'Vitals', publish_date=date.today())
         Session.add(schema)
@@ -114,11 +117,11 @@ class TestAdd(IntegrationFixture):
         """
         It should not let the user exceed their allocated export limit
         """
-        import deform
-        from tests import add_user
-        self.config.registry.settings['app.export.limit'] = '1'
+        from occams.clinical.security import track_user
 
-        add_user('joe')
+        self.config.registry.settings['app.export.limit'] = 0
+
+        track_user('joe')
         previous_export = models.Export(
             owner_user=Session.query(models.User).filter_by(key='joe').one(),
             contents=[{
@@ -141,82 +144,95 @@ class TestAdd(IntegrationFixture):
                 ('contents', 'vitals')
                 ]))
         request.POST['csrf_token'] = request.session.get_csrf_token()
-        response = self.view_func(request)
-        self.assertIsInstance(response['form'], deform.ValidationFailure)
-        self.assertEqual(response['form'].error.msg, u'Export limit exceeded')
+        self.assertTrue(response['exceeded'])
 
 
-class TestExport(IntegrationFixture):
+class TestStatusJSON(IntegrationFixture):
 
     def setUp(self):
-        super(TestExport, self).setUp()
+        super(TestStatusJSON, self).setUp()
         # Use permissive since we're using functional tests for permissions
         self.config.testing_securitypolicy(userid='joe', permissive=True)
-        from occams.clinical.views.export import export
-        self.view_func = export
+        from occams.clinical.views.export import status_json
+        self.view_func = status_json
 
     def test_get_current_user(self):
         """
         It should return the authenticated user's exports
         """
-        from tests import add_user
-        add_user('jane')
-        add_user('joe')
+        from occams.clinical.security import track_user
+
+        self.config.registry.settings['app.export.dir'] = '/tmp'
+        self.config.include('occams.clinical.routes')
+
+        track_user('jane')
+        track_user('joe')
+
         Session.add_all([
             models.Export(
                 owner_user=(
                     Session.query(models.User)
                     .filter_by(key='joe')
                     .one()),
-                status='complete'),
+                contents=[],
+                status='pending'),
             models.Export(
                 owner_user=(
                     Session.query(models.User)
                     .filter_by(key='jane')
                     .one()),
+                contents=[],
                 status='pending')])
         Session.flush()
 
         request = testing.DummyRequest(
             layout_manager=mock.Mock())
         response = self.view_func(request)
-        export = response['exports'].one()
-        self.assertEquals(export.owner_user.key, 'joe')
+        exports = response['exports']
+        self.assertEquals(len(exports), 1)
 
     def test_ignore_expired(self):
         """
         It should not render expired exports.
         """
         from datetime import datetime, timedelta
-        from tests import add_user
+        from occams.clinical.security import track_user
 
         EXPIRE_DAYS = 10
-        self.config.registry.settings['app.export.expire'] = '10'
-        add_user('joe')
+
+        self.config.registry.settings['app.export.expire'] = EXPIRE_DAYS
+        self.config.registry.settings['app.export.dir'] = '/tmp'
+        self.config.include('occams.clinical.routes')
+
+        track_user('joe')
+
         now = datetime.now()
-        Session.add_all([
-            models.Export(
-                owner_user=(
-                    Session.query(models.User)
-                    .filter_by(key='joe')
-                    .one()),
-                status='complete',
-                create_date=now - timedelta(EXPIRE_DAYS + 1)),
-            models.Export(
-                owner_user=(
-                    Session.query(models.User)
-                    .filter_by(key='joe')
-                    .one()),
-                status='pending',
-                create_date=now)])
+
+        export = models.Export(
+            owner_user=(
+                Session.query(models.User)
+                .filter_by(key='joe')
+                .one()),
+            contents=[],
+            status='pending',
+            create_date=now)
+        Session.add(export)
         Session.flush()
 
         request = testing.DummyRequest(
             layout_manager=mock.Mock())
         response = self.view_func(request)
-        self.assertEquals(response['exports_count'], 1)
-        export = response['exports'].one()
-        self.assertEquals(export.create_date, now)
+        exports = response['exports']
+        self.assertEquals(len(exports), 1)
+
+        export.create_date = export.modify_date = \
+            now - timedelta(EXPIRE_DAYS + 1)
+        Session.flush()
+        request = testing.DummyRequest(
+            layout_manager=mock.Mock())
+        response = self.view_func(request)
+        exports = response['exports']
+        self.assertEquals(len(exports), 0)
 
 
 @ddt
@@ -233,35 +249,43 @@ class TestDownload(IntegrationFixture):
         """
         It should only allow owners of the export to download it
         """
+        import os
         from pyramid.httpexceptions import HTTPNotFound
         from pyramid.response import FileResponse
-        from tests import add_user
+        from occams.clinical.security import track_user
 
         self.config.registry.settings['app.export.dir'] = '/tmp'
-        add_user('joe')
-        add_user('jane')
-        Session.add(models.Export(
+        track_user('joe')
+        track_user('jane')
+        export = models.Export(
             id=123,
             owner_user=(
                 Session.query(models.User)
                 .filter_by(key='jane')
                 .one()),
-            status='complete'))
+            contents=[],
+            status='complete')
+        Session.add(export)
         Session.flush()
+
+        fp = open('/tmp/' + export.name, 'w+b')
 
         self.config.testing_securitypolicy(userid='joe', permissive=True)
         request = testing.DummyRequest(
             layout_manager=mock.Mock(),
-            matchdict={'export_id': 123})
+            matchdict={'id': 123})
         with self.assertRaises(HTTPNotFound):
             self.view_func(request)
 
         self.config.testing_securitypolicy(userid='jane', permissive=True)
         request = testing.DummyRequest(
             layout_manager=mock.Mock(),
-            matchdict={'export_id': 123})
+            matchdict={'id': 123})
         response = self.view_func(request)
         self.assertIsInstance(response, FileResponse)
+
+        fp.close()
+        os.remove(fp.name)
 
     @data('failed', 'pending')
     def test_get_not_found_status(self, status):
@@ -269,19 +293,20 @@ class TestDownload(IntegrationFixture):
         It should return 404 if the record is not ready
         """
         from pyramid.httpexceptions import HTTPNotFound
-        from tests import add_user
+        from occams.clinical.security import track_user
 
-        add_user('joe')
+        track_user('joe')
         Session.add(models.Export(
             id=123,
             owner_user=(
                 Session.query(models.User)
                 .filter_by(key='joe')
                 .one()),
+            contents=[],
             status=status))
 
         request = testing.DummyRequest(
             layout_manager=mock.Mock(),
-            matchdict={'export_id': 123})
+            matchdict={'id': 123})
         with self.assertRaises(HTTPNotFound):
             self.view_func(request)

@@ -62,25 +62,27 @@ class TestExportNameSpace(IntegrationFixture):
         """
         from occams.clinical import models, Session
         from occams.clinical.views.socketio import ExportNamespace
+        from occams.clinical.security import track_user
 
-        def hgetall(id):
-            export = Session.query(models.Export).get(id)
-            if export:
-                return {
-                    'export_id': export.id,
-                    'owner_user': export.owner_user.key}
-
-        self.add_user('jane')
-        self.add_user('joe')
+        track_user('jane')
+        track_user('joe')
         user = Session.query(models.User).filter_by(key='joe').one()
         other_user = Session.query(models.User).filter_by(key='jane').one()
-        pending_export = models.Export(owner_user=user, status='pending')
+        pending_export = models.Export(owner_user=user, contents=[],
+                                       status='pending')
+
+        def hgetall(*args):
+            return {
+                'export_id': pending_export.id,
+                'owner_user': pending_export.owner_user.key}
+
         Session.add_all([
             pending_export,
-            # these should not be included in the resultset
-            models.Export(owner_user=other_user, status='pending'),
-            models.Export(owner_user=user, status='failed'),
-            models.Export(owner_user=user, status='complete')])
+            # thes should not be included in the resultset
+            models.Export(owner_user=other_user, contents=[],
+                          status='pending'),
+            models.Export(owner_user=user, contents=[], status='failed'),
+            models.Export(owner_user=user, contents=[], status='complete')])
         Session.flush()
 
         request = testing.DummyRequest(
@@ -95,7 +97,7 @@ class TestExportNameSpace(IntegrationFixture):
         ns.listener()
 
         emit.assert_called_once_with(
-            'progress',
+            'export',
             {'export_id': pending_export.id,
              'owner_user': 'joe'})
 
@@ -126,6 +128,6 @@ class TestExportNameSpace(IntegrationFixture):
         ns.listener()
 
         emit.assert_called_once_with(
-            'progress',
+            'export',
             {'export_id': 123,
              'owner_user': 'jane'})

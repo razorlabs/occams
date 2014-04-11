@@ -1,6 +1,5 @@
 import colander
 import deform.widget
-from repoze.who.api import get_api
 from pyramid.httpexceptions import HTTPFound
 from pyramid.view import view_config, forbidden_view_config
 
@@ -54,7 +53,11 @@ def login(request):
                 title=_(u'Sign In'),
                 css_class='btn btn-lg btn-primary btn-block')])
 
-    who_api = get_api(request.environ)
+    # XXX: Hack for this to work on systems that have not set the
+    # environ yet. Pyramid doesn't give us access to the policy publicly,
+    # put it's still available throught this private variable and
+    # it's usefule in leveraging repoze.who's login mechanisms...
+    who_api = request._get_authentication_policy()._getAPI(request)
 
     if request.method == 'POST':
         try:
@@ -89,6 +92,6 @@ def login(request):
 
 @view_config(route_name='account_logout')
 def logout(request):
-    who_api = get_api(request.environ)
+    who_api = request._get_authentication_policy()._getAPI(request)
     headers = who_api.forget()
     return HTTPFound(location=request.route_path('clinical'), headers=headers)

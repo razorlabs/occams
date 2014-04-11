@@ -48,11 +48,13 @@ class PidPlan(ExportPlan):
         name = self.name
         knowns = [
             row('id', name, types.NUMERIC, is_required=True),
-            row('siteid', name, types.CHOICE,
+            row('site', name, types.CHOICE,
                 choices=self.sites, is_required=True),
             row('pid', name, types.STRING, is_required=True),
             row('our', name, types.STRING),
-            row('earlyid', name, types.STRING)]
+            row('aeh_num', name, types.STRING),
+            row('early_id', name, types.STRING),
+        ]
 
         for known in knowns:
             yield known
@@ -65,7 +67,7 @@ class PidPlan(ExportPlan):
         query = (
             Session.query(
                 models.Patient.id.label('id'),
-                models.Site.id.label('siteid'),
+                models.Site.name.label('site'),
                 models.Patient.pid.label('pid'))
             .join(models.Site))
 

@@ -4,7 +4,7 @@ import uuid
 
 from babel.dates import format_datetime
 import colander
-import humanize
+from humanize import naturalsize
 from pyramid_deform import CSRFSchema
 from pyramid.i18n import get_localizer, negotiate_locale_name
 from pyramid.httpexceptions import HTTPFound, HTTPNotFound, HTTPOk
@@ -57,14 +57,6 @@ def contents_validator(node, kw):
         colander.ContainsOnly(kw['allowed_names']), )
 
 
-@colander.deferred
-def schema_validator(node, kw):
-    def validator(schema, value):
-        if kw['limit_exceeded']:
-            raise colander.Invalid(schema, _(u'Export limit exceeded'))
-    return validator
-
-
 class ExportCheckoutSchema(CSRFSchema):
     """
     Export checkout serialization schema
@@ -74,7 +66,9 @@ class ExportCheckoutSchema(CSRFSchema):
         colander.Set(),
         # Currently does nothing as colander 1.0b1 is hard-coded to "Required"
         missing_msg=_(u'Please select an item'),
-        validator=contents_validator)
+        validator=contents_validator,
+        default=[],
+        missing=None)
 
     expand_collections = colander.SchemaNode(
         colander.Boolean(),
@@ -108,16 +102,17 @@ def add(request):
     cstruct = None
     exportables = exports.list_all(include_rand=False)
     limit = request.registry.settings.get('app.export.limit')
-    exceeded = limit and query_exports(request).count() > limit
+    exceeded = limit is not None and query_exports(request).count() > limit
 
-    cschema = ExportCheckoutSchema(validator=schema_validator).bind(
+    cschema = ExportCheckoutSchema().bind(
         request=request,
         limit_exceeded=exceeded,
         allowed_names=exportables.keys())
 
-    if request.method == 'POST':
+    if not exceeded and request.method == 'POST':
         try:
             cstruct = request.POST.mixed()
+            cstruct.setdefault('contents', set())
             # Force list of contents
             if isinstance(cstruct['contents'], six.string_types):
                 cstruct['contents'] = set([cstruct['contents']])
@@ -153,8 +148,8 @@ def add(request):
         'exceeded': exceeded,
         'errors': errors,
         'limit': limit,
-        'exportables': exportables,
-        'schemata_count': len(exportables)}
+        'exportables': exportables
+    }
 
 
 @view_config(
@@ -191,27 +186,12 @@ def status_json(request):
 
     exports_query = query_exports(request)
     exports_count = exports_query.count()
-    export_dir = request.registry.settings['app.export.dir']
 
     pager = Pager(request.GET.get('page', 1), 5, exports_count)
     exports_query = exports_query[pager.slice_start:pager.slice_end]
 
     locale = negotiate_locale_name(request)
     localizer = get_localizer(request)
-
-    try:
-        delta = timedelta(request.registry.settings.get('app.export.expire'))
-    except ValueError:
-        delta = None
-
-    def file_size(export):
-        if export.status == 'complete':
-            path = os.path.join(export_dir, export.name)
-            return humanize.naturalsize(os.path.getsize(path))
-
-    def expire_date(export):
-        if delta:
-            return format_datetime(export.modify_date + delta, locale=locale)
 
     def export2json(export):
         count = len(export.contents)
@@ -228,17 +208,20 @@ def status_json(request):
             'contents': sorted(export.contents, key=lambda v: v['title']),
             'count': None,
             'total': None,
-            'file_size': file_size(export),
+            'file_size': (naturalsize(export.file_size)
+                          if export.file_size else None),
             'download_url': request.route_path('export_download',
                                                id=export.id),
             'delete_url': request.route_path('export_delete', id=export.id),
             'create_date': format_datetime(export.create_date, locale=locale),
-            'expire_date': expire_date(export)}
+            'expire_date': format_datetime(export.expire_date, locale=locale)
+        }
 
     return {
         'csrf_token': request.session.get_csrf_token(),
         'pager': pager.serialize(),
-        'exports': list(map(export2json, exports_query))}
+        'exports': [export2json(e) for e in exports_query]
+    }
 
 
 @view_config(

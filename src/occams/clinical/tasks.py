@@ -12,14 +12,14 @@ except ImportError:  # pragma: nocover
     import csv  # NOQA (py3, hopefully)
 try:
     from collections import OrderedDict
-except ImportError:
+except ImportError:  # pragma: nocover
     from ordereddict import OrderedDict  # NOQA
 from contextlib import closing
 from itertools import chain
 import json
 import os
 import tempfile
-import zipfile
+from zipfile import ZipFile, ZIP_DEFLATED
 
 from celery import Celery, Task
 from celery.bin import Option
@@ -153,39 +153,36 @@ def make_export(name):
 
     """
     export = Session.query(models.Export).filter_by(name=name).one()
-    contents = export.contents
 
     redis = celery.redis
-    redis_key = export.redis_key
 
-    redis.hmset(redis_key, {
+    redis.hmset(export.redis_key, {
         'export_id': export.id,
         'owner_user': export.owner_user.key,
         'status': export.status,
         'count': 0,
-        'total': len(contents)
+        'total': len(export.contents)
     })
 
-    exportables = exports.list_all()
-
-    path = os.path.join(celery.settings['app.export.dir'], name)
-
-    with closing(zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED)) as zfp:
+    with closing(ZipFile(export.path, 'w', ZIP_DEFLATED)) as zfp:
 
         codebook_chain = []
+        exportables = exports.list_all()
 
-        for item in contents:
+        for item in export.contents:
             plan = exportables[item['name']]
             codebook_chain.append(plan.codebook())
+
             with tempfile.NamedTemporaryFile() as tfp:
                 exports.write_data(tfp, plan.data(
                     use_choice_labels=export.use_choice_labels,
                     expand_collections=export.expand_collections))
                 zfp.write(tfp.name, plan.file_name)
 
-            redis.hincrby(redis_key, 'count')
-            redis.publish('export', json.dumps(redis.hgetall(redis_key)))
-            count, total = redis.hmget(redis_key, 'count', 'total')
+            redis.hincrby(export.redis_key, 'count')
+            message = json.dumps(redis.hgetall(export.redis_key))
+            redis.publish('export', message)
+            count, total = redis.hmget(export.redis_key, 'count', 'total')
             log.info(', '.join([count, total, item['name']]))
 
         with tempfile.NamedTemporaryFile() as tfp:

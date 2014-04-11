@@ -5,6 +5,7 @@ All permissions are declared here for easier overview
 
 from pyramid.events import subscriber, NewRequest
 from pyramid.security import Allow, Authenticated, ALL_PERMISSIONS
+from sqlalchemy.orm.exc import NoResultFound
 
 from . import log, Session, models
 
@@ -16,7 +17,6 @@ def groupfinder(identity, request):
 
 
 def occams_groupfinder(identity, request):
-
     if 'groups' not in identity:
         log.warn('groups has not been set in the repoze identity!')
 
@@ -38,7 +38,7 @@ def track_user_on_request(event):
     track_user(event.request.authenticated_userid)
 
 
-def track_user(userid):
+def track_user(userid, is_current=True):
     """
     Helper function to add a user to the database
     """
@@ -46,11 +46,14 @@ def track_user(userid):
     if not userid:
         return
 
-    if not Session.query(models.User).filter_by(key=userid).count():
+    try:
+        Session.query(models.User).filter_by(key=userid).one()
+    except NoResultFound:
         Session.add(models.User(key=userid))
+        Session.flush()
 
-    # update the current scoped session's infor attribute
-    Session.info['user'] = userid
+    if is_current:
+        Session.info['user'] = userid
 
 
 class RootFactory(object):

@@ -7,6 +7,7 @@ as we transition towards a SQL-driven application.
 
 from __future__ import absolute_import
 from datetime import date, timedelta
+import os
 import uuid
 
 from six import u
@@ -41,6 +42,7 @@ def includeme(config):
     settings = config.registry.settings
     Session.configure(bind=engine_from_config(settings, 'app.db.'))
     log.debug('Clinical connected to: "%s"' % repr(Session.bind.url))
+    Base.metadata.info['settings'] = settings
 
 
 visit_cycle_table = Table(
@@ -601,7 +603,7 @@ class Export(Base, Referenceable, Modifiable, Auditable):
     name = Column(
         Unicode,
         nullable=False,
-        default=lambda: u(uuid.uuid4()),
+        default=lambda: u(str(uuid.uuid4())),
         doc='System name, useful for keep track of asynchronous progress')
 
     owner_user_id = Column(Integer, nullable=False)
@@ -633,6 +635,31 @@ class Export(Base, Referenceable, Modifiable, Auditable):
             if tables/schemata change names, and keeps names preserved
             AT THE TIME this export was generated.
             """)
+
+    @property
+    def path(self):
+        """
+        Virtual attribute that returns the export's path in the filesystem
+        """
+        export_dir = self.metadata.info['settings']['app.export.dir']
+        return os.path.join(export_dir, self.name)
+
+    @property
+    def file_size(self):
+        """
+        Virtual attribute that returns export's file size (if complete)
+        """
+        if self.status == 'complete':
+            return os.path.getsize(self.path)
+
+    @property
+    def expire_date(self):
+        """
+        Virtual attribute that returns the export's expiration date (if avail)
+        """
+        delta = self.metadata.info['settings'].get('app.export.expire')
+        if delta:
+            return self.modify_date - timedelta(delta)
 
     @property
     def redis_key(self):

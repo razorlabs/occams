@@ -6,7 +6,6 @@ To specify a pyramid configuration use:
     nosetests --tc=ini:/path/to/my/config.ini
 
 """
-import threading
 try:
     import unittest2 as unittest
 except ImportError:
@@ -15,6 +14,8 @@ from testconfig import config
 
 
 INI = config['ini']
+
+REDIS_URL = 'redis://localhost/9'
 
 
 def setup_package():
@@ -56,21 +57,9 @@ def teardown_package():
     datastore.DataStoreModel.metadata.drop_all(Session.bind)
 
     for session in (Session, RosterSession):
-        if session.bind.url.drivername == 'sqlite':
-            os.remove(session.bind.url.database)
-
-
-def add_user(userid, is_current=True):
-    """
-    Helper method to add a user to the database
-    Optionally sets it the "current" user so that data entry can be blamed
-    on the user id.
-    """
-    from occams.clinical import Session, models
-    Session.add(models.User(key=userid))
-    Session.flush()
-    if is_current:
-        Session.info['user'] = userid
+        url = session.bind.url
+        if url.drivername == 'sqlite' and url.database:
+            os.remove(url.database)
 
 
 class IntegrationFixture(unittest.TestCase):
@@ -80,15 +69,17 @@ class IntegrationFixture(unittest.TestCase):
 
     def setUp(self):
         from pyramid import testing
-        #import transaction
+        from occams.clinical.models import Base
         self.config = testing.setUp()
-        #transaction.begin()
+        Base.metadata.info['settings'] = self.config.registry.settings
 
     def tearDown(self):
+        from occams.clinical import Session
         from pyramid import testing
         import transaction
         testing.tearDown()
         transaction.abort()
+        Session.remove()
 
 
 class FunctionalFixture(unittest.TestCase):
@@ -147,30 +138,3 @@ class FunctionalFixture(unittest.TestCase):
         response = self.app.get(url, extra_environ=environ, status='*')
         if response.status_code not in (401, 403):
             raise AssertionError(msg or 'Can view %s' % url)
-
-
-class PubSubListener(threading.Thread):
-    """
-    Helper class to listen for redis channel broadcasts in separate thread.
-    To close the thread, any channel must publish a "KILL" data value
-    """
-
-    def __init__(self, r, *channels):
-        """
-        Parameters:
-        r -- the redis instance
-        channels -- the channel(s) to subscribe
-        """
-        super(PubSubListener, self).__init__()
-        assert len(channels)
-        self.redis = r
-        self.pubsub = self.redis.pubsub()
-        self.pubsub.subscribe(channels)
-        self.messages = []
-
-    def run(self):
-        for item in self.pubsub.listen():
-            if item['data'] == 'KILL':
-                break
-            if item['type'] == 'message':
-                self.messages.append(item['data'])
