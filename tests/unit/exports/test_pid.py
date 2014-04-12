@@ -10,9 +10,25 @@ class TestPidPlan(IntegrationFixture):
         plan = exports.PidPlan()
         self.assertEqual(plan.file_name, 'pid.csv')
 
+    def test_columns(self):
+        """
+        It should generate a table of all the pids in the database
+        """
+
+        from occams.clinical import exports
+        plan = exports.PidPlan()
+
+        codebook = list(plan.codebook())
+        query = plan.data()
+
+        codebook_columns = [c['field'] for c in codebook]
+        data_columns = [c['name'] for c in query.column_descriptions]
+
+        self.assertItemsEqual(codebook_columns, data_columns)
+
     def test_data_without_refs(self):
         """
-        It should generate a basic listing of all the PIDs in the database
+        It should be able to generate reports without refs
         """
         from occams.clinical import exports, models, Session
         from occams.clinical.security import track_user
