@@ -9,7 +9,7 @@ except ImportError:  # pragma: nocover
 from operator import or_
 
 from six import itervalues, iteritems
-from sqlalchemy import orm, cast, null, literal, Integer
+from sqlalchemy import orm, cast, null, literal, Integer, case, Unicode
 
 from . import models
 from .utils.sql import group_concat, to_date, to_datetime
@@ -121,20 +121,33 @@ def build_report(session,
                     .as_scalar())
 
             else:
-                exists = (
+                selected_exists = (
                     session.query(Value)
                     .join(Choice, Value._value == Choice.id)
                     .filter(filter_expression)
                     .filter(Choice.name == column.choice.name)
                     .correlate(models.Entity)
                     .exists())
+
                 if use_choice_labels:
-                    value_column = (
-                        session.query(literal(column.choice.title))
-                        .filter(exists))
+                    selected_value_column = (
+                        session.query(
+                            cast(literal(column.choice.title), Unicode))
+                        .filter(selected_exists)
+                        .as_scalar())
                 else:
-                    value_column = (
-                        session.query(cast(exists, Integer)).as_scalar())
+                    selected_value_column = (
+                        session.query(cast(selected_exists, Integer))
+                        .as_scalar())
+
+                is_selected = (
+                    session.query(Value)
+                    .filter(filter_expression)
+                    .correlate(models.Entity)
+                    .exists())
+
+                value_column = case([(is_selected, selected_value_column)])
+
         else:
             # Scalar columns are added via LEFT OUTER JOIN
             query = query.outerjoin(Value, filter_expression)

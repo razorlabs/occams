@@ -471,6 +471,87 @@ def test_build_report_choice_types():
 
 
 @with_setup(begin_func, rollback_func)
+def test_build_report_expand_none_selected():
+    """
+    It should leave all choices blank (not zero) on if no option was selected
+    """
+    from datetime import date
+    from tests import assert_is_none, assert_equals, assert_items_equal
+    from occams.datastore import models, reporting
+
+    today = date.today()
+
+    schema1 = models.Schema(
+        name=u'A',
+        title=u'A',
+        publish_date=today,
+        sections={
+            's1': models.Section(
+                name=u's1',
+                title=u'S1',
+                order=0,
+                attributes={
+                    'a': models.Attribute(
+                        name=u'a',
+                        title=u'',
+                        type='choice',
+                        is_collection=True,
+                        order=0,
+                        choices={
+                            '001': models.Choice(
+                                name=u'001',
+                                title=u'Green',
+                                order=0),
+                            '002': models.Choice(
+                                name=u'002',
+                                title=u'Red',
+                                order=1),
+                            '003': models.Choice(
+                                name=u'003',
+                                title=u'Blue',
+                                order=2)
+                            })})})
+    Session.add(schema1)
+    Session.flush()
+
+    entity1 = models.Entity(schema=schema1, name=u'Foo', title=u'')
+    Session.add(entity1)
+    Session.flush()
+
+    # delimited multiple-choice, labels off
+    report = reporting.build_report(Session, u'A',
+                                    expand_collections=False,
+                                    use_choice_labels=False)
+    result = Session.query(report).one()
+    assert_is_none(result.a)
+
+    # delimited multiple-choice, labels on
+    report = reporting.build_report(Session, u'A',
+                                    expand_collections=False,
+                                    use_choice_labels=True)
+    result = Session.query(report).one()
+    assert_is_none(result.a)
+
+    # expanded multiple-choice, labels off
+    report = reporting.build_report(Session, u'A',
+                                    expand_collections=True,
+                                    use_choice_labels=False)
+    result = Session.query(report).one()
+    assert_is_none(result.a_001)
+    assert_is_none(result.a_002)
+    assert_is_none(result.a_003)
+
+    # expanded multiple-choice, labels on
+    report = reporting.build_report(Session, u'A',
+                                    expand_collections=True,
+                                    use_choice_labels=True)
+    result = Session.query(report).one()
+    assert_is_none(result.a_001)
+    assert_is_none(result.a_002)
+    assert_is_none(result.a_003)
+
+
+@with_setup(begin_func, rollback_func)
 def test_build_report_ids():
     """
     It should be able to include only the schemata with the specified ids
