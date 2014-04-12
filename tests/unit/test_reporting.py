@@ -476,7 +476,7 @@ def test_build_report_expand_none_selected():
     It should leave all choices blank (not zero) on if no option was selected
     """
     from datetime import date
-    from tests import assert_is_none, assert_equals, assert_items_equal
+    from tests import assert_is_none
     from occams.datastore import models, reporting
 
     today = date.today()
