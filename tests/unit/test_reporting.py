@@ -272,7 +272,7 @@ def test_build_report_expected_metadata_columns():
 
     report = reporting.build_report(Session, u'A')
     assert_in(u'id', report.c)
-    assert_in(u'form_name', report.c)
+    assert_in(u'form', report.c)
     assert_in(u'publish_date', report.c)
     assert_in(u'state', report.c)
     assert_in(u'collect_date', report.c)
