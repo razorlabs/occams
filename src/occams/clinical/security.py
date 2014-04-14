@@ -11,23 +11,41 @@ from . import log, Session, models
 
 
 def groupfinder(identity, request):
+    """
+    Pass-through for groups
+    """
+
     if 'groups' not in identity:
         log.warn('groups has not been set in the repoze identity!')
-    return identity.get('groups', [])
+    return identity['groups']
 
 
 def occams_groupfinder(identity, request):
+    """
+    Occams-specific group parsing
+    """
     if 'groups' not in identity:
         log.warn('groups has not been set in the repoze identity!')
 
     # TODO: move to externa bitcore auth module
-    mapping = {
-        'aeh-admins': 'administrator',
-        'aeh-nurses': 'nurse',
-        'aeh-primary_investigators': 'primariy_investicagor'}
 
-    groups = [mapping[g] for g in identity.get('groups', []) if g in mapping]
-    return groups
+    mapping = {
+        'admins': 'administrator',
+        'nurses': 'nurse',
+        'primary_investigators': 'primariy_investigator'}
+
+    def parse_group(name):
+        parts = name.split('-')
+        try:
+            org, site, group = parts
+        except ValueError:
+            org, group = parts
+        if group in mapping:
+            return mapping[group]
+        else:
+            return name
+
+    return [parse_group(n) for n in identity['groups']]
 
 
 @subscriber(NewRequest)
