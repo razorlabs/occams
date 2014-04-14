@@ -238,7 +238,7 @@ def delete(request):
     export = (
         Session.query(models.Export)
         .filter(models.Export.id == request.matchdict['id'])
-        .filter(models.Export.owner_user.has(key=request.authenticted_userid))
+        .filter(models.Export.owner_user.has(key=request.authenticated_userid))
         .first())
 
     if not export:

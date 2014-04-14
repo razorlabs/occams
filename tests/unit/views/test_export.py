@@ -238,20 +238,22 @@ class TestStatusJSON(IntegrationFixture):
 class TestDelete(IntegrationFixture):
 
     def setUp(self):
-        super(TestDownload, self).setUp()
+        super(TestDelete, self).setUp()
         # Use permissive since we're using functional tests for permissions
         self.config.testing_securitypolicy(userid='joe', permissive=True)
         from occams.studies.views.export import delete
         self.view_func = delete
 
-    @mock.patch('occams.studies.occams.studies.exports.celery')
-    def test_deleteable_by_owner(self, celery):
+    @mock.patch('occams.studies.tasks.celery.control.revoke')
+    def test_deletable_not_owner(self, revoke):
         """
-        It should allow the owner of the export to cancel/delete the export
+        It should issue a 404 if the user does not own the export
         """
+        from pyramid.httpexceptions import HTTPNotFound
         from occams.studies import models, Session
         from occams.studies.security import track_user
 
+        track_user('jane', is_current=False)
         track_user('joe')
 
         export = models.Export(
@@ -262,6 +264,97 @@ class TestDelete(IntegrationFixture):
             contents=[],
             status='complete')
         Session.add(export)
+        Session.flush()
+        export_id = export.id
+        Session.expunge_all()
+
+        request = testing.DummyRequest(
+            layout_manager=mock.Mock(),
+            matchdict={'id': str(export_id)})
+        request.POST['csrf_token'] = request.session.get_csrf_token()
+
+        with self.assertRaises(HTTPNotFound):
+            self.view_func(request)
+
+    @mock.patch('occams.studies.tasks.celery.control.revoke')
+    def test_not_found(self, revoke):
+        """
+        It should issue a 404 if the export does not exist
+        """
+        from pyramid.httpexceptions import HTTPNotFound
+
+        request = testing.DummyRequest(
+            layout_manager=mock.Mock(),
+            matchdict={'id': str('123')})
+        request.POST['csrf_token'] = request.session.get_csrf_token()
+
+        with self.assertRaises(HTTPNotFound):
+            self.view_func(request)
+
+    @mock.patch('occams.studies.tasks.celery.control.revoke')
+    def test_invalid_csrf(self, revoke):
+        """
+        It should deny invalid CSRF tokens
+        """
+        from pyramid.httpexceptions import HTTPForbidden
+        from occams.studies import models, Session
+        from occams.studies.security import track_user
+
+        track_user('joe')
+
+        export = models.Export(
+            owner_user=(
+                Session.query(models.User)
+                .filter_by(key='joe')
+                .one()),
+            contents=[],
+            status='complete')
+        Session.add(export)
+        Session.flush()
+        export_id = export.id
+        Session.expunge_all()
+
+        request = testing.DummyRequest(
+            layout_manager=mock.Mock(),
+            matchdict={'id': str(export_id)})
+        request.POST['csrf_token'] = 'd3v10us'
+
+        with self.assertRaises(HTTPForbidden):
+            self.view_func(request)
+
+    @mock.patch('occams.studies.tasks.celery.control.revoke')
+    def test_deleteable_by_owner(self, revoke):
+        """
+        It should allow the owner of the export to cancel/delete the export
+        """
+        from pyramid.httpexceptions import HTTPOk
+        from occams.studies import models, Session
+        from occams.studies.security import track_user
+
+        track_user('joe')
+
+        export = models.Export(
+            owner_user=(
+                Session.query(models.User)
+                .filter_by(key='joe')
+                .one()),
+            contents=[],
+            status='complete')
+        Session.add(export)
+        Session.flush()
+        export_id = export.id
+        export_name = export.name
+        Session.expunge_all()
+
+        request = testing.DummyRequest(
+            layout_manager=mock.Mock(),
+            matchdict={'id': str(export_id)})
+        request.POST['csrf_token'] = request.session.get_csrf_token()
+
+        response = self.view_func(request)
+        self.assertIsInstance(response, HTTPOk)
+        self.assertIsNone(Session.query(models.Export).get(export_id))
+        revoke.assert_called_with(export_name)
 
 
 @ddt
