@@ -13,7 +13,7 @@ by their unique key
 
 Merge scenarios:
   * Data exists in both databases and, thus, can have mismatching primary
-    keys (user, all clinical, partner)
+    keys (user, all studies, partner)
       * Use unique keys (i.e, name, or zid)
   * Data is poluated in both databases, but mutually exclusive
     (datastore phi/fia)
@@ -76,7 +76,7 @@ def install(suid, supw, from_url, to_url):
         OPTIONS(user '{username}', password '{password}');
     """.format(**to_url.translate_connect_args()))
 
-    products = ('clinical', 'datastore', 'lab', 'partner')
+    products = ('studies', 'datastore', 'lab', 'partner')
 
     if 'cctg' in from_url.database:
         products += ('calllog',)

@@ -4,7 +4,7 @@ from tests import IntegrationFixture
 class TestEnrollmentPlan(IntegrationFixture):
 
     def test_file_name(self):
-        from occams.clinical import exports
+        from occams.studies import exports
         plan = exports.EnrollmentPlan()
         self.assertEqual(plan.file_name, 'enrollment.csv')
 
@@ -12,7 +12,7 @@ class TestEnrollmentPlan(IntegrationFixture):
         """
         It should generate a table of all the enrollments in the database
         """
-        from occams.clinical import exports
+        from occams.studies import exports
         plan = exports.EnrollmentPlan()
 
         codebook = list(plan.codebook())

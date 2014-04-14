@@ -9,8 +9,8 @@ class TestSchemaPlan(IntegrationFixture):
         Note this is not the same as de-identification)
         """
         from datetime import date
-        from occams.clinical import Session, models, exports
-        from occams.clinical.security import track_user
+        from occams.studies import Session, models, exports
+        from occams.studies.security import track_user
 
         track_user(u'joe')
 
@@ -41,8 +41,8 @@ class TestSchemaPlan(IntegrationFixture):
         It should not include randomization data if specified.
         """
         from datetime import date, timedelta
-        from occams.clinical import Session, models, exports
-        from occams.clinical.security import track_user
+        from occams.studies import Session, models, exports
+        from occams.studies.security import track_user
 
         track_user(u'joe')
 
@@ -92,8 +92,8 @@ class TestSchemaPlan(IntegrationFixture):
         It should add patient-specific metadata to the report
         """
         from datetime import date
-        from occams.clinical import Session, models, exports
-        from occams.clinical.security import track_user
+        from occams.studies import Session, models, exports
+        from occams.studies.security import track_user
 
         track_user(u'joe')
 
@@ -139,8 +139,8 @@ class TestSchemaPlan(IntegrationFixture):
         It should add enrollment-specific metadata to the report
         """
         from datetime import date, timedelta
-        from occams.clinical import Session, models, exports
-        from occams.clinical.security import track_user
+        from occams.studies import Session, models, exports
+        from occams.studies.security import track_user
 
         track_user(u'joe')
 
@@ -198,8 +198,8 @@ class TestSchemaPlan(IntegrationFixture):
         It should add visit-specific metadata to the report
         """
         from datetime import date, timedelta
-        from occams.clinical import Session, models, exports
-        from occams.clinical.security import track_user
+        from occams.studies import Session, models, exports
+        from occams.studies.security import track_user
 
         track_user(u'joe')
 
@@ -273,8 +273,8 @@ class TestSchemaPlan(IntegrationFixture):
         It should add randomization-specific metadata to the report
         """
         from datetime import date, timedelta
-        from occams.clinical import Session, models, exports
-        from occams.clinical.security import track_user
+        from occams.studies import Session, models, exports
+        from occams.studies.security import track_user
 
         track_user(u'joe')
 

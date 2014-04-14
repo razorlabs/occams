@@ -69,7 +69,7 @@ class TestDownloadViewPersmissions(FunctionalFixture):
         It should allow administrative personnel to download exports
         """
         import transaction
-        from occams.clinical import Session, models
+        from occams.studies import Session, models
         environ = self.make_environ(groups=[principal])
         # Add the the export zip file and database record
         with open('/tmp/123.zip', 'wb+'):

@@ -1,4 +1,4 @@
-occams.clinical
+occams.studies
 ===============
 
 Clinical trials data management software.
@@ -60,7 +60,7 @@ Serving with gUnicorn (for development)
             --recursive \
             -- \
             celery worker \
-            --app "occams.clinical.tasks" \
+            --app "occams.studies.tasks" \
             --loglevel INFO \
             --without-gossip \
             --ini <YOURINI>
@@ -77,7 +77,7 @@ Serving with gUnicorn (for production)
 ::
 
   celery worker \
-           --app "occams.clinical.tasks" \
+           --app "occams.studies.tasks" \
            --without-gossip \
            --loglevel INFO \
            --init <YOURINI>

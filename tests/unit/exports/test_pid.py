@@ -6,7 +6,7 @@ from tests import IntegrationFixture
 class TestPidPlan(IntegrationFixture):
 
     def test_file_name(self):
-        from occams.clinical import exports
+        from occams.studies import exports
         plan = exports.PidPlan()
         self.assertEqual(plan.file_name, 'pid.csv')
 
@@ -15,7 +15,7 @@ class TestPidPlan(IntegrationFixture):
         It should generate a table of all the pids in the database
         """
 
-        from occams.clinical import exports
+        from occams.studies import exports
         plan = exports.PidPlan()
 
         codebook = list(plan.codebook())
@@ -30,8 +30,8 @@ class TestPidPlan(IntegrationFixture):
         """
         It should be able to generate reports without refs
         """
-        from occams.clinical import exports, models, Session
-        from occams.clinical.security import track_user
+        from occams.studies import exports, models, Session
+        from occams.studies.security import track_user
         plan = exports.PidPlan()
 
         track_user('joe')
@@ -62,8 +62,8 @@ class TestPidPlan(IntegrationFixture):
         """
         It should generate a basic listing of all the PIDs in the database
         """
-        from occams.clinical import exports, models, Session
-        from occams.clinical.security import track_user
+        from occams.studies import exports, models, Session
+        from occams.studies.security import track_user
         plan = exports.PidPlan()
 
         track_user('joe')
@@ -99,8 +99,8 @@ class TestPidPlan(IntegrationFixture):
         It should output earlytest ids (for backwards-compatibilty)
         """
         from datetime import date
-        from occams.clinical import exports, models, Session
-        from occams.clinical.security import track_user
+        from occams.studies import exports, models, Session
+        from occams.studies.security import track_user
         plan = exports.PidPlan()
 
         track_user('joe')

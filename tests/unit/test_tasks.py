@@ -9,7 +9,7 @@ class TestIncludeme(IntegrationFixture):
         super(TestIncludeme, self).setUp()
         import mock
 
-        self.patch = mock.patch('occams.clinical.tasks.celery.conf')
+        self.patch = mock.patch('occams.studies.tasks.celery.conf')
         self.patch.start()
 
     def tearDown(self):
@@ -34,7 +34,7 @@ class TestIncludeme(IntegrationFixture):
         expected['app.export.expire'] = int(expected['app.export.expire'])
 
         self.config.registry.settings.update(input)
-        self.config.include('occams.clinical.tasks')
+        self.config.include('occams.studies.tasks')
         for key in input.keys():
             self.assertEquals(
                 self.config.registry.settings[key],
@@ -53,8 +53,8 @@ class TestInTransaction(unittest.TestCase):
         import celery
         from sqlalchemy import Column, Integer, orm
         from sqlalchemy.ext.declarative import declarative_base
-        from occams.clinical import Session
-        from occams.clinical.tasks import in_transaction
+        from occams.studies import Session
+        from occams.studies.tasks import in_transaction
 
         app = celery.Celery('test')
 
@@ -94,10 +94,10 @@ class TestInit(IntegrationFixture):
         It should use the pyramid application to initalize settings/resources
         """
         import mock
-        from occams.clinical import Session, models
-        from occams.clinical.tasks import init
+        from occams.studies import Session, models
+        from occams.studies.tasks import init
 
-        with mock.patch('occams.clinical.tasks.bootstrap') as bootstrap:
+        with mock.patch('occams.studies.tasks.bootstrap') as bootstrap:
             bootstrap.return_value = {
                 'registry': mock.Mock(
                     settings={
@@ -126,7 +126,7 @@ class TestMakeExport(IntegrationFixture):
         import tempfile
         import mock
         from redis import StrictRedis
-        from occams.clinical.tasks import celery
+        from occams.studies.tasks import celery
         from tests import REDIS_URL
 
         self.config.registry.settings['app.export.dir'] = tempfile.mkdtemp()
@@ -135,7 +135,7 @@ class TestMakeExport(IntegrationFixture):
         self.celery.settings = self.config.registry.settings
 
         # Block tasks from commiting to prevent test sideeffects
-        self.transaction = mock.patch('occams.clinical.tasks.transaction')
+        self.transaction = mock.patch('occams.studies.tasks.transaction')
         self.transaction.start()
 
     def tearDown(self):
@@ -150,9 +150,9 @@ class TestMakeExport(IntegrationFixture):
         It should generate a zip file containing the specified contents
         """
         from zipfile import ZipFile
-        from occams.clinical import Session, models
-        from occams.clinical.tasks import make_export
-        from occams.clinical.security import track_user
+        from occams.studies import Session, models
+        from occams.studies.tasks import make_export
+        from occams.studies.security import track_user
 
         track_user('joe')
         export = models.Export(

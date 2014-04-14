@@ -27,7 +27,7 @@ def setup_package():
     """
     from pyramid.paster import get_appsettings
     from sqlalchemy import engine_from_config
-    from occams.clinical import Session, models as clinical
+    from occams.studies import Session, models as studies
     from occams.datastore import models as datastore
     from occams.roster import Session as RosterSession
     from occams.roster import models as roster
@@ -38,7 +38,7 @@ def setup_package():
     RosterSession.configure(bind=engine_from_config(settings, 'pid.db.'))
 
     datastore.DataStoreModel.metadata.create_all(Session.bind)
-    clinical.Base.metadata.create_all(Session.bind)
+    studies.Base.metadata.create_all(Session.bind)
     roster.Base.metadata.create_all(RosterSession.bind)
 
 
@@ -47,13 +47,13 @@ def teardown_package():
     Releases system-wide fixtures
     """
     import os
-    from occams.clinical import Session, models as clinical
+    from occams.studies import Session, models as studies
     from occams.datastore import models as datastore
     from occams.roster import Session as RosterSession
     from occams.roster import models as roster
 
     roster.Base.metadata.drop_all(RosterSession.bind)
-    clinical.Base.metadata.drop_all(Session.bind)
+    studies.Base.metadata.drop_all(Session.bind)
     datastore.DataStoreModel.metadata.drop_all(Session.bind)
 
     for session in (Session, RosterSession):
@@ -69,12 +69,12 @@ class IntegrationFixture(unittest.TestCase):
 
     def setUp(self):
         from pyramid import testing
-        from occams.clinical.models import Base
+        from occams.studies.models import Base
         self.config = testing.setUp()
         Base.metadata.info['settings'] = self.config.registry.settings
 
     def tearDown(self):
-        from occams.clinical import Session
+        from occams.studies import Session
         from pyramid import testing
         import transaction
         testing.tearDown()
@@ -99,14 +99,14 @@ class FunctionalFixture(unittest.TestCase):
 
     def tearDown(self):
         import transaction
-        from occams.clinical import Session, models as clinical
+        from occams.studies import Session, models as studies
         from occams.datastore import models as datastore
         from occams.roster import Session as RosterSession
         from occams.roster import models as roster
         with transaction.manager:
-            Session.query(clinical.Site).delete('fetch')
-            Session.query(clinical.Study).delete('fetch')
-            Session.query(clinical.Partner).delete('fetch')
+            Session.query(studies.Site).delete('fetch')
+            Session.query(studies.Study).delete('fetch')
+            Session.query(studies.Partner).delete('fetch')
             Session.query(datastore.Schema).delete('fetch')
             Session.query(datastore.Category).delete('fetch')
             Session.query(datastore.User).delete('fetch')

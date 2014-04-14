@@ -98,9 +98,9 @@ def get_version():
 
 
 setup(
-    name='occams.clinical',
+    name='occams.studies',
     version=get_version(),
-    description='occams.clinical',
+    description='occams.studies',
     long_description=README + '\n\n' + CHANGES,
     classifiers=[
         "Programming Language :: Python",
@@ -110,7 +110,7 @@ setup(
     ],
     author='UCSD BIT Core Team',
     author_email='bitcore@ucsd.edu',
-    url='https://bitbutcket.org/ucsdbitcore/occams.clinical',
+    url='https://bitbutcket.org/ucsdbitcore/occams.studies',
     keywords='web wsgi bfg pylons pyramid',
     packages=find_packages('src', exclude=['ez_setup']),
     package_dir={'': 'src'},
@@ -123,9 +123,9 @@ setup(
     test_suite='nose.collector',
     entry_points="""\
     [paste.app_factory]
-    main = occams.clinical:main
+    main = occams.studies:main
     [console_scripts]
-    oc_initdb = occams.clinical.scripts.initdb:main
-    oc_export = occams.clinical.scripts.export:main
+    oc_initdb = occams.studies.scripts.initdb:main
+    oc_export = occams.studies.scripts.export:main
     """,
 )

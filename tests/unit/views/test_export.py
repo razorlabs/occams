@@ -5,7 +5,7 @@ import mock
 from pyramid import testing
 from webob.multidict import MultiDict
 
-from occams.clinical import Session, models
+from occams.studies import Session, models
 from tests import IntegrationFixture
 
 
@@ -15,14 +15,14 @@ class TestAdd(IntegrationFixture):
         super(TestAdd, self).setUp()
         # Use permissive since we're using functional tests for permissions
         self.config.testing_securitypolicy(userid='joe', permissive=True)
-        from occams.clinical.views.export import add
+        from occams.studies.views.export import add
         self.view_func = add
 
     def test_get_exportables(self):
         """
         It should render only published schemata
         """
-        from occams.clinical.security import track_user
+        from occams.studies.security import track_user
 
         track_user('joe')
 
@@ -81,15 +81,15 @@ class TestAdd(IntegrationFixture):
         self.assertIsNotNone(response['errors']['csrf_token'])
 
     # Don't actually invoke the subtasks
-    @mock.patch('occams.clinical.tasks.make_export')
+    @mock.patch('occams.studies.tasks.make_export')
     def test_valid(self, make_export):
         """
         It should add an export record and initiate an async task
         """
         from pyramid.httpexceptions import HTTPFound
-        from occams.clinical.security import track_user
+        from occams.studies.security import track_user
 
-        self.config.include('occams.clinical.routes')
+        self.config.include('occams.studies.routes')
         self.config.registry.settings['app.export.dir'] = '/tmp'
 
         track_user('joe')
@@ -117,7 +117,7 @@ class TestAdd(IntegrationFixture):
         """
         It should not let the user exceed their allocated export limit
         """
-        from occams.clinical.security import track_user
+        from occams.studies.security import track_user
 
         self.config.registry.settings['app.export.limit'] = 0
 
@@ -153,17 +153,17 @@ class TestStatusJSON(IntegrationFixture):
         super(TestStatusJSON, self).setUp()
         # Use permissive since we're using functional tests for permissions
         self.config.testing_securitypolicy(userid='joe', permissive=True)
-        from occams.clinical.views.export import status_json
+        from occams.studies.views.export import status_json
         self.view_func = status_json
 
     def test_get_current_user(self):
         """
         It should return the authenticated user's exports
         """
-        from occams.clinical.security import track_user
+        from occams.studies.security import track_user
 
         self.config.registry.settings['app.export.dir'] = '/tmp'
-        self.config.include('occams.clinical.routes')
+        self.config.include('occams.studies.routes')
 
         track_user('jane')
         track_user('joe')
@@ -196,13 +196,13 @@ class TestStatusJSON(IntegrationFixture):
         It should not render expired exports.
         """
         from datetime import datetime, timedelta
-        from occams.clinical.security import track_user
+        from occams.studies.security import track_user
 
         EXPIRE_DAYS = 10
 
         self.config.registry.settings['app.export.expire'] = EXPIRE_DAYS
         self.config.registry.settings['app.export.dir'] = '/tmp'
-        self.config.include('occams.clinical.routes')
+        self.config.include('occams.studies.routes')
 
         track_user('joe')
 
@@ -235,6 +235,35 @@ class TestStatusJSON(IntegrationFixture):
         self.assertEquals(len(exports), 0)
 
 
+class TestDelete(IntegrationFixture):
+
+    def setUp(self):
+        super(TestDownload, self).setUp()
+        # Use permissive since we're using functional tests for permissions
+        self.config.testing_securitypolicy(userid='joe', permissive=True)
+        from occams.studies.views.export import delete
+        self.view_func = delete
+
+    @mock.patch('occams.studies.occams.studies.exports.celery')
+    def test_deleteable_by_owner(self, celery):
+        """
+        It should allow the owner of the export to cancel/delete the export
+        """
+        from occams.studies import models, Session
+        from occams.studies.security import track_user
+
+        track_user('joe')
+
+        export = models.Export(
+            owner_user=(
+                Session.query(models.User)
+                .filter_by(key='jane')
+                .one()),
+            contents=[],
+            status='complete')
+        Session.add(export)
+
+
 @ddt
 class TestDownload(IntegrationFixture):
 
@@ -242,7 +271,7 @@ class TestDownload(IntegrationFixture):
         super(TestDownload, self).setUp()
         # Use permissive since we're using functional tests for permissions
         self.config.testing_securitypolicy(userid='joe', permissive=True)
-        from occams.clinical.views.export import download
+        from occams.studies.views.export import download
         self.view_func = download
 
     def test_get_owner_exports(self):
@@ -252,7 +281,7 @@ class TestDownload(IntegrationFixture):
         import os
         from pyramid.httpexceptions import HTTPNotFound
         from pyramid.response import FileResponse
-        from occams.clinical.security import track_user
+        from occams.studies.security import track_user
 
         self.config.registry.settings['app.export.dir'] = '/tmp'
         track_user('joe')
@@ -293,7 +322,7 @@ class TestDownload(IntegrationFixture):
         It should return 404 if the record is not ready
         """
         from pyramid.httpexceptions import HTTPNotFound
-        from occams.clinical.security import track_user
+        from occams.studies.security import track_user
 
         track_user('joe')
         Session.add(models.Export(
