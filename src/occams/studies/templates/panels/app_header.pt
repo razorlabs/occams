@@ -17,7 +17,7 @@
         <span class="icon-bar"></span>
       </button>
       <a class="navbar-brand"
-          href="${request.route_path('studies')}">OCCAMS Clinical</a>
+          href="${request.route_path('studies')}">OCCAMS Studies</a>
     </div> <!--/.navbar-header -->
 
     <div class="collapse navbar-collapse">
