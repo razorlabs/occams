@@ -665,11 +665,6 @@ class Export(Base, Referenceable, Modifiable, Auditable):
     def redis_key(self):
         return self.__tablename__ + ':' + self.name
 
-    def __repr__(self):
-        return '<{0}(id={o.id}, owner_user={o.owner_user.key})>'.format(
-            self.__module__ + '.' + self.__class__.__name__,
-            o=self)
-
     @declared_attr
     def __table_args__(cls):
         return (

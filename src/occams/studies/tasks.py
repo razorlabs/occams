@@ -27,6 +27,7 @@ from celery.signals import worker_init
 from celery.utils.log import get_task_logger
 import humanize
 from pyramid.paster import bootstrap
+from sqlalchemy.orm.exc import NoResultFound
 import transaction
 
 from . import models, Session, exports
@@ -57,7 +58,14 @@ def includeme(config):
     if 'app.export.expire' in settings:
         settings['app.export.expire'] = int(settings['app.export.expire'])
 
-    celery.conf.update(BROKER_URL=settings['celery.broker.url'])
+    celery.conf.update(
+        BROKER_URL=settings['celery.broker.url'],
+        CELERY_RESULT_BACKEND=settings['celery.backend.url'],
+        BROKER_TRANSPORT_OPTIONS={
+            'fanout_prefix': True,
+            'fanout_patterns': True
+            }
+        )
 
 
 @worker_init.connect
@@ -115,18 +123,19 @@ class ExportTask(Task):
 
     @in_transaction
     def on_success(self, retval, task_id, args, kwargs):
-        export = Session.query(models.Export).filter_by(name=task_id).one()
+        try:
+            export = Session.query(models.Export).filter_by(name=task_id).one()
+        except NoResultFound:
+            # Assume revoked
+            return
         export.status = 'complete'
-        path = os.path.join(celery.settings['app.export.dir'], export.name)
         redis = celery.redis
-        redis_key = export.redis_key
-        file_size = humanize.naturalsize(os.path.getsize(path))
-        redis.hmset(redis_key, {
+        redis.hmset(export.redis_key, {
             'status': export.status,
-            'file_size': file_size
+            'file_size': humanize.naturalsize(export.file_size)
         })
         Session.flush()
-        redis.publish('export', json.dumps(redis.hgetall(redis_key)))
+        redis.publish('export', json.dumps(redis.hgetall(export.redis_key)))
 
 
 @celery.task(name='make_export', base=ExportTask, ignore_result=True)
