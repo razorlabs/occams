@@ -125,7 +125,7 @@ setup(
     [paste.app_factory]
     main = occams.studies:main
     [console_scripts]
-    oc_initdb = occams.studies.scripts.initdb:main
-    oc_export = occams.studies.scripts.export:main
+    os_initdb = occams.studies.scripts.initdb:main
+    os_export = occams.studies.scripts.export:main
     """,
 )
