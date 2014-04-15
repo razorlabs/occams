@@ -7,23 +7,27 @@ try:
 except ImportError:
     import unittest
 import re
-from six.moves.configparser import SafeConfigParser
-from sqlalchemy import create_engine, orm
+from sqlalchemy import orm
 
-from occams.datastore.models.events import register
 
 _user = u'bitcore@ucsd.edu'
 
 Session = orm.scoped_session(orm.sessionmaker())
-register(Session)
-
-config = SafeConfigParser()
-config.read('setup.cfg')
 
 
 def setup_package():
+    import os
+    from six.moves.configparser import SafeConfigParser
+    from sqlalchemy import create_engine
+    from testconfig import config
     from occams.datastore import models
-    engine = create_engine(config.get('db', 'default'))
+    from occams.datastore.models.events import register
+    register(Session)
+    HERE = os.path.abspath(os.path.dirname(__file__))
+    cfg = SafeConfigParser()
+    cfg.read(os.path.join(HERE, '..', 'setup.cfg'))
+    db = config.get('db') or 'default'
+    engine = create_engine(cfg.get('db', db))
     models.DataStoreModel.metadata.create_all(engine)
     Session.configure(bind=engine, info={'user': _user})
 

@@ -13,7 +13,7 @@ REQUIRES = [
 
 EXTRAS = {
     'postgresql': ['psycopg2'],
-    'test': ['nose', 'coverage']
+    'test': ['nose', 'coverage', 'nose-testconfig']
     }
 
 
