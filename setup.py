@@ -1,10 +1,25 @@
-from setuptools import find_packages, setup
+import os
 from subprocess import Popen, PIPE
-import os.path
+from setuptools import setup, find_packages
 import sys
 
 
 HERE = os.path.abspath(os.path.dirname(__file__))
+
+REQUIRES = [
+    'alembic',
+    'six',
+    'SQLAlchemy']
+
+EXTRAS = {
+    'postgresql': ['psycopg2'],
+    'test': ['nose', 'coverage', 'nose-testconfig']
+    }
+
+
+if sys.version_info < (2, 7):
+    REQUIRES.extend(['argparse', 'ordereddict'])
+    EXTRAS['test'].extend(['unittest2'])
 
 
 def get_version():
@@ -43,7 +58,6 @@ setup(
     description='Provides storage solution for sparse data.',
     classifiers=[
         'Development Status :: 4 - Beta'
-        'Framework :: Zope3',
         'Intended Audience :: Developers'
         'Operating System :: OS Independent'
         'Programming Language :: Python',
@@ -54,46 +68,17 @@ setup(
         'Topic :: Software Development :: Libraries',
         'Topic :: Utilities',
         ],
-    keywords='AVRC BIT OCCAMS datastore database eav sqlalchemy relational clinical',
+    keywords='BIT OCCAMS datastore database eav sqlalchemy clinical',
     author='BIT Core Development Team',
     author_email='bitcore@ucsd.edu',
-    url='https://bitbucket.org/ucsdbitcore/occams.datstore.git',
+    url='https://bitbucket.org/ucsdbitcore/occams.datastore.git',
     license='GPL',
     packages=find_packages('src', exclude=['ez_setup']),
-    package_dir={'':'src'},
+    package_dir={'': 'src'},
     namespace_packages=['occams'],
     include_package_data=True,
     zip_safe=False,
-    install_requires=[
-        'setuptools',
-        'argparse',
-
-        # Useful tool for result sets
-        'ordereddict',
-
-        # Import/Export support via XML
-        'lxml',
-
-        # ORM utilities and upgrade tools
-        'SQLAlchemy',
-        'sqlalchemy-migrate',
-
-        # Component specification/documentation
-        # Note that these packages do not install the entire Zope ecosystem,
-        # they install necessary building blocks that are useful merely for
-        # specification and documentation.
-        'zope.component',
-        'zope.deprecation',
-        'zope.i18nmessageid',
-        'zope.interface',
-        'zope.schema',
-
-        # Low-level batching support for Zope products
-        'z3c.batching',
-        ],
-    extras_require=dict(
-        postgresql=['psycopg2'],
-        test=['plone.testing'], # Required for layers, does not install Plone
-        ),
-    tests_require=['plone.testing'],
-    )
+    install_requires=REQUIRES,
+    extras_require=EXTRAS,
+    tests_require=EXTRAS['test'],
+    test_suite='nose.collector')
