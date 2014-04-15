@@ -1,29 +1,26 @@
-from datetime import date
-
 from ddt import ddt, data
 import mock
-from pyramid import testing
-from webob.multidict import MultiDict
 
-from occams.studies import Session, models
 from tests import IntegrationFixture
 
 
 class TestAdd(IntegrationFixture):
 
-    def setUp(self):
-        super(TestAdd, self).setUp()
-        # Use permissive since we're using functional tests for permissions
-        self.config.testing_securitypolicy(userid='joe', permissive=True)
+    @property
+    def view_func(self):
         from occams.studies.views.export import add
-        self.view_func = add
+        return add
 
     def test_get_exportables(self):
         """
         It should render only published schemata
         """
+        from datetime import date
+        from pyramid import testing
         from occams.studies.security import track_user
+        from occams.studies import Session, models
 
+        #self.config.testing_securitypolicy(userid='joe', permissive=True)
         track_user('joe')
 
         # No schemata
@@ -54,6 +51,8 @@ class TestAdd(IntegrationFixture):
         """
         It should raise validation errors on empty imput
         """
+        from pyramid import testing
+        from webob.multidict import MultiDict
         request = testing.DummyRequest(
             layout_manager=mock.Mock(),
             post=MultiDict())
@@ -64,6 +63,8 @@ class TestAdd(IntegrationFixture):
         """
         It should raise validation errors for non-existent schemata
         """
+        from pyramid import testing
+        from webob.multidict import MultiDict
         request = testing.DummyRequest(
             layout_manager=mock.Mock(),
             post=MultiDict([('contents', 'does_not_exist')]))
@@ -74,6 +75,8 @@ class TestAdd(IntegrationFixture):
         """
         It should check for cross-site forgery
         """
+        from pyramid import testing
+        from webob.multidict import MultiDict
         request = testing.DummyRequest(
             layout_manager=mock.Mock(),
             post=MultiDict([('csrf_token', 'd3v10us')]))
@@ -86,8 +89,12 @@ class TestAdd(IntegrationFixture):
         """
         It should add an export record and initiate an async task
         """
+        from datetime import date
+        from pyramid import testing
         from pyramid.httpexceptions import HTTPFound
+        from webob.multidict import MultiDict
         from occams.studies.security import track_user
+        from occams.studies import Session, models
 
         self.config.include('occams.studies.routes')
         self.config.registry.settings['app.export.dir'] = '/tmp'
@@ -99,6 +106,7 @@ class TestAdd(IntegrationFixture):
         Session.add(schema)
         Session.flush()
 
+        self.config.testing_securitypolicy(userid='joe')
         request = testing.DummyRequest(
             layout_manager=mock.Mock(),
             post=MultiDict([
@@ -117,7 +125,11 @@ class TestAdd(IntegrationFixture):
         """
         It should not let the user exceed their allocated export limit
         """
+        from datetime import date
+        from pyramid import testing
+        from webob.multidict import MultiDict
         from occams.studies.security import track_user
+        from occams.studies import Session, models
 
         self.config.registry.settings['app.export.limit'] = 0
 
@@ -132,12 +144,14 @@ class TestAdd(IntegrationFixture):
         Session.flush()
 
         # The renderer should know about it
+        self.config.testing_securitypolicy(userid='joe')
         request = testing.DummyRequest(
             layout_manager=mock.Mock())
         response = self.view_func(request)
         self.assertTrue(response['exceeded'])
 
         # If the user insists, they'll get a validation error as well
+        self.config.testing_securitypolicy(userid='joe')
         request = testing.DummyRequest(
             layout_manager=mock.Mock(),
             post=MultiDict([
@@ -149,18 +163,18 @@ class TestAdd(IntegrationFixture):
 
 class TestStatusJSON(IntegrationFixture):
 
-    def setUp(self):
-        super(TestStatusJSON, self).setUp()
-        # Use permissive since we're using functional tests for permissions
-        self.config.testing_securitypolicy(userid='joe', permissive=True)
+    @property
+    def view_func(self):
         from occams.studies.views.export import status_json
-        self.view_func = status_json
+        return status_json
 
     def test_get_current_user(self):
         """
         It should return the authenticated user's exports
         """
+        from pyramid import testing
         from occams.studies.security import track_user
+        from occams.studies import Session, models
 
         self.config.registry.settings['app.export.dir'] = '/tmp'
         self.config.include('occams.studies.routes')
@@ -185,6 +199,7 @@ class TestStatusJSON(IntegrationFixture):
                 status='pending')])
         Session.flush()
 
+        self.config.testing_securitypolicy(userid='joe')
         request = testing.DummyRequest(
             layout_manager=mock.Mock())
         response = self.view_func(request)
@@ -196,7 +211,9 @@ class TestStatusJSON(IntegrationFixture):
         It should not render expired exports.
         """
         from datetime import datetime, timedelta
+        from pyramid import testing
         from occams.studies.security import track_user
+        from occams.studies import Session, models
 
         EXPIRE_DAYS = 10
 
@@ -219,6 +236,7 @@ class TestStatusJSON(IntegrationFixture):
         Session.add(export)
         Session.flush()
 
+        self.config.testing_securitypolicy(userid='joe')
         request = testing.DummyRequest(
             layout_manager=mock.Mock())
         response = self.view_func(request)
@@ -237,18 +255,17 @@ class TestStatusJSON(IntegrationFixture):
 
 class TestDelete(IntegrationFixture):
 
-    def setUp(self):
-        super(TestDelete, self).setUp()
-        # Use permissive since we're using functional tests for permissions
-        self.config.testing_securitypolicy(userid='joe', permissive=True)
+    @property
+    def view_func(self):
         from occams.studies.views.export import delete
-        self.view_func = delete
+        return delete
 
     @mock.patch('occams.studies.tasks.celery.control.revoke')
     def test_deletable_not_owner(self, revoke):
         """
         It should issue a 404 if the user does not own the export
         """
+        from pyramid import testing
         from pyramid.httpexceptions import HTTPNotFound
         from occams.studies import models, Session
         from occams.studies.security import track_user
@@ -281,6 +298,7 @@ class TestDelete(IntegrationFixture):
         """
         It should issue a 404 if the export does not exist
         """
+        from pyramid import testing
         from pyramid.httpexceptions import HTTPNotFound
 
         request = testing.DummyRequest(
@@ -296,6 +314,7 @@ class TestDelete(IntegrationFixture):
         """
         It should deny invalid CSRF tokens
         """
+        from pyramid import testing
         from pyramid.httpexceptions import HTTPForbidden
         from occams.studies import models, Session
         from occams.studies.security import track_user
@@ -314,6 +333,7 @@ class TestDelete(IntegrationFixture):
         export_id = export.id
         Session.expunge_all()
 
+        self.config.testing_securitypolicy(userid='joe')
         request = testing.DummyRequest(
             layout_manager=mock.Mock(),
             matchdict={'id': str(export_id)})
@@ -327,6 +347,7 @@ class TestDelete(IntegrationFixture):
         """
         It should allow the owner of the export to cancel/delete the export
         """
+        from pyramid import testing
         from pyramid.httpexceptions import HTTPOk
         from occams.studies import models, Session
         from occams.studies.security import track_user
@@ -346,6 +367,7 @@ class TestDelete(IntegrationFixture):
         export_name = export.name
         Session.expunge_all()
 
+        self.config.testing_securitypolicy(userid='joe')
         request = testing.DummyRequest(
             layout_manager=mock.Mock(),
             matchdict={'id': str(export_id)})
@@ -360,21 +382,21 @@ class TestDelete(IntegrationFixture):
 @ddt
 class TestDownload(IntegrationFixture):
 
-    def setUp(self):
-        super(TestDownload, self).setUp()
-        # Use permissive since we're using functional tests for permissions
-        self.config.testing_securitypolicy(userid='joe', permissive=True)
+    @property
+    def view_func(self):
         from occams.studies.views.export import download
-        self.view_func = download
+        return download
 
     def test_get_owner_exports(self):
         """
         It should only allow owners of the export to download it
         """
         import os
+        from pyramid import testing
         from pyramid.httpexceptions import HTTPNotFound
         from pyramid.response import FileResponse
         from occams.studies.security import track_user
+        from occams.studies import Session, models
 
         self.config.registry.settings['app.export.dir'] = '/tmp'
         track_user('joe')
@@ -392,14 +414,14 @@ class TestDownload(IntegrationFixture):
 
         fp = open('/tmp/' + export.name, 'w+b')
 
-        self.config.testing_securitypolicy(userid='joe', permissive=True)
+        #self.config.testing_securitypolicy(userid='joe', permissive=True)
         request = testing.DummyRequest(
             layout_manager=mock.Mock(),
             matchdict={'id': 123})
         with self.assertRaises(HTTPNotFound):
             self.view_func(request)
 
-        self.config.testing_securitypolicy(userid='jane', permissive=True)
+        self.config.testing_securitypolicy(userid='jane')
         request = testing.DummyRequest(
             layout_manager=mock.Mock(),
             matchdict={'id': 123})
@@ -414,8 +436,10 @@ class TestDownload(IntegrationFixture):
         """
         It should return 404 if the record is not ready
         """
+        from pyramid import testing
         from pyramid.httpexceptions import HTTPNotFound
         from occams.studies.security import track_user
+        from occams.studies import Session, models
 
         track_user('joe')
         Session.add(models.Export(

@@ -1,5 +1,4 @@
 import mock
-from pyramid import testing
 
 from tests import IntegrationFixture
 
@@ -11,6 +10,7 @@ class TestExportNameSpace(IntegrationFixture):
         """
         It should keep methods protected if the user does not have permissions
         """
+        from pyramid import testing
         from occams.studies.views.socketio import ExportNamespace
 
         request = testing.DummyRequest(
@@ -29,6 +29,7 @@ class TestExportNameSpace(IntegrationFixture):
         """
         It should unlock methods if the user has the proper permissions
         """
+        from pyramid import testing
         from occams.studies.views.socketio import ExportNamespace
 
         self.config.testing_securitypolicy(userid='joe', permissive=True)
@@ -49,6 +50,7 @@ class TestExportNameSpace(IntegrationFixture):
         """
         It should initially lock all access to methods
         """
+        from pyramid import testing
         from occams.studies.views.socketio import ExportNamespace
         request = testing.DummyRequest(
             environ={'socketio': mock.Mock(session={})})
@@ -60,6 +62,7 @@ class TestExportNameSpace(IntegrationFixture):
         """
         It should emit current progress for the current authenticated user
         """
+        from pyramid import testing
         from occams.studies import models, Session
         from occams.studies.views.socketio import ExportNamespace
         from occams.studies.security import track_user
@@ -107,6 +110,7 @@ class TestExportNameSpace(IntegrationFixture):
         It should emit ongoing progress for the authenticated user
         """
         import json
+        from pyramid import testing
         from occams.studies.views.socketio import ExportNamespace
 
         def listen():

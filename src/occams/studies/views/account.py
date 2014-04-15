@@ -1,6 +1,7 @@
 import colander
 import deform.widget
 from pyramid.httpexceptions import HTTPFound, HTTPForbidden
+from pyramid.security import forget
 from pyramid.view import view_config, forbidden_view_config
 
 from .. import _, Session, models
@@ -33,7 +34,7 @@ class LoginSchema(colander.MappingSchema):
     renderer='occams.studies:templates/account/login.pt')
 def login(request):
 
-    if (request.matched_route != 'account_login'
+    if (request.matched_route.name != 'account_login'
             and request.authenticated_userid):
         # If an authenticated user has reached this controller without
         # intentionally going to the login view, assume permissions
@@ -62,20 +63,22 @@ def login(request):
                 title=_(u'Sign In'),
                 css_class='btn btn-lg btn-primary btn-block')])
 
-    # XXX: Hack for this to work on systems that have not set the
-    # environ yet. Pyramid doesn't give us access to the policy publicly,
-    # put it's still available throught this private variable and
-    # it's usefule in leveraging repoze.who's login mechanisms...
-    who_api = request._get_authentication_policy()._getAPI(request)
-
     # Only process the input if the user intented to post to this view
     # (could be not-logged-in redirect)
-    if request.method == 'POST' and request.matched_route == 'account_login':
+    if (request.method == 'POST'
+            and request.matched_route.name == 'account_login'):
         try:
             appstruct = form.validate(request.POST.items())
         except deform.ValidationFailure as e:
             form = e
         else:
+            # XXX: Hack for this to work on systems that have not set the
+            # environ yet. Pyramid doesn't give us access to the policy
+            # publicly, put it's still available throught this private
+            # variable and it's usefule in leveraging repoze.who's
+            # login mechanisms...
+            who_api = request._get_authentication_policy()._getAPI(request)
+
             authenticated, headers = who_api.login({
                 'login': appstruct['login'],
                 'password': appstruct['password']})
@@ -89,14 +92,9 @@ def login(request):
                 if not user:
                     Session.add(models.User(key=appstruct['login']))
                 return HTTPFound(location=referrer, headers=headers)
-    else:
-        # Forcefully forget any existing credentials.
-        __, headers = who_api.login({})
 
-    # clear any authenticated user for the current request.
-    request.response_headerlist = headers
-    if 'REMOTE_USER' in request.environ:
-        del request.environ['REMOTE_USER']
+    # forcefully forget any credentials
+    request.response_headerlist = forget(request)
 
     return {'form': form.render()}
 
@@ -104,5 +102,5 @@ def login(request):
 @view_config(route_name='account_logout')
 def logout(request):
     who_api = request._get_authentication_policy()._getAPI(request)
-    headers = who_api.forget()
+    headers = who_api.logout()
     return HTTPFound(location=request.route_path('home'), headers=headers)
