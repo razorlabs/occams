@@ -1,0 +1,72 @@
+/**
+ * Export view stylings
+ */
+
+
+.export {
+
+  .panel-heading {
+
+    .export-status {
+      text-align: right;
+    }
+
+    ul.details {
+      margin-bottom: 0;
+    }
+
+  }
+
+  .export-file {
+    display: inline-block;
+    margin-left: @font-size-base;
+  }
+
+  .export-contents-toggle:after {
+    .glyphicon();
+    content: " \e114";
+  }
+
+  .export-contents-toggle.collapsed:after {
+    .glyphicon();
+    content: " \e080";
+  }
+
+  .export-contents {
+    background-color: @gray-lighter;
+  }
+
+  &.panel-complete {
+    .panel-success();
+  }
+
+  &.panel-failed {
+    .panel-danger();
+  }
+
+  &.panel-pending {
+    .panel-default();
+  }
+}
+
+
+#export-faq-sidebar {
+
+  &.affix-top, &.affix {
+    position: static;
+  }
+
+  @media (min-width: @screen-md) {
+
+    &.affix {
+      position: fixed;
+      top: @font-size-large;
+    }
+
+    &.affix-top {
+      position: static;
+      margin-top: 0;
+    }
+  }
+
+}
