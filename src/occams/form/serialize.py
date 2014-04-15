@@ -16,7 +16,6 @@ import re
 import zope.schema
 from zope.schema.vocabulary import SimpleVocabulary
 from zope.schema.vocabulary import SimpleTerm
-from occams.datastore.interfaces import typesVocabulary
 
 # Copied from Python documentation
 reservedWords = """

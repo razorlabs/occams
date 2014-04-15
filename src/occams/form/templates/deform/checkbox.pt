@@ -1,0 +1,18 @@
+<label
+    tal:define="label label|field.schema.label|nothing"
+    tal:omit-tag="not label">
+
+  <input
+      tal:define="
+         true_val true_val|field.widget.true_val;"
+      type="checkbox"
+      name="${name|field.name}"
+      value="${true_val}"
+      id="${oid|field.oid}"
+      tal:attributes="
+        checked cstruct == true_val;
+        class css_class|field.widget.css_class"/>
+
+    ${label|nothing}
+
+</label>

@@ -1,18 +1,15 @@
-===========
 OCCAMS Form
 ===========
 
-A tool for managing dynamic forms in Plone.
+A web application for managing dynamic forms.
 
 
----------
 Rationale
 ---------
 
 As part of the OCCAMS suite of components, a method for accessing and managing
 forms through the web is needed for patient data.
 
------
 Goals
 -----
 
@@ -23,7 +20,6 @@ Some goals of this product:
     * Show form statistics (usage, # instances, % entered, states)
     * Form importing/exporting
 
---------------
 Implementation
 --------------
 
@@ -39,10 +35,11 @@ PostgreSQL
 
 Currently we only support PostgreSQL
 
-------------
 Installation
 ------------
 
+Python
+++++++
 To install, refer  to this plugin in your egg's ``setup.py`` file::
 
    setup(
@@ -56,34 +53,16 @@ To install, refer  to this plugin in your egg's ``setup.py`` file::
        )
 
 
-Note that this product relies on z3c.saconfig_ for it's database session
-source. Therefore, you must register your session components in either your
-own product or plone's ZCML. Best practices would suggest you do the latter
-via buildout::
+Authentication
+++++++++++++++
 
-    [instance]
-    recipe = plone.recipe.zope2instance
-    ...
-    zcml-additional =
-    <configure
-        xmlns="http://namespaces.zope.org/zope"
-        xmlns:db="http://namespaces.zope.org/db">
-      <include package="z3c.saconfig" file="meta.zcml" />
-      <db:engine name="YOUR.OWN.ENGINE" url="postgresql://...." />
-      <db:session name="YOUR.OWN.SESSION" engine="YOUR.OWN.ENGINE" />
-    </configure>
+Because many organizations have their politics of authentication, this app
+tries to not force any authentication paradigm on the client and instead
+uses `repoze.who` to allow clients to supply their own authentication via
+customized-organization-specific plugins.
 
-This will help keep all your connections in one file as opposed to having them
-scattered through out your eggs, and additionaly it will prevent your from
-accidentally commiting your configuration details to your SCM!
 
-Once installed, you will be able to select from a list of registered
-``z3c.saconfig`` sessions as the target form repository.
-
-.. z3c.saconfig: http://pypi.python.org/pypi/z3c.saconfig
-
-------------
-Attributions
+Credits
 ------------
 
 This addon uses icons from various sources, which are credited below:
@@ -106,14 +85,6 @@ This addon uses icons from various sources, which are credited below:
 .. _Creative Commons Attribution 3.0: http://creativecommons.org/licenses/by/3.0/
 
 
-----------
-Disclaimer
-----------
-
-This product may contain traces of nuts.
-
-
-------------------
 Self-Certification
 ------------------
 

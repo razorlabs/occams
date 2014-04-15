@@ -8,7 +8,8 @@ import plone.directives.form
 
 from occams.datastore.interfaces import IDataBaseItem
 from occams.datastore.interfaces import IEntity
-from occams.form import MessageFactory as _
+
+from . import _
 
 
 DATA_KEY = 'occams.form'

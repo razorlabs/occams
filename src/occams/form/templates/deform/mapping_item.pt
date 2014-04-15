@@ -1,0 +1,40 @@
+<div
+    tal:define="
+      error_class error_class|field.widget.error_class;
+      description description|field.description;
+      title title|field.title;
+      oid oid|field.oid;
+      hidden hidden|field.widget.hidden;
+      category category|field.widget.category;"
+    class="form-group ${'has-error ' + error_class if field.error else ''}"
+    title="${description}"
+    id="item-${oid}"
+    tal:omit-tag="hidden"
+    i18n:domain="occams.form">
+
+  <!-- mapping_item -->
+  <label
+      tal:condition="
+        not (hidden or category == 'structural') and title"
+      class="control-label ${'required' if field.required else ''}"
+      title="${title}"
+      for="${oid}"
+      >${title}</label>
+
+  <p tal:condition="
+        not field.typ.__class__.__name__=='Mapping'
+        and description"
+      class="help-block">${description}</p>
+
+  <p tal:condition="field.error and not hidden and not field.typ.__class__.__name__=='Mapping'"
+     tal:define="errstr 'error-%s' % oid"
+     tal:repeat="msg field.error.messages()"
+     tal:attributes="id repeat.msg.index==0 and errstr or ('%s-%s' % (errstr, repeat.msg.index))"
+     class="help-block ${error_class}"
+     i18n:translate="">${msg}</p>
+
+  <input tal:replace="structure field.serialize(cstruct)"/>
+
+  <!-- /mapping_item -->
+
+</div>

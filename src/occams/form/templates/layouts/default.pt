@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html
+    xmlns="http://www.w3.org/1999/xhtml"
+    xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+    xmlns:tal="http://xml.zope.org/namespaces/tal"
+    xmlns:metal="http://xml.zope.org/namespaces/metal"
+    xml:lang="en"
+    lang="en"
+    i18n:domain="occams.form">
+
+  <head>
+    <meta charset="utf-8">
+    <title>${request.settings.app_title|'OCCAMS Form'}</title>
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <link tal:repeat="url layout.styles.urls()" href="${url}" rel="stylesheet" />
+    <!--! Shortcut icons -->
+    <link
+        rel="shortcut icon"
+        href="${request.static_path('occams.form:static/images/favicon.ico')}"/>
+    <link rel="shortcut icon" sizes="1024x1024" href="favicon-highres.png" />
+    <link rel="shortcut icon" sizes="128x128" href="favicon.png" />
+    <link rel="apple-touch-icon" sizes="128x128" href="favicon.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="128x128" href="favicon.png" />
+  </head>
+
+  <body
+      data-view-name="${request.matched_route.name}"
+      data-view-path="${request.current_route_path()}">
+
+    <!--! Wrap the content so we can push the footer to the bottom of the page -->
+    <div id="wrap">
+      <!--! Keep the app navbar separate from the content container -->
+      <header tal:replace="panel('app_header')" />
+      <div class="container">
+        <header class="page-header" tal:condition="layout.show_header">
+          <menu class="pull-right"><button tal:replace="panel('menu')" /></menu>
+          <h1>${layout.title}
+            <small tal:condition="layout.subtitle">${layout.subtitle}</small>
+          </h1>
+          <ul tal:replace="panel('details')" />
+          <nav tal:replace="panel('nav')" />
+        </header>
+        <tal:alerts repeat="type ('error', 'warning', 'info', 'success')">
+          <div
+              class="alert alert-${type}"
+              tal:repeat="msg request.session.pop_flash(type)">${msg}</div>
+        </tal:alerts>
+        <main id="${request.matched_route.name}">
+          <metal:content-slot define-slot="content-slot" />
+        </main>
+      </div> <!-- /.container -->
+    </div> <!-- /#wrap -->
+
+    <div id="modal" class="modal fade" role="dialog"></div>
+
+    <div tal:replace="panel('app_footer')" />
+
+    <!--! Load scripts at the end so we don't block rendering -->
+    <script
+        tal:repeat="url layout.scripts.urls()"
+        src="${url}"
+        type="text/javascript"> </script>
+
+  </body>
+</html>
+

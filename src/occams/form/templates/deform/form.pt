@@ -1,0 +1,59 @@
+<form
+    tal:define="title title|field.title;
+                autocomplete autocomplete|field.autocomplete;
+                formid formid|field.formid;
+                errormsg errormsg|field.errormsg;
+                description description|field.description;
+                item_template item_template|field.widget.item_template;
+                buttons buttons|field.buttons;
+                use_ajax use_ajax|field.use_ajax;
+                ajax_options ajax_options|field.ajax_options;
+                formid formid|field.formid;
+                action action|field.action;
+                method method|field.method;"
+    tal:attributes="
+      class css_class|field.css_class;
+      autocomplete autocomplete"
+    role="form"
+    id="${formid}"
+    action="${action}"
+    method="${method}"
+    enctype="multipart/form-data"
+    accept-charset="utf-8"
+    i18n:domain="occams.form">
+
+  <fieldset>
+
+    <legend tal:condition="title">${title}</legend>
+
+    <input type="hidden" name="_charset_" />
+    <input type="hidden" name="__formid__" value="${formid}"/>
+
+    <div class="alert alert-danger" tal:condition="field.error">
+      <strong i18n:translate="">There was a problem with your submission!</strong>
+      <div tal:condition="not:errormsg" i18n:translate="">Errors have been highlighted below</div>
+      <div tal:condition="errormsg">${errormsg}</div>
+    </div>
+
+    <p tal:condition="description">${description}</p>
+
+    <div tal:repeat="child field"
+         tal:replace="structure child.render_template(item_template)"/>
+
+    <div class="buttons clearfix">
+      <tal:block repeat="button buttons">
+        <button
+            tal:attributes="disabled button.disabled"
+            id="${formid + button.name}"
+            name="${button.name}"
+            type="${button.type}"
+            class="${button.css_class}"
+            value="${button.value}">
+          ${button.title}
+        </button>
+      </tal:block>
+    </div>
+
+  </fieldset>
+
+</form>
