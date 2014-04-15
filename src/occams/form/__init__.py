@@ -5,7 +5,6 @@ from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.config import Configurator
 from pyramid.i18n import TranslationStringFactory
 from pyramid_who.whov2 import WhoV2AuthenticationPolicy
-from repoze.who.config import make_middleware_with_config
 from sqlalchemy import orm, engine_from_config
 from zope.dottedname.resolve import resolve
 import zope.sqlalchemy
@@ -59,8 +58,6 @@ def main(global_config, **settings):
     config.commit()
 
     app = config.make_wsgi_app()
-    who_config = settings['who.config_file']
-    app = make_middleware_with_config(app, global_config, who_config)
 
     log.info('Ready')
 
