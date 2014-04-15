@@ -21,10 +21,12 @@ class TestIncludeme(IntegrationFixture):
         """
         It should be able to sanitize export-specific settings
         """
+        from tests import REDIS_URL
         input = {
             'app.export.user': 'dummy',
             'app.export.dir': '/tmp',
-            'celery.broker.url': 'redis:///9',
+            'celery.broker.url': REDIS_URL,
+            'celery.backend.url': REDIS_URL,
             'app.export.limit': '1234',
             'app.export.expire': '123'
         }

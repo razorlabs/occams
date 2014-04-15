@@ -10,6 +10,7 @@ from datetime import date, timedelta
 import os
 import uuid
 
+import six
 from six import u
 from sqlalchemy import (
     engine_from_config,
@@ -40,7 +41,11 @@ Base = ModelClass(u'Base')
 
 def includeme(config):
     settings = config.registry.settings
-    Session.configure(bind=engine_from_config(settings, 'app.db.'))
+
+    # tests will override the session, use the setting for everything else
+    if isinstance(settings['app.db.url'], six.string_types):
+        Session.configure(bind=engine_from_config(settings, 'app.db.'))
+
     log.debug('Clinical connected to: "%s"' % repr(Session.bind.url))
     Base.metadata.info['settings'] = settings
 

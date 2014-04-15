@@ -174,12 +174,6 @@ def status(request):
     permission='fia_view',
     xhr=True,
     renderer='json')
-@view_config(
-    # For quick debbuging
-    route_name='export_status',
-    permission='fia_view',
-    request_param='xhr',
-    renderer='json')
 def status_json(request):
     """
     Returns the current exports statuses.
@@ -229,8 +223,7 @@ def status_json(request):
     route_name='export_delete',
     permission='fia_view',
     request_method='POST',
-    xhr=True
-    )
+    xhr=True)
 def delete(request):
     """
     Handles delete delete AJAX request

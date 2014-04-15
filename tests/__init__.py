@@ -10,10 +10,7 @@ try:
     import unittest2 as unittest
 except ImportError:
     import unittest
-from testconfig import config
 
-
-INI = config['ini']
 
 REDIS_URL = 'redis://localhost/9'
 
@@ -25,17 +22,24 @@ def setup_package():
     Useful for installing system-wide heavy resources such as a database.
     (Costly to do per-test or per-fixture)
     """
-    from pyramid.paster import get_appsettings
-    from sqlalchemy import engine_from_config
+    import os
+    from six.moves.configparser import SafeConfigParser
+    from sqlalchemy import create_engine
+    from testconfig import config
     from occams.studies import Session, models as studies
     from occams.datastore import models as datastore
     from occams.roster import Session as RosterSession
     from occams.roster import models as roster
 
-    settings = get_appsettings(INI)
+    HERE = os.path.abspath(os.path.dirname(__file__))
+    cfg = SafeConfigParser()
+    cfg.read(os.path.join(HERE, '..', 'setup.cfg'))
+    db = config.get('db') or 'default'
+    studies_engine = create_engine(cfg.get('db', db))
+    roster_engine = create_engine('sqlite:///')
 
-    Session.configure(bind=engine_from_config(settings, 'app.db.'))
-    RosterSession.configure(bind=engine_from_config(settings, 'pid.db.'))
+    Session.configure(bind=studies_engine)
+    RosterSession.configure(bind=roster_engine)
 
     datastore.DataStoreModel.metadata.create_all(Session.bind)
     studies.Base.metadata.create_all(Session.bind)
@@ -58,7 +62,9 @@ def teardown_package():
 
     for session in (Session, RosterSession):
         url = session.bind.url
-        if url.drivername == 'sqlite' and url.database:
+        if (url.drivername == 'sqlite'
+                and url.database
+                and 'memory' not in url.database):
             os.remove(url.database)
 
 
@@ -90,8 +96,30 @@ class FunctionalFixture(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        from pyramid.paster import get_app
-        cls.app = get_app(INI)
+        import os
+        from pyramid.path import AssetResolver
+        from occams.studies import main, Session
+        HERE = os.path.abspath(os.path.dirname(__file__))
+        cls.app = main({}, **{
+            'app.org.name': 'myorg',
+            'app.org.title': 'MY ORGANIZATION',
+            'app.export.dir': '/tmp',
+            'app.export.user': 'celery@localhost',
+            'app.db.url': Session.bind,
+            'pid.package': 'occams.roster',
+            'pid.db.url': 'sqlite:///',
+            'redis.url': REDIS_URL,
+            'redis.sessions.secret': 'sekrit',
+            'webassets.base_dir': (AssetResolver()
+                                   .resolve('occams.studies:static')
+                                   .abspath()),
+            'webassets.base_url': '/static',
+            'webassets.debug': 'false',
+            'celery.broker.url': REDIS_URL,
+            'celery.backend.url': REDIS_URL,
+            'who.config_file': os.path.join(HERE, 'who.ini'),
+            'who.identifier_id': '',
+            })
 
     def setUp(self):
         from webtest import TestApp
@@ -100,18 +128,11 @@ class FunctionalFixture(unittest.TestCase):
     def tearDown(self):
         import transaction
         from occams.studies import Session, models as studies
-        from occams.datastore import models as datastore
         from occams.roster import Session as RosterSession
         from occams.roster import models as roster
         with transaction.manager:
-            Session.query(studies.Site).delete('fetch')
-            Session.query(studies.Study).delete('fetch')
-            Session.query(studies.Partner).delete('fetch')
-            Session.query(datastore.Schema).delete('fetch')
-            Session.query(datastore.Category).delete('fetch')
-            Session.query(datastore.User).delete('fetch')
-            Session.query(roster.Site).delete('fetch')
-            Session.query(roster.Identifier).delete('fetch')
+            Session.query(studies.User).delete()
+            Session.query(roster.Site).delete()
         Session.remove()
         RosterSession.remove()
 
@@ -119,22 +140,10 @@ class FunctionalFixture(unittest.TestCase):
         """
         Creates dummy environ variables for mock-authentication
         """
-        if not userid:
-            return
-
-        return {
-            'REMOTE_USER': userid,
-            'repoze.who.identity': {
-                'repoze.who.userid': userid,
-                'properties': properties,
-                'groups': groups}}
-
-    def assert_can_view(self, url, environ=None, msg=None):
-        response = self.app.get(url, extra_environ=environ)
-        if response.status_code != 200:
-            raise AssertionError(msg or 'Cannot view %s' % url)
-
-    def assert_cannot_view(self, url, environ=None, msg=None):
-        response = self.app.get(url, extra_environ=environ, status='*')
-        if response.status_code not in (401, 403):
-            raise AssertionError(msg or 'Can view %s' % url)
+        if userid:
+            return {
+                'REMOTE_USER': userid,
+                'repoze.who.identity': {
+                    'repoze.who.userid': userid,
+                    'properties': properties,
+                    'groups': groups}}

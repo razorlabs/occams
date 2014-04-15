@@ -62,7 +62,7 @@ def includeme(config):
     route('export_download',    '/exports/{id:\d+}/download')
     route('export_delete',      '/exports/{id:\d+}/delete')
 
-    route('studies', '/')
+    route('home', '/')
 
     log.debug('Routes configured')
 

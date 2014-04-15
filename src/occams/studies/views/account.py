@@ -1,6 +1,6 @@
 import colander
 import deform.widget
-from pyramid.httpexceptions import HTTPFound
+from pyramid.httpexceptions import HTTPFound, HTTPForbidden
 from pyramid.view import view_config, forbidden_view_config
 
 from .. import _, Session, models
@@ -32,14 +32,23 @@ class LoginSchema(colander.MappingSchema):
 @forbidden_view_config(
     renderer='occams.studies:templates/account/login.pt')
 def login(request):
+
+    if (request.matched_route != 'account_login'
+            and request.authenticated_userid):
+        # If an authenticated user has reached this controller without
+        # intentionally going to the login view, assume permissions
+        # error
+        return HTTPForbidden()
+
     request.layout_manager.layout.title = _('Log In')
     request.layout_manager.layout.show_header = False
 
     # Figure out where the user came from so we can redirect afterwards
     referrer = request.GET.get('referrer', request.current_route_path())
+
     if not referrer or referrer == request.route_path('account_login'):
         # Never use the login as the referrer
-        referrer = request.route_path('studies')
+        referrer = request.route_path('home')
 
     form = deform.Form(
         schema=LoginSchema(title=_(u'Please log in')).bind(request=request),
@@ -59,7 +68,9 @@ def login(request):
     # it's usefule in leveraging repoze.who's login mechanisms...
     who_api = request._get_authentication_policy()._getAPI(request)
 
-    if request.method == 'POST':
+    # Only process the input if the user intented to post to this view
+    # (could be not-logged-in redirect)
+    if request.method == 'POST' and request.matched_route == 'account_login':
         try:
             appstruct = form.validate(request.POST.items())
         except deform.ValidationFailure as e:
@@ -94,4 +105,4 @@ def login(request):
 def logout(request):
     who_api = request._get_authentication_policy()._getAPI(request)
     headers = who_api.forget()
-    return HTTPFound(location=request.route_path('studies'), headers=headers)
+    return HTTPFound(location=request.route_path('home'), headers=headers)

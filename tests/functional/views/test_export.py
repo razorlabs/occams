@@ -4,95 +4,167 @@ from tests import FunctionalFixture
 
 
 @ddt
-class TestListViewPermissions(FunctionalFixture):
+class TestPermissionsAbout(FunctionalFixture):
 
-    url = '/data'
+    url = '/exports'
 
     @data('administrator', 'investigator', 'statistician', 'researcher',
           'nurse')
-    def test_allowed(self, principal):
-        """
-        It should allow administrative personnel to view form listings
-        """
-        self.assert_can_view(self.url, self.make_environ(groups=[principal]))
+    def test_allowed(self, group):
+        environ = self.make_environ(groups=[group])
+        response = self.app.get(self.url, extra_environ=environ, status='*')
+        self.assertNotEqual(response.status_code, 403)
 
     @data('assistant', 'student', None)
-    def test_not_allowed(self, principal):
-        """
-        It should not allow data entry prinicipals to view form listings
-        """
-        self.assert_cannot_view(self.url, self.make_environ(groups=[principal]))
+    def test_not_allowed(self, group):
+        environ = self.make_environ(groups=[group])
+        response = self.app.get(self.url, extra_environ=environ, status='*')
+        self.assertEqual(response.status_code, 403)
 
-    def test_unauthenticated_not_allowed(self):
-        """
-        It should not allow unauthenticated users to view form listings
-        """
-        self.assert_cannot_view(self.url)
+    def test_not_authenticated(self):
+        response = self.app.get(self.url, status='*')
+        self.assertIn('login', response.body)
 
 
 @ddt
-class TestExportViewPermissions(FunctionalFixture):
+class TestExportViewPermissionsFaq(FunctionalFixture):
 
-    url = '/data/exports'
+    url = '/exports/faq'
 
     @data('administrator', 'investigator', 'statistician', 'researcher',
           'nurse')
-    def test_allowed(self, principal):
-        """
-        It should allow administrative personnel to view downloads
-        """
-        self.assert_can_view(self.url, self.make_environ(groups=[principal]))
+    def test_allowed(self, group):
+        environ = self.make_environ(groups=[group])
+        response = self.app.get(self.url, extra_environ=environ, status='*')
+        self.assertNotEqual(response.status_code, 403)
 
     @data('assistant', 'student', None)
-    def test_not_allowed(self, principal):
-        """
-        It should not allow data entry prinicipals to view downloads
-        """
-        self.assert_cannot_view(self.url, self.make_environ(groups=[principal]))
+    def test_not_allowed(self, group):
+        environ = self.make_environ(groups=[group])
+        response = self.app.get(self.url, extra_environ=environ, status='*')
+        self.assertEqual(response.status_code, 403)
 
-    def test_unauthenticated_not_allowed(self):
-        """
-        It should not allow unauthenticated users to view downloads
-        """
-        self.assert_cannot_view(self.url)
+    def test_not_authenticated(self):
+        response = self.app.get(self.url, status='*')
+        self.assertIn('login', response.body)
 
 
 @ddt
-class TestDownloadViewPersmissions(FunctionalFixture):
+class TestPermissionsAdd(FunctionalFixture):
 
-    url = '/data/exports/123'
+    url = '/exports/add'
 
     @data('administrator', 'investigator', 'statistician', 'researcher',
           'nurse')
-    def test_allowed(self, principal):
-        """
-        It should allow administrative personnel to download exports
-        """
-        import transaction
-        from occams.studies import Session, models
-        environ = self.make_environ(groups=[principal])
-        # Add the the export zip file and database record
-        with open('/tmp/123.zip', 'wb+'):
-            with transaction.manager:
-                self.add_user(environ['REMOTE_USER'])
-                Session.add(models.Export(
-                    id=123,
-                    owner_user=(
-                        Session.query(models.User)
-                        .filter_by(key=environ['REMOTE_USER'])
-                        .one()),
-                    status='complete'))
-            self.assert_can_view(self.url, environ)
+    def test_allowed(self, group):
+        environ = self.make_environ(groups=[group])
+        response = self.app.get(self.url, extra_environ=environ, status='*')
+        self.assertNotEqual(response.status_code, 403)
 
     @data('assistant', 'student', None)
-    def test_not_allowed(self, principal):
-        """
-        It should not allow data entry prinicipals to download exports
-        """
-        self.assert_cannot_view(self.url, self.make_environ(groups=[principal]))
+    def test_not_allowed(self, group):
+        environ = self.make_environ(groups=[group])
+        response = self.app.get(self.url, extra_environ=environ, status='*')
+        self.assertEqual(response.status_code, 403)
 
-    def test_unauthenticated_not_allowed(self):
-        """
-        It should not allow unauthenticated users to download exports
-        """
-        self.assert_cannot_view(self.url)
+    def test_not_authenticated(self):
+        response = self.app.get(self.url, status='*')
+        self.assertIn('login', response.body)
+
+
+@ddt
+class TestPermissionsStatus(FunctionalFixture):
+
+    url = '/exports/status'
+
+    @data('administrator', 'investigator', 'statistician', 'researcher',
+          'nurse')
+    def test_allowed(self, group):
+        environ = self.make_environ(groups=[group])
+        response = self.app.get(self.url, extra_environ=environ, status='*')
+        self.assertNotEqual(response.status_code, 403)
+
+    @data('assistant', 'student', None)
+    def test_not_allowed(self, group):
+        environ = self.make_environ(groups=[group])
+        response = self.app.get(self.url, extra_environ=environ, status='*')
+        self.assertEqual(response.status_code, 403)
+
+    def test_not_authenticated(self):
+        response = self.app.get(self.url, status='*')
+        self.assertIn('login', response.body)
+
+
+@ddt
+class TestPermissionsStatusJSON(FunctionalFixture):
+
+    url = '/exports/status'
+
+    @data('administrator', 'investigator', 'statistician', 'researcher',
+          'nurse')
+    def test_allowed(self, group):
+        environ = self.make_environ(groups=[group])
+        response = self.app.get(
+            self.url, extra_environ=environ, xhr=True, status='*')
+        self.assertNotEqual(response.status_code, 403)
+
+    @data('assistant', 'student', None)
+    def test_not_allowed(self, group):
+        environ = self.make_environ(groups=[group])
+        response = self.app.get(
+            self.url, extra_environ=environ, xhr=True, status='*')
+        self.assertEqual(response.status_code, 403)
+
+    def test_not_authenticated(self):
+        response = self.app.get(self.url, xhr=True, status='*')
+        self.assertIn('login', response.body)
+
+
+@ddt
+class TestPersmissionsDelete(FunctionalFixture):
+
+    url = '/exports/123/delete'
+
+    @data('administrator', 'investigator', 'statistician', 'researcher',
+          'nurse')
+    def test_allowed(self, group):
+        environ = self.make_environ(groups=[group])
+        response = self.app.post(
+            self.url, extra_environ=environ, xhr=True, status='*')
+        self.assertNotEqual(response.status_code, 403)
+
+    @data('assistant', 'student', None)
+    def test_not_allowed(self, group):
+        environ = self.make_environ(groups=[group])
+        response = self.app.post(
+            self.url, extra_environ=environ, xhr=True, status='*')
+        self.assertEqual(response.status_code, 403)
+
+    def test_not_authenticated(self):
+        response = self.app.post(self.url, xhr=True, status='*')
+        self.assertIn('login', response.body)
+
+
+@ddt
+class TestPersmissionsDownload(FunctionalFixture):
+
+    url = '/exports/123/download'
+
+    @data('administrator', 'investigator', 'statistician', 'researcher',
+          'nurse')
+    def test_allowed(self, group):
+        environ = self.make_environ(groups=[group])
+        response = self.app.get(
+            self.url, extra_environ=environ, status='*')
+        self.assertNotEqual(response.status_code, 403)
+
+    @data('assistant', 'student', None)
+    def test_not_allowed(self, group):
+        environ = self.make_environ(groups=[group])
+        response = self.app.get(
+            self.url, extra_environ=environ, status='*')
+        self.assertEqual(response.status_code, 403)
+
+    def test_not_authenticated(self):
+        response = self.app.get(self.url, status='*')
+        self.assertIn('login', response.body)
