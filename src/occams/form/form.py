@@ -1,111 +1,74 @@
 """
-API base classes for rendering forms in certain contexts.
+Toolset for rendering datastore forms.
 """
-from AccessControl import getSecurityManager
 
-from zope.schema.interfaces import IChoice
-from zope.schema.interfaces import IList
-from zope.schema.interfaces import ITextLine
-from zope.schema.interfaces import IText
-import z3c.form.form
-import z3c.form.group
-import z3c.form.browser.textarea
-from z3c.form.browser.radio import RadioFieldWidget
-from z3c.form.browser.checkbox import CheckBoxFieldWidget
-from z3c.form.browser.textlines import TextLinesFieldWidget
-from zope.schema.interfaces import IField
-from z3c.saconfig import named_scoped_session
-from occams.datastore import model
+import datetime
+from pkg_resources import resource_filename
 
-from occams.form.interfaces import TEXTAREA_SIZE
+import colander
+import deform.widget
 
-def TextAreaFieldWidget(field, request):
+from occams.datastore import models as datastore
+
+
+def choice_widget_factory(attribute):
+    choices = [(choice.name, choice.title) for choice in attribute.choices]
+    if len(choices) <= 5:
+        if attribute.is_collection:
+            return deform.widget.CheckboxChoiceWidget(values=choices)
+        else:
+            return deform.widget.RadioChoiceWidget(values=choices)
+    return deform.widget.SelectWidget(
+        css_class='select2',
+        template='select',
+        multiple=attribute.is_collection,
+        values=choices)
+
+
+widgets = {
+    'text': lambda a: deform.widget.TextAreaWidget(rows=5),
+    'date': lambda a: deform.widget.DateInputWidget(type_name='date', css_class='datepicker'),
+    'choice': choice_widget_factory }
+
+
+types = {
+    'boolean': colander.Bool,
+    'integer': colander.Int,
+    'decimal': colander.Decimal,
+    'choice': colander.String,
+    'string': colander.String,
+    'text': colander.String,
+    'date': colander.Date,
+    'datetime': colander.DateTime}
+
+
+def schema2colander(schema):
     """
-    Forms should use a slightly bigger textarea
-
-    z3c.form doesn't allow configuring of rows so we must subclass it.
-
-    Unfortunately there is no way to register this, so every view that wants
-    to use this factory must specify it in the ``widgetFactory`` property
-    of the ``z3c.form.field.Field`` instance.
-    """
-    widget = z3c.form.browser.textarea.TextAreaFieldWidget(field, request)
-    widget.rows = TEXTAREA_SIZE
-    return widget
-
-
-class StandardWidgetsMixin(object):
-    """
-    Updates form widgets to use basic widgets that make it easy for the user
-    to distinguish available options.
-    """
-
-    def update(self):
-        for field in self.fields.values():
-            if IChoice.providedBy(field.field):
-                field.widgetFactory = RadioFieldWidget
-            elif IList.providedBy(field.field):
-                if IChoice.providedBy(field.field.value_type):
-                    field.widgetFactory = CheckBoxFieldWidget
-                elif ITextLine.providedBy(field.field.value_type):
-                    field.widgetFactory = TextLinesFieldWidget
-            elif IText.providedBy(field.field) and not ITextLine.providedBy(field.field):
-                field.widgetFactory = TextAreaFieldWidget
-        super(StandardWidgetsMixin, self).update()
-
-
-class Group(StandardWidgetsMixin, z3c.form.group.Group):
-    """
-    A datastore-specific group
+    Converta a DataStore schema to a colander form schema
     """
 
-    @property
-    def prefix(self):
-        return str(self.context.name)
+    def nodify(item, type_=None):
+        """ Helper method to create nodes from named records """
+        return colander.SchemaNode(
+            (type_ or colander.Mapping)(),
+            name=item.name,
+            title=item.title,
+            description=item.description)
 
-    @property
-    def label(self):
-        return self.context.title
-
-    @property
-    def description(self):
-        return self.context.description
-
-    def update(self):
-        self.fields = z3c.form.field.Fields()
-        for name, field in self.context.object_schema.items():
-            self.fields += z3c.form.field.Fields(IField(field))
-        super(Group, self).update()
-
-
-class Form(StandardWidgetsMixin, z3c.form.group.GroupForm, z3c.form.form.Form):
-    """
-    A datastore-specific form
-    """
-
-    ignoreContext = True
-    ignoreRequest = True
-    enable_form_tabbing = False
-
-    iface = None
-    groupFactory = Group
-
-    @property
-    def label(self):
-        return self.iface['title']
-
-    @property
-    def description(self):
-        return self.iface['description']
-
-    def update(self):
-        self.request.set('disable_border', True)
-        # TODO: should be context-agnostic
-        self.fields = z3c.form.field.Fields()
-        self.groups = []
-        for name, field in self.context.item.items():
-            if field.type == 'object':
-                self.groups.append(self.groupFactory(field, self.request, self))
+    node = nodify(schema)
+    for section in schema.sections:
+        subnode = nodify(section)
+        node.add(subnode)
+        for attribute in section.attributes.itervalues():
+            if attribute.is_collection:
+                type_ = colander.Set
             else:
-                self.fields += z3c.form.field.Fields(IField(field))
-        super(Form, self).update()
+                type_ = types[attribute.type]
+            field = nodify(attribute, type_)
+            if attribute.is_required:
+                field.missing = colander.required
+            if attribute.type in widgets:
+                field.widget = widgets[attribute.type](attribute)
+            subnode.add(field)
+
+    return node

@@ -82,6 +82,12 @@ parts
 sdist
 var
 develop.cfg
+development.ini
+production.ini
+res
+refs
+gen
+webassets-external
 VERSION
 
 ##### Translations
