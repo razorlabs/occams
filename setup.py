@@ -4,35 +4,67 @@ from setuptools import setup, find_packages
 import sys
 
 HERE = os.path.abspath(os.path.dirname(__file__))
-README = open(os.path.join(HERE, 'README.md')).read()
-CHANGES = open(os.path.join(HERE, 'CHANGES.md')).read()
+README = open(os.path.join(HERE, 'README.rst')).read()
+CHANGES = open(os.path.join(HERE, 'CHANGES.rst')).read()
 
 
-requires = [
+REQUIRES = [
     'alembic',
-    'beaker',
-    'celery',
+    'babel',
+    'celery[redis]',
     'colander',
     'cssmin',
+    'deform',
     'gevent-socketio',
+    'humanize',
     'jsmin',
+    'lingua',
     'pyramid',
-    'pyramid_celery',
-    'pyramid_debugtoolbar',
+    'pyramid_chameleon',
+    'pyramid_deform',
     'pyramid_layout',
-    'pyramid_ldap',
+    'pyramid_mailer',
     'pyramid_tm',
+    'pyramid_redis_sessions',
+    'pyramid_redis',
+    'pyramid_rewrite',
     'pyramid_webassets',
-    'PyYAML',
+    'pyramid_who',
     'redis',
     'SQLAlchemy',
+    'six',
+    'tabulate',
     'transaction',
     'webassets',
+    'zope.sqlalchemy',
 
     'occams.datastore',
     'occams.form',
-    'occams.roster',
-    ]
+]
+
+EXTRAS = {
+    'sqlite': [],
+    'postgresql': ['psycopg2', 'psycogreen'],
+    'gunicorn': ['gunicorn'],
+    'test': [
+        'pyramid_debugtoolbar',
+        'nose',
+        'nose-testconfig',
+        'coverage',
+        'WebTest',
+        'beautifulsoup4',
+        'mock',
+        'ddt'],
+}
+
+
+if sys.version_info < (2, 7):
+    REQUIRES.extend(['argparse', 'ordereddict'])
+    EXTRAS['test'].extend(['unittest2'])
+
+
+if sys.version_info < (3, 0):
+    REQUIRES.extend(['unicodecsv'])
 
 
 def get_version():
@@ -50,14 +82,12 @@ def get_version():
         version_git = (
             Popen(['git', 'describe'], stdout=PIPE, stderr=PIPE, cwd=HERE)
             .communicate()[0]
-            .strip())
+            .strip()
+            .decode(sys.getdefaultencoding()))
     except:
         version_git = None
 
-    version = version_git or version_txt
-
-    if not version:
-        raise ValueError('Could not determine version')
+    version = version_git or version_txt or '0.0.0'
 
     # update fallback file if necessary
     if version != version_txt:
@@ -68,36 +98,34 @@ def get_version():
 
 
 setup(
-    name='occams.clinical',
+    name='occams.studies',
     version=get_version(),
-    description='occams.clinical',
+    description='occams.studies',
     long_description=README + '\n\n' + CHANGES,
     classifiers=[
-    "Programming Language :: Python",
-    "Framework :: Pyramid",
-    "Topic :: Internet :: WWW/HTTP",
-    "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
+        "Programming Language :: Python",
+        "Framework :: Pyramid",
+        "Topic :: Internet :: WWW/HTTP",
+        "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
     ],
-    author='',
-    author_email='',
-    url='',
+    author='UCSD BIT Core Team',
+    author_email='bitcore@ucsd.edu',
+    url='https://bitbutcket.org/ucsdbitcore/occams.studies',
     keywords='web wsgi bfg pylons pyramid',
     packages=find_packages('src', exclude=['ez_setup']),
-    package_dir={'':'src'},
+    package_dir={'': 'src'},
     namespace_packages=['occams'],
     include_package_data=True,
     zip_safe=False,
-    test_suite='occams.clinical',
-    install_requires=requires,
-    extras_require=dict(
-        postgresql=['psycopg2', 'psycogreen'],
-        test=['plone.testing'], # Required for layers, does not install Plone
-        ),
+    install_requires=REQUIRES,
+    extras_require=EXTRAS,
+    tests_require=EXTRAS['test'],
+    test_suite='nose.collector',
     entry_points="""\
     [paste.app_factory]
-    main = occams.clinical:main
+    main = occams.studies:main
     [console_scripts]
-    initialize_occams_clinical_db = occams.clinical.scripts.initializedb:main
+    os_initdb = occams.studies.scripts.initdb:main
+    os_export = occams.studies.scripts.export:main
     """,
-    )
-
+)

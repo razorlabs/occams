@@ -1,0 +1,18 @@
+/**
+ * Bootstrap Overrides
+ */
+
+// Accomodate the feature-rich navbar by collapsing only for phones/tablets
+@grid-float-breakpoint: @screen-desktop;
+
+// The navbar margin is a bit excessive
+@navbar-margin-bottom: -(@line-height-computed);
+
+// Update the base path to relative to the assets directory
+@icon-font-path:        '../libs/bootstrap/fonts/';
+
+.navbar-brand {
+  font-family: 'Exo 2', @font-family-sans-serif;
+  font-weight: bold;
+}
+
