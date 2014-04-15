@@ -1,10 +1,27 @@
-
 import logging
-Logger = logging.getLogger(__name__)
+import pkg_resources
 
-import zope.i18nmessageid
-MessageFactory = zope.i18nmessageid.MessageFactory(__name__)
+from alembic.util import obfuscate_url_pw
+from sqlalchemy import engine_from_config
+from sqlalchemy.orm import scoped_session, sessionmaker
+import zope.sqlalchemy
 
-from z3c import saconfig
-Session = saconfig.named_scoped_session('occams.roster.Session')
 
+__version__ = pkg_resources.require(__name__)[0].version
+
+log = logging.getLogger(__name__)
+
+Session = scoped_session(sessionmaker(
+    extension=zope.sqlalchemy.ZopeTransactionExtension()))
+
+from occams.roster.generator import OUR_PATTERN, generate  # NOQA
+
+
+def includeme(config):
+    """
+    Include as a pyramid application add-on
+    """
+    settings = config.registry.settings
+    Session.configure(bind=engine_from_config(settings, 'pid.db.'))
+    log.debug('Roster connected to: "%s"'
+              % obfuscate_url_pw(Session.bind.url))
