@@ -9,6 +9,7 @@ System Requirements
 * Python 2.7+
 * redis
 * PostgreSQL 9.3+
+* lessc (installed via npm)
 
 
 Extra Python Requirements
@@ -80,4 +81,4 @@ Serving with gUnicorn (for production)
            --app "occams.studies.tasks" \
            --without-gossip \
            --loglevel INFO \
-           --init <YOURINI>
+           --ini <YOURINI>
