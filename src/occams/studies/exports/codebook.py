@@ -44,6 +44,8 @@ def row(field, table, type,
     """
     Helper function to create an codebook entry
     """
+    if choices:
+        choices = sorted(choices, key=lambda v: int(v[0]))
     return dict(
         field=field,
         table=table,
