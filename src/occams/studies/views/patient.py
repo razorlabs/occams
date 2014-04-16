@@ -4,13 +4,13 @@ from pyramid.view import view_config
 from sqlalchemy import bindparam, or_, func, orm, sql
 from webhelpers import paginate
 
-from occams.clinical import _, log, models, Session
+from occams.studies import _, log, models, Session
 
 
 @view_config(
     route_name='patient_search',
     permission='patient_view',
-    renderer='occams.clinical:templates/patient/search.pt')
+    renderer='occams.studies:templates/patient/search.pt')
 def search(request):
     request.layout_manager.layout.content_title = _(u'Patients')
     search_term = request.GET.get('search')
@@ -32,7 +32,7 @@ def search(request):
 @view_config(
     route_name='patient_view',
     permission='patient_view',
-    renderer='occams.clinical:templates/patient/view.pt')
+    renderer='occams.studies:templates/patient/view.pt')
 def search(request):
     patient = find_patient(request)
     request.layout_manager.layout.title = patient.our

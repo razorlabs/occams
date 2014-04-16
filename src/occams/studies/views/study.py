@@ -5,7 +5,7 @@ from pyramid_deform import CSRFSchema
 from pyramid.view import view_config
 from sqlalchemy import func, orm, sql
 
-from occams.clinical import _, models, Session
+from occams.studies import _, models, Session
 
 
 def find_study(request):
@@ -93,7 +93,7 @@ class ScheduleSchema(CSRFSchema):
 @view_config(
     route_name='study_list',
     permission='study_view',
-    renderer='occams.clinical:templates/study/list.pt')
+    renderer='occams.studies:templates/study/list.pt')
 def list_(request):
     layout = request.layout_manager.layout
     layout.title = _(u'Studies')
@@ -109,7 +109,7 @@ def list_(request):
 @view_config(
     route_name='study_view',
     permission='study_view',
-    renderer='occams.clinical:templates/study/view.pt')
+    renderer='occams.studies:templates/study/view.pt')
 def view(request):
     study = find_study(request)
     layout = request.layout_manager.layout
@@ -123,7 +123,7 @@ def view(request):
 @view_config(
     route_name='study_ecrfs',
     permission='study_view',
-    renderer='occams.clinical:templates/study/ecrfs.pt')
+    renderer='occams.studies:templates/study/ecrfs.pt')
 def ecrfs(request):
     study = find_study(request)
     layout = request.layout_manager.layout
@@ -137,7 +137,7 @@ def ecrfs(request):
 @view_config(
     route_name='study_schedule',
     permission='study_view',
-    renderer='occams.clinical:templates/study/schedule.pt')
+    renderer='occams.studies:templates/study/schedule.pt')
 def schedule(request):
     study = find_study(request)
     layout = request.layout_manager.layout
@@ -181,7 +181,7 @@ def schedule(request):
 @view_config(
     route_name='study_progress',
     permission='study_view',
-    renderer='occams.clinical:templates/study/progress.pt')
+    renderer='occams.studies:templates/study/progress.pt')
 def progress(request):
     study = find_study(request)
 
@@ -228,12 +228,12 @@ def progress(request):
 @view_config(
     route_name='study_add',
     permission='study_add',
-    renderer='occams.clinical:templates/form.pt')
+    renderer='occams.studies:templates/form.pt')
 @view_config(
     route_name='study_add',
     permission='study_add',
     xhr=True,
-    renderer='occams.clinical:templates/form.pt',
+    renderer='occams.studies:templates/form.pt',
     layout='ajax_layout')
 def add(request):
     schema = StudySchema(title=_(u'Add Study'))

@@ -5,7 +5,7 @@ from pyramid.httpexceptions import HTTPFound
 from pyramid.view import view_config
 from sqlalchemy import func, orm, sql
 
-from occams.clinical import _, log, models, Session
+from occams.studies import _, log, models, Session
 import occams.form.widgets
 
 
@@ -59,13 +59,13 @@ class EventAddSchema(CSRFSchema):
 @view_config(
     route_name='event_add',
     permission='event_add',
-    renderer='occams.clinical:templates/static/form.pt')
+    renderer='occams.studies:templates/static/form.pt')
 @view_config(
     route_name='event_add',
     permission='event_add',
     xhr=True,
     layout='ajax',
-    renderer='occams.clinical:templates/static/form.pt')
+    renderer='occams.studies:templates/static/form.pt')
 def add(request):
     form = deform.Form(
         EventAddSchema(title=_(u'Add a Patient')).bind(request=request),
@@ -82,6 +82,6 @@ def add(request):
 @view_config(
     route_name='event_list',
     permission='event_view',
-    renderer='occams.clinical:templates/event/list.pt')
+    renderer='occams.studies:templates/event/list.pt')
 def list_(request):
     return {}

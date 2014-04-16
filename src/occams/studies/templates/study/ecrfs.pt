@@ -1,4 +1,4 @@
-<html i18n:domain="occams.clinical" metal:use-macro="main_template">
+<html i18n:domain="occams.studies" metal:use-macro="main_template">
   <metal:content-slot fill-slot="content-slot">
 
     <div class="row">
