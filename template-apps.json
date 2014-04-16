@@ -1,0 +1,28 @@
+[
+  {
+    "title": "Application Group 1",
+    "apps": [
+      {
+        "title": "Application 1",
+        "url": ""
+      },
+      {
+        "title": "Application 2",
+        "url": ""
+      }
+    ]
+  },
+  {
+    "title": "Application Group 2",
+    "apps": [
+      {
+        "title": "Application 3",
+        "url": ""
+      },
+      {
+        "title": "Application 4",
+        "url": ""
+      }
+    ]
+  }
+]

@@ -4,8 +4,8 @@ from setuptools import setup, find_packages
 import sys
 
 HERE = os.path.abspath(os.path.dirname(__file__))
-README = open(os.path.join(HERE, 'README.md')).read()
-CHANGES = open(os.path.join(HERE, 'CHANGES.md')).read()
+README = open(os.path.join(HERE, 'README.rst')).read()
+CHANGES = open(os.path.join(HERE, 'CHANGES.rst')).read()
 
 
 REQUIRES = [
@@ -32,21 +32,24 @@ REQUIRES = [
     'pyramid_who',
     'redis',
     'SQLAlchemy',
+    'six',
+    'tabulate',
     'transaction',
     'webassets',
     'zope.sqlalchemy',
-    'zope.dottedname',
 
     'occams.datastore',
     'occams.form',
-    'occams.roster',
 ]
 
 EXTRAS = {
+    'sqlite': [],
     'postgresql': ['psycopg2', 'psycogreen'],
+    'gunicorn': ['gunicorn'],
     'test': [
         'pyramid_debugtoolbar',
         'nose',
+        'nose-testconfig',
         'coverage',
         'WebTest',
         'beautifulsoup4',
@@ -56,11 +59,12 @@ EXTRAS = {
 
 
 if sys.version_info < (2, 7):
-    raise Exception('This module is only compatible with Python 2.7')
+    REQUIRES.extend(['argparse', 'ordereddict'])
+    EXTRAS['test'].extend(['unittest2'])
 
 
 if sys.version_info < (3, 0):
-    REQUIRES.append('unicodecsv')
+    REQUIRES.extend(['unicodecsv'])
 
 
 def get_version():
@@ -94,9 +98,9 @@ def get_version():
 
 
 setup(
-    name='occams.clinical',
+    name='occams.studies',
     version=get_version(),
-    description='occams.clinical',
+    description='occams.studies',
     long_description=README + '\n\n' + CHANGES,
     classifiers=[
         "Programming Language :: Python",
@@ -106,7 +110,7 @@ setup(
     ],
     author='UCSD BIT Core Team',
     author_email='bitcore@ucsd.edu',
-    url='https://bitbutcket.org/ucsdbitcore/occams.clinical',
+    url='https://bitbutcket.org/ucsdbitcore/occams.studies',
     keywords='web wsgi bfg pylons pyramid',
     packages=find_packages('src', exclude=['ez_setup']),
     package_dir={'': 'src'},
@@ -119,8 +123,9 @@ setup(
     test_suite='nose.collector',
     entry_points="""\
     [paste.app_factory]
-    main = occams.clinical:main
+    main = occams.studies:main
     [console_scripts]
-    cl_init = occams.clinical.scripts.initializedb:main
+    os_initdb = occams.studies.scripts.initdb:main
+    os_export = occams.studies.scripts.export:main
     """,
 )
