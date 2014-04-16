@@ -184,13 +184,13 @@ def migrate(src, dst, tables):
     print('Moving data {0} -> {1}'.format(src.database, dst.database))
 
     with tempfile.NamedTemporaryFile('rw+b') as fp:
-        pg_dump = ['pg_dump', '-f', fp.name, '--no-owner']
+        pg_dump = ['/usr/pgsql-9.3/bin/pg_dump', '-f', fp.name, '--no-owner']
         for table in tables:
             pg_dump += ['-t', mrg(table)]
         pg_dump += ['-d', str(src)]
 
         check_call(pg_dump)
-        check_call(['psql', '-f', fp.name, '-d', str(dst)])
+        check_call(['/usr/pgsql-9.3/bin/psql', '-f', fp.name, '-d', str(dst)])
 
 
 def integrate(url):

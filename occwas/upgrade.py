@@ -35,11 +35,11 @@ def main(argv):
 
     for db in (args.fia, args.phi):
         check_call(
-            'psql -f {0} "user={user} password={pw} dbname={db}"'
+            '/usr/pgsql-9.3/bin/psql -f {0} "user={user} password={pw} dbname={db}"'
             .format(FILE_CODES, user=oid, pw=opw, db=db),
             shell=True)
         check_call(
-            'psql -f {0} "user={user} password={pw} dbname={db}"'
+            '/usr/pgsql-9.3/bin/psql -f {0} "user={user} password={pw} dbname={db}"'
             .format(FILE_LABFIX, user=oid, pw=opw, db=db),
             shell=True)
 
