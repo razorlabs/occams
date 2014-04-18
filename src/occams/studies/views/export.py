@@ -134,7 +134,10 @@ def add(request):
 
             def apply_after_commit(success):
                 if success:
-                    make_export.apply_async(args=[task_id], task_id=task_id)
+                    make_export.apply_async(
+                        args=[task_id],
+                        task_id=task_id,
+                        countdown=4)
 
             # Avoid race-condition by executing the task after succesful commit
             transaction.get().addAfterCommitHook(apply_after_commit)
