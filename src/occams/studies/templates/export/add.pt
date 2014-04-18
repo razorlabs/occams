@@ -90,7 +90,7 @@
           <label>
             <input type="radio" name="${field_name}" value="true"
                 checked="${cvalue == 'true'}"/>
-            <span tal:omit-tag="" i18n:translate="">Separate colum for each possible answer choice.</span>
+            <span tal:omit-tag="" i18n:translate="">Separate column for each possible answer choice.</span>
           </label>
         </div>
       </div>
