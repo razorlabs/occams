@@ -26,6 +26,7 @@ from celery.bin import Option
 from celery.signals import worker_init
 from celery.utils.log import get_task_logger
 import humanize
+from six import itervalues
 from pyramid.paster import bootstrap
 from sqlalchemy.orm.exc import NoResultFound
 import transaction
@@ -175,12 +176,10 @@ def make_export(name):
 
     with closing(ZipFile(export.path, 'w', ZIP_DEFLATED)) as zfp:
 
-        codebook_chain = []
         exportables = exports.list_all()
 
         for item in export.contents:
             plan = exportables[item['name']]
-            codebook_chain.append(plan.codebook())
 
             with tempfile.NamedTemporaryFile() as tfp:
                 exports.write_data(tfp, plan.data(
@@ -195,5 +194,6 @@ def make_export(name):
             log.info(', '.join([count, total, item['name']]))
 
         with tempfile.NamedTemporaryFile() as tfp:
+            codebook_chain = [p.codebook() for p in itervalues(exportables)]
             exports.write_codebook(tfp, chain.from_iterable(codebook_chain))
             zfp.write(tfp.name, exports.codebook.FILE_NAME)
