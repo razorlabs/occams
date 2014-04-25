@@ -20,17 +20,23 @@ class EnrollmentPlan(ExportPlan):
     def codebook(self):
 
         return iter([
-            row('id', self.name, types.NUMERIC, is_required=True),
-            row('enrollment_id', self.name, types.NUMERIC, is_required=True),
-            row('study', self.name, types.STRING, is_required=True),
-            row('pid', self.name, types.STRING, is_required=True),
-            row('our', self.name, types.STRING, is_required=True),
-            row('aeh_num', self.name, types.STRING),
-            row('nurse', self.name, types.STRING),
-            row('reference_number', self.name, types.STRING),
-            row('consent_date', self.name, types.DATE, is_required=True),
-            row('latest_consent_date', self.name, types.DATE),
-            row('termination_date', self.name, types.DATE)
+            row('id', self.name, types.NUMERIC,
+                is_system=True, is_required=True),
+            row('enrollment_id', self.name, types.NUMERIC,
+                is_system=True, is_required=True),
+            row('study', self.name, types.STRING,
+                is_system=True, is_required=True),
+            row('pid', self.name, types.STRING,
+                is_system=True, is_required=True),
+            row('our', self.name, types.STRING,
+                is_system=True, is_required=True),
+            row('aeh_num', self.name, types.STRING, is_system=True),
+            row('nurse', self.name, types.STRING, is_system=True),
+            row('reference_number', self.name, types.STRING, is_system=True),
+            row('consent_date', self.name, types.DATE,
+                is_system=True, is_required=True),
+            row('latest_consent_date', self.name, types.DATE, is_system=True),
+            row('termination_date', self.name, types.DATE, is_system=True)
             ])
 
     def data(self, use_choice_labels=False, expand_collections=False):

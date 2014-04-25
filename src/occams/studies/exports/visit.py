@@ -17,11 +17,13 @@ class VisitPlan(ExportPlan):
 
     def codebook(self):
         return iter([
-            row('our', self.name, types.STRING, is_required=True),
-            row('aeh_num', self.name, types.STRING),
-            row('visit_date', self.name, types.STRING, is_required=True),
-            row('cycle', self.name, types.STRING),
-            row('study_name', self.name, types.STRING),
+            row('our', self.name, types.STRING,
+                is_required=True, is_system=True),
+            row('aeh_num', self.name, types.STRING, is_system=True),
+            row('visit_date', self.name, types.DATE,
+                is_required=True, is_system=True),
+            row('cycle', self.name, types.STRING, is_system=True),
+            row('study_name', self.name, types.STRING, is_system=True),
             ])
 
     def data(self, use_choice_labels=False, expand_collections=False):
