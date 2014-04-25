@@ -22,6 +22,7 @@ def includeme(config):
             'scripts/button.js',
             'scripts/export-status.js',
             'scripts/export-faq.js',
+            'scripts/export-codebook.js',
             filters='jsmin'),
         output='gen/default.%(version)s.min.js'))
 

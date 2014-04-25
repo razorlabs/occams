@@ -15,7 +15,7 @@ import six
 from sqlalchemy import orm
 import transaction
 
-from .. import _, models, Session, exports
+from .. import _, log, models, Session, exports
 from ..tasks import celery,  make_export
 from ..widgets.pager import Pager
 
@@ -134,7 +134,10 @@ def add(request):
 
             def apply_after_commit(success):
                 if success:
-                    make_export.apply_async(args=[task_id], task_id=task_id)
+                    make_export.apply_async(
+                        args=[task_id],
+                        task_id=task_id,
+                        countdown=4)
 
             # Avoid race-condition by executing the task after succesful commit
             transaction.get().addAfterCommitHook(apply_after_commit)
@@ -217,6 +220,68 @@ def status_json(request):
         'pager': pager.serialize(),
         'exports': [export2json(e) for e in exports_query]
     }
+
+
+@view_config(
+    route_name='export_codebook',
+    permission='fia_view',
+    renderer='occams.studies:templates/export/codebook.pt')
+def codebook(request):
+    """
+    Codebook viewer
+    """
+    layout = request.layout_manager.layout
+    layout.title = _(u'Exports')
+    layout.set_nav('export_nav')
+    return {'exportables': exports.list_all().values()}
+
+
+@view_config(
+    route_name='export_codebook',
+    permission='fia_view',
+    xhr=True,
+    renderer='json')
+def codebook_json(request):
+    """
+    Loads codebook rows for the specified data file
+    """
+
+    file = request.GET.get('file')
+
+    if not file:
+        raise HTTPNotFound
+
+    def massage(row):
+        publish_date = row['publish_date']
+        if publish_date:
+            row['publish_date'] = publish_date.isoformat()
+        return row
+
+    exportables = exports.list_all()
+
+    if file not in exportables:
+        raise HTTPNotFound
+
+    plan = exportables[file]
+    return [massage(row) for row in plan.codebook()]
+
+
+@view_config(
+    route_name='export_codebook_download',
+    permission='fia_view')
+def codebook_download(request):
+    """
+    Returns full codebook file
+    """
+    export_dir = request.registry.settings['app.export.dir']
+    codebook_name = exports.codebook.FILE_NAME
+    path = os.path.join(export_dir, codebook_name)
+    if not os.path.isfile(path):
+        log.warn('Trying to download codebook before it\'s pre-cooked!')
+        raise HTTPNotFound
+    response = FileResponse(path)
+    response.content_disposition = 'attachment;filename=%s' % codebook_name
+    return response
 
 
 @view_config(

@@ -26,8 +26,55 @@
           tal:define="section request.current_route_path()">
         <li tal:define="url request.route_path('export_home')"
             tal:attributes="class python:'active' if url in section else ''"
-            tal:condition="request.has_permission('fia_view')">
-          <a href="${url}">Exports</a>
+            tal:condition="request.has_permission('fia_view')"
+            class="dropdown">
+          <a  id="exports-dropdown"
+              href="${url}"
+              data-toggle="dropdown">Exports <span class="caret"></span></a>
+          <ul class="dropdown-menu"
+              role="menu"
+              aria-labelledby="exports-dropdown">
+            <li role="presentation"
+                tal:define="route string:export_home"
+                class="${'active' if request.matched_route.name == route
+                                  else ''}">
+              <a  role="menuitem"
+                  tabindex="-1"
+                    href="${request.route_path(route)}">Overview</a>
+            </li>
+            <li role="presentation"
+                tal:define="route string:export_add"
+                class="${'active' if request.matched_route.name == route
+                                  else ''}">
+              <a  role="menuitem"
+                  tabindex="-1"
+                  href="${request.route_path(route)}">Create an Export</a>
+            </li>
+            <li role="presentation"
+                tal:define="route string:export_status"
+                class="${'active' if request.matched_route.name == route
+                                  else ''}">
+              <a  role="menuitem"
+                  tabindex="-1"
+                  href="${request.route_path(route)}">My Exports</a>
+            </li>
+            <li role="presentation"
+                tal:define="route string:export_codebook"
+                class="${'active' if request.matched_route.name == route
+                                  else ''}">
+              <a  role="menuitem"
+                  tabindex="-1"
+                  href="${request.route_path(route)}">Codebook</a>
+            </li>
+            <li role="presentation"
+                tal:define="route string:export_faq"
+                class="${'active' if request.matched_route.name == route
+                                  else ''}">
+              <a  role="menuitem"
+                  tabindex="-1"
+                  href="${request.route_path(route)}">FAQ</a>
+            </li>
+          </ul>
         </li>
       </ul>
 

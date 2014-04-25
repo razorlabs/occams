@@ -15,6 +15,7 @@ try:
 except ImportError:  # pragma: nocover
     from ordereddict import OrderedDict  # NOQA
 from contextlib import closing
+from datetime import timedelta
 from itertools import chain
 import json
 import os
@@ -26,6 +27,7 @@ from celery.bin import Option
 from celery.signals import worker_init
 from celery.utils.log import get_task_logger
 import humanize
+from six import itervalues
 from pyramid.paster import bootstrap
 from sqlalchemy.orm.exc import NoResultFound
 import transaction
@@ -64,8 +66,13 @@ def includeme(config):
         BROKER_TRANSPORT_OPTIONS={
             'fanout_prefix': True,
             'fanout_patterns': True
-            }
-        )
+        },
+        CELERYBEAT_SCHEDULE={
+            'make-codebook-every-hour': {
+                'task': 'make_codebook',
+                'schedule': timedelta(hours=1),
+            },
+        })
 
 
 @worker_init.connect
@@ -86,6 +93,8 @@ def init(signal, sender):
     # Clear the registry so we ALWAYS get the correct userid
     Session.remove()
     Session.configure(info={'user': userid})
+
+    make_codebook.apply_async()
 
 
 def in_transaction(func):
@@ -175,12 +184,10 @@ def make_export(name):
 
     with closing(ZipFile(export.path, 'w', ZIP_DEFLATED)) as zfp:
 
-        codebook_chain = []
         exportables = exports.list_all()
 
         for item in export.contents:
             plan = exportables[item['name']]
-            codebook_chain.append(plan.codebook())
 
             with tempfile.NamedTemporaryFile() as tfp:
                 exports.write_data(tfp, plan.data(
@@ -195,5 +202,19 @@ def make_export(name):
             log.info(', '.join([count, total, item['name']]))
 
         with tempfile.NamedTemporaryFile() as tfp:
+            codebook_chain = [p.codebook() for p in itervalues(exportables)]
             exports.write_codebook(tfp, chain.from_iterable(codebook_chain))
             zfp.write(tfp.name, exports.codebook.FILE_NAME)
+
+
+@celery.task(name='make_codebook', ignore_result=True)
+@in_transaction
+def make_codebook():
+    """
+    Pre-cooks a codebook file for faster downloading
+    """
+    codebook_chain = [p.codebook() for p in itervalues(exports.list_all())]
+    path = os.path.join(celery.settings['app.export.dir'],
+                        exports.codebook.FILE_NAME)
+    with open(path, 'w+b') as fp:
+        exports.write_codebook(fp, chain.from_iterable(codebook_chain))
