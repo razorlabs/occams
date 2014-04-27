@@ -7,6 +7,7 @@ from itertools import chain
 import os
 import sys
 
+from six import itervalues
 from six.moves import map, filter
 from sqlalchemy import create_engine
 from tabulate import tabulate
@@ -88,8 +89,6 @@ def main(argv=sys.argv):
     else:
         make_export(args)
 
-    sys.exit(1)
-
 
 def print_list(args):
     """
@@ -103,7 +102,7 @@ def print_list(args):
         return star(row.has_private), star(row.has_rand), row.name, row.title
 
     header = ['priv', 'rand', 'name', 'title']
-    rows = iter(map(format, exports.list_all()))
+    rows = iter(map(format, itervalues(exports.list_all())))
     print(tabulate(rows, header, tablefmt='simple'))
 
 
@@ -112,32 +111,29 @@ def make_export(args):
     Generates the export data files
     """
 
-    if not (args.all or args.all_public or args.all_rand or args.names):
-        print('You must specifiy something to export!')
-        return
+    if not (args.all
+            or args.all_public
+            or args.all_private
+            or args.all_rand
+            or args.names):
+        sys.exit('You must specifiy something to export!')
 
     def is_valid_target(item):
-        if args.all:
-            return True
-        elif args.all_private:
-            return item.has_private
-        elif args.all_rand:
-            return item.has_rand
-        elif args.names:
-            return item.name in args.names
+        return (
+            args.all
+            or (args.all_private and item.has_private and not item.has_rand)
+            or (args.all_public and not item.has_private and not item.has_rand)
+            or (args.all_rand and item.has_rand)
+            or (args.names and item.name in args.names))
 
-    items = iter(filter(is_valid_target, exports.list_all()))
+    exportables = exports.list_all()
 
-    codebooks = []
-
-    for item in items:
-        codebooks.append(item.codebook())
-        with open(os.path.join(args.dir, item.file_name), 'w+b') as fp:
-            exports.write_data(fp, item.data())
+    for plan in iter(filter(is_valid_target, itervalues(exportables))):
+        with open(os.path.join(args.dir, plan.file_name), 'w+b') as fp:
+            exports.write_data(fp, plan.data(
+                use_choice_labels=args.use_choice_labels,
+                expand_collections=args.expand_collections))
 
     with open(os.path.join(args.dir, exports.codebook.FILE_NAME), 'w+b') as fp:
+        codebooks = [p.codebook() for p in itervalues(exportables)]
         exports.write_codebook(fp, chain.from_iterable(codebooks))
-
-
-if __name__ == '__main__':
-    main()
