@@ -81,7 +81,7 @@ def init(signal, sender):
     Configure the database connections when the celery daemon starts
     """
     # Have the pyramid app initialize all settings
-    env = bootstrap(sender.options['ini'])
+    env = bootstrap(sender.options['ini'] + '#occams.studies')
     sender.app.settings = settings = env['registry'].settings
     sender.app.redis = env['request'].redis
 
