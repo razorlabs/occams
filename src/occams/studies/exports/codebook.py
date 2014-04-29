@@ -3,10 +3,10 @@ Code Book utitlities
 """
 
 HEADER = [
-    'field',
     'table',
     'form',
     'publish_date',
+    'field',
     'title',
     'description',
     'is_required',
