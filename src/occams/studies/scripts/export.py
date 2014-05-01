@@ -7,9 +7,10 @@ from itertools import chain
 import os
 import sys
 
+from pyramid.paster import get_appsettings
 from six import itervalues
 from six.moves import map, filter
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, engine_from_config
 from tabulate import tabulate
 
 from .. import Session, exports
@@ -23,8 +24,13 @@ def parse_args(argv=sys.argv):
         '--db',
         metavar='DBURI',
         dest='db',
-        required=True,
         help='Database URL')
+
+    conn_group.add_argument(
+        '-c', '--config',
+        metavar='INI',
+        dest='config',
+        help='Application INI file')
 
     main_group = parser.add_argument_group('General Options')
     main_group.add_argument(
@@ -82,8 +88,6 @@ def parse_args(argv=sys.argv):
 def main(argv=sys.argv):
     args = parse_args(argv[1:])
 
-    Session.configure(bind=create_engine(args.db))
-
     if args.list:
         print_list(args)
     else:
@@ -110,6 +114,14 @@ def make_export(args):
     """
     Generates the export data files
     """
+    if args.config:
+        engine = engine_from_config(get_appsettings(args.config), 'app.db.')
+    elif args.db:
+        engine = create_engine(args.db)
+    else:
+        sys.exit('You must specify either a connection or app configuration')
+
+    Session.configure(bind=engine)
 
     if not (args.all
             or args.all_public

@@ -18,10 +18,13 @@ class PrintListTestCase(unittest.TestCase):
 
         # Don't configure the session since we already did that in the
         # the package setup
-        self.engine_patch = \
+        self.create_engine_patch = \
             mock.patch('occams.studies.scripts.export.create_engine').start()
-        self.configure_patch = \
+        self.session_configure_patch = \
             mock.patch('occams.studies.Session.configure').start()
+        self.engine_from_config_patch = \
+            mock.patch('occams.studies.scripts.export.engine_from_config')\
+            .start()
 
         self.dir = tempfile.mkdtemp()
 
@@ -187,6 +190,34 @@ class PrintListTestCase(unittest.TestCase):
             cmd = self.getCommand()
             cmd([None, '--db', 'fake://', '--dir', self.dir, plan.name])
             self.assertIn(plan.file_name, os.listdir(self.dir))
+
+    def test_make_export_with_config(self):
+        """
+        It should be able to export using an app configuration file
+        """
+        import tempfile
+        import mock
+        # force list_all to return only the test form
+        with tempfile.NamedTemporaryFile() as fp:
+            fp.write("""
+[app:main]
+use = egg:occams.studies
+app.db.url = fake://
+""")
+            fp.flush()
+            with mock.patch('occams.studies.exports.list_all',
+                            return_value={}):
+                cmd = self.getCommand()
+                cmd([None, '--config', fp.name, '--all', '--dir', self.dir])
+                self.assertTrue(self.engine_from_config_patch.called)
+
+    def test_make_export_no_connection(self):
+        """
+        It should require a connection
+        """
+        with self.assertRaisesRegexp(SystemExit, '.*configuration.*'):
+            cmd = self.getCommand()
+            cmd([None, '--dir', self.dir])
 
     def test_make_export_nothing_specified(self):
         """
