@@ -168,6 +168,6 @@ def make_export(args):
         old_dir = os.path.realpath(args.dir)
         if os.path.islink(args.dir):
             os.unlink(args.dir)
-        os.symlink(out_dir, args.dir)
+        os.symlink(os.path.abspath(out_dir), args.dir)
         if not os.path.islink(old_dir):
             shutil.rmtree(old_dir)
