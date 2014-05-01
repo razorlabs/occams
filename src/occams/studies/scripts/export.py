@@ -5,7 +5,9 @@ Command-line interface for exporting data
 import argparse
 from itertools import chain
 import os
+import shutil
 import sys
+import uuid
 
 from pyramid.paster import get_appsettings
 from six import itervalues
@@ -81,6 +83,10 @@ def parse_args(argv=sys.argv):
         metavar='PATH',
         dest='dir',
         help='Output directory')
+    export_group.add_argument(
+        '--atomic',
+        action='store_true',
+        help='Treat the output path as a symlink')
 
     return parser.parse_args(argv)
 
@@ -140,12 +146,28 @@ def make_export(args):
 
     exportables = exports.list_all()
 
+    if args.atomic:
+        out_dir = '%s-%s' % (args.dir.rstrip('/'), uuid.uuid4())
+        os.makedirs(out_dir)
+    else:
+        out_dir = args.dir
+        if not os.path.exists(args.dir):
+            os.makedirs(args.dir)
+
     for plan in iter(filter(is_valid_target, itervalues(exportables))):
-        with open(os.path.join(args.dir, plan.file_name), 'w+b') as fp:
+        with open(os.path.join(out_dir, plan.file_name), 'w+b') as fp:
             exports.write_data(fp, plan.data(
                 use_choice_labels=args.use_choice_labels,
                 expand_collections=args.expand_collections))
 
-    with open(os.path.join(args.dir, exports.codebook.FILE_NAME), 'w+b') as fp:
+    with open(os.path.join(out_dir, exports.codebook.FILE_NAME), 'w+b') as fp:
         codebooks = [p.codebook() for p in itervalues(exportables)]
         exports.write_codebook(fp, chain.from_iterable(codebooks))
+
+    if args.atomic:
+        old_dir = os.path.realpath(args.dir)
+        if os.path.islink(args.dir):
+            os.unlink(args.dir)
+        os.symlink(out_dir, args.dir)
+        if not os.path.islink(old_dir):
+            shutil.rmtree(old_dir)

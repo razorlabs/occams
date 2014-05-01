@@ -231,3 +231,52 @@ app.db.url = fake://
                             return_value={plan.name: plan}):
                 cmd = self.getCommand()
                 cmd([None, '--db', 'fake://', '--dir', self.dir])
+
+    def test_make_export_atomic(self):
+        """
+        It should allow atomic generating of data files
+        """
+        import os
+        import mock
+        plan = self.makePlan()
+        dest_dir = os.path.join(self.dir, 'myfiles')
+        # force list_all to return only the test form
+        with mock.patch('occams.studies.exports.list_all',
+                        return_value={plan.name: plan}):
+            cmd = self.getCommand()
+            cmd([None, '--db', 'fake://', '--all', '--dir', dest_dir,
+                '--atomic'])
+        self.assertTrue(os.path.islink(dest_dir), 'Not a symlink')
+
+    def test_make_export_atomic_remove_old(self):
+        """
+        It should cleanup old data directories from a previous atomic run.
+        """
+        import os
+        import mock
+        plan = self.makePlan()
+        old_dir = os.path.join(self.dir, 'oldpath')
+        dest_dir = os.path.join(self.dir, 'myfiles')
+        os.makedirs(old_dir)
+        os.symlink(old_dir, dest_dir)
+        # force list_all to return only the test form
+        with mock.patch('occams.studies.exports.list_all',
+                        return_value={plan.name: plan}):
+            cmd = self.getCommand()
+            cmd([None, '--db', 'fake://', '--all', '--dir', dest_dir,
+                '--atomic'])
+        self.assertFalse(os.path.exists(old_dir), 'Was not removed')
+
+    def test_make_export_create_directory(self):
+        """
+        It should auto create the destination directory if it doesn't exist.
+        """
+        import os
+        import mock
+        dest_dir = os.path.join(self.dir, 'myfiles')
+        # force list_all to return only the test form
+        with mock.patch('occams.studies.exports.list_all',
+                        return_value={}):
+            cmd = self.getCommand()
+            cmd([None, '--db', 'fake://', '--all', '--dir', dest_dir])
+        self.assertTrue(os.path.isdir(dest_dir))
