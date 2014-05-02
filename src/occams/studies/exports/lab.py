@@ -151,6 +151,7 @@ class LabPlan(ExportPlan):
                 models.Patient.id,
                 models.Patient.our,
                 models.Patient.nurse,
-                models.Patient.legacy_number))
+                models.Patient.legacy_number,
+                models.Site.name))
 
         return query
