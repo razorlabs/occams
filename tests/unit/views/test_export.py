@@ -232,7 +232,8 @@ class TestStatusJSON(IntegrationFixture):
                 .one()),
             contents=[],
             status='pending',
-            create_date=now)
+            create_date=now,
+            modify_date=now)
         Session.add(export)
         Session.flush()
 

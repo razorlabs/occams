@@ -26,8 +26,8 @@ class TestWriteData(IntegrationFixture):
         from occams.studies import exports
 
         query = Session.query(
-            literal_column(u'"420"', Integer).label(u'anumeric'),
-            literal_column(u'"¿Qué pasa?"', Unicode).label(u'astring'),
+            literal_column(u"'420'", Integer).label(u'anumeric'),
+            literal_column(u"'¿Qué pasa?'", Unicode).label(u'astring'),
             )
 
         with closing(six.BytesIO()) as fp:

@@ -1,5 +1,3 @@
-import unittest
-
 from tests import IntegrationFixture
 
 
@@ -41,52 +39,6 @@ class TestIncludeme(IntegrationFixture):
             self.assertEquals(
                 self.config.registry.settings[key],
                 expected[key])
-
-
-class TestInTransaction(unittest.TestCase):
-    """
-    Functional-ish test that ensures tasks can be completed in a transaction.
-    """
-
-    def test_remove(self):
-        """
-        It should disconnect the database after each task.
-        """
-        import celery
-        from sqlalchemy import Column, Integer, orm
-        from sqlalchemy.ext.declarative import declarative_base
-        from occams.studies import Session
-        from occams.studies.tasks import in_transaction
-
-        app = celery.Celery('test')
-
-        Model = declarative_base()
-
-        class Dummy(Model):
-            __tablename__ = 'dummy'
-            id = Column(Integer, primary_key=True)
-
-        Model.metadata.create_all(Session.bind)
-
-        @app.task()
-        @in_transaction
-        def do_something():
-            ret = Dummy()
-            Session.add(ret)
-            return ret
-
-        self.assertEquals(Session.query(Dummy).count(), 0)
-
-        ret = do_something()
-
-        # The transaction/connection should no longer be available
-        with self.assertRaises(orm.exc.DetachedInstanceError):
-            # Accessing an attribute from another connection angers sqlalchemy
-            ret.id
-
-        self.assertEquals(Session.query(Dummy).count(), 1)
-
-        Model.metadata.drop_all(Session.bind)
 
 
 class TestInit(IntegrationFixture):
