@@ -26,6 +26,8 @@ class EnrollmentPlan(ExportPlan):
                 is_system=True, is_required=True),
             row('study', self.name, types.STRING,
                 is_system=True, is_required=True),
+            row('site', self.name, types.STRING,
+                is_system=True, is_required=True),
             row('pid', self.name, types.STRING,
                 is_system=True, is_required=True),
             row('our', self.name, types.STRING,
@@ -46,6 +48,7 @@ class EnrollmentPlan(ExportPlan):
                 models.Enrollment.id.label('id'),
                 models.Enrollment.id.label('enrollment_id'),  # BBB
                 models.Study.title.label('study'),  # BBB
+                models.Site.name.label('site'),
                 models.Patient.our.label('pid'),
                 models.Patient.our.label('our'),  # BBB
                 models.Patient.legacy_number.label('aeh_num'),  # BBB
@@ -58,6 +61,7 @@ class EnrollmentPlan(ExportPlan):
             .select_from(models.Enrollment)
             .join(models.Enrollment.patient)
             .join(models.Enrollment.study)
+            .join(models.Patient.site)
             .order_by(models.Enrollment.id,
                       models.Study.title,
                       models.Patient.pid))

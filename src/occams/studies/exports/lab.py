@@ -55,6 +55,10 @@ class LabPlan(ExportPlan):
             row('tubes', self.name, types.NUMERIC, is_system=True),
             row('tube_type', self.name, types.STRING, is_system=True),
             row('specimen_notes', self.name, types.STRING, is_system=True),
+            row('site', self.name, types.STRING,
+                is_required=True, is_system=True),
+            row('pid', self.name, types.STRING,
+                is_required=True, is_system=True),
             row('our', self.name, types.STRING,
                 is_required=True, is_system=True),
             row('nurse_email', self.name, types.STRING, is_system=True),
@@ -95,6 +99,8 @@ class LabPlan(ExportPlan):
                 lab.Specimen.tubes.label('tubes'),
                 lab.SpecimenType.tube_type.label('tube_type'),
                 lab.Specimen.notes.label('specimen_notes'),
+                models.Site.name.label('site'),
+                models.Patient.our.label('pid'),
                 models.Patient.our.label('our'),
                 models.Patient.nurse.label('nurse_email'),
                 models.Patient.legacy_number.label('aeh_num'))
@@ -110,6 +116,7 @@ class LabPlan(ExportPlan):
             .outerjoin(lab.Specimen.specimen_type)
             .outerjoin(lab.Specimen.state)
             .join(lab.Specimen.patient)
+            .join(models.Patient.site)
             .filter(lab.AliquotState.title != u'Aliquot Not used')
             .filter(func.coalesce(lab.Aliquot.freezer,
                                   lab.Aliquot.rack,

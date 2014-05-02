@@ -17,6 +17,10 @@ class VisitPlan(ExportPlan):
 
     def codebook(self):
         return iter([
+            row('site', self.name, types.STRING,
+                is_required=True, is_system=True),
+            row('pid', self.name, types.STRING,
+                is_required=True, is_system=True),
             row('our', self.name, types.STRING,
                 is_required=True, is_system=True),
             row('aeh_num', self.name, types.STRING, is_system=True),
@@ -27,9 +31,10 @@ class VisitPlan(ExportPlan):
             ])
 
     def data(self, use_choice_labels=False, expand_collections=False):
-
         query = (
             Session.query(
+                models.Site.name.label('site'),
+                models.Patient.our.label('pid'),
                 models.Patient.our.label('our'),
                 models.Patient.legacy_number.label('aeh_num'),
                 models.Visit.visit_date.label('visit_date'),
@@ -38,5 +43,6 @@ class VisitPlan(ExportPlan):
             .select_from(models.Patient)
             .join(models.Patient.visits)
             .join(models.Visit.cycles)
-            .join(models.Cycle.study))
+            .join(models.Cycle.study)
+            .join(models.Patient.site))
         return query
