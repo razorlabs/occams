@@ -1,6 +1,6 @@
 import json
 
-from occams.clinical import log
+from occams.form import log
 
 
 def includeme(config):

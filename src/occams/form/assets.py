@@ -11,20 +11,14 @@ def includeme(config):
 
     config.add_webasset('default-js', Bundle(
         Bundle('libs/jquery.min.js'),
+        Bundle('libs/bootstrap/dist/js/bootstrap.min.js'),
+        Bundle('libs/knockout.min.js'),
+        Bundle('libs/knockout.mapping.min.js'),
         Bundle('libs/jquery-ui.min.js'),
-        Bundle(
-            'libs/bootstrap/js/transition.js',
-            'libs/bootstrap/js/collapse.js',
-            'libs/bootstrap/js/button.js',
-            'libs/bootstrap/js/dropdown.js',
-            'libs/bootstrap/js/modal.js',
-            'libs/bootstrap/js/tooltip.js',
-            filters='jsmin',
-            output='bootstrap.%(version)s.min.js'),
         Bundle('libs/select2.min.js'),
         Bundle(
             'scripts/modal.js',
-            'scripts/app.js',
+            'scripts/form-list.js',
             filters='jsmin'),
         output='gen/default.%(version)s.min.js'))
 

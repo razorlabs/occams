@@ -1,5 +1,3 @@
-import datetime
-
 from occams.form import log
 
 
@@ -9,47 +7,38 @@ def includeme(config):
     """
     log.debug('Registering views...')
 
-    config.include('pyramid_rewrite')
-    config.add_rewrite_rule(r'/(?P<path>.*)/', r'/%(path)s')
-
-    str_to_version = versions('version')
     config.add_static_view('static', 'static', cache_max_age=3600)
 
-    config.add_route('home', '/')
+    r = config.add_route
 
-    config.add_route('account_login', '/login')
-    config.add_route('account_logout', '/logout')
-    config.add_route('account', '/account')
+    r('home',                '/')
 
-    config.add_route('form_add', '/add')
-    config.add_route('form_view', '/{form}/{version}')
-    config.add_route('form_delete', '/{form}/{version}/delete')
+    r('account_login',       '/login')
+    r('account_logout',      '/logout')
 
-    config.add_route('field_add', '/{form_name}/{version}/add',
-        custom_predicates=(str_to_version,))
-    config.add_route('field_view', '/{form_name}/{version}/{field}',
-        custom_predicates=(str_to_version,))
-    config.add_route('field_edit', '/{form_name}/{version}/{field}/edit',
-        custom_predicates=(str_to_version,))
-    config.add_route('field_move', '/{form_name}/{version}/field}/move',
-        custom_predicates=(str_to_version,))
-    config.add_route('field_delete', '/{form_name}/{version}/{field}/delete',
-        custom_predicates=(str_to_version,))
+    r('workflow_add',        '/workflows/add')
+    r('workflow_view',       '/workflows/{workflow}')
+    r('workflow_edit',       '/workflows/{workflow}/edit')
+    r('workflow_delete',     '/workflows/{workflow}/delete')
 
+    r('state_add',           '/workflows/{workflow}/add')
+    r('state_view',          '/workflows/{workflow}/{state}')
+    r('state_edit',          '/workflows/{workflow}/{state}/edit')
+    r('state_delete',        '/workflows/{workflow}/{state}/delete')
 
-def versions(*segment_names):
-    """
-    Creates function to parse version segments in URL on dispatch.
-    """
-    def predicate(info, request):
-        strpdate = lambda s: datetime.datetime.strptime(s, '%Y-%m-%d').date()
-        match = info['match']
-        for segment_name in segment_names:
-            try:
-                raw = match[segment_name]
-                parsed = int(raw) if raw.isdigit() else strpdate(raw)
-                match[segment_name] = parsed
-            except ValueError:
-                return False
-        return True
-    return predicate
+    r('form_add',            '/add')
+
+    r('version_view',        '/{form}/{version}')
+    r('version_edit',        '/{form}/{version}/edit')
+    r('version_delete',      '/{form}/{version}/delete')
+    r('version_preview',     '/{form}/{version}/preview')
+    r('version_download',    '/{form}/{version}/download')
+    r('version_copy',        '/{form}/{version}/copy')
+    r('version_draft',       '/{form}/{version}/draft')
+    r('version_codebook',    '/{form}/{version}/codebook')
+
+    r('field_add',           '/{form}/{version}/add')
+    r('field_view',          '/{form}/{version}/{field}')
+    r('field_edit',          '/{form}/{version}/{field}/edit')
+    r('field_move',          '/{form}/{version}/field}/move')
+    r('field_delete',        '/{form}/{version}/{field}/delete')

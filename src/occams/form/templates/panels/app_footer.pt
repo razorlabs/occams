@@ -1,9 +1,0 @@
-<footer i18n:domain="occams.form" id="footer">
-  <div class="container">
-    <p class="muted credit">
-      Developed by <a href="http://cfar.ucsd.edu/bit">UCSD Bit Core</a>.
-      Code licensed under <a href="http://opensource.org/licenses/MIT">MIT License</a>
-    </p>
-  </div>
-</footer>
-

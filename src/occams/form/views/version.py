@@ -1,44 +1,78 @@
-import datetime
-import re
-
-import colander
-import deform
-import deform.widget
-from pyramid.httpexceptions import HTTPFound, HTTPNotFound
+from pyramid.httpexceptions import HTTPNotFound
 from pyramid.view import view_config
-from pyramid_deform import CSRFSchema
-from pyramid_layout.panel import panel_config
-from sqlalchemy import func, orm, sql
+from sqlalchemy import orm
 
-from occams.form import _, Session, log, widgets
-from occams.datastore import models as datastore
+from occams.form import models, Session
+from occams.form.form import schema2wtf
 
 
-#@view_config(
-    #route_name='version_view',
-    #renderer='occams.form:templates/version/view.pt',
-    #layout='web_layout')
-#def view(request):
-    #"""
-    #"""
-    #name = request.matchdict['form_name']
-    #version = request.matchdict['version']
+def get_form(request):
+    """
+    Helper method to retrieve the schema from a URL request
+    """
+    name = request.matchdict['form']
+    version = request.matchdict['version']
+    query = Session.query(models.Schema).filter_by(name=name)
 
-    #try:
-        #schema = get_version(Session, name, version)
-    #except ValueError, orm.exc.NoResultFound:
-        #raise HTTPNotFound
+    if version.isdigit():
+        query = query.filter_by(id=version)
+    else:
+        query = query.filter_by(publish_date=version)
 
-    #form = Form(schema=schema)
-
-    #layout = request.layout_manager.layout
-    #layout.content_title = schema.title
-    #return {'form': form.render()}
+    try:
+        return query.one()
+    except orm.exc.NoResultFound:
+        raise HTTPNotFound
 
 
-#def get_version(session, name, version):
-    #query = session.query(datastore.Schema)
-    #if isinstance(version, int):
-        #return query.filter_by(id=version).one()
-    #return query.filter_by(name=name, publish_date=version).one()
+@view_config(
+    route_name='version_view',
+    renderer='occams.form:templates/version/view.pt',
+    permission='form_view')
+def view(request):
+    """
+    Overview of the form version
+    """
+    schema = get_form(request)
 
+    return {'schema': schema}
+
+
+@view_config(
+    route_name='version_codebook',
+    renderer='occams.form:templates/version/codebook.pt',
+    permission='form_view')
+def codebook(request):
+    """
+    Codebook Page
+    """
+    schema = get_form(request)
+    return {'schema': schema}
+
+
+@view_config(
+    route_name='version_preview',
+    renderer='occams.form:templates/version/preview.pt',
+    permission='form_view')
+def preview(request):
+    """
+    Preview form for test-drivining.
+    """
+    schema = get_form(request)
+    SchemaForm = schema2wtf(schema)
+    return {
+        'schema': schema,
+        'form': SchemaForm(),
+    }
+
+
+@view_config(
+    route_name='version_edit',
+    renderer='occams.form:templates/version/edit.pt',
+    permission='form_edit')
+def edit(request):
+    """
+    Editor Page
+    """
+    schema = get_form(request)
+    return {'schema': schema}

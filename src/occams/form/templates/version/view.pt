@@ -1,16 +1,15 @@
 <!DOCTYPE html>
-<html
-    xmlns="http://www.w3.org/1999/xhtml"
-    xmlns:i18n="http://xml.zope.org/namespaces/i18n"
-    xmlns:tal="http://xml.zope.org/namespaces/tal"
-    xmlns:metal="http://xml.zope.org/namespaces/metal"
-    xml:lang="en"
-    lang="en"
-    i18n:domain="occams.form"
-    metal:use-macro="main_template">
+<html metal:use-macro="load: ../master.pt">
   <metal:content-slot fill-slot="content-slot">
 
-    <form tal:replace="structure form"></form>
+    <header class="page-header">
+      <div metal:use-macro="load: ./panels/toolbar.pt" />
+      <h1>${schema.title}</h1>
+      <ul metal:use-macro="load: ./panels/details.pt" />
+      <nav metal:use-macro="load: ./panels/nav.pt" />
+    </header>
+
+    Something view
 
   </metal:content-slot>
 </html>

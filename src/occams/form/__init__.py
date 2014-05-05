@@ -4,12 +4,14 @@ import pkg_resources
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.config import Configurator
 from pyramid.i18n import TranslationStringFactory
+from pyramid.path import DottedNameResolver
 from pyramid_who.whov2 import WhoV2AuthenticationPolicy
 from sqlalchemy import orm, engine_from_config
-from zope.dottedname.resolve import resolve
 import zope.sqlalchemy
 
 import occams.datastore.models.events
+
+from occams.datastore import models
 
 __version__ = pkg_resources.require(__name__)[0].version
 
@@ -34,17 +36,16 @@ def main(global_config, **settings):
         authentication_policy=WhoV2AuthenticationPolicy(
             settings.get('who.config_file'),
             settings.get('who.identifier_id'),
-            resolve(settings.get('who.callback'))),
+            DottedNameResolver().resolve(settings.get('who.callback'))),
         authorization_policy=ACLAuthorizationPolicy())
 
     Session.configure(bind=engine_from_config(settings, 'sqlalchemy.'))
 
     config.include('pyramid_chameleon')
-    config.include('pyramid_deform')
-    config.include('pyramid_layout')
     config.include('pyramid_mailer')
     config.include('pyramid_redis_sessions')
     config.include('pyramid_rewrite')
+    config.add_rewrite_rule(r'/(?P<path>.*)/', r'/%(path)s')
     config.include('pyramid_tm')
     config.include('pyramid_webassets')
 

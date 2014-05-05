@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html metal:use-macro="load: ../master.pt">
+  <metal:content-slot fill-slot="content-slot">
+
+    <header class="page-header">
+      <h1>${schema.title}</h1>
+      <ul metal:use-macro="load: ./panels/details.pt" />
+    </header>
+
+    <div class="alert alert-info">
+      <span class="glyphicon glyphicon-info-sign"></span>
+      <strong i18n:translate="">Edit Mode</strong>
+      <span>Make your changes then save</span>
+    </div>
+
+    <div data-bind="visible: !ready()">Initializing...</div>
+
+    <div id="of-editor" style="display: none;" data-bind="visible: ready()">
+
+      <div id="of-aux">
+        <!-- Field types -->
+        <div id="of-new">
+          <h3>Types</h3>
+          <ul>
+            <li><a href="#" i18n:translate="">Choice</a></li>
+            <li><a href="#" i18n:translate="">Date</a></li>
+            <li><a href="#" i18n:translate="">File</a></li>
+            <li><a href="#" i18n:translate="">Number</a></li>
+            <li><a href="#" i18n:translate="">Text</a></li>
+            <li><a href="#" i18n:translate="">Paragraph</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div id="of-main">
+
+      </div>
+
+    </div> <!-- /#of-editor -->
+
+
+    <script id="item-template" type="text/html">
+      <div
+          class="of-item"
+          data-bind="
+            css: { type(): true},
+            attr: {
+              'data-name': name(),
+              'data-type': type()
+            }">
+        <!-- ko: if: title() -->
+          <div class="of-head">
+            <a href="#collapse" class="of-collapseable">Collapse</a>
+            <div class="of-metadata">
+              <div class="of-type" data-bind="text: type()"></div>
+              <div class="of-name" data-bind="text: name()"></div>
+              <div class="of-title" data-bind="text: title()"></div>
+            </div>
+            <div class="of-controls">
+              <ul>
+                <li><a class="of-editable" data-bind="attr: {href: editUrl()}">Edit</a></li>
+                <li><a class="of-deleteable" data-bind="attr: {href: deleteUrl()}">Delete</a></li>
+              </ul>
+            </div>
+          </div>
+          <!-- ko: if: description() -->
+            <div class="of-description" data-bind="text: description()"></div>
+          <!-- /ko -->
+        <!-- /ko -->
+        <div class="of-content">
+        </div>
+      </div>
+    </script>
+
+    <script id="number-form-template" type="text/html">
+      <form>
+
+        <div class="form-group">
+
+        </div>
+
+      </form>
+
+    </script>
+
+  </metal:content-slot>
+</html>
+

@@ -1,58 +1,83 @@
 <!DOCTYPE html>
-<html
-    xmlns="http://www.w3.org/1999/xhtml"
-    xmlns:i18n="http://xml.zope.org/namespaces/i18n"
-    xmlns:tal="http://xml.zope.org/namespaces/tal"
-    xmlns:metal="http://xml.zope.org/namespaces/metal"
-    xml:lang="en"
-    lang="en"
-    i18n:domain="occams.form"
-    metal:use-macro="main_template">
+<html metal:use-macro="load:../master.pt">
+
   <metal:content-slot fill-slot="content-slot">
-    <p class="well well-lg" tal:condition="not:forms_count">
-      No forms have been created yet.
-    </p>
-    <div tal:condition="forms_count">
-      <p tal:condition="python: forms_count">
-        There are <strong>${forms_count}</strong> forms in the system.
+
+    <header class="page-header">
+      <div class="pull-right">
+        <div id="form-list-toolbar">
+          <div class="btn-toolbar" role="toolbar" >
+            <div class="btn-group">
+              <a href="${request.route_path('form_add')}"
+                  class="btn btn-primary"
+                  tal:condition="request.has_permission('form_add')"
+                  data-bind="click: launchCreateForm">
+                <span class="glyphicon glyphicon-plus"></span>
+                <span i18n:translate="">Create Form</span>
+              </a>
+            </div>
+          </div> <!-- /.btn-toolbar -->
+        </div>
+      </div>
+      <h1 i18n:translate="">Forms</h1>
+    </header>
+
+    <div data-bind="template: {
+        name: 'modal-form-template',
+        if: addForm(),
+        data: addForm()}"></div>
+
+    <!-- ko ifnot:ready() -->
+    <p class="text-center" i18n:translate="">Loading...</p>
+    <!-- /ko -->
+
+    <div style="display: none" data-bind="visible:ready()">
+
+      <!-- ko ifnot:forms() -->
+      <p class="well well-lg" i18n:translate="">
+        No forms have been created yet.
       </p>
-      <table id="forms" class="table table-hover table-striped"
-          tal:condition="forms_count">
+      <!-- /ko -->
+
+      <!-- ko if:forms() -->
+      <p>
+        There are <span data-bind="text:forms().length" class="badge"></span> forms in the system.
+      </p>
+      <table id="forms" class="table table-hover table-striped">
         <thead>
           <tr>
             <th class="has_private">
               <span class="glyphicon glyphicon-user"></span>
             </th>
-            <th class="title">Form</th>
             <th class="name">Schema</th>
+            <th class="title">Form</th>
             <th class="publish_date">Version</th>
           </tr>
         </thead>
-        <tbody>
-          <tr tal:define="highlight highlight|nothing"
-              tal:repeat="form forms"
-              tal:attributes="class python:'success' if form.name == highlight else ''">
-            <td class="has_private">
+        <tbody data-bind="foreach:forms()">
+          <tr data-bind="css: {success: is_new()}">
+            <td class="has_private" data-bind="if:has_private()">
               <span
                   class="glyphicon glyphicon-user"
-                  title="Has private information"
-                  tal:condition="form.has_private"></span>
+                  title="Has private information"></span>
             </td>
-            <td class="title">${form.title}</td>
-            <td class="name"><code>${form.name}</code></td>
-            <td class="publish_date"
-                tal:define="url request.route_path('form_view',
-                                                   form=form.name,
-                                                   version=form.publish_date or form.id);">
-              <tal:switch switch="form.publish_date is not None">
-                <a href="${url}" tal:case="True">${form.publish_date}</a>
-                <a href="${url}" tal:case="False">draft</a>
-              </tal:switch>
+            <td class="name"><code data-bind="text:name()"></code></td>
+            <td class="title" data-bind="text:title()"></td>
+            <td class="publish_date" data-bind="if:versions()">
+              <table data-bind="foreach: versions()">
+                <tr>
+                  <td>
+                    <a href="" data-bind="attr: {href: url()}, text:label()"></a>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
         </tbody>
       </table>
-    </div>
+      <!-- /ko -->
+
   </metal:content-slot>
+
 </html>
 

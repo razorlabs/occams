@@ -1,0 +1,37 @@
+<div id="form-list-toolbar" class="pull-right">
+  <div class="btn-toolbar" role="toolbar" >
+    <div class="btn-group">
+      <a href="${request.current_route_path(_route_name='version_download')}"
+          class="btn btn-default">
+        <span class="glyphicon glyphicon-download"></span>
+        <span i18n:translate="">Download This Version</span>
+      </a>
+    </div>
+    <div class="btn-group">
+      <a href="${request.current_route_path(_route_name='version_draft')}"
+          class="btn btn-default"
+          tal:condition="schema.publish_date|nothing">
+        <span class="glyphicon glyphicon-transfer"></span>
+        <span i18n:translate="">Draft New Version</span>
+      </a>
+      <a href="${request.current_route_path(_route_name='version_edit')}"
+          class="btn btn-default">
+        <span class="glyphicon glyphicon-pencil"></span>
+        <span i18n:translate="">Edit</span>
+      </a>
+      <div class="btn-group dropdown">
+        <button class="btn btn-default dropdown-toggle"
+            data-toggle="dropdown">
+          <span class="glyphicon glyphicon-cog"></span>
+          <span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu pull-right" role="menu">
+          <li>
+            <a href="${request.current_route_path(_route_name='version_delete')}"
+                i18n:translate="">Delete</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div> <!-- /.btn-toolbar -->
+</div>

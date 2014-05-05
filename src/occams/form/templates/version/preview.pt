@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html metal:use-macro="load: ../master.pt">
+  <metal:content-slot fill-slot="content-slot">
+
+    <header class="page-header">
+      <div metal:use-macro="load: ./panels/toolbar.pt" />
+      <h1>${schema.title}</h1>
+      <ul metal:use-macro="load: ./panels/details.pt" />
+      <nav metal:use-macro="load: ./panels/nav.pt" />
+    </header>
+
+    <div class="alert alert-info">
+      <span class="glyphicon glyphicon-info-sign"></span>
+      <strong i18n:translate="">Debug Mode</strong>
+      <span i18n:translate="">
+        You are currently previewing a form, you are free to enter data
+        without side effects to the database.
+      </span>
+    </div>
+
+    <form role="form">
+      <fieldset tal:repeat="fieldset form">
+        <legend tal:define="label fieldset.label.text" tal:condition="label">${label}</legend>
+        <p class="help-text"
+            tal:define="description fieldset.description"
+            tal:condition="description">${description}</p>
+        <div class="form-group" tal:repeat="field fieldset">
+          ${structure: field.label(class_='required' if field.flags.required else '')}
+          <p class="help-text"
+              tal:define="description field.description"
+              tal:condition="description">${description}</p>
+          <tal:widget switch="python:hasattr(field, 'choices')">
+            <input tal:case="False" tal:replace="field(class_='form-control')" />
+            <div tal:case="True" tal:repeat="choice field" class="${field.option_widget.input_type}">
+              <label>
+                ${structure: choice}
+                ${choice.label.text}
+              </label>
+            </div>
+          </tal:widget>
+        </div>
+      </fieldset>
+
+      <hr width="100%" />
+      <div class="pull-right">
+        <button type="button" class="btn btn-link" i18n:translate="">Clear</button>
+        <button type="submit" class="btn btn-primary" i18n:translate="">Submit</button>
+      </div>
+    </form>
+
+  </metal:content-slot>
+</html>
+

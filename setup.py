@@ -9,15 +9,11 @@ CHANGES = open(os.path.join(HERE, 'CHANGES.rst')).read()
 
 REQUIRES = [
     'alembic',
-    'colander',
     'cssmin',
-    'deform',
     'jsmin',
     'occams.datastore',
     'pyramid',
-    'pyramid_deform',
     'pyramid_mailer',
-    'pyramid_layout',
     'pyramid_redis_sessions',
     'pyramid_redis',
     'pyramid_tm',
@@ -26,9 +22,8 @@ REQUIRES = [
     'pyramid_who',
     'SQLAlchemy',
     'transaction',
-    'webhelpers',
+    'wtforms',
     'zope.sqlalchemy',
-    'zope.dottedname',
 ]
 
 EXTRAS = {

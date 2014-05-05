@@ -2,73 +2,83 @@
 Toolset for rendering datastore forms.
 """
 
-import datetime
-from pkg_resources import resource_filename
-
-import colander
-import deform.widget
-
-from occams.datastore import models as datastore
+import six
+import wtforms
+from wtforms.fields import html5
 
 
-def choice_widget_factory(attribute):
-    choices = [(choice.name, choice.title) for choice in attribute.choices]
-    if len(choices) <= 5:
-        if attribute.is_collection:
-            return deform.widget.CheckboxChoiceWidget(values=choices)
-        else:
-            return deform.widget.RadioChoiceWidget(values=choices)
-    return deform.widget.SelectWidget(
-        css_class='select2',
-        template='select',
-        multiple=attribute.is_collection,
-        values=choices)
-
-
-widgets = {
-    'text': lambda a: deform.widget.TextAreaWidget(rows=5),
-    'date': lambda a: deform.widget.DateInputWidget(type_name='date', css_class='datepicker'),
-    'choice': choice_widget_factory }
-
-
-types = {
-    'boolean': colander.Bool,
-    'integer': colander.Int,
-    'decimal': colander.Decimal,
-    'choice': colander.String,
-    'string': colander.String,
-    'text': colander.String,
-    'date': colander.Date,
-    'datetime': colander.DateTime}
-
-
-def schema2colander(schema):
+class MultiCheckboxField(wtforms.SelectMultipleField):
     """
-    Converta a DataStore schema to a colander form schema
+    A multiple-select, except displays a list of checkboxes.
+
+    Iterating the field will produce subfields, allowing custom rendering of
+    the enclosed checkbox fields.
     """
+    widget = wtforms.widgets.ListWidget(prefix_label=False)
+    option_widget = wtforms.widgets.CheckboxInput()
 
-    def nodify(item, type_=None):
-        """ Helper method to create nodes from named records """
-        return colander.SchemaNode(
-            (type_ or colander.Mapping)(),
-            name=item.name,
-            title=item.title,
-            description=item.description)
 
-    node = nodify(schema)
-    for section in schema.sections:
-        subnode = nodify(section)
-        node.add(subnode)
-        for attribute in section.attributes.itervalues():
+def schema2wtf(schema):
+
+    def make_field(attribute):
+        kw = {
+            'label': attribute.title,
+            'description': attribute.description,
+            'validators': []
+        }
+
+        if attribute.type == 'integer':
+            field_class = html5.IntegerField
+        elif attribute.type == 'decimal':
+            field_class = wtforms.DecimalField
+        elif attribute.type == 'string':
+            field_class = wtforms.StringField
+        elif attribute.type == 'text':
+            field_class = wtforms.StringField
+            kw['widget'] = wtforms.widgets.TextArea()
+        elif attribute.type == 'date':
+            field_class = wtforms.DateField
+        elif attribute.type == 'datetime':
+            field_class = wtforms.DateTimeField
+        elif attribute.type == 'choice':
+            kw['choices'] = [(c.name, c.title)
+                             for c in sorted(six.itervalues(attribute.choices),
+                                             key=lambda v: v.order)]
             if attribute.is_collection:
-                type_ = colander.Set
+                field_class = MultiCheckboxField
             else:
-                type_ = types[attribute.type]
-            field = nodify(attribute, type_)
-            if attribute.is_required:
-                field.missing = colander.required
-            if attribute.type in widgets:
-                field.widget = widgets[attribute.type](attribute)
-            subnode.add(field)
+                field_class = wtforms.RadioField
+        elif attribute.type == 'blob':
+            field_class = wtforms.FileField
+        else:
+            raise Exception(u'Unknown type: %s' % attribute.type)
 
-    return node
+        if attribute.is_required:
+            kw['validators'].append(wtforms.validators.required())
+
+        return field_class(**kw)
+
+    F = type('F', (wtforms.Form,), {})
+
+    # Non-fieldset fiels
+    S = type('default', (wtforms.Form,), {})
+    setattr(F, 'default', wtforms.FormField(S, label=u''))
+    for attribute in sorted(six.itervalues(schema.attributes),
+                            key=lambda v: v.order):
+        if not attribute.section:
+            setattr(S, attribute.name, make_field(attribute))
+
+    # Fielset-fields
+    for section in sorted(six.itervalues(schema.sections),
+                          key=lambda v: v.order):
+        S = type(str(section.name), (wtforms.Form,), {})
+        setattr(F, section.name, wtforms.FormField(
+            S,
+            label=section.title,
+            description=section.description,
+        ))
+        for attribute in sorted(six.itervalues(section.attributes),
+                                key=lambda v: v.order):
+            setattr(S, attribute.name, make_field(attribute))
+
+    return F
