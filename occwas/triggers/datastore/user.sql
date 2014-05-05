@@ -37,9 +37,11 @@ CREATE OR REPLACE FUNCTION user_mirror() RETURNS TRIGGER AS $$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
-        INSERT INTO user_ext
-          (key, create_date, modify_date)
-        VALUES (NEW.key, NEW.create_date, NEW.modify_date);
+        IF NOT EXISTS(SELECT 1 FROM user_ext WHERE key = NEW.key) THEN
+          INSERT INTO user_ext
+            (key, create_date, modify_date)
+          VALUES (NEW.key, NEW.create_date, NEW.modify_date);
+        END IF;
       WHEN 'DELETE' THEN
         DELETE FROM user_ext WHERE key = OLD.key;
       WHEN 'UPDATE' THEN
