@@ -95,7 +95,7 @@ def install(suid, supw, from_url, to_url):
         """.format(**from_url.translate_connect_args()))
 
     # Don't track these table sin the PHI
-    if 'phi' in from_url.databases:
+    if 'phi' in from_url.database:
         cursor.execute("""
             DROP TRIGGER patient_mirror ON patient;
             DROP TRIGGER user_mirror ON "user";
