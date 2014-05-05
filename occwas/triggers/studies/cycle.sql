@@ -6,7 +6,7 @@ DROP FOREIGN TABLE IF EXISTS cycle_ext;
 
 
 CREATE FOREIGN TABLE cycle_ext (
-    id              SERIAL NOT NULL
+    id              INTEGER
 
   , zid             INTEGER NOT NULL
   , study_id        INTEGER NOT NULL
