@@ -94,6 +94,13 @@ def install(suid, supw, from_url, to_url):
             GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO {username};
         """.format(**from_url.translate_connect_args()))
 
+    # Don't track these table sin the PHI
+    if 'phi' in from_url.databases:
+        cursor.execute("""
+            DROP TRIGGER patient_mirror ON patient;
+            DROP TRIGGER user_mirror ON "user";
+        """.format(**from_url.translate_connect_args()))
+
     conn.commit()
     cursor.close()
     conn.close()
