@@ -8,7 +8,7 @@ DROP FOREIGN TABLE IF EXISTS schema_ext;
 
 
 CREATE FOREIGN TABLE schema_ext (
-    id              INTEGER NOT NULL
+    id              SERIAL NOT NULL
 
   , name            VARCHAR NOT NULL
   , title           VARCHAR NOT NULL

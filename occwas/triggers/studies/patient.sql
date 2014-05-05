@@ -6,7 +6,7 @@ DROP FOREIGN TABLE IF EXISTS patient_ext;
 
 
 CREATE FOREIGN TABLE patient_ext (
-    id              INTEGER NOT NULL
+    id              SERIAL NOT NULL
 
   , site_id         INTEGER NOT NULL
   , zid             INTEGER NOT NULL

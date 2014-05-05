@@ -8,7 +8,7 @@ DROP FOREIGN TABLE IF EXISTS choice_ext;
 
 
 CREATE FOREIGN TABLE choice_ext (
-    id              INTEGER NOT NULL
+    id              SERIAL NOT NULL
 
   , name            VARCHAR NOT NULL
   , title           VARCHAR NOT NULL
@@ -34,7 +34,7 @@ DROP FOREIGN TABLE IF EXISTS value_choice_ext;
 
 
 CREATE FOREIGN TABLE value_choice_ext (
-    id              INTEGER NOT NULL
+    id              SERIAL NOT NULL
 
   , entity_id       INTEGER NOT NULL
   , attribute_id    INTEGER NOT NULL

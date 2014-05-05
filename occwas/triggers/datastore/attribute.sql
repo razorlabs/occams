@@ -9,7 +9,7 @@ DROP FOREIGN TABLE IF EXISTS attribute_ext;
 
 
 CREATE FOREIGN TABLE attribute_ext (
-    id              INTEGER NOT NULL
+    id              SERIAL NOT NULL
 
   , name            VARCHAR NOT NULL
   , title           VARCHAR NOT NULL
@@ -45,7 +45,7 @@ DROP FOREIGN TABLE IF EXISTS section_ext;
 
 
 CREATE FOREIGN TABLE section_ext (
-    id              INTEGER NOT NULL
+    id              SERIAL NOT NULL
 
   , schema_id       INTEGER NOT NULL
   , name            VARCHAR NOT NULL

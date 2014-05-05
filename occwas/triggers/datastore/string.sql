@@ -6,7 +6,7 @@ DROP FOREIGN TABLE IF EXISTS value_string_ext;
 
 
 CREATE FOREIGN TABLE value_string_ext (
-    id              INTEGER NOT NULL
+    id              SERIAL NOT NULL
 
   , entity_id       INTEGER NOT NULL
   , attribute_id    INTEGER NOT NULL

@@ -6,7 +6,7 @@ DROP FOREIGN TABLE IF EXISTS context_ext;
 
 
 CREATE FOREIGN TABLE context_ext (
-    id              INTEGER NOT NULL
+    id              SERIAL NOT NULL
 
   , entity_id       INTEGER NOT NULL
   , external        VARCHAR
