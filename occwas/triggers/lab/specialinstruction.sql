@@ -6,7 +6,7 @@ DROP FOREIGN TABLE IF EXISTS specialinstruction_ext;
 
 
 CREATE FOREIGN TABLE specialinstruction_ext (
-    id              INTEGER
+    id              SERIAL NOT NULL
 
   , name            VARCHAR NOT NULL
   , title           VARCHAR NOT NULL

@@ -7,7 +7,7 @@ DROP FOREIGN TABLE IF EXISTS value_blob_ext;
 
 
 CREATE FOREIGN TABLE value_blob_ext (
-    id              INTEGER
+    id              SERIAL NOT NULL
 
   , entity_id       INTEGER NOT NULL
   , attribute_id    INTEGER NOT NULL

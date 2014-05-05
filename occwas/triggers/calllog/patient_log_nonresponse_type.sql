@@ -6,7 +6,7 @@ DROP FOREIGN TABLE IF EXISTS patient_log_nonresponse_type_ext;
 
 
 CREATE FOREIGN TABLE patient_log_nonresponse_type_ext (
-    id              INTEGER
+    id              SERIAL NOT NULL
 
   , value           VARCHAR NOT NULL
   , "order"         INTEGER NOT NULL

@@ -6,7 +6,7 @@ DROP FOREIGN TABLE IF EXISTS stratum_ext;
 
 
 CREATE FOREIGN TABLE stratum_ext (
-    id                INTEGER
+    id                SERIAL NOT NULL
 
   , study_id          INTEGER NOT NULL
   , arm_id            INTEGER NOT NULL

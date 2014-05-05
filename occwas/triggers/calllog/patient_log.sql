@@ -6,7 +6,7 @@ DROP FOREIGN TABLE IF EXISTS patient_log_ext;
 
 
 CREATE FOREIGN TABLE patient_log_ext (
-    id                      INTEGER
+    id                      SERIAL NOT NULL
 
   , patient_id              INTEGER NOT NULL
   , patient_contact_date    TIMESTAMP  NOT NULL
