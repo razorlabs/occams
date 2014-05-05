@@ -6,7 +6,7 @@ DROP FOREIGN TABLE IF EXISTS enrollment_ext;
 
 
 CREATE FOREIGN TABLE enrollment_ext (
-    id                  SERIAL NOT NULL
+    id                  INTEGER NOT NULL
 
   , zid                 INTEGER NOT NULL
   , patient_id          INTEGER NOT NULL

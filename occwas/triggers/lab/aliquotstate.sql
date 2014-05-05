@@ -6,7 +6,7 @@ DROP FOREIGN TABLE IF EXISTS aliquotstate_ext;
 
 
 CREATE FOREIGN TABLE aliquotstate_ext (
-    id              SERIAL NOT NULL
+    id              INTEGER NOT NULL
 
   , name            VARCHAR NOT NULL
   , title           VARCHAR NOT NULL
