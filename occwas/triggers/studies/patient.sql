@@ -37,51 +37,54 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION patient_mirror() RETURNS TRIGGER AS $$
   BEGIN
-    CASE TG_OP
-      WHEN 'INSERT' THEN
-        INSERT INTO patient_ext (
-            site_id
-          , zid
-          , nurse
-          , our
-          , legacy_number
-          , initials
-          , create_date
-          , create_user_id
-          , modify_date
-          , modify_user_id
-          , revision
-        )
-        VALUES (
-            ext_site_id(NEW.site_id)
-          , NEW.zid
-          , NEW.nurse
-          , NEW.our
-          , NEW.legacy_number
-          , NEW.initials
-          , NEW.create_date
-          , ext_user_id(NEW.create_user_id)
-          , NEW.modify_date
-          , ext_user_id(NEW.modify_user_id)
-          , NEW.revision
-          );
-      WHEN 'DELETE' THEN
-        DELETE FROM patient_ext WHERE zid = OLD.zid;
-      WHEN 'UPDATE' THEN
-        UPDATE patient_ext
-        SET site_id = ext_site_id(NEW.site_id)
-          , zid = NEW.zid
-          , nurse = NEW.nurse
-          , our = NEW.our
-          , legacy_number = NEW.legacy_number
-          , initials = NEW.initials
-          , create_date = NEW.create_date
-          , create_user_id = ext_user_id(NEW.create_user_id)
-          , modify_date = NEW.modify_date
-          , modify_user_id = ext_user_id(NEW.modify_user_id)
-          , revision = NEW.revision
-        WHERE zid = OLD.zid;
-    END CASE;
+    -- Only update the FIA side
+    IF (SELECT current_database()) NOT LIKE '%phi%' THEN
+      CASE TG_OP
+        WHEN 'INSERT' THEN
+          INSERT INTO patient_ext (
+              site_id
+            , zid
+            , nurse
+            , our
+            , legacy_number
+            , initials
+            , create_date
+            , create_user_id
+            , modify_date
+            , modify_user_id
+            , revision
+          )
+          VALUES (
+              ext_site_id(NEW.site_id)
+            , NEW.zid
+            , NEW.nurse
+            , NEW.our
+            , NEW.legacy_number
+            , NEW.initials
+            , NEW.create_date
+            , ext_user_id(NEW.create_user_id)
+            , NEW.modify_date
+            , ext_user_id(NEW.modify_user_id)
+            , NEW.revision
+            );
+        WHEN 'DELETE' THEN
+          DELETE FROM patient_ext WHERE zid = OLD.zid;
+        WHEN 'UPDATE' THEN
+          UPDATE patient_ext
+          SET site_id = ext_site_id(NEW.site_id)
+            , zid = NEW.zid
+            , nurse = NEW.nurse
+            , our = NEW.our
+            , legacy_number = NEW.legacy_number
+            , initials = NEW.initials
+            , create_date = NEW.create_date
+            , create_user_id = ext_user_id(NEW.create_user_id)
+            , modify_date = NEW.modify_date
+            , modify_user_id = ext_user_id(NEW.modify_user_id)
+            , revision = NEW.revision
+          WHERE zid = OLD.zid;
+      END CASE;
+    END IF;
     RETURN NULL;
   END;
 $$ LANGUAGE plpgsql;

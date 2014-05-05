@@ -35,22 +35,25 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION user_mirror() RETURNS TRIGGER AS $$
   BEGIN
-    CASE TG_OP
-      WHEN 'INSERT' THEN
-        IF NOT EXISTS(SELECT 1 FROM user_ext WHERE key = NEW.key) THEN
-          INSERT INTO user_ext
-            (key, create_date, modify_date)
-          VALUES (NEW.key, NEW.create_date, NEW.modify_date);
-        END IF;
-      WHEN 'DELETE' THEN
-        DELETE FROM user_ext WHERE key = OLD.key;
-      WHEN 'UPDATE' THEN
-        UPDATE user_ext
-        SET key = NEW.key
-          , create_date = NEW.create_date
-          , modify_date = NEW.modify_date
-        WHERE key = OLD.key;
-    END CASE;
+    -- Only update the FIA side
+    IF (SELECT current_database()) NOT LIKE '%phi%' THEN
+      CASE TG_OP
+        WHEN 'INSERT' THEN
+          IF NOT EXISTS(SELECT 1 FROM user_ext WHERE key = NEW.key) THEN
+            INSERT INTO user_ext
+              (key, create_date, modify_date)
+            VALUES (NEW.key, NEW.create_date, NEW.modify_date);
+          END IF;
+        WHEN 'DELETE' THEN
+          DELETE FROM user_ext WHERE key = OLD.key;
+        WHEN 'UPDATE' THEN
+          UPDATE user_ext
+          SET key = NEW.key
+            , create_date = NEW.create_date
+            , modify_date = NEW.modify_date
+          WHERE key = OLD.key;
+      END CASE;
+    END IF;
     RETURN NULL;
   END;
 $$ LANGUAGE plpgsql;
