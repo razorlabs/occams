@@ -9,7 +9,7 @@ DROP FOREIGN TABLE IF EXISTS entity_ext;
 
 
 CREATE FOREIGN TABLE entity_ext (
-    id              SERIAL NOT NULL
+    id              INTEGER
 
   , name            VARCHAR NOT NULL
   , title           VARCHAR NOT NULL
@@ -37,7 +37,7 @@ DROP FOREIGN TABLE IF EXISTS state_ext;
 
 
 CREATE FOREIGN TABLE state_ext (
-    id              SERIAL NOT NULL
+    id              INTEGER
 
   , name            VARCHAR NOT NULL
   , title           VARCHAR NOT NULL

@@ -7,7 +7,7 @@ DROP FOREIGN TABLE IF EXISTS value_integer_ext;
 
 
 CREATE FOREIGN TABLE value_integer_ext (
-    id              SERIAL NOT NULL
+    id              INTEGER
 
   , entity_id       INTEGER NOT NULL
   , attribute_id    INTEGER NOT NULL

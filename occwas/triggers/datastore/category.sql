@@ -6,7 +6,7 @@ DROP FOREIGN TABLE IF EXISTS category_ext;
 
 
 CREATE FOREIGN TABLE category_ext (
-    id              SERIAL NOT NULL
+    id              INTEGER
 
   , name            VARCHAR NOT NULL
   , title           VARCHAR NOT NULL

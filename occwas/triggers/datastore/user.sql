@@ -9,7 +9,7 @@ DROP FOREIGN TABLE IF EXISTS user_ext;
 
 
 CREATE FOREIGN TABLE user_ext (
-    id              SERIAL NOT NULL
+    id              INTEGER
 
   , key             VARCHAR NOT NULL
   , create_date     TIMESTAMP NOT NULL

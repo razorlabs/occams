@@ -7,7 +7,7 @@ DROP FOREIGN TABLE IF EXISTS study_ext;
 
 
 CREATE FOREIGN TABLE study_ext (
-    id              SERIAL NOT NULL
+    id              INTEGER
 
   , zid             INTEGER NOT NULL
   , name            VARCHAR NOT NULL

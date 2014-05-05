@@ -6,7 +6,7 @@ DROP FOREIGN TABLE IF EXISTS specimenstate_ext;
 
 
 CREATE FOREIGN TABLE specimenstate_ext (
-    id              SERIAL NOT NULL
+    id              INTEGER
 
   , name            VARCHAR NOT NULL
   , title           VARCHAR NOT NULL
