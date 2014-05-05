@@ -55,9 +55,7 @@ def write_data(buffer, query):
              Note that the column names will be used as the header.
     """
     fieldnames = [d['name'] for d in query.column_descriptions]
-    writer = csv.DictWriter(buffer,
-                            fieldnames=fieldnames,
-                            quoting=csv.QUOTE_ALL)
+    writer = csv.DictWriter(buffer, fieldnames=fieldnames)
     writer.writeheader()
     writer.writerows([r._asdict() for r in query])
     buffer.flush()
@@ -71,7 +69,7 @@ def write_codebook(buffer, rows):
     buffer -- a file object which will be used to write data contents
     rows -- Code book rows. Seee `occams.studies.codebook`
     """
-    writer = csv.DictWriter(buffer, codebook.HEADER, quoting=csv.QUOTE_ALL)
+    writer = csv.DictWriter(buffer, codebook.HEADER)
     writer.writeheader()
 
     def choices2string(choices):
