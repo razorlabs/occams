@@ -6,7 +6,7 @@ class ExportPlan(object):
 
     name = None             # System name
     title = None            # Display name
-
+    is_system = True        # Is the export a system-generated export?
     has_private = False     # Contains private (PHI) data
     has_rand = False        # Contains restricted (Rand) data
 

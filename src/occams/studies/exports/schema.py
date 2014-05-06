@@ -22,6 +22,8 @@ from .codebook import types, row
 
 class SchemaPlan(ExportPlan):
 
+    is_system = False
+
     @classmethod
     def from_sql(cls, record):
         """

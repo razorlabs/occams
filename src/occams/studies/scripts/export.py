@@ -109,9 +109,9 @@ def print_list(args):
         return '*' if condition else ''
 
     def format(row):
-        return star(row.has_private), star(row.has_rand), row.name, row.title
+        return star(row.is_system), star(row.has_private), star(row.has_rand), row.name, row.title
 
-    header = ['priv', 'rand', 'name', 'title']
+    header = ['sys', 'priv', 'rand', 'name', 'title']
     rows = iter(map(format, itervalues(exports.list_all())))
     print(tabulate(rows, header, tablefmt='simple'))
 

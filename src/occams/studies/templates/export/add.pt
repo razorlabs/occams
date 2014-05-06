@@ -31,6 +31,9 @@
               <th class="select">
                 <input type="checkbox" data-toggle="selectall" />
               </th>
+              <th class="is_system">
+                <span class="glyphicon glyphicon-wrench"></span>
+              </th>
               <th class="has_private">
                 <span class="glyphicon glyphicon-user"></span>
               </th>
@@ -48,6 +51,12 @@
                     value="${item.name}"
                     data-toggle="select"
                     data-class="warning" />
+              </td>
+              <td>
+                <span
+                    class="glyphicon glyphicon-wrench"
+                    title="System table"
+                    tal:condition="item.is_system"></span>
               </td>
               <td>
                 <span
