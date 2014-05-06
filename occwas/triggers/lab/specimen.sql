@@ -6,7 +6,7 @@ DROP FOREIGN TABLE IF EXISTS specimen_ext;
 
 
 CREATE FOREIGN TABLE specimen_ext (
-    id                INTEGER
+    id                SERIAL NOT NULL
 
   , specimen_type_id  INTEGER NOT NULL
   , patient_id        INTEGER NOT NULL

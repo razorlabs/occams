@@ -6,7 +6,7 @@ DROP FOREIGN TABLE IF EXISTS location_ext;
 
 
 CREATE FOREIGN TABLE location_ext (
-    id              INTEGER
+    id              SERIAL NOT NULL
 
   , name            VARCHAR NOT NULL
   , title           VARCHAR NOT NULL

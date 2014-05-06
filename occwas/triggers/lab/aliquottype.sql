@@ -6,7 +6,7 @@ DROP FOREIGN TABLE IF EXISTS aliquottype_ext;
 
 
 CREATE FOREIGN TABLE aliquottype_ext (
-    id              INTEGER
+    id              SERIAL NOT NULL
 
   , name            VARCHAR NOT NULL
   , title           VARCHAR NOT NULL
