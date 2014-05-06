@@ -6,7 +6,7 @@ DROP FOREIGN TABLE IF EXISTS reftype_ext;
 
 
 CREATE FOREIGN TABLE reftype_ext (
-    id              SERIAL NOT NULL
+    id              INTEGER NOT NULL
 
   , name            VARCHAR NOT NULL
   , title           VARCHAR NOT NULL

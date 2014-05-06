@@ -6,7 +6,7 @@ DROP FOREIGN TABLE IF EXISTS site_ext;
 
 
 CREATE FOREIGN TABLE site_ext (
-    id              SERIAL NOT NULL
+    id              INTEGER NOT NULL
 
   , zid             INTEGER NOT NULL
   , name            VARCHAR NOT NULL
