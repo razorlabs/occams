@@ -24,8 +24,7 @@ class TestAdd(IntegrationFixture):
         track_user('joe')
 
         # No schemata
-        request = testing.DummyRequest(
-            layout_manager=mock.Mock())
+        request = testing.DummyRequest()
         response = self.view_func(request)
         self.assertEquals(len(response['exportables']), 4)  # Only pre-cooked
 
@@ -34,16 +33,14 @@ class TestAdd(IntegrationFixture):
             name=u'vitals', title=u'Vitals')
         Session.add(schema)
         Session.flush()
-        request = testing.DummyRequest(
-            layout_manager=mock.Mock())
+        request = testing.DummyRequest()
         response = self.view_func(request)
         self.assertEquals(len(response['exportables']), 4)
 
         # Published schemata
         schema.publish_date = date.today()
         Session.flush()
-        request = testing.DummyRequest(
-            layout_manager=mock.Mock())
+        request = testing.DummyRequest()
         response = self.view_func(request)
         self.assertEquals(len(response['exportables']), 5)
 
@@ -54,7 +51,6 @@ class TestAdd(IntegrationFixture):
         from pyramid import testing
         from webob.multidict import MultiDict
         request = testing.DummyRequest(
-            layout_manager=mock.Mock(),
             post=MultiDict())
         response = self.view_func(request)
         self.assertIsNotNone(response['errors']['contents'])
@@ -66,7 +62,6 @@ class TestAdd(IntegrationFixture):
         from pyramid import testing
         from webob.multidict import MultiDict
         request = testing.DummyRequest(
-            layout_manager=mock.Mock(),
             post=MultiDict([('contents', 'does_not_exist')]))
         response = self.view_func(request)
         self.assertIsNotNone(response['errors']['contents'])
@@ -78,7 +73,6 @@ class TestAdd(IntegrationFixture):
         from pyramid import testing
         from webob.multidict import MultiDict
         request = testing.DummyRequest(
-            layout_manager=mock.Mock(),
             post=MultiDict([('csrf_token', 'd3v10us')]))
         response = self.view_func(request)
         self.assertIsNotNone(response['errors']['csrf_token'])
@@ -108,7 +102,6 @@ class TestAdd(IntegrationFixture):
 
         self.config.testing_securitypolicy(userid='joe')
         request = testing.DummyRequest(
-            layout_manager=mock.Mock(),
             post=MultiDict([
                 ('contents', str('vitals'))
             ]))
@@ -145,15 +138,13 @@ class TestAdd(IntegrationFixture):
 
         # The renderer should know about it
         self.config.testing_securitypolicy(userid='joe')
-        request = testing.DummyRequest(
-            layout_manager=mock.Mock())
+        request = testing.DummyRequest()
         response = self.view_func(request)
         self.assertTrue(response['exceeded'])
 
         # If the user insists, they'll get a validation error as well
         self.config.testing_securitypolicy(userid='joe')
         request = testing.DummyRequest(
-            layout_manager=mock.Mock(),
             post=MultiDict([
                 ('contents', 'vitals')
                 ]))
@@ -200,8 +191,7 @@ class TestStatusJSON(IntegrationFixture):
         Session.flush()
 
         self.config.testing_securitypolicy(userid='joe')
-        request = testing.DummyRequest(
-            layout_manager=mock.Mock())
+        request = testing.DummyRequest()
         response = self.view_func(request)
         exports = response['exports']
         self.assertEquals(len(exports), 1)
@@ -238,8 +228,7 @@ class TestStatusJSON(IntegrationFixture):
         Session.flush()
 
         self.config.testing_securitypolicy(userid='joe')
-        request = testing.DummyRequest(
-            layout_manager=mock.Mock())
+        request = testing.DummyRequest()
         response = self.view_func(request)
         exports = response['exports']
         self.assertEquals(len(exports), 1)
@@ -247,8 +236,7 @@ class TestStatusJSON(IntegrationFixture):
         export.create_date = export.modify_date = \
             now - timedelta(EXPIRE_DAYS + 1)
         Session.flush()
-        request = testing.DummyRequest(
-            layout_manager=mock.Mock())
+        request = testing.DummyRequest()
         response = self.view_func(request)
         exports = response['exports']
         self.assertEquals(len(exports), 0)
@@ -271,7 +259,6 @@ class TestCodebookJSON(IntegrationFixture):
         from webob.multidict import MultiDict
 
         request = testing.DummyRequest(
-            layout_manager=mock.Mock(),
             params=MultiDict([('file', '')])
         )
 
@@ -288,7 +275,6 @@ class TestCodebookJSON(IntegrationFixture):
         from webob.multidict import MultiDict
 
         request = testing.DummyRequest(
-            layout_manager=mock.Mock(),
             params=MultiDict([('file', 'i_dont_exist')])
         )
 
@@ -324,7 +310,6 @@ class TestCodebookJSON(IntegrationFixture):
         Session.flush()
 
         request = testing.DummyRequest(
-            layout_manager=mock.Mock(),
             params=MultiDict([('file', 'aform')])
         )
 
@@ -351,8 +336,7 @@ class TestCodebookDownload(IntegrationFixture):
         name = '/tmp/' + FILE_NAME
         with open(name, 'w+b'):
             self.config.testing_securitypolicy(userid='jane')
-            request = testing.DummyRequest(
-                layout_manager=mock.Mock())
+            request = testing.DummyRequest()
             response = self.view_func(request)
             self.assertIsInstance(response, FileResponse)
         os.remove(name)
@@ -391,7 +375,6 @@ class TestDelete(IntegrationFixture):
         Session.expunge_all()
 
         request = testing.DummyRequest(
-            layout_manager=mock.Mock(),
             matchdict={'id': str(export_id)})
         request.POST['csrf_token'] = request.session.get_csrf_token()
 
@@ -407,7 +390,6 @@ class TestDelete(IntegrationFixture):
         from pyramid.httpexceptions import HTTPNotFound
 
         request = testing.DummyRequest(
-            layout_manager=mock.Mock(),
             matchdict={'id': str('123')})
         request.POST['csrf_token'] = request.session.get_csrf_token()
 
@@ -440,7 +422,6 @@ class TestDelete(IntegrationFixture):
 
         self.config.testing_securitypolicy(userid='joe')
         request = testing.DummyRequest(
-            layout_manager=mock.Mock(),
             matchdict={'id': str(export_id)})
         request.POST['csrf_token'] = 'd3v10us'
 
@@ -474,7 +455,6 @@ class TestDelete(IntegrationFixture):
 
         self.config.testing_securitypolicy(userid='joe')
         request = testing.DummyRequest(
-            layout_manager=mock.Mock(),
             matchdict={'id': str(export_id)})
         request.POST['csrf_token'] = request.session.get_csrf_token()
 
@@ -520,14 +500,12 @@ class TestDownload(IntegrationFixture):
         name = '/tmp/' + export.name
         with open(name, 'w+b'):
             request = testing.DummyRequest(
-                layout_manager=mock.Mock(),
                 matchdict={'id': 123})
             with self.assertRaises(HTTPNotFound):
                 self.view_func(request)
 
             self.config.testing_securitypolicy(userid='jane')
             request = testing.DummyRequest(
-                layout_manager=mock.Mock(),
                 matchdict={'id': 123})
             response = self.view_func(request)
             self.assertIsInstance(response, FileResponse)
@@ -554,7 +532,6 @@ class TestDownload(IntegrationFixture):
             status=status))
 
         request = testing.DummyRequest(
-            layout_manager=mock.Mock(),
             matchdict={'id': 123})
         with self.assertRaises(HTTPNotFound):
             self.view_func(request)

@@ -11,6 +11,4 @@ from .. import _, log, models, Session
     permission='view',
     renderer='occams.studies:templates/portal/home.pt')
 def home(request):
-    layout = request.layout_manager.layout
-    layout.title = request.registry.settings['app.org.title']
     return {}

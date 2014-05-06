@@ -40,7 +40,6 @@ def main(global_config, **settings):
     # Required third-party plugins
     config.include('pyramid_chameleon')
     config.include('pyramid_deform')
-    config.include('pyramid_layout')
     config.include('pyramid_mailer')
     config.include('pyramid_redis')
     config.include('pyramid_redis_sessions')

@@ -28,9 +28,6 @@ def about(request):
     """
     General intro-page so users know what they're getting into.
     """
-    layout = request.layout_manager.layout
-    layout.title = _(u'Exports')
-    layout.set_nav('export_nav')
     return {}
 
 
@@ -42,9 +39,6 @@ def faq(request):
     """
     Verbose details about how this tool works.
     """
-    layout = request.layout_manager.layout
-    layout.title = _(u'Exports')
-    layout.set_nav('export_nav')
     return {}
 
 
@@ -95,9 +89,6 @@ def add(request):
     The actual exporting process is then queued in a another thread so the user
     isn't left with an unresponsive page.
     """
-    layout = request.layout_manager.layout
-    layout.title = _(u'Exports')
-    layout.set_nav('export_nav')
 
     errors = None
     cstruct = None
@@ -166,9 +157,6 @@ def status(request):
 
     All exports will be loaded asynchronously via seperate ajax call.
     """
-    layout = request.layout_manager.layout
-    layout.title = _(u'Exports')
-    layout.set_nav('export_nav')
     return {}
 
 
@@ -230,9 +218,6 @@ def codebook(request):
     """
     Codebook viewer
     """
-    layout = request.layout_manager.layout
-    layout.title = _(u'Exports')
-    layout.set_nav('export_nav')
     return {'exportables': exports.list_all().values()}
 
 
