@@ -47,6 +47,14 @@ class PidPlan(ExportPlan):
             row('our', name, types.STRING, is_system=True),
             row('aeh_num', name, types.STRING, is_system=True),
             row('early_id', name, types.STRING, is_system=True),
+            row('create_date', self.name, types.DATE,
+                is_required=True, is_system=True),
+            row('create_user', self.name, types.STRING,
+                is_required=True, is_system=True),
+            row('modify_date', self.name, types.DATE,
+                is_required=True, is_system=True),
+            row('modify_user', self.name, types.STRING, is_required=True,
+                is_system=True)
         ]
 
         for known in knowns:
@@ -99,6 +107,18 @@ class PidPlan(ExportPlan):
                 .as_scalar()
                 .label(reftype.name))
 
-        query = query.order_by(models.Patient.pid)
+        CreateUser = aliased(models.User)
+        ModifyUser = aliased(models.User)
+
+        query = (
+            query
+            .join(CreateUser, models.Patient.create_user)
+            .join(ModifyUser, models.Patient.modify_user)
+            .add_columns(
+                models.Patient.create_date,
+                CreateUser.key.label('create_user'),
+                models.Patient.modify_date,
+                ModifyUser.key.label('modify_user'))
+            .order_by(models.Patient.id))
 
         return query

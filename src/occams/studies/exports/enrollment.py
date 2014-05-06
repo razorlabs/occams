@@ -6,6 +6,8 @@ The goal is to generate a patient's participation in a study
 Formerly: avrcdataexport/sql/additional/Enrollment.sql
 """
 
+from sqlalchemy.orm import aliased
+
 from .. import _, models, Session
 from .plan import ExportPlan
 from .codebook import row, types
@@ -38,11 +40,20 @@ class EnrollmentPlan(ExportPlan):
             row('consent_date', self.name, types.DATE,
                 is_system=True, is_required=True),
             row('latest_consent_date', self.name, types.DATE, is_system=True),
-            row('termination_date', self.name, types.DATE, is_system=True)
-            ])
+            row('termination_date', self.name, types.DATE, is_system=True),
+            row('create_date', self.name, types.DATE,
+                is_required=True, is_system=True),
+            row('create_user', self.name, types.STRING,
+                is_required=True, is_system=True),
+            row('modify_date', self.name, types.DATE,
+                is_required=True, is_system=True),
+            row('modify_user', self.name, types.STRING, is_required=True,
+                is_system=True)
+        ])
 
     def data(self, use_choice_labels=False, expand_collections=False):
-
+        CreateUser = aliased(models.User)
+        ModifyUser = aliased(models.User)
         query = (
             Session.query(
                 models.Enrollment.id.label('id'),
@@ -57,13 +68,18 @@ class EnrollmentPlan(ExportPlan):
                 models.Enrollment.consent_date.label('consent_date'),
                 models.Enrollment.latest_consent_date.label(
                     'latest_consent_date'),
-                models.Enrollment.termination_date.label('termination_date'))
+                models.Enrollment.termination_date.label('termination_date'),
+                models.Enrollment.create_date,
+                CreateUser.key.label('create_user'),
+                models.Enrollment.modify_date,
+                ModifyUser.key.label('modify_user'))
             .select_from(models.Enrollment)
             .join(models.Enrollment.patient)
             .join(models.Enrollment.study)
             .join(models.Patient.site)
+            .join(CreateUser, models.Enrollment.create_user)
+            .join(ModifyUser, models.Enrollment.modify_user)
             .order_by(models.Enrollment.id,
                       models.Study.title,
                       models.Patient.pid))
-
         return query
