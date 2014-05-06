@@ -81,6 +81,13 @@ def install(suid, supw, from_url, to_url):
         GRANT USAGE ON FOREIGN SERVER trigger_target TO {username};
     """.format(**to_url.translate_connect_args()))
 
+    if 'phi' in from_url.database:
+        # Ignore these on the PHI side since it will gridlock the remote
+        cursor.execute("""
+            DROP TRIGGER IF EXISTS user_mirror ON "patient";
+            DROP TRIGGER IF EXISTS user_mirror ON "user";
+        """)
+
     products = ('studies', 'datastore', 'lab', 'partner')
 
     if 'cctg' in from_url.database:
