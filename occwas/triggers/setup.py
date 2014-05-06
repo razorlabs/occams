@@ -84,8 +84,8 @@ def install(suid, supw, from_url, to_url):
     if 'phi' in from_url.database:
         # Ignore these on the PHI side since it will gridlock the remote
         cursor.execute("""
-            DROP TRIGGER IF EXISTS user_mirror ON "patient";
-            DROP TRIGGER IF EXISTS user_mirror ON "user";
+            DROP TRIGGER patient_mirror ON "patient";
+            DROP TRIGGER user_mirror ON "user";
         """)
 
     products = ('studies', 'datastore', 'lab', 'partner')
