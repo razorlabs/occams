@@ -39,8 +39,10 @@ CREATE OR REPLACE FUNCTION visit_mirror() RETURNS TRIGGER AS $$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
+        PERFORM dblink_connect('trigger_target');
         INSERT INTO visit_ext (
-            zid
+            id
+          , zid
           , patient_id
           , visit_date
           , create_date
@@ -52,7 +54,8 @@ CREATE OR REPLACE FUNCTION visit_mirror() RETURNS TRIGGER AS $$
           , old_id
         )
         VALUES (
-            NEW.zid
+            (SELECT val FROM dblink('SELECT nextval(''visit_id_seq'') AS val') AS sec(val int))
+          , NEW.zid
           , ext_patient_id(NEW.patient_id)
           , NEW.visit_date
           , NEW.create_date
@@ -63,6 +66,7 @@ CREATE OR REPLACE FUNCTION visit_mirror() RETURNS TRIGGER AS $$
           , (SELECT current_database())
           , NEW.id
         );
+        PERFORM dblink_disconnect();
       WHEN 'DELETE' THEN
         DELETE FROM visit_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);

@@ -80,8 +80,10 @@ CREATE OR REPLACE FUNCTION entity_mirror() RETURNS TRIGGER AS $$
 
         IF NOT EXISTS(SELECT 1 FROM schema where id = NEW.schema_id AND is_inline) THEN
 
+          PERFORM dblink_connect('trigger_target');
           INSERT INTO entity_ext (
-              name
+              id
+            , name
             , title
             , description
             , schema_id
@@ -97,7 +99,8 @@ CREATE OR REPLACE FUNCTION entity_mirror() RETURNS TRIGGER AS $$
             , old_id
           )
           VALUES (
-              NEW.name
+              (SELECT val FROM dblink('SELECT nextval(''entity_id_seq'') AS val') AS sec(val int))
+            , NEW.name
             , NEW.title
             , NEW.description
             , ext_schema_id(NEW.schema_id)
@@ -112,6 +115,7 @@ CREATE OR REPLACE FUNCTION entity_mirror() RETURNS TRIGGER AS $$
             , (SELECT current_database())
             , NEW.id
             );
+          PERFORM dblink_disconnect();
 
         END IF;
 

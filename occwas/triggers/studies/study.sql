@@ -47,8 +47,10 @@ CREATE OR REPLACE FUNCTION study_mirror() RETURNS TRIGGER AS $$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
+        PERFORM dblink_connect('trigger_target');
         INSERT INTO study_ext (
-            zid
+            id
+          , zid
           , name
           , title
           , description
@@ -67,7 +69,8 @@ CREATE OR REPLACE FUNCTION study_mirror() RETURNS TRIGGER AS $$
           , old_id
         )
         VALUES (
-            NEW.zid
+            (SELECT val FROM dblink('SELECT nextval(''study_id_seq'') AS val') AS sec(val int))
+          , NEW.zid
           , NEW.name
           , NEW.title
           , NEW.description
@@ -85,6 +88,7 @@ CREATE OR REPLACE FUNCTION study_mirror() RETURNS TRIGGER AS $$
           , (SELECT current_database())
           , NEW.id
         );
+        PERFORM dblink_disconnect();
       WHEN 'DELETE' THEN
         DELETE FROM study_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);

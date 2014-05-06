@@ -29,8 +29,10 @@ CREATE OR REPLACE FUNCTION patientreference_mirror() RETURNS TRIGGER AS $$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
+        PERFORM dblink_connect('trigger_target');
         INSERT INTO patientreference_ext (
-            patient_id
+            id
+          , patient_id
           , reftype_id
           , reference_number
 
@@ -44,7 +46,8 @@ CREATE OR REPLACE FUNCTION patientreference_mirror() RETURNS TRIGGER AS $$
           , old_id
         )
         VALUES (
-            ext_patient_id(NEW.patient_id)
+            (SELECT val FROM dblink('SELECT nextval(''patientreference_id_seq'') AS val') AS sec(val int))
+          , ext_patient_id(NEW.patient_id)
           , ext_reftype_id(NEW.reftype_id)
           , NEW.reference_number
           , NEW.create_date
@@ -55,6 +58,7 @@ CREATE OR REPLACE FUNCTION patientreference_mirror() RETURNS TRIGGER AS $$
           , (SELECT current_database())
           , NEW.id
         );
+        PERFORM dblink_disconnect();
       WHEN 'DELETE' THEN
         DELETE FROM patientreference_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);

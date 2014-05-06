@@ -28,8 +28,10 @@ CREATE OR REPLACE FUNCTION specimenstate_mirror() RETURNS TRIGGER AS $specimenst
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
+        PERFORM dblink_connect('trigger_target');
         INSERT INTO specimenstate_ext (
-            name
+            id
+          , name
           , title
           , description
           , create_date
@@ -40,7 +42,8 @@ CREATE OR REPLACE FUNCTION specimenstate_mirror() RETURNS TRIGGER AS $specimenst
           , old_id
         )
         VALUES (
-            NEW.name
+            (SELECT val FROM dblink('SELECT nextval(''specimenstate_id_seq'') AS val') AS sec(val int))
+          , NEW.name
           , NEW.title
           , NEW.description
           , NEW.create_date
@@ -50,6 +53,7 @@ CREATE OR REPLACE FUNCTION specimenstate_mirror() RETURNS TRIGGER AS $specimenst
           , (SELECT current_database())
           , NEW.id
         );
+        PERFORM dblink_disconnect();
       WHEN 'DELETE' THEN
         DELETE FROM specimenstate_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);

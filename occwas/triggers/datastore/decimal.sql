@@ -7,9 +7,10 @@ DROP FOREIGN TABLE IF EXISTS value_decimal_ext;
 
 
 CREATE FOREIGN TABLE value_decimal_ext (
-    id              INTEGER NOT NULL
+    -- id              INTEGER NOT NULL
 
-  , entity_id       INTEGER NOT NULL
+  -- , entity_id       INTEGER NOT NULL
+    entity_id       INTEGER NOT NULL
   , attribute_id    INTEGER NOT NULL
   , value           NUMERIC NOT NULL
 

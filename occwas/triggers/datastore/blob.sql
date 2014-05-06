@@ -7,9 +7,10 @@ DROP FOREIGN TABLE IF EXISTS value_blob_ext;
 
 
 CREATE FOREIGN TABLE value_blob_ext (
-    id              INTEGER NOT NULL
+    -- id              INTEGER NOT NULL
 
-  , entity_id       INTEGER NOT NULL
+  -- , entity_id       INTEGER NOT NULL
+    entity_id       INTEGER NOT NULL
   , attribute_id    INTEGER NOT NULL
   , value           BYTEA NOT NULL
 
@@ -30,7 +31,6 @@ CREATE OR REPLACE FUNCTION value_blob_mirror() RETURNS TRIGGER AS $$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
-
         IF NEW.value IS NOT NULL THEN
           INSERT INTO value_blob_ext (
               entity_id
@@ -57,7 +57,6 @@ CREATE OR REPLACE FUNCTION value_blob_mirror() RETURNS TRIGGER AS $$
             , NEW.id
             );
         END IF;
-
       WHEN 'DELETE' THEN
         DELETE FROM value_blob_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);

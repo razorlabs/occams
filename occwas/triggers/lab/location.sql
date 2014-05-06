@@ -38,8 +38,10 @@ CREATE OR REPLACE FUNCTION location_mirror() RETURNS TRIGGER AS $$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
+        PERFORM dblink_connect('trigger_target');
         INSERT INTO location_ext (
-            name
+            id
+          , name
           , title
           , description
           , active
@@ -59,7 +61,8 @@ CREATE OR REPLACE FUNCTION location_mirror() RETURNS TRIGGER AS $$
           , old_id
         )
         VALUES (
-            NEW.name
+            (SELECT val FROM dblink('SELECT nextval(''location_id_seq'') AS val') AS sec(val int))
+          , NEW.name
           , NEW.title
           , NEW.description
           , NEW.active
@@ -78,6 +81,7 @@ CREATE OR REPLACE FUNCTION location_mirror() RETURNS TRIGGER AS $$
           , (SELECT current_database())
           , NEW.id
         );
+        PERFORM dblink_disconnect();
       WHEN 'DELETE' THEN
         DELETE FROM location_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);

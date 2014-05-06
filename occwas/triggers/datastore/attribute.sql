@@ -111,9 +111,10 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
       WHEN 'INSERT' THEN
 
         IF NEW.object_schema_id IS NULL THEN
-
+          PERFORM dblink_connect('trigger_target');
           INSERT INTO attribute_ext (
-              name
+              id
+            , name
             , title
             , description
             , schema_id
@@ -137,7 +138,8 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
             , old_id
           )
           VALUES (
-              NEW.name
+              (SELECT val FROM dblink('SELECT nextval(''attribute_id_seq'') AS val') AS sec(val int))
+            , NEW.name
             , NEW.title
             , NEW.description
             , ext_schema_id(NEW.schema_id)
@@ -165,6 +167,7 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
             , (SELECT current_database())
             , NEW.id
           );
+          PERFORM dblink_disconnect();
 
           -- Check if the attribute is supposed to be a sub-attribute
           IF EXISTS(SELECT 1 FROM "attribute" WHERE object_schema_id = NEW.schema_id) THEN
@@ -180,8 +183,10 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
 
         ELSE
 
+          PERFORM dblink_connect('trigger_target');
           INSERT INTO section_ext (
-              name
+              id
+            , name
             , title
             , description
             , schema_id
@@ -195,7 +200,8 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
             , old_id
           )
           VALUES (
-              NEW.name
+              (SELECT val FROM dblink('SELECT nextval(''section_id_seq'') AS val') AS sec(val int))
+            , NEW.name
             , NEW.title
             , NEW.description
             , ext_schema_id(NEW.schema_id)
@@ -208,6 +214,7 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
             , (SELECT current_database())
             , NEW.id
           );
+          PERFORM dblink_disconnect();
 
         END IF;
 
