@@ -71,8 +71,7 @@ def includeme(config):
         CELERYBEAT_SCHEDULE={
             'make-codebook-every-hour': {
                 'task': 'make_codebook',
-                'schedule': timedelta(minutes=5),
-                #'schedule': timedelta(hours=1),
+                'schedule': timedelta(hours=1),
             },
         })
 
