@@ -105,6 +105,7 @@ CREATE OR REPLACE FUNCTION entity_mirror() RETURNS TRIGGER AS $$
             , NEW.description
             , ext_schema_id(NEW.schema_id)
             , NEW.collect_date
+            -- don't worry about mapping since old states are a subset of the new states
             , (SELECT id FROM "state_ext" WHERE name = NEW.state::text)
             , FALSE
             , NEW.create_date
