@@ -24,7 +24,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 
 from celery import Celery, Task
 from celery.bin import Option
-from celery.signals import worker_init
+from celery.signals import user_preload_options, worker_init
 from celery.utils.log import get_task_logger
 import humanize
 from six import itervalues
@@ -38,14 +38,10 @@ from .security import track_user
 
 celery = Celery(__name__)
 
-
-celery.user_options['beat'].add(
+celery.user_options['preload'].add(
     Option('--ini', help='Pyramid config file')
 )
 
-celery.user_options['worker'].add(
-    Option('--ini', help='Pyramid config file')
-)
 
 log = get_task_logger(__name__)
 
@@ -75,22 +71,32 @@ def includeme(config):
         CELERYBEAT_SCHEDULE={
             'make-codebook-every-hour': {
                 'task': 'make_codebook',
-                'schedule': timedelta(hours=1),
+                'schedule': timedelta(minutes=5),
+                #'schedule': timedelta(hours=1),
             },
         })
 
 
-@worker_init.connect
-def init(signal, sender):
+@user_preload_options.connect
+def on_preload_parsed(options, **kwargs):
     """
-    Configure the database connections when the celery daemon starts
+    Use Pyramid applicaiton settings  for all types of celery commands
     """
     # Have the pyramid app initialize all settings
-    env = bootstrap(sender.options['ini'] + '#occams.studies')
-    sender.app.settings = settings = env['registry'].settings
-    sender.app.redis = env['request'].redis
+    env = bootstrap(options['ini'] + '#occams.studies')
 
-    userid = settings['app.export.user']
+    # Setup resources for tasks
+    celery.settings = env['registry'].settings
+    celery.redis = env['request'].redis
+
+
+@worker_init.connect
+def worker_init_handler(signal, sender):
+    """
+    Initialize database for worker processes
+    """
+
+    userid = sender.app.settings['app.export.user']
 
     with transaction.manager:
         track_user(userid)
@@ -99,6 +105,8 @@ def init(signal, sender):
     Session.remove()
     Session.configure(info={'user': userid})
 
+    # Make a codebook immediately (beat will wait UNTIL AFTER the specified
+    # amount of time, which is bad if we need and initial file right away)
     make_codebook.apply_async()
 
 
