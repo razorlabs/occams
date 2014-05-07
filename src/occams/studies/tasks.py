@@ -38,6 +38,11 @@ from .security import track_user
 
 celery = Celery(__name__)
 
+
+celery.user_options['beat'].add(
+    Option('--ini', help='Pyramid config file')
+)
+
 celery.user_options['worker'].add(
     Option('--ini', help='Pyramid config file')
 )
