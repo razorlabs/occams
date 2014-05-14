@@ -68,7 +68,7 @@ CREATE OR REPLACE FUNCTION patient_log_mirror() RETURNS TRIGGER AS $$
           , old_id
         )
         VALUES (
-            (SELECT val FROM dblink('SELECT nextval(''foo'') AS val') AS sec(val int))
+            (SELECT val FROM dblink('SELECT nextval(''patient_log_id_seq'') AS val') AS sec(val int))
           , ext_patient_id(NEW.patient_id)
           , NEW.patient_contact_date
           , NEW.last_text_date
