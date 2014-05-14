@@ -78,9 +78,9 @@ CREATE OR REPLACE FUNCTION patient_log_mirror() RETURNS TRIGGER AS $$
           , NEW.message_left
           , NEW.comments
           , NEW.create_date
-          , ext_user_id(create_user_id)
+          , ext_user_id(NEW.create_user_id)
           , NEW.modify_date
-          , ext_user_id(modify_user_id)
+          , ext_user_id(NEW.modify_user_id)
           , NEW.revision
           , (SELECT current_database())
           , NEW.id
