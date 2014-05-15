@@ -106,7 +106,7 @@ CREATE OR REPLACE FUNCTION choice_mirror() RETURNS TRIGGER AS $$
         PERFORM dblink_disconnect();
       WHEN 'DELETE' THEN
         DELETE FROM choice_ext
-        WHERE (old_db, old_id) = (SELECT current_database(), $1);
+        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
       WHEN 'UPDATE' THEN
         UPDATE choice_ext
         SET name = NEW.value
@@ -121,7 +121,7 @@ CREATE OR REPLACE FUNCTION choice_mirror() RETURNS TRIGGER AS $$
           , revision = NEW.revision
           , old_db = (SELECT current_database())
           , old_id = NEW.id
-        WHERE (old_db, old_id) = (SELECT current_database(), $1);
+        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
 
     END CASE;
     RETURN NULL;
