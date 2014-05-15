@@ -192,6 +192,10 @@ UPDATE ONLY attribute SET name = 'test_kit' FROM schema WHERE current_database()
 UPDATE ONLY attribute SET name = 'test_kit' FROM schema WHERE current_database() LIKE '%avrc%' AND schema.name = 'WesternBlot' AND attribute.name = 'test_kit_type';
 UPDATE ONLY attribute SET name = 'test_kit' FROM schema WHERE current_database() LIKE '%avrc%' AND schema.name = 'WesternBlotSelfReport' AND attribute.name = 'test_kit_type';
 
+UPDATE ONLY attribute SET name = 'rec_drug_use' FROM schema WHERE current_database() LIKE '%avrc%' AND attribute.type = 'object' AND attribute.name = 'recreational_drug_use';
+UPDATE ONLY attribute SET name = 'needle_sharing' FROM schema WHERE current_database() LIKE '%avrc%' AND attribute.type = 'object' AND attribute.name = 'neddle_sharing_partners';
+UPDATE ONLY attribute SET name = 'likert_risk' FROM schema WHERE current_database() LIKE '%avrc%' AND attribute.type = 'object' AND attribute.name = 'likert_risk_questions';
+
 UPDATE schema SET name = 'AehPerm2Contact' WHERE current_database() LIKE '%avrc%' AND name = 'AEHPermissionToContactForFutureStudyOpportunities';
 
 COMMIT;
