@@ -1,14 +1,21 @@
-import colander
-import deform.widget
 from pyramid.httpexceptions import HTTPFound, HTTPNotFound
-from pyramid_deform import CSRFSchema
 from pyramid.view import view_config
 from sqlalchemy import func, orm, sql
+from wtforms import (
+    IntegerField,
+    StringField,
+    TextAreaField,
+    ValidationError,
+    validators,
+    widgets
+)
+from wtforms.fields.html5 import DateField
 
 from occams.studies import _, models, Session
+from occams.studies.utils.form import CSRFForm
 
 
-def find_study(request):
+def get_study(request):
     """
     Uses the URL dispatch matching dictionary to find a study
     """
@@ -21,70 +28,61 @@ def find_study(request):
         raise HTTPNotFound
 
 
-class StudySchema(CSRFSchema):
-
-    id = colander.SchemaNode(
-        colander.Int(),
-        widget=deform.widget.HiddenWidget(),
-        missing=None)
-
-    name = colander.SchemaNode(
-        colander.String(),
-        title=_(u'URL Name'),
-        description=_(u'ID for user (e.g. /studies/my-study)'))
-
-    title = colander.SchemaNode(
-        colander.String(),
-        title=_(u'Title'))
-
-    description = colander.SchemaNode(
-        colander.String(),
-        title=_(u'Description'),
-        widget=deform.widget.TextAreaWidget(),
-        missing=None)
-
-    code = colander.SchemaNode(
-        colander.String(),
-        title=_(u'Code'))
-
-    short_title = colander.SchemaNode(
-        colander.String(),
-        title=_(u'Printable Title'))
-
-    consent_date = colander.SchemaNode(
-        colander.Date(),
-        title=_(u'Consent Date'))
-
-    def validator(self, node, struct):
-        name = struct['name']
-        name_query = Session.query(models.Study).filter_by(name=name)
-        if struct['id'] is not None:
-            name_query = name_query.filter(models.Study.id != struct['id'])
-        count = name_query.count()
-        if count > 0:
-            raise colander.Invalid('"%s" already exists' % struct['title'])
+def is_unique_name(form, field):
+    name_query = sql.exists().where(models.Schema.name == field.data.name)
+    if hasattr(form, 'id'):
+        name_query = name_query.where(models.Study.id != form.data.id)
+    if Session.query(name_query).one():
+        raise ValidationError(_(u'"%s" already exists' % form.title.data))
 
 
-class ScheduleSchema(CSRFSchema):
+class StudyForm(CSRFForm):
 
-    id = colander.SchemaNode(
-        colander.Int(),
-        widget=deform.widget.HiddenWidget(),
-        missing=None)
+    id = IntegerField(widget=widgets.HiddenInput())
 
-    study_id = colander.SchemaNode(
-        colander.Int(),
-        widget=deform.widget.HiddenWidget(),
-        missing=None)
+    name = StringField(
+        label=_(u'URL Name'),
+        description=_(u'ID for user (e.g. /studies/my-study)'),
+        validators=[
+            validators.required(),
+            validators.Length(min=3, max=32),
+            is_unique_name
+        ])
 
-    title = colander.SchemaNode(
-        colander.String(),
-        title=_(u'Title'))
+    title = StringField(
+        label=_(u'Title'),
+        validators=[
+            validators.required(),
+            validators.Length(min=3, max=32),
+        ])
 
-    week = colander.SchemaNode(
-        colander.Int(),
+    description = TextAreaField(
+        title=_(u'Description'))
+
+    code = StringField(
+        label=_(u'Code'),
+        validators=[validators.required()])
+
+    short_title = StringField(
+        label=_(u'Printable Title'),
+        validators=[validators.required()])
+
+    consent_date = DateField(
+        label=_(u'Consent Date'),
+        validators=[validators.required()])
+
+
+class ScheduleForm(CSRFForm):
+
+    id = IntegerField(widget=widgets.HiddenInput())
+
+    title = StringField(
+        title=_(u'Title'),
+        validators=[validators.required()])
+
+    week = IntegerField(
         title=_(u'Week Number'),
-        missing=None)
+        validators=[validators.required()])
 
     def validator(self, node, struct):
         pass
@@ -95,9 +93,6 @@ class ScheduleSchema(CSRFSchema):
     permission='study_view',
     renderer='occams.studies:templates/study/list.pt')
 def list_(request):
-    layout = request.layout_manager.layout
-    layout.title = _(u'Studies')
-    layout.set_menu('study_list_menu')
     studies_query = (
         Session.query(models.Study)
         .order_by(models.Study.title.asc()))
@@ -111,12 +106,7 @@ def list_(request):
     permission='study_view',
     renderer='occams.studies:templates/study/view.pt')
 def view(request):
-    study = find_study(request)
-    layout = request.layout_manager.layout
-    layout.title = study.title
-    layout.set_menu('study_view_menu', study=study)
-    layout.set_details('study_details', study=study)
-    layout.set_nav('study_nav', study=study)
+    study = get_study(request)
     return {'study': study}
 
 
@@ -125,12 +115,7 @@ def view(request):
     permission='study_view',
     renderer='occams.studies:templates/study/ecrfs.pt')
 def ecrfs(request):
-    study = find_study(request)
-    layout = request.layout_manager.layout
-    layout.title = study.title
-    layout.set_menu('study_view_menu', study=study)
-    layout.set_details('study_details', study=study)
-    layout.set_nav('study_nav', study=study)
+    study = get_study(request)
     return {'study': study}
 
 
@@ -139,12 +124,7 @@ def ecrfs(request):
     permission='study_view',
     renderer='occams.studies:templates/study/schedule.pt')
 def schedule(request):
-    study = find_study(request)
-    layout = request.layout_manager.layout
-    layout.title = study.title
-    layout.set_menu('study_view_menu', study=study)
-    layout.set_details('study_details', study=study)
-    layout.set_nav('study_nav', study=study)
+    study = get_study(request)
     cycles_query = (
         Session.query(models.Cycle)
         .filter(models.Cycle.study == study)
@@ -183,13 +163,7 @@ def schedule(request):
     permission='study_view',
     renderer='occams.studies:templates/study/progress.pt')
 def progress(request):
-    study = find_study(request)
-
-    layout = request.layout_manager.layout
-    layout.title = study.title
-    layout.set_menu('study_view_menu', study=study)
-    layout.set_details('study_details', study=study)
-    layout.set_nav('study_nav', study=study)
+    study = get_study(request)
 
     states_query = Session.query(models.State)
 
@@ -228,43 +202,26 @@ def progress(request):
 @view_config(
     route_name='study_add',
     permission='study_add',
-    renderer='occams.studies:templates/form.pt')
-@view_config(
-    route_name='study_add',
-    permission='study_add',
     xhr=True,
-    renderer='occams.studies:templates/form.pt',
-    layout='ajax_layout')
+    renderer='json')
 def add(request):
-    schema = StudySchema(title=_(u'Add Study'))
-    form = deform.Form(
-        schema=schema.bind(request=request),
-        buttons=[
-            deform.Button('cancel', _(u'Cancel'), css_class='btn'),
-            deform.Button('submit', _(u'Add'), css_class='btn btn-primary')])
+    #title = _(u'Add Study')
+    form = StudyForm(request.POST)
 
-    if 'cancel' in request.POST:
-        request.session.flash(_(u'Changes canceled'), 'info')
-        return HTTPFound(location=request.route_path('study_list'))
-
-    if 'submit' in request.POST:
-        try:
-            appstruct = form.validate(request.POST.items())
-        except deform.ValidationFailure as e:
-            return {'form': e.render()}
-        study = models.apply(models.Study(), appstruct)
+    if request.method == 'POST' and form.validate():
+        study = models.Study()
+        form.populate_obj(study)
         Session.add(study)
-        Session.flush()
         study_url = request.current_route_path(_route_name='study_view',
                                                study_name=study.name)
         request.session.flash(_(u'New study added!', 'success'))
         return HTTPFound(location=study_url)
 
-    return {'form': form.render()}
+    return {'form': form}
 
 
 def query_enabled_ecrfs(study):
-    StudySchema = orm.aliased(models.Schema, name='StudySchema')
+    StudyForm = orm.aliased(models.Schema, name='StudyForm')
     CurrentSchema = orm.aliased(models.Schema, name='CurrentSchema')
     study_schemata_query = (
         Session.query(models.Schema)
@@ -272,21 +229,21 @@ def query_enabled_ecrfs(study):
         .subquery('study_schemata'))
     ecrfs_query = (
         Session.query(
-            StudySchema.id,
-            StudySchema.name,
-            StudySchema.title)
+            StudyForm.id,
+            StudyForm.name,
+            StudyForm.title)
         .add_column(
             (study_schemata_query.c.id is not None).label('is_enabled'))
         .outerjoin(study_schemata_query,
-                   study_schemata_query.c.id == StudySchema.id)
-        .filter(~StudySchema.is_inline)
-        .filter(StudySchema.publish_date == (
+                   study_schemata_query.c.id == StudyForm.id)
+        .filter(~StudyForm.is_inline)
+        .filter(StudyForm.publish_date == (
             Session.query(CurrentSchema.publish_date)
-            .filter(CurrentSchema.name == StudySchema.name)
+            .filter(CurrentSchema.name == StudyForm.name)
             .filter(CurrentSchema.state == 'published')
             .order_by(CurrentSchema.publish_date.desc())
             .limit(1)
-            .correlate(StudySchema)
+            .correlate(StudyForm)
             .as_scalar()))
-        .order_by(StudySchema.title.asc()))
+        .order_by(StudyForm.title.asc()))
     return ecrfs_query

@@ -1,5 +1,32 @@
-<html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
+<!DOCTYPE html>
+<html
+    xmlns="http://www.w3.org/1999/xhtml"
+    xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+    xmlns:tal="http://xml.zope.org/namespaces/tal"
+    xmlns:metal="http://xml.zope.org/namespaces/metal"
+    xml:lang="en"
+    lang="en"
+    i18n:domain="occams.studies"
+    metal:use-macro="load:../master.pt">
   <metal:content-slot fill-slot="content-slot">
-    <form tal:replace="structure form" />
+    <form class="form-login"
+        role="form"
+        method="POST"
+        action="${request.route_path('account_login', _query={'referrer': referrer})}">
+      <h2 class="form-login-heading" i18n:translate="">Please log in</h2>
+      <div
+        class="alert alert-danger"
+        tal:define="message request.session.pop_flash('error')"
+        tal:condition="message">${message}</div>
+      <input tal:replace="
+          structure: form.login(type='email',
+                                class_='form-control',
+                                placeholder=form.login.label.text,
+                                autofocus='1')">
+      <input tal:replace="
+          structure: form.password(class_='form-control',
+                                   placeholder=form.password.label.text)">
+      <button class="btn btn-lg btn-primary btn-block" type="submit">Log in</button>
+    </form>
   </metal:content-slot>
 </html>

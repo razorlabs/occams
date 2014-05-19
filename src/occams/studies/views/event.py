@@ -1,82 +1,70 @@
-import colander
-import deform
-from pyramid_deform import CSRFSchema
-from pyramid.httpexceptions import HTTPFound
 from pyramid.view import view_config
-from sqlalchemy import func, orm, sql
+from wtforms import (
+    Form,
+    FormField,
+    FieldList,
+    StringField,
+    BooleanField,
+    validators,
+    widgets
+)
+from wtforms.fields.html5 import DateField
 
-from occams.studies import _, log, models, Session
-import occams.form.widgets
+from occams.studies import _
+from occams.studies.utils.form import CSRFForm
 
 
-class EventAddSchema(CSRFSchema):
+class PatientSubForm(Form):
 
-    @colander.instantiate(
-        title=_(u'Patient'),
+    is_new = BooleanField(
+        label=_(u'Create'),
+        widget=widgets.CheckboxInput())
+
+    pid = StringField()
+
+
+class ScheduleSubForm(Form):
+
+    study = StringField(
+        label=_(u'Study'))
+
+    schedule = StringField(
+        label=_(u'Schedule'))
+
+
+class EventAddForm(CSRFForm):
+
+    patient = FormField(
+        PatientSubForm,
+        label=_(u'Patient'),
         description=_(
             u'Please specify the patient to add the event for. '
             u'You may also create a new patient'),
-        widget=occams.form.widgets.GroupInputWidget(before='is_new'),
-        required=True)
-    class patient(colander.MappingSchema):
+        #widget=occams.form.widgets.GroupInputWidget(before='is_new'),
+        validators=[validators.required()])
 
-        is_new = colander.SchemaNode(
-            colander.Bool(),
-            title=None,
-            widget=deform.widget.CheckboxWidget(),
-            label=_(u'Create'))
-
-        pid = colander.SchemaNode(
-            colander.String(),
-            title=None,
-            missing=None)
-
-    event_date = colander.SchemaNode(
-        colander.Date(),
-        title=_(u'Event Date'),
+    event_date = DateField(
+        label=_(u'Event Date'),
         description=_(u'The date the event took place.'),
-        required=True)
+        validators=[validators.required()])
 
-    @colander.instantiate(
-        title=_(u'Schedules'),
+    schedules = FieldList(
+        FormField(ScheduleSubForm),
+        label=_(u'Schedules'),
         description=_(
-            u'(Optional) The study schedule that applies to this event'),
-        missing=None)
-    class schedules(colander.SequenceSchema):
-
-        @colander.instantiate()
-        class schedule(colander.MappingSchema):
-
-            study = colander.SchemaNode(
-                colander.String(),
-                title=_(u'Study'))
-
-            schedule = colander.SchemaNode(
-                colander.String(),
-                title=_(u'Schedule'))
+            u'(Optional) The study schedule that applies to this event'))
 
 
-@view_config(
-    route_name='event_add',
-    permission='event_add',
-    renderer='occams.studies:templates/static/form.pt')
 @view_config(
     route_name='event_add',
     permission='event_add',
     xhr=True,
-    layout='ajax',
-    renderer='occams.studies:templates/static/form.pt')
+    renderer='json')
 def add(request):
-    form = deform.Form(
-        EventAddSchema(title=_(u'Add a Patient')).bind(request=request),
-        buttons=[
-            deform.Button('submit', _(u'Submit'),
-                          css_class='btn btn-primary pull-right'),
-            deform.Button('cancel', _(u'Cancel'),
-                          type='button', css_class='btn btn-link pull-right')])
-    if request.is_xhr:
-        form.widget = occams.form.widgets.ModalFormWidget()
-    return {'form': form.render()}
+    form = EventAddForm(request.POST)
+    if request.method == 'POST' and form.validate():
+        pass
+    return {'form': form}
 
 
 @view_config(

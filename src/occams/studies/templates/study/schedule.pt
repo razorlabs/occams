@@ -1,5 +1,12 @@
-<html i18n:domain="occams.studies" metal:use-macro="main_template">
+<html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
   <metal:content-slot fill-slot="content-slot">
+
+    <header class="page-header">
+      <div metal:use-macro="load: ./panels/view-toolbar.pt" />
+      <h1 i18n:translate="">${study.title}</h1>
+      <ul metal:use-macro="load: ./panels/details.pt" />
+      <nav metal:use-macro="load: ./panels/nav.pt" />
+    </header>
 
     <div class="table-responsive table-scrollable">
       <table

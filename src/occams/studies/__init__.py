@@ -39,7 +39,6 @@ def main(global_config, **settings):
 
     # Required third-party plugins
     config.include('pyramid_chameleon')
-    config.include('pyramid_deform')
     config.include('pyramid_mailer')
     config.include('pyramid_redis')
     config.include('pyramid_redis_sessions')
@@ -49,7 +48,6 @@ def main(global_config, **settings):
     config.include('pyramid_webassets')
 
     # Required second-party plugins
-    config.include('occams.form.widgets')
     config.include(settings['pid.package'])
 
     # App-specific configurations
