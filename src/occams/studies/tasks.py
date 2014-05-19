@@ -33,8 +33,6 @@ from sqlalchemy.orm.exc import NoResultFound
 import transaction
 
 from . import models, Session, exports
-from .security import track_user
-
 
 celery = Celery(__name__)
 
@@ -88,21 +86,22 @@ def on_preload_parsed(options, **kwargs):
     celery.settings = env['registry'].settings
     celery.redis = env['request'].redis
 
+    user = celery.settings['app.export.user']
+
+    if not Session.query(models.User).filter_by(key=user).first():
+        with transaction.manager:
+            Session.add(models.User(key=user))
+
+    # Clear the registry so we ALWAYS get the correct userid
+    Session.remove()
+    Session.configure(info={'user': user})
+
 
 @worker_init.connect
 def worker_init_handler(signal, sender):
     """
     Initialize database for worker processes
     """
-
-    userid = sender.app.settings['app.export.user']
-
-    with transaction.manager:
-        track_user(userid)
-
-    # Clear the registry so we ALWAYS get the correct userid
-    Session.remove()
-    Session.configure(info={'user': userid})
 
     # Make a codebook immediately (beat will wait UNTIL AFTER the specified
     # amount of time, which is bad if we need and initial file right away)

@@ -5,9 +5,8 @@ All permissions are declared here for easier overview
 
 from pyramid.events import subscriber, NewRequest
 from pyramid.security import Allow, Authenticated, ALL_PERMISSIONS
-from sqlalchemy.orm.exc import NoResultFound
 
-from . import log, Session, models
+from . import log, Session
 
 
 def groupfinder(identity, request):
@@ -53,25 +52,7 @@ def track_user_on_request(event):
     """
     Annotates the database session with the current user.
     """
-    track_user(event.request.authenticated_userid)
-
-
-def track_user(userid, is_current=True):
-    """
-    Helper function to add a user to the database
-    """
-
-    if not userid:
-        return
-
-    try:
-        Session.query(models.User).filter_by(key=userid).one()
-    except NoResultFound:
-        Session.add(models.User(key=userid))
-        Session.flush()
-
-    if is_current:
-        Session.info['user'] = userid
+    Session.info['user'] = event.request.authenticated_userid
 
 
 class RootFactory(object):

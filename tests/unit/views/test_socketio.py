@@ -65,7 +65,7 @@ class TestExportNameSpace(IntegrationFixture):
         from pyramid import testing
         from occams.studies import models, Session
         from occams.studies.views.socketio import ExportNamespace
-        from occams.studies.security import track_user
+        from tests import track_user
 
         track_user('jane')
         track_user('joe')

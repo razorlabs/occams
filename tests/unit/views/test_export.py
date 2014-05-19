@@ -17,7 +17,7 @@ class TestAdd(IntegrationFixture):
         """
         from datetime import date
         from pyramid import testing
-        from occams.studies.security import track_user
+        from tests import track_user
         from occams.studies import Session, models
 
         #self.config.testing_securitypolicy(userid='joe', permissive=True)
@@ -87,7 +87,7 @@ class TestAdd(IntegrationFixture):
         from pyramid import testing
         from pyramid.httpexceptions import HTTPFound
         from webob.multidict import MultiDict
-        from occams.studies.security import track_user
+        from tests import track_user
         from occams.studies import Session, models
 
         self.config.include('occams.studies.routes')
@@ -121,7 +121,7 @@ class TestAdd(IntegrationFixture):
         from datetime import date
         from pyramid import testing
         from webob.multidict import MultiDict
-        from occams.studies.security import track_user
+        from tests import track_user
         from occams.studies import Session, models
 
         self.config.registry.settings['app.export.limit'] = 0
@@ -164,7 +164,7 @@ class TestStatusJSON(IntegrationFixture):
         It should return the authenticated user's exports
         """
         from pyramid import testing
-        from occams.studies.security import track_user
+        from tests import track_user
         from occams.studies import Session, models
 
         self.config.registry.settings['app.export.dir'] = '/tmp'
@@ -202,7 +202,7 @@ class TestStatusJSON(IntegrationFixture):
         """
         from datetime import datetime, timedelta
         from pyramid import testing
-        from occams.studies.security import track_user
+        from tests import track_user
         from occams.studies import Session, models
 
         EXPIRE_DAYS = 10
@@ -253,7 +253,6 @@ class TestCodebookJSON(IntegrationFixture):
         """
         It should return 404 if the file not specified
         """
-        import mock
         from pyramid import testing
         from pyramid.httpexceptions import HTTPNotFound
         from webob.multidict import MultiDict
@@ -269,7 +268,6 @@ class TestCodebookJSON(IntegrationFixture):
         """
         It should return 404 if the file does not exist
         """
-        import mock
         from pyramid import testing
         from pyramid.httpexceptions import HTTPNotFound
         from webob.multidict import MultiDict
@@ -286,11 +284,10 @@ class TestCodebookJSON(IntegrationFixture):
         It should return the json rows for the codebook fragment
         """
         from datetime import date
-        import mock
         from pyramid import testing
         from webob.multidict import MultiDict
         from occams.studies import Session, models
-        from occams.studies.security import track_user
+        from tests import track_user
 
         track_user('joe')
 
@@ -357,7 +354,7 @@ class TestDelete(IntegrationFixture):
         from pyramid import testing
         from pyramid.httpexceptions import HTTPNotFound
         from occams.studies import models, Session
-        from occams.studies.security import track_user
+        from tests import track_user
 
         track_user('jane', is_current=False)
         track_user('joe')
@@ -404,7 +401,7 @@ class TestDelete(IntegrationFixture):
         from pyramid import testing
         from pyramid.httpexceptions import HTTPForbidden
         from occams.studies import models, Session
-        from occams.studies.security import track_user
+        from tests import track_user
 
         track_user('joe')
 
@@ -436,7 +433,7 @@ class TestDelete(IntegrationFixture):
         from pyramid import testing
         from pyramid.httpexceptions import HTTPOk
         from occams.studies import models, Session
-        from occams.studies.security import track_user
+        from tests import track_user
 
         track_user('joe')
 
@@ -480,7 +477,7 @@ class TestDownload(IntegrationFixture):
         from pyramid import testing
         from pyramid.httpexceptions import HTTPNotFound
         from pyramid.response import FileResponse
-        from occams.studies.security import track_user
+        from tests import track_user
         from occams.studies import Session, models
 
         self.config.registry.settings['app.export.dir'] = '/tmp'
@@ -518,7 +515,7 @@ class TestDownload(IntegrationFixture):
         """
         from pyramid import testing
         from pyramid.httpexceptions import HTTPNotFound
-        from occams.studies.security import track_user
+        from tests import track_user
         from occams.studies import Session, models
 
         track_user('joe')

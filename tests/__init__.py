@@ -88,6 +88,13 @@ class IntegrationFixture(unittest.TestCase):
         Session.remove()
 
 
+def track_user(login, is_current=True):
+    from occams.studies import models, Session
+    Session.add(models.User(key=login))
+    Session.flush()
+    Session.info['user'] = login
+
+
 class FunctionalFixture(unittest.TestCase):
     """
     Fixture for testing the full application stack.

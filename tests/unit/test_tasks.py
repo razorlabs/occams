@@ -49,7 +49,7 @@ class TestInit(IntegrationFixture):
         """
         import mock
         from occams.studies import Session, models
-        from occams.studies.tasks import init
+        from occams.studies.tasks import on_preload_parsed
 
         with mock.patch('occams.studies.tasks.bootstrap') as bootstrap:
             bootstrap.return_value = {
@@ -59,18 +59,16 @@ class TestInit(IntegrationFixture):
                     }),
                 'request': mock.Mock(redis=mock.Mock())}
 
-            signal = mock.Mock()
-            sender = mock.Mock(options={'ini': 'app.ini'})
+            with mock.patch('occams.studies.tasks.celery') as celery:
+                on_preload_parsed({'ini': 'app.ini'})
 
-            init(signal, sender)
-
-            # App should now be configured with pyramid's settings
-            self.assertIn('app.export.user', sender.app.settings)
-            self.assertIsNotNone(sender.app.redis)
-            self.assertIsNotNone(
-                Session.query(models.User)
-                .filter_by(key='celery_user')
-                .first())
+                # App should now be configured with pyramid's settings
+                self.assertIn('app.export.user', celery.settings)
+                self.assertIsNotNone(celery.redis)
+                self.assertIsNotNone(
+                    Session.query(models.User)
+                    .filter_by(key='celery_user')
+                    .first())
 
 
 class TestMakeExport(IntegrationFixture):
@@ -106,7 +104,7 @@ class TestMakeExport(IntegrationFixture):
         from zipfile import ZipFile
         from occams.studies import Session, models
         from occams.studies.tasks import make_export
-        from occams.studies.security import track_user
+        from tests import track_user
 
         track_user('joe')
         export = models.Export(
