@@ -5,10 +5,14 @@ Command-line interface for exporting data
 import argparse
 from itertools import chain
 import os
+import shutil
 import sys
+import uuid
 
+from pyramid.paster import get_appsettings
+from six import itervalues
 from six.moves import map, filter
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, engine_from_config
 from tabulate import tabulate
 
 from .. import Session, exports
@@ -22,8 +26,13 @@ def parse_args(argv=sys.argv):
         '--db',
         metavar='DBURI',
         dest='db',
-        required=True,
         help='Database URL')
+
+    conn_group.add_argument(
+        '-c', '--config',
+        metavar='INI',
+        dest='config',
+        help='Application INI file')
 
     main_group = parser.add_argument_group('General Options')
     main_group.add_argument(
@@ -74,6 +83,10 @@ def parse_args(argv=sys.argv):
         metavar='PATH',
         dest='dir',
         help='Output directory')
+    export_group.add_argument(
+        '--atomic',
+        action='store_true',
+        help='Treat the output path as a symlink')
 
     return parser.parse_args(argv)
 
@@ -81,14 +94,10 @@ def parse_args(argv=sys.argv):
 def main(argv=sys.argv):
     args = parse_args(argv[1:])
 
-    Session.configure(bind=create_engine(args.db))
-
     if args.list:
         print_list(args)
     else:
         make_export(args)
-
-    sys.exit(1)
 
 
 def print_list(args):
@@ -100,10 +109,10 @@ def print_list(args):
         return '*' if condition else ''
 
     def format(row):
-        return star(row.has_private), star(row.has_rand), row.name, row.title
+        return star(row.is_system), star(row.has_private), star(row.has_rand), row.name, row.title
 
-    header = ['priv', 'rand', 'name', 'title']
-    rows = iter(map(format, exports.list_all()))
+    header = ['sys', 'priv', 'rand', 'name', 'title']
+    rows = iter(map(format, itervalues(exports.list_all())))
     print(tabulate(rows, header, tablefmt='simple'))
 
 
@@ -111,33 +120,54 @@ def make_export(args):
     """
     Generates the export data files
     """
+    if args.config:
+        engine = engine_from_config(get_appsettings(args.config), 'app.db.')
+    elif args.db:
+        engine = create_engine(args.db)
+    else:
+        sys.exit('You must specify either a connection or app configuration')
 
-    if not (args.all or args.all_public or args.all_rand or args.names):
-        print('You must specifiy something to export!')
-        return
+    Session.configure(bind=engine)
+
+    if not (args.all
+            or args.all_public
+            or args.all_private
+            or args.all_rand
+            or args.names):
+        sys.exit('You must specifiy something to export!')
 
     def is_valid_target(item):
-        if args.all:
-            return True
-        elif args.all_private:
-            return item.has_private
-        elif args.all_rand:
-            return item.has_rand
-        elif args.names:
-            return item.name in args.names
+        return (
+            args.all
+            or (args.all_private and item.has_private and not item.has_rand)
+            or (args.all_public and not item.has_private and not item.has_rand)
+            or (args.all_rand and item.has_rand)
+            or (args.names and item.name in args.names))
 
-    items = iter(filter(is_valid_target, exports.list_all()))
+    exportables = exports.list_all()
 
-    codebooks = []
+    if args.atomic:
+        out_dir = '%s-%s' % (args.dir.rstrip('/'), uuid.uuid4())
+        os.makedirs(out_dir)
+    else:
+        out_dir = args.dir
+        if not os.path.exists(args.dir):
+            os.makedirs(args.dir)
 
-    for item in items:
-        codebooks.append(item.codebook())
-        with open(os.path.join(args.dir, item.file_name), 'w+b') as fp:
-            exports.write_data(fp, item.data())
+    for plan in iter(filter(is_valid_target, itervalues(exportables))):
+        with open(os.path.join(out_dir, plan.file_name), 'w+b') as fp:
+            exports.write_data(fp, plan.data(
+                use_choice_labels=args.use_choice_labels,
+                expand_collections=args.expand_collections))
 
-    with open(os.path.join(args.dir, exports.codebook.FILE_NAME), 'w+b') as fp:
+    with open(os.path.join(out_dir, exports.codebook.FILE_NAME), 'w+b') as fp:
+        codebooks = [p.codebook() for p in itervalues(exportables)]
         exports.write_codebook(fp, chain.from_iterable(codebooks))
 
-
-if __name__ == '__main__':
-    main()
+    if args.atomic:
+        old_dir = os.path.realpath(args.dir)
+        if os.path.islink(args.dir):
+            os.unlink(args.dir)
+        os.symlink(os.path.abspath(out_dir), args.dir)
+        if not os.path.islink(old_dir):
+            shutil.rmtree(old_dir)

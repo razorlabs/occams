@@ -22,7 +22,6 @@ REQUIRES = [
     'pyramid',
     'pyramid_chameleon',
     'pyramid_deform',
-    'pyramid_layout',
     'pyramid_mailer',
     'pyramid_tm',
     'pyramid_redis_sessions',

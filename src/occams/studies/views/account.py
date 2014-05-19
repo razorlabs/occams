@@ -41,9 +41,6 @@ def login(request):
         # error
         return HTTPForbidden()
 
-    request.layout_manager.layout.title = _('Log In')
-    request.layout_manager.layout.show_header = False
-
     # Figure out where the user came from so we can redirect afterwards
     referrer = request.GET.get('referrer', request.current_route_path())
 

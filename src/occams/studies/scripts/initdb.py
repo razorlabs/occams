@@ -1,4 +1,4 @@
-import os
+import argparse
 import sys
 
 from pyramid.paster import get_appsettings, setup_logging
@@ -7,18 +7,16 @@ from sqlalchemy import engine_from_config
 from .. import models
 
 
-def usage(argv):
-    cmd = os.path.basename(argv[0])
-    print('usage: %s <config_uri>\n'
-          '(example: "%s development.ini")' % (cmd, cmd))
-    sys.exit(1)
+def parse_args(argv=sys.argv):
+    parser = argparse.ArgumentParser(description='Initialize database')
+    parser.add_argument('config_uri', metavar='INI')
+    return parser.parse_args(argv)
 
 
 def main(argv=sys.argv):
-    if len(argv) != 2:
-        usage(argv)
-    config_uri = argv[1]
+    args = parse_args(argv[1:])
+    config_uri = args.config_url
     setup_logging(config_uri)
     settings = get_appsettings(config_uri)
-    engine = engine_from_config(settings, 'studiesdb.')
+    engine = engine_from_config(settings, 'app.db.')
     models.Base.metadata.create_all(engine, checkfirst=True)

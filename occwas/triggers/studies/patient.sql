@@ -6,7 +6,7 @@ DROP FOREIGN TABLE IF EXISTS patient_ext;
 
 
 CREATE FOREIGN TABLE patient_ext (
-    id              SERIAL NOT NULL
+    id              INTEGER NOT NULL
 
   , site_id         INTEGER NOT NULL
   , zid             INTEGER NOT NULL
@@ -39,8 +39,10 @@ CREATE OR REPLACE FUNCTION patient_mirror() RETURNS TRIGGER AS $$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
+        PERFORM dblink_connect('trigger_target');
         INSERT INTO patient_ext (
-            site_id
+            id
+          , site_id
           , zid
           , nurse
           , our
@@ -53,7 +55,8 @@ CREATE OR REPLACE FUNCTION patient_mirror() RETURNS TRIGGER AS $$
           , revision
         )
         VALUES (
-            ext_site_id(NEW.site_id)
+            (SELECT val FROM dblink('SELECT nextval(''patient_id_seq'') AS val') AS sec(val int))
+          , ext_site_id(NEW.site_id)
           , NEW.zid
           , NEW.nurse
           , NEW.our
@@ -65,6 +68,7 @@ CREATE OR REPLACE FUNCTION patient_mirror() RETURNS TRIGGER AS $$
           , ext_user_id(NEW.modify_user_id)
           , NEW.revision
           );
+        PERFORM dblink_disconnect();
       WHEN 'DELETE' THEN
         DELETE FROM patient_ext WHERE zid = OLD.zid;
       WHEN 'UPDATE' THEN

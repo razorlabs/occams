@@ -9,7 +9,7 @@ DROP FOREIGN TABLE IF EXISTS user_ext;
 
 
 CREATE FOREIGN TABLE user_ext (
-    id              SERIAL NOT NULL
+    id              INTEGER NOT NULL
 
   , key             VARCHAR NOT NULL
   , create_date     TIMESTAMP NOT NULL
@@ -37,9 +37,20 @@ CREATE OR REPLACE FUNCTION user_mirror() RETURNS TRIGGER AS $$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
-        INSERT INTO user_ext
-          (key, create_date, modify_date)
-        VALUES (NEW.key, NEW.create_date, NEW.modify_date);
+        PERFORM dblink_connect('trigger_target');
+        INSERT INTO user_ext (
+            id
+          , key
+          , create_date
+          , modify_date
+        )
+        VALUES (
+            (SELECT val FROM dblink('SELECT nextval(''user_id_seq'') AS val') AS sec(val int))
+          , NEW.key
+          , NEW.create_date
+          , NEW.modify_date
+        );
+        PERFORM dblink_disconnect();
       WHEN 'DELETE' THEN
         DELETE FROM user_ext WHERE key = OLD.key;
       WHEN 'UPDATE' THEN

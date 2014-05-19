@@ -22,6 +22,8 @@ from .codebook import types, row
 
 class SchemaPlan(ExportPlan):
 
+    is_system = False
+
     @classmethod
     def from_sql(cls, record):
         """
@@ -122,33 +124,49 @@ class SchemaPlan(ExportPlan):
 
     def codebook(self):
         knowns = [
-            row('id', self.name, types.NUMERIC, is_required=True),
-            row('pid', self.name, types.STRING, is_required=True),
-            row('site', self.name, types.STRING, is_required=True),
-            row('enrollment', self.name, types.NUMERIC, is_collection=True),
+            row('id', self.name, types.NUMERIC,
+                is_required=True, is_system=True),
+            row('pid', self.name, types.STRING,
+                is_required=True, is_system=True),
+            row('site', self.name, types.STRING,
+                is_required=True, is_system=True),
+            row('enrollment', self.name, types.NUMERIC,
+                is_collection=True, is_system=True),
             row('enrollment_ids', self.name, types.NUMERIC,
-                is_collection=True),
-            row('visit_cycles', self.name, types.STRING, is_collection=True)]
+                is_collection=True, is_system=True),
+            row('visit_cycles', self.name, types.STRING, is_collection=True,
+                is_system=True)]
 
         if self.has_rand:
             knowns.extend([
                 row('block_number', self.name, types.NUMERIC,
-                    is_required=True),
-                row('randid', self.name, types.STRING, is_required=True),
-                row('arm_name', self.name, types.STRING, is_required=True)])
+                    is_required=True, is_system=True),
+                row('randid', self.name, types.STRING, is_required=True,
+                    is_system=True),
+                row('arm_name', self.name, types.STRING, is_required=True,
+                    is_system=True)])
 
         knowns.extend([
-            row('form', self.name, types.STRING, is_required=True),
-            row('publish_date', self.name, types.STRING, is_required=True),
-            row('state', self.name, types.STRING, is_required=True),
-            row('visit_date', self.name, types.DATE),
-            row('visit_id', self.name, types.NUMERIC),
-            row('collect_date', self.name, types.DATE, is_required=True),
-            row('is_null', self.name, types.BOOLEAN, is_required=True),
-            row('create_date', self.name, types.DATE, is_required=True),
-            row('create_user', self.name, types.STRING, is_required=True),
-            row('modify_date', self.name, types.DATE, is_required=True),
-            row('modify_user', self.name, types.STRING, is_required=True)])
+            row('form', self.name, types.STRING,
+                is_required=True, is_system=True),
+            row('publish_date', self.name, types.STRING,
+                is_required=True, is_system=True),
+            row('state', self.name, types.STRING,
+                is_required=True, is_system=True),
+            row('visit_date', self.name, types.DATE, is_system=True),
+            row('visit_id', self.name, types.NUMERIC, is_system=True),
+            row('collect_date', self.name, types.DATE,
+                is_required=True, is_system=True),
+            row('is_null', self.name, types.BOOLEAN,
+                is_required=True, is_system=True),
+            row('create_date', self.name, types.DATE,
+                is_required=True, is_system=True),
+            row('create_user', self.name, types.STRING,
+                is_required=True, is_system=True),
+            row('modify_date', self.name, types.DATE,
+                is_required=True, is_system=True),
+            row('modify_user', self.name, types.STRING, is_required=True,
+                is_system=True)])
 
         for column in knowns:
             yield column
@@ -162,7 +180,7 @@ class SchemaPlan(ExportPlan):
 
         query = (
             query.order_by(
-                models.Attribute.order,
+                models.Attribute.name,
                 models.Schema.publish_date))
 
         for attribute in query:

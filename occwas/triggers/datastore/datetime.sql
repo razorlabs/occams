@@ -7,9 +7,10 @@ DROP FOREIGN TABLE IF EXISTS value_datetime_ext;
 
 
 CREATE FOREIGN TABLE value_datetime_ext (
-    id              SERIAL NOT NULL
+    -- id              INTEGER NOT NULL
 
-  , entity_id       INTEGER NOT NULL
+  -- , entity_id       INTEGER NOT NULL
+    entity_id       INTEGER NOT NULL
   , attribute_id    INTEGER NOT NULL
   , value           TIMESTAMP NOT NULL
 

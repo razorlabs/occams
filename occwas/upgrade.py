@@ -13,6 +13,7 @@ from sqlalchemy.engine.url import URL
 HERE = os.path.abspath(os.path.dirname(__file__))
 
 FILE_CODES = os.path.join(HERE, 'scripts', 'choice2codes.sql')
+FILE_VARS = os.path.join(HERE, 'scripts', 'varnames.sql')
 FILE_LABFIX = os.path.join(HERE, 'scripts', 'lab_fix.sql')
 FILE_MERGE = os.path.join(HERE, 'scripts', 'mergedb.py')
 FILE_TRIGGERS = os.path.join(HERE, 'triggers', 'setup.py')
@@ -35,11 +36,15 @@ def main(argv):
 
     for db in (args.fia, args.phi):
         check_call(
-            'psql -f {0} "user={user} password={pw} dbname={db}"'
+            '/usr/pgsql-9.3/bin/psql -f {0} "user={user} password={pw} dbname={db}"'
             .format(FILE_CODES, user=oid, pw=opw, db=db),
             shell=True)
         check_call(
-            'psql -f {0} "user={user} password={pw} dbname={db}"'
+            '/usr/pgsql-9.3/bin/psql -f {0} "user={user} password={pw} dbname={db}"'
+            .format(FILE_VARS, user=oid, pw=opw, db=db),
+            shell=True)
+        check_call(
+            '/usr/pgsql-9.3/bin/psql -f {0} "user={user} password={pw} dbname={db}"'
             .format(FILE_LABFIX, user=oid, pw=opw, db=db),
             shell=True)
 

@@ -67,6 +67,9 @@ def install(suid, supw, from_url, to_url):
         DROP EXTENSION IF EXISTS postgres_fdw CASCADE;
         CREATE EXTENSION postgres_fdw;
 
+        DROP EXTENSION IF EXISTS dblink CASCADE;
+        CREATE EXTENSION dblink;
+
         CREATE SERVER trigger_target
         FOREIGN DATA WRAPPER postgres_fdw
         OPTIONS (dbname '{database}');
@@ -74,6 +77,8 @@ def install(suid, supw, from_url, to_url):
         CREATE USER MAPPING FOR {username}
         SERVER trigger_target
         OPTIONS(user '{username}', password '{password}');
+
+        GRANT USAGE ON FOREIGN SERVER trigger_target TO {username};
     """.format(**to_url.translate_connect_args()))
 
     products = ('studies', 'datastore', 'lab', 'partner')
@@ -93,6 +98,13 @@ def install(suid, supw, from_url, to_url):
 
             GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO {username};
         """.format(**from_url.translate_connect_args()))
+
+    if 'phi' in from_url.database:
+        # Ignore these on the PHI side since it will gridlock the remote
+        cursor.execute("""
+            DROP TRIGGER patient_mirror ON "patient";
+            DROP TRIGGER user_mirror ON "user";
+        """)
 
     conn.commit()
     cursor.close()

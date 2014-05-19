@@ -6,7 +6,7 @@ DROP FOREIGN TABLE IF EXISTS patient_log_ext;
 
 
 CREATE FOREIGN TABLE patient_log_ext (
-    id                      SERIAL NOT NULL
+    id                      INTEGER NOT NULL
 
   , patient_id              INTEGER NOT NULL
   , patient_contact_date    TIMESTAMP  NOT NULL
@@ -48,8 +48,10 @@ CREATE OR REPLACE FUNCTION patient_log_mirror() RETURNS TRIGGER AS $$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
+        PERFORM dblink_connect('trigger_target');
         INSERT INTO patient_log_ext (
-            patient_id
+            id
+          , patient_id
           , patient_contact_date
           , last_text_date
           , contact_reason
@@ -66,7 +68,8 @@ CREATE OR REPLACE FUNCTION patient_log_mirror() RETURNS TRIGGER AS $$
           , old_id
         )
         VALUES (
-            ext_patient_id(patient_id)
+            (SELECT val FROM dblink('SELECT nextval(''patient_log_id_seq'') AS val') AS sec(val int))
+          , ext_patient_id(NEW.patient_id)
           , NEW.patient_contact_date
           , NEW.last_text_date
           , NEW.contact_reason
@@ -75,13 +78,14 @@ CREATE OR REPLACE FUNCTION patient_log_mirror() RETURNS TRIGGER AS $$
           , NEW.message_left
           , NEW.comments
           , NEW.create_date
-          , ext_user_id(create_user_id)
+          , ext_user_id(NEW.create_user_id)
           , NEW.modify_date
-          , ext_user_id(modify_user_id)
+          , ext_user_id(NEW.modify_user_id)
           , NEW.revision
           , (SELECT current_database())
           , NEW.id
         );
+        PERFORM dblink_disconnect();
       WHEN 'DELETE' THEN
         DELETE FROM patient_log_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);

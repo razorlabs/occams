@@ -38,29 +38,31 @@ class PidPlan(ExportPlan):
             Session.query(models.RefType)
             .order_by(models.RefType.name))
 
-    @reify
-    def sites(self):
-        sites_query = Session.query(models.Site).order_by(models.Site.id)
-        sites = [(s.id, s.title) for s in sites_query]
-        return sites
-
     def codebook(self):
         name = self.name
         knowns = [
-            row('id', name, types.NUMERIC, is_required=True),
-            row('site', name, types.CHOICE,
-                choices=self.sites, is_required=True),
-            row('pid', name, types.STRING, is_required=True),
-            row('our', name, types.STRING),
-            row('aeh_num', name, types.STRING),
-            row('early_id', name, types.STRING),
+            row('id', name, types.NUMERIC, is_required=True, is_system=True),
+            row('site', name, types.STRING, is_required=True, is_system=True),
+            row('pid', name, types.STRING, is_required=True, is_system=True),
+            row('our', name, types.STRING, is_system=True),
+            row('aeh_num', name, types.STRING, is_system=True),
+            row('early_id', name, types.STRING, is_system=True),
+            row('create_date', self.name, types.DATE,
+                is_required=True, is_system=True),
+            row('create_user', self.name, types.STRING,
+                is_required=True, is_system=True),
+            row('modify_date', self.name, types.DATE,
+                is_required=True, is_system=True),
+            row('modify_user', self.name, types.STRING, is_required=True,
+                is_system=True)
         ]
 
         for known in knowns:
             yield known
 
         for reftype in self.reftypes:
-            yield row(reftype.name, name, types.STRING, is_collection=True)
+            yield row(reftype.name, name, types.STRING,
+                      is_system=True, is_collection=True)
 
     def data(self, use_choice_labels=False, expand_collections=False):
 
@@ -105,6 +107,18 @@ class PidPlan(ExportPlan):
                 .as_scalar()
                 .label(reftype.name))
 
-        query = query.order_by(models.Patient.pid)
+        CreateUser = aliased(models.User)
+        ModifyUser = aliased(models.User)
+
+        query = (
+            query
+            .join(CreateUser, models.Patient.create_user)
+            .join(ModifyUser, models.Patient.modify_user)
+            .add_columns(
+                models.Patient.create_date,
+                CreateUser.key.label('create_user'),
+                models.Patient.modify_date,
+                ModifyUser.key.label('modify_user'))
+            .order_by(models.Patient.id))
 
         return query

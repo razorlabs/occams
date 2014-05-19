@@ -1,5 +1,10 @@
-<html i18n:domain="occams.studies" metal:use-macro="main_template">
+<html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
   <metal:content-slot fill-slot="content-slot">
+
+    <header class="page-header">
+      <h1 i18n:translate="">Exports</h1>
+      <nav metal:use-macro="load: ./panels/nav.pt" />
+    </header>
 
     <div class="alert alert-warning" tal:condition="exceeded|nothing">
       <strong>You have exceed your export limit of ${limit}</strong>
@@ -31,6 +36,9 @@
               <th class="select">
                 <input type="checkbox" data-toggle="selectall" />
               </th>
+              <th class="is_system">
+                <span class="glyphicon glyphicon-wrench"></span>
+              </th>
               <th class="has_private">
                 <span class="glyphicon glyphicon-user"></span>
               </th>
@@ -48,6 +56,12 @@
                     value="${item.name}"
                     data-toggle="select"
                     data-class="warning" />
+              </td>
+              <td>
+                <span
+                    class="glyphicon glyphicon-wrench"
+                    title="System table"
+                    tal:condition="item.is_system"></span>
               </td>
               <td>
                 <span
@@ -90,7 +104,7 @@
           <label>
             <input type="radio" name="${field_name}" value="true"
                 checked="${cvalue == 'true'}"/>
-            <span tal:omit-tag="" i18n:translate="">Separate colum for each possible answer choice.</span>
+            <span tal:omit-tag="" i18n:translate="">Separate column for each possible answer choice.</span>
           </label>
         </div>
       </div>

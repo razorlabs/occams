@@ -6,7 +6,7 @@ DROP FOREIGN TABLE IF EXISTS specimen_ext;
 
 
 CREATE FOREIGN TABLE specimen_ext (
-    id                SERIAL NOT NULL
+    id                INTEGER NOT NULL
 
   , specimen_type_id  INTEGER NOT NULL
   , patient_id        INTEGER NOT NULL
@@ -35,8 +35,10 @@ CREATE OR REPLACE FUNCTION specimen_mirror() RETURNS TRIGGER AS $$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
+        PERFORM dblink_connect('trigger_target');
         INSERT INTO specimen_ext (
-            specimen_type_id
+            id
+          , specimen_type_id
           , patient_id
           , cycle_id
           , state_id
@@ -54,7 +56,8 @@ CREATE OR REPLACE FUNCTION specimen_mirror() RETURNS TRIGGER AS $$
           , old_id
         )
         VALUES (
-            (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimen_type_id))
+            (SELECT val FROM dblink('SELECT nextval(''specimen_id_seq'') AS val') AS sec(val int))
+          , (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimen_type_id))
           , ext_patient_id(NEW.patient_id)
           , ext_cycle_id(NEW.cycle_id)
           , (SELECT id FROM specimenstate_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.state_id))
@@ -71,6 +74,7 @@ CREATE OR REPLACE FUNCTION specimen_mirror() RETURNS TRIGGER AS $$
           , (SELECT current_database())
           , NEW.id
         );
+        PERFORM dblink_disconnect();
       WHEN 'DELETE' THEN
         DELETE FROM specimen_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);

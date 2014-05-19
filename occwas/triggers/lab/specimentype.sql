@@ -6,7 +6,7 @@ DROP FOREIGN TABLE IF EXISTS specimentype_ext;
 
 
 CREATE FOREIGN TABLE specimentype_ext (
-    id              SERIAL NOT NULL
+    id              INTEGER NOT NULL
 
   , name            VARCHAR NOT NULL
   , title           VARCHAR NOT NULL
@@ -30,8 +30,10 @@ CREATE OR REPLACE FUNCTION specimentype_mirror() RETURNS TRIGGER AS $$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
+        PERFORM dblink_connect('trigger_target');
         INSERT INTO specimentype_ext (
-            name
+            id
+          , name
           , title
           , description
           , tube_type
@@ -44,7 +46,8 @@ CREATE OR REPLACE FUNCTION specimentype_mirror() RETURNS TRIGGER AS $$
           , old_id
         )
         VALUES (
-            NEW.name
+            (SELECT val FROM dblink('SELECT nextval(''specimentype_id_seq'') AS val') AS sec(val int))
+          , NEW.name
           , NEW.title
           , NEW.description
           , NEW.tube_type
@@ -56,6 +59,7 @@ CREATE OR REPLACE FUNCTION specimentype_mirror() RETURNS TRIGGER AS $$
           , (SELECT current_database())
           , NEW.id
         );
+        PERFORM dblink_disconnect();
       WHEN 'DELETE' THEN
         DELETE FROM specimentype_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);

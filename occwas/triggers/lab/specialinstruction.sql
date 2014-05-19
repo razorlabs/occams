@@ -6,7 +6,7 @@ DROP FOREIGN TABLE IF EXISTS specialinstruction_ext;
 
 
 CREATE FOREIGN TABLE specialinstruction_ext (
-    id              SERIAL NOT NULL
+    id              INTEGER NOT NULL
 
   , name            VARCHAR NOT NULL
   , title           VARCHAR NOT NULL
@@ -28,8 +28,10 @@ CREATE OR REPLACE FUNCTION specialinstruction_mirror() RETURNS TRIGGER AS $$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
+        PERFORM dblink_connect('trigger_target');
         INSERT INTO specialinstruction_ext (
-            name
+            id
+          , name
           , title
           , description
           , create_date
@@ -40,7 +42,8 @@ CREATE OR REPLACE FUNCTION specialinstruction_mirror() RETURNS TRIGGER AS $$
           , old_id
         )
         VALUES (
-            NEW.name
+            (SELECT val FROM dblink('SELECT nextval(''specialinstruction_id_seq'') AS val') AS sec(val int))
+          , NEW.name
           , NEW.title
           , NEW.description
           , NEW.create_date

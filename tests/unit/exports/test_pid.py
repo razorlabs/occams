@@ -31,7 +31,7 @@ class TestPidPlan(IntegrationFixture):
         It should be able to generate reports without refs
         """
         from occams.studies import exports, models, Session
-        from occams.studies.security import track_user
+        from tests import track_user
         plan = exports.PidPlan()
 
         track_user('joe')
@@ -63,7 +63,7 @@ class TestPidPlan(IntegrationFixture):
         It should generate a basic listing of all the PIDs in the database
         """
         from occams.studies import exports, models, Session
-        from occams.studies.security import track_user
+        from tests import track_user
         plan = exports.PidPlan()
 
         track_user('joe')
@@ -100,7 +100,7 @@ class TestPidPlan(IntegrationFixture):
         """
         from datetime import date
         from occams.studies import exports, models, Session
-        from occams.studies.security import track_user
+        from tests import track_user
         plan = exports.PidPlan()
 
         track_user('joe')

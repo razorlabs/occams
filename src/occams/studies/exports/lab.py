@@ -22,36 +22,47 @@ class LabPlan(ExportPlan):
 
     def codebook(self):
         return iter([
-            row('aliquot_type', self.name, types.STRING, is_required=True),
-            row('store_date', self.name, types.DATE),
-            row('volume', self.name, types.NUMERIC),
-            row('cell_amount', self.name, types.NUMERIC),
-            row('aliquot_location', self.name, types.STRING),
-            row('freezer', self.name, types.STRING),
-            row('rack', self.name, types.STRING),
-            row('box', self.name, types.STRING),
-            row('aliquot_count', self.name, types.NUMERIC, is_required=True),
-            row('aliquot_state', self.name, types.STRING, is_required=True),
-            row('sent_date', self.name, types.DATE),
-            row('sent_name', self.name, types.STRING),
-            row('sent_notes', self.name, types.STRING),
-            row('thawed_num', self.name, types.NUMERIC),
-            row('special_instruction', self.name, types.STRING),
-            row('inventory_date', self.name, types.DATE),
-            row('aliquot_notes', self.name, types.STRING),
-            row('specimen_type', self.name, types.STRING, is_required=True),
-            row('collect_time', self.name, types.TIME),
-            row('collect_date', self.name, types.DATE),
-            row('specimen_study', self.name, types.STRING),
-            row('specimen_cycle', self.name, types.STRING),
-            row('specimen_destination', self.name, types.STRING),
-            row('specimen_state', self.name, types.STRING),
-            row('tubes', self.name, types.NUMERIC),
-            row('tube_type', self.name, types.STRING),
-            row('specimen_notes', self.name, types.STRING),
-            row('our', self.name, types.STRING, is_required=True),
-            row('nurse_email', self.name, types.STRING),
-            row('aeh_num', self.name, types.STRING)
+            row('aliquot_type', self.name, types.STRING,
+                is_required=True, is_system=True),
+            row('store_date', self.name, types.DATE, is_system=True),
+            row('volume', self.name, types.NUMERIC, is_system=True),
+            row('cell_amount', self.name, types.NUMERIC, is_system=True),
+            row('aliquot_location', self.name, types.STRING, is_system=True),
+            row('freezer', self.name, types.STRING, is_system=True),
+            row('rack', self.name, types.STRING, is_system=True),
+            row('box', self.name, types.STRING, is_system=True),
+            row('aliquot_count', self.name, types.NUMERIC,
+                is_required=True, is_system=True),
+            row('aliquot_state', self.name, types.STRING,
+                is_required=True, is_system=True),
+            row('sent_date', self.name, types.DATE, is_system=True),
+            row('sent_name', self.name, types.STRING, is_system=True),
+            row('sent_notes', self.name, types.STRING, is_system=True),
+            row('thawed_num', self.name, types.NUMERIC, is_system=True),
+            row('special_instruction', self.name, types.STRING,
+                is_system=True),
+            row('inventory_date', self.name, types.DATE, is_system=True),
+            row('aliquot_notes', self.name, types.STRING, is_system=True),
+            row('specimen_type', self.name, types.STRING,
+                is_required=True, is_system=True),
+            row('collect_time', self.name, types.TIME, is_system=True),
+            row('collect_date', self.name, types.DATE, is_system=True),
+            row('specimen_study', self.name, types.STRING, is_system=True),
+            row('specimen_cycle', self.name, types.STRING, is_system=True),
+            row('specimen_destination', self.name, types.STRING,
+                is_system=True),
+            row('specimen_state', self.name, types.STRING, is_system=True),
+            row('tubes', self.name, types.NUMERIC, is_system=True),
+            row('tube_type', self.name, types.STRING, is_system=True),
+            row('specimen_notes', self.name, types.STRING, is_system=True),
+            row('site', self.name, types.STRING,
+                is_required=True, is_system=True),
+            row('pid', self.name, types.STRING,
+                is_required=True, is_system=True),
+            row('our', self.name, types.STRING,
+                is_required=True, is_system=True),
+            row('nurse_email', self.name, types.STRING, is_system=True),
+            row('aeh_num', self.name, types.STRING, is_system=True)
             ])
 
     def data(self, use_choice_labels=False, expand_collections=False):
@@ -88,6 +99,8 @@ class LabPlan(ExportPlan):
                 lab.Specimen.tubes.label('tubes'),
                 lab.SpecimenType.tube_type.label('tube_type'),
                 lab.Specimen.notes.label('specimen_notes'),
+                models.Site.name.label('site'),
+                models.Patient.our.label('pid'),
                 models.Patient.our.label('our'),
                 models.Patient.nurse.label('nurse_email'),
                 models.Patient.legacy_number.label('aeh_num'))
@@ -103,6 +116,7 @@ class LabPlan(ExportPlan):
             .outerjoin(lab.Specimen.specimen_type)
             .outerjoin(lab.Specimen.state)
             .join(lab.Specimen.patient)
+            .join(models.Patient.site)
             .filter(lab.AliquotState.title != u'Aliquot Not used')
             .filter(func.coalesce(lab.Aliquot.freezer,
                                   lab.Aliquot.rack,
@@ -137,6 +151,7 @@ class LabPlan(ExportPlan):
                 models.Patient.id,
                 models.Patient.our,
                 models.Patient.nurse,
-                models.Patient.legacy_number))
+                models.Patient.legacy_number,
+                models.Site.name))
 
         return query

@@ -15,6 +15,7 @@ try:
 except ImportError:  # pragma: nocover
     from ordereddict import OrderedDict  # NOQA
 from contextlib import closing
+from datetime import timedelta
 from itertools import chain
 import json
 import os
@@ -23,22 +24,22 @@ from zipfile import ZipFile, ZIP_DEFLATED
 
 from celery import Celery, Task
 from celery.bin import Option
-from celery.signals import worker_init
+from celery.signals import user_preload_options, worker_init
 from celery.utils.log import get_task_logger
 import humanize
+from six import itervalues
 from pyramid.paster import bootstrap
 from sqlalchemy.orm.exc import NoResultFound
 import transaction
 
 from . import models, Session, exports
-from .security import track_user
-
 
 celery = Celery(__name__)
 
-celery.user_options['worker'].add(
+celery.user_options['preload'].add(
     Option('--ini', help='Pyramid config file')
 )
+
 
 log = get_task_logger(__name__)
 
@@ -64,28 +65,47 @@ def includeme(config):
         BROKER_TRANSPORT_OPTIONS={
             'fanout_prefix': True,
             'fanout_patterns': True
-            }
-        )
+        },
+        CELERYBEAT_SCHEDULE={
+            'make-codebook-every-hour': {
+                'task': 'make_codebook',
+                'schedule': timedelta(hours=1),
+            },
+        })
 
 
-@worker_init.connect
-def init(signal, sender):
+@user_preload_options.connect
+def on_preload_parsed(options, **kwargs):
     """
-    Configure the database connections when the celery daemon starts
+    Use Pyramid applicaiton settings  for all types of celery commands
     """
     # Have the pyramid app initialize all settings
-    env = bootstrap(sender.options['ini'])
-    sender.app.settings = settings = env['registry'].settings
-    sender.app.redis = env['request'].redis
+    env = bootstrap(options['ini'] + '#occams.studies')
 
-    userid = settings['app.export.user']
+    # Setup resources for tasks
+    celery.settings = env['registry'].settings
+    celery.redis = env['request'].redis
 
-    with transaction.manager:
-        track_user(userid)
+    user = celery.settings['app.export.user']
+
+    if not Session.query(models.User).filter_by(key=user).first():
+        with transaction.manager:
+            Session.add(models.User(key=user))
 
     # Clear the registry so we ALWAYS get the correct userid
     Session.remove()
-    Session.configure(info={'user': userid})
+    Session.configure(info={'user': user})
+
+
+@worker_init.connect
+def worker_init_handler(signal, sender):
+    """
+    Initialize database for worker processes
+    """
+
+    # Make a codebook immediately (beat will wait UNTIL AFTER the specified
+    # amount of time, which is bad if we need and initial file right away)
+    make_codebook.apply_async()
 
 
 def in_transaction(func):
@@ -175,12 +195,10 @@ def make_export(name):
 
     with closing(ZipFile(export.path, 'w', ZIP_DEFLATED)) as zfp:
 
-        codebook_chain = []
         exportables = exports.list_all()
 
         for item in export.contents:
             plan = exportables[item['name']]
-            codebook_chain.append(plan.codebook())
 
             with tempfile.NamedTemporaryFile() as tfp:
                 exports.write_data(tfp, plan.data(
@@ -195,5 +213,19 @@ def make_export(name):
             log.info(', '.join([count, total, item['name']]))
 
         with tempfile.NamedTemporaryFile() as tfp:
+            codebook_chain = [p.codebook() for p in itervalues(exportables)]
             exports.write_codebook(tfp, chain.from_iterable(codebook_chain))
             zfp.write(tfp.name, exports.codebook.FILE_NAME)
+
+
+@celery.task(name='make_codebook', ignore_result=True)
+@in_transaction
+def make_codebook():
+    """
+    Pre-cooks a codebook file for faster downloading
+    """
+    codebook_chain = [p.codebook() for p in itervalues(exports.list_all())]
+    path = os.path.join(celery.settings['app.export.dir'],
+                        exports.codebook.FILE_NAME)
+    with open(path, 'w+b') as fp:
+        exports.write_codebook(fp, chain.from_iterable(codebook_chain))

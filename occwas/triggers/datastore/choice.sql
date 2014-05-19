@@ -8,7 +8,7 @@ DROP FOREIGN TABLE IF EXISTS choice_ext;
 
 
 CREATE FOREIGN TABLE choice_ext (
-    id              SERIAL NOT NULL
+    id              INTEGER NOT NULL
 
   , name            VARCHAR NOT NULL
   , title           VARCHAR NOT NULL
@@ -34,9 +34,10 @@ DROP FOREIGN TABLE IF EXISTS value_choice_ext;
 
 
 CREATE FOREIGN TABLE value_choice_ext (
-    id              SERIAL NOT NULL
+    -- id              INTEGER NOT NULL
 
-  , entity_id       INTEGER NOT NULL
+  -- , entity_id       INTEGER NOT NULL
+    entity_id       INTEGER NOT NULL
   , attribute_id    INTEGER NOT NULL
   , value           INTEGER NOT NULL
 
@@ -71,8 +72,10 @@ CREATE OR REPLACE FUNCTION choice_mirror() RETURNS TRIGGER AS $$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
+        PERFORM dblink_connect('trigger_target');
         INSERT INTO choice_ext (
-            name
+            id
+          , name
           , title
           , description
           , attribute_id
@@ -86,7 +89,8 @@ CREATE OR REPLACE FUNCTION choice_mirror() RETURNS TRIGGER AS $$
           , old_id
         )
         VALUES (
-            NEW.value
+            (SELECT val FROM dblink('SELECT nextval(''choice_id_seq'') AS val') AS sec(val int))
+          , NEW.value
           , NEW.title
           , NEW.description
           , ext_attribute_id(NEW.attribute_id)
@@ -99,9 +103,10 @@ CREATE OR REPLACE FUNCTION choice_mirror() RETURNS TRIGGER AS $$
           , (SELECT current_database())
           , NEW.id
           );
+        PERFORM dblink_disconnect();
       WHEN 'DELETE' THEN
         DELETE FROM choice_ext
-        WHERE (old_db, old_id) = (SELECT current_database(), $1);
+        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
       WHEN 'UPDATE' THEN
         UPDATE choice_ext
         SET name = NEW.value
@@ -116,7 +121,7 @@ CREATE OR REPLACE FUNCTION choice_mirror() RETURNS TRIGGER AS $$
           , revision = NEW.revision
           , old_db = (SELECT current_database())
           , old_id = NEW.id
-        WHERE (old_db, old_id) = (SELECT current_database(), $1);
+        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
 
     END CASE;
     RETURN NULL;

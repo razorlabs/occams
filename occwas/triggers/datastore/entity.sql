@@ -9,7 +9,7 @@ DROP FOREIGN TABLE IF EXISTS entity_ext;
 
 
 CREATE FOREIGN TABLE entity_ext (
-    id              SERIAL NOT NULL
+    id              INTEGER NOT NULL
 
   , name            VARCHAR NOT NULL
   , title           VARCHAR NOT NULL
@@ -37,7 +37,7 @@ DROP FOREIGN TABLE IF EXISTS state_ext;
 
 
 CREATE FOREIGN TABLE state_ext (
-    id              SERIAL NOT NULL
+    id              INTEGER NOT NULL
 
   , name            VARCHAR NOT NULL
   , title           VARCHAR NOT NULL
@@ -80,8 +80,10 @@ CREATE OR REPLACE FUNCTION entity_mirror() RETURNS TRIGGER AS $$
 
         IF NOT EXISTS(SELECT 1 FROM schema where id = NEW.schema_id AND is_inline) THEN
 
+          PERFORM dblink_connect('trigger_target');
           INSERT INTO entity_ext (
-              name
+              id
+            , name
             , title
             , description
             , schema_id
@@ -97,11 +99,13 @@ CREATE OR REPLACE FUNCTION entity_mirror() RETURNS TRIGGER AS $$
             , old_id
           )
           VALUES (
-              NEW.name
+              (SELECT val FROM dblink('SELECT nextval(''entity_id_seq'') AS val') AS sec(val int))
+            , NEW.name
             , NEW.title
             , NEW.description
             , ext_schema_id(NEW.schema_id)
             , NEW.collect_date
+            -- don't worry about mapping since old states are a subset of the new states
             , (SELECT id FROM "state_ext" WHERE name = NEW.state::text)
             , FALSE
             , NEW.create_date
@@ -112,6 +116,7 @@ CREATE OR REPLACE FUNCTION entity_mirror() RETURNS TRIGGER AS $$
             , (SELECT current_database())
             , NEW.id
             );
+          PERFORM dblink_disconnect();
 
         END IF;
 

@@ -1,5 +1,8 @@
-<html i18n:domain="occams.studies" metal:use-macro="main_template">
+<html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
   <metal:content-slot fill-slot="content-slot">
+    <header class="page-header">
+      <h1>${request.registry.settings['app.org.title']|OCCAMS}</h1>
+    </header>
 
     <!--! Recent Patients -->
     <div class="jumbotron">

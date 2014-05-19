@@ -71,5 +71,13 @@ def write_codebook(buffer, rows):
     """
     writer = csv.DictWriter(buffer, codebook.HEADER)
     writer.writeheader()
-    writer.writerows(rows)
+
+    def choices2string(choices):
+        choices = choices or []
+        return ';'.join(['%s=%s' % c for c in choices])
+
+    for row in rows:
+        row['choices'] = choices2string(row['choices'])
+        writer.writerow(row)
+
     buffer.flush()

@@ -664,7 +664,7 @@ class Export(Base, Referenceable, Modifiable, Auditable):
         """
         delta = self.metadata.info['settings'].get('app.export.expire')
         if delta:
-            return self.modify_date - timedelta(delta)
+            return self.modify_date + timedelta(delta)
 
     @property
     def redis_key(self):

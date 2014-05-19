@@ -1,5 +1,3 @@
-import unittest
-
 from tests import IntegrationFixture
 
 
@@ -43,52 +41,6 @@ class TestIncludeme(IntegrationFixture):
                 expected[key])
 
 
-class TestInTransaction(unittest.TestCase):
-    """
-    Functional-ish test that ensures tasks can be completed in a transaction.
-    """
-
-    def test_remove(self):
-        """
-        It should disconnect the database after each task.
-        """
-        import celery
-        from sqlalchemy import Column, Integer, orm
-        from sqlalchemy.ext.declarative import declarative_base
-        from occams.studies import Session
-        from occams.studies.tasks import in_transaction
-
-        app = celery.Celery('test')
-
-        Model = declarative_base()
-
-        class Dummy(Model):
-            __tablename__ = 'dummy'
-            id = Column(Integer, primary_key=True)
-
-        Model.metadata.create_all(Session.bind)
-
-        @app.task()
-        @in_transaction
-        def do_something():
-            ret = Dummy()
-            Session.add(ret)
-            return ret
-
-        self.assertEquals(Session.query(Dummy).count(), 0)
-
-        ret = do_something()
-
-        # The transaction/connection should no longer be available
-        with self.assertRaises(orm.exc.DetachedInstanceError):
-            # Accessing an attribute from another connection angers sqlalchemy
-            ret.id
-
-        self.assertEquals(Session.query(Dummy).count(), 1)
-
-        Model.metadata.drop_all(Session.bind)
-
-
 class TestInit(IntegrationFixture):
 
     def test_init(self):
@@ -97,7 +49,7 @@ class TestInit(IntegrationFixture):
         """
         import mock
         from occams.studies import Session, models
-        from occams.studies.tasks import init
+        from occams.studies.tasks import on_preload_parsed
 
         with mock.patch('occams.studies.tasks.bootstrap') as bootstrap:
             bootstrap.return_value = {
@@ -107,18 +59,16 @@ class TestInit(IntegrationFixture):
                     }),
                 'request': mock.Mock(redis=mock.Mock())}
 
-            signal = mock.Mock()
-            sender = mock.Mock(options={'ini': 'app.ini'})
+            with mock.patch('occams.studies.tasks.celery') as celery:
+                on_preload_parsed({'ini': 'app.ini'})
 
-            init(signal, sender)
-
-            # App should now be configured with pyramid's settings
-            self.assertIn('app.export.user', sender.app.settings)
-            self.assertIsNotNone(sender.app.redis)
-            self.assertIsNotNone(
-                Session.query(models.User)
-                .filter_by(key='celery_user')
-                .first())
+                # App should now be configured with pyramid's settings
+                self.assertIn('app.export.user', celery.settings)
+                self.assertIsNotNone(celery.redis)
+                self.assertIsNotNone(
+                    Session.query(models.User)
+                    .filter_by(key='celery_user')
+                    .first())
 
 
 class TestMakeExport(IntegrationFixture):
@@ -154,7 +104,7 @@ class TestMakeExport(IntegrationFixture):
         from zipfile import ZipFile
         from occams.studies import Session, models
         from occams.studies.tasks import make_export
-        from occams.studies.security import track_user
+        from tests import track_user
 
         track_user('joe')
         export = models.Export(

@@ -1,5 +1,18 @@
-<html i18n:domain="occams.studies" metal:use-macro="main_template">
+<html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
   <metal:content-slot fill-slot="content-slot">
+    <header class="page-header">
+      <h1 i18n:translate="">Exports</h1>
+      <nav metal:use-macro="load: ./panels/nav.pt" />
+    </header>
+    <tal:alerts repeat="type ('error', 'warning', 'info', 'success')">
+      <div
+          class="alert alert-${type}"
+          tal:repeat="msg request.session.pop_flash(type)">
+        <button type="button" class="close" data-dismiss="alert"
+            aria-hidden="true">&times;</button>
+        ${msg}
+      </div>
+    </tal:alerts>
 
     <p class="text-center" data-bind="visible:!ready()">
       <span i18n:translate="">Loading...</span>

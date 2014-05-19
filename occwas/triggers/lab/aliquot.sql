@@ -6,9 +6,10 @@ DROP FOREIGN TABLE IF EXISTS aliquot_ext;
 
 
 CREATE FOREIGN TABLE aliquot_ext (
-    id                      SERIAL NOT NULL
+    -- id                      INTEGER NOT NULL
 
-  , specimen_id             INTEGER NOT NULL
+  -- , specimen_id             INTEGER NOT NULL
+    specimen_id             INTEGER NOT NULL
   , aliquot_type_id         INTEGER NOT NULL
   , state_id                INTEGER NOT NULL
   , labbook                 VARCHAR

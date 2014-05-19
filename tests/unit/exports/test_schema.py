@@ -10,7 +10,7 @@ class TestSchemaPlan(IntegrationFixture):
         """
         from datetime import date
         from occams.studies import Session, models, exports
-        from occams.studies.security import track_user
+        from tests import track_user
 
         track_user(u'joe')
 
@@ -42,7 +42,7 @@ class TestSchemaPlan(IntegrationFixture):
         """
         from datetime import date, timedelta
         from occams.studies import Session, models, exports
-        from occams.studies.security import track_user
+        from tests import track_user
 
         track_user(u'joe')
 
@@ -93,7 +93,7 @@ class TestSchemaPlan(IntegrationFixture):
         """
         from datetime import date
         from occams.studies import Session, models, exports
-        from occams.studies.security import track_user
+        from tests import track_user
 
         track_user(u'joe')
 
@@ -140,7 +140,7 @@ class TestSchemaPlan(IntegrationFixture):
         """
         from datetime import date, timedelta
         from occams.studies import Session, models, exports
-        from occams.studies.security import track_user
+        from tests import track_user
 
         track_user(u'joe')
 
@@ -199,7 +199,7 @@ class TestSchemaPlan(IntegrationFixture):
         """
         from datetime import date, timedelta
         from occams.studies import Session, models, exports
-        from occams.studies.security import track_user
+        from tests import track_user
 
         track_user(u'joe')
 
@@ -274,7 +274,7 @@ class TestSchemaPlan(IntegrationFixture):
         """
         from datetime import date, timedelta
         from occams.studies import Session, models, exports
-        from occams.studies.security import track_user
+        from tests import track_user
 
         track_user(u'joe')
 

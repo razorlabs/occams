@@ -8,7 +8,7 @@ DROP FOREIGN TABLE IF EXISTS schema_ext;
 
 
 CREATE FOREIGN TABLE schema_ext (
-    id              SERIAL NOT NULL
+    id              INTEGER NOT NULL
 
   , name            VARCHAR NOT NULL
   , title           VARCHAR NOT NULL
@@ -56,8 +56,10 @@ CREATE OR REPLACE FUNCTION schema_mirror() RETURNS TRIGGER AS $$
     CASE TG_OP
       WHEN 'INSERT' THEN
         IF NOT NEW.is_inline THEN
+          PERFORM dblink_connect('trigger_target');
           INSERT INTO schema_ext (
-              name
+              id
+            , name
             , title
             , description
             , storage
@@ -73,7 +75,8 @@ CREATE OR REPLACE FUNCTION schema_mirror() RETURNS TRIGGER AS $$
             , old_id
           )
           VALUES (
-              NEW.name
+              (SELECT val FROM dblink('SELECT nextval(''schema_id_seq'') AS val') AS sec(val int))
+            , NEW.name
             , NEW.title
             , NEW.description
             , NEW.storage
@@ -88,6 +91,7 @@ CREATE OR REPLACE FUNCTION schema_mirror() RETURNS TRIGGER AS $$
             , (SELECT current_database())
             , NEW.id
           );
+          PERFORM dblink_disconnect();
         END IF;
       WHEN 'DELETE' THEN
         DELETE FROM schema_ext
