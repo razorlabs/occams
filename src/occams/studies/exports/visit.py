@@ -42,7 +42,10 @@ class VisitPlan(ExportPlan):
                 is_system=True)
         ])
 
-    def data(self, use_choice_labels=False, expand_collections=False):
+    def data(self,
+             use_choice_labels=False,
+             expand_collections=False,
+             ignore_private=True):
         CreateUser = aliased(models.User)
         ModifyUser = aliased(models.User)
         query = (

@@ -73,9 +73,11 @@ def parse_args(argv=sys.argv):
         action='store_true',
         help='Expands multi-selects to one row per '
              'possible selection')
+    # Can't use --ignore-private because default behavior is to de-identify
+    # private data. Need an explicit flag to disable that behavior.
     export_group.add_argument(
-        '--ignore-private',
-        dest='ignore_private',
+        '--show-private',
+        dest='show_private',
         action='store_true',
         help='De-identifies private data.')
     export_group.add_argument(
@@ -158,7 +160,8 @@ def make_export(args):
         with open(os.path.join(out_dir, plan.file_name), 'w+b') as fp:
             exports.write_data(fp, plan.data(
                 use_choice_labels=args.use_choice_labels,
-                expand_collections=args.expand_collections))
+                expand_collections=args.expand_collections,
+                ignore_private=not args.show_private))
 
     with open(os.path.join(out_dir, exports.codebook.FILE_NAME), 'w+b') as fp:
         codebooks = [p.codebook() for p in itervalues(exportables)]

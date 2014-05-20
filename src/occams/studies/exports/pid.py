@@ -64,8 +64,10 @@ class PidPlan(ExportPlan):
             yield row(reftype.name, name, types.STRING,
                       is_system=True, is_collection=True)
 
-    def data(self, use_choice_labels=False, expand_collections=False):
-
+    def data(self,
+             use_choice_labels=False,
+             expand_collections=False,
+             ignore_private=True):
         query = (
             Session.query(
                 models.Patient.id.label('id'),

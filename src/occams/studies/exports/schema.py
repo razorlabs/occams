@@ -196,23 +196,10 @@ class SchemaPlan(ExportPlan):
                       choices=[(c.name, c.title)
                                for c in itervalues(attribute.choices)])
 
-    def data(self, use_choice_labels=False, expand_collections=False):
-        """
-        Generates a studies report containing the patient's metadata
-        that relates to the form.
-
-        Clinical metadadata includes:
-            * site -- Patient's site
-            * pid -- Patient's PID number
-            * enrollment -- The applicable enrollment
-            * cycles - The applicable visit's cycles
-
-        Parameters:
-        schema -- The schema to generate the report for
-
-        Returns:
-        A SQLAlchemy query
-        """
+    def data(self,
+             use_choice_labels=False,
+             expand_collections=False,
+             ignore_private=True):
 
         ids_query = (
             Session.query(models.Schema.id)
@@ -224,7 +211,8 @@ class SchemaPlan(ExportPlan):
             self.name,
             ids=ids,
             expand_collections=expand_collections,
-            use_choice_labels=use_choice_labels)
+            use_choice_labels=use_choice_labels,
+            ignore_private=ignore_private)
 
         query = (
             Session.query(report.c.id.label('id'))
