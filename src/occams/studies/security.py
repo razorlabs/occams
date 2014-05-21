@@ -32,7 +32,7 @@ def occams_groupfinder(identity, request):
             org, site, group = parts
         except ValueError:
             org, group = parts
-        return name
+        return group
 
     return [parse_group(n) for n in identity['groups']]
 
