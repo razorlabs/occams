@@ -31,7 +31,8 @@ def occams_groupfinder(identity, request):
     mapping = {
         'admins': 'administrator',
         'nurses': 'nurse',
-        'primary_investigators': 'primariy_investigator'}
+        'statistician': 'analyst',
+        'pi': 'investigator'}
 
     def parse_group(name):
         parts = name.split('-')
@@ -62,13 +63,10 @@ class RootFactory(object):
         (Allow, 'investigator', (
             'view',
             'fia_view')),
-        (Allow, 'coordinator', (
+        (Allow, 'manager', (
             'view',
             'fia_view')),
-        (Allow, 'statistician', (
-            'view',
-            'fia_view')),
-        (Allow, 'researcher', (
+        (Allow, 'analyst', (
             'view',
             'fia_view')),
         (Allow, 'nurse', (
@@ -77,8 +75,7 @@ class RootFactory(object):
             'patient_add',  'patient_view',  'patient_edit',
             'enrollment_add',  'enrollment_view',  'enrollment_edit',
             'enrollment_delete',
-            'visit_add',  'visit_view',  'visit_edit',  'visit_delete',
-            'fia_view')),
+            'visit_add',  'visit_view',  'visit_edit',  'visit_delete')),
         (Allow, 'assistant', ('view',)),
         (Allow, 'student', ('view',)),
         (Allow, Authenticated, 'view'),
