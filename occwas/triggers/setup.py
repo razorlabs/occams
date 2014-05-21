@@ -81,10 +81,16 @@ def install(suid, supw, from_url, to_url):
         GRANT USAGE ON FOREIGN SERVER trigger_target TO {username};
     """.format(**to_url.translate_connect_args()))
 
-    products = ('studies', 'datastore', 'lab', 'partner')
-
-    if 'cctg' in from_url.database:
-        products += ('calllog',)
+    if 'avrc' in from_url.database:
+        products = ('studies', 'databastore', 'lab', 'partner')
+    elif 'cctg' in from_url.database:
+        products = ('studies', 'databastore', 'lab', 'calllog')
+    elif 'mhealth' in from_url.database:
+        products = ('studies', 'databastore', 'lab')
+    elif 'addis' in from_url.database:
+        products = ('studies', 'databastore')
+    else:
+        raise Exception('Cannot recognize product')
 
     for product in products:
         product_dir = os.path.join(HERE, product)

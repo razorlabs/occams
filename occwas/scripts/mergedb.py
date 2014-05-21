@@ -46,7 +46,9 @@ TRACK = set([
     'attribute', 'blob', 'category', 'choice',
     'datetime', 'decimal', 'entity', 'integer',
     'schema', 'string', 'text', 'object',
-    'context',
+    'context'])
+
+LAB_TRACK = set([
     'aliquot', 'aliquotstate', 'aliquottype',
     'location', 'specialinstruction',
     'specimen', 'specimenstate', 'specimentype'])
@@ -82,6 +84,9 @@ def main():
     print('FIA -> {0}'.format(repr(fia)))
     print('PHI -> {0}'.format(repr(phi)))
     print('TARGET -> {0}'.format(repr(target)))
+
+    if any(dbname in target.database for dbname in ['aeh', 'cctg', 'mhealth']):
+        TRACK.update(LAB_TRACK)
 
     if 'cctg' in target.database:
         TRACK.update(CCTG_TRACK)
