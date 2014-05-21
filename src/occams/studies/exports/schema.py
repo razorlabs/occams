@@ -133,9 +133,7 @@ class SchemaPlan(ExportPlan):
             row('enrollment', self.name, types.NUMERIC,
                 is_collection=True, is_system=True),
             row('enrollment_ids', self.name, types.NUMERIC,
-                is_collection=True, is_system=True),
-            row('visit_cycles', self.name, types.STRING, is_collection=True,
-                is_system=True)]
+                is_collection=True, is_system=True)]
 
         if self.has_rand:
             knowns.extend([
@@ -147,26 +145,20 @@ class SchemaPlan(ExportPlan):
                     is_system=True)])
 
         knowns.extend([
-            row('form', self.name, types.STRING,
+            row('visit_cycles', self.name, types.STRING, is_collection=True,
+                is_system=True),
+            row('visit_date', self.name, types.DATE, is_system=True),
+            row('visit_id', self.name, types.NUMERIC, is_system=True),
+            row('form_name', self.name, types.STRING,
                 is_required=True, is_system=True),
-            row('publish_date', self.name, types.STRING,
+            row('form_publish_date', self.name, types.STRING,
                 is_required=True, is_system=True),
             row('state', self.name, types.STRING,
                 is_required=True, is_system=True),
-            row('visit_date', self.name, types.DATE, is_system=True),
-            row('visit_id', self.name, types.NUMERIC, is_system=True),
             row('collect_date', self.name, types.DATE,
                 is_required=True, is_system=True),
             row('is_null', self.name, types.BOOLEAN,
-                is_required=True, is_system=True),
-            row('create_date', self.name, types.DATE,
-                is_required=True, is_system=True),
-            row('create_user', self.name, types.STRING,
-                is_required=True, is_system=True),
-            row('modify_date', self.name, types.DATE,
-                is_required=True, is_system=True),
-            row('modify_user', self.name, types.STRING, is_required=True,
-                is_system=True)])
+                is_required=True, is_system=True)])
 
         for column in knowns:
             yield column
@@ -196,23 +188,23 @@ class SchemaPlan(ExportPlan):
                       choices=[(c.name, c.title)
                                for c in itervalues(attribute.choices)])
 
-    def data(self, use_choice_labels=False, expand_collections=False):
-        """
-        Generates a studies report containing the patient's metadata
-        that relates to the form.
+        footer = [
+            row('create_date', self.name, types.DATE,
+                is_required=True, is_system=True),
+            row('create_user', self.name, types.STRING,
+                is_required=True, is_system=True),
+            row('modify_date', self.name, types.DATE,
+                is_required=True, is_system=True),
+            row('modify_user', self.name, types.STRING, is_required=True,
+                is_system=True)]
 
-        Clinical metadadata includes:
-            * site -- Patient's site
-            * pid -- Patient's PID number
-            * enrollment -- The applicable enrollment
-            * cycles - The applicable visit's cycles
+        for column in footer:
+            yield column
 
-        Parameters:
-        schema -- The schema to generate the report for
-
-        Returns:
-        A SQLAlchemy query
-        """
+    def data(self,
+             use_choice_labels=False,
+             expand_collections=False,
+             ignore_private=True):
 
         ids_query = (
             Session.query(models.Schema.id)
@@ -224,10 +216,20 @@ class SchemaPlan(ExportPlan):
             self.name,
             ids=ids,
             expand_collections=expand_collections,
-            use_choice_labels=use_choice_labels)
+            use_choice_labels=use_choice_labels,
+            ignore_private=ignore_private)
 
         query = (
             Session.query(report.c.id.label('id'))
+            .add_column(
+                Session.query(models.Patient.pid)
+                .join(models.Context,
+                      (models.Context.external == u'patient')
+                      & (models.Context.key == models.Patient.id))
+                .filter(models.Context.entity_id == report.c.id)
+                .correlate(report)
+                .as_scalar()
+                .label('pid'))
             .add_column(
                 Session.query(models.Site.name)
                 .select_from(models.Patient)
@@ -239,15 +241,6 @@ class SchemaPlan(ExportPlan):
                 .correlate(report)
                 .as_scalar()
                 .label('site'))
-            .add_column(
-                Session.query(models.Patient.pid)
-                .join(models.Context,
-                      (models.Context.external == u'patient')
-                      & (models.Context.key == models.Patient.id))
-                .filter(models.Context.entity_id == report.c.id)
-                .correlate(report)
-                .as_scalar()
-                .label('pid'))
             .add_column(
                 Session.query(group_concat(models.Study.name, ';'))
                 .select_from(models.Enrollment)
@@ -271,43 +264,7 @@ class SchemaPlan(ExportPlan):
                 .correlate(report)
                 .as_scalar()
                 .label('enrollment_ids'))
-            .add_column(
-                Session.query(models.Visit.id)
-                .select_from(models.Visit)
-                .join(models.Context,
-                      (models.Context.external == u'visit')
-                      & (models.Context.key == models.Visit.id))
-                .filter(models.Context.entity_id == report.c.id)
-                .correlate(report)
-                .as_scalar()
-                .label('visit_id'))
-            .add_column(
-                Session.query(models.Visit.visit_date)
-                .select_from(models.Visit)
-                .join(models.Context,
-                      (models.Context.external == u'visit')
-                      & (models.Context.key == models.Visit.id))
-                .filter(models.Context.entity_id == report.c.id)
-                .correlate(report)
-                .as_scalar()
-                .label('visit_date'))
-            .add_column(
-                Session.query(group_concat(models.Study.title
-                                           + literal_column(u"'('")
-                                           + cast(models.Cycle.week, String)
-                                           + literal_column(u"')'"),
-                                           literal_column(u"';'")))
-                .select_from(models.Visit)
-                .join(models.Visit.cycles)
-                .join(models.Cycle.study)
-                .join(models.Context,
-                      (models.Context.external == u'visit')
-                      & (models.Context.key == models.Visit.id))
-                .filter(models.Context.entity_id == report.c.id)
-                .group_by(models.Context.entity_id)
-                .correlate(report)
-                .as_scalar()
-                .label('visit_cycles')))
+        )
 
         if self.has_rand:
             query = (
@@ -343,6 +300,47 @@ class SchemaPlan(ExportPlan):
                     .correlate(report)
                     .as_scalar()
                     .label('arm_name')))
+
+        query = (
+            query
+            .add_column(
+                Session.query(group_concat(models.Study.title
+                                           + literal_column(u"'('")
+                                           + cast(models.Cycle.week, String)
+                                           + literal_column(u"')'"),
+                                           literal_column(u"';'")))
+                .select_from(models.Visit)
+                .join(models.Visit.cycles)
+                .join(models.Cycle.study)
+                .join(models.Context,
+                      (models.Context.external == u'visit')
+                      & (models.Context.key == models.Visit.id))
+                .filter(models.Context.entity_id == report.c.id)
+                .group_by(models.Context.entity_id)
+                .correlate(report)
+                .as_scalar()
+                .label('visit_cycles'))
+            .add_column(
+                Session.query(models.Visit.id)
+                .select_from(models.Visit)
+                .join(models.Context,
+                      (models.Context.external == u'visit')
+                      & (models.Context.key == models.Visit.id))
+                .filter(models.Context.entity_id == report.c.id)
+                .correlate(report)
+                .as_scalar()
+                .label('visit_id'))
+            .add_column(
+                Session.query(models.Visit.visit_date)
+                .select_from(models.Visit)
+                .join(models.Context,
+                      (models.Context.external == u'visit')
+                      & (models.Context.key == models.Visit.id))
+                .filter(models.Context.entity_id == report.c.id)
+                .correlate(report)
+                .as_scalar()
+                .label('visit_date'))
+        )
 
         query = query.add_columns(
             *[c for c in report.columns if c.name != 'id'])

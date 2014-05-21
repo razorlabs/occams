@@ -25,16 +25,21 @@ class ExportPlan(object):
         """
         raise NotImplemented  # pragma: nocover
 
-    def data(self, use_choice_labels=False, expand_collections=False):
+    def data(self,
+             use_choice_labels=False,
+             expand_collections=False,
+             ignore_private=True):
         """
         Generate export data
 
         Parameters:
         use_choice_labels -- (Optional) Use choice labels instead of codes,
                              default: False
-        expand_collections -- (Optional) Examnd multi-selects to one column per
+        expand_collections -- (Optional) Expand multi-selects to one column per
                               possible choice.
                               default: False
+        ignore_private -- (Optional) De-identity private information
+                          default: True
 
         Returns:
         An iterator of row data

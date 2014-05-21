@@ -65,7 +65,10 @@ class LabPlan(ExportPlan):
             row('aeh_num', self.name, types.STRING, is_system=True)
             ])
 
-    def data(self, use_choice_labels=False, expand_collections=False):
+    def data(self,
+             use_choice_labels=False,
+             expand_collections=False,
+             ignore_private=True):
 
         AliquotLocation = aliased(lab.Location)
         SpecimenLocation = aliased(lab.Location)

@@ -24,17 +24,14 @@ class EnrollmentPlan(ExportPlan):
         return iter([
             row('id', self.name, types.NUMERIC,
                 is_system=True, is_required=True),
+            row('pid', self.name, types.STRING,
+                is_system=True, is_required=True),
+            row('site', self.name, types.STRING,
+                is_system=True, is_required=True),
             row('enrollment_id', self.name, types.NUMERIC,
                 is_system=True, is_required=True),
             row('study', self.name, types.STRING,
                 is_system=True, is_required=True),
-            row('site', self.name, types.STRING,
-                is_system=True, is_required=True),
-            row('pid', self.name, types.STRING,
-                is_system=True, is_required=True),
-            row('our', self.name, types.STRING,
-                is_system=True, is_required=True),
-            row('aeh_num', self.name, types.STRING, is_system=True),
             row('nurse', self.name, types.STRING, is_system=True),
             row('reference_number', self.name, types.STRING, is_system=True),
             row('consent_date', self.name, types.DATE,
@@ -51,18 +48,19 @@ class EnrollmentPlan(ExportPlan):
                 is_system=True)
         ])
 
-    def data(self, use_choice_labels=False, expand_collections=False):
+    def data(self,
+             use_choice_labels=False,
+             expand_collections=False,
+             ignore_private=True):
         CreateUser = aliased(models.User)
         ModifyUser = aliased(models.User)
         query = (
             Session.query(
                 models.Enrollment.id.label('id'),
-                models.Enrollment.id.label('enrollment_id'),  # BBB
-                models.Study.title.label('study'),  # BBB
-                models.Site.name.label('site'),
                 models.Patient.our.label('pid'),
-                models.Patient.our.label('our'),  # BBB
-                models.Patient.legacy_number.label('aeh_num'),  # BBB
+                models.Site.name.label('site'),
+                models.Enrollment.id.label('enrollment_id'),  # BBB
+                models.Study.title.label('study'),
                 models.Patient.nurse.label('nurse'),  # BBB
                 models.Enrollment.reference_number.label('reference_number'),
                 models.Enrollment.consent_date.label('consent_date'),

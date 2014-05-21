@@ -8,14 +8,13 @@ class TestPermissionsAbout(FunctionalFixture):
 
     url = '/exports'
 
-    @data('administrator', 'investigator', 'statistician', 'researcher',
-          'nurse')
+    @data('administrator', 'consumer')
     def test_allowed(self, group):
         environ = self.make_environ(groups=[group])
         response = self.app.get(self.url, extra_environ=environ, status='*')
         self.assertNotEqual(response.status_code, 403)
 
-    @data('assistant', 'student', None)
+    @data(None)
     def test_not_allowed(self, group):
         environ = self.make_environ(groups=[group])
         response = self.app.get(self.url, extra_environ=environ, status='*')
@@ -31,14 +30,13 @@ class TestExportViewPermissionsFaq(FunctionalFixture):
 
     url = '/exports/faq'
 
-    @data('administrator', 'investigator', 'statistician', 'researcher',
-          'nurse')
+    @data('administrator', 'consumer')
     def test_allowed(self, group):
         environ = self.make_environ(groups=[group])
         response = self.app.get(self.url, extra_environ=environ, status='*')
         self.assertNotEqual(response.status_code, 403)
 
-    @data('assistant', 'student', None)
+    @data(None)
     def test_not_allowed(self, group):
         environ = self.make_environ(groups=[group])
         response = self.app.get(self.url, extra_environ=environ, status='*')
@@ -54,14 +52,13 @@ class TestPermissionsAdd(FunctionalFixture):
 
     url = '/exports/add'
 
-    @data('administrator', 'investigator', 'statistician', 'researcher',
-          'nurse')
+    @data('administrator', 'consumer')
     def test_allowed(self, group):
         environ = self.make_environ(groups=[group])
         response = self.app.get(self.url, extra_environ=environ, status='*')
         self.assertNotEqual(response.status_code, 403)
 
-    @data('assistant', 'student', None)
+    @data(None)
     def test_not_allowed(self, group):
         environ = self.make_environ(groups=[group])
         response = self.app.get(self.url, extra_environ=environ, status='*')
@@ -77,14 +74,13 @@ class TestPermissionsStatus(FunctionalFixture):
 
     url = '/exports/status'
 
-    @data('administrator', 'investigator', 'statistician', 'researcher',
-          'nurse')
+    @data('administrator', 'consumer')
     def test_allowed(self, group):
         environ = self.make_environ(groups=[group])
         response = self.app.get(self.url, extra_environ=environ, status='*')
         self.assertNotEqual(response.status_code, 403)
 
-    @data('assistant', 'student', None)
+    @data(None)
     def test_not_allowed(self, group):
         environ = self.make_environ(groups=[group])
         response = self.app.get(self.url, extra_environ=environ, status='*')
@@ -100,15 +96,14 @@ class TestPermissionsStatusJSON(FunctionalFixture):
 
     url = '/exports/status'
 
-    @data('administrator', 'investigator', 'statistician', 'researcher',
-          'nurse')
+    @data('administrator', 'consumer')
     def test_allowed(self, group):
         environ = self.make_environ(groups=[group])
         response = self.app.get(
             self.url, extra_environ=environ, xhr=True, status='*')
         self.assertNotEqual(response.status_code, 403)
 
-    @data('assistant', 'student', None)
+    @data(None)
     def test_not_allowed(self, group):
         environ = self.make_environ(groups=[group])
         response = self.app.get(
@@ -125,15 +120,14 @@ class TestPersmissionsDelete(FunctionalFixture):
 
     url = '/exports/123/delete'
 
-    @data('administrator', 'investigator', 'statistician', 'researcher',
-          'nurse')
+    @data('administrator', 'consumer')
     def test_allowed(self, group):
         environ = self.make_environ(groups=[group])
         response = self.app.post(
             self.url, extra_environ=environ, xhr=True, status='*')
         self.assertNotEqual(response.status_code, 403)
 
-    @data('assistant', 'student', None)
+    @data(None)
     def test_not_allowed(self, group):
         environ = self.make_environ(groups=[group])
         response = self.app.post(
@@ -150,15 +144,14 @@ class TestPersmissionsCodebook(FunctionalFixture):
 
     url = '/exports/codebook'
 
-    @data('administrator', 'investigator', 'statistician', 'researcher',
-          'nurse')
+    @data('administrator', 'consumer')
     def test_allowed(self, group):
         environ = self.make_environ(groups=[group])
         response = self.app.get(
             self.url, extra_environ=environ, status='*')
         self.assertNotEqual(response.status_code, 403)
 
-    @data('assistant', 'student', None)
+    @data(None)
     def test_not_allowed(self, group):
         environ = self.make_environ(groups=[group])
         response = self.app.get(
@@ -175,15 +168,14 @@ class TestPersmissionsCodebookJSON(FunctionalFixture):
 
     url = '/exports/codebook'
 
-    @data('administrator', 'investigator', 'statistician', 'researcher',
-          'nurse')
+    @data('administrator', 'consumer')
     def test_allowed(self, group):
         environ = self.make_environ(groups=[group])
         response = self.app.get(
             self.url, extra_environ=environ, xhr=True, status='*')
         self.assertNotEqual(response.status_code, 403)
 
-    @data('assistant', 'student', None)
+    @data(None)
     def test_not_allowed(self, group):
         environ = self.make_environ(groups=[group])
         response = self.app.get(
@@ -200,15 +192,14 @@ class TestPersmissionsCodebookDownload(FunctionalFixture):
 
     url = '/exports/codebook/download'
 
-    @data('administrator', 'investigator', 'statistician', 'researcher',
-          'nurse')
+    @data('administrator', 'consumer')
     def test_allowed(self, group):
         environ = self.make_environ(groups=[group])
         response = self.app.get(
             self.url, extra_environ=environ, status='*')
         self.assertNotEqual(response.status_code, 403)
 
-    @data('assistant', 'student', None)
+    @data(None)
     def test_not_allowed(self, group):
         environ = self.make_environ(groups=[group])
         response = self.app.get(
@@ -225,15 +216,14 @@ class TestPersmissionsDownload(FunctionalFixture):
 
     url = '/exports/123/download'
 
-    @data('administrator', 'investigator', 'statistician', 'researcher',
-          'nurse')
+    @data('administrator', 'consumer')
     def test_allowed(self, group):
         environ = self.make_environ(groups=[group])
         response = self.app.get(
             self.url, extra_environ=environ, status='*')
         self.assertNotEqual(response.status_code, 403)
 
-    @data('assistant', 'student', None)
+    @data(None)
     def test_not_allowed(self, group):
         environ = self.make_environ(groups=[group])
         response = self.app.get(

@@ -42,8 +42,8 @@ class PidPlan(ExportPlan):
         name = self.name
         knowns = [
             row('id', name, types.NUMERIC, is_required=True, is_system=True),
-            row('site', name, types.STRING, is_required=True, is_system=True),
             row('pid', name, types.STRING, is_required=True, is_system=True),
+            row('site', name, types.STRING, is_required=True, is_system=True),
             row('our', name, types.STRING, is_system=True),
             row('aeh_num', name, types.STRING, is_system=True),
             row('early_id', name, types.STRING, is_system=True),
@@ -64,8 +64,10 @@ class PidPlan(ExportPlan):
             yield row(reftype.name, name, types.STRING,
                       is_system=True, is_collection=True)
 
-    def data(self, use_choice_labels=False, expand_collections=False):
-
+    def data(self,
+             use_choice_labels=False,
+             expand_collections=False,
+             ignore_private=True):
         query = (
             Session.query(
                 models.Patient.id.label('id'),

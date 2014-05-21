@@ -57,7 +57,7 @@
           <div class="panel-body">
             <p i18n:translate="">
               No because randomization data is intended for analysts only and
-              therefore considered classified. If you need acess please contact
+              therefore considered classified. If you need access please contact
               your system administrator.
             </p>
           </div>
@@ -72,10 +72,10 @@
           <div class="panel-body">
             <p i18n:translate="">
               You can download your exports anywhere you can log in to OCCAMS.
-              The system cannot control your export once it downloaded, so please
-              follow proper data safety procedures such as keeping data on your
-              machine and refrain from emailing it via public services such as
-              Gmail, Yahoo Mail, or Outlook.
+              The system cannot control your export once it is downloaded, so please
+              follow proper data safety procedures such as encrypting your
+              hard drive and keeping data on your machine. In addition, refrain from emailing
+              it via public services such as Gmail, Yahoo Mail, or Outlook.
             </p>
           </div>
         </div>
