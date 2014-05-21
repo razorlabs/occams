@@ -82,13 +82,13 @@ def install(suid, supw, from_url, to_url):
     """.format(**to_url.translate_connect_args()))
 
     if 'avrc' in from_url.database:
-        products = ('studies', 'databastore', 'lab', 'partner')
+        products = ('studies', 'datastore', 'lab', 'partner')
     elif 'cctg' in from_url.database:
-        products = ('studies', 'databastore', 'lab', 'calllog')
+        products = ('studies', 'datastore', 'lab', 'calllog')
     elif 'mhealth' in from_url.database:
-        products = ('studies', 'databastore', 'lab')
+        products = ('studies', 'datastore', 'lab')
     elif 'addis' in from_url.database:
-        products = ('studies', 'databastore')
+        products = ('studies', 'datastore')
     else:
         raise Exception('Cannot recognize product')
 
