@@ -51,8 +51,8 @@ def build_report(session,
     query = (
         session.query(
             models.Entity.id.label('id'),
-            models.Schema.name.label('form'),
-            models.Schema.publish_date.label('publish_date'),
+            models.Schema.name.label('form_name'),
+            models.Schema.publish_date.label('form_publish_date'),
             models.State.name.label('state'),
             models.Entity.collect_date.label('collect_date'),
             cast(models.Entity.is_null, Integer).label('is_null'))
@@ -93,6 +93,11 @@ def build_report(session,
             # Cast datetimes to match their attribute types
             conv = to_date if column.type == 'date' else to_datetime
             value_column = conv(Value._value)
+
+        if column.type == 'blob':
+            value_column = case(
+                whens=[((value_column != null()), literal(u'[FILE]'))],
+                else_=null())
 
         filter_expression = (
             (models.Entity.id == Value.entity_id)
