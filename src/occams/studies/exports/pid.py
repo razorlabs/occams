@@ -42,8 +42,8 @@ class PidPlan(ExportPlan):
         name = self.name
         knowns = [
             row('id', name, types.NUMERIC, is_required=True, is_system=True),
-            row('site', name, types.STRING, is_required=True, is_system=True),
             row('pid', name, types.STRING, is_required=True, is_system=True),
+            row('site', name, types.STRING, is_required=True, is_system=True),
             row('our', name, types.STRING, is_system=True),
             row('aeh_num', name, types.STRING, is_system=True),
             row('early_id', name, types.STRING, is_system=True),

@@ -21,13 +21,10 @@ class VisitPlan(ExportPlan):
         return iter([
             row('id', self.name, types.NUMERIC,
                 is_system=True, is_required=True),
-            row('site', self.name, types.STRING,
-                is_required=True, is_system=True),
             row('pid', self.name, types.STRING,
                 is_required=True, is_system=True),
-            row('our', self.name, types.STRING,
+            row('site', self.name, types.STRING,
                 is_required=True, is_system=True),
-            row('aeh_num', self.name, types.STRING, is_system=True),
             row('visit_date', self.name, types.DATE,
                 is_required=True, is_system=True),
             row('cycle', self.name, types.STRING, is_system=True),
@@ -51,10 +48,8 @@ class VisitPlan(ExportPlan):
         query = (
             Session.query(
                 models.Visit.id.label('id'),
-                models.Site.name.label('site'),
                 models.Patient.our.label('pid'),
-                models.Patient.our.label('our'),
-                models.Patient.legacy_number.label('aeh_num'),
+                models.Site.name.label('site'),
                 models.Visit.visit_date.label('visit_date'),
                 models.Cycle.week.label('cycle'),
                 models.Study.title.label('study_name'),
