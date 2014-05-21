@@ -196,7 +196,6 @@
         <p class="muted credit">
           v<span tal:define="pkg import:occams.studies">${pkg.__version__}</span>.
           Developed by <a href="http://cfar.ucsd.edu/bit">UCSD Bit Core</a>.
-          Code licensed under <a href="http://opensource.org/licenses/MIT">MIT License</a>
         </p>
       </div>
     </footer>
