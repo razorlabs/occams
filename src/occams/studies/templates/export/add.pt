@@ -97,7 +97,7 @@
           <label>
             <input type="radio" name="${field_name}" value="false"
                 checked="${cvalue == 'false'}" />
-            <span tal:omit-tag="" i18n:translate="">Single column with comma-delimted values.</span>
+            <span tal:omit-tag="" i18n:translate="">Single column with comma-delimited values.</span>
           </label>
         </div>
         <div class="radio">
