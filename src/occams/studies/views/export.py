@@ -3,21 +3,28 @@ import os
 import uuid
 
 from babel.dates import format_datetime
-import colander
 from humanize import naturalsize
-from pyramid_deform import CSRFSchema
 from pyramid.i18n import get_localizer, negotiate_locale_name
 from pyramid.httpexceptions import (
     HTTPFound, HTTPNotFound, HTTPOk, HTTPForbidden)
 from pyramid.response import FileResponse
+from pyramid.settings import asbool
 from pyramid.view import view_config
 import six
 from sqlalchemy import orm
 import transaction
+from wtforms import (
+    Form,
+    RadioField,
+    SelectMultipleField,
+    widgets,
+    validators
+)
 
 from .. import _, log, models, Session, exports
 from ..tasks import celery,  make_export
 from ..widgets.pager import Pager
+from ..security import CSRF
 
 
 @view_config(
@@ -42,38 +49,40 @@ def faq(request):
     return {}
 
 
-@colander.deferred
-def contents_validator(node, kw):
-    """
-    Deferred validator to determine the schema choices at request-time.
-    """
-    return colander.All(
-        colander.Length(min=1),
-        colander.ContainsOnly(kw['allowed_names']), )
-
-
-class ExportCheckoutSchema(CSRFSchema):
+class ExportCheckoutForm(Form):
     """
     Export checkout serialization schema
     """
 
-    contents = colander.SchemaNode(
-        colander.Set(),
-        # Currently does nothing as colander 1.0b1 is hard-coded to "Required"
-        missing_msg=_(u'Please select an item'),
-        validator=contents_validator,
-        default=[],
-        missing=None)
+    class Meta(object):
+        csrf = True
+        csrf_class = CSRF
 
-    expand_collections = colander.SchemaNode(
-        colander.Boolean(),
-        default=False,
-        missing=None)
+    contents = SelectMultipleField(
+        widget=widgets.ListWidget(prefix_label=False),
+        option_widget=widgets.CheckboxInput(),
+        validators=[
+            validators.required(_(u'Please select an item')),
+            validators.Length(min=1),
+        ])
 
-    use_choice_labels = colander.SchemaNode(
-        colander.Boolean(),
-        default=False,
-        missing=None)
+    expand_collections = RadioField(
+        label=_(u'Select list style.'),
+        choices=[
+            (False, _(u'Single column with comma-delimited values.')),
+            (True, _(u'Separate column for each possible answer choice.'))
+        ],
+        coerce=asbool,
+        default=False)
+
+    use_choice_labels = RadioField(
+        label=_(u'Select answer choice style.'),
+        choices=[
+            (False, _(u'Use codes.')),
+            (True, _(u'Use labels.'))
+        ],
+        coerce=asbool,
+        default=False)
 
 
 @view_config(
@@ -90,58 +99,42 @@ def add(request):
     isn't left with an unresponsive page.
     """
 
-    errors = None
-    cstruct = None
     exportables = exports.list_all(include_rand=False)
     limit = request.registry.settings.get('app.export.limit')
     exceeded = limit is not None and query_exports(request).count() > limit
 
-    cschema = ExportCheckoutSchema().bind(
-        request=request,
-        limit_exceeded=exceeded,
-        allowed_names=exportables.keys())
+    form = ExportCheckoutForm(request.POST, meta={'csrf_context': request.session})
+    form.contents.choices = [(k, v.title) for k, v in six.iteritems(exportables)]
 
-    if not exceeded and request.method == 'POST':
-        try:
-            cstruct = request.POST.mixed()
-            cstruct.setdefault('contents', set())
-            # Force list of contents
-            if isinstance(cstruct['contents'], six.string_types):
-                cstruct['contents'] = set([cstruct['contents']])
-            appstruct = cschema.deserialize(cstruct)
-        except colander.Invalid as e:
-            errors = e.asdict()
-        else:
-            task_id = six.u(str(uuid.uuid4()))
-            Session.add(models.Export(
-                name=task_id,
-                expand_collections=appstruct['expand_collections'],
-                use_choice_labels=appstruct['use_choice_labels'],
-                owner_user=(Session.query(models.User)
-                            .filter_by(key=request.authenticated_userid)
-                            .one()),
-                contents=[exportables[k].to_json()
-                          for k in appstruct['contents']]))
+    if request.method == 'POST' and not exceeded and form.validate():
+        task_id = six.u(str(uuid.uuid4()))
+        Session.add(models.Export(
+            name=task_id,
+            expand_collections=form.expand_collections.data,
+            use_choice_labels=form.use_choice_labels.data,
+            owner_user=(Session.query(models.User)
+                        .filter_by(key=request.authenticated_userid)
+                        .one()),
+            contents=[exportables[k].to_json() for k in form.contents.data]))
 
-            def apply_after_commit(success):
-                if success:
-                    make_export.apply_async(
-                        args=[task_id],
-                        task_id=task_id,
-                        countdown=4)
+        def apply_after_commit(success):
+            if success:
+                make_export.apply_async(
+                    args=[task_id],
+                    task_id=task_id,
+                    countdown=4)
 
-            # Avoid race-condition by executing the task after succesful commit
-            transaction.get().addAfterCommitHook(apply_after_commit)
+        # Avoid race-condition by executing the task after succesful commit
+        transaction.get().addAfterCommitHook(apply_after_commit)
 
-            msg = _(u'Your request has been received!')
-            request.session.flash(msg, 'success')
+        msg = _(u'Your request has been received!')
+        request.session.flash(msg, 'success')
 
-            return HTTPFound(location=request.route_path('export_status'))
+        return HTTPFound(location=request.route_path('export_status'))
 
     return {
-        'cstruct': cstruct or cschema.serialize(),
+        'form': form,
         'exceeded': exceeded,
-        'errors': errors,
         'limit': limit,
         'exportables': exportables
     }

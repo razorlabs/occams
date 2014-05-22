@@ -9,9 +9,9 @@ from wtforms import (
     widgets
 )
 from wtforms.fields.html5 import DateField
+from wtforms.csrf.session import SessionCSRF
 
 from occams.studies import _
-from occams.studies.utils.form import CSRFForm
 
 
 class PatientSubForm(Form):
@@ -32,7 +32,11 @@ class ScheduleSubForm(Form):
         label=_(u'Schedule'))
 
 
-class EventAddForm(CSRFForm):
+class EventAddForm(Form):
+
+    class Meta(object):
+        csrf = True
+        csrf_class = SessionCSRF
 
     patient = FormField(
         PatientSubForm,

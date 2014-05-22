@@ -2,6 +2,7 @@ from pyramid.httpexceptions import HTTPFound, HTTPNotFound
 from pyramid.view import view_config
 from sqlalchemy import func, orm, sql
 from wtforms import (
+    Form,
     IntegerField,
     StringField,
     TextAreaField,
@@ -11,8 +12,8 @@ from wtforms import (
 )
 from wtforms.fields.html5 import DateField
 
-from occams.studies import _, models, Session
-from occams.studies.utils.form import CSRFForm
+from .. import _, models, Session
+from ..security import CSRF
 
 
 def get_study(request):
@@ -36,7 +37,11 @@ def is_unique_name(form, field):
         raise ValidationError(_(u'"%s" already exists' % form.title.data))
 
 
-class StudyForm(CSRFForm):
+class StudyForm(Form):
+
+    class Meta(object):
+        csrf = True
+        csrf_class = CSRF
 
     id = IntegerField(widget=widgets.HiddenInput())
 
@@ -72,7 +77,11 @@ class StudyForm(CSRFForm):
         validators=[validators.required()])
 
 
-class ScheduleForm(CSRFForm):
+class ScheduleForm(Form):
+
+    class Meta(object):
+        csrf = True
+        csrf_class = CSRF
 
     id = IntegerField(widget=widgets.HiddenInput())
 

@@ -1,8 +1,5 @@
-import colander
-from pyramid.httpexceptions import HTTPFound, HTTPNotFound
+from pyramid.httpexceptions import HTTPNotFound
 from pyramid.view import view_config
-from sqlalchemy import bindparam, or_, func, orm, sql
-from webhelpers import paginate
 
 from occams.studies import _, log, models, Session
 

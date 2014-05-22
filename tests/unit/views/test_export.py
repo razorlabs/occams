@@ -17,6 +17,7 @@ class TestAdd(IntegrationFixture):
         """
         from datetime import date
         from pyramid import testing
+        from webob.multidict import MultiDict
         from tests import track_user
         from occams.studies import Session, models
 
@@ -24,7 +25,7 @@ class TestAdd(IntegrationFixture):
         track_user('joe')
 
         # No schemata
-        request = testing.DummyRequest()
+        request = testing.DummyRequest(post=MultiDict())
         response = self.view_func(request)
         self.assertEquals(len(response['exportables']), 4)  # Only pre-cooked
 
@@ -33,14 +34,14 @@ class TestAdd(IntegrationFixture):
             name=u'vitals', title=u'Vitals')
         Session.add(schema)
         Session.flush()
-        request = testing.DummyRequest()
+        request = testing.DummyRequest(post=MultiDict())
         response = self.view_func(request)
         self.assertEquals(len(response['exportables']), 4)
 
         # Published schemata
         schema.publish_date = date.today()
         Session.flush()
-        request = testing.DummyRequest()
+        request = testing.DummyRequest(post=MultiDict())
         response = self.view_func(request)
         self.assertEquals(len(response['exportables']), 5)
 
@@ -53,7 +54,7 @@ class TestAdd(IntegrationFixture):
         request = testing.DummyRequest(
             post=MultiDict())
         response = self.view_func(request)
-        self.assertIsNotNone(response['errors']['contents'])
+        self.assertIsNotNone(response['form'].errors['contents'])
 
     def test_post_non_existent_schema(self):
         """
@@ -64,7 +65,7 @@ class TestAdd(IntegrationFixture):
         request = testing.DummyRequest(
             post=MultiDict([('contents', 'does_not_exist')]))
         response = self.view_func(request)
-        self.assertIsNotNone(response['errors']['contents'])
+        self.assertIsNotNone(response['form'].errors['contents'])
 
     def test_post_invalid_csrf(self):
         """
@@ -75,7 +76,7 @@ class TestAdd(IntegrationFixture):
         request = testing.DummyRequest(
             post=MultiDict([('csrf_token', 'd3v10us')]))
         response = self.view_func(request)
-        self.assertIsNotNone(response['errors']['csrf_token'])
+        self.assertIsNotNone(response['form'].errors['csrf_token'])
 
     # Don't actually invoke the subtasks
     @mock.patch('occams.studies.tasks.make_export')
@@ -138,7 +139,7 @@ class TestAdd(IntegrationFixture):
 
         # The renderer should know about it
         self.config.testing_securitypolicy(userid='joe')
-        request = testing.DummyRequest()
+        request = testing.DummyRequest(post=MultiDict())
         response = self.view_func(request)
         self.assertTrue(response['exceeded'])
 
