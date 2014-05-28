@@ -27,7 +27,7 @@ class TestAdd(IntegrationFixture):
         # No schemata
         request = testing.DummyRequest(post=MultiDict())
         response = self.view_func(request)
-        self.assertEquals(len(response['exportables']), 4)  # Only pre-cooked
+        self.assertEquals(len(response['exportables']), 3)  # Only pre-cooked
 
         # Not-yet-published schemata
         schema = models.Schema(
@@ -36,14 +36,14 @@ class TestAdd(IntegrationFixture):
         Session.flush()
         request = testing.DummyRequest(post=MultiDict())
         response = self.view_func(request)
-        self.assertEquals(len(response['exportables']), 4)
+        self.assertEquals(len(response['exportables']), 3)
 
         # Published schemata
         schema.publish_date = date.today()
         Session.flush()
         request = testing.DummyRequest(post=MultiDict())
         response = self.view_func(request)
-        self.assertEquals(len(response['exportables']), 5)
+        self.assertEquals(len(response['exportables']), 4)
 
     def test_post_empty(self):
         """

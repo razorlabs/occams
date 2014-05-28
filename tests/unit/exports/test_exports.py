@@ -9,7 +9,7 @@ class TestListAll(IntegrationFixture):
         from occams.studies import exports
         exportables = exports.list_all()
         self.assertItemsEqual(
-            ['pid', 'enrollment', 'SpecimenAliquot', 'visit'],
+            ['pid', 'enrollment', 'visit'],
             exportables.keys())
 
 
