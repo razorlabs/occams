@@ -123,6 +123,12 @@ class TestTrigger(unittest.TestCase):
         truncate_all(cls.src_conn)
         truncate_all(cls.dst_conn)
 
+        # Add because we truncated all tables...
+        with cls.dst_conn.begin():
+            for state in ('complete', 'pending-review', 'pending-entry'):
+                populate(cls.dst_conn, cls.dst_metadata.tables['state'],
+                         overrides={'state.name': state})
+
     def _getRecord(self, src_table, src_id, dst_table=None):
         if dst_table is None:
             if src_table.name in set(['text', 'blob', 'integer', 'datetime',
@@ -201,7 +207,18 @@ class TestTrigger(unittest.TestCase):
             dst_val = dst_data[column.name] \
                 if column.name in dst_data else None
 
-            if column.foreign_keys and src_val is not None:
+            # State is an FK in the new system
+            if src_table.name == 'entity' and column.name == 'state':
+                dst_state_table = self.dst_metadata.tables['state']
+                dst_state_data = (
+                    self.dst_conn.execute(
+                        dst_state_table.select()
+                        .where(dst_state_table.c.id == dst_data['state_id']))
+                    .fetchone())
+                dst_val = dst_state_data['name']
+
+            # Derefence all other FKs
+            elif column.foreign_keys and src_val is not None:
                 src_dep_table = list(column.foreign_keys)[0].column.table
                 src_dep_data, dst_dep_data = \
                     self._getRecord(src_dep_table, [src_val])
@@ -303,6 +320,44 @@ class TestTrigger(unittest.TestCase):
                                ignore=['schema.state',
                                        'schema.is_inline',
                                        'entity.state'])
+
+        # Deletes
+        self.src_conn.execute(
+            src_table.delete()
+            .where(and_(*[c == i for c, i in zip(src_table.primary_key.columns,
+                                                 src_id)])))
+        src_data, dst_data = self._getRecord(src_table, src_id)
+        self.assertIsNone(src_data)
+        self.assertIsNone(dst_data)
+
+    @data('complete', 'pending-entry', 'pending-review')
+    def test_state_supported(self, state):
+        """
+        It should properly transfer supported state data
+        """
+        src_table = self.src_metadata.tables['entity']
+        dst_table = self.dst_metadata.tables['entity']
+
+        overrides = {
+            'entity.state': state,
+            'schema.state': 'published',
+            'schema.storage': 'eav',
+            'schema.is_inline': False,
+            'schema.base_schema_id': None,
+        }
+
+        # Inserts
+        with self.src_conn.begin():
+            src_id = populate(self.src_conn, src_table, overrides=overrides)
+        src_data, dst_data = self._getRecord(src_table, src_id)
+        self.assertRecordEqual(src_table, src_data, dst_table, dst_data)
+
+        # Updates
+        with self.src_conn.begin():
+            src_id = populate(self.src_conn, src_table,
+                              overrides=overrides, id=src_id)
+        src_data, dst_data = self._getRecord(src_table, src_id)
+        self.assertRecordEqual(src_table, src_data, dst_table, dst_data)
 
         # Deletes
         self.src_conn.execute(

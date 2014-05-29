@@ -16,7 +16,7 @@ CREATE FOREIGN TABLE entity_ext (
   , description     TEXT
 
   , schema_id       INTEGER NOT NULL
-  , state_id        INTEGER NOT NULL
+  , state_id        INTEGER
   , collect_date    DATE NOT NULL
   , is_null         BOOLEAN NOT NULL
 
@@ -50,7 +50,7 @@ CREATE FOREIGN TABLE state_ext (
   , revision        INTEGER NOT NULL
 )
 SERVER trigger_target
-OPTIONS (table_name 'entity');
+OPTIONS (table_name 'state');
 
 
 --
@@ -69,16 +69,46 @@ CREATE OR REPLACE FUNCTION ext_entity_id(id INTEGER) RETURNS SETOF integer AS $$
                                            WHERE "object"."value" = $1)
                                           ,$1))
       ;
-    END;
+  END;
 $$ LANGUAGE plpgsql;
 
 
+CREATE OR REPLACE FUNCTION ext_state_id(state entity_state) RETURNS SETOF integer AS $$
+  DECLARE
+    state_str varchar;
+  BEGIN
+
+    state_str := $1::varchar;
+
+    IF state_str = 'not-done' THEN
+      RETURN;
+    END IF;
+
+    IF NOT EXISTS(SELECT 1 FROM "state_ext" WHERE name = state_str) THEN
+      RAISE EXCEPTION 'state ''%'' not found in external', state_str;
+    END IF;
+
+    RETURN QUERY
+      SELECT "state_ext".id
+      FROM "state_ext"
+      WHERE name = state_str
+      ;
+  END;
+$$ LANGUAGE plpgsql;
+
+
+
 CREATE OR REPLACE FUNCTION entity_mirror() RETURNS TRIGGER AS $$
+  DECLARE
+    v_state_id int;
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
 
         IF NOT EXISTS(SELECT 1 FROM schema where id = NEW.schema_id AND is_inline) THEN
+
+          -- Get the state before trying anything so we don't waste ids
+          v_state_id := ext_state_id(NEW.state);
 
           PERFORM dblink_connect('trigger_target');
           INSERT INTO entity_ext (
@@ -106,8 +136,8 @@ CREATE OR REPLACE FUNCTION entity_mirror() RETURNS TRIGGER AS $$
             , ext_schema_id(NEW.schema_id)
             , NEW.collect_date
             -- don't worry about mapping since old states are a subset of the new states
-            , (SELECT id FROM "state_ext" WHERE name = NEW.state::text)
-            , FALSE
+            , v_state_id
+            , (NEW.state::varchar = 'not-done')
             , NEW.create_date
             , ext_user_id(NEW.create_user_id)
             , NEW.modify_date
@@ -124,14 +154,17 @@ CREATE OR REPLACE FUNCTION entity_mirror() RETURNS TRIGGER AS $$
         DELETE FROM entity_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
       WHEN 'UPDATE' THEN
+
+        v_state_id := ext_state_id(NEW.state);
+
         UPDATE entity_ext
         SET name = NEW.name
           , title = NEW.title
           , description = NEW.description
           , schema_id = ext_schema_id(NEW.schema_id)
           , collect_date = NEW.collect_date
-          , state_id = (SELECT id FROM "state_ext" WHERE name = NEW.state::text)
-          , is_null = FALSE
+          , state_id = v_state_id
+          , is_null = (NEW.state::varchar = 'not-done')
           , create_date = NEW.create_date
           , create_user_id = ext_user_id(NEW.create_user_id)
           , modify_date = NEW.modify_date

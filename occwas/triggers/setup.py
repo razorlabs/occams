@@ -89,6 +89,8 @@ def install(suid, supw, from_url, to_url):
         products = ('studies', 'datastore', 'lab')
     elif 'addis' in from_url.database:
         products = ('studies', 'datastore')
+    elif 'test' in from_url.database:
+        products = ('studies', 'datastore', 'lab', 'partner')
     else:
         raise Exception('Cannot recognize product')
 
