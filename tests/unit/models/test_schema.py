@@ -67,6 +67,22 @@ def test_schema_defaults():
 
 
 @with_setup(begin_func, rollback_func)
+def test_schema_invalid_regexp_name():
+    """
+    It should prevent invalid names (See RE_VALID_NAME)
+    """
+    from datetime import date
+    from occams.datastore import models
+    from tests import assert_raises
+    with assert_raises(ValueError):
+        Session.add(models.Schema(
+            name='555SomeForm',
+            title=u'Foo',
+            publish_date=date(2014, 3, 31)))
+        Session.flush()
+
+
+@with_setup(begin_func, rollback_func)
 def test_schema_unique_case_insensitive():
     """
     It should enforce case-insensitive schemata
@@ -274,6 +290,52 @@ def test_attribute_defaults():
     Session.flush()
     count = Session.query(models.Attribute).count()
     assert_equals(count, 1, 'Found more than one entry')
+
+
+@with_setup(begin_func, rollback_func)
+def test_attributea_invalid_regexp_name():
+    """
+    It should prevent invalid attribute names (See RE_VALID_NAME)
+    """
+    from datetime import date
+    from occams.datastore import models
+    from tests import assert_raises
+    schema = models.Schema(
+        name='SomeForm',
+        title=u'Foo',
+        publish_date=date(2014, 3, 31))
+    Session.add(schema)
+    Session.flush()
+
+    with assert_raises(ValueError):
+        schema.attributes['5myattr'] = models.Attribute(
+            name=u'5myattr',
+            title=u'My Attribute',
+            type=u'string',
+            order=1)
+
+
+@with_setup(begin_func, rollback_func)
+def test_attributea_invalid_reserved_name():
+    """
+    It should prevent reserved words as attribute names
+    """
+    from datetime import date
+    from occams.datastore import models
+    from tests import assert_raises
+    schema = models.Schema(
+        name='SomeForm',
+        title=u'Foo',
+        publish_date=date(2014, 3, 31))
+    Session.add(schema)
+    Session.flush()
+
+    with assert_raises(ValueError):
+        schema.attributes['while'] = models.Attribute(
+            name=u'while',
+            title=u'My Attribute',
+            type=u'string',
+            order=1)
 
 
 @with_setup(begin_func, rollback_func)

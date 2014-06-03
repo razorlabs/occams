@@ -9,6 +9,7 @@ import re
 
 import six
 from sqlalchemy import(
+    cast,
     Table, Column,
     PrimaryKeyConstraint,
     CheckConstraint, UniqueConstraint, ForeignKeyConstraint, Index,
@@ -22,6 +23,33 @@ from . import DataStoreModel as Model
 from .metadata import Referenceable, Describeable, Modifiable
 from .auditing import Auditable
 from ..utils.sql import CaseInsensitive
+
+
+RE_VALID_NAME = re.compile(r'^[a-z][a-z0-9_]*$', re.I)
+
+
+RESERVED_WORDS = frozenset(
+    # Python keywords
+    # https://docs.python.org/3.4/reference/lexical_analysis.html#keywords
+    """
+    False      class      finally    is         return
+    None       continue   for        lambda     try
+    True       def        from       nonlocal   while
+    and        del        global     not        with
+    as         elif       if         or         yield
+    assert     else       import     pass
+    break      except     in         raise
+    """
+    # Additional black-listed names
+    """
+    Data     Float     Int     Numeric     Oxphys
+    array     close     float     int     input
+    open     range     type     write     zeros
+    acos     asin     atan     cos     e
+    exp     fabs     floor     log     log10
+    pi     sin     sqrt     tan
+    """
+    .split())
 
 
 def checksum(*args):
@@ -137,6 +165,9 @@ class Schema(Model, Referenceable, Describeable, Modifiable, Auditable):
 
     __tablename__ = 'schema'
 
+    # Override for max length of 32 characters
+    name = Column(String(32), nullable=False)
+
     categories = relationship(
         Category,
         secondary=schema_category_table,
@@ -176,6 +207,12 @@ class Schema(Model, Referenceable, Describeable, Modifiable, Auditable):
             if attribute.is_private:
                 return True
         return False
+
+    @validates('name')
+    def valid_name(self, key, name):
+        if not RE_VALID_NAME.match(name):
+            raise ValueError('Invalid name: "%s"' % name)
+        return name
 
     @declared_attr
     def __table_args__(cls):
@@ -274,6 +311,15 @@ class Section(Model, Referenceable, Describeable, Modifiable, Auditable):
 
     order = Column(Integer, nullable=False)
 
+    @validates('schema')
+    def validate_attribute(self, key, schema):
+        """
+        Switches all attributes to the assigned schema
+        """
+        for attribute in six.itervalues(self.attributes):
+            attribute.schema = schema
+        return schema
+
     @declared_attr
     def __table_args__(cls):
         return (
@@ -286,15 +332,6 @@ class Section(Model, Referenceable, Describeable, Modifiable, Auditable):
                              name='uq_%s_name' % cls.__tablename__),
             UniqueConstraint('schema_id', 'order',
                              name='uq_%s_order' % cls.__tablename__))
-
-    @validates('schema')
-    def validate_attribute(self, key, schema):
-        """
-        Switches all attributes to the assigned schema
-        """
-        for attribute in six.itervalues(self.attributes):
-            attribute.schema = schema
-        return schema
 
     def __copy__(self):
         keys = ('name', 'title', 'description', 'order')
@@ -349,6 +386,9 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
     """
 
     __tablename__ = 'attribute'
+
+    # Overide for maximum character lenght of 20
+    name = Column(String(20), nullable=False)
 
     schema_id = Column(Integer, nullable=False,)
 
@@ -414,6 +454,25 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
 
     order = Column(Integer, nullable=False, doc='Display order')
 
+    @validates('name')
+    def validate_name(self, key, name):
+        if not RE_VALID_NAME.match(name):
+            raise ValueError('Invalid name: "%s"' % name)
+        if name in RESERVED_WORDS:
+            raise ValueError(
+                'Cannot use reserved word as attribute name: %s' % name)
+        return name
+
+    @validates('section')
+    def validate_section(self, key, section):
+        """
+        Sets the schema of the attribute to the assigned section
+        This happens when a section is assigned directly to an attribute.
+        Need to switch over to the section's schema.
+        """
+        self.schema = section.schema
+        return section
+
     @declared_attr
     def __table_args__(cls):
         return (
@@ -457,16 +516,6 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
         for choice in six.itervalues(self.choices):
             duplicate.choices[choice.name] = deepcopy(choice)
         return duplicate
-
-    @validates('section')
-    def validate_section(self, key, section):
-        """
-        Sets the schema of the attribute to the assigned section
-        This happens when a section is assigned directly to an attribute.
-        Need to switch over to the section's schema.
-        """
-        self.schema = section.schema
-        return section
 
     @classmethod
     def from_json(cls, data):
@@ -531,6 +580,9 @@ class Choice(Model, Referenceable, Describeable, Modifiable, Auditable):
 
     __tablename__ = 'choice'
 
+    # Override for maximum character lenght of 8
+    name = Column(String(8), nullable=False)
+
     attribute_id = Column(Integer, nullable=False,)
 
     attribute = relationship(
@@ -556,9 +608,6 @@ class Choice(Model, Referenceable, Describeable, Modifiable, Auditable):
                              name='uq_%s_name' % cls.__tablename__),
             UniqueConstraint('attribute_id', 'order',
                              name='uq_%s_order' % cls.__tablename__))
-            # XXX: this is alsmost impossible to do in a database-agnostic way
-            #CheckConstraint("name ~ '^[0-9]+$'",
-                            #name='ck_%s_numeric_name' % cls.__tablename__))
 
     def __copy__(self):
         keys = ('name', 'title', 'description', 'order')
@@ -585,3 +634,5 @@ class Choice(Model, Referenceable, Describeable, Modifiable, Auditable):
             'name': self.name,
             'title': self.title,
             'order': self.order}
+
+CheckConstraint(cast(Choice.name, Integer), name='ck_choice_numeric_name')
