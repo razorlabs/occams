@@ -559,5 +559,6 @@ class Choice(Model, Referenceable, Describeable, Modifiable, Auditable):
             'order': self.order}
 
 
+# It's OK if this errors out in PG since that means the constraint failed
 CheckConstraint(cast(Choice.name, Integer) != null(),
                 name='ck_choice_numeric_name')
