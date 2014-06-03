@@ -4,7 +4,6 @@ Metadata definitions
 
 from copy import copy, deepcopy
 from datetime import datetime
-import hashlib
 import re
 
 import six
@@ -50,77 +49,6 @@ RESERVED_WORDS = frozenset(
     pi     sin     sqrt     tan
     """
     .split())
-
-
-def checksum(*args):
-    """
-    Returns a checksum of the combined arguments
-    """
-    # Finds any unicode whitespace in a string
-    rex = re.compile(r'\s+', re.MULTILINE | re.UNICODE)
-
-    # Condense all whitespace and strip trailing whitespace
-    def condense_whitespace(value):
-        if not isinstance(value, six.string_types):
-            value = str(value)
-        return rex.sub(u' ', value).strip()
-
-    nonnulls = six.moves.filter(lambda v: v is not None, args)
-    strings = six.moves.map(condense_whitespace, nonnulls)
-
-    # encode and generate checksum
-    return hashlib.md5(u''.join(strings).encode('utf-8')).hexdigest()
-
-
-def generateChecksum(attribute):
-    """
-    Creates a checksum for an attribute.
-    """
-
-    # This attribute has not been assigned a parent schema yet, let the
-    # database handle this issue
-    schema = attribute.schema or getattr(attribute.section, 'schema', None)
-    if schema is None:
-        return None
-
-    values = [
-        # Consider ONLY the schema name, as descriptions would create a new
-        # checksum for all attributes
-        schema.name,
-
-        # Attribute properties to consider, note object_schema_id is not
-        # considered because only its fields matter not the actual sub form
-        # itself
-        attribute.name,
-        attribute.title,
-        attribute.description,  # None != '', let the values behave naturally
-        attribute.type,
-        ]
-
-    # is_collection and is_required could potentially not have been set at this
-    # point, so assume their future default values
-    if attribute.is_collection is None:
-        values.append(Attribute.is_collection.default.arg)
-    else:
-        values.append(attribute.is_collection)
-
-    if attribute.is_required is None:
-        values.append(Attribute.is_required.default.arg)
-    else:
-        values.append(attribute.is_required)
-
-    # Consider choices as well, but order them alphabetically instead of
-    # by order in case things were just rearranged, which apparently
-    # should never affect the checksum
-    for choice in sorted(six.itervalues(attribute.choices),
-                         key=lambda c: c.order):
-        values.extend([choice.name, choice.title])
-
-    return checksum(*values)
-
-
-def setChecksum(attribute):
-    attribute._checksum = generateChecksum(attribute)
 
 
 class Category(Model, Referenceable, Describeable, Modifiable, Auditable):
@@ -438,10 +366,6 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
         default=False,
         doc='Stores Personnally Identifiable Information (PII).')
 
-    _checksum = Column('checksum', String(32), nullable=False)
-
-    checksum = hybrid_property(lambda self: self._checksum)
-
     value_min = Column(Integer, doc='Minimum length or value')
 
     value_max = Column(Integer, doc='Maximum length or value')
@@ -483,7 +407,6 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
                 ondelete='CASCADE'),
             UniqueConstraint('schema_id', 'order',
                              name='uq_%s_order' % cls.__tablename__),
-            Index('ix_%s_checksum' % cls.__tablename__, 'checksum'),
             CheckConstraint(
                 "collection_min IS NULL OR collection_min >= 0",
                 name='ck_%s_unsigned_collection_min' % cls.__tablename__),
@@ -549,7 +472,6 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
             'is_required': self.is_required,
             'is_collection': self.is_collection,
             'is_private': self.is_private,
-            'checksum': self.checksum,
             'value_min': self.value_min,
             'value_max': self.value_max,
             'validator': self.validator,

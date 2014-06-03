@@ -473,109 +473,11 @@ def test_add_category_to_schema():
 
 
 @with_setup(begin_func, rollback_func)
-def test_checksum_generate():
-    """
-    It should generate a checksum based on names/settings
-    """
-    from tests import assert_equals, assert_is_none, assert_is_not_none
-    from occams.datastore import models
-    from occams.datastore.models.schema import generateChecksum
-
-    attribute1 = models.Attribute(
-        name=u'value',
-        title=u'Enter value',
-        type='string')
-
-    assert_is_none(generateChecksum(attribute1))
-    attribute1.schema = models.Schema(name='Sample', title=u'Sample Schema')
-    assert_is_not_none(generateChecksum(attribute1))
-
-    attribute2 = models.Attribute(
-        schema=models.Schema(name='Sample', title=u'Sample Schema'),
-        name=u'value',
-        title=u'Enter value',
-        type='string')
-
-    checksum1 = generateChecksum(attribute1)
-    checksum2 = generateChecksum(attribute2)
-
-    # Identical schemata  should yield the same checksum
-    assert_is_not_none(checksum1)
-    assert_is_not_none(checksum2)
-    assert_equals(checksum1, checksum2)
-
-    # Schamata titles should not be considered
-    attribute2.schema.title = 'New title that makes no difference'
-    checksum2 = generateChecksum(attribute2)
-    assert_equals(checksum1, checksum2)
-
-    # Only attribute names are
-    attribute2.schema.name = 'ThisDoes'
-    checksum2 = generateChecksum(attribute2)
-    assert checksum1 != checksum2
-
-    # Change it back
-    attribute2.schema.name = 'Sample'
-    checksum2 = generateChecksum(attribute2)
-    assert_equals(checksum1, checksum2)
-
-
-@with_setup(begin_func, rollback_func)
-def test_checksum_with_choices():
-    """
-    It should generate a checksum using choice names
-    """
-    from tests import assert_equals, assert_not_equals, assert_is_not_none
-    from occams.datastore import models
-    from occams.datastore.models.schema import generateChecksum
-
-    attribute1 = models.Attribute(
-        schema=models.Schema(name='Sample', title=u'Sample Schema'),
-        name=u'value',
-        title=u'Enter value',
-        type='choice',
-        choices={
-            '001': models.Choice(name=u'001', title=u'Never', order=0),
-            '002': models.Choice(name=u'002', title=u'Sometimes', order=1),
-            '003': models.Choice(name=u'003', title=u'Always', order=2)})
-
-    attribute2 = models.Attribute(
-        schema=models.Schema(name='Sample', title=u'Sample Schema'),
-        name=u'value',
-        title=u'Enter value',
-        type='choice',
-        choices={
-            '001': models.Choice(name=u'001', title=u'Never', order=0),
-            '002': models.Choice(name=u'002', title=u'Sometimes', order=1),
-            '003': models.Choice(name=u'003', title=u'Always', order=2)})
-
-    checksum1 = generateChecksum(attribute1)
-    checksum2 = generateChecksum(attribute2)
-
-    assert_is_not_none(checksum1)
-    assert_is_not_none(checksum2)
-    assert_equals(checksum1, checksum2)
-
-    attribute2.schema.title = 'New title that makes no difference'
-    checksum2 = generateChecksum(attribute2)
-    assert_equals(checksum1, checksum2)
-
-    attribute2.schema.name = 'ThisDoes'
-    checksum2 = generateChecksum(attribute2)
-    assert_not_equals(checksum1, checksum2)
-
-    # Change it back
-    attribute2.schema.name = 'Sample'
-    checksum2 = generateChecksum(attribute2)
-    assert_equals(checksum1, checksum2)
-
-
-@with_setup(begin_func, rollback_func)
 def test_copy_schema_basic():
     """
     It should let the user copy schemata
     """
-    from tests import assert_equals, assert_not_equals
+    from tests import assert_equals
     from copy import deepcopy
     from occams.datastore import models
 
@@ -614,12 +516,3 @@ def test_copy_schema_basic():
         choice_copy = schema_copy.attributes['foo'].choices[choice.name]
         for prop in ('name', 'title', 'order'):
             assert_equals(getattr(choice, prop), getattr(choice_copy, prop))
-
-    assert_not_equals(schema.id, schema_copy.id)
-    assert_equals(schema.attributes['foo'].checksum,
-                  schema_copy.attributes['foo'].checksum)
-
-    schema_copy.attributes['foo'].title = u'New Title'
-    Session.flush()
-    assert_not_equals(schema.attributes['foo'].checksum,
-                      schema_copy.attributes['foo'].checksum)

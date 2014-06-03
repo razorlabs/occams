@@ -2,7 +2,6 @@ from sqlalchemy import event
 
 from .metadata import updateMetadata, Modifiable
 from .auditing import createRevision, Auditable
-from .schema import setChecksum, Attribute
 from .storage import Entity, enforceSchemaState
 
 
@@ -22,9 +21,6 @@ def dispatch(instance, state):
     """
     Dispatches the events to the instances
     """
-
-    if isinstance(instance, Attribute) and state in ('new', 'dirty'):
-        setChecksum(instance)
 
     if isinstance(instance, Entity) and state in ('new', 'dirty'):
         enforceSchemaState(instance)
