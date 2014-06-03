@@ -9,6 +9,7 @@ import re
 import six
 from sqlalchemy import(
     cast,
+    null,
     Table, Column,
     PrimaryKeyConstraint,
     CheckConstraint, UniqueConstraint, ForeignKeyConstraint, Index,
@@ -198,7 +199,7 @@ class Schema(Model, Referenceable, Describeable, Modifiable, Auditable):
 # __table_args__ is not accepting this constraint.
 # Need to initiate the Index here for now...
 Index(
-    'uq_schema_version',
+    'uq_schema_name',
     CaseInsensitive(Schema.name),
     Schema.publish_date,
     unique=True)
@@ -557,4 +558,6 @@ class Choice(Model, Referenceable, Describeable, Modifiable, Auditable):
             'title': self.title,
             'order': self.order}
 
-CheckConstraint(cast(Choice.name, Integer), name='ck_choice_numeric_name')
+
+CheckConstraint(cast(Choice.name, Integer) != null(),
+                name='ck_choice_numeric_name')
