@@ -277,6 +277,39 @@ def test_attribute_defaults():
 
 
 @with_setup(begin_func, rollback_func)
+def test_attribute_unique_case_insensitive():
+    """
+    It should enforce case-insensitive attributes
+    """
+    from tests import assert_raises
+    from datetime import date
+    import sqlalchemy.exc
+    from occams.datastore import models
+
+    schema = models.Schema(
+        name='Foo',
+        title=u'Foo',
+        publish_date=date(2014, 3, 31))
+
+    schema.attributes['MyAttr'] = models.Attribute(
+        name=u'MyAttr',
+        title=u'My Attribute',
+        type=u'string',
+        order=0)
+    Session.add(schema)
+    Session.flush()
+
+    schema.attributes['myattr'] = models.Attribute(
+        name=u'myattr',
+        title=u'My Attribute 2',
+        type=u'string',
+        order=1)
+
+    with assert_raises(sqlalchemy.exc.IntegrityError):
+        Session.flush()
+
+
+@with_setup(begin_func, rollback_func)
 def test_choice_defaults():
     """
     It should set choice defaults

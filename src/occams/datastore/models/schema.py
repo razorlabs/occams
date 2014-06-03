@@ -9,7 +9,6 @@ import re
 
 import six
 from sqlalchemy import(
-    event,
     Table, Column,
     PrimaryKeyConstraint,
     CheckConstraint, UniqueConstraint, ForeignKeyConstraint, Index,
@@ -423,8 +422,6 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
                 refcolumns=['schema.id'],
                 name='fk_%s_schema_id' % cls.__tablename__,
                 ondelete='CASCADE'),
-            UniqueConstraint('schema_id', 'name',
-                             name='uq_%s_name' % cls.__tablename__),
             UniqueConstraint('schema_id', 'order',
                              name='uq_%s_order' % cls.__tablename__),
             Index('ix_%s_checksum' % cls.__tablename__, 'checksum'),
@@ -512,6 +509,15 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
             'order': self.order,
             'choices': dict([(c.name, c.to_json())
                             for c in six.itervalues(self.choices)])}
+
+
+# __table_args__ is not accepting this constraint.
+# Need to initiate the Index here for now...
+Index(
+    'uq_attribute_name',
+    Attribute.schema_id,
+    CaseInsensitive(Attribute.name),
+    unique=True)
 
 
 class Choice(Model, Referenceable, Describeable, Modifiable, Auditable):
