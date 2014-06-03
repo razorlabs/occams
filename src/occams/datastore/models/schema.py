@@ -9,6 +9,7 @@ import re
 
 import six
 from sqlalchemy import(
+    event,
     Table, Column,
     PrimaryKeyConstraint,
     CheckConstraint, UniqueConstraint, ForeignKeyConstraint, Index,
@@ -21,6 +22,7 @@ from sqlalchemy.orm.collections import attribute_mapped_collection
 from . import DataStoreModel as Model
 from .metadata import Referenceable, Describeable, Modifiable
 from .auditing import Auditable
+from ..utils.sql import CaseInsensitive
 
 
 def checksum(*args):
@@ -179,10 +181,9 @@ class Schema(Model, Referenceable, Describeable, Modifiable, Auditable):
     @declared_attr
     def __table_args__(cls):
         return (
-            UniqueConstraint('name', 'publish_date'),
             CheckConstraint(
                 'publish_date <= retract_date',
-                name='ck_%s_valid_publication' % cls.__tablename__))
+                name='ck_%s_valid_publication' % cls.__tablename__),)
 
     def __copy__(self):
         keys = ('name', 'title', 'description', 'storage')
@@ -228,6 +229,15 @@ class Schema(Model, Referenceable, Describeable, Modifiable, Auditable):
             'published': self.publish_date.isoformat(),
             'sections': dict([(s.name, s.to_json())
                              for s in six.itervalues(self.sections)])}
+
+
+# __table_args__ is not accepting this constraint.
+# Need to initiate the Index here for now...
+Index(
+    'uq_schema_version',
+    CaseInsensitive(Schema.name),
+    Schema.publish_date,
+    unique=True)
 
 
 section_attribute_table = Table(

@@ -67,6 +67,31 @@ def test_schema_defaults():
 
 
 @with_setup(begin_func, rollback_func)
+def test_schema_unique_case_insensitive():
+    """
+    It should enforce case-insensitive schemata
+    """
+    from tests import assert_raises
+    from datetime import date
+    import sqlalchemy.exc
+    from occams.datastore import models
+
+    Session.add(models.Schema(
+        name='Foo',
+        title=u'Foo',
+        publish_date=date(2014, 3, 31)))
+    Session.flush()
+
+    Session.add(models.Schema(
+        name='foo',
+        title=u'Foo',
+        publish_date=date(2014, 3, 31)))
+
+    with assert_raises(sqlalchemy.exc.IntegrityError):
+        Session.flush()
+
+
+@with_setup(begin_func, rollback_func)
 def test_schema_publish_date_unique():
     """
     It should enforce unique publish dates
