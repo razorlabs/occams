@@ -69,8 +69,10 @@ CREATE OR REPLACE FUNCTION patient_mirror() RETURNS TRIGGER AS $$
           , NEW.revision
           );
         PERFORM dblink_disconnect();
+        RETURN NEW;
       WHEN 'DELETE' THEN
         DELETE FROM patient_ext WHERE zid = OLD.zid;
+        RETURN OLD;
       WHEN 'UPDATE' THEN
         UPDATE patient_ext
         SET site_id = ext_site_id(NEW.site_id)
@@ -85,6 +87,7 @@ CREATE OR REPLACE FUNCTION patient_mirror() RETURNS TRIGGER AS $$
           , modify_user_id = ext_user_id(NEW.modify_user_id)
           , revision = NEW.revision
         WHERE zid = OLD.zid;
+        RETURN NEW;
     END CASE;
     RETURN NULL;
   END;

@@ -79,9 +79,11 @@ CREATE OR REPLACE FUNCTION stratum_mirror() RETURNS TRIGGER AS $$
           , NEW.id
         );
         PERFORM dblink_disconnect();
+        RETURN NEW;
       WHEN 'DELETE' THEN
         DELETE FROM stratum_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        RETURN OLD;
       WHEN 'UPDATE' THEN
         UPDATE stratum_ext
         SET study_id = ext_study_id(NEW.study_id)
@@ -98,6 +100,7 @@ CREATE OR REPLACE FUNCTION stratum_mirror() RETURNS TRIGGER AS $$
           , old_db = (SELECT current_database())
           , old_id = NEW.id
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        RETURN NEW;
     END CASE;
     RETURN NULL;
   END;

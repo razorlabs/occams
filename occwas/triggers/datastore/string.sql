@@ -83,6 +83,7 @@ CREATE OR REPLACE FUNCTION value_string_mirror() RETURNS TRIGGER AS $$
               , NEW.id
               );
           END IF;
+          RETURN NEW;
         END IF;
 
       WHEN 'DELETE' THEN
@@ -93,6 +94,7 @@ CREATE OR REPLACE FUNCTION value_string_mirror() RETURNS TRIGGER AS $$
           DELETE FROM value_choice_ext
           WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
         END IF;
+        RETURN OLD;
       WHEN 'UPDATE' THEN
 
         IF NEW.value IS NOT NULL THEN
@@ -119,6 +121,7 @@ CREATE OR REPLACE FUNCTION value_string_mirror() RETURNS TRIGGER AS $$
               , revision = NEW.revision
             WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
           END IF;
+          RETURN NEW;
         END IF;
 
     END CASE;

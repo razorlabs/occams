@@ -218,6 +218,8 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
 
         END IF;
 
+        RETURN NEW;
+
       WHEN 'DELETE' THEN
         IF OLD.object_schema_id IS NULL THEN
           DELETE FROM attribute_ext
@@ -233,6 +235,7 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
           DELETE FROM section_ext
           WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
         END IF;
+        RETURN OLD;
       WHEN 'UPDATE' THEN
 
         IF NEW.object_schema_id IS NULL THEN
@@ -296,6 +299,7 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
           WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
 
         END IF;
+        RETURN NEW;
 
     END CASE;
     RETURN NULL;

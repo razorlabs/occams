@@ -25,11 +25,13 @@ CREATE OR REPLACE FUNCTION site_lab_location_mirror() RETURNS TRIGGER AS $$
             (SELECT id FROM site_ext WHERE zid = (SELECT zid FROM site WHERE id = NEW.site_id))
           , (SELECT id FROM location_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.location_id))
         );
+        RETURN NEW;
       WHEN 'DELETE' THEN
         DELETE FROM site_lab_location_ext
         WHERE site_id = (SELECT id FROM site_ext WHERE zid = (SELECT zid FROM site WHERE id = OLD.site_id))
         AND   location_id = (SELECT id FROM location_ext WHERE (old_db, old_id) = (SELECT current_database(), OLD.location_id))
         ;
+        RETURN OLD;
       WHEN 'UPDATE' THEN
         UPDATE site_lab_location_ext
         SET site_id = (SELECT id FROM site_ext WHERE zid = (SELECT zid FROM site WHERE id = NEW.site_id))
@@ -37,6 +39,7 @@ CREATE OR REPLACE FUNCTION site_lab_location_mirror() RETURNS TRIGGER AS $$
         WHERE site_id = (SELECT id FROM site_ext WHERE zid = (SELECT zid FROM site WHERE id = OLD.site_id))
         AND   location_id = (SELECT id FROM location_ext WHERE (old_db, old_id) = (SELECT current_database(), OLD.location_id))
         ;
+        RETURN NEW;
     END CASE;
     RETURN NULL;
   END;

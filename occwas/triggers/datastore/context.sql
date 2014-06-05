@@ -74,10 +74,12 @@ CREATE OR REPLACE FUNCTION context_mirror() RETURNS TRIGGER AS $$
           , (SELECT current_database())
           , NEW.id
           );
+        RETURN NEW;
 
       WHEN 'DELETE' THEN
         DELETE FROM context_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        RETURN OLD;
       WHEN 'UPDATE' THEN
 
         UPDATE context_ext
@@ -97,6 +99,7 @@ CREATE OR REPLACE FUNCTION context_mirror() RETURNS TRIGGER AS $$
           , old_db = (SELECT current_database())
           , old_id = NEW.id
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        RETURN NEW;
 
     END CASE;
     RETURN NULL;

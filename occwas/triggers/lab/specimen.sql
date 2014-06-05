@@ -75,9 +75,11 @@ CREATE OR REPLACE FUNCTION specimen_mirror() RETURNS TRIGGER AS $$
           , NEW.id
         );
         PERFORM dblink_disconnect();
+        RETURN NEW;
       WHEN 'DELETE' THEN
         DELETE FROM specimen_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        RETURN OLD;
       WHEN 'UPDATE' THEN
         UPDATE specimen_ext
         SET specimen_type_id = (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimen_type_id))
@@ -95,6 +97,7 @@ CREATE OR REPLACE FUNCTION specimen_mirror() RETURNS TRIGGER AS $$
           , modify_user_id = ext_user_id(NEW.modify_user_id)
           , revision = NEW.revision
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        RETURN NEW;
     END CASE;
     RETURN NULL;
   END;

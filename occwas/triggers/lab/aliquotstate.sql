@@ -54,9 +54,11 @@ CREATE OR REPLACE FUNCTION aliquotstate_mirror() RETURNS TRIGGER AS $$
           , NEW.id
         );
         PERFORM dblink_disconnect();
+        RETURN NEW;
       WHEN 'DELETE' THEN
         DELETE FROM aliquotstate_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        RETURN OLD;
       WHEN 'UPDATE' THEN
         UPDATE aliquotstate_ext
         SET name = NEW.name
@@ -69,6 +71,7 @@ CREATE OR REPLACE FUNCTION aliquotstate_mirror() RETURNS TRIGGER AS $$
           , old_db = (SELECT current_database())
           , old_id = NEW.id
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        RETURN NEW;
     END CASE;
     RETURN NULL;
   END;

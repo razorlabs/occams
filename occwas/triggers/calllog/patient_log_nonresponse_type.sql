@@ -46,9 +46,11 @@ CREATE OR REPLACE FUNCTION patient_log_nonresponse_type_mirror() RETURNS TRIGGER
           , (SELECT current_database())
           , NEW.id
         );
+        RETURN NEW;
       WHEN 'DELETE' THEN
         DELETE FROM patient_log_nonresponse_type_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        RETURN OLD;
       WHEN 'UPDATE' THEN
         UPDATE patient_log_nonresponse_type_ext
         SET value = NEW.value
@@ -56,6 +58,7 @@ CREATE OR REPLACE FUNCTION patient_log_nonresponse_type_mirror() RETURNS TRIGGER
           , old_db = (SELECT current_database())
           , old_id = NEW.id
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        RETURN NEW;
     END CASE;
     RETURN NULL;
   END;

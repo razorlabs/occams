@@ -148,11 +148,13 @@ CREATE OR REPLACE FUNCTION entity_mirror() RETURNS TRIGGER AS $$
             );
           PERFORM dblink_disconnect();
 
+          RETURN NEW;
         END IF;
 
       WHEN 'DELETE' THEN
         DELETE FROM entity_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        RETURN OLD;
       WHEN 'UPDATE' THEN
 
         v_state_id := ext_state_id(NEW.state);
@@ -173,6 +175,8 @@ CREATE OR REPLACE FUNCTION entity_mirror() RETURNS TRIGGER AS $$
           , old_db = (SELECT current_database())
           , old_id = NEW.id
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+
+        RETURN NEW;
 
     END CASE;
     RETURN NULL;

@@ -56,10 +56,12 @@ CREATE OR REPLACE FUNCTION value_blob_mirror() RETURNS TRIGGER AS $$
             , (SELECT current_database())
             , NEW.id
             );
+          RETURN NEW;
         END IF;
       WHEN 'DELETE' THEN
         DELETE FROM value_blob_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        RETURN OLD;
       WHEN 'UPDATE' THEN
 
         IF NEW.value IS NOT NULL THEN
@@ -75,6 +77,7 @@ CREATE OR REPLACE FUNCTION value_blob_mirror() RETURNS TRIGGER AS $$
             , old_db = (SELECT current_database())
             , old_id = NEW.id
           WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+          RETURN NEW;
         END IF;
 
     END CASE;

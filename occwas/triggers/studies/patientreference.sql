@@ -59,9 +59,11 @@ CREATE OR REPLACE FUNCTION patientreference_mirror() RETURNS TRIGGER AS $$
           , NEW.id
         );
         PERFORM dblink_disconnect();
+        RETURN NEW;
       WHEN 'DELETE' THEN
         DELETE FROM patientreference_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        RETURN OLD;
       WHEN 'UPDATE' THEN
         UPDATE patientreference_ext
         SET patient_id = ext_patient_id(NEW.patient_id)
@@ -75,6 +77,7 @@ CREATE OR REPLACE FUNCTION patientreference_mirror() RETURNS TRIGGER AS $$
           , old_db = (SELECT current_database())
           , old_id = NEW.id
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        RETURN NEW;
     END CASE;
     RETURN NULL;
   END;

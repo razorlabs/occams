@@ -53,9 +53,11 @@ CREATE OR REPLACE FUNCTION specialinstruction_mirror() RETURNS TRIGGER AS $$
           , (SELECT current_database())
           , NEW.id
         );
+        RETURN NEW;
       WHEN 'DELETE' THEN
         DELETE FROM specialinstruction_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        RETURN OLD;
       WHEN 'UPDATE' THEN
         UPDATE specialinstruction_ext
         SET name = NEW.name
@@ -68,6 +70,7 @@ CREATE OR REPLACE FUNCTION specialinstruction_mirror() RETURNS TRIGGER AS $$
           , old_db = (SELECT current_database())
           , old_id = NEW.id
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        RETURN NEW;
     END CASE;
     RETURN NULL;
   END;

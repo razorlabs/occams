@@ -51,14 +51,17 @@ CREATE OR REPLACE FUNCTION user_mirror() RETURNS TRIGGER AS $$
           , NEW.modify_date
         );
         PERFORM dblink_disconnect();
+        RETURN NEW;
       WHEN 'DELETE' THEN
         DELETE FROM user_ext WHERE key = OLD.key;
+        RETURN OLD;
       WHEN 'UPDATE' THEN
         UPDATE user_ext
         SET key = NEW.key
           , create_date = NEW.create_date
           , modify_date = NEW.modify_date
         WHERE key = OLD.key;
+        RETURN NEW;
     END CASE;
     RETURN NULL;
   END;

@@ -25,11 +25,13 @@ CREATE OR REPLACE FUNCTION schema_category_mirror() RETURNS TRIGGER AS $$
             ext_schema_id(NEW.schema_id)
           , ext_category_id(NEW.category_id)
         );
+        RETURN NEW;
       WHEN 'DELETE' THEN
         DELETE FROM schema_category_ext
         WHERE schema_id = (SELECT * FROM ext_schema_id(OLD.schema_id))
           AND category_id = (SELECT * FROM ext_category_id(OLD.category_id))
         ;
+        RETURN OLD;
       WHEN 'UPDATE' THEN
         UPDATE schema_category_ext
         SET schema_id = ext_schema_id(NEW.schema_id)
@@ -37,6 +39,7 @@ CREATE OR REPLACE FUNCTION schema_category_mirror() RETURNS TRIGGER AS $$
         WHERE schema_id = (SELECT * FROM ext_schema_id(OLD.schema_id))
           AND category_id = (SELECT * FROM ext_category_id(OLD.category_id))
         ;
+        RETURN NEW;
     END CASE;
     RETURN NULL;
   END;

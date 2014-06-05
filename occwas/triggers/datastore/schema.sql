@@ -92,10 +92,12 @@ CREATE OR REPLACE FUNCTION schema_mirror() RETURNS TRIGGER AS $$
             , NEW.id
           );
           PERFORM dblink_disconnect();
+          RETURN NEW;
         END IF;
       WHEN 'DELETE' THEN
         DELETE FROM schema_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        RETURN OLD;
       WHEN 'UPDATE' THEN
         -- Don't need to update subschemata as they don't exist in the new system
         IF NOT NEW.is_inline THEN
@@ -115,6 +117,7 @@ CREATE OR REPLACE FUNCTION schema_mirror() RETURNS TRIGGER AS $$
             , old_db = (SELECT current_database())
             , old_id = NEW.id
           WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+          RETURN NEW;
         END IF;
 
     END CASE;

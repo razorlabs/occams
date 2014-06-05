@@ -25,17 +25,20 @@ CREATE OR REPLACE FUNCTION specimentype_cycle_mirror() RETURNS TRIGGER AS $$
             ext_cycle_id(NEW.cycle_id)
           , (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimentype_id))
         );
+        RETURN NEW;
 
       WHEN 'DELETE' THEN
         DELETE FROM specimentype_cycle_ext
         WHERE cycle_id = (SELECT * FROM ext_cycle_id(OLD.cycle_id))
         AND   specimentype_id = (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), OLD.specimentype_id));
+        RETURN OLD;
       WHEN 'UPDATE' THEN
         UPDATE specimentype_cycle_ext
         SET cycle_id = ext_cycle_id(NEW.cycle_id)
           , specimentype_id = (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimentype_id))
         WHERE cycle_id = (SELECT * FROM ext_cycle_id(OLD.cycle_id))
         AND   specimentype_id = (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), OLD.specimentype_id));
+        RETURN NEW;
 
     END CASE;
     RETURN NULL;
