@@ -27,7 +27,7 @@ CREATE FOREIGN TABLE cycle_ext (
   , old_id          INTEGER NOT NULL
 )
 SERVER trigger_target
-OPTIONS (table_name 'cycle');
+OPTIONS (schema_name 'public', table_name 'cycle');
 
 
 CREATE OR REPLACE FUNCTION ext_cycle_id(id INTEGER) RETURNS SETOF integer AS $$
@@ -41,10 +41,15 @@ $$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION cycle_mirror() RETURNS TRIGGER AS $$
+  DECLARE
+    ext_id int;
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
         PERFORM dblink_connect('trigger_target');
+        SELECT val INTO ext_id FROM dblink('SELECT nextval(''cycle_id_seq'') AS val') AS sec(val int);
+        PERFORM dblink_disconnect();
+
         INSERT INTO cycle_ext (
             id
           , zid
@@ -64,7 +69,7 @@ CREATE OR REPLACE FUNCTION cycle_mirror() RETURNS TRIGGER AS $$
           , old_id
         )
         VALUES (
-            (SELECT val FROM dblink('SELECT nextval(''cycle_id_seq'') AS val') AS sec(val int))
+            ext_id
           , NEW.zid
           , ext_study_id(NEW.study_id)
           , NEW.name
@@ -81,10 +86,9 @@ CREATE OR REPLACE FUNCTION cycle_mirror() RETURNS TRIGGER AS $$
           , (SELECT current_database())
           , NEW.id
           );
-        PERFORM dblink_disconnect();
         RETURN NEW;
       WHEN 'DELETE' THEN
-        DELETE FROM arm_ext
+        DELETE FROM cycle_ext
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
         RETURN OLD;
       WHEN 'UPDATE' THEN
@@ -112,8 +116,16 @@ CREATE OR REPLACE FUNCTION cycle_mirror() RETURNS TRIGGER AS $$
 $$ LANGUAGE plpgsql;
 
 
-DROP TRIGGER IF EXISTS cycle_mirror ON cycle;
+DROP TRIGGER IF EXISTS cycle_mirror ON "cycle";
 
 
-CREATE TRIGGER cycle_mirror AFTER INSERT OR UPDATE OR DELETE ON cycle
+CREATE TRIGGER cycle_mirror AFTER INSERT OR UPDATE OR DELETE ON "cycle"
   FOR EACH ROW EXECUTE PROCEDURE cycle_mirror();
+
+----
+GRANT SELECT, INSERT, UPDATE, DELETE
+ON ALL TABLES IN SCHEMA public
+TO plone;
+
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO plone;
+
