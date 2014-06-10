@@ -23,13 +23,14 @@ CREATE FOREIGN TABLE reftype_ext (
 SERVER trigger_target
 OPTIONS (table_name 'reftype');
 
+DROP FUNCTION IF EXISTS ext_reftype_id(INTEGER);
 
-CREATE OR REPLACE FUNCTION ext_reftype_id(id INTEGER) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_reftype_id(id INTEGER) RETURNS integer AS $$
   BEGIN
-    RETURN QUERY
+    RETURN (
       SELECT "reftype_ext".id
       FROM "reftype_ext"
-      WHERE (old_db, old_id) = (SELECT current_database(), $1);
+      WHERE (old_db, old_id) = (SELECT current_database(), $1));
   END;
 $$ LANGUAGE plpgsql;
 

@@ -76,30 +76,33 @@ CREATE FOREIGN TABLE section_attribute_ext (
 SERVER trigger_target
 OPTIONS (table_name 'section_attribute');
 
+DROP FUNCTION IF EXISTS ext_attribute_id(INTEGER);
 
 --
 -- Helper function to find the attribute id in the new system using
 -- the old system id number
 --
-CREATE OR REPLACE FUNCTION ext_attribute_id(id INTEGER) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_attribute_id(id INTEGER) RETURNS integer AS $$
   BEGIN
-    RETURN QUERY
+    RETURN (
         SELECT "attribute_ext".id
         FROM "attribute_ext"
-        WHERE (old_db, old_id) = (SELECT current_database(), $1);
+        WHERE (old_db, old_id) = (SELECT current_database(), $1));
   END;
 $$ LANGUAGE plpgsql;
+
+DROP FUNCTION IF EXISTS ext_section_id(INTEGER);
 
 --
 -- Helper function to find the section  id in the new system using
 -- the old system id number
 --
-CREATE OR REPLACE FUNCTION ext_section_id(id INTEGER) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_section_id(id INTEGER) RETURNS integer AS $$
   BEGIN
-    RETURN QUERY
+    RETURN (
         SELECT "section_ext".id
         FROM "section_ext"
-        WHERE (old_db, old_id) = (SELECT current_database(), $1);
+        WHERE (old_db, old_id) = (SELECT current_database(), $1));
   END;
 $$ LANGUAGE plpgsql;
 

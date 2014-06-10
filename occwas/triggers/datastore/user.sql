@@ -19,16 +19,18 @@ SERVER trigger_target
 OPTIONS (table_name 'user');
 
 
+DROP FUNCTION IF EXISTS ext_user_id(INTEGER);
+
 --
 -- Helper function to find the user id in the new system using
 -- the old system id number
 --
-CREATE OR REPLACE FUNCTION ext_user_id(id INTEGER) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_user_id(id INTEGER) RETURNS integer AS $$
   BEGIN
-    RETURN QUERY
+    RETURN (
       SELECT "user_ext".id
       FROM "user_ext"
-      WHERE key = (SELECT "user".key FROM "user" WHERE "user".id = $1);
+      WHERE key = (SELECT "user".key FROM "user" WHERE "user".id = $1));
   END;
 $$ LANGUAGE plpgsql;
 

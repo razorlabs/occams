@@ -25,16 +25,18 @@ SERVER trigger_target
 OPTIONS (table_name 'category');
 
 
+DROP FUNCTION IF EXISTS ext_category_id(INTEGER);
+
 --
 -- Helper function to find the schema id in the new system using
 -- the old system id number
 --
-CREATE OR REPLACE FUNCTION ext_category_id(id INTEGER) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_category_id(id INTEGER) RETURNS integer AS $$
   BEGIN
-    RETURN QUERY
+    RETURN (
       SELECT "category_ext".id
       FROM "category_ext"
-      WHERE (old_db, old_id) = (SELECT current_database(), $1);
+      WHERE (old_db, old_id) = (SELECT current_database(), $1));
   END;
 $$ LANGUAGE plpgsql;
 

@@ -54,16 +54,18 @@ SERVER trigger_target
 OPTIONS (table_name 'value_choice');
 
 
+DROP FUNCTION IF EXISTS ext_choice_id(INTEGER);
+
 --
 -- Helper function to find the choice id in the new system using
 -- the old system id number
 --
-CREATE OR REPLACE FUNCTION ext_choice_id(id INTEGER) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_choice_id(id INTEGER) RETURNS integer AS $$
   BEGIN
-    RETURN QUERY
+    RETURN (
       SELECT "choice_ext".id
       FROM "choice_ext"
-      WHERE (old_db, old_id) = (SELECT current_database(), $1);
+      WHERE (old_db, old_id) = (SELECT current_database(), $1));
   END;
 $$ LANGUAGE plpgsql;
 

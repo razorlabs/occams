@@ -32,13 +32,14 @@ CREATE FOREIGN TABLE study_ext (
 SERVER trigger_target
 OPTIONS (table_name 'study');
 
+DROP FUNCTION IF EXISTS ext_study_id(INTEGER);
 
-CREATE OR REPLACE FUNCTION ext_study_id(id INTEGER) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_study_id(id INTEGER) RETURNS integer AS $$
   BEGIN
-    RETURN QUERY
+    RETURN (
       SELECT "study_ext".id
       FROM "study_ext"
-      WHERE (old_db, old_id) = (SELECT current_database(), $1);
+      WHERE (old_db, old_id) = (SELECT current_database(), $1));
   END;
 $$ LANGUAGE plpgsql;
 

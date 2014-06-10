@@ -24,13 +24,14 @@ CREATE FOREIGN TABLE visit_ext (
 SERVER trigger_target
 OPTIONS (table_name 'visit');
 
+DROP FUNCTION IF EXISTS ext_visit_id(INTEGER);
 
-CREATE OR REPLACE FUNCTION ext_visit_id(id INTEGER) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_visit_id(id INTEGER) RETURNS integer AS $$
   BEGIN
-    RETURN QUERY
+    RETURN (
       SELECT "visit_ext".id
       FROM "visit_ext"
-      WHERE (old_db, old_id) = (SELECT current_database(), $1);
+      WHERE (old_db, old_id) = (SELECT current_database(), $1));
   END;
 $$ LANGUAGE plpgsql;
 

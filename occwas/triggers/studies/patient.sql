@@ -24,13 +24,14 @@ CREATE FOREIGN TABLE patient_ext (
 SERVER trigger_target
 OPTIONS (table_name 'patient');
 
+DROP FUNCTION IF EXISTS ext_patient_id(INTEGER);
 
-CREATE OR REPLACE FUNCTION ext_patient_id(id INTEGER) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_patient_id(id INTEGER) RETURNS integer AS $$
   BEGIN
-    RETURN QUERY
+    RETURN (
         SELECT "patient_ext".id
         FROM "patient_ext"
-        WHERE zid = (SELECT "patient".zid FROM "patient" WHERE "patient".id = $1);
+        WHERE zid = (SELECT "patient".zid FROM "patient" WHERE "patient".id = $1));
   END;
 $$ LANGUAGE plpgsql;
 

@@ -27,15 +27,16 @@ CREATE FOREIGN TABLE cycle_ext (
   , old_id          INTEGER NOT NULL
 )
 SERVER trigger_target
-OPTIONS (schema_name 'public', table_name 'cycle');
+OPTIONS (table_name 'cycle');
 
+DROP FUNCTION IF EXISTS ext_cycle_id(INTEGER);
 
-CREATE OR REPLACE FUNCTION ext_cycle_id(id INTEGER) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_cycle_id(id INTEGER) RETURNS integer AS $$
   BEGIN
-    RETURN QUERY
+    RETURN (
       SELECT "cycle_ext".id
       FROM "cycle_ext"
-      WHERE (old_db, old_id) = (SELECT current_database(), $1);
+      WHERE (old_db, old_id) = (SELECT current_database(), $1));
   END;
 $$ LANGUAGE plpgsql;
 
@@ -50,7 +51,7 @@ CREATE OR REPLACE FUNCTION cycle_mirror() RETURNS TRIGGER AS $$
         SELECT val INTO ext_id FROM dblink('SELECT nextval(''cycle_id_seq'') AS val') AS sec(val int);
         PERFORM dblink_disconnect();
 
-        INSERT INTO cycle_ext (
+        INSERT INTO "cycle_ext" (
             id
           , zid
           , study_id
@@ -85,14 +86,14 @@ CREATE OR REPLACE FUNCTION cycle_mirror() RETURNS TRIGGER AS $$
           , NEW.revision
           , (SELECT current_database())
           , NEW.id
-          );
+        );
         RETURN NEW;
       WHEN 'DELETE' THEN
-        DELETE FROM cycle_ext
+        DELETE FROM "cycle_ext"
         WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
         RETURN OLD;
       WHEN 'UPDATE' THEN
-        UPDATE cycle_ext
+        UPDATE "cycle_ext"
         SET zid = NEW.zid
           , study_id = ext_study_id(NEW.study_id)
           , name = NEW.name

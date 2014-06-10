@@ -26,13 +26,14 @@ CREATE FOREIGN TABLE arm_ext (
 SERVER trigger_target
 OPTIONS (table_name 'arm');
 
+DROP FUNCTION IF EXISTS ext_arm_id(INTEGER);
 
-CREATE OR REPLACE FUNCTION ext_arm_id(id integer) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_arm_id(id integer) RETURNS integer AS $$
   BEGIN
-    RETURN QUERY
+    RETURN (
       SELECT "arm_ext".id
       FROM "arm_ext"
-      WHERE (old_db, old_id) = (SELECT current_database(), $1);
+      WHERE (old_db, old_id) = (SELECT current_database(), $1));
   END;
 $$ LANGUAGE plpgsql;
 

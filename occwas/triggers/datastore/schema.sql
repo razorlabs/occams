@@ -30,14 +30,15 @@ CREATE FOREIGN TABLE schema_ext (
 SERVER trigger_target
 OPTIONS (table_name 'schema');
 
+DROP FUNCTION IF EXISTS ext_schema_id(INTEGER);
 
 --
 -- Helper function to find the schema id in the new system using
 -- the old system id number
 --
-CREATE OR REPLACE FUNCTION ext_schema_id(id INTEGER) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_schema_id(id INTEGER) RETURNS integer AS $$
   BEGIN
-    RETURN QUERY
+    RETURN (
       -- Always return the root schema,
       -- since schemata are flattened in the new database
       SELECT "schema_ext".id FROM "schema_ext"
@@ -45,7 +46,7 @@ CREATE OR REPLACE FUNCTION ext_schema_id(id INTEGER) RETURNS SETOF integer AS $$
                                 , COALESCE((SELECT schema_id
                                            FROM "attribute"
                                            WHERE object_schema_id = $1)
-                                         , $1))
+                                         , $1)))
       ;
   END;
 $$ LANGUAGE plpgsql;

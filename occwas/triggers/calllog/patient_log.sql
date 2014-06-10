@@ -30,16 +30,18 @@ SERVER trigger_target
 OPTIONS (table_name 'patient_log');
 
 
+DROP FUNCTION IF EXISTS ext_patient_log_id(INTEGER);
+
 --
 -- Helper function to find the attribute id in the new system using
 -- the old system id number
 --
-CREATE OR REPLACE FUNCTION ext_patient_log_id(id INTEGER) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_patient_log_id(id INTEGER) RETURNS integer AS $$
   BEGIN
-    RETURN QUERY
+    RETURN (
         SELECT "patient_log_ext".id
         FROM "patient_log_ext"
-        WHERE (old_db, old_id) = (SELECT current_database(), $1);
+        WHERE (old_db, old_id) = (SELECT current_database(), $1));
   END;
 $$ LANGUAGE plpgsql;
 

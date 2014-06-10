@@ -53,13 +53,15 @@ SERVER trigger_target
 OPTIONS (table_name 'state');
 
 
+DROP FUNCTION IF EXISTS ext_entity_id(INTEGER);
+
 --
 -- Helper function to find the entity id in the new system using
 -- the old system id number
 --
-CREATE OR REPLACE FUNCTION ext_entity_id(id INTEGER) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_entity_id(id INTEGER) RETURNS integer AS $$
   BEGIN
-    RETURN QUERY
+    RETURN (
       -- Check if it's a sub-object first
       SELECT "entity_ext".id
       FROM "entity_ext"
@@ -67,13 +69,14 @@ CREATE OR REPLACE FUNCTION ext_entity_id(id INTEGER) RETURNS SETOF integer AS $$
                                 , COALESCE((SELECT "object"."entity_id"
                                            FROM "object"
                                            WHERE "object"."value" = $1)
-                                          ,$1))
+                                          ,$1)))
       ;
   END;
 $$ LANGUAGE plpgsql;
 
+DROP FUNCTION IF EXISTS ext_state_id(entity_state);
 
-CREATE OR REPLACE FUNCTION ext_state_id(state entity_state) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_state_id(state entity_state) RETURNS integer AS $$
   DECLARE
     state_str varchar;
   BEGIN
@@ -81,18 +84,18 @@ CREATE OR REPLACE FUNCTION ext_state_id(state entity_state) RETURNS SETOF intege
     state_str := $1::varchar;
 
     IF state_str = 'not-done' THEN
-      RETURN;
+      RETURN NULL;
     END IF;
 
     IF NOT EXISTS(SELECT 1 FROM "state_ext" WHERE name = state_str) THEN
       RAISE EXCEPTION 'state ''%'' not found in external', state_str;
     END IF;
 
-    RETURN QUERY
+    RETURN (
       SELECT "state_ext".id
       FROM "state_ext"
       WHERE name = state_str
-      ;
+      );
   END;
 $$ LANGUAGE plpgsql;
 

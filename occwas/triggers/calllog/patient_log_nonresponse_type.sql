@@ -15,6 +15,7 @@ CREATE FOREIGN TABLE patient_log_nonresponse_type_ext (
 SERVER trigger_target
 OPTIONS (table_name 'patient_log_nonresponse_type');
 
+DROP FUNCTION IF EXISTS ext_patient_log_nonresponse_type_id(INTEGER);
 
 --
 -- Helper function to find the attribute id in the new system using

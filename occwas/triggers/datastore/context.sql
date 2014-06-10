@@ -26,16 +26,18 @@ SERVER trigger_target
 OPTIONS (table_name 'context');
 
 
+DROP FUNCTION IF EXISTS ext_context_id(INTEGER);
+
 --
 -- Helper function to find the context id in the new system using
 -- the old system id number
 --
-CREATE OR REPLACE FUNCTION ext_context_id(id INTEGER) RETURNS SETOF integer AS $$
+CREATE OR REPLACE FUNCTION ext_context_id(id INTEGER) RETURNS integer AS $$
   BEGIN
-    RETURN QUERY
+    RETURN (
         SELECT "context_ext".id
         FROM "context_ext"
-        WHERE (old_db, old_id) = (SELECT current_database(), $1);
+        WHERE (old_db, old_id) = (SELECT current_database(), $1));
   END;
 $$ LANGUAGE plpgsql;
 
