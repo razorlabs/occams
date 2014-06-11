@@ -48,7 +48,7 @@ class ExportNamespace(BaseNamespace):
         log.debug(self.request.has_permission('fia_view'))
         if self.request.has_permission('fia_view'):
             self.lift_acl_restrictions()
-            self.session['user'] = self.request.environ['repoze.who.identity']['properties']['email']
+            self.session['user'] = self.request.authenticated_userid
             self.session['redis'] = self.request.redis
             log.debug('socket.io for %s' % self.session['user'])
             self.spawn(self.listener)

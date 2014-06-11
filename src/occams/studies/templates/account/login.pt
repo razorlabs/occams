@@ -1,5 +1,12 @@
 <html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
   <metal:content-slot fill-slot="content-slot">
+    <tal:error
+        define="queue request.session.pop_flash('error')|nothing;"
+        condition="queue">
+      <br />
+      <br />
+      <div class="alert alert-danger">${queue[-1]}</div>
+    </tal:error>
     <form tal:replace="structure form" />
   </metal:content-slot>
 </html>

@@ -118,7 +118,7 @@ def add(request):
                 expand_collections=appstruct['expand_collections'],
                 use_choice_labels=appstruct['use_choice_labels'],
                 owner_user=(Session.query(models.User)
-                            .filter_by(key=request.environ['repoze.who.identity']['properties']['email'])
+                            .filter_by(key=request.authenticated_userid)
                             .one()),
                 contents=[exportables[k].to_json()
                           for k in appstruct['contents']]))
@@ -281,7 +281,7 @@ def delete(request):
     export = (
         Session.query(models.Export)
         .filter(models.Export.id == request.matchdict['id'])
-        .filter(models.Export.owner_user.has(key=request.environ['repoze.who.identity']['properties']['email']))
+        .filter(models.Export.owner_user.has(key=request.authenticated_userid))
         .first())
 
     if not export:
@@ -311,8 +311,7 @@ def download(request):
         export = (
             Session.query(models.Export)
             .filter_by(id=request.matchdict['id'], status='complete')
-            .filter(models.Export.owner_user.has(
-                key=request.environ['repoze.who.identity']['properties']['email']))
+            .filter(models.Export.owner_user.has(key=request.authenticated_userid))  # NOQA
             .one())
     except orm.exc.NoResultFound:
         raise HTTPNotFound
@@ -329,7 +328,7 @@ def query_exports(request):
     """
     Helper method to query current exports for the authenticated user
     """
-    userid = request.environ['repoze.who.identity']['properties']['email']
+    userid = request.authenticated_userid
     export_expire = request.registry.settings.get('app.export.expire')
 
     query = (

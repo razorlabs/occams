@@ -11,8 +11,8 @@ CCTG Patient Call Log
 #
 
 
-from sqlalchemy import case, MetaData, Table
-from sqlalchemy.orm import aliased, mapper, literal
+from sqlalchemy import case, MetaData, Table, literal
+from sqlalchemy.orm import aliased, mapper
 
 from occams.datastore.utils.sql import group_concat
 

@@ -42,9 +42,7 @@ def track_user_on_request(event):
     """
     Annotates the database session with the current user.
     """
-    identity = event.request.environ.get('repoze.who.identity')
-    if identity:
-        Session.info['user'] = identity['properties']['email']
+    Session.info['user'] = event.request.authenticated_userid
 
 
 class RootFactory(object):
