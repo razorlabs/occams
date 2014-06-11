@@ -12,7 +12,7 @@ CCTG Patient Call Log
 
 
 from sqlalchemy import case, MetaData, Table
-from sqlalchemy.orm import aliased, mapper
+from sqlalchemy.orm import aliased, mapper, literal
 
 from occams.datastore.utils.sql import group_concat
 
@@ -56,7 +56,7 @@ non_response_type_choices = {
 
 class CallLogPlan(ExportPlan):
 
-    name = 'calllog'
+    name = 'CallLog'
 
     title = _(u'Call Log')
 
@@ -103,7 +103,7 @@ class CallLogPlan(ExportPlan):
                 title=u'Unlisted Difficulty',
                 ),
             row('message_left', self.name, types.BOOLEAN),
-            row('comments', self.name, types.STRING),
+            row('comments', self.name, types.STRING, is_private=True),
             row('create_date', self.name, types.DATE,
                 is_required=True, is_system=True),
             row('create_user', self.name, types.STRING,
@@ -172,7 +172,7 @@ class CallLogPlan(ExportPlan):
 
                 PatientLog.non_response_other,
                 PatientLog.message_left,
-                PatientLog.comments,
+                (literal(u'[PRIVATE]') if ignore_private else PatientLog.comments).label('comments'),  # NOQA
 
                 PatientLog.create_date,
                 CreateUser.key.label('create_user'),
