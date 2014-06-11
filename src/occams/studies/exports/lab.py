@@ -4,10 +4,16 @@ Patient aliquot report.
 Formerly: avrcdataexport/sql/additional/SpecimenAliquot.sql
 """
 
+
+#
+# BBB: Lab is not part of the studies app, but needs to be
+#      generated anyway until we can implement LIMS, in which
+#      case it'll have it's own export page/process in that app.
+#
+
+
 from sqlalchemy import func, null
 from sqlalchemy.orm import aliased
-
-from occams.lab import models as lab
 
 from .. import models, Session
 from .plan import ExportPlan
@@ -19,6 +25,11 @@ class LabPlan(ExportPlan):
     name = 'SpecimenAliquot'
 
     title = 'Specimen'
+
+    @property
+    def is_enabled(self):
+        return any(n in Session.bind.url.database
+                   for n in ['aeh', 'cctg', 'mhealth'])
 
     def codebook(self):
         return iter([
@@ -69,6 +80,9 @@ class LabPlan(ExportPlan):
              use_choice_labels=False,
              expand_collections=False,
              ignore_private=True):
+
+        # Import here to avoid breaking installations that don't use lab.
+        from occams.lab import models as lab
 
         AliquotLocation = aliased(lab.Location)
         SpecimenLocation = aliased(lab.Location)
