@@ -1,5 +1,0 @@
-<html metal:use-macro="main_template">
-  <metal:content-slot fill-slot="content-slot">
-    <form tal:replace="structure form" />
-  </metal:content-slot>
-</html>

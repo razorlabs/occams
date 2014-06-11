@@ -1,0 +1,39 @@
+/**
+ * Table components
+ */
+
+
+/**
+ * Scrollable Table
+ *
+ * Content that does not fit horizontally in the viewport will become scrollable
+ * Use for tables that are expected to contain a lot of horizontal content
+ * such as a datagrid.
+ */
+.table-scrollable {
+  margin-bottom:               15px;
+  overflow-y:                  hidden;
+  overflow-x:                  scroll;
+  -ms-overflow-style:          -ms-autohiding-scrollbar;
+  -webkit-overflow-scrolling:  touch;
+  width:                       100%;
+}
+
+/**
+ * Dimensional Table
+ *
+ * Centers containt for
+ */
+.table-dimensional {
+  tbody {
+    td {
+      vertical-align:  middle;
+      text-align:      center;
+    }
+
+    th {
+      border-right: 2px solid @table-border-color !important;
+    }
+  }
+}
+

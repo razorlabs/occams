@@ -1,0 +1,157 @@
+<html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
+  <metal:content-slot fill-slot="content-slot">
+
+    <header class="page-header">
+      <h1 i18n:translate="">Exports</h1>
+      <nav metal:use-macro="load: ./panels/nav.pt" />
+    </header>
+
+    <div class="alert alert-warning" tal:condition="exceeded|nothing">
+      <strong>You have exceed your export limit of ${limit}</strong>
+    </div>
+
+    <div class="alert alert-danger" tal:condition="errors|nothing">
+      <strong>Error!</strong> Your request failed for the following reasons
+    </div>
+
+    <form
+        role="form"
+        name="export"
+        method="POST"
+        action="${request.current_route_path()}">
+
+      <h3>Step 1</h3>
+
+      <p class="lead" i18n:translate="">
+        Select the de-identified data you would like to download.
+        All exports include a code book.
+      </p>
+
+      <p class="text-danger" tal:define="error errors['contents']|nothing" tal:condition="error">${error}</p>
+
+      <div class="table-responsive">
+        <table class="table table-striped">
+          <thead>
+            <tr>
+              <th class="select">
+                <input type="checkbox" data-toggle="selectall" />
+              </th>
+              <th class="is_system">
+                <span class="glyphicon glyphicon-wrench"></span>
+              </th>
+              <th class="has_private">
+                <span class="glyphicon glyphicon-user"></span>
+              </th>
+              <th class="title" i18n:translate="">Title</th>
+              <th class="name" i18n:translate="">Name</th>
+              <th class="version" i18n:translate="">Version</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr tal:repeat="item exportables.values()">
+              <td class="select">
+                <input
+                    type="checkbox"
+                    name="contents"
+                    value="${item.name}"
+                    data-toggle="select"
+                    data-class="warning" />
+              </td>
+              <td>
+                <span
+                    class="glyphicon glyphicon-wrench"
+                    title="System table"
+                    tal:condition="item.is_system"></span>
+              </td>
+              <td>
+                <span
+                    class="glyphicon glyphicon-user"
+                    title="Has private information"
+                    tal:condition="item.has_private"></span>
+              </td>
+              <td class="title">${item.title}</td>
+              <td class="name"><code>${item.name}</code></td>
+              <td class="version">
+                <p tal:repeat="version item.versions">${version.isoformat()}</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <hr />
+
+      <h3>Step 2</h3>
+
+      <p class="lead" i18n:translate="">
+        Select list style.
+      </p>
+
+
+      <div class="form-group"
+          tal:define="
+            field_name  string:expand_collections;
+            cvalue      cstruct[field_name]">
+        <p class="text-danger" tal:define="error errors[field_name]|nothing" tal:condition="error">${error}</p>
+        <div class="radio">
+          <label>
+            <input type="radio" name="${field_name}" value="false"
+                checked="${cvalue == 'false'}" />
+            <span tal:omit-tag="" i18n:translate="">Single column with comma-delimited values.</span>
+          </label>
+        </div>
+        <div class="radio">
+          <label>
+            <input type="radio" name="${field_name}" value="true"
+                checked="${cvalue == 'true'}"/>
+            <span tal:omit-tag="" i18n:translate="">Separate column for each possible answer choice.</span>
+          </label>
+        </div>
+      </div>
+
+      <hr/>
+
+      <h3>Step 3</h3>
+
+      <p class="lead" i18n:translate="">
+        Select answer choice style.
+      </p>
+
+      <div class="form-group"
+          tal:define="
+            field_name  string:use_choice_labels;
+            cvalue      cstruct[field_name]">
+        <p class="text-danger" tal:define="error errors[field_name]|nothing" tal:condition="error">${error}</p>
+        <div class="radio">
+          <label>
+            <input type="radio" name="${field_name}" value="false"
+                checked="${cvalue == 'false'}"/>
+            <span tal:omit-tag="" i18n:translate="">Use codes.</span>
+          </label>
+        </div>
+        <div class="radio">
+          <label>
+            <input type="radio" name="${field_name}" value="true"
+                checked="${cvalue == 'true'}"/>
+            <span tal:omit-tag="" i18n:translate="">Use labels.</span>
+          </label>
+        </div>
+      </div>
+
+      <input type="hidden" name="csrf_token" value="${cstruct['csrf_token']}" />
+
+      <hr />
+
+      <p>
+        <button
+            type="submit"
+            name="submit"
+            class="pull-right btn btn-lg btn-primary"
+            tal:attributes="disabled exceeded"
+            i18n:translate="">Export</button>
+      </p>
+
+    </form>
+
+  </metal:content-slot>
+</html>

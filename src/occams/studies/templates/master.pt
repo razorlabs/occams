@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html
+    xmlns="http://www.w3.org/1999/xhtml"
+    xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+    xmlns:tal="http://xml.zope.org/namespaces/tal"
+    xmlns:metal="http://xml.zope.org/namespaces/metal"
+    xml:lang="en"
+    lang="en"
+    i18n:domain="occams.studies">
+
+  <head>
+    <meta charset="utf-8">
+    <title>${request.settings.app.title|'OCCAMS Clinical'}</title>
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <link tal:repeat="url request.webassets_env['default-css'].urls()" href="${url}" rel="stylesheet" />
+    <!--! Shortcut icons -->
+    <link
+        rel="shortcut icon"
+        href="${request.static_path('occams.studies:static/images/favicon.ico')}"/>
+    <link rel="shortcut icon" sizes="1024x1024" href="favicon-highres.png">
+    <link rel="shortcut icon" sizes="128x128" href="favicon.png">
+    <link rel="apple-touch-icon" sizes="128x128" href="favicon.png">
+    <link rel="apple-touch-icon-precomposed" sizes="128x128" href="favicon.png">
+  </head>
+
+  <!--! socket.io HATES leading-following slashes in resource paths... -->
+  <body
+      id="body"
+      data-view-name="${request.matched_route.name}"
+      data-view-path="${request.current_route_path()}"
+      data-socket-io-resource="${request.route_path('socket.io', remaining='').strip('/')}">
+
+    <!--! Wrap the content so we can push the footer to the bottom of the page -->
+    <div id="wrap">
+      <!--! Keep the app navbar separate from the content container -->
+      <nav
+          class="navbar navbar-default navbar-static-top"
+          role="navigation"
+          i18n:domain="occams.studies"
+          tal:define="user request.user|nothing;">
+
+        <div class="container">
+
+          <div class="navbar-header">
+            <button
+                type="button"
+                class="navbar-toggle"
+                data-toggle="collapse"
+                data-target=".navbar-collapse">
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand"
+                href="${request.route_path('home')}">OCCAMS Studies</a>
+          </div> <!--/.navbar-header -->
+
+          <div class="collapse navbar-collapse">
+
+            <ul class="nav navbar-nav"
+                tal:define="section request.current_route_path()">
+              <li tal:define="url request.route_path('export_home')"
+                  tal:attributes="class python:'active' if url in section else ''"
+                  tal:condition="request.has_permission('fia_view')"
+                  class="dropdown">
+                <a  id="exports-dropdown"
+                    href="${url}"
+                    data-toggle="dropdown">Exports <span class="caret"></span></a>
+                <ul class="dropdown-menu"
+                    role="menu"
+                    aria-labelledby="exports-dropdown">
+                  <li role="presentation"
+                      tal:define="route string:export_home"
+                      class="${'active' if request.matched_route.name == route
+                                        else ''}">
+                    <a  role="menuitem"
+                        tabindex="-1"
+                          href="${request.route_path(route)}">Overview</a>
+                  </li>
+                  <li role="presentation"
+                      tal:define="route string:export_add"
+                      class="${'active' if request.matched_route.name == route
+                                        else ''}">
+                    <a  role="menuitem"
+                        tabindex="-1"
+                        href="${request.route_path(route)}">Create an Export</a>
+                  </li>
+                  <li role="presentation"
+                      tal:define="route string:export_status"
+                      class="${'active' if request.matched_route.name == route
+                                        else ''}">
+                    <a  role="menuitem"
+                        tabindex="-1"
+                        href="${request.route_path(route)}">My Exports</a>
+                  </li>
+                  <li role="presentation"
+                      tal:define="route string:export_codebook"
+                      class="${'active' if request.matched_route.name == route
+                                        else ''}">
+                    <a  role="menuitem"
+                        tabindex="-1"
+                        href="${request.route_path(route)}">Codebook</a>
+                  </li>
+                  <li role="presentation"
+                      tal:define="route string:export_faq"
+                      class="${'active' if request.matched_route.name == route
+                                        else ''}">
+                    <a  role="menuitem"
+                        tabindex="-1"
+                        href="${request.route_path(route)}">FAQ</a>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+
+            <ul class="nav navbar-nav navbar-right"
+                tal:define="user request.environ['repoze.who.identity']['properties']|nothing;"
+                  tal:condition="user">
+              <li><p class="navbar-text">${user['first_name']}</p></li>
+              <li class="dropdown"
+                  tal:condition="request.apps">
+                <a href="#apps"
+                  role="button"
+                  class="dropdown-toggle"
+                  rel="tooltip"
+                  data-toggle="dropdown"
+                  data-placement="bottom"
+                  data-container="body"
+                  data-animation="false"
+                  title="Services"
+                  ><span class="glyphicon glyphicon-th"></span><span class="caret"></span></a>
+                <ul class="dropdown-menu" role="menu" aria-labelledby="Apps Menu">
+                  <tal:suites repeat="suite request.apps">
+                    <li role="presentation" class="dropdown-header">
+                      ${suite['title']}
+                    </li>
+                    <tal:apps repeat="app suite['apps']">
+                      <li role="presentation">
+                        <a href="${app['url']}" role="menuitem">${app['title']}</a>
+                      </li>
+                    </tal:apps>
+                    <li role="presentation" class="divider"
+                        tal:condition="not:repeat.suite.end"></li>
+                  </tal:suites>
+                </ul>
+              </li>
+              <li>
+                <a href="${request.route_path('account_logout')}"
+                    rel="tooltip"
+                    data-placement="bottom"
+                    data-container="body"
+                    data-animation="false"
+                    title="Log Out"
+                  ><span class="glyphicon glyphicon-log-out"></span></a>
+              </li>
+            </ul>
+
+          </div><!--/.nav-collapse -->
+
+        </div>
+      </nav>
+      <div class="container">
+        <main id="${request.matched_route.name}">
+          <metal:content-slot define-slot="content-slot" />
+        </main>
+      </div> <!-- /.container -->
+    </div> <!-- /#wrap -->
+
+    <footer i18n:domain="occams.studies" id="footer">
+      <div class="container">
+        <p class="muted credit">
+          v<span tal:define="pkg import:occams.studies">${pkg.__version__}</span>.
+          Developed by <a href="http://cfar.ucsd.edu/bit">UCSD Bit Core</a>.
+        </p>
+      </div>
+    </footer>
+
+    <!--! Load scripts at the end so we don't block rendering -->
+    <script
+        tal:repeat="url request.webassets_env['default-js'].urls()"
+        src="${url}"
+        type="text/javascript"> </script>
+
+  </body>
+</html>
+

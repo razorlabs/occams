@@ -63,6 +63,7 @@ Session.vim
 *.egg
 *.egg-info*
 *PKG-INFO
+VERSION
 
 ##### Buildout / Unit test / Coverage Reports
 .coverage

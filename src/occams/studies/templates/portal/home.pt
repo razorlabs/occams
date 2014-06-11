@@ -1,0 +1,26 @@
+<html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
+  <metal:content-slot fill-slot="content-slot">
+    <header class="page-header">
+      <h1>${request.registry.settings['app.org.title']|OCCAMS}</h1>
+    </header>
+
+    <!--! Recent Patients -->
+    <div class="jumbotron">
+      <h1 i18n:translate="">Welcome!</h1>
+      <p i18n:translate="">
+        This application is currently a work in progress. In the future all OCCAMS Clinical
+        functionality will be availble from here.
+      </p>
+      <p i18n:translate="">
+        In the meantime, only exporting of data is availble.
+      </p>
+      <p>
+        <a class="btn btn-primary btn-lg"
+            role="button"
+            href="${request.route_path('export_home')}"
+            i18n:translate="">Generate an export.</a>
+      </p>
+    </div>
+
+  </metal:content-slot>
+</html>

@@ -1,5 +1,0 @@
-<html metal:use-macro="main_template">
-  <metal:content-slot fill-slot="content-slot">
-
-  </metal:content-slot>
-</html>
