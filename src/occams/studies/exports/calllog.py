@@ -11,8 +11,8 @@ CCTG Patient Call Log
 #
 
 
-from sqlalchemy import case
-from sqlalchemy.orm import aliased
+from sqlalchemy import case, MetaData, Table
+from sqlalchemy.orm import aliased, mapper
 
 from occams.datastore.utils.sql import group_concat
 
@@ -118,50 +118,70 @@ class CallLogPlan(ExportPlan):
              use_choice_labels=False,
              expand_collections=False,
              ignore_private=True):
-        # Import here in case it's not actually installed
-        from cctg.patientlog import model as log
+
+        metadata = MetaData()
+        patient_log_table = Table(
+            'patient_log', metadata, autoload=True, autoload_with=Session.bind)
+        patient_log_nonresponse_type_table = Table(
+            'patient_log_nonresponse_type', metadata, autoload=True,
+            autoload_with=Session.bind)
+        log_response_table = Table(
+            'log_responses', metadata, autoload=True,
+            autoload_with=Session.bind)
+
+        class PatientLog(object):
+            pass
+
+        class PatientLogNonResponseType(object):
+            pass
+
+        mapper(PatientLog, patient_log_table)
+        mapper(PatientLogNonResponseType, patient_log_nonresponse_type_table)
+
         CreateUser = aliased(models.User)
         ModifyUser = aliased(models.User)
         query = (
             Session.query(
-                log.PatientLog.id.label('id'),
+                PatientLog.id.label('id'),
                 models.Patient.our.label('pid'),
                 models.Site.name.label('site'),
 
-                log.PatientLog.patient_contact_date.label('contact_date'),
-                log.PatientLog.last_text_date,
+                PatientLog.patient_contact_date.label('contact_date'),
+                PatientLog.last_text_date,
 
-                case(value=log.PatientLog.contact_reason,
+                case(value=PatientLog.contact_reason,
                      whens=[(v, k) for k, v in contact_reason_choices.items()])
                 .label('contact_reason'),
 
-                case(value=log.PatientLog.contact_type,
+                case(value=PatientLog.contact_type,
                      whens=[(v, k) for k, v in contact_type_choices.items()])
                 .label('contact_type'),
 
-                group_concat(
-                    Session.query(
-                        case(value=log.PatientLogNonResponseType.value,
-                             whens=[(v, k) for k, v in non_response_type_choices.items()]))  # NOQA
-                    .join(log.log_response_table)
-                    .filter(log.log_response_table.patient_log_id == log.PatientLog.id)  # NOQA
-                    .correlate(log.PatientLog)
-                    .as_scalar(),
-                    ';')
+                Session.query(
+                     group_concat(
+                        case(value=PatientLogNonResponseType.value,
+                             whens=[(v, k) for k, v in non_response_type_choices.items()]),  # NOQA
+                        ';'))
+                .select_from(PatientLogNonResponseType)
+                .join(log_response_table, log_response_table.c.patient_log_nonresponse_type_id == PatientLogNonResponseType.id)  # NOQA
+                .filter(log_response_table.c.patient_log_id == PatientLog.id)  # NOQA
+                .group_by(log_response_table.c.patient_log_id)
+                .correlate(PatientLog)
+                .as_scalar()
                 .label('non_response_type'),
 
-                log.PatientLog.non_response_other,
-                log.PatientLog.message_left,
-                log.PatientLog.comments,
+                PatientLog.non_response_other,
+                PatientLog.message_left,
+                PatientLog.comments,
 
-                log.PatientLog.create_date,
+                PatientLog.create_date,
                 CreateUser.key.label('create_user'),
-                log.PatientLog.modify_date,
+                PatientLog.modify_date,
                 ModifyUser.key.label('modify_user'))
-            .select_from(log.PatientLog)
-            .join(models.PatientLog.patient)
+            .select_from(PatientLog)
+            .join(models.Patient, models.Patient.id == PatientLog.patient_id)
             .join(models.Patient.site)
-            .join(CreateUser, log.PatientLog.create_user)
-            .join(ModifyUser, log.PatientLog.modify_user)
-            .order_by(log.PatientLog.id))
+            .join(CreateUser, PatientLog.create_user_id == CreateUser.id)
+            .join(ModifyUser, PatientLog.modify_user_id == ModifyUser.id)
+            .order_by(PatientLog.id))
         return query
