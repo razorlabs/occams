@@ -96,6 +96,15 @@ def parse_args(argv=sys.argv):
 def main(argv=sys.argv):
     args = parse_args(argv[1:])
 
+    if args.config:
+        engine = engine_from_config(get_appsettings(args.config), 'app.db.')
+    elif args.db:
+        engine = create_engine(args.db)
+    else:
+        sys.exit('You must specify either a connection or app configuration')
+
+    Session.configure(bind=engine)
+
     if args.list:
         print_list(args)
     else:
@@ -111,7 +120,7 @@ def print_list(args):
         return '*' if condition else ''
 
     def format(row):
-        return star(row.is_system), star(row.has_private), star(row.has_rand), row.name, row.title
+        return star(row.is_system), star(row.has_private), star(row.has_rand), row.name, row.title  # NOQA
 
     header = ['sys', 'priv', 'rand', 'name', 'title']
     rows = iter(map(format, itervalues(exports.list_all())))
@@ -122,14 +131,6 @@ def make_export(args):
     """
     Generates the export data files
     """
-    if args.config:
-        engine = engine_from_config(get_appsettings(args.config), 'app.db.')
-    elif args.db:
-        engine = create_engine(args.db)
-    else:
-        sys.exit('You must specify either a connection or app configuration')
-
-    Session.configure(bind=engine)
 
     if not (args.all
             or args.all_public
