@@ -6,7 +6,7 @@
  * this style of implementation is to make the code (hopefully) less confusing
  * to follow.
  */
-(function($) {
++function($) {
     'use strict';
 
     /**
@@ -473,4 +473,4 @@
         }
     });
 
-})(jQuery);
+}(jQuery);

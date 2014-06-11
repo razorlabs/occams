@@ -176,7 +176,7 @@ class DataEntryForm(z3c.form.group.GroupForm, DataForm, z3c.form.form.Form):
     A form for entering data into DataStore
     """
     implements(interfaces.IDataEntryForm)
-    template = ViewPageTemplateFile('entry_templates/form.pt')
+#    template = ViewPageTemplateFile('entry_templates/form.pt')
 
     @property
     def formState(self):
@@ -264,7 +264,7 @@ class DataAddForm(z3c.form.group.GroupForm, DataForm, z3c.form.form.AddForm):
     A form for entering data into DataStore
     """
     implements(interfaces.IDataEntryForm)
-    template = ViewPageTemplateFile('entry_templates/form.pt')
+#    template = ViewPageTemplateFile('entry_templates/form.pt')
 
     @property
     def formState(self):
@@ -324,7 +324,7 @@ class UberAddForm(z3c.form.group.GroupForm, UberForm, z3c.form.form.AddForm):
     implements(interfaces.IDataEntryForm)
     z3c.form.form.extends(z3c.form.form.AddForm)
 
-    template = viewpagetemplatefile.ViewPageTemplateFile('entry_templates/uberform.pt')
+#    template = viewpagetemplatefile.ViewPageTemplateFile('entry_templates/uberform.pt')
     ignoreContext=True
 
     def getContent(self):
@@ -391,7 +391,7 @@ class UberEditForm(z3c.form.group.GroupForm, UberForm, z3c.form.form.EditForm):
     implements(interfaces.IDataEntryForm)
     z3c.form.form.extends(z3c.form.form.EditForm)
 
-    template = viewpagetemplatefile.ViewPageTemplateFile('entry_templates/uberform.pt')
+#    template = viewpagetemplatefile.ViewPageTemplateFile('entry_templates/uberform.pt')
 
     @view.memoize
     def getForms(self):

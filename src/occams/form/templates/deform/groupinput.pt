@@ -1,0 +1,49 @@
+<div
+    tal:define="
+      error_class error_class|field.widget.error_class;
+      description description|field.description;
+      title title|field.title;
+      oid oid|field.oid;
+      name name|field.name;
+      css_class css_class|field.widget.css_class;
+
+      before before|field[field.widget.before]|nothing;
+      after after|field[field.widget.after]|nothing;"
+    class="form-group ${'has-error ' + error_class if field.error else ''}"
+    title="${description}"
+    id="item-${oid}"
+    i18n:domain="occams.form">
+
+  <label tal:condition="title">${title}</label>
+
+  <p tal:condition="description" class="help-block">${description}</p>
+
+  <div class="alert" tal:condition="field.error">${field.error}</div>
+
+${field.start_mapping()}
+
+  <!-- groupinput -->
+
+  <div class="input-group">
+    <span class="input-group-addon" tal:condition="before">
+      <input tal:replace="structure before.serialize(before.cstruct)" />
+    </span>
+
+    <tal:fields repeat="child field">
+      <input
+          tal:condition="
+            (before and before.name != child.name)
+            or (after and after.name != child.name)"
+          tal:replace="structure child.serialize(child.cstruct)" />
+    </tal:fields>
+
+    <span class="input-group-addon" tal:condition="after">
+      <input tal:replace="structure after.serialize(after.cstruct)" />
+    </span>
+
+  </div><!-- /input-group -->
+
+  <!-- /groupinput -->
+
+${field.end_mapping()}
+</div>

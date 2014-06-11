@@ -1,0 +1,3 @@
+[submodule "src/occams/form/static/libs/bootstrap"]
+	path = src/occams/form/static/libs/bootstrap
+	url = https://github.com/twbs/bootstrap.git

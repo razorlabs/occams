@@ -1,0 +1,32 @@
+form label.required:after {
+  /* Match bootstrap's red */
+  color: #e32;
+  content: ' \25A0';
+  vertical-align: super;
+}
+
+/** Default form styling **/
+
+form ul {
+  margin: 0;
+  padding: 0;
+  list-style-type: none;
+}
+
+form li {
+}
+
+form .status {
+  font-weight: bold;
+}
+
+/** Bootstrap Overrides **/
+
+#modal form {
+  /* Disable form margins inside the modal container so
+   * that we don't get unwanted whitespace
+   */
+  margin: 0;
+}
+
+
