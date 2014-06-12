@@ -14,13 +14,15 @@ try:
 except ImportError:  # pragma: nocover
     from collections import OrderedDict
 
-from ..import Session
 from . import codebook
+from .calllog import CallLogPlan
 from .enrollment import EnrollmentPlan
+from .partner import PartnerPlan
 from .pid import PidPlan
 from .lab import LabPlan
 from .schema import SchemaPlan
 from .visit import VisitPlan
+from .symptom import SymptomPlan
 
 
 def list_all(include_rand=True, include_private=True):
@@ -34,13 +36,12 @@ def list_all(include_rand=True, include_private=True):
     Returns:
     An ordered dictionary (name, plan) items.
     """
-    # Precooked reports
-    tables = [EnrollmentPlan(), PidPlan(), VisitPlan()]
-    if 'aliquot' in Session.bind.table_names():
-        # BBB: Lab is not part of the studies app, but needs to be
-        #      generated anyway until we can implement LIMS, in which
-        #      case it'll have it's own export page/process in that app.
-        tables.append(LabPlan())
+    # System tables (one day...)
+    tables = [p for p in [EnrollmentPlan(), PidPlan(), VisitPlan(),
+                          # not system tables:
+                          LabPlan(),
+                          CallLogPlan(), PartnerPlan(), SymptomPlan()]
+              if p.is_enabled]
     schemata = SchemaPlan.list_all(include_rand=include_rand,
                                    include_private=include_private)
     merged = sorted(tables + schemata, key=lambda v: v.title)

@@ -10,6 +10,8 @@ class ExportPlan(object):
     has_private = False     # Contains private (PHI) data
     has_rand = False        # Contains restricted (Rand) data
 
+    is_enabled = True       # Flag to disable org-spcific-hard-coded forms
+
     versions = []           # All versions avaialble
 
     @property

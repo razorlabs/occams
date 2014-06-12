@@ -304,8 +304,7 @@ def download(request):
         export = (
             Session.query(models.Export)
             .filter_by(id=request.matchdict['id'], status='complete')
-            .filter(models.Export.owner_user.has(
-                key=request.authenticated_userid))
+            .filter(models.Export.owner_user.has(key=request.authenticated_userid))  # NOQA
             .one())
     except orm.exc.NoResultFound:
         raise HTTPNotFound
