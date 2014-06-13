@@ -231,7 +231,15 @@ class TestTrigger(unittest.TestCase):
                 else:
                     dst_val = dst_dep_data['old_id']
 
-            if src_val != dst_val:
+            if (src_table.name == 'entity'
+                    and column.name == 'state'
+                    and src_val in ('not-done', 'not-applicable')
+                    and dst_val != 'complete'):
+                invalid_fields.append(
+                    '%s.%s: %s not forwarded to %s'
+                    % (src_table.name, column.name, src_val, dst_val))
+
+            elif src_val != dst_val:
                 invalid_fields.append(
                     '%s.%s: %s != %s'
                     % (src_table.name, column.name, src_val, dst_val))
@@ -351,6 +359,7 @@ class TestTrigger(unittest.TestCase):
             src_id = populate(self.src_conn, src_table, overrides=overrides)
         src_data, dst_data = self._getRecord(src_table, src_id)
         self.assertRecordEqual(src_table, src_data, dst_table, dst_data)
+        self.assertFalse(dst_data['is_null'])
 
         # Updates
         with self.src_conn.begin():
@@ -358,6 +367,7 @@ class TestTrigger(unittest.TestCase):
                               overrides=overrides, id=src_id)
         src_data, dst_data = self._getRecord(src_table, src_id)
         self.assertRecordEqual(src_table, src_data, dst_table, dst_data)
+        self.assertFalse(dst_data['is_null'])
 
         # Deletes
         self.src_conn.execute(
@@ -367,6 +377,35 @@ class TestTrigger(unittest.TestCase):
         src_data, dst_data = self._getRecord(src_table, src_id)
         self.assertIsNone(src_data)
         self.assertIsNone(dst_data)
+
+    @data('not-applicable', 'not-done')
+    def test_is_null(self, state):
+        """
+        It should set is_null/complete when using not applicable/done
+        """
+        src_table = self.src_metadata.tables['entity']
+        dst_table = self.dst_metadata.tables['entity']
+
+        overrides = {
+            'entity.state': state,
+            'schema.state': 'published',
+            'schema.storage': 'eav',
+            'schema.is_inline': False,
+            'schema.base_schema_id': None,
+        }
+
+        # Inserts
+        with self.src_conn.begin():
+            src_id = populate(self.src_conn, src_table, overrides=overrides)
+        src_data, dst_data = self._getRecord(src_table, src_id)
+        self.assertTrue(dst_data['is_null'])
+
+        # Updates
+        with self.src_conn.begin():
+            src_id = populate(self.src_conn, src_table,
+                              overrides=overrides, id=src_id)
+        src_data, dst_data = self._getRecord(src_table, src_id)
+        self.assertTrue(dst_data['is_null'])
 
     @data('patient', 'enrollment', 'visit', 'stratum')
     def test_context(self, external):
