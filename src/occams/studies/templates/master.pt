@@ -169,8 +169,8 @@
 
     <footer i18n:domain="occams.studies" id="footer">
       <div class="container">
-        <p class="muted credit">
-          v<span tal:define="pkg import:occams.studies">${pkg.__version__}</span>.
+        <p class="text-muted credit">
+          Version <span tal:define="pkg import:occams.studies">${pkg.__version__}</span>.
           Developed by <a href="http://cfar.ucsd.edu/bit">UCSD Bit Core</a>.
         </p>
       </div>
