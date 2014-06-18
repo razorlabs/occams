@@ -192,7 +192,7 @@ SET value = CASE LOWER(value)
                                   END
 
                                 -- seems like nothing changed with this one...
-                                WHEN (("schema_name" ILIKE 'RapidTest%' AND "attribute_name" IN ('rapid2', 'result'))
+                                WHEN (("schema_name" ILIKE 'RapidTest%' AND "attribute_name" IN ('verify_result', 'result'))
                                       OR ("schema_name" ILIKE 'IFA%' AND "attribute_name" = 'result')) THEN
                                   CASE
                                     WHEN "choice_value" ILIKE 'Negative' THEN '0'
