@@ -402,7 +402,7 @@ def integrate(url):
         conn.execute("""
             UPDATE attribute
             SET is_private = TRUE
-            WHERE attribute.name = 'someone_had_early_test'
+            WHERE attribute.name = 'sexpart_et_name'
             """)
 
 
