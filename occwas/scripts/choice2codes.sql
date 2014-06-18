@@ -50,7 +50,9 @@ SET value = CASE LOWER(value)
                 WHEN 'no' THEN '0'
                 WHEN 'false' THEN '0'
                 ELSE (SELECT CASE
-                                -- Overrides for backwards compatibility
+
+                                -- Overrides for backwards compatibility --
+
                                 WHEN ("schema_name", "attribute_name") = ('DetunedEIA', 'test_kit_type') AND "choice_value" ILIKE 'vironostika' THEN  '1'
                                 WHEN ("schema_name", "attribute_name") = ('DetunedEIA', 'test_kit_type') AND "choice_value" ILIKE 'BED' THEN  '2'
                                 WHEN ("schema_name", "attribute_name") = ('DetunedEIA', 'test_kit_type') AND "choice_value" ILIKE 'vitros' THEN  '3'
@@ -100,8 +102,127 @@ SET value = CASE LOWER(value)
                                 WHEN ("schema_name", "attribute_name") = ('ViralLoad', 'test_kit_type') AND "choice_value" ILIKE 'Proprietary Method Of National Genetics Institute' THEN  '17'
                                 WHEN ("schema_name", "attribute_name") = ('ViralLoad', 'test_kit_type') AND "choice_value" ILIKE 'Roche Ampliprep Taqman V 2.l' THEN  '18'
 
-                                -- Preferred case
-                                ELSE "code"
+                                -- Requested changes --
+
+                                WHEN "schema_name" ILIKE 'Demographics%' AND "attribute_name" = 'orientation' THEN
+                                  CASE
+                                    WHEN "choice_value" ILIKE 'men' THEN '1'
+                                    WHEN "choice_value" ILIKE 'women' THEN '2'
+                                    WHEN "choice_value" ILIKE 'transgenderFM' THEN '3'
+                                    WHEN "choice_value" ILIKE 'transgenderMF' THEN '4'
+                                    WHEN "choice_value" ILIKE 'unknown' THEN '5'
+                                  END
+
+                                WHEN "schema_name" ILIKE 'Demographics%' AND "attribute_name" = 'language' THEN
+                                  CASE
+                                    WHEN "choice_value" ILIKE 'english' THEN '1'
+                                    WHEN "choice_value" ILIKE 'spanish' THEN '2'
+                                    WHEN "choice_value" ILIKE 'french' THEN '3'
+                                    WHEN "choice_value" ILIKE 'other' THEN '4'
+                                  END
+
+                                WHEN "schema_name" ILIKE 'HIVSerologySelfReport' AND "attribute_name" = 'test_kit_type' THEN
+                                  CASE
+                                    WHEN "choice_value" ILIKE 'anti-hiv' THEN '1'
+                                    WHEN "choice_value" ILIKE 'enzygnost' THEN '2'
+                                    WHEN "choice_value" ILIKE 'genscreen' THEN '3'
+                                    WHEN "choice_value" ILIKE 'hiv' THEN '4'
+                                    WHEN "choice_value" ILIKE 'hiv a' THEN '5'
+                                    WHEN "choice_value" ILIKE 'vironostika' THEN '6'
+                                    WHEN "choice_value" ILIKE 'uni-form' THEN '7'
+                                    WHEN "choice_value" ILIKE 'bio-rad' THEN '8'
+                                    WHEN "choice_value" ILIKE 'unknown' THEN '9'
+                                    WHEN "choice_value" ILIKE 'error' THEN '10'
+                                    WHEN "choice_value" ILIKE 'icma' THEN '11'
+                                    WHEN "choice_value" ILIKE 'oraquick' THEN '12'
+                                    WHEN "choice_value" ILIKE 'abbot' THEN '13'
+                                  END
+
+                                WHEN "schema_name" ILIKE 'IEarlyTest%' AND "attribute_name" = 'hiv_sex' THEN
+                                  CASE
+                                    WHEN "choice_value" ILIKE 'na' THEN '0'
+                                    WHEN "choice_value" ILIKE 'men' THEN '1'
+                                    WHEN "choice_value" ILIKE 'women' THEN '2'
+                                    WHEN "choice_value" ILIKE 'transgenderFM' THEN '3'
+                                    WHEN "choice_value" ILIKE 'transgenderMF' THEN '4'
+                                    WHEN "choice_value" ILIKE 'unknown' THEN '5'
+                                    WHEN "choice_value" ILIKE 'transgender' THEN '6'
+                                  END
+
+                                WHEN (("schema_name" ILIKE 'IPartnerDemographics%' AND "attribute_name" = 'gender')
+                                      OR ("schema_name" ILIKE 'Demographics%' AND "attribute_name" = 'gender')) THEN
+                                  CASE
+                                    WHEN "choice_value" ILIKE 'male' THEN '1'
+                                    WHEN "choice_value" ILIKE 'female' THEN '2'
+                                    WHEN "choice_value" ILIKE 'transfemale2male' THEN '3'
+                                    WHEN "choice_value" ILIKE 'transmale2female' THEN '4'
+                                    WHEN "choice_value" ILIKE 'other' THEN '5' -- (Not in regular demographics)
+                                  END
+
+                                WHEN (("schema_name" ILIKE 'IPartnerDemographics%' AND "attribute_name" = 'ethnicity')
+                                      OR ("schema_name" ILIKE 'Demographics%' AND "attribute_name" = 'ethnicity')) THEN
+                                  CASE
+                                    WHEN "choice_value" ILIKE 'hispanic' THEN '1'
+                                    WHEN "choice_value" ILIKE 'not_hispanic' THEN '2'
+                                    WHEN "choice_value" ILIKE 'unknown' THEN '3'
+                                    WHEN "choice_value" ILIKE 'decline' THEN '4'
+                                    WHEN "choice_value" ILIKE 'other' THEN '5'
+                                  END
+
+                                WHEN (("schema_name" ILIKE 'IPartnerDemographics%' AND "attribute_name" = 'race')
+                                      OR ("schema_name" ILIKE 'Demographics%' AND "attribute_name" = 'race')) THEN
+                                  CASE
+                                    WHEN "choice_value" ILIKE 'caucasian' THEN '1'
+                                    WHEN "choice_value" ILIKE 'native_american' THEN '2'
+                                    WHEN "choice_value" ILIKE 'alaskan' THEN '3'
+                                    WHEN "choice_value" ILIKE 'asian' THEN '4'
+                                    WHEN "choice_value" ILIKE 'hawaiian' THEN '5'
+                                    WHEN "choice_value" ILIKE 'pacific_islander' THEN '6'
+                                    WHEN "choice_value" ILIKE 'black' THEN '7'
+                                    WHEN "choice_value" ILIKE 'decline' THEN '8'
+                                    WHEN "choice_value" ILIKE 'unknown' THEN '9'
+                                    WHEN "choice_value" ILIKE 'other' THEN '10'
+                                  END
+
+                                WHEN "schema_name" ILIKE 'IPartnerDisclosure%' AND "attribute_name" = 'test_result' THEN
+                                  CASE
+                                    WHEN "choice_value" ILIKE 'Early Test Site' THEN '0'
+                                    WHEN "choice_value" ILIKE 'Other' THEN '1'
+                                    WHEN "choice_value" ILIKE 'Unknown' THEN '2'
+                                  END
+
+                                -- seems like nothing changed with this one...
+                                WHEN (("schema_name" ILIKE 'RapidTest%' AND "attribute_name" IN ('rapid2', 'result'))
+                                      OR ("schema_name" ILIKE 'IFA%' AND "attribute_name" = 'result')) THEN
+                                  CASE
+                                    WHEN "choice_value" ILIKE 'Negative' THEN '0'
+                                    WHEN "choice_value" ILIKE 'positive' THEN '1'
+                                    WHEN "choice_value" ILIKE 'Indeterminate' THEN '2'
+                                  END
+
+                                WHEN "schema_name" ILIKE 'ScreeningRouteOfTransmission027%' AND "attribute_name" = 'referral_source' THEN
+                                  CASE
+                                    WHEN "choice_value" ILIKE 'community' THEN '1'
+                                    WHEN "choice_value" ILIKE 'nat' THEN '2'
+                                    WHEN "choice_value" ILIKE 'rds 022' THEN '3'
+                                    WHEN "choice_value" ILIKE 'rds 027' THEN '4'
+                                    WHEN "choice_value" ILIKE 'unknown' THEN '5'
+                                    WHEN "choice_value" ILIKE 'error' THEN '6'
+                                    WHEN "choice_value" ILIKE 'aeh 020' THEN '7'
+                                    WHEN "choice_value" ILIKE 'partner 020' THEN '8'
+                                  END
+
+                                WHEN "schema_name" ILIKE 'WesternBlot%' AND "attribute_name" IN ('gp120', 'gp160', 'gp40', 'gp41', 'p18', 'p24', 'p31', 'p40', 'p51', 'p55', 'p65', 'p66', 'result') THEN
+                                  CASE
+                                    WHEN "choice_value" ILIKE 'negative' THEN '0'
+                                    WHEN "choice_value" ILIKE 'positive' THEN '1'
+                                    WHEN "choice_value" ILIKE 'indeterminate' THEN '2'
+                                    WHEN "choice_value" ILIKE 'na' THEN '3'
+                                  END
+
+                                -- Preferred case --
+
+                                ELSE "code"::text
                               END
                       FROM "codes"
                       WHERE "codes"."choice_value" = "choice"."value"
