@@ -83,8 +83,8 @@ CREATE OR REPLACE FUNCTION ext_state_id(state entity_state) RETURNS integer AS $
 
     state_str := $1::varchar;
 
-    IF state_str = 'not-done' THEN
-      RETURN NULL;
+    IF state_str IN ('not-done', 'not-applicable') THEN
+      RETURN (SELECT id FROM "state_ext" WHERE name = 'complete');
     END IF;
 
     IF NOT EXISTS(SELECT 1 FROM "state_ext" WHERE name = state_str) THEN
@@ -140,7 +140,7 @@ CREATE OR REPLACE FUNCTION entity_mirror() RETURNS TRIGGER AS $$
             , NEW.collect_date
             -- don't worry about mapping since old states are a subset of the new states
             , v_state_id
-            , (NEW.state::varchar = 'not-done')
+            , (NEW.state::varchar IN ('not-done', 'not-applicable'))
             , NEW.create_date
             , ext_user_id(NEW.create_user_id)
             , NEW.modify_date
@@ -169,7 +169,7 @@ CREATE OR REPLACE FUNCTION entity_mirror() RETURNS TRIGGER AS $$
           , schema_id = ext_schema_id(NEW.schema_id)
           , collect_date = NEW.collect_date
           , state_id = v_state_id
-          , is_null = (NEW.state::varchar = 'not-done')
+          , is_null = (NEW.state::varchar IN ('not-done', 'not-applicable'))
           , create_date = NEW.create_date
           , create_user_id = ext_user_id(NEW.create_user_id)
           , modify_date = NEW.modify_date

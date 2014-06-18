@@ -10,8 +10,8 @@ CREATE FOREIGN TABLE context_ext (
 
   -- , entity_id       INTEGER NOT NULL
     entity_id       INTEGER NOT NULL
-  , external        VARCHAR
-  , key             INTEGER
+  , external        VARCHAR NOT NULL
+  , key             INTEGER NOT NULL
 
   , create_date     TIMESTAMP NOT NULL
   , create_user_id  INTEGER NOT NULL
@@ -27,19 +27,6 @@ OPTIONS (table_name 'context');
 
 
 DROP FUNCTION IF EXISTS ext_context_id(INTEGER);
-
---
--- Helper function to find the context id in the new system using
--- the old system id number
---
-CREATE OR REPLACE FUNCTION ext_context_id(id INTEGER) RETURNS integer AS $$
-  BEGIN
-    RETURN (
-        SELECT "context_ext".id
-        FROM "context_ext"
-        WHERE (old_db, old_id) = (SELECT current_database(), $1));
-  END;
-$$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION context_mirror() RETURNS TRIGGER AS $$
@@ -62,11 +49,11 @@ CREATE OR REPLACE FUNCTION context_mirror() RETURNS TRIGGER AS $$
         VALUES (
             ext_entity_id(NEW.entity_id)
           , NEW.external
-          , CASE
-              WHEN NEW.external = 'patient' THEN ext_patient_id(NEW.key)
-              WHEN NEW.external = 'enrollment' THEN ext_enrollment_id(NEW.key)
-              WHEN NEW.external = 'visit' THEN ext_visit_id(NEW.key)
-              WHEN NEW.external = 'stratum' THEN ext_stratum_id(NEW.key)
+          , CASE NEW.external
+              WHEN 'patient' THEN ext_patient_id(NEW.key)
+              WHEN 'enrollment' THEN ext_enrollment_id(NEW.key)
+              WHEN 'visit' THEN ext_visit_id(NEW.key)
+              WHEN 'stratum' THEN ext_stratum_id(NEW.key)
             END
           , NEW.create_date
           , ext_user_id(NEW.create_user_id)
@@ -87,11 +74,11 @@ CREATE OR REPLACE FUNCTION context_mirror() RETURNS TRIGGER AS $$
         UPDATE context_ext
         SET entity_id = ext_entity_id(NEW.entity_id)
           , external = NEW.external
-          , key = CASE
-                    WHEN NEW.external = 'patient' THEN ext_patient_id(NEW.key)
-                    WHEN NEW.external = 'enrollment' THEN ext_enrollment_id(NEW.key)
-                    WHEN NEW.external = 'visit' THEN ext_visit_id(NEW.key)
-                    WHEN NEW.external = 'stratum' THEN ext_stratum_id(NEW.key)
+          , key = CASE NEW.external
+                    WHEN 'patient' THEN ext_patient_id(NEW.key)
+                    WHEN 'enrollment' THEN ext_enrollment_id(NEW.key)
+                    WHEN 'visit' THEN ext_visit_id(NEW.key)
+                    WHEN 'stratum' THEN ext_stratum_id(NEW.key)
                   END
           , create_date = NEW.create_date
           , create_user_id = ext_user_id(NEW.create_user_id)
