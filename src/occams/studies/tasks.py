@@ -218,14 +218,18 @@ def make_export(name):
             zfp.write(tfp.name, exports.codebook.FILE_NAME)
 
 
-@celery.task(name='make_codebook', ignore_result=True)
+@celery.task(name='make_codebook', ignore_result=True, bind=True)
 @in_transaction
-def make_codebook():
+def make_codebook(self):
     """
     Pre-cooks a codebook file for faster downloading
     """
-    codebook_chain = [p.codebook() for p in itervalues(exports.list_all())]
-    path = os.path.join(celery.settings['app.export.dir'],
-                        exports.codebook.FILE_NAME)
-    with open(path, 'w+b') as fp:
-        exports.write_codebook(fp, chain.from_iterable(codebook_chain))
+    try:
+        codebook_chain = [p.codebook() for p in itervalues(exports.list_all())]
+        path = os.path.join(celery.settings['app.export.dir'],
+                            exports.codebook.FILE_NAME)
+        with open(path, 'w+b') as fp:
+            exports.write_codebook(fp, chain.from_iterable(codebook_chain))
+    except Exception as exc:
+        # Need to keep retrying (default is every 3 min)
+        self.retry(exc=exc)
