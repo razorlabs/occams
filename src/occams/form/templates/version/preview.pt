@@ -30,6 +30,7 @@
               tal:define="description field.description"
               tal:condition="description">${description}</p>
           <tal:widget switch="python:hasattr(field, 'choices')">
+            <!-- TODO: make textarea 5 -->
             <input tal:case="False" tal:replace="field(class_='form-control')" />
             <div tal:case="True" tal:repeat="choice field" class="${field.option_widget.input_type}">
               <label>

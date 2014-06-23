@@ -5,6 +5,17 @@ Toolset for rendering datastore forms.
 import six
 import wtforms
 from wtforms.fields import html5
+from wtforms.ext.csrf import SecureForm
+
+
+class CsrfForm(SecureForm):
+
+    def generate_csrf_token(self, csrf_context):
+        return csrf_context.get_csrf_token()
+
+    def validate_csrf_token(self, field):
+        if field.data != field.current_token:
+            raise ValueError('Invalid CSRF')
 
 
 class MultiCheckboxField(wtforms.SelectMultipleField):
@@ -34,8 +45,7 @@ def schema2wtf(schema):
         elif attribute.type == 'string':
             field_class = wtforms.StringField
         elif attribute.type == 'text':
-            field_class = wtforms.StringField
-            kw['widget'] = wtforms.widgets.TextArea()
+            field_class = wtforms.TextAreaField
         elif attribute.type == 'date':
             field_class = wtforms.DateField
         elif attribute.type == 'datetime':

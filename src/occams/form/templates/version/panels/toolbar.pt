@@ -1,24 +1,36 @@
-<div id="form-list-toolbar" class="pull-right">
+<div id="form-list-toolbar">
   <div class="btn-toolbar" role="toolbar" >
     <div class="btn-group">
-      <a href="${request.current_route_path(_route_name='version_download')}"
+      <button data-target="${request.current_route_path(_route_name='version_download')}"
           class="btn btn-default">
         <span class="glyphicon glyphicon-download"></span>
-        <span i18n:translate="">Download This Version</span>
-      </a>
+        <span i18n:translate="">Download</span>
+      </button>
     </div>
-    <div class="btn-group">
-      <a href="${request.current_route_path(_route_name='version_draft')}"
+    <div class="btn-group"
+        tal:define="is_published schema.publish_date|nothing">
+      <button data-target="${request.current_route_path(_route_name='version_draft')}"
           class="btn btn-default"
-          tal:condition="schema.publish_date|nothing">
+          tal:condition="is_published">
         <span class="glyphicon glyphicon-transfer"></span>
-        <span i18n:translate="">Draft New Version</span>
-      </a>
-      <a href="${request.current_route_path(_route_name='version_edit')}"
+        <span i18n:translate="">Draft New</span>
+      </button>
+      <button data-target="${request.current_route_path(_route_name='version_draft')}"
+          class="btn btn-default"
+          tal:condition="not:is_published">
+        <span class="glyphicon glyphicon-tag"></span>
+        <span i18n:translate="">Publish</span>
+      </button>
+      <button data-target="${request.current_route_path(_route_name='version_edit')}"
           class="btn btn-default">
         <span class="glyphicon glyphicon-pencil"></span>
         <span i18n:translate="">Edit</span>
-      </a>
+      </button>
+      <button data-target="${request.current_route_path(_route_name='version_edit')}"
+          class="btn btn-default">
+        <span class="glyphicon glyphicon-move"></span>
+        <span i18n:translate="">Manage Fields</span>
+      </button>
       <div class="btn-group dropdown">
         <button class="btn btn-default dropdown-toggle"
             data-toggle="dropdown">
@@ -34,4 +46,8 @@
       </div>
     </div>
   </div> <!-- /.btn-toolbar -->
+
+  <!-- TODO: Made status messge -->
+  <!-- cancelMessage = _(u'Changes canceled, nothing saved.') -->
+
 </div>

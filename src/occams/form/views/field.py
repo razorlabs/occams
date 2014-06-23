@@ -2,6 +2,184 @@
 def list(request):
     pass
 
+def crap():
+    class IOccamsFormComponent(zope.interface.Interface):
+        """
+        Marker interfaces for interfaces of this plug-in
+        """
+
+
+
+    class IEditableField(IOccamsFormComponent):
+        """
+        The human-friendly form for edidting a field.
+        """
+
+        # Note we did not make this readonly so that users with superpowers can
+        # change it
+        name = zope.schema.ASCIILine(
+            title=_(u'Variable Name'),
+            description=_(
+                u'Internal variable name, this value cannot be changed once it is '
+                u'created.'
+                ),
+            )
+
+        title = zope.schema.TextLine(
+            title=_(u'Label'),
+            description=_(u'The prompt for the user.'),
+            )
+
+        description = zope.schema.Text(
+            title=_(u'Description'),
+            description=_(u'A short description about the field\'s purpose.'),
+            required=False,
+            )
+
+        order = zope.schema.Int(
+            title=_(u'Order'),
+            description=_(u'The field\'s order in the form'),
+            required=True
+            )
+
+
+
+    class ICollectable(IOccamsFormComponent):
+
+        is_collection = zope.schema.Bool(
+            title=_(u'Multiple?'),
+            description=_(u'If selected, the user may enter more than one value.'),
+            default=False,
+            )
+
+
+    class IRequireable(IOccamsFormComponent):
+
+        is_required = zope.schema.Bool(
+            title=_(u'Required?'),
+            description=_(u'If selected, the user will be required to enter a value.'),
+            default=False,
+            )
+
+
+    class IEditableChoice(IOccamsFormComponent):
+
+        title = zope.schema.TextLine(
+            title=_(u'Displayed Label'),
+            )
+
+        value = zope.interface.Attribute(_(u'The value stored for the answer choice'))
+
+
+    class IEditableBooleanChoice(IEditableChoice):
+
+        value = zope.schema.Bool(
+            title=_(u'Stored Value'),
+            )
+
+
+    class IEditableBooleanField(IEditableField, IRequireable):
+
+        choices = zope.schema.List(
+            title=_(u'Configure True/False Labels'),
+            value_type=DictRow(schema=IEditableBooleanChoice),
+            required=True,
+            )
+
+
+    class IEditableDateField(IEditableField, IRequireable):
+
+        pass
+
+
+    class IEditableDateTimeField(IEditableField, IRequireable):
+
+        pass
+
+
+    class IEditableIntegerChoice(IEditableChoice):
+
+        value = zope.schema.Int(
+            title=_(u'Stored Value'),
+            )
+
+
+    class IEditableIntegerField(IEditableField, IRequireable):
+
+        choices = zope.schema.List(
+            title=_(u'Value Constraints'),
+            description=_(
+                u'If you want the field to be limited to a subset of possible values, '
+                u'please enter them below. Leave blank otherwise.'),
+            value_type=DictRow(schema=IEditableIntegerChoice),
+            required=False,
+            )
+
+
+    class IEditableDecimalChoice(IEditableChoice):
+
+        value = zope.schema.Decimal(
+            title=_(u'Stored Value'),
+            )
+
+
+    class IEditableDecimalField(IEditableField, IRequireable):
+
+        choices = zope.schema.List(
+            title=_(u'Value Constraints'),
+            description=_(
+                u'If you want the field to be limited to a subset of possible values, '
+                u'please enter them below. Leave blank otherwise.'),
+            value_type=DictRow(schema=IEditableDecimalChoice),
+            required=False,
+            )
+
+
+    class IEditableStringChoice(IEditableChoice):
+
+        value = zope.schema.TextLine(
+            title=_(u'Stored Value'),
+            )
+
+
+    class IEditableStringField(IEditableField, IRequireable, ICollectable):
+
+        choices = zope.schema.List(
+            title=_(u'Value Constraints'),
+            description=_(
+                u'If you want the field to be limited to a subset of possible values, '
+                u'please enter them below. Leave blank otherwise.'),
+            value_type=DictRow(schema=IEditableStringChoice),
+            required=False,
+            )
+
+
+    class IEditableTextField(IEditableField, IRequireable):
+
+        pass
+
+
+    class IEditableBlobField(IEditableField, IRequireable):
+
+        pass
+
+
+    class IEditableObjectField(IEditableField):
+
+        pass
+
+
+    typeInputSchemaMap = dict(
+        boolean=IEditableBooleanField,
+        date=IEditableDateField,
+        datetime=IEditableDateTimeField,
+        decimal=IEditableDecimalField,
+        integer=IEditableIntegerField,
+        string=IEditableStringField,
+        text=IEditableTextField,
+        blob=IEditableBlobField,
+        object=IEditableObjectField,
+        )
 
 def view(request):
 

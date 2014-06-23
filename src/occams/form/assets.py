@@ -14,7 +14,6 @@ def includeme(config):
         Bundle('libs/bootstrap/dist/js/bootstrap.min.js'),
         Bundle('libs/knockout.min.js'),
         Bundle('libs/knockout.mapping.min.js'),
-        Bundle('libs/jquery-ui.min.js'),
         Bundle('libs/select2.min.js'),
         Bundle(
             'scripts/modal.js',

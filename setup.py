@@ -32,8 +32,9 @@ EXTRAS = {
         'pyramid_debugtoolbar',
         'nose',
         'coverage',
+        'unittest2',
         'WebTest',
-        'beautifulsoup4'],
+        'beautifulsoup4']
 }
 
 

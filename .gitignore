@@ -96,3 +96,6 @@ VERSION
 ##### Installer Logs
 pip-log.txt
 
+##### Node
+node_modules/
+npm-debug.log

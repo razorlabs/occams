@@ -18,10 +18,10 @@
     <link
         rel="shortcut icon"
         href="${request.static_path('occams.form:static/images/favicon.ico')}"/>
-    <link rel="shortcut icon" sizes="1024x1024" href="favicon-highres.png" />
-    <link rel="shortcut icon" sizes="128x128" href="favicon.png" />
-    <link rel="apple-touch-icon" sizes="128x128" href="favicon.png" />
-    <link rel="apple-touch-icon-precomposed" sizes="128x128" href="favicon.png" />
+    <link rel="shortcut icon" sizes="1024x1024" href="${request.static_path('occams.form:static/images/favicon-highres.png')}" />
+    <link rel="shortcut icon" sizes="128x128" href="${request.static_path('occams.form:static/images/favicon.png')}" />
+    <link rel="apple-touch-icon" sizes="128x128" href="${request.static_path('occams.form:static/images/favicon.png')}" />
+    <link rel="apple-touch-icon-precomposed" sizes="128x128" href="${request.static_path('occams.form:static/images/favicon.png')}" />
   </head>
 
   <body
@@ -50,6 +50,11 @@
             </button>
             <a class="navbar-brand"
                 href="${request.route_path('home')}">OCCAMS Form</a>
+            <a href="${request.route_path('home')}"
+                class="navbar-logo">
+              <img src="${request.static_path('occams.form:static/images/orglogo.png')}"
+                  alt="Organization Logo"/>
+            </a>
           </div> <!--/.navbar-header -->
 
           <div class="collapse navbar-collapse">
@@ -123,9 +128,9 @@
 
     <footer i18n:domain="occams.form" id="footer">
       <div class="container">
-        <p class="muted credit">
+        <p class="text-muted credit">
+          Version <span tal:define="pkg import:occams.studies">${pkg.__version__}</span>.
           Developed by <a href="http://cfar.ucsd.edu/bit">UCSD Bit Core</a>.
-          Code licensed under <a href="http://opensource.org/licenses/MIT">MIT License</a>
         </p>
       </div>
     </footer>
@@ -137,15 +142,10 @@
         type="text/javascript"> </script>
 
     <script id="modal-form-template" type="text/html">
-      <div id="create-form-modal" class="modal fade"
-          data-backdrop="static"
-          data-keyboard="false"
-          data-bind="
-            showModal: $data,
-            with: $data">
+      <div class="modal fade" data-keyboard="false" data-bind="showModal: $data">
         <div class="modal-dialog">
           <div class="modal-content">
-            <form data-bind="attr: {method: method, action: action}, submit: $data.onSubmit">
+            <form data-bind="attr: {method: method, action: action}, submit: onSubmit">
               <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
                 <h4 class="modal-title" data-bind="text: title"></h4>

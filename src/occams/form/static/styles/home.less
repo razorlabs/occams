@@ -1,0 +1,29 @@
+/**
+ * Form listing styles
+ */
+[data-view-name='home'] {
+
+  // Keep table columns consistent
+  #forms .has_private   { width: 1em; }
+  #forms .name          { width: 20em; }
+  #forms .publish_date  { width: 10em; }
+
+  // Some schemata names are rather long, so we have overflow protection
+  .name .name-overflow {
+    display: block;
+    max-width: 18em;
+    .text-overflow();
+  }
+
+  // Don't emphasize retracted forms
+  .is_retracted {
+    text-decoration: line-through;
+    .text-muted();
+  }
+
+  // Give version labels a little more breathing room
+  .versions td {
+    padding-top: 3px;
+    padding-bottom: 3px;
+  }
+}

@@ -8,13 +8,21 @@
         <div id="form-list-toolbar">
           <div class="btn-toolbar" role="toolbar" >
             <div class="btn-group">
-              <a href="${request.route_path('form_add')}"
-                  class="btn btn-primary"
+              <button data-target="${request.route_path('form_add')}"
+                  class="btn btn-default"
+                  tal:condition="request.has_permission('form_add')"
+                  data-bind="click: launchUploadForm">
+                <span class="glyphicon glyphicon-upload"></span>
+                <span i18n:translate="">Upload</span>
+              </button>
+              <button
+                  data-target="${request.route_path('form_add')}"
+                  class="btn btn-default"
                   tal:condition="request.has_permission('form_add')"
                   data-bind="click: launchCreateForm">
                 <span class="glyphicon glyphicon-plus"></span>
-                <span i18n:translate="">Create Form</span>
-              </a>
+                <span i18n:translate="">Create</span>
+              </button>
             </div>
           </div> <!-- /.btn-toolbar -->
         </div>
@@ -22,13 +30,14 @@
       <h1 i18n:translate="">Forms</h1>
     </header>
 
-    <div data-bind="template: {
-        name: 'modal-form-template',
-        if: addForm(),
-        data: addForm()}"></div>
+    <!--!
+    <div data-bind="template: {name: 'modal-form-template', data: form}"></div>
+    -->
 
     <!-- ko ifnot:ready() -->
-    <p class="text-center" i18n:translate="">Loading...</p>
+    <p class="text-center" i18n:translate="">
+      <span class="glyphicon glyphicon-refresh spin"></span> Loading...
+    </p>
     <!-- /ko -->
 
     <div style="display: none" data-bind="visible:ready()">
@@ -40,42 +49,84 @@
       <!-- /ko -->
 
       <!-- ko if:forms() -->
-      <p>
-        There are <span data-bind="text:forms().length" class="badge"></span> forms in the system.
-      </p>
-      <table id="forms" class="table table-hover table-striped">
-        <thead>
-          <tr>
-            <th class="has_private">
-              <span class="glyphicon glyphicon-user"></span>
-            </th>
-            <th class="name">Schema</th>
-            <th class="title">Form</th>
-            <th class="publish_date">Version</th>
-          </tr>
-        </thead>
-        <tbody data-bind="foreach:forms()">
-          <tr data-bind="css: {success: is_new()}">
-            <td class="has_private" data-bind="if:has_private()">
-              <span
-                  class="glyphicon glyphicon-user"
-                  title="Has private information"></span>
-            </td>
-            <td class="name"><code data-bind="text:name()"></code></td>
-            <td class="title" data-bind="text:title()"></td>
-            <td class="publish_date" data-bind="if:versions()">
-              <table data-bind="foreach: versions()">
-                <tr>
-                  <td>
-                    <a href="" data-bind="attr: {href: url()}, text:label()"></a>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+
+
+      <div class="clearfix">
+        <div class="pull-left">
+          <p>
+            <span>Showing</span>
+            <strong>
+              <!-- ko if:filter() -->
+                <span data-bind="text:filteredForms().length"></span>
+                <span>of</span>
+              <!-- /ko -->
+              <span data-bind="text:forms().length"></span>
+            </strong>
+            <span>forms</span>
+          </p>
+        </div>
+        <div class="pull-right">
+          <form>
+            <div class="form-group">
+              <input
+                  type="search"
+                  class="form-control"
+                  name="filter"
+                  placeholder="Filter forms..."
+                  data-bind="
+                    value: filter,
+                    valueUpdate: ['input', 'afterkeydown']
+                  "/>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table id="forms" class="table table-striped table-hover">
+          <thead>
+            <tr>
+              <th class="has_private">
+                <span class="glyphicon glyphicon-user"></span>
+              </th>
+              <th class="name">Schema</th>
+              <th class="title">Form</th>
+              <th class="publish_date">Version</th>
+            </tr>
+          </thead>
+          <tbody data-bind="foreach:filteredForms()">
+            <tr>
+              <td class="has_private" data-bind="if:has_private()">
+                <span
+                    class="glyphicon glyphicon-user"
+                    title="Has private information"></span>
+              </td>
+              <td class="name"><div class="name-overflow"><code data-bind="text:name()"></code></div></td>
+              <td class="title" data-bind="text:title()"></td>
+              <td class="publish_date" data-bind="if:versions()">
+                <table class="versions" data-bind="foreach: versions()">
+                  <tr>
+                    <td>
+                      <!-- ko if:publish_date -->
+                       <a href="" data-bind="
+                          attr: {href: url()},
+                          css: {is_retracted: retract_date()},
+                          text: publish_date()"></a>
+                      <!-- /ko -->
+                      <!-- ko ifnot:publish_date -->
+                        <a href="" data-bind="attr: {href: url()}" i18n:translate="">Draft</a>
+                      <!-- /ko -->
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
       <!-- /ko -->
+
+    </div>
 
   </metal:content-slot>
 

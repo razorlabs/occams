@@ -11,7 +11,7 @@ import zope.sqlalchemy
 
 import occams.datastore.models.events
 
-from occams.datastore import models
+from occams.datastore import models  # NOQA
 
 __version__ = pkg_resources.require(__name__)[0].version
 
@@ -52,7 +52,6 @@ def main(global_config, **settings):
     config.include('.assets')
     config.include('.routes')
     config.include('.links')
-    config.include('.widgets')
     config.scan(ignore=[
         'occams.form.browser',
         'occams.form.interfaces'])
