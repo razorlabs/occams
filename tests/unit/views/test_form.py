@@ -4,7 +4,7 @@ from tests import IntegrationFixture
 class TestListJSON(IntegrationFixture):
 
     def _getView(self):
-        from occams.form.views.form import list_json
+        from occams.forms.views.form import list_json
         return list_json
 
     def test_empty(self):
@@ -22,7 +22,7 @@ class TestListJSON(IntegrationFixture):
         """
         from datetime import date
         from pyramid import testing
-        from occams.form import Session, models
+        from occams.forms import Session, models
         from tests import track_user
 
         self.config.add_route('version_view', '/dummy/{form}/{version}')

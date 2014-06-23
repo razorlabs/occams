@@ -20,6 +20,6 @@ serve:
 		--directory $(VIRTUAL_ENV)/src \
 		--recursive \
 		-- \
-		$(VIRTUAL_ENV)/bin/gunicorn --paste $(VIRTUAL_ENV)/etc/pirc.ini
+		$(VIRTUAL_ENV)/bin/gunicorn --paste $(VIRTUAL_ENV)/etc/development.ini
 
 celeryd:

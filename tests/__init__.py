@@ -22,7 +22,7 @@ def setup_package():
     from six.moves.configparser import SafeConfigParser
     from sqlalchemy import create_engine
     from testconfig import config
-    from occams.form import Session, models
+    from occams.forms import Session, models
 
     HERE = os.path.abspath(os.path.dirname(__file__))
     cfg = SafeConfigParser()
@@ -40,7 +40,7 @@ def teardown_package():
     Releases system-wide fixtures
     """
     import os
-    from occams.form import Session, models
+    from occams.forms import Session, models
 
     models.DataStoreModel.metadata.drop_all(Session.bind)
 
@@ -55,7 +55,7 @@ def teardown_package():
 
 
 def track_user(login, is_current=True):
-    from occams.form import Session, models
+    from occams.forms import Session, models
     Session.add(models.User(key=login))
     Session.flush()
     Session.info['user'] = login
@@ -68,13 +68,13 @@ class IntegrationFixture(unittest.TestCase):
 
     def setUp(self):
         from pyramid import testing
-        from occams.form import models
+        from occams.forms import models
         self.config = testing.setUp()
         models.DataStoreModel.metadata.info['settings'] = \
             self.config.registry.settings
 
     def tearDown(self):
-        from occams.form import Session
+        from occams.forms import Session
         from pyramid import testing
         import transaction
         testing.tearDown()
@@ -92,7 +92,7 @@ class FunctionalFixture(unittest.TestCase):
     def setUpClass(cls):
         import os
         from pyramid.path import AssetResolver
-        from occams.form import main, Session
+        from occams.forms import main, Session
         HERE = os.path.abspath(os.path.dirname(__file__))
         cls.app = main({}, **{
             'app.org.name': 'myorg',
@@ -101,7 +101,7 @@ class FunctionalFixture(unittest.TestCase):
             'redis.url': REDIS_URL,
             'redis.sessions.secret': 'sekrit',
             'webassets.base_dir': (AssetResolver()
-                                   .resolve('occams.form:static')
+                                   .resolve('occams.forms:static')
                                    .abspath()),
             'webassets.base_url': '/static',
             'webassets.debug': 'false',
@@ -115,7 +115,7 @@ class FunctionalFixture(unittest.TestCase):
 
     def tearDown(self):
         import transaction
-        from occams.form import Session, models
+        from occams.forms import Session, models
         with transaction.manager:
             Session.query(models.User).delete()
         Session.remove()

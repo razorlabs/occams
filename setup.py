@@ -1,7 +1,5 @@
 import os
 from setuptools import find_packages, setup
-from subprocess import Popen, PIPE
-import sys
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(HERE, 'README.rst')).read()
@@ -39,7 +37,14 @@ EXTRAS = {
 
 
 def get_version():
-    version_file = os.path.join(HERE, 'VERSION')
+    """
+    Generates python version from projects git tag
+    """
+    import os
+    from subprocess import Popen, PIPE
+    import sys
+    here = os.path.abspath(os.path.dirname(__file__))
+    version_file = os.path.join(here, 'VERSION')
 
     # read fallback file
     try:
@@ -51,7 +56,7 @@ def get_version():
     # read git version (if available)
     try:
         version_git = (
-            Popen(['git', 'describe'], stdout=PIPE, stderr=PIPE, cwd=HERE)
+            Popen(['git', 'describe'], stdout=PIPE, stderr=PIPE, cwd=here)
             .communicate()[0]
             .strip()
             .decode(sys.getdefaultencoding()))
@@ -69,7 +74,7 @@ def get_version():
 
 
 setup(
-    name='occams.form',
+    name='occams.forms',
     version=get_version(),
     description='A web application for managing dynamic forms',
     classifiers=[
@@ -87,7 +92,7 @@ setup(
     keywords='OCCAMS datastore database eav',
     author='UCSD BIT Core Team',
     author_email='bitcore@ucsd.edu',
-    url='https://bitbutcket.org/ucsdbitcore/occams.form',
+    url='https://bitbutcket.org/ucsdbitcore/occams.forms',
     license='GPL',
     packages=find_packages('src', exclude=['ez_setup']),
     package_dir={'': 'src'},
@@ -100,8 +105,8 @@ setup(
     test_suite='nose.collector',
     entry_points="""\
     [paste.app_factory]
-    main = occams.form:main
+    main = occams.forms:main
     [console_scripts]
-    of_init = occams.form.scripts.initializedb:main
+    of_init = occams.forms.scripts.initializedb:main
     """,
 )
