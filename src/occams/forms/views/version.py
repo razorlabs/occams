@@ -74,7 +74,7 @@ class VersionEditForm(CsrfForm):
 
 @view_config(
     route_name='version_view',
-    renderer='occams.forms:templates/version/view.pt',
+    renderer='../templates/version/view.pt',
     permission='form_view')
 def view(request):
     schema = get_schema(request)
@@ -83,7 +83,7 @@ def view(request):
 
 @view_config(
     route_name='version_preview',
-    renderer='occams.forms:templates/version/preview.pt',
+    renderer='../templates/version/preview.pt',
     permission='form_view')
 def preview(request):
     """

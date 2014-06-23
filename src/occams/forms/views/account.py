@@ -28,9 +28,9 @@ class LoginForm(Form):
 
 @view_config(
     route_name='account_login',
-    renderer='occams.forms:templates/account/login.pt')
+    renderer='../templates/account/login.pt')
 @forbidden_view_config(
-    renderer='occams.forms:templates/account/login.pt')
+    renderer='../templates/account/login.pt')
 def login(request):
 
     if (request.matched_route.name != 'account_login'

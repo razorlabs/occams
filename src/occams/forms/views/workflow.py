@@ -8,7 +8,7 @@ from .. import Session
 
 @view_config(
     route_name='workflow_view',
-    renderer='occams.forms:templates/workflow/view.pt',
+    renderer='../templates/workflow/view.pt',
     permission='form_view')
 def view(request):
     """

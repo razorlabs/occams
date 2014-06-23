@@ -39,7 +39,7 @@ class SchemaForm(CsrfForm):
 
 @view_config(
     route_name='home',
-    renderer='occams.forms:templates/form/list.pt',
+    renderer='../templates/form/list.pt',
     permission='form_view')
 def list_(request):
     return {}
