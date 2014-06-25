@@ -151,7 +151,7 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
             , NEW.is_collection
             , NEW.is_required
             , ((SELECT current_database() LIKE '%phi%')
-                OR NEW.name = 'someone_had_early_test')
+                OR NEW.name = 'sexpart_et_name')
             , NEW.value_min
             , NEW.value_max
             , NEW.collection_min
@@ -253,7 +253,7 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
             , is_collection = NEW.is_collection
             , is_required = NEW.is_required
             , is_private = ((SELECT current_database() LIKE '%phi%')
-                OR NEW.name = 'someone_had_early_test')
+                OR NEW.name = 'sexpart_et_name')
             , value_min = NEW.value_min
             , value_max = NEW.value_max
             , collection_min = NEW.collection_min
