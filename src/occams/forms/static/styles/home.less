@@ -4,9 +4,11 @@
 [data-view-name='home'] {
 
   // Keep table columns consistent
-  #forms .has_private   { width: 1em; }
-  #forms .name          { width: 20em; }
-  #forms .publish_date  { width: 10em; }
+  #forms {
+    .has_private   { width: 1em; }
+    .name          { width: 20em; }
+    .publish_date  { width: 8em; }
+  }
 
   // Some schemata names are rather long, so we have overflow protection
   .name .name-overflow {

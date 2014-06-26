@@ -19,7 +19,7 @@
                   data-target="${request.route_path('form_add')}"
                   class="btn btn-default"
                   tal:condition="request.has_permission('form_add')"
-                  data-bind="click: launchCreateForm">
+                  data-bind="click: launchAddForm">
                 <span class="glyphicon glyphicon-plus"></span>
                 <span i18n:translate="">Create</span>
               </button>

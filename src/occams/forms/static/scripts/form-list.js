@@ -1,14 +1,16 @@
 /**
  * Manages form listing
  */
+
 function FormListView() {
 
   var self = this;
+
   self.ready = ko.observable(false);      // Flag unhide body
+
+  self.action = ko.observable();           // Current form in modal
+
   self.forms = ko.observableArray([]);    // Master list of forms
-
-  self.form = ko.observable();            // Current form in modal
-
   self.filter = ko.observable();          // Filter string (i.e. search)
 
   /**
@@ -40,33 +42,43 @@ function FormListView() {
     }
   });
 
-  self.launchCreateForm = function(data, event){
-    $.ajax($(event.currentTarget).data('target'), {
-      type: 'GET',
-      success: function(result){
-        self.form(ko.mapping.fromJS(result, {}, {
-          onSubmit: self.onCreateSubmit
-        }));
-      }
+  self.launchAddForm = function(data, event){
+    $.getJSON($(event.currentTarget).data('target'), function(data){
+      self.action(new AddView(data));
     });
-  }
-
-  self.launchUploadForm = function(data, event){
-    $.ajax($(event.currentTarget).data('target'), {
-      type: 'GET',
-      success: function(result){
-        self.form(ko.mapping.fromJS(result, {}, {
-          onSubmit: self.onUploadSubmit
-        }));
-      }
-    });
-  }
-
-  self.onCreateSubmit= function(element){
-    var $form = $(element);
   };
 
-  self.onCreateSubmit= function(element){
+  self.launchUploadForm = function(data, event){
+    $.getJSON($(event.currentTarget).data('target'), function(data){
+      self.action(new UploadView(data));
+    });
+  };
+
+  // Get initial data
+  $.getJSON(window.location, function(data) {
+      self.forms($.map(data, ko.mapping.fromJS));
+      self.ready(true);
+  });
+
+}
+
+
+function UploadForm(data){
+  var self = this;
+
+  self.fields = ko.mapping.fromJS(fields);
+
+  self.onSubmit = function(element){
+  };
+}
+
+
+function AddForm(data){
+  var self = this;
+
+  self.fields = ko.mapping.fromJS(fields);
+
+  self.onSubmit = function(element){
     var $form = $(element);
     $.ajax({
       url: $form.attr('action'),
@@ -93,14 +105,8 @@ function FormListView() {
       }
     });
   };
+}
 
-  // Get initial data
-  $.getJSON(window.location, function(data) {
-      self.forms($.map(data, ko.mapping.fromJS));
-      self.ready(true);
-  });
-
-};
 
 /**
  * Registers the view model only if we're in the target page

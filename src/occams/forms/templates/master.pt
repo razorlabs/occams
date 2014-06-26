@@ -10,7 +10,7 @@
 
   <head>
     <meta charset="utf-8">
-    <title>${request.settings.app_title|'OCCAMS Form'}</title>
+    <title>${request.settings.app_title|'OCCAMS Forms'}</title>
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <link tal:repeat="url request.webassets_env['default-css'].urls()" href="${url}" rel="stylesheet" />
@@ -49,7 +49,7 @@
               <span class="icon-bar"></span>
             </button>
             <a class="navbar-brand"
-                href="${request.route_path('home')}">OCCAMS Form</a>
+                href="${request.route_path('home')}">OCCAMS Forms</a>
             <a href="${request.route_path('home')}"
                 class="navbar-logo">
               <img src="${request.static_path('occams.forms:static/images/orglogo.png')}"
