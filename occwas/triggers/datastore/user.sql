@@ -39,20 +39,22 @@ CREATE OR REPLACE FUNCTION user_mirror() RETURNS TRIGGER AS $$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
-        PERFORM dblink_connect('trigger_target');
-        INSERT INTO user_ext (
-            id
-          , key
-          , create_date
-          , modify_date
-        )
-        VALUES (
-            (SELECT val FROM dblink('SELECT nextval(''user_id_seq'') AS val') AS sec(val int))
-          , NEW.key
-          , NEW.create_date
-          , NEW.modify_date
-        );
-        PERFORM dblink_disconnect();
+        IF NOT EXISTS(SELECT 1 FROM "user_ext" where key = NEW.key) THEN
+          PERFORM dblink_connect('trigger_target');
+          INSERT INTO user_ext (
+              id
+            , key
+            , create_date
+            , modify_date
+          )
+          VALUES (
+              (SELECT val FROM dblink('SELECT nextval(''user_id_seq'') AS val') AS sec(val int))
+            , NEW.key
+            , NEW.create_date
+            , NEW.modify_date
+          );
+          PERFORM dblink_disconnect();
+        END IF;
         RETURN NEW;
       WHEN 'DELETE' THEN
         DELETE FROM user_ext WHERE key = OLD.key;
