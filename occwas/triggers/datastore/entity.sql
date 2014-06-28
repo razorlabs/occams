@@ -160,24 +160,26 @@ CREATE OR REPLACE FUNCTION entity_mirror() RETURNS TRIGGER AS $$
         RETURN OLD;
       WHEN 'UPDATE' THEN
 
-        v_state_id := ext_state_id(NEW.state);
+        IF NOT EXISTS(SELECT 1 FROM schema where id = NEW.schema_id AND is_inline) THEN
+          v_state_id := ext_state_id(NEW.state);
 
-        UPDATE entity_ext
-        SET name = NEW.name
-          , title = NEW.title
-          , description = NEW.description
-          , schema_id = ext_schema_id(NEW.schema_id)
-          , collect_date = NEW.collect_date
-          , state_id = v_state_id
-          , is_null = (NEW.state::varchar IN ('not-done', 'not-applicable'))
-          , create_date = NEW.create_date
-          , create_user_id = ext_user_id(NEW.create_user_id)
-          , modify_date = NEW.modify_date
-          , modify_user_id = ext_user_id(NEW.modify_user_id)
-          , revision = NEW.revision
-          , old_db = (SELECT current_database())
-          , old_id = NEW.id
-        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+          UPDATE entity_ext
+          SET name = NEW.name
+            , title = NEW.title
+            , description = NEW.description
+            , schema_id = ext_schema_id(NEW.schema_id)
+            , collect_date = NEW.collect_date
+            , state_id = v_state_id
+            , is_null = (NEW.state::varchar IN ('not-done', 'not-applicable'))
+            , create_date = NEW.create_date
+            , create_user_id = ext_user_id(NEW.create_user_id)
+            , modify_date = NEW.modify_date
+            , modify_user_id = ext_user_id(NEW.modify_user_id)
+            , revision = NEW.revision
+            , old_db = (SELECT current_database())
+            , old_id = NEW.id
+          WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        END IF;
 
         RETURN NEW;
 
