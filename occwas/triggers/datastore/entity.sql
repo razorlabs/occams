@@ -179,9 +179,10 @@ CREATE OR REPLACE FUNCTION entity_mirror() RETURNS TRIGGER AS $$
             , old_db = (SELECT current_database())
             , old_id = NEW.id
           WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
-        END IF;
 
-        RETURN NEW;
+          RETURN NEW;
+
+        END IF;
 
     END CASE;
     RETURN NULL;
