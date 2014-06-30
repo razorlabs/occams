@@ -263,7 +263,9 @@ class Section(Model, Referenceable, Describeable, Modifiable, Auditable):
             UniqueConstraint('schema_id', 'name',
                              name='uq_%s_name' % cls.__tablename__),
             UniqueConstraint('schema_id', 'order',
-                             name='uq_%s_order' % cls.__tablename__))
+                             name='uq_%s_order' % cls.__tablename__,
+                             deferrable=True,
+                             initially='DEFERRED'),)
 
     def __copy__(self):
         keys = ('name', 'title', 'description', 'order')
@@ -410,7 +412,9 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
                 name='fk_%s_schema_id' % cls.__tablename__,
                 ondelete='CASCADE'),
             UniqueConstraint('schema_id', 'order',
-                             name='uq_%s_order' % cls.__tablename__),
+                             name='uq_%s_order' % cls.__tablename__,
+                             deferrable=True,
+                             initially='DEFERRED'),
             CheckConstraint(
                 "collection_min IS NULL OR collection_min >= 0",
                 name='ck_%s_unsigned_collection_min' % cls.__tablename__),
@@ -533,7 +537,9 @@ class Choice(Model, Referenceable, Describeable, Modifiable, Auditable):
             UniqueConstraint('attribute_id', 'name',
                              name='uq_%s_name' % cls.__tablename__),
             UniqueConstraint('attribute_id', 'order',
-                             name='uq_%s_order' % cls.__tablename__))
+                             name='uq_%s_order' % cls.__tablename__,
+                             deferrable=True,
+                             initially='DEFERRED'),)
 
     def __copy__(self):
         keys = ('name', 'title', 'description', 'order')
