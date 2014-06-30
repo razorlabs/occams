@@ -6,7 +6,7 @@ from copy import copy, deepcopy
 from datetime import datetime
 import re
 
-import six
+from six import iteritems, itervalues
 from sqlalchemy import(
     cast,
     null,
@@ -157,7 +157,7 @@ class Schema(Model, Referenceable, Describeable, Modifiable, Auditable):
     def __deepcopy__(self, memo):
         duplicate = copy(self)
         duplicate.categories = set([c for c in self.categories])
-        for section in six.itervalues(self.sections):
+        for section in itervalues(self.sections):
             duplicate.sections[section.name] = deepcopy(section)
         return duplicate
 
@@ -176,7 +176,7 @@ class Schema(Model, Referenceable, Describeable, Modifiable, Auditable):
             datetime.strptime(data['publish_date'], '%Y-%m-%d').date()
 
         if sections:
-            for key, section in six.iteritems(sections):
+            for key, section in iteritems(sections):
                 schema.sections[key] = Section.from_json(section)
             schema.attributes.update(schema.sections[key].attributes)
 
@@ -192,8 +192,11 @@ class Schema(Model, Referenceable, Describeable, Modifiable, Auditable):
             'description': self.description,
             'storage': self.storage,
             'published': self.publish_date.isoformat(),
+            'attributes': dict([(a.name, a.to_json())
+                               for a in itervalues(self.attributes)
+                               if a.section is None]),
             'sections': dict([(s.name, s.to_json())
-                             for s in six.itervalues(self.sections)])}
+                             for s in itervalues(self.sections)])}
 
 
 # __table_args__ is not accepting this constraint.
@@ -245,7 +248,7 @@ class Section(Model, Referenceable, Describeable, Modifiable, Auditable):
         """
         Switches all attributes to the assigned schema
         """
-        for attribute in six.itervalues(self.attributes):
+        for attribute in itervalues(self.attributes):
             attribute.schema = schema
         return schema
 
@@ -268,7 +271,7 @@ class Section(Model, Referenceable, Describeable, Modifiable, Auditable):
 
     def __deepcopy__(self, memo):
         duplicate = copy(self)
-        for attribute in six.itervalues(self.attributes):
+        for attribute in itervalues(self.attributes):
             duplicate.attributes[attribute.name] = deepcopy(attribute)
         return duplicate
 
@@ -285,7 +288,7 @@ class Section(Model, Referenceable, Describeable, Modifiable, Auditable):
         section = cls(**data)
 
         if attributes:
-            for key, attribute in six.iteritems(attributes):
+            for key, attribute in iteritems(attributes):
                 section.attributes[key] = Attribute.from_json(attribute)
 
         return section
@@ -299,7 +302,7 @@ class Section(Model, Referenceable, Describeable, Modifiable, Auditable):
             'title': self.title,
             'description': self.description,
             'attributes': dict([(a.name, a.to_json())
-                               for a in six.itervalues(self.attributes)])}
+                               for a in itervalues(self.attributes)])}
 
 
 class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
@@ -437,7 +440,7 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
 
     def __deepcopy__(self, memo):
         duplicate = copy(self)
-        for choice in six.itervalues(self.choices):
+        for choice in itervalues(self.choices):
             duplicate.choices[choice.name] = deepcopy(choice)
         return duplicate
 
@@ -455,7 +458,7 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
         attribute = cls(**data)
 
         if choices is not None:
-            for key, choice in six.iteritems(choices):
+            for key, choice in iteritems(choices):
                 attribute.choices[key] = Choice.from_json(choice)
 
         return attribute
@@ -480,7 +483,7 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
             'collection_max': self.collection_max,
             'order': self.order,
             'choices': dict([(c.name, c.to_json())
-                            for c in six.itervalues(self.choices)])}
+                            for c in itervalues(self.choices)])}
 
 
 # __table_args__ is not accepting this constraint.
