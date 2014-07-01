@@ -359,7 +359,7 @@ class TestTrigger(unittest.TestCase):
             src_id = populate(self.src_conn, src_table, overrides=overrides)
         src_data, dst_data = self._getRecord(src_table, src_id)
         self.assertRecordEqual(src_table, src_data, dst_table, dst_data)
-        self.assertFalse(dst_data['is_null'])
+        self.assertFalse(dst_data['not_done'])
 
         # Updates
         with self.src_conn.begin():
@@ -367,7 +367,7 @@ class TestTrigger(unittest.TestCase):
                               overrides=overrides, id=src_id)
         src_data, dst_data = self._getRecord(src_table, src_id)
         self.assertRecordEqual(src_table, src_data, dst_table, dst_data)
-        self.assertFalse(dst_data['is_null'])
+        self.assertFalse(dst_data['not_done'])
 
         # Deletes
         self.src_conn.execute(
@@ -379,9 +379,9 @@ class TestTrigger(unittest.TestCase):
         self.assertIsNone(dst_data)
 
     @data('not-applicable', 'not-done')
-    def test_is_null(self, state):
+    def test_not_done(self, state):
         """
-        It should set is_null/complete when using not applicable/done
+        It should set not_done/complete when using not applicable/done
         """
         src_table = self.src_metadata.tables['entity']
         dst_table = self.dst_metadata.tables['entity']
@@ -398,14 +398,14 @@ class TestTrigger(unittest.TestCase):
         with self.src_conn.begin():
             src_id = populate(self.src_conn, src_table, overrides=overrides)
         src_data, dst_data = self._getRecord(src_table, src_id)
-        self.assertTrue(dst_data['is_null'])
+        self.assertTrue(dst_data['not_done'])
 
         # Updates
         with self.src_conn.begin():
             src_id = populate(self.src_conn, src_table,
                               overrides=overrides, id=src_id)
         src_data, dst_data = self._getRecord(src_table, src_id)
-        self.assertTrue(dst_data['is_null'])
+        self.assertTrue(dst_data['not_done'])
 
     @data('patient', 'enrollment', 'visit', 'stratum')
     def test_context(self, external):

@@ -18,7 +18,7 @@ CREATE FOREIGN TABLE entity_ext (
   , schema_id       INTEGER NOT NULL
   , state_id        INTEGER
   , collect_date    DATE NOT NULL
-  , is_null         BOOLEAN NOT NULL
+  , not_done         BOOLEAN NOT NULL
 
   , create_date     TIMESTAMP NOT NULL
   , create_user_id  INTEGER NOT NULL
@@ -122,7 +122,7 @@ CREATE OR REPLACE FUNCTION entity_mirror() RETURNS TRIGGER AS $$
             , schema_id
             , collect_date
             , state_id
-            , is_null
+            , not_done
             , create_date
             , create_user_id
             , modify_date
@@ -170,7 +170,7 @@ CREATE OR REPLACE FUNCTION entity_mirror() RETURNS TRIGGER AS $$
             , schema_id = ext_schema_id(NEW.schema_id)
             , collect_date = NEW.collect_date
             , state_id = v_state_id
-            , is_null = (NEW.state::varchar IN ('not-done', 'not-applicable'))
+            , not_done = (NEW.state::varchar IN ('not-done', 'not-applicable'))
             , create_date = NEW.create_date
             , create_user_id = ext_user_id(NEW.create_user_id)
             , modify_date = NEW.modify_date
