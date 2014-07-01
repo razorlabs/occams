@@ -55,7 +55,7 @@ def build_report(session,
             models.Schema.publish_date.label('form_publish_date'),
             models.State.name.label('state'),
             models.Entity.collect_date.label('collect_date'),
-            cast(models.Entity.is_null, Integer).label('is_null'))
+            cast(models.Entity.not_done, Integer).label('not_done'))
         .outerjoin(models.State)
         .join(models.Schema)
         .filter(models.Schema.name == schema_name)
