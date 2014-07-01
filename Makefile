@@ -20,6 +20,10 @@ serve:
 		--directory $(VIRTUAL_ENV)/src \
 		--recursive \
 		-- \
-		$(VIRTUAL_ENV)/bin/gunicorn --paste $(VIRTUAL_ENV)/etc/development.ini
+		$(VIRTUAL_ENV)/bin/gunicorn \
+		--error-logfile - \
+		--log-config $(VIRTUAL_ENV)/etc/development.ini \
+		--paste $(VIRTUAL_ENV)/etc/development.ini
+
 
 celeryd:
