@@ -9,28 +9,28 @@
     </div>
     <div class="btn-group"
         tal:define="is_published schema.publish_date|nothing">
-      <button data-target="${request.current_route_path(_route_name='version_draft')}"
+      <a href="${request.current_route_path(_route_name='version_draft')}"
           class="btn btn-default"
           tal:condition="is_published">
         <span class="glyphicon glyphicon-transfer"></span>
         <span i18n:translate="">Draft New</span>
-      </button>
-      <button data-target="${request.current_route_path(_route_name='version_draft')}"
+      </a>
+      <a href="${request.current_route_path(_route_name='version_publish')}"
           class="btn btn-default"
           tal:condition="not:is_published">
         <span class="glyphicon glyphicon-tag"></span>
         <span i18n:translate="">Publish</span>
-      </button>
-      <button data-target="${request.current_route_path(_route_name='version_edit')}"
+      </a>
+      <a href="${request.current_route_path(_route_name='version_edit')}"
           class="btn btn-default">
         <span class="glyphicon glyphicon-pencil"></span>
         <span i18n:translate="">Edit</span>
-      </button>
-      <button data-target="${request.current_route_path(_route_name='version_edit')}"
+      </a>
+      <a href ="${request.current_route_path(_route_name='version_manage')}"
           class="btn btn-default">
         <span class="glyphicon glyphicon-move"></span>
         <span i18n:translate="">Manage Fields</span>
-      </button>
+      </a>
       <div class="btn-group dropdown">
         <button class="btn btn-default dropdown-toggle"
             data-toggle="dropdown">
@@ -46,8 +46,4 @@
       </div>
     </div>
   </div> <!-- /.btn-toolbar -->
-
-  <!-- TODO: Made status messge -->
-  <!-- cancelMessage = _(u'Changes canceled, nothing saved.') -->
-
 </div>
