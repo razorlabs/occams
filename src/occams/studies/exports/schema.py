@@ -157,7 +157,7 @@ class SchemaPlan(ExportPlan):
                 is_required=True, is_system=True),
             row('collect_date', self.name, types.DATE,
                 is_required=True, is_system=True),
-            row('is_null', self.name, types.BOOLEAN,
+            row('not_done', self.name, types.BOOLEAN,
                 is_required=True, is_system=True)])
 
         for column in knowns:
