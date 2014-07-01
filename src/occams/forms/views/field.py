@@ -1,720 +1,347 @@
-
-def list(request):
-    pass
-
-def crap():
-    class IOccamsFormComponent(zope.interface.Interface):
-        """
-        Marker interfaces for interfaces of this plug-in
-        """
-
-
-
-    class IEditableField(IOccamsFormComponent):
-        """
-        The human-friendly form for edidting a field.
-        """
-
-        # Note we did not make this readonly so that users with superpowers can
-        # change it
-        name = zope.schema.ASCIILine(
-            title=_(u'Variable Name'),
-            description=_(
-                u'Internal variable name, this value cannot be changed once it is '
-                u'created.'
-                ),
-            )
-
-        title = zope.schema.TextLine(
-            title=_(u'Label'),
-            description=_(u'The prompt for the user.'),
-            )
-
-        description = zope.schema.Text(
-            title=_(u'Description'),
-            description=_(u'A short description about the field\'s purpose.'),
-            required=False,
-            )
-
-        order = zope.schema.Int(
-            title=_(u'Order'),
-            description=_(u'The field\'s order in the form'),
-            required=True
-            )
-
-
-
-    class ICollectable(IOccamsFormComponent):
-
-        is_collection = zope.schema.Bool(
-            title=_(u'Multiple?'),
-            description=_(u'If selected, the user may enter more than one value.'),
-            default=False,
-            )
-
-
-    class IRequireable(IOccamsFormComponent):
-
-        is_required = zope.schema.Bool(
-            title=_(u'Required?'),
-            description=_(u'If selected, the user will be required to enter a value.'),
-            default=False,
-            )
-
-
-    class IEditableChoice(IOccamsFormComponent):
-
-        title = zope.schema.TextLine(
-            title=_(u'Displayed Label'),
-            )
-
-        value = zope.interface.Attribute(_(u'The value stored for the answer choice'))
-
-
-    class IEditableBooleanChoice(IEditableChoice):
-
-        value = zope.schema.Bool(
-            title=_(u'Stored Value'),
-            )
-
-
-    class IEditableBooleanField(IEditableField, IRequireable):
-
-        choices = zope.schema.List(
-            title=_(u'Configure True/False Labels'),
-            value_type=DictRow(schema=IEditableBooleanChoice),
-            required=True,
-            )
-
-
-    class IEditableDateField(IEditableField, IRequireable):
-
-        pass
-
-
-    class IEditableDateTimeField(IEditableField, IRequireable):
-
-        pass
-
-
-    class IEditableIntegerChoice(IEditableChoice):
-
-        value = zope.schema.Int(
-            title=_(u'Stored Value'),
-            )
-
-
-    class IEditableIntegerField(IEditableField, IRequireable):
-
-        choices = zope.schema.List(
-            title=_(u'Value Constraints'),
-            description=_(
-                u'If you want the field to be limited to a subset of possible values, '
-                u'please enter them below. Leave blank otherwise.'),
-            value_type=DictRow(schema=IEditableIntegerChoice),
-            required=False,
-            )
-
-
-    class IEditableDecimalChoice(IEditableChoice):
-
-        value = zope.schema.Decimal(
-            title=_(u'Stored Value'),
-            )
-
-
-    class IEditableDecimalField(IEditableField, IRequireable):
-
-        choices = zope.schema.List(
-            title=_(u'Value Constraints'),
-            description=_(
-                u'If you want the field to be limited to a subset of possible values, '
-                u'please enter them below. Leave blank otherwise.'),
-            value_type=DictRow(schema=IEditableDecimalChoice),
-            required=False,
-            )
-
-
-    class IEditableStringChoice(IEditableChoice):
-
-        value = zope.schema.TextLine(
-            title=_(u'Stored Value'),
-            )
-
-
-    class IEditableStringField(IEditableField, IRequireable, ICollectable):
-
-        choices = zope.schema.List(
-            title=_(u'Value Constraints'),
-            description=_(
-                u'If you want the field to be limited to a subset of possible values, '
-                u'please enter them below. Leave blank otherwise.'),
-            value_type=DictRow(schema=IEditableStringChoice),
-            required=False,
-            )
-
-
-    class IEditableTextField(IEditableField, IRequireable):
-
-        pass
-
-
-    class IEditableBlobField(IEditableField, IRequireable):
-
-        pass
-
-
-    class IEditableObjectField(IEditableField):
-
-        pass
-
-
-    typeInputSchemaMap = dict(
-        boolean=IEditableBooleanField,
-        date=IEditableDateField,
-        datetime=IEditableDateTimeField,
-        decimal=IEditableDecimalField,
-        integer=IEditableIntegerField,
-        string=IEditableStringField,
-        text=IEditableTextField,
-        blob=IEditableBlobField,
-        object=IEditableObjectField,
-        )
-
-def view(request):
-
-    class FieldPreview(StandardWidgetsMixin, DisabledMixin, z3c.form.form.Form):
-        """
-        Preview of form fields for re-rendering single fields during form editing
-        """
-
-        ignoreRequest = True
-
-        @property
-        def label(self):
-            return 'Preview: %s' % self.context.item.name
-
-        def getContent(self):
-            return self.context.data
-
-        def update(self):
-            self.request.set('disable_border', True)
-            schemaField = fieldFactory(self.getContent())
-            self.fields = z3c.form.field.Fields(schemaField)
-            super(FieldPreview, self).update()
-
-
-    class FieldJsonView(BrowserView):
-        """
-        JSON view for form fields
-        """
-
-        def __call__(self):
-            """
-            Returns a clean copy of the current state of the field.
-            Additionally adds an extra ``view`` field in the JSON object
-            for rendering the field on the client side
-            """
-            data = copy(self.context.data)
-            if data['schema']:
-                del data['schema']
-            # For client-side ajax update of the field
-            if data['type'] != 'object':
-                data['view'] = FieldPreview(self.context, self.request)()
-            else:
-                data['view'] = None
-            # JSON doesn't understand dates, gotta clean that up too
-            # Cleanup choice values (in case they're decimals)
-            if data['choices']:
-                for choice in data['choices']:
-                    if isinstance(choice['value'], Decimal):
-                        choice['value'] = str(choice['value'])
-
-            self.request.response.setHeader(u'Content-type', u'application/json')
-            return json.dumps(data)
-
-
-def add(request):
-    class FieldFormInputHelper(object):
-        """
-        Helper class for displaying the inputs for editing field metadata.
-        """
-
-        def getType(self):
-            """
-            Sub classes must return the value type they are editing
-            """
-            raise NotImplementedError
-
-        def getMetadataFields(self):
-            """
-            Configures fields based on type
-            """
-            if not hasattr(self, '_fields'):
-                type_ = self.getType()
-                schema = typeInputSchemaMap[type_]
-                fields = z3c.form.field.Fields(schema).select('name', 'title', 'description')
-                fields['description'].widgetFactory = TextAreaFieldWidget
-                if 'choices' in schema:
-                    fields += z3c.form.field.Fields(schema).select('choices')
-                    fields['choices'].widgetFactory = DataGridFieldFactory
-                fields += z3c.form.field.Fields(schema).omit('name', 'title', 'description', 'choices')
-                self._fields = fields
-            return self._fields
-
-        def datagridInitialise(self, subform, widget):
-            """
-            Callback for configuring grid widgets
-            """
-            # Booleans are not allowed to have more than two values (duh)
-            if self.getType() == 'boolean':
-                subform.fields['value'].widgetFactory = TextFieldWidget
-                widget.auto_append = False
-                widget.allow_insert = False
-                widget.allow_delete = False
-                widget.allow_reorder = False
-            else:
-                widget.allow_reorder = True
-                widget.auto_append = True
-                widget.allow_insert = True
-                widget.allow_delete = True
-
-        def datagridUpdateWidgets(self, subform, widgets, widget):
-            """
-            Callback for updating grid widgets
-            """
-            # Booleans are special in that their values are known
-            if self.getType() == 'boolean':
-                widgets['value'].readonly = 'readonly'
-
-
-    class FieldAddForm(FieldFormInputHelper, z3c.form.form.AddForm):
-        """
-        Add form for fields.
-
-        Optionally takes a request variable ``order`` to preset where the
-        field will be added (otherwise at the end of the form)
-        """
-        z3c.form.form.extends(z3c.form.form.AddForm)
-
-        prefix = 'add'
-
-        @property
-        def label(self):
-            return _('New %s Field') % typesVocabulary.getTermByToken(self.typeName).title
-
-        def getType(self):
-            return self.__name__.split('-').pop()
-
-        def update(self):
-            self.request.set('disable_border', True)
-            # Can't add fields to non-object fields
-            if IAttributeContext.providedBy(self.context) and \
-                    self.context['type'] != 'object':
-                raise NotFound()
-
-            self.buttons = self.buttons.select('cancel', 'add')
-
-            self.fields = self.getMetadataFields().omit('order')
-
-            self.fields += z3c.form.field.Fields(zope.schema.ASCIILine(
-                __name__='after',
-                title=_(u'After which field'),
-                required=False,
-                ))
-
-            super(FieldAddForm, self).update()
-
-        def updateWidgets(self):
-            super(FieldAddForm, self).updateWidgets()
-
-            # Set the order (this is intended for AJAX requests)
-            if 'after' in self.request:
-                self.widgets['after'].value = str(self.request.get('after', ''))
-
-            self.widgets['after'].mode = HIDDEN_MODE
-
-            # Set the boolean default if not already set
-            if self.getType() == 'boolean' and not self.widgets['choices'].value:
-                self.widgets['choices'].value = [
-                    dict(title=u'True', value=True),
-                    dict(title=u'False', value=False),
-                    ]
-
-        def createAndAdd(self, data):
-            Session = named_scoped_session(self.context.session)
-            cleanupChoices(data)
-
-            if IAttributeContext.providedBy(self.context):
-                form = self.context.item.object_schema
-            else:
-                form = self.context.item
-
-            # create the new field and let ``moveField`` automatically sort it
-            newAttribute = model.Attribute(
-                schema=form,
-                name=str(data['name']).lower(),
-                title=data['title'],
-                description=data['description'],
-                type=self.getType(),
-                is_collection=data.get('is_collection', False),
-                is_required=data.get('is_required', False),
-                )
-
-            # create a new sub-schema if the new field is an object
-            if newAttribute.type == 'object':
-                newAttribute.object_schema = model.Schema(
-                    name=form.name + camelize(data['title']),
-                    state=form.state,
-                    publish_date=form.publish_date,
-                    title=data['title'],
-                    description=data['description'],
-                    is_inline=True
-                    )
-
-            # update the column ordering
-            moveField(form, newAttribute, data['after'])
-
-            # add choices, if any
-            if data.has_key('choices') and data['choices']:
-                applyChoiceChanges(newAttribute, data['choices'])
-
-            Session.flush()
-
-            # broadcast new item only after it's been completely configured
-            zope.event.notify(zope.lifecycleevent.ObjectCreatedEvent(newAttribute))
-
-            self._newItem = newAttribute
-            return newAttribute
-
-        def nextURL(self):
-            url = self.context.absolute_url()
-            if self._newItem is not None:
-                url = os.path.join(url, str(self._newItem.name), '@@json')
-            return url
-
-        @z3c.form.button.buttonAndHandler(_(u'Cancel'), name='cancel')
-        def handleCancel(self, action):
-            self._finishedAdd = True
-
-
-def edit(request):
-    class FieldEditForm(FieldFormInputHelper, z3c.form.form.EditForm):
-        """
-        Edit form for field.
-        """
-        z3c.form.form.extends(z3c.form.form.EditForm)
-
-        prefix = 'edit'
-
-        @property
-        def label(self):
-            return _(u'Edit: %s') % self.context.__name__
-
-        @property
-        def fields(self):
-            return self.getMetadataFields()
-
-        def getType(self):
-            return self.context['type']
-
-        def getContent(self):
-            return self.context.data
-
-        def update(self):
-            self.request.set('disable_border', True)
-            # Flip the buttons
-            self.buttons = self.buttons.select('cancel', 'apply')
-            self.buttons['apply'].title = _(u'Apply')
-            self.fields['order'].mode = HIDDEN_MODE
-            super(FieldEditForm, self).update()
-
-        def updateWidgets(self):
-            super(FieldEditForm, self).updateWidgets()
-            self.widgets['name'].readonly = 'readonly'
-
-        def applyChanges(self, data):
-            """
-            Commits changes to the browser session data
-            """
-
-            cleanupChoices(data)
-            # Now do the default changes
-            changes = super(FieldEditForm, self).applyChanges(data)
-            if changes:
-                Session = named_scoped_session(self.context.session)
-                # Get into the heart of the changes
-                for changelist in changes.values():
-                    ## outputes lists, so go through them:
-                    for change in changelist:
-                        if change == 'choices':
-                            applyChoiceChanges(self.context.item, data[change])
-                        else:
-                            setattr(self.context.item, change, data[change])
-                Session.flush()
-            self.context._data = None
-            nextUrl = os.path.join(self.context.absolute_url(), '@@json')
-            self.request.response.redirect(nextUrl)
-            return changes
-
-        @z3c.form.button.buttonAndHandler(_(u'Cancel'), name='cancel')
-        def handleCancel(self, action):
-            parent = self.context.getParentNode()
-            nextUrl = os.path.join(parent.absolute_url())
-            self.request.response.redirect(nextUrl)
-
-
-    class VariableNameValidator(z3c.form.validator.SimpleFieldValidator):
-        """
-        Variable name validation
-        """
-
-        def validate(self, value):
-            super(VariableNameValidator, self).validate(value)
-
-            # We want lower case, so validate as such (will be forced on add)
-            value = value.lower()
-
-            # Check proper Python variable name
-            if value != symbolize(value):
-                raise zope.interface.Invalid(_(u'Not a valid variable name'))
-
-
-            if value in reservedWords:
-                raise zope.interface.Invalid(_(u'Can\'t use reserved programming word'))
-
-            # Avoid duplicate variable names in the subform
-            if IAttributeContext.providedBy(self.context):
-                schemaData = self.context.data['schema']
-            else:
-                schemaData = self.context.data
-            if value in schemaData['fields']:
-                raise zope.interface.Invalid(_(u'Variable name already exists in this subform'))
-
-            # Avaid duplicate names for scalars
-            if IAttributeContext.providedBy(self.context):
-                schemaData = self.context.aq_parent.data
-            else:
-                schemaData = self.context.data
-            def get_scalar_fields(schema):
-                names = set()
-                for key, field in schema['fields'].items():
-                    if field['type'] == 'object':
-                        names.update(get_scalar_fields(field['schema']))
-                    else:
-                        names.add(key)
-                return names
-            names = get_scalar_fields(schemaData)
-            if value in names:
-                raise zope.interface.Invalid(_(u'Variable name already exists in this form'))
-
-    # Limit variable name validation only to add forms, since that's the only time
-    # a user is allow to choose a name
-    z3c.form.validator.WidgetValidatorDiscriminators(
-        validator=VariableNameValidator,
-        view=FieldAddForm,
-        field=IEditableField['name'],
-        )
-
-    class ConstraintValidator(z3c.form.validator.SimpleFieldValidator):
-        """
-        Field constraints validation
-        """
-
-        def validate(self, value):
-            super(ConstraintValidator, self).validate(value)
-            if value:
-                values = [c['value'] for c in value]
-                titles = [c['title'] for c in value]
-                if len(values) != len(set(values)) or len(titles) != len(set(titles)):
-                    raise zope.interface.Invalid(_(
-                        u'Only unique values and titles are allowed'
-                        ))
-
-
-    # Limit the contraint validator to only forms that will be dealing with
-    # field metadata (add/edit)
-    z3c.form.validator.WidgetValidatorDiscriminators(
-        validator=ConstraintValidator,
-        view=FieldFormInputHelper,
-        widget=DataGridField
-        )
-
-
-def move(request):
-    class FieldOrderForm(StandardWidgetsMixin, z3c.form.form.Form):
-        """
-        Form for editing the position of a field in a form.
-        """
-
-        @property
-        def label(self):
-            return _(u'Reorder: %s') % self.context.__name__
-
-        def getContent(self):
-            return self.context.data
-
-        def update(self):
-            self.request.set('disable_border', True)
-            schemaContext = closest(self.context, ISchemaContext)
-
-            self.fields = z3c.form.field.Fields(zope.schema.Choice(
-                __name__='target',
-                title=_(u'Target Fieldset'),
-                description=_(
-                    u'The fieldset within the parent form to send the field to.'
-                    ),
-                values=listFieldsets(schemaContext.data),
-                required=False,
-                ))
-
-            self.fields += z3c.form.field.Fields(zope.schema.ASCIILine(
-                __name__='after',
-                title=_(u'After which field'),
-                required=False,
-                ))
-
-            super(FieldOrderForm, self).update()
-
-        @z3c.form.button.buttonAndHandler(title=_(u'Sort'), name='apply')
-        def handleApply(self, action):
-            data, errors = self.extractData()
-            if errors:
-                self.request.response.setStatus(400)
-            else:
-                (target, after) = (data['target'], data['after'])
-                parent = self.context.getParentNode()
-                schemaContext = closest(self.context, ISchemaContext)
-                sourceForm = parent.item
-                Session = named_scoped_session(self.context.session)
-                # Get the target form data that the field is going to
-                if target:
-                    targetForm = schemaContext.item[target]
-                else:
-                    targetForm = schemaContext.item
-                if targetForm == sourceForm:
-                    moveField(targetForm, self.context.item, after)
-                    self.context._data = None
-                elif (self.context.item in targetForm.values()) or (self.context.item.name in targetForm.keys()):
-                # Do not allow the field to be moved into another schema if it
-                # already contains a field with the same name
-                    self.request.response.setStatus(400)
-                else:
-                    # This item needs to move to a different fieldset
-                    field = self.context.item
-                    del sourceForm[self.context.item.name]
-                    parent._data = None
-                    targetForm[field.name] = field
-                    moveField(targetForm, field, after)
-                    schemaContext._data = None
-                    self.context._data = None
-                Session.flush()
-                self.request.response.setStatus(200)
-
-
-    def render(self):
-        return u''
-
-
-def delete(request):
-
-    class FieldDeleteForm(StandardWidgetsMixin, z3c.form.form.Form):
-        """
-        Delete confirmation form for fields.
-        """
-
-    #    template = ViewPageTemplateFile('editor_templates/field_delete.pt')
-
-        prefix = 'delete'
-
-        @property
-        def label(self):
-            return _(u'Delete: %s') % self.context.__name__
-
-        def getContent(self):
-            return self.context.data
-
-        def update(self):
-            self.request.set('disable_border', True)
-            super(FieldDeleteForm, self).update()
-
-        @z3c.form.button.buttonAndHandler(_(u'Cancel'), name='cancel')
-        def handleCancel(self, action):
-            self.request.response.setStatus(304);
-
-        @z3c.form.button.buttonAndHandler(_(u'Yes, I\'m sure'), name='delete')
-        def handleDelete(self, action):
-            Session = named_scoped_session(self.context.session)
-            if self.context.item.object_schema:
-                Session.delete(self.context.item.object_schema)
-            Session.delete(self.context.item)
-            Session.flush()
-            self.context._data = None
-            self.request.response.setStatus(200)
-
-
-    # Need to wrap the form because of the custom template
-    FieldDeleteFormView = plone.z3cform.layout.wrap_form(FieldDeleteForm)
-
-
-# Helper Methods
-def applyChoiceChanges(field, choiceData):
-    # Need a helper to add choice changes
-    subSession = object_session(field)
-    if field.choices:
-        def findChoice(value, itemlist):
-            for i, item in enumerate(itemlist):
-                if item['value'] == value:
-                    return itemlist.pop(i)
-            return None
-
-        for choice in field.choices:
-            choice.order = choice.order + 1000000
-
-        subSession.flush()
-        removable = []
-        for choice in field.choices:
-            newValue = findChoice(choice.value, choiceData)
-            if newValue is not None:
-                for key, value in newValue.items():
-                    setattr(choice, key, value)
-            else:
-                removable.append(choice)
-        for choice in removable:
-            # Remove the choice directly since doing so from the
-            # choices collection causes bizarre ordering behavior
-            subSession.delete(choice)
-        subSession.flush()
-
-    for new_choice in choiceData:
-        newChoice = model.Choice(
-            attribute=field,
-            name = str(new_choice['name']),
-            title = unicode(new_choice['title']),
-            order = new_choice['order'],
-            value = unicode(new_choice['value'])
-            )
-        # Don't interfere with the collection
-        subSession.add(newChoice)
-    subSession.flush()
-    return field
-
-
-def moveField(form, field, after=None):
-    subSession = object_session(form)
-    if after is None:
-        field.order = 100
+from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound
+from pyramid.view import view_config
+from six import iterkeys
+from sqlalchemy import orm
+from wtforms import (
+    Form,
+    validators, ValidationError,
+    StringField, TextAreaField, BooleanField, HiddenField, IntegerField,
+    FieldList, FormField)
+
+from occams.datastore.models.schema import RE_VALID_NAME, RESERVED_WORDS
+
+from .. import _, models, Session
+from ..form import CsrfForm
+from ..utils import move_item
+from .version import get_schema
+
+
+def get_attribute(request):
+    """
+    Helper method to retrieve the attribute from a URL request
+    """
+    form_name = request.matchdict['form']
+    version = request.matchdict['version']
+    field_name = request.matchdict['field']
+    query = (
+        Session.query(models.Attribute)
+        .filter(models.Attribute.name == field_name)
+        .join(models.Schema)
+        .filter(models.Schema.name == form_name))
+
+    if version.isdigit():
+        query = query.filter(models.Schema.id == version)
     else:
-        field.order = form[after].order + 101
-    # Move everything that follows
-    for formfield in sorted(form.values(), key=lambda i: i.order):
-        if formfield != field:
-            formfield.order += 100
-            if  formfield.order >= field.order:
-                formfield.order += 1
-    subSession.flush()
-    ## ok, we need to reorder everything
-    for order, formfield in enumerate(sorted(form.values(), key=lambda i: i.order)):
-        formfield.order = order
-    subSession.flush()
-    return form
+        query = query.filter(models.Schema.publish_date == version)
+
+    try:
+        return query.one()
+    except orm.exc.NoResultFound:
+        raise HTTPNotFound
+
+
+@view_config(
+    name='field_list',
+    xhr=True,
+    renderer='json')
+def list(request):
+    """
+    Return a a listing of the fields in the form
+    """
+    schema = get_schema(request)
+    schema_json = schema.json()
+    return {
+        'attributes': schema_json['attributes'],
+        'sections': schema_json['sections']
+    }
+
+
+def is_unique_name(form, field):
+    """
+    Verifies that an attribute name is unique within a schema
+    """
+
+    query = (
+        Session.query(models.Attribute)
+        .filter(models.Attribute.name.ilike(field.data))
+        .filter(models.Attribute.schema_id == form.schema_id.data))
+
+    # If editing (admin only), avoid false positive
+    if form.id.data:
+        query = query.filter(models.Attribute.id != form.id.data)
+
+    if Session.query(query.exists()).one():
+        raise ValidationError(_(u'Variable name already exists in this form'))
+
+
+class ChoiceForm(Form):
+
+    name = StringField(
+        label=_(u'Stored Value'),
+        validators=[
+            validators.required(),
+            validators.Length(min=1, max=8),
+            validators.Regexp('-?[0-9]+')])
+
+    title = StringField(
+        title=_(u'Displayed Label'),
+        validators=[
+            validators.required()])
+
+
+class FieldForm(CsrfForm):
+
+    id = HiddenField()
+
+    schema_id = HiddenField(validators=[validators.required()])
+
+    section_id = HiddenField(validators=[validators.optional()])
+
+    type = HiddenField()
+
+    name = StringField(
+        title=_(u'Variable Name'),
+        description=_(
+            u'Internal variable name, this value cannot be changed once it is '
+            u'created.'
+            ),
+        validators=[
+            validators.required(),
+            validators.Regexp(
+                RE_VALID_NAME,
+                message=_(u'Not a valid variable name')),
+            validators.NoneOf(
+                RESERVED_WORDS,
+                message=_(u'Can\'t use reserved programming word')),
+            is_unique_name])
+
+    title = StringField(
+        label=_(u'Label'),
+        description=_(u'The prompt for the user.'),
+        validators=[
+            validators.required()])
+
+    description = TextAreaField(
+        label=_(u'Help Text'),
+        description=_(u'A short description about the field\'s purpose.'),
+        validators=[validators.optional()])
+
+    is_required = BooleanField(
+        label=_(u'Required?'),
+        description=_(
+            u'If selected, the user will be required to enter a value.'))
+
+    is_private = BooleanField(
+        label=_(u'Does this field contain private information?'))
+
+    # choice
+    is_collection = BooleanField(
+        label=_(u'Multiple Choice?'),
+        description=_(u'If selected, the user may enter more than one value.'))
+
+    # int
+    precision = IntegerField(
+        label=_(u'Decimal precision'),
+        validators=[validators.optional()])
+
+    # int/str
+    value_min = StringField(
+        label=_(u'Minimum value'),
+        validators=[validators.optional()])
+
+    # int/str
+    value_max = StringField(
+        label=_(u'Maximum value'),
+        validators=[validators.optional()])
+
+    # str
+    format_expr = StringField(
+        label=_(u'A regular expression to validate the field'),
+        validators=[validators.optional()])
+
+    constraint_expr = StringField(
+        label=_(u'Constraint expression.'),
+        description=_(
+            u'A Javascript expression that returns a validation error, '
+            u'if one occurs.'),
+        validators=[validators.optional()])
+
+    skip_expr = StringField(
+        label=_(u'Skip expression.'),
+        description=_(
+            u'A Javascript expression that returns true if the field should '
+            u'be skipped or false otherwise'),
+        validators=[validators.optional()])
+
+    # choice
+    collection_min = IntegerField(
+        label=(u'Minimum number of selections'))
+
+    # choice
+    collection_max = IntegerField(
+        label=(u'Maximum number of selections'))
+
+    # choice
+    choices = FieldList(FormField(ChoiceForm))
+
+    order = HiddenField()
+
+
+@view_config(
+    name='field_view',
+    xhr=True,
+    renderer='json',
+    permission='form_view')
+def view(request):
+    attribute = get_attribute(request)
+    attr_json = attribute.to_json()
+    # TODO: add html preview?
+    return attr_json
+
+
+@view_config(
+    name='field_add',
+    xhr=True,
+    renderer='json',
+    permission='form_edit')
+def add(request):
+    """
+    Add form for fields.
+
+    Optionally takes a request variable ``order`` to preset where the
+    field will be added (otherwise at the end of the form)
+    """
+
+    schema = get_schema(request)
+    section = None
+    type_ = request.matchdict['type']
+
+    if schema.publish_date and not request.has_permission('admin'):
+        raise HTTPForbidden('Cannot delete a field in a published form')
+
+    add_form = FieldForm(request.POST)
+
+    if request.method == 'POST' and add_form.validate():
+
+        schema[add_form.name.data] = attribute = models.Attribute(
+            section=section,
+            name=add_form.name.data,
+            title=add_form.title.data,
+            description=add_form.description.data,
+            type=type_,
+            is_collection=add_form.is_collection.data,
+            is_required=add_form.is_required.data,
+            is_private=add_form.is_private.data,
+        )
+
+        move_item(schema.attributes, attribute, add_form.order.data)
+
+        if type_ == 'choice':
+            for i, choice_form in enumerate(add_form.choices.data):
+                attribute[choice_form.name.data] = models.Choice(
+                    name=choice_form.name.data,
+                    title=choice_form.title.data,
+                    order=i)
+
+        # TODO return something useful
+        return {}
+
+    # TODO return something useful
+    return {}
+
+
+@view_config(
+    name='field_edit',
+    xhr=True,
+    renderer='json',
+    permission='form_edit')
+def edit(request):
+    """
+    Edit view for an attribute
+    """
+
+    attribute = get_attribute(request)
+
+    if attribute.schema.publish_date and not request.has_permission('admin'):
+        raise HTTPForbidden('Cannot delete a field in a published form')
+
+    edit_form = FieldForm(request.POST, attribute)
+
+    if request.method == 'POST' and edit_form.validate():
+        attribute.name = edit_form.name.data
+        attribute.title = edit_form.title.data
+        attribute.description = edit_form.description.data
+        attribute.is_required = edit_form.is_required.data
+        attribute.is_private = edit_form.is_private.data
+        attribute.constraint_expr = edit_form.constraint_expr.data
+        attribute.skip_expr = edit_form.skip_expr.data
+
+        new_codes = dict([(c.name, c.title) for c in edit_form.choices.data])
+
+        for code in iterkeys(attribute.choices):
+            if code not in new_codes:
+                del attribute.choices[code]
+
+        for i, choice_form in enumerate(edit_form.choices.data):
+            if choice_form.name.data in attribute.choices:
+                choice = attribute.choices[choice_form.name.data]
+            else:
+                choice = models.Choice(attribute=attribute)
+                Session.add(choice)
+            choice.name = choice_form.name.data
+            choice.title = choice_form.title.data
+            choice.order = i
+
+        # TODO return something useful
+        return {}
+
+    # TODO return something useful
+    return {}
+
+
+@view_config(
+    name='field_move',
+    xhr=True,
+    request_method='POST',
+    renderer='json',
+    permission='form_edit')
+def move(request):
+    """
+    Moves the field to the target section and display order within the form
+    """
+    attribute = get_attribute(request)
+
+    if attribute.schema.publish_date and not request.has_permission('admin'):
+        raise HTTPForbidden('Cannot delete a field in a published form')
+
+    # Target section
+    section_name = request.POST.get('section') or None
+
+    # Move to the (valid) target section, if applicable
+    if section_name:
+        if section_name not in attribute.schema.sections:
+            raise HTTPNotFound
+        attribute.section = attribute.schema.sections[section_name]
+
+    move_item(attribute.schema.attributes, attribute, request.POST['order'])
+
+    # TODO: return something useful
+    return {}
+
+
+@view_config(
+    name='field_delete',
+    xhr=True,
+    request_method='POST',
+    renderer='json',
+    permission='form_edit')
+def delete(request):
+    """
+    Deletes the field from the form
+    """
+    attribute = get_attribute(request)
+    if attribute.schema.publish_date and not request.has_permission('admin'):
+        raise HTTPForbidden('Cannot delete a field in a published form')
+    Session.delete(attribute)
+    # TODO: return something useful
+    return {}

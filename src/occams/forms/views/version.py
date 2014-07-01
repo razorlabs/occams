@@ -29,12 +29,12 @@ def get_schema(request):
 
 
 def is_unique_publish_date(form, field):
-    if not field.publish_date:
+    if not field.data:
         return
 
     version_exists = sql.exists().where(
         (models.Schema.name == field.data.lower())
-        & (models.Schema.publish_date == field.publish_date))
+        & (models.Schema.publish_date == field.data))
 
     if not Session.query(version_exists).one():
         raise ValidationError(_(
@@ -133,3 +133,12 @@ def edit(request):
         'cancel': _(u'Cancel'),
         'submit': _(u'Submit'),
     }
+
+
+@view_config(
+    route_name='version_manage',
+    permission='form_manage',
+    renderer='../templates/version/manage.pt')
+def manage(request):
+    schema = get_schema(request)
+    return {'schema': schema}
