@@ -145,7 +145,7 @@ class Entity(Model, Referenceable, Describeable, Modifiable, Auditable):
             lazy='dynamic'),
         doc='The current workflow state')
 
-    is_null = Column(
+    not_done = Column(
         Boolean,
         nullable=False,
         default=False,

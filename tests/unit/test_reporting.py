@@ -276,7 +276,7 @@ def test_build_report_expected_metadata_columns():
     assert_in(u'form_publish_date', report.c)
     assert_in(u'state', report.c)
     assert_in(u'collect_date', report.c)
-    assert_in(u'is_null', report.c)
+    assert_in(u'not_done', report.c)
     assert_in(u'create_date', report.c)
     assert_in(u'create_user', report.c)
     assert_in(u'modify_date', report.c)
