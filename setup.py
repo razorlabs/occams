@@ -36,7 +36,7 @@ REQUIRES = [
     'zope.sqlalchemy',
 
     'occams.datastore',
-    'occams.form',
+    'occams.forms',
 ]
 
 EXTRAS = {

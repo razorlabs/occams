@@ -1,14 +1,14 @@
 """Remove zid and old_id
 
 Revision ID: 2eb2629708b3
-Revises: 17e83fd33667
+Revises: 60f4ba5ba66
 Create Date: 2014-05-19 13:06:58.677357
 
 """
 
 # revision identifiers, used by Alembic.
 revision = '2eb2629708b3'
-down_revision = '17e83fd33667'
+down_revision = '60f4ba5ba66'
 
 from alembic import op
 import sqlalchemy as sa
