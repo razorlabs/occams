@@ -37,12 +37,13 @@ class PartnerPlan(ExportPlan):
                 is_required=True, is_system=True),
 
             row('report_date', self.name, types.DATE,
-                title=u'Date Started',
-                desc=u'Date the patient started exhibiting the symptom.',  # NOQA
+                title=u'Date Partner Reported',
+                desc=u'The date that the reporting patient reported this partner.',  # NOQA
                 is_required=True),
-            row('partner_pid', self.name, types.DATE,
-                title=u'Date Stopped',
-                desc=u'Date the patient stopped exhibiting the symptom.'),  # NOQA
+            row('partner_pid', self.name, types.STRING,
+                title=u'This Partner\'s Patient Entry',
+                desc=u'This partner is also a patient; This property references that patient entry'),  # NOQA
+
 
             row('create_date', self.name, types.DATE,
                 is_required=True, is_system=True),
