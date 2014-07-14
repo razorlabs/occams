@@ -23,6 +23,7 @@ serve:
 		$(VIRTUAL_ENV)/bin/gunicorn \
 		--error-logfile - \
 		--log-config $(VIRTUAL_ENV)/etc/development.ini \
+		--timeout 100000 \
 		--paste $(VIRTUAL_ENV)/etc/development.ini
 
 

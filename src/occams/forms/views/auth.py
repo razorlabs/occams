@@ -27,23 +27,23 @@ class LoginForm(Form):
 
 
 @view_config(
-    route_name='account_login',
-    renderer='../templates/account/login.pt')
+    route_name='login',
+    renderer='../templates/auth/login.pt')
 @forbidden_view_config(
-    renderer='../templates/account/login.pt')
+    renderer='../templates/auth/login.pt')
 def login(request):
 
-    if (request.matched_route.name != 'account_login'
+    if (request.matched_route.name != 'login'
             and request.authenticated_userid):
         # If an authenticated user has reached this controller without
         # intentionally going to the login view, assume permissions
         # error
-        return HTTPForbidden()
+        return HTTPForbidden(_(u'Permission denied'))
 
     # Figure out where the user came from so we can redirect afterwards
     referrer = request.GET.get('referrer', request.current_route_path())
 
-    if not referrer or referrer == request.route_path('account_login'):
+    if not referrer or referrer == request.route_path('login'):
         # Never use the login as the referrer
         referrer = request.route_path('home')
 
@@ -52,7 +52,7 @@ def login(request):
     # Only process the input if the user intented to post to this view
     # (could be not-logged-in redirect)
     if (request.method == 'POST'
-            and request.matched_route.name == 'account_login'
+            and request.matched_route.name == 'login'
             and form.validate()):
         # XXX: Hack for this to work on systems that have not set the
         # environ yet. Pyramid doesn't give us access to the policy
@@ -84,8 +84,6 @@ def login(request):
     }
 
 
-@view_config(route_name='account_logout')
+@view_config(route_name='logout')
 def logout(request):
-    who_api = request._get_authentication_policy()._getAPI(request)
-    headers = who_api.logout()
-    return HTTPFound(location=request.route_path('home'), headers=headers)
+    return HTTPFound(location='/', headers=forget(request))

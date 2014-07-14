@@ -1,6 +1,6 @@
 from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound
 from pyramid.view import view_config
-from six import iterkeys
+from six import iterkeys, itervalues
 from sqlalchemy import orm
 from wtforms import (
     Form,
@@ -11,49 +11,101 @@ from wtforms import (
 from occams.datastore.models.schema import RE_VALID_NAME, RESERVED_WORDS
 
 from .. import _, models, Session
-from ..form import CsrfForm
-from ..utils import move_item
+from ..form import CSRF
 from .version import get_schema
 
 
-def get_attribute(request):
+def get_attribute(form=None, field=None, version=None, **kw):
     """
     Helper method to retrieve the attribute from a URL request
     """
-    form_name = request.matchdict['form']
-    version = request.matchdict['version']
-    field_name = request.matchdict['field']
     query = (
         Session.query(models.Attribute)
-        .filter(models.Attribute.name == field_name)
+        .filter(models.Attribute.name == field)
         .join(models.Schema)
-        .filter(models.Schema.name == form_name))
-
-    if version.isdigit():
-        query = query.filter(models.Schema.id == version)
-    else:
-        query = query.filter(models.Schema.publish_date == version)
-
+        .filter(models.Schema.name == form))
     try:
-        return query.one()
+        if str(version).isdigit():
+            return query.filter(models.Schema.id == version).one()
+        else:
+            return query.filter(models.Schema.publish_date == version).one()
     except orm.exc.NoResultFound:
         raise HTTPNotFound
 
 
-@view_config(
-    name='field_list',
-    xhr=True,
-    renderer='json')
-def list(request):
+def get_fields_data(request, schema):
     """
-    Return a a listing of the fields in the form
+    Helper method to return fields JSON data
     """
-    schema = get_schema(request)
-    schema_json = schema.json()
+
+    def fields(attributes):
+        attributes = sorted(attributes, key=lambda i: i.order)
+        return [get_field_data(request, a) for a in attributes]
+
     return {
-        'attributes': schema_json['attributes'],
-        'sections': schema_json['sections']
+        '__metadata__': {
+            'src':  request.route_path(
+                'field_list',
+                form=schema.name,
+                version=str(schema.publish_date or schema.id))},
+        'items': (
+            fields(a for a in itervalues(schema.attributes) if not a.section) +
+            fields(s for s in itervalues(schema.sections)))
     }
+
+
+def get_field_data(request, attribute):
+    """
+    Helper method to return field JSON data
+    """
+    schema = attribute.schema
+    data = attribute.to_json()
+    data['__metadata__'] = {
+        'src': request.route_path(
+            'field_view',
+            form=attribute.schema.name,
+            version=str(schema.publish_date or schema.id),
+            field=attribute.name)}
+    children = data.pop('attributes', None)
+    if children:
+        children = sorted(itervalues(children), key=lambda i: i['order'])
+        data['type'] = 'section'
+        data['is_required'] = False
+        data['fields'] = \
+            [get_field_data(request, schema[f['name']]) for f in children]
+    choices = data.pop('choices', None)
+    if choices:
+        choices = sorted(itervalues(choices), key=lambda i: i['order'])
+        data['choices'] = choices
+    return data
+
+
+@view_config(
+    route_name='field_list',
+    xhr=True,
+    renderer='json',
+    permission='form_view')
+@view_config(
+    route_name='field_list',
+    request_param='alt=json',
+    renderer='json',
+    permission='form_view')
+def list_json(request):
+    schema = get_schema(**request.matchdict)
+    return get_fields_data(request, schema)
+
+
+@view_config(
+    route_name='field_view',
+    xhr=True,
+    renderer='json',
+    permission='form_view')
+def view_json(request):
+    """
+    Returns JSON for a single attribute
+    """
+    attribute = get_attribute(**request.matchdict)
+    return get_field_data(request, attribute)
 
 
 def is_unique_name(form, field):
@@ -84,12 +136,16 @@ class ChoiceForm(Form):
             validators.Regexp('-?[0-9]+')])
 
     title = StringField(
-        title=_(u'Displayed Label'),
+        label=_(u'Displayed Label'),
         validators=[
             validators.required()])
 
 
-class FieldForm(CsrfForm):
+class FieldForm(Form):
+
+    class Meta(object):
+        csrf = True
+        csrf_class = CSRF
 
     id = HiddenField()
 
@@ -100,7 +156,7 @@ class FieldForm(CsrfForm):
     type = HiddenField()
 
     name = StringField(
-        title=_(u'Variable Name'),
+        label=_(u'Variable Name'),
         description=_(
             u'Internal variable name, this value cannot be changed once it is '
             u'created.'
@@ -134,27 +190,33 @@ class FieldForm(CsrfForm):
     is_private = BooleanField(
         label=_(u'Does this field contain private information?'))
 
+    is_system = BooleanField(
+        label=_(u'This field is can only be managed by system services'))
+
+    is_readonly = BooleanField(
+        label=_(u'This field is ready only and generated by a formula'))
+
     # choice
     is_collection = BooleanField(
         label=_(u'Multiple Choice?'),
         description=_(u'If selected, the user may enter more than one value.'))
 
-    # int
+    # number
     precision = IntegerField(
         label=_(u'Decimal precision'),
         validators=[validators.optional()])
 
-    # int/str
+    # number/string
     value_min = StringField(
         label=_(u'Minimum value'),
         validators=[validators.optional()])
 
-    # int/str
+    # number/string
     value_max = StringField(
         label=_(u'Maximum value'),
         validators=[validators.optional()])
 
-    # str
+    # string
     format_expr = StringField(
         label=_(u'A regular expression to validate the field'),
         validators=[validators.optional()])
@@ -162,8 +224,9 @@ class FieldForm(CsrfForm):
     constraint_expr = StringField(
         label=_(u'Constraint expression.'),
         description=_(
-            u'A Javascript expression that returns a validation error, '
-            u'if one occurs.'),
+            u'A Javascript expression that throws a validation error, '
+            u'if one occurs. This expression is also allowed to '
+            u'perform post-processing on the field.'),
         validators=[validators.optional()])
 
     skip_expr = StringField(
@@ -188,23 +251,22 @@ class FieldForm(CsrfForm):
 
 
 @view_config(
-    name='field_view',
+    route_name='field_list',
     xhr=True,
+    request_method='OPTIONS',
     renderer='json',
-    permission='form_view')
-def view(request):
-    attribute = get_attribute(request)
-    attr_json = attribute.to_json()
-    # TODO: add html preview?
-    return attr_json
+    permission='form_edit')
+def options_json(request):
+    return {}
 
 
 @view_config(
-    name='field_add',
+    route_name='field_list',
     xhr=True,
+    request_method='POST',
     renderer='json',
     permission='form_edit')
-def add(request):
+def add_json(request):
     """
     Add form for fields.
 
@@ -212,14 +274,14 @@ def add(request):
     field will be added (otherwise at the end of the form)
     """
 
-    schema = get_schema(request)
+    schema = get_schema(**request.matchdict)
     section = None
     type_ = request.matchdict['type']
 
     if schema.publish_date and not request.has_permission('admin'):
         raise HTTPForbidden('Cannot delete a field in a published form')
 
-    add_form = FieldForm(request.POST)
+    add_form = FieldForm(request.POST, meta={'csrf_context': request.session})
 
     if request.method == 'POST' and add_form.validate():
 
@@ -250,12 +312,20 @@ def add(request):
     return {}
 
 
+def move_item(items, target, new_order):
+    target.order = new_order
+    for other in itervalues(items):
+        if (target.id and other.id != target.id) or other.order >= new_order:
+            other.order += 1
+
+
 @view_config(
-    name='field_edit',
+    route_name='field_view',
     xhr=True,
+    request_method='PUT',
     renderer='json',
     permission='form_edit')
-def edit(request):
+def edit_json(request):
     """
     Edit view for an attribute
     """
@@ -299,43 +369,43 @@ def edit(request):
     return {}
 
 
+#@view_config(
+    #route_name='field_view',
+    #xhr=True,
+    #request_method='PUT',
+    #renderer='json',
+    #permission='form_edit')
+#def move_json(request):
+    #"""
+    #Moves the field to the target section and display order within the form
+    #"""
+    #attribute = get_attribute(request)
+
+    #if attribute.schema.publish_date and not request.has_permission('admin'):
+        #raise HTTPForbidden('Cannot delete a field in a published form')
+
+    ## Target section
+    #section_name = request.POST.get('section') or None
+
+    ## Move to the (valid) target section, if applicable
+    #if section_name:
+        #if section_name not in attribute.schema.sections:
+            #raise HTTPNotFound
+        #attribute.section = attribute.schema.sections[section_name]
+
+    #move_item(attribute.schema.attributes, attribute, request.POST['order'])
+
+    ## TODO: return something useful
+    #return {}
+
+
 @view_config(
-    name='field_move',
+    route_name='field_delete',
     xhr=True,
-    request_method='POST',
+    request_method='DELETE',
     renderer='json',
     permission='form_edit')
-def move(request):
-    """
-    Moves the field to the target section and display order within the form
-    """
-    attribute = get_attribute(request)
-
-    if attribute.schema.publish_date and not request.has_permission('admin'):
-        raise HTTPForbidden('Cannot delete a field in a published form')
-
-    # Target section
-    section_name = request.POST.get('section') or None
-
-    # Move to the (valid) target section, if applicable
-    if section_name:
-        if section_name not in attribute.schema.sections:
-            raise HTTPNotFound
-        attribute.section = attribute.schema.sections[section_name]
-
-    move_item(attribute.schema.attributes, attribute, request.POST['order'])
-
-    # TODO: return something useful
-    return {}
-
-
-@view_config(
-    name='field_delete',
-    xhr=True,
-    request_method='POST',
-    renderer='json',
-    permission='form_edit')
-def delete(request):
+def delete_json(request):
     """
     Deletes the field from the form
     """

@@ -1,0 +1,103 @@
+/**
+ * Field listing style sheet
+ */
+[data-view-name='version_edit'] {
+
+  // Visual cue for dragging new types, disabled when editing
+  .ui-draggable {
+    cursor: move;
+    &.ui-draggable-disabled {
+      cursor: not-allowed;
+    }
+  }
+
+  #of-types {
+    // Icons for types
+    [data-type]:before{
+      font-family: FontAwesome;
+      padding-right: 5px;
+    }
+
+    [data-type='choice']:before { content: "\f046"; }
+    [data-type='date']:before { content: "\f073"; }
+    [data-type='datetime']:before { content: "\f017"; }
+    [data-type='blob']:before { content: "\f0c6"; }
+    [data-type='number']:before { content:  "\f0c3"; }
+    [data-type='section']:before { content: "\f1dc"; }
+    [data-type='string']:before { content: "\f031" }
+    [data-type='text']:before { content: "\f1dd"; }
+
+    // Wrap the drag helper in a border
+    .ui-draggable-dragging {
+      border: 1px solid;
+      .border-top-radius(@border-radius-base);
+      .border-bottom-radius(@border-radius-base);
+      .border-left-radius(@border-radius-base);
+      .border-right-radius(@border-radius-base);
+    }
+  }
+
+  // Ensure the first set of fields is large enough for a user to
+  // just drag a new field rather than moving around looking for the drop target
+  #of-form-root > .of-fields {
+    min-height: 400px;    // Almost the same height as the types panel
+  }
+
+  .of-fields {
+    min-height: 5em;      // Use a big enough area for drag/drop
+  }
+
+  #of-content {
+    position: relative;
+
+    > #of-empty {
+      // position the empty messsage so it doesn't interfere with dragging
+      position: absolute;
+      top: 0;
+      left: 0;
+      padding-left: @grid-gutter-width / 2;
+    }
+  }
+
+  // Only show controls when hovering over an editable field
+  .of-controls {
+    visibility: hidden;
+  }
+
+  .of-editable:hover .of-controls {
+    visibility: visible;
+  }
+
+
+  // Only show backgroun-highlight when hovering over an editable field
+  .ui-sortable-helper,
+  .of-editable:hover {
+    cursor: move;
+  }
+
+  .ui-sortable-helper,
+  .of-editable:hover,
+  .of-delete,
+  .of-edit {
+    background-color: @gray-lighter;
+  }
+
+  // Add some padding to a field so the backgorund doesn't look awkward
+  .of-view {
+    padding: @padding-base-vertical 0;
+  }
+
+  .of-edit,
+  .of-delete {
+    border-left: 5px solid;
+    padding: @padding-base-vertical @padding-base-horizontal;
+  }
+
+  .of-edit { border-color: @brand-primary; }
+  .of-delete { border-color: @brand-danger; }
+
+  // placeholder for sorting target
+  .of-placeholder {
+    border: 2px dotted @brand-danger;
+  }
+}

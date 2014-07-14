@@ -5,8 +5,25 @@ all permissions are declared here for easier overview
 
 from pyramid.events import subscriber, NewRequest
 from pyramid.security import Allow, Authenticated, ALL_PERMISSIONS
+import wtforms.csrf.core
 
 from . import log, Session
+
+
+class CSRF(wtforms.csrf.core.CSRF):
+    """
+    Generates CSRF tokens for WTForms in Pyramid
+    """
+    def setup_form(self, form):
+        self.csrf_context = form.meta.csrf_context
+        return super(CSRF, self).setup_form(form)
+
+    def generate_csrf_token(self, csrf_token):
+        return self.csrf_context.get_csrf_token()
+
+    def validate_csrf_token(self, form, field):
+        if field.data != field.current_token:
+            raise ValueError('Invalid CSRF')
 
 
 def groupfinder(identity, request):

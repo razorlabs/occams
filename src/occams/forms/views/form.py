@@ -1,10 +1,9 @@
 from pyramid.view import view_config
 from sqlalchemy import orm, sql, null
-from wtforms import StringField, validators, ValidationError
+from wtforms import Form, StringField, validators, ValidationError
 
-from occams.datastore import models
-from .. import _, Session
-from ..form import CsrfForm
+from .. import _, log, Session, models
+from ..form import CSRF
 
 
 def is_unique_name(form, field):
@@ -13,7 +12,11 @@ def is_unique_name(form, field):
         raise ValidationError(_(u'Form name already in use'))
 
 
-class SchemaForm(CsrfForm):
+class SchemaForm(Form):
+
+    class Meta(object):
+        csrf = True
+        csrf_class = CSRF
 
     name = StringField(
         label=_('Schema Name'),
@@ -38,7 +41,7 @@ class SchemaForm(CsrfForm):
 
 
 @view_config(
-    route_name='home',
+    route_name='form_list',
     renderer='../templates/form/list.pt',
     permission='form_view')
 def list_(request):
@@ -46,8 +49,9 @@ def list_(request):
 
 
 @view_config(
-    route_name='home',
+    route_name='form_list',
     xhr=True,
+    request_method='GET',
     renderer='json',
     permission='form_view')
 def list_json(request):
@@ -105,6 +109,7 @@ def list_json(request):
 @view_config(
     route_name='form_add',
     xhr=True,
+    request_method='POST',
     permission='form_add',
     renderer='json')
 def add(request):

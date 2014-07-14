@@ -4,7 +4,7 @@
     <form class="form-login"
         role="form"
         method="POST"
-        action="${request.route_path('account_login', _query={'referrer': referrer})}">
+        action="${request.route_path('login', _query={'referrer': referrer})}">
       <h2 class="form-login-heading" i18n:translate="">Please log in</h2>
       <div
         class="alert alert-danger"

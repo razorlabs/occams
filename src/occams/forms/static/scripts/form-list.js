@@ -56,8 +56,8 @@ function FormListView() {
 
   // Get initial data
   $.getJSON(window.location, function(data) {
-      self.forms($.map(data, ko.mapping.fromJS));
-      self.ready(true);
+    self.forms($.map(data, ko.mapping.fromJS));
+    self.ready(true);
   });
 
 }
@@ -113,8 +113,8 @@ function AddForm(data){
  */
 $(document).ready(function(){
 
-  var element = $('#home');
-  if ( element.length > 0){
+  var element = $('#form_list');
+  if (element.length > 0){
     ko.applyBindings(new FormListView(), element[0]);
   }
 

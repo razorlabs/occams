@@ -15,21 +15,10 @@
         <span class="glyphicon glyphicon-transfer"></span>
         <span i18n:translate="">Draft New</span>
       </a>
-      <a href="${request.current_route_path(_route_name='version_publish')}"
-          class="btn btn-default"
-          tal:condition="not:is_published">
-        <span class="glyphicon glyphicon-tag"></span>
-        <span i18n:translate="">Publish</span>
-      </a>
       <a href="${request.current_route_path(_route_name='version_edit')}"
           class="btn btn-default">
         <span class="glyphicon glyphicon-pencil"></span>
         <span i18n:translate="">Edit</span>
-      </a>
-      <a href ="${request.current_route_path(_route_name='version_manage')}"
-          class="btn btn-default">
-        <span class="glyphicon glyphicon-move"></span>
-        <span i18n:translate="">Manage Fields</span>
       </a>
       <div class="btn-group dropdown">
         <button class="btn btn-default dropdown-toggle"
