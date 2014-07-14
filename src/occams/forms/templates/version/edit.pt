@@ -40,7 +40,7 @@
         <div id="of-sidebar" class="col-md-3">
           <div id="of-types" class="panel panel-primary">
             <div class="panel-heading">
-              <h3 class="panel-title">Types</h3>
+              <h3 class="panel-title" i18n:translate="">Add new field...</h3>
             </div>
             <!-- ko foreach: types() -->
               <div class="list-group"
@@ -160,6 +160,7 @@
     <script id="field-edit-template" type="text/html">
       <div class="of-edit">
         <form>
+
           <div class="text-right">
             <button type="button" class="btn btn-link" data-bind="click: $root.clearSelected">Cancel</button>
             <button type="button" class="btn btn-primary" data-bind="click: $root.saveField">Save</button>

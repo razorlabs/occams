@@ -66,8 +66,14 @@ function VersionEditViewModel(){
   };
 
   self.deleteField = function(field){
-    self.clearSelected();
-    console.log('DELETED ' + field.name());
+    $.ajax({
+      url: field.__metadata__.src(),
+      method: 'DELETE',
+      success: function(data, status, jxhr){
+        self.fields.destroy(field);
+        self.clearSelected();
+      }
+    });
   };
 
   // Load initial data

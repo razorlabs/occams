@@ -1,4 +1,4 @@
-from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound
+from pyramid.httpexceptions import HTTPOk, HTTPForbidden, HTTPNotFound
 from pyramid.view import view_config
 from six import iterkeys, itervalues
 from sqlalchemy import orm
@@ -413,5 +413,5 @@ def delete_json(request):
     if attribute.schema.publish_date and not request.has_permission('admin'):
         raise HTTPForbidden('Cannot delete a field in a published form')
     Session.delete(attribute)
-    # TODO: return something useful
-    return {}
+    Session.flush()
+    return HTTPOk
