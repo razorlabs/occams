@@ -141,7 +141,7 @@
 
         <div class="col-md-2 text-right">
           <div class="of-controls btn-group">
-            <button type="button" class="btn btn-default" data-bind="click: $root.selectedEditField">
+            <button type="button" class="btn btn-default" data-bind="click: $root.selectFieldForEditing">
               <span class="glyphicon glyphicon-pencil"></span>
             </button>
             <button type="button" class="btn btn-default" data-bind="click: $root.selectedDeleteField">
@@ -157,13 +157,32 @@
       <!-- /ko -->
     </script>
 
+
     <script id="field-edit-template" type="text/html">
       <div class="of-edit">
-        <form>
+        <form tal:define="form field_form; wtforms load:../wtforms.pt">
+
+          <metal:field tal:define="field form['id']" use-macro="wtforms.macros['hidden']" />
+          <metal:field tal:define="field form['schema_id']" use-macro="wtforms.macros['hidden']" />
+          <metal:field tal:define="field form['section_id']" use-macro="wtforms.macros['hidden']" />
+          <metal:field tal:define="field form['type']" use-macro="wtforms.macros['hidden']" />
+          <metal:field tal:define="field form['name']" use-macro="wtforms.macros['core']" />
+          <metal:field tal:define="field form['title']" use-macro="wtforms.macros['core']" />
+          <metal:field tal:define="field form['description']" use-macro="wtforms.macros['core']" />
+
+
+          <hr width="100%" />
 
           <div class="text-right">
             <button type="button" class="btn btn-link" data-bind="click: $root.clearSelected">Cancel</button>
-            <button type="button" class="btn btn-primary" data-bind="click: $root.saveField">Save</button>
+            <button type="button" class="btn btn-primary" data-bind="click: $root.saveField">
+              <!-- ko if: id -->
+                <span>Save</span>
+              <!-- /ko -->
+              <!-- ko ifnot: id -->
+                <span>Create</span>
+              <!-- /ko -->
+            </button>
           </div>
         </form>
       </div>

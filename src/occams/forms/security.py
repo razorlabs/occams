@@ -14,6 +14,7 @@ class CSRF(wtforms.csrf.core.CSRF):
     """
     Generates CSRF tokens for WTForms in Pyramid
     """
+
     def setup_form(self, form):
         self.csrf_context = form.meta.csrf_context
         return super(CSRF, self).setup_form(form)
@@ -24,6 +25,13 @@ class CSRF(wtforms.csrf.core.CSRF):
     def validate_csrf_token(self, form, field):
         if field.data != field.current_token:
             raise ValueError('Invalid CSRF')
+
+
+class CSRFForm(wtforms.Form):
+
+    class Meta:
+        csrf = True
+        csrf_class = CSRF
 
 
 def groupfinder(identity, request):

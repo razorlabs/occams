@@ -1,0 +1,42 @@
+<metal:wtforms tal:condition="False">
+
+  <metal:macro define-macro="hidden">
+    ${structure: field()}
+  </metal:macro>
+
+  <metal:macro define-macro="CSRFTokenField" extend-macro="macros['hidden']" />
+  <metal:macro define-macro="HiddenField" extend-macro="macros['hidden']" />
+
+  <metal:macro define-macro="BooleanField">
+    <div class="${field.widget.input_type}">
+      <label>
+        ${structure: field()}
+        ${structure: field.label.text}
+      </label>
+      <p class="help-block" tal:repeat="msg field.errors">${msg}</p>
+    </div>
+  </metal:macro>
+
+  <metal:macro define-macro="core">
+    <div class="form-group">
+      ${structure: field.label(class_='required' if field.flags.required else '')}
+      <p class="help-block">${field.description}</p>
+      <p class="help-block" tal:repeat="msg field.errors">${msg}</p>
+      <metal:widget define-slot="widget">
+        ${structure: field(class_='form-control')}
+      </metal:widget>
+    </div>
+  </metal:macro>
+
+  <metal:macro define-macro="FieldList" extend-macro="macros['core']" />
+
+  <metal:macro define-macro="IntegerField" extend-macro="macros['core']" />
+  <metal:macro define-macro="TextAreaField" extend-macro="macros['core']" />
+
+  <metal:macro define-macro="form">
+    <tal:fields tal:repeat="field form">
+      <metal:field use-macro="macros[field.type]"></metal:field>
+    </tal:fields>
+  </metal:macro"
+
+</metal:wtforms>

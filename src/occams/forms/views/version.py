@@ -134,8 +134,12 @@ def preview(request):
     permission='form_edit',
     renderer='../templates/version/edit.pt')
 def edit(request):
+    from .field import FieldForm
     schema = get_schema(**request.matchdict)
-    return {'schema': schema}
+    return {
+        'schema': schema,
+        'field_form': FieldForm(meta={'csrf_context': request.session})
+    }
 
 
 @view_config(

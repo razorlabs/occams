@@ -15,10 +15,12 @@ function VersionEditViewModel(){
   self.publish_date = ko.observable();
   self.retract_date = ko.observable();
 
+  self.fieldsSrc = null;
   self.fields = ko.observableArray([]);       // form fields
 
   self.selectedEditField = ko.observable();   // currently field being edited
-  self.selectedDeleteField = ko.observable(); // currently field being edited
+  self.fieldForEditing = ko.observable();     // A copy of the field for editing
+  self.selectedDeleteField = ko.observable(); // currently field being edite
 
   self.hasFields = ko.computed(function(){    // form has no fields flag
     return self.fields().length > 0;
@@ -55,16 +57,46 @@ function VersionEditViewModel(){
     return field;
   };
 
+  /**
+   * Helper method to clear any type of selected field
+   */
   self.clearSelected = function(){
     self.selectedEditField(null);
+    self.fieldForEditing(null);
     self.selectedDeleteField(null);
   };
 
+  /**
+   * Send PUT/POST delete request for the field
+   */
   self.saveField = function(field){
-    self.clearSelected();
-    console.log('SAVED' + field.name());
+    var selected = self.selectedEditField(),
+        edited = ko.toJS(this.fieldForEditing()); //clean copy of edited
+    $.ajax({
+      url: field.id() ? field.__metadata__.src() : self.fieldsSrc,
+      method: field.id() ? 'POST' : 'PUT',
+      data: edited,
+      error: function(jxhr, status, error){
+        console.log('THERE WERE PROBLEMS EDITING');
+      },
+      success: function(data, status, jxhr){
+        selected.update(data);
+        self.clearSelected();
+      }
+    });
   };
 
+  /**
+   * Selected the field for editing
+   */
+  self.selectFieldForEditing = function(field) {
+    self.selectedEditField(field);
+    self.fieldForEditing(new Field(ko.toJS(field)));
+  };
+
+  /**
+   * Send DELETE request the field
+   */
   self.deleteField = function(field){
     $.ajax({
       url: field.__metadata__.src(),
@@ -78,6 +110,7 @@ function VersionEditViewModel(){
 
   // Load initial data
   $.getJSON(window.location, function(data) {
+    self.fieldsSrc = data.fields.__metadata__.src
     self.fields(ko.utils.arrayMap(data.fields.items, function(f){
       return new Field(f);
     }));
@@ -93,13 +126,7 @@ function VersionEditViewModel(){
 function Field(data){
   var self = this;
 
-  ko.mapping.fromJS(data, {
-    'fields': {
-      create: function(options) {
-        return new Field(options.data);
-      }
-    }
-  }, self);
+  self.update(data);
 
   self.template = ko.computed(function(){
     return self.type() + '-widget-template';
@@ -116,6 +143,31 @@ function Field(data){
     return self.type() == 'section';
   });
 }
+
+// Extend the Field model with commit/revert functionality for editing
+ko.utils.extend(Field.prototype, {
+  cache: function(){},
+  update: function(data) {
+    var self = this;
+    ko.mapping.fromJS(data, {
+      'fields': {
+        create: function(options) {
+          return new Field(options.data);
+        }
+      }
+    }, self);
+    //save off the latest data for later use
+    self.cache.latestData = data;
+  },
+  revert: function() {
+    var self = this;
+    self.update(self.cache.latestData);
+  },
+  commit: function() {
+    var self = this;
+    self.cache.latestData = ko.toJS(self);
+  }
+});
 
 
 /**
