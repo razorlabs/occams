@@ -15,7 +15,7 @@
               id="codebook-select">
             <span i18n:translate="" data-bind="ifnot:title()">Select a data file...</span>
             <span i18n:translate="" data-bind="if:title()">
-              <span data-bind="text:title()"></span>
+              <span data-bind="text:title()"></span> &bull; <code data-bind="text: name"></code>
             </span>
 
             <span data-bind="visible:loading()">
@@ -37,7 +37,7 @@
                   data-name="${file.name}"
                   data-title="${file.title}"
                   data-bind="click: function(){ $('#codebook-select').dropdown('toggle'); return true;}"
-                  >${file.title}</a>
+                  >${file.title} &bull; <code>${file.name}</code></a>
             </li>
           </ul>
         </div>
