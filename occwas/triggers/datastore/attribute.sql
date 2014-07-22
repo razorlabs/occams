@@ -8,6 +8,9 @@
 DROP FOREIGN TABLE IF EXISTS attribute_ext;
 
 
+DROP TYPE IF EXISTS attribute_type_ext;
+CREATE TYPE attribute_type_ext AS ENUM('blob','boolean','choice','date','datetime','decimal','integer','string','text');
+
 CREATE FOREIGN TABLE attribute_ext (
     id              INTEGER NOT NULL
 
@@ -16,7 +19,7 @@ CREATE FOREIGN TABLE attribute_ext (
   , description     TEXT
 
   , schema_id       INTEGER NOT NULL
-  , type            VARCHAR NOT NULL
+  , type            attribute_type_ext
   , checksum        VARCHAR NOT NULL
   , is_collection   BOOLEAN NOT NULL
   , is_required     BOOLEAN NOT NULL
@@ -146,7 +149,10 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
             , NEW.title
             , NEW.description
             , ext_schema_id(NEW.schema_id)
-            , NEW.type -- No object or choice...
+            -- We cannot set CHOICE type on insert because we have no way of knowing if the
+            -- attribute will have choices that will reference it, we'll have to take care of
+            -- this on the ``choice`` insert trigger.
+            , NEW.type::text::attribute_type_ext
             , NEW.checksum
             , NEW.is_collection
             , NEW.is_required
@@ -246,7 +252,10 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
             , title = NEW.title
             , description = NEW.description
             , schema_id = ext_schema_id(NEW.schema_id)
-            , type = NEW.type
+            , type = (CASE
+                       WHEN EXISTS(SELECT 1 FROM choice WHERE choice.attribute_id = OLD.id) THEN 'choice'::text
+                       ELSE NEW.type::text
+                     END)::attribute_type_ext
             , checksum = NEW.checksum
             , is_collection = NEW.is_collection
             , is_required = NEW.is_required

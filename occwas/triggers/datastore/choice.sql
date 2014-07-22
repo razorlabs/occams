@@ -74,6 +74,13 @@ CREATE OR REPLACE FUNCTION choice_mirror() RETURNS TRIGGER AS $$
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
+        -- To address the fact that attribute choice types are not explicit in
+        -- OCCWAS, we need to set the parent attribute's type to choice manually
+        -- a choice is added to a string type attribute
+        UPDATE attribute_ext
+        SET type = 'choice'::text::attribute_type_ext
+        WHERE id = ext_attribute_id(NEW.attribute_id);
+
         PERFORM dblink_connect('trigger_target');
         INSERT INTO choice_ext (
             id
