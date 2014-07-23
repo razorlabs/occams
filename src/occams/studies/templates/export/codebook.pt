@@ -15,7 +15,7 @@
               id="codebook-select">
             <span i18n:translate="" data-bind="ifnot:title()">Select a data file...</span>
             <span i18n:translate="" data-bind="if:title()">
-              <span data-bind="text:title()"></span>
+              <span data-bind="text:title()"></span> &bull; <code data-bind="text: name"></code>
             </span>
 
             <span data-bind="visible:loading()">
@@ -37,7 +37,7 @@
                   data-name="${file.name}"
                   data-title="${file.title}"
                   data-bind="click: function(){ $('#codebook-select').dropdown('toggle'); return true;}"
-                  >${file.title}</a>
+                  >${file.title} &bull; <code>${file.name}</code></a>
             </li>
           </ul>
         </div>
@@ -57,15 +57,10 @@
       <table class="table">
         <thead>
           <tr>
-            <th class="field">Field</th>
+            <th class="field">Variable</th>
             <th class="version">Version</th>
             <th class="question">Question</th>
             <th class="type">Type</th>
-            <th class="is_required">
-              <span class="glyphicon glyphicon-asterisk"
-                  title="Required"
-                  i18n:attributes="title"></span>
-            </th>
             <th class="is_system">
               <span class="glyphicon glyphicon-wrench"
                   title="System"
@@ -89,16 +84,10 @@
             <td class="field"><code data-bind="text: field"></code></td>
             <td class="version"><span data-bind="text: publish_date"></span></td>
             <td class="question">
-              <strong data-bind="text: title"></strong><br />
-              <span data-bind="text: description"></span>
+              <label data-bind="text: title, visible: title, css: {'required': is_required}"></label>
+              <p class="help-block"  data-bind="visible: description, text: description"></p>
             </td>
             <td class="type"><code data-bind="text: type"></code></td>
-            <td class="is_required">
-              <span data-bind="visible: is_required"
-                  class="glyphicon glyphicon-asterisk"
-                  title="Required"
-                  i18n:translate="title"></span>
-            </td>
             <td class="is_system">
               <span data-bind="visible: is_system"
                   class="glyphicon glyphicon-wrench"

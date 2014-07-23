@@ -45,8 +45,8 @@
               <th class="has_private">
                 <span class="glyphicon glyphicon-user"></span>
               </th>
-              <th class="title" i18n:translate="">Title</th>
-              <th class="name" i18n:translate="">Name</th>
+              <th class="title" i18n:translate="">Form Title</th>
+              <th class="name" i18n:translate="">System Name</th>
               <th class="version" i18n:translate="">Version</th>
             </tr>
           </thead>
