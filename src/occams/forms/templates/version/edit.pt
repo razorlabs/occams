@@ -42,7 +42,7 @@
             <div class="panel-heading">
               <h3 class="panel-title" i18n:translate="">Add new field...</h3>
             </div>
-            <!-- ko foreach: types() -->
+            <!-- ko foreach: types -->
               <div class="list-group"
                   data-bind="
                     draggable: {
@@ -75,13 +75,12 @@
 
     </div> <!-- /#of-editor" -->
 
-
     <script id="field-template" type="text/html">
       <div class="of-fields"
           data-bind="
             sortable: {
               data: fields,
-              dragged: $root.showAddForm,
+              dragged: $root.startAdd,
               isEnabled: $root.isMovingEnabled,
               options: {
                 axis: 'y',
@@ -93,37 +92,29 @@
             }
           ">
         <div class="of-field">
-          <div data-bind="
-            template: {
-              if: !$root.isSelectedField($data),
-              data: $data,
-              name: 'field-view-template'
-            }"></div>
-          <div data-bind="
-            template: {
-              if: $root.isSelectedEditField($data),
-              data: $data,
-              name: 'field-edit-template'
-            }"></div>
-          <div data-bind="
-            template: {
-              if: $root.isSelectedDeleteField($data),
-              data: $data,
-              name: 'field-delete-template'
-            }"></div>
+          <!-- ko ifnot: $root.isSelectedField($data) -->
+            <div data-bind="template: {name: 'field-view-template', data: $data}"></div>
+          <!-- /ko -->
+          <!-- ko if: $root.isSelectedField($data) && $root.showEditor()-->
+            <div data-bind="template: {name: 'field-edit-template', data: $data}"></div>
+          <!-- /ko -->
+          <!-- ko if: $root.isSelectedField($data) && $root.showDeletor -->
+            <div data-bind="template: {name: 'field-delete-template', data: $data}"></div>
+          <!-- /ko -->
         </div>
       </div>
     </script>
 
     <script id="field-view-template" type="text/html">
-      <div class="row of-view" data-bind="css: {'of-editable': !$root.isEditing()}">
+      <div class="row of-view" data-bind="css: {'of-editable': $root.isMovingEnabled()}">
 
         <div class="col-md-10">
           <div class="form-group">
             <!-- ko ifnot: isSection -->
               <p>
-                <code data-bind="text: type"></code> &bull;
                 <code data-bind="text: name"></code>
+                &bull;
+                <code data-bind="text: type"></code>
               </p>
               <label data-bind="css: {'required': is_required}, text: title"></label>
             <!-- /ko -->
@@ -134,18 +125,56 @@
               <p class="help-block" data-bind="text: description"></p>
             <!-- /ko -->
             <!-- ko ifnot: isSection -->
-              <div data-bind="template: {name: template, data: $data}"></div>
+              <!-- ko if: type() == 'choice' -->
+                <!-- ko foreach: choices -->
+                  <div data-bind="css: $parent.choiceInputType">
+                    <label>
+                      <input disabled data-bind="
+                          attr: {
+                            name: $parent.name,
+                            type: $parent.choiceInputType,
+                            value: name
+                          }" />
+                      <span data-bind="text: title"></span>
+                    </label>
+                  </div>
+                <!-- /ko -->
+              <!-- /ko -->
+              <!-- ko if: type() == 'date' -->
+                <input type="date" class="form-control" disabled />
+              <!-- /ko -->
+              <!-- ko if: type() == 'datetime' -->
+                <input type="date" class="form-control" disabled />
+              <!-- /ko -->
+              <!-- ko if: type() == 'blob' -->
+                <input type="file" class="form-control" disabled />
+              <!-- /ko -->
+              <!-- ko if: type() == 'integer' -->
+                <input type="decimal" class="form-control" disabled />
+              <!-- /ko -->
+              <!-- ko if: type() == 'decimal' -->
+                <input type="decimal" class="form-control" disabled />
+              <!-- /ko -->
+              <!-- ko if: type() == 'number' -->
+                <input type="decimal" class="form-control" disabled />
+              <!-- /ko -->
+              <!-- ko if: type() == 'string' -->
+                <input type="text" class="form-control" disabled />
+              <!-- /ko -->
+              <!-- ko if: type() == 'text' -->
+                <textarea class="form-control" disabled></textarea>
+              <!-- /ko -->
             <!-- /ko -->
           </div>
         </div> <!-- /.col-md-10 -->
 
         <div class="col-md-2 text-right">
           <div class="of-controls btn-group">
-            <button type="button" class="btn btn-default" data-bind="click: $root.selectFieldForEditing">
-              <span class="glyphicon glyphicon-pencil"></span>
-            </button>
-            <button type="button" class="btn btn-default" data-bind="click: $root.selectedDeleteField">
+            <button type="button" class="btn btn-default" data-bind="click: $root.startDelete">
               <span class="glyphicon glyphicon-trash"></span>
+            </button>
+            <button type="button" class="btn btn-default" data-bind="click: $root.startEdit">
+              <span class="glyphicon glyphicon-pencil"></span>
             </button>
           </div>
         </div> <!-- /.col-md-3 -->
@@ -162,20 +191,103 @@
       <div class="of-edit">
         <form tal:define="form field_form; wtforms load:../wtforms.pt">
 
-          <metal:field tal:define="field form['id']" use-macro="wtforms.macros['hidden']" />
-          <metal:field tal:define="field form['schema_id']" use-macro="wtforms.macros['hidden']" />
-          <metal:field tal:define="field form['section_id']" use-macro="wtforms.macros['hidden']" />
-          <metal:field tal:define="field form['type']" use-macro="wtforms.macros['hidden']" />
-          <metal:field tal:define="field form['name']" use-macro="wtforms.macros['core']" />
-          <metal:field tal:define="field form['title']" use-macro="wtforms.macros['core']" />
-          <metal:field tal:define="field form['description']" use-macro="wtforms.macros['core']" />
+          <metal:field tal:define="field form.name" use-macro="wtforms.field" />
+          <metal:field tal:define="field form.title" use-macro="wtforms.field" />
+          <metal:field tal:define="field form.description" use-macro="wtforms.field" />
 
+          <metal:field tal:define="field form.type" use-macro="wtforms.field">
+            <metal:widget fill-slot="widget">
+              <div class="row">
+                <div class="col-xs-4">
+                  <input metal:use-macro="wtforms.widget" />
+                </div>
+              </div>
+            </metal:widget>
+          </metal:field>
+
+          <!-- ko ifnot: isSection -->
+            <metal:field tal:define="field form.is_required" use-macro="wtforms.widget" />
+            <metal:field tal:define="field form.is_private" use-macro="wtforms.widget" />
+            <metal:field tal:define="field form.is_system" use-macro="wtforms.widget" />
+            <metal:field tal:define="field form.is_readonly" use-macro="wtforms.widget" />
+          <!-- /ko -->
+
+          <!-- ko if: type() == 'choice' -->
+            <metal:field tal:define="field form.is_collection" use-macro="wtforms.widget" />
+            <metal:field tal:define="field form.choices" use-macro="wtforms.field">
+              <metal:widget fill-slot="widget">
+                <div class="row">
+                  <div class="col-xs-2"><strong>Code</strong></div>
+                  <div class="col-xs-8"><strong>Label</strong></div>
+                </div>
+                <!-- ko foreach: {data: choices, as: 'choice'} -->
+                  <div class="row">
+                    <div class="col-xs-2">
+                      <input type="text" class="form-control" data-bind="value:choice.name" />
+                    </div>
+                    <div class="col-xs-8">
+                      <input type="text" class="form-control" data-bind="value:choice.title" />
+                    </div>
+                    <div class="col-xs-2">
+                      <div class="btn-group">
+                        <button class="btn btn-default"><span class="glyphicon glyphicon-trash"></span></button>
+                        <button class="btn btn-default"><span class="glyphicon glyphicon-plus"></span></button>
+                      </div>
+                    </div>
+                  </div>
+                <!-- /ko -->
+              </metal:widget>
+            </metal:field>
+          <!-- /ko -->
+
+          <!-- ko if: ['decimal', 'number', 'integer', 'string'].indexOf(type()) > -1 -->
+            <metal:field tal:define="field form.value_limit" use-macro="wtforms.default">
+              <div class="row" metal:fill-slot="widget">
+                <div class="col-xs-2">
+                  ${structure: field['min'](class_='form-control', placeholder='Min')}
+                </div>
+                <div class="col-xs-2">
+                  ${structure: field['max'](class_='form-control', placeholder='Max')}
+                </div>
+              </div>
+            </metal:field>
+          <!-- /ko -->
+          <!-- ko if: is_collection -->
+            <metal:field tal:define="field form.collection_limit" use-macro="wtforms.default">
+              <div class="row" metal:fill-slot="widget">
+                <div class="col-xs-2">
+                  ${structure: field['min'](class_='form-control', placeholder='Min')}
+                </div>
+                <div class="col-xs-2">
+                  ${structure: field['max'](class_='form-control', placeholder='Max')}
+                </div>
+              </div>
+            </metal:field>
+          <!-- /ko -->
+          <!-- ko if: ['decimal', 'number'].indexOf(type()) > -1 -->
+            <metal:field tal:define="field form.precision" use-macro="wtforms.default">
+              <div class="row" metal:fill-slot="widget">
+                <div class="col-xs-2">
+                  ${structure: field(class_='form-control')}
+                </div>
+              </div>
+            </metal:field>
+          <!-- /ko -->
+
+          <!-- ko if: type() == 'string' -->
+            <metal:field tal:define="field form.format_regex" use-macro="wtforms.field" />
+          <!-- /ko -->
+
+          ${structure: form.id()}
+          ${structure: form.schema_id()}
+          ${structure: form.section_id()}
+          ${structure: form.order()}
 
           <hr width="100%" />
 
           <div class="text-right">
             <button type="button" class="btn btn-link" data-bind="click: $root.clearSelected">Cancel</button>
-            <button type="button" class="btn btn-primary" data-bind="click: $root.saveField">
+            <button type="button" class="btn btn-primary" data-bind="click: $root.doEditField">
               <!-- ko if: id -->
                 <span>Save</span>
               <!-- /ko -->
@@ -200,54 +312,9 @@
         </div>
         <div class="text-right">
           <button type="button" class="btn btn-link" data-bind="click: $root.clearSelected">Cancel</button>
-          <button type="button" class="btn btn-danger" data-bind="click: $root.deleteField">Yes, I'm sure</button>
+          <button type="button" class="btn btn-danger" data-bind="click: $root.doDeleteField">Yes, I'm sure</button>
         </div>
       </div>
-    </script>
-
-
-    <script id="choice-widget-template" type="text/html">
-      <!-- ko foreach: choices -->
-        <div data-bind="css: $parent.choiceInputType">
-          <label>
-            <input disabled data-bind="
-                attr: {
-                  name: $parent.name,
-                  type: $parent.choiceInputType,
-                  value: name
-                }" />
-            <span data-bind="text: title"></span>
-          </label>
-        </div>
-      <!-- /ko -->
-    </script>
-
-    <script id="date-widget-template" type="text/html">
-      <input type="date" class="form-control" disabled data-bind="attr: {name: name}" />
-    </script>
-
-    <script id="datetime-widget-template" type="text/html">
-      <input type="datetime" class="form-control" disabled data-bind="attr: {name: name}" />
-    </script>
-
-    <script id="blob-widget-template" type="text/html">
-      <input type="file" class="form-control" disabled data-bind="attr: {name: name}" />
-    </script>
-
-    <script id="integer-widget-template" type="text/html">
-      <input type="decimal" class="form-control" disabled data-bind="attr: {name: name}" />
-    </script>
-
-    <script id="decimal-widget-template" type="text/html">
-      <input type="decimal" class="form-control" disabled data-bind="attr: {name: name}" />
-    </script>
-
-    <script id="string-widget-template" type="text/html">
-      <input type="text" class="form-control" disabled data-bind="attr: {name: name}" />
-    </script>
-
-    <script id="text-widget-template" type="text/html">
-      <textarea class="form-control" disabled data-bind="attr: {name: name}"></textarea>
     </script>
 
   </metal:content-slot>

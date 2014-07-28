@@ -4,7 +4,7 @@
 +function($){
   'use strict';
 
-  // http://stackoverflow.com/q/14683953/148781
+  // htt//stackoverflow.com/q/14683953/148781
   ko.bindingHandlers.showModal = {
     init: function (element, valueAccessor) { },
     update: function (element, valueAccessor) {

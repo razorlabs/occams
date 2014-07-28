@@ -1,18 +1,219 @@
-from pyramid.httpexceptions import HTTPOk, HTTPForbidden, HTTPNotFound
+from pyramid.httpexceptions import (
+    HTTPOk, HTTPNotFound, HTTPForbidden, HTTPBadRequest)
 from pyramid.view import view_config
 from six import iterkeys, itervalues
 from sqlalchemy import orm
-from wtforms import (
-    Form,
-    validators, ValidationError,
-    StringField, TextAreaField, BooleanField, HiddenField, IntegerField,
-    FieldList, FormField)
+import wtforms
 
 from occams.datastore.models.schema import RE_VALID_NAME, RESERVED_WORDS
 
 from .. import _, models, Session
-from ..security import CSRFForm
 from .version import get_schema
+
+
+types = [
+    {'name': 'choice', 'title': _(u'Answer choices')},
+    {'name': 'date', 'title': _(u'Date')},
+    {'name': 'datetime', 'title': _(u'Date & Time')},
+    {'name': 'blob', 'title': _(u'File Attachement')},
+    {'name': 'number', 'title': _(u'Number')},
+    {'name': 'section', 'title': _(u'Section')},
+    {'name': 'string', 'title': _(u'Text')},
+    {'name': 'text', 'title': _(u'Paragraph Text')}]
+
+
+@view_config(
+    route_name='field_list',
+    xhr=True,
+    request_method='GET',
+    renderer='json',
+    permission='form_view')
+@view_config(
+    route_name='field_list',
+    request_param='alt=json',
+    request_method='GET',
+    renderer='json',
+    permission='form_view')
+def list_json(request):
+    schema = get_schema(**request.matchdict)
+    return get_fields_data(request, schema)
+
+
+@view_config(
+    route_name='field_view',
+    xhr=True,
+    request_method='GET',
+    renderer='json',
+    permission='form_view')
+def view_json(request):
+    """
+    Returns JSON for a single attribute
+    """
+    attribute = get_attribute(**request.matchdict)
+    return get_field_data(request, attribute)
+
+
+@view_config(
+    route_name='field_list',
+    xhr=True,
+    check_csrf=True,
+    request_method='PUT',
+    renderer='json',
+    permission='form_edit')
+def move_json(request):
+    """
+    Moves the field to the target section and display order within the form
+    """
+    attribute = get_attribute(**request.matchdict)
+
+    if attribute.schema.publish_date and not request.has_permission('admin'):
+        raise HTTPForbidden(json={
+            'user_message': _(u'Cannot delete a field in a published form'),
+            'debug_message': _(u'Non-admin tried to edit a published form')
+        })
+
+    # Target section
+    section_name = request.POST.get('section') or None
+
+    # Move to the (valid) target section, if applicable
+    if section_name:
+        if section_name not in attribute.schema.sections:
+            raise HTTPBadRequest(json={
+                'user_message': _(u'Moving to invalid section')
+            })
+        attribute.section = attribute.schema.sections[section_name]
+
+    move_item(attribute.schema.attributes, attribute, request.POST['order'])
+
+    return get_fields_data(attribute.schema)
+
+
+@view_config(
+    route_name='field_list',
+    xhr=True,
+    check_csrf=True,
+    request_method='POST',
+    renderer='json',
+    permission='form_edit')
+def add_json(request):
+    """
+    Add form for fields.
+
+    Optionally takes a request variable ``order`` to preset where the
+    field will be added (otherwise at the end of the form)
+    """
+
+    schema = get_schema(**request.matchdict)
+    section = None
+
+    if schema.publish_date and not request.has_permission('admin'):
+        raise HTTPForbidden(json={
+            'user_message': _(u'Cannot add a field to a published form'),
+            'debug_message': _(u'Non-admin tried to edit a published form')
+        })
+
+    add_form = FieldForm(request.POST)
+
+    if not add_form.validate():
+        raise HTTPBadRequest(json={
+            'validation_errors': add_form.errors
+        })
+
+    schema[add_form.name.data] = attribute = models.Attribute(
+        section=section,
+        name=add_form.name.data,
+        title=add_form.title.data,
+        description=add_form.description.data,
+        type=add_form.type.data,
+        is_collection=add_form.is_collection.data,
+        is_required=add_form.is_required.data,
+        is_private=add_form.is_private.data,
+    )
+
+    move_item(schema.attributes, attribute, add_form.order.data)
+
+    if add_form.type.data == 'choice':
+        for i, choice_form in enumerate(add_form.choices.data):
+            attribute[choice_form.name.data] = models.Choice(
+                name=choice_form.name.data,
+                title=choice_form.title.data,
+                order=i)
+
+    return get_field_data(request, attribute)
+
+
+@view_config(
+    route_name='field_view',
+    xhr=True,
+    check_csrf=True,
+    request_method='PUT',
+    renderer='json',
+    permission='form_edit')
+def edit_json(request):
+    """
+    Edit view for an attribute
+    """
+    attribute = get_attribute(**request.matchdict)
+
+    if attribute.schema.publish_date and not request.has_permission('admin'):
+        raise HTTPForbidden(json={
+            'user_message': 'Cannot delete a field in a published form',
+        })
+
+    edit_form = FieldForm(request.POST, attribute)
+
+    if not edit_form.validate():
+        raise HTTPBadRequest(json={
+            'validation_errors': edit_form.errors
+        })
+
+    attribute.name = edit_form.name.data
+    attribute.title = edit_form.title.data
+    attribute.description = edit_form.description.data
+    attribute.is_required = edit_form.is_required.data
+    attribute.is_private = edit_form.is_private.data
+    attribute.constraint_expr = edit_form.constraint_expr.data
+    attribute.skip_expr = edit_form.skip_expr.data
+
+    new_codes = dict([(c.name, c.title) for c in edit_form.choices.data])
+
+    for code in iterkeys(attribute.choices):
+        if code not in new_codes:
+            del attribute.choices[code]
+
+    for i, choice_form in enumerate(edit_form.choices.data):
+        if choice_form.name.data in attribute.choices:
+            choice = attribute.choices[choice_form.name.data]
+        else:
+            choice = models.Choice(attribute=attribute)
+            Session.add(choice)
+        choice.name = choice_form.name.data
+        choice.title = choice_form.title.data
+        choice.order = i
+
+    Session.rollback()
+
+    return get_field_data(request, attribute)
+
+
+@view_config(
+    route_name='field_view',
+    xhr=True,
+    check_csrf=True,
+    request_method='DELETE',
+    renderer='json',
+    permission='form_edit')
+def delete_json(request):
+    """
+    Deletes the field from the form
+    """
+    attribute = get_attribute(**request.matchdict)
+    if attribute.schema.publish_date and not request.has_permission('admin'):
+        raise HTTPForbidden(json={
+            'user_message': 'Cannot delete a field in a published form',
+        })
+    Session.delete(attribute)
+    return HTTPOk
 
 
 def get_attribute(form=None, field=None, version=None, **kw):
@@ -77,232 +278,13 @@ def get_field_data(request, attribute):
     if choices:
         choices = sorted(itervalues(choices), key=lambda i: i['order'])
         data['choices'] = choices
+    data.update({
+        'id': attribute.id,
+        'format_regex': None,
+        'constraint_logic': None,
+        'skip_logic': None
+    })
     return data
-
-
-@view_config(
-    route_name='field_list',
-    xhr=True,
-    renderer='json',
-    permission='form_view')
-@view_config(
-    route_name='field_list',
-    request_param='alt=json',
-    renderer='json',
-    permission='form_view')
-def list_json(request):
-    schema = get_schema(**request.matchdict)
-    return get_fields_data(request, schema)
-
-
-@view_config(
-    route_name='field_view',
-    xhr=True,
-    renderer='json',
-    permission='form_view')
-def view_json(request):
-    """
-    Returns JSON for a single attribute
-    """
-    attribute = get_attribute(**request.matchdict)
-    return get_field_data(request, attribute)
-
-
-def is_unique_name(form, field):
-    """
-    Verifies that an attribute name is unique within a schema
-    """
-
-    query = (
-        Session.query(models.Attribute)
-        .filter(models.Attribute.name.ilike(field.data))
-        .filter(models.Attribute.schema_id == form.schema_id.data))
-
-    # If editing (admin only), avoid false positive
-    if form.id.data:
-        query = query.filter(models.Attribute.id != form.id.data)
-
-    if Session.query(query.exists()).one():
-        raise ValidationError(_(u'Variable name already exists in this form'))
-
-
-class ChoiceForm(Form):
-
-    name = StringField(
-        label=_(u'Stored Value'),
-        validators=[
-            validators.required(),
-            validators.Length(min=1, max=8),
-            validators.Regexp('-?[0-9]+')])
-
-    title = StringField(
-        label=_(u'Displayed Label'),
-        validators=[
-            validators.required()])
-
-
-class FieldForm(CSRFForm):
-
-    id = HiddenField()
-
-    schema_id = HiddenField(validators=[validators.required()])
-
-    section_id = HiddenField(validators=[validators.optional()])
-
-    type = HiddenField()
-
-    name = StringField(
-        label=_(u'Variable Name'),
-        description=_(
-            u'Internal variable name, this value cannot be changed once it is '
-            u'created.'
-            ),
-        validators=[
-            validators.required(),
-            validators.Regexp(
-                RE_VALID_NAME,
-                message=_(u'Not a valid variable name')),
-            validators.NoneOf(
-                RESERVED_WORDS,
-                message=_(u'Can\'t use reserved programming word')),
-            is_unique_name])
-
-    title = StringField(
-        label=_(u'Label'),
-        description=_(u'The prompt for the user.'),
-        validators=[
-            validators.required()])
-
-    description = TextAreaField(
-        label=_(u'Help Text'),
-        description=_(u'A short description about the field\'s purpose.'),
-        validators=[validators.optional()])
-
-    is_required = BooleanField(
-        label=_(u'Required'))
-
-    is_private = BooleanField(
-        label=_(u'Contains private information'))
-
-    is_system = BooleanField(
-        label=_(u'Can only be managed by system services'))
-
-    is_readonly = BooleanField(
-        label=_(u'Ready only or generated by a formula'))
-
-    # choice
-    is_collection = BooleanField(
-        label=_(u'More than one option may be slected'))
-
-    # number
-    precision = IntegerField(
-        label=_(u'Decimal precision'),
-        validators=[validators.optional()])
-
-    # number/string
-    value_min = StringField(
-        label=_(u'Minimum value'),
-        validators=[validators.optional()])
-
-    # number/string
-    value_max = StringField(
-        label=_(u'Maximum value'),
-        validators=[validators.optional()])
-
-    # choice
-    collection_min = IntegerField(
-        label=(u'Minimum number of selections'))
-
-    # choice
-    collection_max = IntegerField(
-        label=(u'Maximum number of selections'))
-
-    # choice
-    choices = FieldList(FormField(ChoiceForm))
-
-    # string
-    format_expr = StringField(
-        label=_(u'A regular expression to validate the field'),
-        validators=[validators.optional()])
-
-    constraint_expr = TextAreaField(
-        label=_(u'Constraint expression.'),
-        description=_(
-            u'A Javascript expression that throws a validation error, '
-            u'if one occurs. This expression is also allowed to '
-            u'perform post-processing on the field.'),
-        validators=[validators.optional()])
-
-    skip_expr = TextAreaField(
-        label=_(u'Skip expression.'),
-        description=_(
-            u'A Javascript expression that returns true if the field should '
-            u'be skipped or false otherwise'),
-        validators=[validators.optional()])
-
-    order = HiddenField()
-
-
-@view_config(
-    route_name='field_list',
-    xhr=True,
-    request_method='OPTIONS',
-    renderer='json',
-    permission='form_edit')
-def options_json(request):
-    return {}
-
-
-@view_config(
-    route_name='field_list',
-    xhr=True,
-    request_method='POST',
-    renderer='json',
-    permission='form_edit')
-def add_json(request):
-    """
-    Add form for fields.
-
-    Optionally takes a request variable ``order`` to preset where the
-    field will be added (otherwise at the end of the form)
-    """
-
-    schema = get_schema(**request.matchdict)
-    section = None
-    type_ = request.matchdict['type']
-
-    if schema.publish_date and not request.has_permission('admin'):
-        raise HTTPForbidden('Cannot delete a field in a published form')
-
-    add_form = FieldForm(request.POST, meta={'csrf_context': request.session})
-
-    if request.method == 'POST' and add_form.validate():
-
-        schema[add_form.name.data] = attribute = models.Attribute(
-            section=section,
-            name=add_form.name.data,
-            title=add_form.title.data,
-            description=add_form.description.data,
-            type=type_,
-            is_collection=add_form.is_collection.data,
-            is_required=add_form.is_required.data,
-            is_private=add_form.is_private.data,
-        )
-
-        move_item(schema.attributes, attribute, add_form.order.data)
-
-        if type_ == 'choice':
-            for i, choice_form in enumerate(add_form.choices.data):
-                attribute[choice_form.name.data] = models.Choice(
-                    name=choice_form.name.data,
-                    title=choice_form.title.data,
-                    order=i)
-
-        # TODO return something useful
-        return {}
-
-    # TODO return something useful
-    return {}
 
 
 def move_item(items, target, new_order):
@@ -312,99 +294,129 @@ def move_item(items, target, new_order):
             other.order += 1
 
 
-@view_config(
-    route_name='field_view',
-    xhr=True,
-    request_method='PUT',
-    renderer='json',
-    permission='form_edit')
-def edit_json(request):
-    """
-    Edit view for an attribute
-    """
+class ChoiceForm(wtforms.Form):
 
-    attribute = get_attribute(request)
+    code = wtforms.StringField(
+        label=_(u'Stored Value'),
+        validators=[
+            wtforms.validators.required(),
+            wtforms.validators.Length(min=1, max=8),
+            wtforms.validators.Regexp('-?[0-9]+')])
 
-    if attribute.schema.publish_date and not request.has_permission('admin'):
-        raise HTTPForbidden('Cannot delete a field in a published form')
-
-    edit_form = FieldForm(request.POST, attribute)
-
-    if request.method == 'POST' and edit_form.validate():
-        attribute.name = edit_form.name.data
-        attribute.title = edit_form.title.data
-        attribute.description = edit_form.description.data
-        attribute.is_required = edit_form.is_required.data
-        attribute.is_private = edit_form.is_private.data
-        attribute.constraint_expr = edit_form.constraint_expr.data
-        attribute.skip_expr = edit_form.skip_expr.data
-
-        new_codes = dict([(c.name, c.title) for c in edit_form.choices.data])
-
-        for code in iterkeys(attribute.choices):
-            if code not in new_codes:
-                del attribute.choices[code]
-
-        for i, choice_form in enumerate(edit_form.choices.data):
-            if choice_form.name.data in attribute.choices:
-                choice = attribute.choices[choice_form.name.data]
-            else:
-                choice = models.Choice(attribute=attribute)
-                Session.add(choice)
-            choice.name = choice_form.name.data
-            choice.title = choice_form.title.data
-            choice.order = i
-
-        # TODO return something useful
-        return {}
-
-    # TODO return something useful
-    return {}
+    title = wtforms.StringField(
+        label=_(u'Displayed Label'),
+        validators=[
+            wtforms.validators.required()])
 
 
-#@view_config(
-    #route_name='field_view',
-    #xhr=True,
-    #request_method='PUT',
-    #renderer='json',
-    #permission='form_edit')
-#def move_json(request):
-    #"""
-    #Moves the field to the target section and display order within the form
-    #"""
-    #attribute = get_attribute(request)
+class MinMaxForm(wtforms.Form):
 
-    #if attribute.schema.publish_date and not request.has_permission('admin'):
-        #raise HTTPForbidden('Cannot delete a field in a published form')
+    min = wtforms.IntegerField(
+        label=_(u'Min'),
+        validators=[wtforms.validators.optional()])
 
-    ## Target section
-    #section_name = request.POST.get('section') or None
-
-    ## Move to the (valid) target section, if applicable
-    #if section_name:
-        #if section_name not in attribute.schema.sections:
-            #raise HTTPNotFound
-        #attribute.section = attribute.schema.sections[section_name]
-
-    #move_item(attribute.schema.attributes, attribute, request.POST['order'])
-
-    ## TODO: return something useful
-    #return {}
+    max = wtforms.IntegerField(
+        label=_(u'Max'),
+        validators=[wtforms.validators.optional()])
 
 
-@view_config(
-    route_name='field_delete',
-    xhr=True,
-    request_method='DELETE',
-    renderer='json',
-    permission='form_edit')
-def delete_json(request):
-    """
-    Deletes the field from the form
-    """
-    attribute = get_attribute(request)
-    if attribute.schema.publish_date and not request.has_permission('admin'):
-        raise HTTPForbidden('Cannot delete a field in a published form')
-    Session.delete(attribute)
-    Session.flush()
-    return HTTPOk
+class FieldForm(wtforms.Form):
+
+    id = wtforms.HiddenField()
+
+    schema_id = wtforms.HiddenField(
+        validators=[wtforms.validators.required()])
+
+    section_id = wtforms.HiddenField(
+        validators=[wtforms.validators.optional()])
+
+    name = wtforms.StringField(
+        label=_(u'Variable'),
+        description=_(
+            u'Internal variable name, this value cannot be changed once it is '
+            u'created.'
+            ),
+        validators=[
+            wtforms.validators.required(),
+            wtforms.validators.Regexp(
+                RE_VALID_NAME,
+                message=_(u'Not a valid variable name')),
+            wtforms.validators.NoneOf(
+                RESERVED_WORDS,
+                message=_(u'Can\'t use reserved programming word'))])
+
+    title = wtforms.StringField(
+        label=_(u'Question'),
+        description=_(u'The prompt for the user.'),
+        validators=[
+            wtforms.validators.required()])
+
+    description = wtforms.TextAreaField(
+        label=_(u'Help Text'),
+        description=_(u'A short description about the field\'s purpose.'),
+        validators=[wtforms.validators.optional()])
+
+    type = wtforms.SelectField(
+        label=_(u'Data Type'),
+        choices=sorted((t['name'], t['title']) for t in types))
+
+    is_required = wtforms.BooleanField(
+        label=_(u'Required'))
+
+    is_private = wtforms.BooleanField(
+        label=_(u'Contains private information'))
+
+    is_system = wtforms.BooleanField(
+        label=_(u'Can only be managed by system services'))
+
+    is_readonly = wtforms.BooleanField(
+        label=_(u'Ready only or generated by a formula'))
+
+    # choice
+    is_collection = wtforms.BooleanField(
+        label=_(u'More than one option may be selected'))
+
+    # number
+    precision = wtforms.IntegerField(
+        label=_(u'Decimal precision'),
+        validators=[wtforms.validators.optional()])
+
+    # number/string
+    value_limit = wtforms.FormField(
+        MinMaxForm,
+        label=_(u'Value limits.'))
+
+    # choice
+    collection_limit = wtforms.FormField(
+        MinMaxForm,
+        label=_(u'Possible number of selections limit.'))
+
+    # choice
+    choices = wtforms.FieldList(
+        wtforms.FormField(ChoiceForm),
+        label=_(u'Answer choices'))
+
+    # string
+    format_regex = wtforms.StringField(
+        label=_(u'A regular expression to validate the field'),
+        validators=[wtforms.validators.optional()])
+
+    order = wtforms.HiddenField()
+
+    def validate_name(form, field):
+        """
+        Verifies that an attribute name is unique within a schema
+        """
+
+        query = (
+            Session.query(models.Attribute)
+            .filter(models.Attribute.name.ilike(field.data))
+            .filter(models.Attribute.schema_id == form.schema_id.data))
+
+        # If editing (admin only), avoid false positive
+        if form.id.data:
+            query = query.filter(models.Attribute.id != form.id.data)
+
+        if Session.query(query.exists()).one():
+            raise wtforms.ValidationError(
+                _(u'Variable name already exists in this form'))

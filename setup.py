@@ -18,6 +18,7 @@ REQUIRES = [
     'pyramid_rewrite',
     'pyramid_webassets',
     'pyramid_who',
+    'reportlab',
     'SQLAlchemy',
     'transaction',
     'wtforms',

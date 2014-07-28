@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html metal:use-macro="load: ../master.pt">
+  <metal:content-slot fill-slot="content-slot">
+
+    <header class="page-header hidden-print">
+      <h1 i18n:translate="">Widgets Showcase: Sample Form</h1>
+    </header>
+
+    <p class="alert alert-warning hidden-print" i18n:translate="">
+      This view demonstrates available form widgets as they would look
+      in a form. Feel free to even print this page to see the print versions.
+    </p>
+
+    <form role="form" class="of-form" tal:define="wtforms load:../wtforms.pt">
+      <h1 class="visible-print-block" i18n:translate="">Sample Form</h1>
+      <p class="lead" i18n:translate="">Sample form introduction:
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse semper est non augue tincidunt gravida. Proin viverra enim id erat iaculis condimentum. Cras sed arcu blandit, scelerisque libero vel, rhoncus nunc. Aliquam erat volutpat. Ut convallis, velit eget varius bibendum, est orci feugiat neque, et tincidunt orci leo a nibh. Maecenas nec est quam. Morbi at felis sem. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus.
+      </p>
+
+      <metal:fields use-macro="wtforms.fields" />
+
+      <div class="of-controls hidden-print">
+        <button type="reset" class="btn btn-link" i18n:translate="">Clear</button>
+        <button type="submit" class="btn btn-primary" i18n:translate="">Submit</button>
+      </div>
+    </form>
+
+  </metal:content-slot>
+</html>
+

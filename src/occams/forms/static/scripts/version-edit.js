@@ -7,6 +7,7 @@ function VersionEditViewModel(){
   self.isReady = ko.observable(false);        // content loaded flag
   self.isDragging = ko.observable(false);     // view drag state flag
 
+  self.fieldsSrc = null;
   self.types = ko.observableArray([]);        // available types
 
   self.name = ko.observable();
@@ -15,89 +16,92 @@ function VersionEditViewModel(){
   self.publish_date = ko.observable();
   self.retract_date = ko.observable();
 
-  self.fieldsSrc = null;
-  self.fields = ko.observableArray([]);       // form fields
-
-  self.selectedEditField = ko.observable();   // currently field being edited
-  self.fieldForEditing = ko.observable();     // A copy of the field for editing
-  self.selectedDeleteField = ko.observable(); // currently field being edite
+  self.fields = ko.observableArray([]);
 
   self.hasFields = ko.computed(function(){    // form has no fields flag
     return self.fields().length > 0;
   });
 
-  self.isEditing = ko.computed(function(){
-    return !!self.selectedEditField() || !!self.selectedDeleteField();
-  });
+  self.selectedField = ko.observable();            // currently selected field
+  self.selectedFieldForEditing = ko.observable();  // a copy of the field for editing
+  self.showEditor = ko.observable(false);
+  self.showDeletor = ko.observable(false);
 
   self.isMovingEnabled = ko.computed(function(){ // dragging enabled flag
     // we can't just specify this in the isEnabled option
     // because of a bug in knockout, this workaround is sufficient.
-    return !self.isEditing();
+    return !(self.showEditor() || self.showDeletor());
   });
 
   self.isSelectedField = function(field){
-    return self.isSelectedEditField(field) || self.isSelectedDeleteField(field);
-  };
-
-  self.isSelectedEditField = function(field){
-    return field === self.selectedEditField();
-  };
-
-  self.isSelectedDeleteField = function(field){
-    return field === self.selectedDeleteField();
+    return field === self.selectedField();
   };
 
   /**
    * Handler when a new field is added to form
    */
-  self.showAddForm = function(type, event, ui){
+  self.startAdd = function(type, event, ui){
     var field = new Field({type: type.name()});
-    self.selectedEditField(field);
-    return field;
+    self.startEdit(field);
+  };
+
+  self.startEdit = function(field){
+    self.clearSelected();
+    self.selectedField(field);
+    self.selectedFieldForEditing(new Field(ko.toJS(field)))
+    self.showEditor(true);
+  };
+
+  self.startDelete = function(field){
+    self.clearSelected();
+    self.selectedField(field);
+    self.showDeletor(true);
   };
 
   /**
    * Helper method to clear any type of selected field
    */
   self.clearSelected = function(){
-    self.selectedEditField(null);
-    self.fieldForEditing(null);
-    self.selectedDeleteField(null);
+    self.selectedField(null);
+    self.selectedFieldForEditing(null);
+    self.showEditor(false);
+    self.showDeletor(false);
   };
 
   /**
    * Send PUT/POST delete request for the field
    */
-  self.saveField = function(field){
-    var selected = self.selectedEditField(),
-        edited = ko.toJS(this.fieldForEditing()); //clean copy of edited
+  self.doEditField = function(){
+    var selected = self.selectedField(),
+        edited = self.selectedFieldForEditing();
+
     $.ajax({
-      url: field.id() ? field.__metadata__.src() : self.fieldsSrc,
-      method: field.id() ? 'POST' : 'PUT',
-      data: edited,
-      error: function(jxhr, status, error){
-        console.log('THERE WERE PROBLEMS EDITING');
+      url: selected.id() ? selected.__metadata__.src() : self.fieldsSrc,
+      method: selected.id() ? 'PUT' : 'POST',
+      data: ko.toJSON(edited),
+      contentType: 'application/json',
+      error: function(jqXHR, textStatus, errorThrown){
+        var data = jqXHR.responseJSON;
+        if (!data || !data.validation_errors){
+            console.log('A server error occurred');
+            return
+        }
+        console.log('A recoverable error occurred')
+        console.log(data);
       },
-      success: function(data, status, jxhr){
-        selected.update(data);
+      success: function(data, textStatus, jqXHR){
+        console.log('UPADATED');
+        console.log(data);
+        //selected.update(data);
         self.clearSelected();
       }
     });
   };
 
   /**
-   * Selected the field for editing
-   */
-  self.selectFieldForEditing = function(field) {
-    self.selectedEditField(field);
-    self.fieldForEditing(new Field(ko.toJS(field)));
-  };
-
-  /**
    * Send DELETE request the field
    */
-  self.deleteField = function(field){
+  self.doDeleteField = function(field){
     $.ajax({
       url: field.__metadata__.src(),
       method: 'DELETE',
@@ -112,7 +116,7 @@ function VersionEditViewModel(){
   $.getJSON(window.location, function(data) {
     self.fieldsSrc = data.fields.__metadata__.src
     self.fields(ko.utils.arrayMap(data.fields.items, function(f){
-      return new Field(f);
+        return new Field(f);
     }));
     self.types(ko.utils.arrayMap(data.__metadata__.types, ko.mapping.fromJS));
     self.isReady(true);
@@ -126,27 +130,29 @@ function VersionEditViewModel(){
 function Field(data){
   var self = this;
 
-  self.update(data);
+  self.id = ko.observable();
+  self.name = ko.observable();
+  self.title = ko.observable();
+  self.description = ko.observable();
+  self.type = ko.observable();
+  self.is_required = ko.observable();
+  self.is_collection = ko.observable();
 
-  self.template = ko.computed(function(){
-    return self.type() + '-widget-template';
-  });
+  self.cache = function(){};
 
   self.choiceInputType = ko.computed(function(){
-    if(self.type() != 'choice'){
-      return undefined;
-    }
     return self.is_collection() ? 'checkbox' : 'radio';
   });
 
   self.isSection = ko.computed(function(){
     return self.type() == 'section';
   });
+
+  self.update(data);
 }
 
 // Extend the Field model with commit/revert functionality for editing
 ko.utils.extend(Field.prototype, {
-  cache: function(){},
   update: function(data) {
     var self = this;
     ko.mapping.fromJS(data, {

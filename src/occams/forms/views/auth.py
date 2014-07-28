@@ -1,29 +1,10 @@
 from pyramid.httpexceptions import HTTPFound, HTTPForbidden
 from pyramid.security import forget
 from pyramid.view import view_config, forbidden_view_config
-from wtforms import Form, StringField, validators, PasswordField
-from wtforms.widgets.html5 import EmailInput
+import wtforms
+import wtforms.widgets.html5
 
 from .. import _, Session, models
-
-
-class LoginForm(Form):
-
-    login = StringField(
-        label=_(u'Email address'),
-        widget=EmailInput(),
-        validators=[
-            validators.Required(),
-            validators.Length(max=32),
-            validators.Email(),
-        ])
-
-    password = PasswordField(
-        label=_(u'Password'),
-        validators=[
-            validators.Required(),
-            validators.Length(min=5, max=32)
-        ])
 
 
 @view_config(
@@ -87,3 +68,22 @@ def login(request):
 @view_config(route_name='logout')
 def logout(request):
     return HTTPFound(location='/', headers=forget(request))
+
+
+class LoginForm(wtforms.Form):
+
+    login = wtforms.StringField(
+        label=_(u'Email address'),
+        widget=wtforms.widgets.html5.EmailInput(),
+        validators=[
+            wtforms.validators.required(),
+            wtforms.validators.Length(max=32),
+            wtforms.validators.Email(),
+        ])
+
+    password = wtforms.PasswordField(
+        label=_(u'Password'),
+        validators=[
+            wtforms.validators.required(),
+            wtforms.validators.Length(min=5, max=32)
+        ])

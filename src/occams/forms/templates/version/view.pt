@@ -11,6 +11,11 @@
       <nav metal:use-macro="load: ./panels/nav.pt" />
     </header>
 
+    <div class="alert alert-success"
+          tal:repeat="msg request.session.pop_flash()">
+      ${msg}
+    </div>
+
     <div class="alert alert-info">
       <span class="glyphicon glyphicon-info-sign"></span>
       <span i18n:translate="">
