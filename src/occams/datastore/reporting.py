@@ -77,6 +77,9 @@ def build_report(session,
     attributes = None if attributes is None else set(attributes)
 
     for column in itervalues(columns):
+        if column.type == 'section':  # Sections are not used in reports
+            continue
+
         if attributes is not None and column.name not in attributes:
             continue
 

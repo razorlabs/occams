@@ -3,6 +3,9 @@ Tests for storage implementations and services
 """
 
 from nose.tools import with_setup
+from sqlalchemy import Column, Integer, String
+
+from occams.datastore import models
 
 from tests import Session, begin_func, rollback_func
 
@@ -103,12 +106,10 @@ def test_entity_types():
     from decimal import Decimal
 
     data = [
-        ('integer', 5, 8, [1, 2, 3]),
-        ('decimal',
+        ('number',
             Decimal('16.4'),
             Decimal('12.3'),
             [Decimal('1.5'), Decimal('12.1'), Decimal('3.0')]),
-        ('boolean', True, False, [True, False]),
         ('string', u'foo', u'bar', [u'foo', u'bar', u'baz']),
         ('text', u'foo\nbar', u'foo\nbario',
             [u'par\n1', u'par\n2', u'par\n3']),
@@ -134,24 +135,25 @@ def check_entity_types(type, simple, update, collection):
     from tests import assert_is_none, assert_equals, assert_items_equal
     from occams.datastore import models
 
-    schema = models.Schema(name=u'Foo', title=u'',
-                           publish_date=date(2000, 1, 1))
-    section = models.Section(
-        schema=schema, name='section', title=u'Section 1', order=0)
+    schema = models.Schema(
+        name=u'Foo', title=u'',
+        publish_date=date(2000, 1, 1),
+        attributes={
+            's1': models.Attribute(
+                name='s1', title=u'Section 1', type='section', order=1)})
     entity = models.Entity(schema=schema, name=u'Foo', title=u'')
     Session.add(entity)
     Session.flush()
 
-    order = 0
+    order = 1
 
     ModelClass = models.nameModelMap[type]
 
     # Do simple values
     simpleName = type + 'simple'
 
-    schema.attributes[simpleName] = models.Attribute(
+    schema.attributes['s1'].attributes[simpleName] = models.Attribute(
         name=simpleName,
-        section=section,
         title=u'', type=type, is_required=False, order=order)
     assert_is_none(entity[simpleName])
     entity[simpleName] = None
@@ -182,10 +184,9 @@ def check_entity_types(type, simple, update, collection):
 
     # Now try collections
     collectionName = type + 'collection'
-    schema.attributes[collectionName] = models.Attribute(
+    schema.attributes['s1'].attributes[collectionName] = models.Attribute(
         name=collectionName,
         schema=schema,
-        section=section,
         title=u'', type=type, is_collection=True, order=order)
     entity[collectionName] = collection
     Session.flush()
@@ -219,15 +220,15 @@ def test_entity_force_date():
 
     schema = models.Schema(name=u'Foo', title=u'',
                            publish_date=date(2000, 1, 1))
-    section = models.Section(
-        schema=schema, name='section', title=u'Section 1', order=0)
+    s1 = models.Attribute(
+        schema=schema, name='s1', title=u'Section 1', type='section', order=0)
     entity = models.Entity(schema=schema, name=u'Foo', title=u'')
 
     # Do simple values
     simpleName = 'choicesimple'
     schema.attributes[simpleName] = models.Attribute(
         schema=schema,
-        section=section,
+        parent_attribute=s1,
         title=u'', type='date', is_required=False, order=1)
 
     now = datetime.now()
@@ -250,8 +251,8 @@ def test_entity_choices():
 
     schema = models.Schema(name=u'Foo', title=u'',
                            publish_date=date(2000, 1, 1))
-    section = models.Section(
-        schema=schema, name='section', title=u'Section 1', order=0)
+    s1 = models.Attribute(
+        schema=schema, name='s1', title=u'Section 1', type='section', order=0)
     entity = models.Entity(schema=schema, name=u'Foo', title=u'')
     Session.add(entity)
     Session.flush()
@@ -260,7 +261,7 @@ def test_entity_choices():
     simpleName = 'choicesimple'
     schema.attributes[simpleName] = models.Attribute(
         schema=schema,
-        section=section,
+        parent_attribute=s1,
         name=simpleName,
         title=u'', type='choice', is_required=False, order=1,
         choices={
@@ -282,7 +283,7 @@ def test_entity_choices():
     collectionName = 'choicecollection'
     schema.attributes[collectionName] = models.Attribute(
         schema=schema,
-        section=section,
+        parent_attribute=s1,
         name=collectionName,
         title=u'', type='choice', is_collection=True, order=2,
         choices={
@@ -309,10 +310,11 @@ def test_entity_blob_type():
 
     schema = models.Schema(name='HasBlob', title=u'',
                            publish_date=date(2000, 1, 1))
-    section = models.Section(
-        schema=schema, name='section', title=u'Section 1', order=0)
+    s1 = models.Attribute(
+        schema=schema, name='s1', title=u'Section 1', type='section', order=0)
     schema.attributes['theblob'] = models.Attribute(
-        section=section, name=u'theblob', title=u'', type='blob', order=0)
+        parent_attribute=s1,
+        name=u'theblob', title=u'', type='blob', order=0)
     entity = models.Entity(schema=schema, name='blobish', title=u'')
     contents = os.urandom(1000)
     entity['theblob'] = contents
@@ -338,8 +340,7 @@ def test_value_min_constraint():
 
     data = [
         ('string', 5, u'foo', u'foooo', u'foobario'),
-        ('integer', 5, 2, 5, 10),
-        ('decimal', 5, Decimal('2.0'), Decimal('5.0'), Decimal('10.0')),
+        ('number', 5, Decimal('2.0'), Decimal('5.0'), Decimal('10.0')),
         ('date',
             time.mktime(date(2009, 5, 6).timetuple()),
             date(2001, 2, 8), date(2009, 5, 6),
@@ -366,14 +367,14 @@ def check_value_min_constraint(type_, limit, below, equal, over):
 
     schema = models.Schema(
         name=u'Foo', title=u'', publish_date=date(2000, 1, 1))
-    section = models.Section(
-        schema=schema, name='section', title=u'Section 1', order=0)
+    s1 = models.Attribute(
+        schema=schema, name='s1', title=u'Section 1', type='section', order=0)
     entity = models.Entity(schema=schema, name=u'Foo', title=u'')
     Session.add(entity)
     Session.flush()
 
     models.Attribute(
-        schema=schema, section=section,
+        schema=schema, parent_attribute=s1,
         name=type_, title=u'',
         type=type_, is_required=False, value_min=limit, order=0)
 
@@ -385,7 +386,7 @@ def check_value_min_constraint(type_, limit, below, equal, over):
     entity[type_] = over
 
     models.Attribute(
-        schema=schema, section=section,
+        schema=schema, parent_attribute=s1,
         name=u'boolean', title=u'', type=u'boolean', value_min=10, order=1)
 
     with assert_raises(NotImplementedError):
@@ -403,8 +404,7 @@ def test_value_max_constraint():
     data = [
         # (type, limit, below, equal, over)
         ('string', 5, u'foo', u'foooo', u'foobario'),
-        ('integer', 5, 2, 5, 10),
-        ('decimal', 5, Decimal('2.0'), Decimal('5.0'), Decimal('10.0')),
+        ('number', 5, Decimal('2.0'), Decimal('5.0'), Decimal('10.0')),
         ('date',
             time.mktime(date(2009, 5, 6).timetuple()),
             date(2001, 2, 8), date(2009, 5, 6),
@@ -431,14 +431,14 @@ def check_value_max_constraint(type_, limit, below, equal, over):
 
     schema = models.Schema(name=u'Foo', title=u'',
                            publish_date=date(2000, 1, 1))
-    section = models.Section(
-        schema=schema, name='section', title=u'Section 1', order=0)
+    s1 = models.Attribute(
+        schema=schema, name='s1', title=u'Section 1', type='section', order=0)
     entity = models.Entity(schema=schema, name=u'Foo', title=u'')
     Session.add(entity)
     Session.flush()
 
     models.Attribute(
-        schema=schema, section=section,
+        schema=schema, parent_attribute=s1,
         name=type_, title=u'', type=type_, is_required=False,
         value_max=limit, order=0)
 
@@ -450,7 +450,7 @@ def check_value_max_constraint(type_, limit, below, equal, over):
         entity[type_] = over
 
     models.Attribute(
-        schema=schema, section=section,
+        schema=schema, parent_attribute=s1,
         name=u'boolean', title=u'', type=u'boolean', value_max=10, order=1)
     with assert_raises(NotImplementedError):
         entity['boolean'] = True
@@ -468,17 +468,17 @@ def test_validator_constraint():
 
     schema = models.Schema(name=u'Foo', title=u'',
                            publish_date=date(2000, 1, 1))
-    section = models.Section(
-        schema=schema, name='section', title=u'Section 1', order=0)
+    s1 = models.Attribute(
+        schema=schema, name='s1', title=u'Section 1', type='section', order=0)
     models.Attribute(
         schema=schema,
-        section=section,
+        parent_attribute=s1,
         name=u'test',
         title=u'',
         type=u'string',
         is_required=False,
         # Valid US phone number
-        validator=r'\d{3}-\d{3}-\d{4}',
+        pattern=r'\d{3}-\d{3}-\d{4}',
         order=0)
     Session.add(schema)
     Session.flush()
@@ -508,10 +508,10 @@ def test_choice_constraint():
 
     schema = models.Schema(name=u'Foo', title=u'',
                            publish_date=date(2000, 1, 1))
-    section = models.Section(
-        schema=schema, name='section', title=u'Section 1', order=0)
+    s1 = models.Attribute(
+        schema=schema, name='s1', title=u'Section 1', type='section', order=0)
     models.Attribute(
-        schema=schema, section=section,
+        schema=schema, parent_attribute=s1,
         name=u'test', title=u'', type=u'choice', is_required=False, order=0,
         choices={
             '001': models.Choice(name=u'001', title=u'Foo', order=0),
@@ -540,6 +540,34 @@ def test_choice_constraint():
         entity['test'] = u'999'
 
 
+TestModel = models.ModelClass('TestModel')
+
+
+class SampleClass1(TestModel, models.HasEntities):
+    __tablename__ = 'sampleclass1'
+
+    id = Column(Integer, primary_key=True)
+
+    name = Column(String, nullable=False)
+
+
+class SampleClass2(TestModel, models.HasEntities):
+    __tablename__ = 'sampleclass2'
+
+    id = Column(Integer, primary_key=True)
+
+    name = Column(String, nullable=False)
+
+
+def setup_module():
+    TestModel.metadata.create_all(Session.bind)
+
+
+def teardown_module():
+    TestModel.metadata.drop_all(Session.bind)
+
+
+@with_setup(begin_func, rollback_func)
 def test_has_entities():
     """
     It should allow any table to be associated with entities (yuk!)
@@ -547,34 +575,6 @@ def test_has_entities():
     from datetime import date
     from tests import (
         assert_is_not_none, assert_equals, assert_items_equal)
-    from sqlalchemy import create_engine, Column, Integer, String
-    from sqlalchemy.orm import scoped_session, sessionmaker
-    from occams.datastore import models
-    from occams.datastore.models.events import register
-
-    Session = scoped_session(sessionmaker(
-        bind=create_engine('sqlite://'),
-        info={'user': 'foo@foo.com'}))
-    register(Session)
-
-    class SampleClass1(models.DataStoreModel, models.HasEntities):
-        __tablename__ = 'sampleclass1'
-
-        id = Column(Integer, primary_key=True)
-
-        name = Column(String, nullable=False)
-
-    class SampleClass2(models.DataStoreModel, models.HasEntities):
-        __tablename__ = 'sampleclass2'
-
-        id = Column(Integer, primary_key=True)
-
-        name = Column(String, nullable=False)
-
-    # Register a default user
-    models.DataStoreModel.metadata.create_all(Session.bind)
-    Session.add(models.User(key='foo@foo.com'))
-    Session.flush()
 
     # Sample schemata
     schemaA = models.Schema(name=u'A', title=u'',

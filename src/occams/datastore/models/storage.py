@@ -178,9 +178,7 @@ class Entity(Model, Referenceable, Describeable, Modifiable, Auditable):
 
     def _getCollector(self, key):
         type_ = self.schema.attributes[key].type
-        if type_ == 'boolean':
-            type_ = 'integer'
-        elif type_ == 'date':
+        if type_ == 'date':
             type_ = 'datetime'
         try:
             return getattr(self, '_%s_values' % type_)
@@ -369,11 +367,8 @@ def TypeMappingClass(typeName, className, tableName, valueType, index=True):
 ValueDatetime = TypeMappingClass(
     'datetime', 'ValueDatetime', 'value_datetime', DateTime)
 
-ValueInteger = TypeMappingClass(
-    'integer', 'ValueInteger', 'value_integer', Integer)
-
-ValueDecimal = TypeMappingClass(
-    'decimal', 'ValueDecimal', 'value_decimal', Numeric)
+ValueNumber = TypeMappingClass(
+    'number', 'ValueNumber', 'value_number', Numeric)
 
 ValueString = TypeMappingClass(
     'string', 'ValueString', 'value_string', Unicode)
@@ -396,8 +391,7 @@ ValueBlob = TypeMappingClass(
 valueProperty = hybrid_property(lambda s: s._value,
                                 lambda s, v: setattr(s, '_value', v))
 ValueDatetime.value = valueProperty
-ValueInteger.value = valueProperty
-ValueDecimal.value = valueProperty
+ValueNumber.value = valueProperty
 ValueString.value = valueProperty
 ValueText.value = valueProperty
 ValueChoice.value = relationship(Choice,
@@ -423,9 +417,7 @@ def validateValue(target, value, oldvalue, initiator):
         """
         if type_ in ('string', 'text'):
             interpreted = len(value)
-        elif type_ in ('integer'):
-            pass
-        elif type_ in ('decimal'):
+        elif type_ in ('number'):
             check = Decimal(check)
         elif type_ in ('date'):
             check = date.fromtimestamp(check)
@@ -456,15 +448,14 @@ def validateValue(target, value, oldvalue, initiator):
 
     # TODO: collections
 
-    if attribute.validator is not None \
-            and not re.match(attribute.validator, str(value)):
+    if attribute.pattern is not None \
+            and not re.match(attribute.pattern, str(value)):
         raise ConstraintError(
-            attribute.schema.name, attribute.name, attribute.validator, value)
+            attribute.schema.name, attribute.name, attribute.pattern, value)
 
 
 event.listen(ValueDatetime.value, 'set', validateValue)
-event.listen(ValueInteger.value, 'set', validateValue)
-event.listen(ValueDecimal.value, 'set', validateValue)
+event.listen(ValueNumber.value, 'set', validateValue)
 event.listen(ValueString.value, 'set', validateValue)
 event.listen(ValueText.value, 'set', validateValue)
 event.listen(ValueChoice.value, 'set', validateValue)
@@ -473,13 +464,11 @@ event.listen(ValueBlob.value, 'set', validateValue)
 
 # Where the types are stored
 nameModelMap = dict(
-    integer=ValueInteger,
-    boolean=ValueInteger,
     string=ValueString,
     text=ValueText,
-    decimal=ValueDecimal,
+    number=ValueNumber,
     date=ValueDatetime,
     datetime=ValueDatetime,
     choice=ValueChoice,
     blob=ValueBlob,
-    )
+)

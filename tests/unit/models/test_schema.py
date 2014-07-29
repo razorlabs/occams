@@ -8,9 +8,9 @@ from tests import Session, begin_func, rollback_func
 
 
 @with_setup(begin_func, rollback_func)
-def test_schema_section_attribute():
+def test_schema_attribute():
     """
-    It should implement full schema/section/attribute heirarchies
+    It should implement full schema/attribute/subattribute hierarchies
     """
     from datetime import date
     from tests import assert_in
@@ -19,10 +19,11 @@ def test_schema_section_attribute():
         name=u'aform',
         title=u'A Form',
         publish_date=date.today(),
-        sections={
-            'section1': models.Section(
+        attributes={
+            'section1': models.Attribute(
                 name=u'section1',
                 title=u'Section 1',
+                type='section',
                 order=0,
                 attributes={
                     'foo': models.Attribute(
@@ -41,8 +42,10 @@ def test_schema_section_attribute():
 
     Session.add(schema)
     Session.flush()
-    assert_in('section1', schema.sections)
+    assert_in('section1', schema.attributes)
+    # Works both ways
     assert_in('foo', schema.attributes)
+    assert_in('foo', schema.attributes['section1'].attributes)
 
 
 @with_setup(begin_func, rollback_func)
@@ -161,31 +164,22 @@ def test_schema_has_private():
     schema = models.Schema(
         name='Foo',
         title=u'Foo',
-        publish_date=date(2014, 3, 31))
+        publish_date=date(2014, 3, 31),
+        attributes={
+            'not_private': models.Attribute(
+                name='not_private',
+                title=u'',
+                type='string',
+                is_private=False,
+                order=0)
+        })
     Session.add(schema)
     Session.flush()
 
     assert_false(schema.has_private)
 
-    section1 = models.Section(
-        schema=schema,
-        name=u'section1', title=u'Section 1', order=0)
-
-    schema.attributes['not_private'] = models.Attribute(
-        schema=schema,
-        section=section1,
-        name='not_private',
-        title=u'',
-        type='string',
-        is_private=False,
-        order=0)
-
-    assert_false(schema.has_private)
-
     schema.attributes['is_private'] = models.Attribute(
-        schema=schema,
-        section=section1,
-        name='ist_private',
+        name='is_private',
         title=u'',
         type='string',
         is_private=True,
@@ -208,11 +202,12 @@ def test_json():
         "description": null,
         "publish_date": "2000-01-01",
         "storage": "eav",
-        "sections": {
+        "attributes": {
             "section1": {
                 "name": "section1",
                 "title": "Section 1",
                 "description": null,
+                "type": "section",
                 "order": 0,
                 "attributes": {
                     "foo": {
@@ -246,26 +241,6 @@ def test_json():
 
 
 @with_setup(begin_func, rollback_func)
-def test_section_defaults():
-    """
-    It should set section defaults
-    """
-    from tests import assert_equals
-    from occams.datastore import models
-
-    schema = models.Schema(name='Foo', title=u'Foo')
-    section = models.Section(
-        schema=schema,
-        name='section1',
-        title=u'Section 1',
-        order=0)
-    Session.add_all([schema, section])
-    Session.flush()
-    count = Session.query(models.Section).count()
-    assert_equals(count, 1, 'Found more than one entry')
-
-
-@with_setup(begin_func, rollback_func)
 def test_attribute_defaults():
     """
     It should set attribute defaults
@@ -274,14 +249,8 @@ def test_attribute_defaults():
     from occams.datastore import models
 
     schema = models.Schema(name=u'Foo', title=u'Foo')
-    section = models.Section(
-        schema=schema,
-        name=u'section1',
-        title=u'Section1',
-        order=0)
     attribute = models.Attribute(
         schema=schema,
-        section=section,
         name=u'foo',
         title=u'Enter Foo',
         type=u'string',
@@ -381,14 +350,8 @@ def test_choice_defaults():
     from occams.datastore import models
 
     schema = models.Schema(name=u'Foo', title=u'Foo')
-    section = models.Section(
-        schema=schema,
-        name=u'section1',
-        title=u'Section1',
-        order=0)
     attribute = models.Attribute(
         schema=schema,
-        section=section,
         name=u'foo',
         title=u'Enter Foo',
         type=u'choice',
@@ -400,7 +363,7 @@ def test_choice_defaults():
     choice3 = models.Choice(
         attribute=attribute, name='003', title=u'Baz', order=2)
 
-    Session.add_all([schema, section, attribute, choice1, choice2, choice3])
+    Session.add_all([schema, attribute, choice1, choice2, choice3])
     Session.flush()
     count = Session.query(models.Choice).count()
     assert_equals(count, 3, 'Did not find any choices')
@@ -481,23 +444,29 @@ def test_copy_schema_basic():
     from copy import deepcopy
     from occams.datastore import models
 
-    section1 = models.Section(name=u'section1', title=u'Section 1', order=0)
     schema = models.Schema(
         name='Foo',
         title=u'Foo',
-        sections={'section1': section1},
         attributes={
-            'foo': models.Attribute(
-                name='foo',
-                title=u'Enter Foo',
-                section=section1,
-                type='choice',
-                choices={
-                    '001': models.Choice(name='001', title=u'Foo', order=0),
-                    '002': models.Choice(name='002', title=u'Bar', order=1),
-                    '003': models.Choice(name='003', title=u'Baz', order=2)},
-                order=0)})
-
+            'section1': models.Attribute(
+                name=u'section1',
+                title=u'Section 1',
+                type='section',
+                order=0,
+                attributes={
+                    'foo': models.Attribute(
+                        name='foo',
+                        title=u'Enter Foo',
+                        type='choice',
+                        order=1,
+                        choices={
+                            '001': models.Choice(
+                                name='001', title=u'Foo', order=0),
+                            '002': models.Choice(
+                                name='002', title=u'Bar', order=1),
+                            '003': models.Choice(
+                                name='003', title=u'Baz', order=2)},
+                        )})})
     Session.add(schema)
     Session.flush()
 
