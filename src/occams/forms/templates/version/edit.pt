@@ -276,14 +276,15 @@
           <hr width="100%" />
 
           <div class="text-right">
-            <button type="button" class="btn btn-link" data-bind="click: $root.clearSelected">Cancel</button>
+            <button type="button" class="btn btn-link" data-bind="click: $root.doCancelEdit">Cancel</button>
             <button type="button" class="btn btn-primary" data-bind="click: $root.doEditField">
-              <!-- ko if: id -->
+              <!-- ko ifnot: isNew -->
                 <span>Save</span>
               <!-- /ko -->
-              <!-- ko ifnot: id -->
+              <!-- ko if: isNew -->
                 <span>Create</span>
               <!-- /ko -->
+              <span class="fa fa-refresh fa-spin" style="display: none" data-bind="visible: isSaving"></span>
             </button>
           </div>
         </form>

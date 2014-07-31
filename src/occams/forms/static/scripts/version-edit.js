@@ -43,6 +43,7 @@ function VersionEditViewModel(){
   self.startAdd = function(type, event, ui){
     var field = new Field({type: type.name()});
     self.startEdit(field);
+    return field;
   };
 
   self.startEdit = function(field){
@@ -69,7 +70,13 @@ function VersionEditViewModel(){
   };
 
   self.doMoveField = function(arg, event, ui){
+
+    if (arg.item.isNew()){
+        return;
+    }
+
     var model = ko.dataFor(event.target);
+
     $.ajax({
         url: arg.item.__src__(),
         method: 'PUT',
@@ -89,7 +96,22 @@ function VersionEditViewModel(){
           console.log('Successfully moved')
         }
     });
-  }
+  };
+
+  /**
+   * Cancels form edits.
+   */
+  self.doCancelEdit = function(data, event){
+    var selected = self.selectedField()
+      , context = ko.contextFor(event.target);
+    if (selected.isNew()){
+      context.$parentContext.$parent.fields.remove(selected);
+    } else {
+      selected.update(selected.cache.latestData);
+    }
+    self.clearSelected()
+
+  };
 
   /**
    * Send PUT/POST delete request for the field
@@ -154,13 +176,17 @@ function VersionEditViewModel(){
 function Field(data){
   var self = this;
 
-  self.id = ko.observable();
+  self.isSaving = ko.observable(false);
+
+  self.__src__ = ko.observable();
+
   self.name = ko.observable();
   self.title = ko.observable();
   self.description = ko.observable();
   self.type = ko.observable();
   self.is_required = ko.observable();
   self.is_collection = ko.observable();
+  self.choices = ko.observableArray([]);
 
   self.cache = function(){};
 
@@ -172,32 +198,37 @@ function Field(data){
     return self.type() == 'section';
   });
 
-  self.update(data);
-}
+  self.isNew = ko.computed(function(){
+    return !self.__src__();
+  });
 
-// Extend the Field model with commit/revert functionality for editing
-ko.utils.extend(Field.prototype, {
-  update: function(data) {
-    var self = this;
+  self.update = function(data) {
     ko.mapping.fromJS(data, {
       'fields': {
         create: function(options) {
           return new Field(options.data);
         }
+      },
+      'choices': {
+        create: function(options) {
+          return ko.mapping.fromJS(options.data);
+        }
       }
     }, self);
     //save off the latest data for later use
     self.cache.latestData = data;
-  },
-  revert: function() {
-    var self = this;
+  };
+
+  self.revert = function() {
     self.update(self.cache.latestData);
-  },
-  commit: function() {
-    var self = this;
+  };
+
+  self.commit = function() {
     self.cache.latestData = ko.toJS(self);
-  }
-});
+  };
+
+  self.update(data);
+}
 
 
 /**
