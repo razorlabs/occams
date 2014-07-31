@@ -3,18 +3,17 @@ from tests import IntegrationFixture
 
 class TestListJSON(IntegrationFixture):
 
-    def _getView(self):
+    def _callView(self, request):
         from occams.forms.views.form import list_json
-        return list_json
+        return list_json(request)
 
     def test_empty(self):
         """
         It should return an empty list if there are no schemata in the system
         """
         from pyramid import testing
-        view = self._getView()
-        result = view(testing.DummyRequest())
-        self.assertEqual([], result)
+        result = self._callView(testing.DummyRequest())
+        self.assertEqual([], result['forms'])
 
     def test_not_empty(self):
         """
@@ -25,7 +24,7 @@ class TestListJSON(IntegrationFixture):
         from occams.forms import Session, models
         from tests import track_user
 
-        self.config.add_route('version_view', '/dummy/{form}/{version}')
+        self.config.add_route('version_view', '/versions/{version}')
 
         track_user('joe')
         Session.add(models.Schema(
@@ -35,12 +34,11 @@ class TestListJSON(IntegrationFixture):
         ))
         Session.flush()
 
-        view = self._getView()
-        result = view(testing.DummyRequest())
+        result = self._callView(testing.DummyRequest())
 
-        self.assertEqual(1, len(result))
+        self.assertEqual(1, len(result['forms']))
 
-        record = result[0]
+        record = result['forms'][0]
         self.assertEqual('sample', record['name'])
         self.assertEqual(False, record['has_private'])
         self.assertEqual('Sample', record['title'])

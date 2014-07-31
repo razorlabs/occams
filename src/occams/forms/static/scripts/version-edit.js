@@ -24,13 +24,13 @@ function VersionEditViewModel(){
 
   self.selectedField = ko.observable();            // currently selected field
   self.selectedFieldForEditing = ko.observable();  // a copy of the field for editing
-  self.showEditor = ko.observable(false);
-  self.showDeletor = ko.observable(false);
+  self.showEditView = ko.observable(false);
+  self.showDeleteView = ko.observable(false);
 
   self.isMovingEnabled = ko.computed(function(){ // dragging enabled flag
     // we can't just specify this in the isEnabled option
     // because of a bug in knockout, this workaround is sufficient.
-    return !(self.showEditor() || self.showDeletor());
+    return !(self.showEditView() || self.showDeleteView());
   });
 
   self.isSelectedField = function(field){
@@ -49,13 +49,13 @@ function VersionEditViewModel(){
     self.clearSelected();
     self.selectedField(field);
     self.selectedFieldForEditing(new Field(ko.toJS(field)))
-    self.showEditor(true);
+    self.showEditView(true);
   };
 
   self.startDelete = function(field){
     self.clearSelected();
     self.selectedField(field);
-    self.showDeletor(true);
+    self.showDeleteView(true);
   };
 
   /**
@@ -64,9 +64,32 @@ function VersionEditViewModel(){
   self.clearSelected = function(){
     self.selectedField(null);
     self.selectedFieldForEditing(null);
-    self.showEditor(false);
-    self.showDeletor(false);
+    self.showEditView(false);
+    self.showDeleteView(false);
   };
+
+  self.doMoveField = function(arg, event, ui){
+    var model = ko.dataFor(event.target);
+    $.ajax({
+        url: arg.item.__src__(),
+        method: 'PUT',
+        data: {
+          move: 1,
+          parent: model instanceof VersionEditViewModel ? null : model.name(),
+          after: arg.targetIndex > 0 ? arg.targetParent()[arg.targetIndex].name() : null
+        },
+        headers: {'X-CSRF-Token': $.cookie('csrf_token')},
+        error: function(jqXHR, textStatus, errorThrown){
+          console.log('Failed to sort, resetting item');
+          // put it back
+          arg.targetParent.splice(arg.targetIndex, 1);
+          arg.sourceParent.splice(arg.sourceIndex, 0, arg.item);
+        },
+        success: function(data, textStatus, jqXHR){
+          console.log('Successfully moved')
+        }
+    });
+  }
 
   /**
    * Send PUT/POST delete request for the field
@@ -76,10 +99,10 @@ function VersionEditViewModel(){
         edited = self.selectedFieldForEditing();
 
     $.ajax({
-      url: selected.id() ? selected.__metadata__.src() : self.fieldsSrc,
+      url: selected.id() ? selected.__src__() : self.fieldsSrc,
       method: selected.id() ? 'PUT' : 'POST',
       data: ko.toJSON(edited),
-      contentType: 'application/json',
+      headers: {'X-CSRF-Token': $.cookie('csrf_token')},
       error: function(jqXHR, textStatus, errorThrown){
         var data = jqXHR.responseJSON;
         if (!data || !data.validation_errors){
@@ -103,8 +126,9 @@ function VersionEditViewModel(){
    */
   self.doDeleteField = function(field){
     $.ajax({
-      url: field.__metadata__.src(),
+      url: field.__src__(),
       method: 'DELETE',
+      headers: {'X-CSRF-Token': $.cookie('csrf_token')},
       success: function(data, status, jxhr){
         self.fields.destroy(field);
         self.clearSelected();
@@ -114,11 +138,11 @@ function VersionEditViewModel(){
 
   // Load initial data
   $.getJSON(window.location, function(data) {
-    self.fieldsSrc = data.fields.__metadata__.src
-    self.fields(ko.utils.arrayMap(data.fields.items, function(f){
+    self.fieldsSrc = data.fields.__src__
+    self.fields(ko.utils.arrayMap(data.fields.fields, function(f){
         return new Field(f);
     }));
-    self.types(ko.utils.arrayMap(data.__metadata__.types, ko.mapping.fromJS));
+    self.types(ko.utils.arrayMap(data.__types__, ko.mapping.fromJS));
     self.isReady(true);
   });
 }

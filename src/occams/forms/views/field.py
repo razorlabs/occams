@@ -54,10 +54,11 @@ def view_json(request):
 
 
 @view_config(
-    route_name='field_list',
+    route_name='field_view',
     xhr=True,
     check_csrf=True,
     request_method='PUT',
+    request_param='move',
     renderer='json',
     permission='form_edit')
 def move_json(request):
@@ -65,27 +66,20 @@ def move_json(request):
     Moves the field to the target section and display order within the form
     """
     attribute = get_attribute(**request.matchdict)
+    schema = attribute.schema
 
-    if attribute.schema.publish_date and not request.has_permission('admin'):
+    if schema.publish_date and not request.has_permission('form_amend'):
         raise HTTPForbidden(json={
             'user_message': _(u'Cannot delete a field in a published form'),
             'debug_message': _(u'Non-admin tried to edit a published form')
         })
 
-    # Target section
-    section_name = request.POST.get('section') or None
-
-    # Move to the (valid) target section, if applicable
-    if section_name:
-        if section_name not in attribute.schema.sections:
-            raise HTTPBadRequest(json={
-                'user_message': _(u'Moving to invalid section')
-            })
-        attribute.section = attribute.schema.sections[section_name]
-
-    move_item(attribute.schema.attributes, attribute, request.POST['order'])
-
-    return get_fields_data(attribute.schema)
+    parent_attribute = extract_field(schema, request.POST, 'parent')
+    after_attribute = extract_field(schema, request.POST, 'after')
+    move_field(attribute.schema, attribute,
+               into=parent_attribute,
+               after=after_attribute)
+    return HTTPOk()
 
 
 @view_config(
@@ -106,7 +100,7 @@ def add_json(request):
     schema = get_schema(**request.matchdict)
     section = None
 
-    if schema.publish_date and not request.has_permission('admin'):
+    if schema.publish_date and not request.has_permission('form_amend'):
         raise HTTPForbidden(json={
             'user_message': _(u'Cannot add a field to a published form'),
             'debug_message': _(u'Non-admin tried to edit a published form')
@@ -130,7 +124,7 @@ def add_json(request):
         is_private=add_form.is_private.data,
     )
 
-    move_item(schema.attributes, attribute, add_form.order.data)
+    move_field(schema.attributes, attribute, add_form.order.data)
 
     if add_form.type.data == 'choice':
         for i, choice_form in enumerate(add_form.choices.data):
@@ -154,8 +148,9 @@ def edit_json(request):
     Edit view for an attribute
     """
     attribute = get_attribute(**request.matchdict)
+    schema = attribute.schema
 
-    if attribute.schema.publish_date and not request.has_permission('admin'):
+    if schema.publish_date and not request.has_permission('form_amend'):
         raise HTTPForbidden(json={
             'user_message': 'Cannot delete a field in a published form',
         })
@@ -208,12 +203,13 @@ def delete_json(request):
     Deletes the field from the form
     """
     attribute = get_attribute(**request.matchdict)
-    if attribute.schema.publish_date and not request.has_permission('admin'):
+    schema = attribute.schema
+    if schema.publish_date and not request.has_permission('form_amend'):
         raise HTTPForbidden(json={
             'user_message': 'Cannot delete a field in a published form',
         })
     Session.delete(attribute)
-    return HTTPOk
+    return HTTPOk()
 
 
 def get_attribute(form=None, field=None, version=None, **kw):
@@ -244,14 +240,13 @@ def get_fields_data(request, schema):
         return [get_field_data(request, a) for a in attributes]
 
     return {
-        '__metadata__': {
-            'src':  request.route_path(
-                'field_list',
-                form=schema.name,
-                version=str(schema.publish_date or schema.id))},
-        'items': (
-            fields(a for a in itervalues(schema.attributes) if not a.section) +
-            fields(s for s in itervalues(schema.sections)))
+        '__src__':  request.route_path(
+            'field_list',
+            form=schema.name,
+            version=str(schema.publish_date or schema.id)),
+        'fields': fields(a
+                         for a in itervalues(schema.attributes)
+                         if a.parent_attribute is None)
     }
 
 
@@ -260,38 +255,84 @@ def get_field_data(request, attribute):
     Helper method to return field JSON data
     """
     schema = attribute.schema
-    data = attribute.to_json()
-    data['__metadata__'] = {
-        'src': request.route_path(
-            'field_view',
-            form=attribute.schema.name,
-            version=str(schema.publish_date or schema.id),
-            field=attribute.name)}
+    data = attribute.to_json(True)
+    data['id'] = attribute.id
+    data['__src__'] = request.route_path(
+        'field_view',
+        form=attribute.schema.name,
+        version=str(schema.publish_date or schema.id),
+        field=attribute.name)
     children = data.pop('attributes', None)
     if children:
         children = sorted(itervalues(children), key=lambda i: i['order'])
-        data['type'] = 'section'
-        data['is_required'] = False
         data['fields'] = \
-            [get_field_data(request, schema[f['name']]) for f in children]
+            [get_field_data(request, schema.attributes[f['name']])
+             for f in children]
     choices = data.pop('choices', None)
     if choices:
         choices = sorted(itervalues(choices), key=lambda i: i['order'])
         data['choices'] = choices
-    data.update({
-        'id': attribute.id,
-        'format_regex': None,
-        'constraint_logic': None,
-        'skip_logic': None
-    })
     return data
 
 
-def move_item(items, target, new_order):
-    target.order = new_order
-    for other in itervalues(items):
-        if (target.id and other.id != target.id) or other.order >= new_order:
-            other.order += 1
+def extract_field(schema, data, key):
+    """
+    Helper method to extract an attribute from request data
+    """
+    name = data.get(key, '').strip()
+    if not name:
+        return None
+    if name not in schema.attributes:
+        raise HTTPBadRequest(json={
+            'user_message': _(
+                u'Inavalid desitation field: ${name}',
+                mapping={name: name}),
+            'debug_message': _(
+                u'Parent name specified is not in the form: ${name}',
+                mapping={name: name}),
+        })
+    return schema.attributes[name]
+
+
+def move_field(schema, attribute, into=None, after=None):
+    """
+    Moves the attribute to a new location in the form
+
+    Parameters:
+    schema -- Attribute's schema (in case we're dealing with a new field)
+    attribute -- Source attribute
+    into -- (optional) Desination parent, None implies root of form
+    after -- (optional) Place after target, None implies first
+    """
+    assert schema is not None
+    assert attribute is not None
+    assert attribute != into
+    assert attribute != after
+    assert schema == attribute.schema
+    assert into is None or schema == into.schema
+    assert after is None or schema == after.schema
+
+    # Move to a (valid) target section, if applicable
+    if attribute.type == 'section' and into and into.type == 'section':
+        raise HTTPBadRequest(json={
+            'user_message': _(u'Moving to invalid section')
+        })
+
+    attributes = sorted(itervalues(schema.attributes), key=lambda a: a.order)
+    attributes.remove(attribute)
+
+    if after is None:
+        index = 0 if into is None else attributes.index(into) + 1
+    elif after.type == 'section':
+        index = attributes.index(after) + len(after.attributes)
+    else:
+        index = attributes.index(after) + 1
+
+    attribute.parent_attribute = into
+    attributes.insert(index, attribute)
+
+    for i, a in enumerate(attributes):
+        a.order = i
 
 
 class ChoiceForm(wtforms.Form):
@@ -321,14 +362,6 @@ class MinMaxForm(wtforms.Form):
 
 
 class FieldForm(wtforms.Form):
-
-    id = wtforms.HiddenField()
-
-    schema_id = wtforms.HiddenField(
-        validators=[wtforms.validators.required()])
-
-    section_id = wtforms.HiddenField(
-        validators=[wtforms.validators.optional()])
 
     name = wtforms.StringField(
         label=_(u'Variable'),
@@ -377,7 +410,7 @@ class FieldForm(wtforms.Form):
         label=_(u'More than one option may be selected'))
 
     # number
-    precision = wtforms.IntegerField(
+    decimal_places = wtforms.IntegerField(
         label=_(u'Decimal precision'),
         validators=[wtforms.validators.optional()])
 
@@ -397,11 +430,9 @@ class FieldForm(wtforms.Form):
         label=_(u'Answer choices'))
 
     # string
-    format_regex = wtforms.StringField(
+    pattern = wtforms.StringField(
         label=_(u'A regular expression to validate the field'),
         validators=[wtforms.validators.optional()])
-
-    order = wtforms.HiddenField()
 
     def validate_name(form, field):
         """

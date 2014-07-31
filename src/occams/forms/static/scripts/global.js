@@ -1,3 +1,8 @@
+/**
+ * Global settings
+ */
+
+
 $(document).ready(function(){
   $('select').select2();
   $('input[type="datetime"]').datetimepicker();

@@ -167,12 +167,11 @@ def get_version_data(request, schema):
     # Avoid circular dependencies
     from .field import get_fields_data, types
     return {
-        '__metadata__': {
-            'types': types,
-            'src': request.route_path(
-                'version_view',
-                form=schema.name,
-                version=str(schema.publish_date or schema.id))},
+        '__src__': request.route_path(
+            'version_view',
+            form=schema.name,
+            version=str(schema.publish_date or schema.id)),
+        '__types__': types,
         'id': schema.id,
         'name': schema.name,
         'title': schema.title,
