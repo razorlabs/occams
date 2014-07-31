@@ -109,14 +109,14 @@
                 </label>
               </div>
             </tal:case>
-            <tal:case case="string:Date" define="ko string:value:$name, disable:$name.disabled">
-              ${structure: field(class_='form-control', **{'data-bind': ko})}
+            <tal:case case="string:DateInput" define="ko string:value:$name, disable:$name.disabled">
+              ${structure: field(class_='form-control js-datepicker', **{'data-bind': ko})}
             </tal:case>
-            <tal:case case="string:Date" define="ko string:value:$name, disable:$name.disabled">
-              ${structure: field(class_='form-control', **{'data-bind': ko})}
+            <tal:case case="string:DateTimeInput" define="ko string:value:$name, disable:$name.disabled">
+              ${structure: field(class_='form-control js-datetimepicker', **{'data-bind': ko})}
             </tal:case>
             <tal:case case="string:Select" define="ko string:value:$name, disable:$name.disabled, select2:{}">
-              ${structure: field(class_='form-control', **{'data-bind': ko})}
+              ${structure: field(class_='form-control js-select2', **{'data-bind': ko})}
             </tal:case>
             <tal:case case="string:TelInput" define="ko string:value:$name, disable:$name.disabled">
               ${structure: field(class_='form-control', **{'data-bind': ko})}

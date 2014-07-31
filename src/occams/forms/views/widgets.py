@@ -44,11 +44,13 @@ class SampleSection(wtforms.Form):
 
     var_date = wtforms.DateField(
         label=_(u'Date'),
-        description=random_sentence(3))
+        description=random_sentence(3),
+        widget=wtforms.widgets.html5.DateInput())
 
     var_datetime = wtforms.DateField(
         label=_(u'Date Time'),
-        description=random_sentence(3))
+        description=random_sentence(3),
+        widget=wtforms.widgets.html5.DateTimeInput())
 
     var_number = wtforms.DateField(
         label=_(u'Number'),
