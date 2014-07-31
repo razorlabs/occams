@@ -207,8 +207,9 @@
             <metal:field tal:define="field form.is_readonly" use-macro="wtforms.widget" />
           <!-- /ko -->
 
-          <!-- ko if: type() == 'choice' -->
+          <!-- ko if: isType('choice') -->
             <metal:field tal:define="field form.is_collection" use-macro="wtforms.widget" />
+            <metal:field tal:define="field form.is_shuffled" use-macro="wtforms.widget" />
             <metal:field tal:define="field form.choices" use-macro="wtforms.field">
               <metal:widget fill-slot="widget">
                 <div class="row">
@@ -235,7 +236,7 @@
             </metal:field>
           <!-- /ko -->
 
-          <!-- ko if: ['number', 'string'].indexOf(type()) > -1 -->
+          <!-- ko if: isType('number', 'string') -->
             <metal:field tal:define="field form.value_limit" use-macro="wtforms.default">
               <div class="row" metal:fill-slot="widget">
                 <div class="col-xs-2">
@@ -259,7 +260,7 @@
               </div>
             </metal:field>
           <!-- /ko -->
-          <!-- ko if: ['number'].indexOf(type()) > -1 -->
+          <!-- ko if: isType('number') -->
             <metal:field tal:define="field form.decimal_places" use-macro="wtforms.default">
               <div class="row" metal:fill-slot="widget">
                 <div class="col-xs-2">
@@ -269,7 +270,7 @@
             </metal:field>
           <!-- /ko -->
 
-          <!-- ko if: type() == 'string' -->
+          <!-- ko if: isType('string') -->
             <metal:field tal:define="field form.pattern" use-macro="wtforms.field" />
           <!-- /ko -->
 
@@ -279,10 +280,10 @@
             <button type="button" class="btn btn-link" data-bind="click: $root.doCancelEdit">Cancel</button>
             <button type="button" class="btn btn-primary" data-bind="click: $root.doEditField">
               <!-- ko ifnot: isNew -->
-                <span>Save</span>
+                <span i18n:translate="">Save</span>
               <!-- /ko -->
               <!-- ko if: isNew -->
-                <span>Create</span>
+                <span i18n:translate="">Create</span>
               <!-- /ko -->
               <span class="fa fa-refresh fa-spin" style="display: none" data-bind="visible: isSaving"></span>
             </button>

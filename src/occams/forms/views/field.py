@@ -409,6 +409,9 @@ class FieldForm(wtforms.Form):
     is_collection = wtforms.BooleanField(
         label=_(u'More than one option may be selected'))
 
+    is_shuffled = wtforms.BooleanField(
+        label=_(u'Shuffle answer choices when entering data'))
+
     # number
     decimal_places = wtforms.IntegerField(
         label=_(u'Decimal precision'),

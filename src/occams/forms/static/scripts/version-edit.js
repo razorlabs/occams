@@ -202,6 +202,15 @@ function Field(data){
     return !self.__src__();
   });
 
+  self.isType = function(){
+    for (var i = 0; i < arguments.length; i++){
+      if (arguments[i] == self.type()){
+        return true;
+      }
+    }
+    return false;
+  }
+
   self.update = function(data) {
     ko.mapping.fromJS(data, {
       'fields': {
