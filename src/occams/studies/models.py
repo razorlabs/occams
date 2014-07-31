@@ -30,7 +30,7 @@ from occams.datastore.models import (  # NOQA
     HasEntities,
     ModelClass,
     User,
-    Schema, Section, Attribute, Choice, State, Entity, Context)
+    Schema, Attribute, Choice, State, Entity, Context)
 from occams.datastore.utils.sql import JSON
 
 from . import log, Session
