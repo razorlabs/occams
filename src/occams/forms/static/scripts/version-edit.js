@@ -7,7 +7,7 @@ function VersionEditViewModel(){
   self.isReady = ko.observable(false);        // content loaded flag
   self.isDragging = ko.observable(false);     // view drag state flag
 
-  self.fieldsSrc = null;
+  self.listingSrc = null;
   self.types = ko.observableArray([]);        // available types
 
   self.name = ko.observable();
@@ -49,7 +49,7 @@ function VersionEditViewModel(){
   self.startEdit = function(field){
     self.clearSelected();
     self.selectedField(field);
-    self.selectedFieldForEditing(new Field(ko.toJS(field)))
+    self.selectedFieldForEditing(new Field(ko.toJS(field)));
     self.showEditView(true);
   };
 
@@ -70,7 +70,6 @@ function VersionEditViewModel(){
   };
 
   self.doMoveField = function(arg, event, ui){
-
     if (arg.item.isNew()){
         return;
     }
@@ -91,9 +90,6 @@ function VersionEditViewModel(){
           // put it back
           arg.targetParent.splice(arg.targetIndex, 1);
           arg.sourceParent.splice(arg.sourceIndex, 0, arg.item);
-        },
-        success: function(data, textStatus, jqXHR){
-          console.log('Successfully moved')
         }
     });
   };
@@ -102,15 +98,12 @@ function VersionEditViewModel(){
    * Cancels form edits.
    */
   self.doCancelEdit = function(data, event){
-    var selected = self.selectedField()
-      , context = ko.contextFor(event.target);
+    var selected = self.selectedField();
     if (selected.isNew()){
+      var context = ko.contextFor(event.target);
       context.$parentContext.$parent.fields.remove(selected);
-    } else {
-      selected.update(selected.cache.latestData);
     }
     self.clearSelected()
-
   };
 
   /**
@@ -120,9 +113,11 @@ function VersionEditViewModel(){
     var selected = self.selectedField(),
         edited = self.selectedFieldForEditing();
 
+    return;
+
     $.ajax({
-      url: selected.id() ? selected.__src__() : self.fieldsSrc,
-      method: selected.id() ? 'PUT' : 'POST',
+      url: selected.isNew() ? self.listingSrc : selected.__src__(),
+      method: selected.isNew() ? 'POST' : 'PUT',
       data: ko.toJSON(edited),
       headers: {'X-CSRF-Token': $.cookie('csrf_token')},
       error: function(jqXHR, textStatus, errorThrown){
@@ -135,9 +130,10 @@ function VersionEditViewModel(){
         console.log(data);
       },
       success: function(data, textStatus, jqXHR){
-        console.log('UPADATED');
-        console.log(data);
-        //selected.update(data);
+        var selected = this.selectedField(),
+            edited = ko.toJS(this.selectedFieldForEditing()); //clean copy of edited
+        //apply updates from the edited item to the selected item
+        selected.update(edited);
         self.clearSelected();
       }
     });
@@ -160,7 +156,7 @@ function VersionEditViewModel(){
 
   // Load initial data
   $.getJSON(window.location, function(data) {
-    self.fieldsSrc = data.fields.__src__
+    self.listingSrc = data.fields.__src__
     self.fields(ko.utils.arrayMap(data.fields.fields, function(f){
         return new Field(f);
     }));
@@ -186,9 +182,29 @@ function Field(data){
   self.type = ko.observable();
   self.is_required = ko.observable();
   self.is_collection = ko.observable();
+  self.is_private = ko.observable();
+  self.is_shuffled = ko.observable();
+  self.is_readonly = ko.observable();
+  self.is_system = ko.observable();
+  self.pattern = ko.observable();
+  self.decimal_places = ko.observable();
+  self.value_min = ko.observable();
+  self.value_max = ko.observable();
   self.choices = ko.observableArray([]);
 
-  self.cache = function(){};
+  self.isType = function(){
+    for (var i = 0; i < arguments.length; i++){
+      if (arguments[i] == self.type()){
+        return true;
+      }
+    }
+    return false;
+  };
+
+  self.isLimitAllowed = ko.computed(function(){
+    return self.isType('string', 'number')
+      || (self.isType('choice') && self.is_collection());
+  });
 
   self.choiceInputType = ko.computed(function(){
     return self.is_collection() ? 'checkbox' : 'radio';
@@ -202,14 +218,13 @@ function Field(data){
     return !self.__src__();
   });
 
-  self.isType = function(){
-    for (var i = 0; i < arguments.length; i++){
-      if (arguments[i] == self.type()){
-        return true;
-      }
-    }
-    return false;
-  }
+  self.doAddChoice = function(){
+    self.choices.push(new Choice({}));
+  };
+
+  self.doDeleteChoice = function(data, event){
+      self.choices.remove(data);
+  };
 
   self.update = function(data) {
     ko.mapping.fromJS(data, {
@@ -220,23 +235,20 @@ function Field(data){
       },
       'choices': {
         create: function(options) {
-          return ko.mapping.fromJS(options.data);
+          return new Choice(options.data);
         }
       }
     }, self);
-    //save off the latest data for later use
-    self.cache.latestData = data;
-  };
-
-  self.revert = function() {
-    self.update(self.cache.latestData);
-  };
-
-  self.commit = function() {
-    self.cache.latestData = ko.toJS(self);
   };
 
   self.update(data);
+}
+
+
+function Choice(data){
+  var self = this;
+  self.name = ko.observable(data.name);
+  self.title = ko.observable(data.title);
 }
 
 

@@ -93,6 +93,7 @@ def assets(config):
             'scripts/binding-scrolltoif.js',
             'scripts/binding-select2.js',
             'scripts/binding-validateable.js',
+            'scripts/utils-validation.js',
             'scripts/form-list.js',
             'scripts/version-edit.js',
             'scripts/version.js',

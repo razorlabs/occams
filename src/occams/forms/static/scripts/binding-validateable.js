@@ -12,3 +12,21 @@ ko.extenders.validateable = function(target, overrides) {
     //return the original observable
     return target;
 };
+
+
+/**
+ * Validation tools
+ */
++function($){
+  'use strict';
+
+  ko.bindingHandlers.validation = {
+    init: function (element, valueAccessor) {
+      // Todo use valueAccessor as a settings object...
+      $(element).validation();
+    },
+    update: function (element, valueAccessor) {
+    }
+  };
+
+}(jQuery);

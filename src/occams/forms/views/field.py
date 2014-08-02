@@ -98,7 +98,8 @@ def add_json(request):
     """
 
     schema = get_schema(**request.matchdict)
-    section = None
+
+    raise HTTPBadRequest()
 
     if schema.publish_date and not request.has_permission('form_amend'):
         raise HTTPForbidden(json={
@@ -113,25 +114,10 @@ def add_json(request):
             'validation_errors': add_form.errors
         })
 
-    schema[add_form.name.data] = attribute = models.Attribute(
-        section=section,
-        name=add_form.name.data,
-        title=add_form.title.data,
-        description=add_form.description.data,
-        type=add_form.type.data,
-        is_collection=add_form.is_collection.data,
-        is_required=add_form.is_required.data,
-        is_private=add_form.is_private.data,
-    )
+    schema[add_form.name.data] = attribute = apply_changes(models.Attribute(),
+                                                           add_form.data)
 
     move_field(schema.attributes, attribute, add_form.order.data)
-
-    if add_form.type.data == 'choice':
-        for i, choice_form in enumerate(add_form.choices.data):
-            attribute[choice_form.name.data] = models.Choice(
-                name=choice_form.name.data,
-                title=choice_form.title.data,
-                order=i)
 
     return get_field_data(request, attribute)
 
@@ -150,6 +136,8 @@ def edit_json(request):
     attribute = get_attribute(**request.matchdict)
     schema = attribute.schema
 
+    raise HTTPBadRequest()
+
     if schema.publish_date and not request.has_permission('form_amend'):
         raise HTTPForbidden(json={
             'user_message': 'Cannot delete a field in a published form',
@@ -162,33 +150,31 @@ def edit_json(request):
             'validation_errors': edit_form.errors
         })
 
-    attribute.name = edit_form.name.data
-    attribute.title = edit_form.title.data
-    attribute.description = edit_form.description.data
-    attribute.is_required = edit_form.is_required.data
-    attribute.is_private = edit_form.is_private.data
-    attribute.constraint_expr = edit_form.constraint_expr.data
-    attribute.skip_expr = edit_form.skip_expr.data
-
-    new_codes = dict([(c.name, c.title) for c in edit_form.choices.data])
-
-    for code in iterkeys(attribute.choices):
-        if code not in new_codes:
-            del attribute.choices[code]
-
-    for i, choice_form in enumerate(edit_form.choices.data):
-        if choice_form.name.data in attribute.choices:
-            choice = attribute.choices[choice_form.name.data]
-        else:
-            choice = models.Choice(attribute=attribute)
-            Session.add(choice)
-        choice.name = choice_form.name.data
-        choice.title = choice_form.title.data
-        choice.order = i
-
-    Session.rollback()
+    apply_changes(attribute, edit_form.data)
 
     return get_field_data(request, attribute)
+
+
+@view_config(
+    route_name='field_view',
+    xhr=True,
+    check_csrf=True,
+    request_method='POST',
+    request_param='validate',
+    renderer='json',
+    permission='view')
+def validate_json(request):
+    return validate_field(FieldForm(request.POST),
+                          request.POST.get('validate'))
+
+
+def validate_field(form, prop):
+    """
+    Helper method to validate a single field in a WTForm instance
+    """
+    if not prop or prop not in form or not form[prop].validate(None):
+        raise HTTPBadRequest
+    return HTTPOk()
 
 
 @view_config(
@@ -294,6 +280,39 @@ def extract_field(schema, data, key):
     return schema.attributes[name]
 
 
+def apply_changes(attribute, data):
+    for prop in ('name', 'title', 'description', 'type',
+                 'is_collection', 'is_required', 'is_private'):
+        setattr(attribute, prop, data[prop])
+
+    # from add
+    #if add_form.type.data == 'choice':
+        #for i, choice_form in enumerate(add_form.choices.data):
+            #attribute[choice_form.name.data] = models.Choice(
+                #name=choice_form.name.data,
+                #title=choice_form.title.data,
+                #order=i)
+
+    # from edit
+    #new_codes = dict([(c.name, c.title) for c in edit_form.choices.data])
+
+    #for code in iterkeys(attribute.choices):
+        #if code not in new_codes:
+            #del attribute.choices[code]
+
+    #for i, choice_form in enumerate(edit_form.choices.data):
+        #if choice_form.name.data in attribute.choices:
+            #choice = attribute.choices[choice_form.name.data]
+        #else:
+            #choice = models.Choice(attribute=attribute)
+            #Session.add(choice)
+        #choice.name = choice_form.name.data
+        #choice.title = choice_form.title.data
+        #choice.order = i
+
+    return attribute
+
+
 def move_field(schema, attribute, into=None, after=None):
     """
     Moves the attribute to a new location in the form
@@ -337,40 +356,22 @@ def move_field(schema, attribute, into=None, after=None):
 
 class ChoiceForm(wtforms.Form):
 
-    code = wtforms.StringField(
-        label=_(u'Stored Value'),
+    name = wtforms.StringField(
         validators=[
             wtforms.validators.required(),
             wtforms.validators.Length(min=1, max=8),
             wtforms.validators.Regexp('-?[0-9]+')])
 
     title = wtforms.StringField(
-        label=_(u'Displayed Label'),
-        validators=[
-            wtforms.validators.required()])
-
-
-class MinMaxForm(wtforms.Form):
-
-    min = wtforms.IntegerField(
-        label=_(u'Min'),
-        validators=[wtforms.validators.optional()])
-
-    max = wtforms.IntegerField(
-        label=_(u'Max'),
-        validators=[wtforms.validators.optional()])
+        validators=[wtforms.validators.required()])
 
 
 class FieldForm(wtforms.Form):
 
     name = wtforms.StringField(
-        label=_(u'Variable'),
-        description=_(
-            u'Internal variable name, this value cannot be changed once it is '
-            u'created.'
-            ),
         validators=[
             wtforms.validators.required(),
+            wtforms.validators.Length(3, 20),
             wtforms.validators.Regexp(
                 RE_VALID_NAME,
                 message=_(u'Not a valid variable name')),
@@ -379,63 +380,36 @@ class FieldForm(wtforms.Form):
                 message=_(u'Can\'t use reserved programming word'))])
 
     title = wtforms.StringField(
-        label=_(u'Question'),
-        description=_(u'The prompt for the user.'),
         validators=[
             wtforms.validators.required()])
 
     description = wtforms.TextAreaField(
-        label=_(u'Help Text'),
-        description=_(u'A short description about the field\'s purpose.'),
         validators=[wtforms.validators.optional()])
 
     type = wtforms.SelectField(
-        label=_(u'Data Type'),
         choices=sorted((t['name'], t['title']) for t in types))
 
-    is_required = wtforms.BooleanField(
-        label=_(u'Required'))
-
-    is_private = wtforms.BooleanField(
-        label=_(u'Contains private information'))
-
-    is_system = wtforms.BooleanField(
-        label=_(u'Can only be managed by system services'))
-
-    is_readonly = wtforms.BooleanField(
-        label=_(u'Ready only or generated by a formula'))
-
-    # choice
-    is_collection = wtforms.BooleanField(
-        label=_(u'More than one option may be selected'))
-
-    is_shuffled = wtforms.BooleanField(
-        label=_(u'Shuffle answer choices when entering data'))
+    is_required = wtforms.BooleanField()
+    is_private = wtforms.BooleanField()
+    is_system = wtforms.BooleanField()
+    is_readonly = wtforms.BooleanField()
+    is_collection = wtforms.BooleanField()  # choice only
+    is_shuffled = wtforms.BooleanField()  # choice only
 
     # number
     decimal_places = wtforms.IntegerField(
-        label=_(u'Decimal precision'),
         validators=[wtforms.validators.optional()])
 
-    # number/string
-    value_limit = wtforms.FormField(
-        MinMaxForm,
-        label=_(u'Value limits.'))
-
-    # choice
-    collection_limit = wtforms.FormField(
-        MinMaxForm,
-        label=_(u'Possible number of selections limit.'))
-
-    # choice
-    choices = wtforms.FieldList(
-        wtforms.FormField(ChoiceForm),
-        label=_(u'Answer choices'))
+    # number/string/multiple-choice
+    value_min = wtforms.IntegerField()
+    value_max = wtforms.IntegerField()
 
     # string
     pattern = wtforms.StringField(
-        label=_(u'A regular expression to validate the field'),
         validators=[wtforms.validators.optional()])
+
+    # choice
+    choices = wtforms.FieldList(wtforms.FormField(ChoiceForm))
 
     def validate_name(form, field):
         """
