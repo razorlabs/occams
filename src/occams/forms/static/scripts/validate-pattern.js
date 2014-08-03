@@ -1,36 +1,5 @@
-/**
- * Annotates the observable with validation messages
- */
-ko.extenders.validateable = function(target, overrides) {
-    //add some sub-observables to our observable
-    target.errors = ko.observableArray([]);
-
-    target.hasErrors = ko.computed(function(){
-      return target.errors().length > 0;
-    });
-
-    //return the original observable
-    return target;
-};
-
-
-/**
- * Validation tools
- */
-+function($){
-  'use strict';
-
-  ko.bindingHandlers.validate = {
-    init: function (element, valueAccessor) {
-      $(element).validate(ko.utils.unwrapObservable(valueAccessor()));
-    },
-  };
-
-}(jQuery);
-
-
-+function($){
  // Copied the following form additional methods since all I need is pattern.
++function($){
  /**
   * Return true if the field value matches the given format RegExp
   *

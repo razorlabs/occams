@@ -17,7 +17,7 @@ def render_field(field, **kw):
         if isinstance(validator, wtforms.validators.Length):
             # minlength is not supported by browsers
             if validator.min > -1:
-                kw['data-minlength'] = validator.min
+                kw['minlength'] = validator.min
             # set maxlenght only, minlength is not supported by browsers
             if validator.max > -1:
                 kw['maxlength'] = validator.max

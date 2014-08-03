@@ -1,8 +1,10 @@
+import json
 from pyramid.httpexceptions import (
     HTTPOk, HTTPNotFound, HTTPForbidden, HTTPBadRequest)
 from pyramid.view import view_config
-from six import iterkeys, itervalues
+import six
 from sqlalchemy import orm
+from webob.multidict import MultiDict
 import wtforms
 
 from occams.datastore.models.schema import RE_VALID_NAME, RESERVED_WORDS
@@ -74,11 +76,10 @@ def move_json(request):
             'debug_message': _(u'Non-admin tried to edit a published form')
         })
 
-    parent_attribute = extract_field(schema, request.POST, 'parent')
-    after_attribute = extract_field(schema, request.POST, 'after')
     move_field(attribute.schema, attribute,
-               into=parent_attribute,
-               after=after_attribute)
+               into=extract_field(schema, request.json_body, 'parent'),
+               after=extract_field(schema, request.json_body, 'after'))
+
     return HTTPOk()
 
 
@@ -92,14 +93,9 @@ def move_json(request):
 def add_json(request):
     """
     Add form for fields.
-
-    Optionally takes a request variable ``order`` to preset where the
-    field will be added (otherwise at the end of the form)
     """
 
     schema = get_schema(**request.matchdict)
-
-    raise HTTPBadRequest()
 
     if schema.publish_date and not request.has_permission('form_amend'):
         raise HTTPForbidden(json={
@@ -107,17 +103,21 @@ def add_json(request):
             'debug_message': _(u'Non-admin tried to edit a published form')
         })
 
-    add_form = FieldForm(request.POST)
+    add_form = FieldForm(data=request.json_body,
+                         meta={'schema': schema})
 
     if not add_form.validate():
         raise HTTPBadRequest(json={
             'validation_errors': add_form.errors
         })
 
-    schema[add_form.name.data] = attribute = apply_changes(models.Attribute(),
-                                                           add_form.data)
-
-    move_field(schema.attributes, attribute, add_form.order.data)
+    attribute = models.Attribute()
+    attribute.apply(add_form.data)
+    schema.attributes[attribute.name] = attribute
+    raise Exception
+    move_field(attribute.schema, attribute,
+               into=extract_field(schema, request.json_body, 'parent'),
+               after=extract_field(schema, request.json_body, 'after'))
 
     return get_field_data(request, attribute)
 
@@ -136,23 +136,37 @@ def edit_json(request):
     attribute = get_attribute(**request.matchdict)
     schema = attribute.schema
 
-    raise HTTPBadRequest()
-
     if schema.publish_date and not request.has_permission('form_amend'):
         raise HTTPForbidden(json={
             'user_message': 'Cannot delete a field in a published form',
         })
 
-    edit_form = FieldForm(request.POST, attribute)
+    edit_form = FieldForm(
+        data=request.json_body,
+        meta={'schema': schema, 'attribute': attribute})
 
     if not edit_form.validate():
         raise HTTPBadRequest(json={
             'validation_errors': edit_form.errors
         })
 
-    apply_changes(attribute, edit_form.data)
+    attribute.apply(edit_form.data)
 
     return get_field_data(request, attribute)
+
+
+@view_config(
+    route_name='field_list',
+    xhr=True,
+    check_csrf=True,
+    request_method='POST',
+    request_param='validate',
+    permission='view')
+def validate_add_json(request):
+    schema = get_schema(**request.matchdict)
+    return validate_field(FieldForm(request.POST,
+                                    meta={'schema': schema}),
+                          request.params.get('validate'))
 
 
 @view_config(
@@ -161,19 +175,32 @@ def edit_json(request):
     check_csrf=True,
     request_method='POST',
     request_param='validate',
-    renderer='json',
     permission='view')
-def validate_json(request):
-    return validate_field(FieldForm(request.POST),
-                          request.POST.get('validate'))
+def validate_edit_json(request):
+    attribute = get_attribute(**request.matchdict)
+    return validate_field(FieldForm(request.POST,
+                                    meta={'schema': attribute.schema,
+                                          'attribute': attribute}),
+                          request.params.get('validate'))
 
 
 def validate_field(form, prop):
     """
-    Helper method to validate a single field in a WTForm instance
+    Helper method to return a validation status
+
+    Note that BadRequest is not returned because the requested data
+    in this context is the status string (not the status of the operation)
+
+    Parameters:
+    form -- the WTForm instance
+    prop -- the properety in the form to validate
+
+    Returns an OK response containing the validation status.
     """
-    if not prop or prop not in form or not form[prop].validate(None):
-        raise HTTPBadRequest
+    if not prop or prop not in form:
+        return HTTPOk(json=_(u'Server Error: No field specified'))
+    elif not form[prop].validate(form):
+        return HTTPOk(json=form[prop].errors[0])
     return HTTPOk()
 
 
@@ -231,7 +258,7 @@ def get_fields_data(request, schema):
             form=schema.name,
             version=str(schema.publish_date or schema.id)),
         'fields': fields(a
-                         for a in itervalues(schema.attributes)
+                         for a in six.itervalues(schema.attributes)
                          if a.parent_attribute is None)
     }
 
@@ -250,13 +277,13 @@ def get_field_data(request, attribute):
         field=attribute.name)
     children = data.pop('attributes', None)
     if children:
-        children = sorted(itervalues(children), key=lambda i: i['order'])
+        children = sorted(six.itervalues(children), key=lambda i: i['order'])
         data['fields'] = \
             [get_field_data(request, schema.attributes[f['name']])
              for f in children]
     choices = data.pop('choices', None)
     if choices:
-        choices = sorted(itervalues(choices), key=lambda i: i['order'])
+        choices = sorted(six.itervalues(choices), key=lambda i: i['order'])
         data['choices'] = choices
     return data
 
@@ -265,7 +292,7 @@ def extract_field(schema, data, key):
     """
     Helper method to extract an attribute from request data
     """
-    name = data.get(key, '').strip()
+    name = (data.get(key) or '').strip()
     if not name:
         return None
     if name not in schema.attributes:
@@ -278,39 +305,6 @@ def extract_field(schema, data, key):
                 mapping={name: name}),
         })
     return schema.attributes[name]
-
-
-def apply_changes(attribute, data):
-    for prop in ('name', 'title', 'description', 'type',
-                 'is_collection', 'is_required', 'is_private'):
-        setattr(attribute, prop, data[prop])
-
-    # from add
-    #if add_form.type.data == 'choice':
-        #for i, choice_form in enumerate(add_form.choices.data):
-            #attribute[choice_form.name.data] = models.Choice(
-                #name=choice_form.name.data,
-                #title=choice_form.title.data,
-                #order=i)
-
-    # from edit
-    #new_codes = dict([(c.name, c.title) for c in edit_form.choices.data])
-
-    #for code in iterkeys(attribute.choices):
-        #if code not in new_codes:
-            #del attribute.choices[code]
-
-    #for i, choice_form in enumerate(edit_form.choices.data):
-        #if choice_form.name.data in attribute.choices:
-            #choice = attribute.choices[choice_form.name.data]
-        #else:
-            #choice = models.Choice(attribute=attribute)
-            #Session.add(choice)
-        #choice.name = choice_form.name.data
-        #choice.title = choice_form.title.data
-        #choice.order = i
-
-    return attribute
 
 
 def move_field(schema, attribute, into=None, after=None):
@@ -337,7 +331,8 @@ def move_field(schema, attribute, into=None, after=None):
             'user_message': _(u'Moving to invalid section')
         })
 
-    attributes = sorted(itervalues(schema.attributes), key=lambda a: a.order)
+    attributes = sorted(six.itervalues(schema.attributes),
+                        key=lambda a: a.order)
     attributes.remove(attribute)
 
     if after is None:
@@ -366,6 +361,23 @@ class ChoiceForm(wtforms.Form):
         validators=[wtforms.validators.required()])
 
 
+def validate_attribute_name(form, field):
+    """
+    Verifies that an attribute name is unique within a schema
+    """
+    schema = getattr(form.meta, 'schema')
+    attribute = getattr(form.meta, 'attribute', None)
+    names = set(schema.attributes.keys())
+
+    # In edit-mode (admin only), avoid false positive
+    if attribute:
+        names.discard(attribute.name)
+
+    if field.data in names:
+        raise wtforms.ValidationError(
+            _(u'Variable name already exists in this form'))
+
+
 class FieldForm(wtforms.Form):
 
     name = wtforms.StringField(
@@ -377,7 +389,8 @@ class FieldForm(wtforms.Form):
                 message=_(u'Not a valid variable name')),
             wtforms.validators.NoneOf(
                 RESERVED_WORDS,
-                message=_(u'Can\'t use reserved programming word'))])
+                message=_(u'Can\'t use reserved programming word')),
+            validate_attribute_name])
 
     title = wtforms.StringField(
         validators=[
@@ -410,21 +423,3 @@ class FieldForm(wtforms.Form):
 
     # choice
     choices = wtforms.FieldList(wtforms.FormField(ChoiceForm))
-
-    def validate_name(form, field):
-        """
-        Verifies that an attribute name is unique within a schema
-        """
-
-        query = (
-            Session.query(models.Attribute)
-            .filter(models.Attribute.name.ilike(field.data))
-            .filter(models.Attribute.schema_id == form.schema_id.data))
-
-        # If editing (admin only), avoid false positive
-        if form.id.data:
-            query = query.filter(models.Attribute.id != form.id.data)
-
-        if Session.query(query.exists()).one():
-            raise wtforms.ValidationError(
-                _(u'Variable name already exists in this form'))

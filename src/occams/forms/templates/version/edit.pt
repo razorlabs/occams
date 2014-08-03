@@ -94,13 +94,13 @@
           ">
         <div class="of-field">
           <!-- ko ifnot: $root.isSelectedField($data) -->
-            <div data-bind="template: {name: 'field-view-template', data: $data}"></div>
+            <div data-bind="template: 'field-view-template'"></div>
           <!-- /ko -->
           <!-- ko if: $root.isSelectedField($data) && $root.showEditView()-->
-            <div data-bind="template: {name: 'field-edit-template', data: $data}"></div>
+            <div data-bind="template: 'field-edit-template'"></div>
           <!-- /ko -->
-          <!-- ko if: $root.isSelectedField($data) && $root.showDeleteView -->
-            <div data-bind="template: {name: 'field-delete-template', data: $data}"></div>
+          <!-- ko if: $root.isSelectedField($data) && $root.showDeleteView() -->
+            <div data-bind="template: 'field-delete-template'"></div>
           <!-- /ko -->
         </div>
       </div>
@@ -183,9 +183,10 @@
 
 
     <script id="field-edit-template" type="text/html">
-      <div class="of-edit" tal:define="render_field import:occams.forms.renderers.render_field">
+      <div class="of-edit" data-bind="with: $root.selectedFieldForEditing()"
+          tal:define="render_field import:occams.forms.renderers.render_field">
         <form tal:define="form field_form" class="form-horizontal"
-            data-bind="validation: {}">
+            data-bind="validate: makeValidateOptions()">
 
           <tal:field define="name 'type'; field form[name];">
             <div class="form-group">
@@ -223,7 +224,6 @@
                              tal:replace="structure: render_field(field,
                                                                   class_='form-control',
                                                                   data_bind=ko)" />
-                      <p class="help-block" data-bind="validationMessage: ${name}"></p>
                     <!-- /ko -->
                     <!-- ko ifnot: isNew -->
                       <p class="form-control-static"><code data-bind="text: ${name}"></code></p>
@@ -341,33 +341,49 @@
             <div class="col-sm-10">
               <div data-bind="sortable: choices">
                 <div class="js-draggable row">
-                  <div class="col-sm-3">
+                  <!--! Generate the manually because it's difficult to reach
+                        subvalues -->
+                  <div class="col-sm-3 js-validation-group">
                     <input type="text"
                         class="form-control"
+                        required
                         pattern="-?[0-9]+"
+                        data-msg-pattern="Must be digits"
+                        data-msg-required="Required"
                         maxlength="8"
                         placeholder="Code"
-                        data-bind="value: name" />
+                        data-bind="value: name, uniqueName: true" />
                   </div>
-                  <div class="col-sm-7">
+                  <div class="col-sm-7 js-validation-group">
                     <input type="text"
                         class="form-control"
                         placeholder="Label"
-                        data-bind="value: title" />
+                        required
+                        data-msg-required="Required"
+                        data-bind="value: title, uniqueName: true" />
                   </div>
                   <div class="col-sm-2">
+                    <!--! tabindex: Do not tab to this element -->
                     <button class="btn btn-link"
+                        tabindex="-1"
                         data-bind="click: $parent.doDeleteChoice">
                       <span class="glyphicon glyphicon-trash"></span>
                     </button>
                   </div>
                 </div>
               </div>
+              <!--! tabindex: Do not tab to this element -->
               <button class="btn btn-link"
-                  data-bind="click: $parent.doAddChoice">
+                  tabindex="-1"
+                  data-bind="click: doAddChoice">
                 <span class="glyphicon glyphicon-plus"></span>
                 <span i18n:translate="">Add another</span>
               </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <div class="col-sm-offset-2 col-sm-10">
               <div class="checkbox" data-bind="visible: isType('choice')">
                 <label>
                   <input type="checkbox" data-bind="checked: is_shuffled, enable: isType('choice')" />

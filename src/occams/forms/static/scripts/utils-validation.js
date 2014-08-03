@@ -3,18 +3,21 @@
  */
 +function($){
 
-  $.fn.validation = function(options){
+  function Validation(element, options){
+    this.options = options;
+    this.$element = $(element);
 
-    var settings = $.extend({
-        container: '.form-group',
-        errorsContainer: '.form-errors',
-        csrfCookieName: 'csrf_token',
-        error: null,
-        errorClass: 'has-error',
-        remoteKey: 'validation_errors',
-        remoteValidatingClass: 'js-validating',
-      }, options )
-      ;
+      $('input,textarea,select', this)
+        .on('focusout', function(event){
+          var chain =  checkRequired(this)
+                    && checkMin(this)
+                    && checkMax(this)
+                    && checkMinLength(this)
+                    && checkMaxLength(this)
+                    && checkPattern(this)
+                    && checkRemote(this);
+          return this;
+        });
 
     function updateMessages(element, messages){
       console.log(messages);
@@ -115,19 +118,43 @@
       }
     }
 
+
+  }
+
+  Validation.DEFAULTS = {
+    container: '.form-group',
+    errorsContainer: '.form-errors',
+    csrfCookieName: 'csrf_token',
+    error: null,
+    errorClass: 'has-error',
+    remoteKey: 'validation_errors',
+    remoteValidatingClass: 'js-validating',
+    validate: false                           // Validate on start
+  };
+
+  Validation.prototype.validate = function(){
+    var $this = $(this);
+    $this.$element.find('input,select
+  };
+
+  function Plugin(arg){
     return this.each(function() {
-      $('input,textarea,select', this)
-        .on('focusout', function(event){
-          var chain =  checkRequired(this)
-                    && checkMin(this)
-                    && checkMax(this)
-                    && checkMinLength(this)
-                    && checkMaxLength(this)
-                    && checkPattern(this)
-                    && checkRemote(this);
-          return this;
-        });
+      var $this = $(this),
+        , data = $this.data('validation')
+        , options =  $.extend({}, Validation.DEFAULTS, $this.data(), typeof arg == 'object' && args);
+
+        if (!data) {
+          $this.data('validation', (data = new Validation(this, options)));
+        }
+
+        if (typeof arg == 'string'){
+          data[arg]();
+        } else if (options.validate) {
+          data.validate();
+        }
     });
   }
+
+  $.fn.validation = Plugin;
 
 }(jQuery);

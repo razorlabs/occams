@@ -41,7 +41,7 @@ function VersionEditViewModel(){
    * Handler when a new field is added to form
    */
   self.startAdd = function(type, event, ui){
-    var field = new Field({type: type.name()});
+    var field = new Field({isNew: true, __src__: self.listingSrc, type: type.name()});
     self.startEdit(field);
     return field;
   };
@@ -49,7 +49,7 @@ function VersionEditViewModel(){
   self.startEdit = function(field){
     self.clearSelected();
     self.selectedField(field);
-    self.selectedFieldForEditing(new Field(ko.toJS(field)));
+    self.selectedFieldForEditing(new Field(field.toJS()));
     self.showEditView(true);
   };
 
@@ -70,20 +70,24 @@ function VersionEditViewModel(){
   };
 
   self.doMoveField = function(arg, event, ui){
+    var parent = ko.dataFor(event.target);
+    var data = {
+      move: 1,
+      parent: parent instanceof VersionEditViewModel ? null : parent.name(),
+      after: arg.targetIndex > 0 ? arg.targetParent()[arg.targetIndex].name() : null
+    };
+
     if (arg.item.isNew()){
+        console.log('moved new', arg.item);
+        arg.item.__move__ = data;
         return;
     }
 
-    var model = ko.dataFor(event.target);
-
     $.ajax({
-        url: arg.item.__src__(),
+        url: arg.item.__src__() + '?move',
         method: 'PUT',
-        data: {
-          move: 1,
-          parent: model instanceof VersionEditViewModel ? null : model.name(),
-          after: arg.targetIndex > 0 ? arg.targetParent()[arg.targetIndex].name() : null
-        },
+        data: ko.toJSON(data),
+        contentType: 'application/json; charset=utf-8',
         headers: {'X-CSRF-Token': $.cookie('csrf_token')},
         error: function(jqXHR, textStatus, errorThrown){
           console.log('Failed to sort, resetting item');
@@ -109,16 +113,29 @@ function VersionEditViewModel(){
   /**
    * Send PUT/POST delete request for the field
    */
-  self.doEditField = function(){
-    var selected = self.selectedField(),
-        edited = self.selectedFieldForEditing();
+  self.doEditField = function(data, event){
+    var $form = $(event.target).closest('form');
 
-    return;
+    // Make sure it's valid before sending data to server
+    if (!$form.validate().form()){
+      return;
+    }
+
+    var edits = self.selectedFieldForEditing()
+      , data = edits.toJS();
+
+    if (edits.isNew()){
+      $.extend(data, edits.__move__);
+      console.log(data);
+    }
+
+    self.selectedFieldForEditing().isSaving(true);
 
     $.ajax({
-      url: selected.isNew() ? self.listingSrc : selected.__src__(),
-      method: selected.isNew() ? 'POST' : 'PUT',
-      data: ko.toJSON(edited),
+      url: edits.__src__(),
+      method: edits.isNew() ? 'POST' : 'PUT',
+      contentType: 'application/json; charset=utf-8',
+      data: ko.toJSON(data),
       headers: {'X-CSRF-Token': $.cookie('csrf_token')},
       error: function(jqXHR, textStatus, errorThrown){
         var data = jqXHR.responseJSON;
@@ -130,11 +147,13 @@ function VersionEditViewModel(){
         console.log(data);
       },
       success: function(data, textStatus, jqXHR){
-        var selected = this.selectedField(),
-            edited = ko.toJS(this.selectedFieldForEditing()); //clean copy of edited
-        //apply updates from the edited item to the selected item
-        selected.update(edited);
+        self.selectedField().update(data);
         self.clearSelected();
+      },
+      complete: function(){
+        if (self.selectedFieldForEditing()){
+          self.selectedFieldForEditing().isSaving(false);
+        }
       }
     });
   };
@@ -174,8 +193,8 @@ function Field(data){
 
   self.isSaving = ko.observable(false);
 
+  self.isNew = ko.observable();
   self.__src__ = ko.observable();
-
   self.name = ko.observable();
   self.title = ko.observable();
   self.description = ko.observable();
@@ -201,6 +220,41 @@ function Field(data){
     return false;
   };
 
+  self.makeValidateOptions = function(){
+    return {
+      errorClass: 'has-error',
+      validClass: 'has-success',
+      wrapper: 'p',
+      errorPlacement: function(label, element){
+        label.addClass('help-block').insertAfter(element);
+      },
+      onfocusout: function(element, event){
+        $(element).valid();
+      },
+      highlight: function(element, errorClass, validClass){
+        $(element)
+          .closest('.js-validation-group,.form-group')
+          .addClass(errorClass)
+          .removeClass(validClass);
+      },
+      unhighlight: function(element, errorClass, validClass){
+        $(element)
+          .closest('.js-validation-group,.form-group')
+          .addClass(validClass)
+          .removeClass(errorClass);
+      },
+      rules: {
+        name: {
+          remote: {
+             url: self.__src__() + '?' + $.param({validate: 'name'}),
+             type: 'POST',
+             headers: {'X-CSRF-Token': $.cookie('csrf_token')},
+          }
+        }
+      }
+    }
+  };
+
   self.isLimitAllowed = ko.computed(function(){
     return self.isType('string', 'number')
       || (self.isType('choice') && self.is_collection());
@@ -212,10 +266,6 @@ function Field(data){
 
   self.isSection = ko.computed(function(){
     return self.type() == 'section';
-  });
-
-  self.isNew = ko.computed(function(){
-    return !self.__src__();
   });
 
   self.doAddChoice = function(){
@@ -240,6 +290,16 @@ function Field(data){
       }
     }, self);
   };
+
+  self.toJS = function(){
+    return ko.mapping.toJS(self, {
+      'include': ['__src__', 'isNew',
+                  'name', 'title', 'description', 'type',
+                  'is_required', 'is_collection', 'is_private', 'is_shuffled',
+                  'is_readonly', 'is_system', 'pattern', 'decimal_places',
+                  'value_min', 'value_max', 'choices'],
+    });
+  }
 
   self.update(data);
 }
