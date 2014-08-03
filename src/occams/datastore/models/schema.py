@@ -6,7 +6,7 @@ from copy import copy, deepcopy
 from datetime import datetime
 import re
 
-from six import iteritems, itervalues
+from six import iterkeys, iteritems, itervalues
 from sqlalchemy import(
     cast,
     sql,
@@ -470,6 +470,7 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
             'is_private': self.is_private,
             'is_system': self.is_system,
             'is_readonly': self.is_readonly,
+            'is_shuffled': self.is_shuffled,
             'value_min': self.value_min,
             'value_max': self.value_max,
             'pattern': self.pattern,
@@ -490,6 +491,48 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
                      for c in itervalues(self.choices)])
 
         return data
+
+    def apply(self, data):
+        self.name = data['name']
+        self.title = data['title']
+        self.description = data['description']
+        self.type = data['type']
+
+        if self.type != 'section':
+            self.is_required = data['is_required']
+            self.is_private = data['is_private']
+            self.is_readonly = data['is_readonly']
+            self.is_system = data['is_system']
+
+        if self.type in ('string', 'number', 'choice'):
+            self.value_min = data['value_min']
+            self.value_max = data['value_max']
+
+        if self.type == 'number':
+            self.decimal_places = data['decimal_places']
+
+        if self.type == 'string':
+            self.pattern = data['pattern']
+
+        if self.type == 'choice':
+            self.is_collection = data['is_collection']
+            self.is_shuffled = data['is_shuffled']
+
+            new_codes = set(c['name'] for c in data['choices'])
+            old_codes = list(iterkeys(self.choices))
+
+            for code in old_codes:
+                if code not in new_codes:
+                    del self.choices[code]
+
+            for i, choice_data in enumerate(data['choices']):
+                name = choice_data['name']
+                if name in self.choices:
+                    choice = self.choices[name]
+                else:
+                    self.choices[name] = choice = Choice(name=name)
+                choice.title = choice_data['title']
+                choice.order = i
 
 
 # __table_args__ is not accepting this constraint.
