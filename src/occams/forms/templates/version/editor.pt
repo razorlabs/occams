@@ -347,7 +347,7 @@
                     <input type="text"
                         class="form-control"
                         required
-                        pattern="-?[0-9]+"
+                        pattern="^-?\d+$"
                         data-msg-pattern="Must be digits"
                         data-msg-required="Required"
                         maxlength="8"
