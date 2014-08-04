@@ -41,7 +41,7 @@ function VersionEditViewModel(){
    * Handler when a new field is added to form
    */
   self.startAdd = function(type, event, ui){
-    var field = new Field({isNew: true, __src__: self.listingSrc, type: type.name()});
+    var field = new Field({__src__: self.listingSrc, type: type.name()});
     self.startEdit(field);
     return field;
   };
@@ -78,7 +78,6 @@ function VersionEditViewModel(){
     };
 
     if (arg.item.isNew()){
-        console.log('moved new', arg.item);
         arg.item.__move__ = data;
         return;
     }
@@ -126,7 +125,6 @@ function VersionEditViewModel(){
 
     if (edits.isNew()){
       $.extend(data, edits.__move__);
-      console.log(data);
     }
 
     self.selectedFieldForEditing().isSaving(true);

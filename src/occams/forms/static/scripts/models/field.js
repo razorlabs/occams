@@ -22,7 +22,7 @@ function Field(data){
   self.value_max = ko.observable();
   self.choices = ko.observableArray([]);
 
-  self.isSaving = ko.observable(false):
+  self.isSaving = ko.observable(false);
 
   self.isNew = ko.computed(function(){
     return !self.id();
