@@ -184,134 +184,6 @@ function VersionEditViewModel(){
   });
 }
 
-
-/**
- * Field model
- */
-function Field(data){
-  var self = this;
-
-  self.isSaving = ko.observable(false);
-
-  self.isNew = ko.observable();
-  self.__src__ = ko.observable();
-  self.name = ko.observable();
-  self.title = ko.observable();
-  self.description = ko.observable();
-  self.type = ko.observable();
-  self.is_required = ko.observable();
-  self.is_collection = ko.observable();
-  self.is_private = ko.observable();
-  self.is_shuffled = ko.observable();
-  self.is_readonly = ko.observable();
-  self.is_system = ko.observable();
-  self.pattern = ko.observable();
-  self.decimal_places = ko.observable();
-  self.value_min = ko.observable();
-  self.value_max = ko.observable();
-  self.choices = ko.observableArray([]);
-
-  self.isType = function(){
-    for (var i = 0; i < arguments.length; i++){
-      if (arguments[i] == self.type()){
-        return true;
-      }
-    }
-    return false;
-  };
-
-  self.makeValidateOptions = function(){
-    return {
-      errorClass: 'has-error',
-      validClass: 'has-success',
-      wrapper: 'p',
-      errorPlacement: function(label, element){
-        label.addClass('help-block').insertAfter(element);
-      },
-      onfocusout: function(element, event){
-        $(element).valid();
-      },
-      highlight: function(element, errorClass, validClass){
-        $(element)
-          .closest('.js-validation-group,.form-group')
-          .addClass(errorClass)
-          .removeClass(validClass);
-      },
-      unhighlight: function(element, errorClass, validClass){
-        $(element)
-          .closest('.js-validation-group,.form-group')
-          .addClass(validClass)
-          .removeClass(errorClass);
-      },
-      rules: {
-        name: {
-          remote: {
-             url: self.__src__() + '?' + $.param({validate: 'name'}),
-             type: 'POST',
-             headers: {'X-CSRF-Token': $.cookie('csrf_token')},
-          }
-        }
-      }
-    }
-  };
-
-  self.isLimitAllowed = ko.computed(function(){
-    return self.isType('string', 'number')
-      || (self.isType('choice') && self.is_collection());
-  });
-
-  self.choiceInputType = ko.computed(function(){
-    return self.is_collection() ? 'checkbox' : 'radio';
-  });
-
-  self.isSection = ko.computed(function(){
-    return self.type() == 'section';
-  });
-
-  self.doAddChoice = function(){
-    self.choices.push(new Choice({}));
-  };
-
-  self.doDeleteChoice = function(data, event){
-      self.choices.remove(data);
-  };
-
-  self.update = function(data) {
-    ko.mapping.fromJS(data, {
-      'fields': {
-        create: function(options) {
-          return new Field(options.data);
-        }
-      },
-      'choices': {
-        create: function(options) {
-          return new Choice(options.data);
-        }
-      }
-    }, self);
-  };
-
-  self.toJS = function(){
-    return ko.mapping.toJS(self, {
-      'include': ['__src__', 'isNew',
-                  'name', 'title', 'description', 'type',
-                  'is_required', 'is_collection', 'is_private', 'is_shuffled',
-                  'is_readonly', 'is_system', 'pattern', 'decimal_places',
-                  'value_min', 'value_max', 'choices'],
-    });
-  }
-
-  self.update(data);
-}
-
-
-function Choice(data){
-  var self = this;
-  self.name = ko.observable(data.name);
-  self.title = ko.observable(data.title);
-}
-
-
 /**
  * Draggable helper for cloning type selections properly
  */
@@ -346,7 +218,7 @@ var newTypeDragStop = function(event, ui){
 
 $(document).ready(function(){
 
-  if ($('#version_edit').length <= 0){
+  if ($('#version_editor').length <= 0){
     return;
   }
 
@@ -378,4 +250,89 @@ $(document).ready(function(){
         return $(this).css('top', MARGIN_TOP).width($(this).width());
       });
     }();
+});
+
+/**
+ * Form field manager view model
+ */
+function VersionViewModel(){
+  var self = this;
+
+  self.isReady = ko.observable(true);        // content loaded flag
+
+  self.isDrafting = ko.observable(false);
+  self.isDeleting = ko.observable(false);
+
+  self.showDraftView = ko.observable(false);
+  self.showDeleteView = ko.observable(false);
+
+  // We don't load anything so we need to inspect the
+  // contents for the source targets
+  self.deleteSrc = $('#delete-button').data('target');
+  self.draftSrc = $('#delete-button').data('target');
+
+  self.clearSelected = function(){
+    self.showDeleteView(false);
+    self.showDraftView(false);
+  };
+
+  self.startDraftView = function(){
+    self.clearSelected();
+    self.showDraftView(true);
+  };
+
+  self.startDeleteView = function() {
+    self.clearSelected();
+    self.showDeleteView(true);
+  };
+
+  /**
+   * Sends a draft request for the current version of the form.
+   */
+  self.doDraftForm = function(form){
+    self.isDrafting(true);
+    $.ajax({
+      url: self.draftSrc,
+      method: 'POST',
+      data: {draft: 1},
+      headers: {'X-CSRF-Token': $.cookie('csrf_token')},
+      error: function(jqXHR, textStatus, errorThrown){
+        console.log('An error occurred, need to show something...');
+      },
+      success: function(data, textStatus, jqXHR){
+        window.location = data.__next__;
+      }
+    });
+  };
+
+  /**
+   * Sends a delete request for the current version of the form.
+   */
+  self.doDeleteForm = function(form){
+    self.isDeleting(true);
+    $.ajax({
+      url: self.deleteSrc,
+      method: 'DELETE',
+      headers: {'X-CSRF-Token': $.cookie('csrf_token')},
+      error: function(jqXHR, textStatus, errorThrown){
+        console.log('An error occurred, need to show something...');
+      },
+      success: function(data, textStatus, jqXHR){
+        window.location = data.__next__;
+      }
+    });
+  };
+
+}
+
+$(document).ready(function(){
+  if ($('#version_preview,#version_view').length < 1){
+    return;
+  }
+
+  ko.applyBindings(new VersionViewModel());
+
+  $('#delete-modal').on('show.bs.modal', function(event){
+    $(this).find('form')[0].reset();
+  });
 });

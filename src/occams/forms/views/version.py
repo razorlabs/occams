@@ -8,9 +8,9 @@ from pyramid.response import FileIter
 from pyramid.view import view_config
 from sqlalchemy import orm, sql
 import wtforms
-import wtforms.widgets.html5
 
 from .. import _, models, Session
+from ..renderers import schema2wtf
 
 
 @view_config(
@@ -52,9 +52,9 @@ def preview(request):
 
 
 @view_config(
-    route_name='version_edit',
+    route_name='version_editor',
     permission='form_edit',
-    renderer='../templates/version/edit.pt')
+    renderer='../templates/version/editor.pt')
 def edit(request):
     from .field import FieldForm
     schema = get_schema(**request.matchdict)
@@ -65,12 +65,12 @@ def edit(request):
 
 
 @view_config(
-    route_name='version_edit',
+    route_name='version_editor',
     xhr=True,
     permission='form_edit',
     renderer='json')
 @view_config(
-    route_name='version_edit',
+    route_name='version_editor',
     request_param='alt=json',
     permission='form_edit',
     renderer='json')
@@ -220,77 +220,3 @@ class VersionEditForm(wtforms.Form):
             raise wtforms.validators.ValidationError(_(
                 u'There is already a version for this publish date. '
                 u'Please select a different publish date'))
-
-
-def schema2wtf(schema):
-
-    def make_field(attribute):
-        kw = {
-            'label': attribute.title,
-            'description': attribute.description,
-            'validators': []}
-
-        if attribute.type == 'section':
-            S = make_form(attribute.attributes)
-            return wtforms.FormField(
-                S, label=attribute.title, description=attribute.description)
-
-        elif attribute.type == 'number':
-            if attribute.decimal_places == 0:
-                field_class = wtforms.IntegerField
-                step = 1
-            elif attribute.decimal_places is None:
-                step = 'any'
-                field_class = wtforms.DecimalField
-            else:
-                field_class = wtforms.DecimalField
-                step = 1/float(pow(10, abs(attribute.decimal_places)))
-            kw['widget'] = wtforms.widgets.html5.NumberInput(step)
-
-        elif attribute.type == 'string':
-            field_class = wtforms.StringField
-
-        elif attribute.type == 'text':
-            field_class = wtforms.TextAreaField
-
-        elif attribute.type == 'date':
-            field_class = wtforms.DateField
-
-        elif attribute.type == 'datetime':
-            field_class = wtforms.DateTimeField
-
-        elif attribute.type == 'choice':
-            choices = list(attribute.choices.values())
-            if attribute.is_shuffled:
-                choices = random.shuffle(choices)
-            else:
-                choices = sorted(choices, key=lambda c: c.order)
-            kw['choices'] = [(c.name, c.title) for c in choices]
-            if attribute.is_collection:
-                field_class = wtforms.SelectMultipleField
-                kw['widget'] = wtforms.widgets.ListWidget(prefix_label=False)
-                kw['option_widget'] = wtforms.widgets.CheckboxInput()
-            else:
-                field_class = wtforms.SelectField
-                kw['widget'] = wtforms.widgets.ListWidget(prefix_label=False)
-                kw['option_widget'] = wtforms.widgets.RadioInput()
-
-        elif attribute.type == 'blob':
-            field_class = wtforms.FileField
-
-        else:
-            raise Exception(u'Unknown type: %s' % attribute.type)
-
-        if attribute.is_required:
-            kw['validators'].append(wtforms.validators.required())
-        else:
-            kw['validators'].append(wtforms.validators.optional())
-
-        return field_class(**kw)
-
-    def make_form(attributes):
-        attributes = sorted(six.itervalues(attributes), key=lambda a: a.order)
-        fields = dict([(a.name, make_field(a)) for a in attributes])
-        return type('F', (wtforms.Form,), fields)
-
-    return make_form(schema.attributes)

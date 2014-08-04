@@ -1,4 +1,4 @@
- // Copied the following form additional methods since all I need is pattern.
+// Copied the following form additional methods since all I need is pattern.
 +function($){
  /**
   * Return true if the field value matches the given format RegExp

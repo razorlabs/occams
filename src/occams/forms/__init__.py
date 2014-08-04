@@ -77,6 +77,7 @@ def assets(config):
     """
     config.include('pyramid_webassets')
     config.add_webasset('default-js', Bundle(
+        # Dependency javascript libraries must be loaded in a specific order
         Bundle('libs/jquery.min.js'),
         Bundle('libs/jquery-ui.min.js'),
         Bundle('libs/jquery.cookie.js'),
@@ -88,26 +89,15 @@ def assets(config):
         Bundle('libs/select2.min.js'),
         Bundle('libs/moment.min.js'),
         Bundle('libs/bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js'),
-        Bundle(
-            'scripts/binding-fade-visible.js',
-            'scripts/binding-modal.js',
-            'scripts/binding-scrolltoif.js',
-            'scripts/binding-select2.js',
-            'scripts/binding-validateable.js',
-            'scripts/validate-pattern.js',
-            #'scripts/utils-validation.js',
-            'scripts/form-list.js',
-            'scripts/version-edit.js',
-            'scripts/version.js',
-            'scripts/global.js',
-            filters='jsmin'),
+        # App-specific scripts can be loaded in any order
+        Bundle('scripts/**/*.js', depends='scripts/**/*.js', filters='jsmin'),
         output='gen/default.%(version)s.min.js'))
 
     config.add_webasset('default-css', Bundle(
         Bundle(
             'styles/main.less',
             filters='less,cssmin',
-            depends='styles/*.less',
+            depends='styles/**/*.less',
             output='gen/main.%(version)s.min.css'),
         Bundle('libs/select2.css', filters=['cssmin', 'cssrewrite']),
         Bundle('libs/select2-bootstrap.css', filters='cssmin'),
@@ -127,12 +117,11 @@ def routes(config):
     config.add_route('logout',             '/logout')
 
     config.add_route('form_list',          '/')
-    config.add_route('form_add',           '/forms/add')
 
     config.add_route('widget_list',        '/widgets')
 
     config.add_route('version_view',       '/forms/{form}/versions/{version}')
-    config.add_route('version_edit',       '/forms/{form}/versions/{version}/edit')
+    config.add_route('version_editor',     '/forms/{form}/versions/{version}/editor')
     config.add_route('version_json',       '/forms/{form}/versions/{version}/json')
     config.add_route('version_pdf',        '/forms/{form}/versions/{version}/pdf')
     config.add_route('version_preview',    '/forms/{form}/versions/{version}/preview')
