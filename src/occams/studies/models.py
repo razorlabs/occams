@@ -13,6 +13,7 @@ import uuid
 import six
 from six import u
 from sqlalchemy import (
+    inspect,
     engine_from_config,
     Table, Column,
     ForeignKey, ForeignKeyConstraint, UniqueConstraint, Index,
@@ -89,33 +90,6 @@ class Study(Base, Referenceable, Describeable, Modifiable, Auditable):
         doc='Flag for randomized studies to indicate that '
             'they are also blinded')
 
-    # TODO: add is_randomized
-
-    @property
-    def duration(self):
-        Session = object_session(self)
-        query = (
-            Session.query(Cycle)
-            .filter((Cycle.study == self))
-            .order_by(
-                # Nulls last (vendor-agnostic)
-                (Cycle.week is not None).desc(),
-                Cycle.week.desc())
-            .limit(1))
-        try:
-            cycle = query.one()
-        except NoResultFound:
-            # There are no results, so this study has no length
-            duration = timedelta()
-        else:
-            # No exception thrown, process result
-            if cycle.week >= 0:
-                duration = timedelta(cycle.week * 7)
-            else:
-                # No valid week data, give a lot of time
-                duration = timedelta.max
-        return duration
-
     # cycles is backref'ed in the Cycle class
 
     # enrollments is backrefed in the Enrollment class
@@ -138,6 +112,29 @@ class Study(Base, Referenceable, Describeable, Modifiable, Auditable):
         single_parent=True,
         cascade='all,delete-orphan',
         primaryjoin=(log_category_id == Category.id))
+
+    @property
+    def __src__(self):
+        session = inspect(self).session
+        if session and 'request' in session.info:
+            return session.info['request'].route_path(
+                'study', study=self.name)
+
+    def serialize(self, deep=False):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'title': self.title,
+            'description': self.description,
+            'short_title': self.short_title,
+            'code': self.code,
+            'consent_date': self.consent_date.isoformat(),
+            'is_blinded': self.is_blinded,
+            'modify_date': self.modify_date.isoformat(),
+            'modify_user': self.modify_user.key,
+            'create_date': self.create_date.isoformat(),
+            'create_user': self.create_user.key
+        }
 
     @declared_attr
     def __table_args__(cls):
@@ -251,11 +248,6 @@ class Patient(Base, Referenceable, Modifiable, HasEntities, Auditable):
 
     __tablename__ = 'patient'
 
-    # Read-only OUR# alias that will be useful for traversal
-    name = hybrid_property(lambda self: self.our)
-
-    title = hybrid_property(lambda self: self.our)
-
     site_id = Column(Integer, nullable=False)
 
     site = relationship(
@@ -266,23 +258,12 @@ class Patient(Base, Referenceable, Modifiable, HasEntities, Auditable):
             lazy=u'dynamic'),
         doc='The facility that the patient is visiting')
 
-    # This is the old way and should be renamed to PID to make it
-    # applicable to other organizations.
-    # In the future we should have PID generators
-    our = Column(
+    pid = Column(
         Unicode,
         nullable=False,
         doc='Patient identification number.')
 
-    pid = hybrid_property(
-        lambda self: self.our,
-        lambda self, value: setattr(self, 'our', value))
-
-    # A secondary reference, to help people verify they are viewing the
-    # correct patient
     initials = Column(Unicode)
-
-    legacy_number = Column(Unicode)
 
     nurse = Column(Unicode)
 
@@ -300,20 +281,17 @@ class Patient(Base, Referenceable, Modifiable, HasEntities, Auditable):
                 refcolumns=['site.id'],
                 name='fk_%s_site_id' % cls.__tablename__,
                 ondelete='CASCADE'),
-            UniqueConstraint('our', name='uq_%s_our' % cls.__tablename__),
-            # Ideally this should be unique, but due to inevitably legacy
-            # issues with ANYTHING, we'll just keep this indexed.
-            Index('ix_%s_legacy_number' % cls.__tablename__, 'legacy_number'),
+            UniqueConstraint('pid', name='uq_%s_pid' % cls.__tablename__),
             Index('ix_%s_site_id' % cls.__tablename__, 'site_id'),
             Index('ix_%s_initials' % cls.__tablename__, 'initials'))
 
 
-class RefType(Base, Referenceable, Describeable, Modifiable):
+class ReferenceType(Base, Referenceable, Describeable, Modifiable):
     """
     Reference type sources
     """
 
-    __tablename__ = 'reftype'
+    __tablename__ = 'reference_type'
 
     @declared_attr
     def __table_args__(cls):
@@ -326,24 +304,21 @@ class PatientReference(Base, Referenceable, Modifiable, Auditable):
     References to a studies subject from other sources
     """
 
-    __tablename__ = 'patientreference'
+    __tablename__ = 'patient_reference'
 
     patient_id = Column(Integer, nullable=False)
 
     patient = relationship(
         Patient,
         backref=backref(
-            name='reference_numbers',
-            cascade='all, delete-orphan'),
-        primaryjoin=(patient_id == Patient.id))
+            name='references',
+            cascade='all, delete-orphan'))
 
-    reftype_id = Column(Integer, nullable=False,)
+    reference_type_id = Column(Integer, nullable=False)
 
-    reftype = relationship(
-        RefType,
-        primaryjoin=(reftype_id == RefType.id))
+    reference_type = relationship(ReferenceType)
 
-    reference_number = Column(Unicode, nullable=False,)
+    reference_number = Column(Unicode, nullable=False)
 
     @declared_attr
     def __table_args__(cls):
@@ -354,16 +329,16 @@ class PatientReference(Base, Referenceable, Modifiable, Auditable):
                 name='fk_%s_patient_id' % cls.__tablename__,
                 ondelete='CASCADE'),
             ForeignKeyConstraint(
-                columns=['reftype_id'],
-                refcolumns=['reftype.id'],
-                name='fk_%s_reftype_id' % cls.__tablename__,
+                columns=['reference_type_id'],
+                refcolumns=['reference_type.id'],
+                name='fk_%s_reference_type_id' % cls.__tablename__,
                 ondelete='CASCADE'),
             Index('ix_%s_patient_id' % cls.__tablename__, 'patient_id'),
             Index('ix_%s_reference_number' % cls.__tablename__,
                   'reference_number'),
             UniqueConstraint(
                 'patient_id',
-                'reftype_id',
+                'reference_type_id',
                 'reference_number',
                 name=u'uq_%s_reference'))
 
@@ -381,7 +356,8 @@ class Enrollment(Base,  Referenceable, Modifiable, HasEntities, Auditable):
         backref=backref(
             name='enrollments',
             cascade='all, delete-orphan',
-            lazy='dynamic'))
+            lazy='dynamic',
+            order_by='Enrollment.consent_date.desc()'))
 
     study_id = Column(Integer, nullable=False,)
 
@@ -412,17 +388,6 @@ class Enrollment(Base,  Referenceable, Modifiable, HasEntities, Auditable):
     reference_number = Column(
         Unicode,
         doc='Identification number within study')
-
-    @property
-    def is_consent_overdue(self):
-        return (
-            self.termination_date is None
-            and self.latest_consent_date < self.study.consent_date)
-
-    @property
-    def is_termination_overdue(self):
-        return (self.termination_date is None
-                and self.consent_date + self.study.duration < date.today())
 
     @declared_attr
     def __table_args__(cls):
@@ -456,11 +421,13 @@ class Visit(Base, Referenceable, Modifiable, HasEntities, Auditable):
         backref=backref(
             name='visits',
             cascade='all, delete-orphan',
-            lazy='dynamic'))
+            lazy='dynamic',
+            order_by='Visit.visit_date.desc()'))
 
     cycles = relationship(
         Cycle,
         secondary=visit_cycle_table,
+        order_by='Cycle.title.asc()',
         backref=backref(
             name='visits',
             lazy='dynamic'))

@@ -6,28 +6,26 @@
 
 @import '../libs/bootstrap/less/bootstrap.less';
 
+@import '../libs/font-awesome/less/font-awesome.less';
+@fa-font-path: '../libs/font-awesome/fonts/';
+
+@import '../libs/bootstrap-datetimepicker/src/less/bootstrap-datetimepicker.less';
+
 // Overrides
 
 @import url(//fonts.googleapis.com/css?family=Exo+2:400,700);
 @import 'overrides.less';
 
-// Components
+@import 'components/alerts.less';
+@import 'components/dropdowns.less';
+@import 'components/forms.less';
+@import 'components/navs.less';
+@import 'components/navbar.less';
+@import 'components/tables.less';
+@import 'components/utilities.less';
 
-@import 'alerts.less';
-@import 'dropdowns.less';
-@import 'forms.less';
-@import 'navs.less';
-@import 'tables.less';
-
-// Layouts
-
-@import 'login.less';
 @import 'stickyfoot.less';
 
-// Utilities
-
-@import 'utilities.less';
-
-
-// Views
-@import 'export.less';
+@import 'views/account.less';
+@import 'views/export.less';
+@import 'views/patient.less';

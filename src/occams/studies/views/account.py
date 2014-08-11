@@ -1,38 +1,36 @@
 from pyramid.httpexceptions import HTTPFound, HTTPForbidden
 from pyramid.security import forget
 from pyramid.view import view_config, forbidden_view_config
-from wtforms import Form, PasswordField, validators
-from wtforms.fields.html5 import EmailField
+import wtforms.fields.html5
+import wtforms.widgets.html5
 
 from .. import _, Session, models
 
 
-class LoginForm(Form):
+class LoginForm(wtforms.Form):
 
-    login = EmailField(
-        label=_(u'Email address'),
+    login = wtforms.fields.html5.EmailField(
         validators=[
-            validators.Required(),
-            validators.Length(max=32),
-            validators.Email(),
+            wtforms.validators.Required(),
+            wtforms.validators.Length(max=32),
+            wtforms.validators.Email(),
         ])
 
-    password = PasswordField(
-        label=_(u'Password'),
+    password = wtforms.PasswordField(
         validators=[
-            validators.Required(),
-            validators.Length(min=5, max=32)
+            wtforms.validators.Required(),
+            wtforms.validators.Length(min=5, max=32)
         ])
 
 
 @view_config(
-    route_name='account_login',
-    renderer='occams.studies:templates/account/login.pt')
+    route_name='login',
+    renderer='../templates/account/login.pt')
 @forbidden_view_config(
-    renderer='occams.studies:templates/account/login.pt')
+    renderer='../templates/account/login.pt')
 def login(request):
 
-    if (request.matched_route.name != 'account_login'
+    if (request.matched_route.name != 'login'
             and request.authenticated_userid):
         # If an authenticated user has reached this controller without
         # intentionally going to the login view, assume permissions
@@ -42,7 +40,7 @@ def login(request):
     # Figure out where the user came from so we can redirect afterwards
     referrer = request.GET.get('referrer', request.current_route_path())
 
-    if not referrer or referrer == request.route_path('account_login'):
+    if not referrer or referrer == request.route_path('login'):
         # Never use the login as the referrer
         referrer = request.route_path('home')
 
@@ -51,7 +49,7 @@ def login(request):
     # Only process the input if the user intented to post to this view
     # (could be not-logged-in redirect)
     if (request.method == 'POST'
-            and request.matched_route.name == 'account_login'
+            and request.matched_route.name == 'login'
             and form.validate()):
         # XXX: Hack for this to work on systems that have not set the
         # environ yet. Pyramid doesn't give us access to the policy
@@ -83,7 +81,7 @@ def login(request):
     }
 
 
-@view_config(route_name='account_logout')
+@view_config(route_name='logout')
 def logout(request):
     who_api = request._get_authentication_policy()._getAPI(request)
     headers = who_api.logout()

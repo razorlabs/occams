@@ -28,9 +28,9 @@ from ..security import CSRF
 
 
 @view_config(
-    route_name='export_home',
+    route_name='exports',
     permission='fia_view',
-    renderer='occams.studies:templates/export/home.pt')
+    renderer='../templates/export/home.pt')
 def about(request):
     """
     General intro-page so users know what they're getting into.
@@ -39,9 +39,9 @@ def about(request):
 
 
 @view_config(
-    route_name='export_faq',
+    route_name='exports_faq',
     permission='fia_view',
-    renderer='occams.studies:templates/export/faq.pt')
+    renderer='../templates/export/faq.pt')
 def faq(request):
     """
     Verbose details about how this tool works.
@@ -86,9 +86,9 @@ class ExportCheckoutForm(Form):
 
 
 @view_config(
-    route_name='export_add',
+    route_name='exports_checkout',
     permission='fia_view',
-    renderer='occams.studies:templates/export/add.pt')
+    renderer='../templates/export/add.pt')
 def add(request):
     """
     Generating a listing of available data for export.
@@ -141,9 +141,9 @@ def add(request):
 
 
 @view_config(
-    route_name='export_status',
+    route_name='exports_status',
     permission='fia_view',
-    renderer='occams.studies:templates/export/status.pt')
+    renderer='../templates/export/status.pt')
 def status(request):
     """
     Renders the view that will contain progress of exports.
@@ -154,7 +154,7 @@ def status(request):
 
 
 @view_config(
-    route_name='export_status',
+    route_name='exports_status',
     permission='fia_view',
     xhr=True,
     renderer='json')
@@ -204,9 +204,9 @@ def status_json(request):
 
 
 @view_config(
-    route_name='export_codebook',
+    route_name='exports_codebook',
     permission='fia_view',
-    renderer='occams.studies:templates/export/codebook.pt')
+    renderer='../templates/export/codebook.pt')
 def codebook(request):
     """
     Codebook viewer
@@ -215,7 +215,7 @@ def codebook(request):
 
 
 @view_config(
-    route_name='export_codebook',
+    route_name='exports_codebook',
     permission='fia_view',
     xhr=True,
     renderer='json')
@@ -245,7 +245,8 @@ def codebook_json(request):
 
 
 @view_config(
-    route_name='export_codebook_download',
+    route_name='exports_codebook',
+    request_param='alt=json',
     permission='fia_view')
 def codebook_download(request):
     """
@@ -263,9 +264,9 @@ def codebook_download(request):
 
 
 @view_config(
-    route_name='export_delete',
+    route_name='export',
     permission='fia_view',
-    request_method='POST',
+    request_method='DELETE',
     xhr=True)
 def delete(request):
     """

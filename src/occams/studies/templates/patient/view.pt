@@ -1,197 +1,284 @@
 <html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
   <metal:content-slot fill-slot="content-slot">
+    <div style="display: none;" data-bind="visible: isReady, with: patient">
 
-    <div id="patient-references">
-      <h4>Alternate PIDs</h4>
-      <table class="listing">
-        <thead>
-          <th>Type</th>
-          <th>PID</th>
-        </thead>
-        <tbody>
-          <!--! TODO (mmartinez): can't hard code this, need to somehow
-                annotate this in the database to keep it institute-agnostic -->
-          <tr tal:condition="patient.legacy_number">
-            <td>Legacy Number</td>
-            <td>${patient.legacy_number}</td>
-          </tr>
-          <tr tal:repeat="reference patient.reference_numbers">
-            <td>${reference.reftype.title}</td>
-            <td>${reference.reference_number|nothing}</td>
-          </tr>
-          <!-- TODO (mmartinez): Again, we can't do this, see above -->
-          <metal:enrollments
-              tal:condition="request.has_permission('enrollment_view')"
-              tal:repeat="enrollment patient.enrollments">
-              <tr tal:condition="enrollment.reference_number|nothing">
-                <td>${enrollment.study.title} Number</td>
-                <td>${enrollment.reference_number}</td>
-              </tr>
-          </metal:enrollments>
-        </tbody>
-      </table>
-    </div>
-<!--!
-    <div id="patient-enrollments" tal:condition="view/canViewEnrollments">
-      <h4>Enrollments</h4>
-      <div class="empty-container" tal:condition="not:patient/enrollments">
-        This patient is currently not enrolled in any studies
-        <a href=""
-            tal:attributes="href string:${context/absolute_url}/++add++avrc.aeh.enrollment">Add one.</a>
-      </div>
-      <table class="listing" tal:condition="patient/enrollments">
-        <thead>
-          <tr>
-            <th class="study">Study</th>
-            <th class="consent-date">Consent</th>
-            <th class="status">Status</th>
-            <th class="reference-number">Enrollment#</th>
-            <th class="strat-number">RANDID</th>
-            <th class="arm">Arm</th>
-            <th></th>
-        </thead>
-        <tbody>
-          <tr tal:repeat="enrollment patient/enrollments"
-              tal:attributes="
-                class python:'odd' if repeat['enrollment'].odd else 'even';">
-            <td class="study" tal:content="enrollment/study/title">STUDY</td>
-            <td class="consent-date"
-                tal:content="enrollment/consent_date/isoformat">CONSENT DATE</td>
-            <td class="status">
-              <span
-                  tal:condition="enrollment/is_consent_overdue"
-                  style="color:red">
-                Consent is out of date
-              </span>
-              <span
-                  tal:condition="enrollment/termination_date">
-                  Terminated on
-                  <span tal:replace="enrollment/termination_date/isoformat" >TERMINATION DATE</span></span>
-              <span
-                  tal:condition="enrollment/is_termination_overdue"
-                  style="color:red">
-                Termination overdue
-              </span>
-            </td>
-            <td class="reference-number" tal:content="enrollment/reference_number">REF #</td>
-            <tal:block define="stratum enrollment/stratum">
-              <td class="strat-number" tal:content="stratum/reference_number|nothing">STRAT #</td>
-              <td class="arm">
-                <tal:block condition="stratum">
-                  <em tal:condition="stratum/study/is_blinded">blinded</em>
-                  <span
-                      tal:condition="not:stratum/study/is_blinded"
-                      tal:content="stratum/arm/title">
-                    ARM
-                  </span>
-                </tal:block>
+      <header class="page-header">
+        <div class="btn-toolbar pull-right">
+          <button class="btn btn-default"
+              data-bind="click: $root.startEdit"
+              tal:condition="request.has_permission('patient_edit')">
+            <span class="fa fa-edit"></span>
+            <span i18n:translate="">Edit</span>
+          </button>
+          <button class="btn btn-default"
+              data-bind="click: $root.startDelete"
+              tal:condition="request.has_permission('patient_delete')">
+            <span class="fa fa-trash-o"></span>
+            <span i18n:translate="">Delete</span>
+          </button>
+        </div>
+        <h1 i18n:translate="" data-bind="text: pid"></h1>
+        <ul class="details list-inline">
+          <li data-bind="with: site">
+            <span class="text-muted" i18n:translate="">Site:</span>
+            <span data-bind="text: title"></span>
+          </li>
+        </ul>
+        <nav>
+          <ul class="nav nav-header">
+            <li><a href="${request.route_path('studies')}" i18n:translate=""><span class="fa fa-chevron-left"></a></li>
+            <li><a i18n:translate="">Overview</a></li>
+            <li><a i18n:translate="">Forms</a></li>
+          </ul>
+        </nav>
+      </header>
+
+       <div class="row">
+        <div class="col-sm-4">
+          <div class="panel panel-default">
+            <div class="panel-heading clearfix">
+              <div class="btn-toolbar pull-right">
+                <button class="btn btn-link btn-xs"
+                    data-bind="click: $root.startEdit"
+                    tal:condition="request.has_permission('patient_edit')">
+                  <span class="fa fa-list"></span>
+                  <span i18n:translate="">Manage</span>
+                </button>
+              </div>
+              <h4 class="panel-title" i18n:translate="">External IDs</h4>
+            </div>
+            <!-- ko ifnot: hasReferences -->
+              <p class="text-muted text-center" i18n:translate="">No references</p>
+            <!-- /ko -->
+            <!-- ko if: hasReferences -->
+              <table class="table table-striped">
+                <colgroup>
+                  <col class="col-sm-8" />
+                  <col class="col-sm-4" />
+                </colgroup>
+                <tbody data-bind="foreach: references">
+                  <tr>
+                    <!-- ko with: reference_type -->
+                      <td data-bind="text: title"></td>
+                    <!-- /ko -->
+                    <td><code data-bind="text: reference_number"></code></td>
+                  </tr>
+                </tbody>
+              </table>
+            <!-- /ko -->
+          </div> <!-- /.panel -->
+        </div> <!-- /.col-sm-4 -->
+        <div class="col-sm-8">
+          <div class="panel panel-default" tal:condition="request.has_permission('enrollment_view')">
+            <div class="panel-heading clearfix">
+              <div class="btn-toolbar pull-right">
+                <button class="btn btn-link btn-xs"
+                    data-bind="click: $root.startAddEnrollment"
+                    tal:condition="request.has_permission('enrollment_add')">
+                  <span class="fa fa-plus"></span>
+                  <span>Add Enrollment</span>
+                </button>
+              </div>
+              <h4 class="panel-title" i18n:translate="">Enrollments</h4>
+            </div>
+            <table class="table table-hover table-striped">
+              <colgroup>
+                <col class="col-sm-4" />
+                <col class="col-sm-3" />
+                <col class="col-sm-1" />
+                <col class="col-sm-1" />
+                <col class="col-sm-2" />
+                <col class="col-sm-1" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th i18n:translate="">Study</th>
+                  <th i18n:translate="">Consent</th>
+                  <th i18n:translate="">STUDYID</th>
+                  <th i18n:translate="">RANDID</th>
+                  <th i18n:translate="">Arm</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody data-bind="foreach: enrollments">
+                <tr>
+                  <!-- ko with: study -->
+                    <td class="study" data-bind="text: title"></td>
+                  <!-- /ko -->
+                  <td data-bind="dateText: consent_date"></td>
+                  <td>
+                    <!-- ko if: reference_number -->
+                      <code data-bind="text: reference_number"></code>
+                    <!-- /ko -->
+                  </td>
+                  <td data-bind="with: stratum">
+                    <code data-bind="text: reference_number"></code>
+                  </td>
+                  <td data-bind="if: isRandomized">
+                    <!-- ko if: study().is_blinded() -->
+                      <em i18n:translate="">Blinded</em>
+                    <!-- /ko -->
+                    <!-- ko ifnot: study().is_blinded() -->
+                      <span data-bind="text: stratum().arm().title()"></span>
+                    <!-- /ko -->
+                  </td>
+                  <td class="text-right">
+                    <a href="" class="btn btn-link"><span class="fa fa-chevron-right"></span></a>
+                  </td>
+                 </tr>
+              </tbody>
+            </table>
+          </div> <!-- /.panel -->
+        </div> <!-- /.col-sm-8 -->
+      </div> <!-- /.row -->
+
+      <div id="visits" class="panel panel-default" tal:condition="request.has_permission('visit_view')">
+        <div class="panel-heading clearfix">
+          <div class="btn-toolbar pull-right">
+            <button class="btn btn-link btn-xs"
+                tal:condition="request.has_permission('visit_add')">
+              <span class="fa fa-plus"></span>
+              <span>Add Visit</span>
+            </button>
+          </div>
+          <h4 class="panel-title" i18n:translate="">Visits</h4>
+        </div>
+        <table class="table table-hover table-striped">
+          <colgroup>
+            <col class="col-sm-2" />
+            <col class="col-sm-4" />
+            <col class="col-sm-5" />
+            <col class="col-sm-1" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th i18n:translate="">Visit Date</th>
+              <th i18n:translate="">Cycles</th>
+              <th i18n:translate="">Progress</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody data-bind="foreach: visits">
+            <tr>
+              <td data-bind="dateText: visit_date"></td>
+              <td data-bind="foreach: cycles">
+                <div data-bind="text: title"></div>
               </td>
-            </tal:block>
-            <td>
-              <a href="" class="view"
-                  tal:define="url enrollment/zobject/absolute_url | nothing"
-                  tal:attributes="href url"
-                  tal:condition="url">View</a>
-            </td>
-           </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div id="patient-visits">
-      <h4>Patient Visits</h4>
-      <table class="listing">
-          <thead>
-              <tr>
-                  <th class="visit">Visit Date </th>
-                  <th class="cycles">Cycles</th>
-                  <th class="pending-entry">Forms Pending Entry</th>
-                  <th class="pending-review">Forms Pending Review</th>
-                  <th class="complete">Forms Complete </th>
-                  <th class="not-done">Forms Skipped </th>
-                  <th></th>
-              </tr>
-          </thead>
-
-          <tbody>
-              <tal:block tal:repeat="visit view/visits">
-              <tr tal:define="odd repeat/visit/odd"
-                  tal:attributes="class python: odd and 'odd' or 'even'">
-                  <td class="visit" tal:content="visit/visit_date">VISIT DATE</td>
-                  <td class="cycles">
-                      <span
-                          tal:repeat="cycle visit/cycles" tal:omit-tag="">
-                              <span tal:replace="cycle" />
-                              <br />
-                      </span>
-                  </td>
-                  <td class=""
-                      tal:define="value visit/form_pending_entry|nothing"
-                      tal:attributes="class python: value and 'pending-entry populated' or 'pending-entry empty'" tal:content="value"/>
-                  <td class=""
-                      tal:define="value visit/form_pending_review|nothing" tal:attributes="class python: value and 'pending-review populated' or 'pending-review empty'" tal:content="value" />
-                  <td class=""
-                      tal:define="value visit/form_complete|nothing"
-                      tal:attributes="class python: value and 'complete populated' or 'complete empty'"
-                      tal:content="value" />
-                  <td class=""
-                      tal:define="value visit/form_not_done|nothing"
-                      tal:attributes="class python: value and 'not-done populated' or 'not-done empty'"
-                      tal:content="value" />
-                  <td>
-                    <a href="" class="view"
-                        tal:attributes="href visit/visit_url">View</a>
-                  </td>
-              </tr>
-              </tal:block>
+              <td>
+                <div class="progress">
+                  <div class="progress-bar"
+                      role="progressbar"
+                      aria-valuenow="0"
+                      aria-valuemin="0"
+                      aria-valuemax="100"
+                      data-bind="
+                        attr: {'aria-valuenow': progress},
+                        style: {width: progress() + '%'}">
+                    <span data-bind="text: num_complete"></span>
+                    /
+                    <span data-bind="text: total_forms"></span>
+                  </div>
+                </div>
+              </td>
+              <td class="text-right"><a class="btn btn-link"><span class="fa fa-chevron-right"></span></a></td>
+            </tr>
           </tbody>
-      </table>
-    </div>
+        </table>
+      </div>
 
-    <div id="patient-forms">
-      <h4>Patient Forms</h4>
-      <table class="listing">
-          <thead>
+
+      <!-- ko if: null -->
+        <div id="forms" class="panel panel-default"
+            tal:condition="request.has_permission('fia_view')">
+          <div class="panel-heading">
+            <h4>Forms</h4>
+          </div>
+          <table class="table table-hover table-striped">
+            <thead>
               <tr>
-                  <th class="form">Form Name</th>
-                  <th class="pending-entry">Forms Pending Entry</th>
-                  <th class="pending-review">Forms Pending Review</th>
-                  <th class="complete">Forms Complete</th>
-                  <th class="not-done">Forms Skipped</th>
-                  <th></th>
+                <th class="form">Form</th>
+                <th class="pending-entry">Pending Entry</th>
+                <th class="pending-review">Pending Review</th>
+                <th class="complete">Complete</th>
+                <th class="not-done">Skipped</th>
+                <th></th>
               </tr>
-          </thead>
-
-          <tbody>
-            <tal:block tal:repeat="formtype view/getFormTypes">
-
-              <tr tal:define="odd repeat/formtype/odd"
-                  tal:attributes="class python: odd and 'odd' or 'even'">
-                  <td class="form" tal:content="formtype/title">FORM NAME</td>
-                  <td class=""
-                      tal:define="value formtype/pending_entry|nothing"
-                      tal:attributes="class python: value and 'pending-entry populated' or 'pending-entry empty'" tal:content="value"/>
-                  <td class=""
-                      tal:define="value formtype/pending_review|nothing" tal:attributes="class python: value and 'pending-review populated' or 'pending-review empty'" tal:content="value" />
-                  <td class=""
-                      tal:define="value formtype/complete|nothing"
-                      tal:attributes="class python: value and 'complete populated' or 'complete empty'"
-                      tal:content="value" />
-                  <td class=""
-                      tal:define="value formtype/not_done|nothing"
-                      tal:attributes="class python: value and 'not-done populated' or 'not-done empty'"
-                      tal:content="value" />
-                  <td>
-                    <a href="" class="view"
-                        tal:attributes="href string:${here/absolute_url}/${formtype/name}">View</a>
-                  </td>
+            </thead>
+            <tbody data-bind="foreach: forms">
+              <tr>
+                <td class="form" data-bind="text: title"></td>
+                <td data-bind="if: count_pending_entry() > 0">
+                  <span class="label label-danger" data-bind="text: count_pending_entry"></span>
+                </td>
+                <td datab-bind="if: count_pending_review() > 0">
+                  <span class="label label-warning" data-bind="text: count_pending_review"></span>
+                </td>
+                <td datab-bind="if: count_complete() > 0">
+                  <span class="label label-success" data-bind="text: count_complete"></span>
+                </td>
+                <td>
+                  <a class="btn btn-link" href=""><span class="fa fa-chevron-right"></span></a>
+                </td>
               </tr>
-            </tal:block>
-          </tbody>
-      </table>
+            </tbody>
+          </table>
+        </div> <!-- /.panel -->
+      <!-- /ko -->
     </div>
-    <div tal:condition="view/canAddFormsOrTests" tal:content="structure view/form_requestor" />
--->
+
+    <div class="modal fade" data-bind="showModal: $root.showEditForm, with: $root.editable">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <form role="form" data-bind="submit: $root.doEdit">
+            <div class="modal-header">
+              <h4 class="modal-title">Edit Patient</h4>
+            </div>
+            <div class="modal-body">
+              <div class="form-group">
+                <label i18n:translate="">Site</label>
+              </div>
+              <div class="form-group=">
+                <label i18n:translate="">Reference Numbers</label>
+                <div class="row" data-bind="references">
+                  <div class="col-sm-6">
+
+                  </div>
+                  <div class="col-sm-6" data-bind="text: reference_number">
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-default" data-bind="click: $root.clearSelected">Close</button>
+              <button type="submit" class="btn btn-primary">Add</button>
+            </div>
+          </form>
+        </div><!-- /.modal-content -->
+      </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+    <div class="modal fade" data-bind="showModal: $root.showDeleteForm, with: $root.selected">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <form data-bind="submit: $root.doEdit">
+            <div class="modal-header">
+              <h4 class="modal-title">Confirm Delete</h4>
+            </div>
+            <div class="modal-body">
+              <p i18n:translate="">You are about to delete this patient. this is an irreversable action. Are you sure you want to proceed?</p>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-default" data-bind="click: $root.clearSelected">Close</button>
+              <button type="button" class="btn btn-danger" i18n:translate="">Delete</button>
+            </div>
+          </form>
+        </div><!-- /.modal-content -->
+      </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+    <!--! Initial data so we don't have to do yet another AJAX call when we
+          already have the data inthis request -->
+    <script id="data" type="application/json" tal:define="json import:json">${json.dumps(patient)}</script>
   </metal:content-slot>
 </html>
 

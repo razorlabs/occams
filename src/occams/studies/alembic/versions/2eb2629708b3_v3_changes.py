@@ -17,13 +17,14 @@ from six import string_types
 from alembic import context
 
 
+UPGRADE_USER = 'bitcore@ucsd.edu'
+
+
 def upgrade():
     remove_zid_oldid()
-    op.drop_column('attribute', 'checksum')
-    op.drop_column('attribute_audit', 'checksum')
-    op.alter_column('attribute', 'is_required', server_default=sa.sql.false())
-    op.alter_column('attribute', 'is_collection', server_default=sa.sql.false())
-    op.alter_column('attribute', 'is_private', server_default=sa.sql.false())
+    cleanup_attribute()
+    cleanup_reftype()
+    cleanup_patient()
     fix_numeric_choice_names()
     case_insensitive_names()
     merge_integer_decimal()
@@ -33,6 +34,84 @@ def upgrade():
 
 def downgrade():
     pass
+
+
+def cleanup_attribute():
+    op.drop_column('attribute', 'checksum')
+    op.drop_column('attribute_audit', 'checksum')
+    op.alter_column('attribute', 'is_required', server_default=sa.sql.false())
+    op.alter_column('attribute', 'is_collection', server_default=sa.sql.false())
+    op.alter_column('attribute', 'is_private', server_default=sa.sql.false())
+
+
+def cleanup_reftype():
+    op.rename_table('reftype', 'reference_type')
+    op.drop_constraint('uq_reftype_name', 'reference_type')
+    op.create_unique_constraint('uq_reference_type_name', 'reference_type', ['name'])
+
+    op.rename_table('patientreference', 'patient_reference')
+    op.drop_constraint('fk_patientreference_patient_id', 'patient_reference')
+    op.create_foreign_key(
+        'fk_patient_reference_patient_id',
+        'patient_reference',
+        'patient',
+        ['patient_id'],
+        ['id'],
+        ondelete='CASCADE')
+    op.alter_column('patient_reference', 'reftype_id', new_column_name='reference_type_id')
+    op.drop_constraint('fk_patientreference_reftype_id', 'patient_reference')
+    op.create_foreign_key(
+        'fk_patient_reference_reference_type_id',
+        'patient_reference',
+        'reference_type',
+        ['reference_type_id'],
+        ['id'],
+        ondelete='CASCADE')
+    op.drop_index('ix_patientreference_patient_id', 'patient_reference')
+    op.create_index('ix_patient_reference_patient_id', 'patient_reference', ['patient_id'])
+    op.drop_index('ix_patientreference_reference_number', 'patient_reference')
+    op.create_index('ix_patient_reference_reference_number', 'patient_reference', ['reference_number'])
+    op.drop_constraint('uq_patientreference_reference', 'patient_reference')
+    op.create_unique_constraint('uq_patient_reference_reference_number', 'patient_reference', ['patient_id', 'reference_type_id', 'reference_number'])
+
+
+def cleanup_patient():
+    op.alter_column('patient', 'our', new_column_name='pid')
+    op.drop_constraint('uq_patient_our', 'patient')
+    op.create_unique_constraint('uq_patient_pid', 'patient', ['pid'])
+
+    # Move legacy_number to reference numbers, where it should have been in the first place
+    if 'aeh' in op.get_bind().engine.url.database:
+        legacy_name = u'aeh_num'
+        legacy_title = u'AEH Number'
+    else:
+        legacy_name = u'legacy_number'
+        legacy_title = u'Legacy Number'
+    op.execute("""
+        INSERT INTO reference_type (name, title, create_user_id, create_date, modify_user_id, modify_date)
+        VALUES (
+              {}
+            , {}
+            , (SELECT "user".id FROM "user" WHERE key = {user})
+            , CURRENT_TIMESTAMP
+            , (SELECT "user".id FROM "user" WHERE key = {user})
+            , CURRENT_TIMESTAMP
+            )
+    """.format(op.inline_literal(legacy_name), op.inline_literal(legacy_title), user=op.inline_literal(UPGRADE_USER)))
+    op.execute("""
+        INSERT INTO patient_reference (patient_id, reference_type_id, reference_number, create_user_id, create_date, modify_user_id, modify_date, revision)
+        SELECT patient.id
+             , (SELECT "reference_type".id FROM reference_type WHERE "reference_type".name = {legacy_name})
+             , legacy_number
+             , (SELECT "user".id FROM "user" WHERE key = {user})
+             , CURRENT_TIMESTAMP
+             , (SELECT "user".id FROM "user" WHERE key = {user})
+             , CURRENT_TIMESTAMP
+             , 1
+        FROM patient
+        WHERE patient.legacy_number iS NOT NULL
+    """.format(legacy_name=op.inline_literal(legacy_name), user=op.inline_literal(UPGRADE_USER)))
+    op.drop_column('patient', 'legacy_number')
 
 
 def alter_enum(name, new_values, cols, new_name=None):
@@ -310,8 +389,8 @@ def overhaul_attribute():
         op.add_column(table_name, sa.Column('constraint_logic', sa.Text()))
         op.add_column(table_name, sa.Column('skip_logic', sa.Text()))
 
-    op.drop_constraint('attribute', 'uq_attribute_order')
-    op.create_uqique_constraint(
+    op.drop_constraint('uq_attribute_order', 'attribute')
+    op.create_unique_constraint(
         'uq_attribute_order',
         'attribute',
         ['schema_id', 'order'],

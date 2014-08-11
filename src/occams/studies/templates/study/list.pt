@@ -1,39 +1,79 @@
 <html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
   <metal:content-slot fill-slot="content-slot">
-    <header class="page-header">
-      <div metal:use-macro="load: ./panels/list-toolbar.pt" />
-      <h1 i18n:translate="">Studies</h1>
-    </header>
+    <div class="row">
+      <div class="col-sm-4">
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <h3 class="panel-title" i18n:translate="">Recently Viewed Patients</h3>
+          </div>
+          <div class="panel-body" tal:condition="viewed_count <= 0">
+            <p class="text-muted text-center" i18n:translate="">Nothing viewed recently</p>
+          </div>
+          <ul class="list-group" tal:condition="viewed_count > 0">
+            <tal:patients tal:define="humanize import:humanize" repeat="patient viewed">
+              <li class="list-group-item">
+                <a href="${request.route_path('patient', patient=patient.pid)}">${patient.pid}</a>
+                &bull;
+                <small class="text-muted">
+                  ${humanize.naturaltime(patient['view_date'])}
+                </small>
+              </li>
+            </tal:patients>
+          </ul>
+        </div> <!-- .panel -->
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <h3 class="panel-title" i18n:translate="">Recently Modified Patients</h3>
+          </div>
+          <div class="panel-body" tal:condition="modified_count <= 0">
+            <p class="text-muted text-center" i18n:translate="">Nothing viewed recently</p>
+          </div>
+          <ul class="list-group" tal:condition="modified > 0">
+            <tal:patients tal:define="humanize import:humanize" repeat="patient modified">
+              <li class="list-group-item">
+                <a href="${request.route_path('patient', patient=patient.pid)}">${patient.pid}</a>
+                &bull;
+                <small class="text-muted">
+                  ${humanize.naturaltime(patient.modify_date)}
+                  <span i18n:translate="">by</span>
+                  ${patient.modify_user.key}
+                </small>
+              </li>
+            </tal:patients>
+          </ul>
+        </div> <!-- .panel -->
+      </div> <!-- /.col-sm-4 -->
+      <div class="col-sm-8">
+        <div class="list-group">
+          <a tal:repeat="study studies"
+              href="${request.route_path('study', study=study.name)"
+              class="list-group-item">
+            <h4 class="list-group-item-heading">${study.title}</h4>
+            <ul class="details list-inline">
+              <li>
+                <span class="text-muted" i18n:translate="">Code:</span>
+                <code>${study.code}</code>
+              </li>
+              <li>
+                <span class="text-muted" i18n:translate="">Label:</span>
+                <span>${study.short_title}</span>
+              </li>
+              <li>
+                <span class="text-muted" i18n:translate="">Blinded:</span>
+                <span tal:switch="bool(study.is_blinded)">
+                  <span tal:case="True" tal:omit-tag="" i18n:translate="">Yes</span>
+                  <span tal:case="False" tal:omit-tag="" i18n:translate="">No</span>
+                </span>
+              </li>
+              <li>
+                <span class="text-muted" i18n:translate="">Consent Date:</span>
+                <span>${study.consent_date}<span>
+              </li>
+            </ul>
+          </a>
+        </div> <!-- /.list-group -->
+      </div> <!-- /.col-sm-8 -->
+    </div> <!-- /.row -->
 
-    <div class="table-responsive">
-      <table class="table table-bordered table-striped">
-        <thead>
-          <tr>
-            <th>Study</th>
-            <th>Code</th>
-            <th>Consent Date</th>
-            <th>Created</th>
-            <th>Creator</th>
-            <th>Modified</th>
-            <th>Modifier</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr tal:repeat="study studies">
-            <td>
-              <a href="${request.current_route_path(
-                    _route_name='study_view',
-                    study_name=study.name)}">${study.title}</a>
-            </td>
-            <td>${study.code}</td>
-            <td>${study.consent_date.isoformat()}</td>
-            <td>${study.create_date.date().isoformat()}</td>
-            <td>${study.create_user.key}</td>
-            <td>${study.modify_date.date().isoformat()}</td>
-            <td>${study.modify_user.key}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
   </metal:content-slot>
 </html>

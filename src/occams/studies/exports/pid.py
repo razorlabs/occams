@@ -75,12 +75,6 @@ class PidPlan(ExportPlan):
                 models.Patient.pid.label('pid'))
             .join(models.Site))
 
-        # BBB 2014-02-20 (Marco): AEH needs OUR and aeh_num
-        # New organizations SHOULD NOT USE legacy number, use ref tables
-        query = query.add_columns(
-            models.Patient.our.label('our'),
-            models.Patient.legacy_number.label('aeh_num'))
-
         # BBB 2014-02-20 (Marco): AEH needs Early Test
         EarlyTest = aliased(models.Enrollment)
         subquery = (

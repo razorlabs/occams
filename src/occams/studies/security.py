@@ -59,6 +59,8 @@ def track_user_on_request(event):
     """
     Annotates the database session with the current user.
     """
+    # Keep track of the request so we can generate model URLs
+    Session.info['request'] = event.request
     Session.info['user'] = event.request.authenticated_userid
 
 

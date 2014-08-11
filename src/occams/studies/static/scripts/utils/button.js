@@ -1,8 +1,6 @@
 +function($){
   'use strict';
-
   $(document).ready(function(){
-
     /**
      * Disable the submit buttons to prevent double-clicking
      */
@@ -13,6 +11,5 @@
     });
 
   });
-
 }(jQuery);
 

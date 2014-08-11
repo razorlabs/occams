@@ -1,178 +1,71 @@
-from pyramid.httpexceptions import HTTPFound, HTTPNotFound
+from pyramid.httpexceptions import (
+    HTTPBadRequest, HTTPForbidden, HTTPFound, HTTPNotFound)
 from pyramid.view import view_config
 from sqlalchemy import func, orm, sql
-from wtforms import (
-    Form,
-    IntegerField,
-    StringField,
-    TextAreaField,
-    ValidationError,
-    validators,
-    widgets
-)
-from wtforms.fields.html5 import DateField
+import wtforms.fields.html5
+import wtforms.widgets.html5
 
 from .. import _, models, Session
-from ..security import CSRF
-
-
-def get_study(request):
-    """
-    Uses the URL dispatch matching dictionary to find a study
-    """
-    try:
-        return (
-            Session.query(models.Study)
-            .filter_by(name=request.matchdict['study_name'])
-            .one())
-    except orm.exc.NoResultFound:
-        raise HTTPNotFound
-
-
-def is_unique_name(form, field):
-    name_query = sql.exists().where(models.Schema.name == field.data.name)
-    if hasattr(form, 'id'):
-        name_query = name_query.where(models.Study.id != form.data.id)
-    if Session.query(name_query).one():
-        raise ValidationError(_(u'"%s" already exists' % form.title.data))
-
-
-class StudyForm(Form):
-
-    class Meta(object):
-        csrf = True
-        csrf_class = CSRF
-
-    id = IntegerField(widget=widgets.HiddenInput())
-
-    name = StringField(
-        label=_(u'URL Name'),
-        description=_(u'ID for user (e.g. /studies/my-study)'),
-        validators=[
-            validators.required(),
-            validators.Length(min=3, max=32),
-            is_unique_name
-        ])
-
-    title = StringField(
-        label=_(u'Title'),
-        validators=[
-            validators.required(),
-            validators.Length(min=3, max=32),
-        ])
-
-    description = TextAreaField(
-        title=_(u'Description'))
-
-    code = StringField(
-        label=_(u'Code'),
-        validators=[validators.required()])
-
-    short_title = StringField(
-        label=_(u'Printable Title'),
-        validators=[validators.required()])
-
-    consent_date = DateField(
-        label=_(u'Consent Date'),
-        validators=[validators.required()])
-
-
-class ScheduleForm(Form):
-
-    class Meta(object):
-        csrf = True
-        csrf_class = CSRF
-
-    id = IntegerField(widget=widgets.HiddenInput())
-
-    title = StringField(
-        title=_(u'Title'),
-        validators=[validators.required()])
-
-    week = IntegerField(
-        title=_(u'Week Number'),
-        validators=[validators.required()])
-
-    def validator(self, node, struct):
-        pass
 
 
 @view_config(
-    route_name='study_list',
-    permission='study_view',
-    renderer='occams.studies:templates/study/list.pt')
-def list_(request):
+    route_name='home',
+    permission='view',
+    renderer='../templates/study/list.pt')
+@view_config(
+    route_name='studies',
+    permission='view',
+    renderer='../templates/study/list.pt')
+def home(request):
     studies_query = (
         Session.query(models.Study)
         .order_by(models.Study.title.asc()))
+
+    modified_query = (
+        Session.query(models.Patient)
+        .order_by(models.Patient.modify_date.desc())
+        .limit(10))
+
+    viewed = sorted((request.session.get('viewed') or {}).values(),
+                    key=lambda v: v['view_date'],
+                    reverse=True)
+
     return {
         'studies': studies_query,
-        'studies_count': studies_query.count()}
+        'studies_count': studies_query.count(),
+
+        'modified': modified_query,
+        'modified_count': modified_query.count(),
+
+        'viewed': viewed,
+        'viewed_count': len(viewed),
+    }
 
 
 @view_config(
-    route_name='study_view',
+    route_name='study',
     permission='study_view',
-    renderer='occams.studies:templates/study/view.pt')
+    renderer='../templates/study/view.pt')
 def view(request):
-    study = get_study(request)
+    study = get_study(**request.matchdict)
     return {'study': study}
 
 
 @view_config(
     route_name='study_ecrfs',
     permission='study_view',
-    renderer='occams.studies:templates/study/ecrfs.pt')
+    renderer='../templates/study/ecrfs.pt')
 def ecrfs(request):
-    study = get_study(request)
+    study = get_study(**request.matchdict)
     return {'study': study}
-
-
-@view_config(
-    route_name='study_schedule',
-    permission='study_view',
-    renderer='occams.studies:templates/study/schedule.pt')
-def schedule(request):
-    study = get_study(request)
-    cycles_query = (
-        Session.query(models.Cycle)
-        .filter(models.Cycle.study == study)
-        .order_by(models.Cycle.week.nullslast()))
-
-    OuterSchema = orm.aliased(models.Schema, name='OuterSchema')
-
-    ecrfs_query = (
-        Session.query(OuterSchema.title)
-        .add_columns(*[
-            sql.exists([models.Schema.id])
-            .where((models.Schema.name == OuterSchema.name)
-                   & models.Schema.categories.contains(cycle.category))
-            .label(cycle.name)
-            for cycle in cycles_query])
-        .filter(OuterSchema.categories.contains(study.category))
-        .filter(OuterSchema.publish_date == (
-            Session.query(models.Schema.publish_date)
-            .filter(models.Schema.publish_date is not None)
-            .filter(models.Schema.name == OuterSchema.name)
-            .order_by(models.Schema.publish_date.desc())
-            .limit(1)
-            .correlate(OuterSchema)
-            .as_scalar()))
-        .order_by(OuterSchema.title.asc()))
-
-    return {
-        'study': study,
-        'cycles': cycles_query,
-        'has_cycles': cycles_query.count() > 0,
-        'ecrfs': ecrfs_query}
 
 
 @view_config(
     route_name='study_progress',
     permission='study_view',
-    renderer='occams.studies:templates/study/progress.pt')
+    renderer='../templates/study/progress.pt')
 def progress(request):
-    study = get_study(request)
+    study = get_study(**request.matchdict)
 
     states_query = Session.query(models.State)
 
@@ -209,12 +102,12 @@ def progress(request):
 
 
 @view_config(
-    route_name='study_add',
+    route_name='study',
     permission='study_add',
+    request_method='POST',
     xhr=True,
     renderer='json')
 def add(request):
-    #title = _(u'Add Study')
     form = StudyForm(request.POST)
 
     if request.method == 'POST' and form.validate():
@@ -256,3 +149,56 @@ def query_enabled_ecrfs(study):
             .as_scalar()))
         .order_by(StudyForm.title.asc()))
     return ecrfs_query
+
+
+def get_study(study=None):
+    """
+    Uses the URL dispatch matching dictionary to find a study
+    """
+    try:
+        return Session.query(models.Study).filter_by(name=study).one()
+    except orm.exc.NoResultFound:
+        raise HTTPNotFound
+
+
+def is_unique_name(form, field):
+    name_query = sql.exists().where(models.Schema.name == field.data.name)
+    if hasattr(form, 'id'):
+        name_query = name_query.where(models.Study.id != form.data.id)
+    if Session.query(name_query).one():
+        raise wtforms.ValidationError(
+            _(u'"%s" already exists' % form.title.data))
+
+
+class StudyForm(wtforms.Form):
+
+    name = wtforms.StringField(
+        label=_(u'URL Name'),
+        description=_(u'ID for user (e.g. /studies/my-study)'),
+        validators=[
+            wtforms.validators.required(),
+            wtforms.validators.Length(min=3, max=32),
+            is_unique_name
+        ])
+
+    title = wtforms.StringField(
+        label=_(u'Title'),
+        validators=[
+            wtforms.validators.required(),
+            wtforms.validators.Length(min=3, max=32),
+        ])
+
+    description = wtforms.TextAreaField(
+        title=_(u'Description'))
+
+    code = wtforms.StringField(
+        label=_(u'Code'),
+        validators=[wtforms.validators.required()])
+
+    short_title = wtforms.StringField(
+        label=_(u'Printable Title'),
+        validators=[wtforms.validators.required()])
+
+    consent_date = wtforms.fields.html5.DateField(
+        label=_(u'Consent Date'),
+        validators=[wtforms.validators.required()])
