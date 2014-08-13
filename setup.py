@@ -31,6 +31,7 @@ REQUIRES = [
     'six',
     'tabulate',
     'transaction',
+    'voluptuous',
     'webassets',
     'wtforms',
     'zope.sqlalchemy',

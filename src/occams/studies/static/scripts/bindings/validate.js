@@ -13,6 +13,32 @@
 }(jQuery);
 
 
+// Valiation options that accommodate Bootstrap styling
+var defaultValidationOptions = {
+    errorClass: 'has-error',
+    validClass: 'has-success',
+    wrapper: 'p',
+    errorPlacement: function(label, element){
+      label.addClass('help-block').insertAfter(element);
+    },
+    onfocusout: function(element, event){
+      $(element).valid();
+    },
+    highlight: function(element, errorClass, validClass){
+      $(element)
+        .closest('.js-validation-item,.form-group')
+        .addClass(errorClass)
+        .removeClass(validClass);
+    },
+    unhighlight: function(element, errorClass, validClass){
+      $(element)
+        .closest('.js-validation-item,.form-group')
+        .addClass(validClass)
+        .removeClass(errorClass);
+    }
+};
+
+
 +function($){
  // Copied the following form additional methods since all I need is pattern.
  /**

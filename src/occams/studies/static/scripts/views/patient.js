@@ -2,6 +2,7 @@ function PatientView(data){
   var self = this;
 
   self.isReady = ko.observable(false);
+  self.isSaving = ko.observable(false);
 
   self.selected = ko.observable();
   self.editable = ko.observable();
@@ -17,7 +18,7 @@ function PatientView(data){
   self.latestVisit = ko.observable();
   self.showVisitEditForm = ko.observable(false);
 
-  self.patient = ko.observable(new Patient(data));
+  self.patient = ko.observable(new Patient(data.patient));
 
   self.clearSelected = function(){
     self.selected(null);
@@ -36,8 +37,7 @@ function PatientView(data){
   self.startEdit = function(){
     self.clearSelected();
     self.showEditForm(true);
-    self.selected(self.patient());
-    self.editable(new Patient(self.patient().toJS()));
+    self.editable(new Patient(ko.mapping.toJS(self.patient())));
   }
 
   self.startDelete = function(){
@@ -52,7 +52,32 @@ function PatientView(data){
     self.editable(new Enrollment());
   }
 
-  self.doEdit = function(){
+  self.doEdit = function(element){
+    self.isSaving(true);
+
+    if (!$(element).validate().form()){
+      return;
+    }
+
+    $.ajax({
+      url: self.patient.__src__,
+      method: 'PUT',
+      contentType: 'application/json; charset=utf-8',
+      data: ko.mapping.toJSON(self.editable()),
+      headers: {'X-CSRF-Token': $.cookie('csrf_token')},
+      error: function(jqXHR, textStatus, errorThrown){
+        console.log('An error occurred, need to show something...');
+        console.log(jqXHR.responseJSON);
+      },
+      success: function(data, textStatus, jqXHR){
+        console.log(data);
+        self.patient().update(data);
+        self.clearSelected();
+      },
+      complete: function(){
+        self.isSaving(false);
+      }
+    });
   };
 
   self.doEnroll = function(){
@@ -71,8 +96,23 @@ function PatientView(data){
   $(document).ready(function(){
     var $view = $('#patient');
     if ($view.length > 0){
-      var data = JSON.parse($('#data').text());
-      ko.applyBindings(new PatientView(data), $view[0]);
+
+      Site.availableOptions($.map(
+        JSON.parse($('#availableSites-data').text()),
+        function(data){ return new Site(data); }));
+
+      // Configure Reference model to use only these reference types
+      ReferenceType.availableOptions($.map(
+        JSON.parse($('#availableReferenceTypes-data').text()),
+        function(data){
+          return new ReferenceType(data);
+        }));
+
+      ko.applyBindings(new PatientView({
+        patient: JSON.parse($('#patient-data').text()),
+        enrollments: JSON.parse($('#enrollments-data').text()),
+        visits: JSON.parse($('#visits-data').text()),
+      }), $view[0]);
     }
   });
 }(jQuery);

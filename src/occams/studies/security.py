@@ -59,9 +59,17 @@ def track_user_on_request(event):
     """
     Annotates the database session with the current user.
     """
+    request = event.request
     # Keep track of the request so we can generate model URLs
-    Session.info['request'] = event.request
-    Session.info['user'] = event.request.authenticated_userid
+    Session.info['request'] = request
+    Session.info['user'] = request.authenticated_userid
+
+    # Store the CSRF token in a cookie since we'll need to sent it back
+    # frequently in single-page views.
+    # https://docs.djangoproject.com/en/dev/ref/contrib/csrf/
+    # The attacker cannot read or change the value of the cookie due to the
+    # same-origin policy, and thus cannot guess the right GET/POST parameter
+    request.response.set_cookie('csrf_token', request.session.get_csrf_token())
 
 
 class RootFactory(object):

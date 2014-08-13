@@ -50,6 +50,7 @@ def cleanup_reftype():
     op.create_unique_constraint('uq_reference_type_name', 'reference_type', ['name'])
 
     op.rename_table('patientreference', 'patient_reference')
+    op.rename_table('patientreference_audit', 'patient_reference_audit')
     op.drop_constraint('fk_patientreference_patient_id', 'patient_reference')
     op.create_foreign_key(
         'fk_patient_reference_patient_id',
@@ -59,6 +60,7 @@ def cleanup_reftype():
         ['id'],
         ondelete='CASCADE')
     op.alter_column('patient_reference', 'reftype_id', new_column_name='reference_type_id')
+    op.alter_column('patient_reference_audit', 'reftype_id', new_column_name='reference_type_id')
     op.drop_constraint('fk_patientreference_reftype_id', 'patient_reference')
     op.create_foreign_key(
         'fk_patient_reference_reference_type_id',

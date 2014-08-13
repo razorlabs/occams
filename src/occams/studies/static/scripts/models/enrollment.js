@@ -25,10 +25,6 @@ function Enrollment(data){
 
   // Utilities
 
-  self.isNew = ko.computed(function(){
-    return !self.id();
-  });
-
   self.isRandomized = ko.computed(function(){
     return !!self.stratum();
   });

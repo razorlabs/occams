@@ -31,10 +31,6 @@ function Visit(data){
     return Math.round((self.num_complete() / self.total_forms()) * 100);
   });
 
-  self.isNew = ko.computed(function(){
-    return !self.id();
-  });
-
   /**
    * Update instance properties
    */

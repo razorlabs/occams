@@ -9,6 +9,12 @@ function Patient(data){
   // Database columns
 
   self.id = ko.observable();
+  self.site_id = ko.observable();
+  self.site = ko.computed(function(){
+    return ko.utils.arrayFirst(Site.availableOptions(), function(site){
+      return site.id() === self.site_id();
+    });
+  });
   self.pid = ko.observable();
   self.nurse = ko.observable();
   self.is_archived = ko.observable();
@@ -19,7 +25,6 @@ function Patient(data){
 
   //  Database relations
 
-  self.site = ko.observable();
   self.references = ko.observableArray();
   self.enrollments = ko.observableArray();
   self.visits = ko.observableArray();
@@ -38,16 +43,26 @@ function Patient(data){
 
   // Utilities
 
-  self.isNew = ko.computed(function(){
-    return !self.id();
-  });
+  self.addReference = function(){
+    self.references.push(new Reference());
+  }
+
+  self.deleteReference = function(item){
+    self.references.remove(item);
+  }
 
   /**
    * Update instance properties
    */
   self.update = function(data){
+    if (!data){
+      return;
+    }
     ko.mapping.fromJS(data, {
       references: {
+        key: function(item){
+          return ko.utils.unwrapObservable(item.id);
+        },
         create: function(options){
           return new Reference(options.data);
         }
@@ -65,16 +80,6 @@ function Patient(data){
     }, self);
   };
 
-  /**
-   * Serializes object for transport to server
-   */
-  self.toJS = function(){
-    return ko.mapping.toJS(self, {
-      include: ['id', 'pid', 'nurse', 'is_archived']
-    });
-  };
-
   // Apply initial data
   self.update(data);
 }
-

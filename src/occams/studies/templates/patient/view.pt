@@ -1,5 +1,6 @@
 <html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
   <metal:content-slot fill-slot="content-slot">
+
     <div style="display: none;" data-bind="visible: isReady, with: patient">
 
       <header class="page-header">
@@ -76,58 +77,63 @@
                     data-bind="click: $root.startAddEnrollment"
                     tal:condition="request.has_permission('enrollment_add')">
                   <span class="fa fa-plus"></span>
-                  <span>Add Enrollment</span>
+                  <span i18n:translate="">Add Enrollment</span>
                 </button>
               </div>
               <h4 class="panel-title" i18n:translate="">Enrollments</h4>
             </div>
-            <table class="table table-hover table-striped">
-              <colgroup>
-                <col class="col-sm-4" />
-                <col class="col-sm-3" />
-                <col class="col-sm-1" />
-                <col class="col-sm-1" />
-                <col class="col-sm-2" />
-                <col class="col-sm-1" />
-              </colgroup>
-              <thead>
-                <tr>
-                  <th i18n:translate="">Study</th>
-                  <th i18n:translate="">Consent</th>
-                  <th i18n:translate="">STUDYID</th>
-                  <th i18n:translate="">RANDID</th>
-                  <th i18n:translate="">Arm</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody data-bind="foreach: enrollments">
-                <tr>
-                  <!-- ko with: study -->
-                    <td class="study" data-bind="text: title"></td>
-                  <!-- /ko -->
-                  <td data-bind="dateText: consent_date"></td>
-                  <td>
-                    <!-- ko if: reference_number -->
+            <div class="panel-body" data-bind="ifnot: hasEnrollments">
+              <p class="text-muted text-center" i18n:translate="">No enrollments</p>
+            </div>
+            <!-- ko if: hasEnrollments -->
+              <table class="table table-hover table-striped">
+                <colgroup>
+                  <col class="col-sm-4" />
+                  <col class="col-sm-3" />
+                  <col class="col-sm-1" />
+                  <col class="col-sm-1" />
+                  <col class="col-sm-2" />
+                  <col class="col-sm-1" />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th i18n:translate="">Study</th>
+                    <th i18n:translate="">Consent</th>
+                    <th i18n:translate="">STUDYID</th>
+                    <th i18n:translate="">RANDID</th>
+                    <th i18n:translate="">Arm</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody data-bind="foreach: enrollments">
+                  <tr>
+                    <!-- ko with: study -->
+                      <td class="study" data-bind="text: title"></td>
+                    <!-- /ko -->
+                    <td data-bind="dateText: consent_date"></td>
+                    <td>
+                      <!-- ko if: reference_number -->
+                        <code data-bind="text: reference_number"></code>
+                      <!-- /ko -->
+                    </td>
+                    <td data-bind="with: stratum">
                       <code data-bind="text: reference_number"></code>
-                    <!-- /ko -->
-                  </td>
-                  <td data-bind="with: stratum">
-                    <code data-bind="text: reference_number"></code>
-                  </td>
-                  <td data-bind="if: isRandomized">
-                    <!-- ko if: study().is_blinded() -->
-                      <em i18n:translate="">Blinded</em>
-                    <!-- /ko -->
-                    <!-- ko ifnot: study().is_blinded() -->
-                      <span data-bind="text: stratum().arm().title()"></span>
-                    <!-- /ko -->
-                  </td>
-                  <td class="text-right">
-                    <a href="" class="btn btn-link"><span class="fa fa-chevron-right"></span></a>
-                  </td>
-                 </tr>
-              </tbody>
-            </table>
+                    </td>
+                    <td data-bind="if: isRandomized">
+                      <!-- ko if: study().is_blinded() -->
+                        <em i18n:translate="">Blinded</em>
+                      <!-- /ko -->
+                      <!-- ko ifnot: study().is_blinded() -->
+                        <span data-bind="text: stratum().arm().title()"></span>
+                      <!-- /ko -->
+                    </td>
+                    <td class="text-right">
+                      <a href="" class="btn btn-link"><span class="fa fa-chevron-right"></span></a>
+                    </td>
+                   </tr>
+                </tbody>
+              </table>
+            <!-- /ko -->
           </div> <!-- /.panel -->
         </div> <!-- /.col-sm-8 -->
       </div> <!-- /.row -->
@@ -138,54 +144,58 @@
             <button class="btn btn-link btn-xs"
                 tal:condition="request.has_permission('visit_add')">
               <span class="fa fa-plus"></span>
-              <span>Add Visit</span>
+              <span i18n:translate="">Add Visit</span>
             </button>
           </div>
           <h4 class="panel-title" i18n:translate="">Visits</h4>
         </div>
-        <table class="table table-hover table-striped">
-          <colgroup>
-            <col class="col-sm-2" />
-            <col class="col-sm-4" />
-            <col class="col-sm-5" />
-            <col class="col-sm-1" />
-          </colgroup>
-          <thead>
-            <tr>
-              <th i18n:translate="">Visit Date</th>
-              <th i18n:translate="">Cycles</th>
-              <th i18n:translate="">Progress</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody data-bind="foreach: visits">
-            <tr>
-              <td data-bind="dateText: visit_date"></td>
-              <td data-bind="foreach: cycles">
-                <div data-bind="text: title"></div>
-              </td>
-              <td>
-                <div class="progress">
-                  <div class="progress-bar"
-                      role="progressbar"
-                      aria-valuenow="0"
-                      aria-valuemin="0"
-                      aria-valuemax="100"
-                      data-bind="
-                        attr: {'aria-valuenow': progress},
-                        style: {width: progress() + '%'}">
-                    <span data-bind="text: num_complete"></span>
-                    /
-                    <span data-bind="text: total_forms"></span>
+        <div class="panel-body" data-bind="ifnot: hasVisits">
+          <p class="text-muted text-center" i18n:translate="">No visits</p>
+        </div>
+        <!-- ko if: hasVisits -->
+          <table class="table table-hover table-striped">
+            <colgroup>
+              <col class="col-sm-2" />
+              <col class="col-sm-4" />
+              <col class="col-sm-5" />
+              <col class="col-sm-1" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th i18n:translate="">Visit Date</th>
+                <th i18n:translate="">Cycles</th>
+                <th i18n:translate="">Progress</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody data-bind="foreach: visits">
+              <tr>
+                <td data-bind="dateText: visit_date"></td>
+                <td data-bind="foreach: cycles">
+                  <div data-bind="text: title"></div>
+                </td>
+                <td>
+                  <div class="progress">
+                    <div class="progress-bar"
+                        role="progressbar"
+                        aria-valuenow="0"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                        data-bind="
+                          attr: {'aria-valuenow': progress},
+                          style: {width: progress() + '%'}">
+                      <span data-bind="text: num_complete"></span>
+                      /
+                      <span data-bind="text: total_forms"></span>
+                    </div>
                   </div>
-                </div>
-              </td>
-              <td class="text-right"><a class="btn btn-link"><span class="fa fa-chevron-right"></span></a></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
+                </td>
+                <td class="text-right"><a class="btn btn-link"><span class="fa fa-chevron-right"></span></a></td>
+              </tr>
+            </tbody>
+          </table>
+        <!-- /ko -->
+      </div> <!-- /.panel -->
 
       <!-- ko if: null -->
         <div id="forms" class="panel panel-default"
@@ -229,28 +239,83 @@
     <div class="modal fade" data-bind="showModal: $root.showEditForm, with: $root.editable">
       <div class="modal-dialog">
         <div class="modal-content">
-          <form role="form" data-bind="submit: $root.doEdit">
+          <form
+              role="form"
+              data-bind="submit: $root.doEdit,
+                         validate: window.defaultValidationOptions">
             <div class="modal-header">
               <h4 class="modal-title">Edit Patient</h4>
             </div>
             <div class="modal-body">
               <div class="form-group">
-                <label i18n:translate="">Site</label>
-              </div>
-              <div class="form-group=">
+                <label i18n:translate="" class="required">Site</label>
+                <p class="help-block" i18n:translate="">
+                    Choose a site that the patient belongs to.
+                    You may only select a site of which you are a member of.
+                </p>
+                <select
+                    class="form-control"
+                    required
+                    data-bind="
+                    value: site_id,
+                      options: Site.availableOptions,
+                      optionsCaption: '---',
+                      optionsText: 'title',
+                      optionsValue: 'id',
+                      unqiqueName: true,
+                      select2: {}
+                    "></select>
+              </div> <!-- /.form-group -->
+              <div class="form-group">
                 <label i18n:translate="">Reference Numbers</label>
-                <div class="row" data-bind="references">
-                  <div class="col-sm-6">
-
-                  </div>
-                  <div class="col-sm-6" data-bind="text: reference_number">
-                  </div>
-                </div>
-              </div>
+                <!-- ko foreach: references -->
+                  <div class="form-group row">
+                    <div class="col-sm-5 js-validation-item">
+                      <select
+                        class="form-control"
+                        required
+                        data-bind="
+                            value: reference_type_id,
+                            options: ReferenceType.availableOptions,
+                            optionsCaption: '---',
+                            optionsText: 'title',
+                            optionsValue: 'id',
+                            uniqueName: true,
+                            select2: {}
+                            "></select>
+                    </div>
+                    <div class="col-sm-5 js-validation-item">
+                      <input type="text"
+                          class="form-control"
+                          required
+                          data-bind="
+                            value: reference_number,
+                            uniqueName: true
+                            " />
+                    </div>
+                    <div class="col-sm-2">
+                      <button class="btn btn-link" data-bind="click: $parent.deleteReference"><span class="fa fa-trash-o"></span></button>
+                    </div>
+                  </div> <!-- /.row -->
+                <!-- /ko -->
+                <button class="btn btn-link" data-bind="click: addReference">
+                  <span class="fa fa-plus"></span>
+                  <span i18n:translate="">Add another reference number</span>
+                </button>
+              </div> <!-- /.form-group -->
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-default" data-bind="click: $root.clearSelected">Close</button>
-              <button type="submit" class="btn btn-primary">Add</button>
+              <button
+                  type="button"
+                  class="btn btn-default"
+                  data-bind="click: $root.clearSelected"
+                  i18n:translate="">Close</button>
+              <button type="submit" class="btn btn-primary">
+                <span i18n:translate="">Save</span>
+                <!-- ko if: $root.isSaving -->
+                  <span class="fa fa-refresh fa-spin"></span>
+                <!-- /ko -->
+              </button>
             </div>
           </form>
         </div><!-- /.modal-content -->
@@ -265,7 +330,7 @@
               <h4 class="modal-title">Confirm Delete</h4>
             </div>
             <div class="modal-body">
-              <p i18n:translate="">You are about to delete this patient. this is an irreversable action. Are you sure you want to proceed?</p>
+              <p i18n:translate="">You are about to delete this patient. This is an irreversable action. Are you sure you want to proceed?</p>
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-default" data-bind="click: $root.clearSelected">Close</button>
@@ -276,9 +341,14 @@
       </div><!-- /.modal-dialog -->
     </div><!-- /.modal -->
 
-    <!--! Initial data so we don't have to do yet another AJAX call when we
-          already have the data inthis request -->
-    <script id="data" type="application/json" tal:define="json import:json">${json.dumps(patient)}</script>
+    <!--! Preloaded initial data -->
+    <tal:data define="json import:json">
+      <script id="availableReferenceTypes-data" type="application/json">${json.dumps(available_reference_types)}</script>
+      <script id="availableSites-data" type="application/json">${json.dumps(available_sites)}</script>
+      <script id="patient-data" type="application/json">${json.dumps(patient)}</script>
+      <script id="enrollments-data" type="application/json">${json.dumps(enrollments)}</script>
+      <script id="visits-data" type="application/json">${json.dumps(visits)}</script>
+    </tal:data>
   </metal:content-slot>
 </html>
 
