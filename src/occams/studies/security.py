@@ -28,11 +28,8 @@ def occams_groupfinder(identity, request):
 
     def parse_group(name):
         parts = name.split('-')
-        try:
-            org, site, group = parts
-        except ValueError:
-            org, group = parts
-        return group
+        # return the last part in the list
+        return group[-1]
 
     return [parse_group(n) for n in identity['groups']]
 
