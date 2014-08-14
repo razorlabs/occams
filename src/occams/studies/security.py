@@ -13,7 +13,6 @@ def groupfinder(identity, request):
     """
     Pass-through for groups
     """
-
     if 'groups' not in identity:
         log.warn('groups has not been set in the repoze identity!')
     return identity['groups']
@@ -25,13 +24,7 @@ def occams_groupfinder(identity, request):
     """
     if 'groups' not in identity:
         log.warn('groups has not been set in the repoze identity!')
-
-    def parse_group(name):
-        parts = name.split('-')
-        # return the last part in the list
-        return group[-1]
-
-    return [parse_group(n) for n in identity['groups']]
+    return [n[n.rfind('-') + 1:] for n in identity['groups']]
 
 
 @subscriber(NewRequest)
