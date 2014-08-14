@@ -6,7 +6,9 @@ DROP FOREIGN TABLE IF EXISTS patient_log_nonresponse_type_ext;
 
 
 CREATE FOREIGN TABLE patient_log_nonresponse_type_ext (
-    "order"         INTEGER NOT NULL
+    id              INTEGER NOT NULL
+  , value           VARCHAR
+  , "order"         INTEGER NOT NULL
 
   , old_db          VARCHAR NOT NULL
   , old_id          INTEGER NOT NULL
@@ -35,18 +37,22 @@ CREATE OR REPLACE FUNCTION patient_log_nonresponse_type_mirror() RETURNS TRIGGER
   BEGIN
     CASE TG_OP
       WHEN 'INSERT' THEN
+        PERFORM dblink_connect('trigger_target');
         INSERT INTO patient_log_nonresponse_type_ext (
-            value
+            id
+          , value
           , "order"
           , old_db
           , old_id
         )
         VALUES (
-            NEW.value
+            (SELECT val FROM dblink('SELECT nextval(''patient_log_nonresponse_type_id_seq'') AS val') AS sec(val int))
+          , NEW.value
           , NEW.order
           , (SELECT current_database())
           , NEW.id
         );
+        PERFORM dblink_disconnect();
         RETURN NEW;
       WHEN 'DELETE' THEN
         DELETE FROM patient_log_nonresponse_type_ext
