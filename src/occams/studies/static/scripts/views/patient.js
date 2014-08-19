@@ -4,22 +4,26 @@ function PatientView(){
   self.isReady = ko.observable(false);
   self.isSaving = ko.observable(false);
 
+  self.selectedItem = ko.observable();  // originally selected item
+  self.editableItem = ko.observable();  // pending changes (will be applied to selected)
+
   // Patient UI settings
-  self.editablePatient = ko.observable();
   self.showEditForm = ko.observable(false);
   self.showDeleteForm = ko.observable(false)
 
   // Enrollment UI settings
   self.latestEnrollment = ko.observable();
-  self.editableEnrollment = ko.observable();
   self.showEnrollmentForm = ko.observable(false);
 
   // Visti UI Settings
   self.latestVisit = ko.observable();
-  self.editableVisit = ko.observable();
   self.showVisitForm = ko.observable(false);
 
   // Modal UI Settings
+  self.errorMessages = ko.observableArray();
+  self.hasErrorMessages = ko.computed(function(){
+      return self.errorMessages().length > 0;
+  });
 
   // UI Data
   self.patient = ko.mapping.fromJSON($('#patient-data').text());
@@ -48,13 +52,11 @@ function PatientView(){
     return Math.round((visit.forms_complete() / visit.forms_total()) * 100);
   };
 
-  self.onChangeStudy = function(item, event){
+  self.onChangeReferenceType = function(item, event){
     var $option = $($(event.target).find(':selected'))
-      , $field = $('#reference_number')
+      , $field = $option.closest('.row').find('input.reference_number')
       , pattern = $option.data('reference_pattern')
       , hint = $option.data('reference_hint');
-
-    console.log(pattern, hint);
 
     if (pattern){
       $field.attr('pattern', pattern);
@@ -67,15 +69,33 @@ function PatientView(){
     } else {
       $field.removeAttr('placeholder');
     }
-  }
+  };
+
+  self.onChangeStudy = function(item, event){
+    var $option = $($(event.target).find(':selected'))
+      , $field = $('#reference_number')
+      , pattern = $option.data('reference_pattern')
+      , hint = $option.data('reference_hint');
+
+    if (pattern){
+      $field.attr('pattern', pattern);
+    } else {
+      $field.removeAttr('pattern');
+    }
+
+    if (hint){
+      $field.attr('placeholder', hint);
+    } else {
+      $field.removeAttr('placeholder');
+    }
+  };
 
   /**
    * Clears all UI settings
    */
   self.clear = function(){
-    self.editablePatient(null);
-    self.editableEnrollment(null);
-    self.editableVisit(null);
+    self.selectedItem(null);
+    self.editableItem(null);
     self.showEditForm(false);
     self.showDeleteForm(false);
     self.showEnrollmentForm(false);
@@ -85,7 +105,7 @@ function PatientView(){
   self.startEdit = function(){
     self.clear();
     self.showEditForm(true);
-    self.editablePatient({
+    self.editableItem({
       // Make a copy for editing
       site_id: ko.observable(self.patient.site.id()),
       references: ko.observableArray($.map(self.patient.references(), function(r){
@@ -98,11 +118,11 @@ function PatientView(){
   };
 
   self.deleteReference = function(reference){
-    self.editablePatient().references.remove(reference);
+    self.editableItem().references.remove(reference);
   }
 
   self.addReference = function(reference){
-    self.editablePatient().references.push({reference_type_id: null, reference_number: null});
+    self.editableItem().references.push({reference_type_id: null, reference_number: null});
   }
 
   self.startDelete = function(){
@@ -113,7 +133,7 @@ function PatientView(){
   self.startAddEnrollment = function(){
     self.clear();
     self.showEnrollmentForm(true);
-    self.editableEnrollment({
+    self.editableItem({
       // make a copy for editing
       id: ko.observable(),
       study_id: ko.observable(),
@@ -147,7 +167,7 @@ function PatientView(){
       url: self.patient.__src__,
       method: 'PUT',
       contentType: 'application/json; charset=utf-8',
-      data: ko.mapping.toJSON(self.editablePatient()),
+      data: ko.mapping.toJSON(self.editableItem()),
       headers: {'X-CSRF-Token': $.cookie('csrf_token')},
       error: function(jqXHR, textStatus, errorThrown){
         console.log('An error occurred, need to show something...');
@@ -193,7 +213,7 @@ function PatientView(){
       url: $(element).attr('action'),
       method: 'POST',
       contentType: 'application/json; charset=utf-8',
-      data: ko.mapping.toJSON(self.editableEnrollment()),
+      data: ko.mapping.toJSON(self.editableItem()),
       headers: {'X-CSRF-Token': $.cookie('csrf_token')},
       error: function(jqXHR, textStatus, errorThrown){
         console.log('An error occurred, need to show something...');

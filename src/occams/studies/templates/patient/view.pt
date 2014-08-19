@@ -208,13 +208,13 @@
 
     </div> <!-- /:isReady -->
 
-    <div class="modal fade" data-bind="showModal: $root.showEditForm">
+    <div class="modal fade" data-bind="showModal: $root.showEditForm, if: $root.showEditForm">
       <div class="modal-dialog">
         <div class="modal-content">
           <form
               role="form"
               action="${request.current_route_path(_route_name='patient')}"
-              data-bind="with: $root.editablePatient,
+              data-bind="with: $root.editableItem,
                          submit: $root.savePatient,
                          validate: window.defaultValidationOptions">
             <div class="modal-header">
@@ -239,25 +239,30 @@
                 <label i18n:translate="">Reference Numbers</label>
                 <!-- ko foreach: references -->
                   <div class="form-group row">
-                    <div class="col-sm-5 js-validation-item">
+                    <div class="col-sm-5 js-validation-item" tal:define="name 'reference_type_id'">
                       <select
-                        class="form-control"
+                        class="form-control ${name}"
                         required
                         data-bind="
-                            value: reference_type_id,
+                            value: ${name},
+                            event: {change: $root.onChangeReferenceType},
                             uniqueName: true,
                             select2: {}
                             ">
                           <option value="" i18n:translate="">Select a reference type...</option>
-                          <option tal:repeat="type available_reference_types" value="${type.id}">${type.title}</option>
+                          <option tal:repeat="type available_reference_types"
+                              tal:attributes="
+                                data-reference_pattern python:type.reference_pattern or None;
+                                data-reference_hint python:type.reference_hint or None;"
+                              value="${type.id}">${type.title}</option>
                         </select>
                     </div>
-                    <div class="col-sm-5 js-validation-item">
+                    <div class="col-sm-5 js-validation-item" tal:define="name 'reference_number'">
                       <input type="text"
-                          class="form-control"
+                          class="form-control ${name}"
                           required
                           data-bind="
-                            value: reference_number,
+                            value: ${name},
                             uniqueName: true
                             " />
                     </div>
@@ -297,13 +302,13 @@
       </div><!-- /.modal-dialog -->
     </div><!-- /.modal -->
 
-    <div class="modal fade" data-bind="showModal: $root.showEnrollmentForm">
+    <div class="modal fade" data-bind="showModal: $root.showEnrollmentForm, if: $root.showEnrollmentForm">
       <div class="modal-dialog">
         <div class="modal-content">
           <form
               role="form"
               action="${request.current_route_path(_route_name='patient_enrollments')}"
-              data-bind="with: $root.editableEnrollment,
+              data-bind="with: $root.editableItem,
                          submit: $root.saveEnrollment,
                          validate: window.defaultValidationOptions">
             <div class="modal-header">
@@ -401,7 +406,7 @@
       </div><!-- /.modal-dialog -->
     </div><!-- /.modal -->
 
-    <div class="modal fade" data-bind="showModal: $root.showVisitForm">
+    <div class="modal fade" data-bind="showModal: $root.showVisitForm, if: $root.showVisitForm">
       <div class="modal-dialog">
         <div class="modal-content">
           <form
@@ -470,7 +475,7 @@
     </div><!-- /.modal -->
 
 
-    <div class="modal fade" data-bind="showModal: $root.showDeleteForm">
+    <div class="modal fade" data-bind="showModal: $root.showDeleteForm, if: $root.showDeleteForm">
       <div class="modal-dialog">
         <div class="modal-content">
           <form data-bind="submit: $root.deletePatient">

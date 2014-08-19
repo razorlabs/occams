@@ -8,6 +8,7 @@ from pyramid.i18n import get_localizer, negotiate_locale_name
 from pyramid.httpexceptions import (
     HTTPFound, HTTPNotFound, HTTPOk, HTTPForbidden)
 from pyramid.response import FileResponse
+from pyramid.session import check_csrf_token
 from pyramid.settings import asbool
 from pyramid.view import view_config
 import six
@@ -24,7 +25,6 @@ from wtforms import (
 from .. import _, log, models, Session, exports
 from ..tasks import celery,  make_export
 from ..widgets.pager import Pager
-from ..security import CSRF
 
 
 @view_config(
@@ -53,10 +53,6 @@ class ExportCheckoutForm(Form):
     """
     Export checkout serialization schema
     """
-
-    class Meta(object):
-        csrf = True
-        csrf_class = CSRF
 
     contents = SelectMultipleField(
         widget=widgets.ListWidget(prefix_label=False),
@@ -103,10 +99,11 @@ def add(request):
     limit = request.registry.settings.get('app.export.limit')
     exceeded = limit is not None and query_exports(request).count() > limit
 
-    form = ExportCheckoutForm(request.POST, meta={'csrf_context': request.session})
+    form = ExportCheckoutForm(request.POST)
     form.contents.choices = [(k, v.title) for k, v in six.iteritems(exportables)]
 
     if request.method == 'POST' and not exceeded and form.validate():
+        check_csrf_token(request)
         task_id = six.u(str(uuid.uuid4()))
         Session.add(models.Export(
             name=task_id,
