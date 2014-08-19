@@ -14,6 +14,7 @@ import six
 from six import u
 from sqlalchemy import (
     inspect,
+    sql,
     engine_from_config,
     Table, Column,
     ForeignKey, ForeignKeyConstraint, UniqueConstraint, Index,
@@ -85,10 +86,25 @@ class Study(Base, Referenceable, Describeable, Modifiable, Auditable):
         nullable=False,
         doc='The date that the latest consent was produced for this study.')
 
+    is_randomized = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default=sql.false(),
+        doc='Flag indicating that this study is randomized')
+
     is_blinded = Column(
         Boolean,
         doc='Flag for randomized studies to indicate that '
             'they are also blinded')
+
+    reference_pattern = Column(
+        Unicode,
+        doc='Reference number pattern regular expresssion')
+
+    reference_hint = Column(
+        Unicode,
+        doc='UI reference hint without regular expression syntax')
 
     # cycles is backref'ed in the Cycle class
 
@@ -112,29 +128,6 @@ class Study(Base, Referenceable, Describeable, Modifiable, Auditable):
         single_parent=True,
         cascade='all,delete-orphan',
         primaryjoin=(log_category_id == Category.id))
-
-    @property
-    def __src__(self):
-        session = inspect(self).session
-        if session and 'request' in session.info:
-            return session.info['request'].route_path(
-                'study', study=self.name)
-
-    def serialize(self, deep=False):
-        return {
-            'id': self.id,
-            'name': self.name,
-            'title': self.title,
-            'description': self.description,
-            'short_title': self.short_title,
-            'code': self.code,
-            'consent_date': self.consent_date.isoformat(),
-            'is_blinded': self.is_blinded,
-            'modify_date': self.modify_date.isoformat(),
-            'modify_user': self.modify_user.key,
-            'create_date': self.create_date.isoformat(),
-            'create_user': self.create_user.key
-        }
 
     @declared_attr
     def __table_args__(cls):
@@ -292,6 +285,14 @@ class ReferenceType(Base, Referenceable, Describeable, Modifiable):
     """
 
     __tablename__ = 'reference_type'
+
+    reference_pattern = Column(
+        Unicode,
+        doc='Reference number pattern regular expresssion')
+
+    reference_hint = Column(
+        Unicode,
+        doc='UI reference hint without regular expression syntax')
 
     @declared_attr
     def __table_args__(cls):

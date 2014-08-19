@@ -13,8 +13,14 @@ ko.bindingHandlers.select2 = {
 
     $(element).select2(obj);
 
+    // Ensure the select2 blur event triggers the orginal element's blur event
+    // (Not sure why it doesn't do this in the first place...)
+    $(element).on('select2-blur', function() {
+      $(this).trigger('blur');
+    });
+
     if (lookupKey) {
-      var value = ko.utils.unwrapObservable(allBindings.value);
+      var value = ko.unwrap(allBindings.value);
       $(element).select2('data', ko.utils.arrayFirst(obj.data.results, function (item) {
         return item[lookupKey] === value;
       }));

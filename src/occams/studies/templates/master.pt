@@ -1,4 +1,6 @@
 <!DOCTYPE html>
+<?python import occams.studies as pkg
+  ?><!-- ${pkg.__name__} v${pkg.__version__} -->
 <html
     xmlns="http://www.w3.org/1999/xhtml"
     xmlns:i18n="http://xml.zope.org/namespaces/i18n"
@@ -136,9 +138,6 @@
               ><span class="glyphicon glyphicon-search"></span></button>
           </form>
 
-          <button class="btn btn-primary navbar-btn">Add Forms</button>
-
-
           <ul class="nav navbar-nav navbar-right"
               tal:define="user request.environ['repoze.who.identity']['properties']|nothing;"
                 tal:condition="user">
@@ -203,7 +202,6 @@
     <footer id="footer">
       <div class="container">
         <p class="text-muted credit">
-          Version <span tal:define="pkg import:occams.studies">${pkg.__version__}</span>.
           Developed by <a href="http://cfar.ucsd.edu/bit">UCSD Bit Core</a>.
         </p>
       </div>

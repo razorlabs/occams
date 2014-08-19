@@ -1,0 +1,38 @@
+      <!-- ko if: null -->
+        <div id="forms" class="panel panel-default"
+            tal:condition="request.has_permission('fia_view')">
+          <div class="panel-heading">
+            <h4>Forms</h4>
+          </div>
+          <table class="table table-hover table-striped">
+            <thead>
+              <tr>
+                <th class="form">Form</th>
+                <th class="pending-entry">Pending Entry</th>
+                <th class="pending-review">Pending Review</th>
+                <th class="complete">Complete</th>
+                <th class="not-done">Skipped</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody data-bind="foreach: forms">
+              <tr>
+                <td class="form" data-bind="text: title"></td>
+                <td data-bind="if: count_pending_entry() > 0">
+                  <span class="label label-danger" data-bind="text: count_pending_entry"></span>
+                </td>
+                <td datab-bind="if: count_pending_review() > 0">
+                  <span class="label label-warning" data-bind="text: count_pending_review"></span>
+                </td>
+                <td datab-bind="if: count_complete() > 0">
+                  <span class="label label-success" data-bind="text: count_complete"></span>
+                </td>
+                <td>
+                  <a class="btn btn-link" href=""><span class="fa fa-chevron-right"></span></a>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div> <!-- /.panel -->
+      <!-- /ko -->
+

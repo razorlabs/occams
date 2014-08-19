@@ -25,6 +25,7 @@ def upgrade():
     cleanup_attribute()
     cleanup_reftype()
     cleanup_patient()
+    cleanup_study()
     fix_numeric_choice_names()
     case_insensitive_names()
     merge_integer_decimal()
@@ -34,6 +35,20 @@ def upgrade():
 
 def downgrade():
     pass
+
+
+def cleanup_study():
+    for table_name in ['study', 'study_audit']:
+        op.add_column(
+            table_name,
+            sa.Column('is_randomized', sa.Boolean(), server_default=sa.sql.false())
+            )
+        op.add_column(
+            table_name,
+            sa.Column('reference_pattern', sa.String(), nullable=True))
+        op.add_column(
+            table_name,
+            sa.Column('reference_hint', sa.String(), nullable=True))
 
 
 def cleanup_attribute():
@@ -48,6 +63,12 @@ def cleanup_reftype():
     op.rename_table('reftype', 'reference_type')
     op.drop_constraint('uq_reftype_name', 'reference_type')
     op.create_unique_constraint('uq_reference_type_name', 'reference_type', ['name'])
+    op.add_column(
+        'reference_type',
+        sa.Column('reference_pattern', sa.String(), nullable=True))
+    op.add_column(
+        'reference_type',
+        sa.Column('reference_hint', sa.String(), nullable=True))
 
     op.rename_table('patientreference', 'patient_reference')
     op.rename_table('patientreference_audit', 'patient_reference_audit')

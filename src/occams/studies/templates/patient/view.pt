@@ -1,7 +1,9 @@
 <html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
-  <metal:content-slot fill-slot="content-slot">
+  <metal:content-slot fill-slot="content-slot" tal:define="json import:json">
 
-    <div style="display: none;" data-bind="visible: isReady, with: patient">
+    <script id="patient-data" type="application/json">${json.dumps(patient)}</script>
+
+    <div style="display: none;" data-bind="visible: isReady">
 
       <header class="page-header">
         <div class="btn-toolbar pull-right">
@@ -18,9 +20,9 @@
             <span i18n:translate="">Delete</span>
           </button>
         </div>
-        <h1 i18n:translate="" data-bind="text: pid"></h1>
+        <h1 i18n:translate="" data-bind="text: patient.pid"></h1>
         <ul class="details list-inline">
-          <li data-bind="with: site">
+          <li data-bind="with: patient.site">
             <span class="text-muted" i18n:translate="">Site:</span>
             <span data-bind="text: title"></span>
           </li>
@@ -28,15 +30,15 @@
         <nav>
           <ul class="nav nav-header">
             <li><a href="${request.route_path('studies')}" i18n:translate=""><span class="fa fa-chevron-left"></a></li>
-            <li><a i18n:translate="">Overview</a></li>
-            <li><a i18n:translate="">Forms</a></li>
+            <li><a href="${request.current_route_path(_route_name='patient')}" i18n:translate="">Overview</a></li>
+            <li><a href="${request.current_route_path(_route_name='patient_forms')}" i18n:translate="">Forms</a></li>
           </ul>
         </nav>
       </header>
 
        <div class="row">
         <div class="col-sm-4">
-          <div class="panel panel-default">
+          <div class="panel panel-default" data-bind="with: patient">
             <div class="panel-heading clearfix">
               <div class="btn-toolbar pull-right">
                 <button class="btn btn-link btn-xs"
@@ -48,10 +50,12 @@
               </div>
               <h4 class="panel-title" i18n:translate="">External IDs</h4>
             </div>
-            <!-- ko ifnot: hasReferences -->
-              <p class="text-muted text-center" i18n:translate="">No references</p>
+            <!-- ko if: references().length <= 0 -->
+              <div class="panel-body">
+                <p class="text-muted text-center" i18n:translate="">No references</p>
+              </div>
             <!-- /ko -->
-            <!-- ko if: hasReferences -->
+            <!-- ko if: references().length > 0 -->
               <table class="table table-striped">
                 <colgroup>
                   <col class="col-sm-8" />
@@ -71,6 +75,7 @@
         </div> <!-- /.col-sm-4 -->
         <div class="col-sm-8">
           <div class="panel panel-default" tal:condition="request.has_permission('enrollment_view')">
+            <script id="enrollments-data" type="application/json">${json.dumps(enrollments)}</script>
             <div class="panel-heading clearfix">
               <div class="btn-toolbar pull-right">
                 <button class="btn btn-link btn-xs"
@@ -82,15 +87,17 @@
               </div>
               <h4 class="panel-title" i18n:translate="">Enrollments</h4>
             </div>
-            <div class="panel-body" data-bind="ifnot: hasEnrollments">
-              <p class="text-muted text-center" i18n:translate="">No enrollments</p>
-            </div>
+            <!-- ko ifnot: hasEnrollments -->
+              <div class="panel-body">
+                <p class="text-muted text-center" i18n:translate="">No enrollments</p>
+              </div>
+            <!-- /ko -->
             <!-- ko if: hasEnrollments -->
               <table class="table table-hover table-striped">
                 <colgroup>
                   <col class="col-sm-4" />
-                  <col class="col-sm-3" />
-                  <col class="col-sm-1" />
+                  <col class="col-sm-2" />
+                  <col class="col-sm-2" />
                   <col class="col-sm-1" />
                   <col class="col-sm-2" />
                   <col class="col-sm-1" />
@@ -99,7 +106,7 @@
                   <tr>
                     <th i18n:translate="">Study</th>
                     <th i18n:translate="">Consent</th>
-                    <th i18n:translate="">STUDYID</th>
+                    <th i18n:translate="">Reference #</th>
                     <th i18n:translate="">RANDID</th>
                     <th i18n:translate="">Arm</th>
                     <th />
@@ -111,15 +118,13 @@
                       <td class="study" data-bind="text: title"></td>
                     <!-- /ko -->
                     <td data-bind="dateText: consent_date"></td>
-                    <td>
-                      <!-- ko if: reference_number -->
-                        <code data-bind="text: reference_number"></code>
-                      <!-- /ko -->
+                    <td data-bind="if: reference_number">
+                      <code data-bind="text: reference_number"></code>
                     </td>
                     <td data-bind="with: stratum">
                       <code data-bind="text: reference_number"></code>
                     </td>
-                    <td data-bind="if: isRandomized">
+                    <td data-bind="if: false">
                       <!-- ko if: study().is_blinded() -->
                         <em i18n:translate="">Blinded</em>
                       <!-- /ko -->
@@ -139,9 +144,11 @@
       </div> <!-- /.row -->
 
       <div id="visits" class="panel panel-default" tal:condition="request.has_permission('visit_view')">
+        <script id="visits-data" type="application/json">${json.dumps(visits)}</script>
         <div class="panel-heading clearfix">
           <div class="btn-toolbar pull-right">
             <button class="btn btn-link btn-xs"
+                data-bind="click: $root.startAddVisit"
                 tal:condition="request.has_permission('visit_add')">
               <span class="fa fa-plus"></span>
               <span i18n:translate="">Add Visit</span>
@@ -149,9 +156,11 @@
           </div>
           <h4 class="panel-title" i18n:translate="">Visits</h4>
         </div>
-        <div class="panel-body" data-bind="ifnot: hasVisits">
-          <p class="text-muted text-center" i18n:translate="">No visits</p>
-        </div>
+        <!-- ko ifnot: hasVisits -->
+          <div class="panel-body">
+            <p class="text-muted text-center" i18n:translate="">No visits</p>
+          </div>
+        <!-- /ko -->
         <!-- ko if: hasVisits -->
           <table class="table table-hover table-striped">
             <colgroup>
@@ -182,11 +191,11 @@
                         aria-valuemin="0"
                         aria-valuemax="100"
                         data-bind="
-                          attr: {'aria-valuenow': progress},
-                          style: {width: progress() + '%'}">
-                      <span data-bind="text: num_complete"></span>
+                          attr: {'aria-valuenow': $root.visitProgress($data)},
+                          style: {width: $root.visitProgress($data) + '%'}">
+                      <span data-bind="text: forms_complete"></span>
                       /
-                      <span data-bind="text: total_forms"></span>
+                      <span data-bind="text: forms_total"></span>
                     </div>
                   </div>
                 </td>
@@ -197,54 +206,19 @@
         <!-- /ko -->
       </div> <!-- /.panel -->
 
-      <!-- ko if: null -->
-        <div id="forms" class="panel panel-default"
-            tal:condition="request.has_permission('fia_view')">
-          <div class="panel-heading">
-            <h4>Forms</h4>
-          </div>
-          <table class="table table-hover table-striped">
-            <thead>
-              <tr>
-                <th class="form">Form</th>
-                <th class="pending-entry">Pending Entry</th>
-                <th class="pending-review">Pending Review</th>
-                <th class="complete">Complete</th>
-                <th class="not-done">Skipped</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody data-bind="foreach: forms">
-              <tr>
-                <td class="form" data-bind="text: title"></td>
-                <td data-bind="if: count_pending_entry() > 0">
-                  <span class="label label-danger" data-bind="text: count_pending_entry"></span>
-                </td>
-                <td datab-bind="if: count_pending_review() > 0">
-                  <span class="label label-warning" data-bind="text: count_pending_review"></span>
-                </td>
-                <td datab-bind="if: count_complete() > 0">
-                  <span class="label label-success" data-bind="text: count_complete"></span>
-                </td>
-                <td>
-                  <a class="btn btn-link" href=""><span class="fa fa-chevron-right"></span></a>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div> <!-- /.panel -->
-      <!-- /ko -->
-    </div>
+    </div> <!-- /:isReady -->
 
-    <div class="modal fade" data-bind="showModal: $root.showEditForm, with: $root.editable">
+    <div class="modal fade" data-bind="showModal: $root.showEditForm">
       <div class="modal-dialog">
         <div class="modal-content">
           <form
               role="form"
-              data-bind="submit: $root.doEdit,
+              action="${request.current_route_path(_route_name='patient')}"
+              data-bind="with: $root.editablePatient,
+                         submit: $root.savePatient,
                          validate: window.defaultValidationOptions">
             <div class="modal-header">
-              <h4 class="modal-title">Edit Patient</h4>
+              <h4 class="modal-title" i18n:translate="">Edit Patient</h4>
             </div>
             <div class="modal-body">
               <div class="form-group">
@@ -256,15 +230,10 @@
                 <select
                     class="form-control"
                     required
-                    data-bind="
-                    value: site_id,
-                      options: Site.availableOptions,
-                      optionsCaption: '---',
-                      optionsText: 'title',
-                      optionsValue: 'id',
-                      unqiqueName: true,
-                      select2: {}
-                    "></select>
+                    data-bind="value: site_id, uniqueName:true, select2: {}">
+                  <option value="" i18n:translate="">Select a site...</option>
+                  <option tal:repeat="site available_sites" value="${site.id}">${site.title}</option>
+                </select>
               </div> <!-- /.form-group -->
               <div class="form-group">
                 <label i18n:translate="">Reference Numbers</label>
@@ -276,13 +245,12 @@
                         required
                         data-bind="
                             value: reference_type_id,
-                            options: ReferenceType.availableOptions,
-                            optionsCaption: '---',
-                            optionsText: 'title',
-                            optionsValue: 'id',
                             uniqueName: true,
                             select2: {}
-                            "></select>
+                            ">
+                          <option value="" i18n:translate="">Select a reference type...</option>
+                          <option tal:repeat="type available_reference_types" value="${type.id}">${type.title}</option>
+                        </select>
                     </div>
                     <div class="col-sm-5 js-validation-item">
                       <input type="text"
@@ -294,21 +262,28 @@
                             " />
                     </div>
                     <div class="col-sm-2">
-                      <button class="btn btn-link" data-bind="click: $parent.deleteReference"><span class="fa fa-trash-o"></span></button>
+                      <button class="btn btn-link" data-bind="click: $root.deleteReference"><span class="fa fa-trash-o"></span></button>
                     </div>
                   </div> <!-- /.row -->
                 <!-- /ko -->
-                <button class="btn btn-link" data-bind="click: addReference">
-                  <span class="fa fa-plus"></span>
-                  <span i18n:translate="">Add another reference number</span>
-                </button>
+                <div>
+                  <button class="btn btn-link" data-bind="click: $root.addReference">
+                    <span class="fa fa-plus"></span>
+                    <!-- ko if: references().length > 0 -->
+                      <span i18n:translate="">Add another reference number</span>
+                    <!-- /ko -->
+                    <!-- ko if: references().length <= 0 -->
+                      <span i18n:translate="">Add a reference number</span>
+                    <!-- /ko -->
+                  </button>
+                </div>
               </div> <!-- /.form-group -->
-            </div>
+            </div> <!-- /.modal-body -->
             <div class="modal-footer">
               <button
                   type="button"
-                  class="btn btn-default"
-                  data-bind="click: $root.clearSelected"
+                  class="btn btn-link"
+                  data-bind="click: $root.clear"
                   i18n:translate="">Close</button>
               <button type="submit" class="btn btn-primary">
                 <span i18n:translate="">Save</span>
@@ -322,33 +297,197 @@
       </div><!-- /.modal-dialog -->
     </div><!-- /.modal -->
 
-    <div class="modal fade" data-bind="showModal: $root.showDeleteForm, with: $root.selected">
+    <div class="modal fade" data-bind="showModal: $root.showEnrollmentForm">
       <div class="modal-dialog">
         <div class="modal-content">
-          <form data-bind="submit: $root.doEdit">
+          <form
+              role="form"
+              action="${request.current_route_path(_route_name='patient_enrollments')}"
+              data-bind="with: $root.editableEnrollment,
+                         submit: $root.saveEnrollment,
+                         validate: window.defaultValidationOptions">
             <div class="modal-header">
-              <h4 class="modal-title">Confirm Delete</h4>
+              <!-- ko if: id -->
+                <h4 class="modal-title" i18n:translate="">Edit Enrollment</h4>
+              <!--/ko -->
+              <!-- ko ifnot: id -->
+                <h4 class="modal-title" i18n:translate="">Add Enrollment</h4>
+              <!-- /ko -->
             </div>
             <div class="modal-body">
-              <p i18n:translate="">You are about to delete this patient. This is an irreversable action. Are you sure you want to proceed?</p>
-            </div>
+              <div class="form-group" tal:define="name 'study_id'">
+                <label i18n:translate="" for="${name}" class="required">Study</label>
+                <select
+                    class="form-control"
+                    required
+                    title="Please select a study"
+                    id="${name}"
+                    data-placeholder="Select a study..."
+                    i18n:attributes="title data-placeholder"
+                    data-bind="
+                      disable: id,
+                      event: {change: $root.onChangeStudy},
+                      value: ${name}, select2: {}">
+                  <option></option> <!-- for placeholder -->
+                  <option tal:repeat="study available_studies"
+                      tal:attributes="
+                        data-reference_pattern python:study.reference_pattern or None;
+                        data-reference_hint python:study.reference_hint or None;"
+                      value="${study.id}">${study.title}</option>
+                </select>
+              </div> <!-- /.form-group -->
+              <div class="form-group" tal:define="name 'consent_date'">
+                <label i18n:translate="" for="${name}" class="required">Original Consent Date</label>
+                <input type="date"
+                    class="form-control"
+                    required
+                    id="${name}"
+                    data-type-hint="date"
+                    placeholder="YYYY-MM-DD"
+                    data-date-format="YYYY-MM-DD"
+                    data-rule-dateISO
+                    data-bind="
+                      value: ${name},
+                      datetimePicker: {pickTime: false, useCurrent: false},
+                      uniqueName: true" />
+              </div> <!-- /.form-group -->
+              <div class="form-group" tal:define="name 'latest_consent_date'">
+                <label i18n:translate="" for="${name}" class="required">Current Consent Date</label>
+                <input type="date"
+                    class="form-control"
+                    required
+                    id="${name}"
+                    placeholder="YYYY-MM-DD"
+                    data-type-hint="date"
+                    data-date-format="YYYY-MM-DD"
+                    data-rule-dateISO
+                    data-rule-greaterThanEqualTo="#consent_date"
+                    data-msg-greaterThanEqualTo="Must be after consent date"
+                    data-bind="
+                      value: ${name},
+                      datetimePicker: {pickTime: false, useCurrent: false},
+                      uniqueName: true" />
+              </div> <!-- /.form-group -->
+
+              <!--! Termination date is not edited manually, it is filled
+                    in by the studie's termination form -->
+
+              <div class="form-group" tal:define="name 'reference_number'">
+                <label i18n:translate="" for="${name}">Reference Number</label>
+                <p class="help-block" i18n:translate="">
+                  (Optional) The patient's study-specific identification number.
+                </p>
+                <input type="text"
+                    class="form-control"
+                    id="${name}"
+                    data-bind="value: ${name}, uniqueName:true" />
+              </div> <!-- /.form-group -->
+            </div> <!-- /.modal-body -->
             <div class="modal-footer">
-              <button type="button" class="btn btn-default" data-bind="click: $root.clearSelected">Close</button>
-              <button type="button" class="btn btn-danger" i18n:translate="">Delete</button>
+              <button
+                  type="button"
+                  class="btn btn-link"
+                  data-bind="click: $root.clear"
+                  i18n:translate="">Close</button>
+              <button type="submit" class="btn btn-primary">
+                <span i18n:translate="">Save</span>
+                <!-- ko if: $root.isSaving -->
+                  <span class="fa fa-refresh fa-spin"></span>
+                <!-- /ko -->
+              </button>
             </div>
           </form>
         </div><!-- /.modal-content -->
       </div><!-- /.modal-dialog -->
     </div><!-- /.modal -->
 
-    <!--! Preloaded initial data -->
-    <tal:data define="json import:json">
-      <script id="availableReferenceTypes-data" type="application/json">${json.dumps(available_reference_types)}</script>
-      <script id="availableSites-data" type="application/json">${json.dumps(available_sites)}</script>
-      <script id="patient-data" type="application/json">${json.dumps(patient)}</script>
-      <script id="enrollments-data" type="application/json">${json.dumps(enrollments)}</script>
-      <script id="visits-data" type="application/json">${json.dumps(visits)}</script>
-    </tal:data>
+    <div class="modal fade" data-bind="showModal: $root.showVisitForm">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <form
+              role="form"
+              action="${request.current_route_path(_route_name='patient_visits')}"
+              data-bind="with: $root.editableVisit,
+                         submit: $root.saveVisit,
+                         validate: window.defaultValidationOptions">
+            <div class="modal-header">
+              <!-- ko if: id -->
+                <h4 class="modal-title" i18n:translate="">Edit Visit</h4>
+              <!--/ko -->
+              <!-- ko ifnot: id -->
+                <h4 class="modal-title" i18n:translate="">Add Visit</h4>
+              <!-- /ko -->
+            </div>
+            <div class="modal-body">
+              <div class="form-group" tal:define="name 'cycle_ids'">
+                <label i18n:translate="" for="${name}" class="required">Study Cycles</label>
+                <select
+                    class="form-control"
+                    required
+                    multiple
+                    min="1"
+                    title="Please select associated study cycles"
+                    id="${name}"
+                    data-placeholder="Select a cycle..."
+                    i18n:attributes="title data-placeholder"
+                    data-bind="
+                      disable: id,
+                      value: ${name}, select2: {}">
+                  <option></option> <!-- for placeholder -->
+                </select>
+              </div> <!-- /.form-group -->
+              <div class="form-group" tal:define="name 'visit_date'">
+                <label i18n:translate="" for="${name}" class="required">Visit Date</label>
+                <input type="date"
+                    class="form-control"
+                    required
+                    id="${name}"
+                    data-type-hint="date"
+                    placeholder="YYYY-MM-DD"
+                    data-date-format="YYYY-MM-DD"
+                    data-rule-dateISO
+                    data-bind="
+                      value: ${name},
+                      datetimePicker: {pickTime: false, useCurrent: false},
+                      uniqueName: true" />
+              </div> <!-- /.form-group -->
+            <div class="modal-footer">
+              <button
+                  type="button"
+                  class="btn btn-link"
+                  data-bind="click: $root.clear"
+                  i18n:translate="">Close</button>
+              <button type="submit" class="btn btn-primary">
+                <span i18n:translate="">Save</span>
+                <!-- ko if: $root.isSaving -->
+                  <span class="fa fa-refresh fa-spin"></span>
+                <!-- /ko -->
+              </button>
+            </div>
+          </form>
+        </div><!-- /.modal-content -->
+      </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+
+    <div class="modal fade" data-bind="showModal: $root.showDeleteForm">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <form data-bind="submit: $root.deletePatient">
+            <div class="modal-header">
+              <h4 class="modal-title" i18n:translate="">Confirm Delete</h4>
+            </div>
+            <div class="modal-body">
+              <p i18n:translate="">You are about to delete this patient. This is an irreversable action. Are you sure you want to proceed?</p>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-default" data-bind="click: $root.clear">Close</button>
+              <button type="button" class="btn btn-danger" i18n:translate="">Delete</button>
+            </div>
+          </form>
+        </div><!-- /.modal-content -->
+      </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
   </metal:content-slot>
 </html>
 

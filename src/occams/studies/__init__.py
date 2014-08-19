@@ -87,10 +87,14 @@ def assets(config):
         Bundle('libs/knockout-sortable.min.js'),
         Bundle('libs/select2.min.js'),
         Bundle('libs/moment.min.js'),
-        Bundle('libs/bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js'),
+        Bundle('libs/bootstrap-datetimepicker/src/js/bootstrap-datetimepicker.js'),
+        #Bundle('libs/bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js'),
         Bundle('libs/sammy.min.js'),
         Bundle('libs/socket.io.min.js'),
-        Bundle('scripts/**/*.js', depends='scripts/**/*.js', filters='jsmin'),
+        Bundle(
+            'scripts/*.js',
+            'scripts/**/*.js',
+            depends='scripts/**/*.js', filters='jsmin'),
         output='gen/default.%(version)s.min.js'))
 
     config.add_webasset('default-css', Bundle(
@@ -146,7 +150,8 @@ def routes(config):
 
     config.add_route('patients',            '/patients')
     config.add_route('patient',             '/patients/{patient}')
-    config.add_route('patient_references',  '/patients/{patient}/references')
+    config.add_route('patient_forms',       '/patients/{patient}/forms')
+    config.add_route('patient_form',        '/patients/{patient}/forms/{form}')
     config.add_route('patient_enrollments', '/patients/{patient}/enrollments')
     config.add_route('patient_visits',      '/patients/{patient}/visits')
 
