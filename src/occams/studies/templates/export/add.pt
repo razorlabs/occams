@@ -51,30 +51,27 @@
             </tr>
           </thead>
           <tbody>
-            <tr tal:repeat="choice form.contents">
-              <tal:item define="item exportables[choice.data]">
-                <td class="select">
-                  <input tal:replace="choice(**{'data-toggle': 'select',
-                                                'data-class': 'warning'})" />
-                </td>
-                <td>
-                  <span
-                      class="glyphicon glyphicon-wrench"
-                      title="System table"
-                      tal:condition="item.is_system"></span>
-                </td>
-                <td>
-                  <span
-                      class="glyphicon glyphicon-user"
-                      title="Has private information"
-                      tal:condition="item.has_private"></span>
-                </td>
-                <td class="title">${item.title}</td>
-                <td class="name"><code>${item.name}</code></td>
-                <td class="version">
-                  <p tal:repeat="version item.versions">${version.isoformat()}</p>
-                </td>
-              </tal:item>
+            <tr tal:repeat="item exportables.values()">
+              <td class="select">
+                <input type="checkbox" name"contents" value="${item.name}" data-toggle="select" data-class="warning" />
+              </td>
+              <td>
+                <span
+                    class="glyphicon glyphicon-wrench"
+                    title="System table"
+                    tal:condition="item.is_system"></span>
+              </td>
+              <td>
+                <span
+                    class="glyphicon glyphicon-user"
+                    title="Has private information"
+                    tal:condition="item.has_private"></span>
+              </td>
+              <td class="title">${item.title}</td>
+              <td class="name"><code>${item.name}</code></td>
+              <td class="version">
+                <p tal:repeat="version item.versions">${version.isoformat()}</p>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -82,28 +79,38 @@
 
       <hr />
 
-      <h3>Step 2</h3>
-      <p class="lead">${form.expand_collections.label.text}</p>
-      <div class="form-group">
-        <p class="text-danger" tal:repeat="error form.expand_collections.errors">${error}</p>
-        <div class="radio" tal:repeat="choice form.expand_collections">
+      <h3 i18n:translate="">Step 2</h3>
+      <p class="lead" i18n:translate="">Select list style.</p>
+      <div class="form-group" tal:define="name 'expand_collections'">
+        <div class="radio">
           <label>
-            ${structure:choice()}
-            ${choice.label.text}
+            <span i18n:translate="">Single column with comma-delimited values</span>
+            <input type="radio" name="${name}" value="false" selected>
+          </label>
+        </div>
+        <div class="radio">
+          <label>
+            <span i18n:translate="">Separate column for each possible answer choice</span>
+            <input type="radio" name="${name}" value="true">
           </label>
         </div>
       </div>
 
       <hr/>
 
-      <h3>Step 3</h3>
-      <p class="lead">${form.use_choice_labels.label.text}</p>
-      <div class="form-group">
-        <p class="text-danger" tal:repeat="error form.use_choice_labels.errors">${error}</p>
-        <div class="radio" tal:repeat="choice form.use_choice_labels">
+      <h3 i18n:translate="">Step 3</h3>
+      <p class="lead" i18n:translate="">Select answer choice style.</p>
+      <div class="form-group" tal:define="name 'use_choice_labels'">
+        <div class="radio">
           <label>
-            ${structure:choice()}
-            ${choice.label.text}
+            <span i18n:translate="">Use codes</span>
+            <input type="radio" name="${name}" value="false" selected>
+          </label>
+        </div>
+        <div class="radio">
+          <label>
+            <span i18n:translate="">Use labels</span>
+            <input type="radio" name="${name}" value="true">
           </label>
         </div>
       </div>

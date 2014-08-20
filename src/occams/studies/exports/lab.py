@@ -117,10 +117,17 @@ class LabPlan(ExportPlan):
                 lab.SpecimenType.tube_type.label('tube_type'),
                 lab.Specimen.notes.label('specimen_notes'),
                 models.Site.name.label('site'),
-                models.Patient.our.label('pid'),
-                models.Patient.our.label('our'),
+                models.Patient.pid.label('pid'),
+                models.Patient.pid.label('our'),
                 models.Patient.nurse.label('nurse_email'),
-                models.Patient.legacy_number.label('aeh_num'))
+                (Session.query(models.PatientReference)
+                 .join(models.ReferenceType)
+                 .filter(models.ReferenceType.name == u'aeh_num')
+                 .filter(models.PatientReference.patient_id == models.Patient.id)
+                 .limit(1)
+                 .correlate(models.Patient)
+                 .as_scalar()
+                 .label('aeh_num')))
             .select_from(lab.Aliquot)
             .join(lab.Aliquot.specimen)
             .outerjoin(lab.Aliquot.aliquot_type)
@@ -166,9 +173,9 @@ class LabPlan(ExportPlan):
                 lab.SpecimenType.tube_type,
                 lab.Specimen.notes,
                 models.Patient.id,
-                models.Patient.our,
+                models.Patient.pid,
                 models.Patient.nurse,
-                models.Patient.legacy_number,
+                'aeh_num',
                 models.Site.name))
 
         return query

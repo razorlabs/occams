@@ -38,7 +38,6 @@ class TestPidPlan(IntegrationFixture):
 
         patient = models.Patient(
             pid=u'xxx-xxx',
-            legacy_number=u'12345',
             site=models.Site(name=u'someplace', title=u'Some Place')
         )
 
@@ -56,7 +55,6 @@ class TestPidPlan(IntegrationFixture):
         self.assertEqual(data['pid'], patient.pid)
         self.assertEqual(data['site'], patient.site.name)
         self.assertIsNone(data['early_id'])
-        self.assertEqual(data['aeh_num'], patient.legacy_number)
 
     def test_data_with_refs(self):
         """
@@ -68,14 +66,13 @@ class TestPidPlan(IntegrationFixture):
 
         track_user('joe')
 
-        reftype = models.RefType(name=u'med_num', title=u'Medical Number')
+        reference_type = models.ReferenceType(name=u'med_num', title=u'Medical Number')
 
         patient = models.Patient(
             pid=u'xxx-xxx',
-            legacy_number=u'12345',
-            reference_numbers=[
+            references=[
                 models.PatientReference(
-                    reftype=reftype,
+                    reference_type=reference_type,
                     reference_number=u'999')
                 ],
             site=models.Site(name=u'someplace', title=u'Some Place')
@@ -107,7 +104,6 @@ class TestPidPlan(IntegrationFixture):
 
         patient = models.Patient(
             pid=u'xxx-xxx',
-            legacy_number=u'12345',
             site=models.Site(name=u'someplace', title=u'Some Place'),
             enrollments=[
                 models.Enrollment(

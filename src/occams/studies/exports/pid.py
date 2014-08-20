@@ -35,8 +35,8 @@ class PidPlan(ExportPlan):
     @reify
     def reftypes(self):
         return list(
-            Session.query(models.RefType)
-            .order_by(models.RefType.name))
+            Session.query(models.ReferenceType)
+            .order_by(models.ReferenceType.name))
 
     def codebook(self):
         name = self.name
@@ -44,8 +44,6 @@ class PidPlan(ExportPlan):
             row('id', name, types.NUMERIC, is_required=True, is_system=True),
             row('pid', name, types.STRING, is_required=True, is_system=True),
             row('site', name, types.STRING, is_required=True, is_system=True),
-            row('our', name, types.STRING, is_system=True),
-            row('aeh_num', name, types.STRING, is_system=True),
             row('early_id', name, types.STRING, is_system=True),
             row('create_date', self.name, types.DATE,
                 is_required=True, is_system=True),
@@ -97,7 +95,7 @@ class PidPlan(ExportPlan):
                         models.PatientReference.reference_number, ';'))
                 .filter(
                     models.PatientReference.patient_id == models.Patient.id)
-                .filter(models.PatientReference.reftype_id == reftype.id)
+                .filter(models.PatientReference.reference_type_id == reftype.id)
                 .group_by(models.PatientReference.patient_id)
                 .correlate(models.Patient)
                 .as_scalar()

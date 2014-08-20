@@ -106,7 +106,7 @@ class SymptomPlan(ExportPlan):
         query = (
             Session.query(
                 Symptom.id,
-                models.Patient.our.label('pid'),
+                models.Patient.pid.label('pid'),
                 models.Site.name.label('site'),
 
                 Symptom.start_date,

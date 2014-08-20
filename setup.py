@@ -33,7 +33,6 @@ REQUIRES = [
     'transaction',
     'voluptuous',
     'webassets',
-    'wtforms',
     'zope.sqlalchemy',
 
     'occams.datastore',

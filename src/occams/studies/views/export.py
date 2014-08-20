@@ -5,22 +5,14 @@ import uuid
 from babel.dates import format_datetime
 from humanize import naturalsize
 from pyramid.i18n import get_localizer, negotiate_locale_name
-from pyramid.httpexceptions import (
-    HTTPFound, HTTPNotFound, HTTPOk, HTTPForbidden)
+from pyramid.httpexceptions import HTTPFound, HTTPNotFound, HTTPOk
 from pyramid.response import FileResponse
 from pyramid.session import check_csrf_token
-from pyramid.settings import asbool
 from pyramid.view import view_config
 import six
 from sqlalchemy import orm
 import transaction
-from wtforms import (
-    Form,
-    RadioField,
-    SelectMultipleField,
-    widgets,
-    validators
-)
+from voluptuous import *  # NOQA
 
 from .. import _, log, models, Session, exports
 from ..tasks import celery,  make_export
@@ -49,36 +41,16 @@ def faq(request):
     return {}
 
 
-class ExportCheckoutForm(Form):
-    """
-    Export checkout serialization schema
-    """
-
-    contents = SelectMultipleField(
-        widget=widgets.ListWidget(prefix_label=False),
-        option_widget=widgets.CheckboxInput(),
-        validators=[
-            validators.required(_(u'Please select an item')),
-            validators.Length(min=1),
-        ])
-
-    expand_collections = RadioField(
-        label=_(u'Select list style.'),
-        choices=[
-            (False, _(u'Single column with comma-delimited values.')),
-            (True, _(u'Separate column for each possible answer choice.'))
-        ],
-        coerce=asbool,
-        default=False)
-
-    use_choice_labels = RadioField(
-        label=_(u'Select answer choice style.'),
-        choices=[
-            (False, _(u'Use codes.')),
-            (True, _(u'Use labels.'))
-        ],
-        coerce=asbool,
-        default=False)
+def ExportCheckoutSchema(request, exportables):
+    lz = get_localizer(request)
+    return Schema({
+        Required('contents'): All(
+            [In(exportables)],
+            Length(min=1),
+            msg=lz.translate(_('Invalid selection'))),
+        Required('expand_collections', default=False): Boolean(),
+        Required('use_choice_labels', default=False): Boolean()
+        })
 
 
 @view_config(
@@ -98,39 +70,45 @@ def add(request):
     exportables = exports.list_all(include_rand=False)
     limit = request.registry.settings.get('app.export.limit')
     exceeded = limit is not None and query_exports(request).count() > limit
+    errors = []
 
-    form = ExportCheckoutForm(request.POST)
-    form.contents.choices = [(k, v.title) for k, v in six.iteritems(exportables)]
+    if request.method == 'POST' and check_csrf_token(request) and not exceeded:
+        schema = ExportCheckoutSchema(request, exportables)
+        try:
+            data = schema({
+                'contents': request.POST.getall('contents'),
+                'expand_collections': request.POST.get('expand_collections'),
+                'use_choice_labels': request.POST.get('use_choice_labels')})
+        except MultipleInvalid as exc:
+            errors = [e.error_message for e in exc.errors]
+        else:
+            task_id = six.u(str(uuid.uuid4()))
+            Session.add(models.Export(
+                name=task_id,
+                expand_collections=data['expand_collections'],
+                use_choice_labels=data['use_choice_labels'],
+                owner_user=(Session.query(models.User)
+                            .filter_by(key=request.authenticated_userid)
+                            .one()),
+                contents=[exportables[k].to_json() for k in data['contents']]))
 
-    if request.method == 'POST' and not exceeded and form.validate():
-        check_csrf_token(request)
-        task_id = six.u(str(uuid.uuid4()))
-        Session.add(models.Export(
-            name=task_id,
-            expand_collections=form.expand_collections.data,
-            use_choice_labels=form.use_choice_labels.data,
-            owner_user=(Session.query(models.User)
-                        .filter_by(key=request.authenticated_userid)
-                        .one()),
-            contents=[exportables[k].to_json() for k in form.contents.data]))
+            def apply_after_commit(success):
+                if success:
+                    make_export.apply_async(
+                        args=[task_id],
+                        task_id=task_id,
+                        countdown=4)
 
-        def apply_after_commit(success):
-            if success:
-                make_export.apply_async(
-                    args=[task_id],
-                    task_id=task_id,
-                    countdown=4)
+            # Avoid race-condition by executing the task after succesful commit
+            transaction.get().addAfterCommitHook(apply_after_commit)
 
-        # Avoid race-condition by executing the task after succesful commit
-        transaction.get().addAfterCommitHook(apply_after_commit)
+            msg = _(u'Your request has been received!')
+            request.session.flash(msg, 'success')
 
-        msg = _(u'Your request has been received!')
-        request.session.flash(msg, 'success')
-
-        return HTTPFound(location=request.route_path('export_status'))
+            return HTTPFound(location=request.route_path('export_status'))
 
     return {
-        'form': form,
+        'errors': errors,
         'exceeded': exceeded,
         'limit': limit,
         'exportables': exportables
@@ -187,8 +165,8 @@ def status_json(request):
             'file_size': (naturalsize(export.file_size)
                           if export.file_size else None),
             'download_url': request.route_path('export_download',
-                                               id=export.id),
-            'delete_url': request.route_path('export_delete', id=export.id),
+                                               export=export.id),
+            'delete_url': request.route_path('export', export=export.id),
             'create_date': format_datetime(export.create_date, locale=locale),
             'expire_date': format_datetime(export.expire_date, locale=locale)
         }
@@ -269,17 +247,16 @@ def delete(request):
     """
     Handles delete delete AJAX request
     """
+    check_csrf_token(request)
+
     export = (
         Session.query(models.Export)
-        .filter(models.Export.id == request.matchdict['id'])
+        .filter(models.Export.id == request.matchdict['export'])
         .filter(models.Export.owner_user.has(key=request.authenticated_userid))
         .first())
 
     if not export:
         raise HTTPNotFound
-
-    if request.POST.get('csrf_token') != request.session.get_csrf_token():
-        raise HTTPForbidden
 
     Session.delete(export)
     Session.flush()
@@ -301,7 +278,7 @@ def download(request):
     try:
         export = (
             Session.query(models.Export)
-            .filter_by(id=request.matchdict['id'], status='complete')
+            .filter_by(id=request.matchdict['export'], status='complete')
             .filter(models.Export.owner_user.has(key=request.authenticated_userid))  # NOQA
             .one())
     except orm.exc.NoResultFound:

@@ -57,7 +57,7 @@ class EnrollmentPlan(ExportPlan):
         query = (
             Session.query(
                 models.Enrollment.id.label('id'),
-                models.Patient.our.label('pid'),
+                models.Patient.pid.label('pid'),
                 models.Site.name.label('site'),
                 models.Enrollment.id.label('enrollment_id'),  # BBB
                 models.Study.title.label('study'),

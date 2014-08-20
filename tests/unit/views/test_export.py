@@ -17,15 +17,13 @@ class TestAdd(IntegrationFixture):
         """
         from datetime import date
         from pyramid import testing
-        from webob.multidict import MultiDict
         from tests import track_user
         from occams.studies import Session, models
 
-        #self.config.testing_securitypolicy(userid='joe', permissive=True)
         track_user('joe')
 
         # No schemata
-        request = testing.DummyRequest(post=MultiDict())
+        request = testing.DummyRequest()
         response = self.view_func(request)
         self.assertEquals(len(response['exportables']), 3)  # Only pre-cooked
 
@@ -34,29 +32,30 @@ class TestAdd(IntegrationFixture):
             name=u'vitals', title=u'Vitals')
         Session.add(schema)
         Session.flush()
-        request = testing.DummyRequest(post=MultiDict())
+        request = testing.DummyRequest()
         response = self.view_func(request)
         self.assertEquals(len(response['exportables']), 3)
 
         # Published schemata
         schema.publish_date = date.today()
         Session.flush()
-        request = testing.DummyRequest(post=MultiDict())
+        request = testing.DummyRequest()
         response = self.view_func(request)
         self.assertEquals(len(response['exportables']), 4)
 
-    def test_post_empty(self):
+    @mock.patch('occams.studies.views.export.check_csrf_token')
+    def test_post_empty(self, check_csrf_token):
         """
         It should raise validation errors on empty imput
         """
         from pyramid import testing
         from webob.multidict import MultiDict
-        request = testing.DummyRequest(
-            post=MultiDict())
+        request = testing.DummyRequest(post=MultiDict())
         response = self.view_func(request)
-        self.assertIsNotNone(response['form'].errors['contents'])
+        self.assertIsNotNone(response['errors'])
 
-    def test_post_non_existent_schema(self):
+    @mock.patch('occams.studies.views.export.check_csrf_token')
+    def test_post_non_existent_schema(self, check_csrf_token):
         """
         It should raise validation errors for non-existent schemata
         """
@@ -65,22 +64,11 @@ class TestAdd(IntegrationFixture):
         request = testing.DummyRequest(
             post=MultiDict([('contents', 'does_not_exist')]))
         response = self.view_func(request)
-        self.assertIsNotNone(response['form'].errors['contents'])
+        self.assertIn('Invalid selection', response['errors'][0])
 
-    def test_post_invalid_csrf(self):
-        """
-        It should check for cross-site forgery
-        """
-        from pyramid import testing
-        from webob.multidict import MultiDict
-        request = testing.DummyRequest(
-            post=MultiDict([('csrf_token', 'd3v10us')]))
-        response = self.view_func(request)
-        self.assertIsNotNone(response['form'].errors['csrf_token'])
-
-    # Don't actually invoke the subtasks
-    @mock.patch('occams.studies.tasks.make_export')
-    def test_valid(self, make_export):
+    @mock.patch('occams.studies.views.export.check_csrf_token')
+    @mock.patch('occams.studies.tasks.make_export')  # Don't invoke subtasks
+    def test_valid(self, make_export, check_csrf_token):
         """
         It should add an export record and initiate an async task
         """
@@ -92,6 +80,7 @@ class TestAdd(IntegrationFixture):
         from occams.studies import Session, models
 
         self.config.include('occams.studies.routes')
+        self.config.add_route('export_status', '/dummy')
         self.config.registry.settings['app.export.dir'] = '/tmp'
 
         track_user('joe')
@@ -106,16 +95,17 @@ class TestAdd(IntegrationFixture):
             post=MultiDict([
                 ('contents', str('vitals'))
             ]))
-        request.POST['csrf_token'] = request.session.get_csrf_token()
-        response = self.view_func(request)
 
+        response = self.view_func(request)
+        check_csrf_token.assert_called_with(request)
         self.assertIsInstance(response, HTTPFound)
         self.assertEqual(response.location,
                          request.route_path('export_status'))
         export = Session.query(models.Export).one()
         self.assertEqual(export.owner_user.key, 'joe')
 
-    def test_exceed_limit(self):
+    @mock.patch('occams.studies.views.export.check_csrf_token')
+    def test_exceed_limit(self, check_csrf_token):
         """
         It should not let the user exceed their allocated export limit
         """
@@ -139,7 +129,7 @@ class TestAdd(IntegrationFixture):
 
         # The renderer should know about it
         self.config.testing_securitypolicy(userid='joe')
-        request = testing.DummyRequest(post=MultiDict())
+        request = testing.DummyRequest()
         response = self.view_func(request)
         self.assertTrue(response['exceeded'])
 
@@ -149,7 +139,6 @@ class TestAdd(IntegrationFixture):
             post=MultiDict([
                 ('contents', 'vitals')
                 ]))
-        request.POST['csrf_token'] = request.session.get_csrf_token()
         self.assertTrue(response['exceeded'])
 
 
@@ -347,8 +336,9 @@ class TestDelete(IntegrationFixture):
         from occams.studies.views.export import delete
         return delete
 
+    @mock.patch('occams.studies.views.export.check_csrf_token')
     @mock.patch('occams.studies.tasks.celery.control.revoke')
-    def test_deletable_not_owner(self, revoke):
+    def test_deletable_not_owner(self, revoke, check_csrf_token):
         """
         It should issue a 404 if the user does not own the export
         """
@@ -373,14 +363,14 @@ class TestDelete(IntegrationFixture):
         Session.expunge_all()
 
         request = testing.DummyRequest(
-            matchdict={'id': str(export_id)})
-        request.POST['csrf_token'] = request.session.get_csrf_token()
+            matchdict={'export': str(export_id)})
 
         with self.assertRaises(HTTPNotFound):
             self.view_func(request)
 
+    @mock.patch('occams.studies.views.export.check_csrf_token')
     @mock.patch('occams.studies.tasks.celery.control.revoke')
-    def test_not_found(self, revoke):
+    def test_not_found(self, revoke, check_csrf_token):
         """
         It should issue a 404 if the export does not exist
         """
@@ -388,46 +378,14 @@ class TestDelete(IntegrationFixture):
         from pyramid.httpexceptions import HTTPNotFound
 
         request = testing.DummyRequest(
-            matchdict={'id': str('123')})
-        request.POST['csrf_token'] = request.session.get_csrf_token()
+            matchdict={'export': str('123')})
 
         with self.assertRaises(HTTPNotFound):
             self.view_func(request)
 
+    @mock.patch('occams.studies.views.export.check_csrf_token')
     @mock.patch('occams.studies.tasks.celery.control.revoke')
-    def test_invalid_csrf(self, revoke):
-        """
-        It should deny invalid CSRF tokens
-        """
-        from pyramid import testing
-        from pyramid.httpexceptions import HTTPForbidden
-        from occams.studies import models, Session
-        from tests import track_user
-
-        track_user('joe')
-
-        export = models.Export(
-            owner_user=(
-                Session.query(models.User)
-                .filter_by(key='joe')
-                .one()),
-            contents=[],
-            status='complete')
-        Session.add(export)
-        Session.flush()
-        export_id = export.id
-        Session.expunge_all()
-
-        self.config.testing_securitypolicy(userid='joe')
-        request = testing.DummyRequest(
-            matchdict={'id': str(export_id)})
-        request.POST['csrf_token'] = 'd3v10us'
-
-        with self.assertRaises(HTTPForbidden):
-            self.view_func(request)
-
-    @mock.patch('occams.studies.tasks.celery.control.revoke')
-    def test_deleteable_by_owner(self, revoke):
+    def test_deleteable_by_owner(self, revoke, check_csrf_token):
         """
         It should allow the owner of the export to cancel/delete the export
         """
@@ -453,10 +411,9 @@ class TestDelete(IntegrationFixture):
 
         self.config.testing_securitypolicy(userid='joe')
         request = testing.DummyRequest(
-            matchdict={'id': str(export_id)})
-        request.POST['csrf_token'] = request.session.get_csrf_token()
-
+            matchdict={'export': str(export_id)})
         response = self.view_func(request)
+        check_csrf_token.assert_called_with(request)
         self.assertIsInstance(response, HTTPOk)
         self.assertIsNone(Session.query(models.Export).get(export_id))
         revoke.assert_called_with(export_name)
@@ -498,13 +455,13 @@ class TestDownload(IntegrationFixture):
         name = '/tmp/' + export.name
         with open(name, 'w+b'):
             request = testing.DummyRequest(
-                matchdict={'id': 123})
+                matchdict={'export': 123})
             with self.assertRaises(HTTPNotFound):
                 self.view_func(request)
 
             self.config.testing_securitypolicy(userid='jane')
             request = testing.DummyRequest(
-                matchdict={'id': 123})
+                matchdict={'export': 123})
             response = self.view_func(request)
             self.assertIsInstance(response, FileResponse)
         os.remove(name)
@@ -530,6 +487,6 @@ class TestDownload(IntegrationFixture):
             status=status))
 
         request = testing.DummyRequest(
-            matchdict={'id': 123})
+            matchdict={'export': 123})
         with self.assertRaises(HTTPNotFound):
             self.view_func(request)

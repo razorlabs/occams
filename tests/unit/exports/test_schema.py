@@ -115,7 +115,7 @@ class TestSchemaPlan(IntegrationFixture):
             collect_date=date.today())
         patient = models.Patient(
             site=models.Site(name='ucsd', title=u'UCSD'),
-            our=u'12345',
+            pid=u'12345',
             entities=[entity])
         Session.add_all([schema, entity, patient])
         Session.flush()
@@ -162,7 +162,7 @@ class TestSchemaPlan(IntegrationFixture):
             collect_date=date.today())
         patient = models.Patient(
             site=models.Site(name='ucsd', title=u'UCSD'),
-            our=u'12345',
+            pid=u'12345',
             entities=[entity])
         study = models.Study(
             name=u'cooties',
@@ -221,7 +221,7 @@ class TestSchemaPlan(IntegrationFixture):
             schema=schema)
         patient = models.Patient(
             site=models.Site(name='ucsd', title=u'UCSD'),
-            our=u'12345',
+            pid=u'12345',
             entities=[entity])
         visit = models.Visit(
             visit_date=date.today(),
@@ -296,7 +296,7 @@ class TestSchemaPlan(IntegrationFixture):
             schema=schema)
         patient = models.Patient(
             site=models.Site(name='ucsd', title=u'UCSD'),
-            our=u'12345',
+            pid=u'12345',
             entities=[entity])
         study = models.Study(
             name=u'study1',

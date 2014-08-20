@@ -11,7 +11,6 @@ try:
 except ImportError:
     import unittest
 
-
 REDIS_URL = 'redis://localhost/9'
 
 
@@ -75,17 +74,15 @@ class IntegrationFixture(unittest.TestCase):
 
     def setUp(self):
         from pyramid import testing
+        import transaction
+        from occams.studies import Session
         from occams.studies.models import Base
         self.config = testing.setUp()
+        # Don't actually check csrf, this if for functional tests
+        self.addCleanup(testing.tearDown)
+        self.addCleanup(transaction.abort)
+        self.addCleanup(Session.remove)
         Base.metadata.info['settings'] = self.config.registry.settings
-
-    def tearDown(self):
-        from occams.studies import Session
-        from pyramid import testing
-        import transaction
-        testing.tearDown()
-        transaction.abort()
-        Session.remove()
 
 
 def track_user(login, is_current=True):
