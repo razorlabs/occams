@@ -6,10 +6,9 @@ from tests import IntegrationFixture
 
 class TestAdd(IntegrationFixture):
 
-    @property
-    def view_func(self):
-        from occams.studies.views.export import add
-        return add
+    def call_view(self, request):
+        from occams.studies.views.export import add as view
+        return view(request)
 
     def test_get_exportables(self):
         """
@@ -24,7 +23,7 @@ class TestAdd(IntegrationFixture):
 
         # No schemata
         request = testing.DummyRequest()
-        response = self.view_func(request)
+        response = self.call_view(request)
         self.assertEquals(len(response['exportables']), 3)  # Only pre-cooked
 
         # Not-yet-published schemata
@@ -33,14 +32,14 @@ class TestAdd(IntegrationFixture):
         Session.add(schema)
         Session.flush()
         request = testing.DummyRequest()
-        response = self.view_func(request)
+        response = self.call_view(request)
         self.assertEquals(len(response['exportables']), 3)
 
         # Published schemata
         schema.publish_date = date.today()
         Session.flush()
         request = testing.DummyRequest()
-        response = self.view_func(request)
+        response = self.call_view(request)
         self.assertEquals(len(response['exportables']), 4)
 
     @mock.patch('occams.studies.views.export.check_csrf_token')
@@ -51,7 +50,7 @@ class TestAdd(IntegrationFixture):
         from pyramid import testing
         from webob.multidict import MultiDict
         request = testing.DummyRequest(post=MultiDict())
-        response = self.view_func(request)
+        response = self.call_view(request)
         self.assertIsNotNone(response['errors'])
 
     @mock.patch('occams.studies.views.export.check_csrf_token')
@@ -63,7 +62,7 @@ class TestAdd(IntegrationFixture):
         from webob.multidict import MultiDict
         request = testing.DummyRequest(
             post=MultiDict([('contents', 'does_not_exist')]))
-        response = self.view_func(request)
+        response = self.call_view(request)
         self.assertIn('Invalid selection', response['errors'][0])
 
     @mock.patch('occams.studies.views.export.check_csrf_token')
@@ -96,7 +95,7 @@ class TestAdd(IntegrationFixture):
                 ('contents', str('vitals'))
             ]))
 
-        response = self.view_func(request)
+        response = self.call_view(request)
         check_csrf_token.assert_called_with(request)
         self.assertIsInstance(response, HTTPFound)
         self.assertEqual(response.location,
@@ -130,7 +129,7 @@ class TestAdd(IntegrationFixture):
         # The renderer should know about it
         self.config.testing_securitypolicy(userid='joe')
         request = testing.DummyRequest()
-        response = self.view_func(request)
+        response = self.call_view(request)
         self.assertTrue(response['exceeded'])
 
         # If the user insists, they'll get a validation error as well
@@ -144,10 +143,9 @@ class TestAdd(IntegrationFixture):
 
 class TestStatusJSON(IntegrationFixture):
 
-    @property
-    def view_func(self):
-        from occams.studies.views.export import status_json
-        return status_json
+    def call_view(self, request):
+        from occams.studies.views.export import status_json as view
+        return view(request)
 
     def test_get_current_user(self):
         """
@@ -182,7 +180,7 @@ class TestStatusJSON(IntegrationFixture):
 
         self.config.testing_securitypolicy(userid='joe')
         request = testing.DummyRequest()
-        response = self.view_func(request)
+        response = self.call_view(request)
         exports = response['exports']
         self.assertEquals(len(exports), 1)
 
@@ -219,7 +217,7 @@ class TestStatusJSON(IntegrationFixture):
 
         self.config.testing_securitypolicy(userid='joe')
         request = testing.DummyRequest()
-        response = self.view_func(request)
+        response = self.call_view(request)
         exports = response['exports']
         self.assertEquals(len(exports), 1)
 
@@ -227,17 +225,16 @@ class TestStatusJSON(IntegrationFixture):
             now - timedelta(EXPIRE_DAYS + 1)
         Session.flush()
         request = testing.DummyRequest()
-        response = self.view_func(request)
+        response = self.call_view(request)
         exports = response['exports']
         self.assertEquals(len(exports), 0)
 
 
 class TestCodebookJSON(IntegrationFixture):
 
-    @property
-    def view_func(self):
-        from occams.studies.views.export import codebook_json
-        return codebook_json
+    def call_view(self, request):
+        from occams.studies.views.export import codebook_json as view
+        return view(request)
 
     def test_file_not_specified(self):
         """
@@ -252,7 +249,7 @@ class TestCodebookJSON(IntegrationFixture):
         )
 
         with self.assertRaises(HTTPNotFound):
-            self.view_func(request)
+            self.call_view(request)
 
     def test_file_not_exists(self):
         """
@@ -267,7 +264,7 @@ class TestCodebookJSON(IntegrationFixture):
         )
 
         with self.assertRaises(HTTPNotFound):
-            self.view_func(request)
+            self.call_view(request)
 
     def test_file(self):
         """
@@ -300,16 +297,15 @@ class TestCodebookJSON(IntegrationFixture):
             params=MultiDict([('file', 'aform')])
         )
 
-        response = self.view_func(request)
+        response = self.call_view(request)
         self.assertIsNotNone(response)
 
 
 class TestCodebookDownload(IntegrationFixture):
 
-    @property
-    def view_func(self):
-        from occams.studies.views.export import codebook_download
-        return codebook_download
+    def call_view(self, request):
+        from occams.studies.views.export import codebook_download as view
+        return view(request)
 
     def test_download(self):
         """
@@ -324,17 +320,16 @@ class TestCodebookDownload(IntegrationFixture):
         with open(name, 'w+b'):
             self.config.testing_securitypolicy(userid='jane')
             request = testing.DummyRequest()
-            response = self.view_func(request)
+            response = self.call_view(request)
             self.assertIsInstance(response, FileResponse)
         os.remove(name)
 
 
 class TestDelete(IntegrationFixture):
 
-    @property
-    def view_func(self):
-        from occams.studies.views.export import delete
-        return delete
+    def call_view(self, request):
+        from occams.studies.views.export import delete as view
+        return view(request)
 
     @mock.patch('occams.studies.views.export.check_csrf_token')
     @mock.patch('occams.studies.tasks.celery.control.revoke')
@@ -366,7 +361,7 @@ class TestDelete(IntegrationFixture):
             matchdict={'export': str(export_id)})
 
         with self.assertRaises(HTTPNotFound):
-            self.view_func(request)
+            self.call_view(request)
 
     @mock.patch('occams.studies.views.export.check_csrf_token')
     @mock.patch('occams.studies.tasks.celery.control.revoke')
@@ -381,7 +376,7 @@ class TestDelete(IntegrationFixture):
             matchdict={'export': str('123')})
 
         with self.assertRaises(HTTPNotFound):
-            self.view_func(request)
+            self.call_view(request)
 
     @mock.patch('occams.studies.views.export.check_csrf_token')
     @mock.patch('occams.studies.tasks.celery.control.revoke')
@@ -412,7 +407,7 @@ class TestDelete(IntegrationFixture):
         self.config.testing_securitypolicy(userid='joe')
         request = testing.DummyRequest(
             matchdict={'export': str(export_id)})
-        response = self.view_func(request)
+        response = self.call_view(request)
         check_csrf_token.assert_called_with(request)
         self.assertIsInstance(response, HTTPOk)
         self.assertIsNone(Session.query(models.Export).get(export_id))
@@ -422,10 +417,9 @@ class TestDelete(IntegrationFixture):
 @ddt
 class TestDownload(IntegrationFixture):
 
-    @property
-    def view_func(self):
-        from occams.studies.views.export import download
-        return download
+    def call_view(self, request):
+        from occams.studies.views.export import download as view
+        return view(request)
 
     def test_get_owner_exports(self):
         """
@@ -457,12 +451,12 @@ class TestDownload(IntegrationFixture):
             request = testing.DummyRequest(
                 matchdict={'export': 123})
             with self.assertRaises(HTTPNotFound):
-                self.view_func(request)
+                self.call_view(request)
 
             self.config.testing_securitypolicy(userid='jane')
             request = testing.DummyRequest(
                 matchdict={'export': 123})
-            response = self.view_func(request)
+            response = self.call_view(request)
             self.assertIsInstance(response, FileResponse)
         os.remove(name)
 
@@ -489,4 +483,4 @@ class TestDownload(IntegrationFixture):
         request = testing.DummyRequest(
             matchdict={'export': 123})
         with self.assertRaises(HTTPNotFound):
-            self.view_func(request)
+            self.call_view(request)

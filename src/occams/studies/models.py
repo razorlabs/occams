@@ -8,6 +8,7 @@ as we transition towards a SQL-driven application.
 from __future__ import absolute_import
 from datetime import date, timedelta
 import os
+import re
 import uuid
 
 import six
@@ -293,6 +294,13 @@ class ReferenceType(Base, Referenceable, Describeable, Modifiable):
     reference_hint = Column(
         Unicode,
         doc='UI reference hint without regular expression syntax')
+
+    def check_reference_number(self, reference_number):
+        if not self.reference_pattern:
+            return True
+        else:
+            match = re.match(self.reference_pattern, reference_number)
+            return match is not None
 
     @declared_attr
     def __table_args__(cls):
