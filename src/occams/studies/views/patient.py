@@ -211,6 +211,12 @@ def apply_changes(patient, data):
 
 
 def get_patient_data(request, patient):
+    references_query = (
+        Session.query(models.PatientReference)
+        .filter_by(patient=patient)
+        .join(models.PatientReference.reference_type)
+        .options(orm.joinedload(models.PatientReference.reference_type))
+        .order_by(models.ReferenceType.title.asc()))
     return {
         '__url__': request.route_path('patient', patient=patient.pid),
         'id': patient.id,
@@ -230,7 +236,7 @@ def get_patient_data(request, patient):
                 'title': r.reference_type.title,
                 },
             'reference_number': r.reference_number,
-            } for r in patient.references],
+            } for r in references_query]
         }
 
 

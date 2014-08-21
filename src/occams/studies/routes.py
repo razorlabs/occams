@@ -43,57 +43,45 @@ def includeme(config):
 
     r('patients',
         '/patients',
-        factory='.permissions.PatientFactory',
         traverse='/{patient}')
     r('patient',
         '/patients/{patient}',
-        factory='.permissions.PatientFactory',
         traverse='/{patient}')
     r('patient_forms',
         '/patients/{patient}/forms',
-        factory='.permissions.PatientFactory',
         traverse='/{patient}')
     r('patient_form',
         '/patients/{patient}/forms/{form}',
-        factory='.permissions.PatientFactory',
         traverse='/{patient}')
 
     r('enrollments',
         '/patients/{patient}/enrollments',
-        factory='.permissions.PatientFactory',
         traverse='/{patient}')
     r('enrollment',
         '/patients/{patient}/enrollments/{enrollment}',
-        factory='.permissions.PatientFactory',
         traverse='/{patient}')
 
     r('enrollment_termination',
         '/patients/{patient}/enrollments/{enrollment}/termination',
-        factory='.permissions.PatientFactory',
         traverse='/{patient}')
 
     r('enrollment_randomization',
         '/patients/{patient}/enrollments/{enrollment}/randomization',
-        factory='.permissions.PatientFactory',
         traverse='/{patient}')
 
     r('visits',
         '/patients/{patient}/visits',
-        factory='.permissions.PatientFactory',
         traverse='/{patient}')
     r('visit',
         '/patients/{patient}/visits/{visit}',
-        factory='.permissions.PatientFactory',
         traverse='/{patient}',
         custom_predicates=[ymd])
     r('visit_forms',
         '/patients/{patient}/visits/{visit}/forms',
-        factory='.permissions.PatientFactory',
         traverse='/{patient}',
         custom_predicates=[ymd])
     r('visit_form',
         '/patients/{patient}/visits/{visit}/forms/{form}',
-        factory='.permissions.PatientFactory',
         traverse='/{patient}',
         custom_predicates=[ymd])
 

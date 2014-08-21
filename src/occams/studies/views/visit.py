@@ -1,8 +1,12 @@
+from pyramid.i18n import get_localizer
 from pyramid.view import view_config
-import wtforms.fields.html5
-import wtforms.widgets.html5
+import six
+import sqlalchemy as sa
+from sqlalchemy import orm
+from voluptuous import *  # NOQA
 
-from occams.studies import _
+from occams.studies import _, models, Session
+from occams.studies.validators import Date
 
 
 @view_config(
@@ -26,86 +30,107 @@ def add(request):
     return {'form': form}
 
 
-class PatientSubForm(wtforms.Form):
-
-    is_new = wtforms.BooleanField(
-        label=_(u'Create'),
-        widget=wtforms.widgets.CheckboxInput())
-
-    pid = wtforms.StringField()
-
-
-class ScheduleSubForm(wtforms.Form):
-
-    study = wtforms.StringField(
-        label=_(u'Study'))
-
-    schedule = wtforms.StringField(
-        label=_(u'Schedule'))
-
-
-class EventAddForm(wtforms.Form):
-
-    patient = wtforms.FormField(
-        PatientSubForm,
-        label=_(u'Patient'),
-        description=_(
-            u'Please specify the patient to add the event for. '
-            u'You may also create a new patient'),
-        validators=[wtforms.validators.required()])
-
-    event_date = wtforms.fields.html5.DateField(
-        label=_(u'Event Date'),
-        description=_(u'The date the event took place.'),
-        validators=[wtforms.validators.required()])
-
-    schedules = wtforms.FieldList(
-        wtforms.FormField(ScheduleSubForm),
-        label=_(u'Schedules'),
-        description=_(
-            u'(Optional) The study schedule that applies to this event'))
-
-
 def get_visits_data(request, patient):
-    return [{
-        '__url__': request.route_path(
-            'visit',
-            patient=patient.pid,
-            visit=v.visit_date.isoformat()),
-        'id': v.id,
-        'cycles': [{
-            'id': c.id,
-            'study': {
-                'id': c.study.id,
-                'name': c.study.name,
-                'title': c.study.title,
-                'code': c.study.code
-                },
-            'name': c.name,
-            'title': c.title,
-            'week': c.week
-            } for c in v.cycles],
-        'visit_date': v.visit_date.isoformat(),
-        'forms_complete': len(
-            [e for e in v.entities if e.state.name == 'complete']),
-        'forms_total': len(v.entities)
-        } for v in patient.visits]
+
+    def visit_progress(visit):
+        """
+        Returns a dictionary of the states of the entities in the visit
+        """
+        entities_query = (
+            Session.query(
+                models.State.name,
+                sa.func.count())
+            .select_from(models.Entity)
+            .join(models.Entity.state)
+            .join(models.Context)
+            .filter(models.Context.external == 'visit')
+            .filter(models.Context.key == visit.id)
+            .group_by(models.State.name))
+        return dict(entities_query.all())
+
+    def visit_data(visit):
+        """
+        Generats the actual visit data
+        """
+        progress = visit_progress(visit)
+        return {
+            '__url__': request.route_path(
+                'visit',
+                patient=patient.pid,
+                visit=visit.visit_date.isoformat()),
+            'id': visit.id,
+            'cycles': [{
+                'id': cycle.id,
+                'study': {
+                    'id': cycle.study.id,
+                    'name': cycle.study.name,
+                    'title': cycle.study.title,
+                    'code': cycle.study.code
+                    },
+                'name': cycle.name,
+                'title': cycle.title,
+                'week': cycle.week
+                } for cycle in visit.cycles],
+            'visit_date': visit.visit_date.isoformat(),
+            'forms_complete': progress.get('complete', 0),
+            'forms_incomplete': sum(v for k, v in six.iteritems(progress)
+                                    if k not in ('complete', 'pending-entry')),
+            'forms_not_started': progress.get('pending-entry', 0),
+            'forms_total': sum(v for v in six.itervalues(progress))
+            }
+
+    visits_query = (
+        Session.query(models.Visit)
+        .options(
+            orm.joinedload(models.Visit.cycles).joinedload(models.Cycle.study))
+        .filter_by(patient=patient)
+        .order_by(models.Visit.visit_date.desc()))
+
+    return [visit_data(v) for v in visits_query]
 
 
-def validate_visit_cycle(request, patient, visit=None):
+def VisitSchema(request, patient, visit=None):
+    lz = get_localizer(request)
+    return Schema({
+        Required('cycle_ids'): All(
+            [All(Coerce(int), valid_cycle(request))],
+            Length(
+                min=1,
+                msg=lz.translate(_(u'Must select at least one cycle')))),
+        Required('visit_date'): Date(),
+        Optional('add_forms'): Boolean(),
+        Extra: object
+        }, unqique_visit_cycle)
+
+
+def cycle_exists(request):
+    """
+    Returns a validator callback to ensure the cycle exists in the database
+    """
     def validator(value):
         lz = get_localizer(request)
         (exists,) = (
             Session.query(
                 Session.query(models.Cycle)
                 .filter_by(id=value)
-                .exists()
-            ).one())
+                .exists())
+            .one())
         if not exists:
             raise Invalid(lz.translate(_(
                 u'Specified a cycle that does not exist')))
-        # TODO need a mechanism to check if the cycle can be repeated,
-        # for not just block all repetions, vaya con Dios...
+        return value
+    return validator
+
+
+def unique_visit_cycle(request, patient, visit=None):
+    """
+    Returns a validator callback to ensure the cycle has not already been used
+
+    TODO need a mechanism to check if the cycle can be repeated,
+    for not just block all repetions, vaya con Dios...
+    """
+    def validator(value):
+        lz = get_localizer(request)
         taken_query = (
             Session.query(model.Visit)
             .filter(model.Visit.patient == patient)
@@ -119,16 +144,3 @@ def validate_visit_cycle(request, patient, visit=None):
                 mapping={'visit_date': taken.visit_date}))
         return value
     return validator
-
-
-def VisitSchema(request, patient, visit=None):
-    lz = get_localizer(request)
-    return Schema({
-        Required('cycle_ids'): All(
-            [All(Coerce(int), validate_visit_cycle(request, patient, visit))],
-            Length(
-                min=1,
-                msg=lz.translate(_(u'Must select at least one cycle')))),
-        Required('visit_date'): Date(),
-        Optional('add_forms'): bool
-        })

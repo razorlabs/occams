@@ -45,11 +45,25 @@ function PatientView(){
   /**
    * Returns the form completion progress for the given visit model
    */
-  self.visitProgress = function(visit){
+  self.visitProgressComplete = function(visit){
     if (visit.forms_total() === 0) {
       return 0;
     }
     return Math.round((visit.forms_complete() / visit.forms_total()) * 100);
+  };
+
+  self.visitProgressIncomplete = function(visit){
+    if (visit.forms_total() === 0) {
+      return 0;
+    }
+    return Math.round((visit.forms_incomplete() / visit.forms_total()) * 100);
+  };
+
+  self.visitProgressNotStarted = function(visit){
+    if (visit.forms_total() === 0) {
+      return 0;
+    }
+    return Math.round((visit.forms_not_started() / visit.forms_total()) * 100);
   };
 
   self.onChangeReferenceType = function(item, event){

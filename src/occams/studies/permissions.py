@@ -79,7 +79,7 @@ def track_user_on_request(event):
     request.response.set_cookie('csrf_token', request.session.get_csrf_token())
 
 
-class PatientFactory(object):
+class RootFactory(object):
 
     __acl__ = [
         (Allow, 'administrator', ALL_PERMISSIONS),
@@ -92,17 +92,23 @@ class PatientFactory(object):
 
     def __getitem__(self, key):
         """
-        Find the site and apply object-level security
+        When viewing a patient, active site-level permissions
+
+        Idea from: http://michael.merickel.org/projects/pyramid_auth_demo/object_security.html
         """
         try:
-            patient = Session.query(models.Patient).filter_by(pid=key).one()
+            site = (
+                Session.query(models.Site)
+                .join(models.Patient)
+                .filter_by(pid=key)
+                .one())
         except orm.exc.NoResultFound:
             raise KeyError
 
-        name = patient.site.name
-        patient.__parent__ = self
-        patient.__name__ = name
-        patient.__acl__ = [
+        name = site.name
+        site.__parent__ = self
+        site.__name__ = name
+        site.__acl__ = [
             (Allow, principal(site=name, group='manager'), (
                 'export',
                 'fia_view', 'fia_add', 'fia_edit', 'fia_delete',
@@ -157,4 +163,4 @@ class PatientFactory(object):
             (Allow, principal(site=name, group='member'), ('view',))
             ]
 
-        return patient
+        return site

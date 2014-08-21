@@ -29,6 +29,15 @@ def enrollments_edit_json(request):
 
 
 def get_enrollments_data(request, patient):
+    enrollments_query = (
+        Session.query(models.Enrollment)
+        .filter_by(patient=patient)
+        .options(
+            orm.joinedload(models.Enrollment.study),
+            orm.joinedload(models.Enrollment.stratum)
+            .joinedload(models.Stratum.arm))
+        .order_by(models.Enrollment.consent_date.desc()))
+
     return [{
         '__url__': request.route_path('enrollment',
                                       patient=patient.pid,
@@ -56,4 +65,4 @@ def get_enrollments_data(request, patient):
             e.termination_date and e.termination_date.isoformat()),
         'reference_number': e.reference_number,
         'stratum_id': None if not e.study.is_randomized else e.stratum.id
-        } for e in patient.enrollments]
+        } for e in enrollments_query]

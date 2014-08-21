@@ -123,7 +123,7 @@
           <form class="navbar-form navbar-left" role="search"
               method="GET"
               action="${request.route_path('patients')}"
-              tal:condition="request.has_permission('patients')">
+              tal:condition="request.has_permission('patient_view')">
             <div class="form-group">
               <label class="sr-only" for="search">Search</label>
               <input

@@ -28,7 +28,7 @@ def main(global_config, **settings):
     """
     config = Configurator(
         settings=settings,
-        root_factory='occams.studies.permissions.PatientFactory',
+        root_factory='occams.studies.permissions.RootFactory',
         authentication_policy=WhoV2AuthenticationPolicy(
             settings['who.config_file'],
             settings['who.identifier_id'],
