@@ -77,7 +77,7 @@ class PartnerPlan(ExportPlan):
                 CreateUser.key.label('create_user'),
                 models.Partner.modify_date,
                 ModifyUser.key.label('modify_user'))
-            .select_from(modelsPartner)
+            .select_from(models.Partner)
             .join(models.Patient, models.Partner.patient_id == models.Patient.id)
             .join(models.Patient.site)
             .outerjoin(PartnerPatient, PartnerPatient.id == models.Partner.enrolled_patient_id)  # NOQA
