@@ -17,6 +17,7 @@ REQUIRES = [
     'humanize',
     'jsmin',
     'lingua',
+    'parse',
     'pyramid',
     'pyramid_chameleon',
     'pyramid_mailer',
