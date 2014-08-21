@@ -9,8 +9,9 @@ from voluptuous import *  # NOQA
 
 from .. import _, models, Session
 
+
 @view_config(
-    route_name='patient_enrollments',
+    route_name='enrollments',
     permission='enrollment_add',
     xhr=True,
     request_method='POST',
@@ -26,9 +27,12 @@ def enrollments_edit_json(request):
             'validation_errors': [e.error_message for e in exc.errors]})
     return get_patient_data(request, patient)
 
+
 def get_enrollments_data(request, patient):
     return [{
-        '__url__': request.route_path('enrollment', enrollment=e.id),
+        '__url__': request.route_path('enrollment',
+                                      patient=patient.pid,
+                                      enrollment=e.id),
         'id': e.id,
         'study': {
             'id': e.study.id,
@@ -53,4 +57,3 @@ def get_enrollments_data(request, patient):
         'reference_number': e.reference_number,
         'stratum_id': None if not e.study.is_randomized else e.stratum.id
         } for e in patient.enrollments]
-

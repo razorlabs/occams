@@ -10,9 +10,6 @@ class TestSchemaPlan(IntegrationFixture):
         """
         from datetime import date
         from occams.studies import Session, models, exports
-        from tests import track_user
-
-        track_user(u'joe')
 
         schema = models.Schema(
             name=u'contact',
@@ -42,9 +39,6 @@ class TestSchemaPlan(IntegrationFixture):
         """
         from datetime import date, timedelta
         from occams.studies import Session, models, exports
-        from tests import track_user
-
-        track_user(u'joe')
 
         schema = models.Schema(
             name=u'vitals',
@@ -93,9 +87,6 @@ class TestSchemaPlan(IntegrationFixture):
         """
         from datetime import date
         from occams.studies import Session, models, exports
-        from tests import track_user
-
-        track_user(u'joe')
 
         schema = models.Schema(
             name=u'contact',
@@ -140,9 +131,6 @@ class TestSchemaPlan(IntegrationFixture):
         """
         from datetime import date, timedelta
         from occams.studies import Session, models, exports
-        from tests import track_user
-
-        track_user(u'joe')
 
         schema = models.Schema(
             name=u'termination',
@@ -199,9 +187,6 @@ class TestSchemaPlan(IntegrationFixture):
         """
         from datetime import date, timedelta
         from occams.studies import Session, models, exports
-        from tests import track_user
-
-        track_user(u'joe')
 
         schema = models.Schema(
             name=u'vitals',
@@ -274,9 +259,6 @@ class TestSchemaPlan(IntegrationFixture):
         """
         from datetime import date, timedelta
         from occams.studies import Session, models, exports
-        from tests import track_user
-
-        track_user(u'joe')
 
         schema = models.Schema(
             name=u'vitals',

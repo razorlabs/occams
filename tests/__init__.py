@@ -50,21 +50,19 @@ class IntegrationFixture(unittest.TestCase):
     def setUp(self):
         from pyramid import testing
         import transaction
-        from occams.studies import Session
+        from occams.studies import models, Session
         from occams.studies.models import Base
         self.config = testing.setUp()
         # Don't actually check csrf, this if for functional tests
         self.addCleanup(testing.tearDown)
         self.addCleanup(transaction.abort)
         self.addCleanup(Session.remove)
+
+        Session.add(models.User(key=u'tester'))
+        Session.flush()
+        Session.info['user'] = u'tester'
+
         Base.metadata.info['settings'] = self.config.registry.settings
-
-
-def track_user(login, is_current=True):
-    from occams.studies import models, Session
-    Session.add(models.User(key=login))
-    Session.flush()
-    Session.info['user'] = login
 
 
 class FunctionalFixture(unittest.TestCase):

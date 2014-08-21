@@ -307,7 +307,7 @@
         <div class="modal-content">
           <form
               role="form"
-              action="${request.current_route_path(_route_name='patient_enrollments')}"
+              action="${request.current_route_path(_route_name='enrollments')}"
               data-bind="with: $root.editableItem,
                          submit: $root.saveEnrollment,
                          validate: window.defaultValidationOptions">
@@ -411,7 +411,7 @@
         <div class="modal-content">
           <form
               role="form"
-              action="${request.current_route_path(_route_name='patient_visits')}"
+              action="${request.current_route_path(_route_name='visits')}"
               data-bind="with: $root.editableVisit,
                          submit: $root.saveVisit,
                          validate: window.defaultValidationOptions">

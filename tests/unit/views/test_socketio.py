@@ -65,10 +65,11 @@ class TestExportNameSpace(IntegrationFixture):
         from pyramid import testing
         from occams.studies import models, Session
         from occams.studies.views.socketio import ExportNamespace
-        from tests import track_user
 
-        track_user('jane')
-        track_user('joe')
+        Session.add(models.User(key=u'jane'))
+        Session.add(models.User(key=u'joe'))
+        Session.flush()
+
         user = Session.query(models.User).filter_by(key='joe').one()
         other_user = Session.query(models.User).filter_by(key='jane').one()
         pending_export = models.Export(owner_user=user, contents=[],

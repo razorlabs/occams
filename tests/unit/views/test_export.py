@@ -4,22 +4,20 @@ import mock
 from tests import IntegrationFixture
 
 
+@mock.patch('occams.studies.views.export.check_csrf_token')
 class TestAdd(IntegrationFixture):
 
     def call_view(self, request):
         from occams.studies.views.export import add as view
         return view(request)
 
-    def test_get_exportables(self):
+    def test_get_exportables(self, check_csrf_token):
         """
         It should render only published schemata
         """
         from datetime import date
         from pyramid import testing
-        from tests import track_user
         from occams.studies import Session, models
-
-        track_user('joe')
 
         # No schemata
         request = testing.DummyRequest()
@@ -42,7 +40,6 @@ class TestAdd(IntegrationFixture):
         response = self.call_view(request)
         self.assertEquals(len(response['exportables']), 4)
 
-    @mock.patch('occams.studies.views.export.check_csrf_token')
     def test_post_empty(self, check_csrf_token):
         """
         It should raise validation errors on empty imput
@@ -53,7 +50,6 @@ class TestAdd(IntegrationFixture):
         response = self.call_view(request)
         self.assertIsNotNone(response['errors'])
 
-    @mock.patch('occams.studies.views.export.check_csrf_token')
     def test_post_non_existent_schema(self, check_csrf_token):
         """
         It should raise validation errors for non-existent schemata
@@ -65,7 +61,6 @@ class TestAdd(IntegrationFixture):
         response = self.call_view(request)
         self.assertIn('Invalid selection', response['errors'][0])
 
-    @mock.patch('occams.studies.views.export.check_csrf_token')
     @mock.patch('occams.studies.tasks.make_export')  # Don't invoke subtasks
     def test_valid(self, make_export, check_csrf_token):
         """
@@ -75,14 +70,15 @@ class TestAdd(IntegrationFixture):
         from pyramid import testing
         from pyramid.httpexceptions import HTTPFound
         from webob.multidict import MultiDict
-        from tests import track_user
         from occams.studies import Session, models
 
         self.config.include('occams.studies.routes')
         self.config.add_route('export_status', '/dummy')
         self.config.registry.settings['app.export.dir'] = '/tmp'
 
-        track_user('joe')
+        Session.add(models.User(key=u'joe'))
+        Session.flush()
+        Session.info['user'] = u'joe'
 
         schema = models.Schema(
             name=u'vitals', title=u'Vitals', publish_date=date.today())
@@ -103,7 +99,6 @@ class TestAdd(IntegrationFixture):
         export = Session.query(models.Export).one()
         self.assertEqual(export.owner_user.key, 'joe')
 
-    @mock.patch('occams.studies.views.export.check_csrf_token')
     def test_exceed_limit(self, check_csrf_token):
         """
         It should not let the user exceed their allocated export limit
@@ -111,12 +106,14 @@ class TestAdd(IntegrationFixture):
         from datetime import date
         from pyramid import testing
         from webob.multidict import MultiDict
-        from tests import track_user
         from occams.studies import Session, models
 
         self.config.registry.settings['app.export.limit'] = 0
 
-        track_user('joe')
+        Session.add(models.User(key=u'joe'))
+        Session.flush()
+        Session.info['user'] = u'joe'
+
         previous_export = models.Export(
             owner_user=Session.query(models.User).filter_by(key='joe').one(),
             contents=[{
@@ -152,14 +149,15 @@ class TestStatusJSON(IntegrationFixture):
         It should return the authenticated user's exports
         """
         from pyramid import testing
-        from tests import track_user
         from occams.studies import Session, models
 
         self.config.registry.settings['app.export.dir'] = '/tmp'
         self.config.include('occams.studies.routes')
 
-        track_user('jane')
-        track_user('joe')
+        Session.add(models.User(key='joe'))
+        Session.add(models.User(key='jane'))
+        Session.flush()
+        Session.info['user'] = 'joe'
 
         Session.add_all([
             models.Export(
@@ -190,7 +188,6 @@ class TestStatusJSON(IntegrationFixture):
         """
         from datetime import datetime, timedelta
         from pyramid import testing
-        from tests import track_user
         from occams.studies import Session, models
 
         EXPIRE_DAYS = 10
@@ -199,7 +196,9 @@ class TestStatusJSON(IntegrationFixture):
         self.config.registry.settings['app.export.dir'] = '/tmp'
         self.config.include('occams.studies.routes')
 
-        track_user('joe')
+        Session.add(models.User(key=u'joe'))
+        Session.flush()
+        Session.info['user'] = u'joe'
 
         now = datetime.now()
 
@@ -274,9 +273,6 @@ class TestCodebookJSON(IntegrationFixture):
         from pyramid import testing
         from webob.multidict import MultiDict
         from occams.studies import Session, models
-        from tests import track_user
-
-        track_user('joe')
 
         Session.add(models.Schema(
             name=u'aform',
@@ -325,25 +321,26 @@ class TestCodebookDownload(IntegrationFixture):
         os.remove(name)
 
 
+@mock.patch('occams.studies.tasks.celery.control.revoke')
+@mock.patch('occams.studies.views.export.check_csrf_token')
 class TestDelete(IntegrationFixture):
 
     def call_view(self, request):
         from occams.studies.views.export import delete as view
         return view(request)
 
-    @mock.patch('occams.studies.views.export.check_csrf_token')
-    @mock.patch('occams.studies.tasks.celery.control.revoke')
-    def test_deletable_not_owner(self, revoke, check_csrf_token):
+    def test_deletable_not_owner(self, check_csrf_token, revoke):
         """
         It should issue a 404 if the user does not own the export
         """
         from pyramid import testing
         from pyramid.httpexceptions import HTTPNotFound
         from occams.studies import models, Session
-        from tests import track_user
 
-        track_user('jane', is_current=False)
-        track_user('joe')
+        Session.add(models.User(key=u'jane'))
+        Session.add(models.User(key=u'joe'))
+        Session.flush()
+        Session.info['user'] = u'joe'
 
         export = models.Export(
             owner_user=(
@@ -363,9 +360,7 @@ class TestDelete(IntegrationFixture):
         with self.assertRaises(HTTPNotFound):
             self.call_view(request)
 
-    @mock.patch('occams.studies.views.export.check_csrf_token')
-    @mock.patch('occams.studies.tasks.celery.control.revoke')
-    def test_not_found(self, revoke, check_csrf_token):
+    def test_not_found(self, check_csrf_token, revoke):
         """
         It should issue a 404 if the export does not exist
         """
@@ -378,18 +373,17 @@ class TestDelete(IntegrationFixture):
         with self.assertRaises(HTTPNotFound):
             self.call_view(request)
 
-    @mock.patch('occams.studies.views.export.check_csrf_token')
-    @mock.patch('occams.studies.tasks.celery.control.revoke')
-    def test_deleteable_by_owner(self, revoke, check_csrf_token):
+    def test_deleteable_by_owner(self, check_csrf_token, revoke):
         """
         It should allow the owner of the export to cancel/delete the export
         """
         from pyramid import testing
         from pyramid.httpexceptions import HTTPOk
         from occams.studies import models, Session
-        from tests import track_user
 
-        track_user('joe')
+        Session.add(models.User(key=u'joe'))
+        Session.flush()
+        Session.info['user'] = u'joe'
 
         export = models.Export(
             owner_user=(
@@ -429,12 +423,14 @@ class TestDownload(IntegrationFixture):
         from pyramid import testing
         from pyramid.httpexceptions import HTTPNotFound
         from pyramid.response import FileResponse
-        from tests import track_user
         from occams.studies import Session, models
 
         self.config.registry.settings['app.export.dir'] = '/tmp'
-        track_user('joe')
-        track_user('jane')
+
+        Session.add(models.User(key=u'joe'))
+        Session.add(models.User(key=u'jane'))
+        Session.flush()
+
         export = models.Export(
             id=123,
             owner_user=(
@@ -467,10 +463,12 @@ class TestDownload(IntegrationFixture):
         """
         from pyramid import testing
         from pyramid.httpexceptions import HTTPNotFound
-        from tests import track_user
         from occams.studies import Session, models
 
-        track_user('joe')
+        Session.add(models.User(key=u'joe'))
+        Session.flush()
+        Session.info['user'] = u'joe'
+
         Session.add(models.Export(
             id=123,
             owner_user=(

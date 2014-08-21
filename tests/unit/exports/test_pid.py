@@ -31,10 +31,7 @@ class TestPidPlan(IntegrationFixture):
         It should be able to generate reports without refs
         """
         from occams.studies import exports, models, Session
-        from tests import track_user
         plan = exports.PidPlan()
-
-        track_user('joe')
 
         patient = models.Patient(
             pid=u'xxx-xxx',
@@ -61,10 +58,7 @@ class TestPidPlan(IntegrationFixture):
         It should generate a basic listing of all the PIDs in the database
         """
         from occams.studies import exports, models, Session
-        from tests import track_user
         plan = exports.PidPlan()
-
-        track_user('joe')
 
         reference_type = models.ReferenceType(name=u'med_num', title=u'Medical Number')
 
@@ -97,10 +91,7 @@ class TestPidPlan(IntegrationFixture):
         """
         from datetime import date
         from occams.studies import exports, models, Session
-        from tests import track_user
         plan = exports.PidPlan()
-
-        track_user('joe')
 
         patient = models.Patient(
             pid=u'xxx-xxx',

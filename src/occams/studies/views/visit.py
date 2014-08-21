@@ -6,7 +6,7 @@ from occams.studies import _
 
 
 @view_config(
-    route_name='patient_visits',
+    route_name='visits',
     permission='visit_view',
     renderer='../templates/event/list.pt')
 def list_(request):
@@ -14,7 +14,7 @@ def list_(request):
 
 
 @view_config(
-    route_name='patient_visits',
+    route_name='visits',
     permission='visit_add',
     request_method='POST',
     xhr=True,

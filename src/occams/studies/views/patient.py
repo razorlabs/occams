@@ -7,6 +7,8 @@ import six
 from sqlalchemy import orm
 from voluptuous import *  # NOQA
 
+from occams.roster import generate
+
 from .. import _, models, Session
 from ..widgets.pager import Pager
 from .enrollment import get_enrollments_data
@@ -82,8 +84,9 @@ def add_json(request):
     except MultipleInvalid as exc:
         raise HTTPBadRequest(json={
             'validation_errors': [e.error_message for e in exc.errors]})
-    # TODO generate OUR number
-    patient = models.Patient()
+    site = Session.query(models.Site).get(data['site_id'])
+    pid = generate(site.name)
+    patient = models.Patient(pid=pid)
     apply_changes(patient, data)
     return get_patient_data(request, patient)
 
@@ -105,6 +108,25 @@ def edit_json(request):
             'validation_errors': [e.error_message for e in exc.errors]})
     apply_changes(patient, data)
     return get_patient_data(request, patient)
+
+
+@view_config(
+    route_name='patient',
+    permission='petient_delete',
+    xhr=True,
+    request_method='DELETE',
+    renderer='json')
+def delete_json(request):
+    check_csrf_token(request)
+    patient = get_patient(request)
+    lz = get_localizer(request)
+    Session.delete(patient)
+    Session.flush()
+    msg = lz.translate(
+        _('Patient ${pid} was successfully removed'),
+        mapping={'pid': patient.pid})
+    request.session.flash(msg, 'success')
+    return {'__next__': request.current_route_path(_route_name='home')}
 
 
 def validate_reference(request, patient):
