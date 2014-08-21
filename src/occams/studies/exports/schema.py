@@ -122,6 +122,12 @@ class SchemaPlan(ExportPlan):
 
         return [cls.from_sql(r) for r in query]
 
+    @property
+    def _is_aeh_partner_form(self):
+        return (
+            'aeh' in Session.bind.url.database
+            and self.name in ('IPartnerBio', 'IPartnerContact', 'IPartnerDemographics'))
+
     def codebook(self):
         knowns = [
             row('id', self.name, types.NUMERIC,
@@ -134,6 +140,15 @@ class SchemaPlan(ExportPlan):
                 is_collection=True, is_system=True),
             row('enrollment_ids', self.name, types.NUMERIC,
                 is_collection=True, is_system=True)]
+
+        if self._is_aeh_partner_form:
+            knowns.extend([
+                row('partner_id', self.name, types.NUMERIC,
+                    is_required=True, is_system=True,
+                    desc=u'The partner linkage ID this form was collected for.'),
+                row('parter_pid', self.name, types.STRING, is_system=True,
+                    desc=u'The partner linkage PID this form was collected for. '
+                         u'Available only if the partner is actually enrolled.')])
 
         if self.has_rand:
             knowns.extend([
@@ -263,8 +278,33 @@ class SchemaPlan(ExportPlan):
                 .group_by(models.Context.entity_id)
                 .correlate(report)
                 .as_scalar()
-                .label('enrollment_ids'))
-        )
+                .label('enrollment_ids')))
+
+        if self._is_aeh_partner_form:
+            PartnerPatient = orm.aliased(models.Patient)
+            query = (
+                query
+                .add_column(
+                    Session.query(models.Partner.id)
+                    .select_from(models.Partner)
+                    .join(models.Context,
+                          (models.Context.external == u'partner')
+                          & (models.Context.key == models.Partner.id))
+                    .filter(models.Context.entity_id == report.c.id)
+                    .correlate(report)
+                    .as_scalar()
+                    .label('partner_id'))
+                .add_column(
+                    Session.query(PartnerPatient.pid)
+                    .select_from(models.Partner)
+                    .join(PartnerPatient, models.Partner.enrolled_patient)
+                    .join(models.Context,
+                          (models.Context.external == u'partner')
+                          & (models.Context.key == models.Partner.id))
+                    .filter(models.Context.entity_id == report.c.id)
+                    .correlate(report)
+                    .as_scalar()
+                    .label('partner_pid')))
 
         if self.has_rand:
             query = (
