@@ -37,6 +37,7 @@ from occams.datastore.models import (  # NOQA
 from occams.datastore.utils.sql import JSON
 
 from . import log, Session
+from .permissions import SiteResourceMixin
 
 
 Base = ModelClass(u'Base')
@@ -223,7 +224,7 @@ class Cycle(Base, Referenceable, Describeable, Modifiable, Auditable):
                 cls.__tablename__))
 
 
-class Site(Base,  Referenceable, Describeable, Modifiable, Auditable):
+class Site(Base,  Referenceable, Describeable, Modifiable, Auditable, SiteResourceMixin):
     """
     A facility within an organization
     """

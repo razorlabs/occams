@@ -9,7 +9,7 @@ from pyramid.settings import aslist
 from pyramid.security import Allow, Authenticated, ALL_PERMISSIONS
 from sqlalchemy import orm
 
-from . import log, Session, models
+from . import log, Session
 
 
 def includeme(config):
@@ -83,11 +83,12 @@ class RootFactory(object):
             'site_view', 'site_add', 'site_edit', 'site_delete')),
         (Allow, principal(group='consumer'), (
             'export',
+            'study_view',
+            'cycle_view',
             'fia_view')),
         (Allow, Authenticated, (
             'study_view',
             'cycle_view',
-            'site_view',
             'view'))
         ]
 
@@ -110,10 +111,22 @@ class RootFactory(object):
         except orm.exc.NoResultFound:
             raise KeyError
 
-        name = site.name
         site.__parent__ = self
-        site.__name__ = name
-        site.__acl__ = [
+        return site
+
+
+class SiteResourceMixin(object):
+
+    __parent__ = None
+
+    @property
+    def __name__(self):
+        return self.name
+
+    @property
+    def __acl__(self):
+        name = self.name
+        return [
             (Allow, principal(site=name, group='manager'), (
                 'patient_view', 'patient_add', 'patient_edit',
                 'patient_delete',
@@ -155,4 +168,6 @@ class RootFactory(object):
                 )),
             ]
 
-        return site
+
+# Avoid circular dependencies...
+from . import models

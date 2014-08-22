@@ -16,7 +16,6 @@ from voluptuous import *  # NOQA
 
 from .. import _, log, models, Session, exports
 from ..tasks import celery,  make_export
-from ..widgets.pager import Pager
 
 
 @view_config(

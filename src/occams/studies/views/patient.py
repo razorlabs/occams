@@ -10,7 +10,6 @@ from voluptuous import *  # NOQA
 from occams.roster import generate
 
 from .. import _, models, Session
-from ..widgets.pager import Pager
 from .enrollment import get_enrollments_data
 from .visit import get_visits_data
 
@@ -18,19 +17,66 @@ from .visit import get_visits_data
 @view_config(
     route_name='patients',
     permission='patient_view',
-    request_method='q',
     renderer='../templates/patient/search.pt')
+@view_config(
+    route_name='patients',
+    permission='patient_view',
+    xhr=True,
+    renderer='json')
 def search(request):
-    search_term = request.GET.get('q')
+    """
+    Searches for a patient based on their reference numbers
+    """
 
-    if not search_term:
-        return {}
+    schema = Schema({
+        Required('query', default=''): All(
+            Coearce(lambda v: v and str(v).strip()),
+            # Avoid gigantic queries
+            Length(max=100)),
+        Required('offset', default=0): All(Coerce(int), Clamp(min=0)),
+        Required('limit', default=25): All(
+            Coerce(int), Clamp(min=0, max=50), Any(10, 25, 50)),
+        Extra: object,
+        })
 
-    current_page = int(request.GET.get('page', 0))
-    search_query = query_by_ids(search_term)
-    search_count = search_query.count()
-    pager = Pager(current_page, 10, search_count)
-    return {'pager': pager}
+    search = schema(request.GET)
+
+    query = Session.query(models.Patient)
+
+    if search['query']:
+        wildcard = '%{0}%'.format(search['query'])
+        query = (
+            Session.query(models.Patient)
+            .outerjoin(models.Patient.enrollments)
+            .outerjoin(models.Patient.strata)
+            .outerjoin(models.Patient.reference_numbers)
+            .filter(
+                models.Patient.pid.ilike(wildcard)
+                | models.Enrollment.reference_number.ilike(wildcard)
+                | models.Stratum.reference_number.ilike(wildcard)
+                | models.PatientReference.reference_number.ilike(wildcard)))
+
+    # TODO include only those the user is a site member of
+
+    previous_search = request.session.get(request.matched_route.name)
+
+    if previous_search:
+        previous_search, last_pid = previous_search
+        if previous_search == search:
+            query.filter(models.Patient.pid >= last_pid)
+
+    query = (
+        query
+        .order_by(models.Patient.pid.asc())
+        .offset(search['offset'])
+        .limit(search['limit']))
+
+    results = [get_patient_data(p) for p in query
+               if request.has_permission('patient_view', p.site)]
+
+    request.session[request.matched_route.name] = (search, results[-1]['pid'])
+
+    return {'results': results}
 
 
 @view_config(
@@ -260,26 +306,9 @@ def get_patient(request):
 
 
 def get_available_sites(request):
-    # TODO: Only include the sites the user is a member of
+    """
+    Rertuns a list of sites that the user has access to
+    """
     sites_query = Session.query(models.Site).order_by(models.Site.title)
-    return sites_query
-
-
-def query_by_ids(term):
-    """
-    Search utility that returns a patient entry query based on
-    reference numbers
-    """
-    wildcard = '%{0}%'.format(term)
-    return (
-        Session.query(models.Patient)
-        .outerjoin(models.Patient.enrollments)
-        .outerjoin(models.Patient.strata)
-        .outerjoin(models.Patient.reference_numbers)
-        .filter(
-            models.Patient.pid.ilike(wildcard)
-            | models.Enrollment.reference_number.ilike(wildcard)
-            | models.Stratum.reference_number.ilike(wildcard)
-            | models.PatientReference.reference_number.ilike(wildcard)
-            | models.Patient.initials.ilike(wildcard))
-        .order_by(models.Patient.pid.asc()))
+    return \
+        [s for s in sites_query if request.has_permission('site_view', s)]

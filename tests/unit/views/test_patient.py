@@ -37,6 +37,16 @@ class TestGetPatient(IntegrationFixture):
                 matchdict={'patient': u'1D0NT3X1ST'}))
 
 
+class TestSearch(IntegrationFixture):
+
+    def call_view(self, request):
+        from occams.studies.views.patient import search
+        return search(request)
+
+    def test_simple(self):
+        assert False, "not implemented"
+
+
 @mock.patch('occams.studies.views.patient.check_csrf_token')
 def TestAddJson(IntegrationFixture):
 
