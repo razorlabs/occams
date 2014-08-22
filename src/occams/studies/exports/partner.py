@@ -29,9 +29,12 @@ class PartnerPlan(ExportPlan):
 
     def codebook(self):
         return iter([
-            row('id', self.name, types.NUMERIC,
+            row('partner_id', self.name, types.NUMERIC,
                 is_system=True, is_required=True),
-            row('pid', self.name, types.STRING,
+            row('partner_pid', self.name, types.STRING,
+                title=u'This Partner\'s Patient Entry',
+                desc=u'This partner is also a patient; This property references that patient entry'),  # NOQA
+            row('index_pid', self.name, types.STRING,
                 is_required=True, is_system=True),
             row('site', self.name, types.STRING,
                 is_required=True, is_system=True),
@@ -40,10 +43,6 @@ class PartnerPlan(ExportPlan):
                 title=u'Date Partner Reported',
                 desc=u'The date that the reporting patient reported this partner.',  # NOQA
                 is_required=True),
-            row('partner_pid', self.name, types.STRING,
-                title=u'This Partner\'s Patient Entry',
-                desc=u'This partner is also a patient; This property references that patient entry'),  # NOQA
-
 
             row('create_date', self.name, types.DATE,
                 is_required=True, is_system=True),
@@ -66,12 +65,12 @@ class PartnerPlan(ExportPlan):
 
         query = (
             Session.query(
-                models.Partner.id,
-                models.Patient.our.label('pid'),
+                models.Partner.id.label('partner_id'),
+                PartnerPatient.our.label('partner_pid'),
+                models.Patient.our.label('index_pid'),
                 models.Site.name.label('site'),
 
                 models.Partner.report_date,
-                PartnerPatient.our.label('partner_pid'),
 
                 models.Partner.create_date,
                 CreateUser.key.label('create_user'),
