@@ -275,11 +275,13 @@ class TestDeleteJSON(IntegrationFixture):
         from pyramid import testing
         from occams.studies import models, Session
 
+        self.config.add_route('home', '/home')
+
         site_la = models.Site(name=u'la', title=u'LA')
         patient = models.Patient(site=site_la, pid=u'12345')
-        patient_id = patient.id
         Session.add(patient)
         Session.flush()
+        patient_id = patient.id
 
         self.call_view(testing.DummyRequest(
             matchdict={'patient': patient.pid}))
