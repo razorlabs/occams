@@ -126,7 +126,11 @@ class SchemaPlan(ExportPlan):
     def _is_aeh_partner_form(self):
         return (
             'aeh' in Session.bind.url.database
-            and self.name in ('IPartnerBio', 'IPartnerContact', 'IPartnerDemographics'))
+            and self.name in (
+                'IPartnerBio',
+                'IPartnerContact',
+                'IPartnerDemographics',
+                'IPartnerDisclosure'))
 
     def codebook(self):
         knowns = [
