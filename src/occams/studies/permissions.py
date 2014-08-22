@@ -19,11 +19,8 @@ def includeme(config):
     assert 'auth.groups' in config.registry.settings
     patterns = aslist(config.registry.settings['auth.groups'])
     compiled = [compile(p) for p in patterns]
-
-    def callback(request):
-        return compiled
-
-    config.add_request_method(callback, name='group_patterns', reify=True)
+    config.add_request_method(
+        lambda request: compiled, name='group_patterns', reify=True)
 
 
 def principal(**kw):
@@ -34,11 +31,7 @@ def principal(**kw):
         site --  The site code
         group -- The group name
     """
-
-    if 'site' in kw:
-        return '{group}:{site}'.format(**kw)
-    else:
-        return '{group}'.format(**kw)
+    return ('{group}:{site}' if 'site' in kw else '{group}').format(**kw)
 
 
 def groupfinder(identity, request):
@@ -82,9 +75,20 @@ def track_user_on_request(event):
 class RootFactory(object):
 
     __acl__ = [
-        (Allow, 'administrator', ALL_PERMISSIONS),
-        (Allow, 'consumer', ('fia_view',)),
-        (Allow, Authenticated, ('view',)),
+        (Allow, principal(group='administrator'), ALL_PERMISSIONS),
+        (Allow, principal(group='manager'), (
+            'export',
+            'study_view', 'study_add', 'study_edit', 'study_delete',
+            'cycle_view', 'cycle_add', 'cycle_edit', 'cycle_delete',
+            'site_view', 'site_add', 'site_edit', 'site_delete')),
+        (Allow, principal(group='consumer'), (
+            'export',
+            'fia_view')),
+        (Allow, Authenticated, (
+            'study_view',
+            'cycle_view',
+            'site_view',
+            'view'))
         ]
 
     def __init__(self, request):
@@ -94,7 +98,8 @@ class RootFactory(object):
         """
         When viewing a patient, active site-level permissions
 
-        Idea from: http://michael.merickel.org/projects/pyramid_auth_demo/object_security.html
+        Idea from:
+        http://michael.merickel.org/projects/pyramid_auth_demo/object_security.html
         """
         try:
             site = (
@@ -110,57 +115,44 @@ class RootFactory(object):
         site.__name__ = name
         site.__acl__ = [
             (Allow, principal(site=name, group='manager'), (
-                'export',
-                'fia_view', 'fia_add', 'fia_edit', 'fia_delete',
-                'phi_view', 'phi_add', 'phi_edit', 'phi_delete',
-                'study_view', 'study_add', 'study_edit', 'study_delete',
-                'cycle_view', 'cycle_add', 'cycle_edit', 'cycle_delete',
-                'site_view', 'site_add', 'site_edit', 'site_delete',
                 'patient_view', 'patient_add', 'patient_edit',
                 'patient_delete',
                 'enrollment_view', 'enrollment_add', 'enrollment_edit',
                 'enrollment_delete',
                 'enrollment_randomize', 'enrollment_terminate'
-                'visit_view', 'visit_add', 'visit_edit', 'visit_delete')),
+                'visit_view', 'visit_add', 'visit_edit', 'visit_delete'
+                'fia_view', 'fia_add', 'fia_edit', 'fia_delete',
+                'phi_view', 'phi_add', 'phi_edit', 'phi_delete'
+                )),
 
             (Allow, principal(site=name, group='reviewer'), (
-                'fia_view', 'fia_add', 'fia_edit', 'fia_delete',
-                'phi_view', 'phi_add', 'phi_edit', 'phi_delete',
-                'study_view',
-                'cycle_view',
-                'site_view',
                 'patient_view', 'patient_add', 'patient_edit',
                 'patient_delete',
                 'enrollment_view', 'enrollment_add', 'enrollment_edit',
                 'enrollment_delete',
                 'enrollment_randomize', 'enrollment_terminate'
-                'visit_view', 'visit_add', 'visit_edit', 'visit_delete')),
+                'visit_view', 'visit_add', 'visit_edit', 'visit_delete'
+                'fia_view', 'fia_add', 'fia_edit', 'fia_delete',
+                'phi_view', 'phi_add', 'phi_edit', 'phi_delete',
+                )),
 
             (Allow, principal(site=name, group='enterer'), (
-                'fia_view', 'fia_add', 'fia_edit', 'fia_delete',
-                'phi_view', 'phi_add', 'phi_edit', 'phi_delete',
-                'study_view',
-                'cycle_view',
-                'site_view',
                 'patient_view', 'patient_add', 'patient_edit',
                 'patient_delete',
                 'enrollment_view', 'enrollment_add', 'enrollment_edit',
                 'enrollment_delete',
-                'enrollment_randomize', 'enrollment_terminate'
-                'visit_view', 'visit_add', 'visit_edit', 'visit_delete')),
+                'visit_view', 'visit_add', 'visit_edit', 'visit_delete',
+                'fia_view', 'fia_add', 'fia_edit', 'fia_delete',
+                'phi_view', 'phi_add', 'phi_edit', 'phi_delete',
+                )),
 
             (Allow, principal(site=name, group='consumer'), (
-                'export',
-                'fia_view',
-                'phi_view',
-                'study_view',
-                'cycle_view',
-                'site_view',
                 'patient_view',
                 'enrollment_view',
-                'visit_view')),
-
-            (Allow, principal(site=name, group='member'), ('view',))
+                'visit_view',
+                'fia_view',
+                'phi_view',
+                )),
             ]
 
         return site
