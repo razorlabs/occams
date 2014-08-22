@@ -352,6 +352,60 @@ class PatientReference(Base, Referenceable, Modifiable, Auditable):
                 name=u'uq_%s_reference'))
 
 
+class Partner(Base, Referenceable, Modifiable, HasEntities, Auditable):
+    """
+    A subject's partner.
+    """
+
+    __tablename__ = 'partner'
+
+    patient_id = Column(Integer, nullable=False)
+
+    patient = relationship(
+        Patient,
+        backref=backref(
+            name='partners',
+            cascade='all, delete-orphan'),
+        primaryjoin=(patient_id == Patient.id),
+        doc=u'The Patient that reported this partner.')
+
+    enrolled_patient_id = Column(Integer)
+
+    # One-way ORM relationship
+    enrolled_patient = relationship(
+        Patient,
+        primaryjoin=(enrolled_patient_id == Patient.id),
+        # Setup the backref for back-populate cascade
+        backref=backref(name='from_partners'),
+        doc=u'This partner is also a patient; This property references that'
+            u'patient entry')
+
+    # The date upon which the data was reported
+    report_date = Column(
+        Date,
+        nullable=False,
+        doc=u'The date that the reporting patient reported this partner')
+
+    @declared_attr
+    def __table_args__(cls):
+        return  (
+            ForeignKeyConstraint(
+                columns=['patient_id'],
+                refcolumns=['patient.id'],
+                name='fk_%s_patient_id' % cls.__tablename__,
+                ondelete='CASCADE',
+                ),
+            ForeignKeyConstraint(
+                columns=['enrolled_patient_id'],
+                refcolumns=['patient.id'],
+                name='fk_%s_enrolled_patient_id' % cls.__tablename__,
+                ondelete='SET NULL',
+                ),
+            Index('ix_%s_patient_id' % cls.__tablename__, 'patient_id'),
+            Index('ix_%s_enrolled_patient_id' % cls.__tablename__, 'enrolled_patient_id'),
+            Index('ix_%s_report_date' % cls.__tablename__, 'report_date'))
+
+
 class Enrollment(Base,  Referenceable, Modifiable, HasEntities, Auditable):
     """
     A patient's participation in a study.
