@@ -1,108 +1,60 @@
+# flake8: NOQA
+# This module breaks my OCD-ness in favor of readability
 from datetime import datetime
-
 from . import log
+
+from . import models
 
 
 def includeme(config):
     """
     Helper method to configure available routes for the application
     """
-    ymd = dates('date')
+    config.add_static_view('static',                'occams.studies:static/')
 
-    config.add_static_view('static', 'occams.studies:static/')
+    config.add_route('socket.io',                   '/socket.io/*remaining')
 
-    r = config.add_route
+    config.add_route('login',                       '/login')
+    config.add_route('logout',                      '/logout')
 
-    r('socket.io',           '/socket.io/*remaining')
+    config.add_route('setup',                       '/setup')
 
-    r('login',               '/login')
-    r('logout',              '/logout')
+    config.add_route('home',                        '/',                            factory=models.StudyFactory)
 
-    r('sites',               '/sites')
-    r('site',                '/sites/{site}')
+    config.add_route('sites',                       '/sites')
+    config.add_route('site',                        '/sites/{site}')
 
-    r('reference_types',     '/reference_types')
-    r('reference_type',      '/reference_types/{reference_type}')
+    config.add_route('reference_types',             '/reference_types')
+    config.add_route('reference_type',              '/reference_types/{reference_type}')
 
-    r('studies',             '/')
-    r('study',               '/studies/{study}')
-    r('study_schedule',      '/studies/{study}/schedule')
-    r('study_ecrfs',         '/studies/{study}/ecrfs')
-    r('study_progress',      '/studies/{study}/progress')
+    config.add_route('studies',                     '/',                            factory=models.StudyFactory)
+    config.add_route('study',                       '/studies/{study}',             factory=models.StudyFactory, traverse='/{study}')
+    config.add_route('study_progress',              '/studies/{study}/progress',    factory=models.StudyFactory, traverse='/{study}')
 
-    r('cycles',              '/studies/{study}/cycles')
-    r('cycle',               '/studies/{study}/cycles/{cycle}')
+    config.add_route('cycles',                      '/studies/{study}/cycles')
+    config.add_route('cycle',                       '/studies/{study}/cycles/{cycle}')
 
-    r('exports',             '/exports')
-    r('exports_checkout',    '/exports/checkout')
-    r('exports_status',      '/exports/status')
-    r('exports_faq',         '/exports/faq')
-    r('exports_codebook',    '/exports/codebook')
-    r('export',              '/exports/{export:\d+}')
-    r('export_download',     '/exports/{export:\d+}/download')
+    config.add_route('exports',                     '/exports',                         factory=models.ExportFactory)
+    config.add_route('exports_checkout',            '/exports/checkout',                factory=models.ExportFactory)
+    config.add_route('exports_status',              '/exports/status',                  factory=models.ExportFactory)
+    config.add_route('exports_faq',                 '/exports/faq',                     factory=models.ExportFactory)
+    config.add_route('exports_codebook',            '/exports/codebook',                factory=models.ExportFactory)
+    config.add_route('export',                      '/exports/{export:\d+}',            factory=models.ExportFactory, traverse='/{export}')
+    config.add_route('export_download',             '/exports/{export:\d+}/download',   factory=models.ExportFactory, traverse='/{export}')
 
-    r('patients',
-        '/patients',
-        traverse='/{patient}')
-    r('patient',
-        '/patients/{patient}',
-        traverse='/{patient}')
-    r('patient_forms',
-        '/patients/{patient}/forms',
-        traverse='/{patient}')
-    r('patient_form',
-        '/patients/{patient}/forms/{form}',
-        traverse='/{patient}')
+    config.add_route('patients',                    '/patients',                        factory=models.PatientFactory, traverse='/{patient}')
+    config.add_route('patient',                     '/patients/{patient}',              factory=models.PatientFactory, traverse='/{patient}')
+    config.add_route('patient_forms',               '/patients/{patient}/forms',        factory=models.PatientFactory, traverse='/{patient}')
+    config.add_route('patient_form',                '/patients/{patient}/forms/{form}', factory=models.PatientFactory, traverse='/{patient}')
 
-    r('enrollments',
-        '/patients/{patient}/enrollments',
-        traverse='/{patient}')
-    r('enrollment',
-        '/patients/{patient}/enrollments/{enrollment}',
-        traverse='/{patient}')
+    config.add_route('enrollments',                 '/patients/{patient}/enrollments',                              factory=models.PatientFactory)
+    config.add_route('enrollment',                  '/patients/{patient}/enrollments/{enrollment}',                 factory=models.PatientFactory, traverse='/{enrollment}')
+    config.add_route('enrollment_termination',      '/patients/{patient}/enrollments/{enrollment}/termination',     factory=models.PatientFactory, traverse='/{enrollment}')
+    config.add_route('enrollment_randomization',    '/patients/{patient}/enrollments/{enrollment}/randomization',   factory=models.PatientFactory, traverse='/{enrollment}')
 
-    r('enrollment_termination',
-        '/patients/{patient}/enrollments/{enrollment}/termination',
-        traverse='/{patient}')
-
-    r('enrollment_randomization',
-        '/patients/{patient}/enrollments/{enrollment}/randomization',
-        traverse='/{patient}')
-
-    r('visits',
-        '/patients/{patient}/visits',
-        traverse='/{patient}')
-    r('visit',
-        '/patients/{patient}/visits/{visit}',
-        traverse='/{patient}',
-        custom_predicates=[ymd])
-    r('visit_forms',
-        '/patients/{patient}/visits/{visit}/forms',
-        traverse='/{patient}',
-        custom_predicates=[ymd])
-    r('visit_form',
-        '/patients/{patient}/visits/{visit}/forms/{form}',
-        traverse='/{patient}',
-        custom_predicates=[ymd])
-
-    r('home', '/')
+    config.add_route('visits',                      '/patients/{patient}/visits',                       factory=models.PatientFactory)
+    config.add_route('visit',                       '/patients/{patient}/visits/{visit}',               factory=models.PatientFactory, traverse='/{patient}/visits/{visit}')
+    config.add_route('visit_forms',                 '/patients/{patient}/visits/{visit}/forms',         factory=models.PatientFactory, traverse='/{patient}/visits/{visit}')
+    config.add_route('visit_form',                  '/patients/{patient}/visits/{visit}/forms/{form}',  factory=models.PatientFactory, traverse='/{patient}/visits/{visit}')
 
     log.debug('Routes configured')
-
-
-def dates(*keys):
-    """
-    Creates function to parse date segments in URL on dispatch.
-    """
-    def strpdate(str):
-        return datetime.strptime(str, '%Y-%m-%d').date()
-
-    def predicate(info, request):
-        for key in keys:
-            try:
-                info['match'][key] = strpdate(info['match'][key])
-            except ValueError:
-                return False
-        return True
-
-    return predicate

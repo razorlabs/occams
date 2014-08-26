@@ -11,8 +11,8 @@ from .. import _, models, Session
 
 
 @view_config(
-    route_name='enrollments',
-    permission='enrollment_add',
+    context=models.EnrollmentFactory,
+    permission='add',
     xhr=True,
     request_method='POST',
     renderer='json')

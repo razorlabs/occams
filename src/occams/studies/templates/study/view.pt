@@ -1,17 +1,101 @@
 <html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
   <metal:content-slot fill-slot="content-slot">
+
     <header class="page-header">
       <div metal:use-macro="load: ./panels/view-toolbar.pt" />
-      <h1 i18n:translate="">${study.title}</h1>
+      <h1 i18n:translate="">${context.title}</h1>
       <ul metal:use-macro="load: ./panels/details.pt" />
       <nav metal:use-macro="load: ./panels/nav.pt" />
     </header>
 
-    <tal:description switch="bool(study.description)">
-      <p tal:case="True">${structure:study.description}</p>
-      <div tal:case="False" class="alert alert-info" i18n:translate="">
-        <strong>What to say?</strong> This study has no description.
+    <div class="row">
+
+      <div class="col-md-3">
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <h3 class="panel-title" i18n:translate="">PHI eCRFs</h3>
+          </div>
+          <div class="panel-body">
+            <ul class="list-unstyled">
+              <li>Cras justo odio</li>
+              <li>Dapibus ac facilisis in</li>
+              <li>Cras quis porta dolor</li>
+            </ul>
+          </div>
+        </div>
       </div>
-    </tal:description>
+
+      <div class="col-md-3">
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <h3 class="panel-title" i18n:translate="">Consent eCRFs</h3>
+          </div>
+          <div class="panel-body">
+            <ul class="list-unstyled">
+              <li>Cras justo odio</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <h3 class="panel-title" i18n:translate="">Randomization eCRFs</h3>
+          </div>
+          <div class="panel-body">
+            <ul class="list-unstyled">
+              <li>Cras justo odio</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <h3 class="panel-title" i18n:translate="">Termination eCRFs</h3>
+          </div>
+          <div class="panel-body">
+            <ul class="list-unstyled">
+              <li>Cras justo odio</li>
+              <li>Dapibus ac facilisis in</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+    </div><!--! /.row -->
+
+    <div class="table-responsive table-scrollable">
+      <table
+          id="schedule"
+          class="table table-bordered table-striped table-dimensional">
+        <thead>
+          <tr>
+            <th class="ecrf"></th>
+            <th tal:repeat="cycle visit.cycles">
+              <span class="rotated-text">
+                <span class="rotated-text__inner">${cycle.title}</span>
+              </span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr tal:repeat="ecrf ecrfs">
+            <th class="ecrf"><span>${ecrf.title}</span></th>
+            <!--! The rest of the columns are the cycles,
+                  just loop through them (skip the first since
+                  it's the ecrf) -->
+            <tal:cycles repeat="enabled ecrf">
+              <td tal:condition="not:repeat['enabled'].start">
+                <span tal:condition="enabled" class="glyphicon glyphicon-ok"></span>
+              </td>
+            </tal:cycles>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
   </metal:content-slot>
 </html>

@@ -1,5 +1,4 @@
-from pyramid.httpexceptions import (
-    HTTPBadRequest, HTTPForbidden, HTTPFound, HTTPNotFound)
+from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden
 from pyramid.view import view_config
 from sqlalchemy import func, orm, sql
 import wtforms.fields.html5
@@ -10,10 +9,6 @@ from .. import _, models, Session
 
 @view_config(
     route_name='home',
-    permission='view',
-    renderer='../templates/study/list.pt')
-@view_config(
-    route_name='studies',
     permission='view',
     renderer='../templates/study/list.pt')
 def home(request):
@@ -44,91 +39,27 @@ def home(request):
 
 @view_config(
     route_name='study',
-    permission='study_view',
+    permission='view',
     renderer='../templates/study/view.pt')
-def view(request):
-    study = get_study(**request.matchdict)
-    return {'study': study}
-
-
-@view_config(
-    route_name='study_ecrfs',
-    permission='study_view',
-    renderer='../templates/study/ecrfs.pt')
-def ecrfs(request):
-    study = get_study(**request.matchdict)
-    return {'study': study}
-
-
-@view_config(
-    route_name='study_progress',
-    permission='study_view',
-    renderer='../templates/study/progress.pt')
-def progress(request):
-    study = get_study(**request.matchdict)
-
-    states_query = Session.query(models.State)
-
-    VisitCycle = orm.aliased(models.Cycle)
-
-    cycles_query = (
-        Session.query(models.Cycle)
-        .filter_by(study=study)
-        .add_column(
-            Session.query(func.count(models.Visit.id))
-            .join(VisitCycle, models.Visit.cycles)
-            .filter(VisitCycle.id == models.Cycle.id)
-            .correlate(models.Cycle)
-            .label('visits_count')))
-
-    for state in states_query:
-        cycles_query = cycles_query.add_column(
-            Session.query(func.count(models.Visit.id))
-            .join(VisitCycle, models.Visit.cycles)
-            .filter(models.Visit.entities.any(state=state))
-            .filter(VisitCycle.id == models.Cycle.id)
-            .correlate(models.Cycle)
-            .label(state.name))
-
-    cycles_query = cycles_query.order_by(models.Cycle.week.asc())
-    cycles_count = study.cycles.count()
-
+def view(context, request):
     return {
-        'study': study,
-        'states': states_query,
-        'cycles': cycles_query,
-        'cycles_count': cycles_count,
-        'has_cycles': cycles_count > 0}
+        'cycles_data': cycles(context, request)
+        }
 
 
 @view_config(
     route_name='study',
-    permission='study_add',
-    request_method='POST',
+    permission='view',
     xhr=True,
     renderer='json')
-def add(request):
-    form = StudyForm(request.POST)
-
-    if request.method == 'POST' and form.validate():
-        study = models.Study()
-        form.populate_obj(study)
-        Session.add(study)
-        study_url = request.current_route_path(_route_name='study_view',
-                                               study_name=study.name)
-        request.session.flash(_(u'New study added!', 'success'))
-        return HTTPFound(location=study_url)
-
-    return {'form': form}
-
-
-def query_enabled_ecrfs(study):
+def cycles(context, request):
     StudyForm = orm.aliased(models.Schema, name='StudyForm')
     CurrentSchema = orm.aliased(models.Schema, name='CurrentSchema')
     study_schemata_query = (
         Session.query(models.Schema)
         .filter(models.Schema.categories.contains(study.category))
         .subquery('study_schemata'))
+
     ecrfs_query = (
         Session.query(
             StudyForm.id,
@@ -148,17 +79,71 @@ def query_enabled_ecrfs(study):
             .correlate(StudyForm)
             .as_scalar()))
         .order_by(StudyForm.title.asc()))
-    return ecrfs_query
 
 
-def get_study(study=None):
-    """
-    Uses the URL dispatch matching dictionary to find a study
-    """
-    try:
-        return Session.query(models.Study).filter_by(name=study).one()
-    except orm.exc.NoResultFound:
-        raise HTTPNotFound
+    return {}
+
+
+
+@view_config(
+    route_name='study_progress',
+    permission='view',
+    renderer='../templates/study/progress.pt')
+def progress(context, request):
+
+    states_query = Session.query(models.State)
+
+    VisitCycle = orm.aliased(models.Cycle)
+
+    cycles_query = (
+        Session.query(models.Cycle)
+        .filter_by(study=context)
+        .add_column(
+            Session.query(func.count(models.Visit.id))
+            .join(VisitCycle, models.Visit.cycles)
+            .filter(VisitCycle.id == models.Cycle.id)
+            .correlate(models.Cycle)
+            .label('visits_count')))
+
+    for state in states_query:
+        cycles_query = cycles_query.add_column(
+            Session.query(func.count(models.Visit.id))
+            .join(VisitCycle, models.Visit.cycles)
+            .filter(models.Visit.entities.any(state=state))
+            .filter(VisitCycle.id == models.Cycle.id)
+            .correlate(models.Cycle)
+            .label(state.name))
+
+    cycles_query = cycles_query.order_by(models.Cycle.week.asc())
+    cycles_count = context.cycles.count()
+
+    return {
+        'states': states_query,
+        'cycles': cycles_query,
+        'cycles_count': cycles_count,
+        'has_cycles': cycles_count > 0}
+
+
+@view_config(
+    route_name='study',
+    permission='add',
+    request_method='POST',
+    xhr=True,
+    renderer='json')
+def add(request):
+    form = StudyForm(request.POST)
+
+    if not form.validate():
+        raise HTTPBadRequest
+
+    study = models.Study()
+    form.populate_obj(study)
+    Session.add(study)
+
+    request.session.flash(_(u'New study added!', 'success'))
+
+    return {'__next__': request.current_route_path(_route_name='study',
+                                                   study=study.name)}
 
 
 def is_unique_name(form, field):
@@ -201,4 +186,15 @@ class StudyForm(wtforms.Form):
 
     consent_date = wtforms.fields.html5.DateField(
         label=_(u'Consent Date'),
+        validators=[wtforms.validators.required()])
+
+
+class ScheduleForm(wtforms.Form):
+
+    title = wtforms.StringField(
+        title=_(u'Title'),
+        validators=[wtforms.validators.required()])
+
+    week = wtforms.IntegerField(
+        title=_(u'Week Number'),
         validators=[wtforms.validators.required()])

@@ -10,7 +10,6 @@ from pyramid.response import FileResponse
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 import six
-from sqlalchemy import orm
 import transaction
 from voluptuous import *  # NOQA
 
@@ -19,8 +18,8 @@ from ..tasks import celery,  make_export
 
 
 @view_config(
-    route_name='exports',
-    permission='fia_view',
+    context=models.ExportFactory,
+    permission='view',
     renderer='../templates/export/home.pt')
 def about(request):
     """
@@ -30,8 +29,9 @@ def about(request):
 
 
 @view_config(
-    route_name='exports_faq',
-    permission='fia_view',
+    context=models.ExportFactory,
+    name='faq',
+    permission='view',
     renderer='../templates/export/faq.pt')
 def faq(request):
     """
@@ -53,8 +53,9 @@ def ExportCheckoutSchema(request, exportables):
 
 
 @view_config(
-    route_name='exports_checkout',
-    permission='fia_view',
+    context=models.ExportFactory,
+    name='checkout',
+    permission='add',
     renderer='../templates/export/add.pt')
 def add(request):
     """
@@ -115,8 +116,70 @@ def add(request):
 
 
 @view_config(
-    route_name='exports_status',
-    permission='fia_view',
+    context=models.ExportFactory,
+    name='codebook',
+    permission='view',
+    renderer='../templates/export/codebook.pt')
+def codebook(request):
+    """
+    Codebook viewer
+    """
+    return {'exportables': exports.list_all().values()}
+
+
+@view_config(
+    context=models.ExportFactory,
+    name='codebook',
+    permission='view',
+    xhr=True,
+    renderer='json')
+def codebook_json(request):
+    """
+    Loads codebook rows for the specified data file
+    """
+
+    file = request.GET.get('file')
+
+    if not file:
+        raise HTTPNotFound
+
+    def massage(row):
+        publish_date = row['publish_date']
+        if publish_date:
+            row['publish_date'] = publish_date.isoformat()
+        return row
+
+    exportables = exports.list_all()
+
+    if file not in exportables:
+        raise HTTPNotFound
+
+    plan = exportables[file]
+    return [massage(row) for row in plan.codebook()]
+
+
+@view_config(
+    context=models.ExportFactory,
+    name='codebook.csv',
+    permission='fia_view')
+def codebook_download(request):
+    """
+    Returns full codebook file
+    """
+    export_dir = request.registry.settings['app.export.dir']
+    codebook_name = exports.codebook.FILE_NAME
+    path = os.path.join(export_dir, codebook_name)
+    if not os.path.isfile(path):
+        log.warn('Trying to download codebook before it\'s pre-cooked!')
+        raise HTTPNotFound
+    response = FileResponse(path)
+    response.content_disposition = 'attachment;filename=%s' % codebook_name
+    return response
+
+
+@view_config(
+    context=models.Export,
+    permission='view',
     renderer='../templates/export/status.pt')
 def status(request):
     """
@@ -128,8 +191,9 @@ def status(request):
 
 
 @view_config(
-    route_name='exports_status',
-    permission='fia_view',
+    context=models.Export,
+    name='download',
+    permission='view',
     xhr=True,
     renderer='json')
 def status_json(request):
@@ -178,68 +242,8 @@ def status_json(request):
 
 
 @view_config(
-    route_name='exports_codebook',
-    permission='fia_view',
-    renderer='../templates/export/codebook.pt')
-def codebook(request):
-    """
-    Codebook viewer
-    """
-    return {'exportables': exports.list_all().values()}
-
-
-@view_config(
-    route_name='exports_codebook',
-    permission='fia_view',
-    xhr=True,
-    renderer='json')
-def codebook_json(request):
-    """
-    Loads codebook rows for the specified data file
-    """
-
-    file = request.GET.get('file')
-
-    if not file:
-        raise HTTPNotFound
-
-    def massage(row):
-        publish_date = row['publish_date']
-        if publish_date:
-            row['publish_date'] = publish_date.isoformat()
-        return row
-
-    exportables = exports.list_all()
-
-    if file not in exportables:
-        raise HTTPNotFound
-
-    plan = exportables[file]
-    return [massage(row) for row in plan.codebook()]
-
-
-@view_config(
-    route_name='exports_codebook',
-    request_param='alt=json',
-    permission='fia_view')
-def codebook_download(request):
-    """
-    Returns full codebook file
-    """
-    export_dir = request.registry.settings['app.export.dir']
-    codebook_name = exports.codebook.FILE_NAME
-    path = os.path.join(export_dir, codebook_name)
-    if not os.path.isfile(path):
-        log.warn('Trying to download codebook before it\'s pre-cooked!')
-        raise HTTPNotFound
-    response = FileResponse(path)
-    response.content_disposition = 'attachment;filename=%s' % codebook_name
-    return response
-
-
-@view_config(
-    route_name='export',
-    permission='fia_view',
+    context=models.Export,
+    permission='delete',
     request_method='DELETE',
     xhr=True)
 def delete(request):
@@ -247,41 +251,24 @@ def delete(request):
     Handles delete delete AJAX request
     """
     check_csrf_token(request)
-
-    export = (
-        Session.query(models.Export)
-        .filter(models.Export.id == request.matchdict['export'])
-        .filter(models.Export.owner_user.has(key=request.authenticated_userid))
-        .first())
-
-    if not export:
-        raise HTTPNotFound
-
+    export = request.context
     Session.delete(export)
     Session.flush()
-
     celery.control.revoke(export.name)
-
     return HTTPOk()
 
 
 @view_config(
-    route_name='export_download',
-    permission='fia_view')
+    context=models.Export,
+    name='download',
+    permission='view')
 def download(request):
     """
     Returns specific download attachement
 
     The user should only be allowed to download their exports.
     """
-    try:
-        export = (
-            Session.query(models.Export)
-            .filter_by(id=request.matchdict['export'], status='complete')
-            .filter(models.Export.owner_user.has(key=request.authenticated_userid))  # NOQA
-            .one())
-    except orm.exc.NoResultFound:
-        raise HTTPNotFound
+    export = request.context
 
     export_dir = request.registry.settings['app.export.dir']
     path = os.path.join(export_dir, export.name)

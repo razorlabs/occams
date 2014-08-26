@@ -1,0 +1,99 @@
+<html i18n:domain="occams.studies" metal:use-macro="load:../master.pt">
+  <metal:content-slot fill-slot="content-slot">
+
+    <div style="display: none;" data-bind="visible: isReady">
+
+      <header class="page-header">
+        <div class="btn-toolbar pull-right">
+          <button class="btn btn-default"
+            data-bind="click: startFormAdd"
+            tal:condition="request.has_permission('edit')">
+              <span class="fa fa-files-o"></span>
+              <span i18n:translate="">Add Forms</span>
+          </button>
+          <button class="btn btn-default"
+              data-bind="click: startEdit"
+              tal:condition="request.has_permission('edit')">
+            <span class="fa fa-edit"></span>
+            <span i18n:translate="">Edit</span>
+          </button>
+          <button class="btn btn-default"
+              data-bind="click: startDelete"
+              tal:condition="request.has_permission('delete')">
+            <span class="fa fa-trash-o"></span>
+            <span i18n:translate="">Delete</span>
+          </button>
+        </div>
+        <h1 i18n:translate="">
+          <span i18n:translate="">Visit</span>
+          <span data-bind="text: visit.visit_date"></span>
+        </h1>
+        <ul class="details list-inline">
+          <li data-bind="">
+            <span class="text-muted" i18n:translate="">Site:</span>
+            <span data-bind="text: visit.patient.site.title"></span>
+          </li>
+          <li data-bind="">
+            <span class="text-muted" i18n:translate="">Patient:</span>
+            <a data-bind="
+                attr: {href: visit.patient.__url__},
+                text: visit.patient.pid"></a>
+          </li>
+          <li data-bind="">
+            <span class="text-muted" i18n:translate="">Cycles:</span>
+            <ul class="list-comma" data-bind="foreach: visit.cycles">
+              <li data-bind="text: title"></li>
+            </ul>
+          </li>
+        </ul>
+      </header>
+
+      <table class="table table-hover table-striped">
+        <colgroup>
+        </colgroup>
+        <thead>
+          <th><input type="checkbox" /></th>
+          <th i18n:translate="">ID</th>
+          <th i18n:translate="">Form</th>
+          <th i18n:translate="">Collect Date</th>
+          <th i18n:translate="">State</th>
+          <th></th>
+        </thead>
+        <tbody data-bind="foreach: visit.entities">
+          <td>
+            <input type="checkbox"
+                data-bind="
+                  attr: {value: id},
+                  click: $root.onClickForm" />
+          </td>
+          <td><code data-bind="text: id"></code></td>
+          <td data-bind="text: schema.title"></td>
+          <td data-bind="text: collect_date"></td>
+          <td data-bind="text: state.title"></td>
+          <td>
+            <a data-bind="attr: {href: __url__}"><span class="fa fa-chevron-right"></span></a>
+          </td>
+        </tbody>
+      </table>
+
+      <!-- ko if: hasSelectedForms -->
+        <div class="well well-sm clearfix">
+          <strong>
+            <span data-bind="text: selectedForms().length"></span>
+            <span i18n:translate="">Selected</span>
+          </strong>
+          <span class="btn-group pull-right">
+            <button class="btn btn-default" i18n:translate="">Move</button>
+            <button class="btn btn-default" i18n:translate="">Delete</button>
+          </span>
+        </div>
+      <!-- /ko -->
+
+    </div> <!-- /:isReady -->
+
+    <tal:json define="json import:json">
+      <script id="visit-data" type="application/json" >${json.dumps(visit_data)}</script>
+    </tal:json>
+
+  </metal:content-slot>
+</html>

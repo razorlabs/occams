@@ -1,7 +1,6 @@
 <html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
   <metal:content-slot fill-slot="content-slot" tal:define="json import:json">
 
-    <script id="patient-data" type="application/json">${json.dumps(patient)}</script>
 
     <div style="display: none;" data-bind="visible: isReady">
 
@@ -9,13 +8,13 @@
         <div class="btn-toolbar pull-right">
           <button class="btn btn-default"
               data-bind="click: $root.startEdit"
-              tal:condition="request.has_permission('patient_edit')">
+              tal:condition="request.has_permission('edit')">
             <span class="fa fa-edit"></span>
             <span i18n:translate="">Edit</span>
           </button>
           <button class="btn btn-default"
               data-bind="click: $root.startDelete"
-              tal:condition="request.has_permission('patient_delete')">
+              tal:condition="request.has_permission('delete')">
             <span class="fa fa-trash-o"></span>
             <span i18n:translate="">Delete</span>
           </button>
@@ -43,7 +42,7 @@
               <div class="btn-toolbar pull-right">
                 <button class="btn btn-link btn-xs"
                     data-bind="click: $root.startEdit"
-                    tal:condition="request.has_permission('patient_edit')">
+                    tal:condition="request.has_permission('edit')">
                   <span class="fa fa-list"></span>
                   <span i18n:translate="">Manage</span>
                 </button>
@@ -74,13 +73,13 @@
           </div> <!-- /.panel -->
         </div> <!-- /.col-sm-4 -->
         <div class="col-sm-8">
-          <div class="panel panel-default" tal:condition="request.has_permission('enrollment_view')">
-            <script id="enrollments-data" type="application/json">${json.dumps(enrollments)}</script>
+          <div class="panel panel-default"
+              tal:condition="request.has_permission('view', context['enrollments'])">
             <div class="panel-heading clearfix">
               <div class="btn-toolbar pull-right">
                 <button class="btn btn-link btn-xs"
                     data-bind="click: $root.startAddEnrollment"
-                    tal:condition="request.has_permission('enrollment_add')">
+                    tal:condition="request.has_permission('add', context['enrollments'])">
                   <span class="fa fa-plus"></span>
                   <span i18n:translate="">Add Enrollment</span>
                 </button>
@@ -143,13 +142,13 @@
         </div> <!-- /.col-sm-8 -->
       </div> <!-- /.row -->
 
-      <div id="visits" class="panel panel-default" tal:condition="request.has_permission('visit_view')">
-        <script id="visits-data" type="application/json">${json.dumps(visits)}</script>
+      <div id="visits" class="panel panel-default"
+          tal:condition="request.has_permission('view', context['visits'])">
         <div class="panel-heading clearfix">
           <div class="btn-toolbar pull-right">
             <button class="btn btn-link btn-xs"
                 data-bind="click: $root.startAddVisit"
-                tal:condition="request.has_permission('visit_add')">
+                tal:condition="request.has_permission('add', context['visits'])">
               <span class="fa fa-plus"></span>
               <span i18n:translate="">Add Visit</span>
             </button>
@@ -213,7 +212,12 @@
                     <!-- /ko -->
                   </div>
                 </td>
-                <td class="text-right"><a class="btn btn-link"><span class="fa fa-chevron-right"></span></a></td>
+                <td class="text-right">
+                  <a class="btn btn-link"
+                      data-bind="attr: {href: __url__}">
+                    <span class="fa fa-chevron-right"></span>
+                  </a>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -507,6 +511,12 @@
         </div><!-- /.modal-content -->
       </div><!-- /.modal-dialog -->
     </div><!-- /.modal -->
+
+
+    <script id="patient-data" type="application/json">${json.dumps(patient)}</script>
+    <script id="enrollments-data" type="application/json">${json.dumps(enrollments)}</script>
+    <script id="visits-data" type="application/json">${json.dumps(visits)}</script>
+
   </metal:content-slot>
 </html>
 

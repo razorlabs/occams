@@ -25,7 +25,9 @@ def upgrade():
     cleanup_attribute()
     cleanup_reftype()
     cleanup_patient()
+    cleanup_enrollment()
     cleanup_study()
+    cleanup_visit()
     fix_numeric_choice_names()
     case_insensitive_names()
     merge_integer_decimal()
@@ -41,14 +43,163 @@ def cleanup_study():
     for table_name in ['study', 'study_audit']:
         op.add_column(
             table_name,
-            sa.Column('is_randomized', sa.Boolean(), server_default=sa.sql.false())
-            )
+            sa.Column('is_randomized', sa.Boolean(), server_default=sa.sql.false()))
+
+        op.add_column(
+            table_name,
+            sa.Column('randomization_schema_id', sa.Integer()))
+
+        op.add_column(
+            table_name,
+            sa.Column('is_locked', sa.Boolean(), server_default=sa.sql.false()))
+        op.add_column(
+            table_name,
+            sa.Column('start_date', sa.Date()))
+        op.add_column(
+            table_name,
+            sa.Column('stop_date', sa.Date()))
         op.add_column(
             table_name,
             sa.Column('reference_pattern', sa.String(), nullable=True))
         op.add_column(
             table_name,
             sa.Column('reference_hint', sa.String(), nullable=True))
+
+        # Select the earliest possible date for the start date
+        op.execute(
+            """
+            UPDATE {table}
+            SET start_date = LEAST(
+                {table}.consent_date,
+                (SELECT MIN(enrollment.consent_date)
+                 FROM enrollment
+                 WHERE study_id = {table}.id
+                 LIMIT 1))
+            """.format(table=table_name))
+
+        # Set randomization schemata as explicit selections
+        op.execute(
+            """
+            UPDATE {table}
+            SET randomization_schema_id = (
+                SELECT entity.schema_id
+                FROM stratum
+                JOIN context ON context.external = 'stratum' AND context.key = stratum.id
+                JOIN entity on entity.id = context.entity_id
+                WHERE stratum.study_id = {table}.id
+                LIMIT 1)
+            """.format(table=table_name))
+
+    op.create_foreign_key(
+        'fk_study_randomization_schema_id',
+        'study',
+        'schema',
+        ['randomization_schema_id'],
+        ['id'],
+        ondelete='SET NULL')
+
+    op.create_check_constraint(
+        'ck_study_randomization_schema_id',
+        'study',
+        """
+        (NOT is_randomized AND randomization_schema_id IS NULL)
+        OR
+        (is_randomized AND randomization_schema_id IS NOT NULL)
+        """)
+
+    op.create_check_constraint(
+        'ck_study_lifespan',
+        'study',
+        """
+        start_date <= consent_date
+        AND (
+            stop_date IS NULL
+            OR consent_date <= stop_date)
+        """)
+
+    op.create_table(
+        'study_schema',
+        sa.Column(
+            'study_id',
+            sa.Integer(),
+            sa.ForeignKey(
+                'study.id',
+                name='fk_study_schema_study_id',
+                ondelete='CASCADE'),
+            primary_key=True),
+        sa.Column(
+            'schema_id',
+            sa.Integer(),
+            sa.ForeignKey(
+                'schema.id',
+                name='fk_study_schema_schema_id',
+                ondelete='CASCADE'),
+            primary_key=True))
+
+    op.create_table(
+        'cycle_schema',
+        sa.Column(
+            'cycle_id',
+            sa.Integer(),
+            sa.ForeignKey(
+                'cycle.id',
+                name='fk_cycle_schema_cycle_id',
+                ondelete='CASCADE'),
+            primary_key=True),
+        sa.Column(
+            'schema_id',
+            sa.Integer(),
+            sa.ForeignKey(
+                'schema.id',
+                name='fk_cycle_schema_schema_id',
+                ondelete='CASCADE'),
+            primary_key=True))
+
+    op.execute(
+        """
+        INSERT INTO study_schema (study_id, schema_id) (
+            SELECT DISTINCT
+                  study.id AS study_id
+                , schema.id AS schema_id
+            FROM study
+            JOIN category ON study.category_id = category.id
+            JOIN schema_category ON schema_category.category_id = category.id
+            JOIN schema ON schema.id = schema_category.schema_id
+
+            UNION
+
+            SELECT DISTINCT
+                  study.id AS study_id
+                , schema.id AS schema_id
+            FROM study
+            JOIN category ON study.log_category_id = category.id
+            JOIN schema_category ON schema_category.category_id = category.id
+            JOIN schema ON schema.id = schema_category.schema_id
+        )
+        """)
+
+    op.execute(
+        """
+        INSERT INTO cycle_schema (cycle_id, schema_id) (
+            SELECT DISTINCT
+                  cycle.id AS cycle_id
+                , schema.id AS schema_id
+            FROM cycle
+            JOIN category ON cycle.category_id = category.id
+            JOIN schema_category ON schema_category.category_id = category.id
+            JOIN schema ON schema.id = schema_category.schema_id
+        )
+        """)
+
+    for table_name in ('study', 'study_audit'):
+        op.drop_column(table_name, 'category_id')
+        op.drop_column(table_name, 'log_category_id')
+
+    for table_name in ('cycle', 'cycle_audit'):
+        op.drop_column(table_name, 'category_id')
+
+    op.execute('TRUNCATE category CASCADE')
+    op.execute('TRUNCATE category_audit CASCADE')
 
 
 def cleanup_attribute():
@@ -135,6 +286,128 @@ def cleanup_patient():
         WHERE patient.legacy_number iS NOT NULL
     """.format(legacy_name=op.inline_literal(legacy_name), user=op.inline_literal(UPGRADE_USER)))
     op.drop_column('patient', 'legacy_number')
+
+    op.create_table(
+        'patient_schema',
+        sa.Column(
+            'schema_id',
+            sa.Integer(),
+            sa.ForeignKey(
+                'schema.id',
+                name='fk_patient_schema_schema_id',
+                ondelete='CASCADE'),
+            primary_key=True))
+
+    op.execute(
+        """
+        INSERT INTO patient_schema (schema_id) (
+            SELECT DISTINCT id
+            FROM schema
+            WHERE name IN ('IBio', 'IContact'))
+        """)
+
+
+def cleanup_enrollment():
+    # TODO follow up on the status of this, otherwise we'll have to cancel :(
+    # For now just realign the dates
+    op.execute(
+        """
+        UPDATE enrollment
+        SET consent_date = LEAST(enrollment.consent_date, enrollment.latest_consent_date, enrollment.termination_date)
+          , latest_consent_date = GREATEST(enrollment.consent_date, enrollment.latest_consent_date, enrollment.termination_date)
+          , termination_date = CASE WHEN termination_date IS NULL THEN NULL ELSE GREATEST(enrollment.consent_date, enrollment.latest_consent_date, enrollment.termination_date) END
+        WHERE NOT (
+          enrollment.consent_date <= enrollment.latest_consent_date
+          AND (enrollment.termination_date IS NULL
+                OR enrollment.latest_consent_date <= enrollment.termination_date
+                )
+          )
+        """)
+
+    op.create_check_constraint(
+        'ck_enrollment_lifespan',
+        'enrollment',
+        """
+        consent_date <= latest_consent_date
+        AND (
+            termination_date IS NULL
+            OR latest_consent_date <= termination_date)
+        """)
+
+    op.create_table(
+        'termination_schema',
+        sa.Column(
+            'schema_id',
+            sa.Integer(),
+            sa.ForeignKey(
+                'schema.id',
+                name='fk_termination_schema_schema_id',
+                ondelete='CASCADE'),
+            primary_key=True))
+
+    op.execute(
+        """
+        INSERT INTO termination_schema (schema_id) (
+            SELECT DISTINCT id
+            FROM schema
+            WHERE name IN ('Termination'))
+        """)
+
+
+def cleanup_visit():
+    # --- Make a master table of the visit records
+    op.execute(
+        """
+        CREATE TEMPORARY TABLE main AS (
+          SELECT MIN(id) AS visit_id, patient_id, visit_date
+          FROM visit
+          GROUP BY patient_id, visit_date
+          HAVING COUNT(*) > 1
+        )
+        """)
+
+    # -- Move forms to the designated "main" visit
+    op.execute(
+        """
+        UPDATE ONLY context
+        SET key = main.visit_id
+          , modify_date = NOW()
+          , modify_user_id = (SELECT id FROM "user" WHERE key = '{user}')
+        FROM visit, main
+        WHERE (context.external, context.key) = ('visit', visit.id)
+        AND (visit.patient_id, visit.visit_date) = (main.patient_id, main.visit_date)
+        AND visit.id != main.visit_id
+        """.format(user=UPGRADE_USER))
+
+    # -- Move cycles to the designated "main" visit (if it does not already have them)
+    op.execute(
+        """
+        UPDATE ONLY visit_cycle
+        SET visit_id = main.visit_id
+        FROM visit, main
+        WHERE visit_cycle.visit_id = visit.id
+        AND (visit.patient_id, visit.visit_date) = (main.patient_id, main.visit_date)
+        AND visit.id != main.visit_id
+        AND visit_cycle.cycle_id NOT IN (
+          SELECT cycle_id
+          FROM visit_cycle as othercycle
+          WHERE othercycle.visit_id = main.visit_id
+        )
+        """)
+
+    # -- Delete the duplicate visit
+    op.execute(
+        """
+        DELETE FROM visit
+        USING main
+        WHERE (visit.patient_id, visit.visit_date) = (main.patient_id, main.visit_date)
+        AND visit.id != main.visit_id
+        """)
+
+    op.create_unique_constraint(
+        'uq_visit_patient_id_visit_date',
+        'visit',
+        ['patient_id', 'visit_date'])
 
 
 def alter_enum(name, new_values, cols, new_name=None):

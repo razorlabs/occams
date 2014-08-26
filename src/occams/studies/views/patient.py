@@ -1,5 +1,6 @@
 from datetime import datetime
-from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound
+
+from pyramid.httpexceptions import HTTPBadRequest
 from pyramid.i18n import get_localizer
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
@@ -15,12 +16,12 @@ from .visit import get_visits_data
 
 
 @view_config(
-    route_name='patients',
-    permission='patient_view',
+    context=models.PatientFactory,
+    permission='view',
     renderer='../templates/patient/search.pt')
 @view_config(
-    route_name='patients',
-    permission='patient_view',
+    context=models.PatientFactory,
+    permission='view',
     xhr=True,
     renderer='json')
 def search(request):
@@ -81,11 +82,17 @@ def search(request):
 
 @view_config(
     route_name='patient',
-    permission='patient_view',
+    permission='view',
     request_method='GET',
     renderer='../templates/patient/view.pt')
-def view(request):
-    patient = get_patient(request)
+def view(context, request):
+    patient = context
+    request.session.setdefault('viewed', {})
+    request.session['viewed'][patient.pid] = {
+        'pid': patient.pid,
+        'view_date': datetime.now()
+    }
+    request.session.changed()
     return {
         'available_sites': get_available_sites(request),
         'available_reference_types': (
@@ -101,24 +108,24 @@ def view(request):
 
 
 @view_config(
-    route_name='patient',
-    permission='patient_view',
+    context=models.Patient,
+    permission='view',
     request_param='alt=json',
     request_method='GET',
     renderer='json')
 @view_config(
-    route_name='patient',
-    permission='patient_view',
+    context=models.Patient,
+    permission='view',
     request_method='GET',
     xhr=True,
     renderer='json')
 def view_json(request):
-    return get_patient_data(request, get_patient(request))
+    return get_patient_data(request, request.context)
 
 
 @view_config(
-    route_name='patients',
-    permission='patient_add',
+    context=models.PatientFactory,
+    permission='add',
     xhr=True,
     request_method='POST',
     renderer='json')
@@ -138,14 +145,14 @@ def add_json(request):
 
 
 @view_config(
-    route_name='patient',
-    permission='patient_edit',
+    context=models.Patient,
+    permission='edit',
     xhr=True,
     request_method='PUT',
     renderer='json')
 def edit_json(request):
     check_csrf_token(request)
-    patient = get_patient(request)
+    patient = request.context
     schema = PatientSchema(request, patient)
     try:
         data = schema(request.json_body)
@@ -157,14 +164,14 @@ def edit_json(request):
 
 
 @view_config(
-    route_name='patient',
-    permission='petient_delete',
+    context=models.Patient,
+    permission='delete',
     xhr=True,
     request_method='DELETE',
     renderer='json')
 def delete_json(request):
     check_csrf_token(request)
-    patient = get_patient(request)
+    patient = request.context
     lz = get_localizer(request)
     Session.delete(patient)
     Session.flush()
@@ -284,25 +291,6 @@ def get_patient_data(request, patient):
             'reference_number': r.reference_number,
             } for r in references_query]
         }
-
-
-def get_patient(request):
-    """
-    Uses the URL dispatch matching dictionary to find a study
-    """
-    try:
-        patient = (
-            Session.query(models.Patient)
-            .filter_by(pid=request.matchdict['patient']).one())
-        request.session.setdefault('viewed', {})
-        request.session['viewed'][patient.pid] = {
-            'pid': patient.pid,
-            'view_date': datetime.now()
-        }
-        request.session.changed()
-        return patient
-    except orm.exc.NoResultFound:
-        raise HTTPNotFound
 
 
 def get_available_sites(request):

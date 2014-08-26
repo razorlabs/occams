@@ -4,7 +4,6 @@ import pkg_resources
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.config import Configurator
 from pyramid.i18n import TranslationStringFactory
-from pyramid.path import DottedNameResolver
 from pyramid_who.whov2 import WhoV2AuthenticationPolicy
 from sqlalchemy.orm import scoped_session, sessionmaker
 import zope.sqlalchemy
@@ -21,6 +20,8 @@ Session = scoped_session(sessionmaker(
     extension=zope.sqlalchemy.ZopeTransactionExtension()))
 occams.datastore.models.events.register(Session)
 
+from .models import groups, RootFactory, groupfinder  # NOQA
+
 
 def main(global_config, **settings):
     """
@@ -28,13 +29,11 @@ def main(global_config, **settings):
     """
     config = Configurator(
         settings=settings,
-        root_factory='occams.studies.permissions.RootFactory',
+        root_factory=RootFactory,
         authentication_policy=WhoV2AuthenticationPolicy(
             settings['who.config_file'],
             settings['who.identifier_id'],
-            DottedNameResolver().maybe_resolve(
-                settings.get('who.callback')
-                or 'occams.studies.permissions:groupfinder')),
+            groupfinder),
         authorization_policy=ACLAuthorizationPolicy())
 
     # Required third-party plugins
@@ -55,7 +54,6 @@ def main(global_config, **settings):
     config.include('.links')
     config.include('.models')
     config.include('.routes')
-    config.include('.permissions')
     config.include('.tasks')
 
     config.scan()

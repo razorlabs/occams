@@ -1,22 +1,22 @@
 <ul class="details list-inline">
   <li>
     <span class="text-muted" i18n:translate="">Code:</span>
-    <span>${study.code}</span>
+    <span>${context.code}</span>
   </li>
   <li>
     <span class="text-muted" i18n:translate="">Label:</span>
-    <span>${study.short_title}</span>
+    <span>${context.short_title}</span>
   </li>
   <li>
     <span class="text-muted" i18n:translate="">Blinded:</span>
-    <span tal:switch="bool(study.is_blinded)">
+    <span tal:switch="bool(context.is_blinded)">
       <span tal:case="True" tal:omit-tag="" i18n:translate="">Yes</span>
       <span tal:case="False" tal:omit-tag="" i18n:translate="">No</span>
     </span>
   </li>
   <li>
     <span class="text-muted" i18n:translate="">Consent Date:</span>
-    <span>${study.consent_date}<span>
+    <span>${context.consent_date}<span>
   </li>
 </ul>
 

@@ -10,24 +10,99 @@ from occams.studies.validators import Date
 
 
 @view_config(
-    route_name='visits',
-    permission='visit_view',
-    renderer='../templates/event/list.pt')
-def list_(request):
-    return {}
+    route_name='visit',
+    permission='view',
+    renderer='../templates/visit/view.pt')
+def view(context, request):
+
+    entities_query = (
+        Session.query(models.Entity)
+        .options(orm.joinedload('schema'), orm.joinedload('state'))
+        .join(models.Context)
+        .filter_by(external='visit', key=context.id))
+
+    return {
+        'visit_data': {
+            '__url__': request.current_route_path(_route_name='visit'),
+            'id': context.id,
+            'cycles': [{
+                'id': cycle.id,
+                'study': {
+                    'id': cycle.study.id,
+                    'name': cycle.study.name,
+                    'title': cycle.study.title,
+                    'code': cycle.study.code
+                    },
+                'name': cycle.name,
+                'title': cycle.title,
+                'week': cycle.week
+                } for cycle in context.cycles],
+            'patient': {
+                '__url__': request.current_route_path(_route_name='patient'),
+                'site': {
+                    'title': context.patient.site.title,
+                    },
+                'pid': context.patient.pid
+                },
+            'visit_date': context.visit_date.isoformat(),
+            'entities': [{
+                '__url__': request.current_route_path(_route_name='visit_form',
+                                                      form=entity.id),
+                'id': entity.id,
+                'schema': {
+                    'name': entity.schema.name,
+                    'title': entity.schema.title,
+                    },
+                'collect_date': entity.collect_date.isoformat(),
+                'not_done': entity.not_done,
+                'state': {
+                    'id': entity.state.id,
+                    'title': entity.state.title,
+                    }
+                } for entity in entities_query]
+            }
+        }
 
 
 @view_config(
-    route_name='visits',
-    permission='visit_add',
+    route_name='visit',
+    permission='add',
     request_method='POST',
     xhr=True,
     renderer='json')
-def add(request):
+def add(context, request):
     form = EventAddForm(request.POST)
     if request.method == 'POST' and form.validate():
         pass
-    return {'form': form}
+    return view(context, request)
+
+
+def get_visit_data(request, visit):
+    return {
+        '__url__': request.route_path(
+            'visit',
+            patient=patient.pid,
+            visit=visit.visit_date.isoformat()),
+        'id': visit.id,
+        'cycles': [{
+            'id': cycle.id,
+            'study': {
+                'id': cycle.study.id,
+                'name': cycle.study.name,
+                'title': cycle.study.title,
+                'code': cycle.study.code
+                },
+            'name': cycle.name,
+            'title': cycle.title,
+            'week': cycle.week
+            } for cycle in visit.cycles],
+        'visit_date': visit.visit_date.isoformat(),
+        'forms_complete': progress.get('complete', 0),
+        'forms_incomplete': sum(v for k, v in six.iteritems(progress)
+                                if k not in ('complete', 'pending-entry')),
+        'forms_not_started': progress.get('pending-entry', 0),
+        'forms_total': sum(v for v in six.itervalues(progress))
+        }
 
 
 def get_visits_data(request, patient):
