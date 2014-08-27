@@ -306,6 +306,12 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
             , old_id = NEW.id
           WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
 
+          -- Ensure the sub-attributes get "moved" as well in the remote
+          UPDATE attribute
+          SET modify_date = NEW.modify_date
+            , modify_user_id = NEW.modify_user_id
+          WHERE schema_id = NEW.object_schema_id;
+
         END IF;
         RETURN NEW;
 
