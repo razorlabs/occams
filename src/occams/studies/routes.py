@@ -47,10 +47,10 @@ def includeme(config):
     config.add_route('patient_forms',               '/patients/{patient}/forms',        factory=models.PatientFactory, traverse='/{patient}')
     config.add_route('patient_form',                '/patients/{patient}/forms/{form}', factory=models.PatientFactory, traverse='/{patient}')
 
-    config.add_route('enrollments',                 '/patients/{patient}/enrollments',                              factory=models.PatientFactory)
-    config.add_route('enrollment',                  '/patients/{patient}/enrollments/{enrollment}',                 factory=models.PatientFactory, traverse='/{enrollment}')
-    config.add_route('enrollment_termination',      '/patients/{patient}/enrollments/{enrollment}/termination',     factory=models.PatientFactory, traverse='/{enrollment}')
-    config.add_route('enrollment_randomization',    '/patients/{patient}/enrollments/{enrollment}/randomization',   factory=models.PatientFactory, traverse='/{enrollment}')
+    config.add_route('enrollments',                 '/patients/{patient}/enrollments',                              factory=models.PatientFactory, traverse='/{patient}/enrollments')
+    config.add_route('enrollment',                  '/patients/{patient}/enrollments/{enrollment}',                 factory=models.PatientFactory, traverse='/{patient}/enrollments/{enrollment}')
+    config.add_route('enrollment_termination',      '/patients/{patient}/enrollments/{enrollment}/termination',     factory=models.PatientFactory, traverse='/{patient}/enrollments/{enrollment}')
+    config.add_route('enrollment_randomization',    '/patients/{patient}/enrollments/{enrollment}/randomization',   factory=models.PatientFactory, traverse='/{patient}/enrollments/{enrollment}')
 
     config.add_route('visits',                      '/patients/{patient}/visits',                       factory=models.PatientFactory)
     config.add_route('visit',                       '/patients/{patient}/visits/{visit}',               factory=models.PatientFactory, traverse='/{patient}/visits/{visit}')

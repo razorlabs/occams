@@ -299,15 +299,14 @@ def coerce_site(context, request):
     """
     def validator(value):
         lz = get_localizer(request)
-        try:
-            value = Session.query(models.Site).filter_by(id=value).one()
-        except orm.exc.NoResultFound:
+        study = Session.query(models.Site).get(value)
+        if study is None:
             raise Invalid(lz.translate(_(u'Site does not exist')))
-        if not request.has_permission('view', value):
+        if not request.has_permission('view', study):
             raise Invalid(lz.translate(
                 _(u'You do not have access to {site}'),
-                mapping={'site': value.title}))
-        return value
+                mapping={'site': study.title}))
+        return study
     return validator
 
 
@@ -317,11 +316,8 @@ def coerce_reference_type(context, request):
     """
     def validator(value):
         lz = get_localizer(request)
-        try:
-            return (
-                Session.query(models.ReferenceType)
-                .filter_by(id=value)
-                .one())
-        except orm.exc.NoResultFound:
+        reftype = Session.query(models.ReferenceType).get(value)
+        if reftype is None:
             raise Invalid(lz.translate(_(u'Reference type does not exist')))
+        return reftype
     return validator

@@ -272,6 +272,13 @@ class Study(Base, Referenceable, Describeable, Modifiable, Auditable):
 
     schemata = orm.relationship(Schema, secondary=study_schema_table)
 
+    def check_reference_number(self, reference_number):
+        if not self.reference_pattern:
+            return True
+        else:
+            match = re.match(self.reference_pattern, reference_number)
+            return match is not None
+
     @declared_attr
     def __table_args__(cls):
         return (
@@ -813,7 +820,7 @@ class Stratum(Base, Referenceable, Modifiable, HasEntities, Auditable):
 
     # Rename to randid
     reference_number = sa.Column(
-        sa.Unicode,
+        sa.String,
         nullable=False,
         doc='A pregenerated value assigned to the patient per-study. '
             'This is not a Study ID, this is only for statistician. ')

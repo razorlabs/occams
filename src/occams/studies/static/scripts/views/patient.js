@@ -201,20 +201,26 @@ function PatientView(){
 
     self.isSaving(true);
 
+    item = self.editableItem();
+
     $.ajax({
       url: $(element).attr('action'),
-      method: 'POST',
+      method: item.id() ? 'PUT' : 'POST',
       contentType: 'application/json; charset=utf-8',
-      data: ko.mapping.toJSON(self.editableItem()),
+      data: ko.mapping.toJSON(item),
       headers: {'X-CSRF-Token': $.cookie('csrf_token')},
       error: function(jqXHR, textStatus, errorThrown){
         console.log('An error occurred, need to show something...');
         console.log(jqXHR.responseJSON);
       },
       success: function(data, textStatus, jqXHR){
-        self.enrollments.push(ko.mapping.fromJS(data));
+        if (item.id()){
+          ko.mapping.fromJS(data, {}, self.selectedItem());
+        } else {
+          self.enrollments.push(ko.mapping.fromJS(data));
+        }
         self.enrollments.sort(function(left, right){
-          return left.consent_date() < right.consent_date() ? -1 : 1;
+          return left.consent_date() > right.consent_date() ? -1 : 1;
         });
         self.clear();
       },
