@@ -90,6 +90,13 @@ def cleanup_study():
                 LIMIT 1)
             """.format(table=table_name))
 
+        op.execute(
+            """
+            Update {table}
+            SET is_randomized = TRUE
+            WHERE randomization_schema_id IS NOT NULL
+            """)
+
     op.create_foreign_key(
         'fk_study_randomization_schema_id',
         'study',

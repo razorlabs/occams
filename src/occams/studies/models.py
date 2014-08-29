@@ -3,7 +3,6 @@ import os
 import re
 import uuid
 
-from parse import compile
 from pyramid.events import subscriber, NewRequest
 from pyramid.settings import aslist
 from pyramid.security import Allow, Authenticated, ALL_PERMISSIONS
@@ -35,10 +34,14 @@ def includeme(config):
 
     assert 'auth.groups' in settings
 
-    patterns = aslist(settings['auth.groups'])
-    compiled = [compile(p) for p in patterns]
+    mappings = {}
+
+    for entry in aslist(settings['auth.groups'], flatten=False):
+        (site_domain, app_domain) = entry.split('=')
+        mappings[site_domain.strip()] = app_domain.strip()
+
     config.add_request_method(
-        lambda request: compiled, name='group_patterns', reify=True)
+        lambda request: mappings, name='group_mappings', reify=True)
 
     # tests will override the session, use the setting for everything else
     if isinstance(settings['app.db.url'], six.string_types):
@@ -110,19 +113,10 @@ def groupfinder(identity, request):
     """
     Parse the groups from the identity into internal app groups
     """
-
     assert 'groups' in identity, \
         'Groups has not been set in the repoze identity!'
-
-    def parse(group):
-        for pattern in request.group_patterns:
-            result = pattern.parse(group)
-            if result:
-                return groups.principal(**result.named)
-        else:
-            log.warn('Could not find a pattern for %s' % group)
-
-    return [parse(g) for g in identity['groups']]
+    mappings = request.group_mappings
+    return [mappings[g] for g in identity['groups'] if g in mappings]
 
 
 class RootFactory(dict):
@@ -465,7 +459,7 @@ class Patient(Base, Referenceable, Modifiable, HasEntities, Auditable):
     def __acl__(self):
         site = self.site
         return [
-            (Allow, groups.administrator(site.name), ALL_PERMISSIONS),
+            (Allow, groups.administrator(), ALL_PERMISSIONS),
             (Allow, groups.manager(site=site.name), ('view', 'edit', 'delete')),
             (Allow, groups.reviewer(site=site.name), ('view', 'edit', 'delete')),
             (Allow, groups.enterer(site=site.name), ('view', 'edit', 'delete')),
@@ -569,7 +563,7 @@ class PatientReference(Base, Referenceable, Modifiable, Auditable):
 
     reference_type = orm.relationship(ReferenceType)
 
-    reference_number = sa.Column(sa.Unicode, nullable=False)
+    reference_number = sa.Column(sa.String, nullable=False)
 
     @declared_attr
     def __table_args__(cls):
@@ -1037,7 +1031,7 @@ class Export(Base, Referenceable, Modifiable, Auditable):
     name = sa.Column(
         sa.String,
         nullable=False,
-        default=str(uuid.uuid4()),
+        default=lambda: str(uuid.uuid4()),
         doc='System name, useful for keep track of asynchronous progress')
 
     owner_user_id = sa.Column(sa.Integer, nullable=False)

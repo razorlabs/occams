@@ -1,68 +1,120 @@
-from datetime import datetime
-from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound
-from pyramid.i18n import get_localizer
+from pyramid.httpexceptions import HTTPBadRequest
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
-import six
+
 from sqlalchemy import orm
 from voluptuous import *  # NOQA
 
-from .. import _, models, Session
+from .. import models, Session
 
 
 @view_config(
-    context=models.EnrollmentFactory,
+    route_name='enrollments',
+    permission='view',
+    xhr=True,
+    renderer='json')
+def list_json(context, request):
+    patient = context.__parent__
+    enrollments_query = (
+        Session.query(models.Enrollment)
+        .filter_by(patient=patient)
+        .options(
+            orm.joinedload('patient').joinedload('site'),
+            orm.joinedload('study'),
+            orm.joinedload('stratum').joinedload('arm'))
+        .order_by(models.Enrollment.consent_date.desc()))
+
+    return {
+        'enrollments': [view_json(e, request) for e in enrollments_query]
+        }
+
+
+@view_config(
+    route_name='enrollments',
     permission='add',
     xhr=True,
     request_method='POST',
     renderer='json')
-def enrollments_edit_json(request):
+@view_config(
+    route_name='enrollment',
+    permission='edit',
+    xhr=True,
+    request_method='PUT',
+    renderer='json')
+def manage_json(context, request):
     check_csrf_token(request)
-    patient = get_patient(request)
+
+    if request.method == 'PUT':
+        enrollment = context
+        patient = enrollment.patient
+    else:
+        enrollment = None
+        patient = contet.__parent__
+
     schema = EnrollmentSchema(request, patient)
+
     try:
         data = schema(request.json_body)
     except MultipleInvalid as exc:
         raise HTTPBadRequest(json={
             'validation_errors': [e.error_message for e in exc.errors]})
-    return get_patient_data(request, patient)
+
+    if request.method == 'POST':
+        study = (
+            Session.query(models.Study)
+            .filter_by(id=data['study_id'])
+            .one())
+        enrollment = models.Enrollment(patient=patient, study=study)
+
+    enrollment.consent_date = data['consent_date']
+    enrollment.latest_consent_date = data['latest_consent_date']
+    enrollment.termination_date = data['termination_date']
+    enrollment.reference_number = data['reference_number']
+
+    Session.flush()
+    return view_json(enrollment, request)
 
 
-def get_enrollments_data(request, patient):
-    enrollments_query = (
-        Session.query(models.Enrollment)
-        .filter_by(patient=patient)
-        .options(
-            orm.joinedload(models.Enrollment.study),
-            orm.joinedload(models.Enrollment.stratum)
-            .joinedload(models.Stratum.arm))
-        .order_by(models.Enrollment.consent_date.desc()))
-
-    return [{
+@view_config(
+    route_name='enrollment',
+    permission='view',
+    xhr=True,
+    renderer='json')
+def view_json(context, request):
+    enrollment = context
+    patient = context.patient
+    return {
         '__url__': request.route_path('enrollment',
                                       patient=patient.pid,
-                                      enrollment=e.id),
-        'id': e.id,
+                                      enrollment=enrollment.id),
+        'id': enrollment.id,
         'study': {
-            'id': e.study.id,
-            'name': e.study.name,
-            'title': e.study.title,
-            'is_randomized': e.study.is_randomized,
-            'is_blinded': e.study.is_blinded
+            'id': enrollment.study.id,
+            'name': enrollment.study.name,
+            'title': enrollment.study.title,
+            'is_randomized': enrollment.study.is_randomized,
+            'is_blinded': enrollment.study.is_blinded,
+            'start_date': enrollment.study.start_date.isoformat(),
+            'stop_date': (
+                enrollment.study.stop_date
+                and enrollment.study.stop_date.isoformat()),
             },
-        'stratum': None if not e.study.is_randomized else {
-            'id': e.stratum.id,
-            'arm': None if e.study.is_blinded else {
-                'id': e.stratum.arm.id,
-                'name': e.stratum.arm.name,
-                'title': e.stratum.arm.title,
+        'stratum': None if not enrollment.study.is_randomized else {
+            'id': enrollment.stratum.id,
+            'arm': None if enrollment.study.is_blinded else {
+                'id': enrollment.stratum.arm.id,
+                'name': enrollment.stratum.arm.name,
+                'title': enrollment.stratum.arm.title,
                 },
-            'randid': e.stratum.randid
+            'randid': enrollment.stratum.randid
             },
-        'consent_date': e.consent_date.isoformat(),
-        'latest_consent_date': e.latest_consent_date.isoformat(),
+        'consent_date': enrollment.consent_date.isoformat(),
+        'latest_consent_date': enrollment.latest_consent_date.isoformat(),
         'termination_date': (
-            e.termination_date and e.termination_date.isoformat()),
-        'reference_number': e.reference_number,
-        'stratum_id': None if not e.study.is_randomized else e.stratum.id
-        } for e in enrollments_query]
+            enrollment.termination_date
+            and enrollment.termination_date.isoformat()),
+        'reference_number': enrollment.reference_number,
+        'stratum_id': (
+            None if not enrollment.study.is_randomized
+            else enrollment.stratum.id)
+        }

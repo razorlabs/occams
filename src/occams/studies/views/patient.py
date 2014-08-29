@@ -5,26 +5,29 @@ from pyramid.i18n import get_localizer
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 import six
+import sqlalchemy as sa
 from sqlalchemy import orm
 from voluptuous import *  # NOQA
 
 from occams.roster import generate
 
 from .. import _, models, Session
-from .enrollment import get_enrollments_data
-from .visit import get_visits_data
+from . import (
+    enrollment as enrollment_views,
+    site as site_views,
+    visit as visit_views)
 
 
 @view_config(
-    context=models.PatientFactory,
+    route_name='patients',
     permission='view',
     renderer='../templates/patient/search.pt')
 @view_config(
-    context=models.PatientFactory,
+    route_name='patients',
     permission='view',
     xhr=True,
     renderer='json')
-def search(request):
+def search_json(context, request):
     """
     Searches for a patient based on their reference numbers
     """
@@ -86,7 +89,7 @@ def search(request):
     request_method='GET',
     renderer='../templates/patient/view.pt')
 def view(context, request):
-    patient = context
+    patient = request.context
     request.session.setdefault('viewed', {})
     request.session['viewed'][patient.pid] = {
         'pid': patient.pid,
@@ -94,176 +97,30 @@ def view(context, request):
     }
     request.session.changed()
     return {
-        'available_sites': get_available_sites(request),
+        'available_sites': site_views.list_(None, request)['sites'],
         'available_reference_types': (
             Session.query(models.ReferenceType)
             .order_by(models.ReferenceType.title.asc())),
         'available_studies': (
             Session.query(models.Study)
+            .filter(models.Study.start_date != sa.sql.null())
             .order_by(models.Study.title.asc())),
-        'patient': get_patient_data(request, patient),
-        'enrollments': get_enrollments_data(request, patient),
-        'visits': get_visits_data(request, patient)
+        'patient': view_json(context, request),
+        'enrollments': enrollment_views.list_json(
+            context['enrollments'], request)['enrollments'],
+        'visits': visit_views.list_json(
+            context['visits'], request, summary=True)['visits'],
         }
 
 
 @view_config(
-    context=models.Patient,
-    permission='view',
-    request_param='alt=json',
-    request_method='GET',
-    renderer='json')
-@view_config(
-    context=models.Patient,
+    route_name='patient',
     permission='view',
     request_method='GET',
     xhr=True,
     renderer='json')
-def view_json(request):
-    return get_patient_data(request, request.context)
-
-
-@view_config(
-    context=models.PatientFactory,
-    permission='add',
-    xhr=True,
-    request_method='POST',
-    renderer='json')
-def add_json(request):
-    check_csrf_token(request)
-    schema = PatientSchema(request, patient)
-    try:
-        data = schema(request.json_body)
-    except MultipleInvalid as exc:
-        raise HTTPBadRequest(json={
-            'validation_errors': [e.error_message for e in exc.errors]})
-    site = Session.query(models.Site).get(data['site_id'])
-    pid = generate(site.name)
-    patient = models.Patient(pid=pid)
-    apply_changes(patient, data)
-    return get_patient_data(request, patient)
-
-
-@view_config(
-    context=models.Patient,
-    permission='edit',
-    xhr=True,
-    request_method='PUT',
-    renderer='json')
-def edit_json(request):
-    check_csrf_token(request)
-    patient = request.context
-    schema = PatientSchema(request, patient)
-    try:
-        data = schema(request.json_body)
-    except MultipleInvalid as exc:
-        raise HTTPBadRequest(json={
-            'validation_errors': [e.error_message for e in exc.errors]})
-    apply_changes(patient, data)
-    return get_patient_data(request, patient)
-
-
-@view_config(
-    context=models.Patient,
-    permission='delete',
-    xhr=True,
-    request_method='DELETE',
-    renderer='json')
-def delete_json(request):
-    check_csrf_token(request)
-    patient = request.context
-    lz = get_localizer(request)
-    Session.delete(patient)
-    Session.flush()
-    msg = lz.translate(
-        _('Patient ${pid} was successfully removed'),
-        mapping={'pid': patient.pid})
-    request.session.flash(msg, 'success')
-    return {'__next__': request.current_route_path(_route_name='home')}
-
-
-def validate_reference(request, patient):
-    """
-    Returns a validator callback that checks the reference data
-    """
-    def validator(value):
-        lz = get_localizer(request)
-
-        type_ = (
-            Session.query(models.ReferenceType)
-            .get(value['reference_type_id']))
-        number = value['reference_number']
-        if not type_.check_reference_number(number):
-            msg = lz.translate(
-                _(u'${type} ${number} is not a valid format'),
-                mapping={'type': type_.title, 'number': number})
-            raise Invalid(msg, path=['reference_number'])
-
-        reference_query = (
-            Session.query(models.PatientReference)
-            .filter_by(reference_type=type_, reference_number=number)
-            .filter(models.PatientReference.patient != patient))
-        reference = reference_query.first()
-        if reference:
-            # Need to translate before sending back to client
-            msg = lz.translate(
-                _(u'${type} ${number} is already assigned to ${pid}'),
-                mapping={
-                    'type': reference.reference_type.title,
-                    'number': reference.reference_number,
-                    'pid': reference.patient.pid})
-            raise Invalid(msg, path=['reference_number'])
-
-        return value
-    return validator
-
-
-def PatientSchema(request, patient):
-    valid_sites = [s.id for s in get_available_sites(request)]
-    valid_types = [r.id for r in Session.query(models.ReferenceType)]
-    lz = get_localizer(request)
-    return Schema({
-        Required('site_id', default=patient.site.id): All(
-            Coerce(int),
-            Any(*valid_sites, msg=lz.translate(_(u'Invalid site')))
-            ),
-        Required('references', default=[]): [All({
-            Required('reference_type_id'): All(
-                Coerce(int),
-                Any(*valid_types, msg=lz.translate(_(u'Invalid type')))
-            ),
-            Required('reference_number'): Coerce(lambda v: six.u(str(v))),
-            Extra: object
-            }, validate_reference(request, patient))],
-        Extra: object
-        })
-
-
-def apply_changes(patient, data):
-    patient.site = Session.query(models.Site).get(data['site_id'])
-    if data['references']:
-        incoming = set([(r['reference_type_id'], r['reference_number'])
-                        for r in data['references']])
-        # make a copy of the list so we can remove from the original
-        current = [r for r in patient.references]
-        for r in current:
-            key = (r.reference_type_id, r.reference_number)
-            if key not in incoming:
-                patient.references.remove(r)
-            else:
-                incoming.remove(key)
-
-        for reference_type_id, reference_number in incoming:
-            type_ = Session.query(models.ReferenceType).get(reference_type_id)
-            patient.references.append(models.PatientReference(
-                reference_type=type_,
-                reference_number=reference_number))
-
-    Session.flush()
-    return patient
-
-
-def get_patient_data(request, patient):
+def view_json(context, request):
+    patient = context
     references_query = (
         Session.query(models.PatientReference)
         .filter_by(patient=patient)
@@ -293,10 +150,178 @@ def get_patient_data(request, patient):
         }
 
 
-def get_available_sites(request):
+@view_config(
+    route_name='patients',
+    permission='add',
+    xhr=True,
+    request_method='POST',
+    renderer='json')
+@view_config(
+    route_name='patient',
+    permission='edit',
+    xhr=True,
+    request_method='PUT',
+    renderer='json')
+def edit_json(context, request):
+    check_csrf_token(request)
+
+    schema = PatientSchema(context, request)
+    patient = context if isinstance(context, models.Patient) else None
+
+    try:
+        data = schema(request.json_body)
+    except MultipleInvalid as exc:
+        raise HTTPBadRequest(json={
+            'validation_errors': [e.error_message for e in exc.errors]})
+
+    if isinstance(context, models.PatientFactory):
+        pid = generate(data['site'].name)
+        patient = models.Patient(pid=pid)
+
+    patient.site = data['site']
+
+    if data['references']:
+        incoming = dict([((r['reference_type'].id, r['reference_number']), r)
+                        for r in data['references']])
+        # make a copy of the list so we can remove from the original
+        current = [r for r in patient.references]
+        for r in current:
+            key = (r.reference_type_id, r.reference_number)
+            if key not in incoming:
+                patient.references.remove(r)
+            else:
+                del incoming[key]
+
+        for value in six.itervalues(incoming):
+            patient.references.append(models.PatientReference(
+                reference_type=value['reference_type'],
+                reference_number=value['reference_number']))
+
+    Session.flush()
+
+    return view_json(patient, request)
+
+
+@view_config(
+    route_name='patient',
+    permission='delete',
+    xhr=True,
+    request_method='DELETE',
+    renderer='json')
+def delete_json(context, request):
+    check_csrf_token(request)
+    patient = context
+    lz = get_localizer(request)
+    Session.delete(patient)
+    Session.flush()
+    msg = lz.translate(
+        _('Patient ${pid} was successfully removed'),
+        mapping={'pid': patient.pid})
+    request.session.flash(msg, 'success')
+    return {'__next__': request.current_route_path(_route_name='home')}
+
+
+def PatientSchema(context, request):
     """
-    Rertuns a list of sites that the user has access to
+    Declares data format expected for managing patient properties
     """
-    sites_query = Session.query(models.Site).order_by(models.Site.title)
-    return \
-        [s for s in sites_query if request.has_permission('site_view', s)]
+
+    return Schema({
+        Required('site'): All(Coerce(int), coerce_site(context, request)),
+        Required('references', default=[]): [All({
+            Required('reference_type'): All(
+                Coerce(int), coerce_reference_type(context, request)),
+            Required('reference_number'): Coerce(str),
+            Extra: object
+            },
+            check_reference_format(context, request),
+            check_unique_reference(context, request),
+            )],
+        Extra: object
+        })
+
+
+def check_reference_format(context, request):
+    """
+    Returns a validator that checks number with the pattern the type expects
+    """
+    def validator(value):
+        lz = get_localizer(request)
+        type_ = value['reference_type']
+        number = value['reference_number']
+        if not type_.check_reference_number(number):
+            msg = lz.translate(
+                _(u'${type} ${number} is not a valid format'),
+                mapping={'type': type_.title, 'number': number})
+            raise Invalid(msg, path=['reference_number'])
+        return value
+    return validator
+
+
+def check_unique_reference(context, request):
+    """
+    Returns a validator that checks the reference number is not already taken
+    """
+    def validator(value):
+        lz = get_localizer(request)
+
+        reference_query = (
+            Session.query(models.PatientReference)
+            .filter_by(
+                reference_type=value['reference_type'],
+                reference_number=value['reference_number']))
+
+        if isinstance(context, models.Patient):
+            reference_query = (
+                reference_query
+                .filter(models.PatientReference.patient != context))
+
+        reference = reference_query.first()
+
+        if reference:
+            # Need to translate before sending back to client
+            msg = lz.translate(
+                _(u'${type} ${number} is already assigned to ${pid}'),
+                mapping={
+                    'type': reference.reference_type.title,
+                    'number': reference.reference_number,
+                    'pid': reference.patient.pid})
+            raise Invalid(msg, path=['reference_number'])
+
+        return value
+    return validator
+
+
+def coerce_site(context, request):
+    """
+    Returns a validator to coerce a site id to a site object
+    Also, checks if the user has access to use the site.
+    """
+    def validator(value):
+        lz = get_localizer(request)
+        try:
+            value = Session.query(models.Site).filter_by(id=value).one()
+        except orm.exc.NoResultFound:
+            raise Invalid(lz.translate(_(u'Site does not exist')))
+        if not request.has_permission('view', value):
+            raise Invalid(lz.translate(
+                _(u'You do not have access to {site}'),
+                mapping={'site': value.title}))
+        return value
+    return validator
+
+
+def coerce_reference_type(context, request):
+    """
+    Returns a validator to coerce a reference type id to a type object
+    """
+    def validator(value):
+        lz = get_localizer(request)
+        try:
+            return (
+                Session.query(models.ReferenceType)
+                .filter_by(id=value)
+                .one())
+        except orm.exc.NoResultFound:
+            raise Invalid(lz.translate(_(u'Reference type does not exist')))
+    return validator

@@ -11,6 +11,13 @@ try:
 except ImportError:
     import unittest
 
+
+# Raise unicode warnings as errors so we can fix them
+import warnings
+from sqlalchemy.exc import SAWarning
+warnings.filterwarnings('error', category=SAWarning)
+
+
 REDIS_URL = 'redis://localhost/9'
 
 

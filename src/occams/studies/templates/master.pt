@@ -27,11 +27,7 @@
   </head>
 
   <!--! socket.io HATES leading-following slashes in resource paths... -->
-  <body
-      id="body"
-      data-view-name="${request.matched_route.name}"
-      data-view-path="${request.current_route_path()}"
-      data-socket-io-resource="${request.route_path('socket.io', remaining='').strip('/')}">
+  <body>
 
     <!--! Keep the app navbar separate from the content container -->
     <nav
@@ -200,7 +196,11 @@
       </div>
     </nav>
     <div class="container">
-      <main id="${request.matched_route.name}">
+      <main
+          id="${request.matched_route.name}"
+          data-view-name="${request.matched_route.name}"
+          data-view-path="${request.current_route_path()}"
+          data-socket-io-resource="${request.route_path('socket.io', remaining='').strip('/')}">
         <metal:content-slot define-slot="content-slot" />
       </main>
     </div> <!-- /.container -->

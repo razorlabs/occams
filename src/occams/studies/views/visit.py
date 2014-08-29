@@ -1,12 +1,31 @@
 from pyramid.i18n import get_localizer
 from pyramid.view import view_config
-import six
-import sqlalchemy as sa
 from sqlalchemy import orm
 from voluptuous import *  # NOQA
 
-from occams.studies import _, models, Session
-from occams.studies.validators import Date
+from .. import _, models, Session
+from ..validators import Date
+
+
+@view_config(
+    route_name='visits',
+    permission='view',
+    xhr=True,
+    renderer='json')
+def list_json(context, request, summary=False):
+    patient = context.__parent__
+
+    visits_query = (
+        Session.query(models.Visit)
+        .options(
+            orm.joinedload(models.Visit.cycles).joinedload(models.Cycle.study))
+        .filter_by(patient=patient)
+        .order_by(models.Visit.visit_date.desc()))
+
+    return {
+        'visits': [
+            view_json(v, request, summary=summary) for v in visits_query]
+        }
 
 
 @view_config(
@@ -14,75 +33,28 @@ from occams.studies.validators import Date
     permission='view',
     renderer='../templates/visit/view.pt')
 def view(context, request):
-
-    entities_query = (
-        Session.query(models.Entity)
-        .options(orm.joinedload('schema'), orm.joinedload('state'))
-        .join(models.Context)
-        .filter_by(external='visit', key=context.id))
-
     return {
-        'visit_data': {
-            '__url__': request.current_route_path(_route_name='visit'),
-            'id': context.id,
-            'cycles': [{
-                'id': cycle.id,
-                'study': {
-                    'id': cycle.study.id,
-                    'name': cycle.study.name,
-                    'title': cycle.study.title,
-                    'code': cycle.study.code
-                    },
-                'name': cycle.name,
-                'title': cycle.title,
-                'week': cycle.week
-                } for cycle in context.cycles],
-            'patient': {
-                '__url__': request.current_route_path(_route_name='patient'),
-                'site': {
-                    'title': context.patient.site.title,
-                    },
-                'pid': context.patient.pid
-                },
-            'visit_date': context.visit_date.isoformat(),
-            'entities': [{
-                '__url__': request.current_route_path(_route_name='visit_form',
-                                                      form=entity.id),
-                'id': entity.id,
-                'schema': {
-                    'name': entity.schema.name,
-                    'title': entity.schema.title,
-                    },
-                'collect_date': entity.collect_date.isoformat(),
-                'not_done': entity.not_done,
-                'state': {
-                    'id': entity.state.id,
-                    'title': entity.state.title,
-                    }
-                } for entity in entities_query]
-            }
+        'visit': view_json(context, request)
         }
 
 
 @view_config(
     route_name='visit',
-    permission='add',
-    request_method='POST',
+    permission='view',
     xhr=True,
     renderer='json')
-def add(context, request):
-    form = EventAddForm(request.POST)
-    if request.method == 'POST' and form.validate():
-        pass
-    return view(context, request)
+def view_json(context, request, summary=False):
+    visit = context
+    entities_query = (
+        Session.query(models.Entity)
+        .options(orm.joinedload('schema'), orm.joinedload('state'))
+        .join(models.Context)
+        .filter_by(external='visit', key=visit.id))
 
-
-def get_visit_data(request, visit):
     return {
-        '__url__': request.route_path(
-            'visit',
-            patient=patient.pid,
-            visit=visit.visit_date.isoformat()),
+        '__url__': request.route_path('visit',
+                                      patient=visit.patient.pid,
+                                      visit=visit.visit_date.isoformat()),
         'id': visit.id,
         'cycles': [{
             'id': cycle.id,
@@ -96,72 +68,53 @@ def get_visit_data(request, visit):
             'title': cycle.title,
             'week': cycle.week
             } for cycle in visit.cycles],
+        'patient': {
+            '__url__': request.route_path('patient',
+                                          patient=visit.patient.pid),
+            'site': {
+                'title': visit.patient.site.title,
+                },
+            'pid': visit.patient.pid
+            },
         'visit_date': visit.visit_date.isoformat(),
-        'forms_complete': progress.get('complete', 0),
-        'forms_incomplete': sum(v for k, v in six.iteritems(progress)
-                                if k not in ('complete', 'pending-entry')),
-        'forms_not_started': progress.get('pending-entry', 0),
-        'forms_total': sum(v for v in six.itervalues(progress))
+        'entities': [{
+            '__url__': request.route_path('visit_form',
+                                          patient=visit.patient.id,
+                                          visit=visit.visit_date.isoformat(),
+                                          form=entity.id),
+            'id': entity.id,
+            'schema': {
+                'name': entity.schema.name,
+                'title': entity.schema.title,
+                },
+            'collect_date': entity.collect_date.isoformat(),
+            'not_done': entity.not_done,
+            'state': {
+                'id': entity.state.id,
+                'name': entity.state.name,
+                'title': entity.state.title,
+                }
+            } for entity in entities_query]
         }
 
 
-def get_visits_data(request, patient):
-
-    def visit_progress(visit):
-        """
-        Returns a dictionary of the states of the entities in the visit
-        """
-        entities_query = (
-            Session.query(
-                models.State.name,
-                sa.func.count())
-            .select_from(models.Entity)
-            .join(models.Entity.state)
-            .join(models.Context)
-            .filter(models.Context.external == 'visit')
-            .filter(models.Context.key == visit.id)
-            .group_by(models.State.name))
-        return dict(entities_query.all())
-
-    def visit_data(visit):
-        """
-        Generats the actual visit data
-        """
-        progress = visit_progress(visit)
-        return {
-            '__url__': request.route_path(
-                'visit',
-                patient=patient.pid,
-                visit=visit.visit_date.isoformat()),
-            'id': visit.id,
-            'cycles': [{
-                'id': cycle.id,
-                'study': {
-                    'id': cycle.study.id,
-                    'name': cycle.study.name,
-                    'title': cycle.study.title,
-                    'code': cycle.study.code
-                    },
-                'name': cycle.name,
-                'title': cycle.title,
-                'week': cycle.week
-                } for cycle in visit.cycles],
-            'visit_date': visit.visit_date.isoformat(),
-            'forms_complete': progress.get('complete', 0),
-            'forms_incomplete': sum(v for k, v in six.iteritems(progress)
-                                    if k not in ('complete', 'pending-entry')),
-            'forms_not_started': progress.get('pending-entry', 0),
-            'forms_total': sum(v for v in six.itervalues(progress))
-            }
-
-    visits_query = (
-        Session.query(models.Visit)
-        .options(
-            orm.joinedload(models.Visit.cycles).joinedload(models.Cycle.study))
-        .filter_by(patient=patient)
-        .order_by(models.Visit.visit_date.desc()))
-
-    return [visit_data(v) for v in visits_query]
+@view_config(
+    route_name='visit',
+    permission='add',
+    request_method='POST',
+    xhr=True,
+    renderer='json')
+@view_config(
+    route_name='visit',
+    permission='edit',
+    request_method='PUT',
+    xhr=True,
+    renderer='json')
+def edit(context, request):
+    form = EventAddForm(request.POST)
+    if request.method == 'POST' and form.validate():
+        pass
+    return view(context, request)
 
 
 def VisitSchema(request, patient, visit=None):

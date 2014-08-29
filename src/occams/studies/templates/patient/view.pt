@@ -1,7 +1,6 @@
 <html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
   <metal:content-slot fill-slot="content-slot" tal:define="json import:json">
 
-
     <div style="display: none;" data-bind="visible: isReady">
 
       <header class="page-header">
@@ -27,10 +26,20 @@
           </li>
         </ul>
         <nav>
-          <ul class="nav nav-header">
-            <li><a href="${request.route_path('studies')}" i18n:translate=""><span class="fa fa-chevron-left"></a></li>
-            <li><a href="${request.current_route_path(_route_name='patient')}" i18n:translate="">Overview</a></li>
-            <li><a href="${request.current_route_path(_route_name='patient_forms')}" i18n:translate="">Forms</a></li>
+          <ul class="nav nav-header" tal:define="current request.current_route_path()">
+            <li tal:define="url request.route_path('studies')">
+              <a href="${url}">
+                <span class="fa fa-chevron-left"></span>
+              </a>
+            </li>
+            <li tal:define="url request.current_route_path(_route_name='patient')"
+                class="${'active' if current == url else ''}">
+              <a href="${url}" i18n:translate="">Overview</a>
+            </li>
+            <li tal:define="url request.current_route_path(_route_name='patient_forms')"
+                class="${'active' if current == url else ''}">
+              <a href="${url}" i18n:translate="">Forms</a>
+            </li>
           </ul>
         </nav>
       </header>
@@ -116,7 +125,7 @@
                     <!-- ko with: study -->
                       <td class="study" data-bind="text: title"></td>
                     <!-- /ko -->
-                    <td data-bind="dateText: consent_date"></td>
+                    <td><code data-bind="text: consent_date"></code></td>
                     <td data-bind="if: reference_number">
                       <code data-bind="text: reference_number"></code>
                     </td>
@@ -124,15 +133,30 @@
                       <code data-bind="text: reference_number"></code>
                     </td>
                     <td data-bind="if: false">
-                      <!-- ko if: study().is_blinded() -->
+                      <!-- ko if: study.is_blinded -->
                         <em i18n:translate="">Blinded</em>
                       <!-- /ko -->
-                      <!-- ko ifnot: study().is_blinded() -->
-                        <span data-bind="text: stratum().arm().title()"></span>
+                      <!-- ko ifnot: study.is_blinded -->
+                        <span data-bind="text: stratum.arm.title"></span>
                       <!-- /ko -->
                     </td>
                     <td class="text-right">
-                      <a href="" class="btn btn-link"><span class="fa fa-chevron-right"></span></a>
+                      <div class="dropdown pull-right">
+                        <button class="btn btn-link dropdown-toggle" type="button" data-toggle="dropdown">
+                          <span class="fa fa-cog"></span>
+                          <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu" role="menu">
+                          <li role="presentation"><a role="menuitem" tabindex="-1">Edit</a></li>
+
+                          <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Termination</a></li>
+                          <!-- ko if: study.is_randomized -->
+                          <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Randomization</a></li>
+                          <!-- /ko -->
+                          <li role="presentation" class="divider"></li>
+                          <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Delete</a></li>
+                        </ul>
+                      </div>
                     </td>
                    </tr>
                 </tbody>
@@ -178,37 +202,28 @@
             </thead>
             <tbody data-bind="foreach: visits">
               <tr>
-                <td data-bind="dateText: visit_date"></td>
+                <td><code data-bind="text: visit_date"></code></td>
                 <td data-bind="foreach: cycles">
                   <div data-bind="text: title"></div>
                 </td>
                 <td>
                   <div class="progress">
-                    <!-- ko if: forms_total -->
+                    <!-- ko if: hasEntities -->
                       <div class="progress-bar progress-bar-success"
-                          data-bind="
-                            style: {width: $root.visitProgressComplete($data) + '%'}">
-                        <span data-bind="text: forms_complete"></span>
-                        /
-                        <span data-bind="text: forms_total"></span>
+                          data-bind="style: {width: entitiesCompletedProgress() + '%'}">
+                        <span data-bind="text: entitiesCompletedCount"></span>
                       </div>
                       <div class="progress-bar progress-bar-warning"
-                          data-bind="
-                            style: {width: $root.visitProgressIncomplete($data) + '%'}">
-                        <span data-bind="text: forms_incomplete"></span>
-                        /
-                        <span data-bind="text: forms_total"></span>
+                          data-bind="style: {width: entitiesIncompleteProgress() + '%'}">
+                        <span data-bind="text: entitiesIncompleteCount"></span>
                       </div>
                       <div class="progress-bar progress-bar-danger"
-                          data-bind="
-                            style: {width: $root.visitProgressNotStarted($data) + '%'}">
-                        <span data-bind="text: forms_not_started"></span>
-                        /
-                        <span data-bind="text: forms_total"></span>
+                          data-bind="style: {width: entitiesNotStartedProgress() + '%'}">
+                        <span data-bind="text: entitiesNotStartedCount"></span>
                       </div>
                     <!-- /ko -->
-                    <!-- ifnot: forms_total -->
-                      <div class="progress-bar progress-bar-warning" style="width: 100%">0</div>
+                    <!-- ko ifnot: hasEntities -->
+                      <div class="progress-bar progress-bar-warning" style="width: 100%"></div>
                     <!-- /ko -->
                   </div>
                 </td>
@@ -248,7 +263,7 @@
                 <select
                     class="form-control"
                     required
-                    data-bind="value: site_id, uniqueName:true, select2: {}">
+                    data-bind="value: site, uniqueName:true, select2: {}">
                   <option value="" i18n:translate="">Select a site...</option>
                   <option tal:repeat="site available_sites" value="${site.id}">${site.title}</option>
                 </select>
@@ -257,7 +272,7 @@
                 <label i18n:translate="">Reference Numbers</label>
                 <!-- ko foreach: references -->
                   <div class="form-group row">
-                    <div class="col-sm-5 js-validation-item" tal:define="name 'reference_type_id'">
+                    <div class="col-sm-5 js-validation-item" tal:define="name 'reference_type'">
                       <select
                         class="form-control ${name}"
                         required
@@ -338,7 +353,7 @@
               <!-- /ko -->
             </div>
             <div class="modal-body">
-              <div class="form-group" tal:define="name 'study_id'">
+              <div class="form-group" tal:define="name 'study'">
                 <label i18n:translate="" for="${name}" class="required">Study</label>
                 <select
                     class="form-control"
@@ -442,7 +457,7 @@
               <!-- /ko -->
             </div>
             <div class="modal-body">
-              <div class="form-group" tal:define="name 'cycle_ids'">
+              <div class="form-group" tal:define="name 'cycles'">
                 <label i18n:translate="" for="${name}" class="required">Study Cycles</label>
                 <select
                     class="form-control"

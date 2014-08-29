@@ -1,1 +1,4 @@
-import occams.studies.views.enrollment
+import mock
+
+from tests import IntegrationFixture
+

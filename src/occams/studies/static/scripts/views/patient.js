@@ -28,7 +28,9 @@ function PatientView(){
   // UI Data
   self.patient = ko.mapping.fromJSON($('#patient-data').text());
   self.enrollments = ko.mapping.fromJSON($('#enrollments-data').text());
-  self.visits = ko.mapping.fromJSON($('#visits-data').text());
+  self.visits = ko.observableArray(ko.utils.arrayMap(JSON.parse($('#visits-data').text()), function(data){
+    return new Visit(data);
+  }));
 
   self.hasReferences = ko.computed(function(){
     return self.patient.references().length > 0;
@@ -41,30 +43,6 @@ function PatientView(){
   self.hasVisits = ko.computed(function(){
     return self.visits().length > 0;
   });
-
-  /**
-   * Returns the form completion progress for the given visit model
-   */
-  self.visitProgressComplete = function(visit){
-    if (visit.forms_total() === 0) {
-      return 0;
-    }
-    return Math.round((visit.forms_complete() / visit.forms_total()) * 100);
-  };
-
-  self.visitProgressIncomplete = function(visit){
-    if (visit.forms_total() === 0) {
-      return 0;
-    }
-    return Math.round((visit.forms_incomplete() / visit.forms_total()) * 100);
-  };
-
-  self.visitProgressNotStarted = function(visit){
-    if (visit.forms_total() === 0) {
-      return 0;
-    }
-    return Math.round((visit.forms_not_started() / visit.forms_total()) * 100);
-  };
 
   self.onChangeReferenceType = function(item, event){
     var $option = $($(event.target).find(':selected'))
@@ -121,10 +99,10 @@ function PatientView(){
     self.showEditForm(true);
     self.editableItem({
       // Make a copy for editing
-      site_id: ko.observable(self.patient.site.id()),
+      site: ko.observable(self.patient.site.id()),
       references: ko.observableArray($.map(self.patient.references(), function(r){
         return {
-          reference_type_id: ko.observable(r.reference_type.id()),
+          reference_type: ko.observable(r.reference_type.id()),
           reference_number: ko.observable(r.reference_number())
         };
       }))
@@ -136,7 +114,7 @@ function PatientView(){
   }
 
   self.addReference = function(reference){
-    self.editableItem().references.push({reference_type_id: null, reference_number: null});
+    self.editableItem().references.push({reference_type: null, reference_number: null});
   }
 
   self.startDelete = function(){
@@ -150,7 +128,7 @@ function PatientView(){
     self.editableItem({
       // make a copy for editing
       id: ko.observable(),
-      study_id: ko.observable(),
+      study: ko.observable(),
       consent_date: ko.observable(),
       latest_consent_date: ko.observable(),
       termination_date: ko.observable(),
@@ -163,7 +141,7 @@ function PatientView(){
     self.showVisitForm(true);
     self.editableVisit({
       id: ko.observable(),
-      cycle_ids: ko.observableArray(),
+      cycles: ko.observableArray(),
       visit_date: ko.observable(),
       add_forms: ko.observable()
     });
@@ -234,8 +212,10 @@ function PatientView(){
         console.log(jqXHR.responseJSON);
       },
       success: function(data, textStatus, jqXHR){
-        console.log(data);
         self.enrollments.push(ko.mapping.fromJS(data));
+        self.enrollments.sort(function(left, right){
+          return left.consent_date() < right.consent_date() ? -1 : 1;
+        });
         self.clear();
       },
       complete: function(){

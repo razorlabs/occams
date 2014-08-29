@@ -23,11 +23,8 @@ class LoginForm(wtforms.Form):
         ])
 
 
-@view_config(
-    route_name='login',
-    renderer='../templates/account/login.pt')
-@forbidden_view_config(
-    renderer='../templates/account/login.pt')
+@view_config(route_name='login', renderer='../templates/account/login.pt')
+@forbidden_view_config(renderer='../templates/account/login.pt')
 def login(request):
 
     if (request.matched_route.name != 'login'

@@ -18,10 +18,10 @@ from ..tasks import celery,  make_export
 
 
 @view_config(
-    context=models.ExportFactory,
+    route_name='exports',
     permission='view',
     renderer='../templates/export/home.pt')
-def about(request):
+def about(context, request):
     """
     General intro-page so users know what they're getting into.
     """
@@ -29,11 +29,10 @@ def about(request):
 
 
 @view_config(
-    context=models.ExportFactory,
-    name='faq',
+    route_name='exports_faq',
     permission='view',
     renderer='../templates/export/faq.pt')
-def faq(request):
+def faq(context, request):
     """
     Verbose details about how this tool works.
     """
@@ -53,11 +52,10 @@ def ExportCheckoutSchema(request, exportables):
 
 
 @view_config(
-    context=models.ExportFactory,
-    name='checkout',
+    route_name='exports_checkout',
     permission='add',
     renderer='../templates/export/add.pt')
-def add(request):
+def add(context, request):
     """
     Generating a listing of available data for export.
 
@@ -116,11 +114,10 @@ def add(request):
 
 
 @view_config(
-    context=models.ExportFactory,
-    name='codebook',
+    route_name='exports_codebook',
     permission='view',
     renderer='../templates/export/codebook.pt')
-def codebook(request):
+def codebook(context, request):
     """
     Codebook viewer
     """
@@ -128,12 +125,11 @@ def codebook(request):
 
 
 @view_config(
-    context=models.ExportFactory,
-    name='codebook',
+    route_name='exports_codebook',
     permission='view',
     xhr=True,
     renderer='json')
-def codebook_json(request):
+def codebook_json(context, request):
     """
     Loads codebook rows for the specified data file
     """
@@ -159,10 +155,10 @@ def codebook_json(request):
 
 
 @view_config(
-    context=models.ExportFactory,
-    name='codebook.csv',
+    route_name='exports_codebook',
+    request_param='alt=csv',
     permission='fia_view')
-def codebook_download(request):
+def codebook_download(context, request):
     """
     Returns full codebook file
     """
@@ -178,10 +174,10 @@ def codebook_download(request):
 
 
 @view_config(
-    context=models.Export,
+    route_name='exports_status',
     permission='view',
     renderer='../templates/export/status.pt')
-def status(request):
+def status(context, request):
     """
     Renders the view that will contain progress of exports.
 
@@ -191,12 +187,11 @@ def status(request):
 
 
 @view_config(
-    context=models.Export,
-    name='download',
+    route_name='exports_status',
     permission='view',
     xhr=True,
     renderer='json')
-def status_json(request):
+def status_json(context, request):
     """
     Returns the current exports statuses.
     """
@@ -242,16 +237,16 @@ def status_json(request):
 
 
 @view_config(
-    context=models.Export,
+    route_name='export',
     permission='delete',
     request_method='DELETE',
     xhr=True)
-def delete(request):
+def delete_json(context, request):
     """
     Handles delete delete AJAX request
     """
     check_csrf_token(request)
-    export = request.context
+    export = context
     Session.delete(export)
     Session.flush()
     celery.control.revoke(export.name)
@@ -259,16 +254,22 @@ def delete(request):
 
 
 @view_config(
-    context=models.Export,
-    name='download',
+    route_name='export',
+    request_param='alt=zip',
     permission='view')
-def download(request):
+def download(context, request):
     """
     Returns specific download attachement
 
     The user should only be allowed to download their exports.
     """
-    export = request.context
+    export = context
+
+    if not request.has_permission('view', export):
+        raise HTTPForbidden
+
+    if export.status != 'complete':
+        raise HTTPNotFound
 
     export_dir = request.registry.settings['app.export.dir']
     path = os.path.join(export_dir, export.name)
