@@ -6,7 +6,7 @@ from pyramid.view import view_config
 from sqlalchemy import orm
 from voluptuous import *  # NOQA
 
-from .. import models, Session
+from .. import _, models, Session
 from ..validators import Date
 
 
@@ -88,7 +88,7 @@ def view_json(context, request):
     xhr=True,
     request_method='PUT',
     renderer='json')
-def manage_json(context, request):
+def edit_json(context, request):
     check_csrf_token(request)
 
     schema = EnrollmentSchema(context, request)
@@ -129,7 +129,7 @@ def EnrollmentSchema(context, request):
         Required('study'): All(Coerce(int), coerce_study(context, request)),
         Required('consent_date'): Date(),
         Required('latest_consent_date'): Date(),
-        Optional('reference_number'): Coerce(str),
+        Required('reference_number', default=None): Coerce(str),  # TODO: Optional
         Extra: object
         },
         check_timeline(context, request),
@@ -183,6 +183,8 @@ def check_reference(context, request):
         lz = get_localizer(request)
         study = value['study']
         number = value['reference_number']
+        if number is None:
+            return value
         if not study.check_reference_number(number):
             raise Invalid(
                 _(u'Invalid reference number format for this study'))
@@ -193,7 +195,7 @@ def check_reference(context, request):
             query = query.filter(models.Enrollment.id != context.id)
         (exists,) = Session.query(query.exists()).one()
         if exists:
-            raise Invalid(lz.translate(_(u'Reference number is already used')))
+            raise Invalid(lz.translate(_(u'Reference number already in use.')))
         return value
     return validator
 

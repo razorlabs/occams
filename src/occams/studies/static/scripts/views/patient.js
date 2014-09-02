@@ -92,6 +92,7 @@ function PatientView(){
     self.showDeleteForm(false);
     self.showEnrollmentForm(false);
     self.showVisitForm(false);
+    self.errorMessages([]);
   };
 
   self.startEdit = function(){
@@ -116,6 +117,19 @@ function PatientView(){
   self.addReference = function(reference){
     self.editableItem().references.push({reference_type: null, reference_number: null});
   }
+
+  /**
+   * Re-usable error handler for XHR requests
+   */
+  var handleXHRError = function(jqXHR, textStatus, errorThrown){
+    if (textStatus.indexOf('CSRF') > -1 ){
+      self.errorMessages(['You session has expired, please reload the page']);
+    } else if (jqXHR.responseJSON){
+      self.errorMessages(jqXHR.responseJSON.validation_errors);
+    } else {
+      self.errorMessages([errorThrown]);
+    }
+  };
 
   self.startDelete = function(){
     self.clear();
@@ -161,10 +175,7 @@ function PatientView(){
       contentType: 'application/json; charset=utf-8',
       data: ko.mapping.toJSON(self.editableItem()),
       headers: {'X-CSRF-Token': $.cookie('csrf_token')},
-      error: function(jqXHR, textStatus, errorThrown){
-        console.log('An error occurred, need to show something...');
-        console.log(jqXHR.responseJSON);
-      },
+      error: handleXHRError,
       success: function(data, textStatus, jqXHR){
         ko.mapping.fromJS(data, {}, self.patient);
         self.clear();
@@ -181,10 +192,7 @@ function PatientView(){
       url: self.patient.__src__,
       method: 'DELETE',
       headers: {'X-CSRF-Token': $.cookie('csrf_token')},
-      error: function(jqXHR, textStatus, errorThrown){
-        console.log('An error occurred, need to show something...');
-        console.log(jqXHR.responseJSON);
-      },
+      error: handleXHRError,
       success: function(data, textStatus, jqXHR){
         window.location = data.__next__;
       },
@@ -209,10 +217,7 @@ function PatientView(){
       contentType: 'application/json; charset=utf-8',
       data: ko.mapping.toJSON(item),
       headers: {'X-CSRF-Token': $.cookie('csrf_token')},
-      error: function(jqXHR, textStatus, errorThrown){
-        console.log('An error occurred, need to show something...');
-        console.log(jqXHR.responseJSON);
-      },
+      error: handleXHRError,
       success: function(data, textStatus, jqXHR){
         if (item.id()){
           ko.mapping.fromJS(data, {}, self.selectedItem());
@@ -243,10 +248,7 @@ function PatientView(){
       contentType: 'application/json; charset=utf-8',
       data: ko.mapping.toJSON(self.editableVisit()),
       headers: {'X-CSRF-Token': $.cookie('csrf_token')},
-      error: function(jqXHR, textStatus, errorThrown){
-        console.log('An error occurred, need to show something...');
-        console.log(jqXHR.responseJSON);
-      },
+      error: handleXHRError,
       success: function(data, textStatus, jqXHR){
         console.log(data);
         self.visits.push(ko.mapping.fromJS(data));

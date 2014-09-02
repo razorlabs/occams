@@ -254,6 +254,16 @@
               <h4 class="modal-title" i18n:translate="">Edit Patient</h4>
             </div>
             <div class="modal-body">
+              <!-- ko if: $root.hasErrorMessages -->
+                <div class="alert alert-danger">
+                  <p i18n:translate="">
+                    Could not complete the request for the following reasons:
+                  </p>
+                  <ul data-bind="foreach: $root.errorMessages">
+                    <li data-bind="text: $data"></li>
+                  </ul>
+                </div>
+              <!-- /ko -->
               <div class="form-group">
                 <label i18n:translate="" class="required">Site</label>
                 <p class="help-block" i18n:translate="">
@@ -345,6 +355,7 @@
                          submit: $root.saveEnrollment,
                          validate: window.defaultValidationOptions">
             <div class="modal-header">
+
               <!-- ko if: id -->
                 <h4 class="modal-title" i18n:translate="">Edit Enrollment</h4>
               <!--/ko -->
@@ -353,6 +364,16 @@
               <!-- /ko -->
             </div>
             <div class="modal-body">
+              <!-- ko if: $root.hasErrorMessages -->
+                <div class="alert alert-danger">
+                  <p i18n:translate="">
+                    Could not complete the request for the following reasons:
+                  </p>
+                  <ul data-bind="foreach: $root.errorMessages">
+                    <li data-bind="text: $data"></li>
+                  </ul>
+                </div>
+              <!-- /ko -->
               <div class="form-group" tal:define="name 'study'">
                 <label i18n:translate="" for="${name}" class="required">Study</label>
                 <select
@@ -457,6 +478,16 @@
               <!-- /ko -->
             </div>
             <div class="modal-body">
+              <!-- ko if: $root.hasErrorMessages -->
+                <div class="alert alert-danger">
+                  <p i18n:translate="">
+                    Could not complete the request for the following reasons:
+                  </p>
+                  <ul data-bind="foreach: $root.errorMessages">
+                    <li data-bind="text: $data"></li>
+                  </ul>
+                </div>
+              <!-- /ko -->
               <div class="form-group" tal:define="name 'cycles'">
                 <label i18n:translate="" for="${name}" class="required">Study Cycles</label>
                 <select
@@ -516,6 +547,16 @@
               <h4 class="modal-title" i18n:translate="">Confirm Delete</h4>
             </div>
             <div class="modal-body">
+              <!-- ko if: $root.hasErrorMessages -->
+                <div class="alert alert-danger">
+                  <p i18n:translate="">
+                    Could not complete the request for the following reasons:
+                  </p>
+                  <ul data-bind="foreach: $root.errorMessages">
+                    <li data-bind="text: $data"></li>
+                  </ul>
+                </div>
+              <!-- /ko -->
               <p i18n:translate="">You are about to delete this patient. This is an irreversable action. Are you sure you want to proceed?</p>
             </div>
             <div class="modal-footer">
@@ -526,7 +567,6 @@
         </div><!-- /.modal-content -->
       </div><!-- /.modal-dialog -->
     </div><!-- /.modal -->
-
 
     <script id="patient-data" type="application/json">${json.dumps(patient)}</script>
     <script id="enrollments-data" type="application/json">${json.dumps(enrollments)}</script>
