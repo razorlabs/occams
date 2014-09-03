@@ -145,10 +145,24 @@ function PatientView(){
       study: ko.observable(),
       consent_date: ko.observable(),
       latest_consent_date: ko.observable(),
-      termination_date: ko.observable(),
       reference_number: ko.observable(),
     });
   };
+
+  self.startEditEnrollment = function(item){
+    self.clear();
+    self.showEnrollmentForm(true);
+    self.selectedItem(item)
+    self.editableItem({
+      // make a copy for editing
+      id: ko.observable(item.id()),
+      study: ko.observable(item.study.id()),
+      consent_date: ko.observable(item.consent_date()),
+      latest_consent_date: ko.observable(item.latest_consent_date()),
+      reference_number: ko.observable(item.reference_number()),
+    });
+  };
+
 
   self.startAddVisit = function(){
     self.clear();
@@ -209,18 +223,18 @@ function PatientView(){
 
     self.isSaving(true);
 
-    item = self.editableItem();
+    var selected = self.selectedItem();
 
     $.ajax({
-      url: $(element).attr('action'),
-      method: item.id() ? 'PUT' : 'POST',
+      url: selected.id() ? selected.__url__() : $(element).data('factory-url'),
+      method: selected.id() ? 'PUT' : 'POST',
       contentType: 'application/json; charset=utf-8',
-      data: ko.mapping.toJSON(item),
+      data: ko.mapping.toJSON(self.editableItem()),
       headers: {'X-CSRF-Token': $.cookie('csrf_token')},
       error: handleXHRError,
       success: function(data, textStatus, jqXHR){
-        if (item.id()){
-          ko.mapping.fromJS(data, {}, self.selectedItem());
+        if (selected.id()){
+          ko.mapping.fromJS(data, {}, selected)
         } else {
           self.enrollments.push(ko.mapping.fromJS(data));
         }

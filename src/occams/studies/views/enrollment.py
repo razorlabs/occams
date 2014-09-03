@@ -43,6 +43,14 @@ def view_json(context, request):
         '__url__': request.route_path('enrollment',
                                       patient=patient.pid,
                                       enrollment=enrollment.id),
+        '__can_edit__':
+            bool(request.has_permission('edit', context)),
+        '__can_terminate__':
+            bool(request.has_permission('terminate', context)),
+        '__can_randomize__':
+            bool(request.has_permission('randomize', context)),
+        '__can_delete__':
+            bool(request.has_permission('delete', context)),
         'id': enrollment.id,
         'study': {
             'id': enrollment.study.id,
@@ -102,6 +110,8 @@ def edit_json(context, request):
     if isinstance(context, models.EnrollmentFactory):
         patient = context.__parent__
         enrollment = models.Enrollment(patient=patient, study=data['study'])
+    else:
+        enrollment = context
 
     enrollment.consent_date = data['consent_date']
     enrollment.latest_consent_date = data['latest_consent_date']
@@ -129,7 +139,7 @@ def EnrollmentSchema(context, request):
         Required('study'): All(Coerce(int), coerce_study(context, request)),
         Required('consent_date'): Date(),
         Required('latest_consent_date'): Date(),
-        Required('reference_number', default=None): Coerce(str),  # TODO: Optional
+        Required('reference_number', default=None): Coerce(str),
         Extra: object
         },
         check_timeline(context, request),
@@ -147,6 +157,9 @@ def coerce_study(context, request):
         if study is None:
             raise Invalid(lz.translate(_(
                 u'Study does not exist')))
+        if isinstance(context, models.Enrollment) and context.study != study:
+            raise Invalid(lz.translate(_(
+                u'Cannot change an enrollment\'s study.')))
         return study
     return validator
 
@@ -221,6 +234,6 @@ def check_unique(context, request):
         (exists,) = Session.query(query.exists()).one()
         if exists:
             raise Invalid(lz.translate(_(
-                u'This enrollment already exists')))
+                u'This enrollment already exists.')))
         return value
     return validator

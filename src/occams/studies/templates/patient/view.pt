@@ -132,29 +132,42 @@
                     <td data-bind="with: stratum">
                       <code data-bind="text: reference_number"></code>
                     </td>
-                    <td data-bind="if: false">
-                      <!-- ko if: study.is_blinded -->
-                        <em i18n:translate="">Blinded</em>
-                      <!-- /ko -->
-                      <!-- ko ifnot: study.is_blinded -->
-                        <span data-bind="text: stratum.arm.title"></span>
+                    <td>
+                      <!-- ko if: study.is_randomized -->
+                        <!-- ko if: study.is_blinded -->
+                          <em i18n:translate="">Blinded</em>
+                        <!-- /ko -->
+                        <!-- ko ifnot: study.is_blinded -->
+                          <span data-bind="text: stratum.arm.title"></span>
+                        <!-- /ko -->
                       <!-- /ko -->
                     </td>
                     <td class="text-right">
                       <div class="dropdown pull-right">
                         <button class="btn btn-link dropdown-toggle" type="button" data-toggle="dropdown">
-                          <span class="fa fa-cog"></span>
-                          <span class="caret"></span>
+                          <span class="fa fa-cog"></span><span class="caret"></span>
                         </button>
                         <ul class="dropdown-menu" role="menu">
-                          <li role="presentation"><a role="menuitem" tabindex="-1">Edit</a></li>
-
-                          <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Termination</a></li>
-                          <!-- ko if: study.is_randomized -->
-                          <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Randomization</a></li>
+                          <!-- ko if: __can_edit__ -->
+                            <li role="presentation"><a role="menuitem" tabindex="-1" data-bind="click: $root.startEditEnrollment">Edit</a></li>
                           <!-- /ko -->
-                          <li role="presentation" class="divider"></li>
-                          <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Delete</a></li>
+                          <!-- ko if: __can_terminate__ -->
+                            <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Termination</a></li>
+                          <!-- /ko -->
+                          <!-- ko if: study.is_randomized -->
+                            <!-- ko if: study.stratum -->
+                              <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Randomization Status</a></li>
+                            <!-- /ko -->
+                            <!-- ko ifnot: study.stratum -->
+                              <!-- ko if: __can_randomize__ -->
+                                <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Randomize</a></li>
+                              <!-- /ko -->
+                            <!-- /ko -->
+                          <!-- /ko -->
+                          <!-- ko if: __can_delete__ -->
+                            <li role="presentation" class="divider"></li>
+                            <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Delete</a></li>
+                          <!-- /ko -->
                         </ul>
                       </div>
                     </td>
@@ -350,7 +363,7 @@
         <div class="modal-content">
           <form
               role="form"
-              action="${request.current_route_path(_route_name='enrollments')}"
+              data-factory-url="${request.current_route_path(_route_name='enrollments')}"
               data-bind="with: $root.editableItem,
                          submit: $root.saveEnrollment,
                          validate: window.defaultValidationOptions">

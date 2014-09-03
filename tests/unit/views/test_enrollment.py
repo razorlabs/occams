@@ -116,6 +116,60 @@ class TestEditJson(IntegrationFixture):
         with self.assertRaises(HTTPBadRequest) as cm:
             make_request()
 
-        self.assertEqual(
-            'Reference number already in use.',
-            cm.exception.json['validation_errors'][0])
+        self.assertIn(
+            'This enrollment already exists.',
+            cm.exception.json['validation_errors'])
+
+    def test_disable_study_update(self, check_csrf_token):
+        """
+        It should not allow a enrollment's study to be changed
+        """
+        from datetime import date
+        from pyramid import testing
+        from pyramid.httpexceptions import HTTPBadRequest
+        from occams.studies import models, Session
+
+        self.config.add_route('enrollment', '/{patient}/{enrollment}')
+
+        study1 = models.Study(
+            name=u'somestudy',
+            title=u'Some Study',
+            short_title=u'sstudy',
+            code=u'000',
+            start_date=date.today(),
+            consent_date=date.today())
+
+        study2 = models.Study(
+            name=u'otherstudy',
+            title=u'Other Study',
+            short_title=u'ostudy',
+            code=u'111',
+            start_date=date.today(),
+            consent_date=date.today())
+
+        patient = models.Patient(
+            site=models.Site(name=u'ucsd', title=u'UCSD'),
+            pid=u'12345')
+
+        enrollment = models.Enrollment(
+            study=study1,
+            patient=patient,
+            consent_date=date.today())
+
+        Session.add_all([patient, enrollment, study1, study2])
+        Session.flush()
+
+        consent_date = date.today()
+
+        with self.assertRaises(HTTPBadRequest) as cm:
+            self.call_view(enrollment, testing.DummyRequest(
+                json_body={
+                    'study': str(study2.id),
+                    'consent_date': str(consent_date),
+                    'latest_consent_date': str(consent_date),
+                    }
+                ))
+
+        self.assertIn(
+            'Cannot change an enrollment\'s study.',
+            cm.exception.json['validation_errors'])

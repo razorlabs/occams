@@ -710,9 +710,9 @@ class Enrollment(Base,  Referenceable, Modifiable, HasEntities, Auditable):
         site = self.patient.site
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
-            (Allow, groups.manager(site=site.name), ('view', 'edit', 'delete', 'randomize', 'terminate'))  # NOQA
-            (Allow, groups.reviewer(site=site.name), ('view', 'edit', 'delete', 'randomize', 'terminate'))  # NOQA
-            (Allow, groups.enterer(site=site.name), ('view', 'edit', 'delete'))
+            (Allow, groups.manager(site=site.name), ('view', 'edit', 'delete', 'randomize', 'terminate')),  # NOQA
+            (Allow, groups.reviewer(site=site.name), ('view', 'edit', 'delete', 'randomize', 'terminate')),  # NOQA
+            (Allow, groups.enterer(site=site.name), ('view', 'edit', 'delete')),  # NOQA
             (Allow, groups.consumer(site=site.name), 'view')
             ]
 
