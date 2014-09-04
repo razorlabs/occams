@@ -128,10 +128,12 @@ def edit_json(context, request):
     xhr=True,
     renderer='json')
 def delete_json(context, request):
+    list(map(Session.delete, context.entities))
     Session.delete(context)
     Session.flush()
     request.session.flash(_(u'Deleted sucessfully'))
-    return {'__next__': request.current_route_path(_route_name='patient')}
+    return {'__next__': request.route_path('patient',
+                                           patient=context.patient.pid)}
 
 
 def EnrollmentSchema(context, request):

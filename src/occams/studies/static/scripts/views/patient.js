@@ -14,10 +14,12 @@ function PatientView(){
   // Enrollment UI settings
   self.latestEnrollment = ko.observable();
   self.showEnrollmentForm = ko.observable(false);
+  self.showEnrollmentDelete = ko.observable(false);
 
   // Visti UI Settings
   self.latestVisit = ko.observable();
   self.showVisitForm = ko.observable(false);
+  self.showVisitDelete = ko.observable(false);
 
   // Modal UI Settings
   self.errorMessages = ko.observableArray();
@@ -91,7 +93,9 @@ function PatientView(){
     self.showEditForm(false);
     self.showDeleteForm(false);
     self.showEnrollmentForm(false);
+    self.showEnrollmentDelete(false);
     self.showVisitForm(false);
+    self.showVisitDelete(false);
     self.errorMessages([]);
   };
 
@@ -163,6 +167,11 @@ function PatientView(){
     });
   };
 
+  self.startDeleteEnrollment = function(item){
+    self.clear();
+    self.showEnrollmentDelete(true);
+    self.selectedItem(item)
+  };
 
   self.startAddVisit = function(){
     self.clear();
@@ -241,6 +250,25 @@ function PatientView(){
         self.enrollments.sort(function(left, right){
           return left.consent_date() > right.consent_date() ? -1 : 1;
         });
+        self.clear();
+      },
+      complete: function(){
+        self.isSaving(false);
+      }
+    });
+  };
+
+  self.deleteEnrollment = function(){
+    self.isSaving(true);
+    var item = self.selectedItem();
+
+    $.ajax({
+      url: item.__url__(),
+      method: 'DELETE',
+      headers: {'X-CSRF-Token': $.cookie('csrf_token')},
+      error: handleXHRError,
+      success: function(data, textStatus, jqXHR){
+        self.enrollments.remove(item);
         self.clear();
       },
       complete: function(){

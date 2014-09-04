@@ -173,3 +173,59 @@ class TestEditJson(IntegrationFixture):
         self.assertIn(
             'Cannot change an enrollment\'s study.',
             cm.exception.json['validation_errors'])
+
+
+@mock.patch('occams.studies.views.enrollment.check_csrf_token')
+class TestDeleteJson(IntegrationFixture):
+
+    def call_view(self, context, request):
+        from occams.studies.views.enrollment import delete_json as view
+        return view(context, request)
+
+    def test_cascade_forms(self, check_csrf_token):
+        """
+        It should also remove termination forms.
+        """
+        from datetime import date
+        from pyramid import testing
+        from occams.studies import models, Session
+
+        self.config.add_route('patient', '/{patient}')
+
+        schema = models.Schema(
+            name=u'termination',
+            title=u'Termination',
+            publish_date=date.today())
+
+        study = models.Study(
+            name=u'somestudy',
+            title=u'Some Study',
+            short_title=u'sstudy',
+            code=u'000',
+            start_date=date.today(),
+            consent_date=date.today())
+
+        patient = models.Patient(
+            site=models.Site(name=u'ucsd', title=u'UCSD'),
+            pid=u'12345')
+
+        enrollment = models.Enrollment(
+            study=study,
+            patient=patient,
+            consent_date=date.today())
+
+        enrollment.entities.add(models.Entity(
+            name=u'tinstnace',
+            title=u'',
+            schema=schema,
+            collect_date=date.today()))
+
+        Session.add_all([patient, enrollment, study])
+        Session.flush()
+
+        enrollment_id = enrollment.id
+
+        self.call_view(enrollment, testing.DummyRequest())
+
+        self.assertIsNone(Session.query(models.Enrollment).get(enrollment_id))
+        self.assertEquals(0, Session.query(models.Entity).count())
