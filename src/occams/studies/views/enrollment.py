@@ -158,7 +158,7 @@ def coerce_study(context, request):
         study = Session.query(models.Study).get(value)
         if study is None:
             raise Invalid(lz.translate(_(
-                u'Study does not exist')))
+                u'Study does not exist.')))
         if isinstance(context, models.Enrollment) and context.study != study:
             raise Invalid(lz.translate(_(
                 u'Cannot change an enrollment\'s study.')))
@@ -176,13 +176,16 @@ def check_timeline(context, request):
         stop = value['study'].stop_date
         consent = value['consent_date']
         latest = value['latest_consent_date']
+        if start is None:
+            raise Invalid(lz.translate(_(
+                u'Study has not started yet.')))
         if consent < start:
-            raise Invalid(la.translate(
+            raise Invalid(lz.translate(
                 _('Cannot enroll before the study start date: ${date}'),
                 mapping={'date': start.isoformat()}))
         if not (consent <= latest):
             raise Invalid(lz.translate(_(u'Inconsistent enrollment dates')))
-        if stop and latest < stop:
+        if stop and latest > stop:
             raise Invalid(lz.translate(
                 _('Cannot enroll after the study stop date: ${date}'),
                 mapping={'date': stop.isoformat()}))

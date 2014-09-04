@@ -174,6 +174,98 @@ class TestEditJson(IntegrationFixture):
             'Cannot change an enrollment\'s study.',
             cm.exception.json['validation_errors'])
 
+    def test_timeline_start_date(self, check_csrf_token):
+        """
+        It should not allow consent dates before the study start date
+        """
+        from datetime import date, timedelta
+        from pyramid import testing
+        from pyramid.httpexceptions import HTTPBadRequest
+        from occams.studies import models, Session
+
+        self.config.add_route('enrollment', '/{patient}/{enrollment}')
+
+        today = date.today()
+        invalid_date = today - timedelta(days=100)
+        t1 = today - timedelta(days=5)
+        t2 = today
+
+        study = models.Study(
+            name=u'somestudy',
+            title=u'Some Study',
+            short_title=u'sstudy',
+            code=u'000',
+            start_date=t1,
+            consent_date=t2)
+
+        patient = models.Patient(
+            site=models.Site(name=u'ucsd', title=u'UCSD'),
+            pid=u'12345')
+
+        Session.add_all([patient, study])
+        Session.flush()
+
+        with self.assertRaises(HTTPBadRequest) as cm:
+            self.call_view(patient['enrollments'], testing.DummyRequest(
+                json_body={
+                    'study': str(study.id),
+                    'consent_date': invalid_date,
+                    'latest_consent_date': invalid_date,
+                    }
+                ))
+
+        self.assertTrue([
+            e
+            for e in cm.exception.json['validation_errors']
+            if 'Cannot enroll before the study start date' in e])
+
+    def test_timeline_stop_date(self, check_csrf_token):
+        """
+        It should not allow consent dates after the study stop date
+        """
+        from datetime import date, timedelta
+        from pyramid import testing
+        from pyramid.httpexceptions import HTTPBadRequest
+        from occams.studies import models, Session
+
+        self.config.add_route('enrollment', '/{patient}/{enrollment}')
+
+        today = date.today()
+        t1 = today - timedelta(days=5)
+        t2 = today
+        t3 = today + timedelta(days=100)
+        invalid_date = today + timedelta(days=200)
+
+        study = models.Study(
+            name=u'somestudy',
+            title=u'Some Study',
+            short_title=u'sstudy',
+            code=u'000',
+            start_date=t1,
+            stop_date=t3,
+            consent_date=t2)
+
+        patient = models.Patient(
+            site=models.Site(name=u'ucsd', title=u'UCSD'),
+            pid=u'12345')
+
+        Session.add_all([patient, study])
+        Session.flush()
+
+        with self.assertRaises(HTTPBadRequest) as cm:
+            self.call_view(patient['enrollments'], testing.DummyRequest(
+                json_body={
+                    'study': str(study.id),
+                    'consent_date': invalid_date,
+                    'latest_consent_date': invalid_date,
+                    }
+                ))
+
+        self.assertTrue([
+            e
+            for e in cm.exception.json['validation_errors']
+            if 'Cannot enroll after the study stop date' in e])
+
 
 @mock.patch('occams.studies.views.enrollment.check_csrf_token')
 class TestDeleteJson(IntegrationFixture):
