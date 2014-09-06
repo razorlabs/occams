@@ -52,7 +52,8 @@ def includeme(config):
     config.add_route('enrollment_termination',      '/patients/{patient}/enrollments/{enrollment}/termination',     factory=models.PatientFactory, traverse='/{patient}/enrollments/{enrollment}')
     config.add_route('enrollment_randomization',    '/patients/{patient}/enrollments/{enrollment}/randomization',   factory=models.PatientFactory, traverse='/{patient}/enrollments/{enrollment}')
 
-    config.add_route('visits',                      '/patients/{patient}/visits',                       factory=models.PatientFactory)
+    config.add_route('visits',                      '/patients/{patient}/visits',                       factory=models.PatientFactory, traverse='/{patient}/visits')
+    config.add_route('visits_cycles',               '/patients/{patient}/visits/cycles',                factory=models.PatientFactory, traverse='/{patient}/visits')
     config.add_route('visit',                       '/patients/{patient}/visits/{visit}',               factory=models.PatientFactory, traverse='/{patient}/visits/{visit}')
     config.add_route('visit_forms',                 '/patients/{patient}/visits/{visit}/forms',         factory=models.PatientFactory, traverse='/{patient}/visits/{visit}')
     config.add_route('visit_form',                  '/patients/{patient}/visits/{visit}/forms/{form}',  factory=models.PatientFactory, traverse='/{patient}/visits/{visit}')

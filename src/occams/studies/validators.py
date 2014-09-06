@@ -21,10 +21,11 @@ def Date(fmt='%Y-%m-%d', msg=None):
 
 def DateTime(fmt='%Y-%m-%d', msg=None):
     def validator(value):
-        if isinstance(value, date):
-            return datetime(date.year, date.month, date.day)
+        # Check datetime first since datetime is a subclass of date
         if isinstance(value, datetime):
             return value
+        if isinstance(value, date):
+            return datetime.combine(value, datetime.min.time())
         try:
             return datetime.strptime(value, fmt)
         except ValueError:

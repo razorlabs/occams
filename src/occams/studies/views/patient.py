@@ -109,7 +109,7 @@ def view(context, request):
         'enrollments': enrollment_views.list_json(
             context['enrollments'], request)['enrollments'],
         'visits': visit_views.list_json(
-            context['visits'], request, summary=True)['visits'],
+            context['visits'], request)['visits'],
         }
 
 

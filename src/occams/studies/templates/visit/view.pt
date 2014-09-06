@@ -77,22 +77,22 @@
       </table>
 
       <!-- ko if: hasSelectedForms -->
-        <div class="well well-sm clearfix">
+        <div class="well well-sm">
+          <span class="btn-group">
+            <button class="btn btn-default" i18n:translate="">Move</button>
+            <button class="btn btn-default" i18n:translate="">Delete</button>
+          </span>
           <strong>
             <span data-bind="text: selectedForms().length"></span>
             <span i18n:translate="">Selected</span>
           </strong>
-          <span class="btn-group pull-right">
-            <button class="btn btn-default" i18n:translate="">Move</button>
-            <button class="btn btn-default" i18n:translate="">Delete</button>
-          </span>
         </div>
       <!-- /ko -->
 
     </div> <!-- /:isReady -->
 
     <tal:json define="json import:json">
-      <script id="visit-data" type="application/json" >${json.dumps(visit_data)}</script>
+      <script id="visit-data" type="application/json" >${json.dumps(visit)}</script>
     </tal:json>
 
   </metal:content-slot>

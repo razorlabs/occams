@@ -24,7 +24,7 @@ var defaultValidationOptions = {
     validClass: 'has-success',
     wrapper: 'p',
     // Ignore helper form elements
-    ignore: 'input[type=hidden], .select2-input, .select2-focusser',
+    ignore: 'select2-input, .select2-focusser',
     errorPlacement: function(label, element){
       // Add after the input group (if set) so we don't get
       // weird rendering errors

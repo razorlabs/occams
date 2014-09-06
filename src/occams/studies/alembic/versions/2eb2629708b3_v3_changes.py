@@ -27,6 +27,7 @@ def upgrade():
     cleanup_patient()
     cleanup_enrollment()
     cleanup_study()
+    cleanup_cycle()
     cleanup_visit()
     fix_numeric_choice_names()
     case_insensitive_names()
@@ -207,6 +208,11 @@ def cleanup_study():
 
     op.execute('TRUNCATE category CASCADE')
     op.execute('TRUNCATE category_audit CASCADE')
+
+
+def cleanup_cycle():
+    for table_name in ['cycle', 'cycle_audit']:
+        op.add_column(table_name, sa.Column('is_interim', sa.Boolean, server_default=sa.sql.false()))
 
 
 def cleanup_attribute():

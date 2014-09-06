@@ -330,6 +330,8 @@ class Cycle(Base, Referenceable, Describeable, Modifiable, Auditable):
         doc='The outer limit, in days, that this cycle may follow the '
             'previous schema before it is skipped as a missed visit.')
 
+    is_interim = sa.Column(sa.Boolean, server_default=sa.sql.false())
+
     # visits backref'd from visit
 
     schemata = orm.relationship(Schema, secondary=cycle_schema_table)

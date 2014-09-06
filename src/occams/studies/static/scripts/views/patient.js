@@ -176,12 +176,38 @@ function PatientView(){
   self.startAddVisit = function(){
     self.clear();
     self.showVisitForm(true);
-    self.editableVisit({
+    self.editableItem({
       id: ko.observable(),
-      cycles: ko.observableArray(),
+      cycles: ko.observableArray([]),
       visit_date: ko.observable(),
-      add_forms: ko.observable()
+      include_forms: ko.observable(),
+      include_speciemen: ko.observable()
     });
+  };
+
+
+  self.visitSelect2Options = function(element){
+    return {
+      multiple: true,
+      ajax: {
+        url: $(element).data('cycles-url'),
+        quietMillis: 100,
+        minimumInputLength: 3,
+        data: function (term, page) {
+          return {q: term};
+        },
+        results: function (data) {
+          return {
+            results: $.map(data.cycles, function (item) {
+              return {
+                text: item.title,
+                id: item.id
+              }
+            })
+          };
+        },
+      }
+    }
   };
 
   self.savePatient = function(element){
@@ -283,16 +309,16 @@ function PatientView(){
     }
 
     self.isSaving(true);
+    console.log(ko.mapping.toJSON(self.editableItem()));
 
     $.ajax({
-      url: self.patient.__src__,
+      url: $(element).attr('action'),
       method: 'POST',
       contentType: 'application/json; charset=utf-8',
-      data: ko.mapping.toJSON(self.editableVisit()),
+      data: ko.mapping.toJSON(self.editableItem()),
       headers: {'X-CSRF-Token': $.cookie('csrf_token')},
       error: handleXHRError,
       success: function(data, textStatus, jqXHR){
-        console.log(data);
         self.visits.push(ko.mapping.fromJS(data));
         self.clear();
       },

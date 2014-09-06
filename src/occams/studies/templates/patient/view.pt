@@ -521,7 +521,7 @@
           <form
               role="form"
               action="${request.current_route_path(_route_name='visits')}"
-              data-bind="with: $root.editableVisit,
+              data-bind="with: $root.editableItem,
                          submit: $root.saveVisit,
                          validate: window.defaultValidationOptions">
             <div class="modal-header">
@@ -545,20 +545,21 @@
               <!-- /ko -->
               <div class="form-group" tal:define="name 'cycles'">
                 <label i18n:translate="" for="${name}" class="required">Study Cycles</label>
-                <select
+                <!--! Select2 uses "hidden" for multi-selects -->
+                <input
                     class="form-control"
                     required
-                    multiple
-                    min="1"
+                    type="text"
                     title="Please select associated study cycles"
                     id="${name}"
+                    name="${name}"
                     data-placeholder="Select a cycle..."
+                    data-cycles-url="${request.route_path('visits_cycles', patient=context.pid)}"
+                    data-rule-remote="${request.route_path('visits', patient=context.pid)}"
                     i18n:attributes="title data-placeholder"
                     data-bind="
-                      disable: id,
-                      value: ${name}, select2: {}">
-                  <option></option> <!-- for placeholder -->
-                </select>
+                      selectedValues: ${name},
+                      select2: $root.visitSelect2Options($element)" />
               </div> <!-- /.form-group -->
               <div class="form-group" tal:define="name 'visit_date'">
                 <label i18n:translate="" for="${name}" class="required">Visit Date</label>
