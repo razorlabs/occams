@@ -49,7 +49,20 @@ def setup_package():
         roster.Base.metadata.create_all(RosterSession.bind)
 
 
-class IntegrationFixture(unittest.TestCase):
+class AssertMethodsMixin(object):
+    """
+    Additional useful assertion methods
+    """
+
+    def assertHasStringLike(self, iterable, expected):
+        """
+        Assert that the iterable contains a string that contains the epected
+        """
+        assert [i for i in iterable if expected in i], \
+            '"%s" is not in %s' % (expected, list(iterable))
+
+
+class IntegrationFixture(AssertMethodsMixin, unittest.TestCase):
     """
     Fixure for testing component integration
     """
@@ -72,7 +85,7 @@ class IntegrationFixture(unittest.TestCase):
         Base.metadata.info['settings'] = self.config.registry.settings
 
 
-class FunctionalFixture(unittest.TestCase):
+class FunctionalFixture(AssertMethodsMixin, unittest.TestCase):
     """
     Fixture for testing the full application stack.
     Tests under this fixture will be very slow, so use sparingly.

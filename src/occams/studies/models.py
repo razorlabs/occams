@@ -73,39 +73,40 @@ def track_user_on_request(event):
 class groups:
 
     @staticmethod
-    def principal(org=None, site=None, group=None):
+    def principal(site=None, group=None):
         """
         Generates the principal name used internally by this application
         Supported keyword parameters are:
-            org -- The organization code
             site --  The site code
             group -- The group name
         """
-        return ('{site}:{group}' if site else '{group}').format(
-            org=org, site=site, group=group)
+        if site:
+            return site.name + ':' + group
+        else:
+            return group
 
     @staticmethod
-    def administrator(org=None, site=None):
-        return groups.principal(site=site, group='administrator')
+    def administrator():
+        return groups.principal(group='administrator')
 
     @staticmethod
-    def manager(org=None, site=None):
+    def manager(site=None):
         return groups.principal(site=site, group='manager')
 
     @staticmethod
-    def reviewer(org=None, site=None):
+    def reviewer(site=None):
         return groups.principal(site=site, group='reviewer')
 
     @staticmethod
-    def enterer(org=None, site=None):
+    def enterer(site=None):
         return groups.principal(site=site, group='enterer')
 
     @staticmethod
-    def consumer(org=None, site=None):
+    def consumer(site=None):
         return groups.principal(site=site, group='consumer')
 
     @staticmethod
-    def member(org=None, site=None):
+    def member(site=None):
         return groups.principal(site=site, group='member')
 
 
@@ -469,10 +470,10 @@ class Patient(Base, Referenceable, Modifiable, HasEntities, Auditable):
         site = self.site
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
-            (Allow, groups.manager(site=site.name), ('view', 'edit', 'delete')),
-            (Allow, groups.reviewer(site=site.name), ('view', 'edit', 'delete')),
-            (Allow, groups.enterer(site=site.name), ('view', 'edit', 'delete')),
-            (Allow, groups.consumer(site=site.name), 'view')
+            (Allow, groups.manager(site), ('view', 'edit', 'delete')),
+            (Allow, groups.reviewer(site), ('view', 'edit', 'delete')),
+            (Allow, groups.enterer(site), ('view', 'edit', 'delete')),
+            (Allow, groups.consumer(site), 'view')
             ]
 
     site_id = sa.Column(sa.Integer, nullable=False)
@@ -661,10 +662,10 @@ class EnrollmentFactory(object):
         site = self.__parent__.site
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
-            (Allow, groups.manager(site=site.name), ('view', 'add')),
-            (Allow, groups.reviewer(site=site.name), ('view', 'add')),
-            (Allow, groups.enterer(site=site.name), ('view', 'add')),
-            (Allow, groups.consumer(site=site.name), 'view'),
+            (Allow, groups.manager(site), ('view', 'add')),
+            (Allow, groups.reviewer(site), ('view', 'add')),
+            (Allow, groups.enterer(site), ('view', 'add')),
+            (Allow, groups.consumer(site), 'view'),
             ]
 
     def __init__(self, parent):
@@ -712,10 +713,10 @@ class Enrollment(Base,  Referenceable, Modifiable, HasEntities, Auditable):
         site = self.patient.site
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
-            (Allow, groups.manager(site=site.name), ('view', 'edit', 'delete', 'randomize', 'terminate')),  # NOQA
-            (Allow, groups.reviewer(site=site.name), ('view', 'edit', 'delete', 'randomize', 'terminate')),  # NOQA
-            (Allow, groups.enterer(site=site.name), ('view', 'edit', 'delete')),  # NOQA
-            (Allow, groups.consumer(site=site.name), 'view')
+            (Allow, groups.manager(site), ('view', 'edit', 'delete', 'randomize', 'terminate')),  # NOQA
+            (Allow, groups.reviewer(site), ('view', 'edit', 'delete', 'randomize', 'terminate')),  # NOQA
+            (Allow, groups.enterer(site), ('view', 'edit', 'delete')),  # NOQA
+            (Allow, groups.consumer(site), 'view')
             ]
 
     patient_id = sa.Column(sa.Integer, nullable=False,)
@@ -888,10 +889,10 @@ class VisitFactory(object):
         site = self.__parent__.site
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
-            (Allow, groups.manager(site=site.name), ('view', 'add')),
-            (Allow, groups.reviewer(site=site.name), ('view', 'add')),
-            (Allow, groups.enterer(site=site.name), ('view', 'add')),
-            (Allow, groups.consumer(site=site.name), 'view'),
+            (Allow, groups.manager(site), ('view', 'add')),
+            (Allow, groups.reviewer(site), ('view', 'add')),
+            (Allow, groups.enterer(site), ('view', 'add')),
+            (Allow, groups.consumer(site), 'view'),
             ]
 
     def __init__(self, parent):
@@ -949,10 +950,10 @@ class Visit(Base, Referenceable, Modifiable, HasEntities, Auditable):
         site = self.patient.site
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
-            (Allow, groups.manager(site=site.name), ('view', 'edit', 'delete')),  # NOQA
-            (Allow, groups.reviewer(site=site.name), ('view', 'edit', 'delete')),  # NOQA
-            (Allow, groups.enterer(site=site.name), ('view', 'edit', 'delete')),  # NOQA
-            (Allow, groups.consumer(site=site.name), 'view')
+            (Allow, groups.manager(site), ('view', 'edit', 'delete')),  # NOQA
+            (Allow, groups.reviewer(site), ('view', 'edit', 'delete')),  # NOQA
+            (Allow, groups.enterer(site), ('view', 'edit', 'delete')),  # NOQA
+            (Allow, groups.consumer(site), 'view')
             ]
 
     patient_id = sa.Column(sa.Integer, nullable=False)
@@ -975,6 +976,10 @@ class Visit(Base, Referenceable, Modifiable, HasEntities, Auditable):
 
     visit_date = sa.Column(sa.Date, nullable=False)
 
+    def __getitem__(self, key):
+        if key == 'forms':
+            return FormFactory(self)
+
     @declared_attr
     def __table_args__(cls):
         return (
@@ -989,13 +994,34 @@ class Visit(Base, Referenceable, Modifiable, HasEntities, Auditable):
                 name='uq_%s_patient_id_visit_date' % cls.__tablename__))
 
 
-class ExportFactory(object):
-
-    __key__ = 'exports'
+class FormFactory(object):
 
     @property
-    def __name__(self):
-        return self.__key__
+    def __acl__(self):
+        site = self.__parent__.patient.site
+        return [
+            (Allow, groups.administrator(), ALL_PERMISSIONS),
+            (Allow, groups.manager(site), ('view', 'add')),
+            (Allow, groups.consumer(site), 'view')
+            ]
+
+    def __init__(self, parent):
+        self.__parent__ = parent
+
+    def __getitem__(self, key):
+        try:
+            entity = (
+                Session.query(Entity)
+                .options(orm.joinedload('state'))
+                .filter_by(id=key)
+                .one())
+        except orm.exc.NoResultFound:
+            raise KeyError
+        entity.__parent__ = self
+        return entity
+
+
+class ExportFactory(object):
 
     __acl__ = [
         (Allow, groups.administrator(), ALL_PERMISSIONS),

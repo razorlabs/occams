@@ -53,9 +53,9 @@ class TestEditJson(IntegrationFixture):
         with self.assertRaises(HTTPBadRequest) as cm:
             self.call_view(patient, request)
         self.assertTrue(check_csrf_token.called)
-        self.assertIn(
-            'Site does not exist',
-            cm.exception.json['validation_errors'][0])
+        self.assertHasStringLike(
+            cm.exception.json['validation_errors'],
+            'Site does not exist')
 
     def test_reference_type_invalid(self, check_csrf_token):
         """
@@ -81,8 +81,9 @@ class TestEditJson(IntegrationFixture):
         with self.assertRaises(HTTPBadRequest) as cm:
             self.call_view(patient, request)
         self.assertTrue(check_csrf_token.called)
-        self.assertIn('Reference type does not exist',
-                      cm.exception.json['validation_errors'][0])
+        self.assertHasStringLike(
+            cm.exception.json['validation_errors'],
+            'Reference type does not exist')
 
     def test_reference_valid_number(self, check_csrf_token):
         """
@@ -109,8 +110,9 @@ class TestEditJson(IntegrationFixture):
         with self.assertRaises(HTTPBadRequest) as cm:
             self.call_view(patient, request)
         self.assertTrue(check_csrf_token.called)
-        self.assertIn('not a valid format',
-                      cm.exception.json['validation_errors'][0])
+        self.assertHasStringLike(
+            cm.exception.json['validation_errors'],
+            'not a valid format')
 
     def test_reference_unique(self, check_csrf_token):
         """
@@ -139,8 +141,9 @@ class TestEditJson(IntegrationFixture):
         with self.assertRaises(HTTPBadRequest) as cm:
             self.call_view(patient, request)
         self.assertTrue(check_csrf_token.called)
-        self.assertIn('already assigned',
-                      cm.exception.json['validation_errors'][0])
+        self.assertHasStringLike(
+            cm.exception.json['validation_errors'],
+            'already assigned')
 
     def test_references(self, check_csrf_token):
         """

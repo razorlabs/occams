@@ -116,9 +116,9 @@ class TestEditJson(IntegrationFixture):
         with self.assertRaises(HTTPBadRequest) as cm:
             make_request()
 
-        self.assertIn(
-            'This enrollment already exists.',
-            cm.exception.json['validation_errors'])
+        self.assertHasStringLike(
+            cm.exception.json['validation_errors'],
+            'This enrollment already exists.')
 
     def test_disable_study_update(self, check_csrf_token):
         """
@@ -170,9 +170,9 @@ class TestEditJson(IntegrationFixture):
                     }
                 ))
 
-        self.assertIn(
-            'Cannot change an enrollment\'s study.',
-            cm.exception.json['validation_errors'])
+        self.assertHasStringLike(
+            cm.exception.json['validation_errors'],
+            'Cannot change an enrollment\'s study.')
 
     def test_timeline_start_date(self, check_csrf_token):
         """
@@ -214,10 +214,9 @@ class TestEditJson(IntegrationFixture):
                     }
                 ))
 
-        self.assertTrue([
-            e
-            for e in cm.exception.json['validation_errors']
-            if 'Cannot enroll before the study start date' in e])
+        self.assertHasStringLike(
+            cm.exception.json['validation_errors'],
+            'Cannot enroll before the study start date')
 
     def test_timeline_stop_date(self, check_csrf_token):
         """
@@ -261,10 +260,9 @@ class TestEditJson(IntegrationFixture):
                     }
                 ))
 
-        self.assertTrue([
-            e
-            for e in cm.exception.json['validation_errors']
-            if 'Cannot enroll after the study stop date' in e])
+        self.assertHasStringLike(
+            cm.exception.json['validation_errors'],
+            'Cannot enroll after the study stop date')
 
 
 @mock.patch('occams.studies.views.enrollment.check_csrf_token')
@@ -307,8 +305,6 @@ class TestDeleteJson(IntegrationFixture):
             consent_date=date.today())
 
         enrollment.entities.add(models.Entity(
-            name=u'tinstnace',
-            title=u'',
             schema=schema,
             collect_date=date.today()))
 

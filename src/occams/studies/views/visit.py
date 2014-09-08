@@ -1,4 +1,3 @@
-from uuid import uuid4
 from pyramid.i18n import get_localizer
 from pyramid.httpexceptions import HTTPBadRequest
 from pyramid.session import check_csrf_token
@@ -31,50 +30,6 @@ def list_json(context, request):
         'visits': [
             view_json(v, request) for v in visits_query]
         }
-
-
-@view_config(
-    route_name='visits_cycles',
-    permission='view',
-    xhr=True,
-    renderer='json')
-def cycles_json(context, request):
-    """
-    Searchs for cycles
-    """
-
-    schema = Schema({
-        Required('q', default=''): lambda v: v.strip(),
-        Required('ids', default=[]): [int],
-        Extra: object
-        })
-
-    try:
-        data = schema(request.GET.mixed())
-    except MultipleInvalid as e:
-        raise HTTPBadRequest(json=[str(m) for m in e.errors])
-
-    q, ids = data['q'], data['ids']
-
-    def query_cycles():
-        query = (
-            Session.query(models.Cycle)
-            .join(models.Cycle.study))
-        if ids:
-            query = query.filter(models.Cycle.id.in_(ids))
-        elif q:
-            query = query.filter(models.Cycle.title.ilike('%%%s%%' % q))
-        query = (
-            query
-            .order_by(models.Study.title, models.Cycle.week)
-            .limit(25))
-        return query
-
-    return {
-        'cycles': [] if not (q or ids) else [{
-            'id': cycle.id,
-            'title': cycle.title
-            } for cycle in query_cycles()]}
 
 
 @view_config(
@@ -148,6 +103,43 @@ def view_json(context, request):
 
 
 @view_config(
+    route_name='visits_cycles',
+    permission='view',
+    xhr=True,
+    renderer='json')
+def cycles_json(context, request):
+    """
+    AJAX handler for cycle field options
+    """
+    data = {'cycles': []}
+
+    query = (
+        Session.query(models.Cycle)
+        .join(models.Cycle.study))
+
+    if 'ids' in request.GET:
+        query = query.filter(models.Cycle.id.in_(
+            list(map(int, request.GET.getall('ids')))))
+    elif 'q' in request.GET:
+        query = query.filter(
+            models.Cycle.title.ilike(u'%%%s%%' % request.GET['q']))
+    else:
+        return data
+
+    query = (
+        query
+        .order_by(models.Study.title, models.Cycle.week)
+        .limit(25))
+
+    data['cycles'] = [{
+        'id': cycle.id,
+        'title': cycle.title
+        } for cycle in query]
+
+    return data
+
+
+@view_config(
     route_name='visits',
     permission='view',
     request_method='GET',
@@ -155,14 +147,17 @@ def view_json(context, request):
     xhr=True,
     renderer='json')
 def validate_cycles(context, request):
+    """
+    AJAX handler for validating cycles field
+    """
     target = 'cycles'
     schema = VisitSchema(context, request)
     key = next(key for key in six.iterkeys(schema.schema)
                if str(key) == target)
     try:
-        schema.schema[key](request.GET[target].split(','))
+        schema.schema[key](request.GET.getall(target))
     except MultipleInvalid as e:
-        return str(e.message)
+        return str(e.msg)
     return True
 
 
@@ -209,7 +204,8 @@ def edit_json(context, request):
         CurrentSchema = orm.aliased(models.Schema)
         schemata_query = (
             Session.query(models.Schema)
-            .join(models.Cycle, models.Cycle.schemata)
+            .select_from(models.Cycle)
+            .join(models.Cycle.schemata)
             .filter(models.Schema.publish_date <= data['visit_date'])
             .filter(models.Schema.publish_date == (
                 Session.query(sa.func.max(CurrentSchema.publish_date))
@@ -221,13 +217,11 @@ def edit_json(context, request):
         if isinstance(context, models.Visit):
             # Ignore already-added schemata
             schemata_query = schemata_query.filter(
-                ~model.Schema.name.in_(
+                ~models.Schema.name.in_(
                     [entity.schema.name for entity in visit.entities]))
 
         for schema in schemata_query:
-            visit.entities.append(model.Entity(
-                name=str(uuid4()),
-                title=schema.title,
+            visit.entities.add(models.Entity(
                 schema=schema,
                 collect_date=data['visit_date'],
                 state=default_state))
@@ -235,6 +229,23 @@ def edit_json(context, request):
     Session.flush()
 
     return view_json(visit, request)
+
+
+@view_config(
+    route_name='visit',
+    permission='delete',
+    request_method='DELETE',
+    renderer='json')
+def delete_json(context, request):
+    check_csrf_token(request)
+    list(map(Session.delete, context.entities))
+    Session.delete(context)
+    Session.flush()
+    request.session.flash(_(
+        u'Sucessfully deleted ${visit_date}',
+        mapping={'visit_date': context.visit_date}))
+    return {'__next__': request.route_path('patient',
+                                           patient=context.patient.pid)}
 
 
 def VisitSchema(context, request):
@@ -308,7 +319,7 @@ def unique_visit_date(context, request):
             Session.query(models.Visit)
             .filter_by(visit_date=value))
         if isinstance(context, models.Visit):
-            exists_query = exists_query.filter(models.Visits.id != context.id)
+            exists_query = exists_query.filter(models.Visit.id != context.id)
         exists, = Session.query(exists_query.exists()).one()
         if exists:
             raise Invalid(lz.translate(_(u'Visit already exists')))
