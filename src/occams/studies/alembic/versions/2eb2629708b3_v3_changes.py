@@ -29,6 +29,7 @@ def upgrade():
     cleanup_study()
     cleanup_cycle()
     cleanup_visit()
+    cleanup_entity()
     fix_numeric_choice_names()
     case_insensitive_names()
     merge_integer_decimal()
@@ -421,6 +422,13 @@ def cleanup_visit():
         'uq_visit_patient_id_visit_date',
         'visit',
         ['patient_id', 'visit_date'])
+
+
+def cleanup_entity():
+    for table_name in ('entity', 'entity_audit'):
+        op.drop_column(table_name, 'name')
+        op.drop_column(table_name, 'title')
+        op.drop_column(table_name, 'description')
 
 
 def alter_enum(name, new_values, cols, new_name=None):
