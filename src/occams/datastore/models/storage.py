@@ -117,7 +117,7 @@ class State(Model, Referenceable, Describeable, Modifiable, Auditable):
         return (UniqueConstraint('name'),)
 
 
-class Entity(Model, Referenceable, Describeable, Modifiable, Auditable):
+class Entity(Model, Referenceable, Modifiable, Auditable):
     """
     An object that describes how an EAV object is generated.
     """
@@ -171,7 +171,6 @@ class Entity(Model, Referenceable, Describeable, Modifiable, Auditable):
                 refcolumns=['state.id'],
                 name='fk_%s_state_id' % cls.__tablename__,
                 ondelete='CASCADE'),
-            UniqueConstraint('schema_id', 'name'),
             Index('ix_%s_schema_id' % cls.__tablename__, 'schema_id'),
             Index('ix_%s_state_id' % cls.__tablename__, 'state_id'),
             Index('ix_%s_collect_date' % cls.__tablename__, 'collect_date'))

@@ -329,7 +329,7 @@ def test_build_report_scalar_values():
     Session.flush()
 
     # add some entries for the schema
-    entity1 = models.Entity(schema=schema1, name=u'Foo', title=u'')
+    entity1 = models.Entity(schema=schema1)
     entity1['a'] = u'foovalue'
     Session.add(entity1)
     Session.flush()
@@ -370,7 +370,7 @@ def test_build_report_datetime():
     Session.flush()
 
     # add some entries for the schema
-    entity1 = models.Entity(schema=schema1, name=u'Foo', title=u'')
+    entity1 = models.Entity(schema=schema1)
     entity1['a'] = date(1976, 7, 4)
     Session.add(entity1)
     Session.flush()
@@ -433,7 +433,7 @@ def test_build_report_choice_types():
     Session.add(schema1)
     Session.flush()
 
-    entity1 = models.Entity(schema=schema1, name=u'Foo', title=u'')
+    entity1 = models.Entity(schema=schema1)
     entity1['a'] = u'002'
     Session.add(entity1)
     Session.flush()
@@ -531,7 +531,7 @@ def test_build_report_expand_none_selected():
     Session.add(schema1)
     Session.flush()
 
-    entity1 = models.Entity(schema=schema1, name=u'Foo', title=u'')
+    entity1 = models.Entity(schema=schema1)
     Session.add(entity1)
     Session.flush()
 
@@ -655,7 +655,7 @@ def test_build_report_context():
     Session.add(schema1)
     Session.flush()
 
-    entity1 = models.Entity(schema=schema1, name=u'Foo', title=u'')
+    entity1 = models.Entity(schema=schema1)
     entity1['a'] = u'002'
     Session.add(entity1)
     Session.flush()
@@ -751,7 +751,7 @@ def test_build_report_ignore_private():
     Session.flush()
 
     # add some entries for the schema
-    entity1 = models.Entity(schema=schema1, name=u'Foo', title=u'')
+    entity1 = models.Entity(schema=schema1)
     entity1['name'] = u'Jane Doe'
     Session.add(entity1)
     Session.flush()

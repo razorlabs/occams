@@ -38,7 +38,7 @@ def test_state_entity_relationship():
     schema = models.Schema(name=u'Foo', title=u'Foo',
                            publish_date=date(2000, 1, 1))
     pending_entry = models.State(name=u'pending-entry', title=u'Pending Entry')
-    entity = models.Entity(schema=schema, name='foo', title=u'Foo')
+    entity = models.Entity(schema=schema)
     Session.add_all([pending_entry, entity])
     Session.flush()
 
@@ -62,7 +62,7 @@ def test_entity_add_unpublished_schema():
     from occams.datastore.exc import InvalidEntitySchemaError
 
     schema = models.Schema(name=u'Foo', title=u'')
-    entity = models.Entity(schema=schema, name=u'Foo', title=u'')
+    entity = models.Entity(schema=schema)
     Session.add(entity)
     with assert_raises(InvalidEntitySchemaError):
         Session.flush()
@@ -80,7 +80,7 @@ def test_entity_default_collect_date():
 
     schema = models.Schema(name=u'Foo', title=u'',
                            publish_date=date(2000, 1, 1))
-    entity = models.Entity(schema=schema, name=u'Foo', title=u'')
+    entity = models.Entity(schema=schema)
     Session.add(entity)
     Session.flush()
     assert_equals(date.today(), entity.collect_date)
@@ -89,8 +89,6 @@ def test_entity_default_collect_date():
     collect_date = date(2010, 9, 1)
     entity = models.Entity(
         schema=schema,
-        name=u'Entry 2',
-        title=u'Entry 2',
         collect_date=collect_date)
     Session.add(entity)
     Session.flush()
@@ -141,7 +139,7 @@ def check_entity_types(type, simple, update, collection):
         attributes={
             's1': models.Attribute(
                 name='s1', title=u'Section 1', type='section', order=1)})
-    entity = models.Entity(schema=schema, name=u'Foo', title=u'')
+    entity = models.Entity(schema=schema)
     Session.add(entity)
     Session.flush()
 
@@ -222,7 +220,7 @@ def test_entity_force_date():
                            publish_date=date(2000, 1, 1))
     s1 = models.Attribute(
         schema=schema, name='s1', title=u'Section 1', type='section', order=0)
-    entity = models.Entity(schema=schema, name=u'Foo', title=u'')
+    entity = models.Entity(schema=schema)
 
     # Do simple values
     simpleName = 'choicesimple'
@@ -253,7 +251,7 @@ def test_entity_choices():
                            publish_date=date(2000, 1, 1))
     s1 = models.Attribute(
         schema=schema, name='s1', title=u'Section 1', type='section', order=0)
-    entity = models.Entity(schema=schema, name=u'Foo', title=u'')
+    entity = models.Entity(schema=schema)
     Session.add(entity)
     Session.flush()
 
@@ -315,7 +313,7 @@ def test_entity_blob_type():
     schema.attributes['theblob'] = models.Attribute(
         parent_attribute=s1,
         name=u'theblob', title=u'', type='blob', order=0)
-    entity = models.Entity(schema=schema, name='blobish', title=u'')
+    entity = models.Entity(schema=schema)
     contents = os.urandom(1000)
     entity['theblob'] = contents
     Session.add(entity)
@@ -369,7 +367,7 @@ def check_value_min_constraint(type_, limit, below, equal, over):
         name=u'Foo', title=u'', publish_date=date(2000, 1, 1))
     s1 = models.Attribute(
         schema=schema, name='s1', title=u'Section 1', type='section', order=0)
-    entity = models.Entity(schema=schema, name=u'Foo', title=u'')
+    entity = models.Entity(schema=schema)
     Session.add(entity)
     Session.flush()
 
@@ -433,7 +431,7 @@ def check_value_max_constraint(type_, limit, below, equal, over):
                            publish_date=date(2000, 1, 1))
     s1 = models.Attribute(
         schema=schema, name='s1', title=u'Section 1', type='section', order=0)
-    entity = models.Entity(schema=schema, name=u'Foo', title=u'')
+    entity = models.Entity(schema=schema)
     Session.add(entity)
     Session.flush()
 
@@ -483,7 +481,7 @@ def test_validator_constraint():
     Session.add(schema)
     Session.flush()
 
-    entity = models.Entity(schema=schema, name=u'Foo', title=u'')
+    entity = models.Entity(schema=schema)
     Session.add(entity)
 
     entity['test'] = None
@@ -520,7 +518,7 @@ def test_choice_constraint():
     Session.add(schema)
     Session.flush()
 
-    entity = models.Entity(schema=schema, name=u'FooEntry', title=u'')
+    entity = models.Entity(schema=schema)
     Session.add(entity)
 
     entity['test'] = None
@@ -538,154 +536,3 @@ def test_choice_constraint():
 
     with assert_raises(ConstraintError):
         entity['test'] = u'999'
-
-
-TestModel = models.ModelClass('TestModel')
-
-
-class SampleClass1(TestModel, models.HasEntities):
-    __tablename__ = 'sampleclass1'
-
-    id = Column(Integer, primary_key=True)
-
-    name = Column(String, nullable=False)
-
-
-class SampleClass2(TestModel, models.HasEntities):
-    __tablename__ = 'sampleclass2'
-
-    id = Column(Integer, primary_key=True)
-
-    name = Column(String, nullable=False)
-
-
-def setup_module():
-    TestModel.metadata.create_all(Session.bind)
-
-
-def teardown_module():
-    TestModel.metadata.drop_all(Session.bind)
-
-
-@with_setup(begin_func, rollback_func)
-def test_has_entities():
-    """
-    It should allow any table to be associated with entities (yuk!)
-    """
-    from datetime import date
-    from tests import (
-        assert_is_not_none, assert_equals, assert_items_equal)
-
-    # Sample schemata
-    schemaA = models.Schema(name=u'A', title=u'',
-                            publish_date=date(2000, 1, 1))
-    schemaB = models.Schema(name=u'B', title=u'',
-                            publish_date=date(2000, 1, 1))
-
-    Session.add_all([
-        SampleClass1(
-            name='Foo',
-            entities=[
-                models.Entity(schema=schemaA, name='foo', title=u''),
-                models.Entity(schema=schemaA, name='bar', title=u''),
-                models.Entity(schema=schemaB, name='baz', title=u'')]),
-        SampleClass2(
-            name='Bar',
-            entities=[
-                models.Entity(schema=schemaA, name='caz', title=u''),
-                models.Entity(schema=schemaB, name='raz', title=u'')])])
-
-    Session.flush()
-
-    # Verify that the data was correctly associated
-    sc1 = Session.query(SampleClass1).filter_by(name='Foo').one()
-    assert_equals(3, len(sc1.entities))
-    assert_items_equal(['foo', 'bar', 'baz'], [e.name for e in sc1.entities])
-
-    # Add one more to verify collection_class is of type "set"
-    sc1.entities.add(models.Entity(schema=schemaB, name='car', title=u''),)
-    Session.flush()
-    assert_items_equal(['foo', 'bar', 'baz', 'car'],
-                       [e.name for e in sc1.entities])
-
-    sc2 = Session.query(SampleClass2).filter_by(name='Bar').one()
-    assert_equals(2, len(sc2.entities))
-    assert_items_equal(['raz', 'caz'], [e.name for e in sc2.entities])
-
-    # I want a SampleClass1 that contains specific schemata
-    query = (
-        Session.query(SampleClass1)
-        .filter(SampleClass1.name == 'Foo')
-        .filter(SampleClass1.entities.any(models.Schema.name == u'A')))
-
-    sc1 = query.one()
-    assert_is_not_none(sc1)
-
-    # Now suppose that we only have an fooEntity and want to know its parents
-    # Example: get all the SomeClassX references of an fooEntity
-
-    fooEntity = Session.query(models.Entity).filter_by(name=u'foo').one()
-
-    sc1list = [c.sampleclass1_parent.name
-               for c in fooEntity.contexts if c.sampleclass1_parent]
-    assert_items_equal(['Foo'], sc1list)
-
-    # Querying them directly
-    # There is no clean way of querying for an fooEntity by context in
-    # a generic association setting, as it would have to know about
-    # all ``HasEntities`` classes that reference it
-    sc1EntitiesQuery = (
-        Session.query(models.Entity)
-        .join(models.Entity.contexts)
-        .filter(models.Context.external == u'sampleclass1')
-        .join(SampleClass1, (SampleClass1.id == models.Context.key))
-        .filter(SampleClass1.name == 'Foo'))
-
-    entitylist = [e.name for e in sc1EntitiesQuery]
-    assert_items_equal(['foo', 'bar', 'car', 'baz'], entitylist)
-
-    # Now try adding the fooEntity to an additional context
-    Session.add(SampleClass1(name='Jar', entities=[fooEntity]))
-    Session.flush()
-
-    sc1list = [c.sampleclass1_parent.name
-               for c in fooEntity.contexts if c.sampleclass1_parent]
-    assert_items_equal(['Foo', 'Jar'], sc1list)
-
-    # But what if you want to query them directly? Same as above, query
-    # for a SampleClass that contains the specific schemata you want
-    hasFooQuery = (
-        Session.query(SampleClass1)
-        .filter(SampleClass1.entities.any(models.Entity.name == u'foo')))
-
-    sc1list = [i.name for i in hasFooQuery]
-    assert_items_equal(['Foo', 'Jar'], sc1list)
-
-    # Now try deleting a context object
-    sc1 = Session.query(SampleClass1).filter_by(name=u'Foo').one()
-    Session.delete(sc1)
-    Session.flush()
-
-    assert_equals(0, sc1EntitiesQuery.count())
-
-    # Make sure we didn't accidentally remote the data from 'Jar'
-    sc1list = [i.name for i in hasFooQuery]
-    assert_items_equal(['Jar'], sc1list)
-
-    # Double check just in case
-    count = (
-        Session.query(models.Context)
-        .filter_by(external='sampleclass1')
-        .count())
-    assert_equals(count, 1)
-
-    count = (
-        Session.query(models.Entity)
-        .filter_by(name=u'foo')
-        .count())
-    assert_equals(1, count)
-
-    # TODO Currently there is absolutely no way to remove orphans. The
-    # application must do this manually. This is because assocation proxies
-    # cannot delete orphans and the way the relationships are setup, it
-    # does not allow this..
