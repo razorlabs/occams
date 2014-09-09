@@ -1,2 +1,8 @@
+import mock
 
-import occams.studies.views.study
+from tests import IntegrationFixture
+
+
+#@mock.patch('occams.studies.views.study.check_csrf_token')
+#class TestAddJson(IntegrationFixture):
+

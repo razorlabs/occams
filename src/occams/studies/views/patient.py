@@ -1,7 +1,6 @@
 from datetime import datetime
 
 from pyramid.httpexceptions import HTTPBadRequest
-from pyramid.i18n import get_localizer
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 import six
@@ -34,7 +33,8 @@ def search_json(context, request):
 
     schema = Schema({
         Required('query', default=''): All(
-            Coearce(lambda v: v and str(v).strip()),
+            Coerce(six.binary_types),
+            lambda v: v.strip(),
             # Avoid gigantic queries
             Length(max=100)),
         Required('offset', default=0): All(Coerce(int), Clamp(min=0)),
@@ -211,10 +211,9 @@ def edit_json(context, request):
 def delete_json(context, request):
     check_csrf_token(request)
     patient = context
-    lz = get_localizer(request)
     Session.delete(patient)
     Session.flush()
-    msg = lz.translate(
+    msg = request.localizer.translate(
         _('Patient ${pid} was successfully removed'),
         mapping={'pid': patient.pid})
     request.session.flash(msg, 'success')
@@ -231,7 +230,7 @@ def PatientSchema(context, request):
         Required('references', default=[]): [All({
             Required('reference_type'): All(
                 Coerce(int), coerce_reference_type(context, request)),
-            Required('reference_number'): Coerce(str),
+            Required('reference_number'): Coerce(six.binary_type),
             Extra: object
             },
             check_reference_format(context, request),
@@ -246,11 +245,10 @@ def check_reference_format(context, request):
     Returns a validator that checks number with the pattern the type expects
     """
     def validator(value):
-        lz = get_localizer(request)
         type_ = value['reference_type']
         number = value['reference_number']
         if not type_.check_reference_number(number):
-            msg = lz.translate(
+            msg = request.localizer.translate(
                 _(u'${type} ${number} is not a valid format'),
                 mapping={'type': type_.title, 'number': number})
             raise Invalid(msg, path=['reference_number'])
@@ -263,8 +261,6 @@ def check_unique_reference(context, request):
     Returns a validator that checks the reference number is not already taken
     """
     def validator(value):
-        lz = get_localizer(request)
-
         reference_query = (
             Session.query(models.PatientReference)
             .filter_by(
@@ -280,7 +276,7 @@ def check_unique_reference(context, request):
 
         if reference:
             # Need to translate before sending back to client
-            msg = lz.translate(
+            msg = request.localizer.translate(
                 _(u'${type} ${number} is already assigned to ${pid}'),
                 mapping={
                     'type': reference.reference_type.title,
@@ -298,12 +294,12 @@ def coerce_site(context, request):
     Also, checks if the user has access to use the site.
     """
     def validator(value):
-        lz = get_localizer(request)
         study = Session.query(models.Site).get(value)
         if study is None:
-            raise Invalid(lz.translate(_(u'Site does not exist')))
+            msg = _(u'Site does not exist')
+            raise Invalid(request.localizer.translate(msg))
         if not request.has_permission('view', study):
-            raise Invalid(lz.translate(
+            raise Invalid(request.localizer.translate(
                 _(u'You do not have access to {site}'),
                 mapping={'site': study.title}))
         return study
@@ -315,9 +311,9 @@ def coerce_reference_type(context, request):
     Returns a validator to coerce a reference type id to a type object
     """
     def validator(value):
-        lz = get_localizer(request)
         reftype = Session.query(models.ReferenceType).get(value)
         if reftype is None:
-            raise Invalid(lz.translate(_(u'Reference type does not exist')))
+            msg = _(u'Reference type does not exist')
+            raise Invalid(request.localizer.translate(msg))
         return reftype
     return validator

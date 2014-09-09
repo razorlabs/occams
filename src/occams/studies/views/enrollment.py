@@ -1,5 +1,4 @@
 from pyramid.httpexceptions import HTTPBadRequest
-from pyramid.i18n import get_localizer
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 
@@ -7,7 +6,7 @@ from sqlalchemy import orm
 from voluptuous import *  # NOQA
 
 from .. import _, models, Session
-from ..validators import Date
+from ..validators import Date, DatabaseEntry
 
 
 @view_config(
@@ -138,7 +137,11 @@ def delete_json(context, request):
 
 def EnrollmentSchema(context, request):
     return Schema(All({
-        Required('study'): All(Coerce(int), coerce_study(context, request)),
+        Required('study'): All(
+            DatabaseEntry(models.Study,
+                          msg=_(u'Study does not exist'),
+                          localizer=request.localizer),
+            check_cannot_edit(context, request)),
         Required('consent_date'): Date(),
         Required('latest_consent_date'): Date(),
         Required('reference_number', default=None): Coerce(str),
@@ -149,20 +152,15 @@ def EnrollmentSchema(context, request):
         check_unique(context, request)))
 
 
-def coerce_study(context, request):
+def check_cannot_edit(context, request):
     """
-    Returns a validator that extracts a study object
+    Returns a validator that checks that an enrollment study cannot be changed.
     """
     def validator(value):
-        lz = get_localizer(request)
-        study = Session.query(models.Study).get(value)
-        if study is None:
-            raise Invalid(lz.translate(_(
-                u'Study does not exist.')))
-        if isinstance(context, models.Enrollment) and context.study != study:
-            raise Invalid(lz.translate(_(
+        if isinstance(context, models.Enrollment) and context.study != value:
+            raise Invalid(request.localizer.translate(_(
                 u'Cannot change an enrollment\'s study.')))
-        return study
+        return value
     return validator
 
 
@@ -171,7 +169,7 @@ def check_timeline(context, request):
     Returns a validator that checks the enrollment timeline
     """
     def validator(value):
-        lz = get_localizer(request)
+        lz = request.localizer
         start = value['study'].start_date
         stop = value['study'].stop_date
         consent = value['consent_date']
@@ -198,7 +196,7 @@ def check_reference(context, request):
     Returns a validator that checks the reference number is valid for the study
     """
     def validator(value):
-        lz = get_localizer(request)
+        lz = request.localizer
         study = value['study']
         number = value['reference_number']
         if number is None:
@@ -223,7 +221,7 @@ def check_unique(context, request):
     Ensures the patient is not already enrolled (via consent date)
     """
     def validator(value):
-        lz = get_localizer(request)
+        lz = request.localizer
         if isinstance(context, models.EnrollmentFactory):
             patient = context.__parent__
         else:

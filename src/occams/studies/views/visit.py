@@ -1,4 +1,3 @@
-from pyramid.i18n import get_localizer
 from pyramid.httpexceptions import HTTPBadRequest
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
@@ -8,7 +7,7 @@ from sqlalchemy import orm
 from voluptuous import *  # NOQA
 
 from .. import _, models, Session
-from ..validators import Date
+from ..validators import Date, DatabaseEntry
 
 
 @view_config(
@@ -249,14 +248,17 @@ def delete_json(context, request):
 
 
 def VisitSchema(context, request):
-    lz = get_localizer(request)
     return Schema({
         Required('cycles'): All(
-            [All(coerce_cycle(context, request),
+            [All(DatabaseEntry(models.Cycle,
+                               path=['cycle'],
+                               msg=_(u'Specified cycle does not exist'),
+                               localizer=request.localizer),
                  unique_cycle(context, request))],
             Length(
                 min=1,
-                msg=lz.translate(_(u'Must select at least one cycle')))),
+                msg=request.localizer.translate(
+                    _(u'Must select at least one cycle')))),
         Required('visit_date'):
             All(Date(), unique_visit_date(context, request)),
         Required('include_forms', default=False): Boolean(),
@@ -265,27 +267,11 @@ def VisitSchema(context, request):
         })
 
 
-def coerce_cycle(context, request):
-    """
-    Returns a validator that converts an input value into a cycle instance
-    """
-    def validator(value):
-        lz = get_localizer(request)
-        cycle = Session.query(models.Cycle).get(value)
-        if not cycle:
-            raise Invalid(lz.translate(
-                _(u'Specified cycle does not exist')),
-                path=['cycle'])
-        return cycle
-    return validator
-
-
 def unique_cycle(context, request):
     """
     Returns a validator callback to ensure the cycle has not already been used
     """
     def validator(value):
-        lz = get_localizer(request)
         if isinstance(context, models.Visit):
             patient = context.patient
         else:
@@ -299,7 +285,7 @@ def unique_cycle(context, request):
             taken_query = taken_query.filter(models.Visit.id != context.id)
         taken = taken_query.first()
         if taken:
-            raise Invalid(lz.translate(
+            raise Invalid(request.localizer.translate(
                 _(u'\'${cycle}\' is already used by visit ${visit_date}'),
                 mapping={
                     'cycle': value.title,
@@ -314,7 +300,6 @@ def unique_visit_date(context, request):
     Returns a validator callback to check for date uniqueness
     """
     def validator(value):
-        lz = get_localizer(request)
         exists_query = (
             Session.query(models.Visit)
             .filter_by(visit_date=value))
@@ -322,6 +307,7 @@ def unique_visit_date(context, request):
             exists_query = exists_query.filter(models.Visit.id != context.id)
         exists, = Session.query(exists_query.exists()).one()
         if exists:
-            raise Invalid(lz.translate(_(u'Visit already exists')))
+            raise Invalid(request.localizer.translate(
+                _(u'Visit already exists')))
         return value
     return validator
