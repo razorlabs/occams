@@ -324,10 +324,10 @@ class TestEditJson(IntegrationFixture):
             consent_date=date.today())
 
         cycle1 = models.Cycle(name='week-1', title=u'', week=1)
-        cycle1.schemata.append(form1)
+        cycle1.schemata.add(form1)
 
         cycle2 = models.Cycle(name='week-2', title=u'', week=2)
-        cycle2.schemata.append(form2)
+        cycle2.schemata.add(form2)
 
         study.cycles.append(cycle1)
         study.cycles.append(cycle2)

@@ -1,4 +1,4 @@
-from pyramid.httpexceptions import HTTPBadRequest
+from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPOk
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 from sqlalchemy import func, orm
@@ -7,6 +7,7 @@ from voluptuous import *  # NOQA
 
 from .. import _, log, models, Session
 from . import cycle as cycle_views
+from ..validators import Date, DatabaseEntry
 
 
 @view_config(
@@ -74,45 +75,6 @@ def view_json(context, request):
         'cycles': [
             cycle_views.view_json(cycle, request) for cycle in study.cycles]
         }
-
-
-@view_config(
-    route_name='study_schedule',
-    permission='edit',
-    request_method='PUT',
-    xhr=True,
-    renderer='json')
-def edit_schedule_json(context, request):
-    check_csrf_token(request)
-
-    schema = Schema(All({
-        'schema': DatabaseEntry(
-            models.Schema,
-            msg=_(u'Schema does not exist'),
-            localizer=request.localizer),
-        'cycle': DatabaseEntry(
-            models.Cycle,
-            msg=_(u'Cycle does not exist'),
-            localizer=request.localizer),
-        'enabled': Bool(),
-        Extra: object,
-        },
-        check_schema_in_study(context, request)))
-
-    try:
-        data = schema(request.json_body)
-    except MultipleInvalid as e:
-        raise HTTPBadRequest(json={
-            'validation_errors': [m.error_message for m in e.errors]})
-
-    if data['enabled'] and data['schema'] not in data['cycle'].schemata:
-        data['cycle'].schemata.append(data['schema'])
-    elif not data['enabled'] and data['schema'] in data['cycle'].schemata:
-        data['cycle'].schemata.remove(data['schema'])
-    else:
-        log.warn('Didn\'t do anything')
-
-    return HTTPOk
 
 
 @view_config(
@@ -193,9 +155,39 @@ def edit_json(context, request):
 
     Session.flush()
 
-    request.session.flash(_(u'New study added!', 'success'))
+    if isinstance(context, models.StudyFactory):
+        request.session.flash(_(u'New study added!', 'success'))
 
     return view_json(study, request)
+
+
+@view_config(
+    route_name='study',
+    permission='delete',
+    request_method='DELETE',
+    xhr=True,
+    renderer='json')
+def delete_json(context, request):
+    check_csrf_token(request)
+
+    (has_enrollments,) = (
+        Session.query(
+            Session.query(models.Enrollment)
+            .filter_by(study=context)
+            .exists())
+        .one())
+
+    if has_enrollments and not request.has_permission('admin', context):
+        raise HTTPForbidden(_(u'Cannot delete a study with enrollments'))
+
+    Session.delete(context)
+    Session.flush()
+
+    request.session.flash(
+        _(u'Successfully removed "${study}"', mapping={
+            'study': context.title}))
+
+    return {'__next__': request.route_path('studies')}
 
 
 @view_config(
@@ -215,20 +207,12 @@ def add_schema_json(context, request):
             localizer=request.localizer)})
 
     try:
-        data = schema(requst.json_body)
+        data = schema(request.json_body)
     except MultipleInvalid as e:
         raise HTTPBadRequest(json={
             'validation_errors': [m.error_message for m in e.errors]})
 
-    query = (
-        Session.query(models.Schema)
-        .select_from(models.Study)
-        .filter(models.Study.schemata.any(id=data['schema'].id)))
-
-    (exists,) = Session.query(query.exists()).one()
-
-    if not exists:
-        context.schemata.append(data['schema'])
+    context.schemata.add(data['schema'])
 
     return HTTPOk()
 
@@ -266,6 +250,45 @@ def delete_schema_json(context, request):
     return HTTPOk()
 
 
+@view_config(
+    route_name='study_schedule',
+    permission='edit',
+    request_method='PUT',
+    xhr=True,
+    renderer='json')
+def edit_schedule_json(context, request):
+    check_csrf_token(request)
+
+    schema = Schema(All({
+        'schema': DatabaseEntry(
+            models.Schema,
+            msg=_(u'Schema does not exist'),
+            localizer=request.localizer),
+        'cycle': DatabaseEntry(
+            models.Cycle,
+            msg=_(u'Cycle does not exist'),
+            localizer=request.localizer),
+        'enabled': Bool(),
+        Extra: object,
+        },
+        check_schema_in_study(context, request)))
+
+    try:
+        data = schema(request.json_body)
+    except MultipleInvalid as e:
+        raise HTTPBadRequest(json={
+            'validation_errors': [m.error_message for m in e.errors]})
+
+    if data['enabled'] and data['schema'] not in data['cycle'].schemata:
+        data['cycle'].schemata.append(data['schema'])
+    elif not data['enabled'] and data['schema'] in data['cycle'].schemata:
+        data['cycle'].schemata.remove(data['schema'])
+    else:
+        log.warn('Didn\'t do anything')
+
+    return HTTPOk
+
+
 def check_schema_in_study(context, request):
     """
     Returns a validator that checks that the schema is part of the study
@@ -294,7 +317,7 @@ def StudySchema(context, request):
             check_unique_name(context, request)),
         'title': All(Coerce(six.text_type), Length(min=3, max=32)),
         'code': All(Coerce(six.binary_type), Length(min=3, max=8)),
-        'short_title': All(Coerce(six.binary_type), Length(min=3, max=8)),
+        'short_title': All(Coerce(six.text_type), Length(min=3, max=8)),
         'consent_date': Date(),
         Required('start_date', default=None): Date(),
         Required('stop_date', default=None): Date(),
@@ -308,7 +331,7 @@ def check_unique_name(context, request):
     def validator(value):
         query = Session.query(models.Study).filter_by(name=value)
         if isinstance(context, models.Study):
-            query = query.filter_by(models.Study.id != value.id)
+            query = query.filter(models.Study.id != context.id)
         (exists,) = Session.query(query.exists()).one()
         if exists:
             msg = _('"${name}" already exists')

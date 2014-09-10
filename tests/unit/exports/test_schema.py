@@ -52,8 +52,6 @@ class TestSchemaPlan(IntegrationFixture):
                     order=0,
                 )})
         entity = models.Entity(
-            name=u'sample',
-            title=u'',
             collect_date=date.today(),
             schema=schema)
         study = models.Study(
@@ -100,8 +98,6 @@ class TestSchemaPlan(IntegrationFixture):
                     order=0,
                 )})
         entity = models.Entity(
-            name=u'contact_entry',
-            title=u'',
             schema=schema,
             collect_date=date.today())
         patient = models.Patient(
@@ -144,8 +140,6 @@ class TestSchemaPlan(IntegrationFixture):
                     order=0,
                 )})
         entity = models.Entity(
-            name=u'termination_record',
-            title=u'',
             schema=schema,
             collect_date=date.today())
         patient = models.Patient(
@@ -200,8 +194,6 @@ class TestSchemaPlan(IntegrationFixture):
                     order=0,
                 )})
         entity = models.Entity(
-            name=u'sample',
-            title=u'',
             collect_date=date.today(),
             schema=schema)
         patient = models.Patient(
@@ -272,8 +264,6 @@ class TestSchemaPlan(IntegrationFixture):
                     order=0,
                 )})
         entity = models.Entity(
-            name=u'sample',
-            title=u'',
             collect_date=date.today(),
             schema=schema)
         patient = models.Patient(

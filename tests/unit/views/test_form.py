@@ -34,7 +34,7 @@ class TestAddJson(IntegrationFixture):
             start_date=date.today(),
             consent_date=date.today(),
             cycles=[cycle],
-            schemata=[schema])
+            schemata=set([schema]))
 
         site = models.Site(name=u'ucsd', title=u'UCSD')
 
@@ -82,7 +82,7 @@ class TestAddJson(IntegrationFixture):
             start_date=date.today(),
             consent_date=date.today(),
             cycles=[cycle],
-            schemata=[schema])
+            schemata=set([schema]))
 
         site = models.Site(name=u'ucsd', title=u'UCSD')
 
@@ -183,7 +183,7 @@ class TestDeleteJson(IntegrationFixture):
             start_date=date.today(),
             consent_date=date.today(),
             cycles=[cycle],
-            schemata=[schema])
+            schemata=set([schema]))
 
         site = models.Site(name=u'ucsd', title=u'UCSD')
 

@@ -214,7 +214,7 @@ class Study(Base, Referenceable, Describeable, Modifiable, Auditable):
     short_title = sa.Column(sa.Unicode, nullable=False)
 
     code = sa.Column(
-        sa.Unicode,
+        sa.String,
         nullable=False,
         doc='The Code for this study. Multiple studies may share the same '
             'code, if they are different arms of the same study.')
@@ -271,7 +271,10 @@ class Study(Base, Referenceable, Describeable, Modifiable, Auditable):
 
     # arms backref'd from arms
 
-    schemata = orm.relationship(Schema, secondary=study_schema_table)
+    schemata = orm.relationship(
+        Schema,
+        secondary=study_schema_table,
+        collection_class=set)
 
     def __getitem__(self, key):
         if key == 'cycles':
@@ -359,7 +362,10 @@ class Cycle(Base, Referenceable, Describeable, Modifiable, Auditable):
 
     # visits backref'd from visit
 
-    schemata = orm.relationship(Schema, secondary=cycle_schema_table)
+    schemata = orm.relationship(
+        Schema,
+        secondary=cycle_schema_table,
+        collection_class=set)
 
     @declared_attr
     def __table_args__(cls):
