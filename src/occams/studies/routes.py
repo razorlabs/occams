@@ -27,12 +27,16 @@ def includeme(config):
     config.add_route('reference_types',             '/reference_types')
     config.add_route('reference_type',              '/reference_types/{reference_type}')
 
-    config.add_route('studies',                     '/',                            factory=models.StudyFactory)
-    config.add_route('study',                       '/studies/{study}',             factory=models.StudyFactory, traverse='/{study}')
-    config.add_route('study_progress',              '/studies/{study}/progress',    factory=models.StudyFactory, traverse='/{study}')
+    config.add_route('studies',                     '/',                                factory=models.StudyFactory)
+    config.add_route('study',                       '/studies/{study}',                 factory=models.StudyFactory, traverse='/{study}')
+    config.add_route('study_schedule',              '/studies/{study}/schedule',        factory=models.StudyFactory, traverse='/{study}')
+    config.add_route('study_enrollments',           '/studies/{study}/enrollments',     factory=models.StudyFactory, traverse='/{study}')
+    config.add_route('study_progress',              '/studies/{study}/progress',        factory=models.StudyFactory, traverse='/{study}')
+    config.add_route('study_schemata',              '/studies/{study}/schemata',        factory=models.StudyFactory, traverse='/{study}')
+    config.add_route('study_schema',                '/studies/{study}/schema/{schema}', factory=models.StudyFactory, traverse='/{study}')
 
-    config.add_route('cycles',                      '/studies/{study}/cycles')
-    config.add_route('cycle',                       '/studies/{study}/cycles/{cycle}')
+    config.add_route('cycles',                      '/studies/{study}/cycles',          factory=models.StudyFactory, traverse='/{study}/cycles')
+    config.add_route('cycle',                       '/studies/{study}/cycles/{cycle}',  factory=models.StudyFactory, traverse='/{study}/cycles/{cycle}')
 
     config.add_route('exports',                     '/exports',                         factory=models.ExportFactory)
     config.add_route('exports_checkout',            '/exports/checkout',                factory=models.ExportFactory)

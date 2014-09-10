@@ -1,12 +1,17 @@
-from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden
+from pyramid.httpexceptions import HTTPBadRequest
+from pyramid.session import check_csrf_token
 from pyramid.view import view_config
-from sqlalchemy import func, orm, sql
+import six
 from voluptuous import *  # NOQA
-
 
 from .. import _, models, Session
 
 
+@view_config(
+    route_name='cycle',
+    permission='view',
+    xhr=True,
+    renderer='json')
 def view_json(context, request):
     cycle = context
     return {
@@ -26,44 +31,83 @@ def view_json(context, request):
         }
 
 
-def edit_schemata_json(context, request):
+@view_config(
+    route_name='cycles',
+    permission='add',
+    request_method='POST',
+    xhr=True,
+    renderer='json')
+@view_config(
+    route_name='cycle',
+    permission='edit',
+    request_method='PUT',
+    xhr=True,
+    renderer='json')
+def edit_json(context, request):
     check_csrf_token(request)
 
-    schema = Schema({
-        Required('schemata', default=[]): [
-            DatabaseEntry(
-                models.Schema,
-                path=['schema'],
-                msg=_(u'Schema does not exist'),
-                localizer=request.localizer),
-            check_is_study_schema(context, request),
-            ]})
+    schema = CycleSchema(context, request)
 
     try:
-        data = schema(requst.json_body)
+        data = schema(request.json_body)
     except MultipleInvalid as e:
         raise HTTPBadRequest(json={
             'validation_errors': [m.error_message for m in e.errors]})
 
-    new_ids = set([s.id for s in data['schemata']])
+    if isinstance(context, models.CycleFactory):
+        cycle = models.Cycle(study=context.__parent__)
+        Session.add(cycle)
+    else:
+        cycle = context
 
-    # Remove unused
-    for schema in list(context.schemata):
-        if schema.id not in new_ids:
-            context.schemata.remove(schema)
-        else:
-            new_ids.remove(schema.id)
+    cycle.name = data['name']
+    cycle.title = data['title']
+    cycle.week = data['week']
+    cycle.is_interim = data['is_interim']
 
-    # Update list
-    context.schemata.extend([s for s in data['schemata'] if s.id in new_ids])
+    Session.flush()
 
+    return view_json(cycle, request)
+
+
+@view_config(
+    route_name='cycle',
+    permission='delete',
+    request_method='DELETE',
+    xhr=True,
+    renderer='json')
+def delete_json(context, request):
+    check_csrf_token(request)
+    Session.delete(context)
+    Session.flush()
     return HTTPOk()
 
 
-def check_is_study_schema(context, request):
+def CycleSchema(context, request):
+    return Schema({
+        'name': All(
+            Coerce(six.binary_type),
+            Length(min=3, max=32),
+            check_unique_name(context, request)),
+        'title': All(Coerce(six.text_type), Length(min=3, max=32)),
+        'week': Coerce(int),
+        'is_interim': Bool(),
+        Extra: object})
+
+
+def check_unique_name(context, request):
     """
-    Returns a validator that checks that the schema is part of the study
+    Returns a validator that checks if the cycle name is unique
     """
     def validator(value):
+        query = Session.query(models.Cycle).filter_by(name=name)
+        if isinstance(context, models.Cycle):
+            query = query.filter_by(models.Cycle.id != value.id)
+        (exists,) = Session.query(query.exists()).one()
+        if exists:
+            lz = get_localizer(request)
+            msg = _('"${name}" already exists')
+            mapping = {'name': value}
+            raise Invalid(lz.translate(msg, mapping=mapping))
         return value
     return validator

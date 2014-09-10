@@ -273,6 +273,10 @@ class Study(Base, Referenceable, Describeable, Modifiable, Auditable):
 
     schemata = orm.relationship(Schema, secondary=study_schema_table)
 
+    def __getitem__(self, key):
+        if key == 'cycles':
+            return CycleFactory(self)
+
     def check_reference_number(self, reference_number):
         if not self.reference_pattern:
             return True
@@ -305,6 +309,26 @@ class Study(Base, Referenceable, Describeable, Modifiable, Auditable):
                     OR consent_date <= stop_date)
                 """,
                 name='ck_%s_lifespan' % cls.__tablename__))
+
+
+class CycleFactory(object):
+
+    __acl__ = [
+        (Allow, groups.administrator(), ALL_PERMISSIONS),
+        (Allow, groups.manager(), ('view', 'add')),
+        (Allow, Authenticated, 'view')
+        ]
+
+    def __init__(self, parent):
+        self.__parent__ = parent
+
+    def __getitem__(self, key):
+        try:
+            cycle = Session.query(Cycle).filter_by(id=key).one()
+        except orm.exc.NoResultFound:
+            raise KeyError
+        cycle.__parent__ = self
+        return cycle
 
 
 class Cycle(Base, Referenceable, Describeable, Modifiable, Auditable):

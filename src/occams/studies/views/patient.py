@@ -11,10 +11,7 @@ from voluptuous import *  # NOQA
 from occams.roster import generate
 
 from .. import _, models, Session
-from . import (
-    enrollment as enrollment_views,
-    site as site_views,
-    visit as visit_views)
+from . import enrollment as enrollment_views, visit as visit_views
 
 
 @view_config(
@@ -96,8 +93,12 @@ def view(context, request):
         'view_date': datetime.now()
     }
     request.session.changed()
+
+    sites_query = Session.query(models.Site).order_by(models.Site.title)
+
     return {
-        'available_sites': site_views.list_(None, request)['sites'],
+        'available_sites': [
+            s for s in sites_query if request.has_permission('view', s)],
         'available_reference_types': (
             Session.query(models.ReferenceType)
             .order_by(models.ReferenceType.title.asc())),
