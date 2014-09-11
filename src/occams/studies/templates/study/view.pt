@@ -8,94 +8,39 @@
       <nav metal:use-macro="load: ./panels/nav.pt" />
     </header>
 
-    <div class="row">
-
-      <div class="col-md-3">
-        <div class="panel panel-default">
-          <div class="panel-heading">
-            <h3 class="panel-title" i18n:translate="">PHI eCRFs</h3>
-          </div>
-          <div class="panel-body">
-            <ul class="list-unstyled">
-              <li>Cras justo odio</li>
-              <li>Dapibus ac facilisis in</li>
-              <li>Cras quis porta dolor</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-3">
-        <div class="panel panel-default">
-          <div class="panel-heading">
-            <h3 class="panel-title" i18n:translate="">Consent eCRFs</h3>
-          </div>
-          <div class="panel-body">
-            <ul class="list-unstyled">
-              <li>Cras justo odio</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-3">
-        <div class="panel panel-default">
-          <div class="panel-heading">
-            <h3 class="panel-title" i18n:translate="">Randomization eCRFs</h3>
-          </div>
-          <div class="panel-body">
-            <ul class="list-unstyled">
-              <li>Cras justo odio</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-3">
-        <div class="panel panel-default">
-          <div class="panel-heading">
-            <h3 class="panel-title" i18n:translate="">Termination eCRFs</h3>
-          </div>
-          <div class="panel-body">
-            <ul class="list-unstyled">
-              <li>Cras justo odio</li>
-              <li>Dapibus ac facilisis in</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-    </div><!--! /.row -->
+    <table class="table table-bordered">
+      <tbody>
+        <tr>
+          <td><strong>Randomization eCRFS<strong></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td><strong>Termination eCRFS<strong></td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
 
     <div class="table-responsive table-scrollable">
-      <table
-          id="schedule"
-          class="table table-bordered table-striped table-dimensional">
+      <table class="table table-bordered table-striped table-dimensional">
         <thead>
           <tr>
-            <th class="ecrf"></th>
-            <th tal:repeat="cycle visit.cycles">
-              <span class="rotated-text">
-                <span class="rotated-text__inner">${cycle.title}</span>
-              </span>
-            </th>
+            <th></th>
+            <!-- ko foreach: study.cycles -->
+              <th>
+                <span class="rotated-text">
+                  <span class="rotated-text__inner" data-bind="text: title"></span>
+                </span>
+              </th>
+            <!-- /ko -->
           </tr>
         </thead>
-        <tbody>
-          <tr tal:repeat="ecrf ecrfs">
-            <th class="ecrf"><span>${ecrf.title}</span></th>
-            <!--! The rest of the columns are the cycles,
-                  just loop through them (skip the first since
-                  it's the ecrf) -->
-            <tal:cycles repeat="enabled ecrf">
-              <td tal:condition="not:repeat['enabled'].start">
-                <span tal:condition="enabled" class="glyphicon glyphicon-ok"></span>
-              </td>
-            </tal:cycles>
-          </tr>
-        </tbody>
       </table>
     </div>
+
+    <tal:json define="json import:json">
+      <script id="study-data" type="application/json">${json.dumps(study)}</script>
+    </tal:json>
 
   </metal:content-slot>
 </html>

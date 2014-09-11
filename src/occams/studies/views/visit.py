@@ -81,7 +81,7 @@ def view_json(context, request):
             },
         'visit_date': visit.visit_date.isoformat(),
         'entities': [{
-            '__url__': request.route_path('visit_form',
+            '__url__': request.route_path('form',
                                           patient=visit.patient.id,
                                           visit=visit.visit_date.isoformat(),
                                           form=entity.id),

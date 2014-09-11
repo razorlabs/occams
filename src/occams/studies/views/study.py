@@ -230,6 +230,13 @@ def add_schema_json(context, request):
                 mapping={'schema': value.title}))
         return value
 
+    def check_published(value):
+        if value.publish_date is None:
+            raise Invalid(request.localizer.translate(
+                _(u'${schema} is not published'),
+                mapping={'schema': value.title}))
+        return value
+
     schema = Schema({
         'schema': All(
             DatabaseEntry(
@@ -237,6 +244,7 @@ def add_schema_json(context, request):
                 path=['schema'],
                 msg=_(u'Schema does not exist'),
                 localizer=request.localizer),
+            check_published,
             check_not_patient_schema,
             check_not_randomization_schema,
             check_not_termination_schema)})

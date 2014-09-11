@@ -203,6 +203,7 @@ def cleanup_study():
             JOIN category ON study.category_id = category.id
             JOIN schema_category ON schema_category.category_id = category.id
             JOIN schema ON schema.id = schema_category.schema_id
+            WHERE schema.publish_date IS NOT NULL
 
             UNION
 
@@ -213,6 +214,7 @@ def cleanup_study():
             JOIN category ON study.log_category_id = category.id
             JOIN schema_category ON schema_category.category_id = category.id
             JOIN schema ON schema.id = schema_category.schema_id
+            WHERE schema.publish_date IS NOT NULL
         )
         """)
 
@@ -226,6 +228,7 @@ def cleanup_study():
             JOIN category ON cycle.category_id = category.id
             JOIN schema_category ON schema_category.category_id = category.id
             JOIN schema ON schema.id = schema_category.schema_id
+            WHERE schema.publish_date IS NOT NULL
         )
         """)
 
