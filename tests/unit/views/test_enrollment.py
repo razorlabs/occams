@@ -117,8 +117,8 @@ class TestEditJson(IntegrationFixture):
             make_request()
 
         self.assertHasStringLike(
-            cm.exception.json['validation_errors'],
-            'This enrollment already exists.')
+            'This enrollment already exists.',
+            cm.exception.json['validation_errors'])
 
     def test_disable_study_update(self, check_csrf_token):
         """
@@ -171,8 +171,8 @@ class TestEditJson(IntegrationFixture):
                 ))
 
         self.assertHasStringLike(
-            cm.exception.json['validation_errors'],
-            'Cannot change an enrollment\'s study.')
+            'Cannot change an enrollment\'s study.',
+            cm.exception.json['validation_errors'])
 
     def test_timeline_start_date(self, check_csrf_token):
         """
@@ -215,8 +215,8 @@ class TestEditJson(IntegrationFixture):
                 ))
 
         self.assertHasStringLike(
-            cm.exception.json['validation_errors'],
-            'Cannot enroll before the study start date')
+            'Cannot enroll before the study start date',
+            cm.exception.json['validation_errors'])
 
     def test_timeline_stop_date(self, check_csrf_token):
         """
@@ -261,8 +261,8 @@ class TestEditJson(IntegrationFixture):
                 ))
 
         self.assertHasStringLike(
-            cm.exception.json['validation_errors'],
-            'Cannot enroll after the study stop date')
+            'Cannot enroll after the study stop date',
+            cm.exception.json['validation_errors'])
 
 
 @mock.patch('occams.studies.views.enrollment.check_csrf_token')

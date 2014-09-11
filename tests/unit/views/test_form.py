@@ -148,8 +148,8 @@ class TestAddJson(IntegrationFixture):
                     }))
 
         self.assertHasStringLike(
-            cm.exception.json['validation_errors'],
-            'is not part of the studies')
+            'is not part of the studies',
+            cm.exception.json['validation_errors'])
 
 
 @mock.patch('occams.studies.views.form.check_csrf_token')

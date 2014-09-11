@@ -1,11 +1,12 @@
-from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPOk
+from pyramid.httpexceptions import (
+    HTTPNotFound, HTTPBadRequest, HTTPForbidden, HTTPOk)
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 from sqlalchemy import func, orm
 import six
 from voluptuous import *  # NOQA
 
-from .. import _, log, models, Session
+from .. import _, models, Session
 from . import cycle as cycle_views
 from ..validators import Date, DatabaseEntry
 
@@ -53,6 +54,7 @@ def view(context, request):
 @view_config(
     route_name='study',
     permission='view',
+    xhr=True,
     renderer='json')
 def view_json(context, request):
     study = context
@@ -199,12 +201,45 @@ def delete_json(context, request):
 def add_schema_json(context, request):
     check_csrf_token(request)
 
+    def check_not_patient_schema(value):
+        (exists,) = (
+            Session.query(
+                Session.query(models.patient_schema_table)
+                .filter(models.patient_schema_table.c.schema_id == value.id)
+                .exists())
+            .one())
+        if exists:
+            raise Invalid(request.localizer.translate(
+                _(u'${schema} is already used as a patient form'),
+                mapping={'schema': value.title}))
+        return value
+
+    def check_not_randomization_schema(value):
+        if (context.randomization_schema is not None
+                and context.randomization_schema == value):
+            raise Invalid(request.localizer.translate(
+                _(u'${schema} is already used as a randomization form'),
+                mapping={'schema': value.title}))
+        return value
+
+    def check_not_termination_schema(value):
+        if (context.termination_schema is not None
+                and context.termination_schema == value):
+            raise Invalid(request.localizer.translate(
+                _(u'${schema} is already used as a termination form'),
+                mapping={'schema': value.title}))
+        return value
+
     schema = Schema({
-        'schema': DatabaseEntry(
-            models.Schema,
-            path=['schema'],
-            msg=_(u'Schema does not exist'),
-            localizer=request.localizer)})
+        'schema': All(
+            DatabaseEntry(
+                models.Schema,
+                path=['schema'],
+                msg=_(u'Schema does not exist'),
+                localizer=request.localizer),
+            check_not_patient_schema,
+            check_not_randomization_schema,
+            check_not_termination_schema)})
 
     try:
         data = schema(request.json_body)
@@ -225,27 +260,30 @@ def add_schema_json(context, request):
     renderer='json')
 def delete_schema_json(context, request):
     check_csrf_token(request)
-    schema = Session.query(models.Schema).get(request.matchdict('schema'))
+    schema = Session.query(models.Schema).get(request.matchdict['schema'])
 
     if schema is None:
         raise HTTPNotFound()
 
     # Remove from cycles
-    (Session.query(models.cycle_schema_table)
-        .filter(models.cycle_schema_table.cycle_id.in_(
-            Session.query(models.Cycle.id)
-            .filter_by(study=context)
-            .subquery()))
-        .filter(models.cycle_schema_table.schema_id == schema.id)
-        .delete())
+    Session.execute(
+        models.cycle_schema_table.delete()
+        .where(
+            models.cycle_schema_table.c.cycle_id.in_(
+                Session.query(models.Cycle.id)
+                .filter_by(study=context)
+                .subquery())
+            & (models.cycle_schema_table.c.schema_id == schema.id)))
 
     # Remove from study
-    (Session.query(models.study_schema_table)
-        .filter(models.cycle_schema_table.study_id == context.id)
-        .filter(models.cycle_schema_table.schema_id == schema.id)
-        .delete())
+    Session.execute(
+        models.study_schema_table.delete()
+        .where(
+            (models.study_schema_table.c.study_id == context.id)
+            & (models.study_schema_table.c.schema_id == schema.id)))
 
-    Session.flush()
+    # Expire relations so they load their updated values
+    Session.expire_all()
 
     return HTTPOk()
 
@@ -259,19 +297,43 @@ def delete_schema_json(context, request):
 def edit_schedule_json(context, request):
     check_csrf_token(request)
 
-    schema = Schema(All({
-        'schema': DatabaseEntry(
-            models.Schema,
-            msg=_(u'Schema does not exist'),
-            localizer=request.localizer),
-        'cycle': DatabaseEntry(
-            models.Cycle,
-            msg=_(u'Cycle does not exist'),
-            localizer=request.localizer),
-        'enabled': Bool(),
+    def check_schema_in_study(value):
+        (exists,) = (
+            Session.query(
+                Session.query(models.Study)
+                .filter(models.Study.cycles.any(study_id=context.id))
+                .filter(models.Study.schemata.any(id=value.id))
+                .exists())
+            .one())
+        if not exists:
+            msg = _('${study} does not have form "${schema}"')
+            mapping = {'schema': value.title, 'study': context.title}
+            raise Invalid(request.localizer.translate(msg, mapping=mapping))
+        return value
+
+    def check_cycle_in_study(value):
+        if value.study != context:
+            msg = _('${study} does not have cycle "${cycle}"')
+            mapping = {'cycle': value.title, 'study': context.title}
+            raise Invalid(request.localizer.translate(msg, mapping=mapping))
+        return value
+
+    schema = Schema({
+        'schema': All(
+            DatabaseEntry(
+                models.Schema,
+                msg=_(u'Schema does not exist'),
+                localizer=request.localizer),
+            check_schema_in_study),
+        'cycle': All(
+            DatabaseEntry(
+                models.Cycle,
+                msg=_(u'Cycle does not exist'),
+                localizer=request.localizer),
+            check_cycle_in_study),
+        'enabled': Boolean(),
         Extra: object,
-        },
-        check_schema_in_study(context, request)))
+        })
 
     try:
         data = schema(request.json_body)
@@ -279,56 +341,20 @@ def edit_schedule_json(context, request):
         raise HTTPBadRequest(json={
             'validation_errors': [m.error_message for m in e.errors]})
 
-    if data['enabled'] and data['schema'] not in data['cycle'].schemata:
-        data['cycle'].schemata.append(data['schema'])
-    elif not data['enabled'] and data['schema'] in data['cycle'].schemata:
-        data['cycle'].schemata.remove(data['schema'])
+    if data['enabled']:
+        data['cycle'].schemata.add(data['schema'])
     else:
-        log.warn('Didn\'t do anything')
+        data['cycle'].schemata.remove(data['schema'])
 
     return HTTPOk
 
 
-def check_schema_in_study(context, request):
-    """
-    Returns a validator that checks that the schema is part of the study
-    """
-    def validator(value):
-        query = (
-            Session.query(models.Study)
-            .filter(models.Study.cycle.any(id=value['cycle'].id))
-            .filter(models.Study.schemata.any(id=value['schema'].id)))
-        (exists,) = Session.query(query.exists()).one()
-        if not exists:
-            msg = _('"${schema}" is not part of ${study}')
-            mapping = {
-                'schema': value['schema']['title'],
-                'study': value['study']['title']}
-            raise Invalid(request.localizer.translate(msg, mapping=mapping))
-        return value
-    return validator
-
-
 def StudySchema(context, request):
-    return Schema({
-        'name': All(
-            Coerce(six.binary_type),
-            Length(min=3, max=32),
-            check_unique_name(context, request)),
-        'title': All(Coerce(six.text_type), Length(min=3, max=32)),
-        'code': All(Coerce(six.binary_type), Length(min=3, max=8)),
-        'short_title': All(Coerce(six.text_type), Length(min=3, max=8)),
-        'consent_date': Date(),
-        Required('start_date', default=None): Date(),
-        Required('stop_date', default=None): Date(),
-        Extra: object})
-
-
-def check_unique_name(context, request):
     """
-    Returns a validator that checks if the study name is unique
+    Returns a validator for incoming study modification data
     """
-    def validator(value):
+
+    def check_unique_name(value):
         query = Session.query(models.Study).filter_by(name=value)
         if isinstance(context, models.Study):
             query = query.filter(models.Study.id != context.id)
@@ -338,4 +364,16 @@ def check_unique_name(context, request):
             mapping = {'name': value}
             raise Invalid(request.localizer.translate(msg, mapping=mapping))
         return value
-    return validator
+
+    return Schema({
+        'name': All(
+            Coerce(six.binary_type),
+            Length(min=3, max=32),
+            check_unique_name),
+        'title': All(Coerce(six.text_type), Length(min=3, max=32)),
+        'code': All(Coerce(six.binary_type), Length(min=3, max=8)),
+        'short_title': All(Coerce(six.text_type), Length(min=3, max=8)),
+        'consent_date': Date(),
+        Required('start_date', default=None): Date(),
+        Required('stop_date', default=None): Date(),
+        Extra: object})

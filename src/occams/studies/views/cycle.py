@@ -1,4 +1,4 @@
-from pyramid.httpexceptions import HTTPBadRequest
+from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 import six
@@ -78,36 +78,46 @@ def edit_json(context, request):
     renderer='json')
 def delete_json(context, request):
     check_csrf_token(request)
+
+    (has_visits,) = (
+        Session.query(
+            Session.query(models.Visit)
+            .filter(models.Visit.cycles.any(id=context.id))
+            .exists())
+        .one())
+
+    if has_visits and not request.has_permission('admin', context):
+        raise HTTPForbidden(_(u'Cannot delete a cycle with visits'))
+
     Session.delete(context)
     Session.flush()
-    return HTTPOk()
+
+    request.session.flash(
+        _(u'Successfully removed "${cycle}"', mapping={
+            'cycle': context.title}))
+
+    return {'__next__': request.route_path('study', study=context.study.name)}
 
 
 def CycleSchema(context, request):
+
+    def check_unique_name(value):
+        query = Session.query(models.Cycle).filter_by(name=value)
+        if isinstance(context, models.Cycle):
+            query = query.filter(models.Cycle.id != context.id)
+        (exists,) = Session.query(query.exists()).one()
+        if exists:
+            msg = _('"${name}" already exists')
+            mapping = {'name': value}
+            raise Invalid(request.localizer.translate(msg, mapping=mapping))
+        return value
+
     return Schema({
         'name': All(
             Coerce(six.binary_type),
             Length(min=3, max=32),
-            check_unique_name(context, request)),
+            check_unique_name),
         'title': All(Coerce(six.text_type), Length(min=3, max=32)),
         'week': Coerce(int),
-        'is_interim': Bool(),
+        Required('is_interim', default=False): Boolean(),
         Extra: object})
-
-
-def check_unique_name(context, request):
-    """
-    Returns a validator that checks if the cycle name is unique
-    """
-    def validator(value):
-        query = Session.query(models.Cycle).filter_by(name=name)
-        if isinstance(context, models.Cycle):
-            query = query.filter_by(models.Cycle.id != value.id)
-        (exists,) = Session.query(query.exists()).one()
-        if exists:
-            lz = get_localizer(request)
-            msg = _('"${name}" already exists')
-            mapping = {'name': value}
-            raise Invalid(lz.translate(msg, mapping=mapping))
-        return value
-    return validator

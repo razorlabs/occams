@@ -177,8 +177,8 @@ class TestEditJson(IntegrationFixture):
                     'visit_date': date.today()}))
 
         self.assertHasStringLike(
-            cm.exception.json['validation_errors'],
-            'cycle does not exist')
+            'cycle does not exist',
+            cm.exception.json['validation_errors'])
 
     def test_unique_cycle(self, check_csrf_token):
         """
@@ -227,8 +227,8 @@ class TestEditJson(IntegrationFixture):
             make_request()
 
         self.assertHasStringLike(
-            cm.exception.json['validation_errors'],
-            'is already used by visit')
+            'is already used by visit',
+            cm.exception.json['validation_errors'])
 
         # The exception is interims
         cycle.is_interim = True
@@ -292,8 +292,8 @@ class TestEditJson(IntegrationFixture):
                 ))
 
         self.assertHasStringLike(
-            cm.exception.json['validation_errors'],
-            'Visit already exists')
+            'Visit already exists',
+            cm.exception.json['validation_errors'])
 
     def test_include_forms(self, check_csrf_token):
         """

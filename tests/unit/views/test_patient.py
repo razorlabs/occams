@@ -54,8 +54,8 @@ class TestEditJson(IntegrationFixture):
             self.call_view(patient, request)
         self.assertTrue(check_csrf_token.called)
         self.assertHasStringLike(
-            cm.exception.json['validation_errors'],
-            'Site does not exist')
+            'Site does not exist',
+            cm.exception.json['validation_errors'])
 
     def test_reference_type_invalid(self, check_csrf_token):
         """
@@ -82,8 +82,8 @@ class TestEditJson(IntegrationFixture):
             self.call_view(patient, request)
         self.assertTrue(check_csrf_token.called)
         self.assertHasStringLike(
-            cm.exception.json['validation_errors'],
-            'Reference type does not exist')
+            'Reference type does not exist',
+            cm.exception.json['validation_errors'])
 
     def test_reference_valid_number(self, check_csrf_token):
         """
@@ -111,8 +111,8 @@ class TestEditJson(IntegrationFixture):
             self.call_view(patient, request)
         self.assertTrue(check_csrf_token.called)
         self.assertHasStringLike(
-            cm.exception.json['validation_errors'],
-            'not a valid format')
+            'not a valid format',
+            cm.exception.json['validation_errors'])
 
     def test_reference_unique(self, check_csrf_token):
         """
@@ -142,8 +142,8 @@ class TestEditJson(IntegrationFixture):
             self.call_view(patient, request)
         self.assertTrue(check_csrf_token.called)
         self.assertHasStringLike(
-            cm.exception.json['validation_errors'],
-            'already assigned')
+            'already assigned',
+            cm.exception.json['validation_errors'])
 
     def test_references(self, check_csrf_token):
         """

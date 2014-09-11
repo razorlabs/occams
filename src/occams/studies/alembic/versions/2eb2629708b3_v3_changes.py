@@ -53,6 +53,10 @@ def cleanup_study():
 
         op.add_column(
             table_name,
+            sa.Column('termination_schema_id', sa.Integer()))
+
+        op.add_column(
+            table_name,
             sa.Column('is_locked', sa.Boolean(), server_default=sa.sql.false()))
         op.add_column(
             table_name,
@@ -92,12 +96,25 @@ def cleanup_study():
                 LIMIT 1)
             """.format(table=table_name))
 
+        # Set the termination schema as explicit selection
         op.execute(
             """
-            Update {table}
+            UPDATE {table}
+            SET termination_schema_id = (
+                SELECT id
+                FROM schema
+                WHERE name = 'Termination'
+                AND publish_date IS NOT NULL
+                ORDER BY publish_date DESC
+                LIMIT 1)
+            """.format(table=table_name))
+
+        op.execute(
+            """
+            UPDATE {table}
             SET is_randomized = TRUE
             WHERE randomization_schema_id IS NOT NULL
-            """)
+            """.format(table=table_name))
 
     op.create_foreign_key(
         'fk_study_randomization_schema_id',
@@ -106,6 +123,18 @@ def cleanup_study():
         ['randomization_schema_id'],
         ['id'],
         ondelete='SET NULL')
+
+    op.create_index('ix_study_randomization_id', 'study', ['randomization_schema_id'])
+
+    op.create_foreign_key(
+        'fk_study_termination_schema_id',
+        'study',
+        'schema',
+        ['termination_schema_id'],
+        ['id'],
+        ondelete='SET NULL')
+
+    op.create_index('ix_study_termination_id', 'study', ['termination_schema_id'])
 
     op.create_check_constraint(
         'ck_study_randomization_schema_id',

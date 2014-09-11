@@ -54,7 +54,7 @@ class AssertMethodsMixin(object):
     Additional useful assertion methods
     """
 
-    def assertHasStringLike(self, iterable, expected):
+    def assertHasStringLike(self, expected, iterable):
         """
         Assert that the iterable contains a string that contains the epected
         """

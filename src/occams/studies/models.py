@@ -233,7 +233,15 @@ class Study(Base, Referenceable, Describeable, Modifiable, Auditable):
 
     randomization_schema_id = sa.Column(sa.Integer())
 
-    randomization_schema = orm.relationship(Schema)
+    randomization_schema = orm.relationship(
+        Schema,
+        foreign_keys=[randomization_schema_id])
+
+    termination_schema_id = sa.Column(sa.Integer())
+
+    termination_schema = orm.relationship(
+        Schema,
+        foreign_keys=[termination_schema_id])
 
     is_blinded = sa.Column(
         sa.Boolean,
@@ -297,6 +305,14 @@ class Study(Base, Referenceable, Describeable, Modifiable, Auditable):
                 refcolumns=[Schema.id],
                 name='fk_%s_randomization_schema_id' % cls.__tablename__,
                 ondelete='SET NULL'),
+            sa.Index('ix_%s_randomization_schema_id',
+                     'randomization_schema_id'),
+            sa.ForeignKeyConstraint(
+                columns=['termination_schema_id'],
+                refcolumns=[Schema.id],
+                name='fk_%s_termination_schema_id' % cls.__tablename__,
+                ondelete='SET NULL'),
+            sa.Index('ix_%s_termination_schema_id', 'termination_schema_id'),
             sa.CheckConstraint(
                 """
                 (NOT is_randomized AND randomization_schema_id IS NULL)
