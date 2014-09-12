@@ -12,6 +12,7 @@ from occams.roster import generate
 
 from .. import _, models, Session
 from . import enrollment as enrollment_views, visit as visit_views
+from ..validators import DatabaseEntry
 
 
 @view_config(
@@ -226,55 +227,32 @@ def PatientSchema(context, request):
     Declares data format expected for managing patient properties
     """
 
-    return Schema({
-        Required('site'): All(Coerce(int), coerce_site(context, request)),
-        Required('references', default=[]): [All({
-            Required('reference_type'): All(
-                Coerce(int), coerce_reference_type(context, request)),
-            Required('reference_number'): Coerce(six.binary_type),
-            Extra: object
-            },
-            check_reference_format(context, request),
-            check_unique_reference(context, request),
-            )],
-        Extra: object
-        })
+    def check_can_view_site(value):
+        if not request.has_permission('view', value):
+            raise Invalid(request.localizer.translate(
+                _(u'You do not have access to {site}'),
+                mapping={'site': value.title}))
+        return value
 
-
-def check_reference_format(context, request):
-    """
-    Returns a validator that checks number with the pattern the type expects
-    """
-    def validator(value):
-        type_ = value['reference_type']
-        number = value['reference_number']
-        if not type_.check_reference_number(number):
+    def check_reference_format(value):
+        if not value['reference_type'].check(value['reference_number']):
             msg = request.localizer.translate(
                 _(u'${type} ${number} is not a valid format'),
-                mapping={'type': type_.title, 'number': number})
+                mapping={
+                    'type': value['reference_type'].title,
+                    'number': value['reference_number']})
             raise Invalid(msg, path=['reference_number'])
         return value
-    return validator
 
-
-def check_unique_reference(context, request):
-    """
-    Returns a validator that checks the reference number is not already taken
-    """
-    def validator(value):
-        reference_query = (
+    def check_unique_reference(value):
+        query = (
             Session.query(models.PatientReference)
             .filter_by(
                 reference_type=value['reference_type'],
                 reference_number=value['reference_number']))
-
         if isinstance(context, models.Patient):
-            reference_query = (
-                reference_query
-                .filter(models.PatientReference.patient != context))
-
-        reference = reference_query.first()
-
+            query = query.filter(models.PatientReference.patient != context)
+        reference = query.first()
         if reference:
             # Need to translate before sending back to client
             msg = request.localizer.translate(
@@ -284,37 +262,25 @@ def check_unique_reference(context, request):
                     'number': reference.reference_number,
                     'pid': reference.patient.pid})
             raise Invalid(msg, path=['reference_number'])
-
         return value
-    return validator
 
-
-def coerce_site(context, request):
-    """
-    Returns a validator to coerce a site id to a site object
-    Also, checks if the user has access to use the site.
-    """
-    def validator(value):
-        study = Session.query(models.Site).get(value)
-        if study is None:
-            msg = _(u'Site does not exist')
-            raise Invalid(request.localizer.translate(msg))
-        if not request.has_permission('view', study):
-            raise Invalid(request.localizer.translate(
-                _(u'You do not have access to {site}'),
-                mapping={'site': study.title}))
-        return study
-    return validator
-
-
-def coerce_reference_type(context, request):
-    """
-    Returns a validator to coerce a reference type id to a type object
-    """
-    def validator(value):
-        reftype = Session.query(models.ReferenceType).get(value)
-        if reftype is None:
-            msg = _(u'Reference type does not exist')
-            raise Invalid(request.localizer.translate(msg))
-        return reftype
-    return validator
+    return Schema({
+        Required('site'): All(
+            DatabaseEntry(
+                models.Site,
+                msg=_(u'Site does not exist'),
+                localizer=request.localizer),
+            check_can_view_site),
+        Required('references', default=[]): [All({
+            Required('reference_type'): DatabaseEntry(
+                models.ReferenceType,
+                msg=_(u'Reference type does not exist'),
+                localizer=request.localizer),
+            Required('reference_number'): Coerce(six.binary_type),
+            Extra: object
+            },
+            check_reference_format,
+            check_unique_reference,
+            )],
+        Extra: object
+        })

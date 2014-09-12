@@ -15,6 +15,23 @@ from ..validators import DatabaseEntry
 def add_json(context, request):
     check_csrf_token(request)
 
+    def check_study_form(value):
+        query = (
+            Session.query(models.Visit)
+            .filter(models.Visit.id == context.__parent__.id)
+            .join(models.Visit.cycles)
+            .join(models.Cycle.study)
+            .filter(
+                models.Cycle.schemata.any(id=value.id)
+                | models.Study.schemata.any(id=value.id)))
+        (exists,) = Session.query(query.exists()).one()
+        if not exists:
+            raise Invalid(request.localizer.translate(
+                _('${schema} is not part of the studies for this visit'),
+                mapping={'schema': value.title}),
+                path=['schema'])
+        return value
+
     schema = Schema({
         'schemata': [All(
             DatabaseEntry(
@@ -22,7 +39,7 @@ def add_json(context, request):
                 msg=_(u'Schema does not exist'),
                 path=['schema'],
                 localizer=request.localizer),
-            check_study_form(context, request))],
+            check_study_form)],
         Extra: object})
 
     try:
@@ -86,27 +103,3 @@ def delete_json(context, request):
     Session.flush()
 
     return HTTPOk()
-
-
-def check_study_form(context, request):
-    """
-    Returns a validator that checks if a form is allowed by the cycles/study
-    """
-    def validator(value):
-        query = (
-            Session.query(models.Visit)
-            .filter(models.Visit.id == context.__parent__.id)
-            .join(models.Visit.cycles)
-            .join(models.Cycle.study)
-            .filter(
-                models.Cycle.schemata.any(id=value.id)
-                | models.Study.schemata.any(id=value.id)))
-        (exists,) = Session.query(query.exists()).one()
-        if not exists:
-            lz = request.localizer
-            raise Invalid(lz.translate(
-                _('${schema} is not part of the studies for this visit'),
-                mapping={'schema': value.title}),
-                path=['schema'])
-        return value
-    return validator

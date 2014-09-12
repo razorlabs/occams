@@ -2,8 +2,7 @@
   <metal:content-slot fill-slot="content-slot">
 
     <header class="page-header">
-      <div metal:use-macro="load: ./panels/view-toolbar.pt" />
-      <h1 i18n:translate="">${study.title}</h1>
+      <h1 i18n:translate="">${context.title}</h1>
       <ul metal:use-macro="load: ./panels/details.pt" />
       <nav metal:use-macro="load: ./panels/nav.pt" />
     </header>

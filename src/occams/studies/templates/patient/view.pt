@@ -345,7 +345,7 @@
                   type="button"
                   class="btn btn-link"
                   data-bind="click: $root.clear"
-                  i18n:translate="">Close</button>
+                  i18n:translate="">Cancel</button>
               <button type="submit" class="btn btn-primary">
                 <span i18n:translate="">Save</span>
                 <!-- ko if: $root.isSaving -->
@@ -460,7 +460,7 @@
                   type="button"
                   class="btn btn-link"
                   data-bind="click: $root.clear"
-                  i18n:translate="">Close</button>
+                  i18n:translate="">Cancel</button>
               <button type="submit" class="btn btn-primary">
                 <span i18n:translate="">Save</span>
                 <!-- ko if: $root.isSaving -->
@@ -576,12 +576,13 @@
                       datetimePicker: {pickTime: false, useCurrent: false},
                       uniqueName: true" />
               </div> <!-- /.form-group -->
+            </div> <!-- /.modal-body -->
             <div class="modal-footer">
               <button
                   type="button"
                   class="btn btn-link"
                   data-bind="click: $root.clear"
-                  i18n:translate="">Close</button>
+                  i18n:translate="">Cancel</button>
               <button type="submit" class="btn btn-primary">
                 <span i18n:translate="">Save</span>
                 <!-- ko if: $root.isSaving -->
@@ -614,9 +615,9 @@
                 </div>
               <!-- /ko -->
               <p i18n:translate="">You are about to delete this patient. This is an irreversable action. Are you sure you want to proceed?</p>
-            </div>
+            </div> <!-- /.modal-body -->
             <div class="modal-footer">
-              <button type="button" class="btn btn-default" data-bind="click: $root.clear">Close</button>
+              <button type="button" class="btn btn-default" data-bind="click: $root.clear">Cancel</button>
               <button type="button" class="btn btn-danger" i18n:translate="">Delete</button>
             </div>
           </form>

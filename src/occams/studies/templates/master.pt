@@ -208,7 +208,8 @@
     <footer id="footer">
       <div class="container">
         <p class="text-muted credit">
-          Developed by <a href="http://cfar.ucsd.edu/bit">UCSD Bit Core</a>.
+          <span i18n:translate="">Developed by the</span>
+          <a href="http://cfar.ucsd.edu/bit" i18n:translate="">UCSD Center For AIDS Research Bit Core</a>.
         </p>
       </div>
     </footer>

@@ -1,7 +1,7 @@
 from pyramid.httpexceptions import HTTPBadRequest
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
-
+import six
 from sqlalchemy import orm
 from voluptuous import *  # NOQA
 
@@ -136,66 +136,35 @@ def delete_json(context, request):
 
 
 def EnrollmentSchema(context, request):
-    return Schema(All({
-        Required('study'): All(
-            DatabaseEntry(models.Study,
-                          msg=_(u'Study does not exist'),
-                          localizer=request.localizer),
-            check_cannot_edit(context, request)),
-        Required('consent_date'): Date(),
-        Required('latest_consent_date'): Date(),
-        Required('reference_number', default=None): Coerce(str),
-        Extra: object
-        },
-        check_timeline(context, request),
-        check_reference(context, request),
-        check_unique(context, request)))
 
-
-def check_cannot_edit(context, request):
-    """
-    Returns a validator that checks that an enrollment study cannot be changed.
-    """
-    def validator(value):
+    def check_cannot_edit_study(value):
         if isinstance(context, models.Enrollment) and context.study != value:
             raise Invalid(request.localizer.translate(_(
                 u'Cannot change an enrollment\'s study.')))
         return value
-    return validator
 
-
-def check_timeline(context, request):
-    """
-    Returns a validator that checks the enrollment timeline
-    """
-    def validator(value):
-        lz = request.localizer
+    def check_timeline(value):
         start = value['study'].start_date
         stop = value['study'].stop_date
         consent = value['consent_date']
         latest = value['latest_consent_date']
         if start is None:
-            raise Invalid(lz.translate(_(
+            raise Invalid(request.localizer.translate(_(
                 u'Study has not started yet.')))
         if consent < start:
-            raise Invalid(lz.translate(
+            raise Invalid(request.localizer.translate(
                 _('Cannot enroll before the study start date: ${date}'),
                 mapping={'date': start.isoformat()}))
         if not (consent <= latest):
-            raise Invalid(lz.translate(_(u'Inconsistent enrollment dates')))
+            raise Invalid(request.localizer.translate(
+                _(u'Inconsistent enrollment dates')))
         if stop and latest > stop:
-            raise Invalid(lz.translate(
+            raise Invalid(request.localizer.translate(
                 _('Cannot enroll after the study stop date: ${date}'),
                 mapping={'date': stop.isoformat()}))
         return value
-    return validator
 
-
-def check_reference(context, request):
-    """
-    Returns a validator that checks the reference number is valid for the study
-    """
-    def validator(value):
+    def check_reference(value):
         lz = request.localizer
         study = value['study']
         number = value['reference_number']
@@ -213,15 +182,8 @@ def check_reference(context, request):
         if exists:
             raise Invalid(lz.translate(_(u'Reference number already in use.')))
         return value
-    return validator
 
-
-def check_unique(context, request):
-    """
-    Ensures the patient is not already enrolled (via consent date)
-    """
-    def validator(value):
-        lz = request.localizer
+    def check_unique(value):
         if isinstance(context, models.EnrollmentFactory):
             patient = context.__parent__
         else:
@@ -236,7 +198,21 @@ def check_unique(context, request):
             query = query.filter(models.Enrollment.id != context.id)
         (exists,) = Session.query(query.exists()).one()
         if exists:
-            raise Invalid(lz.translate(_(
+            raise Invalid(request.localizer.translate(_(
                 u'This enrollment already exists.')))
         return value
-    return validator
+
+    return Schema(All({
+        Required('study'): All(
+            DatabaseEntry(models.Study,
+                          msg=_(u'Study does not exist'),
+                          localizer=request.localizer),
+            check_cannot_edit_study),
+        Required('consent_date'): Date(),
+        Required('latest_consent_date'): Date(),
+        Required('reference_number', default=None): Coerce(six.binary_type),
+        Extra: object
+        },
+        check_timeline,
+        check_reference,
+        check_unique))

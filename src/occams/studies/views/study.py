@@ -58,6 +58,14 @@ def view(context, request):
     renderer='json')
 def view_json(context, request):
     study = context
+
+    def schema_json(schema):
+        return {
+            'id': schema.id,
+            'name': schema.name,
+            'title': schema.title,
+            'publish_date': schema.publish_date.isoformat()}
+
     return {
         '__url__': request.route_path('study', study=study.name),
         'id': study.id,
@@ -65,15 +73,18 @@ def view_json(context, request):
         'title': study.title,
         'code': study.code,
         'short_title': study.short_title,
+        'consent_date': study.consent_date.isoformat(),
         'start_date': study.start_date and study.start_date.isoformat(),
         'stop_date': study.stop_date and study.stop_date.isoformat(),
-        'consent_date': study.consent_date.isoformat(),
-        'schemata': [{
-            'id': schema.id,
-            'name': schema.name,
-            'title': schema.title,
-            'publish_date': schema.publish_date.isoformat()
-            } for schema in study.schemata],
+        'is_randomized': study.is_randomized,
+        'is_locked': study.is_locked,
+        'termination_schema':
+            study.termination_schema
+            and schema_json(study.termination_schema),
+        'randomization_schema':
+            study.randomization_schema
+            and schema_json(study.randomization_schema),
+        'schemata': list(map(schema_json, study.schemata)),
         'cycles': [
             cycle_views.view_json(cycle, request) for cycle in study.cycles]
         }

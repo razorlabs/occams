@@ -248,30 +248,8 @@ def delete_json(context, request):
 
 
 def VisitSchema(context, request):
-    return Schema({
-        Required('cycles'): All(
-            [All(DatabaseEntry(models.Cycle,
-                               path=['cycle'],
-                               msg=_(u'Specified cycle does not exist'),
-                               localizer=request.localizer),
-                 unique_cycle(context, request))],
-            Length(
-                min=1,
-                msg=request.localizer.translate(
-                    _(u'Must select at least one cycle')))),
-        Required('visit_date'):
-            All(Date(), unique_visit_date(context, request)),
-        Required('include_forms', default=False): Boolean(),
-        Required('include_specimen', default=False): Boolean(),
-        Extra: object
-        })
 
-
-def unique_cycle(context, request):
-    """
-    Returns a validator callback to ensure the cycle has not already been used
-    """
-    def validator(value):
+    def unique_cycle(value):
         if isinstance(context, models.Visit):
             patient = context.patient
         else:
@@ -292,14 +270,8 @@ def unique_cycle(context, request):
                     'visit_date': taken.visit_date}),
                 path=['cycle'])
         return value
-    return validator
 
-
-def unique_visit_date(context, request):
-    """
-    Returns a validator callback to check for date uniqueness
-    """
-    def validator(value):
+    def unique_visit_date(value):
         exists_query = (
             Session.query(models.Visit)
             .filter_by(visit_date=value))
@@ -310,4 +282,20 @@ def unique_visit_date(context, request):
             raise Invalid(request.localizer.translate(
                 _(u'Visit already exists')))
         return value
-    return validator
+
+    return Schema({
+        Required('cycles'): All(
+            [All(DatabaseEntry(models.Cycle,
+                               path=['cycle'],
+                               msg=_(u'Specified cycle does not exist'),
+                               localizer=request.localizer),
+                 unique_cycle)],
+            Length(
+                min=1,
+                msg=request.localizer.translate(
+                    _(u'Must select at least one cycle')))),
+        Required('visit_date'): All(Date(), unique_visit_date),
+        Required('include_forms', default=False): Boolean(),
+        Required('include_specimen', default=False): Boolean(),
+        Extra: object
+        })

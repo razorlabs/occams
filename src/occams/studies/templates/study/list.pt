@@ -1,5 +1,11 @@
 <html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
   <metal:content-slot fill-slot="content-slot">
+    <header class="page-header clearfix">
+      <div class="btn-toolbar pull-right">
+        <a href="#" class="btn btn-default"><span class="fa fa-user"></span> Add Patient</a>
+        <a href="#" class="btn btn-default"><span class="fa fa-mortar-board"></span> Add Study</a>
+      </div>
+    </header>
     <div class="row">
       <div class="col-sm-4">
         <div class="panel panel-default">
@@ -48,7 +54,10 @@
           <a tal:repeat="study studies"
               href="${request.route_path('study', study=study.name)}"
               class="list-group-item">
-            <h4 class="list-group-item-heading">${study.title}</h4>
+            <h4 class="list-group-item-heading">
+              ${study.title}
+              <span class="fa fa-lock" tal:condition="study.is_locked"></span>
+            </h4>
             <ul class="details list-inline">
               <li>
                 <span class="text-muted" i18n:translate="">Code:</span>
@@ -58,16 +67,33 @@
                 <span class="text-muted" i18n:translate="">Label:</span>
                 <span>${study.short_title}</span>
               </li>
+              <tal:rand condition="study.is_randomized">
+                <li>
+                  <span class="text-muted" i18n:translate="">Randomized:</span>
+                  <span tal:switch="bool(study.is_randomized)">
+                    <span tal:case="True" tal:omit-tag="" i18n:translate="">Yes</span>
+                    <span tal:case="False" tal:omit-tag="" i18n:translate="">No</span>
+                  </span>
+                </li>
+                <li>
+                  <span class="text-muted" i18n:translate="">Blinded:</span>
+                  <span tal:switch="bool(study.is_blinded)">
+                    <span tal:case="True" tal:omit-tag="" i18n:translate="">Yes</span>
+                    <span tal:case="False" tal:omit-tag="" i18n:translate="">No</span>
+                  </span>
+                </li>
+              </tal:rand>
               <li>
-                <span class="text-muted" i18n:translate="">Blinded:</span>
-                <span tal:switch="bool(study.is_blinded)">
-                  <span tal:case="True" tal:omit-tag="" i18n:translate="">Yes</span>
-                  <span tal:case="False" tal:omit-tag="" i18n:translate="">No</span>
-                </span>
+                <span class="text-muted" i18n:translate="">Consent:</span>
+                <code>${study.consent_date}</code>
               </li>
-              <li>
-                <span class="text-muted" i18n:translate="">Consent Date:</span>
-                <span>${study.consent_date}<span>
+              <li tal:condition="study.start_date">
+                <span class="text-muted" i18n:translate="">Start:</span>
+                <code>${study.start_date}</code>
+              </li>
+              <li tal:condition="study.stop_date">
+                <span class="text-muted" i18n:translate="">End:</span>
+                <code>${study.stop_date}</code>
               </li>
             </ul>
           </a>

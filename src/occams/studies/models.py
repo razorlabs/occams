@@ -80,10 +80,7 @@ class groups:
             site --  The site code
             group -- The group name
         """
-        if site:
-            return site.name + ':' + group
-        else:
-            return group
+        return site.name + ':' + group if site else group
 
     @staticmethod
     def administrator():
@@ -288,7 +285,7 @@ class Study(Base, Referenceable, Describeable, Modifiable, Auditable):
         if key == 'cycles':
             return CycleFactory(self)
 
-    def check_reference_number(self, reference_number):
+    def check(self, reference_number):
         if not self.reference_pattern:
             return True
         else:
@@ -364,6 +361,7 @@ class Cycle(Base, Referenceable, Describeable, Modifiable, Auditable):
         backref=orm.backref(
             name='cycles',
             lazy='dynamic',
+            order_by='Cycle.week.asc().nullsfirst()',
             cascade='all, delete-orphan'))
 
     week = sa.Column(sa.Integer, doc='Week number')
@@ -477,7 +475,7 @@ class Site(Base,  Referenceable, Describeable, Modifiable, Auditable):
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
             (Allow, groups.manager(), ('view', 'edit', 'delete')),
-            (Allow, groups.member(site=self.name), 'view'),
+            (Allow, groups.member(site=self), 'view'),
             ]
 
     # patients backref'd from patient
@@ -586,7 +584,7 @@ class ReferenceType(Base, Referenceable, Describeable, Modifiable):
         sa.Unicode,
         doc='UI reference hint without regular expression syntax')
 
-    def check_reference_number(self, reference_number):
+    def check(self, reference_number):
         if not self.reference_pattern:
             return True
         else:

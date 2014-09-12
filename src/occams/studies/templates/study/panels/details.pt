@@ -7,16 +7,33 @@
     <span class="text-muted" i18n:translate="">Label:</span>
     <span>${context.short_title}</span>
   </li>
-  <li>
-    <span class="text-muted" i18n:translate="">Blinded:</span>
-    <span tal:switch="bool(context.is_blinded)">
-      <span tal:case="True" tal:omit-tag="" i18n:translate="">Yes</span>
-      <span tal:case="False" tal:omit-tag="" i18n:translate="">No</span>
-    </span>
-  </li>
+  <tal:rand tal:condition="context.is_randomized">
+    <li>
+      <span class="text-muted" i18n:translate="">Randomized:</span>
+      <span tal:switch="bool(context.is_randomized)">
+        <span tal:case="True" tal:omit-tag="" i18n:translate="">Yes</span>
+        <span tal:case="False" tal:omit-tag="" i18n:translate="">No</span>
+      </span>
+    </li>
+    <li>
+      <span class="text-muted" i18n:translate="">Blinded:</span>
+      <span tal:switch="bool(context.is_blinded)">
+        <span tal:case="True" tal:omit-tag="" i18n:translate="">Yes</span>
+        <span tal:case="False" tal:omit-tag="" i18n:translate="">No</span>
+      </span>
+    </li>
+  </tal:rand>
   <li>
     <span class="text-muted" i18n:translate="">Consent Date:</span>
-    <span>${context.consent_date}<span>
+    <code>${context.consent_date}</code>
+  </li>
+  <li tal:condition="context.start_date">
+    <span class="text-muted" i18n:translate="">Start:</span>
+    <code>${context.start_date}</code>
+  </li>
+  <li tal:condition="context.stop_date">
+    <span class="text-muted" i18n:translate="">End:</span>
+    <code>${context.stop_date}</code>
   </li>
 </ul>
 
