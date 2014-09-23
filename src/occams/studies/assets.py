@@ -9,20 +9,19 @@ def includeme(config):
     """
 
     config.add_webasset('default-js', Bundle(
-        Bundle(
-            'libs/jquery.min.js',
-            'libs/jquery-ui.min.js',
-            'libs/jquery.cookie.js',
-            'libs/jquery.validate.min.js',
-            'libs/bootstrap/dist/js/bootstrap.min.js',
-            'libs/knockout.min.js',
-            'libs/knockout.mapping.min.js',
-            'libs/knockout-sortable.min.js',
-            'libs/select2.min.js',
-            'libs/moment.min.js',
-            'libs/bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js',
-            'libs/sammy.min.js',
-            'libs/socket.io.min.js'),
+        'libs/jquery.min.js',
+        'libs/jquery-ui.min.js',
+        'libs/jquery.cookie.js',
+        'libs/jquery.validate.min.js',
+        'libs/bootstrap/dist/js/bootstrap.min.js',
+        'libs/knockout.min.js',
+        'libs/knockout.mapping.min.js',
+        'libs/knockout-sortable.min.js',
+        'libs/select2.min.js',
+        'libs/moment.min.js',
+        'libs/bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js',
+        'libs/sammy.min.js',
+        'libs/socket.io.min.js',
         Bundle(
             'scripts/*.js',
             'scripts/**/*.js',
