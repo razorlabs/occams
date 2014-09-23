@@ -193,7 +193,7 @@
               <label class="col-sm-2 control-label" i18n:translate="">Type</label>
               <div class="col-sm-4">
                 <!-- ko if: isNew -->
-                  <input tal:define="ko string: value: $name, select2: {}"
+                  <input tal:define="ko string: value: $name, select2: {}, hasFocus: isNew"
                          tal:replace="structure: render_field(field,
                                                               class_='form-control',
                                                               data_bind=ko)" />
@@ -220,7 +220,7 @@
                 <div class="row">
                   <div class="col-sm-6">
                     <!-- ko if: isNew -->
-                      <input tal:define="ko string: value: $name, hasFocus: true"
+                      <input tal:define="ko string: value: $name"
                              tal:replace="structure: render_field(field,
                                                                   class_='form-control',
                                                                   data_bind=ko)" />
@@ -238,7 +238,7 @@
             <div class="form-group">
               <label class="col-sm-2 control-label" i18n:translate="">Question</label>
               <div class="col-sm-10">
-                <input tal:define="ko string: value: $name"
+                <input tal:define="ko string: value: $name, hasFocus: !isNew()"
                        tal:replace="structure: render_field(field,
                                                             class_='form-control',
                                                             data_bind=ko)" />
@@ -279,14 +279,8 @@
                 <div class="col-sm-5">
                   <div class="checkbox" data-bind="visible: !isSection()">
                     <label>
-                      <input type="checkbox" data-bind="checked: is_readonly, disable: isSection" />
-                      <span i18n:translate="">Read-only</span>
-                    </label>
-                  </div>
-                  <div class="checkbox" data-bind="visible: !isSection()">
-                    <label>
                       <input type="checkbox" data-bind="checked: is_system, disable: isSection" />
-                      <span i18n:translate="">Managed by system services</span>
+                      <span i18n:translate="">Read-only</span>
                     </label>
                   </div>
                 </div>
