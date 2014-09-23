@@ -7,3 +7,6 @@
 [submodule "src/occams/forms/static/libs/bootstrap-datetimepicker"]
 	path = src/occams/forms/static/libs/bootstrap-datetimepicker
 	url = https://github.com/Eonasdan/bootstrap-datetimepicker.git
+[submodule "src/occams/studies/static/libs/bootstrap-datetimepicker"]
+	path = src/occams/studies/static/libs/bootstrap-datetimepicker
+	url = https://github.com/Eonasdan/bootstrap-datetimepicker.git

@@ -4,6 +4,30 @@
 
 var html5 = {inputtypes: {}};
 
+var defaultValidationOptions = {
+    errorClass: 'has-error',
+    validClass: 'has-success',
+    wrapper: 'p',
+    errorPlacement: function(label, element){
+      label.addClass('help-block').insertAfter(element);
+    },
+    onfocusout: function(element, event){
+      $(element).valid();
+    },
+    highlight: function(element, errorClass, validClass){
+      $(element)
+        .closest('.js-validation-group,.form-group')
+        .addClass(errorClass)
+        .removeClass(validClass);
+    },
+    unhighlight: function(element, errorClass, validClass){
+      $(element)
+        .closest('.js-validation-group,.form-group')
+        .addClass(validClass)
+        .removeClass(errorClass);
+    }
+}
+
 +function(){
   // Checks if an input type is supported
   // Could have used Modernizr, but consider 15Kb vs 15 lines...

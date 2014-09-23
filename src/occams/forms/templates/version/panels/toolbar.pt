@@ -17,7 +17,7 @@
         <span i18n:translate="">Draft New</span>
       </button>
       <a id="edit-button"
-          href="${request.current_route_path(_route_name='version_edit')}"
+          href="${request.current_route_path(_route_name='version_editor')}"
           class="btn btn-default">
         <span class="glyphicon glyphicon-pencil"></span>
         <span i18n:translate="">Edit</span>

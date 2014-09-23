@@ -78,17 +78,17 @@ def assets(config):
     config.include('pyramid_webassets')
     config.add_webasset('default-js', Bundle(
         # Dependency javascript libraries must be loaded in a specific order
-        Bundle('libs/jquery.min.js'),
-        Bundle('libs/jquery-ui.min.js'),
-        Bundle('libs/jquery.cookie.js'),
-        Bundle('libs/jquery.validate.min.js'),
-        Bundle('libs/bootstrap/dist/js/bootstrap.min.js'),
-        Bundle('libs/knockout.min.js'),
-        Bundle('libs/knockout.mapping.min.js'),
-        Bundle('libs/knockout-sortable.min.js'),
-        Bundle('libs/select2.min.js'),
-        Bundle('libs/moment.min.js'),
-        Bundle('libs/bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js'),
+        'libs/jquery.min.js',
+        'libs/jquery-ui.min.js',
+        'libs/jquery.cookie.js',
+        'libs/jquery.validate.min.js',
+        'libs/bootstrap/dist/js/bootstrap.min.js',
+        'libs/knockout.min.js',
+        'libs/knockout.mapping.min.js',
+        'libs/knockout-sortable.min.js',
+        'libs/select2.min.js',
+        'libs/moment.min.js',
+        'libs/bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js',
         # App-specific scripts can be loaded in any order
         Bundle('scripts/**/*.js', depends='scripts/**/*.js', filters='jsmin'),
         output='gen/default.%(version)s.min.js'))
