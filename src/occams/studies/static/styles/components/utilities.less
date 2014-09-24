@@ -2,37 +2,74 @@
  * Miscellaneous Utilities
  */
 
-
 /**
  * Rotated text
  * From: http://kizu.ru/en/fun/rotated-text/
  */
-.rotated-text {
-  display:                inline-block;
-  overflow:               hidden;
-  width:                  1.5em;
-  line-height:            1.5;
 
-  .rotated-text__inner {
-    display:                   inline-block;
-    white-space:               nowrap;
-    transform:                 translate(0,100%) rotate(-90deg);  // CSS3 Standard
-    -webkit-transform:         translate(0, 100%) rotate(-90deg); // Safari/Chrome
-    -moz-transform:            translate(0, 100%) rotate(-90deg); // Firefox
-    -ms-transform:             translate(0, 100%) rotate(-90deg); // IE
-    -o-transform:              translate(0, 100%) rotate(-90deg); // Opera
-    transform-origin:          0 0; // CSS3 Standard
-    -webkit-transform-origin:  0 0; // Safari/Chrome
-    -moz-transform-origin:     0 0; // Firefix
-    -ms-transform-origin:      0 0; // IE
-    -o-transform-origin:       0 0; // Opera
+.table-rotated-header {
 
-    &:after {
-       content:           "";
-       float:             left;
-       margin-top:        100%;
+  > thead {
+
+    .rotated {
+
+      .rotated-container {
+        display:                inline-block;
+        width:                  1.5em;
+        line-height:            1.5;
+
+        .rotated-rotate {
+          display:                   inline-block;
+          white-space:               nowrap;
+
+          @tx: 0;
+          @ty: 100%;
+          @deg: 315deg;
+
+          @x-offset: -5px;
+          @y-offset: -18px;
+
+          transform:                 translate(@tx, @ty) rotate(@deg);
+          -webkit-transform:         translate(@tx, @ty) rotate(@deg);
+          -moz-transform:            translate(@tx, @ty) rotate(@deg);
+          -ms-transform:             translate(@tx, @ty) rotate(@deg);
+          -o-transform:              translate(@tx, @ty) rotate(@deg);
+          transform-origin:          @x-offset @y-offset;
+          -webkit-transform-origin:  @x-offset @y-offset;
+          -moz-transform-origin:     @x-offset @y-offset;
+          -ms-transform-origin:      @x-offset @y-offset;
+          -o-transform-origin:       @x-offset @y-offset;
+
+          &:after {
+             content:           "";
+             float:             left;
+             margin-top:        100%;
+          }
+
+          .rotated-text {
+            padding: 5px 10px;
+          }
+        }
+      }
+
     }
+
   }
+
+  &.table-bordered {
+    border: none;
+
+    > thead  {
+      th {
+        border-left: none;
+        border-right: none;
+      }
+
+      .rotated-text {
+        border-bottom: 1px solid #ccc;
+      }
+    }
+
+  }
+
 }
-
-

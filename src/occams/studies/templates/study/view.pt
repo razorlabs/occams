@@ -11,7 +11,7 @@
       <nav metal:use-macro="load: ./panels/nav.pt" />
     </header>
 
-    <table class="table table-bordered">
+    <table class="table table-bordered table-rotated-header">
       <tbody>
         <!-- ko if: study.is_randomized -->
           <tr>
@@ -29,15 +29,17 @@
     </table>
 
     <div class="table-responsive table-scrollable">
-      <table class="table table-bordered table-striped table-dimensional">
+      <table class="table table-bordered table-striped table-dimensional table-rotated-header">
         <thead>
           <tr>
             <th></th>
             <!-- ko foreach: study.cycles -->
-              <th>
-                <span class="rotated-text">
-                  <span class="rotated-text__inner" data-bind="text: title"></span>
-                </span>
+              <th class="rotated">
+                <div class="rotated-container">
+                  <div class="rotated-rotate">
+                    <span class="rotated-text" data-bind="text: title"></span>
+                  </div>
+                </div>
               </th>
             <!-- /ko -->
           </tr>
