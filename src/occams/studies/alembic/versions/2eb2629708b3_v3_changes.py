@@ -294,6 +294,20 @@ def cleanup_reftype():
     op.drop_constraint('uq_patientreference_reference', 'patient_reference')
     op.create_unique_constraint('uq_patient_reference_reference_number', 'patient_reference', ['patient_id', 'reference_type_id', 'reference_number'])
 
+    op.execute("""
+        UPDATE study
+        SET reference_pattern = '^76(C|GH)\d{5}$'
+          , reference_hint = '76C##### -or- 76GH#####'
+        WHERE name IN ('lead-the-way', 'early-test')
+        """)
+    op.execute(
+        """
+        UPDATE reference_type
+        SET reference_pattern = '^05-01-\d{4}-\d$'
+          , reference_hint = '05-01-####-#'
+        WHERE name IN ('aeh_num')
+        """)
+
 
 def cleanup_patient():
     op.alter_column('patient', 'our', new_column_name='pid')
