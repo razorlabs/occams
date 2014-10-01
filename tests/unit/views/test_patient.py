@@ -39,6 +39,7 @@ class TestEditJson(IntegrationFixture):
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
         from occams.studies import models, Session
+        from occams.studies.validators import ERROR_NOT_FOUND
 
         self.config.add_route('patient', '/patients/{patient}')
 
@@ -53,9 +54,8 @@ class TestEditJson(IntegrationFixture):
         with self.assertRaises(HTTPBadRequest) as cm:
             self.call_view(patient, request)
         self.assertTrue(check_csrf_token.called)
-        self.assertHasStringLike(
-            'Site does not exist',
-            cm.exception.json['validation_errors'])
+        self.assertEqual(
+            ERROR_NOT_FOUND, cm.exception.json['errors']['site'])
 
     def test_reference_type_invalid(self, check_csrf_token):
         """
@@ -64,6 +64,7 @@ class TestEditJson(IntegrationFixture):
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
         from occams.studies import models, Session
+        from occams.studies.validators import ERROR_NOT_FOUND
 
         self.config.add_route('patient', '/patients/{patient}')
 
@@ -81,9 +82,9 @@ class TestEditJson(IntegrationFixture):
         with self.assertRaises(HTTPBadRequest) as cm:
             self.call_view(patient, request)
         self.assertTrue(check_csrf_token.called)
-        self.assertHasStringLike(
-            'Reference type does not exist',
-            cm.exception.json['validation_errors'])
+        self.assertEqual(
+            ERROR_NOT_FOUND,
+            cm.exception.json['errors']['references.0.reference_type'])
 
     def test_reference_valid_number(self, check_csrf_token):
         """
@@ -98,21 +99,23 @@ class TestEditJson(IntegrationFixture):
         site_la = models.Site(name=u'la', title=u'LA')
         reftype = models.ReferenceType(
             name=u'foo', title=u'Foo',
-            reference_pattern=u'^[0-9]$')
+            reference_pattern=u'^[0-9]+$')
         patient = models.Patient(site=site_la, pid=u'12345')
         Session.add_all([patient, reftype])
         Session.flush()
 
         request = testing.DummyRequest(
-            json_body={'references': [
-                {'reference_type': reftype.id,
-                 'reference_number': u'XYZ'}]})
+            json_body={
+                'site': site_la.id,
+                'references': [
+                    {'reference_type': reftype.id,
+                     'reference_number': u'XYZ'}]})
         with self.assertRaises(HTTPBadRequest) as cm:
             self.call_view(patient, request)
         self.assertTrue(check_csrf_token.called)
-        self.assertHasStringLike(
+        self.assertIn(
             'not a valid format',
-            cm.exception.json['validation_errors'])
+            cm.exception.json['errors']['references.0'])
 
     def test_reference_unique(self, check_csrf_token):
         """
@@ -135,15 +138,17 @@ class TestEditJson(IntegrationFixture):
         Session.flush()
 
         request = testing.DummyRequest(
-            json_body={'references': [
-                {'reference_type': reftype.id,
-                 'reference_number': u'XYZ'}]})
+            json_body={
+                'site': site_la.id,
+                'references': [
+                    {'reference_type': reftype.id,
+                     'reference_number': u'XYZ'}]})
         with self.assertRaises(HTTPBadRequest) as cm:
             self.call_view(patient, request)
         self.assertTrue(check_csrf_token.called)
-        self.assertHasStringLike(
+        self.assertIn(
             'already assigned',
-            cm.exception.json['validation_errors'])
+            cm.exception.json['errors']['references.0'])
 
     def test_references(self, check_csrf_token):
         """

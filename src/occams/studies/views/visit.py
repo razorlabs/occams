@@ -1,13 +1,13 @@
 from pyramid.httpexceptions import HTTPBadRequest
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
-import six
 import sqlalchemy as sa
 from sqlalchemy import orm
-from voluptuous import *  # NOQA
+from good import *  # NOQA
 
 from .. import _, models, Session
-from ..validators import Date, DatabaseEntry
+from ..validators import invalid2dict, Model
+
 
 
 @view_config(
@@ -149,14 +149,11 @@ def validate_cycles(context, request):
     """
     AJAX handler for validating cycles field
     """
-    target = 'cycles'
     schema = VisitSchema(context, request)
-    key = next(key for key in six.iterkeys(schema.schema)
-               if str(key) == target)
     try:
-        schema.schema[key](request.GET.getall(target))
-    except MultipleInvalid as e:
-        return str(e.msg)
+        schema.compiled.schema['cycles'](request.GET.getall('cycles'))
+    except Invalid as e:
+        return str(e.message)
     return True
 
 
@@ -177,9 +174,8 @@ def edit_json(context, request):
     schema = VisitSchema(context, request)
     try:
         data = schema(request.json_body)
-    except MultipleInvalid as e:
-        raise HTTPBadRequest(json={
-            'validation_errors': [m.error_message for m in e.errors]})
+    except Invalid as e:
+        raise HTTPBadRequest(json={'errors': invalid2dict(e)})
     if isinstance(context, models.VisitFactory):
         visit = models.Visit(patient=context.__parent__)
         Session.add(visit)
@@ -263,12 +259,9 @@ def VisitSchema(context, request):
             taken_query = taken_query.filter(models.Visit.id != context.id)
         taken = taken_query.first()
         if taken:
-            raise Invalid(request.localizer.translate(
-                _(u'\'${cycle}\' is already used by visit ${visit_date}'),
-                mapping={
-                    'cycle': value.title,
-                    'visit_date': taken.visit_date}),
-                path=['cycle'])
+            msg = _(u'\'${cycle}\' is already used by visit ${visit_date}')
+            mapping = {'cycle': value.title, 'visit_date': taken.visit_date}
+            raise Invalid(request.localizer.translate(msg, mapping=mapping))
         return value
 
     def unique_visit_date(value):
@@ -279,23 +272,19 @@ def VisitSchema(context, request):
             exists_query = exists_query.filter(models.Visit.id != context.id)
         exists, = Session.query(exists_query.exists()).one()
         if exists:
-            raise Invalid(request.localizer.translate(
-                _(u'Visit already exists')))
+
+            msg = _(u'Visit already exists')
+            raise Invalid(request.localizer.translate(msg))
         return value
 
     return Schema({
-        Required('cycles'): All(
-            [All(DatabaseEntry(models.Cycle,
-                               path=['cycle'],
-                               msg=_(u'Specified cycle does not exist'),
-                               localizer=request.localizer),
-                 unique_cycle)],
-            Length(
-                min=1,
-                msg=request.localizer.translate(
-                    _(u'Must select at least one cycle')))),
-        Required('visit_date'): All(Date(), unique_visit_date),
-        Required('include_forms', default=False): Boolean(),
-        Required('include_specimen', default=False): Boolean(),
-        Extra: object
+        'cycles': All(
+            [All(
+                Model(models.Cycle, localizer=request.localizer),
+                unique_cycle)],
+            Length(min=1)),
+        'visit_date': All(Date('%Y-%m-%d'), unique_visit_date),
+        'include_forms': Any(Boolean(), Default(False)),
+        'include_specimen': Any(Boolean(), Default(False)),
+        Extra: Remove
         })

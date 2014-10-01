@@ -2,55 +2,69 @@
 Re-usable valiators
 """
 
-from datetime import datetime, date
-from voluptuous import Invalid
+from good import Invalid
 
-from . import Session
-
-
-def Date(fmt='%Y-%m-%d', msg=None):
-    def validator(value):
-        if isinstance(value, date):
-            return value
-        if isinstance(value, datetime):
-            return value.date()
-        try:
-            return datetime.strptime(value, fmt).date()
-        except ValueError:
-            raise Invalid(msg or u'Invalid date format, must be YYYY-MM-DD')
-    return validator
+from . import _, Session
 
 
-def DateTime(fmt='%Y-%m-%d', msg=None):
-    def validator(value):
-        # Check datetime first since datetime is a subclass of date
-        if isinstance(value, datetime):
-            return value
-        if isinstance(value, date):
-            return datetime.combine(value, datetime.min.time())
-        try:
-            return datetime.strptime(value, fmt)
-        except ValueError:
-            raise Invalid(msg or u'Invalid date format, must be YYYY-MM-DD')
-    return validator
+ERROR_NOT_FOUND = _(u'Database record was not found')
+ERROR_NOT_EXISTS = _(u'Database record does not exist')
 
 
-def DatabaseEntry(class_, path=None, msg=None, localizer=None):
+def invalid2dict(exc):
+    """
+    Helper method to compile errors into a parseable error data sturcture
+    """
+    return dict(('.'.join(map(str, e.path)), e.message) for e in exc)
+
+
+def Listify(value):
+    """
+    Forces a scalar into a list
+    """
+    return [value] if not isinstance(value, list) else value
+
+
+def Model(class_, path=None, msg=None, localizer=None):
     """
     Returns a validator that evaluates the value into a database record.
 
     Paramters
     class_ -- the SQLAlchemy model or table
     path -- (optional) path to report  on invalid
-    msg -- (optional) error message to report on invalid
+    msg -- (optional) error message (i18n-compatible) to report on invalid
     localizer -- (optional) translator to evaludate `msg` on invalid
     """
     def validator(value):
-        entry = Session.query(class_).get(int(value))
+        entry = Session.query(class_).get(value)
         if entry is None:
-            final_msg = msg or u'Record not found'
+            final_msg = msg or ERROR_NOT_FOUND
             if localizer is not None:
                 final_msg = localizer.translate(final_msg)
             raise Invalid(final_msg, path=path)
         return entry
+    return validator
+
+
+def Exists(class_, path=None, msg=None, localizer=None):
+    """
+    Returns a validator that checks if a database record with value id exists.
+
+    Paramters
+    class_ -- the SQLAlchemy model or table
+    path -- (optional) path to report  on invalid
+    msg -- (optional) error message (i18n-compatible) to report on invalid
+    localizer -- (optional) translator to evaludate `msg` on invalid
+    """
+
+    def validator(value):
+        query = Session.query(class_).filter_by(id=value)
+        (exists,) = Session.query(query.exists()).one()
+        if not exists:
+            final_msg = msg or ERROR_NOT_EXISTS
+            if localizer is not None:
+                mapping = {'id': value}
+                final_msg = localizer.translate(final_msg, mapping=mapping)
+            raise Invalid(final_msg, path=path)
+        return value
     return validator

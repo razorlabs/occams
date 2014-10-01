@@ -126,8 +126,9 @@ class TestValidateCycles(IntegrationFixture):
         It should return an validation error string if the cycles are invalid
         """
         from pyramid import testing
-        from occams.studies import models, Session
         from webob.multidict import MultiDict
+        from occams.studies import models, Session
+        from occams.studies.validators import ERROR_NOT_FOUND
 
         patient = models.Patient(
             site=models.Site(name=u'ucsd', title=u'UCSD'),
@@ -139,7 +140,7 @@ class TestValidateCycles(IntegrationFixture):
         response = self.call_view(patient['visits'], testing.DummyRequest(
             params=MultiDict([('cycles', 123)])))
 
-        self.assertEqual('Specified cycle does not exist', response)
+        self.assertEqual(ERROR_NOT_FOUND, response)
 
 
 @mock.patch('occams.studies.views.visit.check_csrf_token')
@@ -157,6 +158,7 @@ class TestEditJson(IntegrationFixture):
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
         from occams.studies import models, Session
+        from occams.studies.validators import ERROR_NOT_FOUND
 
         self.config.add_route('patient', '/{patient}')
         self.config.add_route('visit', '/{patient}/{visit}')
@@ -176,9 +178,8 @@ class TestEditJson(IntegrationFixture):
                     'cycles': [123],
                     'visit_date': date.today()}))
 
-        self.assertHasStringLike(
-            'cycle does not exist',
-            cm.exception.json['validation_errors'])
+        self.assertEqual(
+            ERROR_NOT_FOUND, cm.exception.json['errors']['cycles.0'])
 
     def test_unique_cycle(self, check_csrf_token):
         """
@@ -226,9 +227,9 @@ class TestEditJson(IntegrationFixture):
         with self.assertRaises(HTTPBadRequest) as cm:
             make_request()
 
-        self.assertHasStringLike(
+        self.assertIn(
             'is already used by visit',
-            cm.exception.json['validation_errors'])
+            cm.exception.json['errors']['cycles.0'])
 
         # The exception is interims
         cycle.is_interim = True
@@ -291,9 +292,9 @@ class TestEditJson(IntegrationFixture):
                     'visit_date': date.today()}
                 ))
 
-        self.assertHasStringLike(
-            'Visit already exists',
-            cm.exception.json['validation_errors'])
+        self.assertIn(
+            'already exists',
+            cm.exception.json['errors']['visit_date'])
 
     def test_include_forms(self, check_csrf_token):
         """
@@ -305,7 +306,7 @@ class TestEditJson(IntegrationFixture):
 
         self.config.add_route('patient', '/{patient}')
         self.config.add_route('visit', '/{patient}/{visit}')
-        self.config.add_route('visit_form', '/forms/{form}')
+        self.config.add_route('form', '/forms/{form}')
 
         Session.add(models.State(name='pending-entry', title=u''))
 

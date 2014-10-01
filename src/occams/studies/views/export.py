@@ -11,7 +11,7 @@ from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 import six
 import transaction
-from voluptuous import *  # NOQA
+from good import *  # NOQA
 
 from .. import _, log, models, Session, exports
 from ..tasks import celery,  make_export
@@ -77,8 +77,8 @@ def add(context, request):
                 'contents': request.POST.getall('contents'),
                 'expand_collections': request.POST.get('expand_collections'),
                 'use_choice_labels': request.POST.get('use_choice_labels')})
-        except MultipleInvalid as exc:
-            errors = [e.error_message for e in exc.errors]
+        except Invalid as exc:
+            errors = invalid2dict(exc)
         else:
             task_id = six.u(str(uuid.uuid4()))
             Session.add(models.Export(

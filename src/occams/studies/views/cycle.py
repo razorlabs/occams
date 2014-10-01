@@ -1,10 +1,11 @@
+from good import *  # NOQA
 from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 import six
-from voluptuous import *  # NOQA
 
 from .. import _, models, Session
+from ..validators import invalid2dict
 
 
 @view_config(
@@ -50,9 +51,8 @@ def edit_json(context, request):
 
     try:
         data = schema(request.json_body)
-    except MultipleInvalid as e:
-        raise HTTPBadRequest(json={
-            'validation_errors': [m.error_message for m in e.errors]})
+    except Invalid as e:
+        raise HTTPBadRequest(json={'errors': invalid2dict(e)})
 
     if isinstance(context, models.CycleFactory):
         cycle = models.Cycle(study=context.__parent__)
@@ -119,5 +119,5 @@ def CycleSchema(context, request):
             check_unique_name),
         'title': All(Coerce(six.text_type), Length(min=3, max=32)),
         'week': Coerce(int),
-        Required('is_interim', default=False): Boolean(),
-        Extra: object})
+        'is_interim': Any(Boolean(), Default(False)),
+        Extra: Remove})

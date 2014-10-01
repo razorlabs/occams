@@ -14,6 +14,7 @@ REQUIRES = [
     'celery[redis]',
     'cssmin',
     'gevent-socketio',
+    'good',
     'humanize',
     'jsmin',
     'lingua',
@@ -31,7 +32,6 @@ REQUIRES = [
     'six',
     'tabulate',
     'transaction',
-    'voluptuous',
     'webassets',
     'zope.sqlalchemy',
 

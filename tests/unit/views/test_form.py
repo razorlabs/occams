@@ -147,9 +147,9 @@ class TestAddJson(IntegrationFixture):
                     'schemata': [schema.id],
                     }))
 
-        self.assertHasStringLike(
+        self.assertIn(
             'is not part of the studies',
-            cm.exception.json['validation_errors'])
+            cm.exception.json['errors']['schemata.0'])
 
 
 @mock.patch('occams.studies.views.form.check_csrf_token')

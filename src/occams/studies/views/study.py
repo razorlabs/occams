@@ -4,11 +4,11 @@ from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 from sqlalchemy import func, orm
 import six
-from voluptuous import *  # NOQA
+from good import *  # NOQA
 
 from .. import _, models, Session
 from . import cycle as cycle_views
-from ..validators import Date, DatabaseEntry
+from ..validators import invalid2dict, Model
 
 
 @view_config(
@@ -148,9 +148,8 @@ def edit_json(context, request):
 
     try:
         data = schema(request.json_body)
-    except MultipleInvalid as e:
-        raise HTTPBadRequest(json={
-            'validation_errors': [m.error_message for m in e.errors]})
+    except Invalid as e:
+        raise HTTPBadRequest(json={'errors': invalid2dict(e)})
 
     if isinstance(context, models.StudyFactory):
         study = models.Study()
@@ -250,11 +249,7 @@ def add_schema_json(context, request):
 
     schema = Schema({
         'schema': All(
-            DatabaseEntry(
-                models.Schema,
-                path=['schema'],
-                msg=_(u'Schema does not exist'),
-                localizer=request.localizer),
+            Model(models.Schema, localizer=request.localizer),
             check_published,
             check_not_patient_schema,
             check_not_randomization_schema,
@@ -262,9 +257,8 @@ def add_schema_json(context, request):
 
     try:
         data = schema(request.json_body)
-    except MultipleInvalid as e:
-        raise HTTPBadRequest(json={
-            'validation_errors': [m.error_message for m in e.errors]})
+    except Invalid as e:
+        raise HTTPBadRequest(json={'errors': invalid2dict(e)})
 
     context.schemata.add(data['schema'])
 
@@ -339,26 +333,19 @@ def edit_schedule_json(context, request):
 
     schema = Schema({
         'schema': All(
-            DatabaseEntry(
-                models.Schema,
-                msg=_(u'Schema does not exist'),
-                localizer=request.localizer),
+            Model(models.Schema, localizer=request.localizer),
             check_schema_in_study),
         'cycle': All(
-            DatabaseEntry(
-                models.Cycle,
-                msg=_(u'Cycle does not exist'),
-                localizer=request.localizer),
+            Model(models.Cycle, localizer=request.localizer),
             check_cycle_in_study),
         'enabled': Boolean(),
-        Extra: object,
+        Extra: Remove
         })
 
     try:
         data = schema(request.json_body)
-    except MultipleInvalid as e:
-        raise HTTPBadRequest(json={
-            'validation_errors': [m.error_message for m in e.errors]})
+    except Invalid as e:
+        raise HTTPBadRequest(json={'errors': invalid2dict(e)})
 
     if data['enabled']:
         data['cycle'].schemata.add(data['schema'])
@@ -392,7 +379,7 @@ def StudySchema(context, request):
         'title': All(Coerce(six.text_type), Length(min=3, max=32)),
         'code': All(Coerce(six.binary_type), Length(min=3, max=8)),
         'short_title': All(Coerce(six.text_type), Length(min=3, max=8)),
-        'consent_date': Date(),
-        Required('start_date', default=None): Date(),
-        Required('stop_date', default=None): Date(),
-        Extra: object})
+        'consent_date': Date('%Y-%m-%d'),
+        'start_date': Maybe(Date('%Y-%m-%d')),
+        'stop_date': Maybe(Date('%Y-%m-%d')),
+        Extra: Remove})

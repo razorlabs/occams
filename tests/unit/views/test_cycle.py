@@ -70,9 +70,9 @@ class TestEditJson(IntegrationFixture):
                     'title': 'Should fail',
                     'week': 2}))
 
-        self.assertHasStringLike(
+        self.assertIn(
             'already exists',
-            cm.exception.json['validation_errors'])
+            cm.exception.json['errors']['name'])
 
     def test_edit_unique_name(self, check_csrf_token):
         """

@@ -60,9 +60,7 @@ class TestEditJson(IntegrationFixture):
                     'code': '111',
                     'consent_date': date.today()}))
 
-        self.assertHasStringLike(
-            'already exists',
-            cm.exception.json['validation_errors'])
+        self.assertIn('already exists', cm.exception.json['errors']['name'])
 
     def test_edit_unique_name(self, check_csrf_token):
         """
@@ -234,9 +232,9 @@ class TestAddSchemaJson(IntegrationFixture):
             self.call_view(study, testing.DummyRequest(
                 json_body={'schema': schema.id}))
 
-        self.assertHasStringLike(
+        self.assertIn(
             'already used as a patient form',
-            cm.exception.json['validation_errors'])
+            cm.exception.json['errors']['schema'])
 
     def test_fail_if_randomization_schema(self, check_csrf_token):
         """
@@ -267,9 +265,9 @@ class TestAddSchemaJson(IntegrationFixture):
             self.call_view(study, testing.DummyRequest(
                 json_body={'schema': schema.id}))
 
-        self.assertHasStringLike(
+        self.assertIn(
             'already used as a randomization form',
-            cm.exception.json['validation_errors'])
+            cm.exception.json['errors']['schema'])
 
     def test_fail_if_termination_schema(self, check_csrf_token):
         """
@@ -299,9 +297,9 @@ class TestAddSchemaJson(IntegrationFixture):
             self.call_view(study, testing.DummyRequest(
                 json_body={'schema': schema.id}))
 
-        self.assertHasStringLike(
+        self.assertIn(
             'already used as a termination form',
-            cm.exception.json['validation_errors'])
+            cm.exception.json['errors']['schema'])
 
 
 @mock.patch('occams.studies.views.study.check_csrf_token')
@@ -415,9 +413,9 @@ class TestEditScheduleJson(IntegrationFixture):
                     'cycle': cycle.id,
                     'enabled': True}))
 
-        self.assertHasStringLike(
+        self.assertIn(
             'does not have form',
-            cm.exception.json['validation_errors'])
+            cm.exception.json['errors']['schema'])
 
     def test_cycle_in_study(self, check_csrf_token):
         """
@@ -461,9 +459,9 @@ class TestEditScheduleJson(IntegrationFixture):
                     'cycle': other_cycle.id,
                     'enabled': True}))
 
-        self.assertHasStringLike(
+        self.assertIn(
             'does not have cycle',
-            cm.exception.json['validation_errors'])
+            cm.exception.json['errors']['cycle'])
 
     def test_enable(self, check_csrf_token):
         """

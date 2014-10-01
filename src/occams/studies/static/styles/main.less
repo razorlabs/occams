@@ -2,31 +2,42 @@
  * Main CSS File
  */
 
-// Extend bootstrap
+//
+// Third-party libraries
+//
 
 @import '../libs/bootstrap/less/bootstrap.less';
-
 @import '../libs/font-awesome/less/font-awesome.less';
-@fa-font-path: '../libs/font-awesome/fonts/';
-
 @import '../libs/bootstrap-datetimepicker/src/less/bootstrap-datetimepicker.less';
 
+//
 // Overrides
+//
 
-@import url(//fonts.googleapis.com/css?family=Exo+2:400,700);
-@import 'overrides.less';
+@fa-font-path: '../libs/font-awesome/fonts/';
 
-@import 'components/alerts.less';
-@import 'components/dropdowns.less';
-@import 'components/forms.less';
-@import 'components/lists.less';
-@import 'components/navs.less';
-@import 'components/navbar.less';
-@import 'components/tables.less';
-@import 'components/utilities.less';
+// Accomodate the feature-rich navbar by collapsing only for phones/tablets
+@grid-float-breakpoint: @screen-desktop;
 
+// The navbar margin is a bit excessive
+@navbar-margin-bottom: -(@line-height-computed);
+
+// Update the base path to relative to the assets directory
+@icon-font-path: '../libs/bootstrap/fonts/';
+
+
+//
+// Custom styling
+//
+
+@import 'forms.less';
+@import 'fonts.less';
+@import 'lists.less';
+@import 'navs.less';
+@import 'navbar.less';
+@import 'tables.less';
 @import 'stickyfoot.less';
 
-@import 'views/account.less';
-@import 'views/export.less';
-@import 'views/patient.less';
+@import 'views-account.less';
+@import 'views-export.less';
+@import 'views-patient.less';

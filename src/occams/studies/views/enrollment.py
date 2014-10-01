@@ -1,12 +1,12 @@
+from good import *  # NOQA
 from pyramid.httpexceptions import HTTPBadRequest
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 import six
 from sqlalchemy import orm
-from voluptuous import *  # NOQA
 
 from .. import _, models, Session
-from ..validators import Date, DatabaseEntry
+from ..validators import invalid2dict, Model
 
 
 @view_config(
@@ -102,9 +102,8 @@ def edit_json(context, request):
 
     try:
         data = schema(request.json_body)
-    except MultipleInvalid as exc:
-        raise HTTPBadRequest(json={
-            'validation_errors': [e.error_message for e in exc.errors]})
+    except Invalid as e:
+        raise HTTPBadRequest(json={'errors': invalid2dict(e)})
 
     if isinstance(context, models.EnrollmentFactory):
         patient = context.__parent__
@@ -203,15 +202,13 @@ def EnrollmentSchema(context, request):
         return value
 
     return Schema(All({
-        Required('study'): All(
-            DatabaseEntry(models.Study,
-                          msg=_(u'Study does not exist'),
-                          localizer=request.localizer),
+        'study': All(
+            Model(models.Study, localizer=request.localizer),
             check_cannot_edit_study),
-        Required('consent_date'): Date(),
-        Required('latest_consent_date'): Date(),
-        Required('reference_number', default=None): Coerce(six.binary_type),
-        Extra: object
+        'consent_date': Date('%Y-%m-%d'),
+        'latest_consent_date': Date('%Y-%m-%d'),
+        'reference_number': Maybe(Coerce(six.binary_type)),
+        Extra: Remove
         },
         check_timeline,
         check_reference,

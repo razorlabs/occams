@@ -1,10 +1,10 @@
 from pyramid.httpexceptions import HTTPBadRequest, HTTPOk
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
-from voluptuous import *  # NOQA
+from good import *  # NOQA
 
 from .. import _, models, Session
-from ..validators import DatabaseEntry
+from ..validators import invalid2dict, Model
 
 
 @view_config(
@@ -28,25 +28,19 @@ def add_json(context, request):
         if not exists:
             raise Invalid(request.localizer.translate(
                 _('${schema} is not part of the studies for this visit'),
-                mapping={'schema': value.title}),
-                path=['schema'])
+                mapping={'schema': value.title}))
         return value
 
     schema = Schema({
         'schemata': [All(
-            DatabaseEntry(
-                models.Schema,
-                msg=_(u'Schema does not exist'),
-                path=['schema'],
-                localizer=request.localizer),
+            Model(models.Schema, localizer=request.localizer),
             check_study_form)],
         Extra: object})
 
     try:
         data = schema(request.json_body)
-    except MultipleInvalid as e:
-        raise HTTPBadRequest(json={
-            'validation_errors': [m.error_message for m in e.errors]})
+    except Invalid as e:
+        raise HTTPBadRequest(json={'errors': invalid2dict(e)})
 
     default_state = (
         Session.query(models.State)
@@ -78,17 +72,16 @@ def delete_json(context, request):
     check_csrf_token(request)
 
     schema = Schema({
-        'forms': [DatabaseEntry(
+        'forms': [Model(
             models.Entity,
             msg=_(u'Form does not exist'),
             localizer=request.localizer)],
-        Extra: object})
+        Extra: Remove})
 
     try:
         data = schema(request.json_body)
-    except MultipleInvalid as e:
-        raise HTTPBadRequest(json={
-            'validation_errors': [m.error_message for m in e.errors]})
+    except Invalid as e:
+        raise HTTPBadRequest(json={'errors': invalid2dict(e)})
 
     entity_ids = [entity.id for entity in data['forms']]
 

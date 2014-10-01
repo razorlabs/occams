@@ -24,15 +24,15 @@ def includeme(config):
         'libs/socket.io.min.js',
         Bundle(
             'scripts/*.js',
-            'scripts/**/*.js',
-            depends='scripts/**/*.js', filters='jsmin'),
+            depends='scripts/*.js',
+            filters='jsmin'),
         output='gen/default.%(version)s.min.js'))
 
     config.add_webasset('default-css', Bundle(
         Bundle(
             'styles/main.less',
             filters='less,cssmin',
-            depends='styles/**/*.less',
+            depends='styles/*.less',
             output='gen/main.%(version)s.min.css'),
         Bundle('libs/select2.css', filters=['cssmin', 'cssrewrite']),
         Bundle('libs/select2-bootstrap.css', filters='cssmin'),

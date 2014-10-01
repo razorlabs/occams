@@ -1,18 +1,18 @@
 from datetime import datetime
 
+from good import *  # NOQA
 from pyramid.httpexceptions import HTTPBadRequest
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 import six
 import sqlalchemy as sa
 from sqlalchemy import orm
-from voluptuous import *  # NOQA
 
 from occams.roster import generate
 
 from .. import _, models, Session
 from . import enrollment as enrollment_views, visit as visit_views
-from ..validators import DatabaseEntry
+from ..validators import invalid2dict, Model
 
 
 @view_config(
@@ -172,9 +172,8 @@ def edit_json(context, request):
 
     try:
         data = schema(request.json_body)
-    except MultipleInvalid as exc:
-        raise HTTPBadRequest(json={
-            'validation_errors': [e.error_message for e in exc.errors]})
+    except Invalid as e:
+        raise HTTPBadRequest(json={'errors': invalid2dict(e)})
 
     if isinstance(context, models.PatientFactory):
         pid = generate(data['site'].name)
@@ -236,12 +235,11 @@ def PatientSchema(context, request):
 
     def check_reference_format(value):
         if not value['reference_type'].check(value['reference_number']):
-            msg = request.localizer.translate(
+            raise Invalid(request.localizer.translate(
                 _(u'${type} ${number} is not a valid format'),
                 mapping={
                     'type': value['reference_type'].title,
-                    'number': value['reference_number']})
-            raise Invalid(msg, path=['reference_number'])
+                    'number': value['reference_number']}))
         return value
 
     def check_unique_reference(value):
@@ -254,33 +252,26 @@ def PatientSchema(context, request):
             query = query.filter(models.PatientReference.patient != context)
         reference = query.first()
         if reference:
-            # Need to translate before sending back to client
             msg = request.localizer.translate(
                 _(u'${type} ${number} is already assigned to ${pid}'),
                 mapping={
                     'type': reference.reference_type.title,
                     'number': reference.reference_number,
                     'pid': reference.patient.pid})
-            raise Invalid(msg, path=['reference_number'])
+            raise Invalid(msg)
         return value
 
     return Schema({
-        Required('site'): All(
-            DatabaseEntry(
-                models.Site,
-                msg=_(u'Site does not exist'),
-                localizer=request.localizer),
+        'site': All(
+            Model(models.Site, localizer=request.localizer),
             check_can_view_site),
-        Required('references', default=[]): [All({
-            Required('reference_type'): DatabaseEntry(
+        'references': Maybe([All({
+            'reference_type': Model(
                 models.ReferenceType,
-                msg=_(u'Reference type does not exist'),
                 localizer=request.localizer),
-            Required('reference_number'): Coerce(six.binary_type),
-            Extra: object
-            },
-            check_reference_format,
-            check_unique_reference,
-            )],
-        Extra: object
+            'reference_number': Coerce(six.binary_type),
+            Extra: Remove,
+            }, check_reference_format, check_unique_reference)],
+            none=[]),
+        Extra: Remove
         })
