@@ -334,9 +334,9 @@ function PatientView(){
 
 +function($){
   $(document).ready(function(){
-    var $view = $('#patient');
-    if ($view.length > 0){
-      ko.applyBindings(new PatientView(), $view[0]);
+    var $view = $('#view-patient')[0];
+    if ($view){
+      ko.applyBindings(new PatientView(), $view);
     }
   });
 }(jQuery);

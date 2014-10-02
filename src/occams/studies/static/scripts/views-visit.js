@@ -39,9 +39,9 @@ function VisitView(){
 
 +function($){
   $(document).ready(function(){
-    var $view = $('#visit');
-    if ($view.length > 0){
-      ko.applyBindings(new VisitView(), $view[0]);
+    var $view = $('#view-visit')[0];
+    if ($view){
+      ko.applyBindings(new VisitView(), $view);
     }
   });
 }(jQuery);

@@ -39,9 +39,9 @@ function StudyView(){
 
 +function($){
   $(document).ready(function(){
-    var $view = $('#study');
-    if ($view.length > 0){
-      ko.applyBindings(new StudyView(), $view[0]);
+    var $view = $('#view-study')[0];
+    if ($view){
+      ko.applyBindings(new StudyView(), $view);
     }
   });
 }(jQuery);

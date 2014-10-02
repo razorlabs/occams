@@ -197,7 +197,7 @@
     </nav>
     <div class="container">
       <main
-          id="${request.matched_route.name}"
+          id="view-${request.matched_route.name}"
           data-view-name="${request.matched_route.name}"
           data-view-path="${request.current_route_path()}"
           data-socket-io-resource="${request.route_path('socket.io', remaining='').strip('/')}">

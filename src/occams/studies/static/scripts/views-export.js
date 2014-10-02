@@ -151,10 +151,9 @@ function StatusViewModel() {
 +function($){
   'use strict';
 
-  /**
-   * Registers the view model only if we're in the target page
-   * TODO: would be nice to figure this out in RequireJS
-   */
+  *
+   Registers the view model only if we're in the target page
+   TODO: would be nice to figure this out in RequireJS
   $(document).ready(function(){
     var $view = $('#export_codebook');
     if ( $view.length > 0 ) {
@@ -182,10 +181,9 @@ function StatusViewModel() {
     }
   });
 
-  /**
-   * Registers the view model only if we're in the export page
-   * TODO: would be nice to figure this out in RequireJS
-   */
+  *
+   Registers the view model only if we're in the export page
+   TODO: would be nice to figure this out in RequireJS
   $(document).ready(function(){
     var $view = $('#export_status');
     if ( $view.length > 0 ) {
