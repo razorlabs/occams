@@ -334,7 +334,7 @@ function PatientView(){
 
 +function($){
   $(document).ready(function(){
-    var $view = $('#view-patient')[0];
+    var $view = $('#views-patient-main')[0];
     if ($view){
       ko.applyBindings(new PatientView(), $view);
     }

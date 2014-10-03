@@ -30,55 +30,49 @@ def search_json(context, request):
     """
 
     schema = Schema({
-        Required('query', default=''): All(
-            Coerce(six.binary_types),
-            lambda v: v.strip(),
-            # Avoid gigantic queries
-            Length(max=100)),
-        Required('offset', default=0): All(Coerce(int), Clamp(min=0)),
-        Required('limit', default=25): All(
-            Coerce(int), Clamp(min=0, max=50), Any(10, 25, 50)),
-        Extra: object,
+        'query': Any(
+            All(
+                Coerce(six.text_type),
+                lambda v: v.strip(),
+                # Avoid gigantic queries
+                Length(max=100)),
+            Default(u'')),
+        'page': Any(All(Coerce(int), Clamp(min=1)), Default(1)),
+        Extra: Remove,
         })
 
-    search = schema(request.GET)
+    data = schema(request.GET.mixed())
 
-    query = Session.query(models.Patient)
+    # Only include sites that the user is a member of
+    sites = Session.query(models.Site)
+    site_ids = [s.id for s in sites if request.has_permission('view', s)]
 
-    if search['query']:
-        wildcard = '%{0}%'.format(search['query'])
+    query = (
+        Session.query(models.Patient)
+        .filter(models.Patient.site_id.in_(site_ids)))
+
+    if data['query']:
+        wildcard = '%{0}%'.format(data['query'])
         query = (
             Session.query(models.Patient)
             .outerjoin(models.Patient.enrollments)
             .outerjoin(models.Patient.strata)
-            .outerjoin(models.Patient.reference_numbers)
+            .outerjoin(models.Patient.references)
             .filter(
                 models.Patient.pid.ilike(wildcard)
                 | models.Enrollment.reference_number.ilike(wildcard)
                 | models.Stratum.reference_number.ilike(wildcard)
                 | models.PatientReference.reference_number.ilike(wildcard)))
 
-    # TODO include only those the user is a site member of
-
-    previous_search = request.session.get(request.matched_route.name)
-
-    if previous_search:
-        previous_search, last_pid = previous_search
-        if previous_search == search:
-            query.filter(models.Patient.pid >= last_pid)
-
     query = (
         query
         .order_by(models.Patient.pid.asc())
-        .offset(search['offset'])
-        .limit(search['limit']))
+        .offset((data['page'] - 1) * 25)
+        .limit(25))
 
-    results = [get_patient_data(p) for p in query
-               if request.has_permission('patient_view', p.site)]
+    patients = [view_json(p, request) for p in query]
 
-    request.session[request.matched_route.name] = (search, results[-1]['pid'])
-
-    return {'results': results}
+    return {'patients': patients}
 
 
 @view_config(

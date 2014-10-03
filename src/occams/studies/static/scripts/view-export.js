@@ -151,13 +151,14 @@ function StatusViewModel() {
 +function($){
   'use strict';
 
-  *
+  /*
    Registers the view model only if we're in the target page
    TODO: would be nice to figure this out in RequireJS
+   */
   $(document).ready(function(){
-    var $view = $('#export_codebook');
-    if ( $view.length > 0 ) {
-      ko.applyBindings(new CodebookViewModel(), $view[0]);
+    var $view = $('#export_codebook')[0];
+    if ($view){
+      ko.applyBindings(new CodebookViewModel(), $view);
     }
 
   });
@@ -181,13 +182,14 @@ function StatusViewModel() {
     }
   });
 
-  *
+  /*
    Registers the view model only if we're in the export page
    TODO: would be nice to figure this out in RequireJS
+   */
   $(document).ready(function(){
-    var $view = $('#export_status');
-    if ( $view.length > 0 ) {
-      ko.applyBindings(new StatusViewModel(), $view[0]);
+    var $view = $('#export_status')[0];
+    if ($view){
+      ko.applyBindings(new StatusViewModel(), $view);
     }
   });
 

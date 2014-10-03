@@ -119,13 +119,16 @@
             </li>
           </ul>
 
+          <!--! Search box: do not display if already in the search view -->
           <form class="navbar-form navbar-left" role="search"
               method="GET"
               action="${request.route_path('patients')}"
               tal:define="
                 factory import:occams.studies.models.PatientFactory;
                 patients factory(request)"
-              tal:condition="request.has_permission('view', patients)">
+              tal:condition="
+                request.has_permission('view', patients)
+                  and request.matched_route.name != 'patients'">
             <div class="form-group">
               <label class="sr-only" for="search">Search</label>
               <input
