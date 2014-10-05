@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from good import *  # NOQA
-from pyramid.httpexceptions import HTTPBadRequest
+from pyramid.httpexceptions import HTTPBadRequest, HTTPFound
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 import six
@@ -19,6 +19,18 @@ from ..validators import invalid2dict, Model
     route_name='patients',
     permission='view',
     renderer='../templates/patient/search.pt')
+def search_view(context, request):
+    """
+    Generates data for the search result listing web view.
+    If the search only yields a single result, a redirect to the patient view
+    will be returned.
+    """
+    results = search_json(context, request)
+    if len(results['patients']) == 1:
+        return HTTPFound(location=results['patients'][0]['__url__'])
+    return {'results': results}
+
+
 @view_config(
     route_name='patients',
     permission='view',
@@ -26,17 +38,35 @@ from ..validators import invalid2dict, Model
     renderer='json')
 def search_json(context, request):
     """
-    Searches for a patient based on their reference numbers
+    Generates a search result listing based on a string term.
+
+    Expects the following GET paramters:
+        query -- A partial patient reference string
+        page -- The page to in the result listing to fetch (default: 1)
+
+    Returns a JSON object containing the following properties:
+        __has_next__ -- flag indicating there are more results to fetch
+        __has_previous__ -- flag indicating that we're not in the first page
+        __page__ -- the current "page" in the results
+        __query__ -- the search query requested
+        patients -- the result list, each record is patient JSON object.
+                    see ``view_json`` for more info.
+                    This object also contains an additional property:
+                    __last_visit_date__ -- indicates the last interaction
+                                           with the patient
     """
+    per_page = 10
 
     schema = Schema({
         'query': Any(
             All(
+                # If we get a string type, the coerce to unicode
+                Type(*six.string_types),
                 Coerce(six.text_type),
                 lambda v: v.strip(),
                 # Avoid gigantic queries
                 Length(max=100)),
-            Default(u'')),
+            Default(None)),
         'page': Any(All(Coerce(int), Clamp(min=1)), Default(1)),
         Extra: Remove,
         })
@@ -49,30 +79,54 @@ def search_json(context, request):
 
     query = (
         Session.query(models.Patient)
+        .options(orm.joinedload(models.Patient.site))
+        .add_column(
+            Session.query(models.Visit.visit_date)
+            .filter(models.Visit.patient_id == models.Patient.id)
+            .order_by(models.Visit.visit_date.desc())
+            .limit(1)
+            .as_scalar())
         .filter(models.Patient.site_id.in_(site_ids)))
 
     if data['query']:
         wildcard = '%{0}%'.format(data['query'])
         query = (
-            Session.query(models.Patient)
-            .outerjoin(models.Patient.enrollments)
-            .outerjoin(models.Patient.strata)
-            .outerjoin(models.Patient.references)
-            .filter(
+            query.filter(
                 models.Patient.pid.ilike(wildcard)
-                | models.Enrollment.reference_number.ilike(wildcard)
-                | models.Stratum.reference_number.ilike(wildcard)
-                | models.PatientReference.reference_number.ilike(wildcard)))
+                | models.Patient.enrollments.any(
+                    models.Enrollment.reference_number.ilike(wildcard))
+                | models.Patient.references.any(
+                    models.PatientReference.reference_number.ilike(wildcard))))
 
+    # TODO: There are better postgres-specific ways of doing pagination
+    # https://coderwall.com/p/lkcaag
+    # This method gets the number per page and one record after
+    # to determine if there is more to view
     query = (
         query
         .order_by(models.Patient.pid.asc())
-        .offset((data['page'] - 1) * 25)
-        .limit(25))
+        .offset((data['page'] - 1) * per_page)
+        .limit(per_page + 1))
 
-    patients = [view_json(p, request) for p in query]
+    def process(result):
+        patient, last_visit_date = result
+        data = view_json(patient, request)
+        data.update(enrollment_views.list_json(
+            patient['enrollments'],
+            request))
+        data['__last_visit_date__'] = \
+            last_visit_date and last_visit_date.isoformat()
+        return data
 
-    return {'patients': patients}
+    patients = [process(result) for result in query]
+
+    return {
+        '__has_previous__': data['page'] > 1,
+        '__has_next__': len(patients) > per_page,
+        '__page__': data['page'],
+        '__query__': data['query'],
+        'patients': patients[:per_page]
+    }
 
 
 @view_config(
@@ -142,7 +196,9 @@ def view_json(context, request):
                 'title': r.reference_type.title,
                 },
             'reference_number': r.reference_number,
-            } for r in references_query]
+            } for r in references_query],
+        'create_date': patient.create_date.isoformat(),
+        'modify_date': patient.modify_date.isoformat(),
         }
 
 

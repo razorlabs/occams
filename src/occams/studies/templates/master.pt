@@ -134,8 +134,7 @@
               <input
                   type="search"
                   class="form-control"
-                  name="search"
-                  value="${request.GET['search']|nothing}"
+                  name="query"
                   placeholder="Search for Patient">
               <span class="input-group-btn">
             </div>
