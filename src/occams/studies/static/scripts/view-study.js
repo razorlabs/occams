@@ -1,10 +1,76 @@
+
+/**
+ * Schema representation in the context of a study
+ */
+function StudySchema(data){
+  var self = this;
+  self.name = data.name;
+  self.title = data.title
+  self.versions = ko.observableArray(data.versions);
+}
+
+
+/**
+ * Cycle representation in the context of a study
+ */
+function StudyCycle(data){
+  var self = this;
+
+  self.update = function(data){
+    self.id(data.id);
+    self.name
+  };
+
+  self.id = ko.observable(data.id);
+  self.name = ko.observable(data.name);
+  self.title = ko.observable(data.title);
+  self.week = ko.observable(data.week);
+  self.is_interim = ko.observable(data.is_interim);
+
+  self.schemata = ko.observableArray((data.schemata || []).map(function(schema){
+    return new StudySchema(schema);
+  }));
+
+  self.hasSchemata = ko.computed(function(){
+    return self.schemata().length;
+  });
+
+  self.schemataIndex = ko.computed(function(){
+    var set = {};
+    self.schemata().forEach(function(schema){
+      set[schema.name] = true
+    });
+    return set;
+  });
+
+  self.containsSchema = function(name){
+    return name in self.schemataIndex();
+  };
+
+  self.update(data);
+}
+
+
 function StudyView(){
   var self = this;
 
-  self.isReady = ko.observable(false);
-  self.isSaving = ko.observable(false);
+  self.isReady = ko.observable(false);      // Indicates UI is ready
+  self.isSaving = ko.observable(false);     // Indicates AJAX call
 
-  self.study = ko.mapping.fromJSON($('#study-data').text());
+  self.isGridEnabled = ko.observable(false);// Grid disable/enable flag
+
+  self.study = ko.mapping.fromJSON($('#study-data').text(), {
+    'schemata': {
+      create: function(options){
+        return new StudySchema(options.data);
+      }
+    },
+    'cycles': {
+      create: function(options){
+        return new StudyCycle(options.data);
+      }
+    }
+  });
 
   //self.selectedForms = ko.observableArray();
   //self.hasSelectedForms = ko.computed(function(){
@@ -33,7 +99,10 @@ function StudyView(){
   //self.startDelete = function(){
   //};
 
-  // Object initalized, set flag to display main UI
+  self.toggleGrid = function(data, event){
+    console.log(event);
+  };
+
   self.isReady(true);
 }
 
@@ -45,21 +114,3 @@ function StudyView(){
     }
   });
 }(jQuery);
-
-
-
-/*
-        <tbody>
-          <tr tal:repeat="ecrf context.schemata">
-            <th class="ecrf"><span>${ecrf.title}</span></th>
-            <!--! The rest of the columns are the cycles,
-                  just loop through them (skip the first since
-                  it's the ecrf) -->
-            <tal:cycles repeat="enabled ecrf">
-              <td tal:condition="not:repeat['enabled'].start">
-                <span tal:condition="enabled" class="glyphicon glyphicon-ok"></span>
-              </td>
-            </tal:cycles>
-          </tr>
-        </tbody>
-*/

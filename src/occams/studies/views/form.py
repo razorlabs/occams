@@ -1,9 +1,9 @@
-from datetime import datetime
+from itertools import groupby
 
+from good import *  # NOQA
 from pyramid.httpexceptions import HTTPBadRequest, HTTPOk
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
-from good import *  # NOQA
 
 from .. import _, models, Session
 from ..validators import invalid2dict, Model
@@ -12,6 +12,40 @@ from ..validators import invalid2dict, Model
 #
 # TODO, update patient on form changes
 #
+
+def schema2json(schema):
+    """
+    Returns a single schema json record
+    """
+    return {
+        'id': schema.id,
+        'name': schema.name,
+        'title': schema.title,
+        'publish_date': schema.publish_date.isoformat()}
+
+
+def versions2json(schemata):
+    """
+    Returns a schemata listing grouped by name
+    """
+
+    def by_name(schema):
+        return schema.name
+
+    def by_version(schema):
+        return schema.publish_date
+
+    def make_json(groups):
+        groups = sorted(groups, key=by_version)
+        return {
+            'name': groups[0].name,
+            'title': groups[-1].title,
+            'versions': list(map(schema2json, groups))
+            }
+
+    schemata = sorted(schemata, key=by_name)
+
+    return [make_json(g) for k, g in groupby(schemata, by_name)]
 
 
 @view_config(

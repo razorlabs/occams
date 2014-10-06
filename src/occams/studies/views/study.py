@@ -7,7 +7,7 @@ import six
 from good import *  # NOQA
 
 from .. import _, models, Session
-from . import cycle as cycle_views
+from . import cycle as cycle_views, form as form_views
 from ..validators import invalid2dict, Model
 
 
@@ -58,14 +58,6 @@ def view(context, request):
     renderer='json')
 def view_json(context, request):
     study = context
-
-    def schema_json(schema):
-        return {
-            'id': schema.id,
-            'name': schema.name,
-            'title': schema.title,
-            'publish_date': schema.publish_date.isoformat()}
-
     return {
         '__url__': request.route_path('study', study=study.name),
         'id': study.id,
@@ -80,11 +72,11 @@ def view_json(context, request):
         'is_locked': study.is_locked,
         'termination_schema':
             study.termination_schema
-            and schema_json(study.termination_schema),
+            and form_views.schema2json(study.termination_schema),
         'randomization_schema':
             study.randomization_schema
-            and schema_json(study.randomization_schema),
-        'schemata': list(map(schema_json, study.schemata)),
+            and form_views.schema2json(study.randomization_schema),
+        'schemata': form_views.versions2json(study.schemata),
         'cycles': [
             cycle_views.view_json(cycle, request) for cycle in study.cycles]
         }

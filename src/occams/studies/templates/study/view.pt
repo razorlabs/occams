@@ -32,7 +32,13 @@
         <table class="table table-bordered table-striped table-dimensional table-rotated-header">
           <thead>
             <tr>
-              <th></th>
+              <th>
+                <input type="checkbox" id="grid-toggle"
+                  data-bind="bootstrapSwitch: isGridEnabled"
+                  data-on-text="Done"
+                  data-off-text="Edit"
+                  />
+              </th>
               <!-- ko foreach: study.cycles -->
                 <th class="rotated">
                   <div class="rotated-container">
@@ -42,14 +48,40 @@
                   </div>
                 </th>
               <!-- /ko -->
+              <th class="rotated">
+                <div class="rotated-container">
+                  <div class="rotated-rotate">
+                    <span class="rorated-text">
+                      <button class="btn btn-link">
+                        <span class="fa fa-plus"></span>
+                        <strong i18n:translate="">Add Cycle</strong>
+                      </button>
+                    </span>
+                  </div>
+                </div>
+              </th>
             </tr>
           </thead>
-          <tbody data-bind="foreach: study.schemata">
+          <tbody>
+            <!-- ko foreach: {data: study.schemata, as: 'schema'} -->
+              <tr>
+                <th data-bind="text: title"></th>
+                <!-- ko foreach: {data: $root.study.cycles, as: 'cycle'} -->
+                  <td data-bind="event: {dblclick: $root.toggleGrid}">
+                    <!-- ko if: cycle.containsSchema(schema.name) -->
+                      <span class="fa fa-check"></span>
+                    <!-- /ko -->
+                  </td>
+                <!-- /ko -->
+              </tr>
+            <!-- /ko -->
             <tr>
-              <th data-bind="text: title"></th>
-              <!-- ko foreach: $root.study.cycles -->
-                <td> </td>
-              <!-- /ko -->
+              <th>
+                <button class="btn btn-link">
+                  <span class="fa fa-plus"></span>
+                  <strong i18n:translate="">Add Form</strong>
+                </button>
+              </th>
             </tr>
           </tbody>
         </table>

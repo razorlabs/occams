@@ -20,6 +20,7 @@ def includeme(config):
         'libs/select2.min.js',
         'libs/moment.min.js',
         'libs/bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js',
+        'libs/bootstrap-switch.min.js',
         'libs/sammy.min.js',
         'libs/socket.io.min.js',
         Bundle(
@@ -36,6 +37,7 @@ def includeme(config):
             output='gen/main.%(version)s.min.css'),
         Bundle('libs/select2.css', filters=['cssmin', 'cssrewrite']),
         Bundle('libs/select2-bootstrap.css', filters='cssmin'),
+        'libs/bootstrap-switch.min.css',
         output='gen/default.%(version)s.css'))
 
     log.debug('Assets configurated')

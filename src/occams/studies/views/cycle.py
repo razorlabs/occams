@@ -5,6 +5,7 @@ from pyramid.view import view_config
 import six
 
 from .. import _, models, Session
+from . import form as form_views
 from ..validators import invalid2dict
 
 
@@ -23,12 +24,7 @@ def view_json(context, request):
         'title': cycle.title,
         'week': cycle.week,
         'is_interim': cycle.is_interim,
-        'schemata': [{
-            'id': schema.id,
-            'name': schema.name,
-            'title': schema.title,
-            'publish_date': schema.publish_date.isoformat()
-            } for schema in cycle.schemata]
+        'schemata': form_views.versions2json(cycle.schemata)
         }
 
 
