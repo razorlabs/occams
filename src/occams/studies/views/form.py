@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pyramid.httpexceptions import HTTPBadRequest, HTTPOk
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
@@ -5,6 +7,11 @@ from good import *  # NOQA
 
 from .. import _, models, Session
 from ..validators import invalid2dict, Model
+
+
+#
+# TODO, update patient on form changes
+#
 
 
 @view_config(

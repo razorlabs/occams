@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pyramid.httpexceptions import HTTPBadRequest
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
@@ -7,7 +9,6 @@ from good import *  # NOQA
 
 from .. import _, models, Session
 from ..validators import invalid2dict, Model
-
 
 
 @view_config(
@@ -182,6 +183,7 @@ def edit_json(context, request):
     else:
         visit = context
 
+    visit.patient.modify_date = datetime.now()
     visit.cycles = data['cycles']
     visit.visit_date = data['visit_date']
 
@@ -234,6 +236,7 @@ def edit_json(context, request):
 def delete_json(context, request):
     check_csrf_token(request)
     list(map(Session.delete, context.entities))
+    context.patient.modify_date = datetime.now()
     Session.delete(context)
     Session.flush()
     request.session.flash(_(

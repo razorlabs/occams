@@ -11,49 +11,50 @@
       <nav metal:use-macro="load: ./panels/nav.pt" />
     </header>
 
-    <table class="table table-bordered table-rotated-header">
-      <tbody>
-        <!-- ko if: study.is_randomized -->
+    <div style="display: none;" data-bind="visible: isReady">
+      <table class="table table-bordered table-rotated-header">
+        <tbody>
+          <!-- ko if: study.is_randomized -->
+            <tr>
+              <td><strong>Randomization Form<strong></td>
+              <td>
+                <a href="#" class="btn btn-default"><span class="glyphicon glyphicon-random"></span> Upload RIDs</a>
+              </td>
+            </tr>
+          <!-- /ko -->
           <tr>
-            <td><strong>Randomization eCRFS<strong></td>
-            <td>
-              <a href="#" class="btn btn-default"><span class="glyphicon glyphicon-random"></span> Upload RIDs</a>
-            </td>
-          </tr>
-        <!-- /ko -->
-        <tr>
-          <td><strong>Termination eCRFS<strong></td>
-          <td data-bind="text: study.termination_schema.title"></td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div class="table-responsive table-scrollable">
-      <table class="table table-bordered table-striped table-dimensional table-rotated-header">
-        <thead>
-          <tr>
-            <th></th>
-            <!-- ko foreach: study.cycles -->
-              <th class="rotated">
-                <div class="rotated-container">
-                  <div class="rotated-rotate">
-                    <span class="rotated-text" data-bind="text: title"></span>
-                  </div>
-                </div>
-              </th>
-            <!-- /ko -->
-          </tr>
-        </thead>
-        <tbody data-bind="foreach: study.schemata">
-          <tr>
-            <th data-bind="text: title"></th>
-            <!-- ko foreach: $root.study.cycles -->
-              <td> </td>
-            <!-- /ko -->
+            <td><strong>Termination Form<strong></td>
+            <td data-bind="text: study.termination_schema.title"></td>
           </tr>
         </tbody>
       </table>
-    </div>
+      <div class="table-responsive table-scrollable">
+        <table class="table table-bordered table-striped table-dimensional table-rotated-header">
+          <thead>
+            <tr>
+              <th></th>
+              <!-- ko foreach: study.cycles -->
+                <th class="rotated">
+                  <div class="rotated-container">
+                    <div class="rotated-rotate">
+                      <span class="rotated-text" data-bind="text: title"></span>
+                    </div>
+                  </div>
+                </th>
+              <!-- /ko -->
+            </tr>
+          </thead>
+          <tbody data-bind="foreach: study.schemata">
+            <tr>
+              <th data-bind="text: title"></th>
+              <!-- ko foreach: $root.study.cycles -->
+                <td> </td>
+              <!-- /ko -->
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div> <!-- /:isReady -->
 
     <tal:json define="json import:json">
       <script id="study-data" type="application/json">${json.dumps(study)}</script>

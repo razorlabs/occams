@@ -367,6 +367,45 @@ class TestEditJson(IntegrationFixture):
         self.assertIn(
             'form2', [e['schema']['name'] for e in response['entities']])
 
+    def test_update_patient(self, check_csrf_token):
+        """
+        It should also mark the patient as modified
+        """
+        from datetime import date
+        from pyramid import testing
+        from occams.studies import models, Session
+
+        self.config.add_route('patient', '/{patient}')
+        self.config.add_route('visit', '/{patient}/{visit}')
+
+        Session.add(models.State(name='pending-entry', title=u''))
+
+        study = models.Study(
+            name=u'somestudy',
+            title=u'Some Study',
+            short_title=u'sstudy',
+            code=u'000',
+            start_date=date.today(),
+            consent_date=date.today())
+
+        cycle1 = models.Cycle(study=study, name='week-1', title=u'', week=1)
+
+        patient = models.Patient(
+            site=models.Site(name=u'ucsd', title=u'UCSD'),
+            pid=u'12345')
+
+        Session.add_all([patient, study])
+        Session.flush()
+
+        old_modify_date = patient.modify_date
+
+        self.call_view(patient['visits'], testing.DummyRequest(
+            json_body={
+                'cycles': [cycle1.id],
+                'visit_date': date.today()}))
+
+        self.assertLess(old_modify_date, patient.modify_date)
+
 
 @mock.patch('occams.studies.views.visit.check_csrf_token')
 class TestDeleteJson(IntegrationFixture):
@@ -374,6 +413,31 @@ class TestDeleteJson(IntegrationFixture):
     def call_view(self, context, request):
         from occams.studies.views.visit import delete_json as view
         return view(context, request)
+
+    def test_update_patient(self, check_csrf_token):
+        """
+        It should also mark the patient as modified
+        """
+        from datetime import date
+        from pyramid import testing
+        from occams.studies import models, Session
+
+        self.config.add_route('patient', '/{patient}')
+
+        patient = models.Patient(
+            site=models.Site(name=u'ucsd', title=u'UCSD'),
+            pid=u'12345')
+
+        visit = models.Visit(
+            patient=patient,
+            visit_date=date.today())
+
+        Session.add_all([patient, visit])
+        Session.flush()
+
+        old_modify_date = patient.modify_date
+        self.call_view(visit, testing.DummyRequest())
+        self.assertLess(old_modify_date, patient.modify_date)
 
     def test_cascade_forms(self, check_csrf_token):
         """

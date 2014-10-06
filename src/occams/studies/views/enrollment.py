@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from good import *  # NOQA
 from pyramid.httpexceptions import HTTPBadRequest
 from pyramid.session import check_csrf_token
@@ -106,11 +108,12 @@ def edit_json(context, request):
         raise HTTPBadRequest(json={'errors': invalid2dict(e)})
 
     if isinstance(context, models.EnrollmentFactory):
-        patient = context.__parent__
-        enrollment = models.Enrollment(patient=patient, study=data['study'])
+        enrollment = models.Enrollment(
+            patient=context.__parent__, study=data['study'])
     else:
         enrollment = context
 
+    enrollment.patient.modify_date = datetime.now()
     enrollment.consent_date = data['consent_date']
     enrollment.latest_consent_date = data['latest_consent_date']
     enrollment.reference_number = data['reference_number']
@@ -127,6 +130,7 @@ def edit_json(context, request):
     renderer='json')
 def delete_json(context, request):
     list(map(Session.delete, context.entities))
+    context.patient.modify_date = datetime.now()
     Session.delete(context)
     Session.flush()
     request.session.flash(_(u'Deleted sucessfully'))
@@ -207,7 +211,7 @@ def EnrollmentSchema(context, request):
             check_cannot_edit_study),
         'consent_date': Date('%Y-%m-%d'),
         'latest_consent_date': Date('%Y-%m-%d'),
-        'reference_number': Maybe(Coerce(six.binary_type)),
+        'reference_number': Maybe(Type(*six.string_types)),
         Extra: Remove
         },
         check_timeline,
