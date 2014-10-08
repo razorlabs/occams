@@ -61,6 +61,7 @@
           @ty: 100%;
           @deg: 315deg;
 
+          // Alignes the rotated boxes as close as possible to the end of the row
           @x-offset: -5px;
           @y-offset: -18px;
 
@@ -75,20 +76,27 @@
           -ms-transform-origin:      @x-offset @y-offset;
           -o-transform-origin:       @x-offset @y-offset;
 
-          &:after {
-             content:           "";
-             float:             left;
-             margin-top:        100%;
-          }
 
           .rotated-text {
             padding: 5px 10px;
           }
         }
+
+        /**
+         * Hack the padding so that the table cell's height is re-adjusted
+         * to accomodate the roated text's next height:
+         * http://stackoverflow.com/a/16301962/148781
+         * http://kizu.ru/en/fun/rotated-text/
+         */
+        &:before {
+          content: '';
+          padding: 150% 0;
+          display: block;
+          position: relative;
+          top: 20px;
+        }
       }
-
     }
-
   }
 
   &.table-bordered {

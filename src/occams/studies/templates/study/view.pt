@@ -1,51 +1,95 @@
 <html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
   <metal:content-slot fill-slot="content-slot">
-
-    <header class="page-header">
-      <div class="btn-toolbar pull-right">
-        <a href="#" class="btn btn-default"><span class="glyphicon glyphicon-edit"></span> Edit</a>
-        <a href="#" class="btn btn-default"><span class="glyphicon glyphicon-trash"></span> Delete</a>
-      </div>
-      <h1 i18n:translate="">${context.title} <small><span class="fa fa-lock" tal:condition="context.is_locked"></span></small></h1>
-      <ul metal:use-macro="load: ./panels/details.pt" />
-      <nav metal:use-macro="load: ./panels/nav.pt" />
-    </header>
-
     <div style="display: none;" data-bind="visible: isReady">
-      <table class="table table-bordered table-rotated-header">
-        <tbody>
-          <!-- ko if: study.is_randomized -->
-            <tr>
-              <td><strong>Randomization Form<strong></td>
-              <td>
-                <a href="#" class="btn btn-default"><span class="glyphicon glyphicon-random"></span> Upload RIDs</a>
-              </td>
-            </tr>
-          <!-- /ko -->
-          <tr>
-            <td><strong>Termination Form<strong></td>
-            <td data-bind="text: study.termination_schema.title"></td>
-          </tr>
-        </tbody>
-      </table>
-      <div class="table-responsive table-scrollable">
-        <table class="table table-bordered table-striped table-dimensional table-rotated-header">
+
+      <header class="page-header">
+        <div class="btn-toolbar pull-right">
+          <input type="checkbox" id="grid-toggle"
+            data-bind="bootstrapSwitch: isGridEnabled"
+            data-label-text="Grid"
+            />
+
+          <a href="#" class="btn btn-default"><span class="glyphicon glyphicon-random"></span> Upload RIDs</a>
+          <a href="#" class="btn btn-default"><span class="glyphicon glyphicon-edit"></span> Edit</a>
+          <a href="#" class="btn btn-default"><span class="glyphicon glyphicon-trash"></span> Delete</a>
+        </div>
+        <h1 i18n:translate="">${context.title} <small><span class="fa fa-lock" tal:condition="context.is_locked"></span></small></h1>
+        <ul metal:use-macro="load: ./panels/details.pt" />
+        <nav metal:use-macro="load: ./panels/nav.pt" />
+      </header>
+
+      <div id="js-schedule" class="table-responsive table-scrollable">
+        <!-- Pre-generated corner -->
+        <table id="js-schedule-corner" class="table table-bordered table-striped table-dimensional table-rotated-header">
+          <thead>
+              <th class="form" i18n:translate=""><div>Visit Forms</div></th>
+          </thead>
+        </table>
+        <!-- Pre-generated header bar -->
+        <table id="js-schedule-header" class="table table-bordered table-striped table-dimensional table-rotated-header">
           <thead>
             <tr>
-              <th>
-                <input type="checkbox" id="grid-toggle"
-                  data-bind="bootstrapSwitch: isGridEnabled"
-                  data-on-text="Done"
-                  data-off-text="Edit"
-                  />
-              </th>
+              <th class="form" i18n:translate=""><div>Visit Forms</div></th>
               <!-- ko foreach: study.cycles -->
                 <th class="rotated">
-                  <div class="rotated-container">
-                    <div class="rotated-rotate">
-                      <span class="rotated-text" data-bind="text: title"></span>
-                    </div>
+                  <span class="rotated-container">
+                    <span class="rotated-rotate">
+                      <span class="rotated-text js-popover-trigger">
+                        <a href="#" data-bind="text: title"></a>
+                      </span>
+                    </span>
+                  </span>
+                </th>
+              <!-- /ko -->
+              <th class="rotated">
+                <div class="rotated-container">
+                  <div class="rotated-rotate">
+                    <span class="rorated-text">
+                      <button class="btn btn-link">
+                        <span class="fa fa-plus"></span>
+                        <strong i18n:translate="">Add Cycle</strong>
+                      </button>
+                    </span>
                   </div>
+                </div>
+              </th>
+            </tr>
+          </thead>
+        </table>
+        <!-- Pre-generated side bar -->
+        <table id="js-schedule-sidebar" class="table table-bordered table-striped table-dimensional table-rotated-header">
+          <tbody>
+            <!-- ko foreach: {data: study.schemata, as: 'schema'} -->
+              <tr>
+                <th class="form">
+                  <div data-bind="text: title"></div>
+                </th>
+              </tr>
+            <!-- /ko -->
+            <tr>
+              <th>
+                <button class="btn btn-link">
+                  <span class="fa fa-plus"></span>
+                  <strong i18n:translate="">Add Form</strong>
+                </button>
+              </th>
+            </tr>
+          </tbody>
+        </table>
+        <!-- Main data table -->
+        <table id="js-schedule-table" class="table table-bordered table-striped table-dimensional table-rotated-header">
+          <thead>
+            <tr>
+              <th class="form" i18n:translate=""><div>Visit Forms</div></th>
+              <!-- ko foreach: study.cycles -->
+                <th class="rotated">
+                  <span class="rotated-container">
+                    <span class="rotated-rotate">
+                      <span class="rotated-text js-popover-trigger">
+                        <a href="#" data-bind="text: title"></a>
+                      </span>
+                    </span>
+                  </span>
                 </th>
               <!-- /ko -->
               <th class="rotated">
@@ -65,7 +109,9 @@
           <tbody>
             <!-- ko foreach: {data: study.schemata, as: 'schema'} -->
               <tr>
-                <th data-bind="text: title"></th>
+                <th class="form">
+                  <div data-bind="text: title"></div>
+                </th>
                 <!-- ko foreach: {data: $root.study.cycles, as: 'cycle'} -->
                   <td data-bind="event: {dblclick: $root.toggleGrid}">
                     <!-- ko if: cycle.containsSchema(schema.name) -->
