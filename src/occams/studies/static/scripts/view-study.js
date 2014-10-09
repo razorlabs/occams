@@ -7,6 +7,12 @@ function StudySchema(data){
   self.name = data.name;
   self.title = data.title
   self.versions = ko.observableArray(data.versions);
+  self.hasMultipleVersions = ko.computed(function(){
+    return self.versions().length > 1;
+  });
+  self.versionsLength = ko.computed(function(){
+    return self.versions().length;
+  });
 }
 
 
@@ -119,21 +125,21 @@ function StudyView(){
 
     ko.applyBindings(new StudyView(), $view);
 
-    $('#js-schedule-table thead, #js-schedule-header thead')
+    $('#js-schedule .js-popover')
       .popover({
-        selector: 'th',
         title: function(){
           var cycle = ko.dataFor(this);
           return cycle.title();
         },
         content: 'adfadfas',
-        trigger: 'manual focus',
+        trigger: 'manual',
         placement: 'bottom',
         container: 'body',
-      })
+      });
+    $('#js-schedule')
       .on('click', '.js-popover-trigger', function(event){
         event.preventDefault();
-        $(event.target).closest('th').popover('show');
+        $(event.target).closest('.js-popover').popover('show');
       });
 
     /*
@@ -186,7 +192,6 @@ function StudyView(){
 
     $(window).on('scroll resize', updateGrid);
     $('#js-schedule').on('scroll', updateGrid);
-
   });
 
 }(jQuery);

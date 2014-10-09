@@ -34,7 +34,7 @@
                 <th class="rotated">
                   <span class="rotated-container">
                     <span class="rotated-rotate">
-                      <span class="rotated-text js-popover-trigger">
+                      <span class="rotated-text">
                         <a href="#" data-bind="text: title"></a>
                       </span>
                     </span>
@@ -61,8 +61,15 @@
           <tbody>
             <!-- ko foreach: {data: study.schemata, as: 'schema'} -->
               <tr>
-                <th class="form">
-                  <div data-bind="text: title"></div>
+                <th>
+                  <div class="form clearfix">
+                    <div class="pull-right">
+                      <!-- ko if: hasMultipleVersions -->
+                        <span class="badge" data-bind="text: versionsLength"></span>
+                      <!-- /ko -->
+                    </div>
+                    <a href="#" data-bind="text: title"></a>
+                  </div>
                 </th>
               </tr>
             <!-- /ko -->
@@ -85,7 +92,7 @@
                 <th class="rotated">
                   <span class="rotated-container">
                     <span class="rotated-rotate">
-                      <span class="rotated-text js-popover-trigger">
+                      <span class="rotated-text">
                         <a href="#" data-bind="text: title"></a>
                       </span>
                     </span>
@@ -109,8 +116,15 @@
           <tbody>
             <!-- ko foreach: {data: study.schemata, as: 'schema'} -->
               <tr>
-                <th class="form">
-                  <div data-bind="text: title"></div>
+                <th>
+                  <div class="form clearfix">
+                    <div class="pull-right">
+                      <!-- ko if: hasMultipleVersions -->
+                        <span class="badge" data-bind="text: versionsLength"></span>
+                      <!-- /ko -->
+                    </div>
+                    <a href="#" data-bind="text: title"></a>
+                  </div>
                 </th>
                 <!-- ko foreach: {data: $root.study.cycles, as: 'cycle'} -->
                   <td data-bind="event: {dblclick: $root.toggleGrid}">
