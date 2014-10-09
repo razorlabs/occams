@@ -137,67 +137,51 @@ function StudyView(){
       });
 
     /*
-     * Scroll the header
+     * Scroll the grid
      */
-
-    function updateCorner(){
+    function updateGrid(){
       var $container = $('#js-schedule')
         , $corner = $('#js-schedule-corner')
-        , $table = $('#js-schedule-table')
-        , scrollTop = $(window).scrollTop()
-        , scrollLeft = $container.scrollLeft()  // get from contanier because of overflow
-        , containerTop = $container.offset().top
+        , $header = $('#js-schedule-header')
+        , $sidebar = $('#js-schedule-sidebar')
+        // get scroll info relative to container
+        , scrollTop = $(window).scrollTop() - $container.offset().top
+        , scrollLeft = $container.scrollLeft()
+        , headerHeight = $('#js-schedule-table thead').height()
+        , sidebarWidth = $('#js-schedule-table tbody th:first').outerWidth()
         , affixLeft = 0 < scrollLeft
-        , affixTop = containerTop < scrollTop;
+        , affixTop = 0 < scrollTop;
 
-      $corner.find('th').css({
-        height: $table.find('thead').outerHeight(),
-        width: $table.find('tbody th:first').outerWidth()
-      });
+      if (affixTop){
+        // affix header to the top side, allowing horizontal scroll
+        $header.css({top: scrollTop}).show();
+      } else {
+        $header.hide();
+      }
+
+      if (affixLeft){
+        // affix sidebar to left side under header, allowing vertical scroll
+        $sidebar.css({
+          top: headerHeight + (affixTop ? 0 : -1), // (uncontrollable FF border)
+          left: scrollLeft
+        })
+        .show();
+      } else {
+        $sidebar.hide();
+      }
 
       if (affixLeft || affixTop){
-        $corner
-          .css({
-            top: affixTop ?  scrollTop - containerTop : 0,
-            left: affixLeft ? scrollLeft: 0
+        // affix cornter to top left while scrolling
+        $corner.css({
+            height: headerHeight + (affixTop ? 1 : 0), // (unconrollable FF border)
+            width: sidebarWidth,
+            top: affixTop ?  scrollTop : 0,
+            left: affixLeft ? scrollLeft : 0
           })
           .show();
       } else {
         $corner.hide();
       }
-    }
-
-    function updateHeader(){
-      var $header = $('#js-schedule-header')
-        , $container = $('#js-schedule')
-        , scrollTop = $(window).scrollTop()
-        , containerTop = $container.offset().top;
-
-      if (containerTop < scrollTop){
-        $header.css({top: scrollTop - containerTop}).show();
-      } else {
-        $header.hide();
-      }
-    }
-
-    function updateSidebar(){
-      var $sidebar = $('#js-schedule-sidebar')
-        , $container = $('#js-schedule')
-        , scrollLeft = $container.scrollLeft(); // get from container because of overflow
-
-      if (0 < scrollLeft) {
-        var newTop = $('#js-schedule-table thead').height() - 2;
-        $sidebar.css({top: newTop, left: scrollLeft}).show();
-      } else {
-        $sidebar.hide();
-      }
-    }
-
-
-    function updateGrid(){
-      updateCorner();
-      updateHeader();
-      updateSidebar();
     }
 
     $(window).on('scroll resize', updateGrid);
