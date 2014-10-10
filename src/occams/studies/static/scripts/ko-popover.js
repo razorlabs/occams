@@ -4,11 +4,13 @@
  * options -- bootstrap options
  *
  */
-ko.bindingHandlers.popover = {
-  init: function(element, valueAccessor, allBindings, viewModel, bindingContext) {
-    var options = $.extend({}, {
-      }, ko.unwrap(valueAccessor()));
-
-      $(element).popover(options.options);
+ko.bindingHandlers.showPopover = {
+  update: function (element, valueAccessor) {
+    var value = valueAccessor();
+    if (ko.unwrap(value)) {
+      $(element).popoverX('show');
+    } else {
+      $(element).popoverX('hide');
+    }
   }
-}
+};

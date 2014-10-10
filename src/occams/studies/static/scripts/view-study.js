@@ -1,4 +1,3 @@
-
 /**
  * Schema representation in the context of a study
  */
@@ -15,27 +14,29 @@ function StudySchema(data){
   });
 }
 
-
 /**
  * Cycle representation in the context of a study
  */
 function StudyCycle(data){
   var self = this;
 
+  self.__url__ = ko.observable();
+  self.id = ko.observable();
+  self.name = ko.observable();
+  self.title = ko.observable();
+  self.week = ko.observable();
+  self.is_interim = ko.observable();
+  self.schemata = ko.observableArray();
+
   self.update = function(data){
-    self.id(data.id);
-    self.name
+    ko.mapping.fromJS(data, {
+      'schemata': {
+        create: function(options){
+          return new StudySchema(options.data);
+        }
+      }
+      }, self);
   };
-
-  self.id = ko.observable(data.id);
-  self.name = ko.observable(data.name);
-  self.title = ko.observable(data.title);
-  self.week = ko.observable(data.week);
-  self.is_interim = ko.observable(data.is_interim);
-
-  self.schemata = ko.observableArray((data.schemata || []).map(function(schema){
-    return new StudySchema(schema);
-  }));
 
   self.hasSchemata = ko.computed(function(){
     return self.schemata().length;
@@ -56,7 +57,6 @@ function StudyCycle(data){
   self.update(data);
 }
 
-
 function StudyView(){
   var self = this;
 
@@ -64,6 +64,21 @@ function StudyView(){
   self.isSaving = ko.observable(false);     // Indicates AJAX call
 
   self.isGridEnabled = ko.observable(false);// Grid disable/enable flag
+
+  self.errorMessages = ko.observableArray([]);
+  self.hasErrorMessages = ko.computed(function(){
+    return self.errorMessages().length > 0;
+  });
+
+  // Modal states
+  var VIEW = 'view', EDIT = 'edit',  DELETE = 'delete';
+
+  self.selectedCycle = ko.observable();
+  self.editableCycle = ko.observable();
+  self.cycleModalState = ko.observable();
+  self.showViewCycle = ko.computed(function(){ return self.cycleModalState() === VIEW; });
+  self.showEditCycle = ko.computed(function(){ return self.cycleModalState() === EDIT; });
+  self.showDeleteCycle = ko.computed(function(){ return self.cycleModalState() === DELETE; });
 
   self.study = ko.mapping.fromJSON($('#study-data').text(), {
     'schemata': {
@@ -78,32 +93,82 @@ function StudyView(){
     }
   });
 
-  //self.selectedForms = ko.observableArray();
-  //self.hasSelectedForms = ko.computed(function(){
-    //return self.selectedForms().length > 0;
-  //});
+  self.startViewCycle = function(cycle, event){
+    self.selectedCycle(cycle);
+    self.cycleModalState(VIEW);
+  };
 
-  //self.onClickForm = function(item, event){
-    //var $element = $(event.target)
-      //, value = $element.val();
-    //if ($element.prop('checked')){
-      //console.log('adding', value);
-      //self.selectedForms.push(value);
-    //} else {
-      //console.log('removing', value);
-      //self.selectedForms.remove(value);
-    //}
-    //return true;
-  //}
+  self.startEditCycle = function(cycle, event){
+    self.selectedCycle(cycle);
+    self.editableCycle(new StudyCycle(ko.mapping.toJS(cycle)));
+    self.cycleModalState(EDIT);
+  };
 
-  //self.startFormAdd = function(){
-  //};
+  self.startDeleteCycle = function(cycle, event){
+    self.selectedCycle(cycle);
+    self.editableCycle(null);
+    self.cycleModalState(DELETE);
+  };
 
-  //self.startEdit = function(){
-  //};
+  /**
+   * Re-usable error handler for XHR requests
+   */
+  var handleXHRError = function(form){
+    return function(jqXHR, textStatus, errorThrown){
+      if (textStatus.indexOf('CSRF') > -1 ){
+        self.errorMessages(['You session has expired, please reload the page']);
+      } else if (jqXHR.responseJSON){
+        self.errorMessages(['Validation problems']);
+        $(form).validate().showErrors(jqXHR.responseJSON.errors);
+      } else {
+        self.errorMessages([errorThrown]);
+      }
+    };
+  };
 
-  //self.startDelete = function(){
-  //};
+  self.saveCycle = function(form){
+    if (!$(form).validate().form()){
+      return;
+    }
+
+    var selected = self.selectedCycle();
+
+    $.ajax({
+      url: selected.id() ? selected.__url__() : $(form).data('factory-url'),
+      type: selected.id() ? 'PUT' : 'POST',
+      contentType: 'application/json; charset=utf-8',
+      headers: {'X-CSRF-Token': $.cookie('csrf_token')},
+      data: ko.mapping.toJSON(self.editableCycle()),
+      beforeSend: function(){
+        self.isSaving(true);
+      },
+      error: handleXHRError(form),
+      success: function(data, textStatus, jqXHR){
+        if  (selected.id()){
+          selected.update(data);
+        } else {
+          self.study.cycles.push(new StudyCycle(data));
+        }
+        self.study.cycles.sort(function(a, b){
+          return a.title().localeCompare(b.title());
+        });
+        self.clear();
+      },
+      complete: function(){
+        self.isSaving(false);
+      }
+    });
+  };
+
+  self.deleteCycle = function(cycle, event){
+  };
+
+  self.clear = function(){
+    self.errorMessages([]);
+    self.selectedCycle(null);
+    self.editableCycle(null);
+    self.cycleModalState(null);
+  };
 
   self.toggleGrid = function(data, event){
     console.log(event);
@@ -124,23 +189,6 @@ function StudyView(){
     }
 
     ko.applyBindings(new StudyView(), $view);
-
-    $('#js-schedule .js-popover')
-      .popover({
-        title: function(){
-          var cycle = ko.dataFor(this);
-          return cycle.title();
-        },
-        content: 'adfadfas',
-        trigger: 'manual',
-        placement: 'bottom',
-        container: 'body',
-      });
-    $('#js-schedule')
-      .on('click', '.js-popover-trigger', function(event){
-        event.preventDefault();
-        $(event.target).closest('.js-popover').popover('show');
-      });
 
     /*
      * Scroll the grid

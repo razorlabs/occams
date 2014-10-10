@@ -320,7 +320,7 @@ class CycleFactory(object):
 
     def __getitem__(self, key):
         try:
-            cycle = Session.query(Cycle).filter_by(id=key).one()
+            cycle = Session.query(Cycle).filter_by(name=key).one()
         except orm.exc.NoResultFound:
             raise KeyError
         cycle.__parent__ = self

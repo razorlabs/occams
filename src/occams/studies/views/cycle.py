@@ -20,6 +20,7 @@ def view_json(context, request):
         '__url__': request.route_path('cycle',
                                       study=cycle.study.name,
                                       cycle=cycle.name),
+        'id': cycle.id,
         'name': cycle.name,
         'title': cycle.title,
         'week': cycle.week,
@@ -114,6 +115,6 @@ def CycleSchema(context, request):
             Length(min=3, max=32),
             check_unique_name),
         'title': All(Coerce(six.text_type), Length(min=3, max=32)),
-        'week': Coerce(int),
+        'week': Maybe(Any(int, lambda v: v.strip() and int(v) or None)),
         'is_interim': Any(Boolean(), Default(False)),
         Extra: Remove})
