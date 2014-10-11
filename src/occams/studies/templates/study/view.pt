@@ -50,7 +50,7 @@
                 <div class="rotated-container">
                   <div class="rotated-rotate">
                     <span class="rorated-text">
-                      <button class="btn btn-link">
+                      <button class="btn btn-link" data-bind="click: startAddCycle">
                         <span class="fa fa-plus"></span>
                         <strong i18n:translate="">Add Cycle</strong>
                       </button>
@@ -113,7 +113,7 @@
                 <div class="rotated-container">
                   <div class="rotated-rotate">
                     <span class="rorated-text">
-                      <button class="btn btn-link">
+                      <button class="btn btn-link" data-bind="click: startAddCycle">
                         <span class="fa fa-plus"></span>
                         <strong i18n:translate="">Add Cycle</strong>
                       </button>
@@ -219,7 +219,12 @@
                   validate: window.defaultValidationOptions,
                   submit: $root.saveCycle">
               <div class="modal-header">
-                <h4 class="modal-title" data-bind="text: title"></h4>
+                <!-- ko if: id -->
+                  <h4 class="modal-title" data-bind="text: title"></h4>
+                <!-- /ko -->
+                <!-- ko ifnot: id -->
+                  <h4 class="modal-title">New Cycle</h4>
+                <!-- /ko -->
               </div>
               <div class="modal-body" data-bind="with: $root.editableCycle">
                 <div data-bind="template: {name: 'validation-errors-template', if: $root.hasErrorMessages, data: $root.errorMessages}"></div>
@@ -259,11 +264,20 @@
                     <span i18n:translate="">Add another</span>
                   </label>
                 <!-- /ko -->
-                <button
-                    type="button"
-                    class="btn btn-link"
-                    data-bind="click: $root.startViewCycle"
-                    i18n:translate="">Cancel</button>
+                <!-- ko if: id -->
+                  <button
+                      type="button"
+                      class="btn btn-link"
+                      data-bind="click: $root.startViewCycle"
+                      i18n:translate="">Cancel</button>
+                <!-- /ko -->
+                <!-- ko ifnot: id -->
+                  <button
+                      type="button"
+                      class="btn btn-link"
+                      data-bind="click: $root.clear"
+                      i18n:translate="">Cancel</button>
+                <!-- /ko -->
                 <button type="submit" class="btn btn-primary">
                   <span i18n:translate="">Save</span>
                   <!-- ko if: $root.isSaving -->

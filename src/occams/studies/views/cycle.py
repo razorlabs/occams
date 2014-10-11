@@ -111,10 +111,17 @@ def CycleSchema(context, request):
 
     return Schema({
         'name': All(
+            Type(*six.string_types),
             Coerce(six.binary_type),
             Length(min=3, max=32),
             check_unique_name),
-        'title': All(Coerce(six.text_type), Length(min=3, max=32)),
-        'week': Maybe(Any(int, lambda v: v.strip() and int(v) or None)),
+        'title': All(
+            Type(*six.string_types),
+            Coerce(six.text_type),
+            Length(min=3, max=32)),
+        'week': Any(
+            Coerce(int),
+            All(Type(*six.string_types), Falsy(), Default(None)),
+            Default(None)),
         'is_interim': Any(Boolean(), Default(False)),
         Extra: Remove})

@@ -35,7 +35,7 @@ function StudyCycle(data){
           return new StudySchema(options.data);
         }
       }
-      }, self);
+    }, self);
   };
 
   self.hasSchemata = ko.computed(function(){
@@ -54,7 +54,7 @@ function StudyCycle(data){
     return name in self.schemataIndex();
   };
 
-  self.update(data);
+  self.update(data || {});
 }
 
 function StudyView(){
@@ -98,9 +98,16 @@ function StudyView(){
     self.cycleModalState(VIEW);
   };
 
+  self.startAddCycle = function(){
+    var cycle = new StudyCycle();
+    self.selectedCycle(cycle);
+    self.editableCycle(cycle);
+    self.cycleModalState(EDIT);
+  };
+
   self.startEditCycle = function(cycle, event){
     self.selectedCycle(cycle);
-    self.editableCycle(new StudyCycle(ko.mapping.toJS(cycle)));
+    self.editableCycle(new StudyCycle(ko.toJS(cycle)));
     self.cycleModalState(EDIT);
   };
 
@@ -138,7 +145,7 @@ function StudyView(){
       type: selected.id() ? 'PUT' : 'POST',
       contentType: 'application/json; charset=utf-8',
       headers: {'X-CSRF-Token': $.cookie('csrf_token')},
-      data: ko.mapping.toJSON(self.editableCycle()),
+      data: ko.toJSON(self.editableCycle()),
       beforeSend: function(){
         self.isSaving(true);
       },
