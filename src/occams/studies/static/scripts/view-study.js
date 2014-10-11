@@ -73,8 +73,10 @@ function StudyView(){
   // Modal states
   var VIEW = 'view', EDIT = 'edit',  DELETE = 'delete';
 
+  self.previousCycle = ko.observable();
   self.selectedCycle = ko.observable();
   self.editableCycle = ko.observable();
+  self.addMoreCycles = ko.observable(false);
   self.cycleModalState = ko.observable();
   self.showViewCycle = ko.computed(function(){ return self.cycleModalState() === VIEW; });
   self.showEditCycle = ko.computed(function(){ return self.cycleModalState() === EDIT; });
@@ -157,13 +159,18 @@ function StudyView(){
       },
       error: handleXHRError(form),
       success: function(data, textStatus, jqXHR){
-        if  (selected.id()){
+        if (selected.id()){
           selected.update(data);
         } else {
           self.study.cycles.push(new StudyCycle(data));
         }
         self.study.cycles.sort(byWeek);
-        self.clear();
+        if (self.addMoreCycles()){
+          self.previousCycle(selected);
+          self.startAddCycle();
+        } else {
+          self.clear();
+        }
       },
       complete: function(){
         self.isSaving(false);
@@ -196,6 +203,8 @@ function StudyView(){
 
   self.clear = function(){
     self.errorMessages([]);
+    self.addMoreCycles(false);
+    self.previousCycle(null);
     self.selectedCycle(null);
     self.editableCycle(null);
     self.cycleModalState(null);

@@ -227,6 +227,12 @@
                 <!-- /ko -->
               </div>
               <div class="modal-body" data-bind="with: $root.editableCycle">
+                <!-- ko with: $root.previousCycle -->
+                  <div class="alert alert-success">
+                    <span i18n:translate="">Successfully added</span>
+                    <strong data-bind="text: title"></strong>!
+                  </div>
+                <!-- /ko -->
                 <div data-bind="template: {name: 'validation-errors-template', if: $root.hasErrorMessages, data: $root.errorMessages}"></div>
                 <div class="form-group">
                   <label class="col-sm-2 control-label required">Title</label>
@@ -260,7 +266,7 @@
               <div class="modal-footer">
                 <!-- ko ifnot: id -->
                   <label class="text-muted">
-                    <input type="checkbox" name="add_more" />
+                    <input type="checkbox" name="add_another" data-bind="checked: $root.addMoreCycles" />
                     <span i18n:translate="">Add another</span>
                   </label>
                 <!-- /ko -->

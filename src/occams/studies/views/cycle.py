@@ -89,11 +89,11 @@ def delete_json(context, request):
     Session.delete(context)
     Session.flush()
 
-    request.session.flash(
-        _(u'Successfully removed "${cycle}"', mapping={
-            'cycle': context.title}))
-
-    return {'__next__': request.route_path('study', study=context.study.name)}
+    return {
+        '__next__': request.route_path('study', study=context.study.name),
+        'message': _(u'Successfully removed "${cycle}"',
+                     mapping={'cycle': context.title})
+        }
 
 
 def CycleSchema(context, request):
