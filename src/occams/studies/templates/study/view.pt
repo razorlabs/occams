@@ -206,7 +206,7 @@
               </div> <!-- /.modal-body -->
               <div class="modal-footer">
                 <button type="button"
-                    class="btn btn-primary"
+                    class="btn btn-link"
                     data-bind="click: $root.clear"
                     i18n:translate="">Close</button>
               </div>
@@ -288,7 +288,7 @@
             </form>
           <!-- /ko -->
           <!-- ko if: $root.showDeleteCycle -->
-            <form class="form-horizontal">
+            <form class="form-horizontal" data-bind="submit: $root.deleteCycle">
               <div class="modal-header">
                 <h4 class="modal-title" i18n:translate="">Delete Cycle</h4>
               </div>

@@ -93,6 +93,12 @@ function StudyView(){
     }
   });
 
+  var byTitle = function(a, b){ return ko.unwrap(a.title).localeCompare(ko.unwrap(b.title)); };
+  var byWeek = function(a, b){ return ko.unwrap(a.week) - ko.unwrap(b.week) };
+
+  self.study.cycles.sort(byWeek);
+  self.study.schemata.sort(byTitle);
+
   self.startViewCycle = function(cycle, event){
     self.selectedCycle(cycle);
     self.cycleModalState(VIEW);
@@ -156,9 +162,7 @@ function StudyView(){
         } else {
           self.study.cycles.push(new StudyCycle(data));
         }
-        self.study.cycles.sort(function(a, b){
-          return a.title().localeCompare(b.title());
-        });
+        self.study.cycles.sort(byWeek);
         self.clear();
       },
       complete: function(){
@@ -167,7 +171,27 @@ function StudyView(){
     });
   };
 
-  self.deleteCycle = function(cycle, event){
+  self.deleteCycle = function(form){
+    var selected = self.selectedCycle();
+    $.ajax({
+      url: selected.__url__(),
+      type: 'DELETE',
+      contentType: 'application/json; charset=utf-8',
+      headers: {'X-CSRF-Token': $.cookie('csrf_token')},
+      beforeSend: function(){
+        self.isSaving(true);
+      },
+      error: handleXHRError(form),
+      success: function(data, textStatus, jqXHR){
+        self.study.cycles.remove(function(cycle){
+          return selected.id() == cycle.id();
+        });
+        self.clear();
+      },
+      complete: function(){
+        self.isSaving(false);
+      }
+    });
   };
 
   self.clear = function(){
