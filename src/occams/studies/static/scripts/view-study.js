@@ -241,10 +241,11 @@ function StudyView(){
         // get scroll info relative to container
         , scrollTop = $(window).scrollTop() - $container.offset().top
         , scrollLeft = $container.scrollLeft()
-        , headerHeight = $('#js-schedule-table thead').height()
-        , sidebarWidth = $('#js-schedule-table tbody th:first').outerWidth()
         , affixLeft = 0 < scrollLeft
-        , affixTop = 0 < scrollTop;
+        , affixTop = 0 < scrollTop
+          // (uncontrollable FF border)
+        , headerHeight = $('#js-schedule-table thead th').outerHeight() - (affixTop ? 0 : 1)
+        , headerWidth = $('#js-schedule-table thead th').outerWidth();
 
       if (affixTop){
         // affix header to the top side, allowing horizontal scroll
@@ -255,31 +256,22 @@ function StudyView(){
 
       if (affixLeft){
         // affix sidebar to left side under header, allowing vertical scroll
-        $sidebar.css({
-          top: headerHeight + (affixTop ? 0 : -1), // (uncontrollable FF border)
-          left: scrollLeft
-        })
-        .show();
+        $sidebar.css({top: headerHeight, left: scrollLeft}).show();
       } else {
         $sidebar.hide();
       }
 
       if (affixLeft || affixTop){
         // affix cornter to top left while scrolling
-        $corner.css({
-            height: headerHeight + (affixTop ? 1 : 0), // (unconrollable FF border)
-            width: sidebarWidth,
-            top: affixTop ?  scrollTop : 0,
-            left: affixLeft ? scrollLeft : 0
-          })
-          .show();
+        $corner.find('th:first').css({height: headerHeight, width: headerWidth});
+        $corner.css({top: affixTop ?  scrollTop : 0, left: affixLeft ? scrollLeft : 0}).show();
       } else {
         $corner.hide();
       }
     }
 
-    $(window).on('scroll resize', updateGrid);
-    $('#js-schedule').on('scroll', updateGrid);
+    $(window).on('scroll mousewheel resize', updateGrid);
+    $('#js-schedule').on('scroll mousewheel', updateGrid);
   });
 
 }(jQuery);
