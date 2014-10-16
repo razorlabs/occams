@@ -35,50 +35,24 @@ function StudyForm(data){
     return self.versions().length;
   });
 
-  // Select2 schema search callback
-  self.searchSchema = function(options){
-    $.ajax({
-      url: $(options.element).data('url'),
-      data: {vocabulary: 'available_schemata', term: options.term},
-      success: function(data, textStatus, jqXHR){
-        options.callback({results: data});
-      }
-    });
+  // Select2 schema search parameters callback
+  self.searchSchemaParams = function(term, page){
+    return {vocabulary: 'available_schemata', term: term};
   };
 
-  // Select2 version search callback
-  self.searchVersions = function(options){
-    $.ajax({
-      url: $(options.element).data('url'),
-      data: {
-        vocabulary: 'available_versions',
-        schema: self.schema().name,
-        term: options.term
-      },
-      success: function(data, textStatus, jqXHR){
-        options.callback({results: data});
-      }
-    });
+  // Select2 schema results callback
+  self.searchSchemaResults = function(data){
+    return {results: data.schemata};
   };
 
-  // Select2 schema key getter
-  self.idSchema = function(schema){
-    return schema.name;
+  // Select2 version search parameters callback
+  self.searchVersionsParams = function(term, page){
+    return {vocabulary: 'available_versions', schema: self.name(), term: term}
   };
 
-  // Select2 schema label getter
-  self.formatSchema = function(schema){
-    return schema.title;
-  };
-
-  // Select2 version key getter
-  self.idVersion = function(version){
-    return version.publish_date;
-  }
-
-  // Select2 version label getter
-  self.formatVersion = function(version){
-    return version.publish_date;
+  // Select2 version results callback
+  self.searchVersionsResults = function(data){
+    return {results: data.versions};
   };
 
   self.update(data);

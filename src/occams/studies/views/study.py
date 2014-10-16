@@ -201,7 +201,7 @@ def available_schemata(context, request):
 
     query = query.order_by(titles_query.c.title).limit(100)
 
-    return [{'name': r.name, 'title': r.title} for r in query]
+    return {'schemata': [{'name': r.name, 'title': r.title} for r in query]}
 
 
 @view_config(
@@ -229,7 +229,7 @@ def available_version(context, request):
 
     query = query.order_by(models.Schema.publish_date.desc()).limit(100)
 
-    return [form_views.version2json(s) for s in query]
+    return {'versions': [form_views.version2json(s) for s in query]}
 
 
 @view_config(

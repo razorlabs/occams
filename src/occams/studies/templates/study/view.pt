@@ -90,7 +90,7 @@
                         <span class="badge" data-bind="text: versionsLength"></span>
                       <!-- /ko -->
                     </div>
-                    <button class="link" data-bind="click: $root.startViewForm, text: schema.title"></button>
+                    <button class="link" data-bind="click: $root.startViewForm, text: title"></button>
                   </div>
                 </th>
               </tr>
@@ -400,7 +400,10 @@
                             dataId: 'name',
                             dataLabel: 'title',
                             select2: {
-                              query: searchSchema,
+                              ajax: {
+                                data: searchSchemaParams,
+                                results: searchSchemaResults
+                              }
                             }" />
                     </div>
                   </div> <!-- /.form-group -->
@@ -418,7 +421,10 @@
                             dataLabel: 'publish_date',
                             select2: {
                               multiple: true,
-                              query: searchVersions,
+                              ajax: {
+                                data: searchVersionsParams,
+                                results: searchVersionsResults
+                              }
                             }" />
                     </div>
                   </div> <!-- /.form-group -->
