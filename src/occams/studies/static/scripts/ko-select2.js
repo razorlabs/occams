@@ -37,10 +37,10 @@
 
       var select2Settings = ko.unwrap(allBindings.get('select2'));
 
-      if (allBindings.has('dataId')){
+      if (allBindings.has('dataKey')){
         $.extend(select2Settings, {
           id: function(item){
-            return ko.unwrap(item[allBindings.get('dataId')]);
+            return ko.unwrap(item[allBindings.get('dataKey')]);
           }
         });
       }

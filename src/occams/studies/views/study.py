@@ -174,6 +174,9 @@ def edit_json(context, request):
     request_param='vocabulary=available_schemata',
     renderer='json')
 def available_schemata(context, request):
+    """
+    Returns a JSON listing of avavilable schemata for studies to use.
+    """
     term = (request.GET.get('term') or u'').strip()
 
     InnerSchema = orm.aliased(models.Schema)
@@ -191,6 +194,25 @@ def available_schemata(context, request):
             .label('title'))
         .filter(models.Schema.publish_date != sa.null())
         .filter(models.Schema.retract_date == sa.null())
+        .filter(~models.Schema.name.in_(
+            # Filter out schemata that is already in use by the study
+            Session.query(models.Schema.name)
+            .select_from(models.Study)
+            .filter(models.Study.id == context.id)
+            .join(models.Study.schemata)
+            .union(
+                # Filter out termination schemata
+                Session.query(models.Schema.name)
+                .select_from(models.Study)
+                .join(models.Study.termination_schema)
+                .filter(models.Study.id == context.id),
+
+                # Filter out randomization schemata
+                Session.query(models.Schema.name)
+                .select_from(models.Study)
+                .join(models.Study.randomization_schema)
+                .filter(models.Study.id == context.id))
+            .subquery()))
         .group_by(models.Schema.name)
         .subquery())
 
@@ -211,6 +233,9 @@ def available_schemata(context, request):
     request_param='vocabulary=available_versions',
     renderer='json')
 def available_version(context, request):
+    """
+    Returns a JSON listing of schemata versions for studies to use.
+    """
     term = (request.GET.get('term') or u'').strip()
     schema = (request.GET.get('schema') or u'').strip()
 
@@ -270,11 +295,19 @@ def delete_json(context, request):
 def add_schema_json(context, request):
     check_csrf_token(request)
 
+    def check_published(value):
+        if value.publish_date is None:
+            raise Invalid(request.localizer.translate(
+                _(u'${schema} is not published'),
+                mapping={'schema': value.title}))
+        return value
+
     def check_not_patient_schema(value):
         (exists,) = (
             Session.query(
-                Session.query(models.patient_schema_table)
-                .filter(models.patient_schema_table.c.schema_id == value.id)
+                Session.query(models.Schema)
+                .join(models.patient_schema_table)
+                .filter(models.Schema.name == value.name)
                 .exists())
             .one())
         if exists:
@@ -285,7 +318,7 @@ def add_schema_json(context, request):
 
     def check_not_randomization_schema(value):
         if (context.randomization_schema is not None
-                and context.randomization_schema == value):
+                and context.randomization_schema.name == value.name):
             raise Invalid(request.localizer.translate(
                 _(u'${schema} is already used as a randomization form'),
                 mapping={'schema': value.title}))
@@ -293,35 +326,58 @@ def add_schema_json(context, request):
 
     def check_not_termination_schema(value):
         if (context.termination_schema is not None
-                and context.termination_schema == value):
+                and context.termination_schema.name == value.name):
             raise Invalid(request.localizer.translate(
                 _(u'${schema} is already used as a termination form'),
                 mapping={'schema': value.title}))
         return value
 
-    def check_published(value):
-        if value.publish_date is None:
-            raise Invalid(request.localizer.translate(
-                _(u'${schema} is not published'),
-                mapping={'schema': value.title}))
+    def check_same_schema(value):
+        versions = value['versions']
+        schema = value['schema']
+        invalid = [i.publish_date for i in versions if i.name != schema]
+        if invalid:
+            raise Invalid(
+                request.localizer(
+                    _(u'Incorrect version: ${versions}'),
+                    mapping={'versions': ', '.join(map(str, invalid))}
+                ),
+                path='versions')
         return value
 
-    schema = Schema({
-        'schema': All(
+    schema = Schema(All({
+        'schema': Coerce(six.binary_type),
+        'versions': [All(
             Model(models.Schema, localizer=request.localizer),
             check_published,
             check_not_patient_schema,
             check_not_randomization_schema,
-            check_not_termination_schema)})
+            check_not_termination_schema,
+            )],
+        Extra: Remove},
+        check_same_schema,
+        ))
 
     try:
         data = schema(request.json_body)
     except Invalid as e:
         raise HTTPBadRequest(json={'errors': invalid2dict(e)})
 
-    context.schemata.add(data['schema'])
+    new_items = set(data['versions'])
 
-    return HTTPOk()
+    # Remove unselected versions
+    for schema in context.schemata:
+        if schema.name == data['schema']:
+            if schema not in new_items:
+                context.schemata.remove(schema)
+            else:
+                new_items.remove(schema)
+
+    # Add the newly selected versions
+    context.schemata.update(new_items)
+
+    # Return only the first value since we're only working with one schema
+    return form_views.form2json(new_items)[0]
 
 
 @view_config(

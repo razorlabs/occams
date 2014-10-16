@@ -380,8 +380,10 @@
             <!-- /ko -->
             <!-- ko if: $root.showEditForm-->
               <form class="form-horizontal"
+                  action="${request.current_route_path(_route_name='study_schemata')}"
                   data-bind="
                     with: $root.editableForm,
+                    validate: window.defaultValidationOptions,
                     submit: $root.saveForm">
                 <div class="modal-header">
                   <h4 class="modal-title" i18n:translate="">Add form to study</h4>
@@ -391,15 +393,16 @@
                     <label class="col-sm-2 control-label required">Form</label>
                     <div class="col-sm-10">
                       <input type="hidden" class="form-control"
+                          required
                           i18n:attributes="data-placeholder"
                           data-placeholder="Select a form..."
-                          data-url="${request.current_route_path()}"
                           data-bind="
                             enable: isNew,
                             selectedData: schema,
-                            dataId: 'name',
+                            dataKey: 'name',
                             dataLabel: 'title',
                             select2: {
+                              allowClear: true,
                               ajax: {
                                 data: searchSchemaParams,
                                 results: searchSchemaResults
@@ -412,12 +415,12 @@
                     <div class="col-sm-10">
                       <input type="hidden" class="form-control"
                           i18n:attributes="data-placeholder"
-                          data-url="${request.current_route_path()}"
+                          required
                           data-placeholder="Select a version..."
                           data-bind="
                             enable: schema,
                             selectedData: versions,
-                            dataId: 'publish_date',
+                            dataKey: 'publish_date',
                             dataLabel: 'publish_date',
                             select2: {
                               multiple: true,

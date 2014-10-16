@@ -235,6 +235,7 @@ function StudyView(){
         self.errorMessages(['You session has expired, please reload the page']);
       } else if (jqXHR.responseJSON){
         self.errorMessages(['Validation problems']);
+        console.log(jqXHR.responseJSON.errors);
         $(form).validate().showErrors(jqXHR.responseJSON.errors);
       } else {
         self.errorMessages([errorThrown]);
@@ -303,9 +304,45 @@ function StudyView(){
   };
 
   self.saveForm = function(form){
-    var data = ko.toJS(self.editableForm());
+    if (!$(form).validate().form()){
+      return;
+    }
 
-    console.log(data);
+    var selected = self.selectedForm();
+
+    $.ajax({
+      url: $(form).attr('action'),
+      type: 'POST',
+      contentType: 'application/json; charset=utf-8',
+      headers: {'X-CSRF-Token': $.cookie('csrf_token')},
+      data: ko.toJSON({
+        schema: self.editableForm().schema().name,
+        versions: self.editableForm().versions().map(function(version){
+          return version.id;
+        })
+      }),
+      beforeSend: function(){
+        self.isSaving(true);
+      },
+      error: handleXHRError(form),
+      success: function(data, textStatus, jqXHR){
+        if (!selected.isNew()){
+          selected.update(data);
+        } else {
+          self.study.forms.push(new StudyForm(data));
+        }
+        self.study.forms.sort(byTitle);
+        if (self.addMoreForms()){
+          self.previousForm(selected);
+          self.startAddForm();
+        } else {
+          self.clear();
+        }
+      },
+      complete: function(){
+        self.isSaving(false);
+      }
+    });
   };
 
   self.deleteForm = function(form){
