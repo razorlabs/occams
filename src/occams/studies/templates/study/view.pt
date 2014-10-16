@@ -397,11 +397,10 @@
                           data-bind="
                             enable: isNew,
                             selectedData: schema,
+                            dataId: 'name',
+                            dataLabel: 'title',
                             select2: {
                               query: searchSchema,
-                              id: idSchema,
-                              formatResult: formatSchema,
-                              formatSelection: formatSchema
                             }" />
                     </div>
                   </div> <!-- /.form-group -->
@@ -415,12 +414,11 @@
                           data-bind="
                             enable: schema,
                             selectedData: versions,
+                            dataId: 'publish_date',
+                            dataLabel: 'publish_date',
                             select2: {
                               multiple: true,
                               query: searchVersions,
-                              id: idVersion,
-                              formatResult: formatVersion,
-                              formatSelection: formatVersion
                             }" />
                     </div>
                   </div> <!-- /.form-group -->

@@ -35,8 +35,28 @@
         $(element).select2('destroy');
       });
 
+      var select2Settings = ko.unwrap(allBindings.get('select2'));
+
+      if (allBindings.has('dataId')){
+        $.extend(select2Settings, {
+          id: function(item){
+            return ko.unwrap(item[allBindings.get('dataId')]);
+          }
+        });
+      }
+
+      if (allBindings.has('dataLabel')){
+        var getLabel = function(item){
+          return ko.unwrap(item[allBindings.get('dataLabel')]);
+        };
+        $.extend(select2Settings, {
+          formatSelection: getLabel,
+          formatResult: getLabel,
+        });
+      }
+
       $(element)
-        .select2(ko.unwrap(allBindings.get('select2')))
+        .select2(select2Settings)
         .on('select2-blur', function(){
           // Trigger focusout on underlying element for validation
           $(this).trigger('focusout');
