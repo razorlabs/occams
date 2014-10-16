@@ -389,6 +389,7 @@
                   <h4 class="modal-title" i18n:translate="">Add form to study</h4>
                 </div>
                 <div class="modal-body">
+                  <div data-bind="template: {name: 'validation-errors-template', if: $root.hasErrorMessages, data: $root.errorMessages}"></div>
                   <div class="form-group">
                     <label class="col-sm-2 control-label required">Form</label>
                     <div class="col-sm-10">
@@ -463,11 +464,14 @@
               </form>
             <!-- /ko -->
             <!-- ko if: $root.showDeleteForm-->
-              <form class="form-horizontal" data-bind="with: selectedForm, submit: $root.deleteForm">
+              <form class="form-horizontal"
+                  action="${request.current_route_path(_route_name='study_schemata')}"
+                  data-bind="with: selectedForm, submit: $root.deleteForm">
                 <div class="modal-header">
                   <h4 class="modal-title" i18n:translate="">Remove form from study</h4>
                 </div>
                 <div class="modal-body">
+                  <div data-bind="template: {name: 'validation-errors-template', if: $root.hasErrorMessages, data: $root.errorMessages}"></div>
                   <p>
                     <span i18n:translate="">You are about to remove</span>
                     <strong data-bind="text: title"></strong>

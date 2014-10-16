@@ -346,6 +346,27 @@ function StudyView(){
   };
 
   self.deleteForm = function(form){
+    var selected = self.selectedForm();
+    $.ajax({
+      // Shortcut to get this working
+      // It's currently difficult to generate a URL for a form
+      url: $(form).attr('action') + '/' + selected.name(),
+      type: 'DELETE',
+      headers: {'X-CSRF-Token': $.cookie('csrf_token')},
+      beforeSend: function(){
+        self.isSaving(true);
+      },
+      error: handleXHRError(form),
+      success: function(data, textStatus, jqXHR){
+        self.study.forms.remove(function(form){
+          return selected.name() == form.name();
+        });
+        self.clear();
+      },
+      complete: function(){
+        self.isSaving(false);
+      }
+    });
   };
 
   self.clear = function(){

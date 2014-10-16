@@ -19,11 +19,12 @@ def version2json(schema):
     Returns a single schema json record
     (this is how it's stored in the database)
     """
-    return {
+    data = {
         'id': schema.id,
         'name': schema.name,
         'title': schema.title,
         'publish_date': schema.publish_date.isoformat()}
+    return data
 
 
 def form2json(schemata):

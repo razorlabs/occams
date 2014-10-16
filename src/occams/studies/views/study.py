@@ -1,11 +1,11 @@
-from pyramid.httpexceptions import (
-    HTTPNotFound, HTTPBadRequest, HTTPForbidden, HTTPOk)
+from good import *  # NOQA
+from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPOk
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 import sqlalchemy as sa
 from sqlalchemy import orm
 import six
-from good import *  # NOQA
+from zope.sqlalchemy import mark_changed
 
 from .. import _, models, Session
 from . import cycle as cycle_views, form as form_views
@@ -372,6 +372,18 @@ def add_schema_json(context, request):
     # Add newly selected
     context.schemata.update(new_items)
 
+    # Get a list of cycles to update
+    cycles = (
+        Session.query(models.Cycle)
+        .options(orm.joinedload(models.Cycle.schemata))
+        .filter(models.Cycle.study == context)
+        .filter(models.Cycle.schemata.any(name=data['schema'])))
+
+    # Also update available cycle schemata versions
+    for cycle in cycles:
+        cycle.schemata.difference_update(old_item - new_items)
+        cycle.schemata.update(new_items)
+
     return form_views.form2json(new_items)[0]
 
 
@@ -383,10 +395,10 @@ def add_schema_json(context, request):
     renderer='json')
 def delete_schema_json(context, request):
     check_csrf_token(request)
-    schema = Session.query(models.Schema).get(request.matchdict['schema'])
+    schema_name = request.matchdict.get('schema')
 
-    if schema is None:
-        raise HTTPNotFound()
+    if not schema_name:
+        return HTTPBadRequest()
 
     # Remove from cycles
     Session.execute(
@@ -396,14 +408,22 @@ def delete_schema_json(context, request):
                 Session.query(models.Cycle.id)
                 .filter_by(study=context)
                 .subquery())
-            & (models.cycle_schema_table.c.schema_id == schema.id)))
+            & models.cycle_schema_table.c.schema_id.in_(
+                Session.query(models.Schema.id)
+                .filter_by(name=schema_name)
+                .subquery())))
 
     # Remove from study
     Session.execute(
         models.study_schema_table.delete()
         .where(
             (models.study_schema_table.c.study_id == context.id)
-            & (models.study_schema_table.c.schema_id == schema.id)))
+            & (models.study_schema_table.c.schema_id.in_(
+                Session.query(models.Schema.id)
+                .filter_by(name=schema_name)
+                .subquery()))))
+
+    mark_changed(Session())
 
     # Expire relations so they load their updated values
     Session.expire_all()
