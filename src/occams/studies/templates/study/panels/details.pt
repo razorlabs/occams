@@ -1,43 +1,37 @@
 <ul class="details list-inline">
   <li>
     <span class="text-muted" i18n:translate="">Code:</span>
-    <span>${context.code}</span>
+    <span data-bind="text: code"></span>
   </li>
   <li>
     <span class="text-muted" i18n:translate="">Label:</span>
-    <span>${context.short_title}</span>
+    <span data-bind="text: short_title"></span>
   </li>
-  <tal:rand tal:condition="context.is_randomized">
-    <li>
-      <span class="text-muted" i18n:translate="">Randomized:</span>
-      <span tal:switch="bool(context.is_randomized)">
-        <span tal:case="True" tal:omit-tag="" i18n:translate="">Yes</span>
-        <span tal:case="False" tal:omit-tag="" i18n:translate="">No</span>
-      </span>
-    </li>
-    <li>
-      <span class="text-muted" i18n:translate="">Blinded:</span>
-      <span tal:switch="bool(context.is_blinded)">
-        <span tal:case="True" tal:omit-tag="" i18n:translate="">Yes</span>
-        <span tal:case="False" tal:omit-tag="" i18n:translate="">No</span>
-      </span>
-    </li>
-  </tal:rand>
   <li>
     <span class="text-muted" i18n:translate="">Consent Date:</span>
-    <code>${context.consent_date}</code>
+    <code data-bind="text: consent_date"></code>
   </li>
-  <li tal:condition="context.start_date">
-    <span class="text-muted" i18n:translate="">Lifecycle:</span>
-    <code>${context.start_date} - ${context.stop_date|nothing}</code>
-  </li>
-  <li tal:condition="python:context.termination_schema or context.randomization_schema">
+  <!-- ko if: start_date -->
+    <li>
+      <span class="text-muted" i18n:translate="">Lifecycle:</span>
+      <code><!-- ko text: start_date --><!-- /ko --> - <!-- ko text: stop_date --><!-- /ko --></code>
+    </li>
+  <!-- /ko -->
+  <!-- ko if: termination_form || randomization_form -->
+  <li>
     <span class="text-muted" i18n:translate="">Enrollment Forms:</span>
-    <strong tal:condition="context.termination_schema">${context.termination_schema.title}</strong>
-    <tal:r condition="context.randomization_schema">
-      <span tal:condition="context.termination_schema">,</span>
-      <strong>${context.termination_schema.title}</strong>
-    </tal:r>
+    <!-- ko with: termination_form -->
+      <strong data-bind="text: title"></strong>
+    <!-- /ko -->
+    <!-- ko if: randomization_form -->
+      <!-- ko if: termination_form -->
+        <span>,</span>
+      <!-- /ko -->
+      <!-- ko with: randomization_form -->
+        <strong data-bind="text: title"></strong>
+      <!-- /ko -->
+    <!-- /ko -->
   </li>
+  <!-- /ko -->
 </ul>
 

@@ -1,3 +1,4 @@
+import collections
 from itertools import groupby
 
 from good import *  # NOQA
@@ -13,9 +14,10 @@ from ..validators import invalid2dict, Model
 # TODO, update patient on form changes
 #
 
-def schema2json(schema):
+def version2json(schema):
     """
     Returns a single schema json record
+    (this is how it's stored in the database)
     """
     return {
         'id': schema.id,
@@ -24,9 +26,21 @@ def schema2json(schema):
         'publish_date': schema.publish_date.isoformat()}
 
 
-def versions2json(schemata):
+def form2json(schemata):
     """
-    Returns a schemata listing grouped by name
+    Returns a representation of schemata grouped by versions.
+
+    This is useful for representing schemata grouped by their version.
+
+    The final dict contains the following values:
+        ``schema`` -- a dict containing:
+            ``name`` -- the schema name
+            ``title`` -- the schema's most recent human title
+        ``versions`` -- a list containining each version (see ``version2json``)
+
+    This method accepts a single value (in which it will be transformted into
+    a schema/versions pair, or a list which will be regrouped
+    into schema/versions pairs
     """
 
     def by_name(schema):
@@ -38,14 +52,18 @@ def versions2json(schemata):
     def make_json(groups):
         groups = sorted(groups, key=by_version)
         return {
-            'name': groups[0].name,
-            'title': groups[-1].title,
-            'versions': list(map(schema2json, groups))
+            'schema': {
+                'name': groups[0].name,
+                'title': groups[-1].title
+                },
+            'versions': list(map(version2json, groups))
             }
 
-    schemata = sorted(schemata, key=by_name)
-
-    return [make_json(g) for k, g in groupby(schemata, by_name)]
+    if isinstance(schemata, collections.Iterable):
+        schemata = sorted(schemata, key=by_name)
+        return [make_json(g) for k, g in groupby(schemata, by_name)]
+    elif isinstance(schemata, models.Schema):
+        return make_json([schemata])
 
 
 @view_config(

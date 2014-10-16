@@ -1,23 +1,94 @@
 /**
- * Schema representation in the context of a study
+ *
  */
-function StudySchema(data){
+function StudyForm(data){
+  data = data || {};
+
   var self = this;
-  self.name = data.name;
-  self.title = data.title
-  self.versions = ko.observableArray(data.versions);
+
+  self.isNew = ko.observable();
+
+  self.schema = ko.observable();
+  self.versions = ko.observableArray();
+
+  // Short-hand name getter
+  self.name = ko.computed(function(){
+    return self.schema() && self.schema().name;
+  });
+
+  // Short-hand title getter
+  self.title = ko.computed(function(){
+    return self.schema() && self.schema().title;
+  });
+
+  self.update = function(data){
+    self.isNew(data.isNew || false);
+    self.schema(data.schema || null);
+    self.versions(data.versions || []);
+  };
+
   self.hasMultipleVersions = ko.computed(function(){
     return self.versions().length > 1;
   });
+
   self.versionsLength = ko.computed(function(){
     return self.versions().length;
   });
+
+  // Select2 schema search callback
+  self.searchSchema = function(options){
+    $.ajax({
+      url: $(options.element).data('url'),
+      data: {vocabulary: 'available_schemata', term: options.term},
+      success: function(data, textStatus, jqXHR){
+        options.callback({results: data});
+      }
+    });
+  };
+
+  // Select2 version search callback
+  self.searchVersions = function(options){
+    $.ajax({
+      url: $(options.element).data('url'),
+      data: {
+        vocabulary: 'available_versions',
+        schema: self.schema().name,
+        term: options.term
+      },
+      success: function(data, textStatus, jqXHR){
+        options.callback({results: data});
+      }
+    });
+  };
+
+  // Select2 schema key getter
+  self.idSchema = function(schema){
+    return schema.name;
+  };
+
+  // Select2 schema label getter
+  self.formatSchema = function(schema){
+    return schema.title;
+  };
+
+  // Select2 version key getter
+  self.idVersion = function(version){
+    return version.publish_date;
+  }
+
+  // Select2 version label getter
+  self.formatVersion = function(version){
+    return version.publish_date;
+  };
+
+  self.update(data);
 }
 
 /**
  * Cycle representation in the context of a study
  */
 function StudyCycle(data){
+  data = data || {};
   var self = this;
 
   self.__url__ = ko.observable();
@@ -26,35 +97,35 @@ function StudyCycle(data){
   self.title = ko.observable();
   self.week = ko.observable();
   self.is_interim = ko.observable();
-  self.schemata = ko.observableArray();
+  self.forms = ko.observableArray();
 
   self.update = function(data){
     ko.mapping.fromJS(data, {
-      'schemata': {
+      'forms': {
         create: function(options){
-          return new StudySchema(options.data);
+          return new StudyForm(options.data);
         }
       }
     }, self);
   };
 
-  self.hasSchemata = ko.computed(function(){
-    return self.schemata().length;
+  self.hasForms = ko.computed(function(){
+    return self.forms().length;
   });
 
-  self.schemataIndex = ko.computed(function(){
+  self.formsIndex = ko.computed(function(){
     var set = {};
-    self.schemata().forEach(function(schema){
-      set[schema.name] = true
+    self.forms().forEach(function(form){
+      set[form.schema().name] = true
     });
     return set;
   });
 
-  self.containsSchema = function(name){
-    return name in self.schemataIndex();
+  self.containsForm = function(form){
+    return form.schema().name in self.formsIndex();
   };
 
-  self.update(data || {});
+  self.update(data);
 }
 
 function StudyView(){
@@ -82,10 +153,29 @@ function StudyView(){
   self.showEditCycle = ko.computed(function(){ return self.cycleModalState() === EDIT; });
   self.showDeleteCycle = ko.computed(function(){ return self.cycleModalState() === DELETE; });
 
+  self.previousForm = ko.observable();
+  self.selectedForm = ko.observable();
+  self.editableForm = ko.observable();
+  self.addMoreForms = ko.observable(false);
+  self.formModalState = ko.observable();
+  self.showViewForm = ko.computed(function(){ return self.formModalState() === VIEW; });
+  self.showEditForm = ko.computed(function(){ return self.formModalState() === EDIT; });
+  self.showDeleteForm = ko.computed(function(){ return self.formModalState() === DELETE; });
+
   self.study = ko.mapping.fromJSON($('#study-data').text(), {
-    'schemata': {
+    'termination_form': {
       create: function(options){
-        return new StudySchema(options.data);
+        return new StudyForm(options.data);
+      }
+    },
+    'randomization_form': {
+      create: function(options){
+        return new StudyForm(options.data);
+      }
+    },
+    'forms': {
+      create: function(options){
+        return new StudyForm(options.data);
       }
     },
     'cycles': {
@@ -95,11 +185,24 @@ function StudyView(){
     }
   });
 
-  var byTitle = function(a, b){ return ko.unwrap(a.title).localeCompare(ko.unwrap(b.title)); };
-  var byWeek = function(a, b){ return ko.unwrap(a.week) - ko.unwrap(b.week) };
+  var byTitle = function(a, b){
+    return a.title().localeCompare(b.title());
+  };
 
+  var byWeek = function(a, b){
+    a = parseInt(ko.unwrap(a.week));
+    b = parseInt(ko.unwrap(b.week));
+    if (!isNaN(a) && isNaN(b)){
+      return -1;
+    } else if (isNaN(a) && !isNaN(b)){
+      return 1;
+    } else {
+      return a - b;
+    }
+  };
+
+  self.study.forms.sort(byTitle);
   self.study.cycles.sort(byWeek);
-  self.study.schemata.sort(byTitle);
 
   self.startViewCycle = function(cycle, event){
     self.selectedCycle(cycle);
@@ -123,6 +226,30 @@ function StudyView(){
     self.selectedCycle(cycle);
     self.editableCycle(null);
     self.cycleModalState(DELETE);
+  };
+
+  self.startViewForm = function(form, event){
+    self.selectedForm(form);
+    self.formModalState(VIEW);
+  };
+
+  self.startAddForm = function(){
+    var form = new StudyForm({isNew: true})
+    self.selectedForm(form);
+    self.editableForm(form);
+    self.formModalState(EDIT);
+  };
+
+  self.startEditForm = function(form, event){
+    self.selectedForm(form);
+    self.editableForm(new StudyForm(ko.toJS(form)));
+    self.formModalState(EDIT);
+  };
+
+  self.startDeleteForm = function(form, event){
+    self.selectedForm(form);
+    self.editableForm(null);
+    self.formModalState(DELETE);
   };
 
   /**
@@ -201,6 +328,15 @@ function StudyView(){
     });
   };
 
+  self.saveForm = function(form){
+    var data = ko.toJS(self.editableForm());
+
+    console.log(data);
+  };
+
+  self.deleteForm = function(form){
+  };
+
   self.clear = function(){
     self.errorMessages([]);
     self.addMoreCycles(false);
@@ -208,6 +344,11 @@ function StudyView(){
     self.selectedCycle(null);
     self.editableCycle(null);
     self.cycleModalState(null);
+    self.previousForm(null);
+    self.selectedForm(null);
+    self.editableForm(null);
+    self.formModalState(null);
+
   };
 
   self.toggleGrid = function(data, event){
@@ -222,13 +363,17 @@ function StudyView(){
 }
 
 +function($){
+  "use strict";
+
   $(document).ready(function(){
-    var $view = $('#view-study')[0];
-    if (!$view){
+
+    var element = $('#study-main')[0];
+
+    if (!element){
       return;
     }
 
-    ko.applyBindings(new StudyView(), $view);
+    ko.applyBindings(new StudyView(), element);
 
     /*
      * Scroll the grid

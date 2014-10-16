@@ -2,7 +2,8 @@ from pyramid.httpexceptions import (
     HTTPNotFound, HTTPBadRequest, HTTPForbidden, HTTPOk)
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
-from sqlalchemy import func, orm
+import sqlalchemy as sa
+from sqlalchemy import orm
 import six
 from good import *  # NOQA
 
@@ -69,16 +70,17 @@ def view_json(context, request):
         'start_date': study.start_date and study.start_date.isoformat(),
         'stop_date': study.stop_date and study.stop_date.isoformat(),
         'is_randomized': study.is_randomized,
+        'is_blinded': study.is_blinded,
         'is_locked': study.is_locked,
-        'termination_schema':
-            study.termination_schema
-            and form_views.schema2json(study.termination_schema),
-        'randomization_schema':
-            study.randomization_schema
-            and form_views.schema2json(study.randomization_schema),
-        'schemata': form_views.versions2json(study.schemata),
         'cycles': [
-            cycle_views.view_json(cycle, request) for cycle in study.cycles]
+            cycle_views.view_json(cycle, request) for cycle in study.cycles],
+        'termination_form':
+            study.termination_schema
+            and form_views.form2json(study.termination_schema),
+        'randomization_form':
+            study.randomization_schema
+            and form_views.form2json(study.randomization_schema),
+        'forms': form_views.form2json(study.schemata)
         }
 
 
@@ -96,7 +98,7 @@ def progress(context, request):
         Session.query(models.Cycle)
         .filter_by(study=context)
         .add_column(
-            Session.query(func.count(models.Visit.id))
+            Session.query(sa.func.count(models.Visit.id))
             .join(VisitCycle, models.Visit.cycles)
             .filter(VisitCycle.id == models.Cycle.id)
             .correlate(models.Cycle)
@@ -104,7 +106,7 @@ def progress(context, request):
 
     for state in states_query:
         cycles_query = cycles_query.add_column(
-            Session.query(func.count(models.Visit.id))
+            Session.query(sa.func.count(models.Visit.id))
             .join(VisitCycle, models.Visit.cycles)
             .filter(models.Visit.entities.any(state=state))
             .filter(VisitCycle.id == models.Cycle.id)
@@ -163,6 +165,71 @@ def edit_json(context, request):
         request.session.flash(_(u'New study added!', 'success'))
 
     return view_json(study, request)
+
+
+@view_config(
+    route_name='study',
+    permission='edit',
+    xhr=True,
+    request_param='vocabulary=available_schemata',
+    renderer='json')
+def available_schemata(context, request):
+    term = (request.GET.get('term') or u'').strip()
+
+    InnerSchema = orm.aliased(models.Schema)
+    titles_query = (
+        Session.query(models.Schema.name)
+        .add_column(
+            Session.query(InnerSchema.title)
+            .filter(InnerSchema.name == models.Schema.name)
+            .filter(InnerSchema.publish_date != sa.null())
+            .filter(InnerSchema.retract_date == sa.null())
+            .order_by(InnerSchema.publish_date.desc())
+            .limit(1)
+            .correlate(models.Schema)
+            .as_scalar()
+            .label('title'))
+        .filter(models.Schema.publish_date != sa.null())
+        .filter(models.Schema.retract_date == sa.null())
+        .group_by(models.Schema.name)
+        .subquery())
+
+    query = Session.query(titles_query)
+
+    if term:
+        query = query.filter(titles_query.c.title.ilike(u'%' + term + u'%'))
+
+    query = query.order_by(titles_query.c.title).limit(100)
+
+    return [{'name': r.name, 'title': r.title} for r in query]
+
+
+@view_config(
+    route_name='study',
+    permission='edit',
+    xhr=True,
+    request_param='vocabulary=available_versions',
+    renderer='json')
+def available_version(context, request):
+    term = (request.GET.get('term') or u'').strip()
+    schema = (request.GET.get('schema') or u'').strip()
+
+    if not schema:
+        return []
+
+    query = (
+        Session.query(models.Schema)
+        .filter(models.Schema.name == schema)
+        .filter(models.Schema.publish_date != sa.null())
+        .filter(models.Schema.retract_date == sa.null()))
+
+    if term:
+        publish_string = sa.cast(models.Schema.publish_date, sa.String)
+        query = query.filter(publish_string.ilike(u'%' + term + u'%'))
+
+    query = query.order_by(models.Schema.publish_date.desc()).limit(100)
+
+    return [form_views.version2json(s) for s in query]
 
 
 @view_config(

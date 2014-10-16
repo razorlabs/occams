@@ -25,7 +25,7 @@ def view_json(context, request):
         'title': cycle.title,
         'week': cycle.week,
         'is_interim': cycle.is_interim,
-        'schemata': form_views.versions2json(cycle.schemata)
+        'forms': form_views.form2json(cycle.schemata)
         }
 
 
