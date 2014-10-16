@@ -363,20 +363,15 @@ def add_schema_json(context, request):
     except Invalid as e:
         raise HTTPBadRequest(json={'errors': invalid2dict(e)})
 
+    old_items = set(i for i in context.schemata if i.name == data['schema'])
     new_items = set(data['versions'])
 
-    # Remove unselected versions
-    for schema in context.schemata:
-        if schema.name == data['schema']:
-            if schema not in new_items:
-                context.schemata.remove(schema)
-            else:
-                new_items.remove(schema)
+    # Remove unselected
+    context.schemata.difference_update(old_items - new_items)
 
-    # Add the newly selected versions
+    # Add newly selected
     context.schemata.update(new_items)
 
-    # Return only the first value since we're only working with one schema
     return form_views.form2json(new_items)[0]
 
 
