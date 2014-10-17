@@ -136,6 +136,8 @@ function StudyView(){
   self.showEditForm = ko.computed(function(){ return self.formModalState() === EDIT; });
   self.showDeleteForm = ko.computed(function(){ return self.formModalState() === DELETE; });
 
+  self.scheduleUrl = $('#study-main').data('schedule-url');
+
   self.study = ko.mapping.fromJSON($('#study-data').text(), {
     'termination_form': {
       create: function(options){
@@ -236,7 +238,9 @@ function StudyView(){
       } else if (jqXHR.responseJSON){
         self.errorMessages(['Validation problems']);
         console.log(jqXHR.responseJSON.errors);
-        $(form).validate().showErrors(jqXHR.responseJSON.errors);
+        if (form){
+          $(form).validate().showErrors(jqXHR.responseJSON.errors);
+        }
       } else {
         self.errorMessages([errorThrown]);
       }
@@ -353,6 +357,7 @@ function StudyView(){
       url: $(form).attr('action') + '/' + selected.name(),
       type: 'DELETE',
       headers: {'X-CSRF-Token': $.cookie('csrf_token')},
+      contentType: 'application/json; charset=utf-8',
       beforeSend: function(){
         self.isSaving(true);
       },
@@ -362,6 +367,41 @@ function StudyView(){
           return selected.name() == form.name();
         });
         self.clear();
+      },
+      complete: function(){
+        self.isSaving(false);
+      }
+    });
+  };
+
+  self.toggleForm  = function(cycle, form, event){
+
+    if (!self.isGridEnabled()){
+      return;
+    }
+
+    var enabled = !cycle.containsForm(form)
+      , formName = form.name()
+      , cycleId = cycle.id();
+
+    $.ajax({
+      url: self.scheduleUrl,
+      type: 'PUT',
+      headers: {'X-CSRF-Token': $.cookie('csrf_token')},
+      contentType: 'application/json; charset=utf-8',
+      data: ko.toJSON({cycle: cycleId, schema: formName, enabled: enabled}),
+      beforeSend: function(){
+        self.isSaving(true);
+      },
+      error: handleXHRError(null),
+      success: function(data, textStatus, jqXHR){
+        if (enabled){
+          cycle.forms.push(form);
+        } else {
+          cycle.forms.remove(function(form){
+            return form.name() == formName;
+          });
+        }
       },
       complete: function(){
         self.isSaving(false);
@@ -382,14 +422,6 @@ function StudyView(){
     self.formModalState(null);
 
   };
-
-  self.toggleGrid = function(data, event){
-    console.log(event);
-  };
-
-  self.onCycleHover = function(data, event){
-    console.log('adfdasf');
-  }
 
   self.isReady(true);
 }

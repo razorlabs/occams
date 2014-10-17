@@ -445,12 +445,12 @@ def edit_schedule_json(context, request):
             Session.query(
                 Session.query(models.Study)
                 .filter(models.Study.cycles.any(study_id=context.id))
-                .filter(models.Study.schemata.any(id=value.id))
+                .filter(models.Study.schemata.any(name=value))
                 .exists())
             .one())
         if not exists:
             msg = _('${study} does not have form "${schema}"')
-            mapping = {'schema': value.title, 'study': context.title}
+            mapping = {'schema': value, 'study': context.title}
             raise Invalid(request.localizer.translate(msg, mapping=mapping))
         return value
 
@@ -463,7 +463,7 @@ def edit_schedule_json(context, request):
 
     schema = Schema({
         'schema': All(
-            Model(models.Schema, localizer=request.localizer),
+            Coerce(six.binary_type),
             check_schema_in_study),
         'cycle': All(
             Model(models.Cycle, localizer=request.localizer),
@@ -477,12 +477,21 @@ def edit_schedule_json(context, request):
     except Invalid as e:
         raise HTTPBadRequest(json={'errors': invalid2dict(e)})
 
-    if data['enabled']:
-        data['cycle'].schemata.add(data['schema'])
-    else:
-        data['cycle'].schemata.remove(data['schema'])
+    schema_name = data['schema']
+    cycle = data['cycle']
+    enabled = data['enabled']
 
-    return HTTPOk
+    study_items = set(i for i in context.schemata if i.name == schema_name)
+    cycle_items = set(i for i in cycle.schemata if i.name == schema_name)
+
+    if enabled:
+        # Match cycle schemata to the study's schemata for the given name
+        cycle.schemata.difference_update(cycle_items - study_items)
+        cycle.schemata.update(study_items)
+    else:
+        cycle.schemata.difference_update(study_items | cycle_items)
+
+    return HTTPOk()
 
 
 def StudySchema(context, request):

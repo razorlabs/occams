@@ -1,6 +1,7 @@
 <html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
   <metal:content-slot fill-slot="content-slot">
-    <div id="study-main" style="display: none;" data-bind="visible: isReady">
+    <div id="study-main" style="display: none;" data-bind="visible: isReady"
+        data-schedule-url="${request.current_route_path(_route_name='study_schedule')}">
 
       <header class="page-header" data-bind="with: study">
         <div class="btn-toolbar pull-right">
@@ -154,7 +155,10 @@
                   </div>
                 </th>
                 <!-- ko foreach: {data: $root.study.cycles, as: 'cycle'} -->
-                  <td data-bind="event: {dblclick: $root.toggleGrid}">
+                  <td data-bind="
+                      css: {'js-clickable-cell': $root.isGridEnabled},
+                      event: {dblclick: $root.toggleForm.bind($root, cycle, form)}
+                      ">
                     <!-- ko if: cycle.containsForm(form) -->
                       <span class="fa fa-check"></span>
                     <!-- /ko -->
