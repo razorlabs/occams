@@ -146,12 +146,12 @@ function StudyView(){
     },
     'randomization_form': {
       create: function(options){
-        return new StudyForm(options.data);
+        return options.data ? new StudyForm(options.data) : null;
       }
     },
     'forms': {
       create: function(options){
-        return new StudyForm(options.data);
+        return options.data ? new StudyForm(options.data) : null;
       }
     },
     'cycles': {
@@ -420,7 +420,6 @@ function StudyView(){
     self.selectedForm(null);
     self.editableForm(null);
     self.formModalState(null);
-
   };
 
   self.isReady(true);
