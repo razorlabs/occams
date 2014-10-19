@@ -21,6 +21,13 @@ function StudyForm(data){
     return self.schema() && self.schema().title;
   });
 
+  self.titleWithVersion = ko.computed(function(){
+    if (self.versions().length == 1){
+      var version = self.versions()[0];
+      return version.title + ' @ ' + version.publish_date;
+    }
+  });
+
   self.update = function(data){
     self.isNew(data.isNew || false);
     self.schema(data.schema || null);
@@ -102,6 +109,83 @@ function StudyCycle(data){
   self.update(data);
 }
 
+function Study(data){
+  'use strict';
+  var self = this;
+
+  self.update = function(data){
+    ko.mapping.fromJS(data, {
+      'termination_form': {
+        create: function(options){
+          return ko.observable(options.data ? new StudyForm(options.data) : null);
+        }
+      },
+      'randomization_form': {
+        create: function(options){
+          return ko.observable(options.data ? new StudyForm(options.data) : null);
+        }
+      },
+      'forms': {
+        create: function(options){
+          return new StudyForm(options.data);
+        }
+      },
+      'cycles': {
+        create: function(options){
+          return new StudyCycle(options.data);
+        }
+      }
+    }, self);
+
+    self.forms.sort(function(a, b){
+      return a.title().localeCompare(b.title());
+    });
+
+    self.cycles.sort(function(a, b){
+      a = parseInt(ko.unwrap(a.week));
+      b = parseInt(ko.unwrap(b.week));
+      if (!isNaN(a) && isNaN(b)){
+        return -1;
+      } else if (isNaN(a) && !isNaN(b)){
+        return 1;
+      } else {
+        return a - b;
+      }
+    });
+  };
+
+  // Select2 termination search parameters callback
+  self.searchTerminationParams = function(term, page){
+    return {vocabulary: 'available_termination', term: term}
+  };
+
+  // Select2 termination results callback
+  self.searchTerminationResults = function(data){
+    return {
+      results: data.schemata.map(function(schema){
+        return new StudyForm({schema: schema, versions: [schema]});
+      })
+    };
+  };
+
+  // Select2 randomization search parameters callback
+  self.searchRandomizationParams = function(term, page){
+    return {vocabulary: 'available_randomization', term: term}
+  };
+
+  // Select2 randomization results callback
+  self.searchRandomizationResults = function(data){
+    return {
+      results: data.schemata.map(function(schema){
+        return new StudyForm({schema: schema, versions: [schema]});
+      })
+    };
+  };
+
+  self.update(data);
+}
+
+
 function StudyView(){
   var self = this;
 
@@ -138,47 +222,25 @@ function StudyView(){
 
   self.scheduleUrl = $('#study-main').data('schedule-url');
 
-  self.study = ko.mapping.fromJSON($('#study-data').text(), {
-    'termination_form': {
-      create: function(options){
-        return new StudyForm(options.data);
-      }
-    },
-    'randomization_form': {
-      create: function(options){
-        return options.data ? new StudyForm(options.data) : null;
-      }
-    },
-    'forms': {
-      create: function(options){
-        return options.data ? new StudyForm(options.data) : null;
-      }
-    },
-    'cycles': {
-      create: function(options){
-        return new StudyCycle(options.data);
-      }
-    }
-  });
+  self.study = new Study(JSON.parse($('#study-data').text()));
 
-  var byTitle = function(a, b){
-    return a.title().localeCompare(b.title());
+  self.selectedStudy = ko.observable();
+  self.editableStudy = ko.observable();
+  self.studyModalState = ko.observable();
+  self.showEditStudy = ko.computed(function(){ return self.studyModalState() === EDIT; });
+  self.showDeleteStudy = ko.computed(function(){ return self.studyModalState() === DELETE; });
+
+
+  self.startEditStudy = function(study, event){
+    self.selectedStudy(study);
+    self.editableStudy(new Study(ko.toJS(study)));
+    self.studyModalState(EDIT);
   };
 
-  var byWeek = function(a, b){
-    a = parseInt(ko.unwrap(a.week));
-    b = parseInt(ko.unwrap(b.week));
-    if (!isNaN(a) && isNaN(b)){
-      return -1;
-    } else if (isNaN(a) && !isNaN(b)){
-      return 1;
-    } else {
-      return a - b;
-    }
+  self.startDeleteStudy = function(study, event){
+    self.selectedStudy(study);
+    self.studyModalState(DELETE);
   };
-
-  self.study.forms.sort(byTitle);
-  self.study.cycles.sort(byWeek);
 
   self.startViewCycle = function(cycle, event){
     self.selectedCycle(cycle);
@@ -247,6 +309,41 @@ function StudyView(){
     };
   };
 
+  self.saveStudy = function(form){
+    if (!$(form).validate().form()){
+      return;
+    }
+    var selected = self.selectedStudy()
+      , edits = ko.toJS(self.editableStudy());
+
+    $.extend(edits, {
+        // Convert to ids since this is what he REST API expects
+        termination_form: edits.termination_form && edits.termination_form.versions[0].id,
+        randomization_form: edits.randomization_form && edits.randomization_form.versions[0].id,
+      });
+
+    $.ajax({
+      url: selected.id() ? selected.__url__() : $(form).data('factory-url'),
+      type: selected.id() ? 'PUT' : 'POST',
+      contentType: 'application/json; charset=utf-8',
+      headers: {'X-CSRF-Token': $.cookie('csrf_token')},
+      data: ko.toJSON(edits),
+      beforeSend: function(){
+        self.isSaving(true);
+      },
+      error: handleXHRError(form),
+      success: function(data, textStatus, jqXHR){
+        if (selected.id()){
+          selected.update(data);
+        }
+        self.clear();
+      },
+      complete: function(){
+        self.isSaving(false);
+      }
+    });
+  };
+
   self.saveCycle = function(form){
     if (!$(form).validate().form()){
       return;
@@ -270,7 +367,6 @@ function StudyView(){
         } else {
           self.study.cycles.push(new StudyCycle(data));
         }
-        self.study.cycles.sort(byWeek);
         if (self.addMoreCycles()){
           self.previousCycle(selected);
           self.startAddCycle();
@@ -335,7 +431,6 @@ function StudyView(){
         } else {
           self.study.forms.push(new StudyForm(data));
         }
-        self.study.forms.sort(byTitle);
         if (self.addMoreForms()){
           self.previousForm(selected);
           self.startAddForm();
@@ -411,6 +506,8 @@ function StudyView(){
 
   self.clear = function(){
     self.errorMessages([]);
+    self.studyModalState(null)
+    self.editableStudy(null);
     self.addMoreCycles(false);
     self.previousCycle(null);
     self.selectedCycle(null);

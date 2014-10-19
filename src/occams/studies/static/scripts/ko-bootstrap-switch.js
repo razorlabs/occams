@@ -2,41 +2,32 @@
  * https://github.com/pauloortins/knockout-bootstrap-switch
  */
 ko.bindingHandlers.bootstrapSwitch = {
-    init: function (element, valueAccessor, allBindingsAccessor) {
-        //initialize bootstrapSwitch
-        $(element).bootstrapSwitch();
+  init: function (element, valueAccessor, allBindings) {
+    //initialize bootstrapSwitch
+    $(element).bootstrapSwitch();
 
-        // setting initial value
-        $(element).bootstrapSwitch('state', valueAccessor()());
+    // handle the field changing
+    $(element).on('switchChange.bootstrapSwitch', function (event, state) {
+      var observable = valueAccessor();
+      observable(state);
+    });
 
-        //handle the field changing
-  $(element).on('switchChange.bootstrapSwitch', function (event, state) {
-            var observable = valueAccessor();
-            observable(state);
-        });
+    //handle disposal (if KO removes by the template binding)
+    ko.utils.domNodeDisposal.addDisposeCallback(element, function () {
+      $(element).bootstrapSwitch('destroy').remove();
+    });
+  },
 
-        // Adding component options
-        var options = allBindingsAccessor().bootstrapSwitchOptions || {};
-        for (var property in options) {
-            $(element).bootstrapSwitch(property, ko.utils.unwrapObservable(options[property]));
-        }
+  //update the control when the view model changes
+  update: function (element, valueAccessor, allBindings) {
 
-        //handle disposal (if KO removes by the template binding)
-        ko.utils.domNodeDisposal.addDisposeCallback(element, function () {
-            $(element).bootstrapSwitch("destroy");
-        });
-
-    },
-    //update the control when the view model changes
-    update: function (element, valueAccessor, allBindingsAccessor) {
-        var value = ko.utils.unwrapObservable(valueAccessor());
-
-        // Adding component options
-        var options = allBindingsAccessor().bootstrapSwitchOptions || {};
-        for (var property in options) {
-            $(element).bootstrapSwitch(property, ko.utils.unwrapObservable(options[property]));
-        }
-
-        $(element).bootstrapSwitch("state", value);
+    // Adding component options
+    if (allBindings.has('bootstrapSwitchOptions')){
+      for (var property in allBindings.get('bootstrapSwitchOptions')){
+        $(element).bootstrapSwitch(property, ko.unwrap(options[property]));
+      }
     }
+
+    $(element).bootstrapSwitch('state', ko.unwrap(valueAccessor()));
+  }
 };

@@ -65,9 +65,13 @@
       // Remember to update the attached binding
       if (allBindings.has('selectedData')){
         var dataAccessor = allBindings.get('selectedData');
-        $(element).on('change', function(){
-          dataAccessor($(element).select2('data'));
-        });
+        if (dataAccessor instanceof Function){
+          $(element).on('change', function(){
+            dataAccessor($(element).select2('data'));
+          });
+        } else {
+          console.warn('selectedData is not a callable', element, dataAccessor);
+        }
       }
     },
 

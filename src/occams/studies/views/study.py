@@ -68,7 +68,7 @@ def view_json(context, request):
         'short_title': study.short_title,
         'consent_date': study.consent_date.isoformat(),
         'start_date': study.start_date and study.start_date.isoformat(),
-        'stop_date': study.stop_date and study.stop_date.isoformat(),
+        'end_date': study.end_date and study.end_date.isoformat(),
         'is_randomized': study.is_randomized,
         'is_blinded': study.is_blinded,
         'is_locked': study.is_locked,
@@ -157,7 +157,17 @@ def edit_json(context, request):
     study.short_title = data['short_title']
     study.consent_date = data['consent_date']
     study.start_date = data['start_date']
-    study.stop_date = data['stop_date']
+    study.end_date = data['end_date']
+    study.termination_schema = data['termination_form']
+    study.is_locked = data['is_locked']
+    study.is_randomized = data['is_randomized']
+
+    if study.is_randomized:
+        study.is_blinded = data['is_blinded']
+        study.randomization_schema = data['randomization_form']
+    else:
+        study.is_blinded = None
+        study.randomization_schema = None
 
     Session.flush()
 
@@ -165,6 +175,112 @@ def edit_json(context, request):
         request.session.flash(_(u'New study added!', 'success'))
 
     return view_json(study, request)
+
+
+@view_config(
+    route_name='studies',
+    permission='add',
+    xhr=True,
+    request_param='vocabulary=available_termination',
+    renderer='json')
+@view_config(
+    route_name='study',
+    permission='edit',
+    xhr=True,
+    request_param='vocabulary=available_termination',
+    renderer='json')
+def available_termination(context, request):
+    """
+    Returns a JSON listing of avavilable schemata for terminiation
+    """
+    term = (request.GET.get('term') or u'').strip()
+
+    query = (
+        Session.query(models.Schema)
+        .filter(models.Schema.publish_date != sa.null())
+        .filter(models.Schema.retract_date == sa.null()))
+
+    if isinstance(context, models.Study):
+        query = (
+            query
+            .filter(~models.Schema.name.in_(
+                # Filter out schemata that is already in use by the study
+                Session.query(models.Schema.name)
+                .select_from(models.Study)
+                .filter(models.Study.id == context.id)
+                .join(models.Study.schemata)
+                .union(
+                    # Filter out randomization schemata
+                    Session.query(models.Schema.name)
+                    .select_from(models.Study)
+                    .join(models.Study.randomization_schema)
+                    .filter(models.Study.id == context.id))
+                .subquery())))
+
+    if term:
+        query = query.filter(models.Schema.title.ilike(u'%' + term + u'%'))
+
+    query = (
+        query
+        .order_by(
+            models.Schema.title,
+            models.Schema.publish_date)
+        .limit(100))
+
+    return {'schemata': [form_views.version2json(i) for i in query]}
+
+
+@view_config(
+    route_name='studies',
+    permission='add',
+    xhr=True,
+    request_param='vocabulary=available_randomization',
+    renderer='json')
+@view_config(
+    route_name='study',
+    permission='edit',
+    xhr=True,
+    request_param='vocabulary=available_randomization',
+    renderer='json')
+def available_randomiation(context, request):
+    """
+    Returns a JSON listing of avavilable schemata for randomization
+    """
+    term = (request.GET.get('term') or u'').strip()
+
+    query = (
+        Session.query(models.Schema)
+        .filter(models.Schema.publish_date != sa.null())
+        .filter(models.Schema.retract_date == sa.null()))
+
+    if isinstance(context, models.Study):
+        query = (
+            query
+            .filter(~models.Schema.name.in_(
+                # Filter out schemata that is already in use by the study
+                Session.query(models.Schema.name)
+                .select_from(models.Study)
+                .filter(models.Study.id == context.id)
+                .join(models.Study.schemata)
+                .union(
+                    # Filter out terminiation schemata
+                    Session.query(models.Schema.name)
+                    .select_from(models.Study)
+                    .join(models.Study.termination_schema)
+                    .filter(models.Study.id == context.id))
+                .subquery())))
+
+    if term:
+        query = query.filter(models.Schema.title.ilike(u'%' + term + u'%'))
+
+    query = (
+        query
+        .order_by(
+            models.Schema.title,
+            models.Schema.publish_date)
+        .limit(100))
+
+    return {'schemata': [form_views.version2json(i) for i in query]}
 
 
 @view_config(
@@ -514,11 +630,19 @@ def StudySchema(context, request):
         'name': All(
             Coerce(six.binary_type),
             Length(min=3, max=32),
+            Match(r'^[a-z0-9_\-]+$'),
             check_unique_name),
         'title': All(Coerce(six.text_type), Length(min=3, max=32)),
         'code': All(Coerce(six.binary_type), Length(min=3, max=8)),
         'short_title': All(Coerce(six.text_type), Length(min=3, max=8)),
         'consent_date': Date('%Y-%m-%d'),
         'start_date': Maybe(Date('%Y-%m-%d')),
-        'stop_date': Maybe(Date('%Y-%m-%d')),
+        'end_date': Maybe(Date('%Y-%m-%d')),
+        'is_locked': Boolean(),
+        'termination_form': All(
+            Model(models.Schema, localizer=request.localizer)),
+        'is_randomized': Maybe(Boolean()),
+        'is_blinded': Maybe(Boolean()),
+        'randomization_form': Maybe(
+            Model(models.Schema, localizer=request.localizer)),
         Extra: Remove})

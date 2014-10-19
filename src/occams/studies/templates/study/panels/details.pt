@@ -14,7 +14,7 @@
   <!-- ko if: start_date -->
     <li>
       <span class="text-muted" i18n:translate="">Lifecycle:</span>
-      <code><!-- ko text: start_date --><!-- /ko --> - <!-- ko text: stop_date --><!-- /ko --></code>
+      <code><!-- ko text: start_date --><!-- /ko --> - <!-- ko text: end_date --><!-- /ko --></code>
     </li>
   <!-- /ko -->
   <!-- ko if: termination_form || randomization_form -->

@@ -235,7 +235,7 @@ class Study(Base, Referenceable, Describeable, Modifiable, Auditable):
         doc='If set, this study is available for data entry on or '
             'after this date')
 
-    stop_date = sa.Column(
+    end_date = sa.Column(
         'stop_date',
         sa.Date(),
         doc='If set, data can only be entered before or after this date')
@@ -301,8 +301,8 @@ class Study(Base, Referenceable, Describeable, Modifiable, Auditable):
                 """
                 start_date <= consent_date
                 AND (
-                    stop_date IS NULL
-                    OR consent_date <= stop_date)
+                    end_date IS NULL
+                    OR consent_date <= end_date)
                 """,
                 name='ck_%s_lifespan' % cls.__tablename__))
 
