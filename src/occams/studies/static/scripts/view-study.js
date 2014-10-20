@@ -344,6 +344,31 @@ function StudyView(){
     });
   };
 
+  self.deleteStudy = function(form){
+    var selected = self.selectedStudy();
+
+    $.ajax({
+      url: selected.__url__(),
+      type: 'DELETE',
+      contentType: 'application/json; charset=utf-8',
+      headers: {'X-CSRF-Token': $.cookie('csrf_token')},
+      beforeSend: function(){
+        self.isSaving(true);
+      },
+      error: handleXHRError(form),
+      success: function(data, textStatus, jqXHR){
+        window.location = data.__next__
+      },
+      complete: function(){
+        self.isSaving(false);
+      }
+    });
+  };
+
+  self.uploadRIDs = function(study, event){
+    console.log('something something upload');
+  };
+
   self.saveCycle = function(form){
     if (!$(form).validate().form()){
       return;

@@ -12,10 +12,10 @@
               />
           <!-- /ko -->
           <!-- ko if: randomization_form -->
-            <button class="btn btn-default"><span class="fa fa-random"></span> Upload RIDs</button>
+            <button class="btn btn-default" data-bind="click: $root.uploadRIDs"><span class="fa fa-random"></span> Upload RIDs</button>
           <!-- /ko -->
           <button class="btn btn-default" data-bind="click: $root.startEditStudy"><span class="fa fa-edit"></span> Edit</button>
-          <button class="btn btn-default"><span class="fa fa-trash-o"></span> Delete</button>
+          <button class="btn btn-default" data-bind="click: $root.startDeleteStudy"><span class="fa fa-trash-o"></span> Delete</button>
         </div>
         <h1>
           <span data-bind="text: title"></span>
@@ -322,6 +322,41 @@
                     i18n:translate="">Cancel</button>
                 <button type="submit" class="btn btn-primary">
                   <span i18n:translate="">Save</span>
+                  <!-- ko if: $root.isSaving -->
+                    <span class="fa fa-refresh fa-spin"></span>
+                  <!-- /ko -->
+                </button>
+              </div> <!-- /.modal-footer -->
+            </form>
+          </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+      </div><!-- /.modal -->
+
+      <div class="modal fade" data-bind="showModal: showDeleteStudy, if: showDeleteStudy">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form
+                class="form-horizontal"
+                data-bind="
+                  with: selectedStudy,
+                  submit: $root.deleteStudy">
+              <div class="modal-header">
+                <h4 class="modal-title" i18n:translate="">Delete study</h4>
+              </div>
+              <div class="modal-body">
+                <div data-bind="template: {name: 'validation-errors-template', if: $root.hasErrorMessages, data: $root.errorMessages}"></div>
+                <p i18n:translate="">You are about to delete the following study and all it's collected data:</p>
+                <h4 data-bind="text: title"></h4>
+                <p i18n:translate="">Are you sure you want to continue?</p>
+              </div> <!-- /.modal-body -->
+              <div class="modal-footer">
+                <button
+                    type="button"
+                    class="btn btn-link"
+                    data-bind="click: $root.clear"
+                    i18n:translate="">No</button>
+                <button type="submit" class="btn btn-danger">
+                  <span i18n:translate="">Yes</span>
                   <!-- ko if: $root.isSaving -->
                     <span class="fa fa-refresh fa-spin"></span>
                   <!-- /ko -->
