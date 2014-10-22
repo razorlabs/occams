@@ -31,8 +31,8 @@
             <!-- /ko -->
           </small>
         </h1>
-        <ul metal:use-macro="load: ./panels/details.pt" />
-        <nav metal:use-macro="load: ./panels/nav.pt" />
+        <ul metal:use-macro="load: header-details.pt" />
+        <nav metal:use-macro="load: header-nav.pt" />
       </header>
 
       <div id="js-schedule" class="table-responsive table-scrollable">

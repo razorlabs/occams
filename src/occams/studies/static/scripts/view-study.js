@@ -230,7 +230,6 @@ function StudyView(){
   self.showEditStudy = ko.computed(function(){ return self.studyModalState() === EDIT; });
   self.showDeleteStudy = ko.computed(function(){ return self.studyModalState() === DELETE; });
 
-
   self.startEditStudy = function(study, event){
     self.selectedStudy(study);
     self.editableStudy(new Study(ko.toJS(study)));
@@ -544,25 +543,10 @@ function StudyView(){
     self.formModalState(null);
   };
 
-  self.isReady(true);
-}
+  // One-time setup
+  +function(){
 
-+function($){
-  "use strict";
-
-  $(document).ready(function(){
-
-    var element = $('#study-main')[0];
-
-    if (!element){
-      return;
-    }
-
-    ko.applyBindings(new StudyView(), element);
-
-    /*
-     * Scroll the grid
-     */
+    // Scroll the grid
     function updateGrid(){
       var $container = $('#js-schedule')
         , $corner = $('#js-schedule-corner')
@@ -602,6 +586,14 @@ function StudyView(){
 
     $(window).on('scroll mousewheel resize', updateGrid);
     $('#js-schedule').on('scroll mousewheel', updateGrid);
-  });
 
-}(jQuery);
+    self.isReady(true);
+  }();
+}
+
+
+jQuery(function($){
+  "use strict";
+  var ID = '#study-main', VIEW = StudyView, ELEMENT = $(ID)[0];
+  if (ELEMENT) { ko.applyBindings(new VIEW, ELEMENT); }
+});
