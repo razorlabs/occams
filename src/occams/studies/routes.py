@@ -31,7 +31,8 @@ def includeme(config):
     config.add_route('study',                       '/studies/{study}',                 factory=models.StudyFactory, traverse='/{study}')
     config.add_route('study_schedule',              '/studies/{study}/schedule',        factory=models.StudyFactory, traverse='/{study}')
     config.add_route('study_enrollments',           '/studies/{study}/enrollments',     factory=models.StudyFactory, traverse='/{study}')
-    config.add_route('study_progress',              '/studies/{study}/progress',        factory=models.StudyFactory, traverse='/{study}')
+    config.add_route('study_visits',                '/studies/{study}/visits',          factory=models.StudyFactory, traverse='/{study}')
+    config.add_route('study_visits_cycle',          '/studies/{study}/visits/{cycle}',  factory=models.StudyFactory, traverse='/{study}')
     config.add_route('study_schemata',              '/studies/{study}/schemata',        factory=models.StudyFactory, traverse='/{study}')
     config.add_route('study_schema',                '/studies/{study}/schemata/{schema}', factory=models.StudyFactory, traverse='/{study}')
 

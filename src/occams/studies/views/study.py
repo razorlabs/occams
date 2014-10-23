@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 from good import *  # NOQA
 from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPOk
 from pyramid.session import check_csrf_token
@@ -57,9 +59,9 @@ def view(context, request):
     permission='view',
     xhr=True,
     renderer='json')
-def view_json(context, request):
+def view_json(context, request, deep=True):
     study = context
-    return {
+    data = {
         '__url__': request.route_path('study', study=study.name),
         'id': study.id,
         'name': study.name,
@@ -72,51 +74,105 @@ def view_json(context, request):
         'is_randomized': study.is_randomized,
         'is_blinded': study.is_blinded,
         'is_locked': study.is_locked,
-        'cycles': [
-            cycle_views.view_json(cycle, request) for cycle in study.cycles],
         'termination_form':
             study.termination_schema
             and form_views.form2json(study.termination_schema),
         'randomization_form':
             study.randomization_schema
             and form_views.form2json(study.randomization_schema),
-        'forms': form_views.form2json(study.schemata)
         }
+
+    if deep:
+        data.update({
+            'cycles': [
+                cycle_views.view_json(cycle, request)
+                for cycle in study.cycles],
+            'forms': form_views.form2json(study.schemata)})
+
+    return data
 
 
 @view_config(
-    route_name='study_progress',
+    route_name='study_visits',
     permission='view',
-    renderer='../templates/study/progress.pt')
-def progress(context, request):
+    renderer='../templates/study/visits.pt')
+def visits(context, request):
+    today = date.today()
+    this_month_begin = date(today.year, today.month, 1)
+    last_month_end = this_month_begin - timedelta(days=1)
+    last_month_begin = date(last_month_end.year, last_month_end.month, 1)
 
-    states_query = Session.query(models.State)
+    states_query = Session.query(models.State).order_by('id')
 
     VisitCycle = orm.aliased(models.Cycle)
 
     cycles_query = (
-        Session.query(models.Cycle)
+        Session.query(models.Cycle.name, models.Cycle.title)
         .filter_by(study=context)
         .add_column(
             Session.query(sa.func.count(models.Visit.id))
             .join(VisitCycle, models.Visit.cycles)
             .filter(VisitCycle.id == models.Cycle.id)
             .correlate(models.Cycle)
-            .label('visits_count')))
-
-    for state in states_query:
-        cycles_query = cycles_query.add_column(
+            .label('visits_count'))
+        .add_columns(*[
             Session.query(sa.func.count(models.Visit.id))
             .join(VisitCycle, models.Visit.cycles)
             .filter(models.Visit.entities.any(state=state))
             .filter(VisitCycle.id == models.Cycle.id)
             .correlate(models.Cycle)
-            .label(state.name))
+            .label(state.name) for state in states_query])
+        .order_by(models.Cycle.week.asc()))
 
-    cycles_query = cycles_query.order_by(models.Cycle.week.asc())
     cycles_count = context.cycles.count()
 
+    if context.is_randomized and not context.is_blinded:
+        arms_query = (
+            Session.query(
+                sa.func.coalesce(
+                    models.Arm.title,
+                    literal_column(_('\'(not randomized)\''))).label('title'),
+                sa.func.count(models.Enrollment.id).label('enrollment_count'))
+            .select_from(models.Enrollment)
+            .join(models.Enrollment.study)
+            .outerjoin(
+                models.Stratum,
+                (models.Stratum.patient_id == models.Enrollment.patient_id)
+                & (models.Stratum.study_id == models.Enrollment.study_id))
+            .outerjoin(models.Stratum.arm)
+            .filter(models.Enrollment.study == self.study)
+            .group_by(models.Arm.title)
+            .order_by(models.Arm.title))
+    else:
+        arms_query = []
+
     return {
+        'arms': arms_query,
+        'start_this_month': (
+            context.enrollments
+            .filter(models.Enrollment.consent_date >= this_month_begin)
+            .count()),
+        'start_last_month': (
+            context.enrollments
+            .filter(
+                (models.Enrollment.consent_date >= last_month_begin)
+                & (models.Enrollment.consent_date < this_month_begin))
+            .count()),
+        'end_this_month': (
+            context.enrollments
+            .filter(models.Enrollment.termination_date >= this_month_begin)
+            .count()),
+        'end_last_month': (
+            context.enrollments
+            .filter(
+                (models.Enrollment.termination_date >= last_month_begin)
+                & (models.Enrollment.termination_date < this_month_begin))
+            .count()),
+        'active': (
+            context.enrollments
+            .filter_by(termination_date=sa.null())
+            .count()),
+        'all_time': context.enrollments.count(),
         'states': states_query,
         'cycles': cycles_query,
         'cycles_count': cycles_count,
