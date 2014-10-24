@@ -132,24 +132,23 @@ def visits(context, request):
 
     states = Session.query(models.State).order_by('id').all()
 
-    VisitCycle = orm.aliased(models.Cycle)
-
     cycles_query = (
         Session.query(models.Cycle.name, models.Cycle.title)
         .filter_by(study=context)
-        .add_column(
-            Session.query(sa.func.count(models.Visit.id))
-            .join(VisitCycle, models.Visit.cycles)
-            .filter(VisitCycle.id == models.Cycle.id)
-            .correlate(models.Cycle)
-            .label('visits_count'))
+        .join(models.Cycle.visits)
+        .add_column(sa.func.count(models.Visit.id.distinct()).label('visits_count'))
+        .join(
+            models.Context,
+            (models.Context.external == sa.sql.literal_column("'visit'"))
+            & (models.Context.key == models.Visit.id))
+        .join(models.Context.entity)
+        .join(models.Entity.state)
         .add_columns(*[
-            Session.query(sa.func.count(models.Visit.id))
-            .join(VisitCycle, models.Visit.cycles)
-            .filter(models.Visit.entities.any(state=state))
-            .filter(VisitCycle.id == models.Cycle.id)
-            .correlate(models.Cycle)
-            .label(state.name) for state in states])
+            sa.func.count(
+                sa.sql.case([
+                    (models.State.name == state.name, sa.true())],
+                    else_=sa.null())).label(state.name) for state in states])
+        .group_by(models.Cycle.name, models.Cycle.title, models.Cycle.week)
         .order_by(models.Cycle.week.asc()))
 
     cycles_count = context.cycles.count()
