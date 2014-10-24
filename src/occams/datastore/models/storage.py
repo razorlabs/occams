@@ -63,7 +63,8 @@ class Context(Model, Referenceable, Modifiable, Auditable):
                 refcolumns=['entity.id'],
                 name='fk_%s_entity_id' % cls.__tablename__,
                 ondelete='CASCADE'),
-            UniqueConstraint('entity_id', 'external', 'key'))
+            UniqueConstraint('entity_id', 'external', 'key'),
+            Index('ix_%s_external_key' % cls.__tablename__, 'external', 'key'))
 
 
 class GroupedCollection(object):
