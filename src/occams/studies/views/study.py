@@ -12,6 +12,7 @@ from zope.sqlalchemy import mark_changed
 from .. import _, models, Session
 from . import cycle as cycle_views, form as form_views
 from ..validators import invalid2dict, Model
+from ..utils import Pagination
 
 
 @view_config(
@@ -97,34 +98,17 @@ def view_json(context, request, deep=True):
     permission='view',
     renderer='../templates/study/visits.pt')
 def visits(context, request):
+    """
+    Returns overall stats about the study such as:
+        * # of visits
+        * # of visits by form status
+        * enrollment activity
+        * randomization stats
+    """
     today = date.today()
     this_month_begin = date(today.year, today.month, 1)
     last_month_end = this_month_begin - timedelta(days=1)
     last_month_begin = date(last_month_end.year, last_month_end.month, 1)
-
-    states_query = Session.query(models.State).order_by('id')
-
-    VisitCycle = orm.aliased(models.Cycle)
-
-    cycles_query = (
-        Session.query(models.Cycle.name, models.Cycle.title)
-        .filter_by(study=context)
-        .add_column(
-            Session.query(sa.func.count(models.Visit.id))
-            .join(VisitCycle, models.Visit.cycles)
-            .filter(VisitCycle.id == models.Cycle.id)
-            .correlate(models.Cycle)
-            .label('visits_count'))
-        .add_columns(*[
-            Session.query(sa.func.count(models.Visit.id))
-            .join(VisitCycle, models.Visit.cycles)
-            .filter(models.Visit.entities.any(state=state))
-            .filter(VisitCycle.id == models.Cycle.id)
-            .correlate(models.Cycle)
-            .label(state.name) for state in states_query])
-        .order_by(models.Cycle.week.asc()))
-
-    cycles_count = context.cycles.count()
 
     if context.is_randomized and not context.is_blinded:
         arms_query = (
@@ -145,6 +129,30 @@ def visits(context, request):
             .order_by(models.Arm.title))
     else:
         arms_query = []
+
+    states = Session.query(models.State).order_by('id').all()
+
+    VisitCycle = orm.aliased(models.Cycle)
+
+    cycles_query = (
+        Session.query(models.Cycle.name, models.Cycle.title)
+        .filter_by(study=context)
+        .add_column(
+            Session.query(sa.func.count(models.Visit.id))
+            .join(VisitCycle, models.Visit.cycles)
+            .filter(VisitCycle.id == models.Cycle.id)
+            .correlate(models.Cycle)
+            .label('visits_count'))
+        .add_columns(*[
+            Session.query(sa.func.count(models.Visit.id))
+            .join(VisitCycle, models.Visit.cycles)
+            .filter(models.Visit.entities.any(state=state))
+            .filter(VisitCycle.id == models.Cycle.id)
+            .correlate(models.Cycle)
+            .label(state.name) for state in states])
+        .order_by(models.Cycle.week.asc()))
+
+    cycles_count = context.cycles.count()
 
     return {
         'arms': arms_query,
@@ -173,10 +181,118 @@ def visits(context, request):
             .filter_by(termination_date=sa.null())
             .count()),
         'all_time': context.enrollments.count(),
-        'states': states_query,
+        'states': states,
         'cycles': cycles_query,
         'cycles_count': cycles_count,
         'has_cycles': cycles_count > 0}
+
+
+@view_config(
+    route_name='study_visits_cycle',
+    permission='view',
+    renderer='../templates/study/visits_cycle.pt')
+def visits_cycle(context, request):
+    """
+    This view displays summary statistics about visits that are related to
+    this cycle, as well as a listing of those visits for reference.
+    """
+
+    page_size = 25
+
+    cycle = (
+        Session.query(models.Cycle)
+        .filter_by(study=context, name=request.matchdict['cycle'])
+        .first())
+
+    if not cycle:
+        raise HTTPNotFound()
+
+    states = Session.query(models.State).order_by('id').all()
+
+    data = {
+        'states': states,
+        'visit_count': cycle.visits.count(),
+        'data_summary': {},
+        'visits_summary': {}
+        }
+
+    by_state = (request.GET.get('by_state') or '').strip()
+    by_state = next(
+        (state for state in states if state.name == by_state), None)
+
+    for state in states:
+        data['visits_summary'][state.name] = (
+            cycle.visits.filter(models.Visit.entities.any(state=state))
+            .count())
+        data['data_summary'][state.name] = (
+            Session.query(models.Entity)
+            .join(models.Entity.contexts)
+            .join(
+                models.Visit,
+                (models.Context.external == 'visit')
+                & (models.Visit.id == models.Context.key))
+            .filter(models.Visit.cycles.any(id=cycle.id))
+            .filter(models.Entity.state == state)
+            .count())
+
+    def count_state_exp(name):
+        return sa.func.count(
+            sa.sql.case([
+                (models.State.name == name, sa.true())],
+                else_=sa.null()))
+
+    visits_query = (
+        Session.query(
+            models.Patient.pid,
+            models.Visit.visit_date)
+        .select_from(models.Visit)
+        .filter(models.Visit.cycles.any(id=cycle.id))
+        .join(models.Visit.patient)
+        .join(
+            models.Context,
+            (models.Context.external == sa.sql.literal_column(u"'visit'"))
+            & (models.Context.key == models.Visit.id))
+        .join(models.Context.entity)
+        .join(models.Entity.state)
+        .add_columns(*[
+            count_state_exp(state.name).label(state.name)
+            for state in states])
+        .group_by(
+            models.Patient.pid,
+            models.Visit.visit_date)
+        .order_by(models.Visit.visit_date.desc()))
+
+    if by_state:
+        visits_query = visits_query.having(count_state_exp(by_state.name) > 0)
+
+    total_visits = visits_query.count()
+    total_pages = total_visits / page_size
+
+    try:
+        page = int((request.GET.get('page') or '').strip())
+    except ValueError:
+        page = 1
+    else:
+        page = max(1, min(page, total_pages))
+
+    visits = visits_query.offset((page - 1) * page_size).limit(page_size).all()
+
+    def make_page_url(page):
+        return request.current_route_path(_query={
+            'state': by_state and by_state.name,
+            'page': page})
+
+    data.update({
+        'by_state': by_state,
+        'offset_start': max(1, (page - 1) * page_size),
+        'offset_end': ((page - 1) * page_size) + len(visits),
+        'total_visits': total_visits,
+        'make_page_url': make_page_url,
+        'pagination': Pagination(page, page_size, total_visits),
+        'visits': visits
+    })
+
+    return data
 
 
 @view_config(

@@ -95,7 +95,7 @@
                   tal:replace="value"></span>
             </td>
             <td tal:repeat="state states">
-              <a href="${request.current_route_path(_route_name='study_visits_cycle', cycle=cycle.name, _query={'state': state.name})}"
+              <a href="${request.current_route_path(_route_name='study_visits_cycle', cycle=cycle.name, _query={'by_state': state.name})}"
                   tal:define="value python:getattr(cycle, state.name)"
                   tal:condition="value > 0">${value}</a>
             </td>
