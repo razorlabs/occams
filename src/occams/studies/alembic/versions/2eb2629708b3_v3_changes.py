@@ -30,6 +30,7 @@ def upgrade():
     cleanup_cycle()
     cleanup_visit()
     cleanup_entity()
+    cleanup_context()
     fix_numeric_choice_names()
     case_insensitive_names()
     merge_integer_decimal()
@@ -475,6 +476,10 @@ def cleanup_entity():
         op.drop_column(table_name, 'name')
         op.drop_column(table_name, 'title')
         op.drop_column(table_name, 'description')
+
+
+def cleanup_context():
+    op.create_index('ix_context_external_key', 'context', ['external', 'key'])
 
 
 def alter_enum(name, new_values, cols, new_name=None):
