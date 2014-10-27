@@ -1,0 +1,31 @@
+<!--! Quick and dirty version of ajax datils bar
+
+      Typically this would done via AJAX, but since some pages
+      are generated on server for studies, this will just
+      have to do for now. Will revisit later, if ever.
+-->
+
+<ul class="details list-inline">
+  <li>
+    <span class="text-muted" i18n:translate="">Code:</span>
+    <span>${context.code}</span>
+  </li>
+  <li>
+    <span class="text-muted" i18n:translate="">Label:</span>
+    <span>${context.short_title}</span>
+  </li>
+  <li>
+    <span class="text-muted" i18n:translate="">Consent Date:</span>
+    <code>${context.consent_date}</code>
+  </li>
+  <li tal:condition="context.start_date">
+    <span class="text-muted" i18n:translate="">Lifecycle:</span>
+    <code>${context.start_date} - ${context.end_date|nohting}</code>
+  </li>
+  <li tal:condition="python:context.termination_schema">
+    <span class="text-muted" i18n:translate="">Enrollment Forms:</span>
+    <strong tal:condition="context.termination_schema">${context.termination_schema.title}</strong>
+    <span tal:condition="python:context.termination_schema and context.randomization_schema">,</span>
+    <strong tal:condition="context.randomization_schema">${context.randomization_schema.title}</strong>
+  </li>
+</ul>

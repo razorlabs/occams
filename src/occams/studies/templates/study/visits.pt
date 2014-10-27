@@ -3,7 +3,7 @@
 
     <header class="page-header">
       <h1 i18n:translate="">${context.title}</h1>
-      <ul metal:use-macro="load: header-details.pt" />
+      <ul metal:use-macro="load: header-details-server.pt" />
       <nav metal:use-macro="load: header-nav.pt" />
     </header>
 

@@ -94,6 +94,109 @@ def view_json(context, request, deep=True):
 
 
 @view_config(
+    route_name='study_enrollments',
+    permission='view',
+    renderer='../templates/study/enrollments.pt')
+def enrollments(context, request):
+    """
+    Displays enrollment summary and allows the user to filter by date.
+    """
+
+    result = (
+        Session.query(sa.func.max(models.Cycle.week).label('week'))
+        .filter_by(study=context)
+        .first())
+
+    if result and result.week > 0:
+        duration = timedelta(days=result.week * 7)
+    else:
+        duration = timedelta.max
+
+    statuses = {
+        'active': models.Enrollment.termination_date == sa.null(),
+        'terminated': models.Enrollment.termination_date != sa.null(),
+        'termination_overdue': (
+            (models.Enrollment.termination_date == sa.null())
+            & (models.Enrollment.consent_date + duration < date.today())),
+        'consent_overdue': (
+            (models.Enrollment.termination_date == sa.null())
+            & (models.Enrollment.latest_consent_date
+                < models.Study.consent_date))
+        }
+
+    enrollments_query = (
+        Session.query(
+            models.Patient.pid,
+            models.Enrollment.reference_number,
+            models.Enrollment.consent_date,
+            models.Enrollment.latest_consent_date,
+            models.Enrollment.termination_date)
+        .add_columns(*[expr.label(name) for name, expr in statuses.items()])
+        .select_from(models.Enrollment)
+        .join(models.Enrollment.patient)
+        .join(models.Enrollment.study)
+        .filter(models.Enrollment.study == context)
+        .order_by(models.Enrollment.consent_date.desc()))
+
+    schema = Schema({
+        'page': Any(Coerce(int), Fallback(None)),
+        'status': Any(In(statuses), Fallback(None)),
+        'start': Any(Date('%Y-%m-%d'), Fallback(None)),
+        'end': Any(Date('%Y-%m-%d'), Fallback(None)),
+        Extra: Remove
+        })
+
+    params = schema(request.GET.mixed())
+
+    if params['start']:
+        enrollments_query = enrollments_query.filter(
+            models.Enrollment.consent_date >= params['start'])
+
+    if params['end']:
+        enrollments_query = enrollments_query.filter(
+            models.Enrollment.consent_date <= params['end'])
+
+    if params['status']:
+        enrollments_query = enrollments_query.filter(
+            statuses[params['status']])
+
+    pagination = Pagination(
+        params['page'], 25, enrollments_query.count())
+
+    enrollments = (
+        enrollments_query
+        .offset(pagination.offset)
+        .limit(pagination.per_page)
+        .all())
+
+    def make_page_url(page):
+        _query = params.copy()
+        _query['page'] = page
+        return request.current_route_path(_query=_query)
+
+    return {
+        'params': params,
+        'total_active': (
+            context.enrollments.filter(statuses['active']).count()),
+        'total_terminated': (
+            context.enrollments.filter(statuses['terminated']).count()),
+        'total_termination_overdue': (
+            context.enrollments.filter(statuses['termination_overdue'])
+            .count()),
+        'total_consent_overdue': (
+            context.enrollments
+            .join('study')
+            .filter(statuses['consent_overdue'])
+            .count()),
+        'make_page_url': make_page_url,
+        'offset_start': pagination.offset + 1,
+        'offset_end': pagination.offset + len(enrollments),
+        'enrollments': enrollments,
+        'pagination': pagination
+        }
+
+
+@view_config(
     route_name='study_visits',
     permission='view',
     renderer='../templates/study/visits.pt')
@@ -136,7 +239,8 @@ def visits(context, request):
         Session.query(models.Cycle.name, models.Cycle.title)
         .filter_by(study=context)
         .join(models.Cycle.visits)
-        .add_column(sa.func.count(models.Visit.id.distinct()).label('visits_count'))
+        .add_column(
+            sa.func.count(models.Visit.id.distinct()).label('visits_count'))
         .join(
             models.Context,
             (models.Context.external == sa.sql.literal_column("'visit'"))
@@ -282,6 +386,7 @@ def visits_cycle(context, request):
             'page': page})
 
     data.update({
+        'cycle': cycle,
         'by_state': by_state,
         'offset_start': max(1, (page - 1) * page_size),
         'offset_end': ((page - 1) * page_size) + len(visits),
@@ -413,7 +518,7 @@ def available_termination(context, request):
     xhr=True,
     request_param='vocabulary=available_randomization',
     renderer='json')
-def available_randomiation(context, request):
+def available_randomization(context, request):
     """
     Returns a JSON listing of avavilable schemata for randomization
     """

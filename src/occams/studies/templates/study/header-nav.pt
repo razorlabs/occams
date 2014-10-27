@@ -1,17 +1,21 @@
-<nav tal:define="section section|request.current_route_path()">
+<!--! Developer Note:
+      Remember to clear URL Query parameters, since ``current_route_path``
+      keeps any in the current page.
+  -->
+<nav tal:define="section section|request.current_route_path(_query={})">
   <ul class="nav nav-header">
-    <li tal:define="url request.current_route_path(_route_name='studies')">
+    <li tal:define="url request.current_route_path(_route_name='studies', _query={})">
       <a href="${url}"><span class="fa fa-chevron-left"></span></a>
     </li>
-    <li tal:define="url request.current_route_path(_route_name='study')"
+    <li tal:define="url request.current_route_path(_route_name='study', _query={})"
         tal:attributes="class python:'active' if section == url else ''">
       <a href="${url}" i18n:translate="">Details</a>
     </li>
-    <li tal:define="url request.current_route_path(_route_name='study_visits')"
+    <li tal:define="url request.current_route_path(_route_name='study_visits', _query={})"
         tal:attributes="class python:'active' if section == url else ''">
       <a href="${url}" i18n:translate="">Visits</a>
     </li>
-    <li tal:define="url request.current_route_path(_route_name='study_enrollments')"
+    <li tal:define="url request.current_route_path(_route_name='study_enrollments', _query={})"
         tal:attributes="class python:'active' if section == url else ''">
       <a href="${url}" i18n:translate="">Enrollments</a>
     </li>

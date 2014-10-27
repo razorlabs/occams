@@ -1,26 +1,6 @@
-/**
- * Formats a value to a localized datetime string
- */
-ko.bindingHandlers.datetimeText = {
-  update: function(element, valueAccessor, allBindingsAccessor) {
-   var value = ko.unwrap(valueAccessor())
-     , formattedValue = moment(value).format('llll');
-    ko.bindingHandlers.text.update(element, function() { return formattedValue; });
-  }
-};
-
-/**
- * Formats a value to a localized datet string
- */
-ko.bindingHandlers.dateText = {
-  update: function(element, valueAccessor, allBindingsAccessor) {
-   var value = ko.unwrap(valueAccessor())
-     , formattedValue = moment(value).format('ll');
-    ko.bindingHandlers.text.update(element, function() { return formattedValue; });
-  }
-};
-
 +function(){
+  "use strict";
+
   /**
    * Check if the browser supports (and can actually validate) dates
    */
@@ -32,6 +12,36 @@ ko.bindingHandlers.dateText = {
     return !(input.value === notADateValue);
   })();
 
+  // Apply datetime widget to non-ko-bound elements
+  $(function(){
+    if (!supportsDateInput){
+      $('input[type=date]:not([data-bind]),.js-date:not([data-bind])').datetimepicker({pickTime: false});
+      $('input[type=datetime]:not([data-bind]),.js-datetime:not([data-bind])').datetimepicker();
+    }
+  });
+
+  /**
+   * Formats a value to a localized datetime string
+   */
+  ko.bindingHandlers.datetimeText = {
+    update: function(element, valueAccessor, allBindingsAccessor) {
+     var value = ko.unwrap(valueAccessor())
+       , formattedValue = moment(value).format('llll');
+      ko.bindingHandlers.text.update(element, function() { return formattedValue; });
+    }
+  };
+
+  /**
+   * Formats a value to a localized datet string
+   */
+  ko.bindingHandlers.dateText = {
+    update: function(element, valueAccessor, allBindingsAccessor) {
+     var value = ko.unwrap(valueAccessor())
+       , formattedValue = moment(value).format('ll');
+      ko.bindingHandlers.text.update(element, function() { return formattedValue; });
+    }
+  };
+
   /**
    * Enables a datetime picker widget for the input element
    */
@@ -42,4 +52,5 @@ ko.bindingHandlers.dateText = {
       }
     }
   };
+
 }();
