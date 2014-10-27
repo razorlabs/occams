@@ -191,9 +191,11 @@ function StudyView(){
 
   self.isReady = ko.observable(false);      // Indicates UI is ready
   self.isSaving = ko.observable(false);     // Indicates AJAX call
+  self.isUploading = ko.observable(false);
 
   self.isGridEnabled = ko.observable(false);// Grid disable/enable flag
 
+  self.successMessage = ko.observable();
   self.errorMessages = ko.observableArray([]);
   self.hasErrorMessages = ko.computed(function(){
     return self.errorMessages().length > 0;
@@ -201,6 +203,8 @@ function StudyView(){
 
   // Modal states
   var VIEW = 'view', EDIT = 'edit',  DELETE = 'delete';
+
+  self.showUploadRids = ko.observable(false);
 
   self.previousCycle = ko.observable();
   self.selectedCycle = ko.observable();
@@ -289,6 +293,38 @@ function StudyView(){
     self.formModalState(DELETE);
   };
 
+  self.startUploadRids = function(){
+    self.showUploadRids(true);
+    $('<input type="file" />').on('change', function(event){
+        var upload = new FormData();
+        upload.append('upload', event.target.files[0]);
+
+        // Clear error messages for next round of status updates
+        self.errorMessages([]);
+
+        $.ajax({
+          url: window.location,
+          type: 'POST',
+          data: upload,
+          headers: {'X-CSRF-Token': $.cookie('csrf_token')},
+          processData: false,  // tell jQuery not to process the data
+          contentType: false,  // tell jQuery not to set contentType
+          error: handleXHRError(),
+          beforeSend: function(){
+            self.isUploading(true);
+          },
+          success: function(data, textStatus, jqXHR){
+            self.clear();
+            self.successMessage('Successfully uploaded');
+          },
+          complete: function(jqXHR, textStatus){
+            $(event.target).remove();
+            self.isUploading(false);
+          }
+        });
+    }).click();
+  };
+
   /**
    * Re-usable error handler for XHR requests
    */
@@ -298,10 +334,11 @@ function StudyView(){
         self.errorMessages(['You session has expired, please reload the page']);
       } else if (jqXHR.responseJSON){
         self.errorMessages(['Validation problems']);
-        console.log(jqXHR.responseJSON.errors);
         if (form){
           $(form).validate().showErrors(jqXHR.responseJSON.errors);
         }
+      } else if (!/<[a-z][\s\S]*>/i.test(jqXHR.responseText)){
+        self.errorMessages([jqXHR.responseText]);
       } else {
         self.errorMessages([errorThrown]);
       }

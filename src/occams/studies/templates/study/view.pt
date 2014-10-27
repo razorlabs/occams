@@ -12,8 +12,16 @@
               />
           <!-- /ko -->
           <!-- ko if: randomization_form -->
-            <button class="btn btn-default" data-bind="click: $root.uploadRIDs"><span class="fa fa-random"></span> Upload RIDs</button>
+            <button class="btn btn-default" data-bind="click: $root.startUploadRids"><span class="fa fa-random"></span> Upload RIDs</button>
           <!-- /ko -->
+
+            <button class="btn btn-default" data-bind="click: $root.startUploadRids">
+              <span class="fa fa-random"></span>
+              Upload RIDs
+              <!-- ko if: $root.isUploading -->
+                <span class="fa fa-refresh fa-spin"></span>
+              <!-- /ko -->
+            </button>
           <button class="btn btn-default" data-bind="click: $root.startEditStudy"><span class="fa fa-edit"></span> Edit</button>
           <button class="btn btn-default" data-bind="click: $root.startDeleteStudy"><span class="fa fa-trash-o"></span> Delete</button>
         </div>
@@ -34,6 +42,22 @@
         <ul metal:use-macro="load: header-details.pt" />
         <nav metal:use-macro="load: header-nav.pt" />
       </header>
+
+      <!-- ko if: showUploadRids -->
+        <!-- ko if: hasErrorMessages  -->
+          <div class="alert alert-danger" data-bind="text: errorMessages()[0]"></div>
+        <!-- /ko -->
+      <!-- /ko -->
+
+      <!-- ko if: successMessage -->
+        <div class="alert alert-success">
+          <span data-bind="text successMessage"></span>
+          <button type="button" class="close" data-dismiss="alert">
+            <span aria-hidden="true">&times;</span>
+            <span class="sr-only">Close</span>
+          </button>
+        </div>
+      <!-- /ko -->
 
       <div id="js-schedule" class="table-responsive table-scrollable">
         <!-- Pre-generated corner -->
