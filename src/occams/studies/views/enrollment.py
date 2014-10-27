@@ -39,7 +39,9 @@ def list_json(context, request):
     renderer='json')
 def view_json(context, request):
     enrollment = context
+    study = context.study
     patient = context.patient
+    can_randomize = bool(request.has_permission('randomize', context))
     return {
         '__url__': request.route_path('enrollment',
                                       patient=patient.pid,
@@ -48,25 +50,22 @@ def view_json(context, request):
             bool(request.has_permission('edit', context)),
         '__can_terminate__':
             bool(request.has_permission('terminate', context)),
-        '__can_randomize__':
-            bool(request.has_permission('randomize', context)),
+        '__can_randomize__': can_randomize,
         '__can_delete__':
             bool(request.has_permission('delete', context)),
         'id': enrollment.id,
         'study': {
-            'id': enrollment.study.id,
-            'name': enrollment.study.name,
-            'title': enrollment.study.title,
-            'is_randomized': enrollment.study.is_randomized,
-            'is_blinded': enrollment.study.is_blinded,
-            'start_date': enrollment.study.start_date.isoformat(),
-            'stop_date': (
-                enrollment.study.stop_date
-                and enrollment.study.stop_date.isoformat()),
+            'id': study.id,
+            'name': study.name,
+            'title': study.title,
+            'is_randomized': study.is_randomized,
+            'is_blinded': study.is_blinded,
+            'start_date': study.start_date.isoformat(),
+            'stop_date': (study.end_date and study.end_date.isoformat()),
             },
-        'stratum': None if not enrollment.study.is_randomized else {
+        'stratum': None if not study.is_randomized else {
             'id': enrollment.stratum.id,
-            'arm': None if enrollment.study.is_blinded else {
+            'arm': None if not can_randomize or study.is_blinded else {
                 'id': enrollment.stratum.arm.id,
                 'name': enrollment.stratum.arm.name,
                 'title': enrollment.stratum.arm.title,
@@ -79,9 +78,7 @@ def view_json(context, request):
             enrollment.termination_date
             and enrollment.termination_date.isoformat()),
         'reference_number': enrollment.reference_number,
-        'stratum_id': (
-            None if not enrollment.study.is_randomized
-            else enrollment.stratum.id)
+        'stratum_id': enrollment.stratum.id if study.is_randomized else None
         }
 
 

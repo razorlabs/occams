@@ -213,7 +213,7 @@ def visits(context, request):
     last_month_end = this_month_begin - timedelta(days=1)
     last_month_begin = date(last_month_end.year, last_month_end.month, 1)
 
-    if context.is_randomized and not context.is_blinded:
+    if context.is_randomized:
         arms_query = (
             Session.query(
                 sa.func.coalesce(
