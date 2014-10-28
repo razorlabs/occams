@@ -3,7 +3,8 @@ from datetime import date, timedelta
 import mimetypes
 
 from good import *  # NOQA
-from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPOk
+from pyramid.httpexceptions import \
+    HTTPBadRequest, HTTPForbidden, HTTPNotFound, HTTPOk
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 import sqlalchemy as sa
@@ -729,17 +730,16 @@ def add_schema_json(context, request):
         schema = value['schema']
         invalid = [i.publish_date for i in versions if i.name != schema]
         if invalid:
-            raise Invalid(
-                request.localizer(
-                    _(u'Incorrect version: ${versions}'),
-                    mapping={'versions': ', '.join(map(str, invalid))}
-                ),
-                path='versions')
+            raise Invalid(request.localizer(
+                _(u'Incorrect version: ${versions}'),
+                mapping={'versions': ', '.join(map(str, invalid))}),
+                path=['versions'])
         return value
 
     schema = Schema(All({
-        'schema': Coerce(six.binary_type),
+        'schema': All(Type(*six.string_types), Coerce(six.binary_type)),
         'versions': [All(
+            int,
             Model(models.Schema, localizer=request.localizer),
             check_published,
             check_not_patient_schema,
@@ -790,7 +790,18 @@ def delete_schema_json(context, request):
     schema_name = request.matchdict.get('schema')
 
     if not schema_name:
-        return HTTPBadRequest()
+        raise HTTPBadRequest()
+
+    (exists,) = (
+        Session.query(
+            Session.query(models.Study)
+            .filter(models.Study.schemata.any(name=schema_name))
+            .filter(models.Study.id == context.id)
+            .exists())
+        .one())
+
+    if not exists:
+        raise HTTPNotFound()
 
     # Remove from cycles
     Session.execute(
@@ -832,6 +843,11 @@ def delete_schema_json(context, request):
 def edit_schedule_json(context, request):
     """
     Enables/Disables a form for a cycle
+
+    Request body json parameters:
+        schema -- name of the schema (will used study-enabled versions)
+        cycle -- cycle id
+        enabled -- true/false
     """
     check_csrf_token(request)
 
@@ -993,21 +1009,33 @@ def StudySchema(context, request):
 
     return Schema({
         'name': All(
+            Type(*six.string_types),
             Coerce(six.binary_type),
             Length(min=3, max=32),
             Match(r'^[a-z0-9_\-]+$'),
             check_unique_name),
-        'title': All(Coerce(six.text_type), Length(min=3, max=32)),
-        'code': All(Coerce(six.binary_type), Length(min=3, max=8)),
-        'short_title': All(Coerce(six.text_type), Length(min=3, max=8)),
+        'title': All(
+            Type(*six.string_types),
+            Coerce(six.text_type),
+            Length(min=3, max=32)),
+        'code': All(
+            Type(*six.string_types),
+            Coerce(six.binary_type),
+            Length(min=3, max=8)),
+        'short_title': All(
+            Type(*six.string_types),
+            Coerce(six.text_type),
+            Length(min=3, max=8)),
         'consent_date': Date('%Y-%m-%d'),
-        'start_date': Maybe(Date('%Y-%m-%d')),
-        'end_date': Maybe(Date('%Y-%m-%d')),
-        'is_locked': Boolean(),
-        'termination_form': All(
-            Model(models.Schema, localizer=request.localizer)),
-        'is_randomized': Maybe(Boolean()),
-        'is_blinded': Maybe(Boolean()),
-        'randomization_form': Maybe(
-            Model(models.Schema, localizer=request.localizer)),
+        'start_date': Any(Date('%Y-%m-%d'), Default(None)),
+        'end_date':  Any(Date('%Y-%m-%d'), Default(None)),
+        'is_locked': Any(Boolean(), Default(False)),
+        'termination_form': Any(
+            All(int, Model(models.Schema, localizer=request.localizer)),
+            Default(None)),
+        'is_randomized': Any(Boolean(), Default(False)),
+        'is_blinded': Any(Boolean(), Default(False)),
+        'randomization_form': Any(
+            All(int, Model(models.Schema, localizer=request.localizer)),
+            Default(None)),
         Extra: Remove})

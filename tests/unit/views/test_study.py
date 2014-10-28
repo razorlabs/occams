@@ -82,7 +82,6 @@ class TestEditJson(IntegrationFixture):
 
         Session.add_all([study])
         Session.flush()
-
         response = self.call_view(study, testing.DummyRequest(
             json_body={
                 'name': 'newname',
@@ -196,7 +195,7 @@ class TestAddSchemaJson(IntegrationFixture):
         Session.flush()
 
         self.call_view(study, testing.DummyRequest(
-            json_body={'schema': schema.id}))
+            json_body={'schema': schema.name, 'versions': [schema.id]}))
 
         self.assertIn(schema, study.schemata)
 
@@ -230,11 +229,11 @@ class TestAddSchemaJson(IntegrationFixture):
 
         with self.assertRaises(HTTPBadRequest) as cm:
             self.call_view(study, testing.DummyRequest(
-                json_body={'schema': schema.id}))
+                json_body={'schema': schema.name, 'versions': [schema.id]}))
 
         self.assertIn(
             'already used as a patient form',
-            cm.exception.json['errors']['schema'])
+            cm.exception.json['errors']['versions.0'])
 
     def test_fail_if_randomization_schema(self, check_csrf_token):
         """
@@ -263,11 +262,11 @@ class TestAddSchemaJson(IntegrationFixture):
 
         with self.assertRaises(HTTPBadRequest) as cm:
             self.call_view(study, testing.DummyRequest(
-                json_body={'schema': schema.id}))
+                json_body={'schema': schema.name, 'versions': [schema.id]}))
 
         self.assertIn(
             'already used as a randomization form',
-            cm.exception.json['errors']['schema'])
+            cm.exception.json['errors']['versions.0'])
 
     def test_fail_if_termination_schema(self, check_csrf_token):
         """
@@ -295,11 +294,11 @@ class TestAddSchemaJson(IntegrationFixture):
 
         with self.assertRaises(HTTPBadRequest) as cm:
             self.call_view(study, testing.DummyRequest(
-                json_body={'schema': schema.id}))
+                json_body={'schema': schema.name, 'versions': [schema.id]}))
 
         self.assertIn(
             'already used as a termination form',
-            cm.exception.json['errors']['schema'])
+            cm.exception.json['errors']['versions.0'])
 
 
 @mock.patch('occams.studies.views.study.check_csrf_token')
@@ -340,7 +339,7 @@ class TestDeleteSchemaJson(IntegrationFixture):
         Session.flush()
 
         self.call_view(study, testing.DummyRequest(
-            matchdict={'schema': schema.id}))
+            matchdict={'schema': schema.name}))
 
         self.assertNotIn(schema, study.schemata)
         self.assertNotIn(schema, cycle.schemata)
@@ -367,7 +366,7 @@ class TestDeleteSchemaJson(IntegrationFixture):
 
         with self.assertRaises(HTTPNotFound):
             self.call_view(study, testing.DummyRequest(
-                matchdict={'schema': 123}))
+                matchdict={'schema': 'idonotexist'}))
 
 
 @mock.patch('occams.studies.views.study.check_csrf_token')
@@ -494,15 +493,15 @@ class TestEditScheduleJson(IntegrationFixture):
 
         self.call_view(study, testing.DummyRequest(
             json_body={
-                'schema': schema.id,
+                'schema': schema.name,
                 'cycle': cycle.id,
                 'enabled': True}))
 
         self.assertIn(schema, cycle.schemata)
 
-    def test_disnable(self, check_csrf_token):
+    def test_disable(self, check_csrf_token):
         """
-        It should successfully remove a schema from a cycle
+        It should successfully disable schema from a cycle
         """
         from datetime import date
         from pyramid import testing
@@ -532,7 +531,7 @@ class TestEditScheduleJson(IntegrationFixture):
 
         self.call_view(study, testing.DummyRequest(
             json_body={
-                'schema': schema.id,
+                'schema': schema.name,
                 'cycle': cycle.id,
                 'enabled': False}))
 
