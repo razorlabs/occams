@@ -145,7 +145,7 @@ def EnrollmentSchema(context, request):
 
     def check_timeline(value):
         start = value['study'].start_date
-        stop = value['study'].stop_date
+        end = value['study'].end_date
         consent = value['consent_date']
         latest = value['latest_consent_date']
         if start is None:
@@ -158,10 +158,10 @@ def EnrollmentSchema(context, request):
         if not (consent <= latest):
             raise Invalid(request.localizer.translate(
                 _(u'Inconsistent enrollment dates')))
-        if stop and latest > stop:
+        if end and latest > end:
             raise Invalid(request.localizer.translate(
-                _('Cannot enroll after the study stop date: ${date}'),
-                mapping={'date': stop.isoformat()}))
+                _('Cannot enroll after the study end date: ${date}'),
+                mapping={'date': end.isoformat()}))
         return value
 
     def check_reference(value):

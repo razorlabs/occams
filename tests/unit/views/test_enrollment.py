@@ -218,9 +218,9 @@ class TestEditJson(IntegrationFixture):
             'Cannot enroll before the study start date',
             cm.exception.json['errors'][''])
 
-    def test_timeline_stop_date(self, check_csrf_token):
+    def test_timeline_end_date(self, check_csrf_token):
         """
-        It should not allow consent dates after the study stop date
+        It should not allow consent dates after the study end date
         """
         from datetime import date, timedelta
         from pyramid import testing
@@ -241,7 +241,7 @@ class TestEditJson(IntegrationFixture):
             short_title=u'sstudy',
             code=u'000',
             start_date=t1,
-            stop_date=t3,
+            end_date=t3,
             consent_date=t2)
 
         patient = models.Patient(
@@ -261,7 +261,7 @@ class TestEditJson(IntegrationFixture):
                 ))
 
         self.assertIn(
-            'Cannot enroll after the study stop date',
+            'Cannot enroll after the study end date',
             cm.exception.json['errors'][''])
 
     def test_update_patient(self, check_csrf_token):
