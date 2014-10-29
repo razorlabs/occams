@@ -8,7 +8,7 @@ from tests import IntegrationFixture
 class TestAdd(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.export import add as view
+        from occams.studies.views.export import checkout as view
         return view(context, request)
 
     def test_get_exportables(self, check_csrf_token):
@@ -61,7 +61,7 @@ class TestAdd(IntegrationFixture):
         request = testing.DummyRequest(
             post=MultiDict([('contents', 'does_not_exist')]))
         response = self.call_view(models.ExportFactory(request), request)
-        self.assertIn('Invalid selection', response['errors'][0])
+        self.assertIn('Invalid selection', response['errors']['contents'])
 
     @mock.patch('occams.studies.tasks.make_export')  # Don't invoke subtasks
     def test_valid(self, make_export, check_csrf_token):

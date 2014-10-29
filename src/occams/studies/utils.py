@@ -44,6 +44,16 @@ class Pagination(object):
     def next_page(self):
         return min(self.page + 1, self.pages)
 
+    def serialize(self):
+        return dict([(p, getattr(self, p)) for p in [
+            'per_page',
+            'page',
+            'total_count',
+            'pages', 'offset',
+            'is_first', 'is_last',
+            'has_previous', 'previous_page',
+            'has_next', 'next_page']])
+
     def iter_pages(self, left_edge=2, left_current=2,
                    right_current=5, right_edge=2):
         last = 0

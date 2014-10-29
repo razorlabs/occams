@@ -2,7 +2,7 @@
   <metal:content-slot fill-slot="content-slot">
     <header class="page-header">
       <h1 i18n:translate="">Exports</h1>
-      <nav metal:use-macro="load: ./panels/nav.pt" />
+      <nav metal:use-macro="load: header-nav.pt" />
     </header>
 
     <div class="row" id="top">
@@ -157,8 +157,13 @@
             answer choices.
           </div>
         </div>
-
     </div> <!-- /.row -->
-
   </metal:content-slot>
+
+  <metal:content-slot fill-slot="javascript-extras-slot">
+    <script>
+      $(setup_exports_faq);
+    </script>
+  </metal:content-slot>
+
 </html>

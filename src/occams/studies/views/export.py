@@ -15,6 +15,8 @@ from good import *  # NOQA
 
 from .. import _, log, models, Session, exports
 from ..tasks import celery,  make_export
+from ..utils import Pagination
+from ..validators import invalid2dict
 
 
 @view_config(
@@ -39,23 +41,11 @@ def faq(context, request):
     return {}
 
 
-def ExportCheckoutSchema(request, exportables):
-    lz = get_localizer(request)
-    return Schema({
-        Required('contents'): All(
-            [In(exportables)],
-            Length(min=1),
-            msg=lz.translate(_('Invalid selection'))),
-        Required('expand_collections', default=False): Boolean(),
-        Required('use_choice_labels', default=False): Boolean()
-        })
-
-
 @view_config(
     route_name='exports_checkout',
     permission='add',
-    renderer='../templates/export/add.pt')
-def add(context, request):
+    renderer='../templates/export/checkout.pt')
+def checkout(context, request):
     """
     Generating a listing of available data for export.
 
@@ -68,12 +58,26 @@ def add(context, request):
     exportables = exports.list_all(include_rand=False)
     limit = request.registry.settings.get('app.export.limit')
     exceeded = limit is not None and query_exports(request).count() > limit
-    errors = []
+    errors = {}
 
     if request.method == 'POST' and check_csrf_token(request) and not exceeded:
-        schema = ExportCheckoutSchema(request, exportables)
+
+        def check_exportable(values):
+            if any(value not in exportables for value in values):
+                raise Invalid(request.localizer.translate(
+                    _(u'Invalid selection')))
+            return values
+
+        schema = Schema({
+            'contents': All(list, Length(min=1), check_exportable),
+            'expand_collections': Any(Boolean(), Default(False)),
+            'use_choice_labels': Any(Boolean(), Default(False)),
+            Extra: Remove,
+            })
+
         try:
             data = schema({
+                # Use a formated dict, py-good is too stupid to figure this out
                 'contents': request.POST.getall('contents'),
                 'expand_collections': request.POST.get('expand_collections'),
                 'use_choice_labels': request.POST.get('use_choice_labels')})
@@ -199,8 +203,8 @@ def status_json(context, request):
     exports_query = query_exports(request)
     exports_count = exports_query.count()
 
-    pager = Pager(request.GET.get('page', 1), 5, exports_count)
-    exports_query = exports_query[pager.slice_start:pager.slice_end]
+    pagination = Pagination(request.GET.get('page', 1), 5, exports_count)
+    exports_query = exports_query.offset(pagination.offset).limit(5)
 
     locale = negotiate_locale_name(request)
     localizer = get_localizer(request)
@@ -231,7 +235,7 @@ def status_json(context, request):
 
     return {
         'csrf_token': request.session.get_csrf_token(),
-        'pager': pager.serialize(),
+        'pagination': pagination.serialize(),
         'exports': [export2json(e) for e in exports_query]
     }
 

@@ -3,14 +3,14 @@
 
     <header class="page-header">
       <h1 i18n:translate="">Exports</h1>
-      <nav metal:use-macro="load: ./panels/nav.pt" />
+      <nav metal:use-macro="load: header-nav.pt" />
     </header>
 
     <div class="alert alert-warning" tal:condition="exceeded|nothing">
       <strong>You have exceed your export limit of ${limit}</strong>
     </div>
 
-    <div class="alert alert-danger" tal:condition="form.errors">
+    <div class="alert alert-danger" tal:condition="errors">
       <strong>Error!</strong> There were issues with your request, see below.
     </div>
 
@@ -18,10 +18,12 @@
         role="form"
         name="export"
         method="POST"
+        autocomplete="on"
         action="${request.current_route_path()}">
 
-      <p class="text-danger" tal:repeat="error form.csrf_token.errors">${error}</p>
-      <input tal:replace="structure: form.csrf_token()" />
+      <tal:input define="name 'csrf_token'">
+        <input type="hidden" name="${name}" value="${request.session.get_csrf_token()}" />
+      </tal:input>
 
       <h3>Step 1</h3>
 
@@ -30,7 +32,7 @@
         All exports include a code book.
       </p>
 
-      <p class="text-danger" tal:repeat="error form.contents.errors">${error}</p>
+      <p class="text-danger" tal:define="msg errors['contents']|nothing" tal:condition="msg">${msg}</p>
 
       <div class="table-responsive">
         <table class="table table-striped">
@@ -53,7 +55,7 @@
           <tbody>
             <tr tal:repeat="item exportables.values()">
               <td class="select">
-                <input type="checkbox" name"contents" value="${item.name}" data-toggle="select" data-class="warning" />
+                <input type="checkbox" name="contents" value="${item.name}" data-toggle="select" data-class="warning" />
               </td>
               <td>
                 <span
@@ -81,17 +83,17 @@
 
       <h3 i18n:translate="">Step 2</h3>
       <p class="lead" i18n:translate="">Select list style.</p>
-      <div class="form-group" tal:define="name 'expand_collections'">
+      <div class="form-group" tal:define="name 'expand_collections'; value request.POST.get(name) or 'false';">
         <div class="radio">
           <label>
+            <input type="radio" name="${name}" value="false" tal:attributes="checked value == 'false' or None">
             <span i18n:translate="">Single column with comma-delimited values</span>
-            <input type="radio" name="${name}" value="false" selected>
           </label>
         </div>
         <div class="radio">
           <label>
+             <input type="radio" name="${name}" value="true" tal:attributes="checked value == 'true' or None"/>
             <span i18n:translate="">Separate column for each possible answer choice</span>
-            <input type="radio" name="${name}" value="true">
           </label>
         </div>
       </div>
@@ -100,25 +102,24 @@
 
       <h3 i18n:translate="">Step 3</h3>
       <p class="lead" i18n:translate="">Select answer choice style.</p>
-      <div class="form-group" tal:define="name 'use_choice_labels'">
+      <div class="form-group" tal:define="name 'use_choice_labels'; value request.POST.get(name) or 'false'">
         <div class="radio">
           <label>
+            <input type="radio" name="${name}" value="false" tal:attributes="checked value == 'false' or None" />
             <span i18n:translate="">Use codes</span>
-            <input type="radio" name="${name}" value="false" selected>
           </label>
         </div>
         <div class="radio">
           <label>
+            <input type="radio" name="${name}" value="true" tal:attributes="checked value == 'true' or None" />
             <span i18n:translate="">Use labels</span>
-            <input type="radio" name="${name}" value="true">
           </label>
         </div>
       </div>
 
-
       <hr />
 
-      <p>
+      <p class="clearfix">
         <button
             type="submit"
             name="submit"

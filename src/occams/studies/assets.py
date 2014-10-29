@@ -1,3 +1,5 @@
+import os
+
 from webassets import Bundle
 
 from . import log
@@ -7,6 +9,8 @@ def includeme(config):
     """
     Loads web assets
     """
+    HERE = os.path.dirname(os.path.realpath(__file__))
+    SCRIPTS = os.path.join(HERE, 'static/scripts')
 
     config.add_webasset('default-js', Bundle(
         'libs/jquery.min.js',
@@ -24,8 +28,9 @@ def includeme(config):
         'libs/sammy.min.js',
         'libs/socket.io.min.js',
         Bundle(
-            'scripts/*.js',
-            depends='scripts/*.js',
+            *[os.path.join(root, filename)
+                for root, dirnames, filenames in os.walk(SCRIPTS)
+                for filename in filenames if filename.endswith('.js')],
             filters='jsmin'),
         output='gen/default.%(version)s.min.js'))
 

@@ -8,7 +8,9 @@
     xmlns:metal="http://xml.zope.org/namespaces/metal"
     xml:lang="en"
     lang="en"
-    i18n:domain="occams.studies">
+    i18n:domain="occams.studies"
+    tal:define="
+      route_name request.matched_route.name">
 
   <head>
     <meta charset="utf-8">
@@ -77,7 +79,7 @@
                   aria-labelledby="exports-dropdown">
                 <li role="presentation"
                     tal:define="route string:exports"
-                    class="${'active' if request.matched_route.name == route
+                    class="${'active' if route_name == route
                                       else ''}">
                   <a  role="menuitem"
                       tabindex="-1"
@@ -85,7 +87,7 @@
                 </li>
                 <li role="presentation"
                     tal:define="route string:exports_checkout"
-                    class="${'active' if request.matched_route.name == route
+                    class="${'active' if route_name == route
                                       else ''}">
                   <a  role="menuitem"
                       tabindex="-1"
@@ -93,7 +95,7 @@
                 </li>
                 <li role="presentation"
                     tal:define="route string:exports_status"
-                    class="${'active' if request.matched_route.name == route
+                    class="${'active' if route_name == route
                                       else ''}">
                   <a  role="menuitem"
                       tabindex="-1"
@@ -101,7 +103,7 @@
                 </li>
                 <li role="presentation"
                     tal:define="route string:exports_codebook"
-                    class="${'active' if request.matched_route.name == route
+                    class="${'active' if route_name == route
                                       else ''}">
                   <a  role="menuitem"
                       tabindex="-1"
@@ -109,7 +111,7 @@
                 </li>
                 <li role="presentation"
                     tal:define="route string:exports_faq"
-                    class="${'active' if request.matched_route.name == route
+                    class="${'active' if route_name == route
                                       else ''}">
                   <a  role="menuitem"
                       tabindex="-1"
@@ -128,7 +130,7 @@
                 patients factory(request)"
               tal:condition="
                 request.has_permission('view', patients)
-                  and request.matched_route.name != 'patients'">
+                  and route_name != 'patients'">
             <div class="form-group">
               <label class="sr-only" for="search">Search</label>
               <div class="input-group">
@@ -203,8 +205,8 @@
     </nav>
     <div class="container">
       <main
-          id="view-${request.matched_route.name}"
-          data-view-name="${request.matched_route.name}"
+          id="view-${route_name}"
+          data-view-name="${route_name}"
           data-view-path="${request.current_route_path()}"
           data-socket-io-resource="${request.route_path('socket.io', remaining='').strip('/')}">
         <metal:content-slot define-slot="content-slot" />
@@ -225,6 +227,10 @@
         tal:repeat="url request.webassets_env['default-js'].urls()"
         src="${url}"
         type="text/javascript"> </script>
+
+    <metal:content-slot define-slot="javascript-extras-slot">
+      <!--! Slot for injecting extra javascript into the applciation (e.g. ko initialization) -->
+    </metal:content-slot>
 
   </body>
 </html>

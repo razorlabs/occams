@@ -3,6 +3,7 @@ Re-usable valiators
 """
 
 from good import Invalid
+from good.schema.util import const
 
 from . import _, Session
 
@@ -18,10 +19,12 @@ def invalid2dict(exc):
     return dict(('.'.join(map(str, e.path)), e.message) for e in exc)
 
 
-def Listify(value):
+def List(value):
     """
     Forces a scalar into a list
     """
+    if value is None or value is const.UNDEFINED:
+        raise Invalid('List value is not defined')
     return [value] if not isinstance(value, list) else value
 
 
