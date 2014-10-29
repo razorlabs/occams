@@ -130,14 +130,3 @@ function PatientSearchView(){
   self.update(JSON.parse($('#results-data').text()));
   self.isReady(true);
 }
-
-
-+function($){
-  "use strict";
-  $(document).ready(function(){
-    var element = $('#views-patient-search')[0];
-    if (element){
-      ko.applyBindings(new PatientSearchView(), element);
-    }
-  });
-}(jQuery);

@@ -90,4 +90,11 @@
     </tal:json>
 
   </metal:content-slot>
+  <metal:content-slot fill-slot="javascript-extras-slot">
+    <script>
+      $(function(){
+        ko.applyBindings(new PatientSearchView, document.getElementById('views-patient-search'));
+      });
+    </script>
+  </metal:content-slot>
 </html>

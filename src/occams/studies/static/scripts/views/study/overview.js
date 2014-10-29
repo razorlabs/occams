@@ -627,10 +627,3 @@ function StudyView(){
     self.isReady(true);
   }();
 }
-
-
-jQuery(function($){
-  "use strict";
-  var ID = '#study-main', VIEW = StudyView, ELEMENT = $(ID)[0];
-  if (ELEMENT) { ko.applyBindings(new VIEW, ELEMENT); }
-});

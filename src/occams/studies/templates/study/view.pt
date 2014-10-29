@@ -12,9 +12,6 @@
               />
           <!-- /ko -->
           <!-- ko if: randomization_form -->
-            <button class="btn btn-default" data-bind="click: $root.startUploadRids"><span class="fa fa-random"></span> Upload RIDs</button>
-          <!-- /ko -->
-
             <button class="btn btn-default" data-bind="click: $root.startUploadRids">
               <span class="fa fa-random"></span>
               Upload RIDs
@@ -22,6 +19,7 @@
                 <span class="fa fa-refresh fa-spin"></span>
               <!-- /ko -->
             </button>
+          <!-- /ko -->
           <button class="btn btn-default" data-bind="click: $root.startEditStudy"><span class="fa fa-edit"></span> Edit</button>
           <button class="btn btn-default" data-bind="click: $root.startDeleteStudy"><span class="fa fa-trash-o"></span> Delete</button>
         </div>
@@ -729,5 +727,12 @@
       <script id="study-data" type="application/json">${json.dumps(study)}</script>
     </tal:json>
 
+  </metal:content-slot>
+  <metal:content-slot fill-slot="javascript-extras-slot">
+    <script>
+      $(function(){
+        ko.applyBindings(new StudyView, document.getElementById('study-main'));
+      });
+    </script>
   </metal:content-slot>
 </html>

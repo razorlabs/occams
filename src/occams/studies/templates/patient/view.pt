@@ -634,5 +634,12 @@
     <script id="visits-data" type="application/json">${json.dumps(visits)}</script>
 
   </metal:content-slot>
+  <metal:content-slot fill-slot="javascript-extras-slot">
+    <script>
+      $(function(){
+        ko.applyBindings(new PatientView, document.getElementById('views-patient-main'));
+      });
+    </script>
+  </metal:content-slot>
 </html>
 

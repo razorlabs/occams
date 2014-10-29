@@ -331,12 +331,3 @@ function PatientView(){
   // Object initalized, set flag to display main UI
   self.isReady(true);
 }
-
-+function($){
-  $(document).ready(function(){
-    var $view = $('#views-patient-main')[0];
-    if ($view){
-      ko.applyBindings(new PatientView(), $view);
-    }
-  });
-}(jQuery);
