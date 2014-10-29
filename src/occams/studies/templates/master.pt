@@ -62,12 +62,39 @@
         <div class="collapse navbar-collapse">
 
           <ul class="nav navbar-nav"
-              tal:define="section request.current_route_path()">
+              tal:define="section request.current_route_path(_query={})">
+
+            <li tal:define="
+                  factory import:occams.studies.models.StudyFactory;
+                  studies factory(request);
+                  url request.route_path('studies');
+                  current_study request.matchdict['study']|nothing;
+                  active route_name.startswith('stud');"
+                tal:attributes="class python:'active' if active else ''"
+                tal:condition="request.has_permission('view', studies)"
+                class="dropdown">
+              <a  id="studies-dropdown"
+                  href="${url}"
+                  data-toggle="dropdown">Studies <span class="caret"></span></a>
+              <ul class="dropdown-menu"
+                  role="menu"
+                  aria-labelledby="studies-dropdown">
+                <li role="presentation"
+                    tal:repeat="study available_studies"
+                    class="${'active' if current_study == study.name else ''}">
+                  <a  role="menuitem"
+                      tabindex="-1"
+                        href="${request.route_path('study', study=study.name)}">${study.title}</a>
+                </li>
+              </ul>
+            </li>
+
             <li tal:define="
                   factory import:occams.studies.models.ExportFactory;
                   exports factory(request);
-                  url request.route_path('exports')"
-                tal:attributes="class python:'active' if url in section else ''"
+                  url request.route_path('exports');
+                  active route_name.startswith('export');"
+                tal:attributes="class python:'active' if active else ''"
                 tal:condition="request.has_permission('view', exports)"
                 class="dropdown">
 

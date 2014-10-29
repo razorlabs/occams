@@ -3,6 +3,7 @@ from datetime import date, timedelta
 import mimetypes
 
 from good import *  # NOQA
+from pyramid.events import subscriber, BeforeRender
 from pyramid.httpexceptions import \
     HTTPBadRequest, HTTPForbidden, HTTPNotFound, HTTPOk
 from pyramid.session import check_csrf_token
@@ -16,6 +17,17 @@ from .. import _, models, Session
 from . import cycle as cycle_views, form as form_views
 from ..validators import invalid2dict, Model
 from ..utils import Pagination
+
+
+@subscriber(BeforeRender)
+def add_cores(event):
+    """
+    Inject studies listing into Chameleon template variables to render menu.
+    """
+    if event['renderer_info'].type != '.pt':
+        return
+    studies_query = Session.query(models.Study).order_by(models.Study.title)
+    event.rendering_val['available_studies'] = studies_query.all()
 
 
 @view_config(
