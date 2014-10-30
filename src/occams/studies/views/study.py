@@ -22,7 +22,7 @@ from ..utils import Pagination
 
 
 @subscriber(BeforeRender)
-def add_cores(event):
+def add_studies(event):
     """
     Inject studies listing into Chameleon template variables to render menu.
     """
@@ -30,36 +30,6 @@ def add_cores(event):
         return
     studies_query = Session.query(models.Study).order_by(models.Study.title)
     event.rendering_val['available_studies'] = studies_query.all()
-
-
-@view_config(
-    route_name='home',
-    permission='view',
-    renderer='../templates/study/list.pt')
-def home(request):
-    studies_query = (
-        Session.query(models.Study)
-        .order_by(models.Study.title.asc()))
-
-    modified_query = (
-        Session.query(models.Patient)
-        .order_by(models.Patient.modify_date.desc())
-        .limit(10))
-
-    viewed = sorted((request.session.get('viewed') or {}).values(),
-                    key=lambda v: v['view_date'],
-                    reverse=True)
-
-    return {
-        'studies': studies_query,
-        'studies_count': studies_query.count(),
-
-        'modified': modified_query,
-        'modified_count': modified_query.count(),
-
-        'viewed': viewed,
-        'viewed_count': len(viewed),
-    }
 
 
 @view_config(
@@ -315,8 +285,6 @@ def visits_cycle(context, request):
     this cycle, as well as a listing of those visits for reference.
     """
 
-    page_size = 25
-
     cycle = (
         Session.query(models.Cycle)
         .filter_by(study=context, name=request.matchdict['cycle'])
@@ -384,16 +352,19 @@ def visits_cycle(context, request):
         visits_query = visits_query.having(count_state_exp(by_state.name) > 0)
 
     total_visits = visits_query.count()
-    total_pages = total_visits / page_size
 
     try:
         page = int((request.GET.get('page') or '').strip())
     except ValueError:
         page = 1
-    else:
-        page = max(1, min(page, total_pages))
 
-    visits = visits_query.offset((page - 1) * page_size).limit(page_size).all()
+    pagination = Pagination(page, 25, total_visits)
+
+    visits = (
+        visits_query
+        .offset(pagination.offset)
+        .limit(pagination.per_page)
+        .all())
 
     def make_page_url(page):
         return request.current_route_path(_query={
@@ -403,11 +374,11 @@ def visits_cycle(context, request):
     data.update({
         'cycle': cycle,
         'by_state': by_state,
-        'offset_start': max(1, (page - 1) * page_size),
-        'offset_end': ((page - 1) * page_size) + len(visits),
+        'offset_start': pagination.offset + 1,
+        'offset_end': pagination.offset + len(visits),
         'total_visits': total_visits,
         'make_page_url': make_page_url,
-        'pagination': Pagination(page, page_size, total_visits),
+        'pagination': pagination,
         'visits': visits
     })
 
