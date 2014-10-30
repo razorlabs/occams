@@ -536,3 +536,399 @@ class TestEditScheduleJson(IntegrationFixture):
                 'enabled': False}))
 
         self.assertNotIn(schema, cycle.schemata)
+
+
+@mock.patch('occams.studies.views.study.check_csrf_token')
+class TestAvailableSchemata(IntegrationFixture):
+
+    def call_view(self, context, request):
+        from occams.studies.views.study import available_schemata as view
+        return view(context, request)
+
+    def test_no_params(self, check_csrf_token):
+        """
+        It should just return all schemata if there is not study context
+        """
+        from datetime import date
+        from pyramid import testing
+        from webob.multidict import MultiDict
+        from occams.studies import models, Session
+
+        Session.add_all([
+            models.Schema(name='v', title=u'V', publish_date=date.today())])
+        Session.flush()
+
+        request = testing.DummyRequest(params=MultiDict())
+        result = self.call_view(models.StudyFactory(request), request)
+        self.assertEqual('v', result['schemata'][0]['name'])
+
+    def test_term(self, check_csrf_token):
+        """
+        It should filter schemata by title or publish_date
+        """
+        from datetime import date
+        from pyramid import testing
+        from webob.multidict import MultiDict
+        from occams.studies import models, Session
+
+        Session.add_all([
+            models.Schema(name='v', title=u'V', publish_date=date.today()),
+            models.Schema(name='xyz', title=u'XYZ', publish_date=date.today())
+            ])
+        Session.flush()
+
+        request = testing.DummyRequest(params=MultiDict([('term', 'x')]))
+        result = self.call_view(models.StudyFactory(request), request)
+        self.assertEqual('xyz', result['schemata'][0]['name'])
+
+    def test_schema(self, check_csrf_token):
+        """
+        It should just return all publish_dates for the specific "schema"
+        """
+        from datetime import date, timedelta
+        from pyramid import testing
+        from webob.multidict import MultiDict
+        from occams.studies import models, Session
+
+        today = date.today()
+        tomorrow = date.today() + timedelta(days=1)
+
+        Session.add_all([
+            models.Schema(name='v', title=u'V', publish_date=today),
+            models.Schema(name='v', title=u'V', publish_date=tomorrow),
+            models.Schema(name='x', title=u'x', publish_date=today)])
+        Session.flush()
+
+        request = testing.DummyRequest(params=MultiDict([('schema', 'v')]))
+        result = self.call_view(models.StudyFactory(request), request)
+        self.assertEqual(2, len(result['schemata']))
+
+    def test_exclude_randomization(self, check_csrf_token):
+        """
+        It should exlude randomization forms used by the study (editing)
+        """
+        from datetime import date
+        from pyramid import testing
+        from webob.multidict import MultiDict
+        from occams.studies import models, Session
+
+        x = models.Schema(name='x', title=u'x', publish_date=date.today())
+        y = models.Schema(name='y', title=u'Y', publish_date=date.today())
+
+        study = models.Study(
+            name=u'somestudy',
+            title=u'Some Study',
+            short_title=u'sstudy',
+            code=u'000',
+            start_date=date.today(),
+            consent_date=date.today(),
+            is_randomized=True,
+            randomization_schema=x)
+
+        Session.add_all([x, y, study])
+        Session.flush()
+
+        request = testing.DummyRequest(params=MultiDict())
+        result = self.call_view(study, request)
+        self.assertEqual(1, len(result['schemata']))
+        self.assertEqual('y', result['schemata'][0]['name'])
+
+    def test_exclude_termination(self, check_csrf_token):
+        """
+        It should exlude termination forms used by the study (editing)
+        """
+        from datetime import date
+        from pyramid import testing
+        from webob.multidict import MultiDict
+        from occams.studies import models, Session
+
+        x = models.Schema(name='x', title=u'x', publish_date=date.today())
+        y = models.Schema(name='y', title=u'Y', publish_date=date.today())
+
+        study = models.Study(
+            name=u'somestudy',
+            title=u'Some Study',
+            short_title=u'sstudy',
+            code=u'000',
+            start_date=date.today(),
+            consent_date=date.today(),
+            termination_schema=x)
+
+        Session.add_all([x, y, study])
+        Session.flush()
+
+        request = testing.DummyRequest(params=MultiDict())
+        result = self.call_view(study, request)
+        self.assertEqual(1, len(result['schemata']))
+        self.assertEqual('y', result['schemata'][0]['name'])
+
+    def test_exclude_schema(self, check_csrf_token):
+        """
+        It should exlude general forms used by the study (editing)
+        """
+        from datetime import date
+        from pyramid import testing
+        from webob.multidict import MultiDict
+        from occams.studies import models, Session
+
+        x = models.Schema(name='x', title=u'x', publish_date=date.today())
+        y = models.Schema(name='y', title=u'Y', publish_date=date.today())
+
+        study = models.Study(
+            name=u'somestudy',
+            title=u'Some Study',
+            short_title=u'sstudy',
+            code=u'000',
+            start_date=date.today(),
+            consent_date=date.today(),
+            schemata=set([x]))
+
+        Session.add_all([x, y, study])
+        Session.flush()
+
+        request = testing.DummyRequest(params=MultiDict())
+        result = self.call_view(study, request)
+        self.assertEqual(1, len(result['schemata']))
+        self.assertEqual('y', result['schemata'][0]['name'])
+
+
+@mock.patch('occams.studies.views.study.check_csrf_token')
+class TestUploadRandomizationJson(IntegrationFixture):
+
+    def call_view(self, context, request):
+        from occams.studies.views.study import \
+            upload_randomization_json as view
+        return view(context, request)
+
+    def test_not_randomized(self, check_csrf_token):
+        """
+        It should only allow uploads if the study is randomized
+        """
+
+        from datetime import date
+        from pyramid import testing
+        from pyramid.httpexceptions import HTTPBadRequest
+        from occams.studies import models, Session
+
+        study = models.Study(
+            name=u'somestudy',
+            title=u'Some Study',
+            short_title=u'sstudy',
+            code=u'000',
+            consent_date=date.today())
+
+        Session.add(study)
+        Session.flush()
+
+        with self.assertRaises(HTTPBadRequest) as cm:
+            self.call_view(study, testing.DummyRequest())
+
+        self.assertTrue(check_csrf_token.called)
+        self.assertIn('not randomized', cm.exception.body)
+
+    def test_valid_csv(self, check_csrf_token):
+        """
+        It should only accept CSV files
+        """
+        import tempfile
+        from datetime import date
+        from pyramid import testing
+        from pyramid.httpexceptions import HTTPBadRequest
+        from occams.studies import models, Session
+
+        schema = models.Schema(
+            name='rand', title=u'Rand', publish_date=date.today())
+
+        study = models.Study(
+            name=u'somestudy',
+            title=u'Some Study',
+            short_title=u'sstudy',
+            code=u'000',
+            is_randomized=True,
+            randomization_schema=schema,
+            consent_date=date.today())
+
+        Session.add(study)
+        Session.flush()
+
+        class DummyUpload:
+            pass
+
+        with tempfile.NamedTemporaryFile(prefix='nose-', suffix='.exe') as fp:
+            upload = DummyUpload()
+            upload.file = fp
+            upload.filename = fp.name
+
+            with self.assertRaises(HTTPBadRequest) as cm:
+                self.call_view(study, testing.DummyRequest(
+                    post={'upload': upload}))
+
+            self.assertTrue(check_csrf_token.called)
+            self.assertIn('must be CSV', cm.exception.body)
+
+    def test_incomplete_header(self, check_csrf_token):
+        """
+        It should include randomization schema attribute names in the header
+        """
+        import tempfile
+        import csv
+        from datetime import date
+        from pyramid import testing
+        from pyramid.httpexceptions import HTTPBadRequest
+        from occams.studies import models, Session
+
+        schema = models.Schema(
+            name='rand', title=u'Rand', publish_date=date.today(),
+            attributes={
+                'criteria': models.Attribute(
+                    name='criteria',
+                    title=u'Criteria',
+                    type='string',
+                    order=0)})
+
+        study = models.Study(
+            name=u'somestudy',
+            title=u'Some Study',
+            short_title=u'sstudy',
+            code=u'000',
+            is_randomized=True,
+            randomization_schema=schema,
+            consent_date=date.today())
+
+        Session.add(study)
+        Session.flush()
+
+        class DummyUpload:
+            pass
+
+        with tempfile.NamedTemporaryFile(prefix='nose-', suffix='.exe') as fp:
+            upload = DummyUpload()
+            upload.file = fp
+            upload.filename = fp.name
+
+            # forget the schema keys
+            writer = csv.writer(fp)
+            writer.writerow(['ARM', 'STRATA', 'BLOCKID', 'RANDID'])
+            fp.flush()
+
+            with self.assertRaises(HTTPBadRequest) as cm:
+                self.call_view(study, testing.DummyRequest(
+                    post={'upload': upload}))
+
+            self.assertTrue(check_csrf_token.called)
+            self.assertIn('missing', cm.exception.body)
+
+    def test_valid_upload(self, check_csrf_token):
+        """
+        It should be able to upload a perfectly valid CSV
+        """
+        import tempfile
+        import csv
+        from datetime import date
+        from pyramid import testing
+        from occams.studies import models, Session
+
+        schema = models.Schema(
+            name='rand', title=u'Rand', publish_date=date.today(),
+            attributes={
+                'criteria': models.Attribute(
+                    name='criteria',
+                    title=u'Criteria',
+                    type='string',
+                    order=0)})
+
+        state = models.State(name='complete', title=u'Complete')
+
+        study = models.Study(
+            name=u'somestudy',
+            title=u'Some Study',
+            short_title=u'sstudy',
+            code=u'000',
+            is_randomized=True,
+            randomization_schema=schema,
+            consent_date=date.today())
+
+        Session.add_all([study, state])
+        Session.flush()
+
+        class DummyUpload:
+            pass
+
+        with tempfile.NamedTemporaryFile(prefix='nose-', suffix='.exe') as fp:
+            upload = DummyUpload()
+            upload.file = fp
+            upload.filename = fp.name
+
+            # forget the schema keys
+            writer = csv.writer(fp)
+            writer.writerow([u'ARM', u'STRATA', u'BLOCKID', u'RANDID', u'CRITERIA'])  # noqa
+            writer.writerow([u'UCSD', u'hints', u'1234567', u'987654', u'is smart'])  # noqa
+            fp.flush()
+
+            self.call_view(study, testing.DummyRequest(
+                post={'upload': upload}))
+
+            stratum = Session.query(models.Stratum).one()
+            entity = Session.query(models.Entity).one()
+            self.assertEquals(stratum.arm.name, 'UCSD')
+            self.assertIn(entity, stratum.entities)
+            self.assertEquals(entity['criteria'], 'is smart')
+
+    def test_duplicate_rids(self, check_csrf_token):
+        """
+        It should fail if the upload contains repeated rids
+        """
+        import tempfile
+        import csv
+        from datetime import date
+        from pyramid import testing
+        from pyramid.httpexceptions import HTTPBadRequest
+        from occams.studies import models, Session
+
+        schema = models.Schema(
+            name='rand', title=u'Rand', publish_date=date.today(),
+            attributes={
+                'criteria': models.Attribute(
+                    name='criteria',
+                    title=u'Criteria',
+                    type='string',
+                    order=0)})
+
+        state = models.State(name='complete', title=u'Complete')
+
+        study = models.Study(
+            name=u'somestudy',
+            title=u'Some Study',
+            short_title=u'sstudy',
+            code=u'000',
+            is_randomized=True,
+            randomization_schema=schema,
+            consent_date=date.today())
+
+        Session.add_all([study, state])
+        Session.flush()
+
+        class DummyUpload:
+            pass
+
+        with tempfile.NamedTemporaryFile(prefix='nose-', suffix='.exe') as fp:
+            upload = DummyUpload()
+            upload.file = fp
+            upload.filename = fp.name
+
+            # forget the schema keys
+            writer = csv.writer(fp)
+            writer.writerow([u'ARM', u'STRATA', u'BLOCKID', u'RANDID', u'CRITERIA'])  # noqa
+            writer.writerow([u'UCSD', u'hints', u'1234567', u'987654', u'is smart'])  # noqa
+            fp.flush()
+
+            self.call_view(study, testing.DummyRequest(
+                post={'upload': upload}))
+
+            fp.seek(0)
+
+            with self.assertRaises(HTTPBadRequest) as cm:
+                self.call_view(study, testing.DummyRequest(
+                    post={'upload': upload}))
+
+            self.assertIn('existing reference numbers', cm.exception.body)
