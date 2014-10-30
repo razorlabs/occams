@@ -199,6 +199,109 @@ class TestAddSchemaJson(IntegrationFixture):
 
         self.assertIn(schema, study.schemata)
 
+    def test_update_cycles(self, check_csrf_token):
+        """
+        It should also update cycle versions
+        """
+        from datetime import date, timedelta
+        from pyramid import testing
+        from occams.studies import models, Session
+
+        today = date.today()
+        tomorrow = today + timedelta(days=1)
+
+        v1 = models.Schema(name=u'test', title=u'', publish_date=today)
+        v2 = models.Schema(name=u'test', title=u'', publish_date=tomorrow)
+
+        cycle = models.Cycle(
+            name=u'wk-001', title=u'WK-001', schemata=set([v1]))
+
+        study = models.Study(
+            name=u'somestudy',
+            title=u'Some Study',
+            short_title=u'sstudy',
+            code=u'000',
+            start_date=date.today(),
+            cycles=[cycle],
+            schemata=set([v1]),
+            consent_date=date.today())
+
+        Session.add_all([study, v1, v2])
+        Session.flush()
+
+        self.call_view(study, testing.DummyRequest(
+            json_body={'schema': v1.name, 'versions': [v2.id]}))
+
+        self.assertIn(v2, study.schemata)
+        # v2 should have been passed on to the cycle using it as well
+        self.assertIn(v2, cycle.schemata)
+
+    def test_fail_if_not_published(self, check_csrf_token):
+        """
+        It should fail if the schema is not published
+        """
+        from datetime import date
+        from pyramid import testing
+        from pyramid.httpexceptions import HTTPBadRequest
+        from occams.studies import models, Session
+
+        schema = models.Schema(name='test', title=u'')
+
+        study = models.Study(
+            name=u'somestudy',
+            title=u'Some Study',
+            short_title=u'sstudy',
+            code=u'000',
+            start_date=date.today(),
+            consent_date=date.today())
+
+        Session.add_all([study, schema])
+        Session.flush()
+
+        Session.execute(
+            models.patient_schema_table
+            .insert()
+            .values({'schema_id': schema.id}))
+
+        with self.assertRaises(HTTPBadRequest) as cm:
+            self.call_view(study, testing.DummyRequest(
+                json_body={'schema': schema.name, 'versions': [schema.id]}))
+
+        self.assertIn(
+            'not published',
+            cm.exception.json['errors']['versions.0'])
+
+    def test_fail_if_not_same_schema(self, check_csrf_token):
+        """
+        It should fail if the schema and versions do not match
+        """
+        from datetime import date
+        from pyramid import testing
+        from pyramid.httpexceptions import HTTPBadRequest
+        from occams.studies import models, Session
+
+        schema = models.Schema(
+            name='test', title=u'', publish_date=date.today())
+
+        study = models.Study(
+            name=u'somestudy',
+            title=u'Some Study',
+            short_title=u'sstudy',
+            code=u'000',
+            start_date=date.today(),
+            consent_date=date.today())
+
+        Session.add_all([study, schema])
+        Session.flush()
+
+        with self.assertRaises(HTTPBadRequest) as cm:
+            self.call_view(study, testing.DummyRequest(
+                json_body={'schema': 'otherform', 'versions': [schema.id]}))
+
+        self.assertIn(
+            'Incorrect versions',
+            cm.exception.json['errors']['versions'])
+
     def test_fail_if_patient_schema(self, check_csrf_token):
         """
         It should not allow patient schemata to be used as study schemata

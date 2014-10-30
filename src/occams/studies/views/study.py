@@ -452,128 +452,21 @@ def edit_json(context, request):
     study.termination_schema = data['termination_form']
     study.is_locked = data['is_locked']
     study.is_randomized = data['is_randomized']
-
-    if study.is_randomized:
-        study.is_blinded = data['is_blinded']
-        study.randomization_schema = data['randomization_form']
-    else:
-        study.is_blinded = None
-        study.randomization_schema = None
+    study.is_blinded = None if not study.is_randomized else data['is_blinded']
+    study.randomization_schema = \
+        None if not study.is_randomized else data['randomization_form']
 
     Session.flush()
-
-    if isinstance(context, models.StudyFactory):
-        request.session.flash(_(u'New study added!', 'success'))
 
     return view_json(study, request)
 
 
 @view_config(
     route_name='studies',
-    permission='add',
-    xhr=True,
-    request_param='vocabulary=available_termination',
-    renderer='json')
-@view_config(
-    route_name='study',
     permission='edit',
     xhr=True,
-    request_param='vocabulary=available_termination',
+    request_param='vocabulary=available_schemata',
     renderer='json')
-def available_termination(context, request):
-    """
-    Returns a JSON listing of avavilable schemata for terminiation
-    """
-    term = (request.GET.get('term') or u'').strip()
-
-    query = (
-        Session.query(models.Schema)
-        .filter(models.Schema.publish_date != sa.null())
-        .filter(models.Schema.retract_date == sa.null()))
-
-    if isinstance(context, models.Study):
-        query = (
-            query
-            .filter(~models.Schema.name.in_(
-                # Filter out schemata that is already in use by the study
-                Session.query(models.Schema.name)
-                .select_from(models.Study)
-                .filter(models.Study.id == context.id)
-                .join(models.Study.schemata)
-                .union(
-                    # Filter out randomization schemata
-                    Session.query(models.Schema.name)
-                    .select_from(models.Study)
-                    .join(models.Study.randomization_schema)
-                    .filter(models.Study.id == context.id))
-                .subquery())))
-
-    if term:
-        query = query.filter(models.Schema.title.ilike(u'%' + term + u'%'))
-
-    query = (
-        query
-        .order_by(
-            models.Schema.title,
-            models.Schema.publish_date)
-        .limit(100))
-
-    return {'schemata': [form_views.version2json(i) for i in query]}
-
-
-@view_config(
-    route_name='studies',
-    permission='add',
-    xhr=True,
-    request_param='vocabulary=available_randomization',
-    renderer='json')
-@view_config(
-    route_name='study',
-    permission='edit',
-    xhr=True,
-    request_param='vocabulary=available_randomization',
-    renderer='json')
-def available_randomization(context, request):
-    """
-    Returns a JSON listing of avavilable schemata for randomization
-    """
-    term = (request.GET.get('term') or u'').strip()
-
-    query = (
-        Session.query(models.Schema)
-        .filter(models.Schema.publish_date != sa.null())
-        .filter(models.Schema.retract_date == sa.null()))
-
-    if isinstance(context, models.Study):
-        query = (
-            query
-            .filter(~models.Schema.name.in_(
-                # Filter out schemata that is already in use by the study
-                Session.query(models.Schema.name)
-                .select_from(models.Study)
-                .filter(models.Study.id == context.id)
-                .join(models.Study.schemata)
-                .union(
-                    # Filter out terminiation schemata
-                    Session.query(models.Schema.name)
-                    .select_from(models.Study)
-                    .join(models.Study.termination_schema)
-                    .filter(models.Study.id == context.id))
-                .subquery())))
-
-    if term:
-        query = query.filter(models.Schema.title.ilike(u'%' + term + u'%'))
-
-    query = (
-        query
-        .order_by(
-            models.Schema.title,
-            models.Schema.publish_date)
-        .limit(100))
-
-    return {'schemata': [form_views.version2json(i) for i in query]}
-
-
 @view_config(
     route_name='study',
     permission='edit',
@@ -582,86 +475,76 @@ def available_randomization(context, request):
     renderer='json')
 def available_schemata(context, request):
     """
-    Returns a JSON listing of avavilable schemata for studies to use.
-    """
-    term = (request.GET.get('term') or u'').strip()
+    Returns a listing of available schemata for the study
 
-    InnerSchema = orm.aliased(models.Schema)
-    titles_query = (
-        Session.query(models.Schema.name)
-        .add_column(
-            Session.query(InnerSchema.title)
-            .filter(InnerSchema.name == models.Schema.name)
-            .filter(InnerSchema.publish_date != sa.null())
-            .filter(InnerSchema.retract_date == sa.null())
-            .order_by(InnerSchema.publish_date.desc())
-            .limit(1)
-            .correlate(models.Schema)
-            .as_scalar()
-            .label('title'))
+    The results will try to exclude schemata configured for patients,
+    or schemata that is currently used by the context study (if editing).
+
+    GET parameters:
+        term -- (optional) filters by schema title or publish date
+        schema -- (optional) only shows results for specific schema name
+                  (useful for searching for a schema's publish dates)
+        grouped -- (optional) groups all results by schema name
+    """
+    schema = Schema({
+        'term': All(Type(*six.string_types), Coerce(six.text_type)),
+        'schema': All(Type(*six.string_types), Coerce(six.text_type)),
+        'grouped': Boolean(),
+        Extra: Remove
+        }, default_keys=Optional)
+
+    params = schema(request.GET.mixed())
+
+    query = (
+        Session.query(models.Schema)
         .filter(models.Schema.publish_date != sa.null())
         .filter(models.Schema.retract_date == sa.null())
         .filter(~models.Schema.name.in_(
-            # Filter out schemata that is already in use by the study
+            # Exclude patient schemata
+            Session.query(models.Schema.name)
+            .join(models.patient_schema_table)
+            .subquery())))
+
+    if 'schema' in params:
+        query = query.filter(models.Schema.name == params['schema'])
+
+    if 'term' in params:
+        wildcard = u'%' + params['term'] + u'%'
+        query = query.filter(
+            models.Schema.title.ilike(wildcard)
+            | sa.cast(models.Schema.publish_date, sa.Unicode).ilike(wildcard))
+
+    if isinstance(context, models.Study):
+
+        # Filter out schemata that is already in use by the study
+
+        if context.randomization_schema:
+            query = query.filter(
+                models.Schema.name != context.randomization_schema.name)
+
+        if context.termination_schema:
+            query = query.filter(
+                models.Schema.name != context.termination_schema.name)
+
+        query = query.filter(~models.Schema.name.in_(
             Session.query(models.Schema.name)
             .select_from(models.Study)
             .filter(models.Study.id == context.id)
             .join(models.Study.schemata)
-            .union(
-                # Filter out termination schemata
-                Session.query(models.Schema.name)
-                .select_from(models.Study)
-                .join(models.Study.termination_schema)
-                .filter(models.Study.id == context.id),
-
-                # Filter out randomization schemata
-                Session.query(models.Schema.name)
-                .select_from(models.Study)
-                .join(models.Study.randomization_schema)
-                .filter(models.Study.id == context.id))
             .subquery()))
-        .group_by(models.Schema.name)
-        .subquery())
-
-    query = Session.query(titles_query)
-
-    if term:
-        query = query.filter(titles_query.c.title.ilike(u'%' + term + u'%'))
-
-    query = query.order_by(titles_query.c.title).limit(100)
-
-    return {'schemata': [{'name': r.name, 'title': r.title} for r in query]}
-
-
-@view_config(
-    route_name='study',
-    permission='edit',
-    xhr=True,
-    request_param='vocabulary=available_versions',
-    renderer='json')
-def available_version(context, request):
-    """
-    Returns a JSON listing of schemata versions for studies to use.
-    """
-    term = (request.GET.get('term') or u'').strip()
-    schema = (request.GET.get('schema') or u'').strip()
-
-    if not schema:
-        return []
 
     query = (
-        Session.query(models.Schema)
-        .filter(models.Schema.name == schema)
-        .filter(models.Schema.publish_date != sa.null())
-        .filter(models.Schema.retract_date == sa.null()))
+        query.order_by(
+            models.Schema.title,
+            models.Schema.publish_date.asc())
+        .limit(100))
 
-    if term:
-        publish_string = sa.cast(models.Schema.publish_date, sa.String)
-        query = query.filter(publish_string.ilike(u'%' + term + u'%'))
-
-    query = query.order_by(models.Schema.publish_date.desc()).limit(100)
-
-    return {'versions': [form_views.version2json(s) for s in query]}
+    return {
+        '__query__': params,
+        'schemata': (form_views.form2json(query)
+                     if params.get('grouped')
+                     else [form_views.version2json(i) for i in query])
+    }
 
 
 @view_config(
@@ -686,10 +569,6 @@ def delete_json(context, request):
     Session.delete(context)
     Session.flush()
 
-    request.session.flash(
-        _(u'Successfully removed "${study}"', mapping={
-            'study': context.title}))
-
     return {'__next__': request.route_path('studies')}
 
 
@@ -701,12 +580,12 @@ def delete_json(context, request):
     renderer='json')
 def add_schema_json(context, request):
     check_csrf_token(request)
+    translate = request.localizer.translate
 
     def check_published(value):
         if value.publish_date is None:
-            raise Invalid(request.localizer.translate(
-                _(u'${schema} is not published'),
-                mapping={'schema': value.title}))
+            msg = _(u'${schema} is not published')
+            raise Invalid(translate(msg, mapping={'schema': value.title}))
         return value
 
     def check_not_patient_schema(value):
@@ -718,25 +597,22 @@ def add_schema_json(context, request):
                 .exists())
             .one())
         if exists:
-            raise Invalid(request.localizer.translate(
-                _(u'${schema} is already used as a patient form'),
-                mapping={'schema': value.title}))
+            msg = _(u'${schema} is already used as a patient form'),
+            raise Invalid(translate(msg, mapping={'schema': value.title}))
         return value
 
     def check_not_randomization_schema(value):
         if (context.randomization_schema is not None
                 and context.randomization_schema.name == value.name):
-            raise Invalid(request.localizer.translate(
-                _(u'${schema} is already used as a randomization form'),
-                mapping={'schema': value.title}))
+            msg = _(u'${schema} is already used as a randomization form'),
+            raise Invalid(translate(msg, mapping={'schema': value.title}))
         return value
 
     def check_not_termination_schema(value):
         if (context.termination_schema is not None
                 and context.termination_schema.name == value.name):
-            raise Invalid(request.localizer.translate(
-                _(u'${schema} is already used as a termination form'),
-                mapping={'schema': value.title}))
+            msg = _(u'${schema} is already used as a termination form'),
+            raise Invalid(translate(msg, mapping={'schema': value.title}))
         return value
 
     def check_same_schema(value):
@@ -744,10 +620,9 @@ def add_schema_json(context, request):
         schema = value['schema']
         invalid = [i.publish_date for i in versions if i.name != schema]
         if invalid:
-            raise Invalid(request.localizer(
-                _(u'Incorrect version: ${versions}'),
-                mapping={'versions': ', '.join(map(str, invalid))}),
-                path=['versions'])
+            msg = _(u'Incorrect versions: ${versions}')
+            mapping = {'versions': ', '.join(map(str, invalid))}
+            raise Invalid(translate(msg, mapping=mapping), path=['versions'])
         return value
 
     schema = Schema(All({
@@ -787,7 +662,7 @@ def add_schema_json(context, request):
 
     # Also update available cycle schemata versions
     for cycle in cycles:
-        cycle.schemata.difference_update(old_item - new_items)
+        cycle.schemata.difference_update(old_items - new_items)
         cycle.schemata.update(new_items)
 
     return form_views.form2json(new_items)[0]
@@ -802,9 +677,6 @@ def add_schema_json(context, request):
 def delete_schema_json(context, request):
     check_csrf_token(request)
     schema_name = request.matchdict.get('schema')
-
-    if not schema_name:
-        raise HTTPBadRequest()
 
     (exists,) = (
         Session.query(

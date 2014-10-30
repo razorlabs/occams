@@ -88,7 +88,15 @@
                 <li role="presentation"
                     tal:repeat="study available_studies"
                     class="${'active' if current_study == study.name else ''}">
-                  <a role="menuitem" tabindex="-1" href="${request.route_path('study', study=study.name)}">${study.title}</a>
+                  <!--! The study will inevitably be updated, so it's good to
+                        also come back and update the menu via jquery (since
+                        this part is not bound to knockout).
+                  -->
+                  <a role="menuitem"
+                      class="js-study-option"
+                      data-id="${study.id}"
+                      tabindex="-1"
+                      href="${request.route_path('study', study=study.name)}">${study.title}</a>
                 </li>
               </ul>
             </li> <!-- /#studies-menu -->

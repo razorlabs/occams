@@ -44,22 +44,22 @@ function StudyForm(data){
 
   // Select2 schema search parameters callback
   self.searchSchemaParams = function(term, page){
-    return {vocabulary: 'available_schemata', term: term};
+    return {vocabulary: 'available_schemata', term: term, grouped: true};
   };
 
   // Select2 schema results callback
   self.searchSchemaResults = function(data){
-    return {results: data.schemata};
+    return {results: data.schemata.map(function(item){ return item.schema; })};
   };
 
   // Select2 version search parameters callback
   self.searchVersionsParams = function(term, page){
-    return {vocabulary: 'available_versions', schema: self.name(), term: term}
+    return {vocabulary: 'available_schemata', term: term, schema: self.schema().name};
   };
 
   // Select2 version results callback
   self.searchVersionsResults = function(data){
-    return {results: data.versions};
+    return {results: data.schemata};
   };
 
   self.update(data);
@@ -156,7 +156,7 @@ function Study(data){
 
   // Select2 termination search parameters callback
   self.searchTerminationParams = function(term, page){
-    return {vocabulary: 'available_termination', term: term}
+    return {vocabulary: 'available_schemata', term: term};
   };
 
   // Select2 termination results callback
@@ -170,7 +170,7 @@ function Study(data){
 
   // Select2 randomization search parameters callback
   self.searchRandomizationParams = function(term, page){
-    return {vocabulary: 'available_randomization', term: term}
+    return {vocabulary: 'available_schemata', term: term};
   };
 
   // Select2 randomization results callback
