@@ -551,6 +551,10 @@ def delete_json(context, request):
     Session.delete(context)
     Session.flush()
 
+    msg = _(u'Successfully deleted ${study}',
+            mapping={'study': context.title})
+    request.session.flash(msg, 'success')
+
     return {'__next__': request.route_path('studies')}
 
 

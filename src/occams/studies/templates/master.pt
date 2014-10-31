@@ -229,15 +229,19 @@
 
       </div>
     </nav>
-    <div class="container">
-      <main
-          id="view-${route_name}"
-          data-view-name="${route_name}"
-          data-view-path="${request.current_route_path()}"
-          data-socket-io-resource="${request.route_path('socket.io', remaining='').strip('/')}">
-        <metal:content-slot define-slot="content-slot" />
-      </main>
-    </div> <!-- /.container -->
+    <main
+        id="view-${route_name}"
+        class="container"
+        data-view-name="${route_name}"
+        data-view-path="${request.current_route_path()}"
+        data-socket-io-resource="${request.route_path('socket.io', remaining='').strip('/')}">
+
+      <tal:alerts define="types python:['danger', 'warning', 'success', 'info']" repeat="type types">
+        <div class="alert alert-${type}" tal:define="alerts python:request.session.pop_flash(type)" tal:repeat="alert alerts">${alert}</div>
+      </tal:alerts>
+
+      <metal:content-slot define-slot="content-slot" />
+    </main>
 
     <footer id="footer">
       <div class="container">
