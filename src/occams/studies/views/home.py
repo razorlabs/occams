@@ -2,6 +2,7 @@ from good import *  # NOQA
 from pyramid.view import view_config
 
 from .. import models, Session
+from . import study as study_views
 
 
 @view_config(
@@ -22,9 +23,12 @@ def home(request):
                     key=lambda v: v['view_date'],
                     reverse=True)
 
+    studies_data = [study_views.view_json(s, request, deep=False)
+                    for s in studies_query]
+
     return {
-        'studies': studies_query,
-        'studies_count': studies_query.count(),
+        'studies_data': studies_data,
+        'studies_count': len(studies_data),
 
         'modified': modified_query,
         'modified_count': modified_query.count(),

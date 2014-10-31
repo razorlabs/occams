@@ -59,7 +59,6 @@ def view_json(context, request, deep=True):
         'end_date': study.end_date and study.end_date.isoformat(),
         'is_randomized': study.is_randomized,
         'is_blinded': study.is_blinded,
-        'is_locked': study.is_locked,
         'termination_form':
             study.termination_schema
             and form_views.form2json(study.termination_schema),
@@ -386,6 +385,12 @@ def visits_cycle(context, request):
 
 
 @view_config(
+    route_name='home',
+    permission='add',
+    request_method='POST',
+    xhr=True,
+    renderer='json')
+@view_config(
     route_name='studies',
     permission='add',
     request_method='POST',
@@ -432,6 +437,12 @@ def edit_json(context, request):
     return view_json(study, request)
 
 
+@view_config(
+    route_name='home',
+    permission='edit',
+    xhr=True,
+    request_param='vocabulary=available_schemata',
+    renderer='json')
 @view_config(
     route_name='studies',
     permission='edit',

@@ -1,192 +1,98 @@
-/**
- *
- */
-function StudyForm(data){
-  data = data || {};
-
-  var self = this;
-
-  self.isNew = ko.observable();
-
-  self.schema = ko.observable();
-  self.versions = ko.observableArray();
-
-  // Short-hand name getter
-  self.name = ko.computed(function(){
-    return self.schema() && self.schema().name;
-  });
-
-  // Short-hand title getter
-  self.title = ko.computed(function(){
-    return self.schema() && self.schema().title;
-  });
-
-  self.titleWithVersion = ko.computed(function(){
-    if (self.versions().length == 1){
-      var version = self.versions()[0];
-      return version.title + ' @ ' + version.publish_date;
-    }
-  });
-
-  self.update = function(data){
-    self.isNew(data.isNew || false);
-    self.schema(data.schema || null);
-    self.versions(data.versions || []);
-  };
-
-  self.hasMultipleVersions = ko.computed(function(){
-    return self.versions().length > 1;
-  });
-
-  self.versionsLength = ko.computed(function(){
-    return self.versions().length;
-  });
-
-  // Select2 schema search parameters callback
-  self.searchSchemaParams = function(term, page){
-    return {vocabulary: 'available_schemata', term: term, grouped: true};
-  };
-
-  // Select2 schema results callback
-  self.searchSchemaResults = function(data){
-    return {results: data.schemata.map(function(item){ return item.schema; })};
-  };
-
-  // Select2 version search parameters callback
-  self.searchVersionsParams = function(term, page){
-    return {vocabulary: 'available_schemata', term: term, schema: self.schema().name};
-  };
-
-  // Select2 version results callback
-  self.searchVersionsResults = function(data){
-    return {results: data.schemata};
-  };
-
-  self.update(data);
-}
-
-/**
- * Cycle representation in the context of a study
- */
-function StudyCycle(data){
-  data = data || {};
-  var self = this;
-
-  self.__url__ = ko.observable();
-  self.id = ko.observable();
-  self.name = ko.observable();
-  self.title = ko.observable();
-  self.week = ko.observable();
-  self.is_interim = ko.observable();
-  self.forms = ko.observableArray();
-
-  self.update = function(data){
-    ko.mapping.fromJS(data, {
-      'forms': {
-        create: function(options){
-          return new StudyForm(options.data);
-        }
-      }
-    }, self);
-  };
-
-  self.hasForms = ko.computed(function(){
-    return self.forms().length;
-  });
-
-  self.formsIndex = ko.computed(function(){
-    var set = {};
-    self.forms().forEach(function(form){
-      set[form.schema().name] = true
-    });
-    return set;
-  });
-
-  self.containsForm = function(form){
-    return form.schema().name in self.formsIndex();
-  };
-
-  self.update(data);
-}
-
-function Study(data){
+function StudyListingView(studiesData){
   'use strict';
+
   var self = this;
 
-  self.update = function(data){
-    ko.mapping.fromJS(data, {
-      'termination_form': {
-        create: function(options){
-          return ko.observable(options.data ? new StudyForm(options.data) : null);
+  self.isReady = ko.observable(false);
+  self.isSaving = ko.observable(false);
+
+  self.errorMessage = ko.observable();
+
+  self.studies = ko.observableArray((studiesData || []).map(function(data){
+    return new Study(data);
+  }));
+
+  self.studies.sort(function(a, b){
+    return a.title().localeCompare(b.title());
+  });
+
+  self.hasStudies = ko.pureComputed(function(){
+    return self.studies().length > 0;
+  });
+
+  self.selectedStudy = ko.observable();
+  self.editableStudy = ko.observable();
+  self.previousStudy = ko.observable();
+  self.addMoreStudies = ko.observable(false);
+
+  self.clear = function(){
+    self.selectedStudy(null);
+    self.editableStudy(null);
+    self.errorMessage(null);
+  };
+
+  self.startAddStudy = function(){
+    var study = new Study();
+    self.selectedStudy(study);
+    self.editableStudy(study);
+  }
+
+  // Note: this is the almost like the single study view's save,
+  // but it needs to account for a listing of studies
+  self.saveStudy = function(form){
+    if (!$(form).validate().form()){
+      return;
+    }
+    var selected = self.selectedStudy()
+      , edits = ko.toJS(self.editableStudy());
+
+    $.extend(edits, {
+        // Convert to ids since this is what he REST API expects
+        termination_form: edits.termination_form && edits.termination_form.versions[0].id,
+        randomization_form: edits.randomization_form && edits.randomization_form.versions[0].id,
+      });
+
+    $.ajax({
+      url: selected.id() ? selected.__url__() : $(form).attr('action'),
+      type: selected.id() ? 'PUT' : 'POST',
+      contentType: 'application/json; charset=utf-8',
+      headers: {'X-CSRF-Token': $.cookie('csrf_token')},
+      data: ko.toJSON(edits),
+      beforeSend: function(){
+        self.isSaving(true);
+      },
+      error: handleXHRError({logger: self.errorMessage, form: form}),
+      success: function(data, textStatus, jqXHR){
+        if (selected.id()){
+          selected.update(data);
+        } else {
+          var study = new Study(data);
+          self.previousStudy(study);
+          self.studies.push(study);
+        }
+
+        self.studies.sort(function(a, b){
+          return a.title().localeCompare(b.title());
+        });
+
+        if (self.addMoreStudies()){
+          self.startAddStudy();
+        } else {
+          window.location = study.__url__();
         }
       },
-      'randomization_form': {
-        create: function(options){
-          return ko.observable(options.data ? new StudyForm(options.data) : null);
-        }
-      },
-      'forms': {
-        create: function(options){
-          return new StudyForm(options.data);
-        }
-      },
-      'cycles': {
-        create: function(options){
-          return new StudyCycle(options.data);
-        }
+      complete: function(){
+        self.isSaving(false);
       }
-    }, self);
-
-    self.forms.sort(function(a, b){
-      return a.title().localeCompare(b.title());
-    });
-
-    self.cycles.sort(function(a, b){
-      a = parseInt(ko.unwrap(a.week));
-      b = parseInt(ko.unwrap(b.week));
-      if (!isNaN(a) && isNaN(b)){
-        return -1;
-      } else if (isNaN(a) && !isNaN(b)){
-        return 1;
-      } else {
-        return a - b;
-      }
     });
   };
 
-  // Select2 termination search parameters callback
-  self.searchTerminationParams = function(term, page){
-    return {vocabulary: 'available_schemata', term: term};
-  };
+  self.isReady(true);
+};
 
-  // Select2 termination results callback
-  self.searchTerminationResults = function(data){
-    return {
-      results: data.schemata.map(function(schema){
-        return new StudyForm({schema: schema, versions: [schema]});
-      })
-    };
-  };
+function StudyView(studyData, scheduleUrl){
+  'use strict';
 
-  // Select2 randomization search parameters callback
-  self.searchRandomizationParams = function(term, page){
-    return {vocabulary: 'available_schemata', term: term};
-  };
-
-  // Select2 randomization results callback
-  self.searchRandomizationResults = function(data){
-    return {
-      results: data.schemata.map(function(schema){
-        return new StudyForm({schema: schema, versions: [schema]});
-      })
-    };
-  };
-
-  self.update(data);
-}
-
-
-function StudyView(){
   var self = this;
 
   self.isReady = ko.observable(false);      // Indicates UI is ready
@@ -196,10 +102,7 @@ function StudyView(){
   self.isGridEnabled = ko.observable(false);// Grid disable/enable flag
 
   self.successMessage = ko.observable();
-  self.errorMessages = ko.observableArray([]);
-  self.hasErrorMessages = ko.computed(function(){
-    return self.errorMessages().length > 0;
-  });
+  self.errorMessage = ko.observable();
 
   // Modal states
   var VIEW = 'view', EDIT = 'edit',  DELETE = 'delete';
@@ -224,12 +127,11 @@ function StudyView(){
   self.showEditForm = ko.computed(function(){ return self.formModalState() === EDIT; });
   self.showDeleteForm = ko.computed(function(){ return self.formModalState() === DELETE; });
 
-  self.scheduleUrl = $('#study-main').data('schedule-url');
-
-  self.study = new Study(JSON.parse($('#study-data').text()));
+  self.study = studyData ? new Study(studyData) : null;
 
   self.selectedStudy = ko.observable();
   self.editableStudy = ko.observable();
+  self.previousStudy = ko.observable();
   self.studyModalState = ko.observable();
   self.showEditStudy = ko.computed(function(){ return self.studyModalState() === EDIT; });
   self.showDeleteStudy = ko.computed(function(){ return self.studyModalState() === DELETE; });
@@ -300,7 +202,7 @@ function StudyView(){
         upload.append('upload', event.target.files[0]);
 
         // Clear error messages for next round of status updates
-        self.errorMessages([]);
+        self.errorMessage(null);
 
         $.ajax({
           url: window.location,
@@ -309,7 +211,7 @@ function StudyView(){
           headers: {'X-CSRF-Token': $.cookie('csrf_token')},
           processData: false,  // tell jQuery not to process the data
           contentType: false,  // tell jQuery not to set contentType
-          error: handleXHRError(),
+          error: handleXHRError({logger: self.errorMessage}),
           beforeSend: function(){
             self.isUploading(true);
           },
@@ -323,26 +225,6 @@ function StudyView(){
           }
         });
     }).click();
-  };
-
-  /**
-   * Re-usable error handler for XHR requests
-   */
-  var handleXHRError = function(form){
-    return function(jqXHR, textStatus, errorThrown){
-      if (textStatus.indexOf('CSRF') > -1 ){
-        self.errorMessages(['You session has expired, please reload the page']);
-      } else if (jqXHR.responseJSON){
-        self.errorMessages(['Validation problems']);
-        if (form){
-          $(form).validate().showErrors(jqXHR.responseJSON.errors);
-        }
-      } else if (!/<[a-z][\s\S]*>/i.test(jqXHR.responseText)){
-        self.errorMessages([jqXHR.responseText]);
-      } else {
-        self.errorMessages([errorThrown]);
-      }
-    };
   };
 
   self.saveStudy = function(form){
@@ -359,7 +241,7 @@ function StudyView(){
       });
 
     $.ajax({
-      url: selected.id() ? selected.__url__() : $(form).data('factory-url'),
+      url: selected.id() ? selected.__url__() : $(form).attr('action'),
       type: selected.id() ? 'PUT' : 'POST',
       contentType: 'application/json; charset=utf-8',
       headers: {'X-CSRF-Token': $.cookie('csrf_token')},
@@ -367,7 +249,7 @@ function StudyView(){
       beforeSend: function(){
         self.isSaving(true);
       },
-      error: handleXHRError(form),
+      error: handleXHRError({logger: self.errorMessage, form: form}),
       success: function(data, textStatus, jqXHR){
         if (selected.id()){
           selected.update(data);
@@ -391,7 +273,7 @@ function StudyView(){
       beforeSend: function(){
         self.isSaving(true);
       },
-      error: handleXHRError(form),
+      error: handleXHRError({logger: self.errorMessage, form: form}),
       success: function(data, textStatus, jqXHR){
         window.location = data.__next__
       },
@@ -399,10 +281,6 @@ function StudyView(){
         self.isSaving(false);
       }
     });
-  };
-
-  self.uploadRIDs = function(study, event){
-    console.log('something something upload');
   };
 
   self.saveCycle = function(form){
@@ -413,7 +291,7 @@ function StudyView(){
     var selected = self.selectedCycle();
 
     $.ajax({
-      url: selected.id() ? selected.__url__() : $(form).data('factory-url'),
+      url: selected.id() ? selected.__url__() : $(form).attr('action'),
       type: selected.id() ? 'PUT' : 'POST',
       contentType: 'application/json; charset=utf-8',
       headers: {'X-CSRF-Token': $.cookie('csrf_token')},
@@ -421,7 +299,7 @@ function StudyView(){
       beforeSend: function(){
         self.isSaving(true);
       },
-      error: handleXHRError(form),
+      error: handleXHRError({logger: self.errroMessage, form: form}),
       success: function(data, textStatus, jqXHR){
         if (selected.id()){
           selected.update(data);
@@ -451,7 +329,7 @@ function StudyView(){
       beforeSend: function(){
         self.isSaving(true);
       },
-      error: handleXHRError(form),
+      error: handleXHRError({logger: self.errorMessage, form: form}),
       success: function(data, textStatus, jqXHR){
         self.study.cycles.remove(function(cycle){
           return selected.id() == cycle.id();
@@ -485,7 +363,7 @@ function StudyView(){
       beforeSend: function(){
         self.isSaving(true);
       },
-      error: handleXHRError(form),
+      error: handleXHRError({logger: self.errorMessage, form: form}),
       success: function(data, textStatus, jqXHR){
         if (!selected.isNew()){
           selected.update(data);
@@ -517,7 +395,7 @@ function StudyView(){
       beforeSend: function(){
         self.isSaving(true);
       },
-      error: handleXHRError(form),
+      error: handleXHRError({logger: self.errorMessage, form: form}),
       success: function(data, textStatus, jqXHR){
         self.study.forms.remove(function(form){
           return selected.name() == form.name();
@@ -541,7 +419,7 @@ function StudyView(){
       , cycleId = cycle.id();
 
     $.ajax({
-      url: self.scheduleUrl,
+      url: scheduleUrl,
       type: 'PUT',
       headers: {'X-CSRF-Token': $.cookie('csrf_token')},
       contentType: 'application/json; charset=utf-8',
@@ -549,7 +427,7 @@ function StudyView(){
       beforeSend: function(){
         self.isSaving(true);
       },
-      error: handleXHRError(null),
+      error: handleXHRError({logger: self.errorMessage}),
       success: function(data, textStatus, jqXHR){
         if (enabled){
           cycle.forms.push(form);
@@ -566,7 +444,7 @@ function StudyView(){
   };
 
   self.clear = function(){
-    self.errorMessages([]);
+    self.errorMessage();
     self.studyModalState(null)
     self.editableStudy(null);
     self.addMoreCycles(false);
@@ -580,50 +458,48 @@ function StudyView(){
     self.formModalState(null);
   };
 
-  // One-time setup
-  +function(){
+  self.isReady(true);
+}
 
-    // Scroll the grid
-    function updateGrid(){
-      var $container = $('#js-schedule')
-        , $corner = $('#js-schedule-corner')
-        , $header = $('#js-schedule-header')
-        , $sidebar = $('#js-schedule-sidebar')
-        // get scroll info relative to container
-        , scrollTop = $(window).scrollTop() - $container.offset().top
-        , scrollLeft = $container.scrollLeft()
-        , affixLeft = 0 < scrollLeft
-        , affixTop = 0 < scrollTop
-          // (uncontrollable FF border)
-        , headerHeight = $('#js-schedule-table thead th').outerHeight() - (affixTop ? 0 : 1)
-        , headerWidth = $('#js-schedule-table thead th').outerWidth();
+function setupScheduleGrid(){
+  // Scroll the grid
+  function updateGrid(){
+    var $container = $('#js-schedule')
+      , $corner = $('#js-schedule-corner')
+      , $header = $('#js-schedule-header')
+      , $sidebar = $('#js-schedule-sidebar')
+      // get scroll info relative to container
+      , scrollTop = $(window).scrollTop() - $container.offset().top
+      , scrollLeft = $container.scrollLeft()
+      , affixLeft = 0 < scrollLeft
+      , affixTop = 0 < scrollTop
+        // (uncontrollable FF border)
+      , headerHeight = $('#js-schedule-table thead th').outerHeight() - (affixTop ? 0 : 1)
+      , headerWidth = $('#js-schedule-table thead th').outerWidth();
 
-      if (affixTop){
-        // affix header to the top side, allowing horizontal scroll
-        $header.css({top: scrollTop}).show();
-      } else {
-        $header.hide();
-      }
-
-      if (affixLeft){
-        // affix sidebar to left side under header, allowing vertical scroll
-        $sidebar.css({top: headerHeight, left: scrollLeft}).show();
-      } else {
-        $sidebar.hide();
-      }
-
-      if (affixLeft || affixTop){
-        // affix cornter to top left while scrolling
-        $corner.find('th:first').css({height: headerHeight, width: headerWidth});
-        $corner.css({top: affixTop ?  scrollTop : 0, left: affixLeft ? scrollLeft : 0}).show();
-      } else {
-        $corner.hide();
-      }
+    if (affixTop){
+      // affix header to the top side, allowing horizontal scroll
+      $header.css({top: scrollTop}).show();
+    } else {
+      $header.hide();
     }
 
-    $(window).on('scroll mousewheel resize', updateGrid);
-    $('#js-schedule').on('scroll mousewheel', updateGrid);
+    if (affixLeft){
+      // affix sidebar to left side under header, allowing vertical scroll
+      $sidebar.css({top: headerHeight, left: scrollLeft}).show();
+    } else {
+      $sidebar.hide();
+    }
 
-    self.isReady(true);
-  }();
+    if (affixLeft || affixTop){
+      // affix cornter to top left while scrolling
+      $corner.find('th:first').css({height: headerHeight, width: headerWidth});
+      $corner.css({top: affixTop ?  scrollTop : 0, left: affixLeft ? scrollLeft : 0}).show();
+    } else {
+      $corner.hide();
+    }
+  }
+
+  $(window).on('scroll mousewheel resize', updateGrid);
+  $('#js-schedule').on('scroll mousewheel', updateGrid);
 }

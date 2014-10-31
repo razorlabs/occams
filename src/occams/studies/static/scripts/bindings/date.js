@@ -48,7 +48,11 @@
   ko.bindingHandlers.datetimePicker = {
     init: function(element, valueAccessor, allBindingsAccessor) {
       if (!supportsDateInput) {
-        $(element).datetimepicker(ko.unwrap(valueAccessor()));
+        var options = ko.unwrap(valueAccessor());
+        if ($(element).attr('type') == 'date'){
+          $.extend(options, {pickTime: false});
+        }
+        $(element).datetimepicker(options);
       }
     }
   };

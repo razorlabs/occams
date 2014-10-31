@@ -6,12 +6,14 @@
  */
 ko.bindingHandlers.showModal = {
   update: function (element, valueAccessor) {
-    var value = valueAccessor();
-    if (ko.unwrap(value)) {
-      $(element).modal('show');
-      $('input', element).focus();
-    } else {
-      $(element).modal('hide');
-    }
+    $(element).modal(ko.unwrap(valueAccessor()) ? 'show' : 'hide');
   }
 };
+
+$(function(){
+  // Autofocus an element when it is first shown
+  $(document).on('shown.bs.modal', '.modal', function() {
+    $('[autofocus]', this).focus();
+  });
+});
+
