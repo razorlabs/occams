@@ -25,7 +25,6 @@ def includeme(config):
         'libs/moment.min.js',
         'libs/bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js',
         'libs/bootstrap-switch.min.js',
-        'libs/sammy.min.js',
         'libs/socket.io.min.js',
         Bundle(
             *[os.path.join(root, filename)

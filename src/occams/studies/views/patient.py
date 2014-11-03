@@ -11,7 +11,11 @@ from sqlalchemy import orm
 from occams.roster import generate
 
 from .. import _, models, Session
-from . import enrollment as enrollment_views, visit as visit_views
+from . import (
+    site as site_views,
+    enrollment as enrollment_views,
+    visit as visit_views,
+    reference_type as reference_type_views)
 from ..validators import invalid2dict, Model
 
 
@@ -143,14 +147,7 @@ def view(context, request):
     }
     request.session.changed()
 
-    sites_query = Session.query(models.Site).order_by(models.Site.title)
-
     return {
-        'available_sites': [
-            s for s in sites_query if request.has_permission('view', s)],
-        'available_reference_types': (
-            Session.query(models.ReferenceType)
-            .order_by(models.ReferenceType.title.asc())),
         'available_studies': (
             Session.query(models.Study)
             .filter(models.Study.start_date != sa.sql.null())
@@ -180,23 +177,14 @@ def view_json(context, request):
     return {
         '__url__': request.route_path('patient', patient=patient.pid),
         'id': patient.id,
-        'site': {
-            'id': patient.site.id,
-            'name': patient.site.name,
-            'title': patient.site.title
-            },
         'pid': patient.pid,
+        'site': site_views.view_json(patient.site, context),
         'references': [{
-            '__meta__': {
-                },
-            'id': r.id,
-            'reference_type': {
-                'id': r.reference_type.id,
-                'name': r.reference_type.name,
-                'title': r.reference_type.title,
-                },
-            'reference_number': r.reference_number,
-            } for r in references_query],
+            'reference_type': reference_type_views.view_json(
+                reference.reference_type,
+                request),
+            'reference_number': reference.reference_number
+            } for reference in references_query],
         'create_date': patient.create_date.isoformat(),
         'modify_date': patient.modify_date.isoformat(),
         }

@@ -254,7 +254,10 @@
 
     <!--! Load scripts at the end so we don't block rendering -->
     <script
-        tal:repeat="url request.webassets_env['default-js'].urls()"
+        tal:define="
+          bundle request.webassets_env['default-js'];
+          urls bundle.urls();"
+        tal:repeat="url urls"
         src="${url}"
         type="text/javascript"> </script>
 
@@ -264,4 +267,3 @@
 
   </body>
 </html>
-

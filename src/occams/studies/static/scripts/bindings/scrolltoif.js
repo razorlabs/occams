@@ -4,7 +4,7 @@
  */
 ko.bindingHandlers.scrollToIf = {
   update: function(element, valueAccessor) {
-    var value = ko.utils.unwrapObservable(valueAccessor());
+    var value = ko.unwrap(valueAccessor());
 
     if (value) {
       var scrollTop = $(element).offset().top

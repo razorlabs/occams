@@ -11,7 +11,7 @@
    */
   ko.bindingHandlers.validate = {
     init: function (element, valueAccessor) {
-      $(element).validate(ko.utils.unwrapObservable(valueAccessor()));
+      $(element).validate(ko.unwrap(valueAccessor()));
     },
   };
 

@@ -33,6 +33,42 @@ def add_studies(event):
 
 
 @view_config(
+    route_name='home',
+    permission='view',
+    renderer='../templates/study/list.pt')
+@view_config(
+    route_name='studies',
+    permission='view',
+    renderer='../templates/study/list.pt')
+def list_(request):
+    studies_query = (
+        Session.query(models.Study)
+        .order_by(models.Study.title.asc()))
+
+    modified_query = (
+        Session.query(models.Patient)
+        .order_by(models.Patient.modify_date.desc())
+        .limit(10))
+
+    viewed = sorted((request.session.get('viewed') or {}).values(),
+                    key=lambda v: v['view_date'],
+                    reverse=True)
+
+    studies_data = [view_json(s, request, deep=False) for s in studies_query]
+
+    return {
+        'studies_data': studies_data,
+        'studies_count': len(studies_data),
+
+        'modified': modified_query,
+        'modified_count': modified_query.count(),
+
+        'viewed': viewed,
+        'viewed_count': len(viewed),
+    }
+
+
+@view_config(
     route_name='study',
     permission='view',
     renderer='../templates/study/view.pt')

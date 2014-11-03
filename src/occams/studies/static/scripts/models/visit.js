@@ -1,18 +1,24 @@
 function Visit(data){
   var self = this;
 
+  self.visit_date = ko.observable();
+  self.cycles = ko.observableArray();
+  self.entities = ko.observableArray();
+
+  self.hasCycles = ko.pureComputed(function(){
+    return self.visits().length > 0;
+  });
+
+  self.hasEntities = ko.pureComputed(function(){
+    return self.entities().length > 0;
+  });
+
   self.update = function(data) {
     ko.mapping.fromJS(data, {}, self);
   };
 
-  self.update(data);
-
-  self.hasEntities = ko.computed(function(){
-    return self.entities().length > 0;
-  });
-
   self.entitiesNotStartedCount = ko.computed(function(){
-    return ko.utils.arrayFilter(self.entities(), function(entity){
+    return self.entities().filter(function(entity){
       return entity.state.name() == 'pending-entry';
     }).length;
   });
@@ -25,7 +31,7 @@ function Visit(data){
   });
 
   self.entitiesIncompleteCount = ko.computed(function(){
-    return ko.utils.arrayFilter(self.entities(), function(entity){
+    return self.entities().filter(function(entity){
       return entity.state.name() != 'pending-entry'&& entity.state.name() != 'complete';
     }).length;
   });
@@ -38,7 +44,7 @@ function Visit(data){
   });
 
   self.entitiesCompletedCount = ko.computed(function(){
-    return ko.utils.arrayFilter(self.entities(), function(entity){
+    return self.entities().filter(function(entity){
       return entity.state.name() == 'complete';
     }).length;
   });
@@ -49,4 +55,6 @@ function Visit(data){
     }
     return Math.round((self.entitiesCompletedCount() / self.entities().length) * 100);
   });
+
+  self.update(data);
 }

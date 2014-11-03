@@ -8,13 +8,13 @@
         <header class="page-header">
           <div class="btn-toolbar pull-right">
             <button class="btn btn-default"
-                data-bind="click: $root.startEdit"
+                data-bind="click: $root.startEditPatient"
                 tal:condition="request.has_permission('edit')">
               <span class="fa fa-edit"></span>
               <span i18n:translate="">Edit</span>
             </button>
             <button class="btn btn-default"
-                data-bind="click: $root.startDelete"
+                data-bind="click: $root.startDeletePatient"
                 tal:condition="request.has_permission('delete')">
               <span class="fa fa-trash-o"></span>
               <span i18n:translate="">Delete</span>
@@ -52,7 +52,7 @@
               <div class="panel-heading clearfix">
                 <div class="btn-toolbar pull-right">
                   <button class="btn btn-link btn-xs"
-                      data-bind="click: $root.startEdit"
+                      data-bind="click: $root.startEditPatient"
                       tal:condition="request.has_permission('edit')">
                     <span class="fa fa-list"></span>
                     <span i18n:translate="">Manage</span>
@@ -256,111 +256,10 @@
 
       </div> <!-- /:isReady -->
 
-      <div class="modal fade" data-bind="showModal: $root.showEditForm, if: $root.showEditForm">
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <form
-                role="form"
-                action="${request.current_route_path(_route_name='patient')}"
-                data-bind="with: $root.editableItem,
-                           submit: $root.savePatient,
-                           validate: window.defaultValidationOptions">
-              <div class="modal-header">
-                <h4 class="modal-title" i18n:translate="">Edit Patient</h4>
-              </div>
-              <div class="modal-body">
-                <!-- ko if: $root.hasErrorMessages -->
-                  <div class="alert alert-danger">
-                    <p i18n:translate="">
-                      Could not complete the request for the following reasons:
-                    </p>
-                    <ul data-bind="foreach: $root.errorMessages">
-                      <li data-bind="text: $data"></li>
-                    </ul>
-                  </div>
-                <!-- /ko -->
-                <div class="form-group">
-                  <label i18n:translate="" class="required">Site</label>
-                  <p class="help-block" i18n:translate="">
-                      Choose a site that the patient belongs to.
-                      You may only select a site of which you are a member of.
-                  </p>
-                  <select
-                      class="form-control"
-                      required
-                      data-bind="value: site, uniqueName:true, select2: {}">
-                    <option value="" i18n:translate="">Select a site...</option>
-                    <option tal:repeat="site available_sites" value="${site.id}">${site.title}</option>
-                  </select>
-                </div> <!-- /.form-group -->
-                <div class="form-group">
-                  <label i18n:translate="">Reference Numbers</label>
-                  <!-- ko foreach: references -->
-                    <div class="form-group row">
-                      <div class="col-sm-5 js-validation-item" tal:define="name 'reference_type'">
-                        <select
-                          class="form-control ${name}"
-                          required
-                          data-bind="
-                              value: ${name},
-                              event: {change: $root.onChangeReferenceType},
-                              uniqueName: true,
-                              select2: {}
-                              ">
-                            <option value="" i18n:translate="">Select a reference type...</option>
-                            <option tal:repeat="type available_reference_types"
-                                tal:attributes="
-                                  data-reference_pattern python:type.reference_pattern or None;
-                                  data-reference_hint python:type.reference_hint or None;"
-                                value="${type.id}">${type.title}</option>
-                          </select>
-                      </div>
-                      <div class="col-sm-5 js-validation-item" tal:define="name 'reference_number'">
-                        <input type="text"
-                            class="form-control ${name}"
-                            required
-                            data-bind="
-                              value: ${name},
-                              uniqueName: true
-                              " />
-                      </div>
-                      <div class="col-sm-2">
-                        <button class="btn btn-link" data-bind="click: $root.deleteReference"><span class="fa fa-trash-o"></span></button>
-                      </div>
-                    </div> <!-- /.row -->
-                  <!-- /ko -->
-                  <div>
-                    <button class="btn btn-link" data-bind="click: $root.addReference">
-                      <span class="fa fa-plus"></span>
-                      <!-- ko if: references().length > 0 -->
-                        <span i18n:translate="">Add another reference number</span>
-                      <!-- /ko -->
-                      <!-- ko if: references().length <= 0 -->
-                        <span i18n:translate="">Add a reference number</span>
-                      <!-- /ko -->
-                    </button>
-                  </div>
-                </div> <!-- /.form-group -->
-              </div> <!-- /.modal-body -->
-              <div class="modal-footer">
-                <button
-                    type="button"
-                    class="btn btn-link"
-                    data-bind="click: $root.clear"
-                    i18n:translate="">Cancel</button>
-                <button type="submit" class="btn btn-primary">
-                  <span i18n:translate="">Save</span>
-                  <!-- ko if: $root.isSaving -->
-                    <span class="fa fa-refresh fa-spin"></span>
-                  <!-- /ko -->
-                </button>
-              </div>
-            </form>
-          </div><!-- /.modal-content -->
-        </div><!-- /.modal-dialog -->
-      </div><!-- /.modal -->
+      <!-- Use template so we can reuse in home view -->
+      <div metal:use-macro="load: modal-patient.pt"></div>
 
-      <div class="modal fade" data-bind="showModal: $root.showEnrollmentForm, if: $root.showEnrollmentForm">
+      <div class="modal fade" data-bind="showModal: $root.showEditEnrollment, if: $root.showEditEnrollment">
         <div class="modal-dialog">
           <div class="modal-content">
             <form
@@ -475,7 +374,7 @@
         </div><!-- /.modal-dialog -->
       </div><!-- /.modal -->
 
-      <div class="modal fade" data-bind="showModal: $root.showEnrollmentDelete, if: $root.showEnrollmentDelete">
+      <div class="modal fade" data-bind="showModal: $root.showDeleteEnrollment, if: $root.showDeleteEnrollment">
         <div class="modal-dialog">
           <div class="modal-content" data-bind="with: $root.selectedItem">
             <form data-bind="submit: $root.deleteEnrollment">
@@ -516,8 +415,7 @@
         </div><!-- /.modal-dialog -->
       </div><!-- /.modal -->
 
-
-      <div class="modal fade" data-bind="showModal: $root.showVisitForm, if: $root.showVisitForm">
+      <div class="modal fade" data-bind="showModal: $root.showEditVisit, if: $root.showEditVisit">
         <div class="modal-dialog">
           <div class="modal-content">
             <form
@@ -598,7 +496,7 @@
       </div><!-- /.modal -->
 
 
-      <div class="modal fade" data-bind="showModal: $root.showDeleteForm, if: $root.showDeleteForm">
+      <div class="modal fade" data-bind="showModal: $root.showDeletePatient, if: $root.showDeletePatient">
         <div class="modal-dialog">
           <div class="modal-content">
             <form data-bind="submit: $root.deletePatient">
