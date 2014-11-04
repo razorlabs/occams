@@ -6,6 +6,8 @@ function PatientAddView(){
   self.isReady = ko.observable(false);
   self.isSaving = ko.observable(false);
 
+  self.errorMessage = ko.observable();
+
   self.selectedItem = ko.observable();
   self.editableItem = ko.observable();
 
@@ -26,7 +28,27 @@ function PatientAddView(){
     self.editableItem(new Patient());
   };
 
-  self.savePatient = function(form){
+  self.savePatient = function(element){
+    if ($(element).validate().form()){
+      $.ajax({
+        url: $(element).attr('action'),
+        method: 'POST',
+        contentType: 'application/json; charset=utf-8',
+        data: ko.toJSON(self.editableItem()),
+        headers: {'X-CSRF-Token': $.cookie('csrf_token')},
+        error: handleXHRError({form: element, logger: self.errorMessage}),
+        beforeSend: function(){
+          self.isSaving(true);
+        },
+        success: function(data, textStatus, jqXHR){
+          window.location = data.__url__
+          self.clear();
+        },
+        complete: function(){
+          self.isSaving(false);
+        }
+      });
+    }
   };
 
   self.isReady(true);

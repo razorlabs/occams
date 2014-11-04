@@ -35,8 +35,8 @@
                   select2: {
                     ajax: {
                       url: '${ajax}',
-                      data: $parent.select2ParamsSite,
-                      results: $parent.select2ResultsSite,
+                      data: select2ParamsSite,
+                      results: select2ResultsSite,
                     }
                   }" />
 
@@ -63,8 +63,8 @@
                         select2: {
                           ajax: {
                             url: '${ajax}',
-                            data: $parents[1].select2ParamsReferenceType,
-                            results: $parents[1].select2ResultsReferenceType
+                            data: $parent.select2ParamsReferenceType,
+                            results: $parent.select2ResultsReferenceType
                           }
                         }" />
                 </div>

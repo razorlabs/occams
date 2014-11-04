@@ -45,30 +45,6 @@ function PatientView(patientData, enrollmentsData, visitsData){
     return self.visits().length > 0;
   });
 
-  self.select2ParamsSite = function(term,  page){
-    return {vocabulary: 'available_sites', term: term};
-  };
-
-  self.select2ResultsSite = function(data, page, query){
-    return {
-      results: data.sites.map(function(value){
-        return new Site(value);
-      })
-    };
-  };
-
-  self.select2ParamsReferenceType = function(term, page){
-    return {vocabulary: 'available_reference_types', term: term};
-  };
-
-  self.select2ResultsReferenceType = function(data, page, query){
-    return {
-      results: data.reference_types.map(function(value){
-        return new ReferenceType(value);
-      })
-    };
-  };
-
   self.onChangeStudy = function(item, event){
     var $option = $($(event.target).find(':selected'))
       , $field = $('#reference_number')

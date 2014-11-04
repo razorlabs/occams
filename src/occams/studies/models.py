@@ -417,6 +417,7 @@ class Arm(Base, Referenceable, Describeable,  Modifiable, Auditable):
 class PatientFactory(object):
 
     __acl__ = [
+        (Allow, groups.administrator(), ('add', 'view')),
         (Allow, groups.manager(), ('add', 'view')),
         (Allow, groups.reviewer(), ('add', 'view')),
         (Allow, groups.enterer(), ('add', 'view')),

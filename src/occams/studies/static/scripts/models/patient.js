@@ -34,5 +34,29 @@ function Patient(data){
     self.references.push(new Reference());
   };
 
+  self.select2ParamsSite = function(term,  page){
+    return {vocabulary: 'available_sites', term: term};
+  };
+
+  self.select2ResultsSite = function(data, page, query){
+    return {
+      results: data.sites.map(function(value){
+        return new Site(value);
+      })
+    };
+  };
+
+  self.select2ParamsReferenceType = function(term, page){
+    return {vocabulary: 'available_reference_types', term: term};
+  };
+
+  self.select2ResultsReferenceType = function(data, page, query){
+    return {
+      results: data.reference_types.map(function(value){
+        return new ReferenceType(value);
+      })
+    };
+  };
+
   self.update(data || {});
 }
