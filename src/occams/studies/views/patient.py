@@ -16,7 +16,7 @@ from . import (
     enrollment as enrollment_views,
     visit as visit_views,
     reference_type as reference_type_views)
-from ..validators import invalid2dict, Model
+from ..validators import invalid2dict, Model, Key
 
 
 @view_config(
@@ -301,15 +301,19 @@ def PatientSchema(context, request):
 
     return Schema({
         'site': All(
+            Any(Key('id'), int),
             Model(models.Site, localizer=request.localizer),
             check_can_view_site),
-        'references': Maybe([All({
-            'reference_type': Model(
-                models.ReferenceType,
-                localizer=request.localizer),
-            'reference_number': Coerce(six.binary_type),
-            Extra: Remove,
-            }, check_reference_format, check_unique_reference)],
-            none=[]),
+        'references': [All({
+            'reference_type': All(
+                Any(Key('id'), int),
+                Model(models.ReferenceType, localizer=request.localizer)),
+            'reference_number': All(
+                Type(*six.string_types),
+                Coerce(six.binary_type)),
+            Extra: Remove
+            },
+            check_reference_format,
+            check_unique_reference)],
         Extra: Remove
         })

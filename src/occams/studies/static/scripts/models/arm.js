@@ -1,9 +1,9 @@
-function Site(data){
+function Arm(data){
   'use strict';
 
   var self = this;
 
-  self.__url__ = ko.observable();
+  self.__url__ = ko.obesrvable();
   self.id = ko.observable();
   self.name = ko.observable();
   self.title = ko.observable();

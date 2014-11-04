@@ -45,7 +45,7 @@
             <label i18n:translate="">Reference Numbers</label>
             <!-- ko foreach: references -->
               <div class="form-group row">
-                <div class="col-sm-5 js-validation-item" tal:define="name 'reference_type'">
+                <div class="col-sm-5 " tal:define="name 'reference_type'">
                   <input
                     type="hidden"
                     class="form-control ${name}"
@@ -55,7 +55,7 @@
                     tal:define="ajax request.route_path('reference_types')"
                     data-bind="
                         attr: {
-                          name: 'references.${name}.' + $index
+                          name: 'references.' + $index() + '.${name}',
                         },
                         selectedData: ${name},
                         dataKey: 'id',
@@ -68,15 +68,16 @@
                           }
                         }" />
                 </div>
-                <div class="col-sm-5 js-validation-item" tal:define="name 'reference_number'">
+                <div class="col-sm-5 " tal:define="name 'reference_number'">
                   <input type="text"
                       class="form-control ${name}"
                       required
                       data-bind="
                         attr: {
-                          name: 'references.${name}.' + $index,
+                          name: 'references.' + $index() + '.${name}',
                           pattern: reference_pattern,
-                          title: reference_hint
+                          title: reference_hint,
+                          placeholder: reference_hint
                         },
                         value: ${name}
                         " />

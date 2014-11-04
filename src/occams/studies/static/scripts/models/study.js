@@ -35,29 +35,24 @@ function Study(data){
   });
 
   self.update = function(data){
-    ko.mapping.fromJS(data, {
-      'ignore': ['enrollmentForms'],
-      'termination_form': {
-        create: function(options){
-          return ko.observable(options.data ? new StudyForm(options.data) : null);
-        }
-      },
-      'randomization_form': {
-        create: function(options){
-          return ko.observable(options.data ? new StudyForm(options.data) : null);
-        }
-      },
-      'forms': {
-        create: function(options){
-          return new StudyForm(options.data);
-        }
-      },
-      'cycles': {
-        create: function(options){
-          return new StudyCycle(options.data);
-        }
-      }
-    }, self);
+    self.__url__(data.__url__);
+    self.name(data.name);
+    self.title(data.title);
+    self.short_title(data.short_title);
+    self.code(data.code);
+    self.consent_date(data.consent_date);
+    self.start_date(data.start_date);
+    self.end_date(data.end_date);
+    self.termination_form(data.termination_form ? new StudyForm(data.termination_form) : null);
+    self.is_randomized(data.is_randomized);
+    self.is_blinded(data.is_blinded);
+    self.randomization_form(data.randomization_form ? new StudyForm(data.randomzation_form) : null);
+    self.forms((data.forms || []).map(function(value){
+      return new StudyForm(value);
+    }));
+    self.cycles((data.cycles || []).map(function(value){
+      return new Cycle(value);
+    }));
 
     self.forms.sort(function(a, b){
       return a.title().localeCompare(b.title());
@@ -90,7 +85,7 @@ function Study(data){
     };
   };
 
-  self.update(data);
+  self.update(data || {});
 }
 
 
@@ -100,8 +95,6 @@ function Study(data){
 function StudyForm(data){
   'use strict';
 
-  data = data || {};
-
   var self = this;
 
   self.isNew = ko.observable();
@@ -110,12 +103,12 @@ function StudyForm(data){
   self.versions = ko.observableArray();
 
   // Short-hand name getter
-  self.name = ko.computed(function(){
+  self.name = ko.pureComputed(function(){
     return self.schema() && self.schema().name;
   });
 
   // Short-hand title getter
-  self.title = ko.computed(function(){
+  self.title = ko.pureComputed(function(){
     return self.schema() && self.schema().title;
   });
 
@@ -160,52 +153,5 @@ function StudyForm(data){
     return {results: data.schemata};
   };
 
-  self.update(data);
-}
-
-/**
- * Cycle representation in the context of a study
- */
-function StudyCycle(data){
-  'use strict';
-
-  data = data || {};
-
-  var self = this;
-
-  self.__url__ = ko.observable();
-  self.id = ko.observable();
-  self.name = ko.observable();
-  self.title = ko.observable();
-  self.week = ko.observable();
-  self.is_interim = ko.observable();
-  self.forms = ko.observableArray();
-
-  self.update = function(data){
-    ko.mapping.fromJS(data, {
-      'forms': {
-        create: function(options){
-          return new StudyForm(options.data);
-        }
-      }
-    }, self);
-  };
-
-  self.hasForms = ko.computed(function(){
-    return self.forms().length;
-  });
-
-  self.formsIndex = ko.computed(function(){
-    var set = {};
-    self.forms().forEach(function(form){
-      set[form.schema().name] = true
-    });
-    return set;
-  });
-
-  self.containsForm = function(form){
-    return form.schema().name in self.formsIndex();
-  };
-
-  self.update(data);
+  self.update(data || {});
 }

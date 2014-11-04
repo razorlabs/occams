@@ -28,6 +28,16 @@ def List(value):
     return [value] if not isinstance(value, list) else value
 
 
+def Key(key):
+    def validator(value):
+        if not isinstance(value, dict):
+            raise Invalid('not a dict')
+        if key not in value:
+            raise Invalid('%s is not in dict' % key)
+        return value[key]
+    return validator
+
+
 def Model(class_, path=None, msg=None, localizer=None):
     """
     Returns a validator that evaluates the value into a database record.

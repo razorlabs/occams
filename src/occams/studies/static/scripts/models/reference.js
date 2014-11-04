@@ -15,18 +15,9 @@ function Reference(data){
   });
 
   self.update = function(data){
-    ko.mapping.fromJS(data, {
-      'reference_type': {
-        'create': function(options){
-          return options.data ? new ReferenceType(options.data) : null;
-        }
-      }
-    }, self);
+    self.reference_type(data.reference_type ? new ReferenceType(data.reference_type) : null);
+    self.reference_number(data.reference_number);
   };
 
-  self.toJS = function(){
-    return ko.toJS(self);
-  };
-
-  self.update(data);
+  self.update(data || {});
 }

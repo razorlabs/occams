@@ -19,7 +19,8 @@ def includeme(config):
         'libs/jquery.validate.min.js',
         'libs/bootstrap/dist/js/bootstrap.min.js',
         'libs/knockout.min.js',
-        'libs/knockout.mapping.min.js',
+        # Unpredicatble library, let's refrain from using it...
+        # 'libs/knockout.mapping.min.js',
         'libs/knockout-sortable.min.js',
         'libs/select2.min.js',
         'libs/moment.min.js',

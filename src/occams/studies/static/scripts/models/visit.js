@@ -1,6 +1,10 @@
 function Visit(data){
+  'use strict';
+
   var self = this;
 
+  self.__url__ = ko.observable();
+  self.id = ko.observable();
   self.visit_date = ko.observable();
   self.cycles = ko.observableArray();
   self.entities = ko.observableArray();
@@ -14,47 +18,53 @@ function Visit(data){
   });
 
   self.update = function(data) {
-    ko.mapping.fromJS(data, {}, self);
+    self.__url__(data.__url__);
+    self.id(data.id);
+    self.visit_date(data.visit_date);
+    self.cycles((data.cycles || []).map(function(value){
+      return new Cycle(value);
+    }));
+    self.entities(data.entities);
   };
 
-  self.entitiesNotStartedCount = ko.computed(function(){
+  self.entitiesNotStartedCount = ko.pureComputed(function(){
     return self.entities().filter(function(entity){
-      return entity.state.name() == 'pending-entry';
+      return entity.state.name == 'pending-entry';
     }).length;
   });
 
-  self.entitiesNotStartedProgress = ko.computed(function(){
+  self.entitiesNotStartedProgress = ko.pureComputed(function(){
     if (!self.hasEntities()){
       return 0;
     }
     return Math.round((self.entitiesNotStartedCount() / self.entities().length) * 100);
   });
 
-  self.entitiesIncompleteCount = ko.computed(function(){
+  self.entitiesIncompleteCount = ko.pureComputed(function(){
     return self.entities().filter(function(entity){
-      return entity.state.name() != 'pending-entry'&& entity.state.name() != 'complete';
+      return entity.state.name != 'pending-entry'&& entity.state.name != 'complete';
     }).length;
   });
 
-  self.entitiesIncompleteProgress = ko.computed(function(){
+  self.entitiesIncompleteProgress = ko.pureComputed(function(){
     if (!self.hasEntities()){
       return 0;
     }
     return Math.round((self.entitiesIncompleteCount() / self.entities().length) * 100);
   });
 
-  self.entitiesCompletedCount = ko.computed(function(){
+  self.entitiesCompletedCount = ko.pureComputed(function(){
     return self.entities().filter(function(entity){
-      return entity.state.name() == 'complete';
+      return entity.state.name == 'complete';
     }).length;
   });
 
-  self.entitiesCompletedProgress = ko.computed(function(){
+  self.entitiesCompletedProgress = ko.pureComputed(function(){
     if (self.entities().length < 1) {
       return 0;
     }
     return Math.round((self.entitiesCompletedCount() / self.entities().length) * 100);
   });
 
-  self.update(data);
+  self.update(data || {});
 }

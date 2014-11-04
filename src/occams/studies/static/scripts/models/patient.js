@@ -3,6 +3,8 @@ function Patient(data){
 
   var self = this;
 
+  self.__url__ = ko.observable();
+  self.id = ko.observable();
   self.pid = ko.observable();
   self.site = ko.observable();
   self.references = ko.observableArray();
@@ -12,13 +14,16 @@ function Patient(data){
   });
 
   self.update = function(data){
-    ko.mapping.fromJS(data, {
-      'references': {
-        'create': function(options){
-          return new Reference(options.data);
-        }
-      }
-    }, self);
+    self.__url__(data.__url__);
+    self.id(data.id);
+    self.pid(data.pid);
+    self.site(data.site ? new Site(data.site) : null);
+    self.references((data.references || []).map(function(value){
+      return new Reference(value);
+    }));
+    self.references.sort(function(a, b){
+      return a.reference_type().title().localeCompare(b.reference_type().title());
+    });
   };
 
   self.deleteReference = function(reference){
@@ -29,9 +34,5 @@ function Patient(data){
     self.references.push(new Reference());
   };
 
-  self.toJS = function(){
-    return ko.toJS(self);
-  }
-
-  self.update(data);
+  self.update(data || {});
 }

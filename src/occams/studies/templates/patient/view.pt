@@ -1,260 +1,256 @@
 <html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
-  <metal:content-slot fill-slot="content-slot" tal:define="json import:json">
+  <metal:content-slot fill-slot="content-slot">
 
-    <div id="views-patient-main">
+    <div id="views-patient-main" style="display: none;" data-bind="visible: isReady">
 
-      <div style="display: none;" data-bind="visible: isReady">
-
-        <header class="page-header">
-          <div class="btn-toolbar pull-right">
-            <button class="btn btn-default"
-                data-bind="click: $root.startEditPatient"
-                tal:condition="request.has_permission('edit')">
-              <span class="fa fa-edit"></span>
-              <span i18n:translate="">Edit</span>
-            </button>
-            <button class="btn btn-default"
-                data-bind="click: $root.startDeletePatient"
-                tal:condition="request.has_permission('delete')">
-              <span class="fa fa-trash-o"></span>
-              <span i18n:translate="">Delete</span>
-            </button>
-          </div>
-          <h1 i18n:translate="" data-bind="text: patient.pid"></h1>
-          <ul class="details list-inline">
-            <li data-bind="with: patient.site">
-              <span class="text-muted" i18n:translate="">Site:</span>
-              <span data-bind="text: title"></span>
+      <header class="page-header">
+        <div class="btn-toolbar pull-right">
+          <button class="btn btn-default"
+              data-bind="click: $root.startEditPatient"
+              tal:condition="request.has_permission('edit')">
+            <span class="fa fa-edit"></span>
+            <span i18n:translate="">Edit</span>
+          </button>
+          <button class="btn btn-default"
+              data-bind="click: $root.startDeletePatient"
+              tal:condition="request.has_permission('delete')">
+            <span class="fa fa-trash-o"></span>
+            <span i18n:translate="">Delete</span>
+          </button>
+        </div>
+        <h1 i18n:translate="" data-bind="text: patient.pid"></h1>
+        <ul class="details list-inline">
+          <li data-bind="with: patient.site">
+            <span class="text-muted" i18n:translate="">Site:</span>
+            <span data-bind="text: title"></span>
+          </li>
+        </ul>
+        <nav>
+          <ul class="nav nav-header" tal:define="current request.current_route_path(_query={})">
+            <li tal:define="url request.route_path('studies')">
+              <a href="${url}">
+                <span class="fa fa-chevron-left"></span>
+              </a>
+            </li>
+            <li tal:define="url request.current_route_path(_route_name='patient', _query={})"
+                class="${'active' if current == url else ''}">
+              <a href="${url}" i18n:translate="">Overview</a>
+            </li>
+            <li tal:define="url request.current_route_path(_route_name='patient_forms', _query={})"
+                class="${'active' if current == url else ''}">
+              <a href="${url}" i18n:translate="">Forms</a>
             </li>
           </ul>
-          <nav>
-            <ul class="nav nav-header" tal:define="current request.current_route_path()">
-              <li tal:define="url request.route_path('studies')">
-                <a href="${url}">
-                  <span class="fa fa-chevron-left"></span>
-                </a>
-              </li>
-              <li tal:define="url request.current_route_path(_route_name='patient')"
-                  class="${'active' if current == url else ''}">
-                <a href="${url}" i18n:translate="">Overview</a>
-              </li>
-              <li tal:define="url request.current_route_path(_route_name='patient_forms')"
-                  class="${'active' if current == url else ''}">
-                <a href="${url}" i18n:translate="">Forms</a>
-              </li>
-            </ul>
-          </nav>
-        </header>
+        </nav>
+      </header>
 
-         <div class="row">
-          <div class="col-sm-4">
-            <div class="panel panel-default" data-bind="with: patient">
-              <div class="panel-heading clearfix">
-                <div class="btn-toolbar pull-right">
-                  <button class="btn btn-link btn-xs"
-                      data-bind="click: $root.startEditPatient"
-                      tal:condition="request.has_permission('edit')">
-                    <span class="fa fa-list"></span>
-                    <span i18n:translate="">Manage</span>
-                  </button>
-                </div>
-                <h4 class="panel-title" i18n:translate="">External IDs</h4>
+      <div class="row">
+        <div class="col-sm-4">
+          <div class="panel panel-default" data-bind="with: patient">
+            <div class="panel-heading clearfix">
+              <div class="btn-toolbar pull-right">
+                <button class="btn btn-link btn-xs"
+                    data-bind="click: $root.startEditPatient"
+                    tal:condition="request.has_permission('edit')">
+                  <span class="fa fa-list"></span>
+                  <span i18n:translate="">Manage</span>
+                </button>
               </div>
-              <!-- ko if: references().length <= 0 -->
-                <div class="panel-body">
-                  <p class="text-muted text-center" i18n:translate="">No references</p>
-                </div>
-              <!-- /ko -->
-              <!-- ko if: references().length > 0 -->
-                <table class="table table-striped">
-                  <colgroup>
-                    <col class="col-sm-8" />
-                    <col class="col-sm-4" />
-                  </colgroup>
-                  <tbody data-bind="foreach: references">
-                    <tr>
-                      <!-- ko with: reference_type -->
-                        <td data-bind="text: title"></td>
-                      <!-- /ko -->
-                      <td><code data-bind="text: reference_number"></code></td>
-                    </tr>
-                  </tbody>
-                </table>
-              <!-- /ko -->
-            </div> <!-- /.panel -->
-          </div> <!-- /.col-sm-4 -->
-          <div class="col-sm-8">
-            <div class="panel panel-default"
-                tal:condition="request.has_permission('view', context['enrollments'])">
-              <div class="panel-heading clearfix">
-                <div class="btn-toolbar pull-right">
-                  <button class="btn btn-link btn-xs"
-                      data-bind="click: $root.startAddEnrollment"
-                      tal:condition="request.has_permission('add', context['enrollments'])">
-                    <span class="fa fa-plus"></span>
-                    <span i18n:translate="">Add Enrollment</span>
-                  </button>
-                </div>
-                <h4 class="panel-title" i18n:translate="">Enrollments</h4>
+              <h4 class="panel-title" i18n:translate="">External IDs</h4>
+            </div>
+            <!-- ko if: references().length <= 0 -->
+              <div class="panel-body">
+                <p class="text-muted text-center" i18n:translate="">No references</p>
               </div>
-              <!-- ko ifnot: hasEnrollments -->
-                <div class="panel-body">
-                  <p class="text-muted text-center" i18n:translate="">No enrollments</p>
-                </div>
-              <!-- /ko -->
-              <!-- ko if: hasEnrollments -->
-                <table class="table table-hover table-striped">
-                  <colgroup>
-                    <col class="col-sm-4" />
-                    <col class="col-sm-2" />
-                    <col class="col-sm-2" />
-                    <col class="col-sm-1" />
-                    <col class="col-sm-2" />
-                    <col class="col-sm-1" />
-                  </colgroup>
-                  <thead>
-                    <tr>
-                      <th i18n:translate="">Study</th>
-                      <th i18n:translate="">Consent</th>
-                      <th i18n:translate="">Reference #</th>
-                      <th i18n:translate="">RANDID</th>
-                      <th i18n:translate="">Arm</th>
-                      <th />
-                    </tr>
-                  </thead>
-                  <tbody data-bind="foreach: enrollments">
-                    <tr>
-                      <!-- ko with: study -->
-                        <td class="study" data-bind="text: title"></td>
-                      <!-- /ko -->
-                      <td><code data-bind="text: consent_date"></code></td>
-                      <td data-bind="if: reference_number">
-                        <code data-bind="text: reference_number"></code>
-                      </td>
-                      <td data-bind="with: stratum">
-                        <code data-bind="text: reference_number"></code>
-                      </td>
-                      <td>
-                        <!-- ko if: study.is_randomized -->
-                          <!-- ko if: study.is_blinded -->
-                            <em i18n:translate="">Blinded</em>
-                          <!-- /ko -->
-                          <!-- ko ifnot: study.is_blinded -->
-                            <span data-bind="text: stratum.arm.title"></span>
-                          <!-- /ko -->
+            <!-- /ko -->
+            <!-- ko if: references().length > 0 -->
+              <table class="table table-striped">
+                <colgroup>
+                  <col class="col-sm-8" />
+                  <col class="col-sm-4" />
+                </colgroup>
+                <tbody data-bind="foreach: references">
+                  <tr>
+                    <!-- ko with: reference_type -->
+                      <td data-bind="text: title"></td>
+                    <!-- /ko -->
+                    <td><code data-bind="text: reference_number"></code></td>
+                  </tr>
+                </tbody>
+              </table>
+            <!-- /ko -->
+          </div> <!-- /.panel -->
+        </div> <!-- /.col-sm-4 -->
+        <div class="col-sm-8">
+          <div class="panel panel-default"
+              tal:condition="request.has_permission('view', context['enrollments'])">
+            <div class="panel-heading clearfix">
+              <div class="btn-toolbar pull-right">
+                <button class="btn btn-link btn-xs"
+                    data-bind="click: $root.startAddEnrollment"
+                    tal:condition="request.has_permission('add', context['enrollments'])">
+                  <span class="fa fa-plus"></span>
+                  <span i18n:translate="">Add Enrollment</span>
+                </button>
+              </div>
+              <h4 class="panel-title" i18n:translate="">Enrollments</h4>
+            </div>
+            <!-- ko ifnot: hasEnrollments -->
+              <div class="panel-body">
+                <p class="text-muted text-center" i18n:translate="">No enrollments</p>
+              </div>
+            <!-- /ko -->
+            <!-- ko if: hasEnrollments -->
+              <table class="table table-hover table-striped">
+                <colgroup>
+                  <col class="col-sm-4" />
+                  <col class="col-sm-2" />
+                  <col class="col-sm-2" />
+                  <col class="col-sm-1" />
+                  <col class="col-sm-2" />
+                  <col class="col-sm-1" />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th i18n:translate="">Study</th>
+                    <th i18n:translate="">Consent</th>
+                    <th i18n:translate="">Reference #</th>
+                    <th i18n:translate="">RANDID</th>
+                    <th i18n:translate="">Arm</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody data-bind="foreach: enrollments">
+                  <tr>
+                    <!-- ko with: study -->
+                      <td class="study" data-bind="text: title"></td>
+                    <!-- /ko -->
+                    <td><code data-bind="text: consent_date"></code></td>
+                    <td data-bind="if: reference_number">
+                      <code data-bind="text: reference_number"></code>
+                    </td>
+                    <td data-bind="with: stratum">
+                      <code data-bind="text: reference_number"></code>
+                    </td>
+                    <td>
+                      <!-- ko if: study.is_randomized -->
+                        <!-- ko if: study.is_blinded -->
+                          <em i18n:translate="">Blinded</em>
                         <!-- /ko -->
-                      </td>
-                      <td class="text-right">
-                        <div class="dropdown pull-right">
-                          <button class="btn btn-link dropdown-toggle" type="button" data-toggle="dropdown">
-                            <span class="fa fa-cog"></span><span class="caret"></span>
-                          </button>
-                          <ul class="dropdown-menu" role="menu">
-                            <!-- ko if: __can_edit__ -->
-                              <li role="presentation"><a role="menuitem" tabindex="-1" data-bind="click: $root.startEditEnrollment">Edit</a></li>
+                        <!-- ko ifnot: study.is_blinded -->
+                          <span data-bind="text: stratum.arm.title"></span>
+                        <!-- /ko -->
+                      <!-- /ko -->
+                    </td>
+                    <td class="text-right">
+                      <div class="dropdown pull-right">
+                        <button class="btn btn-link dropdown-toggle" type="button" data-toggle="dropdown">
+                          <span class="fa fa-cog"></span><span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu" role="menu">
+                          <!-- ko if: __can_edit__ -->
+                            <li role="presentation"><a role="menuitem" tabindex="-1" data-bind="click: $root.startEditEnrollment">Edit</a></li>
+                          <!-- /ko -->
+                          <!-- ko if: __can_terminate__ -->
+                            <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Termination</a></li>
+                          <!-- /ko -->
+                          <!-- ko if: study.is_randomized -->
+                            <!-- ko if: study.stratum -->
+                              <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Randomization Status</a></li>
                             <!-- /ko -->
-                            <!-- ko if: __can_terminate__ -->
-                              <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Termination</a></li>
-                            <!-- /ko -->
-                            <!-- ko if: study.is_randomized -->
-                              <!-- ko if: study.stratum -->
-                                <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Randomization Status</a></li>
+                            <!-- ko ifnot: study.stratum -->
+                              <!-- ko if: __can_randomize__ -->
+                                <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Randomize</a></li>
                               <!-- /ko -->
-                              <!-- ko ifnot: study.stratum -->
-                                <!-- ko if: __can_randomize__ -->
-                                  <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Randomize</a></li>
-                                <!-- /ko -->
-                              <!-- /ko -->
                             <!-- /ko -->
-                            <!-- ko if: __can_delete__ -->
-                              <li role="presentation" class="divider"></li>
-                              <li role="presentation"><a role="menuitem" tabindex="-1" href="#" data-bind="click: $root.startDeleteEnrollment">Delete</a></li>
-                            <!-- /ko -->
-                          </ul>
-                        </div>
-                      </td>
-                     </tr>
-                  </tbody>
-                </table>
-              <!-- /ko -->
-            </div> <!-- /.panel -->
-          </div> <!-- /.col-sm-8 -->
-        </div> <!-- /.row -->
+                          <!-- /ko -->
+                          <!-- ko if: __can_delete__ -->
+                            <li role="presentation" class="divider"></li>
+                            <li role="presentation"><a role="menuitem" tabindex="-1" href="#" data-bind="click: $root.startDeleteEnrollment">Delete</a></li>
+                          <!-- /ko -->
+                        </ul>
+                      </div>
+                    </td>
+                   </tr>
+                </tbody>
+              </table>
+            <!-- /ko -->
+          </div> <!-- /.panel -->
+        </div> <!-- /.col-sm-8 -->
+      </div> <!-- /.row -->
 
-        <div id="visits" class="panel panel-default"
-            tal:condition="request.has_permission('view', context['visits'])">
-          <div class="panel-heading clearfix">
-            <div class="btn-toolbar pull-right">
-              <button class="btn btn-link btn-xs"
-                  data-bind="click: $root.startAddVisit"
-                  tal:condition="request.has_permission('add', context['visits'])">
-                <span class="fa fa-plus"></span>
-                <span i18n:translate="">Add Visit</span>
-              </button>
-            </div>
-            <h4 class="panel-title" i18n:translate="">Visits</h4>
+      <div id="visits" class="panel panel-default"
+          tal:condition="request.has_permission('view', context['visits'])">
+        <div class="panel-heading clearfix">
+          <div class="btn-toolbar pull-right">
+            <button class="btn btn-link btn-xs"
+                data-bind="click: $root.startAddVisit"
+                tal:condition="request.has_permission('add', context['visits'])">
+              <span class="fa fa-plus"></span>
+              <span i18n:translate="">Add Visit</span>
+            </button>
           </div>
-          <!-- ko ifnot: hasVisits -->
-            <div class="panel-body">
-              <p class="text-muted text-center" i18n:translate="">No visits</p>
-            </div>
-          <!-- /ko -->
-          <!-- ko if: hasVisits -->
-            <table class="table table-hover table-striped">
-              <colgroup>
-                <col class="col-sm-2" />
-                <col class="col-sm-4" />
-                <col class="col-sm-5" />
-                <col class="col-sm-1" />
-              </colgroup>
-              <thead>
-                <tr>
-                  <th i18n:translate="">Visit Date</th>
-                  <th i18n:translate="">Cycles</th>
-                  <th i18n:translate="">Progress</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody data-bind="foreach: visits">
-                <tr>
-                  <td><code data-bind="text: visit_date"></code></td>
-                  <td data-bind="foreach: cycles">
-                    <div data-bind="text: title"></div>
-                  </td>
-                  <td>
-                    <div class="progress">
-                      <!-- ko if: hasEntities -->
-                        <div class="progress-bar progress-bar-success"
-                            data-bind="style: {width: entitiesCompletedProgress() + '%'}">
-                          <span data-bind="text: entitiesCompletedCount"></span>
-                        </div>
-                        <div class="progress-bar progress-bar-warning"
-                            data-bind="style: {width: entitiesIncompleteProgress() + '%'}">
-                          <span data-bind="text: entitiesIncompleteCount"></span>
-                        </div>
-                        <div class="progress-bar progress-bar-danger"
-                            data-bind="style: {width: entitiesNotStartedProgress() + '%'}">
-                          <span data-bind="text: entitiesNotStartedCount"></span>
-                        </div>
-                      <!-- /ko -->
-                      <!-- ko ifnot: hasEntities -->
-                        <div class="progress-bar progress-bar-warning" style="width: 100%"></div>
-                      <!-- /ko -->
-                    </div>
-                  </td>
-                  <td class="text-right">
-                    <a class="btn btn-link"
-                        data-bind="attr: {href: __url__}">
-                      <span class="fa fa-chevron-right"></span>
-                    </a>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          <!-- /ko -->
-        </div> <!-- /.panel -->
-
-      </div> <!-- /:isReady -->
+          <h4 class="panel-title" i18n:translate="">Visits</h4>
+        </div>
+        <!-- ko ifnot: hasVisits -->
+          <div class="panel-body">
+            <p class="text-muted text-center" i18n:translate="">No visits</p>
+          </div>
+        <!-- /ko -->
+        <!-- ko if: hasVisits -->
+          <table class="table table-hover table-striped">
+            <colgroup>
+              <col class="col-sm-2" />
+              <col class="col-sm-4" />
+              <col class="col-sm-5" />
+              <col class="col-sm-1" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th i18n:translate="">Visit Date</th>
+                <th i18n:translate="">Cycles</th>
+                <th i18n:translate="">Progress</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody data-bind="foreach: visits">
+              <tr>
+                <td><code data-bind="text: visit_date"></code></td>
+                <td data-bind="foreach: cycles">
+                  <div data-bind="text: title"></div>
+                </td>
+                <td>
+                  <div class="progress">
+                    <!-- ko if: hasEntities -->
+                      <div class="progress-bar progress-bar-success"
+                          data-bind="style: {width: entitiesCompletedProgress() + '%'}">
+                        <span data-bind="text: entitiesCompletedCount"></span>
+                      </div>
+                      <div class="progress-bar progress-bar-warning"
+                          data-bind="style: {width: entitiesIncompleteProgress() + '%'}">
+                        <span data-bind="text: entitiesIncompleteCount"></span>
+                      </div>
+                      <div class="progress-bar progress-bar-danger"
+                          data-bind="style: {width: entitiesNotStartedProgress() + '%'}">
+                        <span data-bind="text: entitiesNotStartedCount"></span>
+                      </div>
+                    <!-- /ko -->
+                    <!-- ko ifnot: hasEntities -->
+                      <div class="progress-bar progress-bar-warning" style="width: 100%"></div>
+                    <!-- /ko -->
+                  </div>
+                </td>
+                <td class="text-right">
+                  <a class="btn btn-link"
+                      data-bind="attr: {href: __url__}">
+                    <span class="fa fa-chevron-right"></span>
+                  </a>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        <!-- /ko -->
+      </div> <!-- /.panel -->
 
       <!-- Use template so we can reuse in home view -->
       <div metal:use-macro="load: modal-patient.pt"></div>
@@ -495,7 +491,6 @@
         </div><!-- /.modal-dialog -->
       </div><!-- /.modal -->
 
-
       <div class="modal fade" data-bind="showModal: $root.showDeletePatient, if: $root.showDeletePatient">
         <div class="modal-dialog">
           <div class="modal-content">
@@ -526,18 +521,21 @@
       </div><!-- /.modal -->
 
     </div> <!-- /#views-patient-main -->
-
-    <script id="patient-data" type="application/json">${json.dumps(patient)}</script>
-    <script id="enrollments-data" type="application/json">${json.dumps(enrollments)}</script>
-    <script id="visits-data" type="application/json">${json.dumps(visits)}</script>
-
   </metal:content-slot>
   <metal:content-slot fill-slot="javascript-extras-slot">
     <script>
       $(function(){
-        ko.applyBindings(new PatientView, document.getElementById('views-patient-main'));
+        var patient = JSON.parse($('#patient-data').text()),
+            enrollments = JSON.parse($('#enrollments-data').text()),
+            visits = JSON.parse($('#visits-data').text());
+        ko.applyBindings(new PatientView(patient, enrollments, visits), document.getElementById('views-patient-main'));
       });
     </script>
+    <tal:json define="json import:json">
+      <script id="patient-data" type="application/json">${json.dumps(patient)}</script>
+      <script id="enrollments-data" type="application/json">${json.dumps(enrollments)}</script>
+      <script id="visits-data" type="application/json">${json.dumps(visits)}</script>
+    </tal:json>
   </metal:content-slot>
 </html>
 

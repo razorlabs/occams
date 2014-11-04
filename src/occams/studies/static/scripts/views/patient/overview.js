@@ -1,4 +1,4 @@
-function PatientView(){
+function PatientView(patientData, enrollmentsData, visitsData){
   var self = this;
 
   self.isReady = ko.observable(false);
@@ -29,10 +29,12 @@ function PatientView(){
   self.errorMessage = ko.observable();
 
   // UI Data
-  self.patient = new Patient(JSON.parse($('#patient-data').text()));
-  self.enrollments = ko.mapping.fromJSON($('#enrollments-data').text());
-  self.visits = ko.observableArray(JSON.parse($('#visits-data').text()).map(function(data){
-    return new Visit(data);
+  self.patient = new Patient(patientData);
+  self.enrollments = ko.observableArray(enrollmentsData.map(function(value){
+    return new Enrollment(value);
+  }));
+  self.visits = ko.observableArray(visitsData.map(function(value){
+    return new Visit(value);
   }));
 
   self.hasEnrollments = ko.computed(function(){
@@ -101,7 +103,7 @@ function PatientView(){
   self.startEditPatient = function(){
     self.clear();
     self.statusPatient(EDIT);
-    self.editableItem(new Patient(self.patient.toJS()));
+    self.editableItem(new Patient(ko.toJS(self.patient)));
   };
 
   self.startDeletePatient = function(){
@@ -181,17 +183,17 @@ function PatientView(){
   self.savePatient = function(element){
     if ($(element).validate().form()){
       $.ajax({
-        url: self.patient.__src__,
+        url: self.patient.__url__(),
         method: 'PUT',
         contentType: 'application/json; charset=utf-8',
-        data: ko.mapping.toJSON(self.editableItem()),
+        data: ko.toJSON(self.editableItem()),
         headers: {'X-CSRF-Token': $.cookie('csrf_token')},
         error: handleXHRError({form: element, logger: self.errorMessage}),
         beforeSend: function(){
           self.isSaving(true);
         },
         success: function(data, textStatus, jqXHR){
-          ko.mapping.fromJS(data, {}, self.patient);
+          self.patient.update(data);
           self.clear();
         },
         complete: function(){
@@ -203,7 +205,7 @@ function PatientView(){
 
   self.deletePatient = function(element){
     $.ajax({
-      url: self.patient.__src__,
+      url: self.patient.__url__(),
       method: 'DELETE',
       headers: {'X-CSRF-Token': $.cookie('csrf_token')},
       error: handleXHRError({form: element, logger: self.errorMessage}),
@@ -227,7 +229,7 @@ function PatientView(){
         url: selected.id() ? selected.__url__() : $(element).data('factory-url'),
         method: selected.id() ? 'PUT' : 'POST',
         contentType: 'application/json; charset=utf-8',
-        data: ko.mapping.toJSON(self.editableItem()),
+        data: ko.toJSON(self.editableItem()),
         headers: {'X-CSRF-Token': $.cookie('csrf_token')},
         error: handleXHRError({form: element, logger: self.errorMessage}),
         beforeSend: function(){
@@ -235,9 +237,9 @@ function PatientView(){
         },
         success: function(data, textStatus, jqXHR){
           if (selected.id()){
-            ko.mapping.fromJS(data, {}, selected)
+            selected.update(data);
           } else {
-            self.enrollments.push(ko.mapping.fromJS(data));
+            self.enrollments.push(new Enrollment(data));
           }
           self.enrollments.sort(function(left, right){
             return left.consent_date() > right.consent_date() ? -1 : 1;
@@ -278,14 +280,14 @@ function PatientView(){
         url: $(element).attr('action'),
         method: 'POST',
         contentType: 'application/json; charset=utf-8',
-        data: ko.mapping.toJSON(self.editableItem()),
+        data: ko.toJSON(self.editableItem()),
         headers: {'X-CSRF-Token': $.cookie('csrf_token')},
         error: handleXHRError({form: element, logger: self.errorMessage}),
         beforeSend: function(){
           self.isSaving(true);
         },
         success: function(data, textStatus, jqXHR){
-          self.visits.push(ko.mapping.fromJS(data));
+          self.visits.push(new Visit(data));
           self.clear();
         },
         complete: function(){
