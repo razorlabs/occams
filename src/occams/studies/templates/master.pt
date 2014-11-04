@@ -49,11 +49,6 @@
           </button>
           <a class="navbar-brand"
               href="${request.route_path('home')}">OCCAMS Studies</a>
-          <a href="${request.route_path('home')}"
-              class="navbar-logo">
-            <img src="${request.static_path('occams.studies:static/images/orglogo.png')}"
-                alt="Organization Logo"/>
-          </a>
         </div> <!--/.navbar-header -->
 
         <div class="collapse navbar-collapse">
