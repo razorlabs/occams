@@ -263,7 +263,7 @@
                 data-factory-url="${request.current_route_path(_route_name='enrollments')}"
                 data-bind="with: $root.editableItem,
                            submit: $root.saveEnrollment,
-                           validate: window.defaultValidationOptions">
+                           validate: {}">
               <div class="modal-header">
 
                 <!-- ko if: id -->
@@ -419,7 +419,7 @@
                 action="${request.current_route_path(_route_name='visits')}"
                 data-bind="with: $root.editableItem,
                            submit: $root.saveVisit,
-                           validate: window.defaultValidationOptions">
+                           validate: {}">
               <div class="modal-header">
                 <!-- ko if: id -->
                   <h4 class="modal-title" i18n:translate="">Edit Visit</h4>

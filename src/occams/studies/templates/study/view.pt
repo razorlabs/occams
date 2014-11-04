@@ -294,9 +294,7 @@
               <form class="form-horizontal"
                   method="POST"
                   action="${request.current_route_path('cycles')}"
-                  data-bind="
-                    validate: window.defaultValidationOptions,
-                    submit: $root.saveCycle">
+                  data-bind="validate: {}, submit: $root.saveCycle">
                 <div class="modal-header">
                   <!-- ko if: id -->
                     <h4 class="modal-title" data-bind="text: title"></h4>
@@ -449,10 +447,7 @@
               <form class="form-horizontal"
                   method="POST"
                   action="${request.current_route_path(_route_name='study_schemata')}"
-                  data-bind="
-                    with: $root.editableForm,
-                    validate: window.defaultValidationOptions,
-                    submit: $root.saveForm">
+                  data-bind="with: $root.editableForm, validate: {}, submit: $root.saveForm">
                 <div class="modal-header">
                   <h4 class="modal-title" i18n:translate="">Add form to study</h4>
                 </div>

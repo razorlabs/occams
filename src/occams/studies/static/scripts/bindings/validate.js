@@ -15,11 +15,7 @@
     },
   };
 
-}(jQuery);
-
-
-// Valiation options that accommodate Bootstrap styling
-var defaultValidationOptions = {
+  $.validator.setDefaults({
     errorClass: 'has-error',
     validClass: 'has-success',
     wrapper: 'p',
@@ -34,7 +30,10 @@ var defaultValidationOptions = {
       label.addClass('help-block').insertAfter(element);
     },
     onfocusout: function(element, event){
-      $(element).valid();
+      // validate, but wait half a moment otherwise we might interrupt
+      // something else the user intended on clicking on, such as cancel
+      var delay = 100; // just barely enough to click on something else
+      window.setTimeout(function(){$(element).valid();}, delay);
     },
     highlight: function(element, errorClass, validClass){
       $(element)
@@ -48,10 +47,8 @@ var defaultValidationOptions = {
         .addClass(validClass)
         .removeClass(errorClass);
     }
-};
+  });
 
-
-+function($){
  // Copied the following form additional methods since all I need is pattern.
  /**
   * Return true if the field value matches the given format RegExp

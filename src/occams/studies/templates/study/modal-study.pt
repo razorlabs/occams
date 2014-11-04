@@ -7,9 +7,7 @@
           class="form-horizontal"
           method="POST"
           action="${request.route_path('studies')}"
-          data-bind="
-            validate: window.defaultValidationOptions,
-            submit: $parent.saveStudy">
+          data-bind="validate: {}, submit: $parent.saveStudy">
         <div class="modal-header">
           <!-- ko if: id -->
             <h4 class="modal-title" data-bind="text: title"></h4>
