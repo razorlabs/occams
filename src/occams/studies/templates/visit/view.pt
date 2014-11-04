@@ -30,16 +30,6 @@
         </h1>
         <ul class="details list-inline">
           <li data-bind="">
-            <span class="text-muted" i18n:translate="">Site:</span>
-            <span data-bind="text: visit.patient.site.title"></span>
-          </li>
-          <li data-bind="">
-            <span class="text-muted" i18n:translate="">Patient:</span>
-            <a data-bind="
-                attr: {href: visit.patient.__url__},
-                text: visit.patient.pid"></a>
-          </li>
-          <li data-bind="">
             <span class="text-muted" i18n:translate="">Cycles:</span>
             <ul class="list-comma" data-bind="foreach: visit.cycles">
               <li data-bind="text: title"></li>
@@ -91,6 +81,15 @@
 
     </div> <!-- /:isReady -->
 
+
+  </metal:content-slot>
+  <metal:content-slot fill-slot="javascript-extras-slot">
+    <script>
+      $(function(){
+        var visit = JSON.parse($('#visit-data').text());
+        ko.applyBindings(new VisitView(visit), document.getElementById('view-visit'));
+      });
+    </script>
     <tal:json define="json import:json">
       <script id="visit-data" type="application/json" >${json.dumps(visit)}</script>
     </tal:json>

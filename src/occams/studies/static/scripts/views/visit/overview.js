@@ -1,13 +1,14 @@
-function VisitView(){
+function VisitView(visitData){
   var self = this;
 
   self.isReady = ko.observable(false);
   self.isSaving = ko.observable(false);
 
-  self.visit = ko.mapping.fromJSON($('#visit-data').text());
+  self.visit = new Visit(visitData);
 
   self.selectedForms = ko.observableArray();
-  self.hasSelectedForms = ko.computed(function(){
+
+  self.hasSelectedForms = ko.pureComputed(function(){
     return self.selectedForms().length > 0;
   });
 
@@ -36,12 +37,3 @@ function VisitView(){
   // Object initalized, set flag to display main UI
   self.isReady(true);
 }
-
-+function($){
-  $(document).ready(function(){
-    var $view = $('#view-visit')[0];
-    if ($view){
-      ko.applyBindings(new VisitView(), $view);
-    }
-  });
-}(jQuery);

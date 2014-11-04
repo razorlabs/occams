@@ -17,21 +17,11 @@
       <code><!-- ko text: start_date --><!-- /ko --> - <!-- ko text: end_date --><!-- /ko --></code>
     </li>
   <!-- /ko -->
-  <!-- ko if: termination_form || randomization_form -->
   <li>
     <span class="text-muted" i18n:translate="">Enrollment Forms:</span>
-    <!-- ko with: termination_form -->
+    <!-- ko foreach: enrollmentForms -->
       <strong data-bind="text: title"></strong>
     <!-- /ko -->
-    <!-- ko if: randomization_form -->
-      <!-- ko if: termination_form -->
-        <span>,</span>
-      <!-- /ko -->
-      <!-- ko with: randomization_form -->
-        <strong data-bind="text: title"></strong>
-      <!-- /ko -->
-    <!-- /ko -->
   </li>
-  <!-- /ko -->
 </ul>
 

@@ -33,7 +33,7 @@ function StatusViewModel() {
         // Refresh the current page
         self.selectedExport(null);
         self.exports.remove(export_);
-        location.hash = '/' + self.pager().page();
+        location.hash = '/' + self.pager().page;
       }
     });
   };
@@ -67,7 +67,7 @@ function StatusViewModel() {
       if (history.pushState){
         history.pushState(query, page, url);
       }
-      self.pager(ko.mapping.fromJS(data.pager));
+      self.pager(data.pager);
       self.exports(data.exports.map(function(item){
         return new Export(item);
       }));
@@ -91,7 +91,7 @@ function StatusViewModel() {
         self.exports().every(function(export_){
            // find the appropriate export and update it's data
           if (export_.id == data['export_id']) {
-            ko.mapping.fromJS(data, {}, export_);
+            export_.update(data);
             return false; // "break"
           }
           return true;
