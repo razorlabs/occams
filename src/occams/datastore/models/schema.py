@@ -150,6 +150,24 @@ class Schema(Model, Referenceable, Describeable, Modifiable, Auditable):
                 'publish_date <= retract_date',
                 name='ck_%s_valid_publication' % cls.__tablename__),)
 
+    def itertraverse(self):
+        """
+        Useful for iterating through attributes as a hierarchy
+        """
+        for attribute in sorted(itervalues(self.attributes),
+                                key=lambda a: a.order):
+            if attribute.parent_attribute is None:
+                yield attribute
+
+    def iterleafs(self):
+        """
+        Lists all attributes flattened without their sections
+        """
+        for attribute in sorted(itervalues(self.attributes),
+                                key=lambda a: a.order):
+            if attribute.type != 'section':
+                yield attribute
+
     def __copy__(self):
         keys = ('name', 'title', 'description', 'storage')
         return self.__class__(**dict([(k, getattr(self, k)) for k in keys]))
@@ -157,9 +175,8 @@ class Schema(Model, Referenceable, Describeable, Modifiable, Auditable):
     def __deepcopy__(self, memo):
         duplicate = copy(self)
         duplicate.categories = set([c for c in self.categories])
-        for attribute in itervalues(self.attributes):
-            if attribute.parent_attribute is None:
-                duplicate.attributes[attribute.name] = deepcopy(attribute)
+        for attribute in self.itertraverse():
+            duplicate.attributes[attribute.name] = deepcopy(attribute)
         return duplicate
 
     @classmethod
@@ -203,9 +220,7 @@ class Schema(Model, Referenceable, Describeable, Modifiable, Auditable):
                 self.retract_date and self.retract_date.isoformat())}
         if deep:
             data['attributes'] = \
-                dict([(a.name, a.to_json(deep))
-                      for a in itervalues(self.attributes)
-                      if a.parent_attribute is None])
+                dict([(a.name, a.to_json(deep)) for a in self.itertraverse()])
         return data
 
 
@@ -357,6 +372,19 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
         if parent_attribute:
             self.schema = parent_attribute.schema
         return parent_attribute
+
+    def itertraverse(self):
+        """
+        Useful for iterating through attributes as a hierarchy
+        """
+        return iter(sorted(itervalues(self.attributes), key=lambda a: a.order))
+
+    def iterchoices(self):
+        """
+        Useful for iterating through attributes in order
+        """
+        # TODO: Maybe apply shuffling here?
+        return iter(sorted(itervalues(self.choices), key=lambda c: c.order))
 
     @declared_attr
     def __table_args__(cls):
