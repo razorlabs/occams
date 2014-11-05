@@ -17,16 +17,16 @@ def includeme(config):
     config.add_route('login',                       '/login')
     config.add_route('logout',                      '/logout')
 
-    config.add_route('setup',                       '/setup')
+    config.add_route('settings',                    '/settings')
 
 
-    config.add_route('sites',                       '/sites')
-    config.add_route('site',                        '/sites/{site}')
+    config.add_route('sites',                       '/sites',                           factory=models.SiteFactory)
+    config.add_route('site',                        '/sites/{site}',                    factory=models.SiteFactory, traverse='/{site}')
 
     config.add_route('reference_types',             '/reference_types')
     config.add_route('reference_type',              '/reference_types/{reference_type}')
 
-    config.add_route('home',                        '/',                            factory=models.StudyFactory)
+    config.add_route('home',                        '/',                                factory=models.StudyFactory)
     config.add_route('studies',                     '/',                                factory=models.StudyFactory)
     config.add_route('study',                       '/studies/{study}',                 factory=models.StudyFactory, traverse='/{study}')
     config.add_route('study_schedule',              '/studies/{study}/schedule',        factory=models.StudyFactory, traverse='/{study}')

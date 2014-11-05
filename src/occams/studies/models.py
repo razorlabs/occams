@@ -440,6 +440,24 @@ class PatientFactory(object):
         return patient
 
 
+class SiteFactory(object):
+
+    __acl__ = [
+        (Allow, groups.administrator(), ALL_PERMISSIONS),
+        ]
+
+    def __init__(self, request):
+        self.request = request
+
+    def __getitem__(self, key):
+        try:
+            site = Session.query(Site).filter_by(name=key).one()
+        except orm.exc.NoResultFound:
+            raise KeyError
+        site.__parent__ = self
+        return site
+
+
 class Site(Base,  Referenceable, Describeable, Modifiable, Auditable):
     """
     A facility within an organization
