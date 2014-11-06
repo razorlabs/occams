@@ -185,9 +185,34 @@ def view_json(context, request):
                 request),
             'reference_number': reference.reference_number
             } for reference in references_query],
-        'create_date': patient.create_date.isoformat(),
-        'modify_date': patient.modify_date.isoformat(),
         }
+
+
+@view_config(
+    route_name='patients_forms',
+    permission='admin',
+    xhr=True,
+    renderer='json')
+def forms_list_json(context, request):
+    """
+    Returns a listing of available patient forms
+    """
+    return {
+        'forms': []
+    }
+
+
+@view_config(
+    route_name='patients_forms',
+    permission='admin',
+    request_method='POST',
+    xhr=True,
+    renderer='json')
+def forms_edit_json(context, request):
+    """
+    Updates the available patient forms
+    """
+    return {}
 
 
 @view_config(

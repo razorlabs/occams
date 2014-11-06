@@ -12,7 +12,6 @@
           <span class="fa fa-spin fa-refresh"></span>
         </small>
       </h2>
-      <p i18n:translate=""></p>
       <!-- ko ifnot: hasSites -->
         <div class="alert alert-info" i18n:translate="">
           This application has not been configured with sites yet.
@@ -159,12 +158,30 @@
       </div><!-- /.modal -->
     </section> <!-- /#sites-section -->
 
+    <section id="patient-forms-section" style="display: none;" data-bind="visible: isReady">
+      <h2>
+        <span i18n:translate="">Patient Forms</span>
+        <small data-bind="if: isAjaxing">
+          <span class="fa fa-spin fa-refresh"></span>
+        </small>
+      </h2>
+      <!-- ko ifnot: hasForms -->
+        <div class="alert alert-info" i18n:translate="">
+          This application has not been configured with patient forms yet.
+        </div>
+      <!-- /ko -->
+      <!-- ko if: hasForms -->
+      <!-- /ko -->
+    </section><!-- /#patient-forms -->
+
   </metal:content-slot>
   <metal:content-slot fill-slot="javascript-extras-slot">
     <script>
       $(function(){
         var sitesUrl = "${request.route_path('sites')}";
-        ko.applyBindings(new SiteManageView(sitesUrl), document.getElementById('view-visit'));
+        ko.applyBindings(new SiteManageView(sitesUrl), document.getElementById('sites-section'));
+        var formsUrl = "${request.route_path('patients_forms')}";
+        ko.applyBindings(new PatientFormsManageView(formsUrl), document.getElementById('patient-forms-section'));
       });
     </script>
   </metal:content-slot>
