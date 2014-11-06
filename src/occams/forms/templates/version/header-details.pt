@@ -1,19 +1,19 @@
 <ul class="details list-inline">
   <li>
     <span class="text-muted" i18n:translate="">Schema:</span>
-    <span><code>${schema.name}</code></span>
+    <span><code>${context.name}</code></span>
   </li>
   <li>
     <span class="text-muted" i18n:translate="">Version:</span>
-    <span tal:condition="schema.publish_date">${schema.publish_date}</span>
-    <span tal:condition="not:schema.publish_date" class="label label-info" i18n:translate="">Draft</span>
+    <span tal:condition="context.publish_date">${context.publish_date}</span>
+    <span tal:condition="not:context.publish_date" class="label label-info" i18n:translate="">Draft</span>
   </li>
   <li>
     <span class="text-muted" i18n:translate="">Created:</span>
-    <span>${schema.create_date.date().isoformat()} by ${schema.create_user.key}</span>
+    <span>${context.create_date.date().isoformat()} by ${context.create_user.key}</span>
   </li>
   <li>
     <span class="text-muted" i18n:translate="">Modified:</span>
-    <span>${schema.modify_date.date().isoformat()} by ${schema.modify_user.key}</span>
+    <span>${context.modify_date.date().isoformat()} by ${context.modify_user.key}</span>
   </li>
 </ul>

@@ -3,11 +3,11 @@
   <metal:content-slot fill-slot="content-slot">
 
     <header class="page-header">
-      <h1>${schema.title}</h1>
+      <h1>${context.title}</h1>
       <ul metal:use-macro="load: header-details.pt" />
     </header>
 
-    <p class="lead" tal:condition="schema.description">${schema.description}</p>
+    <p class="lead" tal:condition="context.description">${context.description}</p>
 
     <!-- ko ifnot: isReady -->
       <p class="text-center" i18n:translate="">

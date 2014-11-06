@@ -18,7 +18,7 @@ from ..validators import Bytes, String, invalid2dict
     permission='view',
     renderer='../templates/version/view.pt')
 def view(context, request):
-    return {'schema': context}
+    return {}
 
 
 @view_config(
@@ -26,14 +26,13 @@ def view(context, request):
     permission='view',
     request_param='download=json')
 def download_json(context, request):
-    schema = context
     fp = six.moves.cStringIO()
-    json.dump(schema.to_json(deep=True), fp, indent=2)
+    json.dump(context.to_json(deep=True), fp, indent=2)
     fp.seek(0)
     response = request.response
     response.content_type = 'application/json'
     response.content_disposition = 'attachment; filename="%s-%s.json"' % (
-        schema.name, schema.publish_date.isoformat())
+        context.name, context.publish_date.isoformat())
     response.app_iter = FileIter(fp)
     return response
 
@@ -46,7 +45,7 @@ def preview(context, request):
     """
     Preview form for test-drivining.
     """
-    return {'schema': context}
+    return {}
 
 
 @view_config(
@@ -54,7 +53,7 @@ def preview(context, request):
     permission='edit',
     renderer='../templates/version/editor.pt')
 def editor(context, request):
-    return {'schema': context}
+    return {}
 
 
 @view_config(
@@ -66,20 +65,18 @@ def edit_json(context, request):
     """
     Edits form version metadata (not the fields)
     """
-    schema = context
-
     return {
-        '__src__': request.route_path(
+        '__url__': request.route_path(
             'version_view',
-            form=schema.name,
-            version=str(schema.publish_date or schema.id)),
+            form=context.name,
+            version=str(context.publish_date or context.id)),
         '__types__': field_views.types,
-        'id': schema.id,
+        'id': context.id,
         'name': schema.name,
-        'title': schema.title,
-        'description': schema.description,
-        'publish_date': schema.publish_date and str(schema.publish_date),
-        'retract_date': schema.retract_date and str(schema.retract_date),
+        'title': context.title,
+        'description': context.description,
+        'publish_date': context.publish_date and str(context.publish_date),
+        'retract_date': context.retract_date and str(context.retract_date),
         'fields': field_views.list_json(context['fields'], request)
         }
 
@@ -124,16 +121,15 @@ def delete_json(context, request):
     """
     check_csrf_token(request)
 
-    schema = context
+    Session.delete(context)
 
-    Session.delete(schema)
-
-    if schema.publish_date:
-        # TODO: REALLY BAD USE MAPPING
-        msg = _(u'Successfully deleted %s version %s'
-                % (schema.name, schema.publish_date))
+    if context.publish_date:
+        msg = _(u'Successfully deleted ${name} version ${version}',
+                mapping={'name': context.name,
+                         'version': context.publish_date})
     else:
-        msg = _(u'Successfully deleted draft of %s' % schema.name)
+        msg = _(u'Successfully deleted draft of ${name}',
+                mapping={'name': context.name})
 
     request.session.flash(msg)
 

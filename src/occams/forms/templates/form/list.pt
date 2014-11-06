@@ -111,12 +111,12 @@
                       <td>
                         <!-- ko if:publish_date -->
                          <a href="" data-bind="
-                            attr: {href: __src__},
+                            attr: {href: __url__},
                             css: {is_retracted: retract_date},
                             text: publish_date"></a>
                         <!-- /ko -->
                         <!-- ko ifnot:publish_date -->
-                          <a href="" data-bind="attr: {href: __src__}" i18n:translate="">Draft</a>
+                          <a href="" data-bind="attr: {href: __url__}" i18n:translate="">Draft</a>
                         <!-- /ko -->
                       </td>
                     </tr>

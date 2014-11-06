@@ -3,7 +3,7 @@
 
     <header class="page-header hidden-print">
       <div metal:use-macro="load: header-toolbar.pt" />
-      <h1>${schema.title}</h1>
+      <h1>${context.title}</h1>
       <ul metal:use-macro="load: header-details.pt" />
       <nav metal:use-macro="load: header-nav.pt" />
     </header>
@@ -19,7 +19,7 @@
 
     <form role="form" class="of-form">
 
-      <metal:ds tal:define="schema schema; ds load: ../datastore.pt" use-macro="ds.main" />
+      <metal:ds tal:define="schema context; ds load: ../datastore.pt" use-macro="ds.main" />
 
       <div class="of-controls hidden-print">
         <button type="button" class="btn btn-link" i18n:translate="">Clear</button>

@@ -82,7 +82,7 @@ function VersionEditorView(fieldsUrl){
     }
 
     $.ajax({
-        url: arg.item.__src__() + '?move',
+        url: arg.item.__url__() + '?move',
         method: 'PUT',
         data: ko.toJSON(data),
         contentType: 'application/json; charset=utf-8',
@@ -122,7 +122,7 @@ function VersionEditorView(fieldsUrl){
       }
 
       $.ajax({
-        url: selected.isNew() ?  fieldFactorySrc : selected.__src__(),
+        url: selected.isNew() ?  fieldFactorySrc : selected.__url__(),
         method: selected.isNew() ? 'POST' : 'PUT',
         contentType: 'application/json; charset=utf-8',
         data: ko.toJSON(data),
@@ -147,7 +147,7 @@ function VersionEditorView(fieldsUrl){
    */
   self.doDeleteField = function(field){
     $.ajax({
-      url: field.__src__(),
+      url: field.__url__(),
       method: 'DELETE',
       headers: {'X-CSRF-Token': $.cookie('csrf_token')},
       success: function(data, status, jxhr){

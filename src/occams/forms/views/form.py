@@ -125,10 +125,13 @@ def get_list_data(request, names=None):
             .order_by(models.Schema.publish_date == sa.null(),
                       models.Schema.publish_date.desc()))
         values['versions'] = [{
-            '__src__':  request.route_path(
+            '__url__':  request.route_path(
                 'version',
                 form=row.name,
                 version=version.publish_date or version.id),
+            'id': version.id,
+            'name': version.name,
+            'title': version.title,
             'publish_date': version.publish_date and str(version.publish_date),
             'retract_date': version.retract_date and str(version.retract_date)
         } for version in versions]

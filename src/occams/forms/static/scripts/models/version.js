@@ -3,7 +3,7 @@ function Version(data) {
 
   var self = this;
 
-  self.__src__ = ko.observable();
+  self.__url__ = ko.observable();
   self.id = ko.observable();
   self.publish_date = ko.observable();
   self.retract_date = ko.observable();
@@ -12,7 +12,7 @@ function Version(data) {
 
   self.update = function(data){
     data = data || {};
-    self.__src__(data.__src__);
+    self.__url__(data.__url__);
     self.id(data.id);
     self.publish_date(data.publish_date);
     self.retract_date(data.retract_date);

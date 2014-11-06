@@ -30,7 +30,7 @@ valid_types = set([t['name'] for t in types])
 def list_json(context, request):
     schema = context.schema
     return {
-        '__src__':  request.route_path(
+        '__url__':  request.route_path(
             'fields',
             form=schema.name,
             version=str(schema.publish_date or schema.id)),
@@ -51,7 +51,7 @@ def view_json(context, request):
     schema = context.schema
     data = attribute.to_json(False)
     data['id'] = attribute.id
-    data['__src__'] = request.route_path(
+    data['__url__'] = request.route_path(
         'field',
         form=schema.name,
         version=str(schema.publish_date or schema.id),

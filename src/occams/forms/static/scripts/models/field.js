@@ -6,7 +6,7 @@ function Field(data){
 
   var self = this;
 
-  self.__src__ = ko.observable();
+  self.__url__ = ko.observable();
   self.id = ko.observable();
   self.name = ko.observable();
   self.title = ko.observable();
@@ -38,7 +38,7 @@ function Field(data){
       rules: {
         name: {
           remote: {
-             url: self.__src__() + '?' + $.param({validate: 'name'}),
+             url: self.__url__() + '?' + $.param({validate: 'name'}),
           }
         }
       }
@@ -68,7 +68,7 @@ function Field(data){
 
   self.update = function(data) {
     data = data || {};
-    self.__src__ = ko.observable(data.__url__);
+    self.__url__ = ko.observable(data.__url__);
     self.id = ko.observable(data.id);
     self.name = ko.observable(data.name);
     self.title = ko.observable(data.title);

@@ -10,7 +10,7 @@
     <div class="btn-group">
       <button id="draft-button"
           class="btn btn-default"
-          tal:condition="schema.publish_date"
+          tal:condition="context.publish_date"
           data-bind="click: startDraftView">
         <span class="glyphicon glyphicon-transfer"></span>
         <span i18n:translate="">Draft New</span>
@@ -42,7 +42,7 @@
         </div>
         <div class="modal-body">
           <p i18n:translate="">
-            Are you sure you want to draft a new version based on <code>${schema.name}</code> at version <code>${schema.publish_date}</code>
+            Are you sure you want to draft a new version based on <code>${context.name}</code> at version <code>${context.publish_date}</code>
           </p>
         </div>
         <div class="modal-footer">
@@ -66,21 +66,21 @@
           <h4 class="modal-title" i18n:translate="">Delete this version</h4>
         </div>
         <div class="modal-body">
-          <p i18n:translate="" tal:condition="not:schema.publish_date">
+          <p i18n:translate="" tal:condition="not:context.publish_date">
             You are about to delete this draft of the form.
             This is an irreverable action. Are you sure you want to continue?
           </p>
-          <p i18n:translate="" tal:condition="schema.publish_date">
-            You are about to delete version <code>${schema.publish_date}</code> of the
-            <code>${schema.name}</code> form.
+          <p i18n:translate="" tal:condition="context.publish_date">
+            You are about to delete version <code>${context.publish_date}</code> of the
+            <code>${context.name}</code> form.
             Any data entered for this version will also be deleted.
             This is an irreverable action. Are you sure you want to continue?
           </p>
-          <div class="form-group has-error" tal:condition="schema.publish_date">
+          <div class="form-group has-error" tal:condition="context.publish_date">
             <p class="help-block">
               Please ensure that you want to delete this form by entering its name.
             </p>
-            <input type="text" class="form-control" pattern="${schema.name}" />
+            <input type="text" class="form-control" pattern="${context.name}" />
           </div>
         </div>
         <div class="modal-footer">
