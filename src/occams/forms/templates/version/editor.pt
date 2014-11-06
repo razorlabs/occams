@@ -4,12 +4,12 @@
 
     <header class="page-header">
       <h1>${schema.title}</h1>
-      <ul metal:use-macro="load: ./panels/details.pt" />
+      <ul metal:use-macro="load: header-details.pt" />
     </header>
 
     <p class="lead" tal:condition="schema.description">${schema.description}</p>
 
-    <!-- ko ifnot:isReady() -->
+    <!-- ko ifnot: isReady -->
       <p class="text-center" i18n:translate="">
         <span class="glyphicon glyphicon-refresh fa-spin"></span>
         <span i18n:translate="">Loading</span>
@@ -183,103 +183,77 @@
 
 
     <script id="field-edit-template" type="text/html">
-      <div class="of-edit" data-bind="with: $root.selectedFieldForEditing()"
-          tal:define="render_field import:occams.forms.renderers.render_field">
-        <form tal:define="form field_form" class="form-horizontal"
-            data-bind="validate: makeValidateOptions()">
-
-          <tal:field define="name 'type'; field form[name];">
-            <div class="form-group">
-              <label class="col-sm-2 control-label" i18n:translate="">Type</label>
-              <div class="col-sm-4">
-                <!-- ko if: isNew -->
-                  <input tal:define="ko string: value: $name, select2: {}, hasFocus: isNew"
-                         tal:replace="structure: render_field(field,
-                                                              class_='form-control',
-                                                              data_bind=ko)" />
-                <!-- /ko -->
-                <!-- ko ifnot: isNew -->
-                  <p class="form-control-static"><code data-bind="text:type"></code></p>
-                <!-- /ko -->
-              </div>
-              <div class="col-sm-4">
-                <div class="checkbox" data-bind="visible: isType('choice')">
-                  <label class="checkbox-inline">
-                    <input type="checkbox" data-bind="checked: is_collection, enable: isType('choice') && isNew()" />
-                    <span i18n:translate="">Multiple-Choice</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-          </tal:field>
-
-          <tal:field define="name 'name'; field form[name];">
-            <div class="form-group">
-              <label class="col-sm-2 control-label" i18n:translate="">Variable</label>
-              <div class="col-sm-10">
-                <div class="row">
-                  <div class="col-sm-6">
-                    <!-- ko if: isNew -->
-                      <input tal:define="ko string: value: $name"
-                             tal:replace="structure: render_field(field,
-                                                                  class_='form-control',
-                                                                  data_bind=ko)" />
-                    <!-- /ko -->
-                    <!-- ko ifnot: isNew -->
-                      <p class="form-control-static"><code data-bind="text: ${name}"></code></p>
-                    <!-- /ko -->
-                  </div>
-                </div>
-              </div>
-            </div>
-          </tal:field>
-
-          <tal:field define="name 'title'; field form[name];">
-            <div class="form-group">
-              <label class="col-sm-2 control-label" i18n:translate="">Question</label>
-              <div class="col-sm-10">
-                <input tal:define="ko string: value: $name, hasFocus: !isNew()"
-                       tal:replace="structure: render_field(field,
-                                                            class_='form-control',
-                                                            data_bind=ko)" />
-              </div>
-            </div>
-          </tal:field>
-
-          <tal:field define="name 'description'; field form[name];">
-            <div class="form-group">
-              <label class="col-sm-2 control-label" i18n:translate="">Help Text</label>
-              <div class="col-sm-10">
-                <input tal:define="ko string: value: $name"
-                       tal:replace="structure: render_field(field,
-                                                            class_='form-control',
-                                                            rows=5,
-                                                            data_bind=ko)" />
-              </div>
-            </div>
-          </tal:field>
+      <div class="of-edit" data-bind="with: $root.editableField">
+        <form class="form-horizontal" data-bind="validate: makeValidateOptions">
 
           <div class="form-group">
+            <label class="col-sm-2 control-label" i18n:translate="">Type</label>
+            <div class="col-sm-4">
+              <!-- ko if: isNew  -->
+                <input type="hidden" name="type" class="form-control"value: type, select2: {}" />
+              <!-- /ko -->
+              <!-- ko ifnot: isNew -->
+                <p class="form-control-static"><code data-bind="text: type"></code></p>
+              <!-- /ko -->
+            </div>
+            <div class="col-sm-4">
+              <div class="checkbox" data-bind="visible: isType('choice')">
+                <label class="checkbox-inline">
+                  <input type="checkbox" data-bind="checked: is_collection, disable: isNew" />
+                  <span i18n:translate="">Multiple-Choice</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="col-sm-2 control-label" i18n:translate="">Variable</label>
+            <div class="col-sm-10">
+              <div class="row">
+                <div class="col-sm-6">
+                  <input
+                      type="text"
+                      class="form-control"
+                      name="name"
+                      data-bind="value: name, enable: isNew" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="col-sm-2 control-label" i18n:translate="">Question</label>
+            <div class="col-sm-10">
+              <input type="text" class="form-control" name="title" data-bind="value: title" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="col-sm-2 control-label" i18n:translate="">Help Text</label>
+            <div class="col-sm-10">
+              <textarea class="form-control" name="description" rows="5" data-bind="value: description"></textarea>
+            </div>
+          </div>
+
+          <div class="form-group" data-bind="ifnot: isSection">
             <div class="col-sm-offset-2 col-sm-10">
               <div class="row">
                 <div class="col-sm-5">
-                  <div class="checkbox" data-bind="visible: !isSection()">
+                  <div class="checkbox">
                     <label>
-                      <input type="checkbox" data-bind="checked: is_required, disable: isSection" />
+                      <input type="checkbox" data-bind="checked: is_required" />
                       <span i18n:translate="">Required</span>
                     </label>
                   </div>
-                  <div class="checkbox" data-bind="visible: !isSection()">
+                  <div class="checkbox">
                     <label>
-                      <input type="checkbox" data-bind="checked: is_private, disable: isSection" />
+                      <input type="checkbox" data-bind="checked: is_private" />
                       <span i18n:translate="">Private</span>
                     </label>
                   </div>
-                </div>
-                <div class="col-sm-5">
-                  <div class="checkbox" data-bind="visible: !isSection()">
+                  <div class="checkbox">
                     <label>
-                      <input type="checkbox" data-bind="checked: is_system, disable: isSection" />
+                      <input type="checkbox" data-bind="checked: is_system" />
                       <span i18n:translate="">Read-only</span>
                     </label>
                   </div>
@@ -288,55 +262,35 @@
             </div>
           </div>
 
-          <tal:field define="name 'decimal_places'; field form[name];">
-            <div class="form-group" data-bind="visible: isType('number')">
-              <label class="col-sm-2 control-label" i18n:translate="">Decimal Places</label>
-              <div class="col-sm-4">
-                <input tal:define="ko string: value: $name"
-                       tal:replace="structure: render_field(field,
-                                                            class_='form-control',
-                                                            data_bind=ko)" />
-              </div>
-            </div>
-          </tal:field>
-
-          <div class="form-group" data-bind="visible: isLimitAllowed">
-            <label class="col-sm-2 control-label" i18n:translate="">Limits</label>
-            <div class="col-sm-3" tal:define="name 'value_min'; field form[name]">
-              <input tal:define="ko string: value: $name, enable: isLimitAllowed"
-                     tal:replace="structure: render_field(field,
-                                                          class_='form-control',
-                                                          placeholder='Min',
-                                                          data_bind=ko)" />
-            </div>
-            <div class="col-sm-3" tal:define="name 'value_max'; field form[name]">
-              <input tal:define="ko string: value: $name, enable: isLimitAllowed"
-                     tal:replace="structure: render_field(field,
-                                                          class_='form-control',
-                                                          placeholder='Max',
-                                                          data_bind=ko)" />
+          <div class="form-group" data-bind="visible: isType('number')">
+            <label class="col-sm-2 control-label" i18n:translate="">Decimal Places</label>
+            <div class="col-sm-4">
+              <input type="number" class="form-control" name="decimal_places" data-bind="value: decimal_places" />
             </div>
           </div>
 
-          <tal:field define="name 'pattern'; field form[name];">
-            <div class="form-group" data-bind="visible: isType('string')">
-              <label class="col-sm-2 control-label" i18n:translate="">Pattern</label>
-              <div class="col-sm-10">
-                <input tal:define="ko string: value: $name"
-                       tal:replace="structure: render_field(field,
-                                                            class_='form-control',
-                                                            data_bind=ko)" />
-              </div>
+          <div class="form-group" data-bind="if: isLimitAllowed">
+            <label class="col-sm-2 control-label" i18n:translate="">Limits</label>
+            <div class="col-sm-3">
+              <input type="number" class="form-control" placeholder="Min" i18n:attributes="placeholder" name="value_min" data-bind="value: value_min" />
             </div>
-          </tal:field>
+            <div class="col-sm-3">
+              <input type="number" class="form-control" placeholder="Max" i18n:attributes="placeholder" name="value_max" data-bind="value: value_max" />
+            </div>
+          </div>
 
-          <div class="form-group" data-bind="visible: isType('choice')">
+          <div class="form-group" data-bind="if: isType('string')">
+            <label class="col-sm-2 control-label" i18n:translate="">Pattern</label>
+            <div class="col-sm-10">
+              <input type="text" class="form-control" name="pattern" data-bind="value: pattern" />
+            </div>
+          </div>
+
+          <div class="form-group" data-bind="if: isType('choice')">
             <label class="col-sm-2 control-label" i18n:translate="">Choices</label>
             <div class="col-sm-10">
               <div data-bind="sortable: choices">
                 <div class="js-draggable row">
-                  <!--! Generate the manually because it's difficult to reach
-                        subvalues -->
                   <div class="col-sm-3 js-validation-group">
                     <input type="text"
                         class="form-control"
@@ -376,17 +330,6 @@
             </div>
           </div>
 
-          <div class="form-group">
-            <div class="col-sm-offset-2 col-sm-10">
-              <div class="checkbox" data-bind="visible: isType('choice')">
-                <label>
-                  <input type="checkbox" data-bind="checked: is_shuffled, enable: isType('choice')" />
-                  <span i18n:translate="">Shuffle answer choices when entering data.</span>
-                </label>
-              </div>
-            </div>
-          </div>
-
           <div class="text-right">
             <button type="button" class="btn btn-link" data-bind="click: $root.doCancelEdit">Cancel</button>
             <button type="button" class="btn btn-primary" data-bind="click: $root.doEditField">
@@ -396,7 +339,9 @@
               <!-- ko if: isNew -->
                 <span i18n:translate="">Create</span>
               <!-- /ko -->
-              <span class="fa fa-refresh fa-spin" style="display: none" data-bind="visible: isSaving"></span>
+              <!-- ko if: $parent.isSaving -->
+                <span class="fa fa-refresh fa-spin"></span>
+              <!-- /ko -->
             </button>
           </div>
         </form>
@@ -420,6 +365,15 @@
       </div>
     </script>
 
+  </metal:content-slot>
+  <metal:content-slot fill-slot="javascript-extras-slot">
+    <script>
+      $(function(){
+        var fieldsUrl = "${request.current_route_path('field_list')}";
+        ko.applyBindings(new VersionEditorView(fieldsUrl), document.getElementById('version_editor'));
+        setupTypesAffix();
+      });
+    </script>
   </metal:content-slot>
 </html>
 

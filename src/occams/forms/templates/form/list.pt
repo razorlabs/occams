@@ -1,67 +1,66 @@
-<!DOCTYPE html>
-<html metal:use-macro="load:../master.pt" tal:define="wtforms load:../wtforms.pt">
+<html metal:use-macro="load:../master.pt">
 
   <metal:content-slot fill-slot="content-slot">
 
-    <header class="page-header">
-      <div class="pull-right">
-        <div id="form-list-toolbar">
-          <div class="btn-toolbar" role="toolbar" >
-            <div class="btn-group">
-              <button
-                  class="btn btn-default"
-                  disabled
-                  tal:condition="request.has_permission('form_add')"
-                  data-bind="disable: !isReady(), click: startUploader">
-                <span class="glyphicon glyphicon-upload"></span>
-                <span i18n:translate="">Upload</span>
-                <span style="display: none" data-bind="visible: isUploading" class="fa fa-refresh fa-spin"></span>
-              </button>
-              <button
-                  class="btn btn-default"
-                  disabled
-                  tal:condition="request.has_permission('form_add')"
-                  data-bind="disable: !isReady(), click: startEditor">
-                <span class="glyphicon glyphicon-plus"></span>
-                <span i18n:translate="">Create</span>
-              </button>
-            </div>
-          </div> <!-- /.btn-toolbar -->
-        </div>
-      </div>
-      <h1 i18n:translate="">Forms</h1>
-    </header>
-
-    <div class="alert alert-success"
-          tal:repeat="msg request.session.pop_flash()">
-      ${msg}
-    </div>
-
-    <!-- ko ifnot:isReady -->
+    <!-- ko ifnot: isReady -->
       <p class="text-center" i18n:translate="">
         <span class="fa fa-refresh fa-spin"></span> Loading...
       </p>
     <!-- /ko -->
 
-    <div style="display: none" data-bind="visible:isReady">
+    <div style="display: none" data-bind="visible: isReady">
 
-      <!-- ko ifnot:forms -->
+      <header class="page-header">
+        <div class="pull-right">
+          <div id="form-list-toolbar">
+            <div class="btn-toolbar" role="toolbar" >
+              <div class="btn-group">
+                <button
+                    class="btn btn-default"
+                    tal:condition="request.has_permission('form_add')"
+                    data-bind="click: startUploader">
+                  <span class="glyphicon glyphicon-upload"></span>
+                  <span i18n:translate="">Upload</span>
+                  <!-- ko if: isUploading -->
+                    <span class="fa fa-refresh fa-spin"></span>
+                  <!-- /ko -->
+                </button>
+                <button
+                    class="btn btn-default"
+                    tal:condition="request.has_permission('form_add')"
+                    data-bind="click: startEditor">
+                  <span class="glyphicon glyphicon-plus"></span>
+                  <span i18n:translate="">Create</span>
+                </button>
+              </div>
+            </div> <!-- /.btn-toolbar -->
+          </div>
+        </div>
+        <h1 i18n:translate="">Forms</h1>
+      </header>
+
+      <div class="alert alert-success"
+            tal:repeat="msg request.session.pop_flash()">
+        ${msg}
+      </div>
+
+      <!-- ko ifnot: hasForms-->
         <p class="well well-lg" i18n:translate="">
           No forms have been created yet.
         </p>
       <!-- /ko -->
 
-      <!-- ko if:forms -->
+      <!-- ko if: hasForms -->
         <div class="clearfix">
           <div class="pull-left">
             <p>
-              <span>Showing</span>
+              <span i18n:translate="">Showing</span>
               <strong>
-                <!-- ko if:filter -->
-                  <span data-bind="text:filteredForms().length"></span>
-                  <span>of</span>
+                <!-- ko if: filter -->
+                  <span data-bind="text: totalShowing"></span>
+                  <span i18n:translate="">of</span>
                 <!-- /ko -->
-                <span data-bind="text:forms().length"></span>
+                <span data-bind="text: totalForms"></span>
               </strong>
               <span>forms</span>
             </p>
@@ -90,23 +89,23 @@
                 <th class="has_private">
                   <span class="glyphicon glyphicon-user"></span>
                 </th>
-                <th class="name">Schema</th>
-                <th class="title">Form</th>
-                <th class="publish_date">Version</th>
+                <th class="name" i18n:translate="">Schema</th>
+                <th class="title" i18n:translate="">Form</th>
+                <th class="publish_date" i18n:translate="">Version</th>
               </tr>
             </thead>
-            <tbody data-bind="foreach:filteredForms">
+            <tbody data-bind="foreach: filteredForms">
               <tr data-bind="
                   css: {'success': $data === $root.lastUpdatedForm()},
                   scrollToIf: $data === $root.lastUpdatedForm()">
-                <td class="has_private" data-bind="if:has_private">
+                <td class="has_private" data-bind="if: has_private">
                   <span
                       class="glyphicon glyphicon-user"
                       title="Has private information"></span>
                 </td>
-                <td class="name"><div class="name-overflow"><code data-bind="text:name"></code></div></td>
-                <td class="title" data-bind="text:title"></td>
-                <td class="publish_date" data-bind="if:versions">
+                <td class="name"><div class="name-overflow"><code data-bind="text: name"></code></div></td>
+                <td class="title" data-bind="text: title"></td>
+                <td class="publish_date" data-bind="if: versions">
                   <table class="versions" data-bind="foreach: versions">
                     <tr>
                       <td>
@@ -128,31 +127,63 @@
           </table>
         </div>
       <!-- /ko -->
+
+      <div class="modal fade" data-keyboard="false" data-bind="showModal: showEditor, if: showEditor">
+        <div class="modal-dialog" data-bind="with: selectedForm">
+          <div class="modal-content">
+            <form data-bind="submit: $parent.doSave, validate: {}">
+              <div class="modal-header">
+                <h4 class="modal-title" i18n:translate="">Add New Form</h4>
+              </div>
+              <div class="modal-body">
+                <!-- ko with: $parent.errorMessage -->
+                  <div class="alert alert-danger" role="alert">
+                    <strong>Error!</strong> <span data-bind="text: $data"></span>
+                  </div>
+                <!-- /ko -->
+                <div class="form-group">
+                  <label class="required" i18n:translate="">System Name</label>
+                  <p class="help-block" i18n:translate="">
+                    The form's system name
+                    The name must not start with numbers or contain special
+                    characters or spaces.
+                    This name cannot be changed once the form is published.
+                  </p>
+
+                  <input type="text" class="form-control" required autofocus name="name" data-bind="value: name" pattern="^[a-zA-Z_][a-zA-Z0-9_]+$" />
+                </div> <!-- /.form-group -->
+                <div class="form-group">
+                  <label class="required" i18n:translate="">Title</label>
+                  <p class="help-block" i18n:translate="">
+                    The human-readable name users will see when entering data.
+                  </p>
+                  <input type="text" class="form-control" required name="title" data-bind="value: title"/>
+                </div> <!-- /.form-group -->
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-link" data-bind="click: $parent.clearSelected" i18n:translate="">Cancel</button>
+                <button type="submit" class="btn btn-primary" data-bind="disable: $parent.isSaving">
+                  <span i18n:translate="">Create</span>
+                  <!-- ko if: $parent.isSaving -->
+                    <span class="fa fa-refresh fa-spin"></span>
+                  <!-- /ko -->
+                </button>
+              </div>
+            </form>
+          </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+      </div><!-- /.modal -->
+
     </div>
 
-    <div class="modal fade" data-keyboard="false" data-bind="showModal: selectedForm, with: selectedForm">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <form data-bind="submit: $root.doSave">
-            <div class="modal-header">
-              <button type="button" class="close" aria-hidden="true" data-bind="click: $root.clearSelected">&times;</button>
-              <h4 class="modal-title" i18n:translate="">Add New Form</h4>
-            </div>
-            <div class="modal-body">
-              <metal:fields tal:define="form add_form" use-macro="wtforms.fields" />
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-link" data-bind="click: $root.clearSelected" i18n:translate="">Cancel</button>
-              <button type="submit" class="btn btn-primary" data-bind="disable: $root.isSaving">
-                <span i18n:translate="">Create</span>
-                <span class="fa fa-refresh fa-spin" style="display: none" data-bind="visible: $root.isSaving"></span>
-              </button>
-            </div>
-          </form>
-        </div><!-- /.modal-content -->
-      </div><!-- /.modal-dialog -->
-    </div><!-- /.modal -->
+  </metal:content-slot>
 
+  <metal:content-slot fill-slot="javascript-extras-slot">
+    <script>
+      $(function(){
+        ko.applyBindings(new FormListView, document.getElementById('form_list'));
+      });
+    </script>
 
   </metal:content-slot>
 

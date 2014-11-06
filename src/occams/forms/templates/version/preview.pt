@@ -1,12 +1,11 @@
-<!DOCTYPE html>
 <html metal:use-macro="load: ../master.pt">
   <metal:content-slot fill-slot="content-slot">
 
     <header class="page-header hidden-print">
-      <div metal:use-macro="load: ./panels/toolbar.pt" />
+      <div metal:use-macro="load: header-toolbar.pt" />
       <h1>${schema.title}</h1>
-      <ul metal:use-macro="load: ./panels/details.pt" />
-      <nav metal:use-macro="load: ./panels/nav.pt" />
+      <ul metal:use-macro="load: header-details.pt" />
+      <nav metal:use-macro="load: header-nav.pt" />
     </header>
 
     <div class="alert alert-info hidden-print">
@@ -18,16 +17,15 @@
       </span>
     </div>
 
-    <form role="form" class="of-form" tal:define="wtforms load:../wtforms.pt">
-      <h1 class="visible-print-block">${schema.title}</h1>
-      <p class="lead visible-print-block">${schema.description}</p>
+    <form role="form" class="of-form">
 
-      <metal:fields use-macro="wtforms.fields" />
+      <metal:ds tal:define="schema schema; ds load: ../datastore.pt" use-macro="ds.main" />
 
       <div class="of-controls hidden-print">
         <button type="button" class="btn btn-link" i18n:translate="">Clear</button>
         <button type="submit" class="btn btn-primary" i18n:translate="">Submit</button>
       </div>
+
     </form>
 
   </metal:content-slot>

@@ -1,5 +1,3 @@
-
-from pyramid.httpexceptions import HTTPNotFound
 from pyramid.view import view_config
 
 from occams.datastore import models
@@ -7,18 +5,13 @@ from .. import Session
 
 
 @view_config(
-    route_name='workflow_view',
-    renderer='../templates/workflow/view.pt',
-    permission='form_view')
-def view(request):
+    route_name='workflow',
+    permission='view',
+    renderer='../templates/workflow/view.pt')
+def view(context, request):
     """
-    Displya default workflow
+    Displays default workflow
     """
-    name = request.matchdict['workflow']
-
-    # Only support default for now
-    if name != 'default':
-        raise HTTPNotFound
 
     states = Session.query(models.State).order_by(models.State.name)
 

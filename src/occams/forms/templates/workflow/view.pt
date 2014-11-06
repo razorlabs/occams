@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html metal:use-macro="load: ../master.pt">
   <metal:content-slot fill-slot="content-slot">
 
@@ -8,17 +7,15 @@
 
     <div class="alert alert-info">
       <span class="glyphicon glyphicon-info-sign"></span>
-      <span i18n:translate="">
-        Current workflow states supported.
-      </span>
+      <span i18n:translate="">Current workflow states supported.</span>
     </div>
 
     <table class="table table-hover table-striped">
       <thead>
         <tr>
-          <th class="name">Name</th>
-          <th class="title">Title</th>
-          <th class="description">Description</th>
+          <th class="name" i18n:translate="">Name</th>
+          <th class="title" i18n:translate="">Title</th>
+          <th class="description" i18n:translate="">Description</th>
         </tr>
       </thead>
       <tbody>
@@ -29,7 +26,6 @@
         </tr>
       </tbody>
     </table>
-
 
   </metal:content-slot>
 </html>

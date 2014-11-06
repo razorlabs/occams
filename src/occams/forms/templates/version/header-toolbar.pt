@@ -1,7 +1,7 @@
 <div id="form-list-toolbar">
   <div class="btn-toolbar pull-right" role="toolbar" >
     <div class="btn-group">
-      <a href="${request.current_route_path(_route_name='version_json')}"
+      <a href="${request.current_route_path(_route_name='version', _query={'download': 'json'})}"
           class="btn btn-default">
         <span class="glyphicon glyphicon-download"></span>
         <span i18n:translate="">Download</span>
@@ -11,8 +11,7 @@
       <button id="draft-button"
           class="btn btn-default"
           tal:condition="schema.publish_date"
-          data-bind="click: startDraftView"
-          data-target="${request.current_route_path(_route_name='version_view')}">
+          data-bind="click: startDraftView">
         <span class="glyphicon glyphicon-transfer"></span>
         <span i18n:translate="">Draft New</span>
       </button>
@@ -25,8 +24,7 @@
       <button
           id="delete-button"
           class="btn btn-default"
-          data-bind="click: startDeleteView"
-          data-target="${request.current_route_path(_route_name='version_view')}">
+          data-bind="click: startDeleteView">
         <span class="glyphicon glyphicon-trash"></span>
         <span i18n:translate="">Delete</span>
       </button>

@@ -1,14 +1,13 @@
-<!DOCTYPE html>
 <html metal:use-macro="load: ../master.pt">
   <metal:content-slot fill-slot="content-slot">
 
     <header class="page-header">
       <div class="pull-right">
-        <div metal:use-macro="load: ./panels/toolbar.pt" />
+        <div metal:use-macro="load: header-toolbar.pt" />
       </div>
       <h1>${schema.title}</h1>
-      <ul metal:use-macro="load: ./panels/details.pt" />
-      <nav metal:use-macro="load: ./panels/nav.pt" />
+      <ul metal:use-macro="load: header-details.pt" />
+      <nav metal:use-macro="load: header-nav.pt" />
     </header>
 
     <div class="alert alert-success"
@@ -47,7 +46,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr tal:repeat="attr python:sorted(schema.attributes.values(), key=lambda a: a.order)">
+          <tr tal:repeat="attr schema.iterleafs()">
             <td class="field"><code>${attr.name}</code></td>
             <td class="question">
               <label tal:attributes="class python:'required' if attr.is_required else ''">${attr.title}</label>
@@ -85,4 +84,3 @@
 
   </metal:content-slot>
 </html>
-

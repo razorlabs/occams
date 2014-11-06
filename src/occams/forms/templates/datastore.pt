@@ -1,0 +1,184 @@
+<!--  Reusable WTFORMS field template macros
+
+      WTFORMS only renders the HTML widget portion of a field
+      (e.g. <input>, <textarea>), leaving the rest of the markup up to
+      the developer, these macros try to standardize a general look and feel
+      using Boostrap for all types of fields.
+
+      Please note that these are not required for rendering a WTFORM form.
+      If you want a highligh customized form UI, you should probably do so
+      in the respective view's markup.
+-->
+<metal:datastore tal:condition="False">
+
+  <!--! Renders all fields in a form
+
+        Parameters:
+          form - The wtform.Form instance
+    -->
+
+  <metal:macro define-macro="main">
+    <h1 class="visible-print-block">${schema.title}</h1>
+    <p class="lead visible-print-block">${schema.description}</p>
+    <metal:fields tal:define="schema schema" use-macro="macros.attributes" />
+  </metal:macro>
+
+
+  <metal:macro define-macro="attributes">
+    <metal:fields tal:repeat="attribute schema.itertraverse()" use-macro="macros.attribute" />
+  </metal:macro>
+
+  <!--! Renders an individual field based on its field type.
+
+        Parameters:
+          field - The wtform.Field instance
+    -->
+  <metal:macro define-macro="attribute">
+    <tal:switch switch="attribute.type">
+      <tal:case case="'section'" metal:use-macro="macros.section" />
+      <tal:case case="default" metal:use-macro="macros.default" />
+    </tal:switch>
+  </metal:macro>
+
+  <!--! Renders a field set and its fields
+
+        Parameters:
+          field - The wtform.FormField instance
+    -->
+  <metal:macro define-macro="section">
+    <fieldset>
+      <legend tal:condition="attribute.title">${attribute.title}</legend>
+      <p class="lead" tal:condition="attribute.description">${attribute.description}</p>
+      <metal:fields tal:define="schema attribute" use-macro="macros.attributes" />
+    </fieldset>
+  </metal:macro>
+
+
+  <!--! Default form field component rendering
+
+        Renders a field wrapped in Bootstrap markup
+
+        Optionally, its "field" slot may be overrriden to provde manual control
+        of how the HTML widget should be rendered.
+
+        Parameters:
+          field - The wtform.field instance
+    -->
+  <metal:macro define-macro="default">
+    <div class="form-group">
+      <label tal:attributes="class python:'required' if attribute.is_required else None">${attribute.title}</label>
+      <p class="help-block" tal:condition="attribute.description">${attribute.description}</p>
+      <input metal:use-macro="macros.widget" />
+    </div>
+  </metal:macro>
+
+  <!--! Renders a standalone HTML widget
+
+        Parameters:
+          field - The wtform.field instance
+    -->
+  <metal:macro define-macro="widget">
+    <tal:switch switch="attribute.type">
+
+      <input
+          tal:case="'date'"
+          type="date"
+          class="form-control"
+          data-date-format="YYYY-MM-DD"
+          tal:attributes="
+            name      attribute.name;
+            required  attribute.is_required|nothing;"/>
+
+      <input
+          tal:case="'datetime'"
+          type="datetime"
+          class="form-control"
+          tal:attributes="
+            name      attribute.name;
+            required  attribute.is_required|nothing;"/>
+
+      <textarea
+          tal:case="'text'"
+          class="form-control"
+          rows="5"
+          tal:attributes="
+            name      attribute.name;
+            required  attribute.is_required|nothing;"></textarea>
+
+      <input
+          tal:case="'number'"
+          type="number"
+          class="form-control"
+          tal:attributes="
+            name      attribute.name;
+            required  attribute.is_required|nothing;
+            step      python:1/float(pow(10, abs(attribute.decimal_places)))|nothing" />
+
+      <tal:string case="'string'">
+        <tal:switch switch="attribute.widget">
+
+          <input
+              tal:case="'email'"
+              type="email"
+              class="form-control"
+              tal:attributes="
+                name      attribute.name;
+                required  attribute.is_required|nothing;" />
+
+          <input
+              tal:case="'telephone'"
+              type="tel"
+              class="form-control"
+              tal:attributes="
+                name      attribute.name;
+                required  attribute.is_required|nothing;" />
+
+          <input
+              tal:case="default"
+              type="text"
+              class="form-control"
+              tal:attributes="
+                name      attribute.name;
+                required  attribute.is_required|nothing;
+                pattern   attribute.pattern" />
+
+        </tal:switch>
+      </tal:string>
+
+      <tal:choice case="'choice'">
+        <tal:switch switch="attribute.widget">
+
+          <select
+              tal:case="'select'"
+              class="form-control js-select2"
+              tal:attributes="
+                name      attribute.name;
+                required  attribute.is_required|nothing;
+                multiple  attribute.is_collection|nothing;">
+            <option tal:repeat="choice attribute.iterchoices()" value="${choice.name}">${choice.title}</option>
+          </select>
+
+          <div
+              tal:case="default"
+              tal:define="
+                boxtype python:'checkbox' if attribute.is_collection else 'radio';"
+              tal:attributes="
+                class   boxtype;"
+              tal:repeat="choice attribute.iterchoices()">
+            <label>
+              <input
+                  tal:attributes="
+                    name  attribute.name;
+                    type  boxtype;
+                    value choice.name" />
+              ${choice.title}
+            </label>
+          </div>
+
+        </tal:switch>
+      </tal:choice>
+
+    </tal:switch>
+  </metal:macro>
+
+</metal:datastore>

@@ -1,30 +1,30 @@
 import json
 
+from good import *  # NOQA
+from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 from pyramid.httpexceptions import HTTPBadRequest
-from sqlalchemy import func, orm, sql, null
-import wtforms
+import six
+import sqlalchemy as sa
+from sqlalchemy import orm
 
 from .. import _, Session, models
 
 
 @view_config(
-    route_name='form_list',
-    renderer='../templates/form/list.pt',
-    permission='form_view')
+    route_name='forms',
+    permission='view',
+    renderer='../templates/form/list.pt')
 def list_(request):
-    return {
-        'add_form': SchemaForm(request.POST)
-    }
+    return {}
 
 
 @view_config(
-    route_name='form_list',
+    route_name='forms',
+    permission='view',
     xhr=True,
-    request_method='GET',
-    renderer='json',
-    permission='form_view')
-def list_json(request):
+    renderer='json')
+def list_json(context, request):
     """
     Lists all forms used by instance.
     """
@@ -32,17 +32,18 @@ def list_json(request):
 
 
 @view_config(
-    route_name='form_list',
-    xhr=True,
-    check_csrf=True,
+    route_name='forms',
+    permission='add',
     request_method='POST',
     request_param='files',
-    permission='form_add',
+    xhr=True,
     renderer='json')
-def upload(request):
+def upload(context, request):
     """
     Allows the user to upload a JSON file form.
     """
+    check_csrf_token(request)
+
     files = request.POST.getall('files')
 
     if len(files) < 1:
@@ -57,25 +58,27 @@ def upload(request):
 
 
 @view_config(
-    route_name='form_list',
-    xhr=True,
-    check_csrf=True,
+    route_name='forms',
+    permission='add',
     request_method='POST',
-    permission='form_add',
+    xhr=True,
     renderer='json')
-def add(request):
+def add(context, request):
     """
     Allows a user to create a new type of form.
     """
-    form = SchemaForm(request.POST)
+    check_csrf_token(request)
 
-    if not form.validate():
-        raise HTTPBadRequest(json={
-            'validation_errors': form.errors,
-            'data': form.data})
+    schema = FormSchema(context, request)
+
+    try:
+        data = schema(request.json_body)
+    except Invalid as e:
+        raise HTTPBadRequest(json=invalid2dict(e))
 
     schema = models.Schema()
-    form.populate_obj(schema)
+    schema.name = data['name']
+    schema.title = data['title']
     Session.add(schema)
     Session.flush()
 
@@ -102,7 +105,7 @@ def get_list_data(request, names=None):
             Session.query(InnerSchema.title)
             .filter(InnerSchema.name == models.Schema.name)
             .order_by(
-                InnerSchema.publish_date == null(),
+                InnerSchema.publish_date == sa.null(),
                 InnerSchema.publish_date.desc())
             .limit(1)
             .correlate(models.Schema)
@@ -119,11 +122,11 @@ def get_list_data(request, names=None):
         versions = (
             Session.query(models.Schema)
             .filter(models.Schema.name == row.name)
-            .order_by(models.Schema.publish_date == null(),
+            .order_by(models.Schema.publish_date == sa.null(),
                       models.Schema.publish_date.desc()))
         values['versions'] = [{
             '__src__':  request.route_path(
-                'version_view',
+                'version',
                 form=row.name,
                 version=version.publish_date or version.id),
             'publish_date': version.publish_date and str(version.publish_date),
@@ -136,34 +139,29 @@ def get_list_data(request, names=None):
     }
 
 
-class SchemaForm(wtforms.Form):
+def FormSchema(context, request):
 
-    name = wtforms.StringField(
-        label=_('System Name'),
-        description=_(
-            u'The form\'s system name. '
-            u'The name must not start with numbers or contain special '
-            u'characters or spaces.'
-            u'This name cannot be changed once the form is published.'),
-        validators=[
-            wtforms.validators.required(),
-            wtforms.validators.Length(min=3, max=32),
-            wtforms.validators.Regexp(r'[a-zA-Z_][a-zA-Z0-9_]+',
-                                      message=_(u'Invalid name format'))])
-
-    title = wtforms.StringField(
-        label=_(u'Form Title'),
-        description=_(
-            u'The human-readable name users will see when entering data.'),
-        validators=[
-            wtforms.validators.required(),
-            wtforms.validators.Length(3, 128)])
-
-    def validate_name(form, field):
-        exists, = (
+    def unique_name(value):
+        (exists,) = (
             Session.query(
-                sql.exists()
-                .where(func.lower(models.Schema.name) == field.data.lower()))
+                Session.query(models.Schema)
+                .filter_by(name=value.lower())
+                .exists())
             .one())
         if exists:
-            raise wtforms.ValidationError(_(u'Form name already in use'))
+            raise Invalid(_(u'Form name already in use'))
+        return value
+
+    return Schema({
+        'name': All(
+            Type(*six.string_types),
+            Coerce(six.binary_type),
+            Length(min=3, max=32),
+            Match('^[a-zA-Z_][a-zA-Z0-9_]+$'),
+            unique_name),
+        'title': All(
+            Type(*six.string_types),
+            Coerce(six.text_type),
+            Length(min=3, max=128)),
+        Extra: Remove
+        })

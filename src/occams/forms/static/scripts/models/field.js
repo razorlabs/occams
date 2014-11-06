@@ -2,6 +2,8 @@
  * Field model
  */
 function Field(data){
+  'use strict';
+
   var self = this;
 
   self.__src__ = ko.observable();
@@ -20,68 +22,39 @@ function Field(data){
   self.decimal_places = ko.observable();
   self.value_min = ko.observable();
   self.value_max = ko.observable();
+  self.fields = ko.observable([]);
   self.choices = ko.observableArray([]);
 
-  self.isSaving = ko.observable(false);
-
-  self.isNew = ko.computed(function(){
-    return !self.id();
-  });
+  self.isNew = ko.pureComputed(function(){ return !self.id(); });
 
   self.isType = function(){
-    for (var i = 0; i < arguments.length; i++){
-      if (arguments[i] == self.type()){
-        return true;
-      }
-    }
-    return false;
+    return Array.slice(arguments).some(function(value){
+      return value == self.type();
+    });
   };
 
   self.makeValidateOptions = function(){
     return {
-      errorClass: 'has-error',
-      validClass: 'has-success',
-      wrapper: 'p',
-      errorPlacement: function(label, element){
-        label.addClass('help-block').insertAfter(element);
-      },
-      onfocusout: function(element, event){
-        $(element).valid();
-      },
-      highlight: function(element, errorClass, validClass){
-        $(element)
-          .closest('.js-validation-group,.form-group')
-          .addClass(errorClass)
-          .removeClass(validClass);
-      },
-      unhighlight: function(element, errorClass, validClass){
-        $(element)
-          .closest('.js-validation-group,.form-group')
-          .addClass(validClass)
-          .removeClass(errorClass);
-      },
       rules: {
         name: {
           remote: {
              url: self.__src__() + '?' + $.param({validate: 'name'}),
-             type: 'POST',
-             headers: {'X-CSRF-Token': $.cookie('csrf_token')},
           }
         }
       }
     }
   };
 
-  self.isLimitAllowed = ko.computed(function(){
+  self.isLimitAllowed = ko.pureComputed(function(){
     return self.isType('string', 'number')
       || (self.isType('choice') && self.is_collection());
   });
 
-  self.choiceInputType = ko.computed(function(){
+  self.choiceInputType = ko.pureComputed(function(){
     return self.is_collection() ? 'checkbox' : 'radio';
   });
 
-  self.isSection = ko.computed(function(){
+  self.isSection = ko.pureComputed(function(){
     return self.type() == 'section';
   });
 
@@ -94,29 +67,30 @@ function Field(data){
   };
 
   self.update = function(data) {
-    ko.mapping.fromJS(data, {
-      'fields': {
-        create: function(options) {
-          return new Field(options.data);
-        }
-      },
-      'choices': {
-        create: function(options) {
-          return new Choice(options.data);
-        }
-      }
-    }, self);
+    data = data || {};
+    self.__src__ = ko.observable(data.__url__);
+    self.id = ko.observable(data.id);
+    self.name = ko.observable(data.name);
+    self.title = ko.observable(data.title);
+    self.description = ko.observable(data.description);
+    self.type = ko.observable(data.type);
+    self.is_required = ko.observable(data.is_required);
+    self.is_collection = ko.observable(data.is_collection);
+    self.is_private = ko.observable(data.is_private);
+    self.is_shuffled = ko.observable(data.is_shuffled);
+    self.is_readonly = ko.observable(data.is_readonly);
+    self.is_system = ko.observable(data.is_system);
+    self.pattern = ko.observable(data.pattern);
+    self.decimal_places = ko.observable(data.decimpal_places);
+    self.value_min = ko.observable(data.value_min);
+    self.value_max = ko.observable(data.value_max);
+    self.fields = ko.observableArray((data.fields || []).map(function(value){
+      return new Field(value);
+    }));
+    self.choices = ko.observableArray((data.choices || []).map(function(value){
+      return new Choice(value);
+    }));
   };
-
-  self.toJS = function(){
-    return ko.mapping.toJS(self, {
-      'include': ['__src__',
-                  'id', 'name', 'title', 'description', 'type',
-                  'is_required', 'is_collection', 'is_private', 'is_shuffled',
-                  'is_readonly', 'is_system', 'pattern', 'decimal_places',
-                  'value_min', 'value_max', 'choices'],
-    });
-  }
 
   self.update(data);
 }

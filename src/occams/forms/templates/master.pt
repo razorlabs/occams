@@ -1,5 +1,10 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en" i18n:domain="occams.forms">
+<html lang="${request.locale_name}" i18n:domain="occams.forms">
+
+  <tal:version define="pkg import:occams.forms">
+  <!-- Application: ${pkg.__name__} -->
+  <!-- Version:     ${pkg.__version__} -->
+  </tal:version>
 
   <head>
     <meta charset="utf-8">
@@ -42,24 +47,19 @@
               <span class="icon-bar"></span>
             </button>
             <a class="navbar-brand"
-                href="${request.route_path('form_list')}">OCCAMS Forms</a>
-            <a href="${request.route_path('form_list')}"
-                class="navbar-logo">
-              <img src="${request.static_path('occams.forms:static/images/orglogo.png')}"
-                  alt="Organization Logo"/>
-            </a>
+                href="${request.route_path('forms')}">OCCAMS Forms</a>
           </div> <!--/.navbar-header -->
 
           <div class="collapse navbar-collapse">
 
             <ul class="nav navbar-nav"
                 tal:define="section request.current_route_path()">
-              <li tal:define="url request.route_path('form_list')"
+              <li tal:define="url request.route_path('forms')"
                   tal:attributes="class python:'active' if url == section else ''"
                   tal:condition="request.has_permission('view')">
                 <a href="${url}" i18n:translate="">Forms</a>
               </li>
-              <li tal:define="url request.route_path('workflow_view', workflow='default')"
+              <li tal:define="url request.route_path('workflow')"
                   tal:attributes="class python:'active' if url == section else ''"
                   tal:condition="request.has_permission('view')">
                 <a href="${url}" i18n:translate="">Workflows</a>
@@ -119,11 +119,11 @@
       </div> <!-- /.container -->
     </div> <!-- /#wrap -->
 
-    <footer i18n:domain="occams.forms" id="footer" class="hidden-print">
+    <footer id="footer">
       <div class="container">
         <p class="text-muted credit">
-          Version <span tal:define="pkg import:occams.studies">${pkg.__version__}</span>.
-          Developed by <a href="http://cfar.ucsd.edu/bit">UCSD Bit Core</a>.
+          <span i18n:translate="">Developed by the</span>
+          <a href="http://cfar.ucsd.edu/bit" i18n:translate="">UCSD Center For AIDS Research Bit Core</a>.
         </p>
       </div>
     </footer>
@@ -134,5 +134,10 @@
         src="${url}"
         type="text/javascript"> </script>
 
+    <metal:content-slot define-slot="javascript-extras-slot">
+      <!--! Slot for injecting extra javascript into the applciation (e.g. ko initialization) -->
+    </metal:content-slot>
+
   </body>
+
 </html>

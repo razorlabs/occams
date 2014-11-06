@@ -1,16 +1,12 @@
-import json
-from pyramid.httpexceptions import (
-    HTTPOk, HTTPNotFound, HTTPForbidden, HTTPBadRequest)
-from pyramid.view import view_config
+from good import *  # NOQA
 import six
-from sqlalchemy import orm
-from webob.multidict import MultiDict
-import wtforms
+from pyramid.httpexceptions import HTTPOk, HTTPBadRequest
+from pyramid.view import view_config
 
 from occams.datastore.models.schema import RE_VALID_NAME, RESERVED_WORDS
 
 from .. import _, models, Session
-from .version import get_schema
+from ..validators import invalid2dict, Bytes, String, Integer
 
 
 types = [
@@ -23,317 +19,94 @@ types = [
     {'name': 'string', 'title': _(u'Text')},
     {'name': 'text', 'title': _(u'Paragraph Text')}]
 
+valid_types = set([t['name'] for t in types])
+
 
 @view_config(
-    route_name='field_list',
+    route_name='fields',
+    permission='view',
     xhr=True,
-    request_method='GET',
-    renderer='json',
-    permission='form_view')
-@view_config(
-    route_name='field_list',
-    request_param='alt=json',
-    request_method='GET',
-    renderer='json',
-    permission='form_view')
-def list_json(request):
-    schema = get_schema(**request.matchdict)
-    return get_fields_data(request, schema)
+    renderer='json')
+def list_json(context, request):
+    schema = context.schema
+    return {
+        '__src__':  request.route_path(
+            'fields',
+            form=schema.name,
+            version=str(schema.publish_date or schema.id)),
+        'fields': [view_json(a, request) for a in schema.itertraverse()]
+        }
 
 
 @view_config(
-    route_name='field_view',
+    route_name='field',
+    permission='view',
+    request_method='GET',
     xhr=True,
-    request_method='GET',
-    renderer='json',
-    permission='form_view')
-def view_json(request):
+    renderer='json')
+def view_json(context, request):
     """
     Returns JSON for a single attribute
     """
-    attribute = get_attribute(**request.matchdict)
-    return get_field_data(request, attribute)
-
-
-@view_config(
-    route_name='field_view',
-    xhr=True,
-    check_csrf=True,
-    request_method='PUT',
-    request_param='move',
-    renderer='json',
-    permission='form_edit')
-def move_json(request):
-    """
-    Moves the field to the target section and display order within the form
-    """
-    attribute = get_attribute(**request.matchdict)
-    schema = attribute.schema
-
-    if schema.publish_date and not request.has_permission('form_amend'):
-        raise HTTPForbidden(json={
-            'user_message': _(u'Cannot delete a field in a published form'),
-            'debug_message': _(u'Non-admin tried to edit a published form')
-        })
-
-    move_field(attribute.schema, attribute,
-               into=extract_field(schema, request.json_body, 'parent'),
-               after=extract_field(schema, request.json_body, 'after'))
-
-    return HTTPOk()
-
-
-@view_config(
-    route_name='field_list',
-    xhr=True,
-    check_csrf=True,
-    request_method='POST',
-    renderer='json',
-    permission='form_edit')
-def add_json(request):
-    """
-    Add form for fields.
-    """
-
-    schema = get_schema(**request.matchdict)
-
-    if schema.publish_date and not request.has_permission('form_amend'):
-        raise HTTPForbidden(json={
-            'user_message': _(u'Cannot add a field to a published form'),
-            'debug_message': _(u'Non-admin tried to edit a published form')
-        })
-
-    add_form = FieldForm(data=request.json_body,
-                         meta={'schema': schema})
-
-    if not add_form.validate():
-        raise HTTPBadRequest(json={
-            'validation_errors': add_form.errors
-        })
-
-    attribute = models.Attribute()
-    attribute.apply(add_form.data)
-    schema.attributes[attribute.name] = attribute
-    raise Exception
-    move_field(attribute.schema, attribute,
-               into=extract_field(schema, request.json_body, 'parent'),
-               after=extract_field(schema, request.json_body, 'after'))
-
-    return get_field_data(request, attribute)
-
-
-@view_config(
-    route_name='field_view',
-    xhr=True,
-    check_csrf=True,
-    request_method='PUT',
-    renderer='json',
-    permission='form_edit')
-def edit_json(request):
-    """
-    Edit view for an attribute
-    """
-    attribute = get_attribute(**request.matchdict)
-    schema = attribute.schema
-
-    if schema.publish_date and not request.has_permission('form_amend'):
-        raise HTTPForbidden(json={
-            'user_message': 'Cannot delete a field in a published form',
-        })
-
-    edit_form = FieldForm(
-        data=request.json_body,
-        meta={'schema': schema, 'attribute': attribute})
-
-    if not edit_form.validate():
-        raise HTTPBadRequest(json={
-            'validation_errors': edit_form.errors
-        })
-
-    attribute.apply(edit_form.data)
-
-    return get_field_data(request, attribute)
-
-
-@view_config(
-    route_name='field_list',
-    xhr=True,
-    check_csrf=True,
-    request_method='POST',
-    request_param='validate',
-    permission='view')
-def validate_add_json(request):
-    schema = get_schema(**request.matchdict)
-    return validate_field(FieldForm(request.POST,
-                                    meta={'schema': schema}),
-                          request.params.get('validate'))
-
-
-@view_config(
-    route_name='field_view',
-    xhr=True,
-    check_csrf=True,
-    request_method='POST',
-    request_param='validate',
-    permission='view')
-def validate_edit_json(request):
-    attribute = get_attribute(**request.matchdict)
-    return validate_field(FieldForm(request.POST,
-                                    meta={'schema': attribute.schema,
-                                          'attribute': attribute}),
-                          request.params.get('validate'))
-
-
-def validate_field(form, prop):
-    """
-    Helper method to return a validation status
-
-    Note that BadRequest is not returned because the requested data
-    in this context is the status string (not the status of the operation)
-
-    Parameters:
-    form -- the WTForm instance
-    prop -- the properety in the form to validate
-
-    Returns an OK response containing the validation status.
-    """
-    if not prop or prop not in form:
-        return HTTPOk(json=_(u'Server Error: No field specified'))
-    elif not form[prop].validate(form):
-        return HTTPOk(json=form[prop].errors[0])
-    return HTTPOk()
-
-
-@view_config(
-    route_name='field_view',
-    xhr=True,
-    check_csrf=True,
-    request_method='DELETE',
-    renderer='json',
-    permission='form_edit')
-def delete_json(request):
-    """
-    Deletes the field from the form
-    """
-    attribute = get_attribute(**request.matchdict)
-    schema = attribute.schema
-    if schema.publish_date and not request.has_permission('form_amend'):
-        raise HTTPForbidden(json={
-            'user_message': 'Cannot delete a field in a published form',
-        })
-    Session.delete(attribute)
-    return HTTPOk()
-
-
-def get_attribute(form=None, field=None, version=None, **kw):
-    """
-    Helper method to retrieve the attribute from a URL request
-    """
-    query = (
-        Session.query(models.Attribute)
-        .filter(models.Attribute.name == field)
-        .join(models.Schema)
-        .filter(models.Schema.name == form))
-    try:
-        if str(version).isdigit():
-            return query.filter(models.Schema.id == version).one()
-        else:
-            return query.filter(models.Schema.publish_date == version).one()
-    except orm.exc.NoResultFound:
-        raise HTTPNotFound
-
-
-def get_fields_data(request, schema):
-    """
-    Helper method to return fields JSON data
-    """
-
-    def fields(attributes):
-        attributes = sorted(attributes, key=lambda i: i.order)
-        return [get_field_data(request, a) for a in attributes]
-
-    return {
-        '__src__':  request.route_path(
-            'field_list',
-            form=schema.name,
-            version=str(schema.publish_date or schema.id)),
-        'fields': fields(a
-                         for a in six.itervalues(schema.attributes)
-                         if a.parent_attribute is None)
-    }
-
-
-def get_field_data(request, attribute):
-    """
-    Helper method to return field JSON data
-    """
-    schema = attribute.schema
-    data = attribute.to_json(True)
+    schema = context.schema
+    data = attribute.to_json(False)
     data['id'] = attribute.id
     data['__src__'] = request.route_path(
-        'field_view',
-        form=attribute.schema.name,
+        'field',
+        form=schema.name,
         version=str(schema.publish_date or schema.id),
         field=attribute.name)
-    children = data.pop('attributes', None)
-    if children:
-        children = sorted(six.itervalues(children), key=lambda i: i['order'])
+    if context.attributes:
         data['fields'] = \
-            [get_field_data(request, schema.attributes[f['name']])
-             for f in children]
-    choices = data.pop('choices', None)
-    if choices:
-        choices = sorted(six.itervalues(choices), key=lambda i: i['order'])
-        data['choices'] = choices
+            [view_json(a, request) for a in context.itertraverse]
+    if context.choices:
+        data['choices'] = [c.to_json() for c in context.iterchoices()]
     return data
 
 
-def extract_field(schema, data, key):
+@view_config(
+    route_name='field',
+    permission='edit',
+    request_method='PUT',
+    request_param='move',
+    xhr=True,
+    renderer='json')
+def move_json(context, request):
     """
-    Helper method to extract an attribute from request data
+    Moves the field to the target section and display order within the form
     """
-    name = (data.get(key) or '').strip()
-    if not name:
-        return None
-    if name not in schema.attributes:
-        raise HTTPBadRequest(json={
-            'user_message': _(
-                u'Inavalid desitation field: ${name}',
-                mapping={name: name}),
-            'debug_message': _(
-                u'Parent name specified is not in the form: ${name}',
-                mapping={name: name}),
+    check_csrf_token(request)
+
+    schema = context.schema
+
+    def not_self(value):
+        if value == context.name:
+            raise Invalid(_(u'Cannot move value into itself'))
+        return value
+
+    def not_section(value):
+        if context.type == 'section' and schema[value].type == 'section':
+            raise Invalid(_(u'Nested sections are not supported'))
+        return value
+
+    validator = Schema({
+        Optional('into'): Maybe(
+            All(Bytes(), In(schema), not_self, not_section)),
+        Optional('after'): Maybe(All(Bytes(), In(schema), not_self)),
+        Extra: Remove
         })
-    return schema.attributes[name]
 
-
-def move_field(schema, attribute, into=None, after=None):
-    """
-    Moves the attribute to a new location in the form
-
-    Parameters:
-    schema -- Attribute's schema (in case we're dealing with a new field)
-    attribute -- Source attribute
-    into -- (optional) Desination parent, None implies root of form
-    after -- (optional) Place after target, None implies first
-    """
-    assert schema is not None
-    assert attribute is not None
-    assert attribute != into
-    assert attribute != after
-    assert schema == attribute.schema
-    assert into is None or schema == into.schema
-    assert after is None or schema == after.schema
-
-    # Move to a (valid) target section, if applicable
-    if attribute.type == 'section' and into and into.type == 'section':
-        raise HTTPBadRequest(json={
-            'user_message': _(u'Moving to invalid section')
-        })
+    try:
+        data = validator(request.json_body)
+    except Invalid as e:
+        raise HTTPBadRequest(json=invalid2dict(e))
 
     attributes = sorted(six.itervalues(schema.attributes),
                         key=lambda a: a.order)
     attributes.remove(attribute)
+
+    into = data['into'] and schema.attributes[data['into']]
+    after = data['after'] and schema.attributes[data['after']]
 
     if after is None:
         index = 0 if into is None else attributes.index(into) + 1
@@ -348,78 +121,145 @@ def move_field(schema, attribute, into=None, after=None):
     for i, a in enumerate(attributes):
         a.order = i
 
-
-class ChoiceForm(wtforms.Form):
-
-    name = wtforms.StringField(
-        validators=[
-            wtforms.validators.required(),
-            wtforms.validators.Length(min=1, max=8),
-            wtforms.validators.Regexp('-?[0-9]+')])
-
-    title = wtforms.StringField(
-        validators=[wtforms.validators.required()])
+    return HTTPOk()
 
 
-def validate_attribute_name(form, field):
+@view_config(
+    route_name='fields',
+    permission='add',
+    request_method='POST',
+    xhr=True,
+    renderer='json')
+@view_config(
+    route_name='field',
+    permission='edit',
+    request_method='PUT',
+    xhr=True,
+    renderer='json')
+def edit_json(context, request):
     """
-    Verifies that an attribute name is unique within a schema
+    Add/Edit form for fields.
     """
-    schema = getattr(form.meta, 'schema')
-    attribute = getattr(form.meta, 'attribute', None)
-    names = set(schema.attributes.keys())
+    check_csrf_token(request)
 
-    # In edit-mode (admin only), avoid false positive
-    if attribute:
-        names.discard(attribute.name)
+    validate = FieldSchema(context, request)
 
-    if field.data in names:
-        raise wtforms.ValidationError(
-            _(u'Variable name already exists in this form'))
+    try:
+        data = validate(request.json_body)
+    except Invalid as e:
+        raise HTTPBadRequest(json=invalid2dict(e))
+
+    if isinstance(context, models.Attribute):
+        attribute = context
+    else:
+        attribute = schema.attributes[data['name']] = models.Attribute()
+
+    attribute.apply(data)
+
+    if not isinstance(context, models.Attribute):
+        move_field_json(attribute, request)
+
+    return view_json(attribute, request)
 
 
-class FieldForm(wtforms.Form):
+@view_config(
+    route_name='fields',
+    permission='edit',
+    xhr=True,
+    request_param='validate',
+    renderer='json')
+@view_config(
+    route_name='field',
+    permission='edit',
+    xhr=True,
+    request_param='validate',
+    renderer='json')
+def validate_value_json(context, request):
+    """
+    Helper method to return a validation status
 
-    name = wtforms.StringField(
-        validators=[
-            wtforms.validators.required(),
-            wtforms.validators.Length(3, 20),
-            wtforms.validators.Regexp(
-                RE_VALID_NAME,
-                message=_(u'Not a valid variable name')),
-            wtforms.validators.NoneOf(
-                RESERVED_WORDS,
-                message=_(u'Can\'t use reserved programming word')),
-            validate_attribute_name])
+    Note that BadRequest is not returned because the requested data
+    in this context is the status string (not the status of the operation)
 
-    title = wtforms.StringField(
-        validators=[
-            wtforms.validators.required()])
+    Returns an OK response containing the validation status.
+    """
+    gschema = FieldSchema(context, request)
+    if not prop or prop not in gschema:
+        return HTTPOk(json=_(u'Server Error: No field specified'))
+    else:
+        try:
+            gschema[prop](request.GET.get(prop))
+        except Invalid as e:
+            return HTTPOk(json=invalid2dict(e))
+    return HTTPOk()
 
-    description = wtforms.TextAreaField(
-        validators=[wtforms.validators.optional()])
 
-    type = wtforms.SelectField(
-        choices=sorted((t['name'], t['title']) for t in types))
+@view_config(
+    route_name='field',
+    permission='edit',
+    request_method='DELETE',
+    xhr=True,
+    renderer='json')
+def delete_json(context, request):
+    """
+    Deletes the field from the form
+    """
+    check_csrf_token(request)
+    Session.delete(context)
+    return HTTPOk()
 
-    is_required = wtforms.BooleanField()
-    is_private = wtforms.BooleanField()
-    is_system = wtforms.BooleanField()
-    is_readonly = wtforms.BooleanField()
-    is_collection = wtforms.BooleanField()  # choice only
-    is_shuffled = wtforms.BooleanField()  # choice only
 
-    # number
-    decimal_places = wtforms.IntegerField(
-        validators=[wtforms.validators.optional()])
+def FieldSchema(context, request):
 
-    # number/string/multiple-choice
-    value_min = wtforms.IntegerField()
-    value_max = wtforms.IntegerField()
+    def not_reserved_word(value):
+        if value in RESERVED_WORDS:
+            raise Invalid(_(u'Can\'t use reserved programming word'))
+        return value
 
-    # string
-    pattern = wtforms.StringField(
-        validators=[wtforms.validators.optional()])
+    def unique_name(value):
+        """
+        Verifies that an attribute name is unique within a schema
+        """
+        query = (
+            Session.query(models.Attribute)
+            .filter_by(schema=context.__parent__, name=value))
+        if isinstance(context, models.Attribute):
+            query = query.filter(models.Attribute.id != context.id)
+        (exists,) = Session.query(query.exists()).one()
+        if exists:
+            raise Invalid(_(u'Variable name already exists in this form'))
 
-    # choice
-    choices = wtforms.FieldList(wtforms.FormField(ChoiceForm))
+    return Schema({
+        'name': All(
+            Bytes(),
+            Match(RE_VALID_NAME, message=_(u'Not a valid variable name')),
+            not_rerserved_word,
+            unique_name),
+        'title': String(),
+        Optional('description'): Maybe(String()),
+        'type': In(valid_types),
+        'is_required': Boolean(),
+        'is_private': Boolean(),
+        Optional('is_system'): Maybe(Boolean()),
+        Optional('is_readonly'): Maybe(Boolean()),
+
+        # choice
+        Optional('is_collection'): Maybe(Boolean()),
+        Optional('is_shuffled'): Maybe(Boolean()),
+
+        # number
+        Optional('decimal_places'): Maybe(Integer()),
+
+        # number/string/multiple-choice
+        Optional('value_min'): Maybe(Integer()),
+        Optional('value_man'): Maybe(integer()),
+
+        # string
+        Optional('pattern'): Maybe(Bytes()),
+
+        Optional('choices'): Maybe([{
+            'name': All(Bytes(), Length(min=1, max=8), Match('^-?[0-9]+$')),
+            'title': String(),
+            Extra: Remove
+            }])
+        })
