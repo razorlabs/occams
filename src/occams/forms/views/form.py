@@ -4,11 +4,12 @@ from good import *  # NOQA
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 from pyramid.httpexceptions import HTTPBadRequest
-import six
 import sqlalchemy as sa
 from sqlalchemy import orm
 
 from .. import _, Session, models
+from . import version as version_views
+from ..validators import invalid2dict, Bytes, String
 
 
 @view_config(
@@ -76,14 +77,11 @@ def add(context, request):
     except Invalid as e:
         raise HTTPBadRequest(json=invalid2dict(e))
 
-    schema = models.Schema()
-    schema.name = data['name']
-    schema.title = data['title']
+    schema = models.Schema(**data)
     Session.add(schema)
     Session.flush()
 
-    # Versions not necessary since this is a brand new form
-    return get_list_data(request, names=[schema.name])
+    return get_list_data(request, names=[schema.name])['forms'][0]
 
 
 def get_list_data(request, names=None):
@@ -157,14 +155,10 @@ def FormSchema(context, request):
 
     return Schema({
         'name': All(
-            Type(*six.string_types),
-            Coerce(six.binary_type),
+            Bytes(),
             Length(min=3, max=32),
             Match('^[a-zA-Z_][a-zA-Z0-9_]+$'),
             unique_name),
-        'title': All(
-            Type(*six.string_types),
-            Coerce(six.text_type),
-            Length(min=3, max=128)),
+        'title': All(String(), Length(min=3, max=128)),
         Extra: Remove
         })

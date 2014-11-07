@@ -126,8 +126,9 @@ function FormListView() {
     if ($(element).validate().form()){
       $.ajax({
         url: window.location,
-        type: 'POST',
+        method: 'POST',
         data: ko.toJSON(self.selectedForm()),
+        contentType: 'application/json; charset=utf-8',
         headers: {'X-CSRF-Token': $.cookie('csrf_token')},
         error: handleXHRError({form: element, logger: self.errroMessage}),
         beforeSend: function(){
