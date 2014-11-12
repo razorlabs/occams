@@ -3,6 +3,7 @@ from webassets import Bundle
 
 from . import log
 
+
 def includeme(config):
     """
     Configures static assets
@@ -35,11 +36,12 @@ def includeme(config):
     config.add_webasset('default-css', Bundle(
         Bundle(
             'styles/main.less',
-            filters='less,cssmin',
+            filters='less',
             depends='styles/**/*.less',
             output='gen/main.%(version)s.min.css'),
-        Bundle('libs/select2.css', filters=['cssmin', 'cssrewrite']),
-        Bundle('libs/select2-bootstrap.css', filters='cssmin'),
+        Bundle('libs/select2.css', filters='cssrewrite'),
+        'libs/select2-bootstrap.css',
+        filters='cssmin',
         output='gen/default.%(version)s.css'))
 
     log.debug('Assets configurated')

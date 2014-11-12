@@ -6,34 +6,39 @@ README = open(os.path.join(HERE, 'README.rst')).read()
 CHANGES = open(os.path.join(HERE, 'CHANGES.rst')).read()
 
 REQUIRES = [
-    'alembic',
-    'cssmin',
-    'jsmin',
-    'good',
-    'six',
-    'occams.datastore',
-    'pyramid',
-    'pyramid_mailer',
-    'pyramid_redis_sessions',
-    'pyramid_redis',
-    'pyramid_tm',
-    'pyramid_rewrite',
-    'pyramid_webassets',
-    'pyramid_who',
-    'SQLAlchemy',
-    'transaction',
-    'zope.sqlalchemy',
+    'alembic',                  # Database table upgrades
+    'cssmin',                   # CSS asset compression
+    'good>=0.0.7',              # Input validation
+    'jsmin>=2.0.11',            # JS asset compression
+    'Paste',                    # Paste-style configuration for pyramid
+    'pyramid>=1.5',             # Framework
+    'pyramid_chameleon',        # Templating
+    'pyramid_redis_sessions',   # HTTP session with redis backend
+    'pyramid_tm',               # Centralized request transactions
+    'pyramid_rewrite',          # Allows urls to end in "/"
+    'pyramid_webassets',        # Asset managements (ala grunt)
+    'pyramid_who',              # User authentication
+    'six',                      # Py 2 & 3 compatibility
+    'SQLAlchemy>=0.9.0',        # Database ORM
+    'zope.sqlalchemy',          # Connects sqlalchemy to pyramid_tm
+
+    'occams.datastore',         # EAV
 ]
 
 EXTRAS = {
-    'postgresql': ['psycopg2'],
+    'ldap': ['python3-ldap', 'who_ldap'],
+    'sqlite': [],
+    'postgresql': ['psycopg2', 'psycogreen'],
+    'gunicorn': ['gunicorn'],
     'test': [
         'pyramid_debugtoolbar',
         'nose',
+        'nose-testconfig',
         'coverage',
-        'unittest2',
         'WebTest',
-        'beautifulsoup4']
+        'beautifulsoup4',
+        'mock',
+        'ddt'],
 }
 
 
