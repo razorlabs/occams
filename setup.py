@@ -9,37 +9,34 @@ CHANGES = open(os.path.join(HERE, 'CHANGES.rst')).read()
 
 
 REQUIRES = [
-    'alembic',
-    'babel',
-    'celery[redis]',
-    'cssmin',
-    'gevent-socketio',
-    'good>=0.0.7',
-    'humanize',
-    'jsmin',
-    'lingua',
-    'pyramid>=1.5',
-    'pyramid_chameleon',
-    'pyramid_mailer',
-    'pyramid_tm',
-    'pyramid_redis_sessions',
-    'pyramid_redis',
-    'pyramid_rewrite',
-    'pyramid_webassets',
-    'pyramid_who',
-    'redis',
-    'SQLAlchemy>=0.9.0',
-    'six',
-    'tabulate',
-    'transaction',
-    'webassets',
-    'zope.sqlalchemy',
+    'alembic',                          # Database table upgrades
+    'babel',                            # i18n
+    'celery[redis]>=3.1,<3.1.99',       # Asynchronous queue API
+    'cssmin',                           # CSS asset compression
+    'gevent-socketio>=0.3.6,<0.3.99',   # websockets
+    'good>=0.0.7',                      # Input validation
+    'humanize',                         # human readable measurements
+    'jsmin',                            # JS asset compression
+    'lingua',                           # i18n
+    'Paste',                            # Paste-style configuration for pyramid
+    'pyramid>=1.5',                     # Framework
+    'pyramid_chameleon',                # Templating
+    'pyramid_tm',                       # Centralized transations
+    'pyramid_redis_sessions==1.0a2',    # HTTP session with redis backend
+    'pyramid_rewrite',                  # Allows urls to end in "/"
+    'pyramid_webassets',                # Asset management (ala grunt)
+    'pyramid_who',                      # User authentication
+    'six',                              # Py 2 & 3 compatibilty
+    'SQLAlchemy>=0.9.0',                # Database ORM
+    'tabulate',                         # ASCII tables for CLI pretty-print
+    'zope.sqlalchemy',                  # Connects sqlalchemy to pyramid_tm
 
-    'occams.datastore',
-    'occams.forms',
+    'occams.datastore',                 # EAV
+    'occams.forms',                     # EAV form renderer
 ]
 
 EXTRAS = {
+    'ldap': ['python3-ldap', 'who_ldap'],
     'sqlite': [],
     'postgresql': ['psycopg2', 'psycogreen'],
     'gunicorn': ['gunicorn'],
