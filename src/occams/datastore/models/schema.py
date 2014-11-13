@@ -27,6 +27,10 @@ from ..utils.sql import CaseInsensitive
 
 RE_VALID_NAME = re.compile(r'^[a-z][a-z0-9_]*$', re.I)
 
+# It's imposiible do to this in the same expression as the the valid name
+# because Python requires a fixed-width expression for look-ahead/behinds
+RE_INVALID_END = re.compile(r'_[0-9]+$')
+
 
 RESERVED_WORDS = frozenset(
     # Python keywords
@@ -349,6 +353,8 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
     def validate_name(self, key, name):
         if not RE_VALID_NAME.match(name):
             raise ValueError('Invalid name: "%s"' % name)
+        if RE_INVALID_END.search(name):
+            raise ValueError('Cannot end with "_#": "%s"' % name)
         if name in RESERVED_WORDS:
             raise ValueError(
                 'Cannot use reserved word as attribute name: %s' % name)
