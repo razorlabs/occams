@@ -10,7 +10,7 @@ REQUIRES = [
     'cssmin',                   # CSS asset compression
     'good>=0.0.7',              # Input validation
     'jsmin>=2.0.11',            # JS asset compression
-    'Paste',                    # Paste-style configuration for pyramid
+    'Paste',                    # Needed for urlmap
     'pyramid>=1.5',             # Framework
     'pyramid_chameleon',        # Templating
     'pyramid_redis_sessions',   # HTTP session with redis backend
