@@ -18,7 +18,7 @@ REQUIRES = [
     'humanize',                         # human readable measurements
     'jsmin',                            # JS asset compression
     'lingua',                           # i18n
-    'Paste',                            # Paste-style configuration for pyramid
+    'Paste',                            # Needed for urlmap
     'pyramid>=1.5',                     # Framework
     'pyramid_chameleon',                # Templating
     'pyramid_tm',                       # Centralized transations

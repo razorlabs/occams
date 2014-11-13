@@ -6,22 +6,26 @@
         method="POST"
         action="${request.route_path('login', _query={'referrer': referrer})}">
       <h2 class="form-login-heading" i18n:translate="">Please log in</h2>
-      <div
-        class="alert alert-danger"
-        tal:define="message request.session.pop_flash('error')"
-        tal:condition="message">${message}</div>
-      <input tal:replace="
-          structure: form.login(type='email',
-                                class_='form-control',
-                                placeholder='Username',
-                                autofocus='1')" />
-      <input tal:replace="
-          structure: form.password(class_='form-control',
-                                   placeholder='Password')" />
-      <button
-          class="btn btn-lg btn-primary btn-block"
-          type="submit"
-          i18n:translate="">Log in</button>
+      <div class="alert alert-danger" tal:condition="error|nothing">${error}</div>
+      <input
+          name="login"
+          type="email"
+          class="form-control"
+          placeholder="Email"
+          autofocus
+          required
+          maxlength="32"
+          value="${data['login']|nothing}"
+          i18n:attributes="placeholder" />
+      <input
+          name="password"
+          type="password"
+          class="form-control"
+          placeholder="Password"
+          required
+          maxlength="32"
+          i18n:attributes="placeholder" />
+      <button class="btn btn-lg btn-primary btn-block" type="submit" i18n:translate="">Log in</button>
     </form>
   </metal:content-slot>
 </html>

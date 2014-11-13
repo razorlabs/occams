@@ -2,7 +2,8 @@
 Re-usable valiators
 """
 
-from good import Invalid
+import six
+from good import Invalid, All, Coerce, Type
 from good.schema.util import const
 
 from . import _, Session
@@ -36,6 +37,18 @@ def Key(key):
             raise Invalid('%s is not in dict' % key)
         return value[key]
     return validator
+
+
+def Bytes():
+    return All(Type(*six.string_types), Coerce(six.binary_type))
+
+
+def String():
+    return All(Type(*six.string_types), Coerce(six.text_type))
+
+
+def Integer():
+    return Coerce(int)
 
 
 def Model(class_, path=None, msg=None, localizer=None):

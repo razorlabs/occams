@@ -40,8 +40,6 @@ def main(global_config, **settings):
 
     # Required third-party plugins
     config.include('pyramid_chameleon')
-    config.include('pyramid_mailer')
-    config.include('pyramid_redis')
     config.include('pyramid_redis_sessions')
     config.include('pyramid_rewrite')
     config.add_rewrite_rule(r'/(?P<path>.*)/', r'/%(path)s')
