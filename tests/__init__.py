@@ -1,5 +1,8 @@
 """
 Testing fixtures
+
+Run with:
+    --tc=db:URL
 """
 
 try:
@@ -18,11 +21,18 @@ Session = orm.scoped_session(orm.sessionmaker())
 def setup_package():
     from sqlalchemy import create_engine
     from testconfig import config
+    from occams.datastore import models
     from occams.datastore.models.events import register
     register(Session)
     db = config.get('db')
     engine = create_engine(db)
     Session.configure(bind=engine, info={'user': _user})
+    models.DataStoreModel.metadata.create_all(Session.bind)
+
+
+def teardown_package():
+    from occams.datastore import models
+    models.DataStoreModel.metadata.drop_all(Session.bind)
 
 
 def begin_func():

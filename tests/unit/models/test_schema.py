@@ -261,27 +261,55 @@ def test_attribute_defaults():
     assert_equals(count, 1, 'Found more than one entry')
 
 
-@with_setup(begin_func, rollback_func)
-def test_attributea_invalid_regexp_name():
+def test_attribute_invalid_regexp_name():
     """
     It should prevent invalid attribute names (See RE_VALID_NAME)
     """
     from datetime import date
     from occams.datastore import models
     from tests import assert_raises
-    schema = models.Schema(
-        name='SomeForm',
-        title=u'Foo',
-        publish_date=date(2014, 3, 31))
-    Session.add(schema)
-    Session.flush()
 
-    with assert_raises(ValueError):
-        schema.attributes['5myattr'] = models.Attribute(
-            name=u'5myattr',
+    @with_setup(begin_func, rollback_func)
+    def check_(name):
+        schema = models.Schema(
+            name='SomeForm',
+            title=u'Foo',
+            publish_date=date(2014, 3, 31))
+        Session.add(schema)
+        Session.flush()
+
+        with assert_raises(ValueError):
+            schema.attributes[name] = models.Attribute(
+                name=name,
+                title=u'My Attribute',
+                type=u'string',
+                order=1)
+
+    for name in ['5', '5foo', 'foo_5']:
+        yield check_, name
+
+
+def test_attribute_valid_regexp_name():
+    """
+    It should vallow valid names (See RE_VALID_NAME)
+    """
+    from datetime import date
+    from occams.datastore import models
+
+    @with_setup(begin_func, rollback_func)
+    def check_(name):
+        schema = models.Schema(
+            name='SomeForm',
+            title=u'Foo',
+            publish_date=date(2014, 3, 31))
+        schema.attributes[name] = models.Attribute(
+            name=name,
             title=u'My Attribute',
             type=u'string',
             order=1)
+
+    for name in ['f', 'foo', 'foo_', 'foo5']:
+        yield check_, name
 
 
 @with_setup(begin_func, rollback_func)
