@@ -1,13 +1,6 @@
-<!DOCTYPE html>
 <html metal:use-macro="load: ../master.pt">
   <metal:content-slot fill-slot="content-slot">
 
-    <header class="page-header">
-      <h1>${context.title}</h1>
-      <ul metal:use-macro="load: header-details.pt" />
-    </header>
-
-    <p class="lead" tal:condition="context.description">${context.description}</p>
 
     <!-- ko ifnot: isReady -->
       <p class="text-center" i18n:translate="">
@@ -16,99 +9,107 @@
       </p>
     <!-- /ko -->
 
-    <div id="of-editor"
-        style="display: none;"
-        data-bind="visible: isReady">
-
+    <div style="display: none;" data-bind="visible: isReady, with: version">
+      <header class="page-header">
+        <h1 data-bind="text: title"></h1>
+        <ul class="details list-inline">
+          <li>
+            <span class="text-muted" i18n:translate="">Schema:</span>
+            <span><code data-bind="text: name"></code></span>
+          </li>
+          <li>
+            <span class="text-muted" i18n:translate="">Version:</span>
+            <!-- ko if: publish_date -->
+              <code data-bind="text: publish_date"></code>
+            <!-- /ko -->
+            <!-- ko ifnot: publish_date -->
+              <span class="label label-info" i18n:translate="">Draft</span>
+            <!-- /ko -->
+          </li>
+        </ul>
+      </header>
+      <!-- ko if: description -->
+        <p class="lead" data-bind="text: description"></p>
+      <!-- /ko -->
       <div class="row">
         <div id="of-content" class="col-md-9">
-
           <!-- ko ifnot: hasFields -->
             <div id="of-empty"
                 class="text-muted"
-                data-bind="fadeVisible: { if: !isDragging(), duration: 'fast' }">
+                data-bind="fadeVisible: { if: !$root.isDragging(), duration: 'fast' }">
               <h4 i18n:translate="">This form does not have any fields addded yet.</h4>
               <p i18n:translate="">To add new fields, drag an item from the types menu.</p>
             </div>
           <!-- /ko -->
-
           <div id="of-form-root" data-bind="template: {name: 'field-template', data: $data}"></div>
-
-        </div>
-
-        <!-- Field types -->
+        </div> <!-- /#of-content -->
         <div id="of-sidebar" class="col-md-3">
           <div id="of-types" class="panel panel-primary">
             <div class="panel-heading">
               <h3 class="panel-title" i18n:translate="">Add new field...</h3>
             </div>
-            <!-- ko foreach: types -->
+            <!-- ko foreach: $root.availableTypes -->
               <div class="list-group"
                   data-bind="
                     draggable: {
                       data: $data,
                       isEnabled: $root.isMovingEnabled,
                       options: {
-                        cursor: 'move',
-                        helper: newTypeHelper,
                         revert: 'invalid',
-                        start: newTypeDragStart,
-                        stop: newTypeDragStop
+                        start: $root.setDragging,
+                        stop: $root.unsetDragging,
+                        helper: newTypeHelper
                       }
                     }">
-                <a class="list-group-item list-group-item-info of-type"
-                  data-bind="
-                    attr: {'data-type': name},
-                    text: title
-                  "></a>
+                <a class="list-group-item list-group-item-info"
+                    data-bind="
+                      attr: {'data-type': name},
+                      text: title
+                    "></a>
               </div>
             <!-- /ko -->
-          </div> <!-- /.panel -->
-        </div> <!-- /.col-md-3 -->
+          </div> <!-- /#of-types.panel -->
+        </div> <!-- /#of-sidebar.col-md-3 -->
       </div> <!-- /.row -->
-
       <hr width="100%" />
-
       <div class="pull-right">
-        <button class="btn btn-lg btn-primary" i18n:translate="">Done</button>
+        <button class="btn btn-lg btn-primary" data-bind="click: $root.saveSchema" i18n:translate="">Done</button>
       </div>
-
-    </div> <!-- /#of-editor" -->
+    </div> <!-- /:isReady -->
 
     <script id="field-template" type="text/html">
       <div class="of-fields"
           data-bind="
             sortable: {
               data: fields,
-              dragged: $root.startAdd,
+              dragged: $root.onDragged,
               isEnabled: $root.isMovingEnabled,
-              beforeMove: $root.doMoveField,
+              beforeMove: $root.moveField,
               options: {
                 axis: 'y',
-                cursor: 'move',
                 forcePlaceholderSize: true,
                 placeholder: 'of-placeholder',
-                revert: true,
+                revert: true
               }
-            }
-          ">
+            }">
         <div class="of-field">
           <!-- ko ifnot: $root.isSelectedField($data) -->
             <div data-bind="template: 'field-view-template'"></div>
           <!-- /ko -->
-          <!-- ko if: $root.isSelectedField($data) && $root.showEditView()-->
-            <div data-bind="template: 'field-edit-template'"></div>
-          <!-- /ko -->
-          <!-- ko if: $root.isSelectedField($data) && $root.showDeleteView() -->
-            <div data-bind="template: 'field-delete-template'"></div>
+          <!-- ko if: $root.isSelectedField($data) -->
+            <!-- ko if: $root.showEditView -->
+              <div data-bind="template: 'field-edit-template'"></div>
+            <!-- /ko -->
+            <!-- ko if: $root.showDeleteView -->
+              <div data-bind="template: 'field-delete-template'"></div>
+            <!-- /ko -->
           <!-- /ko -->
         </div>
       </div>
-    </script>
+    </script> <!-- #field-template -->
 
     <script id="field-view-template" type="text/html">
       <div class="row of-view" data-bind="css: {'of-editable': $root.isMovingEnabled()}">
-
         <div class="col-md-10">
           <div class="form-group">
             <!-- ko ifnot: isSection -->
@@ -162,7 +163,6 @@
             <!-- /ko -->
           </div>
         </div> <!-- /.col-md-10 -->
-
         <div class="col-md-2 text-right">
           <div class="of-controls btn-group">
             <button type="button" class="btn btn-default" data-bind="click: $root.startDelete">
@@ -173,9 +173,7 @@
             </button>
           </div>
         </div> <!-- /.col-md-3 -->
-
       </div> <!-- /.row -->
-
       <!-- ko if: isSection -->
         <div data-bind="template: {name: 'field-template', data: $data}"></div>
       <!-- /ko -->
@@ -353,7 +351,7 @@
         <div class="form-group">
           <label>Are you sure you want to delete <code data-bind="text: name"></code> from this version of the form?</label>
           <p class="help-block">
-            <span data-bind="visible: !isSection() && $root.publish_date()">All  data entered for this field will be removed deleted.</span>
+            <span data-bind="visible: !isSection() && $root.version().publish_date()">All  data entered for this field will be removed deleted.</span>
             <span data-bind="visible: isSection">Removing this section will also remove all sub-fields.</span>
             <span>This action cannot be reversed.</span>
           </p>
@@ -366,14 +364,19 @@
     </script>
 
   </metal:content-slot>
+
   <metal:content-slot fill-slot="javascript-extras-slot">
     <script>
       $(function(){
-        var fieldsUrl = "${request.current_route_path('field_list')}";
-        ko.applyBindings(new VersionEditorView(fieldsUrl), document.getElementById('version_editor'));
+        'use strict';
+        ko.applyBindings(new VersionEditorView({
+            versionUrl: "${request.current_route_path(_route_name='version')}",
+            fieldsUrl: "${request.current_route_path(_route_name='fields')}"
+          }),
+          document.getElementById('version_editor'));
         setupTypesAffix();
       });
     </script>
   </metal:content-slot>
-</html>
 
+</html>

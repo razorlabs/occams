@@ -28,7 +28,7 @@ valid_types = set([t['name'] for t in types])
     xhr=True,
     renderer='json')
 def list_json(context, request):
-    schema = context.schema
+    schema = context.__parent__
     return {
         '__url__':  request.route_path(
             'fields',
@@ -49,16 +49,16 @@ def view_json(context, request):
     Returns JSON for a single attribute
     """
     schema = context.schema
-    data = attribute.to_json(False)
-    data['id'] = attribute.id
+    data = context.to_json(False)
+    data['id'] = context.id
     data['__url__'] = request.route_path(
         'field',
         form=schema.name,
         version=str(schema.publish_date or schema.id),
-        field=attribute.name)
+        field=context.name)
     if context.attributes:
         data['fields'] = \
-            [view_json(a, request) for a in context.itertraverse]
+            [view_json(a, request) for a in context.itertraverse()]
     if context.choices:
         data['choices'] = [c.to_json() for c in context.iterchoices()]
     return data

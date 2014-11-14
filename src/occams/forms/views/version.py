@@ -23,6 +23,30 @@ def view(context, request):
 
 @view_config(
     route_name='version',
+    xhr=True,
+    renderer='json')
+def view_json(context, request):
+    """
+    Edits form version metadata (not the fields)
+    """
+    return {
+        '__url__': request.route_path(
+            'version',
+            form=context.name,
+            version=str(context.publish_date or context.id)),
+        '__types__': field_views.types,
+        'id': context.id,
+        'name': context.name,
+        'title': context.title,
+        'description': context.description,
+        'publish_date': context.publish_date and str(context.publish_date),
+        'retract_date': context.retract_date and str(context.retract_date),
+        'fields': field_views.list_json(context['fields'], request)['fields'],
+        }
+
+
+@view_config(
+    route_name='version',
     permission='view',
     request_param='download=json')
 def download_json(context, request):
@@ -54,31 +78,6 @@ def preview(context, request):
     renderer='../templates/version/editor.pt')
 def editor(context, request):
     return {}
-
-
-@view_config(
-    route_name='version_editor',
-    permission='edit',
-    xhr=True,
-    renderer='json')
-def edit_json(context, request):
-    """
-    Edits form version metadata (not the fields)
-    """
-    return {
-        '__url__': request.route_path(
-            'version_view',
-            form=context.name,
-            version=str(context.publish_date or context.id)),
-        '__types__': field_views.types,
-        'id': context.id,
-        'name': schema.name,
-        'title': context.title,
-        'description': context.description,
-        'publish_date': context.publish_date and str(context.publish_date),
-        'retract_date': context.retract_date and str(context.retract_date),
-        'fields': field_views.list_json(context['fields'], request)
-        }
 
 
 @view_config(

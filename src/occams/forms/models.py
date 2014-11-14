@@ -167,7 +167,7 @@ def schema_getitem(self, key):
 
 
 Schema.__acl__ = property(schema_acl)
-Schema.__getitem__ = property(schema_getitem)
+Schema.__getitem__ = schema_getitem
 
 
 class AttributeFactory(object):

@@ -16,7 +16,7 @@ def includeme(config):
     config.add_route('version_editor',      '/forms/{form}/versions/{version}/editor',           factory=models.FormFactory, traverse='/{form}/versions/{version}')
     config.add_route('version_preview',     '/forms/{form}/versions/{version}/preview',          factory=models.FormFactory, traverse='/{form}/versions/{version}')
 
-    config.add_route('fields',              '/forms/{form}/versions/{version}/fields',           factory=models.FormFactory, traverse='/{form}/versions/{version}')
-    config.add_route('field',               '/forms/{form}/versions/{version}/fields/{field}',   factory=models.FormFactory, traverse='/{form}/versions/{version}/{field}')
+    config.add_route('fields',              '/forms/{form}/versions/{version}/fields',           factory=models.FormFactory, traverse='/{form}/versions/{version}/fields')
+    config.add_route('field',               '/forms/{form}/versions/{version}/fields/{field}',   factory=models.FormFactory, traverse='/{form}/versions/{version}/fields/{field}')
 
     config.add_route('workflow',            '/workflows/default')

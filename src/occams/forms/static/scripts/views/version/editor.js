@@ -1,7 +1,7 @@
 /**
  * Form field manager view model
  */
-function VersionEditorView(fieldsUrl){
+function VersionEditorView(options){
   'use strict';
 
   var self = this;
@@ -11,17 +11,7 @@ function VersionEditorView(fieldsUrl){
 
   self.availableTypes = ko.observableArray(); // available types
 
-  self.name = ko.observable();
-  self.title = ko.observable();
-  self.description = ko.observable();
-  self.publish_date = ko.observable();
-  self.retract_date = ko.observable();
-
-  self.fields = ko.observableArray();
-
-  self.hasFields = ko.pureComputed(function(){    // form has no fields flag
-    return self.fields().length > 0;
-  });
+  self.version = ko.observable();
 
   self.selectedField = ko.observable();           // currently selected field
   self.editableField = ko.observable();           // a copy of the field for editing
@@ -29,7 +19,7 @@ function VersionEditorView(fieldsUrl){
   var EDIT = 'edit', DELETE = 'delete';
   self.modeField = ko.observable();
   self.showEditView = ko.pureComputed(function(){ return self.modeField() == EDIT; });
-  self.showDeleteView = ko.pureComputed(function(){ return self.modelField() == DELETE; });
+  self.showDeleteView = ko.pureComputed(function(){ return self.modeField() == DELETE; });
 
   self.isMovingEnabled = ko.pureComputed(function(){ // dragging enabled flag
     // we can't just specify this in the isEnabled option
@@ -42,10 +32,12 @@ function VersionEditorView(fieldsUrl){
   };
 
   /**
-   * Handler when a new field is added to form
+   * Handler when a new field is added to form.
    */
-  self.startAdd = function(type, event, ui){
-    self.startEdit(new Field({type: type.name()}));
+  self.onDragged = function(type){
+    var field = new Field({type: type.name});
+    self.startEdit(field);
+    return field;  // Replace the dropped sortable with the new field
   };
 
   self.startEdit = function(field){
@@ -68,17 +60,17 @@ function VersionEditorView(fieldsUrl){
     self.modeField(null);
   };
 
-  self.doMoveField = function(arg, event, ui){
+  self.moveField = function(arg, event, ui){
     var parent = ko.dataFor(event.target);
     var data = {
       move: 1,
-      parent: parent instanceof VersionEditViewModel ? null : parent.name(),
+      parent: parent instanceof VersionEditorView ? null : parent.name(),
       after: arg.targetIndex > 0 ? arg.targetParent()[arg.targetIndex].name() : null
     };
 
-    if (arg.item.isNew()){
-        arg.item.__move__ = data;
-        return;
+    if (parent instanceof Version){
+      arg.item.__move__ = data;
+      return;
     }
 
     $.ajax({
@@ -94,6 +86,9 @@ function VersionEditorView(fieldsUrl){
           arg.sourceParent.splice(arg.sourceIndex, 0, arg.item);
         }
     });
+  };
+
+  self.saveSchema = function(){
   };
 
   /**
@@ -112,6 +107,7 @@ function VersionEditorView(fieldsUrl){
    * Send PUT/POST delete request for the field
    */
   self.doEditField = function(data, event){
+    console.log('edit field');
     var $form = $(event.target).closest('form');
     if ($form.validate().form()){
       var selected = self.selectedField,
@@ -146,6 +142,7 @@ function VersionEditorView(fieldsUrl){
    * Send DELETE request the field
    */
   self.doDeleteField = function(field){
+    console.log('delete field');
     $.ajax({
       url: field.__url__(),
       method: 'DELETE',
@@ -157,10 +154,25 @@ function VersionEditorView(fieldsUrl){
     });
   };
 
+  /**
+   * Draggable helper to set start dragging flag
+   */
+  self.setDragging = function(){
+    self.isDragging(true);
+  };
+
+  /**
+   * Draggable helper to set stop dragging flag
+   */
+  self.unsetDragging = function() {
+    // Delay signal so message doesn't reappear while processing
+    setTimeout(function(){ self.isDragging(false); }, 500);
+  };
+
   // Load initial data
-  $.getJSON(fieldsUrl, function(data) {
-    self.fields(data.fields.fields.map(function(f){ return new Field(f); }));
-    self.types(data.__types__);
+  $.getJSON(options.versionUrl, function(data) {
+    self.availableTypes(data.__types__);
+    self.version(new Version(data));
     self.isReady(true);
   });
 }
@@ -168,32 +180,9 @@ function VersionEditorView(fieldsUrl){
 /**
  * Draggable helper for cloning type selections properly
  */
-var newTypeHelper = function(element){
-  return $(this)
-    .clone()
-    .appendTo(document.body)
-    .css('width', $(this).width());
-};
-
-
-/**
- * Draggable helper to set start dragging flag
- */
-var newTypeDragStart = function(event, ui){
-  ko.contextFor(this).$root.isDragging(true);
-};
-
-
-/**
- * Draggable helper to set stop dragging flag
- */
-var newTypeDragStop = function(event, ui){
-  // Wait a bit so that message doesn't reappear even though dragging was
-  // successful
-  var tid = setTimeout(function(){
-    ko.contextFor(event.target).$root.isDragging(false);
-    clearTimeout(tid);
-  }, 500);
+var newTypeHelper = function(){
+  'use strict';
+  return $(this).clone().appendTo(document.body).css('width', $(this).width());
 };
 
 
@@ -201,6 +190,7 @@ var newTypeDragStop = function(event, ui){
  * Affix: affix the types menu to follow the user's scrolling.
  */
 function setupTypesAffix(){
+  'use strict';
 
   var MARGIN_TOP = 20; // use 20 pixels of margin
 
@@ -221,4 +211,4 @@ function setupTypesAffix(){
       // affixing arbitrarily uses fixed positioning, use original width
       return $(this).css('top', MARGIN_TOP).width($(this).width());
     });
-};
+}

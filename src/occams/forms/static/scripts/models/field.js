@@ -22,10 +22,14 @@ function Field(data){
   self.decimal_places = ko.observable();
   self.value_min = ko.observable();
   self.value_max = ko.observable();
-  self.fields = ko.observable([]);
-  self.choices = ko.observableArray([]);
+  self.fields = ko.observable();
+  self.choices = ko.observableArray();
 
   self.isNew = ko.pureComputed(function(){ return !self.id(); });
+
+  self.hasFields = ko.pureComputed(function(){
+    return self.fields().length > 0;
+  });
 
   self.isType = function(){
     return Array.slice(arguments).some(function(value){
