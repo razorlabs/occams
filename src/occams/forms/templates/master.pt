@@ -1,13 +1,9 @@
 <!DOCTYPE html>
 <html lang="${request.locale_name}" i18n:domain="occams.forms">
 
-  <tal:version define="pkg import:occams.forms">
-  <!-- Application: ${pkg.__name__} -->
-  <!-- Version:     ${pkg.__version__} -->
-  </tal:version>
-
   <head>
     <meta charset="utf-8">
+    <meta tal:define="pkg import:occams.forms" name="${pkg.__name__}" content="${pkg.__version__}" />
     <title>${request.settings.app_title|'OCCAMS Forms'}</title>
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>

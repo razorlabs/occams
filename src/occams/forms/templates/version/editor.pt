@@ -110,14 +110,15 @@
 
     <script id="field-view-template" type="text/html">
       <div class="row of-view" data-bind="css: {'of-editable': $root.isMovingEnabled()}">
+
         <div class="col-md-10">
           <div class="form-group">
+            <p>
+              <code data-bind="text: name"></code>
+              &bull;
+              <code data-bind="text: type"></code>
+            </p>
             <!-- ko ifnot: isSection -->
-              <p>
-                <code data-bind="text: name"></code>
-                &bull;
-                <code data-bind="text: type"></code>
-              </p>
               <label data-bind="css: {'required': is_required}, text: title"></label>
             <!-- /ko -->
             <!-- ko if: isSection -->
@@ -182,22 +183,21 @@
 
     <script id="field-edit-template" type="text/html">
       <div class="of-edit" data-bind="with: $root.editableField">
-        <form class="form-horizontal" data-bind="validate: makeValidateOptions">
+        <!-- ko if: $root.errorMessage -->
+          <div class="alert alert-danger" data-bind="text: $root.errorMessage"></div>
+        <!-- /ko -->
+
+        <form class="form-horizontal" data-bind="validate: $root.makeValidateOptions($data)">
 
           <div class="form-group">
             <label class="col-sm-2 control-label" i18n:translate="">Type</label>
             <div class="col-sm-4">
-              <!-- ko if: isNew  -->
-                <input type="hidden" name="type" class="form-control"value: type, select2: {}" />
-              <!-- /ko -->
-              <!-- ko ifnot: isNew -->
-                <p class="form-control-static"><code data-bind="text: type"></code></p>
-              <!-- /ko -->
+              <p class="form-control-static"><code data-bind="text: type"></code></p>
             </div>
             <div class="col-sm-4">
               <div class="checkbox" data-bind="visible: isType('choice')">
                 <label class="checkbox-inline">
-                  <input type="checkbox" data-bind="checked: is_collection, disable: isNew" />
+                  <input type="checkbox" data-bind="checked: is_collection, enable: isNew" />
                   <span i18n:translate="">Multiple-Choice</span>
                 </label>
               </div>
@@ -337,7 +337,7 @@
               <!-- ko if: isNew -->
                 <span i18n:translate="">Create</span>
               <!-- /ko -->
-              <!-- ko if: $parent.isSaving -->
+              <!-- ko if: $root.isSaving -->
                 <span class="fa fa-refresh fa-spin"></span>
               <!-- /ko -->
             </button>

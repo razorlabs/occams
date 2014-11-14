@@ -38,6 +38,7 @@ function Field(data){
   };
 
   self.makeValidateOptions = function(){
+    console.log(self.__url__() + '?' + $.param({validate: 'name'}));
     return {
       rules: {
         name: {

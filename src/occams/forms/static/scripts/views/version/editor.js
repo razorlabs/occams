@@ -7,7 +7,10 @@ function VersionEditorView(options){
   var self = this;
 
   self.isReady = ko.observable(false);        // content loaded flag
+  self.isSaving = ko.observable(false);
   self.isDragging = ko.observable(false);     // view drag state flag
+
+  self.errorMessage = ko.observable();
 
   self.availableTypes = ko.observableArray(); // available types
 
@@ -55,20 +58,22 @@ function VersionEditorView(options){
    * Helper method to clear any type of selected field
    */
   self.clear = function(){
+    self.isSaving(false);
+    self.errorMessage(null);
     self.selectedField(null);
     self.editableField(null);
     self.modeField(null);
   };
 
   self.moveField = function(arg, event, ui){
-    var parent = ko.dataFor(event.target);
-    var data = {
-      move: 1,
-      parent: parent instanceof VersionEditorView ? null : parent.name(),
-      after: arg.targetIndex > 0 ? arg.targetParent()[arg.targetIndex].name() : null
-    };
+    var into = ko.dataFor(event.target),
+        data = {
+          move: 1,
+          into: into instanceof Version ? null : into.name(),
+          after: arg.targetIndex > 0 ? arg.targetParent()[arg.targetIndex - 1].name() : null
+        };
 
-    if (parent instanceof Version){
+    if (arg.item.isNew()){
       arg.item.__move__ = data;
       return;
     }
@@ -107,23 +112,22 @@ function VersionEditorView(options){
    * Send PUT/POST delete request for the field
    */
   self.doEditField = function(data, event){
-    console.log('edit field');
     var $form = $(event.target).closest('form');
     if ($form.validate().form()){
-      var selected = self.selectedField,
-        data = ko.toJS(self.editableField);
+      var selected = self.selectedField(),
+        edits = ko.toJS(self.editableField());
 
       if (selected.isNew()) {
-        $.extend(data, edits.__move__);
+        $.extend(edits, selected.__move__);
       }
 
       $.ajax({
-        url: selected.isNew() ?  fieldFactorySrc : selected.__url__(),
+        url: selected.isNew() ?  options.fieldsUrl : selected.__url__(),
         method: selected.isNew() ? 'POST' : 'PUT',
+        data: ko.toJSON(edits),
         contentType: 'application/json; charset=utf-8',
-        data: ko.toJSON(data),
         headers: {'X-CSRF-Token': $.cookie('csrf_token')},
-        error: handlXHRError({form: $form}),
+        error: handleXHRError({form: $form, logger: self.errorMessage}),
         beforeSend: function(){
           self.isSaving(true);
         },
@@ -167,6 +171,19 @@ function VersionEditorView(options){
   self.unsetDragging = function() {
     // Delay signal so message doesn't reappear while processing
     setTimeout(function(){ self.isDragging(false); }, 500);
+  };
+
+  self.makeValidateOptions = function(field){
+    return {
+      rules: {
+        name: {
+          remote: {
+             url: field.isNew() ? options.fieldsUrl : field.__url__(),
+             data: {validate: 'name'}
+          }
+        }
+      }
+    }
   };
 
   // Load initial data

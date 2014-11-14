@@ -1,6 +1,7 @@
 from good import *  # NOQA
 import six
 from pyramid.httpexceptions import HTTPOk, HTTPBadRequest
+from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 
 from occams.datastore.models.schema import RE_VALID_NAME, RESERVED_WORDS
@@ -91,8 +92,8 @@ def move_json(context, request):
 
     validator = Schema({
         Optional('into'): Maybe(
-            All(Bytes(), In(schema), not_self, not_section)),
-        Optional('after'): Maybe(All(Bytes(), In(schema), not_self)),
+            All(Bytes(), In(schema.attributes), not_self, not_section)),
+        Optional('after'): Maybe(All(Bytes(), In(schema.attributes), not_self)),
         Extra: Remove
         })
 
@@ -103,7 +104,7 @@ def move_json(context, request):
 
     attributes = sorted(six.itervalues(schema.attributes),
                         key=lambda a: a.order)
-    attributes.remove(attribute)
+    attributes.remove(context)
 
     into = data['into'] and schema.attributes[data['into']]
     after = data['after'] and schema.attributes[data['after']]
@@ -115,8 +116,8 @@ def move_json(context, request):
     else:
         index = attributes.index(after) + 1
 
-    attribute.parent_attribute = into
-    attributes.insert(index, attribute)
+    context.parent_attribute = into
+    attributes.insert(index, context)
 
     for i, a in enumerate(attributes):
         a.order = i
@@ -152,12 +153,16 @@ def edit_json(context, request):
     if isinstance(context, models.Attribute):
         attribute = context
     else:
-        attribute = schema.attributes[data['name']] = models.Attribute()
+        # Add the attribute and temporarily set to large display order
+        attribute = models.Attribute(schema=context.__parent__, order=-1)
+        Session.add(attribute)
 
     attribute.apply(data)
+    Session.flush()
 
     if not isinstance(context, models.Attribute):
-        move_field_json(attribute, request)
+        # now we can move the attribute
+        move_json(attribute, request)
 
     return view_json(attribute, request)
 
@@ -178,20 +183,23 @@ def validate_value_json(context, request):
     """
     Helper method to return a validation status
 
-    Note that BadRequest is not returned because the requested data
-    in this context is the status string (not the status of the operation)
+    Returns an HTTP OK response with the JSON validation status:
+        * true -- passed
+        * string -- error message
 
-    Returns an OK response containing the validation status.
+    More info: http://jqueryvalidation.org/remote-method
     """
+    prop = request.GET.get('validate')
     gschema = FieldSchema(context, request)
-    if not prop or prop not in gschema:
+    if not prop or prop not in gschema.compiled.schema:
         return HTTPOk(json=_(u'Server Error: No field specified'))
     else:
         try:
-            gschema[prop](request.GET.get(prop))
+            gschema.compiled.schema[prop](request.GET.get(prop))
         except Invalid as e:
-            return HTTPOk(json=invalid2dict(e))
-    return HTTPOk()
+            return HTTPOk(json=e.message)
+        else:
+            return HTTPOk(json=True)
 
 
 @view_config(
@@ -220,46 +228,50 @@ def FieldSchema(context, request):
         """
         Verifies that an attribute name is unique within a schema
         """
-        query = (
-            Session.query(models.Attribute)
-            .filter_by(schema=context.__parent__, name=value))
+        query = Session.query(models.Attribute).filter_by(name=value)
+        if isinstance(context, models.AttributeFactory):
+            query = query.filter_by(schema=context.__parent__)
+        else:
+            query = query.filter_by(schema=context.schema)
         if isinstance(context, models.Attribute):
             query = query.filter(models.Attribute.id != context.id)
         (exists,) = Session.query(query.exists()).one()
         if exists:
             raise Invalid(_(u'Variable name already exists in this form'))
+        return value
 
     return Schema({
         'name': All(
             Bytes(),
             Match(RE_VALID_NAME, message=_(u'Not a valid variable name')),
-            not_rerserved_word,
+            not_reserved_word,
             unique_name),
         'title': String(),
-        Optional('description'): Maybe(String()),
+        'description': Maybe(String()),
         'type': In(valid_types),
-        'is_required': Boolean(),
-        'is_private': Boolean(),
-        Optional('is_system'): Maybe(Boolean()),
-        Optional('is_readonly'): Maybe(Boolean()),
+        'is_required': Any(Boolean(), Default(False)),
+        'is_private': Any(Boolean(), Default(False)),
+        'is_system': Maybe(Boolean()),
+        'is_readonly': Maybe(Boolean()),
 
         # choice
-        Optional('is_collection'): Maybe(Boolean()),
-        Optional('is_shuffled'): Maybe(Boolean()),
+        'is_collection': Maybe(Boolean()),
+        'is_shuffled': Maybe(Boolean()),
 
         # number
-        Optional('decimal_places'): Maybe(Integer()),
+        'decimal_places': Maybe(Integer()),
 
         # number/string/multiple-choice
-        Optional('value_min'): Maybe(Integer()),
-        Optional('value_man'): Maybe(integer()),
+        'value_min': Maybe(Integer()),
+        'value_max': Maybe(Integer()),
 
         # string
-        Optional('pattern'): Maybe(Bytes()),
+        'pattern': Maybe(Bytes()),
 
-        Optional('choices'): Maybe([{
+        'choices': Maybe([{
             'name': All(Bytes(), Length(min=1, max=8), Match('^-?[0-9]+$')),
             'title': String(),
             Extra: Remove
-            }])
+            }]),
+        Extra: Remove
         })
