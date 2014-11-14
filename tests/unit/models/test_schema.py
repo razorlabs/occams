@@ -285,7 +285,7 @@ def test_attribute_invalid_regexp_name():
                 type=u'string',
                 order=1)
 
-    for name in ['5', '5foo', 'foo_5']:
+    for name in ['5', '5foo', 'foo_5', 'hiv_sex_3']:
         yield check_, name
 
 
