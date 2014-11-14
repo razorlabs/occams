@@ -145,14 +145,13 @@ function VersionEditorView(options){
   /**
    * Send DELETE request the field
    */
-  self.doDeleteField = function(field){
-    console.log('delete field');
+  self.deleteField = function(field, event){
     $.ajax({
       url: field.__url__(),
       method: 'DELETE',
       headers: {'X-CSRF-Token': $.cookie('csrf_token')},
       success: function(data, status, jxhr){
-        self.fields.destroy(field);
+        ko.contextFor(event.target).$parent.fields.destroy(field);
         self.clear();
       }
     });

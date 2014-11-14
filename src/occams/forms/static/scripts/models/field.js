@@ -37,19 +37,6 @@ function Field(data){
     });
   };
 
-  self.makeValidateOptions = function(){
-    console.log(self.__url__() + '?' + $.param({validate: 'name'}));
-    return {
-      rules: {
-        name: {
-          remote: {
-             url: self.__url__() + '?' + $.param({validate: 'name'}),
-          }
-        }
-      }
-    }
-  };
-
   self.isLimitAllowed = ko.pureComputed(function(){
     return self.isType('string', 'number')
       || (self.isType('choice') && self.is_collection());

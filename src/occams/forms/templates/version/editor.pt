@@ -348,6 +348,10 @@
 
     <script id="field-delete-template" type="text/html">
       <div class="of-delete">
+        <!-- ko if: $root.errorMessage -->
+          <div class="alert alert-danger" data-bind="text: $root.errorMessage"></div>
+        <!-- /ko -->
+
         <div class="form-group">
           <label>Are you sure you want to delete <code data-bind="text: name"></code> from this version of the form?</label>
           <p class="help-block">
@@ -357,8 +361,8 @@
           </p>
         </div>
         <div class="text-right">
-          <button type="button" class="btn btn-link" data-bind="click: $root.clearSelected">Cancel</button>
-          <button type="button" class="btn btn-danger" data-bind="click: $root.doDeleteField">Yes, I'm sure</button>
+          <button type="button" class="btn btn-link" data-bind="click: $root.clear">Cancel</button>
+          <button type="button" class="btn btn-danger" data-bind="click: $root.deleteField">Yes, I'm sure</button>
         </div>
       </div>
     </script>
