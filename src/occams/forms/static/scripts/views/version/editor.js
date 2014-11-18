@@ -93,7 +93,26 @@ function VersionEditorView(options){
     });
   };
 
-  self.saveSchema = function(){
+  self.saveSchema = function(element){
+    if ($(element).validate().form()){
+     $.ajax({
+        url: self.version().__url__(),
+        method: 'PUT',
+        data: ko.toJSON(self.version()),
+        contentType: 'application/json; charset=utf-8',
+        headers: {'X-CSRF-Token': $.cookie('csrf_token')},
+        error: handleXHRError({form: element, logger: self.errorMessage}),
+        beforeSend: function(){
+          self.isSaving(true);
+        },
+        success: function(data, textStatus, jqXHR){
+          window.location = self.version().__url__();
+        },
+        complete: function(){
+          self.isSaving(false);
+        }
+      });
+    }
   };
 
   /**

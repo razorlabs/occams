@@ -3,29 +3,41 @@
     <div class="btn-group">
       <a href="${request.current_route_path(_route_name='version', _query={'download': 'json'})}"
           class="btn btn-default">
-        <span class="glyphicon glyphicon-download"></span>
+        <span class="fa fa-download"></span>
         <span i18n:translate="">Download</span>
       </a>
     </div>
     <div class="btn-group">
-      <button id="draft-button"
+      <button
           class="btn btn-default"
           tal:condition="context.publish_date"
           data-bind="click: startDraftView">
-        <span class="glyphicon glyphicon-transfer"></span>
+        <span class="fa fa-copy"></span>
         <span i18n:translate="">Draft New</span>
       </button>
-      <a id="edit-button"
-          href="${request.current_route_path(_route_name='version_editor')}"
+      <!-- ko if: publish_date -->
+        <!-- ko ifnot: retract_date -->
+          <button class="btn btn-default">
+            <span class="fa fa-times-circle"></span>
+            <span i18n:translate="">Retract</span>
+          </button>
+        <!-- /ko -->
+      <!-- /ko -->
+      <!-- ko ifnot: publish_date -->
+          <button class="btn btn-default">
+            <span class="fa fa-check-circle"></span>
+            <span i18n:translate="">Publish</span>
+          </button>
+      <!-- /ko -->
+      <a href="${request.current_route_path(_route_name='version_editor')}"
           class="btn btn-default">
-        <span class="glyphicon glyphicon-pencil"></span>
+        <span class="fa fa-edit"></span>
         <span i18n:translate="">Edit</span>
       </a>
       <button
-          id="delete-button"
           class="btn btn-default"
           data-bind="click: startDeleteView">
-        <span class="glyphicon glyphicon-trash"></span>
+        <span class="fa fa-trash-o"></span>
         <span i18n:translate="">Delete</span>
       </button>
     </div>

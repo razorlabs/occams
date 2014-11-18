@@ -45,7 +45,7 @@
   /**
    * Enables a datetime picker widget for the input element
    */
-  ko.bindingHandlers.datetimePicker = {
+  ko.bindingHandlers.datetimepicker = {
     init: function(element, valueAccessor, allBindingsAccessor) {
       if (!supportsDateInput) {
         var options = ko.unwrap(valueAccessor());

@@ -8,9 +8,9 @@ from pyramid.response import FileIter
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 
-from .. import _, models, Session
+from .. import _, Session
 from . import field as field_views
-from ..validators import Bytes, String, invalid2dict
+from ..validators import String, invalid2dict
 
 
 @view_config(
@@ -73,6 +73,34 @@ def preview(context, request):
 
 
 @view_config(
+    route_name='version',
+    xhr=True,
+    permission='edit',
+    request_method='PUT',
+    renderer='json')
+def edit_json(context, request):
+    check_csrf_token(request)
+
+    validator = Schema({
+        'title': All(String(), Length(min=3, max=128)),
+        'description': Maybe(String()),
+        Extra: Remove
+        })
+
+    try:
+        data = validator(request.json_body)
+    except Invalid as e:
+        return HTTPBadRequest(json=invalid2dict(e))
+
+    context.title = data['title']
+    context.description = data['description']
+
+    request.session.flash(_(u'Changes saved'), 'success')
+
+    return view_json(context, request)
+
+
+@view_config(
     route_name='version_editor',
     permission='edit',
     renderer='../templates/version/editor.pt')
@@ -105,7 +133,7 @@ def draft_json(context, request):
         '__next__': request.route_path('version_view',
                                        form=draft.name,
                                        version=draft.id)
-    }
+        }
 
 
 @view_config(
@@ -135,15 +163,4 @@ def delete_json(context, request):
     return {
         # Hint the next resource to look for data
         '__next__': request.current_route_path(_route_name='forms')
-    }
-
-
-def VersionSchema(context, request):
-    return Schema({
-        'name': Bytes(),
-        'title': All(String(), Length(min=3, max=128)),
-        Optional('description'): String(),
-        # TODO: Need to check that it's unique, no time
-        'publish_date': Date(),
-        Extra: Remove
-        })
+        }

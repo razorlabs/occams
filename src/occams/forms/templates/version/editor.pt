@@ -1,6 +1,7 @@
 <html metal:use-macro="load: ../master.pt">
   <metal:content-slot fill-slot="content-slot">
 
+    <h1 class="page-header" i18n:translate="">Edit Form</h1>
 
     <!-- ko ifnot: isReady -->
       <p class="text-center" i18n:translate="">
@@ -10,27 +11,27 @@
     <!-- /ko -->
 
     <div style="display: none;" data-bind="visible: isReady, with: version">
-      <header class="page-header">
-        <h1 data-bind="text: title"></h1>
-        <ul class="details list-inline">
-          <li>
-            <span class="text-muted" i18n:translate="">Schema:</span>
-            <span><code data-bind="text: name"></code></span>
-          </li>
-          <li>
-            <span class="text-muted" i18n:translate="">Version:</span>
-            <!-- ko if: publish_date -->
-              <code data-bind="text: publish_date"></code>
-            <!-- /ko -->
-            <!-- ko ifnot: publish_date -->
-              <span class="label label-info" i18n:translate="">Draft</span>
-            <!-- /ko -->
-          </li>
-        </ul>
-      </header>
-      <!-- ko if: description -->
-        <p class="lead" data-bind="text: description"></p>
-      <!-- /ko -->
+        <form id="schema-form" class="form-horizontal" data-bind="validate: {}, submit: $root.saveSchema">
+          <div class="form-group">
+            <label class="required col-md-2" i18n:translate="">Schema</label>
+            <div class="col-md-10">
+              <p class="form-control-static"><code data-bind="text: name"></code></p>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="required col-md-2" i18n:translate="">Form</label>
+            <div class="col-md-10">
+              <input type="text" class="form-control" name="title" data-bind="value: title" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="col-md-2" i18n:translate="">Description</label>
+            <div class="col-md-10">
+              <textarea name="description" class="form-control" data-bind="value: description"></textarea>
+            </div>
+          </div>
+        </form>
+      <hr style="width: 100%" />
       <div class="row">
         <div id="of-content" class="col-md-9">
           <!-- ko ifnot: hasFields -->
@@ -73,7 +74,10 @@
       </div> <!-- /.row -->
       <hr width="100%" />
       <div class="pull-right">
-        <button class="btn btn-lg btn-primary" data-bind="click: $root.saveSchema" i18n:translate="">Done</button>
+        <button
+            class="btn btn-lg btn-primary"
+            form="schema-form"
+            i18n:translate="">Done</button>
       </div>
     </div> <!-- /:isReady -->
 
@@ -190,7 +194,7 @@
         <form class="form-horizontal" data-bind="validate: $root.makeValidateOptions($data)">
 
           <div class="form-group">
-            <label class="col-sm-2 control-label" i18n:translate="">Type</label>
+            <label class="required col-sm-2 control-label" i18n:translate="">Type</label>
             <div class="col-sm-4">
               <p class="form-control-static"><code data-bind="text: type"></code></p>
             </div>
@@ -205,7 +209,7 @@
           </div>
 
           <div class="form-group">
-            <label class="col-sm-2 control-label" i18n:translate="">Variable</label>
+            <label class="required col-sm-2 control-label" i18n:translate="">Variable</label>
             <div class="col-sm-10">
               <div class="row">
                 <div class="col-sm-6">
@@ -220,7 +224,7 @@
           </div>
 
           <div class="form-group">
-            <label class="col-sm-2 control-label" i18n:translate="">Question</label>
+            <label class="required col-sm-2 control-label" i18n:translate="">Question</label>
             <div class="col-sm-10">
               <input type="text" class="form-control" name="title" data-bind="value: title" />
             </div>
