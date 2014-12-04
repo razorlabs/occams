@@ -36,8 +36,8 @@ CREATE OR REPLACE FUNCTION value_string_mirror() RETURNS TRIGGER AS $$
         OR (TG_OP = 'UPDATE'
               AND OLD.value IS NULL
               AND NEW.value IS NOT NULL
-              AND (NEW.choice_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM value_choice_ext WHERE (old_db, old_id) = (SELECT current_database(), OLD.id))
-                   OR (NEW.choice_id IS NULL AND NOT EXISTS(SELECT 1 FROM value_string_ext WHERE (old_db, old_id) = (SELECT current_database(), OLD.id)))))
+              AND (NEW.choice_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM value_choice_ext WHERE old_db = (SELECT current_database()) AND old_id = OLD.id)
+                   OR (NEW.choice_id IS NULL AND NOT EXISTS(SELECT 1 FROM value_string_ext WHERE old_db = (SELECT current_database()) AND old_id = OLD.id))))
         THEN
 
       -- Determine destination (choice or string)
@@ -100,8 +100,8 @@ CREATE OR REPLACE FUNCTION value_string_mirror() RETURNS TRIGGER AS $$
 
       -- Delete from both since we can't reliably tell if it was previously
       -- a choice (because of null values)
-      DELETE FROM value_string_ext WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
-      DELETE FROM value_choice_ext WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+      DELETE FROM value_string_ext WHERE old_db = (SELECT current_database()) AND old_id = OLD.id;
+      DELETE FROM value_choice_ext WHERE old_db = (SELECT current_database()) AND old_id = OLD.id;
 
     -- Update existing values
     ELSIF (TG_OP = 'UPDATE' AND OLD.value IS NOT NULL AND NEW.value IS NOT NULL) THEN
@@ -117,7 +117,7 @@ CREATE OR REPLACE FUNCTION value_string_mirror() RETURNS TRIGGER AS $$
           , modify_date = NEW.modify_date
           , modify_user_id = ext_user_id(NEW.modify_user_id)
           , revision = NEW.revision
-        WHERE (old_db, old_id) = (SELECT current_database(), NEW.id);
+        WHERE old_db = (SELECT current_database()) AND old_id = NEW.id;
       ELSE
         UPDATE value_choice_ext
         SET entity_id = ext_entity_id(NEW.entity_id)
@@ -128,7 +128,7 @@ CREATE OR REPLACE FUNCTION value_string_mirror() RETURNS TRIGGER AS $$
           , modify_date = NEW.modify_date
           , modify_user_id = ext_user_id(NEW.modify_user_id)
           , revision = NEW.revision
-        WHERE (old_db, old_id) = (SELECT current_database(), NEW.id);
+        WHERE old_db = (SELECT current_database()) AND old_id = NEW.id;
       END IF;
 
     ELSE

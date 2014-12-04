@@ -75,9 +75,9 @@ CREATE OR REPLACE FUNCTION aliquot_mirror() RETURNS TRIGGER AS $$
           , old_id
         )
         VALUES (
-            (SELECT id FROM specimen_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimen_id))
-          , (SELECT id FROM aliquottype_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.aliquot_type_id))
-          , (SELECT id FROM aliquotstate_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.state_id))
+            (SELECT id FROM specimen_ext WHERE old_db = (SELECT current_database()) AND old_id = NEW.specimen_id)
+          , (SELECT id FROM aliquottype_ext WHERE old_db = (SELECT current_database()) AND old_id = NEW.aliquot_type_id)
+          , (SELECT id FROM aliquotstate_ext WHERE old_db = (SELECT current_database()) AND old_id = NEW.state_id)
           , NEW.labbook
           , NEW.volume
           , NEW.cell_amount
@@ -85,15 +85,15 @@ CREATE OR REPLACE FUNCTION aliquot_mirror() RETURNS TRIGGER AS $$
           , NEW.freezer
           , NEW.rack
           , NEW.box
-          , (SELECT id FROM location_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.location_id))
+          , (SELECT id FROM location_ext WHERE old_db = (SELECT current_database()) AND old_id = NEW.location_id)
           , NEW.thawed_num
           , NEW.inventory_date
           , NEW.sent_date
           , NEW.sent_name
           , NEW.sent_notes
           , NEW.notes
-          , (SELECT id FROM specialinstruction_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.special_instruction_id))
-          , (SELECT id FROM location_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.previous_location_id))
+          , (SELECT id FROM specialinstruction_ext WHERE old_db = (SELECT current_database()) AND old_id = NEW.special_instruction_id)
+          , (SELECT id FROM location_ext WHERE old_db = (SELECT current_database()) AND old_id = NEW.previous_location_id)
           , NEW.create_date
           , ext_user_id(NEW.create_user_id)
           , NEW.modify_date
@@ -106,13 +106,13 @@ CREATE OR REPLACE FUNCTION aliquot_mirror() RETURNS TRIGGER AS $$
 
       WHEN 'DELETE' THEN
         DELETE FROM aliquot_ext
-        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        WHERE old_db = (SELECT current_database()) AND old_id = OLD.id;
         RETURN OLD;
       WHEN 'UPDATE' THEN
         UPDATE aliquot_ext
-        SET specimen_id = (SELECT id FROM specimen_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimen_id))
-          , aliquot_type_id = (SELECT id FROM aliquottype_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.aliquot_type_id))
-          , state_id = (SELECT id FROM aliquotstate_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.state_id))
+        SET specimen_id = (SELECT id FROM specimen_ext WHERE old_db = (SELECT current_database()) AND old_id = NEW.specimen_id)
+          , aliquot_type_id = (SELECT id FROM aliquottype_ext WHERE old_db = (SELECT current_database()) AND old_id = NEW.aliquot_type_id)
+          , state_id = (SELECT id FROM aliquotstate_ext WHERE old_db = (SELECT current_database()) AND old_id = NEW.state_id)
           , labbook = NEW.labbook
           , volume = NEW.volume
           , cell_amount = NEW.cell_amount
@@ -120,15 +120,15 @@ CREATE OR REPLACE FUNCTION aliquot_mirror() RETURNS TRIGGER AS $$
           , freezer = NEW.freezer
           , rack = NEW.rack
           , box = NEW.box
-          , location_id = (SELECT id FROM location_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.location_id))
+          , location_id = (SELECT id FROM location_ext WHERE old_db = (SELECT current_database()) AND old_id = NEW.location_id)
           , thawed_num = NEW.thawed_num
           , inventory_date = NEW.inventory_date
           , sent_date = NEW.sent_date
           , sent_name = NEW.sent_name
           , sent_notes = NEW.sent_notes
           , notes = NEW.notes
-          , special_instruction_id = (SELECT id FROM specialinstruction_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.special_instruction_id))
-          , previous_location_id = (SELECT id FROM location_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.previous_location_id))
+          , special_instruction_id = (SELECT id FROM specialinstruction_ext WHERE old_db = (SELECT current_database()) AND old_id = NEW.special_instruction_id)
+          , previous_location_id = (SELECT id FROM location_ext WHERE old_db = (SELECT current_database()) AND old_id = NEW.previous_location_id)
           , create_date = NEW.create_date
           , create_user_id = ext_user_id(NEW.create_user_id)
           , modify_date = NEW.modify_date
@@ -136,7 +136,7 @@ CREATE OR REPLACE FUNCTION aliquot_mirror() RETURNS TRIGGER AS $$
           , revision = NEW.revision
           , old_db = (SELECT current_database())
           , old_id = NEW.id
-        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        WHERE old_db = (SELECT current_database()) AND old_id = OLD.id;
         RETURN NEW;
     END CASE;
     RETURN NULL;

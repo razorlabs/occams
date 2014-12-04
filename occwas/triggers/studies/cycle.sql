@@ -36,7 +36,7 @@ CREATE OR REPLACE FUNCTION ext_cycle_id(id INTEGER) RETURNS integer AS $$
     RETURN (
       SELECT "cycle_ext".id
       FROM "cycle_ext"
-      WHERE (old_db, old_id) = (SELECT current_database(), $1));
+      WHERE old_db = (SELECT current_database()) AND old_id = $1);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -90,7 +90,7 @@ CREATE OR REPLACE FUNCTION cycle_mirror() RETURNS TRIGGER AS $$
         RETURN NEW;
       WHEN 'DELETE' THEN
         DELETE FROM "cycle_ext"
-        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        WHERE old_db = (SELECT current_database()) AND old_id = OLD.id;
         RETURN OLD;
       WHEN 'UPDATE' THEN
         UPDATE "cycle_ext"
@@ -109,7 +109,7 @@ CREATE OR REPLACE FUNCTION cycle_mirror() RETURNS TRIGGER AS $$
           , revision = NEW.revision
           , old_db = (SELECT current_database())
           , old_id = NEW.id
-        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        WHERE old_db = (SELECT current_database()) AND old_id = OLD.id;
         RETURN NEW;
     END CASE;
     RETURN NULL;

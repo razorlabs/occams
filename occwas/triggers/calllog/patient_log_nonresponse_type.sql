@@ -28,7 +28,7 @@ CREATE OR REPLACE FUNCTION ext_patient_log_nonresponse_type_id(id INTEGER) RETUR
     RETURN (
         SELECT "patient_log_nonresponse_type_ext".id
         FROM "patient_log_nonresponse_type_ext"
-        WHERE (old_db, old_id) = (SELECT current_database(), $1));
+        WHERE old_db = (SELECT current_database()) AND old_id = $1);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -56,7 +56,7 @@ CREATE OR REPLACE FUNCTION patient_log_nonresponse_type_mirror() RETURNS TRIGGER
         RETURN NEW;
       WHEN 'DELETE' THEN
         DELETE FROM patient_log_nonresponse_type_ext
-        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        WHERE old_db = (SELECT current_database()) AND old_id = OLD.id;
         RETURN OLD;
       WHEN 'UPDATE' THEN
         UPDATE patient_log_nonresponse_type_ext
@@ -64,7 +64,7 @@ CREATE OR REPLACE FUNCTION patient_log_nonresponse_type_mirror() RETURNS TRIGGER
           , "order" = NEW.order
           , old_db = (SELECT current_database())
           , old_id = NEW.id
-        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        WHERE old_db = (SELECT current_database()) AND old_id = OLD.id;
         RETURN NEW;
     END CASE;
     RETURN NULL;

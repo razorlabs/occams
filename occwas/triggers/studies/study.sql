@@ -39,7 +39,7 @@ CREATE OR REPLACE FUNCTION ext_study_id(id INTEGER) RETURNS integer AS $$
     RETURN (
       SELECT "study_ext".id
       FROM "study_ext"
-      WHERE (old_db, old_id) = (SELECT current_database(), $1));
+      WHERE old_db = (SELECT current_database()) AND old_id = $1);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -93,7 +93,7 @@ CREATE OR REPLACE FUNCTION study_mirror() RETURNS TRIGGER AS $$
         RETURN NEW;
       WHEN 'DELETE' THEN
         DELETE FROM study_ext
-        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        WHERE old_db = (SELECT current_database()) AND old_id = OLD.id;
         RETURN OLD;
       WHEN 'UPDATE' THEN
         UPDATE study_ext
@@ -114,7 +114,7 @@ CREATE OR REPLACE FUNCTION study_mirror() RETURNS TRIGGER AS $$
           , revision = NEW.revision
           , old_db = (SELECT current_database())
           , old_id = NEW.id
-        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        WHERE old_db = (SELECT current_database()) AND old_id = OLD.id;
         RETURN NEW;
     END CASE;
     RETURN NULL;
