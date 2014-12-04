@@ -65,11 +65,8 @@ CREATE OR REPLACE FUNCTION ext_entity_id(id INTEGER) RETURNS integer AS $$
       -- Check if it's a sub-object first
       SELECT "entity_ext".id
       FROM "entity_ext"
-      WHERE (old_db, old_id) = (  (SELECT current_database())
-                                , COALESCE((SELECT "object"."entity_id"
-                                           FROM "object"
-                                           WHERE "object"."value" = $1)
-                                          ,$1)))
+      WHERE old_db = (SELECT current_database())
+        AND old_id = COALESCE((SELECT "object"."entity_id" FROM "object" WHERE "object"."value" = $1), $1))
       ;
   END;
 $$ LANGUAGE plpgsql;
