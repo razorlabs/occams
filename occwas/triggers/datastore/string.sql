@@ -34,7 +34,6 @@ CREATE OR REPLACE FUNCTION value_string_mirror() RETURNS TRIGGER AS $$
     -- values are not allowed in the external table
     IF     (TG_OP = 'INSERT' AND NEW.value IS NOT NULL)
         OR (TG_OP = 'UPDATE'
-              AND OLD.value IS NULL
               AND NEW.value IS NOT NULL
               AND (NEW.choice_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM value_choice_ext WHERE old_db = (SELECT current_database()) AND old_id = OLD.id)
                    OR (NEW.choice_id IS NULL AND NOT EXISTS(SELECT 1 FROM value_string_ext WHERE old_db = (SELECT current_database()) AND old_id = OLD.id))))

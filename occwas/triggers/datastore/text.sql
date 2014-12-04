@@ -34,7 +34,6 @@ CREATE OR REPLACE FUNCTION value_text_mirror() RETURNS TRIGGER AS $$
     -- values are not allowed in the external table
     IF     (TG_OP = 'INSERT' AND NEW.value IS NOT NULL)
         OR (TG_OP = 'UPDATE'
-              AND OLD.value IS NULL
               AND NEW.value IS NOT NULL
               AND NOT EXISTS(SELECT 1 FROM value_text_ext WHERE old_db = (SELECT current_database()) AND old_id = OLD.id))
         THEN
