@@ -925,7 +925,7 @@ class TestTrigger(unittest.TestCase):
 
         # New tables don't allow NULL values, nothing should be inserted
         src_data, dst_data = self._getRecord(src_value_table, [src_value_id], dst_value_table)
-        self.assertIsNotNone(src_data)
+        self.assertIsNone(src_data['value'])
         self.assertIsNone(dst_data)
 
         with self.src_conn.begin():
@@ -938,8 +938,7 @@ class TestTrigger(unittest.TestCase):
 
         # New data should have been inserted for the updated prevsiouly-null value
         src_data, dst_data = self._getRecord(src_value_table, [src_value_id], dst_value_table)
-        self.assertIsNotNone(src_data)
-        self.assertIsNotNone(dst_data)
+        self.assertEqual(src_data['value'], dst_data['value'])
 
         with self.src_conn.begin():
             self.src_conn.execute(
@@ -949,5 +948,5 @@ class TestTrigger(unittest.TestCase):
 
         # The external row should be deleted if the new value is NULL in the local table
         src_data, dst_data = self._getRecord(src_value_table, [src_value_id], dst_value_table)
-        self.assertIsNotNone(src_data)
+        self.assertIsNone(src_data['value'])
         self.assertIsNone(dst_data)
