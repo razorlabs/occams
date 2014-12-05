@@ -856,3 +856,97 @@ class TestTrigger(unittest.TestCase):
             ).fetchone()
         self.assertEqual(dst_entity_data['id'],
                          dst_value_data['entity_id'])
+
+
+    @data('string', 'integer', 'decimal', 'datetime', 'blob', 'text')
+    def test_null_value_update(self, type):
+        src_schema_table = self.src_metadata.tables['schema']
+        src_attr_table = self.src_metadata.tables['attribute']
+        src_user_table = self.src_metadata.tables['user']
+        src_entity_table = self.src_metadata.tables['entity']
+        src_value_table = self.src_metadata.tables[type]
+
+        dst_schema_table = self.dst_metadata.tables['schema']
+        dst_attr_table = self.dst_metadata.tables['attribute']
+        dst_entity_table = self.dst_metadata.tables['entity']
+        dst_value_table = self.dst_metadata.tables['value_' + type]
+
+        with self.src_conn.begin():
+            src_user_id, = self.src_conn.execute(
+                src_user_table.insert().values(key=value_generator[VARCHAR]())
+                ).inserted_primary_key
+            src_schema_id, = self.src_conn.execute(
+                src_schema_table.insert()
+                .values(
+                    name=value_generator[VARCHAR](),
+                    title=value_generator[VARCHAR](),
+                    is_inline=False,
+                    create_user_id=src_user_id,
+                    modify_user_id=src_user_id,
+                    revision=1)
+                ).inserted_primary_key
+            src_attr_id, = self.src_conn.execute(
+                src_attr_table.insert()
+                .values(
+                    schema_id=src_schema_id,
+                    name=value_generator[VARCHAR](),
+                    title=value_generator[VARCHAR](),
+                    description=value_generator[VARCHAR](),
+                    type=type,
+                    checksum=value_generator[VARCHAR](),
+                    is_collection=False,
+                    is_required=True,
+                    order=0,
+                    create_user_id=src_user_id,
+                    modify_user_id=src_user_id,
+                    revision=1)
+                ).inserted_primary_key
+            src_entity_id, = self.src_conn.execute(
+                src_entity_table.insert()
+                .values(
+                    schema_id=src_schema_id,
+                    name=value_generator[VARCHAR](),
+                    title=value_generator[VARCHAR](),
+                    collect_date=value_generator[DATE](),
+                    create_user_id=src_user_id,
+                    modify_user_id=src_user_id,
+                    revision=1)
+                ).inserted_primary_key
+            src_value_id, = self.src_conn.execute(
+                src_value_table.insert()
+                .values(
+                    entity_id=src_entity_id,
+                    attribute_id=src_attr_id,
+                    value=None,
+                    create_user_id=src_user_id,
+                    modify_user_id=src_user_id,
+                    revision=1)
+                ).inserted_primary_key
+
+        # New tables don't allow NULL values, nothing should be inserted
+        src_data, dst_data = self._getRecord(src_value_table, [src_value_id], dst_value_table)
+        self.assertIsNone(src_data['value'])
+        self.assertIsNone(dst_data)
+
+        with self.src_conn.begin():
+            self.src_conn.execute(
+                src_value_table.update()
+                .values(
+                    value=value_generator[
+                        src_value_table.c.value.type.__class__]())
+                .where(src_value_table.c.id == src_value_id))
+
+        # New data should have been inserted for the updated prevsiouly-null value
+        src_data, dst_data = self._getRecord(src_value_table, [src_value_id], dst_value_table)
+        self.assertEqual(src_data['value'], dst_data['value'])
+
+        with self.src_conn.begin():
+            self.src_conn.execute(
+                src_value_table.update()
+                .values( value=None)
+                .where(src_value_table.c.id == src_value_id))
+
+        # The external row should be deleted if the new value is NULL in the local table
+        src_data, dst_data = self._getRecord(src_value_table, [src_value_id], dst_value_table)
+        self.assertIsNone(src_data['value'])
+        self.assertIsNone(dst_data)

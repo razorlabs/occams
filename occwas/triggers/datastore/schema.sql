@@ -42,11 +42,8 @@ CREATE OR REPLACE FUNCTION ext_schema_id(id INTEGER) RETURNS integer AS $$
       -- Always return the root schema,
       -- since schemata are flattened in the new database
       SELECT "schema_ext".id FROM "schema_ext"
-      WHERE (old_db, old_id) = (  (SELECT current_database())
-                                , COALESCE((SELECT schema_id
-                                           FROM "attribute"
-                                           WHERE object_schema_id = $1)
-                                         , $1)))
+      WHERE old_db = (SELECT current_database())
+        AND old_id = COALESCE((SELECT schema_id FROM "attribute" WHERE object_schema_id = $1), $1))
       ;
   END;
 $$ LANGUAGE plpgsql;
@@ -97,7 +94,7 @@ CREATE OR REPLACE FUNCTION schema_mirror() RETURNS TRIGGER AS $$
         END IF;
       WHEN 'DELETE' THEN
         DELETE FROM schema_ext
-        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        WHERE old_db = (SELECT current_database()) AND old_id = OLD.id;
         RETURN OLD;
       WHEN 'UPDATE' THEN
         -- Don't need to update subschemata as they don't exist in the new system
@@ -117,7 +114,7 @@ CREATE OR REPLACE FUNCTION schema_mirror() RETURNS TRIGGER AS $$
             , revision = NEW.revision
             , old_db = (SELECT current_database())
             , old_id = NEW.id
-          WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+          WHERE old_db = (SELECT current_database()) AND old_id = OLD.id;
           RETURN NEW;
         END IF;
 

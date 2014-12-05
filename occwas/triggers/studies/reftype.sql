@@ -30,7 +30,7 @@ CREATE OR REPLACE FUNCTION ext_reftype_id(id INTEGER) RETURNS integer AS $$
     RETURN (
       SELECT "reftype_ext".id
       FROM "reftype_ext"
-      WHERE (old_db, old_id) = (SELECT current_database(), $1));
+      WHERE old_db = (SELECT current_database()) AND old_id = $1);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -68,7 +68,7 @@ CREATE OR REPLACE FUNCTION reftype_mirror() RETURNS TRIGGER AS $$
         RETURN NEW;
       WHEN 'DELETE' THEN
         DELETE FROM reftype_ext
-        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        WHERE old_db = (SELECT current_database()) AND old_id = OLD.id;
         RETURN OLD;
       WHEN 'UPDATE' THEN
         UPDATE reftype_ext
@@ -81,7 +81,7 @@ CREATE OR REPLACE FUNCTION reftype_mirror() RETURNS TRIGGER AS $$
           , modify_user_id = ext_user_id(NEW.modify_user_id)
           , old_db = (SELECT current_database())
           , old_id = NEW.id
-        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        WHERE old_db = (SELECT current_database()) AND old_id = OLD.id;
         RETURN NEW;
     END CASE;
     RETURN NULL;

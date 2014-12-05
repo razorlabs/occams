@@ -65,11 +65,8 @@ CREATE OR REPLACE FUNCTION ext_entity_id(id INTEGER) RETURNS integer AS $$
       -- Check if it's a sub-object first
       SELECT "entity_ext".id
       FROM "entity_ext"
-      WHERE (old_db, old_id) = (  (SELECT current_database())
-                                , COALESCE((SELECT "object"."entity_id"
-                                           FROM "object"
-                                           WHERE "object"."value" = $1)
-                                          ,$1)))
+      WHERE old_db = (SELECT current_database())
+        AND old_id = COALESCE((SELECT "object"."entity_id" FROM "object" WHERE "object"."value" = $1), $1))
       ;
   END;
 $$ LANGUAGE plpgsql;
@@ -156,7 +153,7 @@ CREATE OR REPLACE FUNCTION entity_mirror() RETURNS TRIGGER AS $$
 
       WHEN 'DELETE' THEN
         DELETE FROM entity_ext
-        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        WHERE old_db = (SELECT current_database()) AND old_id = OLD.id;
         RETURN OLD;
       WHEN 'UPDATE' THEN
 
@@ -178,7 +175,7 @@ CREATE OR REPLACE FUNCTION entity_mirror() RETURNS TRIGGER AS $$
             , revision = NEW.revision
             , old_db = (SELECT current_database())
             , old_id = NEW.id
-          WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+          WHERE old_db = (SELECT current_database()) AND old_id = OLD.id;
 
           RETURN NEW;
 

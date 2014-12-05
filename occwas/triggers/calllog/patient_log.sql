@@ -41,7 +41,7 @@ CREATE OR REPLACE FUNCTION ext_patient_log_id(id INTEGER) RETURNS integer AS $$
     RETURN (
         SELECT "patient_log_ext".id
         FROM "patient_log_ext"
-        WHERE (old_db, old_id) = (SELECT current_database(), $1));
+        WHERE old_db = (SELECT current_database()) AND old_id = $1);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -91,7 +91,7 @@ CREATE OR REPLACE FUNCTION patient_log_mirror() RETURNS TRIGGER AS $$
         RETURN NEW;
       WHEN 'DELETE' THEN
         DELETE FROM patient_log_ext
-        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        WHERE old_db = (SELECT current_database()) AND old_id = OLD.id;
         RETURN OLD;
       WHEN 'UPDATE' THEN
           UPDATE patient_log_ext
@@ -111,7 +111,7 @@ CREATE OR REPLACE FUNCTION patient_log_mirror() RETURNS TRIGGER AS $$
             , revision = NEW.revision
             , old_db = (SELECT current_database())
             , old_id = NEW.id
-        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        WHERE old_db = (SELECT current_database()) AND old_id = OLD.id;
         RETURN NEW;
     END CASE;
     RETURN NULL;

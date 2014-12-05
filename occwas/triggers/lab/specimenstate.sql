@@ -57,7 +57,7 @@ CREATE OR REPLACE FUNCTION specimenstate_mirror() RETURNS TRIGGER AS $specimenst
         RETURN NEW;
       WHEN 'DELETE' THEN
         DELETE FROM specimenstate_ext
-        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        WHERE old_db = (SELECT current_database()) AND old_id = OLD.id;
         RETURN OLD;
       WHEN 'UPDATE' THEN
         UPDATE specimenstate_ext
@@ -70,7 +70,7 @@ CREATE OR REPLACE FUNCTION specimenstate_mirror() RETURNS TRIGGER AS $specimenst
           , modify_user_id = ext_user_id(NEW.modify_user_id)
           , old_db = (SELECT current_database())
           , old_id = NEW.id
-        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        WHERE old_db = (SELECT current_database()) AND old_id = OLD.id;
         RETURN NEW;
     END CASE;
     RETURN NULL;

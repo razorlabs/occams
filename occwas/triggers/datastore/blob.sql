@@ -29,58 +29,67 @@ OPTIONS (table_name 'value_blob');
 
 CREATE OR REPLACE FUNCTION value_blob_mirror() RETURNS TRIGGER AS $$
   BEGIN
-    CASE TG_OP
-      WHEN 'INSERT' THEN
-        IF NEW.value IS NOT NULL THEN
-          INSERT INTO value_blob_ext (
-              entity_id
-            , attribute_id
-            , value
-            , create_date
-            , create_user_id
-            , modify_date
-            , modify_user_id
-            , revision
-            , old_db
-            , old_id
-          )
-          VALUES (
-              ext_entity_id(NEW.entity_id)
-            , ext_attribute_id(NEW.attribute_id)
-            , NEW.value
-            , NEW.create_date
-            , ext_user_id(NEW.create_user_id)
-            , NEW.modify_date
-            , ext_user_id(NEW.modify_user_id)
-            , NEW.revision
-            , (SELECT current_database())
-            , NEW.id
-            );
-          RETURN NEW;
-        END IF;
-      WHEN 'DELETE' THEN
-        DELETE FROM value_blob_ext
-        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
-        RETURN OLD;
-      WHEN 'UPDATE' THEN
+    -- Only insert not-null values
+    -- Also, if updating a previously null value, we need to insert since null
+    -- values are not allowed in the external table
+    IF     (TG_OP = 'INSERT' AND NEW.value IS NOT NULL)
+        OR (TG_OP = 'UPDATE'
+              AND NEW.value IS NOT NULL
+              AND NOT EXISTS(SELECT 1 FROM value_blob_ext WHERE old_db = (SELECT current_database()) AND old_id = OLD.id))
+        THEN
 
-        IF NEW.value IS NOT NULL THEN
-          UPDATE value_blob_ext
-          SET entity_id = ext_entity_id(NEW.entity_id)
-            , attribute_id = ext_attribute_id(NEW.attribute_id)
-            , value = NEW.value
-            , create_date = NEW.create_date
-            , create_user_id = ext_user_id(NEW.create_user_id)
-            , modify_date = NEW.modify_date
-            , modify_user_id = ext_user_id(NEW.modify_user_id)
-            , revision = NEW.revision
-            , old_db = (SELECT current_database())
-            , old_id = NEW.id
-          WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
-          RETURN NEW;
-        END IF;
+      INSERT INTO value_blob_ext (
+          entity_id
+        , attribute_id
+        , value
+        , create_date
+        , create_user_id
+        , modify_date
+        , modify_user_id
+        , revision
+        , old_db
+        , old_id
+      )
+      VALUES (
+          ext_entity_id(NEW.entity_id)
+        , ext_attribute_id(NEW.attribute_id)
+        , NEW.value
+        , NEW.create_date
+        , ext_user_id(NEW.create_user_id)
+        , NEW.modify_date
+        , ext_user_id(NEW.modify_user_id)
+        , NEW.revision
+        , (SELECT current_database())
+        , NEW.id
+        );
 
-    END CASE;
+    -- Remove null values from new database
+    ELSIF  (TG_OP = 'DELETE')
+        OR (TG_OP = 'UPDATE' AND NEW.value IS NULL)
+        THEN
+
+      DELETE FROM value_blob_ext WHERE old_db = (SELECT current_database()) AND old_id = OLD.id;
+
+    -- Update existing values
+    ELSIF (TG_OP = 'UPDATE' AND OLD.value IS NOT NULL AND NEW.value IS NOT NULL) THEN
+
+      UPDATE value_blob_ext
+      SET entity_id = ext_entity_id(NEW.entity_id)
+        , attribute_id = ext_attribute_id(NEW.attribute_id)
+        , value = NEW.value
+        , create_date = NEW.create_date
+        , create_user_id = ext_user_id(NEW.create_user_id)
+        , modify_date = NEW.modify_date
+        , modify_user_id = ext_user_id(NEW.modify_user_id)
+        , revision = NEW.revision
+      WHERE old_db = (SELECT current_database()) AND old_id = NEW.id;
+
+    ELSE
+
+      RAISE WARNING 'COULD NOT DETERMINE APPROPRIATE ACTION!!!';
+
+    END IF;
+
     RETURN NULL;
   END;
 $$ LANGUAGE plpgsql;

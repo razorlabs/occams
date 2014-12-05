@@ -23,20 +23,20 @@ CREATE OR REPLACE FUNCTION specimentype_study_mirror() RETURNS TRIGGER AS $$
         )
         VALUES (
             ext_study_id(NEW.study_id)
-          , (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimentype_id))
+          , (SELECT id FROM specimentype_ext WHERE old_db = (SELECT current_database()) AND old_id = NEW.specimentype_id)
         );
         RETURN NEW;
       WHEN 'DELETE' THEN
         DELETE FROM specimentype_study_ext
         WHERE study_id = (SELECT * FROM ext_study_id(OLD.study_id))
-        AND   specimentype_id =  (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), OLD.specimentype_id));
+        AND   specimentype_id =  (SELECT id FROM specimentype_ext WHERE old_db = (SELECT current_database()) AND old_id = OLD.specimentype_id);
         RETURN OLD;
       WHEN 'UPDATE' THEN
         UPDATE specimentype_study_ext
         SET study_id = ext_study_id(NEW.study_id)
-          , specimentype_id = (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimentype_id))
+          , specimentype_id = (SELECT id FROM specimentype_ext WHERE old_db = (SELECT current_database()) AND old_id = NEW.specimentype_id)
         WHERE study_id = (SELECT * FROM ext_study_id(OLD.study_id))
-        AND   specimentype_id = (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), OLD.specimentype_id))
+        AND   specimentype_id = (SELECT id FROM specimentype_ext WHERE old_db = (SELECT current_database()) AND old_id = OLD.specimentype_id)
         ;
         RETURN NEW;
 

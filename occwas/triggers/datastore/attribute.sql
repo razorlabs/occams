@@ -90,7 +90,7 @@ CREATE OR REPLACE FUNCTION ext_attribute_id(id INTEGER) RETURNS integer AS $$
     RETURN (
         SELECT "attribute_ext".id
         FROM "attribute_ext"
-        WHERE (old_db, old_id) = (SELECT current_database(), $1));
+        WHERE old_db = (SELECT current_database()) AND old_id = $1);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -105,7 +105,7 @@ CREATE OR REPLACE FUNCTION ext_section_id(id INTEGER) RETURNS integer AS $$
     RETURN (
         SELECT "section_ext".id
         FROM "section_ext"
-        WHERE (old_db, old_id) = (SELECT current_database(), $1));
+        WHERE old_db = (SELECT current_database()) AND old_id = $1);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -230,7 +230,7 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
       WHEN 'DELETE' THEN
         IF OLD.object_schema_id IS NULL THEN
           DELETE FROM attribute_ext
-          WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+          WHERE old_db = (SELECT current_database()) AND old_id = OLD.id;
         ELSE
           -- Delete sub-attributes
           DELETE FROM attribute_ext
@@ -240,7 +240,7 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
           AND   (section_ext.old_db, section_ext.old_id) = (SELECT current_database(), OLD.id);
           -- Finally, delete the parent attribute
           DELETE FROM section_ext
-          WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+          WHERE old_db = (SELECT current_database()) AND old_id = OLD.id;
         END IF;
         RETURN OLD;
       WHEN 'UPDATE' THEN
@@ -276,7 +276,7 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
             , revision = NEW.revision
             , old_db = (SELECT current_database())
             , old_id = NEW.id
-          WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+          WHERE old_db = (SELECT current_database()) AND old_id = OLD.id;
 
           -- Check if the attribute is supposed to be a sub-attribute
           IF EXISTS(SELECT 1 FROM "attribute" WHERE object_schema_id = NEW.schema_id) THEN
@@ -304,7 +304,7 @@ CREATE OR REPLACE FUNCTION attribute_mirror() RETURNS TRIGGER AS $$
             , revision = NEW.revision
             , old_db = (SELECT current_database())
             , old_id = NEW.id
-          WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+          WHERE old_db = (SELECT current_database()) AND old_id = OLD.id;
 
           -- Ensure the sub-attributes get "moved" as well in the remote
           UPDATE attribute

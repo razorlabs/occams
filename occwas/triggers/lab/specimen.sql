@@ -57,13 +57,13 @@ CREATE OR REPLACE FUNCTION specimen_mirror() RETURNS TRIGGER AS $$
         )
         VALUES (
             (SELECT val FROM dblink('SELECT nextval(''specimen_id_seq'') AS val') AS sec(val int))
-          , (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimen_type_id))
+          , (SELECT id FROM specimentype_ext WHERE old_db = (SELECT current_database()) AND old_id = NEW.specimen_type_id)
           , ext_patient_id(NEW.patient_id)
           , ext_cycle_id(NEW.cycle_id)
-          , (SELECT id FROM specimenstate_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.state_id))
+          , (SELECT id FROM specimenstate_ext WHERE old_db = (SELECT current_database()) AND old_id = NEW.state_id)
           , NEW.collect_date
           , NEW.collect_time
-          , (SELECT id FROM location_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.location_id))
+          , (SELECT id FROM location_ext WHERE old_db = (SELECT current_database()) AND old_id = NEW.location_id)
           , NEW.tubes
           , NEW.notes
           , NEW.create_date
@@ -78,17 +78,17 @@ CREATE OR REPLACE FUNCTION specimen_mirror() RETURNS TRIGGER AS $$
         RETURN NEW;
       WHEN 'DELETE' THEN
         DELETE FROM specimen_ext
-        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        WHERE old_db = (SELECT current_database()) AND old_id = OLD.id;
         RETURN OLD;
       WHEN 'UPDATE' THEN
         UPDATE specimen_ext
-        SET specimen_type_id = (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimen_type_id))
+        SET specimen_type_id = (SELECT id FROM specimentype_ext WHERE old_db = (SELECT current_database()) AND old_id = NEW.specimen_type_id)
           , patient_id = ext_patient_id(NEW.patient_id)
           , cycle_id = ext_cycle_id(NEW.cycle_id)
-          , state_id = (SELECT id FROM specimenstate_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.state_id))
+          , state_id = (SELECT id FROM specimenstate_ext WHERE old_db = (SELECT current_database()) AND old_id = NEW.state_id)
           , collect_date = NEW.collect_date
           , collect_time = NEW.collect_time
-          , location_id = (SELECT id FROM location_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.location_id))
+          , location_id = (SELECT id FROM location_ext WHERE old_db = (SELECT current_database()) AND old_id = NEW.location_id)
           , tubes = NEW.tubes
           , notes = NEW.notes
           , create_date = NEW.create_date
@@ -96,7 +96,7 @@ CREATE OR REPLACE FUNCTION specimen_mirror() RETURNS TRIGGER AS $$
           , modify_date = NEW.modify_date
           , modify_user_id = ext_user_id(NEW.modify_user_id)
           , revision = NEW.revision
-        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        WHERE old_db = (SELECT current_database()) AND old_id = OLD.id;
         RETURN NEW;
     END CASE;
     RETURN NULL;

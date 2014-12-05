@@ -48,7 +48,7 @@ CREATE OR REPLACE FUNCTION aliquottype_mirror() RETURNS TRIGGER AS $$
           , NEW.name
           , NEW.title
           , NEW.description
-          , (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimen_type_id))
+          , (SELECT id FROM specimentype_ext WHERE old_db = (SELECT current_database()) AND old_id = NEW.specimen_type_id)
           , NEW.create_date
           , ext_user_id(NEW.create_user_id)
           , NEW.modify_date
@@ -60,21 +60,21 @@ CREATE OR REPLACE FUNCTION aliquottype_mirror() RETURNS TRIGGER AS $$
         RETURN NEW;
       WHEN 'DELETE' THEN
         DELETE FROM aliquottype_ext
-        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        WHERE old_db = (SELECT current_database()) AND old_id = OLD.id;
         RETURN OLD;
       WHEN 'UPDATE' THEN
         UPDATE aliquottype_ext
         SET name = NEW.name
           , title = NEW.title
           , description = NEW.description
-          , specimen_type_id = (SELECT id FROM specimentype_ext WHERE (old_db, old_id) = (SELECT current_database(), NEW.specimen_type_id))
+          , specimen_type_id = (SELECT id FROM specimentype_ext WHERE old_db = (SELECT current_database()) AND old_id = NEW.specimen_type_id)
           , create_date = NEW.create_date
           , create_user_id = ext_user_id(NEW.create_user_id)
           , modify_date = NEW.modify_date
           , modify_user_id = ext_user_id(NEW.modify_user_id)
           , old_db = (SELECT current_database())
           , old_id = NEW.id
-        WHERE (old_db, old_id) = (SELECT current_database(), OLD.id);
+        WHERE old_db = (SELECT current_database()) AND old_id = OLD.id;
         RETURN NEW;
     END CASE;
     RETURN NULL;
