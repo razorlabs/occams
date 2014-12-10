@@ -39,9 +39,10 @@ def upgrade():
     op.add_column('value_blob', sa.Column('placeholder_path', sa.String))
 
     for row in conn.execute('SELECT * FROM value_blob WHERE value IS NOT NULL').fetchall():
-        path = os.path.join(base_dir, *str(uuid.uuid4()).split('-'))
-        os.makedirs(os.path.dirname(path))
-        with open(path, 'w+b') as fp:
+        relative_path = os.path.join(*str(uuid.uuid4()).split('-'))
+        absolute_path = os.path.join(base_dir, *relative_path)
+        os.makedirs(os.path.dirname(absolute_path))
+        with open(absolute_path, 'w+b') as fp:
             shutil.copyfileobj(six.BytesIO(row.value), fp)
         conn.execute(sa.text(
             """
@@ -52,9 +53,9 @@ def upgrade():
             WHERE id = :id
             """),
             id=row.id,
-            file_name=os.path.basename(path),
-            mime_type=check_output(['file', '-b', '-i', path]).strip(),
-            path=path)
+            file_name=os.path.basename(absolute_path),
+            mime_type=check_output(['file', '-b', '-i', absolute_path]).strip(),
+            path=relative_path)
 
     for table_name in ('value_blob', 'value_blob_audit'):
         op.drop_column(table_name, 'value')
