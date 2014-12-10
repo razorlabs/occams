@@ -101,7 +101,7 @@ class Schema(Model, Referenceable, Describeable, Modifiable, Auditable):
     __tablename__ = 'schema'
 
     # Override for max length of 32 characters
-    name = Column(String(32), nullable=False)
+    name = Column(String, nullable=False)
 
     categories = relationship(
         Category,
@@ -330,7 +330,7 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
 
     widget = Column(
         Enum(*sorted(['checkbox', 'email', 'radio', 'select',
-                      'telephone']),
+                      'phone']),
              name='attribute_widget'))
 
     value_min = Column(Integer, doc='Minimum length or value')
@@ -435,7 +435,7 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
                 CASE
                     WHEN widget IS NOT NULL THEN
                         CASE type
-                            WHEN 'string' THEN widget IN ('telephone', 'email')
+                            WHEN 'string' THEN widget IN ('phone', 'email')
                             WHEN 'choice' THEN
                                 CASE
                                     WHEN is_collection

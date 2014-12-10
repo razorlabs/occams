@@ -11,6 +11,7 @@ from sqlalchemy import (
     event,
     text,
     Column,
+    CheckConstraint,
     ForeignKey, ForeignKeyConstraint, Index, UniqueConstraint,
     Date, DateTime, Boolean, LargeBinary, Numeric, Integer,
     Unicode, UnicodeText, String)
@@ -380,11 +381,8 @@ ValueChoice = TypeMappingClass(
     'choice', 'ValueChoice', 'value_choice',
     ForeignKey('choice.id', name='fk_value_choice_value', ondelete='CASCADE'))
 
-# TODO: Note that for large files, ``memoryview`` should be investigated
-#       as a buffer so that large files aren't read into memor when being
-#       stored in the database.
 ValueBlob = TypeMappingClass(
-    'blob', 'ValueBlob', 'value_blob', LargeBinary, index=False)
+    'blob', 'ValueBlob', 'value_blob', String, index=False)
 
 # Specify how the ``value`` properties behave, pretty much they're synonymns
 # of the ``_value`` property,
@@ -396,7 +394,37 @@ ValueString.value = valueProperty
 ValueText.value = valueProperty
 ValueChoice.value = relationship(Choice,
                                  primaryjoin='Choice.id == ValueChoice._value')
-ValueBlob.value = valueProperty
+
+
+class BlobInfo(object):
+
+    def __init__(self, file_name, path, mime_type=None):
+        self.file_name = file_name
+        self.path = path
+        self.mime_type = mime_type
+
+
+def get_blob(self):
+    if self.path:
+        return BlobInfo(self.file_name, self.path, self.mime_type)
+
+
+def set_blob(self, value):
+    self.file_name = value.file_name if value else None
+    self.path = value.path if value else None
+    self.mime_type = value.mime_type if value else None
+
+
+ValueBlob.file_name = Column(
+    Unicode,
+    CheckConstraint(
+        'CASE WHEN value IS NOT NULL THEN file_name IS NOT NULL END',
+        name='ck_name_has_value'),
+    doc='The original file name (we use a sanitized file name internally)')
+ValueBlob.mime_type = Column(String, doc='The MIME type of the file')
+# path is an alias of the value (to keep things consisten, albeit confusing)
+ValueBlob.path = valueProperty
+ValueBlob.value = property(get_blob, set_blob)
 
 
 def validateValue(target, value, oldvalue, initiator):
@@ -459,7 +487,6 @@ event.listen(ValueNumber.value, 'set', validateValue)
 event.listen(ValueString.value, 'set', validateValue)
 event.listen(ValueText.value, 'set', validateValue)
 event.listen(ValueChoice.value, 'set', validateValue)
-event.listen(ValueBlob.value, 'set', validateValue)
 
 
 # Where the types are stored

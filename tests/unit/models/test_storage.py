@@ -3,10 +3,6 @@ Tests for storage implementations and services
 """
 
 from nose.tools import with_setup
-from sqlalchemy import Column, Integer, String
-
-from occams.datastore import models
-
 from tests import Session, begin_func, rollback_func
 
 
@@ -150,6 +146,7 @@ def check_entity_types(type, simple, update, collection):
     # Do simple values
     simpleName = type + 'simple'
 
+    # Try null first
     schema.attributes['s1'].attributes[simpleName] = models.Attribute(
         name=simpleName,
         title=u'', type=type, is_required=False, order=order)
@@ -158,6 +155,7 @@ def check_entity_types(type, simple, update, collection):
     Session.flush()
     assert_is_none(entity[simpleName])
 
+    # Update value
     entity[simpleName] = simple
     Session.flush()
     assert_equals(simple, entity[simpleName])
@@ -169,7 +167,7 @@ def check_entity_types(type, simple, update, collection):
     valueObject = valueQuery.one()
     assert_equals(2, valueObject.revision)
 
-    # Try updating
+    # Update again
     entity[simpleName] = update
     Session.flush()
     assert_equals(update, entity[simpleName])
@@ -298,13 +296,12 @@ def test_entity_choices():
 @with_setup(begin_func, rollback_func)
 def test_entity_blob_type():
     """
-    It should support files storage
+    It should be able to keep track of file uploads (will not be storing in DB)
     """
 
     from occams.datastore import models
     from datetime import date
-    import os
-    from tests import assert_equals
+    from tests import assert_equals, assert_is_none
 
     schema = models.Schema(name='HasBlob', title=u'',
                            publish_date=date(2000, 1, 1))
@@ -313,19 +310,27 @@ def test_entity_blob_type():
     schema.attributes['theblob'] = models.Attribute(
         parent_attribute=s1,
         name=u'theblob', title=u'', type='blob', order=0)
+
     entity = models.Entity(schema=schema)
-    contents = os.urandom(1000)
-    entity['theblob'] = contents
     Session.add(entity)
     Session.flush()
     entity_id = entity.id
-    # remove all isntances from the Session so we can see if they are
-    # properly fetched
-    Session.expunge_all()
 
+    # Add value
+    entity['theblob'] = models.BlobInfo(file_name=u'foo', path='bar/baz.gif')
+    Session.add(entity)
+    Session.flush()
     entity = Session.query(models.Entity).get(entity_id)
-    assert_equals(contents, entity['theblob'])
-    assert_equals(1, Session.query(models.ValueBlob).count())
+    blob = entity['theblob']
+    assert_equals(u'foo', blob.file_name)
+    assert_equals('bar/baz.gif', blob.path)
+
+    # Clear value
+    entity['theblob'] = None
+    Session.flush()
+    entity = Session.query(models.Entity).get(entity_id)
+    blob = entity['theblob']
+    assert_is_none(blob)
 
 
 def test_value_min_constraint():
