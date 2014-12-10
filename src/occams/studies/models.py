@@ -639,7 +639,7 @@ class PatientReference(Base, Referenceable, Modifiable, Auditable):
                 'patient_id',
                 'reference_type_id',
                 'reference_number',
-                name=u'uq_%s_reference'))
+                name=u'uq_%s_reference' % cls.__tablename__))
 
 
 class Partner(Base, Referenceable, Modifiable, HasEntities, Auditable):

@@ -10,14 +10,9 @@ Create Date: 2014-05-19 13:06:58.677357
 revision = '2eb2629708b3'
 down_revision = '60f4ba5ba66'
 
-from alembic import op
+from alembic import op, context
 import sqlalchemy as sa
 from six import string_types
-
-from alembic import context
-
-
-UPGRADE_USER = 'bitcore@ucsd.edu'
 
 
 def upgrade():
@@ -36,10 +31,6 @@ def upgrade():
     merge_integer_decimal()
     merge_attribute_section()
     overhaul_attribute()
-
-
-def downgrade():
-    pass
 
 
 def cleanup_study():
@@ -292,11 +283,15 @@ def cleanup_reftype():
     op.create_index('ix_patient_reference_patient_id', 'patient_reference', ['patient_id'])
     op.drop_index('ix_patientreference_reference_number', 'patient_reference')
     op.create_index('ix_patient_reference_reference_number', 'patient_reference', ['reference_number'])
-    op.drop_constraint('uq_patientreference_reference', 'patient_reference')
+    # Accomodate error in cctg
+    if 'cctg' in context.config.get_main_option('sqlalchemy.url'):
+        op.drop_constraint('uq_%s_reference', 'patient_reference')
+    else:
+        op.drop_constraint('uq_patientreference_reference', 'patient_reference')
     op.create_unique_constraint('uq_patient_reference_reference_number', 'patient_reference', ['patient_id', 'reference_type_id', 'reference_number'])
 
     op.execute("""
-        UPDATE study
+        UPDATE reference_type
         SET reference_pattern = '^76(C|GH)\d{5}$'
           , reference_hint = '76C##### -or- 76GH#####'
         WHERE name IN ('lead-the-way', 'early-test')
@@ -311,17 +306,20 @@ def cleanup_reftype():
 
 
 def cleanup_patient():
+    blame = context.config.get_main_option('blame')
     op.alter_column('patient', 'our', new_column_name='pid')
     op.drop_constraint('uq_patient_our', 'patient')
     op.create_unique_constraint('uq_patient_pid', 'patient', ['pid'])
 
     # Move legacy_number to reference numbers, where it should have been in the first place
-    if 'aeh' in op.get_bind().engine.url.database:
+    if 'aeh' in context.config.get_main_option('sqlalchemy.url'):
         legacy_name = u'aeh_num'
         legacy_title = u'AEH Number'
     else:
         legacy_name = u'legacy_number'
         legacy_title = u'Legacy Number'
+    # some instances had their primary id values manually set... need to fix this
+    op.execute('SELECT setval(\'reftype_id_seq\', (SELECT MAX(id) + 1 FROM reference_type), FALSE)')
     op.execute("""
         INSERT INTO reference_type (name, title, create_user_id, create_date, modify_user_id, modify_date)
         VALUES (
@@ -332,7 +330,7 @@ def cleanup_patient():
             , (SELECT "user".id FROM "user" WHERE key = {user})
             , CURRENT_TIMESTAMP
             )
-    """.format(op.inline_literal(legacy_name), op.inline_literal(legacy_title), user=op.inline_literal(UPGRADE_USER)))
+    """.format(op.inline_literal(legacy_name), op.inline_literal(legacy_title), user=op.inline_literal(blame)))
     op.execute("""
         INSERT INTO patient_reference (patient_id, reference_type_id, reference_number, create_user_id, create_date, modify_user_id, modify_date, revision)
         SELECT patient.id
@@ -345,7 +343,7 @@ def cleanup_patient():
              , 1
         FROM patient
         WHERE patient.legacy_number iS NOT NULL
-    """.format(legacy_name=op.inline_literal(legacy_name), user=op.inline_literal(UPGRADE_USER)))
+    """.format(legacy_name=op.inline_literal(legacy_name), user=op.inline_literal(blame)))
     op.drop_column('patient', 'legacy_number')
 
     op.create_table(
@@ -416,6 +414,7 @@ def cleanup_enrollment():
 
 
 def cleanup_visit():
+    blame = context.config.get_main_option('blame')
     # --- Make a master table of the visit records
     op.execute(
         """
@@ -438,7 +437,7 @@ def cleanup_visit():
         WHERE (context.external, context.key) = ('visit', visit.id)
         AND (visit.patient_id, visit.visit_date) = (main.patient_id, main.visit_date)
         AND visit.id != main.visit_id
-        """.format(user=UPGRADE_USER))
+        """.format(user=blame))
 
     # -- Move cycles to the designated "main" visit (if it does not already have them)
     op.execute(
@@ -517,20 +516,26 @@ def remove_zid_oldid():
         op.drop_column(table + '_audit', 'zid')
 
     untrack = [
-        'partner',
         'arm', 'cycle', 'enrollment', 'patientreference',
         'reftype', 'site', 'stratum', 'study', 'visit',
         'attribute', 'value_blob', 'category', 'choice',
         'value_datetime', 'value_decimal', 'entity', 'value_integer',
         'schema', 'value_string', 'value_text',
-        'context',
-        'aliquot', 'aliquotstate', 'aliquottype',
-        'location', 'specialinstruction',
-        'specimen', 'specimenstate', 'specimentype']
+        'context']
 
-    db = context.get_x_argument(as_dictionary=True).get('db')
-    if db and 'cctg' in db:
+    url = context.config.get_main_option('sqlalchemy.url')
+
+    if 'aeh' in url:
+        untrack += ['partner']
+
+    if 'cctg' in url:
         untrack += ['patient_log', 'patient_log_nonresponse_type']
+
+    if 'aeh' in url or 'cctg' in url or 'mhealth' in url:
+        untrack += [
+            'aliquot', 'aliquotstate', 'aliquottype',
+            'location', 'specialinstruction',
+            'specimen', 'specimenstate', 'specimentype']
 
     for table in untrack:
         op.drop_column(table, 'old_db')
@@ -546,7 +551,6 @@ def fix_numeric_choice_names():
 
 def case_insensitive_names():
 
-    op.alter_column('schema', 'name', type_=sa.String(32))
     op.alter_column('attribute', 'name', type_=sa.String(20))
     op.alter_column('choice', 'name', type_=sa.String(8))
 
@@ -677,7 +681,7 @@ def merge_attribute_section():
         .update()
         .values(
             name=op.inline_literal('s_') + section_table.c.name,
-            order=op.inline_literal(1000) + section_table.c.order))
+            order=op.inline_literal(1000000000) + section_table.c.order))
 
     section_query = sa.select([
         section_table.c.schema_id,
@@ -720,7 +724,7 @@ def overhaul_attribute():
             "select exists (select 1 from pg_type "
             "where typname='attribute_widget')").scalar()
         if not has_size_type:
-            op.execute("CREATE TYPE attribute_widget AS ENUM ('checkbox', 'email', 'radio', 'select', 'telephone')")
+            op.execute("CREATE TYPE attribute_widget AS ENUM ('checkbox', 'email', 'radio', 'select', 'phone')")
 
     for table_name in ['attribute', 'attribute_audit']:
 
@@ -752,7 +756,7 @@ def overhaul_attribute():
 
         op.add_column(
             table_name,
-            sa.Column('widget', sa.Enum('checkbox', 'email', 'radio', 'select', 'telephone', name='attribute_widget')))
+            sa.Column('widget', sa.Enum('checkbox', 'email', 'radio', 'select', 'phone', name='attribute_widget')))
 
         op.add_column(table_name, sa.Column('constraint_logic', sa.Text()))
         op.add_column(table_name, sa.Column('skip_logic', sa.Text()))
@@ -777,7 +781,7 @@ def overhaul_attribute():
         CASE
             WHEN widget IS NOT NULL THEN
                 CASE type
-                    WHEN 'string' THEN widget IN ('telephone', 'email')
+                    WHEN 'string' THEN widget IN ('phone', 'email')
                     WHEN 'choice' THEN
                         CASE
                             WHEN is_collection THEN widget IN ('select', 'checkbox')
