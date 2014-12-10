@@ -40,7 +40,7 @@ def upgrade():
 
     for row in conn.execute('SELECT * FROM value_blob WHERE value IS NOT NULL').fetchall():
         relative_path = os.path.join(*str(uuid.uuid4()).split('-'))
-        absolute_path = os.path.join(base_dir, *relative_path)
+        absolute_path = os.path.join(base_dir, relative_path)
         os.makedirs(os.path.dirname(absolute_path))
         with open(absolute_path, 'w+b') as fp:
             shutil.copyfileobj(six.BytesIO(row.value), fp)
