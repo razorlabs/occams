@@ -191,7 +191,7 @@ def draft_json(context, request):
     request.session.flash(_(u'Successfully drafted new version'))
     return {
         # Hint the next resource to look for data
-        '__next__': request.route_path('version_view',
+        '__next__': request.route_path('version',
                                        form=draft.name,
                                        version=draft.id)
         }
