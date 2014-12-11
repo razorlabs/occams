@@ -19,7 +19,7 @@
 
   <metal:macro define-macro="main">
     <h1 class="visible-print-block">${schema.title}</h1>
-    <p class="lead visible-print-block">${schema.description}</p>
+    <p class="lead">${schema.description}</p>
     <metal:fields tal:define="schema schema" use-macro="macros.attributes" />
   </metal:macro>
 

@@ -51,6 +51,13 @@ def Integer():
     return Coerce(int)
 
 
+def Sanitize():
+    def validator(value):
+        if value is not None:
+            return value.strip() or None
+    return validator
+
+
 def Model(class_, path=None, msg=None, localizer=None):
     """
     Returns a validator that evaluates the value into a database record.

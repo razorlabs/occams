@@ -1,12 +1,7 @@
 <html metal:use-macro="load: ../master.pt">
   <metal:content-slot fill-slot="content-slot">
 
-    <header class="page-header hidden-print">
-      <div metal:use-macro="load: header-toolbar.pt" />
-      <h1>${context.title}</h1>
-      <ul metal:use-macro="load: header-details.pt" />
-      <nav metal:use-macro="load: header-nav.pt" />
-    </header>
+    <header metal:use-macro="load: header.pt"></header>
 
     <div class="alert alert-info hidden-print">
       <span class="glyphicon glyphicon-info-sign"></span>
@@ -29,5 +24,17 @@
     </form>
 
   </metal:content-slot>
+  <metal:content-slot fill-slot="javascript-extras-slot">
+    <script>
+      $(function(){
+        'use strict';
+        ko.applyBindings(new VersionViewModel({
+            versionUrl: '${request.current_route_path(_route_name='version')}'
+          })
+        );
+      });
+    </script>
+  </metal:content-slot>
+
 </html>
 

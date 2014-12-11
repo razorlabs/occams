@@ -22,11 +22,19 @@
     // Ignore helper form elements
     ignore: 'select2-input, .select2-focusser',
     errorPlacement: function(label, element){
-      // Add after the input group (if set) so we don't get
-      // weird rendering errors
+      // Add after the input group (if set) so we don't get weird rendering errors
       if ($(element).parent().hasClass('input-group')){
         element = $(element).parent();
       }
+
+      // Check if there's a designated input contaier
+      // This is so that a input lement can be sized without interfering
+      // with the help-block size
+      var $container = $(element).closest('.form-group').find('.input-container');
+      if ( $container.length > 0 ){
+        element = $container[0];
+      }
+
       label.addClass('help-block').insertAfter(element);
     },
     onfocusout: function(element, event){

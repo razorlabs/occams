@@ -8,9 +8,9 @@ from pyramid.response import FileIter
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 
-from .. import _, Session
+from .. import _, models, Session
 from . import field as field_views
-from ..validators import String, invalid2dict
+from ..validators import String, invalid2dict, Sanitize
 
 
 @view_config(
@@ -56,7 +56,8 @@ def download_json(context, request):
     response = request.response
     response.content_type = 'application/json'
     response.content_disposition = 'attachment; filename="%s-%s.json"' % (
-        context.name, context.publish_date.isoformat())
+        context.name,
+        context.publish_date.isoformat() if context.publish_date else 'draft')
     response.app_iter = FileIter(fp)
     return response
 
@@ -70,6 +71,65 @@ def preview(context, request):
     Preview form for test-drivining.
     """
     return {}
+
+
+@view_config(
+    route_name='version',
+    xhr=True,
+    permission='edit',
+    request_method='PUT',
+    request_param='publish',
+    renderer='json')
+def publish_json(context, request):
+    check_csrf_token(request)
+
+    def check_unique_publication(value):
+        if value is not None:
+            (exists,) = (
+                Session.query(
+                    Session.query(models.Schema)
+                    .filter_by(name=context.name, publish_date=value)
+                    .filter(models.Schema.id != context.id)
+                    .exists())
+                .one())
+            if exists:
+                msg = _('Version ${publish_date} is already in use')
+                raise Invalid(request.localizer.translate(
+                    msg, mapping={'publish_date': value}))
+        return value
+
+    def check_valid_timeline(value):
+        if not value['publish_date'] and value['retract_date']:
+            msg = _('No publish date set')
+            raise Invalid(
+                request.localizer.translate(msg), path=['retract_date'])
+        if value['publish_date'] and value['retract_date'] \
+                and value['retract_date'] < value['publish_date']:
+            msg = _('Must be after publish date')
+            raise Invalid(
+                request.localizer.translate(msg), path=['retract_date'])
+        return value
+
+    validator = Schema(All({
+        'publish_date': All(
+            Sanitize(),
+            Maybe(All(Date('%Y-%m-%d'), check_unique_publication))),
+        'retract_date': All(Sanitize(), Maybe(Date('%Y-%m-%d'))),
+        Extra: Remove
+        },
+        check_valid_timeline))
+
+    try:
+        data = validator(request.json_body)
+    except Invalid as e:
+        return HTTPBadRequest(json={'errors': invalid2dict(e)})
+
+    context.publish_date = data['publish_date']
+    context.retract_date = data['retract_date']
+
+    Session.flush()
+
+    return view_json(context, request)
 
 
 @view_config(
@@ -94,6 +154,7 @@ def edit_json(context, request):
 
     context.title = data['title']
     context.description = data['description']
+    Session.flush()
 
     request.session.flash(_(u'Changes saved'), 'success')
 

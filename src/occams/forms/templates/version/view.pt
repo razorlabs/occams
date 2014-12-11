@@ -1,17 +1,10 @@
 <html metal:use-macro="load: ../master.pt">
   <metal:content-slot fill-slot="content-slot">
 
-    <header class="page-header">
-      <div class="pull-right">
-        <div metal:use-macro="load: header-toolbar.pt" />
-      </div>
-      <h1>${context.title}</h1>
-      <ul metal:use-macro="load: header-details.pt" />
-      <nav metal:use-macro="load: header-nav.pt" />
-    </header>
+    <header metal:use-macro="load: header.pt"></header>
 
     <div class="alert alert-success"
-          tal:repeat="msg request.session.pop_flash()">
+          tal:repeat="msg request.session.pop_flash('success')">
       ${msg}
     </div>
 
@@ -81,6 +74,17 @@
         </tbody>
       </table>
     </div>
+  </metal:content-slot>
 
+  <metal:content-slot fill-slot="javascript-extras-slot">
+    <script>
+      $(function(){
+        'use strict';
+        ko.applyBindings(new VersionViewModel({
+            versionUrl: '${request.current_route_path(_route_name='version')}'
+          })
+        );
+      });
+    </script>
   </metal:content-slot>
 </html>

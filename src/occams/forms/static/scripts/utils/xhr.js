@@ -21,8 +21,6 @@ function handleXHRError(options){
 
   return function(jqXHR, textStatus, errorThrown){
 
-    console.log(jqXHR, textStatus, errorThrown);
-
     if (textStatus.indexOf('CSRF') > -1 ){
       // The session has expired and the user needs to be redirected
       window.location.reload();
