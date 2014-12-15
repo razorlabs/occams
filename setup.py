@@ -113,6 +113,6 @@ setup(
     [paste.app_factory]
     main = occams.forms:main
     [console_scripts]
-    of_init = occams.forms.scripts.initializedb:main
+    of_initdb = occams.forms.scripts.initdb:main
     """,
 )

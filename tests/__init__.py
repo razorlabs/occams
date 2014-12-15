@@ -1,11 +1,27 @@
 """
 Testing fixutres
-"""
 
+If using a database other than sqlite, you must preinstall
+the database by first runnning:
+
+    initdb path/to/ini
+
+
+
+To specify a pyramid configuration use:
+
+    nosetests --tc=db:postgres://user:pass@host/db
+
+"""
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
+
+# Raise unicode warnings as errors so we can fix them
+import warnings
+from sqlalchemy.exc import SAWarning
+warnings.filterwarnings('error', category=SAWarning)
 
 
 REDIS_URL = 'redis://localhost/9'
@@ -18,47 +34,13 @@ def setup_package():
     Useful for installing system-wide heavy resources such as a database.
     (Costly to do per-test or per-fixture)
     """
-    import os
-    from six.moves.configparser import SafeConfigParser
     from sqlalchemy import create_engine
     from testconfig import config
-    from occams.forms import Session, models
+    from occams.datastore import models as datastore
+    from occams.forms import Session
 
-    HERE = os.path.abspath(os.path.dirname(__file__))
-    cfg = SafeConfigParser()
-    cfg.read(os.path.join(HERE, '..', 'setup.cfg'))
-    db = config.get('db') or 'default'
-    engine = create_engine(cfg.get('db', db))
-
-    Session.configure(bind=engine)
-
-    models.DataStoreModel.metadata.create_all(Session.bind)
-
-
-def teardown_package():
-    """
-    Releases system-wide fixtures
-    """
-    import os
-    from occams.forms import Session, models
-
-    models.DataStoreModel.metadata.drop_all(Session.bind)
-
-    def delete_db(session):
-        url = session.bind.url
-        if (url.drivername == 'sqlite'
-                and url.database
-                and 'memory' not in url.database):
-            os.remove(url.database)
-
-    delete_db(Session)
-
-
-def track_user(login, is_current=True):
-    from occams.forms import Session, models
-    Session.add(models.User(key=login))
-    Session.flush()
-    Session.info['user'] = login
+    Session.configure(bind=create_engine(config.get('db')))
+    datastore.DataStoreModel.metadata.create_all(Session.bind)
 
 
 class IntegrationFixture(unittest.TestCase):
@@ -68,18 +50,21 @@ class IntegrationFixture(unittest.TestCase):
 
     def setUp(self):
         from pyramid import testing
-        from occams.forms import models
+        import transaction
+        from occams.forms import models, Session
+
         self.config = testing.setUp()
+
+        self.addCleanup(testing.tearDown)
+        self.addCleanup(transaction.abort)
+        self.addCleanup(Session.remove)
+
+        Session.add(models.User(key=u'tester'))
+        Session.flush()
+        Session.info['user'] = u'tester'
+
         models.DataStoreModel.metadata.info['settings'] = \
             self.config.registry.settings
-
-    def tearDown(self):
-        from occams.forms import Session
-        from pyramid import testing
-        import transaction
-        testing.tearDown()
-        transaction.abort()
-        Session.remove()
 
 
 class FunctionalFixture(unittest.TestCase):

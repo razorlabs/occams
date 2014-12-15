@@ -81,7 +81,7 @@
             <label for="retract_date" i18n:translate="">Retract Date</label>
             <p class="help-block" i18n:translate="">
               This field indicates that this form should not be included in export data files
-              for unforseen reasons involving the form (IRB issues, legal issues, etc).
+              for unforseen reasons involving the form (IRB issues, legal ambiguities, etc).
             </p>
             <div class="row input-container">
               <div class="col-md-4">
