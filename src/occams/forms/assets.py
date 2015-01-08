@@ -37,7 +37,7 @@ def includeme(config):
         Bundle(
             'styles/main.less',
             filters='less',
-            depends='styles/**/*.less',
+            depends='styles/*.less',
             output='gen/main.%(version)s.min.css'),
         Bundle('bower_components/select2/select2.css', filters='cssrewrite'),
         'bower_components/select2-bootstrap-css/select2-bootstrap.css',
