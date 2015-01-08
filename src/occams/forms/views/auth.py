@@ -7,15 +7,8 @@ from .. import _, Session, models
 from ..validators import String
 
 
-@view_config(
-    route_name='login',
-    renderer='../templates/auth/login.pt')
-@forbidden_view_config(
-    renderer='../templates/auth/login.pt')
-def login(request):
-    error = None
-    data = None
-
+@forbidden_view_config()
+def forbidden(request):
     if (request.matched_route.name != 'login'
             and request.authenticated_userid):
         # If an authenticated user has reached this controller without
@@ -23,17 +16,28 @@ def login(request):
         # error
         return HTTPForbidden(_(u'Permission denied'))
 
-    # Figure out where the user came from so we can redirect afterwards
-    referrer = request.GET.get('referrer', request.current_route_path())
+    return HTTPFound(location=request.route_path('login', _query={
+        'referrer': request.current_route_path()
+        }))
 
-    if not referrer or referrer == request.route_path('login'):
-        # Never use the login as the referrer
-        referrer = request.route_path('home')
+
+@view_config(
+    route_name='login',
+    renderer='../templates/auth/login.pt')
+def login(request):
+
+    if request.authenticated_userid:
+        return HTTPFound(location=request.route_path('forms'))
+
+    error = None
+    data = None
 
     schema = Schema({
         'login': All(String(), Length(max=32)),
         'password': All(String(), Length(max=128))
         })
+
+    referrer = request.GET.get('referrer') or request.current_route_path()
 
     # Only process the input if the user intented to post to this view
     # (could be not-logged-in redirect)
