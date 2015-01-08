@@ -11,6 +11,7 @@ from pyramid.view import view_config
 from .. import _, models, Session
 from . import field as field_views
 from ..validators import String, invalid2dict, Sanitize
+from ..renderers import make_form, render_form
 
 
 @view_config(
@@ -70,7 +71,30 @@ def preview(context, request):
     """
     Preview form for test-drivining.
     """
-    return {}
+    form_class = make_form(context, enable_metadata=False)
+    form = form_class(request.POST)
+    form_id = 'form-preview'
+    entity = None
+
+    if request.method == 'POST' and form.validate():
+        entity = models.Entity(schema=context)
+        for attribute in context.iterleafs():
+            if attribute.parent_attribute:
+                data = form.data[attribute.parent_attribute.name]
+            else:
+                data = form.data
+            entity[attribute.name] = data[attribute.name]
+
+    return {
+        'entity': entity,
+        'form_id': form_id,
+        'form_content': render_form(form, attr={
+            'id': form_id,
+            'method': 'POST',
+            'action': request.current_route_path(_query={}),
+            'role': 'form'
+            })
+        }
 
 
 @view_config(

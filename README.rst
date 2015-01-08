@@ -53,6 +53,16 @@ To install, refer  to this plugin in your egg's ``setup.py`` file::
        )
 
 
+Node Packages
++++++++++++++
+
+This project depends on some node package for asset-dependency management::
+
+  cd /path/to/occams.forms
+  npm install
+  ./node_modules/.bin/bower install
+
+
 Authentication
 ++++++++++++++
 

@@ -5,7 +5,6 @@ from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.config import Configurator
 from pyramid.i18n import TranslationStringFactory
 from pyramid_who.whov2 import WhoV2AuthenticationPolicy
-from repoze.who.config import make_middleware_with_config
 from sqlalchemy import orm
 import zope.sqlalchemy
 
@@ -54,11 +53,6 @@ def main(global_config, **settings):
     config.commit()
 
     app = config.make_wsgi_app()
-
-    # Use repoze middleware to refresh the cookie after each request.
-    # This will ensure timout/reissue_time settings are observed.
-    app = make_middleware_with_config(
-        app, global_config, settings['who.config_file'])
 
     log.info('Ready')
 
