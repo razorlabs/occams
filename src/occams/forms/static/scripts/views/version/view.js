@@ -22,7 +22,7 @@ function VersionViewModel(options){
   self.showPublish = ko.pureComputed(function(){ return self.mode() == PUBLISH; });
   self.showDelete = ko.pureComputed(function(){ return self.mode() == DELETE; });
 
-  self.clear= function(){
+  self.clear = function(){
     self.mode(null);
     self.editableVersion(null);
     self.errorMessage(null);

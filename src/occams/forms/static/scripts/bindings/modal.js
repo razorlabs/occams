@@ -4,9 +4,10 @@
 +function($){
   'use strict';
 
-  ko.bindingHandlers.showModal = {
+  ko.bindingHandlers.modalVisible = {
     update: function (element, valueAccessor) {
-      $(element).modal(ko.unwrap(valueAccessor()) ? 'show' : 'hide');
+      var show = !!ko.unwrap(valueAccessor());
+      $(element).modal(show ? 'show' : 'hide');
     }
   };
 
