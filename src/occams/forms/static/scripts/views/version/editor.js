@@ -209,7 +209,7 @@ function VersionEditorView(options){
     self.availableTypes(data.__types__);
     self.version(new Version(data));
     self.isReady(true);
-    setupTypesAffix();
+    setupTypesAffix(); // Needs to be done when document is visible
   });
 }
 
