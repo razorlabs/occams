@@ -209,6 +209,7 @@ function VersionEditorView(options){
     self.availableTypes(data.__types__);
     self.version(new Version(data));
     self.isReady(true);
+    setupTypesAffix();
   });
 }
 
@@ -228,7 +229,6 @@ function setupTypesAffix(){
   'use strict';
 
   var MARGIN_TOP = 20; // use 20 pixels of margin
-
   $('#of-types')
     .affix({
       offset: {
@@ -244,6 +244,12 @@ function setupTypesAffix(){
     })
     .on('affix.bs.affix', function(event){
       // affixing arbitrarily uses fixed positioning, use original width
-      return $(this).css('top', MARGIN_TOP).width($(this).width());
+      return $(this).css('top', MARGIN_TOP).width($(this).parent().width());
     });
+
+    $(window).resize(function(){
+      $('#of-types').trigger('affix.bs.affix');
+    });
+
+    $(window).resize();
 }
