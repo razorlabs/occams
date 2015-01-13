@@ -1,15 +1,13 @@
 import json
 
-from good import *  # NOQA
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 from pyramid.httpexceptions import HTTPBadRequest
 import sqlalchemy as sa
 from sqlalchemy import orm
+import wtforms
 
 from .. import _, Session, models
-from . import version as version_views
-from ..validators import invalid2dict, Bytes, String
 
 
 @view_config(
@@ -70,14 +68,12 @@ def add(context, request):
     """
     check_csrf_token(request)
 
-    schema = FormSchema(context, request)
+    form = FormForm.from_json(request.json_body)
 
-    try:
-        data = schema(request.json_body)
-    except Invalid as e:
-        raise HTTPBadRequest(json=invalid2dict(e))
+    if not form.validate():
+        raise HTTPBadRequest(json=form.errors)
 
-    schema = models.Schema(**data)
+    schema = models.Schema(**form.data)
     Session.add(schema)
     Session.flush()
 
@@ -140,25 +136,27 @@ def get_list_data(request, names=None):
     }
 
 
-def FormSchema(context, request):
+def check_unique_name(form, field):
+    (exists,) = (
+        Session.query(
+            Session.query(models.Schema)
+            .filter_by(name=field.data.lower())
+            .exists())
+        .one())
+    if exists:
+        raise wtforms.ValiationError(_(u'Form name already in use'))
 
-    def unique_name(value):
-        (exists,) = (
-            Session.query(
-                Session.query(models.Schema)
-                .filter_by(name=value.lower())
-                .exists())
-            .one())
-        if exists:
-            raise Invalid(_(u'Form name already in use'))
-        return value
 
-    return Schema({
-        'name': All(
-            Bytes(),
-            Length(min=3, max=32),
-            Match('^[a-zA-Z_][a-zA-Z0-9_]+$'),
-            unique_name),
-        'title': All(String(), Length(min=3, max=128)),
-        Extra: Remove
-        })
+class FormForm(wtforms.Form):
+
+    name = wtforms.StringField(
+        validators=[
+            wtforms.validators.InputRequired(),
+            wtforms.validators.Length(min=3, max=32),
+            wtforms.validators.Regexp('^[a-zA-Z_][a-zA-Z0-9_]+$'),
+            check_unique_name])
+
+    title = wtforms.StringField(
+        validators=[
+            wtforms.validators.InputRequired(),
+            wtforms.validators.Length(min=3, max=128)])

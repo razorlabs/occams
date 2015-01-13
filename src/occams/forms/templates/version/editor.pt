@@ -11,26 +11,26 @@
     <!-- /ko -->
 
     <div style="display: none;" data-bind="visible: isReady, with: version">
-        <form id="schema-form" class="form-horizontal" data-bind="validate: {}, submit: $root.saveSchema">
-          <div class="form-group">
-            <label class="required col-md-2" i18n:translate="">Schema</label>
-            <div class="col-md-10">
-              <p class="form-control-static"><code data-bind="text: name"></code></p>
-            </div>
+      <form id="schema-form" class="form-horizontal" data-bind="validate: {}, submit: $root.saveSchema">
+        <div class="form-group">
+          <label class="required col-md-2" i18n:translate="">Schema</label>
+          <div class="col-md-10">
+            <p class="form-control-static"><code data-bind="text: name"></code></p>
           </div>
-          <div class="form-group">
-            <label class="required col-md-2" i18n:translate="">Form</label>
-            <div class="col-md-10">
-              <input type="text" class="form-control" name="title" data-bind="value: title" />
-            </div>
+        </div>
+        <div class="form-group">
+          <label class="required col-md-2" i18n:translate="">Form</label>
+          <div class="col-md-10">
+            <input type="text" class="form-control" name="title" data-bind="value: title" />
           </div>
-          <div class="form-group">
-            <label class="col-md-2" i18n:translate="">Description</label>
-            <div class="col-md-10">
-              <textarea name="description" class="form-control" data-bind="value: description"></textarea>
-            </div>
+        </div>
+        <div class="form-group">
+          <label class="col-md-2" i18n:translate="">Description</label>
+          <div class="col-md-10">
+            <textarea name="description" class="form-control" data-bind="value: description"></textarea>
           </div>
-        </form>
+        </div>
+      </form>
       <hr style="width: 100%" />
       <div class="row">
         <div id="of-content" class="col-md-9">
@@ -381,8 +381,8 @@
             versionUrl: "${request.current_route_path(_route_name='version')}",
             fieldsUrl: "${request.current_route_path(_route_name='fields')}"
           }),
-          document.getElementById('version_editor'));
-        setupTypesAffix();
+          document.getElementById('version_editor')
+        );
       });
     </script>
   </metal:content-slot>

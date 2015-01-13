@@ -1,5 +1,5 @@
 <header class="page-header" data-bind="with: version">
-  <div class="btn-toolbar pull-right" role="toolbar" style="display: none" data-bind="visible: $root.isReady">
+  <div class="btn-toolbar pull-right" role="toolbar">
     <div class="btn-group">
       <a href="${request.current_route_path(_route_name='version', _query={'download': 'json'})}"
           class="btn btn-default">
@@ -57,7 +57,7 @@
   </nav>
 </header>
 
-<div class="modal fade" data-keyboard="false" data-bind="showModal: showPublish, if: showPublish">
+<div class="modal fade" data-keyboard="false" data-bind="modalVisible: showPublish, if: showPublish">
   <div class="modal-dialog" data-bind="with: editableVersion">
     <div class="modal-content">
       <form data-bind="submit: $root.publishVersion, validate: {}">
@@ -103,9 +103,9 @@
   </div><!-- /.modal-dialog -->
 </div><!-- /.modal -->
 
-<div class="modal fade" data-keyboard="false" data-bind="showModal: showDraft, if: showDraft">
-  <div class="modal-dialog" data-bind="with: version">
-    <div class="modal-content">
+<div class="modal fade" data-keyboard="false" data-bind="modalVisible: showDraft">
+  <div class="modal-dialog" data-bind="if: showDraft">
+    <div class="modal-content" data-bind="with: version">
       <form data-bind="submit: $root.draftVersion">
         <div class="modal-header">
           <h4 class="modal-title" i18n:translate="">Draft new version.</h4>
@@ -127,9 +127,9 @@
   </div><!-- /.modal-dialog -->
 </div><!-- /.modal -->
 
-<div class="modal fade" data-keyboard="false" data-bind="showModal: showDelete, if: showDelete">
-  <div class="modal-dialog" data-bind="with: version">
-    <div class="modal-content">
+<div class="modal fade" data-keyboard="false" data-bind="modalVisible: showDelete">
+  <div class="modal-dialog" data-bind="if: showDelete">
+    <div class="modal-content" data-bind="with: version">
       <form data-bind="submit: $root.deleteVersion">
         <div class="modal-header">
           <h4 class="modal-title" i18n:translate="">Delete this version</h4>

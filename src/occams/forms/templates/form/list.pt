@@ -128,9 +128,9 @@
         </div>
       <!-- /ko -->
 
-      <div class="modal fade" data-keyboard="false" data-bind="showModal: showEditor, if: showEditor">
-        <div class="modal-dialog" data-bind="with: selectedForm">
-          <div class="modal-content">
+      <div class="modal fade" data-keyboard="false" data-bind="modalVisible: showEditor">
+        <div class="modal-dialog" data-bind="if: showEditor">
+          <div class="modal-content" data-bind="with: selectedForm">
             <form data-bind="submit: $parent.doSave, validate: {}">
               <div class="modal-header">
                 <h4 class="modal-title" i18n:translate="">Add New Form</h4>

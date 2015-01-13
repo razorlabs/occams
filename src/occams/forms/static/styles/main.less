@@ -2,33 +2,45 @@
  * Main CSS File
  */
 
-// Extend bootstrap
+//
+// Setup
+//
 
-@import '../libs/bootstrap/less/bootstrap.less';
+@import '../bower_components/bootstrap/less/bootstrap.less';
+@import '../bower_components/font-awesome/less/font-awesome.less';
+@import '../bower_components/eonasdan-bootstrap-datetimepicker/src/less/bootstrap-datetimepicker.less';
 
-@import '../libs/font-awesome/less/font-awesome.less';
-@fa-font-path: '../libs/font-awesome/fonts/';
+// Update the base path to relative to the assets directory
+@icon-font-path: '../bower_components/bootstrap/fonts/';
 
-@import '../libs/bootstrap-datetimepicker/src/less/bootstrap-datetimepicker.less';
+@fa-font-path: '../bower_components/font-awesome/fonts/';
 
-// Overrides
+// Accomodate the feature-rich navbar by collapsing only for phones/tablets
+@grid-float-breakpoint: @screen-desktop;
 
-@import 'overrides.less';
+// The navbar margin is a bit excessive
+@navbar-margin-bottom: -(@line-height-computed);
 
-
+//
 // Components
+//
 
 @import 'fonts.less';
 @import 'form.less';
 @import 'navs.less';
 @import 'navbar.less';
 
+//
 // Layouts
+//
 
 @import 'login.less';
 @import 'stickyfoot.less';
 
+//
 // Views
+//
+
 @import 'form-list.less';
 @import 'version-editor.less';
 @import 'version-print.less';
