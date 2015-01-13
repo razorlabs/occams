@@ -134,6 +134,8 @@ def publish_json(context, request):
         if publish_date < retract_date:
             raise wtforms.ValidationError(_('Must be after publish date'))
 
+    # TODO: should move this out, but need to ensure context is removed
+    # from helper validators
     class PublishForm(wtforms.Form):
         publish_date = wtforms.ext.dateutil.fields.DateField(
             validators=[
@@ -159,6 +161,17 @@ def publish_json(context, request):
     return view_json(context, request)
 
 
+class SchemaForm(wtforms.Form):
+
+    title = wtforms.StringField(
+        validators=[
+            wtforms.validators.InputRequired(),
+            wtforms.validators.Length(min=3, max=128)])
+
+    description = wtforms.StringField(
+        validators=[wtforms.validators.Optional()])
+
+
 @view_config(
     route_name='version',
     xhr=True,
@@ -167,14 +180,6 @@ def publish_json(context, request):
     renderer='json')
 def edit_json(context, request):
     check_csrf_token(request)
-
-    class SchemaForm(wtforms.Form):
-        title = wtforms.StringField(
-            validators=[
-                wtforms.validators.InputRequired(),
-                wtforms.validators.Length(min=3, max=128)])
-        description = wtforms.StringField(
-            validators=[wtforms.validators.Optional()])
 
     form = SchemaForm.from_json(request.json_body)
 

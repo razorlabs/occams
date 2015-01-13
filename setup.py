@@ -8,7 +8,6 @@ CHANGES = open(os.path.join(HERE, 'CHANGES.rst')).read()
 REQUIRES = [
     'alembic',                  # Database table upgrades
     'cssmin',                   # CSS asset compression
-    'good>=0.0.7',              # Input validation
     'jsmin>=2.0.11',            # JS asset compression
     'Paste',                    # Needed for urlmap
     'python-dateutil',          # Date parsing
@@ -29,7 +28,7 @@ REQUIRES = [
 ]
 
 EXTRAS = {
-    'ldap': ['python3-ldap', 'who_ldap'],
+    'ldap': ['who_ldap'],
     'sqlite': [],
     'postgresql': ['psycopg2', 'psycogreen'],
     'gunicorn': ['gunicorn'],

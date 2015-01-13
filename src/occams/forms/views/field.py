@@ -223,6 +223,8 @@ def FieldFormFactory(context, request):
         title = wtforms.StringField(
             validators=[wtforms.validators.InputRequired()])
 
+    # TODO: should move this out, but need to ensure context is removed
+    # from helper validators
     class FieldForm(wtforms.Form):
         name = wtforms.StringField(
             validators=[
