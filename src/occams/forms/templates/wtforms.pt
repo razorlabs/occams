@@ -134,6 +134,13 @@
             <tal:case case="string:TextInput">
               ${structure: field(class_='form-control')}
             </tal:case>
+            <tal:case case="string:FileInput">
+              ${structure: field(**{
+                  'class': 'form-control file',
+                  'data-show-upload': 'false',
+                  'data-show-preview': 'false'
+                  })}
+            </tal:case>
             <tal:case case="default">${structure: field()}</tal:case>
           </tal:switch>
         </tal:case>

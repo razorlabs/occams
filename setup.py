@@ -21,7 +21,8 @@ REQUIRES = [
     'pyramid_who',              # User authentication
     'six',                      # Py 2 & 3 compatibility
     'SQLAlchemy>=0.9.0',        # Database ORM
-    'wtforms',
+    'wtforms>=2.0.0',
+    'wtforms-json',
     'zope.sqlalchemy',          # Connects sqlalchemy to pyramid_tm
 
     'occams.datastore',         # EAV

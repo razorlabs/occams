@@ -1,4 +1,5 @@
 <form
+  enctype="multipart/form-data"
   tal:attributes="attr|nothing"
   tal:define="macros load:wtforms.pt">
   <metal:fields use-macro="macros.fields" />

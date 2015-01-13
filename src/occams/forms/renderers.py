@@ -6,6 +6,10 @@ and associated plugins must be enabled.
 """
 
 from __future__ import division
+import os
+import shutil
+import tempfile
+import uuid
 
 from pyramid.renderers import render
 import six
@@ -211,3 +215,68 @@ def render_form(form, attr=None):
         'form': form,
         'attr': attr or {},
         })
+
+
+def apply_data(entity, data, upload_path):
+    """
+    Updates an entity with a dictionary of data
+    """
+
+    assert upload_path is not None, u'Destination path is required'
+
+    if upload_path is None:
+        upload_path = tempfile.mkdtemp()
+        try:
+            apply_data(entity, data, upload_path)
+        finally:
+            shutil.rmtree(upload_path)
+        return
+
+    for attribute in entity.schema.iterleafs():
+
+        # Find the appropriate sub-attribute to update
+        if attribute.parent_attribute:
+            sub = data[attribute.parent_attribute.name]
+        else:
+            sub = data
+
+        # Accomodate patch data (i.e. incomplete data, for updates)
+        if attribute.name not in sub:
+            continue
+
+        if attribute.type == 'blob':
+            original_name = os.path.basename(data[attribute.name].filename)
+            input_file = data[attribute.name].file
+
+            generated_path = os.path.join(*str(uuid.uuid4()).split('-'))
+            dest_path = os.path.join(upload_path, generated_path)
+
+            # Write to a temporary file to prevent using incomplete files
+            temp_dest_path = dest_path + '~'
+            output_file = open(temp_dest_path, 'wb')
+
+            input_file.seek(0)
+            while True:
+                data = input_file.read(2 << 16)
+                if not data:
+                    break
+                output_file.write(data)
+
+            # Make sure the data is commited to the file system before closing
+            output_file.flush()
+            os.fsync(output_file.fileno())
+
+            output_file.close()
+
+            # Rename successfully uploaded file
+            os.rename(temp_dest_path, dest_path)
+
+            mime_type = None
+
+            value = models.BlobInfo(original_name, dest_path, mime_type)
+        else:
+            value = sub[attribute.name]
+
+        entity[attribute.name] = value
+
+    return entity

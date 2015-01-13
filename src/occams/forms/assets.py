@@ -25,6 +25,7 @@ def includeme(config):
         'bower_components/select2/select2.min.js',
         'bower_components/moment/min/moment.min.js',
         'bower_components/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js',
+        'bower_components/bootstrap-fileinput/js/fileinput.min.js',
         # App-specific scripts can be loaded in any order
         Bundle(
             *[os.path.join(root, filename)
@@ -41,6 +42,7 @@ def includeme(config):
             output='gen/main.%(version)s.min.css'),
         Bundle('bower_components/select2/select2.css', filters='cssrewrite'),
         'bower_components/select2-bootstrap-css/select2-bootstrap.css',
+        Bundle('bower_components/bootstrap-fileinput/css/fileinput.min.css', filters='cssrewrite'),
         filters='cssmin',
         output='gen/default.%(version)s.css'))
 

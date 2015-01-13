@@ -1,17 +1,20 @@
 from copy import deepcopy
 import json
+import shutil
+import tempfile
 
-from good import *  # NOQA
 import six
 from pyramid.httpexceptions import HTTPBadRequest
 from pyramid.response import FileIter
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
+import wtforms
+import wtforms.widgets.html5
+import wtforms.ext.dateutil.fields
 
 from .. import _, models, Session
 from . import field as field_views
-from ..validators import String, invalid2dict, Sanitize
-from ..renderers import make_form, render_form
+from ..renderers import make_form, render_form, apply_data
 
 
 @view_config(
@@ -77,13 +80,15 @@ def preview(context, request):
     entity = None
 
     if request.method == 'POST' and form.validate():
-        entity = models.Entity(schema=context)
-        for attribute in context.iterleafs():
-            if attribute.parent_attribute:
-                data = form.data[attribute.parent_attribute.name]
-            else:
-                data = form.data
-            entity[attribute.name] = data[attribute.name]
+        upload_path = tempfile.mkdtemp()
+        try:
+            entity = apply_data(
+                models.Entity(schema=context),
+                form.patch_data,
+                upload_path
+            )
+        finally:
+            shutil.rmtree(upload_path)
 
     return {
         'entity': entity,
@@ -107,49 +112,47 @@ def preview(context, request):
 def publish_json(context, request):
     check_csrf_token(request)
 
-    def check_unique_publication(value):
-        if value is not None:
-            (exists,) = (
-                Session.query(
-                    Session.query(models.Schema)
-                    .filter_by(name=context.name, publish_date=value)
-                    .filter(models.Schema.id != context.id)
-                    .exists())
-                .one())
-            if exists:
-                msg = _('Version ${publish_date} is already in use')
-                raise Invalid(request.localizer.translate(
-                    msg, mapping={'publish_date': value}))
-        return value
+    def check_unique_publish_date(form, field):
+        (exists,) = (
+            Session.query(
+                Session.query(models.Schema)
+                .filter_by(name=context.name, publish_date=field.data)
+                .filter(models.Schema.id != context.id)
+                .exists())
+            .one())
+        if exists:
+            raise wtforms.ValidationError(_(
+                'Version ${publish_date} is already in use',
+                mapping={'publish_date': field.data}))
 
-    def check_valid_timeline(value):
-        if not value['publish_date'] and value['retract_date']:
-            msg = _('No publish date set')
-            raise Invalid(
-                request.localizer.translate(msg), path=['retract_date'])
-        if value['publish_date'] and value['retract_date'] \
-                and value['retract_date'] < value['publish_date']:
-            msg = _('Must be after publish date')
-            raise Invalid(
-                request.localizer.translate(msg), path=['retract_date'])
-        return value
+    def check_valid_timeline(form, field):
+        publish_date = form.publish_date.data
+        retract_date = form.retract_date.data
+        if not publish_date:
+            raise wtforms.ValidationError(_(
+                u'Cannot retract an un-published form'))
+        if publish_date < retract_date:
+            raise wtforms.ValidationError(_('Must be after publish date'))
 
-    validator = Schema(All({
-        'publish_date': All(
-            Sanitize(),
-            Maybe(All(Date('%Y-%m-%d'), check_unique_publication))),
-        'retract_date': All(Sanitize(), Maybe(Date('%Y-%m-%d'))),
-        Extra: Remove
-        },
-        check_valid_timeline))
+    class PublishForm(wtforms.Form):
+        publish_date = wtforms.ext.dateutil.fields.DateField(
+            validators=[
+                wtforms.validators.Optional(),
+                check_unique_publish_date],
+            widget=wtforms.widgets.html5.DateInput())
+        retract_date = wtforms.ext.dateutil.fields.DateField(
+            validators=[
+                wtforms.validators.Optional(),
+                check_valid_timeline],
+            widget=wtforms.widgets.html5.DateInput())
 
-    try:
-        data = validator(request.json_body)
-    except Invalid as e:
-        return HTTPBadRequest(json={'errors': invalid2dict(e)})
+    form = PublishForm.from_json(request.json_body)
 
-    context.publish_date = data['publish_date']
-    context.retract_date = data['retract_date']
+    if not form.validate():
+        return HTTPBadRequest(json=form.errors)
+
+    context.publish_date = form.publish_date.data
+    context.retract_date = form.retract_date.date
 
     Session.flush()
 
@@ -165,19 +168,21 @@ def publish_json(context, request):
 def edit_json(context, request):
     check_csrf_token(request)
 
-    validator = Schema({
-        'title': All(String(), Length(min=3, max=128)),
-        'description': Maybe(String()),
-        Extra: Remove
-        })
+    class SchemaForm(wtforms.Form):
+        title = wtforms.StringField(
+            validators=[
+                wtforms.validators.InputRequired(),
+                wtforms.validators.Length(min=3, max=128)])
+        description = wtforms.StringField(
+            validators=[wtforms.validators.Optional()])
 
-    try:
-        data = validator(request.json_body)
-    except Invalid as e:
-        return HTTPBadRequest(json=invalid2dict(e))
+    form = SchemaForm.from_json(request.json_body)
 
-    context.title = data['title']
-    context.description = data['description']
+    if not form.validate():
+        return HTTPBadRequest(json=form.errors)
+
+    context.title = form.title.data
+    context.description = form.description.data
     Session.flush()
 
     request.session.flash(_(u'Changes saved'), 'success')
