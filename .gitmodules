@@ -1,9 +1,0 @@
-[submodule "src/occams/studies/static/libs/bootstrap"]
-	path = src/occams/studies/static/libs/bootstrap
-  url = https://github.com/twbs/bootstrap.git
-[submodule "src/occams/studies/static/libs/font-awesome"]
-	path = src/occams/studies/static/libs/font-awesome
-	url = https://github.com/FortAwesome/Font-Awesome.git
-[submodule "src/occams/studies/static/libs/bootstrap-datetimepicker"]
-	path = src/occams/studies/static/libs/bootstrap-datetimepicker
-	url = https://github.com/Eonasdan/bootstrap-datetimepicker.git

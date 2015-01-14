@@ -178,7 +178,7 @@ def view_json(context, request):
         '__url__': request.route_path('patient', patient=patient.pid),
         'id': patient.id,
         'pid': patient.pid,
-        'site': site_views.view_json(patient.site, context),
+        'site': site_views.view_json(patient.site, request),
         'references': [{
             'reference_type': reference_type_views.view_json(
                 reference.reference_type,

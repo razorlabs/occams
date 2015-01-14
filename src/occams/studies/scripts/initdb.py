@@ -5,6 +5,7 @@ from pyramid.paster import get_appsettings, setup_logging
 from sqlalchemy import engine_from_config, create_engine
 
 from occams.datastore import models as datastore
+from occams.forms.scripts import initdb as of_initdb
 
 from .. import models
 

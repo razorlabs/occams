@@ -14,7 +14,6 @@ REQUIRES = [
     'celery[redis]>=3.1,<3.1.99',       # Asynchronous queue API
     'cssmin',                           # CSS asset compression
     'gevent-socketio>=0.3.6,<0.3.99',   # websockets
-    'good>=0.0.7',                      # Input validation
     'humanize',                         # human readable measurements
     'jsmin',                            # JS asset compression
     'lingua',                           # i18n
@@ -29,6 +28,8 @@ REQUIRES = [
     'six',                              # Py 2 & 3 compatibilty
     'SQLAlchemy>=0.9.0',                # Database ORM
     'tabulate',                         # ASCII tables for CLI pretty-print
+    'wtforms',
+    'wtforms-json',
     'zope.sqlalchemy',                  # Connects sqlalchemy to pyramid_tm
 
     'occams.datastore',                 # EAV

@@ -3,27 +3,23 @@
  */
 
 //
-// Third-party libraries
+// Setup
 //
 
-@import '../libs/bootstrap/less/bootstrap.less';
-@import '../libs/font-awesome/less/font-awesome.less';
-@import '../libs/bootstrap-datetimepicker/src/less/bootstrap-datetimepicker.less';
+@import '../bower_components/bootstrap/less/bootstrap.less';
+@import '../bower_components/font-awesome/less/font-awesome.less';
+@import '../bower_components/eonasdan-bootstrap-datetimepicker/src/less/bootstrap-datetimepicker.less';
 
-//
-// Overrides
-//
+// Update the base path to relative to the assets directory
+@icon-font-path: '../bower_components/bootstrap/fonts/';
 
-@fa-font-path: '../libs/font-awesome/fonts/';
+@fa-font-path: '../bower_components/font-awesome/fonts/';
 
 // Accomodate the feature-rich navbar by collapsing only for phones/tablets
 @grid-float-breakpoint: @screen-desktop;
 
 // The navbar margin is a bit excessive
 @navbar-margin-bottom: -(@line-height-computed);
-
-// Update the base path to relative to the assets directory
-@icon-font-path: '../libs/bootstrap/fonts/';
 
 
 //

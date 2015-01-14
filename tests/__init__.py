@@ -3,14 +3,13 @@ Testing fixtures
 
 To specify a pyramid configuration use:
 
-    nosetests --tc=ini:/path/to/my/config.ini
+    nosetests --tc=db:postgres://user:pass@host/db
 
 """
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
-
 
 # Raise unicode warnings as errors so we can fix them
 import warnings
@@ -59,8 +58,9 @@ class IntegrationFixture(unittest.TestCase):
         import transaction
         from occams.studies import models, Session
         from occams.studies.models import Base
+
         self.config = testing.setUp()
-        # Don't actually check csrf, this if for functional tests
+
         self.addCleanup(testing.tearDown)
         self.addCleanup(transaction.abort)
         self.addCleanup(Session.remove)
