@@ -89,12 +89,14 @@ def move_json(context, request):
     class MoveForm(wtforms.Form):
         into = wtforms.StringField(
             validators=[
+                wtforms.validators.Optional(),
                 wtforms.validators.AnyOf(
                     schema.attributes, message=_(u'Does not exist')),
                 not_self,
                 not_section])
         after = wtforms.StringField(
             validators=[
+                wtforms.validators.Optional(),
                 wtforms.validators.AnyOf(
                     schema.attributes, message=_(u'Does not exist')),
                 not_self])
@@ -102,7 +104,7 @@ def move_json(context, request):
     form = MoveForm.from_json(request.json_body)
 
     if not form.validate():
-        raise HTTPBadRequest(json=form.errors)
+        raise HTTPBadRequest(json={'errors': form.errors})
 
     attributes = sorted(six.itervalues(schema.attributes),
                         key=lambda a: a.order)
@@ -148,7 +150,7 @@ def edit_json(context, request):
     form = FieldFormFactory(context, request).from_json(request.json_body)
 
     if not form.validate():
-        raise HTTPBadRequest(json=form.errors)
+        raise HTTPBadRequest(json={'errors': form.errors})
 
     if isinstance(context, models.Attribute):
         attribute = context
@@ -239,7 +241,8 @@ def FieldFormFactory(context, request):
                 unique_variable])
         title = wtforms.StringField(validators=[
             wtforms.validators.InputRequired()])
-        description = wtforms.StringField()
+        description = wtforms.StringField(
+            widget=wtforms.widgets.TextInput())
         type = wtforms.StringField(
             validators=[
                 wtforms.validators.InputRequired(),

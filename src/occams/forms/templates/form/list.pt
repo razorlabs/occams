@@ -149,8 +149,7 @@
                     characters or spaces.
                     This name cannot be changed once the form is published.
                   </p>
-
-                  <input type="text" class="form-control" required autofocus name="name" data-bind="value: name" pattern="^[a-zA-Z_][a-zA-Z0-9_]+$" />
+                  <input type="text" class="form-control" required autofocus name="name" data-bind="value: name" pattern="^[a-zA-Z_][a-zA-Z0-9_]+$" data-rule-remote="?validate=name" />
                 </div> <!-- /.form-group -->
                 <div class="form-group">
                   <label class="required" i18n:translate="">Title</label>

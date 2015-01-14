@@ -57,9 +57,9 @@
   </nav>
 </header>
 
-<div class="modal fade" data-keyboard="false" data-bind="modalVisible: showPublish, if: showPublish">
-  <div class="modal-dialog" data-bind="with: editableVersion">
-    <div class="modal-content">
+<div class="modal fade" data-keyboard="false" data-bind="modalVisible: showPublish">
+  <div class="modal-dialog" data-bind="if: showPublish">
+    <div class="modal-content" data-bind="with: editableVersion">
       <form data-bind="submit: $root.publishVersion, validate: {}">
         <div class="modal-header">
           <h4 class="modal-title" i18n:translate="">Publish this version.</h4>
@@ -73,7 +73,7 @@
             </p>
             <div class="row input-container">
               <div class="col-md-4">
-                <input type="date" class="form-control" id="publish_date" name="publish_date" data-date-format="YYYY-MM-DD" data-bind="value: publish_date, datetimepicker: {useCurrent: false}">
+                <input type="date" class="form-control" id="publish_date" name="publish_date" data-date-format="YYYY-MM-DD" data-date-usecurrent="false" data-date-picktime="false" data-bind="value: publish_date, datetimepicker: {}">
               </div>
             </div>
           </div>
@@ -85,11 +85,11 @@
             </p>
             <div class="row input-container">
               <div class="col-md-4">
-                <input type="date" class="form-control" id="retract_date" name="retract_date" data-date-format="YYYY-MM-DD" data-bind="value: retract_date, enable: publish_date, datetimepicker: {useCurrent: false}">
+                <!--! knockout enable/disable interferes with datetimepicker binding, just enforce through validation -->
+                <input type="date" class="form-control" id="retract_date" name="retract_date" data-date-format="YYYY-MM-DD" data-date-usecurrent="false" data-date-picktime="false" data-bind="value: retract_date, datetimepicker: {}">
               </div>
             </div>
           </div>
-
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-link" data-bind="click: $root.clear" i18n:translate="">Cancel</button>

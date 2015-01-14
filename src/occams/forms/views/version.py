@@ -131,7 +131,7 @@ def publish_json(context, request):
         if not publish_date:
             raise wtforms.ValidationError(_(
                 u'Cannot retract an un-published form'))
-        if publish_date < retract_date:
+        if retract_date < publish_date:
             raise wtforms.ValidationError(_('Must be after publish date'))
 
     # TODO: should move this out, but need to ensure context is removed
@@ -151,10 +151,10 @@ def publish_json(context, request):
     form = PublishForm.from_json(request.json_body)
 
     if not form.validate():
-        return HTTPBadRequest(json=form.errors)
+        return HTTPBadRequest(json={'errors': form.errors})
 
     context.publish_date = form.publish_date.data
-    context.retract_date = form.retract_date.date
+    context.retract_date = form.retract_date.data
 
     Session.flush()
 
@@ -184,7 +184,7 @@ def edit_json(context, request):
     form = SchemaForm.from_json(request.json_body)
 
     if not form.validate():
-        return HTTPBadRequest(json=form.errors)
+        return HTTPBadRequest(json={'errors': form.errors})
 
     context.title = form.title.data
     context.description = form.description.data

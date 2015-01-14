@@ -8,6 +8,7 @@ from sqlalchemy import orm
 import wtforms
 
 from .. import _, Session, models
+from ._utils import jquery_wtform_validator
 
 
 @view_config(
@@ -59,6 +60,16 @@ def upload(context, request):
 @view_config(
     route_name='forms',
     permission='add',
+    xhr=True,
+    request_param='validate',
+    renderer='json')
+def validate_value_json(context, request):
+    return jquery_wtform_validator(FormForm, context, request)
+
+
+@view_config(
+    route_name='forms',
+    permission='add',
     request_method='POST',
     xhr=True,
     renderer='json')
@@ -71,7 +82,7 @@ def add(context, request):
     form = FormForm.from_json(request.json_body)
 
     if not form.validate():
-        raise HTTPBadRequest(json=form.errors)
+        raise HTTPBadRequest(json={'errors': form.errors})
 
     schema = models.Schema(**form.data)
     Session.add(schema)
@@ -144,7 +155,7 @@ def check_unique_name(form, field):
             .exists())
         .one())
     if exists:
-        raise wtforms.ValiationError(_(u'Form name already in use'))
+        raise wtforms.ValidationError(_(u'Form name already in use'))
 
 
 class FormForm(wtforms.Form):
