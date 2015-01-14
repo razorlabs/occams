@@ -1,12 +1,10 @@
-<div class="modal fade" data-bind="showModal: showEditPatient, if: showEditPatient">
-  <div class="modal-dialog">
-    <div class="modal-content">
+<div class="modal fade" data-bind="modalVisible: showEditPatient">
+  <div class="modal-dialog" data-bind="if: showEditPatient">
+    <div class="modal-content" data-bind="with: editableItem">
       <form
           role="form"
           action="${request.current_route_path(_route_name='patients')}"
-          data-bind="with: editableItem,
-                     submit: savePatient,
-                     validate: {}">
+          data-bind="submit: $root.savePatient, validate: {}">
         <div class="modal-header">
           <h4 class="modal-title" i18n:translate="">Edit Patient</h4>
         </div>

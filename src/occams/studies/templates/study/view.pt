@@ -197,14 +197,10 @@
       <!--! Re-usable study editor template -->
       <div metal:use-macro="load: modal-study.pt"></div>
 
-      <div class="modal fade" data-bind="showModal: showDeleteStudy, if: showDeleteStudy">
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <form
-                class="form-horizontal"
-                data-bind="
-                  with: selectedStudy,
-                  submit: $root.deleteStudy">
+      <div class="modal fade" data-bind="modalVisible: showDeleteStudy">
+        <div class="modal-dialog" data-bind="if: showDeleteStudy">
+          <div class="modal-content" data-bind="with:selectedStudy">
+            <form class="form-horizontal" data-bind="submit: $root.deleteStudy">
               <div class="modal-header">
                 <h4 class="modal-title" i18n:translate="">Delete study</h4>
               </div>
@@ -236,9 +232,9 @@
         </div><!-- /.modal-dialog -->
       </div><!-- /.modal -->
 
-      <div class="modal fade" data-bind="showModal: selectedCycle, with: selectedCycle">
+      <div class="modal fade" data-bind="modalVisible: selectedCycle">
         <div class="modal-dialog">
-          <div class="modal-content">
+          <div class="modal-content" data-bind="with: selectedCycle">
             <!-- ko if: $root.showViewCycle -->
               <form class="form-horizontal">
                 <div class="modal-header">
@@ -405,8 +401,8 @@
         </div><!-- /.modal-dialog -->
       </div><!-- /.modal -->
 
-      <div class="modal fade" data-bind="showModal: selectedForm, if: selectedForm">
-        <div class="modal-dialog">
+      <div class="modal fade" data-bind="modalVisible: selectedForm">
+        <div class="modal-dialog" data-bind="if: selectedForm">
           <div class="modal-content">
             <!-- ko if: $root.showViewForm-->
               <form class="form-horizontal" data-bind="with: selectedForm">

@@ -104,10 +104,11 @@ function PatientView(patientData, enrollmentsData, visitsData){
     self.clear();
     self.statusEnrollment(EDIT);
     self.selectedItem(item)
+    console.log(item.study)
     self.editableItem({
       // make a copy for editing
       id: ko.observable(item.id()),
-      study: ko.observable(item.study.id()),
+      study: ko.observable(item.study().id()),
       consent_date: ko.observable(item.consent_date()),
       latest_consent_date: ko.observable(item.latest_consent_date()),
       reference_number: ko.observable(item.reference_number()),
@@ -116,7 +117,7 @@ function PatientView(patientData, enrollmentsData, visitsData){
 
   self.startDeleteEnrollment = function(item){
     self.clear();
-    self.showDeleteEnrollment(true);
+    self.statusEnrollment(DELETE);
     self.selectedItem(item)
   };
 

@@ -55,9 +55,9 @@
           </button>
         </div>
       </div>
-      <div class="modal fade" data-bind="showModal: showEditSite, if: showEditSite">
-        <div class="modal-dialog" data-bind="with: selectedSite">
-          <div class="modal-content">
+      <div class="modal fade" data-bind="modalVisible: showEditSite">
+        <div class="modal-dialog" data-bind="if: showEditSite">
+          <div class="modal-content" data-bind="with: selectedSite">
             <form
                 class="form-horizontal"
                 method="POST"
@@ -122,9 +122,9 @@
         </div><!-- /.modal-dialog -->
       </div><!-- /.modal -->
 
-      <div class="modal fade" data-bind="showModal: showDeleteSite, if: showDeleteSite">
-        <div class="modal-dialog" data-bind="with: selectedSite">
-          <div class="modal-content">
+      <div class="modal fade" data-bind="modalVisible: showDeleteSite">
+        <div class="modal-dialog" data-bind="if: showDeleteSite">
+          <div class="modal-content" data-bind="with: selectedSite">
             <form class="form-horizontal" data-bind="submit: $parent.deleteSite">
               <div class="modal-header">
                 <h4 class="modal-title" i18n:translate="">Delete study</h4>
