@@ -58,5 +58,14 @@ function Patient(data){
     };
   };
 
+  self.toRest = function(){
+    return {
+      site: self.site().id,
+      references: self.references().map(function(reference){
+        return reference.toRest();
+      })
+    };
+  };
+
   self.update(data || {});
 }

@@ -4,7 +4,6 @@ except ImportError:  # pragma: nocover
     import csv
 from datetime import date, timedelta
 
-from good import *  # NOQA
 from pyramid.events import subscriber, BeforeRender
 from pyramid.httpexceptions import \
     HTTPBadRequest, HTTPForbidden, HTTPNotFound, HTTPOk
@@ -12,13 +11,15 @@ from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 import sqlalchemy as sa
 from sqlalchemy import orm
-import six
+import wtforms
+from wtforms.ext.sqlalchemy.fields import \
+    QuerySelectField, QuerySelectMultipleField
+from wtforms.ext.dateutil.fields import DateField
 from zope.sqlalchemy import mark_changed
 
 from .. import _, models, Session
 from . import cycle as cycle_views, form as form_views
-from ..validators import invalid2dict, Model
-from ..utils import Pagination
+from ..utils import Pagination, wtferrors
 
 
 @subscriber(BeforeRender)
@@ -158,30 +159,32 @@ def enrollments(context, request):
         .filter(models.Enrollment.study == context)
         .order_by(models.Enrollment.consent_date.desc()))
 
-    schema = Schema({
-        'page': Any(Coerce(int), Fallback(None)),
-        'status': Any(In(statuses), Fallback(None)),
-        'start': Any(Date('%Y-%m-%d'), Fallback(None)),
-        'end': Any(Date('%Y-%m-%d'), Fallback(None)),
-        Extra: Remove
-        })
+    class FilterForm(wtforms.Form):
+        page = wtforms.IntegerField()
+        status = wtforms.StringField(
+            validators=[
+                wtforms.validators.Optional(),
+                wtforms.validators.AnyOf(statuses)])
+        start = DateField()
+        end = DateField()
 
-    params = schema(request.GET.mixed())
+    form = FilterForm(request.GET)
+    form.validate()
 
-    if params['start']:
+    if form.start.data:
         enrollments_query = enrollments_query.filter(
-            models.Enrollment.consent_date >= params['start'])
+            models.Enrollment.consent_date >= form.start.data)
 
-    if params['end']:
+    if form.end.data:
         enrollments_query = enrollments_query.filter(
-            models.Enrollment.consent_date <= params['end'])
+            models.Enrollment.consent_date <= form.end.data)
 
-    if params['status']:
+    if form.status.data:
         enrollments_query = enrollments_query.filter(
-            statuses[params['status']])
+            statuses[form.status.data])
 
     pagination = Pagination(
-        params['page'], 25, enrollments_query.count())
+        form.page.data, 25, enrollments_query.count())
 
     enrollments = (
         enrollments_query
@@ -190,12 +193,12 @@ def enrollments(context, request):
         .all())
 
     def make_page_url(page):
-        _query = params.copy()
+        _query = form.data
         _query['page'] = page
         return request.current_route_path(_query=_query)
 
     return {
-        'params': params,
+        'params': form.data,
         'total_active': (
             context.enrollments.filter(statuses['active']).count()),
         'total_terminated': (
@@ -238,7 +241,8 @@ def visits(context, request):
             Session.query(
                 sa.func.coalesce(
                     models.Arm.title,
-                    literal_column(_('\'(not randomized)\''))).label('title'),
+                    sa.literal_column(_('\'(not randomized)\''))
+                    ).label('title'),
                 sa.func.count(models.Enrollment.id).label('enrollment_count'))
             .select_from(models.Enrollment)
             .join(models.Enrollment.study)
@@ -247,7 +251,7 @@ def visits(context, request):
                 (models.Stratum.patient_id == models.Enrollment.patient_id)
                 & (models.Stratum.study_id == models.Enrollment.study_id))
             .outerjoin(models.Stratum.arm)
-            .filter(models.Enrollment.study == self.study)
+            .filter(models.Enrollment.study == context)
             .group_by(models.Arm.title)
             .order_by(models.Arm.title))
     else:
@@ -441,12 +445,10 @@ def visits_cycle(context, request):
 def edit_json(context, request):
     check_csrf_token(request)
 
-    schema = StudySchema(context, request)
+    form = StudySchema(context, request).from_json(request.json_body)
 
-    try:
-        data = schema(request.json_body)
-    except Invalid as e:
-        raise HTTPBadRequest(json={'errors': invalid2dict(e)})
+    if not form.validate():
+        raise HTTPBadRequest(json={'errors': wtferrors(form)})
 
     if isinstance(context, models.StudyFactory):
         study = models.Study()
@@ -454,19 +456,20 @@ def edit_json(context, request):
     else:
         study = context
 
-    study.name = data['name']
-    study.title = data['title']
-    study.code = data['code']
-    study.short_title = data['short_title']
-    study.consent_date = data['consent_date']
-    study.start_date = data['start_date']
-    study.end_date = data['end_date']
-    study.termination_schema = data['termination_form']
-    study.is_locked = data['is_locked']
-    study.is_randomized = data['is_randomized']
-    study.is_blinded = None if not study.is_randomized else data['is_blinded']
+    study.name = form.name.data
+    study.title = form.title.data
+    study.code = form.code.data
+    study.short_title = form.short_title.data
+    study.consent_date = form.consent_date.data
+    study.start_date = form.start_date.data
+    study.end_date = form.end_date.data
+    study.termination_schema = form.termination_form.data
+    study.is_locked = form.is_locked.data
+    study.is_randomized = form.is_randomized_data
+    study.is_blinded = \
+        None if not study.is_randomized else form.is_blinded.data
     study.randomization_schema = \
-        None if not study.is_randomized else data['randomization_form']
+        None if not study.is_randomized else form.randomization_form.data
 
     Session.flush()
 
@@ -504,14 +507,14 @@ def available_schemata(context, request):
                   (useful for searching for a schema's publish dates)
         grouped -- (optional) groups all results by schema name
     """
-    schema = Schema({
-        'term': All(Type(*six.string_types), Coerce(six.text_type)),
-        'schema': All(Type(*six.string_types), Coerce(six.text_type)),
-        'grouped': Boolean(),
-        Extra: Remove
-        }, default_keys=Optional)
 
-    params = schema(request.GET.mixed())
+    class SearchForm(wtforms.Form):
+        term = wtforms.StringField()
+        schema = wtforms.StringField()
+        grouped = wtforms.BooleanField()
+
+    form = SearchForm(request.GET)
+    form.validate()
 
     query = (
         Session.query(models.Schema)
@@ -523,11 +526,11 @@ def available_schemata(context, request):
             .join(models.patient_schema_table)
             .subquery())))
 
-    if 'schema' in params:
-        query = query.filter(models.Schema.name == params['schema'])
+    if form.schema.data:
+        query = query.filter(models.Schema.name == form.schema.data)
 
-    if 'term' in params:
-        wildcard = u'%' + params['term'] + u'%'
+    if form.term.data:
+        wildcard = u'%' + form.term.data + u'%'
         query = query.filter(
             models.Schema.title.ilike(wildcard)
             | sa.cast(models.Schema.publish_date, sa.Unicode).ilike(wildcard))
@@ -558,9 +561,9 @@ def available_schemata(context, request):
         .limit(100))
 
     return {
-        '__query__': params,
+        '__query__': form.data,
         'schemata': (form_views.form2json(query)
-                     if params.get('grouped')
+                     if form.grouped.data
                      else [form_views.version2json(i) for i in query])
     }
 
@@ -602,72 +605,67 @@ def delete_json(context, request):
     renderer='json')
 def add_schema_json(context, request):
     check_csrf_token(request)
-    translate = request.localizer.translate
 
-    def check_published(value):
-        if value.publish_date is None:
-            msg = _(u'${schema} is not published')
-            raise Invalid(translate(msg, mapping={'schema': value.title}))
-        return value
-
-    def check_not_patient_schema(value):
+    def check_not_patient_schema(form, field):
         (exists,) = (
             Session.query(
                 Session.query(models.Schema)
                 .join(models.patient_schema_table)
-                .filter(models.Schema.name == value.name)
+                .filter(models.Schema.name == field.data)
                 .exists())
             .one())
         if exists:
-            msg = _(u'${schema} is already used as a patient form'),
-            raise Invalid(translate(msg, mapping={'schema': value.title}))
-        return value
+            raise wtforms.ValidationError(request.localizer.translate(
+                _(u'Already a patient form')))
 
-    def check_not_randomization_schema(value):
-        if (context.randomization_schema is not None
-                and context.randomization_schema.name == value.name):
-            msg = _(u'${schema} is already used as a randomization form'),
-            raise Invalid(translate(msg, mapping={'schema': value.title}))
-        return value
+    def check_not_randomization_schema(form, field):
+        if (context.randomization_schema
+                and context.randomization_schema.name == field.data):
+            raise wtforms.ValidationError(request.localizer.translate(_(
+                u'Already a randomization form')))
 
-    def check_not_termination_schema(value):
+    def check_not_termination_schema(form, field):
         if (context.termination_schema is not None
-                and context.termination_schema.name == value.name):
-            msg = _(u'${schema} is already used as a termination form'),
-            raise Invalid(translate(msg, mapping={'schema': value.title}))
-        return value
+                and context.termination_schema.name == field.data):
+            raise wtforms.ValidationError(request.localizer.translate(_(
+                u'Already a termination form')))
 
-    def check_same_schema(value):
-        versions = value['versions']
-        schema = value['schema']
+    def check_same_schema(form, field):
+        versions = form.versions.data
+        schema = form.schema.data
         invalid = [i.publish_date for i in versions if i.name != schema]
         if invalid:
-            msg = _(u'Incorrect versions: ${versions}')
-            mapping = {'versions': ', '.join(map(str, invalid))}
-            raise Invalid(translate(msg, mapping=mapping), path=['versions'])
-        return value
+            raise wtforms.ValidationError(request.localizer.transalte(_(
+                _(u'Incorrect versions: ${versions}'),
+                mapping={'versions': ', '.join(map(str, invalid))})))
 
-    schema = Schema(All({
-        'schema': All(Type(*six.string_types), Coerce(six.binary_type)),
-        'versions': [All(
-            int,
-            Model(models.Schema, localizer=request.localizer),
-            check_published,
-            check_not_patient_schema,
-            check_not_randomization_schema,
-            check_not_termination_schema,
-            )],
-        Extra: Remove},
-        check_same_schema,
-        ))
+    def available_versions():
+        return (
+            Session.query(models.Schema)
+            .filter(models.Schema.publish_date != sa.null())
+            .order_by(models.Schema.title, models.Schema.publish_date))
 
-    try:
-        data = schema(request.json_body)
-    except Invalid as e:
-        raise HTTPBadRequest(json={'errors': invalid2dict(e)})
+    class SchemaManagementForm(wtforms.Form):
+        schema = wtforms.StringField(
+            validators=[
+                wtforms.validators.InputRequired(),
+                check_not_patient_schema,
+                check_not_randomization_schema,
+                check_not_termination_schema])
+        versions = QuerySelectMultipleField(
+            query_factory=available_versions,
+            get_label=lambda c: "%s @ %s" % (c.title, c.publish_date),
+            validators=[
+                wtforms.validators.InputRequired(),
+                check_same_schema])
 
-    old_items = set(i for i in context.schemata if i.name == data['schema'])
-    new_items = set(data['versions'])
+    form = SchemaManagementForm.from_json(request.json_body)
+
+    if not form.validate():
+        raise HTTPBadRequest(json={'errors': wtferrors(form)})
+
+    old_items = set(i for i in context.schemata if i.name == form.schema.data)
+    new_items = set(form.versions.data)
 
     # Remove unselected
     context.schemata.difference_update(old_items - new_items)
@@ -680,7 +678,7 @@ def add_schema_json(context, request):
         Session.query(models.Cycle)
         .options(orm.joinedload(models.Cycle.schemata))
         .filter(models.Cycle.study == context)
-        .filter(models.Cycle.schemata.any(name=data['schema'])))
+        .filter(models.Cycle.schemata.any(name=form.schema.data)))
 
     # Also update available cycle schemata versions
     for cycle in cycles:
@@ -759,46 +757,36 @@ def edit_schedule_json(context, request):
     """
     check_csrf_token(request)
 
-    def check_schema_in_study(value):
-        (exists,) = (
-            Session.query(
-                Session.query(models.Study)
-                .filter(models.Study.cycles.any(study_id=context.id))
-                .filter(models.Study.schemata.any(name=value))
-                .exists())
-            .one())
-        if not exists:
-            msg = _('${study} does not have form "${schema}"')
-            mapping = {'schema': value, 'study': context.title}
-            raise Invalid(request.localizer.translate(msg, mapping=mapping))
-        return value
+    def available_schemata():
+        return (
+            Session.query(models.Schema)
+            .join(models.study_schema_table)
+            .filter(models.study_schema_table.study_id == context.id)
+            .order_by(models.Schema.name, models.Schema.publish_date))
 
-    def check_cycle_in_study(value):
-        if value.study != context:
-            msg = _('${study} does not have cycle "${cycle}"')
-            mapping = {'cycle': value.title, 'study': context.title}
-            raise Invalid(request.localizer.translate(msg, mapping=mapping))
-        return value
+    def available_cycles():
+        return (
+            Session.query(models.Cycle)
+            .filter_by(study=context)
+            .order_by('title'))
 
-    schema = Schema({
-        'schema': All(
-            Coerce(six.binary_type),
-            check_schema_in_study),
-        'cycle': All(
-            Model(models.Cycle, localizer=request.localizer),
-            check_cycle_in_study),
-        'enabled': Boolean(),
-        Extra: Remove
-        })
+    class ScheduleForm(wtforms.Form):
+        schema = QuerySelectField(
+            query_factory=available_schemata,
+            get_label=lambda c: '%s @ %s' % (c.title, c.publish_date))
+        cycle = QuerySelectField(
+            query_factory=available_cycles,
+            get_label='title')
+        enabled = wtforms.BooleanField()
 
-    try:
-        data = schema(request.json_body)
-    except Invalid as e:
-        raise HTTPBadRequest(json={'errors': invalid2dict(e)})
+    form = ScheduleForm.from_json(request.json_body)
 
-    schema_name = data['schema']
-    cycle = data['cycle']
-    enabled = data['enabled']
+    if not form.validate():
+        raise HTTPBadRequest(json={'errors': wtferrors(form)})
+
+    schema_name = form.schema.data.name
+    cycle = form.cyclce.data
+    enabled = form.enabled.data
 
     study_items = set(i for i in context.schemata if i.name == schema_name)
     cycle_items = set(i for i in cycle.schemata if i.name == schema_name)
@@ -911,46 +899,48 @@ def StudySchema(context, request):
     Returns a validator for incoming study modification data
     """
 
-    def check_unique_name(value):
-        query = Session.query(models.Study).filter_by(name=value)
+    def check_unique_name(form, field):
+        query = Session.query(models.Study).filter_by(name=field.data)
         if isinstance(context, models.Study):
             query = query.filter(models.Study.id != context.id)
         (exists,) = Session.query(query.exists()).one()
         if exists:
-            msg = _('"${name}" already exists')
-            mapping = {'name': value}
-            raise Invalid(request.localizer.translate(msg, mapping=mapping))
-        return value
+            raise wtforms.ValidationError(request.localizer.translate_(
+                u'Already exists'))
 
-    return Schema({
-        'name': All(
-            Type(*six.string_types),
-            Coerce(six.binary_type),
-            Length(min=3, max=32),
-            Match(r'^[a-z0-9_\-]+$'),
-            check_unique_name),
-        'title': All(
-            Type(*six.string_types),
-            Coerce(six.text_type),
-            Length(min=3, max=32)),
-        'code': All(
-            Type(*six.string_types),
-            Coerce(six.binary_type),
-            Length(min=3, max=8)),
-        'short_title': All(
-            Type(*six.string_types),
-            Coerce(six.text_type),
-            Length(min=3, max=8)),
-        'consent_date': Date('%Y-%m-%d'),
-        'start_date': Any(Date('%Y-%m-%d'), Default(None)),
-        'end_date':  Any(Date('%Y-%m-%d'), Default(None)),
-        'is_locked': Any(Boolean(), Default(False)),
-        'termination_form': Any(
-            All(int, Model(models.Schema, localizer=request.localizer)),
-            Default(None)),
-        'is_randomized': Any(Boolean(), Default(False)),
-        'is_blinded': Any(Boolean(), Default(None)),
-        'randomization_form': Any(
-            All(int, Model(models.Schema, localizer=request.localizer)),
-            Default(None)),
-        Extra: Remove})
+    def available_forms():
+        return Session.query(models.Schema).order_by('title')
+
+    class StudyForm(wtforms.Form):
+        name = wtforms.StringField(
+            validators=[
+                wtforms.validators.InputRequired(),
+                wtforms.validators.Length(min=3, max=32),
+                wtforms.validators.Regexp(r'^[a-z0-9_\-]+$'),
+                check_unique_name])
+        title = wtforms.StringField(
+            validators=[
+                wtforms.validators.InputRequired(),
+                wtforms.validators.Length(min=3, max=32)])
+        code = wtforms.StringField(
+            validators=[
+                wtforms.validators.InputRequired(),
+                wtforms.validators.Length(min=3, max=8)])
+        short_title = wtforms.StringField(
+            validators=[
+                wtforms.validators.InputRequired(),
+                wtforms.validators.Length(min=3, max=8)])
+        consent_date = DateField()
+        start_date = DateField()
+        end_date = DateField()
+        is_locked = wtforms.BooleanField()
+        termination_form = QuerySelectField(
+            query_factory=available_forms,
+            get_label='title')
+        is_randomized = wtforms.BooleanField()
+        is_blinded = wtforms.BooleanField()
+        randomzation_form = QuerySelectField(
+            query_factory=available_forms,
+            get_label='title')
+
+    return StudyForm

@@ -61,7 +61,7 @@ function StudyView(studyData, scheduleUrl){
   };
 
   self.startAddCycle = function(){
-    var cycle = new StudyCycle();
+    var cycle = new Cycle();
     self.selectedCycle(cycle);
     self.editableCycle(cycle);
     self.cycleModalState(EDIT);
@@ -69,7 +69,7 @@ function StudyView(studyData, scheduleUrl){
 
   self.startEditCycle = function(cycle, event){
     self.selectedCycle(cycle);
-    self.editableCycle(new StudyCycle(ko.toJS(cycle)));
+    self.editableCycle(new Cycle(ko.toJS(cycle)));
     self.cycleModalState(EDIT);
   };
 
@@ -212,7 +212,7 @@ function StudyView(studyData, scheduleUrl){
         if (selected.id()){
           selected.update(data);
         } else {
-          self.study.cycles.push(new StudyCycle(data));
+          self.study.cycles.push(new Cycle(data));
         }
         if (self.addMoreCycles()){
           self.previousCycle(selected);

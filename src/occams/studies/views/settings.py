@@ -1,4 +1,3 @@
-from good import *  # NOQA
 from pyramid.view import view_config
 
 

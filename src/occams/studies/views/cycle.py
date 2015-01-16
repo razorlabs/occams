@@ -1,12 +1,11 @@
-from good import *  # NOQA
 from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
-import six
+import wtforms
 
 from .. import _, models, Session
 from . import form as form_views
-from ..validators import invalid2dict
+from ..utils import wtferrors
 
 
 @view_config(
@@ -44,12 +43,10 @@ def view_json(context, request):
 def edit_json(context, request):
     check_csrf_token(request)
 
-    schema = CycleSchema(context, request)
+    form = CycleSchema(context, request).from_json(request.json_body)
 
-    try:
-        data = schema(request.json_body)
-    except Invalid as e:
-        raise HTTPBadRequest(json={'errors': invalid2dict(e)})
+    if not form.validate():
+        raise HTTPBadRequest(json={'errors': wtferrors(form)})
 
     if isinstance(context, models.CycleFactory):
         cycle = models.Cycle(study=context.__parent__)
@@ -57,10 +54,10 @@ def edit_json(context, request):
     else:
         cycle = context
 
-    cycle.name = data['name']
-    cycle.title = data['title']
-    cycle.week = data['week']
-    cycle.is_interim = data['is_interim']
+    cycle.name = form.name.data
+    cycle.title = form.title.data
+    cycle.week = form.week.data
+    cycle.is_interim = form.is_interim.data
 
     Session.flush()
 
@@ -98,30 +95,26 @@ def delete_json(context, request):
 
 def CycleSchema(context, request):
 
-    def check_unique_name(value):
-        query = Session.query(models.Cycle).filter_by(name=value)
+    def check_unique_name(form, field):
+        query = Session.query(models.Cycle).filter_by(name=field.data)
         if isinstance(context, models.Cycle):
             query = query.filter(models.Cycle.id != context.id)
         (exists,) = Session.query(query.exists()).one()
         if exists:
-            msg = _('"${name}" already exists')
-            mapping = {'name': value}
-            raise Invalid(request.localizer.translate(msg, mapping=mapping))
-        return value
+            raise wtforms.ValidationError(request.localizer.translate(_(
+                u'Already exists')))
 
-    return Schema({
-        'name': All(
-            Type(*six.string_types),
-            Coerce(six.binary_type),
-            Length(min=3, max=32),
-            check_unique_name),
-        'title': All(
-            Type(*six.string_types),
-            Coerce(six.text_type),
-            Length(min=3, max=32)),
-        'week': Any(
-            Coerce(int),
-            All(Type(*six.string_types), Falsy(), Default(None)),
-            Default(None)),
-        'is_interim': Any(Boolean(), Default(False)),
-        Extra: Remove})
+    class CycleForm(wtforms.Form):
+        name = wtforms.StringField(
+            validators=[
+                wtforms.validators.InputRequired(),
+                wtforms.validators.Length(min=3, max=32),
+                check_unique_name])
+        title = wtforms.StringField(
+            validators=[
+                wtforms.validators.InputRequired(),
+                wtforms.validators.Length(min=3, max=32)])
+        week = wtforms.IntegerField()
+        is_interim = wtforms.BooleanField()
+
+    return CycleForm

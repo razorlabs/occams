@@ -3,41 +3,37 @@
  */
 
 .form-login {
-  margin:     @line-height-computed auto;
   max-width:  330px;
   padding:    15px;
+  margin:     0 auto;
 
-  legend {
-    border-bottom:  none;
-    font-size:      ceil(@font-size-base * 2.15);
-    font-weight:    @headings-font-weight;
-    margin-bottom:  10px;
+  .form-login-heading {
+    margin-bottom: 10px;
+  }
+
+  .form-control:focus {
+    z-index: 2;
   }
 
   .form-control {
-    box-sizing:          border-box;
-    -webkit-box-sizing:  border-box;
-    -moz-box-sizing:     border-box;
-    font-size:           16px;
-    height:              auto;
-    padding:             10px;
-    position:            relative;
-
-    &:focus {
-      z-index: 2;
-    }
+    position: relative;
+    height: auto;
+    -webkit-box-sizing: border-box;
+       -moz-box-sizing: border-box;
+            box-sizing: border-box;
+    padding: 10px;
+    font-size: 16px;
   }
 
-  input[type="text"] {
+  input[name="login"] {
     border-bottom-left-radius:   0;
     border-bottom-right-radius:  0;
-    margin-bottom:               -16px; // form-group's margin-bottom = 15px
+    margin-bottom:               -1px;
   }
 
-  input[type="password"] {
+  input[name="password"] {
     border-top-left-radius:   0;
     border-top-right-radius:  0;
     margin-bottom:            10px;
   }
 }
-

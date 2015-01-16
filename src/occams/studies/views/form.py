@@ -1,13 +1,13 @@
 import collections
 from itertools import groupby
 
-from good import *  # NOQA
 from pyramid.httpexceptions import HTTPBadRequest, HTTPOk
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
+import wtforms
 
 from .. import _, models, Session
-from ..validators import invalid2dict, Model
+from ..utils import wtferrors, ModelField
 
 
 #
@@ -75,39 +75,37 @@ def form2json(schemata):
 def add_json(context, request):
     check_csrf_token(request)
 
-    def check_study_form(value):
+    def check_study_form(form, field):
         query = (
             Session.query(models.Visit)
             .filter(models.Visit.id == context.__parent__.id)
             .join(models.Visit.cycles)
             .join(models.Cycle.study)
             .filter(
-                models.Cycle.schemata.any(id=value.id)
-                | models.Study.schemata.any(id=value.id)))
+                models.Cycle.schemata.any(id=field.data.id)
+                | models.Study.schemata.any(id=field.data.id)))
         (exists,) = Session.query(query.exists()).one()
         if not exists:
-            raise Invalid(request.localizer.translate(
+            raise wtforms.ValidationError(request.localizer.translate(
                 _('${schema} is not part of the studies for this visit'),
-                mapping={'schema': value.title}))
-        return value
+                mapping={'schema': field.data.title}))
 
-    schema = Schema({
-        'schemata': [All(
-            Model(models.Schema, localizer=request.localizer),
-            check_study_form)],
-        Extra: object})
+    class AddForm(wtforms.Form):
+        schemata = wtforms.FieldList(ModelField(
+            session=Session,
+            class_=models.Schema))
 
-    try:
-        data = schema(request.json_body)
-    except Invalid as e:
-        raise HTTPBadRequest(json={'errors': invalid2dict(e)})
+    form = AddForm.from_json(request.json_body)
+
+    if not form.validate():
+        raise HTTPBadRequest(json={'errors': wtferrors(form)})
 
     default_state = (
         Session.query(models.State)
         .filter_by(name='pending-entry')
         .one())
 
-    for schema in data['schemata']:
+    for schema in form.schemata.data:
         entity = models.Entity(
             schema=schema,
             collect_date=context.__parent__.visit_date,
@@ -131,19 +129,17 @@ def delete_json(context, request):
     """
     check_csrf_token(request)
 
-    schema = Schema({
-        'forms': [Model(
-            models.Entity,
-            msg=_(u'Form does not exist'),
-            localizer=request.localizer)],
-        Extra: Remove})
+    class DeleteForm(wtforms.Form):
+        forms = wtforms.FieldList(ModelField(
+            session=Session,
+            class_=models.Entity))
 
-    try:
-        data = schema(request.json_body)
-    except Invalid as e:
-        raise HTTPBadRequest(json={'errors': invalid2dict(e)})
+    form = DeleteForm.from_json(request.json_body)
 
-    entity_ids = [entity.id for entity in data['forms']]
+    if not form.validate():
+        raise HTTPBadRequest(json={'errors': wtferrors(form)})
+
+    entity_ids = [entity.id for entity in form.forms.data]
 
     (Session.query(models.Entity)
         .filter(models.Entity.id.in_(

@@ -1,14 +1,14 @@
 from datetime import datetime
 
-from good import *  # NOQA
 from pyramid.httpexceptions import HTTPBadRequest
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
-import six
 from sqlalchemy import orm
+import wtforms
+from wtforms.ext.dateutil.fields import DateField
 
 from .. import _, models, Session
-from ..validators import invalid2dict, Model
+from ..utils import wtferrors, ModelField
 
 
 @view_config(
@@ -97,23 +97,21 @@ def view_json(context, request):
 def edit_json(context, request):
     check_csrf_token(request)
 
-    schema = EnrollmentSchema(context, request)
+    form = EnrollmentSchema(context, request).from_json(request.json_body)
 
-    try:
-        data = schema(request.json_body)
-    except Invalid as e:
-        raise HTTPBadRequest(json={'errors': invalid2dict(e)})
+    if not form.validate():
+        raise HTTPBadRequest(json={'errors': wtferrors(form)})
 
     if isinstance(context, models.EnrollmentFactory):
         enrollment = models.Enrollment(
-            patient=context.__parent__, study=data['study'])
+            patient=context.__parent__, study=form.study.data)
     else:
         enrollment = context
 
     enrollment.patient.modify_date = datetime.now()
-    enrollment.consent_date = data['consent_date']
-    enrollment.latest_consent_date = data['latest_consent_date']
-    enrollment.reference_number = data['reference_number']
+    enrollment.consent_date = form.consent_date.data
+    enrollment.latest_consent_date = form.latest_consent_date.data
+    enrollment.reference_number = form.reference_number.data
 
     Session.flush()
     return view_json(enrollment, request)
@@ -137,42 +135,38 @@ def delete_json(context, request):
 
 def EnrollmentSchema(context, request):
 
-    def check_cannot_edit_study(value):
-        if isinstance(context, models.Enrollment) and context.study != value:
-            raise Invalid(request.localizer.translate(_(
+    def check_cannot_edit_study(form, field):
+        is_new = not isinstance(context, models.Enrollment)
+        if not is_new and context.study != field.data:
+            raise wtforms.ValidationError(request.localizer.translate(_(
                 u'Cannot change an enrollment\'s study.')))
-        return value
 
-    def check_timeline(value):
-        start = value['study'].start_date
-        end = value['study'].end_date
-        consent = value['consent_date']
-        latest = value['latest_consent_date']
+    def check_timeline(form, field):
+        start = form.study.data.start_date
+        end = form.study.data.end_date
+        consent = form.consent_date.data
+        latest = form.latest_consent_date.data
         if start is None:
-            raise Invalid(request.localizer.translate(_(
+            raise wtforms.ValidationError(request.localizer.translate(_(
                 u'Study has not started yet.')))
         if consent < start:
-            raise Invalid(request.localizer.translate(
+            raise wtforms.ValidationError(request.localizer.translate(
                 _('Cannot enroll before the study start date: ${date}'),
                 mapping={'date': start.isoformat()}))
         if not (consent <= latest):
-            raise Invalid(request.localizer.translate(
+            raise wtforms.ValidationError(request.localizer.translate(
                 _(u'Inconsistent enrollment dates')))
         if end and latest > end:
-            raise Invalid(request.localizer.translate(
+            raise wtforms.ValidationError(request.localizer.translate(
                 _('Cannot enroll after the study end date: ${date}'),
                 mapping={'date': end.isoformat()}))
-        return value
 
-    def check_reference(value):
-        lz = request.localizer
-        study = value['study']
-        number = value['reference_number']
-        if number is None:
-            return value
-        if not study.check_reference_number(number):
-            raise Invalid(
-                _(u'Invalid reference number format for this study'))
+    def check_reference(form, field):
+        study = form.study.data
+        number = form.reference_number.data
+        if not study.check(number):
+            raise wtforms.ValidationError(request.localizer.translate(
+                _(u'Invalid reference number format for this study')))
         query = (
             Session.query(models.Enrollment)
             .filter_by(study=study, reference_number=number))
@@ -180,10 +174,10 @@ def EnrollmentSchema(context, request):
             query = query.filter(models.Enrollment.id != context.id)
         (exists,) = Session.query(query.exists()).one()
         if exists:
-            raise Invalid(lz.translate(_(u'Reference number already in use.')))
-        return value
+            raise wtforms.ValidationError(request.localizer.translate(
+                _(u'Reference number already in use.')))
 
-    def check_unique(value):
+    def check_unique(form, field):
         if isinstance(context, models.EnrollmentFactory):
             patient = context.__parent__
         else:
@@ -192,25 +186,33 @@ def EnrollmentSchema(context, request):
             Session.query(models.Enrollment)
             .filter_by(
                 patient=patient,
-                study=value['study'],
-                consent_date=value['consent_date']))
+                study=form.study.data,
+                consent_date=form.consent_date.data))
         if isinstance(context, models.Enrollment):
             query = query.filter(models.Enrollment.id != context.id)
         (exists,) = Session.query(query.exists()).one()
         if exists:
-            raise Invalid(request.localizer.translate(_(
+            raise wtforms.ValidationError(request.localizer.translate(_(
                 u'This enrollment already exists.')))
-        return value
 
-    return Schema(All({
-        'study': All(
-            Model(models.Study, localizer=request.localizer),
-            check_cannot_edit_study),
-        'consent_date': Date('%Y-%m-%d'),
-        'latest_consent_date': Date('%Y-%m-%d'),
-        'reference_number': Maybe(Type(*six.string_types)),
-        Extra: Remove
-        },
-        check_timeline,
-        check_reference,
-        check_unique))
+    class EnrollmentForm(wtforms.Form):
+        study = ModelField(
+            session=Session,
+            class_=models.Study,
+            validators=[
+                wtforms.validators.InputRequired(),
+                check_cannot_edit_study])
+        consent_date = DateField(
+            validators=[
+                wtforms.validators.InputRequired(),
+                check_unique])
+        latest_consent_date = DateField(
+            validators=[
+                wtforms.validators.InputRequired(),
+                check_timeline])
+        reference_number = wtforms.StringField(
+            validators=[
+                wtforms.validators.Optional(),
+                check_reference])
+
+    return EnrollmentForm

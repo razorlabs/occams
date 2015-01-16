@@ -7,7 +7,10 @@ from pyramid.config import Configurator
 from pyramid.i18n import TranslationStringFactory
 from pyramid_who.whov2 import WhoV2AuthenticationPolicy
 from sqlalchemy.orm import scoped_session, sessionmaker
+import wtforms_json
 import zope.sqlalchemy
+
+wtforms_json.init()  # monkey-patch wtforms to accept JSON data
 
 import occams.datastore.models.events
 

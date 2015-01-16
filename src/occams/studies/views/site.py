@@ -1,11 +1,10 @@
-from good import *  # NOQA
-import six
 from pyramid.httpexceptions import HTTPBadRequest, HTTPOk
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
+import wtforms
 
 from .. import _, models, Session
-from ..validators import invalid2dict
+from ..utils import wtferrors
 
 
 @view_config(
@@ -77,12 +76,10 @@ def available_sites(context, request):
 def edit_json(context, request):
     check_csrf_token(request)
 
-    schema = SiteSchema(context, request)
+    form = SiteSchema(context, request).from_json(request.json_body)
 
-    try:
-        data = schema(request.json_body)
-    except Invalid as e:
-        raise HTTPBadRequest(json=invalid2dict(e))
+    if not form.validate():
+        raise HTTPBadRequest(json=wtferrors(form))
 
     if isinstance(context, models.Site):
         site = context
@@ -90,8 +87,8 @@ def edit_json(context, request):
         site = models.Site()
         Session.add(site)
 
-    site.name = data['name']
-    site.title = data['title']
+    site.name = form.name.data
+    site.title = form.title.data
     Session.flush()
 
     return view_json(site, request)
@@ -114,21 +111,21 @@ def delete_json(context, request):
 
 def SiteSchema(context, request):
 
-    def unique_name(value):
-        query = Session.query(models.Site).filter_by(name=value)
+    def unique_name(form, field):
+        query = Session.query(models.Site).filter_by(name=field.data)
         if isinstance(context, models.Site):
             query = query.filter(models.Site.id != context.id)
         (exists,) = Session.query(query.exists()).one()
         if exists:
-            msg = _(u'Site name already exists')
-            raise Invalid(request.localizer.translate(msg))
-        return value
+            raise wtforms.ValidationError(request.localizer.translate(
+                _(u'Site name already exists')))
 
-    return Schema({
-        'name': All(
-            Type(*six.string_types),
-            Coerce(six.binary_type),
-            unique_name),
-        'title': All(Type(*six.string_types), Coerce(six.text_type)),
-        Extra: Remove
-        })
+    class SiteForm(wtforms.Form):
+        name = wtforms.StringField(
+            validators=[
+                wtforms.validators.InputRequired(),
+                unique_name])
+        title = wtforms.StringField(
+            validators=[wtforms.validators.InputRequired()])
+
+    return SiteForm

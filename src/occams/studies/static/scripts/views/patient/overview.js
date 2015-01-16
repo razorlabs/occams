@@ -89,30 +89,14 @@ function PatientView(patientData, enrollmentsData, visitsData){
 
   self.startAddEnrollment = function(){
     self.clear();
-    self.statusEnrollment(EDIT);
-    self.editableItem({
-      // make a copy for editing
-      id: ko.observable(),
-      study: ko.observable(),
-      consent_date: ko.observable(),
-      latest_consent_date: ko.observable(),
-      reference_number: ko.observable(),
-    });
+    self.startEditEnrollment(new Enrollment());
   };
 
   self.startEditEnrollment = function(item){
     self.clear();
     self.statusEnrollment(EDIT);
     self.selectedItem(item)
-    console.log(item.study)
-    self.editableItem({
-      // make a copy for editing
-      id: ko.observable(item.id()),
-      study: ko.observable(item.study().id()),
-      consent_date: ko.observable(item.consent_date()),
-      latest_consent_date: ko.observable(item.latest_consent_date()),
-      reference_number: ko.observable(item.reference_number()),
-    });
+    self.editableItem(new Enrollment(ko.toJS(item)));
   };
 
   self.startDeleteEnrollment = function(item){
@@ -124,13 +108,7 @@ function PatientView(patientData, enrollmentsData, visitsData){
   self.startAddVisit = function(){
     self.clear();
     self.statusVisit(EDIT);
-    self.editableItem({
-      id: ko.observable(),
-      cycles: ko.observableArray([]),
-      visit_date: ko.observable(),
-      include_forms: ko.observable(),
-      include_speciemen: ko.observable()
-    });
+    self.editableItem(new Visit());
   };
 
   self.visitSelect2Options = function(element){
@@ -145,11 +123,8 @@ function PatientView(patientData, enrollmentsData, visitsData){
         },
         results: function (data) {
           return {
-            results: $.map(data.cycles, function (item) {
-              return {
-                text: item.title,
-                id: item.id
-              }
+            results: data.cycles.map(function(cycle_data){
+              return new Cycle(cycle_data);
             })
           };
         },
@@ -163,7 +138,7 @@ function PatientView(patientData, enrollmentsData, visitsData){
         url: self.patient.__url__(),
         method: 'PUT',
         contentType: 'application/json; charset=utf-8',
-        data: ko.toJSON(self.editableItem()),
+        data: ko.toJSON(self.editableItem().toRest()),
         headers: {'X-CSRF-Token': $.cookie('csrf_token')},
         error: handleXHRError({form: element, logger: self.errorMessage}),
         beforeSend: function(){
@@ -257,7 +232,7 @@ function PatientView(patientData, enrollmentsData, visitsData){
         url: $(element).attr('action'),
         method: 'POST',
         contentType: 'application/json; charset=utf-8',
-        data: ko.toJSON(self.editableItem()),
+        data: ko.toJSON(self.editableItem().toRest()),
         headers: {'X-CSRF-Token': $.cookie('csrf_token')},
         error: handleXHRError({form: element, logger: self.errorMessage}),
         beforeSend: function(){

@@ -5,10 +5,12 @@ from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 import sqlalchemy as sa
 from sqlalchemy import orm
-from good import *  # NOQA
+import wtforms
+from wtforms.ext.sqlalchemy.fields import QuerySelectMultipleField
+from wtforms.ext.dateutil.fields import DateField
 
 from .. import _, models, Session
-from ..validators import invalid2dict, Model
+from ..utils import wtferrors
 
 
 @view_config(
@@ -150,12 +152,11 @@ def validate_cycles(context, request):
     """
     AJAX handler for validating cycles field
     """
-    schema = VisitSchema(context, request)
-    try:
-        schema.compiled.schema['cycles'](request.GET.getall('cycles'))
-    except Invalid as e:
-        return str(e.message)
-    return True
+    form = VisitSchema(context, request)(request.GET)
+    if not form.validate() and 'cycles' in form.errors:
+        return form.errors['cycles'][0]
+    else:
+        return True
 
 
 @view_config(
@@ -172,44 +173,45 @@ def validate_cycles(context, request):
     renderer='json')
 def edit_json(context, request):
     check_csrf_token(request)
-    schema = VisitSchema(context, request)
-    try:
-        data = schema(request.json_body)
-    except Invalid as e:
-        raise HTTPBadRequest(json={'errors': invalid2dict(e)})
-    if isinstance(context, models.VisitFactory):
+    is_new = isinstance(context, models.VisitFactory)
+    form = VisitSchema(context, request).from_json(request.json_body)
+
+    if not form.validate():
+        raise HTTPBadRequest(json={'errors': wtferrors(form)})
+
+    if is_new:
         visit = models.Visit(patient=context.__parent__)
         Session.add(visit)
     else:
         visit = context
 
     visit.patient.modify_date = datetime.now()
-    visit.cycles = data['cycles']
-    visit.visit_date = data['visit_date']
+    visit.cycles = form.cycles.data
+    visit.visit_date = form.visit_date.data
 
-    # TODO: Cannot hard code this
+    # TODO: hard coded for now, will be removed when workflows are in place
     default_state = (
         Session.query(models.State)
         .filter_by(name='pending-entry').one())
 
-    if isinstance(context, models.Visit):
+    if not is_new:
         for entity in visit.entities:
             if entity.state.name != default_state:
-                entity.collect_date = data['visit_date']
+                entity.collect_date = form.visit_date.data
 
-    if data['include_forms']:
+    if form.include_forms.data:
         CurrentSchema = orm.aliased(models.Schema)
         schemata_query = (
             Session.query(models.Schema)
             .select_from(models.Cycle)
             .join(models.Cycle.schemata)
-            .filter(models.Schema.publish_date <= data['visit_date'])
+            .filter(models.Schema.publish_date <= form.visit_date.data)
             .filter(models.Schema.publish_date == (
                 Session.query(sa.func.max(CurrentSchema.publish_date))
                 .filter(CurrentSchema.name == models.Schema.name)
                 .correlate(models.Schema)
                 .as_scalar()))
-            .filter(models.Cycle.id.in_([c.id for c in data['cycles']])))
+            .filter(models.Cycle.id.in_([c.id for c in form.cycles.dat])))
 
         if isinstance(context, models.Visit):
             # Ignore already-added schemata
@@ -220,7 +222,7 @@ def edit_json(context, request):
         for schema in schemata_query:
             visit.entities.add(models.Entity(
                 schema=schema,
-                collect_date=data['visit_date'],
+                collect_date=form.visit_date.data,
                 state=default_state))
 
     Session.flush()
@@ -248,46 +250,50 @@ def delete_json(context, request):
 
 def VisitSchema(context, request):
 
-    def unique_cycle(value):
-        if isinstance(context, models.Visit):
-            patient = context.patient
-        else:
-            patient = context.__parent__
+    def unique_cycles(form, field):
+        is_new = isinstance(context, models.VisitFactory)
+        patient = context.__parent__ if is_new else context.patient
         taken_query = (
             Session.query(models.Visit)
+            .distinct()
             .filter(models.Visit.patient == patient)
-            .filter(models.Visit.cycles.any(
-                id=value.id, is_interim=sa.sql.false())))
-        if isinstance(context, models.Visit):
+            .join(models.Visit.cycles)
+            .filter(models.Cycle.is_interim == sa.sql.false())
+            .filter(models.Cycle.id.in_([c.id for c in field.data])))
+        if not is_new:
             taken_query = taken_query.filter(models.Visit.id != context.id)
-        taken = taken_query.first()
+        taken = taken_query.all()
         if taken:
-            msg = _(u'\'${cycle}\' is already used by visit ${visit_date}')
-            mapping = {'cycle': value.title, 'visit_date': taken.visit_date}
-            raise Invalid(request.localizer.translate(msg, mapping=mapping))
-        return value
+            raise wtforms.ValidationError(request.localizer.translate(
+                _(u'Some selected cycles are already in use')))
 
-    def unique_visit_date(value):
+    def unique_visit_date(form, field):
         exists_query = (
             Session.query(models.Visit)
-            .filter_by(visit_date=value))
+            .filter_by(visit_date=field.data))
         if isinstance(context, models.Visit):
             exists_query = exists_query.filter(models.Visit.id != context.id)
-        exists, = Session.query(exists_query.exists()).one()
+        (exists,) = Session.query(exists_query.exists()).one()
         if exists:
+            raise wtforms.ValidationError(request.localizer.translate(
+                _(u'Visit already exists')))
 
-            msg = _(u'Visit already exists')
-            raise Invalid(request.localizer.translate(msg))
-        return value
+    def available_cycles():
+        return Session.query(models.Cycle).order_by('title')
 
-    return Schema({
-        'cycles': All(
-            [All(
-                Model(models.Cycle, localizer=request.localizer),
-                unique_cycle)],
-            Length(min=1)),
-        'visit_date': All(Date('%Y-%m-%d'), unique_visit_date),
-        'include_forms': Any(Boolean(), Default(False)),
-        'include_specimen': Any(Boolean(), Default(False)),
-        Extra: Remove
-        })
+    class VisitForm(wtforms.Form):
+        cycles = QuerySelectMultipleField(
+            query_factory=available_cycles,
+            get_label='title',
+            validators=[
+                wtforms.validators.InputRequired(),
+                wtforms.validators.Length(min=1),
+                unique_cycles])
+        visit_date = DateField(
+            validators=[
+                wtforms.validators.InputRequired(),
+                unique_visit_date])
+        include_forms = wtforms.BooleanField()
+        include_specimen = wtforms.BooleanField()
+
+    return VisitForm

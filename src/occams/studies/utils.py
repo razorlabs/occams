@@ -1,5 +1,51 @@
 from math import ceil
 
+import six
+import wtforms
+
+
+def wtferrors(form):
+    errors = {}
+
+    def process(node):
+        for key, field in node._fields.items():
+            if isinstance(field, wtforms.FieldList):
+                for entry in field.entries:
+                    process(entry.form)
+            elif isinstance(field, wtforms.FormField):
+                process(field.form)
+            else:
+                if field.errors:
+                    errors[field.id] = ' '.join(field.errors)
+
+    process(form)
+    return errors
+
+
+class ModelField(wtforms.Field):
+
+    widget = wtforms.widgets.TextInput()
+
+    def __init__(self, *args, **kwargs):
+        self.class_ = kwargs.pop('class_')
+        self.session = kwargs.pop('session')
+        super(ModelField, self).__init__(*args, **kwargs)
+
+    def _value(self):
+        return six.text_type(self.data.id) if self.data else u''
+
+    def process_formdata(self, valuelist):
+        if valuelist:
+            try:
+                id_ = int(valuelist[0])
+            except ValueError:
+                raise wtforms.ValidationError(self.gettext(u'Invalid value'))
+            self.data = self.session.query(self.class_).get(id_)
+            if not self.data:
+                raise wtforms.ValidationError(self.gettext(u'Value not found'))
+        else:
+            self.data = None
+
 
 class Pagination(object):
     """

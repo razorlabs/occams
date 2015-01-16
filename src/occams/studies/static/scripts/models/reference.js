@@ -19,5 +19,12 @@ function Reference(data){
     self.reference_number(data.reference_number);
   };
 
+  self.toRest = function(){
+    return {
+      reference_type: self.reference_type().id(),
+      reference_number: self.reference_number()
+      };
+  };
+
   self.update(data || {});
 }

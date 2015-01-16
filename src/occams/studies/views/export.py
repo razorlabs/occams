@@ -5,18 +5,18 @@ import uuid
 from babel.dates import format_datetime
 from humanize import naturalsize
 from pyramid.i18n import get_localizer, negotiate_locale_name
-from pyramid.httpexceptions import HTTPFound, HTTPNotFound, HTTPOk
+from pyramid.httpexceptions import \
+    HTTPForbidden, HTTPFound, HTTPNotFound, HTTPOk
 from pyramid.response import FileResponse
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 import six
 import transaction
-from good import *  # NOQA
+import wtforms
 
 from .. import _, log, models, Session, exports
 from ..tasks import celery,  make_export
-from ..utils import Pagination
-from ..validators import invalid2dict
+from ..utils import Pagination, wtferrors
 
 
 @view_config(
@@ -62,37 +62,33 @@ def checkout(context, request):
 
     if request.method == 'POST' and check_csrf_token(request) and not exceeded:
 
-        def check_exportable(values):
-            if any(value not in exportables for value in values):
-                raise Invalid(request.localizer.translate(
+        def check_exportable(form, field):
+            if any(value not in exportables for value in field.data):
+                raise wtforms.ValidationErro(request.localizer.translate(
                     _(u'Invalid selection')))
-            return values
 
-        schema = Schema({
-            'contents': All(list, Length(min=1), check_exportable),
-            'expand_collections': Any(Boolean(), Default(False)),
-            'use_choice_labels': Any(Boolean(), Default(False)),
-            Extra: Remove,
-            })
+        class CheckoutForm(wtforms.Form):
+            contents = wtforms.FieldList(
+                wtforms.StringField(
+                    validators=[wtforms.AnyOf(exportables)]))
+            expand_collections = wtforms.BooleanField(default=False)
+            use_choice_labels = wtforms.BooleanFIeld(default=False)
 
-        try:
-            data = schema({
-                # Use a formated dict, py-good is too stupid to figure this out
-                'contents': request.POST.getall('contents'),
-                'expand_collections': request.POST.get('expand_collections'),
-                'use_choice_labels': request.POST.get('use_choice_labels')})
-        except Invalid as exc:
-            errors = invalid2dict(exc)
+        form = CheckoutForm(request.POST)
+
+        if not form.validate():
+            errors = wtferrors(form)
         else:
-            task_id = six.u(str(uuid.uuid4()))
+            task_id = six.text_type(str(uuid.uuid4()))
             Session.add(models.Export(
                 name=task_id,
-                expand_collections=data['expand_collections'],
-                use_choice_labels=data['use_choice_labels'],
+                expand_collections=form.expand_collections.data,
+                use_choice_labels=form.use_choice_labels.data,
                 owner_user=(Session.query(models.User)
                             .filter_by(key=request.authenticated_userid)
                             .one()),
-                contents=[exportables[k].to_json() for k in data['contents']]))
+                contents=[exportables[k].to_json()
+                          for k in form.contents.data]))
 
             def apply_after_commit(success):
                 if success:
@@ -270,7 +266,7 @@ def download(context, request):
     export = context
 
     if not request.has_permission('view', export):
-        raise HTTPForbidden
+        raise HTTPForbidden()
 
     if export.status != 'complete':
         raise HTTPNotFound

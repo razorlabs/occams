@@ -308,6 +308,7 @@ def cleanup_reftype():
 def cleanup_patient():
     blame = context.config.get_main_option('blame')
     op.alter_column('patient', 'our', new_column_name='pid')
+    op.alter_column('patient_audit', 'our', new_column_name='pid')
     op.drop_constraint('uq_patient_our', 'patient')
     op.create_unique_constraint('uq_patient_pid', 'patient', ['pid'])
 

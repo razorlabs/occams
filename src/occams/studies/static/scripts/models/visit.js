@@ -10,7 +10,7 @@ function Visit(data){
   self.entities = ko.observableArray();
 
   self.hasCycles = ko.pureComputed(function(){
-    return self.visits().length > 0;
+    return self.cycles().length > 0;
   });
 
   self.hasEntities = ko.pureComputed(function(){
@@ -24,7 +24,7 @@ function Visit(data){
     self.cycles((data.cycles || []).map(function(value){
       return new Cycle(value);
     }));
-    self.entities(data.entities);
+    self.entities(data.entities || []);
   };
 
   self.entitiesNotStartedCount = ko.pureComputed(function(){
@@ -65,6 +65,13 @@ function Visit(data){
     }
     return Math.round((self.entitiesCompletedCount() / self.entities().length) * 100);
   });
+
+  self.toRest = function(){
+    return {
+      cycles: self.cycles().map(function(cycle){ return cycle.id(); }),
+      visit_date: self.visit_date(),
+    };
+  };
 
   self.update(data || {});
 }

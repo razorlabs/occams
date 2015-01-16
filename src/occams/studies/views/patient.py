@@ -1,22 +1,23 @@
 from datetime import datetime
 
-from good import *  # NOQA
 from pyramid.httpexceptions import HTTPBadRequest, HTTPFound
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 import six
 import sqlalchemy as sa
 from sqlalchemy import orm
+import wtforms
+from wtforms.ext.sqlalchemy.fields import QuerySelectField
 
 from occams.roster import generate
 
 from .. import _, models, Session
+from ..utils import wtferrors
 from . import (
     site as site_views,
     enrollment as enrollment_views,
     visit as visit_views,
     reference_type as reference_type_views)
-from ..validators import invalid2dict, Model, Key
 
 
 @view_config(
@@ -61,21 +62,19 @@ def search_json(context, request):
     """
     per_page = 10
 
-    schema = Schema({
-        'query': Any(
-            All(
-                # If we get a string type, the coerce to unicode
-                Type(*six.string_types),
-                Coerce(six.text_type),
-                lambda v: v.strip(),
-                # Avoid gigantic queries
-                Length(max=100)),
-            Default(None)),
-        'page': Any(All(Coerce(int), Clamp(min=1)), Default(1)),
-        Extra: Remove,
-        })
+    class SearchForm(wtforms.Form):
+        query = wtforms.StringField(
+            validators=[
+                wtforms.validators.Optional(),
+                wtforms.validators.Length(max=100)],
+            filters=[lambda v: v.strip()])
+        page = wtforms.IntegerField(
+            validators=[wtforms.validators.Optional()],
+            filters=[lambda v: 1 if not v or v < 1 else v],
+            default=1)
 
-    data = schema(request.GET.mixed())
+    form = SearchForm(request.GET)
+    form.validate()
 
     # Only include sites that the user is a member of
     sites = Session.query(models.Site)
@@ -92,8 +91,8 @@ def search_json(context, request):
             .as_scalar())
         .filter(models.Patient.site_id.in_(site_ids)))
 
-    if data['query']:
-        wildcard = '%{0}%'.format(data['query'])
+    if form.query.data:
+        wildcard = '%{0}%'.format(form.query.data)
         query = (
             query.filter(
                 models.Patient.pid.ilike(wildcard)
@@ -109,7 +108,7 @@ def search_json(context, request):
     query = (
         query
         .order_by(models.Patient.pid.asc())
-        .offset((data['page'] - 1) * per_page)
+        .offset((form.page.data - 1) * per_page)
         .limit(per_page + 1))
 
     def process(result):
@@ -125,10 +124,10 @@ def search_json(context, request):
     patients = [process(result) for result in query]
 
     return {
-        '__has_previous__': data['page'] > 1,
+        '__has_previous__': form.page.data > 1,
         '__has_next__': len(patients) > per_page,
-        '__page__': data['page'],
-        '__query__': data['query'],
+        '__page__': form.page.data,
+        '__query__': form.query.data,
         'patients': patients[:per_page]
     }
 
@@ -230,38 +229,40 @@ def forms_edit_json(context, request):
 def edit_json(context, request):
     check_csrf_token(request)
 
-    schema = PatientSchema(context, request)
-    patient = context if isinstance(context, models.Patient) else None
+    form = PatientSchema(context, request).from_json(request.json_body)
 
-    try:
-        data = schema(request.json_body)
-    except Invalid as e:
-        raise HTTPBadRequest(json={'errors': invalid2dict(e)})
+    if not form.validate():
+        raise HTTPBadRequest(json={'errors': wtferrors(form)})
 
     if isinstance(context, models.PatientFactory):
-        pid = generate(data['site'].name)
+        pid = generate(form.site.data.name)
         patient = models.Patient(pid=pid)
+    else:
+        patient = context
 
-    patient.site = data['site']
+    patient.site = form.site.data
 
-    if data['references']:
-        incoming = dict([((r['reference_type'].id, r['reference_number']), r)
-                        for r in data['references']])
-        # make a copy of the list so we can remove from the original
-        current = [r for r in patient.references]
-        for r in current:
-            key = (r.reference_type_id, r.reference_number)
-            if key not in incoming:
-                patient.references.remove(r)
-            else:
-                del incoming[key]
+    if form.references.data:
+        inputs = dict(
+            ((r['reference_type'].id, r['reference_number']), r)
+            for r in form.references.data)
 
-        for value in six.itervalues(incoming):
-            patient.references.append(models.PatientReference(
-                reference_type=value['reference_type'],
-                reference_number=value['reference_number']))
+        for r in patient.references:
+            try:
+                # Remove already-existing values from the inputs
+                del inputs[(r.reference_type.id, r.reference_number)]
+            except KeyError:
+                # References not in the inputs indicate they have been removed
+                Session.delete(r)
+
+        for r in six.itervalues(inputs):
+            Session.add(models.PatientReference(
+                patient=patient,
+                reference_type=r['reference_type'],
+                reference_number=r['reference_number']))
 
     Session.flush()
+    Session.refresh(patient)
 
     return view_json(patient, request)
 
@@ -289,56 +290,56 @@ def PatientSchema(context, request):
     Declares data format expected for managing patient properties
     """
 
-    def check_can_view_site(value):
-        if not request.has_permission('view', value):
-            raise Invalid(request.localizer.translate(
-                _(u'You do not have access to {site}'),
-                mapping={'site': value.title}))
-        return value
+    def check_reference_format(form, field):
+        type_ = form.reference_type.data
+        number = form.reference_number.data
+        if not type_.check(number):
+            raise wtforms.ValidationError(request.localizer.translate(_(
+                _(u'Invalid format'))))
 
-    def check_reference_format(value):
-        if not value['reference_type'].check(value['reference_number']):
-            raise Invalid(request.localizer.translate(
-                _(u'${type} ${number} is not a valid format'),
-                mapping={
-                    'type': value['reference_type'].title,
-                    'number': value['reference_number']}))
-        return value
-
-    def check_unique_reference(value):
+    def check_unique_reference(form, field):
+        type_ = form.reference_type.data
+        number = form.reference_number.data
         query = (
             Session.query(models.PatientReference)
-            .filter_by(
-                reference_type=value['reference_type'],
-                reference_number=value['reference_number']))
+            .filter_by(reference_type=type_, reference_number=number))
         if isinstance(context, models.Patient):
             query = query.filter(models.PatientReference.patient != context)
-        reference = query.first()
-        if reference:
-            msg = request.localizer.translate(
-                _(u'${type} ${number} is already assigned to ${pid}'),
-                mapping={
-                    'type': reference.reference_type.title,
-                    'number': reference.reference_number,
-                    'pid': reference.patient.pid})
-            raise Invalid(msg)
-        return value
+        ref = query.first()
+        if ref:
+            raise wtforms.ValidationError(request.localizer.translate(_(
+                u'Already in use.')))
 
-    return Schema({
-        'site': All(
-            Any(Key('id'), int),
-            Model(models.Site, localizer=request.localizer),
-            check_can_view_site),
-        'references': [All({
-            'reference_type': All(
-                Any(Key('id'), int),
-                Model(models.ReferenceType, localizer=request.localizer)),
-            'reference_number': All(
-                Type(*six.string_types),
-                Coerce(six.binary_type)),
-            Extra: Remove
-            },
-            check_reference_format,
-            check_unique_reference)],
-        Extra: Remove
-        })
+    def available_reference_types():
+        return Session.query(models.ReferenceType).order_by('title')
+
+    def available_sites():
+        allowed_site_ids = [
+            s.id
+            for s in Session.query(models.Site).order_by('title')
+            if request.has_permission('view', s)]
+        return (
+            Session.query(models.Site)
+            .filter(models.Site.id.in_(allowed_site_ids))
+            .order_by('title'))
+
+    class ReferenceForm(wtforms.Form):
+        reference_type = QuerySelectField(
+            query_factory=available_reference_types,
+            get_label='title',
+            validators=[
+                wtforms.validators.InputRequired()])
+        reference_number = wtforms.StringField(
+            validators=[
+                wtforms.validators.InputRequired(),
+                check_reference_format,
+                check_unique_reference])
+
+    class PatientForm(wtforms.Form):
+        site = QuerySelectField(
+            query_factory=available_sites,
+            get_label='title',
+            validators=[wtforms.validators.InputRequired()])
+        references = wtforms.FieldList(wtforms.FormField(ReferenceForm))
+
+    return PatientForm

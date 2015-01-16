@@ -4,7 +4,7 @@ Pyramid-specific events
 
 from pyramid.events import subscriber, NewResponse, NewRequest
 
-from . import Session
+from .. import Session
 
 
 @subscriber(NewResponse)

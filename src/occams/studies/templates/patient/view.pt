@@ -312,10 +312,12 @@
                       data-type-hint="date"
                       placeholder="YYYY-MM-DD"
                       data-date-format="YYYY-MM-DD"
+                      data-date-picktime="false"
+                      data-date-usecurrent="false"
                       data-rule-dateISO
                       data-bind="
                         value: ${name},
-                        datetimePicker: {pickTime: false, useCurrent: false},
+                        datetimepicker: {},
                         uniqueName: true" />
                 </div> <!-- /.form-group -->
                 <div class="form-group" tal:define="name 'latest_consent_date'">
@@ -327,12 +329,14 @@
                       placeholder="YYYY-MM-DD"
                       data-type-hint="date"
                       data-date-format="YYYY-MM-DD"
+                      data-date-picktime="false"
+                      data-date-usecurrent="false"
                       data-rule-dateISO
                       data-rule-greaterThanEqualTo="#consent_date"
                       data-msg-greaterThanEqualTo="Must be after consent date"
                       data-bind="
                         value: ${name},
-                        datetimePicker: {pickTime: false, useCurrent: false},
+                        datetimepicker: {},
                         uniqueName: true" />
                 </div> <!-- /.form-group -->
 
@@ -442,7 +446,6 @@
                       class="form-control"
                       required
                       type="text"
-                      title="Please select associated study cycles"
                       id="${name}"
                       name="${name}"
                       data-placeholder="Select a cycle..."
@@ -450,7 +453,9 @@
                       data-rule-remote="${request.route_path('visits', patient=context.pid)}"
                       i18n:attributes="title data-placeholder"
                       data-bind="
-                        selectedValues: ${name},
+                        dataKey: 'id',
+                        dataLabel: 'title',
+                        selectedData: ${name},
                         select2: $root.visitSelect2Options($element)" />
                 </div> <!-- /.form-group -->
                 <div class="form-group" tal:define="name 'visit_date'">
@@ -462,10 +467,12 @@
                       data-type-hint="date"
                       placeholder="YYYY-MM-DD"
                       data-date-format="YYYY-MM-DD"
+                      data-date-picktime="false"
+                      data-date-usecurrent="false"
                       data-rule-dateISO
                       data-bind="
                         value: ${name},
-                        datetimePicker: {pickTime: false, useCurrent: false},
+                        datetimepicker: {},
                         uniqueName: true" />
                 </div> <!-- /.form-group -->
               </div> <!-- /.modal-body -->
