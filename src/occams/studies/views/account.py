@@ -6,10 +6,11 @@ import wtforms
 from .. import _, Session, models
 
 
-@forbidden_view_config()
+@forbidden_view_config(renderer='../templates/account/forbidden.pt')
 def forbidden(request):
     if (request.matched_route.name != 'login'
             and request.authenticated_userid):
+        return {}
         # If an authenticated user has reached this controller without
         # intentionally going to the login view, assume permissions
         # error
@@ -67,7 +68,7 @@ def login(request):
                 .filter_by(key=form.login.data)
                 .first())
             if not user:
-                Session.add(models.User(key=request.login.data))
+                Session.add(models.User(key=form.login.data))
             return HTTPFound(location=referrer, headers=headers)
 
     # forcefully forget any credentials

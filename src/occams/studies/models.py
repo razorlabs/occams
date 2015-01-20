@@ -553,6 +553,8 @@ class Patient(Base, Referenceable, Modifiable, HasEntities, Auditable):
             return EnrollmentFactory(self)
         elif key == 'visits':
             return VisitFactory(self)
+        elif key == 'forms':
+            return FormFactory(self)
         raise KeyError
 
     @declared_attr
@@ -1062,6 +1064,36 @@ class FormFactory(object):
             raise KeyError
         entity.__parent__ = self
         return entity
+
+
+def _entity_acl(self):
+    factory = self.__parent__
+    study_item = factory.__parent__
+    if isinstance(study_item, Patient):
+        site = study_item.site
+    elif isinstance(study_item, Enrollment) or isinstance(study_item, Visit):
+        site = study_item.patient.site
+    else:
+        Exception(u'Cannot find site for entity')
+    if self.schema.has_private:
+        return [
+            (Allow, groups.administrator(), ALL_PERMISSIONS),
+            (Allow, groups.manager(site), ('view', 'edit', 'delete')),
+            (Allow, groups.reviewer(site), ('view', 'edit', 'delete')),
+            (Allow, groups.enterer(site), ('view', 'edit', 'delete')),
+            (Allow, groups.consumer(site), 'view')
+            ]
+    else:
+        return [
+            (Allow, groups.administrator(), ALL_PERMISSIONS),
+            (Allow, groups.manager(site), ('view', 'edit', 'delete')),
+            (Allow, groups.reviewer(site), 'view')
+            (Allow, groups.enterer(site), 'view')
+            (Allow, groups.consumer(site), 'view')
+            ]
+
+
+Entity.__acl__ = property(_entity_acl)
 
 
 class ExportFactory(object):

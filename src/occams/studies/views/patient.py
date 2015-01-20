@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pyramid.httpexceptions import HTTPBadRequest, HTTPFound
+from pyramid.httpexceptions import HTTPBadRequest, HTTPFound, HTTPForbidden
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 import six
@@ -10,6 +10,7 @@ import wtforms
 from wtforms.ext.sqlalchemy.fields import QuerySelectField
 
 from occams.roster import generate
+from occams.forms.renderers import make_form, render_form, apply_data
 
 from .. import _, models, Session
 from ..utils import wtferrors
@@ -146,7 +147,9 @@ def view(context, request):
     }
     request.session.changed()
 
+    # TODO: Need to limit PHI
     return {
+        'entities': get_patient_entities(context, request),
         'available_studies': (
             Session.query(models.Study)
             .filter(models.Study.start_date != sa.sql.null())
@@ -229,14 +232,16 @@ def forms_edit_json(context, request):
 def edit_json(context, request):
     check_csrf_token(request)
 
+    is_new = isinstance(context, models.PatientFactory)
     form = PatientSchema(context, request).from_json(request.json_body)
 
     if not form.validate():
         raise HTTPBadRequest(json={'errors': wtferrors(form)})
 
-    if isinstance(context, models.PatientFactory):
-        pid = generate(form.site.data.name)
-        patient = models.Patient(pid=pid)
+    if is_new:
+        # if any errors occurr after this, this PID is essentially wasted
+        patient = models.Patient(pid=generate(form.site.data.name))
+        Session.add(patient)
     else:
         patient = context
 
@@ -261,6 +266,14 @@ def edit_json(context, request):
                 reference_type=r['reference_type'],
                 reference_number=r['reference_number']))
 
+    # Add the patient forms
+    if is_new:
+        schemata_query = (
+            Session.query(models.Schema)
+            .join(models.patient_schema_table))
+        for schema in schemata_query:
+            patient.entities.add(models.Entity(schema=schema))
+
     Session.flush()
     Session.refresh(patient)
 
@@ -283,6 +296,48 @@ def delete_json(context, request):
         mapping={'pid': patient.pid})
     request.session.flash(msg, 'success')
     return {'__next__': request.current_route_path(_route_name='home')}
+
+
+@view_config(
+    route_name='patient_form',
+    permission='view',
+    renderer='../templates/patient/form.pt')
+def form(context, request):
+    PatientForm = make_form(context.schema, enable_metadata=False)
+    patient = context.__parent__.__parent__
+    form = PatientForm(request.POST, data=context.to_dict())
+    if request.method == 'POST':
+        if not request.has_permission('edit', context):
+            raise HTTPForbidden()
+        if form.validate():
+            upload_dir = request.registry.settings['app.blob.dir']
+            apply_data(context, form.data, upload_dir)
+            Session.flush()
+            request.session.flash(_(u'Changes saved'), 'success')
+            return HTTPFound(location=request.current_route_path())
+    form_id = 'patient-form'
+    return {
+        'entities': get_patient_entities(patient, request),
+        'patient': view_json(patient, request),
+        'form_id': form_id,
+        'form': render_form(form, attr={
+            'id': form_id,
+            'method': 'POST',
+            'action': request.current_route_path(),
+            'role': 'form'
+        }),
+    }
+
+
+def get_patient_entities(context, request):
+    return (
+        Session.query(models.Entity)
+        .join(models.Context)
+        .filter(models.Context.external == u'patient')
+        .filter(models.Context.key == context.id)
+        .join(models.Entity.schema)
+        .join(models.patient_schema_table)
+        .order_by(models.Schema.title))
 
 
 def PatientSchema(context, request):

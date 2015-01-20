@@ -30,10 +30,12 @@ function PatientView(patientData, enrollmentsData, visitsData){
 
   // UI Data
   self.patient = new Patient(patientData);
-  self.enrollments = ko.observableArray(enrollmentsData.map(function(value){
+
+  self.enrollments = ko.observableArray((enrollmentsData || []).map(function(value){
     return new Enrollment(value);
   }));
-  self.visits = ko.observableArray(visitsData.map(function(value){
+
+  self.visits = ko.observableArray((visitsData || []).map(function(value){
     return new Visit(value);
   }));
 

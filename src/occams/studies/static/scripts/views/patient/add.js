@@ -34,7 +34,7 @@ function PatientAddView(){
         url: $(element).attr('action'),
         method: 'POST',
         contentType: 'application/json; charset=utf-8',
-        data: ko.toJSON(self.editableItem()),
+        data: ko.toJSON(self.editableItem().toRest()),
         headers: {'X-CSRF-Token': $.cookie('csrf_token')},
         error: handleXHRError({form: element, logger: self.errorMessage}),
         beforeSend: function(){

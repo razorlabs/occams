@@ -17,7 +17,7 @@ REQUIRES = [
     'humanize',                         # human readable measurements
     'jsmin',                            # JS asset compression
     'lingua',                           # i18n
-    'Paste',                            # Needed for urlmap
+    'python-dateutil',                  # Date parsing
     'pyramid>=1.5',                     # Framework
     'pyramid_chameleon',                # Templating
     'pyramid_tm',                       # Centralized transations

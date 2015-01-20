@@ -50,8 +50,8 @@ def includeme(config):
     config.add_route('patients',                    '/patients',                        factory=models.PatientFactory, traverse='/')
     config.add_route('patients_forms',              '/patients/forms',                  factory=models.PatientFactory, traverse='/')
     config.add_route('patient',                     '/patients/{patient}',              factory=models.PatientFactory, traverse='/{patient}')
-    config.add_route('patient_forms',               '/patients/{patient}/forms',        factory=models.PatientFactory, traverse='/{patient}')
-    config.add_route('patient_form',                '/patients/{patient}/forms/{form}', factory=models.PatientFactory, traverse='/{patient}')
+    config.add_route('patient_forms',               '/patients/{patient}/forms',        factory=models.PatientFactory, traverse='/{patient}/forms')
+    config.add_route('patient_form',                '/patients/{patient}/forms/{form}', factory=models.PatientFactory, traverse='/{patient}/forms/{form}')
 
     config.add_route('enrollments',                 '/patients/{patient}/enrollments',                              factory=models.PatientFactory, traverse='/{patient}/enrollments')
     config.add_route('enrollment',                  '/patients/{patient}/enrollments/{enrollment}',                 factory=models.PatientFactory, traverse='/{patient}/enrollments/{enrollment}')

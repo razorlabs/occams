@@ -1,0 +1,47 @@
+<header class="page-header">
+  <div class="btn-toolbar pull-right">
+    <button class="btn btn-default"
+        data-bind="click: $root.startEditPatient"
+        tal:condition="request.has_permission('edit')">
+      <span class="fa fa-edit"></span>
+      <span i18n:translate="">Edit</span>
+    </button>
+    <button class="btn btn-default"
+        data-bind="click: $root.startDeletePatient"
+        tal:condition="request.has_permission('delete')">
+      <span class="fa fa-trash-o"></span>
+      <span i18n:translate="">Delete</span>
+    </button>
+  </div>
+  <h1 i18n:translate="" data-bind="text: patient.pid"></h1>
+  <ul class="details list-inline">
+    <li data-bind="with: patient.site">
+      <span class="text-muted" i18n:translate="">Site:</span>
+      <span data-bind="text: title"></span>
+    </li>
+  </ul>
+  <nav>
+    <ul class="nav nav-header" tal:define="current request.current_route_path(_query={})">
+      <li tal:define="url request.route_path('studies')">
+        <a href="${url}">
+          <span class="fa fa-chevron-left"></span>
+        </a>
+      </li>
+      <li tal:define="url request.current_route_path(_route_name='patient', _query={})"
+          class="${'active' if current == url else ''}">
+        <a href="${url}" i18n:translate="">Overview</a>
+      </li>
+      <li tal:define="url request.current_route_path(_route_name='patient_forms', _query={})"
+          class="${'active' if current == url else ''}">
+        <a href="${url}" i18n:translate="">Forms</a>
+      </li>
+      <tal:schemata repeat="entity entities">
+         <li tal:define="url request.current_route_path(_route_name='patient_form', form=entity.id, _query={})"
+            class="${'active' if current == url else ''}">
+          <a href="${url}" i18n:translate="">${entity.schema.title}</a>
+        </li>
+      </tal:schemata>
+    </ul>
+  </nav>
+</header>
+
