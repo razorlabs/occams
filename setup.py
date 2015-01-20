@@ -9,7 +9,6 @@ REQUIRES = [
     'alembic',                  # Database table upgrades
     'cssmin',                   # CSS asset compression
     'jsmin>=2.0.11',            # JS asset compression
-    'Paste',                    # Needed for urlmap
     'python-dateutil',          # Date parsing
     'pyramid>=1.5',             # Framework
     'pyramid_chameleon',        # Templating

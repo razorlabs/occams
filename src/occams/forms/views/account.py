@@ -37,7 +37,7 @@ class LoginForm(wtforms.Form):
 
 @view_config(
     route_name='login',
-    renderer='../templates/auth/login.pt')
+    renderer='../templates/account/login.pt')
 def login(request):
 
     if request.authenticated_userid:
