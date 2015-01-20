@@ -223,13 +223,9 @@ class Entity(Model, Referenceable, Modifiable, Auditable):
         attribute = self.schema.attributes[key]
         wrapperFactory = nameModelMap[attribute.type]
 
-        # Helper method for getting the appropriate parameters for
-        # an attribute/value
-        params = lambda a, v: dict(list(zip(('attribute', 'value'), (a, v))))
-
-        # Helper methot to add an item to the value collector
-        collect = lambda v: collector.__setitem__(
-            attribute.name, wrapperFactory(**params(attribute, v)))
+        if value is None:
+            del self[key]
+            return
 
         def convert(value, type_):
             if value is None:
@@ -252,7 +248,10 @@ class Entity(Model, Referenceable, Modifiable, Auditable):
             # don't even bother getting a diff, just create a new list
             del self[key]
             for v in value:
-                collect(convert(v, attribute.type))
+                convertedValue = convert(v, attribute.type)
+                collector[attribute.name] = wrapperFactory(
+                    attribute=attribute,
+                    value=convertedValue)
         else:
             # For scalars, we're only dealing with one value, so it's OK to
             # try and update it
@@ -261,11 +260,23 @@ class Entity(Model, Referenceable, Modifiable, Auditable):
             if value_entries:
                 value_entries[0].value = convertedValue
             else:
-                collect(convertedValue)
+                collector[attribute.name] = wrapperFactory(
+                    attribute=attribute,
+                    value=convertedValue)
 
     def __delitem__(self, key):
         collector = self._getCollector(key)
         del collector[key]
+
+    def to_dict(self):
+        data = {}
+        for attribute in self.schema.iterleafs():
+            if attribute.parent_attribute:
+                sub = data.setdefault(attribute.parent_attribute.name, {})
+            else:
+                sub = data
+            sub[attribute.name] = self[attribute.name]
+        return data
 
 
 class HasEntities(object):
