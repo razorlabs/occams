@@ -83,4 +83,5 @@ def login(request):
 
 @view_config(route_name='logout')
 def logout(request):
-    return HTTPFound(location='/', headers=forget(request))
+    return HTTPFound(
+        location=request.route_path('login'), headers=forget(request))
