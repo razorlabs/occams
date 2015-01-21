@@ -268,16 +268,6 @@ class Entity(Model, Referenceable, Modifiable, Auditable):
         collector = self._getCollector(key)
         del collector[key]
 
-    def to_dict(self):
-        data = {}
-        for attribute in self.schema.iterleafs():
-            if attribute.parent_attribute:
-                sub = data.setdefault(attribute.parent_attribute.name, {})
-            else:
-                sub = data
-            sub[attribute.name] = self[attribute.name]
-        return data
-
 
 class HasEntities(object):
     """
