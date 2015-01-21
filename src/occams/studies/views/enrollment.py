@@ -65,12 +65,13 @@ def view_json(context, request):
             },
         'stratum': None if not study.is_randomized else {
             'id': enrollment.stratum.id,
-            'arm': None if not can_randomize or study.is_blinded else {
+            'arm': None if study.is_blinded or not can_randomize else {
                 'id': enrollment.stratum.arm.id,
                 'name': enrollment.stratum.arm.name,
                 'title': enrollment.stratum.arm.title,
                 },
-            'randid': enrollment.stratum.randid
+            'randid': (
+                enrollment.stratum.randid if not study.is_blinded else None)
             },
         'consent_date': enrollment.consent_date.isoformat(),
         'latest_consent_date': enrollment.latest_consent_date.isoformat(),
