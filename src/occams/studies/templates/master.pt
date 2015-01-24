@@ -20,10 +20,10 @@
     <link
         rel="shortcut icon"
         href="${request.static_path('occams.studies:static/images/favicon.ico')}"/>
-    <link rel="shortcut icon" sizes="1024x1024" href="favicon-highres.png">
-    <link rel="shortcut icon" sizes="128x128" href="favicon.png">
-    <link rel="apple-touch-icon" sizes="128x128" href="favicon.png">
-    <link rel="apple-touch-icon-precomposed" sizes="128x128" href="favicon.png">
+    <link rel="shortcut icon" sizes="1024x1024" href="${request.static_path('occams.studies:static/images/favicon-highres.png')}">
+    <link rel="shortcut icon" sizes="128x128" href="${request.static_path('occams.studies:static/images/favicon.png')}">
+    <link rel="apple-touch-icon" sizes="128x128" href="${request.static_path('occams.studies:static/images/favicon.png')}">
+    <link rel="apple-touch-icon-precomposed" sizes="128x128" href="${request.static_path('occams.studies:static/images/favicon.png')}">
   </head>
 
   <body>

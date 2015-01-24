@@ -1023,6 +1023,7 @@ class Visit(Base, Referenceable, Modifiable, HasEntities, Auditable):
 
     def __getitem__(self, key):
         if key == 'forms':
+
             return FormFactory(self)
 
     @declared_attr
@@ -1087,9 +1088,9 @@ def _entity_acl(self):
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
             (Allow, groups.manager(site), ('view', 'edit', 'delete')),
-            (Allow, groups.reviewer(site), 'view')
-            (Allow, groups.enterer(site), 'view')
-            (Allow, groups.consumer(site), 'view')
+            (Allow, groups.reviewer(site), 'view'),
+            (Allow, groups.enterer(site), 'view'),
+            (Allow, groups.consumer(site), 'view'),
             ]
 
 

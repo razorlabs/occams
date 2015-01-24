@@ -1,0 +1,80 @@
+<div class="modal fade" data-bind="modalVisible: $root.showAddForm">
+  <div class="modal-dialog" data-bind="if: $root.showAddForm">
+    <div class="modal-content" data-bind="with: $root.editableItem">
+      <form
+          role="form"
+          class="form-horizontal"
+          action="${request.current_route_path(_route_name='patient_forms')}"
+          data-bind="submit: $root.saveForm, validate: {}">
+        <div class="modal-header">
+          <h4 class="modal-title" i18n:translate="">Add Form</h4>
+        </div>
+        <div class="modal-body">
+          <!-- ko if: $root.hasErrorMessages -->
+            <div class="alert alert-danger">
+              <p i18n:translate="">
+                Could not complete the request for the following reasons:
+              </p>
+              <ul data-bind="foreach: $root.errorMessages">
+                <li data-bind="text: $data"></li>
+              </ul>
+            </div>
+          <!-- /ko -->
+          <div class="form-group">
+            <label class="col-sm-3 required" i18n:translate="">Form</label>
+            <div class="col-sm-9">
+              <input type="hidden" class="form-control"
+                  required
+                  i18n:attributes="data-placeholder"
+                  name="schema"
+                  data-placeholder="Select a form..."
+                  data-bind="
+                    selectedData: schema,
+                    dataKey: 'name',
+                    dataLabel: 'titleWithVersion',
+                    select2: {
+                      allowClear: true,
+                      ajax: {
+                        data: $root.formSearchParams,
+                        results: $root.formSearchResults
+                      }
+                    }" />
+            </div>
+          </div> <!-- /.form-group -->
+          <div class="form-group" tal:define="name 'collect_date'">
+            <label i18n:translate="" for="${name}" class="col-sm-3 required">Collect Date</label>
+            <div class="col-sm-9">
+              <input type="date"
+                  class="form-control"
+                  required
+                  id="${name}"
+                  data-type-hint="date"
+                  placeholder="YYYY-MM-DD"
+                  data-date-format="YYYY-MM-DD"
+                  data-date-picktime="false"
+                  data-date-usecurrent="false"
+                  data-rule-dateISO
+                  data-bind="
+                    value: ${name},
+                    datetimepicker: {},
+                    uniqueName: true" />
+            </div>
+          </div> <!-- /.form-group -->
+        </div> <!-- /.modal-body -->
+        <div class="modal-footer">
+          <button
+              type="button"
+              class="btn btn-link"
+              data-bind="click: $root.clear"
+              i18n:translate="">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <span i18n:translate="">Save</span>
+            <!-- ko if: $root.isSaving -->
+              <span class="fa fa-refresh fa-spin"></span>
+            <!-- /ko -->
+          </button>
+        </div>
+      </form>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->

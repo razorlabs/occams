@@ -3,40 +3,7 @@
 
     <div style="display: none;" data-bind="visible: isReady">
 
-      <header class="page-header">
-        <div class="btn-toolbar pull-right">
-          <button class="btn btn-default"
-            data-bind="click: startFormAdd"
-            tal:condition="request.has_permission('edit')">
-              <span class="fa fa-files-o"></span>
-              <span i18n:translate="">Add Forms</span>
-          </button>
-          <button class="btn btn-default"
-              data-bind="click: startEdit"
-              tal:condition="request.has_permission('edit')">
-            <span class="fa fa-edit"></span>
-            <span i18n:translate="">Edit</span>
-          </button>
-          <button class="btn btn-default"
-              data-bind="click: startDelete"
-              tal:condition="request.has_permission('delete')">
-            <span class="fa fa-trash-o"></span>
-            <span i18n:translate="">Delete</span>
-          </button>
-        </div>
-        <h1 i18n:translate="">
-          <span i18n:translate="">Visit</span>
-          <span data-bind="text: visit.visit_date"></span>
-        </h1>
-        <ul class="details list-inline">
-          <li data-bind="">
-            <span class="text-muted" i18n:translate="">Cycles:</span>
-            <ul class="list-comma" data-bind="foreach: visit.cycles">
-              <li data-bind="text: title"></li>
-            </ul>
-          </li>
-        </ul>
-      </header>
+      <header metal:use-macro="load: header.pt"></header>
 
       <table class="table table-hover table-striped">
         <colgroup>

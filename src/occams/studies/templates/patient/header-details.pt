@@ -1,0 +1,7 @@
+<ul class="details list-inline">
+  <li data-bind="with: patient.site">
+    <span class="text-muted" i18n:translate="">Site:</span>
+    <span data-bind="text: title"></span>
+  </li>
+</ul>
+

@@ -521,7 +521,7 @@ def remove_zid_oldid():
         'reftype', 'site', 'stratum', 'study', 'visit',
         'attribute', 'value_blob', 'category', 'choice',
         'value_datetime', 'value_decimal', 'entity', 'value_integer',
-        'schema', 'value_string', 'value_text',
+        'schema', 'value_string', 'value_text', 'value_choice',
         'context']
 
     url = context.config.get_main_option('sqlalchemy.url')

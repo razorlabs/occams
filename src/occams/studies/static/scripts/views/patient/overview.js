@@ -7,7 +7,7 @@ function PatientView(patientData, enrollmentsData, visitsData){
   self.selectedItem = ko.observable();  // originally selected item
   self.editableItem = ko.observable();  // pending changes (will be applied to selected)
 
-  var VIEW = 'view', EDIT = 'edit', DELETE = 'delete';
+  var VIEW = 'view', ADD = 'add', EDIT = 'edit', DELETE = 'delete';
 
   // Patient UI settings
   self.statusPatient = ko.observable();
@@ -20,10 +20,15 @@ function PatientView(patientData, enrollmentsData, visitsData){
   self.showEditEnrollment = ko.pureComputed(function(){ return self.statusEnrollment() == EDIT; });
   self.showDeleteEnrollment = ko.pureComputed(function(){ return self.statusEnrollment() == DELETE; });
 
-  // Visti UI Settings
+  // Visit UI Settings
   self.latestVisit = ko.observable();
   self.statusVisit = ko.observable();
   self.showEditVisit = ko.pureComputed(function(){ return self.statusVisit() == EDIT; });
+
+
+  // Forms UI Settings
+  self.statusForm = ko.observable();
+  self.showAddForm = ko.pureComputed(function(){ return self.statusForm() == ADD; });
 
   // Modal UI Settings
   self.errorMessage = ko.observable();
@@ -46,6 +51,21 @@ function PatientView(patientData, enrollmentsData, visitsData){
   self.hasVisits = ko.computed(function(){
     return self.visits().length > 0;
   });
+
+  // Select2 termination search parameters callback
+  self.formSearchParams = function(term, page){
+    return {vocabulary: 'available_schemata', term: term};
+  };
+
+  // Select2 termination results callback
+  self.formSearchResults = function(data){
+
+    return {
+      results: data.schemata.map(function(schema){
+        return new StudyForm({schema: schema, versions: [schema]});
+      })
+    };
+  };
 
   self.onChangeStudy = function(item, event){
     var $option = $($(event.target).find(':selected'))
@@ -76,6 +96,7 @@ function PatientView(patientData, enrollmentsData, visitsData){
     self.statusPatient(null);
     self.statusEnrollment(null);
     self.statusVisit(null);
+    self.statusForm(null);
   };
 
   self.startEditPatient = function(){
@@ -111,6 +132,12 @@ function PatientView(patientData, enrollmentsData, visitsData){
     self.clear();
     self.statusVisit(EDIT);
     self.editableItem(new Visit());
+  };
+
+  self.startAddForm = function(){
+    self.clear();
+    self.statusForm(ADD);
+    self.editableItem(new Entity());
   };
 
   self.visitSelect2Options = function(element){
@@ -242,6 +269,29 @@ function PatientView(patientData, enrollmentsData, visitsData){
         },
         success: function(data, textStatus, jqXHR){
           self.visits.push(new Visit(data));
+          self.clear();
+        },
+        complete: function(){
+          self.isSaving(false);
+        }
+      });
+    }
+  };
+
+  self.saveForm = function(element){
+    if ($(element).validate().form()){
+       $.ajax({
+        url: $(element).attr('action'),
+        method: 'POST',
+        contentType: 'application/json; charset=utf-8',
+        data: ko.toJSON(self.editableItem().toRest()),
+        headers: {'X-CSRF-Token': $.cookie('csrf_token')},
+        error: handleXHRError({form: element, logger: self.errorMessage}),
+        beforeSend: function(){
+          self.isSaving(true);
+        },
+        success: function(data, textStatus, jqXHR){
+          window.location = data.__next__;
           self.clear();
         },
         complete: function(){
