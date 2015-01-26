@@ -18,7 +18,7 @@ import wtforms.fields.html5
 import wtforms.widgets.html5
 import wtforms.ext.dateutil.fields
 
-from occams.forms import _, Session, models, log
+from occams.forms import _, models, log
 
 
 def render_field(field, **kw):
@@ -139,10 +139,18 @@ def make_field(attribute):
     else:
         kw['validators'].append(wtforms.validators.Optional())
 
+    if attribute.value_min or attribute.value_max:
+        kw['validators'].append(wtforms.validators.Length(
+            min=attribute.value_min,
+            max=attribute.value_max))
+
+    if attribute.pattern:
+        kw['validators'].append(wtforms.validators.Regexp(attribute.pattern))
+
     return field_class(**kw)
 
 
-def make_form(schema, enable_metadata=True, allowed_versions=None):
+def make_form(session, schema, enable_metadata=True, allowed_versions=None):
     """
     Converts a Datastore schema to a WTForm.
     """
@@ -152,19 +160,17 @@ def make_form(schema, enable_metadata=True, allowed_versions=None):
 
     if enable_metadata:
 
-        states = Session.query(models.State)
-
         if not allowed_versions:
             allowed_versions = []
 
         allowed_versions.append(schema.publish_date)
         allowed_versions = sorted(set(allowed_versions))
 
-        actual_versions = [(v,) for v in (
-            Session.query(models.Schema.publish_date)
+        actual_versions = [(str(p), str(p)) for (p,) in (
+            session.query(models.Schema.publish_date)
             .filter(models.Schema.name == schema.name)
             .filter(models.Schema.publish_date.in_(allowed_versions))
-            .order_by(models.publish_date.asc())
+            .order_by(models.Schema.publish_date.asc())
             .all())]
 
         if len(allowed_versions) != len(actual_versions):
@@ -172,19 +178,22 @@ def make_form(schema, enable_metadata=True, allowed_versions=None):
                 'Inconsitent versions: %s != %s' % (
                     allowed_versions, actual_versions))
 
+        states = session.query(models.State)
+
         class Metadata(wtforms.Form):
-            status = wtforms.SelectField(_(u'Status'), choices=[
+            state = wtforms.SelectField(_(u'Status'), choices=[
                 (state.name, state.title) for state in states])
             not_done = wtforms.BooleanField(_(u'Not Done'))
-            collect_date = wtforms.DateField(
+            collect_date = wtforms.ext.dateutil.fields.DateField(
                 _(u'Collected'),
-                validators=[wtforms.required()])
+                widget=wtforms.widgets.html5.DateInput(),
+                validators=[wtforms.validators.InputRequired()])
             version = wtforms.SelectField(
                 _(u'Version'),
                 choices=actual_versions,
-                validators=[wtforms.required()])
+                validators=[wtforms.validators.InputRequired()])
 
-        setattr(DatastoreForm, '__metadata__', wtforms.FormField(Metadata))
+        setattr(DatastoreForm, 'ofmetadata_', wtforms.FormField(Metadata))
 
     for attribute in schema.itertraverse():
         setattr(DatastoreForm, attribute.name, make_field(attribute))
@@ -192,7 +201,7 @@ def make_form(schema, enable_metadata=True, allowed_versions=None):
     return DatastoreForm
 
 
-def make_longform(schemata):
+def make_longform(session, schemata):
     """
     Converts multiple Datastore schemata to a sinlge WTForm.
     """
@@ -201,7 +210,7 @@ def make_longform(schemata):
         pass
 
     for schema in schemata:
-        form = make_form(schema, enable_metadata=False)
+        form = make_form(session, schema, enable_metadata=False)
         setattr(LongForm, schema.name, wtforms.FormField(form))
 
     return LongForm
@@ -217,12 +226,45 @@ def render_form(form, attr=None):
         })
 
 
-def apply_data(entity, data, upload_path):
+def entity_data(entity):
+    data = {
+        'ofmetadata_': {
+            'state': entity.state.name,
+            'not_done': entity.not_done,
+            'collect_date': entity.collect_date,
+            'version': str(entity.schema.publish_date),
+            }
+        }
+    for attribute in entity.schema.iterleafs():
+        if attribute.parent_attribute:
+            sub = data.setdefault(attribute.parent_attribute.name, {})
+        else:
+            sub = data
+        sub[attribute.name] = entity[attribute.name]
+    return data
+
+
+def apply_data(session, entity, data, upload_path):
     """
     Updates an entity with a dictionary of data
     """
 
     assert upload_path is not None, u'Destination path is required'
+
+    if 'ofmetadata_' in data:
+        metadata = data['ofmetadata_']
+        entity.state = (
+            session.query(models.State)
+            .filter_by(name=metadata['state'])
+            .one())
+        entity.not_done = metadata['not_done']
+        entity.collect_date = metadata['collect_date']
+        entity.schema = (
+            session.query(models.Schema)
+            .filter_by(
+                name=entity.schema.name,
+                publish_date=metadata['version'])
+            .one())
 
     if upload_path is None:
         upload_path = tempfile.mkdtemp()

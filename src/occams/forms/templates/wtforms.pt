@@ -17,7 +17,7 @@
           form - The wtform.Form instance
     -->
   <metal:macro define-macro="fields">
-    <metal:fields tal:repeat="field form" use-macro="macros.field" />
+    <tal:fields tal:repeat="field form" metal:use-macro="macros.field" />
   </metal:macro>
 
   <!--! Renders an individual field based on its field type.
@@ -26,11 +26,43 @@
           field - The wtform.Field instance
     -->
   <metal:macro define-macro="field">
-    <tal:switch switch="field.type">
-      <tal:case case="string:HiddenField" metal:use-macro="macros.widget" />
-      <tal:case case="string:FormField" metal:use-macro="macros.fieldset" />
-      <tal:case case="default" metal:use-macro="macros.default" />
-    </tal:switch>
+      <tal:switch switch="field.name.startswith('ofmeta')">
+        <tal:case case="True">
+          <tal:field define="form field.form" metal:use-macro="macros.metadata" />
+        </tal:case>
+        <tal:case case="False">
+          <tal:switch switch="field.type">
+            <tal:case case="string:HiddenField" metal:use-macro="macros.widget" />
+            <tal:case case="string:FormField" metal:use-macro="macros.fieldset" />
+            <tal:case case="default" metal:use-macro="macros.default" />
+          </tal:switch>
+        </tal:case>
+      </tal:switch>
+  </metal:macro>
+
+  <metal:macro define-macro="metadata">
+    <div class="entity">
+      <div class="row">
+        <div class="col-md-1">${form.state.label(class_='control-label required')}</div>
+        <div class="col-md-5">
+          <div class="input-group select2-bootstrap-append">
+            ${form.state(class_='form-control js-select2')}
+            <span class="input-group-addon">
+              <label>${form.not_done()} ${form.not_done.label.text}<label>
+            </span>
+          </div>
+        </div>
+
+        <div class="col-md-1">${form.collect_date.label(class_='control-label required')}</div>
+        <div class="col-md-2">${form.collect_date(class_='form-control js-date')}</div>
+
+        <div class="col-md-1">${form.version.label(class_='control-label required')}</div>
+        <div class="col-md-2">${form.version(class_='form-control js-select2')} </div>
+      </div>
+
+      <hr />
+
+    </div> <!-- /.entity -->
   </metal:macro>
 
   <!--! Renders a field set and its fields
@@ -39,7 +71,7 @@
           field - The wtform.FormField instance
     -->
   <metal:macro define-macro="fieldset">
-    <fieldset>
+    <fieldset class="ds-section">
       <legend tal:define="label field.label.text|nothing" tal:condition="label">${label}</legend>
       <p class="lead" tal:condition="field.description|nothing">${field.description}</p>
       <metal:fields tal:define="form field.form" use-macro="macros.fields" />
@@ -58,7 +90,7 @@
           field - The wtform.field instance
     -->
   <metal:macro define-macro="default">
-    <div class="form-group ${'has-error' if field.errors else ''}">
+    <div class="form-group ds-attribute ${'has-error' if field.errors else ''}">
       <div class="pull-right"><code>${field.short_name}</code></div>
       ${structure: field.label(class_='required' if field.flags.required else '')}
       <p class="help-block" tal:condition="field.description|nothing">${field.description}</p>
@@ -95,7 +127,7 @@
             <tal:case case="string:RadioInput">
               <div class="radio">
                 <label>
-                  ${structure: field()}
+                  ${structure: field(class_="ds-widget ds-choice")}
                   ${structure: field.label.text}
                   <code>${field._value()}</code>
                 </label>
@@ -104,44 +136,44 @@
             <tal:case case="string:CheckboxInput">
               <div class="checkbox">
                 <label>
-                  ${structure: field()}
+                  ${structure: field(class_="ds-widget")}
                   ${structure: field.label.text}
                   <code>${field._value()}</code>
                 </label>
               </div>
             </tal:case>
             <tal:case case="string:DateInput">
-              ${structure: field(class_='form-control')}
+              ${structure: field(class_='form-control js-date ds-widget')}
             </tal:case>
             <tal:case case="string:DateTimeInput">
-              ${structure: field(class_='form-control')}
+              ${structure: field(class_='form-control js-datetime ds-widget')}
             </tal:case>
             <tal:case case="string:Select">
-              ${structure: field(class_='form-control js-select2')}
+              ${structure: field(class_='form-control js-select2 ds-widget')}
             </tal:case>
             <tal:case case="string:TelInput">
-              ${structure: field(class_='form-control')}
+              ${structure: field(class_='form-control ds-widget')}
             </tal:case>
             <tal:case case="string:EmailInput">
-              ${structure: field(class_='form-control')}
+              ${structure: field(class_='form-control ds-widget')}
             </tal:case>
             <tal:case case="string:NumberInput">
-              ${structure: field(class_='form-control')}
+              ${structure: field(class_='form-control ds-widget')}
             </tal:case>
             <tal:case case="string:TextArea">
-              ${structure: field(class_='form-control', rows=5)}
+              ${structure: field(class_='form-control ds-widget', rows=5)}
             </tal:case>
             <tal:case case="string:TextInput">
-              ${structure: field(class_='form-control')}
+              ${structure: field(class_='form-control ds-widget')}
             </tal:case>
             <tal:case case="string:FileInput">
               ${structure: field(**{
-                  'class': 'form-control file',
+                  'class': 'form-control ds-widget file',
                   'data-show-upload': 'false',
                   'data-show-preview': 'false'
                   })}
             </tal:case>
-            <tal:case case="default">${structure: field()}</tal:case>
+            <tal:case case="default">${structure: field(class_='ds-widget')}</tal:case>
           </tal:switch>
         </tal:case>
       </tal:switch>

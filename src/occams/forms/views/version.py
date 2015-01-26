@@ -74,7 +74,7 @@ def preview(context, request):
     """
     Preview form for test-drivining.
     """
-    form_class = make_form(context, enable_metadata=False)
+    form_class = make_form(Session, context, enable_metadata=False)
     form = form_class(request.POST)
     form_id = 'form-preview'
     entity = None
@@ -83,6 +83,7 @@ def preview(context, request):
         upload_path = tempfile.mkdtemp()
         try:
             entity = apply_data(
+                Session,
                 models.Entity(schema=context),
                 form.patch_data,
                 upload_path
