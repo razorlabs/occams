@@ -1,11 +1,6 @@
 +function(){
   "use strict";
 
-  // Apply select2 widget to non-ko-bound elements
-  $(function(){
-    $('.js-select2:not([data-bind])').select2();
-  });
-
   /**
    * Check if the browser supports (and can actually validate) dates
    */

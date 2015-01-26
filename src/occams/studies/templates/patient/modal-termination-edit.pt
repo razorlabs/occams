@@ -1,0 +1,36 @@
+<div class="modal fade" data-bind="modalVisible: $root.showTerminateEnrollment">
+  <div class="modal-dialog modal-lg" data-bind="if: $root.showTerminateEnrollment">
+    <div class="modal-content" data-bind="with: $root.editableItem">
+      <div class="modal-header">
+        <h4 class="modal-title" i18n:translate="">Terminate <!-- ko text: study().title() --><!-- /ko --> Enrollment</h4>
+      </div>
+      <div class="modal-body">
+        <!-- ko if: $root.hasErrorMessages -->
+          <div class="alert alert-danger">
+            <p i18n:translate="">
+              Could not complete the request for the following reasons:
+            </p>
+            <ul data-bind="foreach: $root.errorMessages">
+              <li data-bind="text: $data"></li>
+            </ul>
+          </div>
+        <!-- /ko -->
+        <div data-bind="htmlBind: termination_ui"></div>
+      </div> <!-- /.modal-body -->
+      <div class="modal-footer">
+        <button
+            type="button"
+            class="btn btn-link"
+            data-bind="click: $root.clear"
+            i18n:translate="">Cancel</button>
+        <button type="submit" class="btn btn-primary" form="enrollment-termination">
+          <span i18n:translate="">Terminate</span>
+          <!-- ko if: $root.isSaving -->
+            <span class="fa fa-refresh fa-spin"></span>
+          <!-- /ko -->
+        </button>
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+

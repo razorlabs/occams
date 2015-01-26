@@ -8,6 +8,11 @@
 +function(){
   "use strict";
 
+  // Apply select2 widget to non-ko-bound elements
+  $(function(){
+    $('.js-select2:not([data-bind])').select2();
+  });
+
   /**
    * Binding handler for Select 2 UI element
    *

@@ -49,7 +49,7 @@
             </tal:patients>
           </ul>
         </div> <!-- .panel -->
-        <div metal:use-macro="load: ../patient/modal-patient.pt"></div>
+        <div metal:use-macro="load: ../patient/modal-patient-edit.pt"></div>
       </div> <!-- /#patients-section.col-sm-4 -->
       <div id="studies-section" class="col-sm-8" style="display: none;" data-bind="visible: isReady">
         <p class="clearfix">

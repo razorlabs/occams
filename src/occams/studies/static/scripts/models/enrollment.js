@@ -4,6 +4,8 @@ function Enrollment(data){
   var self = this;
 
   self.__url__ = ko.observable();
+  self.__randomization_url__ = ko.observable();
+  self.__termination_url__ = ko.observable();
   self.__can_edit__ = ko.observable();
   self.__can_terminate__ = ko.observable();
   self.__can_randomize__ = ko.observable();
@@ -16,8 +18,13 @@ function Enrollment(data){
   self.reference_number = ko.observable();
   self.stratum = ko.observable();
 
+  self.termination_ui = ko.observable();
+  self.randomization_ui = ko.observable();
+
   self.update = function(data){
     self.__url__(data.__url__);
+    self.__randomization_url__(data.__randomization_url__);
+    self.__termination_url__(data.__termination_url__);
     self.__can_edit__(data.__can_edit__);
     self.__can_terminate__(data.__can_terminate__);
     self.__can_randomize__(data.__can_randomize__);

@@ -1,11 +1,14 @@
 from datetime import datetime
 
-from pyramid.httpexceptions import HTTPBadRequest
+from pyramid.httpexceptions import HTTPBadRequest, HTTPOk
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 from sqlalchemy import orm
 import wtforms
 from wtforms.ext.dateutil.fields import DateField
+
+from occams.forms.renderers import \
+    make_form, render_form, apply_data, entity_data
 
 from .. import _, models, Session
 from ..utils import wtferrors, ModelField
@@ -43,9 +46,18 @@ def view_json(context, request):
     patient = context.patient
     can_randomize = bool(request.has_permission('randomize', context))
     return {
-        '__url__': request.route_path('enrollment',
-                                      patient=patient.pid,
-                                      enrollment=enrollment.id),
+        '__url__': request.route_path(
+            'enrollment',
+            patient=patient.pid,
+            enrollment=enrollment.id),
+        '__randomize_url__': request.route_path(
+            'enrollment_randomization',
+            patient=patient.pid,
+            enrollment=enrollment.id),
+        '__termination_url__': request.route_path(
+            'enrollment_termination',
+            patient=patient.pid,
+            enrollment=enrollment.id),
         '__can_edit__':
             bool(request.has_permission('edit', context)),
         '__can_terminate__':
@@ -132,6 +144,55 @@ def delete_json(context, request):
     request.session.flash(_(u'Deleted sucessfully'))
     return {'__next__': request.route_path('patient',
                                            patient=context.patient.pid)}
+
+
+@view_config(
+    route_name='enrollment_termination',
+    permission='terminate',
+    xhr=True,
+    renderer='string')
+def terminate_ajax(context, request):
+    try:
+        entity = (
+            Session.query(models.Entity)
+            .join(models.Context)
+            .filter_by(external='enrollment', key=context.id)
+            .one())
+    except orm.exc.MultipleResultsFound:
+        raise Exception('Should only have one...')
+    except orm.exc.NoResultFound:
+        entity = None
+        schema = context.study.termination_schema
+        data = {}
+    else:
+        schema = entity.schema
+        data = entity_data(entity)
+    Form = make_form(Session, schema)
+    form = Form(request.POST, data=data)
+
+    if request.method == 'POST':
+        check_csrf_token(request)
+        if form.validate():
+            if not entity:
+                # changing termination version *should* not be
+                # allowed, just assign the schema that's already being used
+                entity = models.Entity(schema=schema)
+                context.entities.add(entity)
+            upload_dir = request.registry.settings['app.blob.dir']
+            apply_data(Session, entity, form.data, upload_dir)
+            context.termination_date = form.termination_date.data
+            Session.flush()
+            return HTTPOk(json=view_json(context, request))
+        else:
+            return HTTPBadRequest(json={'errors': wtferrors(form)})
+
+    return render_form(form, attr={
+        'id': 'enrollment-termination',
+        'method': 'POST',
+        'action': request.current_route_path(),
+        'role': 'form',
+        'data-bind': 'formentry: {}, submit: $root.terminateEnrollment'
+    })
 
 
 def EnrollmentSchema(context, request):

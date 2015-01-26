@@ -7,7 +7,7 @@ function PatientView(patientData, enrollmentsData, visitsData){
   self.selectedItem = ko.observable();  // originally selected item
   self.editableItem = ko.observable();  // pending changes (will be applied to selected)
 
-  var VIEW = 'view', ADD = 'add', EDIT = 'edit', DELETE = 'delete';
+  var VIEW = 'view', ADD = 'add', EDIT = 'edit', DELETE = 'delete', TERMINATE = 'terminate', RANDOMIZE = 'randomize';
 
   // Patient UI settings
   self.statusPatient = ko.observable();
@@ -19,6 +19,8 @@ function PatientView(patientData, enrollmentsData, visitsData){
   self.statusEnrollment = ko.observable();
   self.showEditEnrollment = ko.pureComputed(function(){ return self.statusEnrollment() == EDIT; });
   self.showDeleteEnrollment = ko.pureComputed(function(){ return self.statusEnrollment() == DELETE; });
+  self.showRandomizeEnrollment = ko.pureComputed(function(){ return self.statusEnrollment() == RANDOMIZEE; });
+  self.showTerminateEnrollment = ko.pureComputed(function(){ return self.statusEnrollment() == TERMINATE; });
 
   // Visit UI Settings
   self.latestVisit = ko.observable();
@@ -128,6 +130,17 @@ function PatientView(patientData, enrollmentsData, visitsData){
     self.selectedItem(item)
   };
 
+  self.startTerminateEnrollment = function(item){
+    self.clear();
+    $.get(item.__termination_url__(), function(data, textSatus, jqXHR){
+      self.statusEnrollment(TERMINATE);
+      self.selectedItem(item);
+      var editable = new Enrollment(ko.toJS(item))
+      editable.termination_ui(data);
+      self.editableItem(editable);
+    });
+  };
+
   self.startAddVisit = function(){
     self.clear();
     self.statusVisit(EDIT);
@@ -225,6 +238,29 @@ function PatientView(patientData, enrollmentsData, visitsData){
           self.enrollments.sort(function(left, right){
             return left.consent_date() > right.consent_date() ? -1 : 1;
           });
+          self.clear();
+        },
+        complete: function(){
+          self.isSaving(false);
+        }
+      });
+    }
+  };
+
+  self.terminateEnrollment = function(element){
+    if ($(element).validate().form()){
+      var item = self.selectedItem();
+      $.ajax({
+        url: item.__termination_url__(),
+        method: 'POST',
+        data: $(element).serialize(),
+        headers: {'X-CSRF-Token': $.cookie('csrf_token')},
+        error: handleXHRError({form: element, logger: self.errorMessage}),
+        beforeSend: function(){
+          self.isSaving(true);
+        },
+        success: function(data, textStatus, jqXHR){
+          item.update(data);
           self.clear();
         },
         complete: function(){

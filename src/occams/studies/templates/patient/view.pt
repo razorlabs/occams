@@ -18,6 +18,7 @@
         <div metal:use-macro="load: modal-enrollment-edit.pt"></div>
         <div metal:use-macro="load: modal-enrollment-delete.pt"></div>
         <div metal:use-macro="load: modal-visit-edit.pt"></div>
+        <div metal:use-macro="load: modal-termination-edit.pt"></div>
       </header>
 
       <div class="row">
@@ -128,7 +129,7 @@
                             <li role="presentation"><a role="menuitem" tabindex="-1" data-bind="click: $root.startEditEnrollment">Edit</a></li>
                           <!-- /ko -->
                           <!-- ko if: __can_terminate__ -->
-                            <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Termination</a></li>
+                            <li role="presentation"><a role="menuitem" tabindex="-1" href="#" data-bind="click: $root.startTerminateEnrollment">Termination</a></li>
                           <!-- /ko -->
                           <!-- ko if: study.is_randomized -->
                             <!-- ko if: study.stratum -->
