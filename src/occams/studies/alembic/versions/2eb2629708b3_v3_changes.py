@@ -283,12 +283,12 @@ def cleanup_reftype():
     op.create_index('ix_patient_reference_patient_id', 'patient_reference', ['patient_id'])
     op.drop_index('ix_patientreference_reference_number', 'patient_reference')
     op.create_index('ix_patient_reference_reference_number', 'patient_reference', ['reference_number'])
-    # Accomodate error in cctg
-    if 'cctg' in context.config.get_main_option('sqlalchemy.url'):
+    # Accomodate typo in later versions of occwas
+    if any(weird in context.config.get_main_option('sqlalchemy.url') for weird in ['cctg', 'mhealth', 'addis']):
         op.drop_constraint('uq_%s_reference', 'patient_reference')
     else:
         op.drop_constraint('uq_patientreference_reference', 'patient_reference')
-    op.create_unique_constraint('uq_patient_reference_reference_number', 'patient_reference', ['patient_id', 'reference_type_id', 'reference_number'])
+    op.create_unique_constraint('uq_patient_reference_reference', 'patient_reference', ['patient_id', 'reference_type_id', 'reference_number'])
 
     op.execute("""
         UPDATE reference_type
