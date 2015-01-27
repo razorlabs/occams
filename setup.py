@@ -1,6 +1,6 @@
 import os
-from subprocess import Popen, PIPE
 from setuptools import setup, find_packages
+from setuptools.command.develop import develop as _develop
 import sys
 
 HERE = os.path.abspath(os.path.dirname(__file__))
@@ -64,7 +64,14 @@ if sys.version_info < (3, 0):
 
 
 def get_version():
-    version_file = os.path.join(HERE, 'VERSION')
+    """
+    Generates python version from projects git tag
+    """
+    import os
+    from subprocess import Popen, PIPE
+    import sys
+    here = os.path.abspath(os.path.dirname(__file__))
+    version_file = os.path.join(here, 'VERSION')
 
     # read fallback file
     try:
@@ -76,7 +83,7 @@ def get_version():
     # read git version (if available)
     try:
         version_git = (
-            Popen(['git', 'describe'], stdout=PIPE, stderr=PIPE, cwd=HERE)
+            Popen(['git', 'describe'], stdout=PIPE, stderr=PIPE, cwd=here)
             .communicate()[0]
             .strip()
             .decode(sys.getdefaultencoding()))
@@ -91,6 +98,18 @@ def get_version():
             fp.write(version)
 
     return version
+
+
+class _custom_develop(_develop):
+    def run(self):
+        _develop.run(self)
+        self.execute(_post_develop, [], msg="Running post-develop task")
+
+
+def _post_develop():
+    from subprocess import call
+    call(['npm', 'install'], cwd=HERE)
+    call(['./node_modules/.bin/bower', 'install'], cwd=HERE)
 
 
 setup(
@@ -117,6 +136,7 @@ setup(
     extras_require=EXTRAS,
     tests_require=EXTRAS['test'],
     test_suite='nose.collector',
+    cmdclass={'develop': _custom_develop},
     entry_points="""\
     [paste.app_factory]
     main = occams.studies:main
