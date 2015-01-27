@@ -1,0 +1,390 @@
+<html metal:use-macro="load: ../master.pt">
+  <metal:content-slot fill-slot="content-slot">
+
+    <h1 class="page-header" i18n:translate="">Edit Form</h1>
+
+    <!-- ko ifnot: isReady -->
+      <p class="text-center" i18n:translate="">
+        <span class="glyphicon glyphicon-refresh fa-spin"></span>
+        <span i18n:translate="">Loading</span>
+      </p>
+    <!-- /ko -->
+
+    <div style="display: none;" data-bind="visible: isReady, with: version">
+      <form id="schema-form" class="form-horizontal" data-bind="validate: {}, submit: $root.saveSchema">
+        <div class="form-group">
+          <label class="required col-md-2" i18n:translate="">Schema</label>
+          <div class="col-md-10">
+            <p class="form-control-static"><code data-bind="text: name"></code></p>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="required col-md-2" i18n:translate="">Form</label>
+          <div class="col-md-10">
+            <input type="text" class="form-control" name="title" data-bind="value: title" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="col-md-2" i18n:translate="">Description</label>
+          <div class="col-md-10">
+            <textarea name="description" class="form-control" data-bind="value: description"></textarea>
+          </div>
+        </div>
+      </form>
+      <hr style="width: 100%" />
+      <div class="row">
+        <div id="of-content" class="col-md-9">
+          <!-- ko ifnot: hasFields -->
+            <div id="of-empty"
+                class="text-muted"
+                data-bind="fadeVisible: { if: !$root.isDragging(), duration: 'fast' }">
+              <h4 i18n:translate="">This form does not have any fields addded yet.</h4>
+              <p i18n:translate="">To add new fields, drag an item from the types menu.</p>
+            </div>
+          <!-- /ko -->
+          <div id="of-form-root" data-bind="template: {name: 'field-template', data: $data}"></div>
+        </div> <!-- /#of-content -->
+        <div id="of-sidebar" class="col-md-3">
+          <div id="of-types" class="panel panel-primary">
+            <div class="panel-heading">
+              <h3 class="panel-title" i18n:translate="">Add new field...</h3>
+            </div>
+            <!-- ko foreach: $root.availableTypes -->
+              <div class="list-group"
+                  data-bind="
+                    draggable: {
+                      data: $data,
+                      isEnabled: $root.isMovingEnabled,
+                      options: {
+                        revert: 'invalid',
+                        start: $root.setDragging,
+                        stop: $root.unsetDragging,
+                        helper: newTypeHelper
+                      }
+                    }">
+                <a class="list-group-item list-group-item-info"
+                    data-bind="
+                      attr: {'data-type': name},
+                      text: title
+                    "></a>
+              </div>
+            <!-- /ko -->
+          </div> <!-- /#of-types.panel -->
+        </div> <!-- /#of-sidebar.col-md-3 -->
+      </div> <!-- /.row -->
+      <hr width="100%" />
+      <div class="pull-right">
+        <button
+            class="btn btn-lg btn-primary"
+            form="schema-form"
+            i18n:translate="">Done</button>
+      </div>
+    </div> <!-- /:isReady -->
+
+    <script id="field-template" type="text/html">
+      <div class="of-fields"
+          data-bind="
+            sortable: {
+              data: fields,
+              dragged: $root.onDragged,
+              isEnabled: $root.isMovingEnabled,
+              beforeMove: $root.moveField,
+              options: {
+                axis: 'y',
+                forcePlaceholderSize: true,
+                placeholder: 'of-placeholder',
+                revert: true
+              }
+            }">
+        <div class="of-field">
+          <!-- ko ifnot: $root.isSelectedField($data) -->
+            <div data-bind="template: 'field-view-template'"></div>
+          <!-- /ko -->
+          <!-- ko if: $root.isSelectedField($data) -->
+            <!-- ko if: $root.showEditView -->
+              <div data-bind="template: 'field-edit-template'"></div>
+            <!-- /ko -->
+            <!-- ko if: $root.showDeleteView -->
+              <div data-bind="template: 'field-delete-template'"></div>
+            <!-- /ko -->
+          <!-- /ko -->
+        </div>
+      </div>
+    </script> <!-- #field-template -->
+
+    <script id="field-view-template" type="text/html">
+      <div class="row of-view" data-bind="css: {'of-editable': $root.isMovingEnabled()}">
+
+        <div class="col-md-10">
+          <div class="form-group">
+            <p>
+              <code data-bind="text: name"></code>
+              &bull;
+              <code data-bind="text: type"></code>
+            </p>
+            <!-- ko ifnot: isSection -->
+              <label data-bind="css: {'required': is_required}, text: title"></label>
+            <!-- /ko -->
+            <!-- ko if: isSection -->
+              <h3 class="page-header" data-bind="text: title"></h3>
+            <!-- /ko -->
+            <!-- ko if: description -->
+              <p class="help-block" data-bind="text: description"></p>
+            <!-- /ko -->
+            <!-- ko ifnot: isSection -->
+              <!-- ko if: type() == 'choice' -->
+                <!-- ko foreach: choices -->
+                  <div data-bind="css: $parent.choiceInputType">
+                    <label>
+                      <input disabled data-bind="
+                          attr: {
+                            name: $parent.name,
+                            type: $parent.choiceInputType,
+                            value: name
+                          }" />
+                      <span data-bind="text: title"></span>
+                    </label>
+                  </div>
+                <!-- /ko -->
+              <!-- /ko -->
+              <!-- ko if: type() == 'date' -->
+                <input type="date" class="form-control" disabled />
+              <!-- /ko -->
+              <!-- ko if: type() == 'datetime' -->
+                <input type="date" class="form-control" disabled />
+              <!-- /ko -->
+              <!-- ko if: type() == 'blob' -->
+                <input type="file" class="form-control" disabled />
+              <!-- /ko -->
+              <!-- ko if: type() == 'number' -->
+                <input type="decimal" class="form-control" disabled />
+              <!-- /ko -->
+              <!-- ko if: type() == 'string' -->
+                <input type="text" class="form-control" disabled />
+              <!-- /ko -->
+              <!-- ko if: type() == 'text' -->
+                <textarea class="form-control" disabled></textarea>
+              <!-- /ko -->
+            <!-- /ko -->
+          </div>
+        </div> <!-- /.col-md-10 -->
+        <div class="col-md-2 text-right">
+          <div class="of-controls btn-group">
+            <button type="button" class="btn btn-default" data-bind="click: $root.startDelete">
+              <span class="glyphicon glyphicon-trash"></span>
+            </button>
+            <button type="button" class="btn btn-default" data-bind="click: $root.startEdit">
+              <span class="glyphicon glyphicon-pencil"></span>
+            </button>
+          </div>
+        </div> <!-- /.col-md-3 -->
+      </div> <!-- /.row -->
+      <!-- ko if: isSection -->
+        <div data-bind="template: {name: 'field-template', data: $data}"></div>
+      <!-- /ko -->
+    </script>
+
+
+    <script id="field-edit-template" type="text/html">
+      <div class="of-edit" data-bind="with: $root.editableField">
+        <!-- ko if: $root.errorMessage -->
+          <div class="alert alert-danger" data-bind="text: $root.errorMessage"></div>
+        <!-- /ko -->
+
+        <form class="form-horizontal" data-bind="validate: $root.makeValidateOptions($data)">
+
+          <div class="form-group">
+            <label class="required col-sm-2 control-label" i18n:translate="">Type</label>
+            <div class="col-sm-4">
+              <p class="form-control-static"><code data-bind="text: type"></code></p>
+            </div>
+            <div class="col-sm-4">
+              <div class="checkbox" data-bind="visible: isType('choice')">
+                <label class="checkbox-inline">
+                  <input type="checkbox" data-bind="checked: is_collection, enable: isNew" />
+                  <span i18n:translate="">Multiple-Choice</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="required col-sm-2 control-label" i18n:translate="">Variable</label>
+            <div class="col-sm-10">
+              <div class="row">
+                <div class="col-sm-6">
+                  <input
+                      type="text"
+                      class="form-control"
+                      name="name"
+                      data-bind="value: name, enable: isNew" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="required col-sm-2 control-label" i18n:translate="">Question</label>
+            <div class="col-sm-10">
+              <input type="text" class="form-control" name="title" data-bind="value: title" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="col-sm-2 control-label" i18n:translate="">Help Text</label>
+            <div class="col-sm-10">
+              <textarea class="form-control" name="description" rows="5" data-bind="value: description"></textarea>
+            </div>
+          </div>
+
+          <div class="form-group" data-bind="ifnot: isSection">
+            <div class="col-sm-offset-2 col-sm-10">
+              <div class="row">
+                <div class="col-sm-5">
+                  <div class="checkbox">
+                    <label>
+                      <input type="checkbox" data-bind="checked: is_required" />
+                      <span i18n:translate="">Required</span>
+                    </label>
+                  </div>
+                  <div class="checkbox">
+                    <label>
+                      <input type="checkbox" data-bind="checked: is_private" />
+                      <span i18n:translate="">Private</span>
+                    </label>
+                  </div>
+                  <div class="checkbox">
+                    <label>
+                      <input type="checkbox" data-bind="checked: is_system" />
+                      <span i18n:translate="">Read-only</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group" data-bind="visible: isType('number')">
+            <label class="col-sm-2 control-label" i18n:translate="">Decimal Places</label>
+            <div class="col-sm-4">
+              <input type="number" class="form-control" name="decimal_places" data-bind="value: decimal_places" />
+            </div>
+          </div>
+
+          <div class="form-group" data-bind="if: isLimitAllowed">
+            <label class="col-sm-2 control-label" i18n:translate="">Limits</label>
+            <div class="col-sm-3">
+              <input type="number" class="form-control" placeholder="Min" i18n:attributes="placeholder" name="value_min" data-bind="value: value_min" />
+            </div>
+            <div class="col-sm-3">
+              <input type="number" class="form-control" placeholder="Max" i18n:attributes="placeholder" name="value_max" data-bind="value: value_max" />
+            </div>
+          </div>
+
+          <div class="form-group" data-bind="if: isType('string')">
+            <label class="col-sm-2 control-label" i18n:translate="">Pattern</label>
+            <div class="col-sm-10">
+              <input type="text" class="form-control" name="pattern" data-bind="value: pattern" />
+            </div>
+          </div>
+
+          <div class="form-group" data-bind="if: isType('choice')">
+            <label class="col-sm-2 control-label" i18n:translate="">Choices</label>
+            <div class="col-sm-10">
+              <div data-bind="sortable: choices">
+                <div class="js-draggable row">
+                  <div class="col-sm-3 js-validation-group">
+                    <input type="text"
+                        class="form-control"
+                        required
+                        pattern="^-?\d+$"
+                        data-msg-pattern="Must be digits"
+                        data-msg-required="Required"
+                        maxlength="8"
+                        placeholder="Code"
+                        data-bind="value: name, uniqueName: true" />
+                  </div>
+                  <div class="col-sm-7 js-validation-group">
+                    <input type="text"
+                        class="form-control"
+                        placeholder="Label"
+                        required
+                        data-msg-required="Required"
+                        data-bind="value: title, uniqueName: true" />
+                  </div>
+                  <div class="col-sm-2">
+                    <!--! tabindex: Do not tab to this element -->
+                    <button class="btn btn-link"
+                        tabindex="-1"
+                        data-bind="click: $parent.doDeleteChoice">
+                      <span class="glyphicon glyphicon-trash"></span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <!--! tabindex: Do not tab to this element -->
+              <button class="btn btn-link"
+                  tabindex="-1"
+                  data-bind="click: doAddChoice">
+                <span class="glyphicon glyphicon-plus"></span>
+                <span i18n:translate="">Add another</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="text-right">
+            <button type="button" class="btn btn-link" data-bind="click: $root.doCancelEdit">Cancel</button>
+            <button type="button" class="btn btn-primary" data-bind="click: $root.doEditField">
+              <!-- ko ifnot: isNew -->
+                <span i18n:translate="">Save</span>
+              <!-- /ko -->
+              <!-- ko if: isNew -->
+                <span i18n:translate="">Create</span>
+              <!-- /ko -->
+              <!-- ko if: $root.isSaving -->
+                <span class="fa fa-refresh fa-spin"></span>
+              <!-- /ko -->
+            </button>
+          </div>
+        </form>
+      </div>
+    </script>
+
+    <script id="field-delete-template" type="text/html">
+      <div class="of-delete">
+        <!-- ko if: $root.errorMessage -->
+          <div class="alert alert-danger" data-bind="text: $root.errorMessage"></div>
+        <!-- /ko -->
+
+        <div class="form-group">
+          <label>Are you sure you want to delete <code data-bind="text: name"></code> from this version of the form?</label>
+          <p class="help-block">
+            <span data-bind="visible: !isSection() && $root.version().publish_date()">All  data entered for this field will be removed deleted.</span>
+            <span data-bind="visible: isSection">Removing this section will also remove all sub-fields.</span>
+            <span>This action cannot be reversed.</span>
+          </p>
+        </div>
+        <div class="text-right">
+          <button type="button" class="btn btn-link" data-bind="click: $root.clear">Cancel</button>
+          <button type="button" class="btn btn-danger" data-bind="click: $root.deleteField">Yes, I'm sure</button>
+        </div>
+      </div>
+    </script>
+
+  </metal:content-slot>
+
+  <metal:content-slot fill-slot="javascript-extras-slot">
+    <script>
+      $(function(){
+        'use strict';
+        ko.applyBindings(new VersionEditorView({
+            versionUrl: "${request.current_route_path(_route_name='version')}",
+            fieldsUrl: "${request.current_route_path(_route_name='fields')}"
+          }),
+          document.getElementById('version_editor')
+        );
+      });
+    </script>
+  </metal:content-slot>
+
+</html>

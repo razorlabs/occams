@@ -1,6 +1,0 @@
-<input
-    type="hidden"
-    name="${name|field.name}"
-    value="${cstruct}"
-    id="${oid|field.oid}"/>
-

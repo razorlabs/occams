@@ -1,0 +1,73 @@
+<html metal:use-macro="load: ../master.pt">
+  <metal:content-slot fill-slot="content-slot">
+
+    <header metal:use-macro="load: header.pt"></header>
+
+    <div style="display: none;" data-bind="visible: isReady">
+
+      <tal:form condition="not:entity">
+        <div class="alert alert-info hidden-print">
+          <span class="glyphicon glyphicon-info-sign"></span>
+          <strong i18n:translate="">Debug Mode</strong>
+          <span i18n:translate="">
+            You are currently previewing a form, you are free to enter data
+            without side effects to the database.
+          </span>
+        </div>
+        <form tal:replace="structure form_content"></form>
+        <hr />
+        <div class="clearfix">
+          <button type="submit" form="${form_id}" class="btn btn-primary pull-right" i18n:translate="">Submit</button>
+        </div>
+      </tal:form>
+
+      <tal:entity condition="entity">
+         <div class="alert alert-info hidden-print">
+          <span class="glyphicon glyphicon-info-sign"></span>
+          <strong i18n:translate="">Entry Results</strong>
+          <span i18n:translate="">
+            These are the results of from data entry preview. These
+            are the values that will be exported in the data files.
+          </span>
+        </div>
+        <table class="table table-bordered">
+          <thead>
+            <th i18n:translate="">Variable</th>
+            <th i18n:translate="">Value</th>
+          </thead>
+          <tbody>
+            <tr tal:repeat="attribute entity.schema.iterleafs()">
+              <td><code>${attribute.name}</code></td>
+              <td tal:define="
+                  value     entity[attribute.name]|nothing;
+                  is_list   isinstance(value, list);
+                  ui_value  python:','.join(value) if is_list else value;">
+                  <code tal:condition="value">${ui_value}</code>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <hr />
+        <div class="clearfix">
+          <a href="${request.current_route_path()}" class="btn btn-primary pull-right" i18n:translate="">Start Over</a>
+        </div>
+      </tal:entity>
+
+    </div>
+
+  </metal:content-slot>
+
+  <metal:content-slot fill-slot="javascript-extras-slot">
+    <script>
+      $(function(){
+        'use strict';
+        ko.applyBindings(new VersionViewModel({
+            versionUrl: '${request.current_route_path(_route_name='version')}'
+          })
+        );
+      });
+    </script>
+  </metal:content-slot>
+
+</html>
+

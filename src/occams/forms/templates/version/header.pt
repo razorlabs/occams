@@ -1,0 +1,163 @@
+<header class="page-header" data-bind="with: version">
+  <div class="btn-toolbar pull-right" role="toolbar">
+    <div class="btn-group">
+      <a href="${request.current_route_path(_route_name='version', _query={'download': 'json'})}"
+          class="btn btn-default">
+        <span class="fa fa-download"></span>
+        <span i18n:translate="">Download</span>
+      </a>
+    </div>
+    <div class="btn-group">
+      <!-- ko if: publish_date -->
+        <button class="btn btn-default" data-bind="click: $root.startDraftVersion">
+          <span class="fa fa-copy"></span>
+          <span i18n:translate="">Draft New</span>
+        </button>
+      <!-- /ko -->
+      <button class="btn btn-default" data-bind="click: $root.startPublishVersion">
+        <span class="fa fa-calendar"></span>
+        <span i18n:translate="">Publish</span>
+      </button>
+      <a href="${request.current_route_path(_route_name='version_editor')}"
+          class="btn btn-default">
+        <span class="fa fa-edit"></span>
+        <span i18n:translate="">Edit</span>
+      </a>
+      <button
+          class="btn btn-default"
+          data-bind="click: $root.startDeleteVersion">
+        <span class="fa fa-trash-o"></span>
+        <span i18n:translate="">Delete</span>
+      </button>
+    </div>
+  </div> <!-- /.btn-toolbar -->
+  <h1 data-bind="text: title">${context.title}</h1>
+  <ul class="details list-inline">
+    <li>
+      <span class="text-muted" i18n:translate="">Schema:</span>
+      <span><code>${context.name}</code></span>
+    </li>
+    <li>
+      <span class="text-muted" i18n:translate="">Version:</span>
+      <!-- ko if: publish_date --><code data-bind="text: publish_date"></code><!-- /ko -->
+      <!-- ko ifnot: publish_date --><span class="label label-info" i18n:translate="">Draft</span><!-- /ko -->
+    </li>
+  </ul>
+  <nav tal:define="section section|request.current_route_path(_query={})">
+    <ul class="nav nav-header">
+      <li tal:define="url request.current_route_path(_route_name='version', _query={})"
+          tal:attributes="class python:'active' if section == url else ''">
+        <a href="${url}" i18n:translate="">Overview</a>
+      </li>
+      <li tal:define="url request.current_route_path(_route_name='version_preview', _query={})"
+          tal:attributes="class python:'active' if section == url else ''">
+        <a href="${url}" i18n:translate="">Preview</a>
+      </li>
+    </ul>
+  </nav>
+</header>
+
+<div class="modal fade" data-keyboard="false" data-bind="modalVisible: showPublish">
+  <div class="modal-dialog" data-bind="if: showPublish">
+    <div class="modal-content" data-bind="with: editableVersion">
+      <form data-bind="submit: $root.publishVersion, validate: {}">
+        <div class="modal-header">
+          <h4 class="modal-title" i18n:translate="">Publish this version.</h4>
+        </div>
+        <div class="modal-body">
+          <!-- ko with: $root.errorMessage --><div class="alert alert-danger" data-bind="text: $data"></div><!-- /ko -->
+          <div class="form-group">
+            <label for="publish_date" i18n:translate="">Publish Date</label>
+            <p class="help-block" i18n:translate="">
+              You must set a unique publish date. To revert to draft-state, remove input value.
+            </p>
+            <div class="row input-container">
+              <div class="col-md-4">
+                <input type="date" class="form-control" id="publish_date" name="publish_date" data-date-format="YYYY-MM-DD" data-date-usecurrent="false" data-date-picktime="false" data-bind="value: publish_date, datetimepicker: {}">
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="retract_date" i18n:translate="">Retract Date</label>
+            <p class="help-block" i18n:translate="">
+              This field indicates that this form should not be included in export data files
+              for unforseen reasons involving the form (IRB issues, legal ambiguities, etc).
+            </p>
+            <div class="row input-container">
+              <div class="col-md-4">
+                <!--! knockout enable/disable interferes with datetimepicker binding, just enforce through validation -->
+                <input type="date" class="form-control" id="retract_date" name="retract_date" data-date-format="YYYY-MM-DD" data-date-usecurrent="false" data-date-picktime="false" data-bind="value: retract_date, datetimepicker: {}">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-link" data-bind="click: $root.clear" i18n:translate="">Cancel</button>
+          <button type="submit" class="btn btn-primary" data-bind="disable: $root.isSaving">
+            <span i18n:translate="">Save</span>
+            <!-- ko if: $root.isSaving --><span class="fa fa-refresh fa-spin"></span><!-- /ko -->
+          </button>
+        </div>
+      </form>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<div class="modal fade" data-keyboard="false" data-bind="modalVisible: showDraft">
+  <div class="modal-dialog" data-bind="if: showDraft">
+    <div class="modal-content" data-bind="with: version">
+      <form data-bind="submit: $root.draftVersion">
+        <div class="modal-header">
+          <h4 class="modal-title" i18n:translate="">Draft new version.</h4>
+        </div>
+        <div class="modal-body">
+          <p i18n:translate="">
+            Are you sure you want to draft a new version based on <code data-bind="text: name"></code> at version <code data-bind="text: publish_date"></code>
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-link" data-bind="click: $root.clear" i18n:translate="">Cancel</button>
+          <button type="submit" class="btn btn-primary" data-bind="disable: $root.isSaving">
+            <span i18n:translate="">OK</span>
+            <!-- ko if: $root.isSaving --><span class="fa fa-refresh fa-spin"></span><!-- /ko -->
+          </button>
+        </div>
+      </form>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<div class="modal fade" data-keyboard="false" data-bind="modalVisible: showDelete">
+  <div class="modal-dialog" data-bind="if: showDelete">
+    <div class="modal-content" data-bind="with: version">
+      <form data-bind="submit: $root.deleteVersion">
+        <div class="modal-header">
+          <h4 class="modal-title" i18n:translate="">Delete this version</h4>
+        </div>
+        <div class="modal-body">
+          <!-- ko ifnot: publish_date -->
+            <p i18n:translate="">
+              You are about to delete this draft of the form.
+              This is an irreverable action. Are you sure you want to continue?
+            </p>
+          <!-- /ko -->
+          <!-- ko if: publish_date -->
+            <p i18n:translate="">
+              You are about to delete version <code data-bind="text: publish_date"></code> of the
+              <code data-bind="text: name"></code> form.
+              Any data entered for this version will also be deleted.
+              This is an irreverable action. Are you sure you want to continue?
+            </p>
+          <!-- /ko -->
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-link" data-bind="click: $root.clear" i18n:translate="">Cancel</button>
+          <button type="submit" class="btn btn-danger" data-bind="disable: $root.isSaving">
+            <span i18n:translate="">Delete</span>
+            <!-- ko if: $root.isSaving --><span class="fa fa-refresh fa-spin"></span><!-- /ko -->
+          </button>
+        </div>
+      </form>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->

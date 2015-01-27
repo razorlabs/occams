@@ -1,0 +1,27 @@
+label.required:after {
+  color: @brand-danger;
+  content: ' \25A0';
+  vertical-align: super;
+}
+
+/** Bootstrap Overrides **/
+
+#modal form {
+  /* Disable form margins inside the modal container so
+   * that we don't get unwanted whitespace
+   */
+  margin: 0;
+}
+
+.of-form {
+
+  .of-controls {
+    border-top: 1px solid @gray-lighter;
+    margin-top: @padding-large-vertical;
+    padding-top: @padding-large-vertical;
+    padding-bottom: @padding-base-vertical;
+    text-align: right;
+  }
+
+}
+

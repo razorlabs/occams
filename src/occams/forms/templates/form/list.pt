@@ -1,0 +1,190 @@
+<html metal:use-macro="load:../master.pt">
+
+  <metal:content-slot fill-slot="content-slot">
+
+    <!-- ko ifnot: isReady -->
+      <p class="text-center" i18n:translate="">
+        <span class="fa fa-refresh fa-spin"></span> Loading...
+      </p>
+    <!-- /ko -->
+
+    <div style="display: none" data-bind="visible: isReady">
+
+      <header class="page-header">
+        <div class="pull-right">
+          <div id="form-list-toolbar">
+            <div class="btn-toolbar" role="toolbar" >
+              <div class="btn-group">
+                <button
+                    class="btn btn-default"
+                    tal:condition="request.has_permission('form_add')"
+                    data-bind="click: startUploader">
+                  <span class="glyphicon glyphicon-upload"></span>
+                  <span i18n:translate="">Upload</span>
+                  <!-- ko if: isUploading -->
+                    <span class="fa fa-refresh fa-spin"></span>
+                  <!-- /ko -->
+                </button>
+                <button
+                    class="btn btn-default"
+                    tal:condition="request.has_permission('form_add')"
+                    data-bind="click: startEditor">
+                  <span class="glyphicon glyphicon-plus"></span>
+                  <span i18n:translate="">Create</span>
+                </button>
+              </div>
+            </div> <!-- /.btn-toolbar -->
+          </div>
+        </div>
+        <h1 i18n:translate="">Forms</h1>
+      </header>
+
+      <div class="alert alert-success"
+            tal:repeat="msg request.session.pop_flash()">
+        ${msg}
+      </div>
+
+      <!-- ko ifnot: hasForms-->
+        <p class="well well-lg" i18n:translate="">
+          No forms have been created yet.
+        </p>
+      <!-- /ko -->
+
+      <!-- ko if: hasForms -->
+        <div class="clearfix">
+          <div class="pull-left">
+            <p>
+              <span i18n:translate="">Showing</span>
+              <strong>
+                <!-- ko if: filter -->
+                  <span data-bind="text: totalShowing"></span>
+                  <span i18n:translate="">of</span>
+                <!-- /ko -->
+                <span data-bind="text: totalForms"></span>
+              </strong>
+              <span>forms</span>
+            </p>
+          </div>
+          <div class="pull-right">
+            <form>
+              <div class="form-group">
+                <input
+                    type="search"
+                    class="form-control"
+                    name="filter"
+                    placeholder="Filter forms..."
+                    data-bind="
+                      value: filter,
+                      valueUpdate: ['input', 'afterkeydown']
+                    "/>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table id="forms" class="table table-striped table-hover">
+            <thead>
+              <tr>
+                <th class="has_private">
+                  <span class="glyphicon glyphicon-user"></span>
+                </th>
+                <th class="name" i18n:translate="">Schema</th>
+                <th class="title" i18n:translate="">Form</th>
+                <th class="publish_date" i18n:translate="">Version</th>
+              </tr>
+            </thead>
+            <tbody data-bind="foreach: filteredForms">
+              <tr data-bind="
+                  css: {'success': $data === $root.lastUpdatedForm()},
+                  scrollToIf: $data === $root.lastUpdatedForm()">
+                <td class="has_private" data-bind="if: has_private">
+                  <span
+                      class="glyphicon glyphicon-user"
+                      title="Has private information"></span>
+                </td>
+                <td class="name"><div class="name-overflow"><code data-bind="text: name"></code></div></td>
+                <td class="title" data-bind="text: title"></td>
+                <td class="publish_date" data-bind="if: versions">
+                  <table class="versions" data-bind="foreach: versions">
+                    <tr>
+                      <td>
+                        <!-- ko if:publish_date -->
+                         <a href="" data-bind="
+                            attr: {href: __url__},
+                            css: {is_retracted: retract_date},
+                            text: publish_date"></a>
+                        <!-- /ko -->
+                        <!-- ko ifnot:publish_date -->
+                          <a href="" data-bind="attr: {href: __url__}" i18n:translate="">Draft</a>
+                        <!-- /ko -->
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      <!-- /ko -->
+
+      <div class="modal fade" data-keyboard="false" data-bind="modalVisible: showEditor">
+        <div class="modal-dialog" data-bind="if: showEditor">
+          <div class="modal-content" data-bind="with: selectedForm">
+            <form data-bind="submit: $parent.doSave, validate: {}">
+              <div class="modal-header">
+                <h4 class="modal-title" i18n:translate="">Add New Form</h4>
+              </div>
+              <div class="modal-body">
+                <!-- ko with: $parent.errorMessage -->
+                  <div class="alert alert-danger" role="alert">
+                    <strong>Error!</strong> <span data-bind="text: $data"></span>
+                  </div>
+                <!-- /ko -->
+                <div class="form-group">
+                  <label class="required" i18n:translate="">System Name</label>
+                  <p class="help-block" i18n:translate="">
+                    The form's system name
+                    The name must not start with numbers or contain special
+                    characters or spaces.
+                    This name cannot be changed once the form is published.
+                  </p>
+                  <input type="text" class="form-control" required autofocus name="name" data-bind="value: name" pattern="^[a-zA-Z_][a-zA-Z0-9_]+$" data-rule-remote="?validate=name" />
+                </div> <!-- /.form-group -->
+                <div class="form-group">
+                  <label class="required" i18n:translate="">Title</label>
+                  <p class="help-block" i18n:translate="">
+                    The human-readable name users will see when entering data.
+                  </p>
+                  <input type="text" class="form-control" required name="title" data-bind="value: title"/>
+                </div> <!-- /.form-group -->
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-link" data-bind="click: $parent.clearSelected" i18n:translate="">Cancel</button>
+                <button type="submit" class="btn btn-primary" data-bind="disable: $parent.isSaving">
+                  <span i18n:translate="">Create</span>
+                  <!-- ko if: $parent.isSaving -->
+                    <span class="fa fa-refresh fa-spin"></span>
+                  <!-- /ko -->
+                </button>
+              </div>
+            </form>
+          </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+      </div><!-- /.modal -->
+
+    </div>
+
+  </metal:content-slot>
+
+  <metal:content-slot fill-slot="javascript-extras-slot">
+    <script>
+      $(function(){
+        ko.applyBindings(new FormListView, document.getElementById('form_list'));
+      });
+    </script>
+
+  </metal:content-slot>
+
+</html>
+
