@@ -1,5 +1,7 @@
 import os
 from setuptools import find_packages, setup
+from setuptools.command.develop import develop as _develop
+
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(HERE, 'README.rst')).read()
@@ -80,6 +82,18 @@ def get_version():
     return version
 
 
+class _custom_develop(_develop):
+    def run(self):
+        _develop.run(self)
+        self.execute(_post_develop, [], msg="Running post-develop task")
+
+
+def _post_develop():
+    from subprocess import call
+    call(['npm', 'install'], cwd=HERE)
+    call(['./node_modules/.bin/bower', 'install'], cwd=HERE)
+
+
 setup(
     name='occams.forms',
     version=get_version(),
@@ -110,6 +124,7 @@ setup(
     extras_require=EXTRAS,
     tests_require=EXTRAS['test'],
     test_suite='nose.collector',
+    cmdclass={'develop': _custom_develop},
     entry_points="""\
     [paste.app_factory]
     main = occams.forms:main
