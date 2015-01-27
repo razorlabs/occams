@@ -8,9 +8,9 @@ from tests import Session, begin_func, rollback_func
 
 
 @with_setup(begin_func, rollback_func)
-def test_schema_section_attribute():
+def test_schema_attribute():
     """
-    It should implement full schema/section/attribute heirarchies
+    It should implement full schema/attribute/subattribute hierarchies
     """
     from datetime import date
     from tests import assert_in
@@ -19,10 +19,11 @@ def test_schema_section_attribute():
         name=u'aform',
         title=u'A Form',
         publish_date=date.today(),
-        sections={
-            'section1': models.Section(
+        attributes={
+            'section1': models.Attribute(
                 name=u'section1',
                 title=u'Section 1',
+                type='section',
                 order=0,
                 attributes={
                     'foo': models.Attribute(
@@ -41,8 +42,10 @@ def test_schema_section_attribute():
 
     Session.add(schema)
     Session.flush()
-    assert_in('section1', schema.sections)
+    assert_in('section1', schema.attributes)
+    # Works both ways
     assert_in('foo', schema.attributes)
+    assert_in('foo', schema.attributes['section1'].attributes)
 
 
 @with_setup(begin_func, rollback_func)
@@ -64,6 +67,47 @@ def test_schema_defaults():
     assert_is_not_none(schema.create_user)
     assert_is_not_none(schema.modify_date)
     assert_is_not_none(schema.modify_user)
+
+
+@with_setup(begin_func, rollback_func)
+def test_schema_invalid_regexp_name():
+    """
+    It should prevent invalid names (See RE_VALID_NAME)
+    """
+    from datetime import date
+    from occams.datastore import models
+    from tests import assert_raises
+    with assert_raises(ValueError):
+        Session.add(models.Schema(
+            name='555SomeForm',
+            title=u'Foo',
+            publish_date=date(2014, 3, 31)))
+        Session.flush()
+
+
+@with_setup(begin_func, rollback_func)
+def test_schema_unique_case_insensitive():
+    """
+    It should enforce case-insensitive schemata
+    """
+    from tests import assert_raises
+    from datetime import date
+    import sqlalchemy.exc
+    from occams.datastore import models
+
+    Session.add(models.Schema(
+        name='Foo',
+        title=u'Foo',
+        publish_date=date(2014, 3, 31)))
+    Session.flush()
+
+    Session.add(models.Schema(
+        name='foo',
+        title=u'Foo',
+        publish_date=date(2014, 3, 31)))
+
+    with assert_raises(sqlalchemy.exc.IntegrityError):
+        Session.flush()
 
 
 @with_setup(begin_func, rollback_func)
@@ -120,31 +164,22 @@ def test_schema_has_private():
     schema = models.Schema(
         name='Foo',
         title=u'Foo',
-        publish_date=date(2014, 3, 31))
+        publish_date=date(2014, 3, 31),
+        attributes={
+            'not_private': models.Attribute(
+                name='not_private',
+                title=u'',
+                type='string',
+                is_private=False,
+                order=0)
+        })
     Session.add(schema)
     Session.flush()
 
     assert_false(schema.has_private)
 
-    section1 = models.Section(
-        schema=schema,
-        name=u'section1', title=u'Section 1', order=0)
-
-    schema.attributes['not_private'] = models.Attribute(
-        schema=schema,
-        section=section1,
-        name='not_private',
-        title=u'',
-        type='string',
-        is_private=False,
-        order=0)
-
-    assert_false(schema.has_private)
-
     schema.attributes['is_private'] = models.Attribute(
-        schema=schema,
-        section=section1,
-        name='ist_private',
+        name='is_private',
         title=u'',
         type='string',
         is_private=True,
@@ -167,11 +202,12 @@ def test_json():
         "description": null,
         "publish_date": "2000-01-01",
         "storage": "eav",
-        "sections": {
+        "attributes": {
             "section1": {
                 "name": "section1",
                 "title": "Section 1",
                 "description": null,
+                "type": "section",
                 "order": 0,
                 "attributes": {
                     "foo": {
@@ -205,26 +241,6 @@ def test_json():
 
 
 @with_setup(begin_func, rollback_func)
-def test_section_defaults():
-    """
-    It should set section defaults
-    """
-    from tests import assert_equals
-    from occams.datastore import models
-
-    schema = models.Schema(name='Foo', title=u'Foo')
-    section = models.Section(
-        schema=schema,
-        name='section1',
-        title=u'Section 1',
-        order=0)
-    Session.add_all([schema, section])
-    Session.flush()
-    count = Session.query(models.Section).count()
-    assert_equals(count, 1, 'Found more than one entry')
-
-
-@with_setup(begin_func, rollback_func)
 def test_attribute_defaults():
     """
     It should set attribute defaults
@@ -233,14 +249,8 @@ def test_attribute_defaults():
     from occams.datastore import models
 
     schema = models.Schema(name=u'Foo', title=u'Foo')
-    section = models.Section(
-        schema=schema,
-        name=u'section1',
-        title=u'Section1',
-        order=0)
     attribute = models.Attribute(
         schema=schema,
-        section=section,
         name=u'foo',
         title=u'Enter Foo',
         type=u'string',
@@ -249,6 +259,113 @@ def test_attribute_defaults():
     Session.flush()
     count = Session.query(models.Attribute).count()
     assert_equals(count, 1, 'Found more than one entry')
+
+
+def test_attribute_invalid_regexp_name():
+    """
+    It should prevent invalid attribute names (See RE_VALID_NAME)
+    """
+    from datetime import date
+    from occams.datastore import models
+    from tests import assert_raises
+
+    @with_setup(begin_func, rollback_func)
+    def check_(name):
+        schema = models.Schema(
+            name='SomeForm',
+            title=u'Foo',
+            publish_date=date(2014, 3, 31))
+        Session.add(schema)
+        Session.flush()
+
+        with assert_raises(ValueError):
+            schema.attributes[name] = models.Attribute(
+                name=name,
+                title=u'My Attribute',
+                type=u'string',
+                order=1)
+
+    for name in ['5', '5foo', 'foo_5', 'hiv_sex_3']:
+        yield check_, name
+
+
+def test_attribute_valid_regexp_name():
+    """
+    It should vallow valid names (See RE_VALID_NAME)
+    """
+    from datetime import date
+    from occams.datastore import models
+
+    @with_setup(begin_func, rollback_func)
+    def check_(name):
+        schema = models.Schema(
+            name='SomeForm',
+            title=u'Foo',
+            publish_date=date(2014, 3, 31))
+        schema.attributes[name] = models.Attribute(
+            name=name,
+            title=u'My Attribute',
+            type=u'string',
+            order=1)
+
+    for name in ['f', 'foo', 'foo_', 'foo5']:
+        yield check_, name
+
+
+@with_setup(begin_func, rollback_func)
+def test_attributea_invalid_reserved_name():
+    """
+    It should prevent reserved words as attribute names
+    """
+    from datetime import date
+    from occams.datastore import models
+    from tests import assert_raises
+    schema = models.Schema(
+        name='SomeForm',
+        title=u'Foo',
+        publish_date=date(2014, 3, 31))
+    Session.add(schema)
+    Session.flush()
+
+    with assert_raises(ValueError):
+        schema.attributes['while'] = models.Attribute(
+            name=u'while',
+            title=u'My Attribute',
+            type=u'string',
+            order=1)
+
+
+@with_setup(begin_func, rollback_func)
+def test_attribute_unique_case_insensitive():
+    """
+    It should enforce case-insensitive attributes
+    """
+    from tests import assert_raises
+    from datetime import date
+    import sqlalchemy.exc
+    from occams.datastore import models
+
+    schema = models.Schema(
+        name='Foo',
+        title=u'Foo',
+        publish_date=date(2014, 3, 31))
+
+    schema.attributes['MyAttr'] = models.Attribute(
+        name=u'MyAttr',
+        title=u'My Attribute',
+        type=u'string',
+        order=0)
+    Session.add(schema)
+    Session.flush()
+
+    schema.attributes['myattr'] = models.Attribute(
+        name=u'myattr',
+        title=u'My Attribute 2',
+        type=u'string',
+        order=1)
+
+    with assert_raises(sqlalchemy.exc.IntegrityError):
+        Session.flush()
 
 
 @with_setup(begin_func, rollback_func)
@@ -261,14 +378,8 @@ def test_choice_defaults():
     from occams.datastore import models
 
     schema = models.Schema(name=u'Foo', title=u'Foo')
-    section = models.Section(
-        schema=schema,
-        name=u'section1',
-        title=u'Section1',
-        order=0)
     attribute = models.Attribute(
         schema=schema,
-        section=section,
         name=u'foo',
         title=u'Enter Foo',
         type=u'choice',
@@ -280,7 +391,7 @@ def test_choice_defaults():
     choice3 = models.Choice(
         attribute=attribute, name='003', title=u'Baz', order=2)
 
-    Session.add_all([schema, section, attribute, choice1, choice2, choice3])
+    Session.add_all([schema, attribute, choice1, choice2, choice3])
     Session.flush()
     count = Session.query(models.Choice).count()
     assert_equals(count, 3, 'Did not find any choices')
@@ -353,129 +464,37 @@ def test_add_category_to_schema():
 
 
 @with_setup(begin_func, rollback_func)
-def test_checksum_generate():
-    """
-    It should generate a checksum based on names/settings
-    """
-    from tests import assert_equals, assert_is_none, assert_is_not_none
-    from occams.datastore import models
-    from occams.datastore.models.schema import generateChecksum
-
-    attribute1 = models.Attribute(
-        name=u'value',
-        title=u'Enter value',
-        type='string')
-
-    assert_is_none(generateChecksum(attribute1))
-    attribute1.schema = models.Schema(name='Sample', title=u'Sample Schema')
-    assert_is_not_none(generateChecksum(attribute1))
-
-    attribute2 = models.Attribute(
-        schema=models.Schema(name='Sample', title=u'Sample Schema'),
-        name=u'value',
-        title=u'Enter value',
-        type='string')
-
-    checksum1 = generateChecksum(attribute1)
-    checksum2 = generateChecksum(attribute2)
-
-    # Identical schemata  should yield the same checksum
-    assert_is_not_none(checksum1)
-    assert_is_not_none(checksum2)
-    assert_equals(checksum1, checksum2)
-
-    # Schamata titles should not be considered
-    attribute2.schema.title = 'New title that makes no difference'
-    checksum2 = generateChecksum(attribute2)
-    assert_equals(checksum1, checksum2)
-
-    # Only attribute names are
-    attribute2.schema.name = 'ThisDoes'
-    checksum2 = generateChecksum(attribute2)
-    assert checksum1 != checksum2
-
-    # Change it back
-    attribute2.schema.name = 'Sample'
-    checksum2 = generateChecksum(attribute2)
-    assert_equals(checksum1, checksum2)
-
-
-@with_setup(begin_func, rollback_func)
-def test_checksum_with_choices():
-    """
-    It should generate a checksum using choice names
-    """
-    from tests import assert_equals, assert_not_equals, assert_is_not_none
-    from occams.datastore import models
-    from occams.datastore.models.schema import generateChecksum
-
-    attribute1 = models.Attribute(
-        schema=models.Schema(name='Sample', title=u'Sample Schema'),
-        name=u'value',
-        title=u'Enter value',
-        type='choice',
-        choices={
-            '001': models.Choice(name=u'001', title=u'Never', order=0),
-            '002': models.Choice(name=u'002', title=u'Sometimes', order=1),
-            '003': models.Choice(name=u'003', title=u'Always', order=2)})
-
-    attribute2 = models.Attribute(
-        schema=models.Schema(name='Sample', title=u'Sample Schema'),
-        name=u'value',
-        title=u'Enter value',
-        type='choice',
-        choices={
-            '001': models.Choice(name=u'001', title=u'Never', order=0),
-            '002': models.Choice(name=u'002', title=u'Sometimes', order=1),
-            '003': models.Choice(name=u'003', title=u'Always', order=2)})
-
-    checksum1 = generateChecksum(attribute1)
-    checksum2 = generateChecksum(attribute2)
-
-    assert_is_not_none(checksum1)
-    assert_is_not_none(checksum2)
-    assert_equals(checksum1, checksum2)
-
-    attribute2.schema.title = 'New title that makes no difference'
-    checksum2 = generateChecksum(attribute2)
-    assert_equals(checksum1, checksum2)
-
-    attribute2.schema.name = 'ThisDoes'
-    checksum2 = generateChecksum(attribute2)
-    assert_not_equals(checksum1, checksum2)
-
-    # Change it back
-    attribute2.schema.name = 'Sample'
-    checksum2 = generateChecksum(attribute2)
-    assert_equals(checksum1, checksum2)
-
-
-@with_setup(begin_func, rollback_func)
 def test_copy_schema_basic():
     """
     It should let the user copy schemata
     """
-    from tests import assert_equals, assert_not_equals
+    from tests import assert_equals
     from copy import deepcopy
     from occams.datastore import models
 
-    section1 = models.Section(name=u'section1', title=u'Section 1', order=0)
     schema = models.Schema(
         name='Foo',
         title=u'Foo',
-        sections={'section1': section1},
         attributes={
-            'foo': models.Attribute(
-                name='foo',
-                title=u'Enter Foo',
-                section=section1,
-                type='choice',
-                choices={
-                    '001': models.Choice(name='001', title=u'Foo', order=0),
-                    '002': models.Choice(name='002', title=u'Bar', order=1),
-                    '003': models.Choice(name='003', title=u'Baz', order=2)},
-                order=0)})
-
+            'section1': models.Attribute(
+                name=u'section1',
+                title=u'Section 1',
+                type='section',
+                order=0,
+                attributes={
+                    'foo': models.Attribute(
+                        name='foo',
+                        title=u'Enter Foo',
+                        type='choice',
+                        order=1,
+                        choices={
+                            '001': models.Choice(
+                                name='001', title=u'Foo', order=0),
+                            '002': models.Choice(
+                                name='002', title=u'Bar', order=1),
+                            '003': models.Choice(
+                                name='003', title=u'Baz', order=2)},
+                        )})})
     Session.add(schema)
     Session.flush()
 
@@ -494,12 +513,3 @@ def test_copy_schema_basic():
         choice_copy = schema_copy.attributes['foo'].choices[choice.name]
         for prop in ('name', 'title', 'order'):
             assert_equals(getattr(choice, prop), getattr(choice_copy, prop))
-
-    assert_not_equals(schema.id, schema_copy.id)
-    assert_equals(schema.attributes['foo'].checksum,
-                  schema_copy.attributes['foo'].checksum)
-
-    schema_copy.attributes['foo'].title = u'New Title'
-    Session.flush()
-    assert_not_equals(schema.attributes['foo'].checksum,
-                      schema_copy.attributes['foo'].checksum)

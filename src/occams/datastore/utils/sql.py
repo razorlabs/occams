@@ -4,10 +4,11 @@ Cross-vendor compatibility functions
 
 import json
 
+from sqlalchemy import func, collate
 from sqlalchemy.dialects import postgres
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.expression import FunctionElement
-from sqlalchemy.types import TypeDecorator, TEXT
+from sqlalchemy.types import TypeDecorator, TEXT, VARCHAR
 
 
 class group_concat(FunctionElement):
@@ -111,3 +112,26 @@ class JSON(TypeDecorator):
             if value is not None:
                 value = json.loads(value)
         return value
+
+
+class CaseInsensitive(FunctionElement):
+    """
+    Function for case insensite indexes
+    """
+    # Need this attribute so Index can processes this element
+    # http://stackoverflow.com/q/22154917/148781
+    __visit_name__ = 'notacolumn'
+    name = 'CaseInsensitive'
+    type = VARCHAR()
+
+
+@compiles(CaseInsensitive, 'sqlite')
+def case_insensitive_sqlite(element, compiler, **kw):
+    arg1, = list(element.clauses)
+    return compiler.process(collate(arg1, 'NOCASE'), **kw)
+
+
+@compiles(CaseInsensitive, 'postgresql')
+def case_insensitive_postgresql(element, compiler, **kw):
+    arg1, = list(element.clauses)
+    return compiler.process(func.lower(arg1), **kw)

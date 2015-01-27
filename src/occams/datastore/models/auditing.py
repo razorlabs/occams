@@ -15,6 +15,9 @@ from sqlalchemy.orm.exc import UnmappedColumnError
 from sqlalchemy.ext.declarative import declared_attr
 
 
+_pending_mappers = []
+
+
 class Auditable(object):
     """
     Enables a mapping to have an "audit" table of previous modifications done

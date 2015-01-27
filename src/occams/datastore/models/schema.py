@@ -4,15 +4,16 @@ Metadata definitions
 
 from copy import copy, deepcopy
 from datetime import datetime
-import hashlib
 import re
 
-import six
+from six import iterkeys, iteritems, itervalues
 from sqlalchemy import(
+    cast,
+    sql,
     Table, Column,
     PrimaryKeyConstraint,
     CheckConstraint, UniqueConstraint, ForeignKeyConstraint, Index,
-    Boolean, Enum, Date, Integer, String)
+    Boolean, Enum, Date, Integer, String, UnicodeText)
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import backref, relationship, validates
@@ -21,77 +22,40 @@ from sqlalchemy.orm.collections import attribute_mapped_collection
 from . import DataStoreModel as Model
 from .metadata import Referenceable, Describeable, Modifiable
 from .auditing import Auditable
+from ..utils.sql import CaseInsensitive
 
 
-def checksum(*args):
+RE_VALID_NAME = re.compile(r"""
+    ^
+    (?!.*_[0-9]+)       # Cannot end with underscore follwed by digits
+    [a-z]               # Must start with character
+    [a-z0-9_]*          # Can contains letters digits and underscores
+    $
+    """, re.I | re.VERBOSE)
+
+
+RESERVED_WORDS = frozenset(
+    # Python keywords
+    # https://docs.python.org/3.4/reference/lexical_analysis.html#keywords
     """
-    Returns a checksum of the combined arguments
+    False      class      finally    is         return
+    None       continue   for        lambda     try
+    True       def        from       nonlocal   while
+    and        del        global     not        with
+    as         elif       if         or         yield
+    assert     else       import     pass
+    break      except     in         raise
     """
-    # Finds any unicode whitespace in a string
-    rex = re.compile(r'\s+', re.MULTILINE | re.UNICODE)
-
-    # Condense all whitespace and strip trailing whitespace
-    def condense_whitespace(value):
-        if not isinstance(value, six.string_types):
-            value = str(value)
-        return rex.sub(u' ', value).strip()
-
-    nonnulls = six.moves.filter(lambda v: v is not None, args)
-    strings = six.moves.map(condense_whitespace, nonnulls)
-
-    # encode and generate checksum
-    return hashlib.md5(u''.join(strings).encode('utf-8')).hexdigest()
-
-
-def generateChecksum(attribute):
+    # Additional black-listed names
     """
-    Creates a checksum for an attribute.
+    Data     Float     Int     Numeric     Oxphys
+    array     close     float     int     input
+    open     range     type     write     zeros
+    acos     asin     atan     cos     e
+    exp     fabs     floor     log     log10
+    pi     sin     sqrt     tan
     """
-
-    # This attribute has not been assigned a parent schema yet, let the
-    # database handle this issue
-    schema = attribute.schema or getattr(attribute.section, 'schema', None)
-    if schema is None:
-        return None
-
-    values = [
-        # Consider ONLY the schema name, as descriptions would create a new
-        # checksum for all attributes
-        schema.name,
-
-        # Attribute properties to consider, note object_schema_id is not
-        # considered because only its fields matter not the actual sub form
-        # itself
-        attribute.name,
-        attribute.title,
-        attribute.description,  # None != '', let the values behave naturally
-        attribute.type,
-        ]
-
-    # is_collection and is_required could potentially not have been set at this
-    # point, so assume their future default values
-    if attribute.is_collection is None:
-        values.append(Attribute.is_collection.default.arg)
-    else:
-        values.append(attribute.is_collection)
-
-    if attribute.is_required is None:
-        values.append(Attribute.is_required.default.arg)
-    else:
-        values.append(attribute.is_required)
-
-    # Consider choices as well, but order them alphabetically instead of
-    # by order in case things were just rearranged, which apparently
-    # should never affect the checksum
-    for choice in sorted(six.itervalues(attribute.choices),
-                         key=lambda c: c.order):
-        values.extend([choice.name, choice.title])
-
-    return checksum(*values)
-
-
-def setChecksum(attribute):
-    attribute._checksum = generateChecksum(attribute)
+    .split())
 
 
 class Category(Model, Referenceable, Describeable, Modifiable, Auditable):
@@ -136,6 +100,9 @@ class Schema(Model, Referenceable, Describeable, Modifiable, Auditable):
 
     __tablename__ = 'schema'
 
+    # Override for max length of 32 characters
+    name = Column(String, nullable=False)
+
     categories = relationship(
         Category,
         secondary=schema_category_table,
@@ -176,13 +143,36 @@ class Schema(Model, Referenceable, Describeable, Modifiable, Auditable):
                 return True
         return False
 
+    @validates('name')
+    def valid_name(self, key, name):
+        if not RE_VALID_NAME.match(name):
+            raise ValueError('Invalid name: "%s"' % name)
+        return name
+
     @declared_attr
     def __table_args__(cls):
         return (
-            UniqueConstraint('name', 'publish_date'),
             CheckConstraint(
                 'publish_date <= retract_date',
-                name='ck_%s_valid_publication' % cls.__tablename__))
+                name='ck_%s_valid_publication' % cls.__tablename__),)
+
+    def itertraverse(self):
+        """
+        Useful for iterating through attributes as a hierarchy
+        """
+        for attribute in sorted(itervalues(self.attributes),
+                                key=lambda a: a.order):
+            if attribute.parent_attribute is None:
+                yield attribute
+
+    def iterleafs(self):
+        """
+        Lists all attributes flattened without their sections
+        """
+        for attribute in sorted(itervalues(self.attributes),
+                                key=lambda a: a.order):
+            if attribute.type != 'section':
+                yield attribute
 
     def __copy__(self):
         keys = ('name', 'title', 'description', 'storage')
@@ -191,8 +181,8 @@ class Schema(Model, Referenceable, Describeable, Modifiable, Auditable):
     def __deepcopy__(self, memo):
         duplicate = copy(self)
         duplicate.categories = set([c for c in self.categories])
-        for section in six.itervalues(self.sections):
-            duplicate.sections[section.name] = deepcopy(section)
+        for attribute in self.itertraverse():
+            duplicate.attributes[attribute.name] = deepcopy(attribute)
         return duplicate
 
     @classmethod
@@ -203,128 +193,50 @@ class Schema(Model, Referenceable, Describeable, Modifiable, Auditable):
         Parameters:
         data -- parsed json data (i.e. a dict)
         """
-        sections = data.pop('sections')
+        attributes = data.pop('attributes', None)
 
         schema = cls(**data)
-        schema.publish_date = \
-            datetime.strptime(data['publish_date'], '%Y-%m-%d').date()
 
-        if sections:
-            for key, section in six.iteritems(sections):
-                schema.sections[key] = Section.from_json(section)
-            schema.attributes.update(schema.sections[key].attributes)
+        if data.get('publish_date'):
+            schema.publish_date = \
+                datetime.strptime(data['publish_date'], '%Y-%m-%d').date()
+
+        if data.get('retract_date'):
+            schema.retract_date = \
+                datetime.strptime(data['retract_date'], '%Y-%m-%d').date()
+
+        if attributes:
+            for key, attribute in iteritems(attributes):
+                schema.attributes[key] = Attribute.from_json(attribute)
 
         return schema
 
-    def to_json(self):
+    def to_json(self, deep=False):
         """
         Serializes to a JSON-ready dictionary
         """
-        return {
+        data = {
             'name': self.name,
             'title': self.title,
             'description': self.description,
             'storage': self.storage,
-            'published': self.publish_date.isoformat(),
-            'sections': dict([(s.name, s.to_json())
-                             for s in six.itervalues(self.sections)])}
+            'publish_date': (
+                self.publish_date and self.publish_date.isoformat()),
+            'retract_date': (
+                self.retract_date and self.retract_date.isoformat())}
+        if deep:
+            data['attributes'] = \
+                dict([(a.name, a.to_json(deep)) for a in self.itertraverse()])
+        return data
 
 
-section_attribute_table = Table(
-    'section_attribute',
-    Model.metadata,
-    Column('section_id', Integer),
-    Column('attribute_id', Integer),
-    PrimaryKeyConstraint('section_id', 'attribute_id'),
-    ForeignKeyConstraint(
-        columns=['section_id'],
-        refcolumns=['section.id'],
-        name='fk_section_attribute_section_id',
-        ondelete='CASCADE'),
-    ForeignKeyConstraint(
-        columns=['attribute_id'],
-        refcolumns=['attribute.id'],
-        name='fk_section_attribute_attribute_id',
-        ondelete='CASCADE'),
-    UniqueConstraint('attribute_id', name='uq_section_attribute_attribute_id'))
-
-
-class Section(Model, Referenceable, Describeable, Modifiable, Auditable):
-
-    __tablename__ = 'section'
-
-    schema_id = Column(Integer, nullable=False)
-
-    schema = relationship(
-        Schema,
-        backref=backref(
-            name='sections',
-            collection_class=attribute_mapped_collection('name'),
-            order_by='Section.order',
-            cascade='all, delete, delete-orphan'))
-
-    order = Column(Integer, nullable=False)
-
-    @declared_attr
-    def __table_args__(cls):
-        return (
-            ForeignKeyConstraint(
-                columns=['schema_id'],
-                refcolumns=['schema.id'],
-                name='fk_%s_schema_id' % cls.__tablename__,
-                ondelete='CASCADE'),
-            UniqueConstraint('schema_id', 'name',
-                             name='uq_%s_name' % cls.__tablename__),
-            UniqueConstraint('schema_id', 'order',
-                             name='uq_%s_order' % cls.__tablename__))
-
-    @validates('schema')
-    def validate_attribute(self, key, schema):
-        """
-        Switches all attributes to the assigned schema
-        """
-        for attribute in six.itervalues(self.attributes):
-            attribute.schema = schema
-        return schema
-
-    def __copy__(self):
-        keys = ('name', 'title', 'description', 'order')
-        return self.__class__(**dict([(k, getattr(self, k)) for k in keys]))
-
-    def __deepcopy__(self, memo):
-        duplicate = copy(self)
-        for attribute in six.itervalues(self.attributes):
-            duplicate.attributes[attribute.name] = deepcopy(attribute)
-        return duplicate
-
-    @classmethod
-    def from_json(cls, data):
-        """
-        Loads a section from parsed JSON data
-
-        Parameters:
-        data -- parsed json data (i.e. a dict)
-        """
-        attributes = data.pop('attributes')
-
-        section = cls(**data)
-
-        if attributes:
-            for key, attribute in six.iteritems(attributes):
-                section.attributes[key] = Attribute.from_json(attribute)
-
-        return section
-
-    def to_json(self):
-        """
-        Serializes to a JSON-ready dictionary
-        """
-        return {
-            'name': self.name,
-            'title': self.title,
-            'description': self.description,
-            'attributes': dict([(a.name, a.to_json())
-                               for a in six.itervalues(self.attributes)])}
+# __table_args__ is not accepting this constraint.
+# Need to initiate the Index here for now...
+Index(
+    'uq_schema_name',
+    CaseInsensitive(Schema.name),
+    Schema.publish_date,
+    unique=True)
 
 
 class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
@@ -341,6 +253,9 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
 
     __tablename__ = 'attribute'
 
+    # Overide for maximum character lenght of 20
+    name = Column(String(20), nullable=False)
+
     schema_id = Column(Integer, nullable=False,)
 
     schema = relationship(
@@ -352,21 +267,21 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
             cascade='all, delete, delete-orphan'),
         doc=u'The schema that this attribute belongs to')
 
-    section = relationship(
-        Section,
-        secondary=section_attribute_table,
-        uselist=False,
+    parent_attribute_id = Column(Integer)
+
+    attributes = relationship(
+        'Attribute',
+        collection_class=attribute_mapped_collection('name'),
+        order_by='Attribute.order',
+        cascade='all, delete',
         backref=backref(
-            name='attributes',
-            collection_class=attribute_mapped_collection('name'),
-            order_by='Attribute.order',
-            single_parent=True,
-            cascade='all, delete, delete-orphan'))
+            name='parent_attribute',
+            remote_side='Attribute.id'))
 
     type = Column(
-        Enum(*sorted(['boolean', 'decimal', 'integer', 'choice',
+        Enum(*sorted(['number', 'choice',
                       'date', 'datetime',
-                      'string', 'text',
+                      'string', 'text', 'section',
                       'blob']),
              name='attribute_type'),
         nullable=False)
@@ -375,23 +290,48 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
         Boolean,
         nullable=False,
         default=False,
-        doc='Enables attribute values to be stored multiple times (i.e. list)')
+        server_default=sql.false(),
+        doc='Single or Multiple choice answers')
+
+    is_shuffled = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default=sql.false(),
+        doc='Display answer choices in random order')
 
     is_required = Column(
         Boolean,
         nullable=False,
         default=False,
+        server_default=sql.false(),
         doc='Forces attribute value to be required')
 
     is_private = Column(
         Boolean,
         nullable=False,
         default=False,
+        server_default=sql.false(),
         doc='Stores Personnally Identifiable Information (PII).')
 
-    _checksum = Column('checksum', String(32), nullable=False)
+    is_system = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default=sql.false(),
+        doc='Is a variable that can only be managed by underlying system')
 
-    checksum = hybrid_property(lambda self: self._checksum)
+    is_readonly = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default=sql.false(),
+        doc='The user may not modify this variable')
+
+    widget = Column(
+        Enum(*sorted(['checkbox', 'email', 'radio', 'select',
+                      'phone']),
+             name='attribute_widget'))
 
     value_min = Column(Integer, doc='Minimum length or value')
 
@@ -401,9 +341,56 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
 
     collection_max = Column(Integer, doc='Maximum list length')
 
-    validator = Column(String, doc='Regular expression validator')
+    pattern = Column(String, doc='String format regular expression')
+
+    decimal_places = Column(Integer)
+
+    constraint_logic = Column(UnicodeText)
+
+    skip_logic = Column(UnicodeText)
 
     order = Column(Integer, nullable=False, doc='Display order')
+
+    @validates('name')
+    def validate_name(self, key, name):
+        if not RE_VALID_NAME.match(name):
+            raise ValueError('Invalid name: "%s"' % name)
+        if name in RESERVED_WORDS:
+            raise ValueError(
+                'Cannot use reserved word as attribute name: %s' % name)
+        return name
+
+    @validates('schema')
+    def validate_schema(self, key, schema):
+        """
+        Cascade schema setting to children (SA won't do this)
+        """
+        if self.type == 'section':
+            for subattribute in itervalues(self.attributes):
+                subattribute.schema = schema
+        return schema
+
+    @validates('parent_attribute')
+    def validate_parent_attribute(self, key, parent_attribute):
+        """
+        Pass the schema if being set as a subattribute (SA won't do this)
+        """
+        if parent_attribute:
+            self.schema = parent_attribute.schema
+        return parent_attribute
+
+    def itertraverse(self):
+        """
+        Useful for iterating through attributes as a hierarchy
+        """
+        return iter(sorted(itervalues(self.attributes), key=lambda a: a.order))
+
+    def iterchoices(self):
+        """
+        Useful for iterating through attributes in order
+        """
+        # TODO: Maybe apply shuffling here?
+        return iter(sorted(itervalues(self.choices), key=lambda c: c.order))
 
     @declared_attr
     def __table_args__(cls):
@@ -413,11 +400,15 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
                 refcolumns=['schema.id'],
                 name='fk_%s_schema_id' % cls.__tablename__,
                 ondelete='CASCADE'),
-            UniqueConstraint('schema_id', 'name',
-                             name='uq_%s_name' % cls.__tablename__),
+            ForeignKeyConstraint(
+                columns=['parent_attribute_id'],
+                refcolumns=['attribute.id'],
+                name='fk_%s_attribute_id' % cls.__tablename__,
+                ondelete='CASCADE'),
             UniqueConstraint('schema_id', 'order',
-                             name='uq_%s_order' % cls.__tablename__),
-            Index('ix_%s_checksum' % cls.__tablename__, 'checksum'),
+                             name='uq_%s_order' % cls.__tablename__,
+                             deferrable=True,
+                             initially='DEFERRED'),
             CheckConstraint(
                 "collection_min IS NULL OR collection_min >= 0",
                 name='ck_%s_unsigned_collection_min' % cls.__tablename__),
@@ -435,31 +426,44 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
                 name='ck_%s_unsigned_value_max' % cls.__tablename__),
             CheckConstraint(
                 "value_min < value_max",
-                name='ck_%s_valid_value' % cls.__tablename__))
+                name='ck_%s_valid_value' % cls.__tablename__),
+            CheckConstraint(
+                "CASE WHEN type != 'number' THEN decimal_places IS NULL END",
+                name='ck_%s_number_decimal_places' % cls.__tablename__),
+            CheckConstraint(
+                """
+                CASE
+                    WHEN widget IS NOT NULL THEN
+                        CASE type
+                            WHEN 'string' THEN widget IN ('phone', 'email')
+                            WHEN 'choice' THEN
+                                CASE
+                                    WHEN is_collection
+                                        THEN widget IN ('select', 'checkbox')
+                                    ELSE widget IN ('select', 'radio')
+                                END
+                        END
+                END
+                """,
+                name='ck_%s_type_widget' % cls.__tablename__))
 
     def __copy__(self):
         keys = (
             'name', 'title', 'description', 'type', 'is_collection',
-            'is_required',
+            'is_required', 'is_system', 'is_readonly', 'is_shuffled',
+            'widget', 'skip_logic', 'constraint_logic',
+            'decimal_places',
             'collection_min', 'collection_max', 'value_min', 'value_max',
-            'validator', 'order')
+            'pattern', 'order')
         return self.__class__(**dict([(k, getattr(self, k)) for k in keys]))
 
     def __deepcopy__(self, memo):
         duplicate = copy(self)
-        for choice in six.itervalues(self.choices):
+        for choice in itervalues(self.choices):
             duplicate.choices[choice.name] = deepcopy(choice)
+        for attribute in itervalues(self.attributes):
+            duplicate.attributes[attribute.name] = deepcopy(attribute)
         return duplicate
-
-    @validates('section')
-    def validate_section(self, key, section):
-        """
-        Sets the schema of the attribute to the assigned section
-        This happens when a section is assigned directly to an attribute.
-        Need to switch over to the section's schema.
-        """
-        self.schema = section.schema
-        return section
 
     @classmethod
     def from_json(cls, data):
@@ -470,22 +474,27 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
         data -- parsed json data (i.e. a dict)
         """
 
-        choices = data.pop('choices')
+        attributes = data.pop('attributes', None)
+        choices = data.pop('choices', None)
 
         attribute = cls(**data)
 
-        if choices is not None:
-            for key, choice in six.iteritems(choices):
+        if attributes:
+            for key, sub in iteritems(attributes):
+                attribute.attributes[key] = Attribute.from_json(sub)
+
+        if choices:
+            for key, choice in iteritems(choices):
                 attribute.choices[key] = Choice.from_json(choice)
 
         return attribute
 
-    def to_json(self):
+    def to_json(self, deep=False):
         """
         Serializes to a JSON-ready dictionary
         """
 
-        return {
+        data = {
             'name': self.name,
             'title': self.title,
             'description': self.description,
@@ -493,15 +502,80 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
             'is_required': self.is_required,
             'is_collection': self.is_collection,
             'is_private': self.is_private,
-            'checksum': self.checksum,
+            'is_system': self.is_system,
+            'is_readonly': self.is_readonly,
+            'is_shuffled': self.is_shuffled,
             'value_min': self.value_min,
             'value_max': self.value_max,
-            'validator': self.validator,
+            'pattern': self.pattern,
+            'decimal_places': self.decimal_places,
+            'constraint_logic': self.constraint_logic,
+            'skip_logic': self.skip_logic,
             'collection_min': self.collection_min,
             'collection_max': self.collection_max,
             'order': self.order,
-            'choices': dict([(c.name, c.to_json())
-                            for c in six.itervalues(self.choices)])}
+        }
+
+        if deep:
+            data['attributes'] = \
+                dict([(a.name, a.to_json(deep))
+                     for a in itervalues(self.attributes)])
+            data['choices'] = \
+                dict([(c.name, c.to_json(deep))
+                     for c in itervalues(self.choices)])
+
+        return data
+
+    def apply(self, data):
+        self.name = data['name']
+        self.title = data['title']
+        self.description = data['description']
+        self.type = data['type']
+
+        if self.type != 'section':
+            self.is_required = data['is_required']
+            self.is_private = data['is_private']
+            self.is_readonly = data['is_readonly']
+            self.is_system = data['is_system']
+
+        if self.type in ('string', 'number', 'choice'):
+            self.value_min = data['value_min']
+            self.value_max = data['value_max']
+
+        if self.type == 'number':
+            self.decimal_places = data['decimal_places']
+
+        if self.type == 'string':
+            self.pattern = data['pattern']
+
+        if self.type == 'choice':
+            self.is_collection = data['is_collection']
+            self.is_shuffled = data['is_shuffled']
+
+            new_codes = set(c['name'] for c in data['choices'])
+            old_codes = list(iterkeys(self.choices))
+
+            for code in old_codes:
+                if code not in new_codes:
+                    del self.choices[code]
+
+            for i, choice_data in enumerate(data['choices']):
+                name = choice_data['name']
+                if name in self.choices:
+                    choice = self.choices[name]
+                else:
+                    self.choices[name] = choice = Choice(name=name)
+                choice.title = choice_data['title']
+                choice.order = i
+
+
+# __table_args__ is not accepting this constraint.
+# Need to initiate the Index here for now...
+Index(
+    'uq_attribute_name',
+    Attribute.schema_id,
+    CaseInsensitive(Attribute.name),
+    unique=True)
 
 
 class Choice(Model, Referenceable, Describeable, Modifiable, Auditable):
@@ -514,6 +588,9 @@ class Choice(Model, Referenceable, Describeable, Modifiable, Auditable):
     """
 
     __tablename__ = 'choice'
+
+    # Override for maximum character lenght of 8
+    name = Column(String(8), nullable=False)
 
     attribute_id = Column(Integer, nullable=False,)
 
@@ -539,10 +616,9 @@ class Choice(Model, Referenceable, Describeable, Modifiable, Auditable):
             UniqueConstraint('attribute_id', 'name',
                              name='uq_%s_name' % cls.__tablename__),
             UniqueConstraint('attribute_id', 'order',
-                             name='uq_%s_order' % cls.__tablename__))
-            # XXX: this is alsmost impossible to do in a database-agnostic way
-            #CheckConstraint("name ~ '^[0-9]+$'",
-                            #name='ck_%s_numeric_name' % cls.__tablename__))
+                             name='uq_%s_order' % cls.__tablename__,
+                             deferrable=True,
+                             initially='DEFERRED'),)
 
     def __copy__(self):
         keys = ('name', 'title', 'description', 'order')
@@ -561,7 +637,7 @@ class Choice(Model, Referenceable, Describeable, Modifiable, Auditable):
         """
         return cls(**data)
 
-    def to_json(self):
+    def to_json(self, deep=False):
         """
         Serializes to a JSON-ready dictionary
         """
@@ -569,3 +645,8 @@ class Choice(Model, Referenceable, Describeable, Modifiable, Auditable):
             'name': self.name,
             'title': self.title,
             'order': self.order}
+
+
+# It's OK if this errors out in PG since that means the constraint failed
+CheckConstraint(cast(Choice.name, Integer) != sql.null(),
+                name='ck_choice_numeric_name')

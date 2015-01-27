@@ -6,7 +6,6 @@ try:
     from collections import OrderedDict
 except ImportError:  # pragma: nocover
     from ordereddict import OrderedDict
-from operator import or_
 
 from six import itervalues, iteritems
 from sqlalchemy import orm, cast, null, literal, Integer, case, Unicode
@@ -78,6 +77,9 @@ def build_report(session,
     attributes = None if attributes is None else set(attributes)
 
     for column in itervalues(columns):
+        if column.type == 'section':  # Sections are not used in reports
+            continue
+
         if attributes is not None and column.name not in attributes:
             continue
 
@@ -286,7 +288,7 @@ class DataColumn(object):
         self.name = name
         self.type = types.pop()
         self.is_collection = collections.pop()
-        self.is_private = reduce(or_, [a.is_private for a in attributes])
+        self.is_private = any(a.is_private for a in attributes)
         self.attributes = tuple(attributes)
         self.choice = choice
         if choice is not None:

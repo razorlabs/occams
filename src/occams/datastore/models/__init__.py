@@ -26,10 +26,10 @@ DataStoreModel = ModelClass('DataStoreModel')
 
 from .auditing import Auditable  # NOQA
 from .metadata import User, Describeable, Modifiable, Referenceable  # NOQA
-from .schema import Schema, Section, Category, Attribute, Choice  # NOQA
+from .schema import Schema, Category, Attribute, Choice  # NOQA
 from .storage import (  # NOQA
     nameModelMap,
     State, Context, Entity,
     HasEntities,
-    ValueInteger, ValueString, ValueDecimal, ValueDatetime, ValueText,
-    ValueChoice, ValueBlob)
+    ValueString, ValueNumber, ValueDatetime, ValueText,
+    ValueChoice, ValueBlob, BlobInfo)

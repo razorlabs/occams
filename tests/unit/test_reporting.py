@@ -19,10 +19,11 @@ def test_datadict_published_schema():
     schema = models.Schema(
         name=u'A',
         title=u'A',
-        sections={
-            's1': models.Section(
+        attributes={
+            's1': models.Attribute(
                 name=u's1',
                 title=u'S1',
+                type='section',
                 order=0,
                 attributes={
                     'a': models.Attribute(
@@ -64,24 +65,25 @@ def test_datadict_multpile_versions():
         name=u'A',
         title=u'A',
         publish_date=today,
-        sections={
-            's1': models.Section(
+        attributes={
+            's1': models.Attribute(
                 name=u's1',
                 title=u'S1',
+                type='section',
                 order=0,
                 attributes={
                     'a': models.Attribute(
                         name=u'a',
                         title=u'',
                         type='string',
-                        order=0)})})
+                        order=1)})})
 
     schema2 = deepcopy(schema1)
     schema2.publish_date = today + timedelta(1)
 
     schema3 = deepcopy(schema2)
     schema3.publish_date = today + timedelta(2)
-    schema3.sections['s1'].attributes[u'a'].title = u'prime'
+    schema3.attributes['s1'].attributes['a'].title = u'prime'
 
     Session.add_all([schema1, schema2, schema3])
     Session.flush()
@@ -109,10 +111,11 @@ def test_datadict_multiple_choice():
         name=u'A',
         title=u'A',
         publish_date=today,
-        sections={
-            's1': models.Section(
+        attributes={
+            's1': models.Attribute(
                 name=u's1',
                 title=u'S1',
+                type='section',
                 order=0,
                 attributes={
                     'a': models.Attribute(
@@ -120,7 +123,7 @@ def test_datadict_multiple_choice():
                         title=u'',
                         type='string',
                         is_collection=True,
-                        order=0,
+                        order=1,
                         choices={
                             '001': models.Choice(
                                 name=u'001',
@@ -140,7 +143,7 @@ def test_datadict_multiple_choice():
 
     schema2 = deepcopy(schema1)
     schema2.publish_date = today + timedelta(1)
-    schema2.sections['s1'].attributes['a'].choices['003'] = \
+    schema2.attributes['s1'].attributes['a'].choices['003'] = \
         models.Choice(name=u'003', title=u'Baz', order=3)
     Session.add(schema2)
     Session.flush()
@@ -167,10 +170,11 @@ def test_datadict_duplicate_vocabulary_term():
         name=u'A',
         title=u'A',
         publish_date=today,
-        sections={
-            's1': models.Section(
+        attributes={
+            's1': models.Attribute(
                 name=u's1',
                 title=u'S1',
+                type='section',
                 order=0,
                 attributes={
                     'a': models.Attribute(
@@ -178,7 +182,7 @@ def test_datadict_duplicate_vocabulary_term():
                         title=u'',
                         type='string',
                         is_collection=True,
-                        order=0,
+                        order=1,
                         choices={
                             '001': models.Choice(
                                 name=u'001',
@@ -192,7 +196,7 @@ def test_datadict_duplicate_vocabulary_term():
     schema2 = deepcopy(schema1)
     schema2.state = u'published'
     schema2.publish_date = today + timedelta(1)
-    for choice in itervalues(schema2.sections['s1'].attributes['a'].choices):
+    for choice in itervalues(schema2.attributes['s1'].attributes['a'].choices):
         choice.title = 'New ' + choice.title
 
     Session.add_all([schema1, schema2])
@@ -216,9 +220,7 @@ def test_report_column_type():
         ('choice', sa.String),
         ('string', sa.Unicode),
         ('text', sa.UnicodeText),
-        ('integer', sa.Integer),
-        ('boolean', sa.Integer),
-        ('decimal', sa.Numeric)]
+        ('number', sa.Numeric)]
 
     #### Date/Datetimes aren't easy to test in SQLite...
 
@@ -236,12 +238,23 @@ def check_report_column_type(ds_type, sa_type):
     from tests import assert_is_instance
     from occams.datastore import models, reporting
 
-    schema = models.Schema(name=u'A', title=u'A', publish_date=date.today())
-    section = models.Section(schema=schema, name=u's1', title=u'S1', order=0)
-    attribute = models.Attribute(
-        schema=schema, section=section, name=u'a', title=u'', type=ds_type,
-        order=0)
-    Session.add(attribute)
+    schema = models.Schema(
+        name=u'A',
+        title=u'A',
+        publish_date=date.today(),
+        attributes={
+            's1': models.Attribute(
+                name=u's1',
+                title=u'S1',
+                type='section',
+                order=0,
+                attributes={
+                    'a': models.Attribute(
+                        name=u'a',
+                        title=u'',
+                        type=ds_type,
+                        order=1)})})
+    Session.add(schema)
     Session.flush()
 
     report = reporting.build_report(Session, u'A')
@@ -299,23 +312,24 @@ def test_build_report_scalar_values():
         name=u'A',
         title=u'A',
         publish_date=today,
-        sections={
-            's1': models.Section(
+        attributes={
+            's1': models.Attribute(
                 name=u's1',
                 title=u'S1',
+                type='section',
                 order=0,
                 attributes={
                     'a': models.Attribute(
                         name=u'a',
                         title=u'',
                         type='string',
-                        order=0)})})
+                        order=1)})})
 
     Session.add(schema1)
     Session.flush()
 
     # add some entries for the schema
-    entity1 = models.Entity(schema=schema1, name=u'Foo', title=u'')
+    entity1 = models.Entity(schema=schema1)
     entity1['a'] = u'foovalue'
     Session.add(entity1)
     Session.flush()
@@ -340,22 +354,23 @@ def test_build_report_datetime():
         name=u'A',
         title=u'A',
         publish_date=today,
-        sections={
-            's1': models.Section(
+        attributes={
+            's1': models.Attribute(
                 name=u's1',
                 title=u'S1',
+                type='section',
                 order=0,
                 attributes={
                     'a': models.Attribute(
                         name=u'a',
                         title=u'',
                         type='date',
-                        order=0)})})
+                        order=1)})})
     Session.add(schema1)
     Session.flush()
 
     # add some entries for the schema
-    entity1 = models.Entity(schema=schema1, name=u'Foo', title=u'')
+    entity1 = models.Entity(schema=schema1)
     entity1['a'] = date(1976, 7, 4)
     Session.add(entity1)
     Session.flush()
@@ -364,7 +379,7 @@ def test_build_report_datetime():
     result = Session.query(report).one()
     assert_equals(str(result.a), '1976-07-04')
 
-    schema1.sections['s1'].attributes['a'].type = 'datetime'
+    schema1.attributes['s1'].attributes['a'].type = 'datetime'
     Session.flush()
     report = reporting.build_report(Session, u'A')
     result = Session.query(report).one()
@@ -388,10 +403,11 @@ def test_build_report_choice_types():
         name=u'A',
         title=u'A',
         publish_date=today,
-        sections={
-            's1': models.Section(
+        attributes={
+            's1': models.Attribute(
                 name=u's1',
                 title=u'S1',
+                type='section',
                 order=0,
                 attributes={
                     'a': models.Attribute(
@@ -417,7 +433,7 @@ def test_build_report_choice_types():
     Session.add(schema1)
     Session.flush()
 
-    entity1 = models.Entity(schema=schema1, name=u'Foo', title=u'')
+    entity1 = models.Entity(schema=schema1)
     entity1['a'] = u'002'
     Session.add(entity1)
     Session.flush()
@@ -485,10 +501,11 @@ def test_build_report_expand_none_selected():
         name=u'A',
         title=u'A',
         publish_date=today,
-        sections={
-            's1': models.Section(
+        attributes={
+            's1': models.Attribute(
                 name=u's1',
                 title=u'S1',
+                type='section',
                 order=0,
                 attributes={
                     'a': models.Attribute(
@@ -496,7 +513,7 @@ def test_build_report_expand_none_selected():
                         title=u'',
                         type='choice',
                         is_collection=True,
-                        order=0,
+                        order=1,
                         choices={
                             '001': models.Choice(
                                 name=u'001',
@@ -514,7 +531,7 @@ def test_build_report_expand_none_selected():
     Session.add(schema1)
     Session.flush()
 
-    entity1 = models.Entity(schema=schema1, name=u'Foo', title=u'')
+    entity1 = models.Entity(schema=schema1)
     Session.add(entity1)
     Session.flush()
 
@@ -568,10 +585,11 @@ def test_build_report_ids():
         name=u'A',
         title=u'A',
         publish_date=today,
-        sections={
-            's1': models.Section(
+        attributes={
+            's1': models.Attribute(
                 name=u's1',
                 title=u'S1',
+                type='section',
                 order=0,
                 attributes={
                     'a': models.Attribute(
@@ -579,13 +597,13 @@ def test_build_report_ids():
                         title=u'',
                         type='string',
                         is_private=True,
-                        order=0)})})
+                        order=1)})})
     Session.add(schema1)
     Session.flush()
 
     schema2 = deepcopy(schema1)
     schema2.publish_date = today + timedelta(1)
-    schema2.sections['s1'].attributes['b'] = models.Attribute(
+    schema2.attributes['s1'].attributes['b'] = models.Attribute(
         name=u'b',
         title=u'',
         type='string',
@@ -621,10 +639,11 @@ def test_build_report_context():
         name=u'A',
         title=u'A',
         publish_date=today,
-        sections={
-            's1': models.Section(
+        attributes={
+            's1': models.Attribute(
                 name=u's1',
                 title=u'S1',
+                type='section',
                 order=0,
                 attributes={
                     'a': models.Attribute(
@@ -632,11 +651,11 @@ def test_build_report_context():
                         title=u'',
                         type='string',
                         is_private=True,
-                        order=0)})})
+                        order=1)})})
     Session.add(schema1)
     Session.flush()
 
-    entity1 = models.Entity(schema=schema1, name=u'Foo', title=u'')
+    entity1 = models.Entity(schema=schema1)
     entity1['a'] = u'002'
     Session.add(entity1)
     Session.flush()
@@ -670,10 +689,11 @@ def test_build_report_attributes():
         name=u'A',
         title=u'A',
         publish_date=today,
-        sections={
-            's1': models.Section(
+        attributes={
+            's1': models.Attribute(
                 name=u's1',
                 title=u'S1',
+                type='section',
                 order=0,
                 attributes={
                     'a': models.Attribute(
@@ -681,13 +701,13 @@ def test_build_report_attributes():
                         title=u'',
                         type='string',
                         is_private=True,
-                        order=0),
+                        order=1),
                     'b': models.Attribute(
                         name=u'b',
                         title=u'',
                         type='string',
                         is_private=True,
-                        order=1)})})
+                        order=2)})})
 
     Session.add(schema1)
     Session.flush()
@@ -713,10 +733,11 @@ def test_build_report_ignore_private():
         name=u'A',
         title=u'A',
         publish_date=today,
-        sections={
-            's1': models.Section(
+        attributes={
+            's1': models.Attribute(
                 name=u's1',
                 title=u'S1',
+                type='section',
                 order=0,
                 attributes={
                     'name': models.Attribute(
@@ -724,13 +745,13 @@ def test_build_report_ignore_private():
                         title=u'',
                         type='string',
                         is_private=True,
-                        order=0)})})
+                        order=1)})})
 
     Session.add(schema1)
     Session.flush()
 
     # add some entries for the schema
-    entity1 = models.Entity(schema=schema1, name=u'Foo', title=u'')
+    entity1 = models.Entity(schema=schema1)
     entity1['name'] = u'Jane Doe'
     Session.add(entity1)
     Session.flush()
