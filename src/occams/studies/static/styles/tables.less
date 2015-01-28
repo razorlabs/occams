@@ -25,15 +25,93 @@
  * Centers containt for
  */
 .table-dimensional {
-  tbody {
-    td {
+  > tbody {
+    > td {
       vertical-align:  middle;
       text-align:      center;
     }
 
-    th {
+    > th {
       border-right: 2px solid @table-border-color !important;
     }
   }
 }
 
+
+/**
+ * A table with a rotated header (for header columns with long content)
+ * From: http://kizu.ru/en/fun/rotated-text/
+ */
+.table-rotated-header {
+
+  > thead {
+
+    .rotated {
+
+      .rotated-container {
+        display:                inline-block;
+        width:                  1.5em;
+        line-height:            1.5;
+
+        .rotated-rotate {
+          display:                   inline-block;
+          white-space:               nowrap;
+
+          @tx: 0;
+          @ty: 100%;
+          @deg: 315deg;
+
+          // Alignes the rotated boxes as close as possible to the end of the row
+          @x-offset: -5px;
+          @y-offset: -18px;
+
+          transform:                 translate(@tx, @ty) rotate(@deg);
+          -webkit-transform:         translate(@tx, @ty) rotate(@deg);
+          -moz-transform:            translate(@tx, @ty) rotate(@deg);
+          -ms-transform:             translate(@tx, @ty) rotate(@deg);
+          -o-transform:              translate(@tx, @ty) rotate(@deg);
+          transform-origin:          @x-offset @y-offset;
+          -webkit-transform-origin:  @x-offset @y-offset;
+          -moz-transform-origin:     @x-offset @y-offset;
+          -ms-transform-origin:      @x-offset @y-offset;
+          -o-transform-origin:       @x-offset @y-offset;
+
+          .rotated-text {
+            padding: 5px 10px;
+          }
+        }
+
+        /**
+         * Hack the padding so that the table cell's height is re-adjusted
+         * to accomodate the roated text's next height:
+         * http://stackoverflow.com/a/16301962/148781
+         * http://kizu.ru/en/fun/rotated-text/
+         */
+        &:before {
+          content: '';
+          padding: 150% 0;
+          display: block;
+          position: relative;
+          top: 20px;
+        }
+      }
+    }
+  }
+
+  &.table-bordered {
+    border: none;
+
+    > thead  {
+      th {
+        border-left: none;
+        border-right: none;
+      }
+
+      .rotated-text {
+        border-bottom: 1px solid #ccc;
+      }
+    }
+
+  }
+
+}

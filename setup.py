@@ -1,6 +1,6 @@
 import os
-from subprocess import Popen, PIPE
 from setuptools import setup, find_packages
+from setuptools.command.develop import develop as _develop
 import sys
 
 HERE = os.path.abspath(os.path.dirname(__file__))
@@ -9,39 +9,36 @@ CHANGES = open(os.path.join(HERE, 'CHANGES.rst')).read()
 
 
 REQUIRES = [
-    'alembic',
-    'babel',
-    'celery[redis]',
-    'colander',
-    'cssmin',
-    'deform',
-    'gevent-socketio',
-    'humanize',
-    'jsmin',
-    'lingua',
-    'pyramid',
-    'pyramid_chameleon',
-    'pyramid_deform',
-    'pyramid_mailer',
-    'pyramid_tm',
-    'pyramid_redis_sessions',
+    'alembic',                          # Database table upgrades
+    'babel',                            # i18n
+    'celery[redis]>=3.1,<3.1.99',       # Asynchronous queue API
+    'cssmin',                           # CSS asset compression
+    'gevent-socketio>=0.3.6,<0.3.99',   # websockets
+    'humanize',                         # human readable measurements
+    'jsmin',                            # JS asset compression
+    'lingua',                           # i18n
+    'python-dateutil',                  # Date parsing
+    'pyramid>=1.5',                     # Framework
+    'pyramid_chameleon',                # Templating
+    'pyramid_tm',                       # Centralized transations
+    'pyramid_redis_sessions==1.0a2',    # HTTP session with redis backend
     'pyramid_redis',
-    'pyramid_rewrite',
-    'pyramid_webassets',
-    'pyramid_who',
-    'redis',
-    'SQLAlchemy',
-    'six',
-    'tabulate',
-    'transaction',
-    'webassets',
-    'zope.sqlalchemy',
+    'pyramid_rewrite',                  # Allows urls to end in "/"
+    'pyramid_webassets',                # Asset management (ala grunt)
+    'pyramid_who',                      # User authentication
+    'six',                              # Py 2 & 3 compatibilty
+    'SQLAlchemy>=0.9.0',                # Database ORM
+    'tabulate',                         # ASCII tables for CLI pretty-print
+    'wtforms',
+    'wtforms-json',
+    'zope.sqlalchemy',                  # Connects sqlalchemy to pyramid_tm
 
-    'occams.datastore',
-    'occams.form',
+    'occams.datastore',                 # EAV
+    'occams.forms',                     # EAV form renderer
 ]
 
 EXTRAS = {
+    'ldap': ['python3-ldap', 'who_ldap'],
     'sqlite': [],
     'postgresql': ['psycopg2', 'psycogreen'],
     'gunicorn': ['gunicorn'],
@@ -67,7 +64,14 @@ if sys.version_info < (3, 0):
 
 
 def get_version():
-    version_file = os.path.join(HERE, 'VERSION')
+    """
+    Generates python version from projects git tag
+    """
+    import os
+    from subprocess import Popen, PIPE
+    import sys
+    here = os.path.abspath(os.path.dirname(__file__))
+    version_file = os.path.join(here, 'VERSION')
 
     # read fallback file
     try:
@@ -79,7 +83,7 @@ def get_version():
     # read git version (if available)
     try:
         version_git = (
-            Popen(['git', 'describe'], stdout=PIPE, stderr=PIPE, cwd=HERE)
+            Popen(['git', 'describe'], stdout=PIPE, stderr=PIPE, cwd=here)
             .communicate()[0]
             .strip()
             .decode(sys.getdefaultencoding()))
@@ -94,6 +98,18 @@ def get_version():
             fp.write(version)
 
     return version
+
+
+class _custom_develop(_develop):
+    def run(self):
+        _develop.run(self)
+        self.execute(_post_develop, [], msg="Running post-develop task")
+
+
+def _post_develop():
+    from subprocess import call
+    call(['npm', 'install'], cwd=HERE)
+    call(['./node_modules/.bin/bower', 'install'], cwd=HERE)
 
 
 setup(
@@ -120,6 +136,7 @@ setup(
     extras_require=EXTRAS,
     tests_require=EXTRAS['test'],
     test_suite='nose.collector',
+    cmdclass={'develop': _custom_develop},
     entry_points="""\
     [paste.app_factory]
     main = occams.studies:main

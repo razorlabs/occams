@@ -3,28 +3,27 @@ import os
 import uuid
 
 from babel.dates import format_datetime
-import colander
 from humanize import naturalsize
-from pyramid_deform import CSRFSchema
 from pyramid.i18n import get_localizer, negotiate_locale_name
-from pyramid.httpexceptions import (
-    HTTPFound, HTTPNotFound, HTTPOk, HTTPForbidden)
+from pyramid.httpexceptions import \
+    HTTPForbidden, HTTPFound, HTTPNotFound, HTTPOk
 from pyramid.response import FileResponse
+from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 import six
-from sqlalchemy import orm
 import transaction
+import wtforms
 
 from .. import _, log, models, Session, exports
 from ..tasks import celery,  make_export
-from ..widgets.pager import Pager
+from ..utils import Pagination, wtferrors
 
 
 @view_config(
-    route_name='export_home',
-    permission='fia_view',
-    renderer='occams.studies:templates/export/home.pt')
-def about(request):
+    route_name='exports',
+    permission='view',
+    renderer='../templates/export/home.pt')
+def about(context, request):
     """
     General intro-page so users know what they're getting into.
     """
@@ -32,55 +31,21 @@ def about(request):
 
 
 @view_config(
-    route_name='export_faq',
-    permission='fia_view',
-    renderer='occams.studies:templates/export/faq.pt')
-def faq(request):
+    route_name='exports_faq',
+    permission='view',
+    renderer='../templates/export/faq.pt')
+def faq(context, request):
     """
     Verbose details about how this tool works.
     """
     return {}
 
 
-@colander.deferred
-def contents_validator(node, kw):
-    """
-    Deferred validator to determine the schema choices at request-time.
-    """
-    return colander.All(
-        colander.Length(min=1),
-        colander.ContainsOnly(kw['allowed_names']), )
-
-
-class ExportCheckoutSchema(CSRFSchema):
-    """
-    Export checkout serialization schema
-    """
-
-    contents = colander.SchemaNode(
-        colander.Set(),
-        # Currently does nothing as colander 1.0b1 is hard-coded to "Required"
-        missing_msg=_(u'Please select an item'),
-        validator=contents_validator,
-        default=[],
-        missing=None)
-
-    expand_collections = colander.SchemaNode(
-        colander.Boolean(),
-        default=False,
-        missing=None)
-
-    use_choice_labels = colander.SchemaNode(
-        colander.Boolean(),
-        default=False,
-        missing=None)
-
-
 @view_config(
-    route_name='export_add',
-    permission='fia_view',
-    renderer='occams.studies:templates/export/add.pt')
-def add(request):
+    route_name='exports_checkout',
+    permission='add',
+    renderer='../templates/export/checkout.pt')
+def checkout(context, request):
     """
     Generating a listing of available data for export.
 
@@ -90,38 +55,40 @@ def add(request):
     isn't left with an unresponsive page.
     """
 
-    errors = None
-    cstruct = None
     exportables = exports.list_all(include_rand=False)
     limit = request.registry.settings.get('app.export.limit')
     exceeded = limit is not None and query_exports(request).count() > limit
+    errors = {}
 
-    cschema = ExportCheckoutSchema().bind(
-        request=request,
-        limit_exceeded=exceeded,
-        allowed_names=exportables.keys())
+    if request.method == 'POST' and check_csrf_token(request) and not exceeded:
 
-    if not exceeded and request.method == 'POST':
-        try:
-            cstruct = request.POST.mixed()
-            cstruct.setdefault('contents', set())
-            # Force list of contents
-            if isinstance(cstruct['contents'], six.string_types):
-                cstruct['contents'] = set([cstruct['contents']])
-            appstruct = cschema.deserialize(cstruct)
-        except colander.Invalid as e:
-            errors = e.asdict()
+        def check_exportable(form, field):
+            if any(value not in exportables for value in field.data):
+                raise wtforms.ValidationErro(request.localizer.translate(
+                    _(u'Invalid selection')))
+
+        class CheckoutForm(wtforms.Form):
+            contents = wtforms.FieldList(
+                wtforms.StringField(
+                    validators=[wtforms.AnyOf(exportables)]))
+            expand_collections = wtforms.BooleanField(default=False)
+            use_choice_labels = wtforms.BooleanFIeld(default=False)
+
+        form = CheckoutForm(request.POST)
+
+        if not form.validate():
+            errors = wtferrors(form)
         else:
-            task_id = six.u(str(uuid.uuid4()))
+            task_id = six.text_type(str(uuid.uuid4()))
             Session.add(models.Export(
                 name=task_id,
-                expand_collections=appstruct['expand_collections'],
-                use_choice_labels=appstruct['use_choice_labels'],
+                expand_collections=form.expand_collections.data,
+                use_choice_labels=form.use_choice_labels.data,
                 owner_user=(Session.query(models.User)
                             .filter_by(key=request.authenticated_userid)
                             .one()),
                 contents=[exportables[k].to_json()
-                          for k in appstruct['contents']]))
+                          for k in form.contents.data]))
 
             def apply_after_commit(success):
                 if success:
@@ -139,82 +106,18 @@ def add(request):
             return HTTPFound(location=request.route_path('export_status'))
 
     return {
-        'cstruct': cstruct or cschema.serialize(),
-        'exceeded': exceeded,
         'errors': errors,
+        'exceeded': exceeded,
         'limit': limit,
         'exportables': exportables
     }
 
 
 @view_config(
-    route_name='export_status',
-    permission='fia_view',
-    renderer='occams.studies:templates/export/status.pt')
-def status(request):
-    """
-    Renders the view that will contain progress of exports.
-
-    All exports will be loaded asynchronously via seperate ajax call.
-    """
-    return {}
-
-
-@view_config(
-    route_name='export_status',
-    permission='fia_view',
-    xhr=True,
-    renderer='json')
-def status_json(request):
-    """
-    Returns the current exports statuses.
-    """
-
-    exports_query = query_exports(request)
-    exports_count = exports_query.count()
-
-    pager = Pager(request.GET.get('page', 1), 5, exports_count)
-    exports_query = exports_query[pager.slice_start:pager.slice_end]
-
-    locale = negotiate_locale_name(request)
-    localizer = get_localizer(request)
-
-    def export2json(export):
-        count = len(export.contents)
-        return {
-            'id': export.id,
-            'title': localizer.pluralize(
-                _(u'Export containing ${count} item'),
-                _(u'Export containing ${count} items'),
-                count, 'occams.studies', mapping={'count': count}),
-            'name': export.name,
-            'status': export.status,
-            'use_choice_labels': export.use_choice_labels,
-            'expand_collections': export.expand_collections,
-            'contents': sorted(export.contents, key=lambda v: v['title']),
-            'count': None,
-            'total': None,
-            'file_size': (naturalsize(export.file_size)
-                          if export.file_size else None),
-            'download_url': request.route_path('export_download',
-                                               id=export.id),
-            'delete_url': request.route_path('export_delete', id=export.id),
-            'create_date': format_datetime(export.create_date, locale=locale),
-            'expire_date': format_datetime(export.expire_date, locale=locale)
-        }
-
-    return {
-        'csrf_token': request.session.get_csrf_token(),
-        'pager': pager.serialize(),
-        'exports': [export2json(e) for e in exports_query]
-    }
-
-
-@view_config(
-    route_name='export_codebook',
-    permission='fia_view',
-    renderer='occams.studies:templates/export/codebook.pt')
-def codebook(request):
+    route_name='exports_codebook',
+    permission='view',
+    renderer='../templates/export/codebook.pt')
+def codebook(context, request):
     """
     Codebook viewer
     """
@@ -222,11 +125,11 @@ def codebook(request):
 
 
 @view_config(
-    route_name='export_codebook',
-    permission='fia_view',
+    route_name='exports_codebook',
+    permission='view',
     xhr=True,
     renderer='json')
-def codebook_json(request):
+def codebook_json(context, request):
     """
     Loads codebook rows for the specified data file
     """
@@ -252,9 +155,10 @@ def codebook_json(request):
 
 
 @view_config(
-    route_name='export_codebook_download',
+    route_name='exports_codebook',
+    request_param='alt=csv',
     permission='fia_view')
-def codebook_download(request):
+def codebook_download(context, request):
     """
     Returns full codebook file
     """
@@ -270,50 +174,101 @@ def codebook_download(request):
 
 
 @view_config(
-    route_name='export_delete',
-    permission='fia_view',
-    request_method='POST',
+    route_name='exports_status',
+    permission='view',
+    renderer='../templates/export/status.pt')
+def status(context, request):
+    """
+    Renders the view that will contain progress of exports.
+
+    All exports will be loaded asynchronously via seperate ajax call.
+    """
+    return {}
+
+
+@view_config(
+    route_name='exports_status',
+    permission='view',
+    xhr=True,
+    renderer='json')
+def status_json(context, request):
+    """
+    Returns the current exports statuses.
+    """
+
+    exports_query = query_exports(request)
+    exports_count = exports_query.count()
+
+    pagination = Pagination(request.GET.get('page', 1), 5, exports_count)
+    exports_query = exports_query.offset(pagination.offset).limit(5)
+
+    locale = negotiate_locale_name(request)
+    localizer = get_localizer(request)
+
+    def export2json(export):
+        count = len(export.contents)
+        return {
+            'id': export.id,
+            'title': localizer.pluralize(
+                _(u'Export containing ${count} item'),
+                _(u'Export containing ${count} items'),
+                count, 'occams.studies', mapping={'count': count}),
+            'name': export.name,
+            'status': export.status,
+            'use_choice_labels': export.use_choice_labels,
+            'expand_collections': export.expand_collections,
+            'contents': sorted(export.contents, key=lambda v: v['title']),
+            'count': None,
+            'total': None,
+            'file_size': (naturalsize(export.file_size)
+                          if export.file_size else None),
+            'download_url': request.route_path('export_download',
+                                               export=export.id),
+            'delete_url': request.route_path('export', export=export.id),
+            'create_date': format_datetime(export.create_date, locale=locale),
+            'expire_date': format_datetime(export.expire_date, locale=locale)
+        }
+
+    return {
+        'csrf_token': request.session.get_csrf_token(),
+        'pagination': pagination.serialize(),
+        'exports': [export2json(e) for e in exports_query]
+    }
+
+
+@view_config(
+    route_name='export',
+    permission='delete',
+    request_method='DELETE',
     xhr=True)
-def delete(request):
+def delete_json(context, request):
     """
     Handles delete delete AJAX request
     """
-    export = (
-        Session.query(models.Export)
-        .filter(models.Export.id == request.matchdict['id'])
-        .filter(models.Export.owner_user.has(key=request.authenticated_userid))
-        .first())
-
-    if not export:
-        raise HTTPNotFound
-
-    if request.POST.get('csrf_token') != request.session.get_csrf_token():
-        raise HTTPForbidden
-
+    check_csrf_token(request)
+    export = context
     Session.delete(export)
     Session.flush()
-
     celery.control.revoke(export.name)
-
     return HTTPOk()
 
 
 @view_config(
-    route_name='export_download',
-    permission='fia_view')
-def download(request):
+    route_name='export',
+    request_param='alt=zip',
+    permission='view')
+def download(context, request):
     """
     Returns specific download attachement
 
     The user should only be allowed to download their exports.
     """
-    try:
-        export = (
-            Session.query(models.Export)
-            .filter_by(id=request.matchdict['id'], status='complete')
-            .filter(models.Export.owner_user.has(key=request.authenticated_userid))  # NOQA
-            .one())
-    except orm.exc.NoResultFound:
+    export = context
+
+    if not request.has_permission('view', export):
+        raise HTTPForbidden()
+
+    if export.status != 'complete':
         raise HTTPNotFound
 
     export_dir = request.registry.settings['app.export.dir']

@@ -1,0 +1,100 @@
+<html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
+  <metal:content-slot fill-slot="content-slot">
+
+    <div id="views-patient-search">
+
+      <p>
+        <form method="GET" data-bind="submit: onSubmitSearch">
+          <div class="input-group input-group-lg">
+            <input type="text" class="form-control" autofocus data-bind="value: query" />
+            <span class="input-group-btn">
+              <button class="btn btn-primary" type="submit"><span class="fa fa-search"></span></button>
+            </span>
+          </div>
+        </form>
+      </p>
+
+      <hr width="100%" />
+
+      <div style="display:none" data-bind="visible: isReady">
+
+        <!-- ko ifnot: hasResults -->
+          <div class="alert alert-warning">
+            <strong i18n:translate="">No results found!</strong>
+            <span i18n:translate="">Please refine your search and try again.</span>
+          </div>
+        <!-- /ko -->
+        <!-- ko if: hasResults -->
+          <!-- ko foreach: results -->
+            <p>
+              <div class="pull-right">
+                <span class="label label-default" data-bind="text: site.title"></span>
+              </div>
+              <h3><a href="" data-bind="attr: {href: __url__}"><span data-bind="text: pid"></span></a></h3>
+              <div class="text-muted">
+                <!-- ko if: groupedEnrollments.length > 0 -->
+                  <ul class="list-inline" data-bind="foreach: groupedEnrollments">
+                    <li>
+                      <strong data-bind="text: studyTitle"></strong>
+                      <!-- ko if: reference_number -->
+                        <code data-bind="text: reference_number"></code>
+                      <!-- /ko -->
+                      <!-- ko if: group.length > 1 -->
+                        <span class="badge" data-bind="text: 'x' + group.length"></span>
+                      <!-- /ko -->
+                    </li>
+                  </ul>
+                <!-- /ko -->
+                <!-- ko if: references.length > 0 -->
+                  <ul class="list-inline" data-bind="foreach: references">
+                    <li>
+                      <strong data-bind="text: reference_type.title"></strong>
+                      <code data-bind="text: reference_number"></code>
+                    </li>
+                  </ul>
+                <!-- /ko -->
+                <div>
+                  <!-- ko if: __last_visit_date__ -->
+                    <span i18n:translate="">Last interaction on</span>
+                    <span data-bind="dateText: __last_visit_date__"></span>.
+                  <!-- /ko -->
+                  <span i18n:translate="">Modified on</span>
+                  <span data-bind="dateText: modify_date"></span>
+                </div>
+              </div>
+            </p>
+            <hr width="100%" />
+          <!-- /ko -->
+        <!-- /ko -->
+
+        <!-- ko if: showPager -->
+          <ul class="pager">
+            <!-- ko if: hasPrevious -->
+            <li class="previous">
+              <a data-bind="attr: {href: $root.previousUrl()}, click: onClickPrevious">&larr; Previous</a>
+            </li>
+            <!-- /ko -->
+            <!-- ko if: hasNext -->
+            <li class="next">
+              <a data-bind="attr: {href: $root.nextUrl()}, click: onClickNext">Next &rarr;</a>
+            </li>
+            <!-- /ko -->
+          </ul>
+        <!-- /ko -->
+
+      </div> <!-- /:isReady -->
+    </div>
+
+    <tal:json define="json import: json">
+      <script id="results-data" type="application/json">${json.dumps(results)}</script>
+    </tal:json>
+
+  </metal:content-slot>
+  <metal:content-slot fill-slot="javascript-extras-slot">
+    <script>
+      $(function(){
+        ko.applyBindings(new PatientSearchView, document.getElementById('views-patient-search'));
+      });
+    </script>
+  </metal:content-slot>
+</html>

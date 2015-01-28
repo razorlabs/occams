@@ -1,0 +1,160 @@
+<!--! Use a template for the study data so that it can be re-used in both
+      the main study view and the listing view -->
+<div class="modal fade" data-bind="modalVisible: editableStudy">
+  <div class="modal-dialog">
+    <div class="modal-content" data-bind="with: editableStudy">
+      <form
+          class="form-horizontal"
+          method="POST"
+          action="${request.route_path('studies')}"
+          data-bind="validate: {}, submit: $parent.saveStudy">
+        <div class="modal-header">
+          <!-- ko if: id -->
+            <h4 class="modal-title" data-bind="text: title"></h4>
+          <!-- /ko -->
+          <!-- ko ifnot: id -->
+            <h4 class="modal-title" i18n:translate="">New Study</h4>
+          <!-- /ko -->
+        </div>
+        <div class="modal-body">
+          <!-- ko with: $parent.previousStudy -->
+            <div class="alert alert-success">
+              <strong i18n:translate="">Success!</strong>
+              <span i18n:translate="">Added:</span>
+              <a class="alert-link" data-bind="attr: {href: __url__}, text: title"></a>
+            </div>
+          <!-- /ko -->
+          <!-- ko with: $parent.errorMessage -->
+            <div class="alert alert-danger" role="alert">
+              <strong>Error!</strong> <span data-bind="text: $data"></span>
+            </div>
+          <!-- /ko -->
+          <div class="form-group">
+            <label class="col-sm-3 required" i18n:translate="">Title</label>
+            <div class="col-sm-9">
+              <input type="text" class="form-control" required autofocus name="title" data-bind="value: title"/>
+            </div>
+          </div> <!-- /.form-group -->
+          <div class="form-group">
+            <label class="col-sm-3 required" i18n:translate="">System Name</label>
+            <div class="col-md-6">
+              <input type="text" class="form-control" required name="name" data-bind="value: name" pattern="^[a-z0-9_\-]+$" />
+
+            </div>
+          </div> <!-- /.form-group -->
+          <div class="form-group">
+            <label class="col-sm-3 required" translate="">Printed Label</label>
+            <div class="col-sm-4">
+              <input type="text" class="form-control" required name="short_title" data-bind="value: short_title"/>
+            </div>
+          </div> <!-- /.form-group -->
+          <div class="form-group">
+            <label class="col-sm-3 required" i18n:translate="">Code</label>
+            <div class="col-sm-3">
+              <input type="text" class="form-control" required name="code" data-bind="value: code"/>
+            </div>
+          </div> <!-- /.form-group -->
+          <div class="form-group">
+            <label class="col-sm-3 required" i18n:translate="">Consent Date</label>
+            <div class="col-sm-3">
+              <input type="date" class="form-control" required data-date-format="YYYY-MM-DD" name="consent_date" data-bind="value: consent_date, datetimePicker: {useCurrent: false}"/>
+            </div>
+          </div> <!-- /.form-group -->
+          <div class="form-group">
+            <label class="col-sm-3" i18n:translate="">Start Date</label>
+            <div class="col-sm-3">
+              <input type="date" class="form-control" data-date-format="YYYY-MM-DD" name="start_date" data-bind="value: start_date, datetimePicker: {useCurrent: false}"/>
+            </div>
+          </div> <!-- /.form-group -->
+          <div class="form-group">
+            <label class="col-sm-3" i18n:translate="">End Date</label>
+            <div class="col-sm-3">
+              <input type="date" class="form-control" data-date-format="YYYY-MM-DD" name="end_date" data-bind="value: end_date, datetimePicker: {useCurrent: false}"/>
+            </div>
+          </div> <!-- /.form-group -->
+          <div class="form-group">
+            <label class="col-sm-3" i18n:translate="">Termination Form</label>
+            <div class="col-sm-9">
+              <input type="hidden" class="form-control"
+                  i18n:attributes="data-placeholder"
+                  name="termination_form"
+                  data-placeholder="Select a form..."
+                  data-bind="
+                    selectedData: termination_form,
+                    dataKey: 'name',
+                    dataLabel: 'titleWithVersion',
+                    select2: {
+                      allowClear: true,
+                      ajax: {
+                        data: searchParams,
+                        results: searchResults
+                      }
+                    }" />
+            </div>
+          </div><!-- /.form-group -->
+          <div class="form-group">
+            <div class="col-sm-offset-3 col-sm-9">
+              <div class="checkbox">
+                <label>
+                  <input type="checkbox" name="is_randomized" data-bind="checked: is_randomized" />
+                  <span i18n:translate="">Randomized</span>
+                </label>
+              </div>
+            </div>
+          </div> <!-- /.form-group -->
+          <!-- ko if: is_randomized -->
+            <div class="form-group">
+              <div class="col-sm-offset-3 col-sm-9">
+                <div class="checkbox">
+                  <label>
+                    <input type="checkbox" name="is_blinded" data-bind="checked: is_blinded" />
+                    <span i18n:translate="">Blinded</span>
+                  </label>
+                </div>
+              </div>
+            </div> <!-- /.form-group -->
+            <div class="form-group">
+              <label class="col-sm-3" i18n:translate="">Randomization Form</label>
+              <div class="col-sm-9">
+                <input type="hidden" class="form-control"
+                    name="randomization_form"
+                    i18n:attributes="data-placeholder"
+                    data-placeholder="Select a form..."
+                    data-bind="
+                      selectedData: randomization_form,
+                      dataKey: 'name',
+                      dataLabel: 'titleWithVersion',
+                      select2: {
+                        allowClear: true,
+                        ajax: {
+                          data: searchParams,
+                          results: searchResults
+                        }
+                      }" />
+              </div>
+            </div><!-- /.form-group -->
+          <!-- /ko -->
+        </div> <!-- /.modal-body -->
+        <div class="modal-footer">
+          <!-- ko ifnot: id -->
+            <label class="text-muted">
+              <input type="checkbox" data-bind="checked: $parent.addMoreStudies" />
+              <span i18n:translate="">Add another</span>
+            </label>
+          <!-- /ko -->
+          <button
+              type="button"
+              class="btn btn-link"
+              data-bind="click: $parent.clear"
+              i18n:translate="">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <span i18n:translate="">Save</span>
+            <!-- ko if: $parent.isSaving -->
+              <span class="fa fa-refresh fa-spin"></span>
+            <!-- /ko -->
+          </button>
+        </div> <!-- /.modal-footer -->
+      </form>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->

@@ -10,9 +10,6 @@ class TestSchemaPlan(IntegrationFixture):
         """
         from datetime import date
         from occams.studies import Session, models, exports
-        from tests import track_user
-
-        track_user(u'joe')
 
         schema = models.Schema(
             name=u'contact',
@@ -42,9 +39,6 @@ class TestSchemaPlan(IntegrationFixture):
         """
         from datetime import date, timedelta
         from occams.studies import Session, models, exports
-        from tests import track_user
-
-        track_user(u'joe')
 
         schema = models.Schema(
             name=u'vitals',
@@ -58,8 +52,6 @@ class TestSchemaPlan(IntegrationFixture):
                     order=0,
                 )})
         entity = models.Entity(
-            name=u'sample',
-            title=u'',
             collect_date=date.today(),
             schema=schema)
         study = models.Study(
@@ -93,9 +85,6 @@ class TestSchemaPlan(IntegrationFixture):
         """
         from datetime import date
         from occams.studies import Session, models, exports
-        from tests import track_user
-
-        track_user(u'joe')
 
         schema = models.Schema(
             name=u'contact',
@@ -109,13 +98,11 @@ class TestSchemaPlan(IntegrationFixture):
                     order=0,
                 )})
         entity = models.Entity(
-            name=u'contact_entry',
-            title=u'',
             schema=schema,
             collect_date=date.today())
         patient = models.Patient(
             site=models.Site(name='ucsd', title=u'UCSD'),
-            our=u'12345',
+            pid=u'12345',
             entities=[entity])
         Session.add_all([schema, entity, patient])
         Session.flush()
@@ -140,9 +127,6 @@ class TestSchemaPlan(IntegrationFixture):
         """
         from datetime import date, timedelta
         from occams.studies import Session, models, exports
-        from tests import track_user
-
-        track_user(u'joe')
 
         schema = models.Schema(
             name=u'termination',
@@ -156,13 +140,11 @@ class TestSchemaPlan(IntegrationFixture):
                     order=0,
                 )})
         entity = models.Entity(
-            name=u'termination_record',
-            title=u'',
             schema=schema,
             collect_date=date.today())
         patient = models.Patient(
             site=models.Site(name='ucsd', title=u'UCSD'),
-            our=u'12345',
+            pid=u'12345',
             entities=[entity])
         study = models.Study(
             name=u'cooties',
@@ -199,9 +181,6 @@ class TestSchemaPlan(IntegrationFixture):
         """
         from datetime import date, timedelta
         from occams.studies import Session, models, exports
-        from tests import track_user
-
-        track_user(u'joe')
 
         schema = models.Schema(
             name=u'vitals',
@@ -215,13 +194,11 @@ class TestSchemaPlan(IntegrationFixture):
                     order=0,
                 )})
         entity = models.Entity(
-            name=u'sample',
-            title=u'',
             collect_date=date.today(),
             schema=schema)
         patient = models.Patient(
             site=models.Site(name='ucsd', title=u'UCSD'),
-            our=u'12345',
+            pid=u'12345',
             entities=[entity])
         visit = models.Visit(
             visit_date=date.today(),
@@ -274,9 +251,6 @@ class TestSchemaPlan(IntegrationFixture):
         """
         from datetime import date, timedelta
         from occams.studies import Session, models, exports
-        from tests import track_user
-
-        track_user(u'joe')
 
         schema = models.Schema(
             name=u'vitals',
@@ -290,13 +264,11 @@ class TestSchemaPlan(IntegrationFixture):
                     order=0,
                 )})
         entity = models.Entity(
-            name=u'sample',
-            title=u'',
             collect_date=date.today(),
             schema=schema)
         patient = models.Patient(
             site=models.Site(name='ucsd', title=u'UCSD'),
-            our=u'12345',
+            pid=u'12345',
             entities=[entity])
         study = models.Study(
             name=u'study1',

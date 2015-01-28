@@ -7,8 +7,7 @@ Partner Linkage
 #
 
 
-from sqlalchemy import MetaData, Table
-from sqlalchemy.orm import aliased, mapper
+from sqlalchemy.orm import aliased
 
 from .. import _, models, Session
 from .plan import ExportPlan

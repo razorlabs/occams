@@ -65,6 +65,11 @@ Session.vim
 *PKG-INFO
 VERSION
 
+##### Node
+npm_modules
+node_modules
+bower_components
+
 ##### Buildout / Unit test / Coverage Reports
 .coverage
 .installed.cfg

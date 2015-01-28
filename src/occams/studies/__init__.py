@@ -1,13 +1,16 @@
+from __future__ import unicode_literals
 import logging
 import pkg_resources
 
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.config import Configurator
 from pyramid.i18n import TranslationStringFactory
-from pyramid.path import DottedNameResolver
 from pyramid_who.whov2 import WhoV2AuthenticationPolicy
 from sqlalchemy.orm import scoped_session, sessionmaker
+import wtforms_json
 import zope.sqlalchemy
+
+wtforms_json.init()  # monkey-patch wtforms to accept JSON data
 
 import occams.datastore.models.events
 
@@ -21,6 +24,8 @@ Session = scoped_session(sessionmaker(
     extension=zope.sqlalchemy.ZopeTransactionExtension()))
 occams.datastore.models.events.register(Session)
 
+from .models import groups, RootFactory, groupfinder  # NOQA
+
 
 def main(global_config, **settings):
     """
@@ -28,28 +33,23 @@ def main(global_config, **settings):
     """
     config = Configurator(
         settings=settings,
-        root_factory='occams.studies.security.RootFactory',
+        root_factory=RootFactory,
         authentication_policy=WhoV2AuthenticationPolicy(
             settings['who.config_file'],
             settings['who.identifier_id'],
-            DottedNameResolver().maybe_resolve(
-                settings.get('who.callback')
-                or 'occams.studies.security:groupfinder')),
+            groupfinder),
         authorization_policy=ACLAuthorizationPolicy())
 
     # Required third-party plugins
     config.include('pyramid_chameleon')
-    config.include('pyramid_deform')
-    config.include('pyramid_mailer')
-    config.include('pyramid_redis')
     config.include('pyramid_redis_sessions')
+    config.include('pyramid_redis')
     config.include('pyramid_rewrite')
     config.add_rewrite_rule(r'/(?P<path>.*)/', r'/%(path)s')
     config.include('pyramid_tm')
     config.include('pyramid_webassets')
 
     # Required second-party plugins
-    config.include('occams.form.widgets')
     config.include(settings['pid.package'])
 
     # App-specific configurations

@@ -1,15 +1,17 @@
-occams.studies
-===============
+OCCAMS Studies
+==============
 
 Clinical trials data management software.
+
 
 System Requirements
 -------------------
 
-* Python 2.7+
-* redis
-* PostgreSQL 9.3+
-* lessc (installed via npm)
+  * Python 2.7+
+  * npm
+    - lessc (must be installed globally, i.e. with "-g" option)
+  * redis
+  * PostgreSQL 9.3+
 
 
 Extra Python Requirements
@@ -20,6 +22,7 @@ ideally you should be able to use any gevent-enabled WSGI server.
 
 * gUnicorn
 * watchdog
+
 
 Getting Started
 ---------------

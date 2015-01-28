@@ -1,167 +1,330 @@
-"""
-Clinical Models
-
-SQL Database persisted studies data that will become the heart of this module
-as we transition towards a SQL-driven application.
-"""
-
-from __future__ import absolute_import
-from datetime import date, timedelta
+from datetime import datetime, timedelta
 import os
+import re
 import uuid
 
+from pyramid.settings import aslist
+from pyramid.security import Allow, Authenticated, ALL_PERMISSIONS
 import six
-from six import u
-from sqlalchemy import (
-    engine_from_config,
-    Table, Column,
-    ForeignKey, ForeignKeyConstraint, UniqueConstraint, Index,
-    Boolean, Date, Enum, Integer, Unicode)
-from sqlalchemy.orm import object_session, backref, relationship
-from sqlalchemy.orm.exc import NoResultFound
+import sqlalchemy as sa
+from sqlalchemy import orm
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import hybrid_property
 
-# import everything so we can also use DS models from this module
 from occams.datastore.models import (  # NOQA
-    Auditable,
-    Referenceable, Describeable, Modifiable,
-    Category,
-    HasEntities,
     ModelClass,
-    User,
-    Schema, Section, Attribute, Choice, State, Entity, Context)
+    Auditable,
+    Referenceable, Describeable, Modifiable, HasEntities,
+    Category,
+    User, Schema, Attribute, Choice, State, Entity, Context)
 from occams.datastore.utils.sql import JSON
 
-from . import log, Session
+from . import Session, log
 
 
 Base = ModelClass(u'Base')
 
 
 def includeme(config):
+    """
+    Configures additional security utilities
+    """
     settings = config.registry.settings
+
+    assert 'auth.groups' in settings
+
+    mappings = {}
+
+    for entry in aslist(settings['auth.groups'], flatten=False):
+        (site_domain, app_domain) = entry.split('=')
+        mappings[site_domain.strip()] = app_domain.strip()
+
+    config.add_request_method(
+        lambda request: mappings, name='group_mappings', reify=True)
 
     # tests will override the session, use the setting for everything else
     if isinstance(settings['app.db.url'], six.string_types):
-        Session.configure(bind=engine_from_config(settings, 'app.db.'))
+        Session.configure(bind=sa.engine_from_config(settings, 'app.db.'))
 
     log.debug('Clinical connected to: "%s"' % repr(Session.bind.url))
     Base.metadata.info['settings'] = settings
 
 
-visit_cycle_table = Table(
-    'visit_cycle',
+class groups:
+
+    @staticmethod
+    def principal(site=None, group=None):
+        """
+        Generates the principal name used internally by this application
+        Supported keyword parameters are:
+            site --  The site code
+            group -- The group name
+        """
+        return site.name + ':' + group if site else group
+
+    @staticmethod
+    def administrator():
+        return groups.principal(group='administrator')
+
+    @staticmethod
+    def manager(site=None):
+        return groups.principal(site=site, group='manager')
+
+    @staticmethod
+    def reviewer(site=None):
+        return groups.principal(site=site, group='reviewer')
+
+    @staticmethod
+    def enterer(site=None):
+        return groups.principal(site=site, group='enterer')
+
+    @staticmethod
+    def consumer(site=None):
+        return groups.principal(site=site, group='consumer')
+
+    @staticmethod
+    def member(site=None):
+        return groups.principal(site=site, group='member')
+
+
+def groupfinder(identity, request):
+    """
+    Parse the groups from the identity into internal app groups
+    """
+    assert 'groups' in identity, \
+        'Groups has not been set in the repoze identity!'
+    mappings = request.group_mappings
+    return [mappings[g] for g in identity['groups'] if g in mappings]
+
+
+class RootFactory(dict):
+
+    __acl__ = [
+        (Allow, groups.administrator(), ALL_PERMISSIONS),
+        (Allow, Authenticated, 'view')
+        ]
+
+    def __init__(self, request):
+        self.request = request
+
+
+class StudyFactory(object):
+
+    __acl__ = [
+        (Allow, groups.administrator(), ALL_PERMISSIONS),
+        (Allow, groups.manager(), ('view', 'add')),
+        (Allow, Authenticated, 'view')
+        ]
+
+    def __init__(self, request):
+        self.request = request
+
+    def __getitem__(self, key):
+        try:
+            study = Session.query(Study).filter_by(name=key).one()
+        except orm.exc.NoResultFound:
+            raise KeyError
+        study.__parent__ = self
+        return study
+
+
+# Configured forms for the study
+study_schema_table = sa.Table(
+    'study_schema',
     Base.metadata,
-    Column('visit_id',
-           Integer,
-           ForeignKey('visit.id',
-                      name='fk_visit_cycle_visit_id',
-                      ondelete='CASCADE'),
-           primary_key=True),
-    Column('cycle_id',
-           Integer,
-           ForeignKey('cycle.id',
-                      name='fk_visit_cycle_cycle_id',
-                      ondelete='CASCADE'),
-           primary_key=True))
+    sa.Column(
+        'study_id',
+        sa.Integer(),
+        sa.ForeignKey(
+            'study.id',
+            name='fk_study_schema_study_id',
+            ondelete='CASCADE'),
+        primary_key=True),
+    sa.Column(
+        'schema_id',
+        sa.Integer(),
+        sa.ForeignKey(
+            Schema.id,
+            name='fk_study_schema_schema_id',
+            ondelete='CASCADE'),
+        primary_key=True))
+
+
+# Configured forms for the cycle
+cycle_schema_table = sa.Table(
+    'cycle_schema',
+    Base.metadata,
+    sa.Column(
+        'cycle_id',
+        sa.Integer(),
+        sa.ForeignKey(
+            'cycle.id',
+            name='fk_cycle_schema_cycle_id',
+            ondelete='CASCADE'),
+        primary_key=True),
+    sa.Column(
+        'schema_id',
+        sa.Integer(),
+        sa.ForeignKey(
+            Schema.id,
+            name='fk_cycle_schema_schema_id',
+            ondelete='CASCADE'),
+        primary_key=True))
 
 
 class Study(Base, Referenceable, Describeable, Modifiable, Auditable):
 
     __tablename__ = 'study'
 
-    short_title = Column(Unicode, nullable=False)
+    @property
+    def __name__(self):
+        return self.name
 
-    code = Column(
-        Unicode,
+    @property
+    def __acl__(self):
+        return [
+            (Allow, groups.administrator(), ALL_PERMISSIONS),
+            (Allow, groups.manager(), ('view', 'edit', 'delete')),
+            (Allow, Authenticated, 'view')
+        ]
+
+    short_title = sa.Column(sa.Unicode, nullable=False)
+
+    code = sa.Column(
+        sa.String,
         nullable=False,
         doc='The Code for this study. Multiple studies may share the same '
             'code, if they are different arms of the same study.')
 
-    consent_date = Column(
-        Date,
+    consent_date = sa.Column(
+        sa.Date,
         nullable=False,
         doc='The date that the latest consent was produced for this study.')
 
-    is_blinded = Column(
-        Boolean,
+    is_randomized = sa.Column(
+        sa.Boolean,
+        nullable=False,
+        default=False,
+        server_default=sa.sql.false(),
+        doc='Flag indicating that this study is randomized')
+
+    randomization_schema_id = sa.Column(sa.Integer())
+
+    randomization_schema = orm.relationship(
+        Schema,
+        foreign_keys=[randomization_schema_id])
+
+    termination_schema_id = sa.Column(sa.Integer())
+
+    termination_schema = orm.relationship(
+        Schema,
+        foreign_keys=[termination_schema_id])
+
+    is_blinded = sa.Column(
+        sa.Boolean,
         doc='Flag for randomized studies to indicate that '
             'they are also blinded')
 
-    # TODO: add is_randomized
+    is_locked = sa.Column(
+        sa.Boolean(),
+        server_default=sa.sql.false(),
+        doc='If set, data for this study cannot me modified anymore')
 
-    @property
-    def duration(self):
-        Session = object_session(self)
-        query = (
-            Session.query(Cycle)
-            .filter((Cycle.study == self))
-            .order_by(
-                # Nulls last (vendor-agnostic)
-                (Cycle.week is not None).desc(),
-                Cycle.week.desc())
-            .limit(1))
-        try:
-            cycle = query.one()
-        except NoResultFound:
-            # There are no results, so this study has no length
-            duration = timedelta()
+    start_date = sa.Column(
+        sa.Date(),
+        doc='If set, this study is available for data entry on or '
+            'after this date')
+
+    end_date = sa.Column(
+        'stop_date',
+        sa.Date(),
+        doc='If set, data can only be entered before or after this date')
+
+    reference_pattern = sa.Column(
+        sa.Unicode,
+        doc='Reference number pattern regular expresssion')
+
+    reference_hint = sa.Column(
+        sa.Unicode,
+        doc='UI reference hint without regular expression syntax')
+
+    # cycles backref'd from cycle
+
+    # enrollments backref'd from enrollment
+
+    # strata backref'd from stratum
+
+    # arms backref'd from arms
+
+    schemata = orm.relationship(
+        Schema,
+        secondary=study_schema_table,
+        collection_class=set)
+
+    def __getitem__(self, key):
+        if key == 'cycles':
+            return CycleFactory(self)
+
+    def check(self, reference_number):
+        if not self.reference_pattern:
+            return True
         else:
-            # No exception thrown, process result
-            if cycle.week >= 0:
-                duration = timedelta(cycle.week * 7)
-            else:
-                # No valid week data, give a lot of time
-                duration = timedelta.max
-        return duration
-
-    # cycles is backref'ed in the Cycle class
-
-    # enrollments is backrefed in the Enrollment class
-
-    # TODO: verify why this is nullable if the add event handler sets this
-    # anyway
-    category_id = Column(Integer)
-
-    category = relationship(
-        Category,
-        single_parent=True,
-        cascade='all,delete-orphan',
-        primaryjoin=(category_id == Category.id))
-
-    # BBB: nullable because category_id is nullable
-    log_category_id = Column(Integer)
-
-    log_category = relationship(
-        Category,
-        single_parent=True,
-        cascade='all,delete-orphan',
-        primaryjoin=(log_category_id == Category.id))
+            match = re.match(self.reference_pattern, reference_number)
+            return match is not None
 
     @declared_attr
     def __table_args__(cls):
         return (
-            ForeignKeyConstraint(
-                columns=['category_id'],
-                refcolumns=[Category.id],
-                name='fk_%s_category_id' % cls.__tablename__,
+            sa.UniqueConstraint('name', name='uq_%s_name' % cls.__tablename__),
+            sa.Index('ix_%s_code' % cls.__tablename__, 'code'),
+            sa.ForeignKeyConstraint(
+                columns=['randomization_schema_id'],
+                refcolumns=[Schema.id],
+                name='fk_%s_randomization_schema_id' % cls.__tablename__,
                 ondelete='SET NULL'),
-            ForeignKeyConstraint(
-                columns=['log_category_id'],
-                refcolumns=[Category.id],
-                name='fk_%s_log_category_id' % cls.__tablename__,
+            sa.Index('ix_%s_randomization_schema_id',
+                     'randomization_schema_id'),
+            sa.ForeignKeyConstraint(
+                columns=['termination_schema_id'],
+                refcolumns=[Schema.id],
+                name='fk_%s_termination_schema_id' % cls.__tablename__,
                 ondelete='SET NULL'),
-            # One category per table
-            UniqueConstraint(
-                'category_id',
-                name='uq_%s_category_id' %
-                cls.__tablename__,),
-            UniqueConstraint('name', name='uq_%s_name' % cls.__tablename__),
-            Index('ix_%s_code' % cls.__tablename__, 'code'),
-            Index('ix_%s_category_id' % cls.__tablename__, 'category_id'),
-            Index('ix_%s_log_category_id' % cls.__tablename__,
-                  'log_category_id'))
+            sa.Index('ix_%s_termination_schema_id', 'termination_schema_id'),
+            sa.CheckConstraint(
+                """
+                (NOT is_randomized AND randomization_schema_id IS NULL)
+                OR
+                (is_randomized AND randomization_schema_id IS NOT NULL)
+                """,
+                name='ck_%s_randomization_schema_id' % cls.__tablename__),
+            sa.CheckConstraint(
+                """
+                start_date <= consent_date
+                AND (
+                    end_date IS NULL
+                    OR consent_date <= end_date)
+                """,
+                name='ck_%s_lifespan' % cls.__tablename__))
+
+
+class CycleFactory(object):
+
+    __acl__ = [
+        (Allow, groups.administrator(), ALL_PERMISSIONS),
+        (Allow, groups.manager(), ('view', 'add')),
+        (Allow, Authenticated, 'view')
+        ]
+
+    def __init__(self, parent):
+        self.__parent__ = parent
+
+    def __getitem__(self, key):
+        try:
+            cycle = Session.query(Cycle).filter_by(name=key).one()
+        except orm.exc.NoResultFound:
+            raise KeyError
+        cycle.__parent__ = self
+        return cycle
 
 
 class Cycle(Base, Referenceable, Describeable, Modifiable, Auditable):
@@ -171,365 +334,51 @@ class Cycle(Base, Referenceable, Describeable, Modifiable, Auditable):
 
     __tablename__ = 'cycle'
 
-    study_id = Column(Integer, nullable=False)
+    study_id = sa.Column(sa.Integer, nullable=False)
 
-    study = relationship(
+    study = orm.relationship(
         Study,
-        backref=backref(
+        backref=orm.backref(
             name='cycles',
             lazy='dynamic',
+            order_by='Cycle.week.asc().nullsfirst()',
             cascade='all, delete-orphan'))
 
-    week = Column(Integer, doc='Week number')
+    week = sa.Column(sa.Integer, doc='Week number')
 
     # future-proof field for exempting cycles
-    threshold = Column(
-        Integer,
+    threshold = sa.Column(
+        sa.Integer,
         doc='The outer limit, in days, that this cycle may follow the '
             'previous schema before it is skipped as a missed visit.')
 
-    # visits is backref'ed in the Visit class
+    is_interim = sa.Column(sa.Boolean, server_default=sa.sql.false())
 
-    category_id = Column(Integer)
+    # visits backref'd from visit
 
-    category = relationship(
-        Category,
-        single_parent=True,
-        cascade='all,delete-orphan')
+    schemata = orm.relationship(
+        Schema,
+        secondary=cycle_schema_table,
+        collection_class=set)
 
     @declared_attr
     def __table_args__(cls):
         return (
-            ForeignKeyConstraint(
+            sa.ForeignKeyConstraint(
                 columns=['study_id'],
                 refcolumns=['study.id'],
                 name='fk_%s_study_id' % cls.__tablename__,
                 ondelete='CASCADE'),
-            ForeignKeyConstraint(
-                columns=['category_id'],
-                refcolumns=[Category.id],
-                name='fk_%s_category_id' % cls.__tablename__,
-                ondelete='SET NULL'),
-
-            Index('ix_%s_study_id' % cls.__tablename__, 'study_id'),
-
-            # One category per table
-            UniqueConstraint(
-                'category_id',
-                name='uq_%s_category_id' %
-                cls.__tablename__),
-
-            # Names and weeks are unique within a cycle
-            UniqueConstraint(
+            sa.UniqueConstraint(
                 'study_id',
                 'name',
                 name='uq_%s_name' %
                 cls.__tablename__),
-            UniqueConstraint(
+            sa.UniqueConstraint(
                 'study_id',
                 'week',
                 name='uq_%s_week' %
                 cls.__tablename__))
-
-
-class Site(Base,  Referenceable, Describeable, Modifiable, Auditable):
-    """
-    A facility within an organization
-    """
-
-    __tablename__ = 'site'
-
-    # patients is backref'ed in the Patient class
-
-    @declared_attr
-    def __table_args__(cls):
-        return (
-            UniqueConstraint('name', name='uq_%s_name' % cls.__tablename__),)
-
-
-class Patient(Base, Referenceable, Modifiable, HasEntities, Auditable):
-
-    __tablename__ = 'patient'
-
-    # Read-only OUR# alias that will be useful for traversal
-    name = hybrid_property(lambda self: self.our)
-
-    title = hybrid_property(lambda self: self.our)
-
-    site_id = Column(Integer, nullable=False)
-
-    site = relationship(
-        Site,
-        backref=backref(
-            name='patients',
-            cascade='all, delete-orphan',
-            lazy=u'dynamic'),
-        doc='The facility that the patient is visiting')
-
-    # This is the old way and should be renamed to PID to make it
-    # applicable to other organizations.
-    # In the future we should have PID generators
-    our = Column(
-        Unicode,
-        nullable=False,
-        doc='Patient identification number.')
-
-    pid = hybrid_property(
-        lambda self: self.our,
-        lambda self, value: setattr(self, 'our', value))
-
-    # A secondary reference, to help people verify they are viewing the
-    # correct patient
-    initials = Column(Unicode)
-
-    legacy_number = Column(Unicode)
-
-    nurse = Column(Unicode)
-
-    # partners is backref'ed in the Partner class
-
-    # enrollments is backref'ed in the Enrollment class
-
-    # visits is backref'ed in the Visit class
-
-    @declared_attr
-    def __table_args__(cls):
-        return (
-            ForeignKeyConstraint(
-                columns=['site_id'],
-                refcolumns=['site.id'],
-                name='fk_%s_site_id' % cls.__tablename__,
-                ondelete='CASCADE'),
-            UniqueConstraint('our', name='uq_%s_our' % cls.__tablename__),
-            # Ideally this should be unique, but due to inevitably legacy
-            # issues with ANYTHING, we'll just keep this indexed.
-            Index('ix_%s_legacy_number' % cls.__tablename__, 'legacy_number'),
-            Index('ix_%s_site_id' % cls.__tablename__, 'site_id'),
-            Index('ix_%s_initials' % cls.__tablename__, 'initials'))
-
-
-class RefType(Base, Referenceable, Describeable, Modifiable):
-    """
-    Reference type sources
-    """
-
-    __tablename__ = 'reftype'
-
-    @declared_attr
-    def __table_args__(cls):
-        return (
-            UniqueConstraint('name', name='uq_%s_name' % cls.__tablename__),)
-
-
-class PatientReference(Base, Referenceable, Modifiable, Auditable):
-    """
-    References to a studies subject from other sources
-    """
-
-    __tablename__ = 'patientreference'
-
-    patient_id = Column(Integer, nullable=False)
-
-    patient = relationship(
-        Patient,
-        backref=backref(
-            name='reference_numbers',
-            cascade='all, delete-orphan'),
-        primaryjoin=(patient_id == Patient.id))
-
-    reftype_id = Column(Integer, nullable=False,)
-
-    reftype = relationship(
-        RefType,
-        primaryjoin=(reftype_id == RefType.id))
-
-    reference_number = Column(Unicode, nullable=False,)
-
-    @declared_attr
-    def __table_args__(cls):
-        return (
-            ForeignKeyConstraint(
-                columns=['patient_id'],
-                refcolumns=['patient.id'],
-                name='fk_%s_patient_id' % cls.__tablename__,
-                ondelete='CASCADE'),
-            ForeignKeyConstraint(
-                columns=['reftype_id'],
-                refcolumns=['reftype.id'],
-                name='fk_%s_reftype_id' % cls.__tablename__,
-                ondelete='CASCADE'),
-            Index('ix_%s_patient_id' % cls.__tablename__, 'patient_id'),
-            Index('ix_%s_reference_number' % cls.__tablename__,
-                  'reference_number'),
-            UniqueConstraint(
-                'patient_id',
-                'reftype_id',
-                'reference_number',
-                name=u'uq_%s_reference'))
-
-
-class Partner(Base, Referenceable, Modifiable, HasEntities, Auditable):
-    """
-    A subject's partner.
-    """
-
-    __tablename__ = 'partner'
-
-    patient_id = Column(Integer, nullable=False)
-
-    patient = relationship(
-        Patient,
-        backref=backref(
-            name='partners',
-            cascade='all, delete-orphan'),
-        primaryjoin=(patient_id == Patient.id),
-        doc=u'The Patient that reported this partner.')
-
-    enrolled_patient_id = Column(Integer)
-
-    # One-way ORM relationship
-    enrolled_patient = relationship(
-        Patient,
-        primaryjoin=(enrolled_patient_id == Patient.id),
-        # Setup the backref for back-populate cascade
-        backref=backref(name='from_partners'),
-        doc=u'This partner is also a patient; This property references that'
-            u'patient entry')
-
-    # The date upon which the data was reported
-    report_date = Column(
-        Date,
-        nullable=False,
-        doc=u'The date that the reporting patient reported this partner')
-
-    @declared_attr
-    def __table_args__(cls):
-        return  (
-            ForeignKeyConstraint(
-                columns=['patient_id'],
-                refcolumns=['patient.id'],
-                name='fk_%s_patient_id' % cls.__tablename__,
-                ondelete='CASCADE',
-                ),
-            ForeignKeyConstraint(
-                columns=['enrolled_patient_id'],
-                refcolumns=['patient.id'],
-                name='fk_%s_enrolled_patient_id' % cls.__tablename__,
-                ondelete='SET NULL',
-                ),
-            Index('ix_%s_patient_id' % cls.__tablename__, 'patient_id'),
-            Index('ix_%s_enrolled_patient_id' % cls.__tablename__, 'enrolled_patient_id'),
-            Index('ix_%s_report_date' % cls.__tablename__, 'report_date'))
-
-
-class Enrollment(Base,  Referenceable, Modifiable, HasEntities, Auditable):
-    """
-    A patient's participation in a study.
-    """
-    __tablename__ = 'enrollment'
-
-    patient_id = Column(Integer, nullable=False,)
-
-    patient = relationship(
-        Patient,
-        backref=backref(
-            name='enrollments',
-            cascade='all, delete-orphan',
-            lazy='dynamic'))
-
-    study_id = Column(Integer, nullable=False,)
-
-    study = relationship(
-        Study,
-        backref=backref(
-            name='enrollments',
-            # The list of enrollments from the study perspective can get quite
-            # long, so we implement as query to allow filtering/limit-offset
-            lazy='dynamic',
-            cascade='all, delete-orphan'))
-
-    # First consent date (i.e. date of enrollment)
-    consent_date = Column(Date, nullable=False)
-
-    # Latest consent date
-    # Note that some consent dates may be acqured AFTER the patient has
-    # terminated
-    latest_consent_date = Column(
-        Date,
-        nullable=False,
-        default=lambda c: c.current_parameters['consent_date'])
-
-    # Termination date
-    termination_date = Column(Date)
-
-    # A reference specifically for this enrollment (blinded studies, etc)
-    reference_number = Column(
-        Unicode,
-        doc='Identification number within study')
-
-    @property
-    def is_consent_overdue(self):
-        return (
-            self.termination_date is None
-            and self.latest_consent_date < self.study.consent_date)
-
-    @property
-    def is_termination_overdue(self):
-        return (self.termination_date is None
-                and self.consent_date + self.study.duration < date.today())
-
-    @declared_attr
-    def __table_args__(cls):
-        return (
-            ForeignKeyConstraint(
-                columns=['patient_id'],
-                refcolumns=['patient.id'],
-                name='fk_%s_patient_id' % cls.__tablename__,
-                ondelete='CASCADE'),
-            ForeignKeyConstraint(
-                columns=['study_id'],
-                refcolumns=['study.id'],
-                name='fk_%s_study_id' % cls.__tablename__,
-                ondelete='CASCADE'),
-            Index('ix_%s_patient_id' % cls.__tablename__, 'patient_id'),
-            Index('ix_%s_study_id' % cls.__tablename__, 'study_id'),
-            # A patient may enroll only once in the study per day
-            UniqueConstraint('patient_id', 'study_id', 'consent_date'),
-            Index('ix_%s_reference_number' % cls.__tablename__,
-                  'reference_number'))
-
-
-class Visit(Base, Referenceable, Modifiable, HasEntities, Auditable):
-
-    __tablename__ = 'visit'
-
-    patient_id = Column(Integer, nullable=False)
-
-    patient = relationship(
-        Patient,
-        backref=backref(
-            name='visits',
-            cascade='all, delete-orphan',
-            lazy='dynamic'))
-
-    cycles = relationship(
-        Cycle,
-        secondary=visit_cycle_table,
-        backref=backref(
-            name='visits',
-            lazy='dynamic'))
-
-    visit_date = Column(Date, nullable=False)
-
-    @declared_attr
-    def __table_args__(cls):
-        return (
-            ForeignKeyConstraint(
-                columns=['patient_id'],
-                refcolumns=['patient.id'],
-                name='fk_%s_patient_id' % cls.__tablename__,
-                ondelete='CASCADE'),
-            Index('ix_%s_patient' % cls.__tablename__, 'patient_id'))
 
 
 class Arm(Base, Referenceable, Describeable,  Modifiable, Auditable):
@@ -539,28 +388,452 @@ class Arm(Base, Referenceable, Describeable,  Modifiable, Auditable):
 
     __tablename__ = 'arm'
 
-    study_id = Column(Integer, nullable=False)
+    study_id = sa.Column(sa.Integer, nullable=False)
 
-    study = relationship(
+    study = orm.relationship(
         Study,
-        backref=backref(
+        backref=orm.backref(
             name='arms',
             cascade='all,delete-orphan'),
         doc='The study theis pool belongs to')
 
+    # strata backref'd from stratum
+
     @declared_attr
     def __table_args__(cls):
         return (
-            ForeignKeyConstraint(
+            sa.ForeignKeyConstraint(
                 columns=[cls.study_id],
                 refcolumns=[Study.id],
                 name=u'fk_%s_study_id' % cls.__tablename__,
                 ondelete='CASCADE'),
-            UniqueConstraint(
+            sa.UniqueConstraint(
                 'study_id',
                 'name',
                 name=u'uq_%s_name' %
                 cls.__tablename__))
+
+
+class PatientFactory(object):
+
+    __acl__ = [
+        (Allow, groups.administrator(), ('add', 'view')),
+        (Allow, groups.manager(), ('add', 'view')),
+        (Allow, groups.reviewer(), ('add', 'view')),
+        (Allow, groups.enterer(), ('add', 'view')),
+        (Allow, Authenticated, 'view')
+        ]
+
+    def __init__(self, request):
+        self.request = request
+
+    def __getitem__(self, key):
+        try:
+            patient = (
+                Session.query(Patient)
+                .options(orm.joinedload('site'))
+                .filter_by(pid=key)
+                .one())
+        except orm.exc.NoResultFound:
+            raise KeyError
+        patient.__parent__ = self
+        return patient
+
+
+class SiteFactory(object):
+
+    __acl__ = [
+        (Allow, groups.administrator(), ALL_PERMISSIONS),
+        ]
+
+    def __init__(self, request):
+        self.request = request
+
+    def __getitem__(self, key):
+        try:
+            site = Session.query(Site).filter_by(name=key).one()
+        except orm.exc.NoResultFound:
+            raise KeyError
+        site.__parent__ = self
+        return site
+
+
+class Site(Base,  Referenceable, Describeable, Modifiable, Auditable):
+    """
+    A facility within an organization
+    """
+
+    __tablename__ = 'site'
+
+    @property
+    def __name__(self):
+        return self.name
+
+    @property
+    def __acl__(self):
+        return [
+            (Allow, groups.administrator(), ALL_PERMISSIONS),
+            (Allow, groups.manager(), ('view', 'edit', 'delete')),
+            (Allow, groups.member(site=self), 'view'),
+            ]
+
+    # patients backref'd from patient
+
+    @declared_attr
+    def __table_args__(cls):
+        return (
+            sa.UniqueConstraint(
+                'name', name='uq_%s_name' % cls.__tablename__),)
+
+
+# Configured forms to add to a patient (globally)
+patient_schema_table = sa.Table(
+    'patient_schema',
+    Base.metadata,
+    sa.Column(
+        'schema_id',
+        sa.Integer(),
+        sa.ForeignKey(
+            Schema.id,
+            name='fk_patient_schema_schema_id',
+            ondelete='CASCADE'),
+        primary_key=True))
+
+
+class Patient(Base, Referenceable, Modifiable, HasEntities, Auditable):
+
+    __tablename__ = 'patient'
+
+    @property
+    def __name__(self):
+        return self.pid
+
+    @property
+    def __acl__(self):
+        site = self.site
+        return [
+            (Allow, groups.administrator(), ALL_PERMISSIONS),
+            (Allow, groups.manager(site), ('view', 'edit', 'delete')),
+            (Allow, groups.reviewer(site), ('view', 'edit', 'delete')),
+            (Allow, groups.enterer(site), ('view', 'edit', 'delete')),
+            (Allow, groups.consumer(site), 'view')
+            ]
+
+    site_id = sa.Column(sa.Integer, nullable=False)
+
+    site = orm.relationship(
+        Site,
+        backref=orm.backref(
+            name='patients',
+            cascade='all, delete-orphan',
+            lazy=u'dynamic'),
+        doc='The facility that the patient is visiting')
+
+    pid = sa.Column(
+        sa.Unicode,
+        nullable=False,
+        doc='Patient identification number.')
+
+    initials = sa.Column(sa.Unicode)
+
+    nurse = sa.Column(sa.Unicode)
+
+    # references backref'd from patientreferences
+
+    # partners backref'd from partner
+
+    # enrollments backref'd from enrollment
+
+    # strata backref'd from stratum
+
+    # visits backref'd from visit
+
+    def __getitem__(self, key):
+        if key == 'enrollments':
+            return EnrollmentFactory(self)
+        elif key == 'visits':
+            return VisitFactory(self)
+        elif key == 'forms':
+            return FormFactory(self)
+        raise KeyError
+
+    @declared_attr
+    def __table_args__(cls):
+        return (
+            sa.ForeignKeyConstraint(
+                columns=['site_id'],
+                refcolumns=['site.id'],
+                name='fk_%s_site_id' % cls.__tablename__,
+                ondelete='CASCADE'),
+            sa.UniqueConstraint('pid', name='uq_%s_pid' % cls.__tablename__),
+            sa.Index('ix_%s_site_id' % cls.__tablename__, 'site_id'),
+            sa.Index('ix_%s_initials' % cls.__tablename__, 'initials'))
+
+
+class ReferenceType(Base, Referenceable, Describeable, Modifiable):
+    """
+    Reference type sources
+    """
+
+    __tablename__ = 'reference_type'
+
+    reference_pattern = sa.Column(
+        sa.Unicode,
+        doc='Reference number pattern regular expresssion')
+
+    reference_hint = sa.Column(
+        sa.Unicode,
+        doc='UI reference hint without regular expression syntax')
+
+    def check(self, reference_number):
+        if not self.reference_pattern:
+            return True
+        else:
+            match = re.match(self.reference_pattern, reference_number)
+            return match is not None
+
+    @declared_attr
+    def __table_args__(cls):
+        return (
+            sa.UniqueConstraint('name', name='uq_%s_name' % cls.__tablename__),
+            )
+
+
+class PatientReference(Base, Referenceable, Modifiable, Auditable):
+    """
+    References to a studies subject from other sources
+    """
+
+    __tablename__ = 'patient_reference'
+
+    patient_id = sa.Column(sa.Integer, nullable=False)
+
+    patient = orm.relationship(
+        Patient,
+        backref=orm.backref(
+            name='references',
+            cascade='all, delete-orphan'))
+
+    reference_type_id = sa.Column(sa.Integer, nullable=False)
+
+    reference_type = orm.relationship(ReferenceType)
+
+    reference_number = sa.Column(sa.String, nullable=False)
+
+    @declared_attr
+    def __table_args__(cls):
+        return (
+            sa.ForeignKeyConstraint(
+                columns=['patient_id'],
+                refcolumns=['patient.id'],
+                name='fk_%s_patient_id' % cls.__tablename__,
+                ondelete='CASCADE'),
+            sa.ForeignKeyConstraint(
+                columns=['reference_type_id'],
+                refcolumns=['reference_type.id'],
+                name='fk_%s_reference_type_id' % cls.__tablename__,
+                ondelete='CASCADE'),
+            sa.Index('ix_%s_patient_id' % cls.__tablename__, 'patient_id'),
+            sa.Index(
+                'ix_%s_reference_number' % cls.__tablename__,
+                'reference_number'),
+            sa.UniqueConstraint(
+                'patient_id',
+                'reference_type_id',
+                'reference_number',
+                name=u'uq_%s_reference' % cls.__tablename__))
+
+
+class Partner(Base, Referenceable, Modifiable, HasEntities, Auditable):
+    """
+    A subject's partner.
+    """
+
+    __tablename__ = 'partner'
+
+    patient_id = sa.Column(sa.Integer, nullable=False)
+
+    patient = orm.relationship(
+        Patient,
+        primaryjoin=(patient_id == Patient.id),
+        backref=orm.backref(
+            name='partners',
+            cascade='all, delete-orphan'),
+        doc=u'The Patient that reported this partner.')
+
+    enrolled_patient_id = sa.Column(sa.Integer)
+
+    # One-way ORM orm.relationship
+    enrolled_patient = orm.relationship(
+        Patient,
+        primaryjoin=(enrolled_patient_id == Patient.id),
+        # Setup the backref for back-populate cascade
+        backref=orm.backref(name='from_partners'),
+        doc=u'This partner is also a patient; This property references that'
+            u'patient entry')
+
+    # The date upon which the data was reported
+    report_date = sa.Column(
+        sa.Date,
+        nullable=False,
+        doc=u'The date that the reporting patient reported this partner')
+
+    @declared_attr
+    def __table_args__(cls):
+        return (
+            sa.ForeignKeyConstraint(
+                columns=['patient_id'],
+                refcolumns=['patient.id'],
+                name='fk_%s_patient_id' % cls.__tablename__,
+                ondelete='CASCADE',
+                ),
+            sa.ForeignKeyConstraint(
+                columns=['enrolled_patient_id'],
+                refcolumns=['patient.id'],
+                name='fk_%s_enrolled_patient_id' % cls.__tablename__,
+                ondelete='SET NULL',
+                ),
+            sa.Index('ix_%s_patient_id' % cls.__tablename__, 'patient_id'),
+            sa.Index(
+                'ix_%s_enrolled_patient_id' % cls.__tablename__,
+                'enrolled_patient_id'),
+            sa.Index('ix_%s_report_date' % cls.__tablename__, 'report_date'))
+
+
+class EnrollmentFactory(object):
+
+    @property
+    def __acl__(self):
+        site = self.__parent__.site
+        return [
+            (Allow, groups.administrator(), ALL_PERMISSIONS),
+            (Allow, groups.manager(site), ('view', 'add')),
+            (Allow, groups.reviewer(site), ('view', 'add')),
+            (Allow, groups.enterer(site), ('view', 'add')),
+            (Allow, groups.consumer(site), 'view'),
+            ]
+
+    def __init__(self, parent):
+        self.__parent__ = parent
+
+    def __getitem__(self, key):
+        try:
+            enrollment = (
+                Session.query(Enrollment)
+                .options(orm.joinedload('patient').joinedload('site'))
+                .filter_by(id=key).one())
+        except orm.exc.NoResultFound:
+            raise KeyError
+        enrollment.__parent__ = self
+        return enrollment
+
+
+# Configured forms for termination
+termination_schema_table = sa.Table(
+    'termination_schema',
+    Base.metadata,
+    sa.Column(
+        'schema_id',
+        sa.Integer(),
+        sa.ForeignKey(
+            Schema.id,
+            name='fk_termination_schema_schema_id',
+            ondelete='CASCADE'),
+        primary_key=True))
+
+
+class Enrollment(Base,  Referenceable, Modifiable, HasEntities, Auditable):
+    """
+    A patient's participation in a study.
+    """
+
+    __tablename__ = 'enrollment'
+
+    @property
+    def __name__(self):
+        return str(self.id)
+
+    @property
+    def __acl__(self):
+        site = self.patient.site
+        return [
+            (Allow, groups.administrator(), ALL_PERMISSIONS),
+            (Allow, groups.manager(site), ('view', 'edit', 'delete', 'randomize', 'terminate')),  # NOQA
+            (Allow, groups.reviewer(site), ('view', 'edit', 'delete', 'randomize', 'terminate')),  # NOQA
+            (Allow, groups.enterer(site), ('view', 'edit', 'delete')),  # NOQA
+            (Allow, groups.consumer(site), 'view')
+            ]
+
+    patient_id = sa.Column(sa.Integer, nullable=False,)
+
+    patient = orm.relationship(
+        Patient,
+        backref=orm.backref(
+            name='enrollments',
+            cascade='all, delete-orphan',
+            lazy='dynamic',
+            order_by='Enrollment.consent_date.desc()'))
+
+    study_id = sa.Column(sa.Integer, nullable=False,)
+
+    study = orm.relationship(
+        Study,
+        backref=orm.backref(
+            name='enrollments',
+            # The list of enrollments from the study perspective can get quite
+            # long, so we implement as query to allow filtering/limit-offset
+            lazy='dynamic',
+            cascade='all, delete-orphan'))
+
+    # First consent date (i.e. date of enrollment)
+    consent_date = sa.Column(sa.Date, nullable=False)
+
+    # Latest consent date
+    # Note that some consent dates may be acqured AFTER the patient has
+    # terminated
+    latest_consent_date = sa.Column(
+        sa.Date,
+        nullable=False,
+        default=lambda c: c.current_parameters['consent_date'])
+
+    # Termination date
+    termination_date = sa.Column(sa.Date)
+
+    # A reference specifically for this enrollment (blinded studies, etc)
+    reference_number = sa.Column(
+        sa.Unicode,
+        doc='Identification number within study')
+
+    # stratum backref'd from straum
+
+    @declared_attr
+    def __table_args__(cls):
+        return (
+            sa.ForeignKeyConstraint(
+                columns=['patient_id'],
+                refcolumns=['patient.id'],
+                name='fk_%s_patient_id' % cls.__tablename__,
+                ondelete='CASCADE'),
+            sa.ForeignKeyConstraint(
+                columns=['study_id'],
+                refcolumns=['study.id'],
+                name='fk_%s_study_id' % cls.__tablename__,
+                ondelete='CASCADE'),
+            sa.Index('ix_%s_patient_id' % cls.__tablename__, 'patient_id'),
+            sa.Index('ix_%s_study_id' % cls.__tablename__, 'study_id'),
+            # A patient may enroll only once in the study per day
+            sa.UniqueConstraint('patient_id', 'study_id', 'consent_date'),
+            sa.Index(
+                'ix_%s_reference_number' % cls.__tablename__,
+                'reference_number'),
+            sa.CheckConstraint(
+                """
+                consent_date <= latest_consent_date
+                AND (
+                    termination_date IS NULL
+                    OR latest_consent_date <= termination_date)
+                """,
+                name='ck_%s_lifespan' % cls.__tablename__))
 
 
 class Stratum(Base, Referenceable, Modifiable, HasEntities, Auditable):
@@ -571,31 +844,31 @@ class Stratum(Base, Referenceable, Modifiable, HasEntities, Auditable):
 
     __tablename__ = 'stratum'
 
-    study_id = Column(Integer, nullable=False)
+    study_id = sa.Column(sa.Integer, nullable=False)
 
-    study = relationship(
+    study = orm.relationship(
         Study,
-        backref=backref(
+        backref=orm.backref(
             name='strata',
             lazy='dynamic',
             cascade='all,delete-orphan'))
 
-    arm_id = Column(Integer, nullable=False)
+    arm_id = sa.Column(sa.Integer, nullable=False)
 
-    arm = relationship(
+    arm = orm.relationship(
         Arm,
-        backref=backref(
+        backref=orm.backref(
             name='strata',
             lazy='dynamic',
             cascade='all,delete-orphan'))
 
-    label = Column(Unicode)
+    label = sa.Column(sa.Unicode)
 
-    block_number = Column(Integer, nullable=False)
+    block_number = sa.Column(sa.Integer, nullable=False)
 
     # Rename to randid
-    reference_number = Column(
-        Unicode,
+    reference_number = sa.Column(
+        sa.String,
         nullable=False,
         doc='A pregenerated value assigned to the patient per-study. '
             'This is not a Study ID, this is only for statistician. ')
@@ -604,21 +877,21 @@ class Stratum(Base, Referenceable, Modifiable, HasEntities, Auditable):
         lambda self: self.reference_number,
         lambda self, value: setattr(self, 'reference_number', value))
 
-    patient_id = Column(Integer)
+    patient_id = sa.Column(sa.Integer)
 
-    patient = relationship(
+    patient = orm.relationship(
         Patient,
-        backref=backref(
+        backref=orm.backref(
             name='strata'))
 
-    enrollments = relationship(
+    enrollments = orm.relationship(
         Enrollment,
         viewonly=True,
         primaryjoin=(
             study_id == Enrollment.study_id) & (
             patient_id == Enrollment.patient_id),
         foreign_keys=[Enrollment.study_id, Enrollment.patient_id],
-        backref=backref(
+        backref=orm.backref(
             name='stratum',
             uselist=False,
             viewonly=True))
@@ -626,30 +899,226 @@ class Stratum(Base, Referenceable, Modifiable, HasEntities, Auditable):
     @declared_attr
     def __table_args__(cls):
         return (
-            ForeignKeyConstraint(
+            sa.ForeignKeyConstraint(
                 columns=[cls.study_id],
                 refcolumns=[Study.id],
                 name=u'fk_%s_study_id' % cls.__tablename__,
                 ondelete='CASCADE'),
-            ForeignKeyConstraint(
+            sa.ForeignKeyConstraint(
                 columns=[cls.arm_id],
                 refcolumns=[Arm.id],
                 name=u'fk_%s_arm_id' % cls.__tablename__,
                 ondelete='CASCADE'),
-            ForeignKeyConstraint(
+            sa.ForeignKeyConstraint(
                 columns=[cls.patient_id],
                 refcolumns=[Patient.id],
                 name=u'fk_%s_patient_id' % cls.__tablename__,
                 ondelete='SET NULL'),
-            UniqueConstraint(
+            sa.UniqueConstraint(
                 cls.study_id, cls.reference_number,
                 name=u'uq_%s_reference_number' % cls.__tablename__),
-            UniqueConstraint(
+            sa.UniqueConstraint(
                 cls.study_id, cls.patient_id,
                 name=u'uq_%s_patient_id' % cls.__tablename__),
-            Index('ix_%s_block_number' % cls.__tablename__, cls.block_number),
-            Index('ix_%s_patient_id' % cls.__tablename__, cls.block_number),
-            Index('ix_%s_arm_id' % cls.__tablename__, cls.arm_id))
+            sa.Index(
+                'ix_%s_block_number' % cls.__tablename__, cls.block_number),
+            sa.Index(
+                'ix_%s_patient_id' % cls.__tablename__, cls.block_number),
+            sa.Index('ix_%s_arm_id' % cls.__tablename__, cls.arm_id))
+
+
+class VisitFactory(object):
+
+    @property
+    def __acl__(self):
+        site = self.__parent__.site
+        return [
+            (Allow, groups.administrator(), ALL_PERMISSIONS),
+            (Allow, groups.manager(site), ('view', 'add')),
+            (Allow, groups.reviewer(site), ('view', 'add')),
+            (Allow, groups.enterer(site), ('view', 'add')),
+            (Allow, groups.consumer(site), 'view'),
+            ]
+
+    def __init__(self, parent):
+        self.__parent__ = parent
+
+    def __getitem__(self, key):
+        try:
+            key = datetime.strptime(key, '%Y-%m-%d').date()
+        except ValueError:
+            raise KeyError
+        try:
+            visit = (
+                Session.query(Visit)
+                .options(orm.joinedload('patient').joinedload('site'))
+                .filter_by(patient=self.__parent__)
+                .filter_by(visit_date=key)
+                .one())
+        except orm.exc.NoResultFound:
+            raise KeyError
+        visit.__parent__ = self
+        return visit
+
+
+visit_cycle_table = sa.Table(
+    'visit_cycle',
+    Base.metadata,
+    sa.Column(
+        'visit_id',
+        sa.Integer,
+        sa.ForeignKey(
+            'visit.id',
+            name='fk_visit_cycle_visit_id',
+            ondelete='CASCADE'),
+        primary_key=True),
+    sa.Column(
+        'cycle_id',
+        sa.Integer,
+        sa.ForeignKey(
+            'cycle.id',
+            name='fk_visit_cycle_cycle_id',
+            ondelete='CASCADE'),
+        primary_key=True))
+
+
+class Visit(Base, Referenceable, Modifiable, HasEntities, Auditable):
+
+    __tablename__ = 'visit'
+
+    @property
+    def __name__(self):
+        return self.visit_date.isoformat()
+
+    @property
+    def __acl__(self):  #
+        site = self.patient.site
+        return [
+            (Allow, groups.administrator(), ALL_PERMISSIONS),
+            (Allow, groups.manager(site), ('view', 'edit', 'delete')),  # NOQA
+            (Allow, groups.reviewer(site), ('view', 'edit', 'delete')),  # NOQA
+            (Allow, groups.enterer(site), ('view', 'edit', 'delete')),  # NOQA
+            (Allow, groups.consumer(site), 'view')
+            ]
+
+    patient_id = sa.Column(sa.Integer, nullable=False)
+
+    patient = orm.relationship(
+        Patient,
+        backref=orm.backref(
+            name='visits',
+            cascade='all, delete-orphan',
+            lazy='dynamic',
+            order_by='Visit.visit_date.desc()'))
+
+    cycles = orm.relationship(
+        Cycle,
+        secondary=visit_cycle_table,
+        order_by='Cycle.title.asc()',
+        backref=orm.backref(
+            name='visits',
+            lazy='dynamic'))
+
+    visit_date = sa.Column(sa.Date, nullable=False)
+
+    def __getitem__(self, key):
+        if key == 'forms':
+
+            return FormFactory(self)
+
+    @declared_attr
+    def __table_args__(cls):
+        return (
+            sa.ForeignKeyConstraint(
+                columns=['patient_id'],
+                refcolumns=[Patient.id],
+                name='fk_%s_patient_id' % cls.__tablename__,
+                ondelete='CASCADE'),
+            sa.Index('ix_%s_patient' % cls.__tablename__, 'patient_id'),
+            sa.UniqueConstraint(
+                'patient_id', 'visit_date',
+                name='uq_%s_patient_id_visit_date' % cls.__tablename__))
+
+
+class FormFactory(object):
+
+    @property
+    def __acl__(self):
+        site = self.__parent__.patient.site
+        return [
+            (Allow, groups.administrator(), ALL_PERMISSIONS),
+            (Allow, groups.manager(site), ('view', 'add')),
+            (Allow, groups.consumer(site), 'view')
+            ]
+
+    def __init__(self, parent):
+        self.__parent__ = parent
+
+    def __getitem__(self, key):
+        try:
+            entity = (
+                Session.query(Entity)
+                .options(orm.joinedload('state'))
+                .filter_by(id=key)
+                .one())
+        except orm.exc.NoResultFound:
+            raise KeyError
+        entity.__parent__ = self
+        return entity
+
+
+def _entity_acl(self):
+    factory = self.__parent__
+    study_item = factory.__parent__
+    if isinstance(study_item, Patient):
+        site = study_item.site
+    elif isinstance(study_item, Enrollment) or isinstance(study_item, Visit):
+        site = study_item.patient.site
+    else:
+        Exception(u'Cannot find site for entity')
+    if self.schema.has_private:
+        return [
+            (Allow, groups.administrator(), ALL_PERMISSIONS),
+            (Allow, groups.manager(site), ('view', 'edit', 'delete')),
+            (Allow, groups.reviewer(site), ('view', 'edit', 'delete')),
+            (Allow, groups.enterer(site), ('view', 'edit', 'delete')),
+            (Allow, groups.consumer(site), 'view')
+            ]
+    else:
+        return [
+            (Allow, groups.administrator(), ALL_PERMISSIONS),
+            (Allow, groups.manager(site), ('view', 'edit', 'delete')),
+            (Allow, groups.reviewer(site), 'view'),
+            (Allow, groups.enterer(site), 'view'),
+            (Allow, groups.consumer(site), 'view'),
+            ]
+
+
+Entity.__acl__ = property(_entity_acl)
+
+
+class ExportFactory(object):
+
+    __acl__ = [
+        (Allow, groups.administrator(), ALL_PERMISSIONS),
+        (Allow, groups.manager(), ('view', 'add')),
+        (Allow, groups.consumer(), 'view')
+        ]
+
+    def __init__(self, parent):
+        self.__parent__ = parent
+
+    def __getitem__(self, key):
+        try:
+            export = (
+                Session.query(Export)
+                .options(orm.joinedload('owner_user'))
+                .filter_by(id=key)
+                .one())
+        except orm.exc.NoResultFound:
+            raise KeyError
+        export.__parent__ = self
+        return export
 
 
 class Export(Base, Referenceable, Modifiable, Auditable):
@@ -659,32 +1128,43 @@ class Export(Base, Referenceable, Modifiable, Auditable):
 
     __tablename__ = 'export'
 
-    name = Column(
-        Unicode,
+    @property
+    def __name__(self):
+        return str(self.id)
+
+    @property
+    def __acl__(self):
+        return [
+            (Allow, groups.administrator(), ALL_PERMISSIONS),
+            (Allow, self.owner_user.key, ('view', 'edit', 'delete')),
+            ]
+
+    name = sa.Column(
+        sa.String,
         nullable=False,
-        default=lambda: u(str(uuid.uuid4())),
+        default=lambda: str(uuid.uuid4()),
         doc='System name, useful for keep track of asynchronous progress')
 
-    owner_user_id = Column(Integer, nullable=False)
+    owner_user_id = sa.Column(sa.Integer, nullable=False)
 
-    owner_user = relationship(User, foreign_keys=[owner_user_id])
+    owner_user = orm.relationship(User, foreign_keys=[owner_user_id])
 
-    expand_collections = Column(Boolean, nullable=False, default=False)
+    expand_collections = sa.Column(sa.Boolean, nullable=False, default=False)
 
-    use_choice_labels = Column(Boolean, nullable=False, default=False)
+    use_choice_labels = sa.Column(sa.Boolean, nullable=False, default=False)
 
-    notify = Column(
-        Boolean,
+    notify = sa.Column(
+        sa.Boolean,
         nullable=False,
         default=False,
         doc='If set, notify the user that the export has completed')
 
-    status = Column(
-        Enum('failed', 'pending', 'complete', name='export_status'),
+    status = sa.Column(
+        sa.Enum('failed', 'pending', 'complete', name='export_status'),
         nullable=False,
         default='pending')
 
-    contents = Column(
+    contents = sa.Column(
         JSON,
         nullable=False,
         doc="""
@@ -727,11 +1207,13 @@ class Export(Base, Referenceable, Modifiable, Auditable):
     @declared_attr
     def __table_args__(cls):
         return (
-            ForeignKeyConstraint(
+            sa.ForeignKeyConstraint(
                 columns=[cls.owner_user_id],
                 refcolumns=[User.id],
                 name=u'fk_%s_owner_user_id' % cls.__tablename__,
                 ondelete='CASCADE'),
-            UniqueConstraint(cls.name, name=u'uq_%s_name' % cls.__tablename__),
-            Index('ix_%s_owner_user_id' % cls.__tablename__,
-                  cls.owner_user_id))
+            sa.UniqueConstraint(
+                cls.name, name=u'uq_%s_name' % cls.__tablename__),
+            sa.Index(
+                'ix_%s_owner_user_id' % cls.__tablename__,
+                cls.owner_user_id))

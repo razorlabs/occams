@@ -104,12 +104,14 @@ class TestMakeExport(IntegrationFixture):
         from zipfile import ZipFile
         from occams.studies import Session, models
         from occams.studies.tasks import make_export
-        from tests import track_user
 
-        track_user('joe')
+        owner = models.User(key=u'joe')
+        Session.info['user'] = u'joe'
+        Session.add(owner)
+        Session.flush()
+
         export = models.Export(
-            owner_user=(
-                Session.query(models.User).filter_by(key='joe').one()),
+            owner_user=owner,
             contents=[{'name': 'pid', 'title': 'PID', 'versions': []}],
             status='complete')
         Session.add(export)

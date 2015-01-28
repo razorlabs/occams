@@ -1,0 +1,65 @@
+<html i18n:domain="occams.studies" metal:use-macro="load:../master.pt">
+  <metal:content-slot fill-slot="content-slot">
+
+    <div style="display: none;" data-bind="visible: isReady">
+
+      <header metal:use-macro="load: header.pt"></header>
+
+      <table class="table table-hover table-striped">
+        <colgroup>
+        </colgroup>
+        <thead>
+          <th><input type="checkbox" /></th>
+          <th i18n:translate="">ID</th>
+          <th i18n:translate="">Form</th>
+          <th i18n:translate="">Collect Date</th>
+          <th i18n:translate="">State</th>
+          <th></th>
+        </thead>
+        <tbody data-bind="foreach: visit.entities">
+          <td>
+            <input type="checkbox"
+                data-bind="
+                  attr: {value: id},
+                  click: $root.onClickForm" />
+          </td>
+          <td><code data-bind="text: id"></code></td>
+          <td data-bind="text: schema.title"></td>
+          <td data-bind="text: collect_date"></td>
+          <td data-bind="text: state.title"></td>
+          <td>
+            <a data-bind="attr: {href: __url__}"><span class="fa fa-chevron-right"></span></a>
+          </td>
+        </tbody>
+      </table>
+
+      <!-- ko if: hasSelectedForms -->
+        <div class="well well-sm">
+          <span class="btn-group">
+            <button class="btn btn-default" i18n:translate="">Move</button>
+            <button class="btn btn-default" i18n:translate="">Delete</button>
+          </span>
+          <strong>
+            <span data-bind="text: selectedForms().length"></span>
+            <span i18n:translate="">Selected</span>
+          </strong>
+        </div>
+      <!-- /ko -->
+
+    </div> <!-- /:isReady -->
+
+
+  </metal:content-slot>
+  <metal:content-slot fill-slot="javascript-extras-slot">
+    <script>
+      $(function(){
+        var visit = JSON.parse($('#visit-data').text());
+        ko.applyBindings(new VisitView(visit), document.getElementById('view-visit'));
+      });
+    </script>
+    <tal:json define="json import:json">
+      <script id="visit-data" type="application/json" >${json.dumps(visit)}</script>
+    </tal:json>
+
+  </metal:content-slot>
+</html>

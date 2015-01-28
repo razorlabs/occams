@@ -1,0 +1,117 @@
+<div class="modal fade" data-bind="modalVisible: showEditPatient">
+  <div class="modal-dialog" data-bind="if: showEditPatient">
+    <div class="modal-content" data-bind="with: editableItem">
+      <form
+          role="form"
+          action="${request.current_route_path(_route_name='patients')}"
+          data-bind="submit: $root.savePatient, validate: {}">
+        <div class="modal-header">
+          <h4 class="modal-title" i18n:translate="">Edit Patient</h4>
+        </div>
+        <div class="modal-body">
+          <!-- ko with: $parent.errorMessage -->
+            <div class="alert alert-danger" data-bind="text: $data"></div>
+          <!-- /ko -->
+          <div class="form-group" tal:define="name 'site'">
+            <label i18n:translate="" class="required">Site</label>
+            <p class="help-block" i18n:translate="">
+                Choose a site that the patient belongs to.
+                You may only select a site of which you are a member of.
+            </p>
+            <input
+              type="hidden"
+              name="${name}"
+              class="form-control ${name}"
+              required
+              data-placeholder="Select a site..."
+              i18n:attributes="data-placeholder"
+              tal:define="ajax request.route_path('sites')"
+              data-bind="
+                  selectedData: ${name},
+                  dataKey: 'id',
+                  dataLabel: 'title',
+                  select2: {
+                    ajax: {
+                      url: '${ajax}',
+                      data: select2ParamsSite,
+                      results: select2ResultsSite,
+                    }
+                  }" />
+
+          </div> <!-- /.form-group -->
+          <div class="form-group">
+            <label i18n:translate="">Reference Numbers</label>
+            <!-- ko foreach: references -->
+              <div class="form-group row">
+                <div class="col-sm-5 " tal:define="name 'reference_type'">
+                  <input
+                    type="hidden"
+                    class="form-control ${name}"
+                    required
+                    data-placeholder="Select a reference type..."
+                    i18n:attributes="data-placeholder"
+                    tal:define="ajax request.route_path('reference_types')"
+                    data-bind="
+                        attr: {
+                          name: 'references-' + $index() + '-${name}',
+                        },
+                        selectedData: ${name},
+                        dataKey: 'id',
+                        dataLabel: 'title',
+                        select2: {
+                          ajax: {
+                            url: '${ajax}',
+                            data: $parent.select2ParamsReferenceType,
+                            results: $parent.select2ResultsReferenceType
+                          }
+                        }" />
+                </div>
+                <div class="col-sm-5 " tal:define="name 'reference_number'">
+                  <input type="text"
+                      class="form-control ${name}"
+                      required
+                      data-bind="
+                        attr: {
+                          name: 'references-' + $index() + '-${name}',
+                          pattern: reference_pattern,
+                          title: reference_hint,
+                          placeholder: reference_hint
+                        },
+                        value: ${name}
+                        " />
+                </div>
+                <div class="col-sm-2">
+                  <button class="btn btn-link" data-bind="click: $parent.deleteReference"><span class="fa fa-trash-o"></span></button>
+                </div>
+              </div> <!-- /.row -->
+            <!-- /ko -->
+            <div>
+              <button class="btn btn-link" data-bind="click: addReference">
+                <span class="fa fa-plus"></span>
+                <!-- ko ifnot: hasReferences -->
+                  <span i18n:translate="">Add another reference number</span>
+                <!-- /ko -->
+                <!-- ko if: hasReferences -->
+                  <span i18n:translate="">Add a reference number</span>
+                <!-- /ko -->
+              </button>
+            </div>
+          </div> <!-- /.form-group -->
+        </div> <!-- /.modal-body -->
+        <div class="modal-footer">
+          <button
+              type="button"
+              class="btn btn-link"
+              data-bind="click: $parent.clear"
+              i18n:translate="">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <span i18n:translate="">Save</span>
+            <!-- ko if: $parent.isSaving -->
+              <span class="fa fa-refresh fa-spin"></span>
+            <!-- /ko -->
+          </button>
+        </div>
+      </form>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->

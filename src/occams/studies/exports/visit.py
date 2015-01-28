@@ -48,7 +48,7 @@ class VisitPlan(ExportPlan):
         query = (
             Session.query(
                 models.Visit.id.label('id'),
-                models.Patient.our.label('pid'),
+                models.Patient.pid.label('pid'),
                 models.Site.name.label('site'),
                 models.Visit.visit_date.label('visit_date'),
                 models.Cycle.week.label('cycle'),

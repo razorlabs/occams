@@ -1,0 +1,117 @@
+<div class="modal fade" data-bind="modalVisible: $root.showEditEnrollment">
+  <div class="modal-dialog" data-bind="if: $root.showEditEnrollment">
+    <div class="modal-content" data-bind="with: $root.editableItem">
+      <form
+          role="form"
+          data-factory-url="${request.current_route_path(_route_name='enrollments')}"
+          data-bind="submit: $root.saveEnrollment, validate: {}">
+        <div class="modal-header">
+
+          <!-- ko if: id -->
+            <h4 class="modal-title" i18n:translate="">Edit Enrollment</h4>
+          <!--/ko -->
+          <!-- ko ifnot: id -->
+            <h4 class="modal-title" i18n:translate="">Add Enrollment</h4>
+          <!-- /ko -->
+        </div>
+        <div class="modal-body">
+          <!-- ko if: $root.hasErrorMessages -->
+            <div class="alert alert-danger">
+              <p i18n:translate="">
+                Could not complete the request for the following reasons:
+              </p>
+              <ul data-bind="foreach: $root.errorMessages">
+                <li data-bind="text: $data"></li>
+              </ul>
+            </div>
+          <!-- /ko -->
+          <div class="form-group" tal:define="name 'study'">
+            <label i18n:translate="" for="${name}" class="required">Study</label>
+            <select
+                class="form-control"
+                required
+                title="Please select a study"
+                id="${name}"
+                data-placeholder="Select a study..."
+                i18n:attributes="title data-placeholder"
+                data-bind="
+                  disable: id,
+                  event: {change: $root.onChangeStudy},
+                  value: ${name}, select2: {}">
+              <option></option> <!-- for placeholder -->
+              <option tal:repeat="study available_studies"
+                  tal:attributes="
+                    data-reference_pattern python:study.reference_pattern or None;
+                    data-reference_hint python:study.reference_hint or None;"
+                  value="${study.id}">${study.title}</option>
+            </select>
+          </div> <!-- /.form-group -->
+          <div class="form-group" tal:define="name 'consent_date'">
+            <label i18n:translate="" for="${name}" class="required">Original Consent Date</label>
+            <input type="date"
+                class="form-control"
+                required
+                id="${name}"
+                data-type-hint="date"
+                placeholder="YYYY-MM-DD"
+                data-date-format="YYYY-MM-DD"
+                data-date-picktime="false"
+                data-date-usecurrent="false"
+                data-rule-dateISO
+                data-bind="
+                  value: ${name},
+                  datetimepicker: {},
+                  uniqueName: true" />
+          </div> <!-- /.form-group -->
+          <div class="form-group" tal:define="name 'latest_consent_date'">
+            <label i18n:translate="" for="${name}" class="required">Current Consent Date</label>
+            <input type="date"
+                class="form-control"
+                required
+                id="${name}"
+                placeholder="YYYY-MM-DD"
+                data-type-hint="date"
+                data-date-format="YYYY-MM-DD"
+                data-date-picktime="false"
+                data-date-usecurrent="false"
+                data-rule-dateISO
+                data-rule-greaterThanEqualTo="#consent_date"
+                data-msg-greaterThanEqualTo="Must be after consent date"
+                data-bind="
+                  value: ${name},
+                  datetimepicker: {},
+                  uniqueName: true" />
+          </div> <!-- /.form-group -->
+
+          <!--! Termination date is not edited manually, it is filled
+                in by the studie's termination form -->
+
+          <div class="form-group" tal:define="name 'reference_number'">
+            <label i18n:translate="" for="${name}">Reference Number</label>
+            <p class="help-block" i18n:translate="">
+              (Optional) The patient's study-specific identification number.
+            </p>
+            <input type="text"
+                class="form-control"
+                id="${name}"
+                data-bind="value: ${name}, uniqueName:true" />
+          </div> <!-- /.form-group -->
+        </div> <!-- /.modal-body -->
+        <div class="modal-footer">
+          <button
+              type="button"
+              class="btn btn-link"
+              data-bind="click: $root.clear"
+              i18n:translate="">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <span i18n:translate="">Save</span>
+            <!-- ko if: $root.isSaving -->
+              <span class="fa fa-refresh fa-spin"></span>
+            <!-- /ko -->
+          </button>
+        </div>
+      </form>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+

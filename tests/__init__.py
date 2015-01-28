@@ -3,13 +3,18 @@ Testing fixtures
 
 To specify a pyramid configuration use:
 
-    nosetests --tc=ini:/path/to/my/config.ini
+    nosetests --tc=db:postgres://user:pass@host/db
 
 """
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
+
+# Raise unicode warnings as errors so we can fix them
+import warnings
+from sqlalchemy.exc import SAWarning
+warnings.filterwarnings('error', category=SAWarning)
 
 
 REDIS_URL = 'redis://localhost/9'
@@ -22,8 +27,6 @@ def setup_package():
     Useful for installing system-wide heavy resources such as a database.
     (Costly to do per-test or per-fixture)
     """
-    import os
-    from six.moves.configparser import SafeConfigParser
     from sqlalchemy import create_engine
     from testconfig import config
     from occams.studies import Session, models as studies
@@ -31,41 +34,18 @@ def setup_package():
     from occams.roster import Session as RosterSession
     from occams.roster import models as roster
 
-    HERE = os.path.abspath(os.path.dirname(__file__))
-    cfg = SafeConfigParser()
-    cfg.read(os.path.join(HERE, '..', 'setup.cfg'))
-    db = config.get('db') or 'default'
-    studies_engine = create_engine(cfg.get('db', db))
+    db = config.get('db') or 'sqlite:///'
+    studies_engine = create_engine(db)
     roster_engine = create_engine('sqlite:///')
 
     Session.configure(bind=studies_engine)
     RosterSession.configure(bind=roster_engine)
 
-    datastore.DataStoreModel.metadata.create_all(Session.bind)
-    studies.Base.metadata.create_all(Session.bind)
-    roster.Base.metadata.create_all(RosterSession.bind)
-
-
-def teardown_package():
-    """
-    Releases system-wide fixtures
-    """
-    import os
-    from occams.studies import Session, models as studies
-    from occams.datastore import models as datastore
-    from occams.roster import Session as RosterSession
-    from occams.roster import models as roster
-
-    roster.Base.metadata.drop_all(RosterSession.bind)
-    studies.Base.metadata.drop_all(Session.bind)
-    datastore.DataStoreModel.metadata.drop_all(Session.bind)
-
-    for session in (Session, RosterSession):
-        url = session.bind.url
-        if (url.drivername == 'sqlite'
-                and url.database
-                and 'memory' not in url.database):
-            os.remove(url.database)
+    if (studies_engine.url.drivername == 'sqlite'
+            and studies_engine.url.database is None):
+        datastore.DataStoreModel.metadata.create_all(Session.bind)
+        studies.Base.metadata.create_all(Session.bind)
+        roster.Base.metadata.create_all(RosterSession.bind)
 
 
 class IntegrationFixture(unittest.TestCase):
@@ -75,24 +55,21 @@ class IntegrationFixture(unittest.TestCase):
 
     def setUp(self):
         from pyramid import testing
-        from occams.studies.models import Base
-        self.config = testing.setUp()
-        Base.metadata.info['settings'] = self.config.registry.settings
-
-    def tearDown(self):
-        from occams.studies import Session
-        from pyramid import testing
         import transaction
-        testing.tearDown()
-        transaction.abort()
-        Session.remove()
+        from occams.studies import models, Session
+        from occams.studies.models import Base
 
+        self.config = testing.setUp()
 
-def track_user(login, is_current=True):
-    from occams.studies import models, Session
-    Session.add(models.User(key=login))
-    Session.flush()
-    Session.info['user'] = login
+        self.addCleanup(testing.tearDown)
+        self.addCleanup(transaction.abort)
+        self.addCleanup(Session.remove)
+
+        Session.add(models.User(key=u'tester'))
+        Session.flush()
+        Session.info['user'] = u'tester'
+
+        Base.metadata.info['settings'] = self.config.registry.settings
 
 
 class FunctionalFixture(unittest.TestCase):

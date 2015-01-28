@@ -1,0 +1,188 @@
+<html i18n:domain="occams.studies" metal:use-macro="load:../master.pt">
+  <metal:content-slot fill-slot="content-slot">
+
+    <h1 class="page-header" i18n:translate="">Setup</h1>
+
+    <p class="lead" i18n:translate="">This page contains system-wide configurations. Please proceed with caution...</p>
+
+    <section id="sites-section" style="display: none;" data-bind="visible: isReady">
+      <h2>
+        <span i18n:translate="">Sites</span>
+        <small data-bind="if: isAjaxing">
+          <span class="fa fa-spin fa-refresh"></span>
+        </small>
+      </h2>
+      <!-- ko ifnot: hasSites -->
+        <div class="alert alert-info" i18n:translate="">
+          This application has not been configured with sites yet.
+        </div>
+      <!-- /ko -->
+      <!-- ko if: hasSites -->
+        <table class="table table-hover table-striped">
+          <colgroup>
+            <col class="title"></col>
+            <col class="name"></col>
+            <col class="actions"></col>
+          </colgroup>
+          <thead>
+            <tr>
+              <th i18n:translate="">Title</th>
+              <th i18n:translate="">System Name</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody data-bind="foreach: sites">
+            <tr>
+              <td><span data-bind="text: title"></span></td>
+              <td><code data-bind="text: name"></code></td>
+              <td>
+                <div class="clearfix">
+                  <div class="btn-group pull-right">
+                    <button class="btn btn-default" data-bind="click: $parent.startEditSite"><span class="fa fa-edit"></span></button>
+                    <button class="btn btn-default" data-bind="click: $parent.startDeleteSite"><span class="fa fa-trash"></span></button>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      <!-- /ko -->
+      <div class="clearfix">
+        <div class="pull-right">
+          <button class="btn btn-default" data-bind="click: startAddSite">
+            <span class="fa fa-map-marker"></span>
+            <span i18n:translate="">Add new site</span>
+          </button>
+        </div>
+      </div>
+      <div class="modal fade" data-bind="modalVisible: showEditSite">
+        <div class="modal-dialog" data-bind="if: showEditSite">
+          <div class="modal-content" data-bind="with: selectedSite">
+            <form
+                class="form-horizontal"
+                method="POST"
+                action="${request.route_path('sites')}"
+                data-bind="validate: {}, submit: $parent.saveSite">
+              <div class="modal-header">
+                <!-- ko if: id -->
+                  <h4 class="modal-title" data-bind="text: title"></h4>
+                <!-- /ko -->
+                <!-- ko ifnot: id -->
+                  <h4 class="modal-title" i18n:translate="">New Site</h4>
+                <!-- /ko -->
+              </div>
+              <div class="modal-body" data-bind="with: $parent.editableSite">
+                <!-- ko with: $parent.latestSite -->
+                  <div class="alert alert-success">
+                    <strong i18n:translate="">Success!</strong>
+                    <span i18n:translate="">Added:</span>
+                    <a class="alert-link" data-bind="attr: {href: __url__}, text: title"></a>
+                  </div>
+                <!-- /ko -->
+                <!-- ko with: $parent.errorMessage -->
+                  <div class="alert alert-danger" role="alert">
+                    <strong>Error!</strong> <span data-bind="text: $data"></span>
+                  </div>
+                <!-- /ko -->
+                <div class="form-group">
+                  <label class="col-sm-3 required" i18n:translate="">Title</label>
+                  <div class="col-sm-9">
+                    <input type="text" class="form-control" required autofocus name="title" data-bind="value: title"/>
+                  </div>
+                </div> <!-- /.form-group -->
+                <div class="form-group">
+                  <label class="col-sm-3 required" i18n:translate="">System Name</label>
+                  <div class="col-md-6">
+                    <input type="text" class="form-control" required name="name" data-bind="value: name" pattern="^[a-z0-9_\-]+$" />
+
+                  </div>
+                </div> <!-- /.form-group -->
+              </div> <!-- /.modal-body -->
+              <div class="modal-footer">
+                <!-- ko ifnot: id -->
+                  <label class="text-muted">
+                    <input type="checkbox" data-bind="checked: $parent.addMoreSites" />
+                    <span i18n:translate="">Add another</span>
+                  </label>
+                <!-- /ko -->
+                <button
+                    type="button"
+                    class="btn btn-link"
+                    data-bind="click: $parent.clear"
+                    i18n:translate="">Cancel</button>
+                <button type="submit" class="btn btn-primary">
+                  <span i18n:translate="">Save</span>
+                  <!-- ko if: $parent.isSaving -->
+                    <span class="fa fa-refresh fa-spin"></span>
+                  <!-- /ko -->
+                </button>
+              </div> <!-- /.modal-footer -->
+            </form>
+          </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+      </div><!-- /.modal -->
+
+      <div class="modal fade" data-bind="modalVisible: showDeleteSite">
+        <div class="modal-dialog" data-bind="if: showDeleteSite">
+          <div class="modal-content" data-bind="with: selectedSite">
+            <form class="form-horizontal" data-bind="submit: $parent.deleteSite">
+              <div class="modal-header">
+                <h4 class="modal-title" i18n:translate="">Delete study</h4>
+              </div>
+              <div class="modal-body">
+                <!-- ko with: $parent.errorMessage -->
+                  <div class="alert alert-danger" role="alert">
+                    <strong>Error!</strong> <span data-bind="text: $data"></span>
+                  </div>
+                <!-- /ko -->
+                <p i18n:translate="">You are about to delete the following site and all its collected data:</p>
+                <h4 data-bind="text: title"></h4>
+                <p i18n:translate="">Are you sure you want to continue?</p>
+              </div> <!-- /.modal-body -->
+              <div class="modal-footer">
+                <button
+                    type="button"
+                    class="btn btn-link"
+                    data-bind="click: $root.clear"
+                    i18n:translate="">No</button>
+                <button type="submit" class="btn btn-danger">
+                  <span i18n:translate="">Yes</span>
+                  <!-- ko if: $root.isSaving -->
+                    <span class="fa fa-refresh fa-spin"></span>
+                  <!-- /ko -->
+                </button>
+              </div> <!-- /.modal-footer -->
+            </form>
+          </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+      </div><!-- /.modal -->
+    </section> <!-- /#sites-section -->
+
+    <section id="patient-forms-section" style="display: none;" data-bind="visible: isReady">
+      <h2>
+        <span i18n:translate="">Patient Forms</span>
+        <small data-bind="if: isAjaxing">
+          <span class="fa fa-spin fa-refresh"></span>
+        </small>
+      </h2>
+      <!-- ko ifnot: hasForms -->
+        <div class="alert alert-info" i18n:translate="">
+          This application has not been configured with patient forms yet.
+        </div>
+      <!-- /ko -->
+      <!-- ko if: hasForms -->
+      <!-- /ko -->
+    </section><!-- /#patient-forms -->
+
+  </metal:content-slot>
+  <metal:content-slot fill-slot="javascript-extras-slot">
+    <script>
+      $(function(){
+        var sitesUrl = "${request.route_path('sites')}";
+        ko.applyBindings(new SiteManageView(sitesUrl), document.getElementById('sites-section'));
+        var formsUrl = "${request.route_path('patients_forms')}";
+        ko.applyBindings(new PatientFormsManageView(formsUrl), document.getElementById('patient-forms-section'));
+      });
+    </script>
+  </metal:content-slot>
+</html>

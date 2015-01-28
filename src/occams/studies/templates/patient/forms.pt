@@ -1,0 +1,63 @@
+<html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
+  <metal:content-slot fill-slot="content-slot">
+
+    <div id="views-patient-main" style="display: none;" data-bind="visible: isReady">
+
+      <header class="page-header">
+        <div class="btn-toolbar pull-right">
+          <div metal:use-macro="load: header-btn-form-add.pt" />
+          <div metal:use-macro="load: header-btn-edit.pt" />
+          <div metal:use-macro="load: header-btn-delete.pt" />
+        </div>
+        <h1 i18n:translate="" data-bind="text: patient.pid"></h1>
+        <ul metal:use-macro="load: header-details.pt" />
+        <nav metal:use-macro="load: header-nav.pt" />
+
+        <!-- Use template so we can reuse in home view -->
+        <div metal:use-macro="load: modal-patient-edit.pt"></div>
+        <div metal:use-macro="load: modal-patient-delete.pt"></div>
+        <div metal:use-macro="load: modal-form-add.pt"></div>
+      </header>
+
+      <div class="table-responsive">
+        <table class="table table-hover table-striped">
+          <thead>
+            <tr>
+              <th><input type="checkbox" /></th>
+              <th i18n:translate="">Schema</th>
+              <th i18n:translate="">Form</th>
+              <th i18n:translate="">Collected</th>
+              <th i18n:translate="">Status</th>
+              <th i18n:translate="">Not Done</th>
+              <th i18n:translate="">ID</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr tal:repeat="entity entities">
+              <td><input type="checkbox" /></td>
+              <td><code>${entity.schema.name}</code></td>
+              <td>${entity.schema.title}</td>
+              <td>${entity.collect_date}</td>
+              <td>${entity.state.title}</td>
+              <td><span class="fa fa-check" tal:condition="entity.not_done"></span></td>
+              <td><code>${entity.id}</code></td>
+              <td><a class="btn btn-link" href="${request.current_route_path(_route_name='patient_form', form=entity.id)}"><span class="fa fa-chevron-right"></span></a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div> <!-- /#views-patient-main -->
+  </metal:content-slot>
+  <metal:content-slot fill-slot="javascript-extras-slot">
+    <script>
+      $(function(){
+        var patient = JSON.parse($('#patient-data').text());
+        ko.applyBindings(new PatientView(patient, null, null), document.getElementById('views-patient-main'));
+      });
+    </script>
+    <tal:json define="json import:json">
+      <script id="patient-data" type="application/json">${json.dumps(patient)}</script>
+    </tal:json>
+  </metal:content-slot>
+</html>

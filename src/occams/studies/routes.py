@@ -1,87 +1,68 @@
-"""
-Route Declarations
-"""
-
+# flake8: NOQA
+# This module breaks my OCD-ness in favor of readability
 from datetime import datetime
-
 from . import log
+
+from . import models
 
 
 def includeme(config):
     """
     Helper method to configure available routes for the application
     """
-    ymd = dates('date')
+    config.add_static_view('static',                'static', cache_max_age=3600)
 
-    # short-hand way to declare the routes
-    route = config.add_route
+    config.add_route('socket.io',                   '/socket.io/*remaining')
 
-    config.add_static_view('static', 'occams.studies:static/')
+    config.add_route('login',                       '/login')
+    config.add_route('logout',                      '/logout')
 
-    route('socket.io', '/socket.io/*remaining')
+    config.add_route('settings',                    '/settings')
 
-    route('account_login', '/login')
-    route('account_logout', '/logout')
 
-    route('site_list', '/sites')
+    config.add_route('sites',                       '/sites',                           factory=models.SiteFactory)
+    config.add_route('site',                        '/sites/{site}',                    factory=models.SiteFactory, traverse='/{site}')
 
-    route('study_list', '/studies')
-    route('study_add', '/studies/add')
-    route('study_view', '/studies/{study_name}')
-    route('study_edit', '/studies/{study_name}/edit')
-    route('study_delete', '/studies/{study_name}/delete')
-    route('study_schedule', '/studies/{study_name}/schedule')
-    route('study_ecrfs', '/studies/{study_name}/ecrfs')
-    route('study_progress', '/studies/{study_name}/progress')
+    config.add_route('reference_types',             '/reference_types')
+    config.add_route('reference_type',              '/reference_types/{reference_type}')
 
-    route('schedule_view', '/studies/{study_name}/{cycle_name}')
+    config.add_route('home',                        '/',                                factory=models.StudyFactory)
+    config.add_route('studies',                     '/',                                factory=models.StudyFactory)
+    config.add_route('study',                       '/studies/{study}',                 factory=models.StudyFactory, traverse='/{study}')
+    config.add_route('study_schedule',              '/studies/{study}/schedule',        factory=models.StudyFactory, traverse='/{study}')
+    config.add_route('study_enrollments',           '/studies/{study}/enrollments',     factory=models.StudyFactory, traverse='/{study}')
+    config.add_route('study_visits',                '/studies/{study}/visits',          factory=models.StudyFactory, traverse='/{study}')
+    config.add_route('study_visits_cycle',          '/studies/{study}/visits/{cycle}',  factory=models.StudyFactory, traverse='/{study}')
+    config.add_route('study_schemata',              '/studies/{study}/schemata',        factory=models.StudyFactory, traverse='/{study}')
+    config.add_route('study_schema',                '/studies/{study}/schemata/{schema}', factory=models.StudyFactory, traverse='/{study}')
 
-    route('patient_search', '/patients')
-    route('patient_view', '/patients/{pid}')
+    config.add_route('cycles',                      '/studies/{study}/cycles',          factory=models.StudyFactory, traverse='/{study}/cycles')
+    config.add_route('cycle',                       '/studies/{study}/cycles/{cycle}',  factory=models.StudyFactory, traverse='/{study}/cycles/{cycle}')
 
-    route('event_add', '/events/add')
+    config.add_route('exports',                     '/exports',                         factory=models.ExportFactory)
+    config.add_route('exports_checkout',            '/exports/checkout',                factory=models.ExportFactory)
+    config.add_route('exports_status',              '/exports/status',                  factory=models.ExportFactory)
+    config.add_route('exports_faq',                 '/exports/faq',                     factory=models.ExportFactory)
+    config.add_route('exports_codebook',            '/exports/codebook',                factory=models.ExportFactory)
+    config.add_route('export',                      '/exports/{export:\d+}',            factory=models.ExportFactory, traverse='/{export}')
+    config.add_route('export_download',             '/exports/{export:\d+}/download',   factory=models.ExportFactory, traverse='/{export}')
 
-    route('event_list', '/patients/{pid}/events')
-    route(
-        'event_view',
-        '/patients/{pid}/events/{vist_date}',
-        custom_predicates=[ymd])
-    route(
-        'event_edit',
-        '/patients/{pid}/events/{event_date}/edit',
-        custom_predicates=[ymd])
-    route(
-        'event_delete',
-        '/patients/{pid}/events/{event_date}/delete',
-        custom_predicates=[ymd])
+    config.add_route('patients',                    '/patients',                        factory=models.PatientFactory, traverse='/')
+    config.add_route('patients_forms',              '/patients/forms',                  factory=models.PatientFactory, traverse='/')
+    config.add_route('patient',                     '/patients/{patient}',              factory=models.PatientFactory, traverse='/{patient}')
+    config.add_route('patient_forms',               '/patients/{patient}/forms',        factory=models.PatientFactory, traverse='/{patient}/forms')
+    config.add_route('patient_form',                '/patients/{patient}/forms/{form}', factory=models.PatientFactory, traverse='/{patient}/forms/{form}')
 
-    route('export_home',                '/exports')
-    route('export_faq',                 '/exports/faq')
-    route('export_add',                 '/exports/add')
-    route('export_codebook',            '/exports/codebook')
-    route('export_codebook_download',   '/exports/codebook/download')
-    route('export_status',              '/exports/status')
-    route('export_download',            '/exports/{id:\d+}/download')
-    route('export_delete',              '/exports/{id:\d+}/delete')
+    config.add_route('enrollments',                 '/patients/{patient}/enrollments',                              factory=models.PatientFactory, traverse='/{patient}/enrollments')
+    config.add_route('enrollment',                  '/patients/{patient}/enrollments/{enrollment}',                 factory=models.PatientFactory, traverse='/{patient}/enrollments/{enrollment}')
+    config.add_route('enrollment_termination',      '/patients/{patient}/enrollments/{enrollment}/termination',     factory=models.PatientFactory, traverse='/{patient}/enrollments/{enrollment}')
+    config.add_route('enrollment_randomization',    '/patients/{patient}/enrollments/{enrollment}/randomization',   factory=models.PatientFactory, traverse='/{patient}/enrollments/{enrollment}')
 
-    route('home', '/')
+    config.add_route('visits',                      '/patients/{patient}/visits',                       factory=models.PatientFactory, traverse='/{patient}/visits')
+    config.add_route('visits_cycles',               '/patients/{patient}/visits/cycles',                factory=models.PatientFactory, traverse='/{patient}/visits')
+    config.add_route('visit',                       '/patients/{patient}/visits/{visit}',               factory=models.PatientFactory, traverse='/{patient}/visits/{visit}')
+
+    config.add_route('visit_forms',                 '/patients/{patient}/visits/{visit}/forms',         factory=models.PatientFactory, traverse='/{patient}/visits/{visit}/forms')
+    config.add_route('visit_form',                  '/patients/{patient}/visits/{visit}/forms/{form}',  factory=models.PatientFactory, traverse='/{patient}/visits/{visit}/forms/{form}')
 
     log.debug('Routes configured')
-
-
-def dates(*keys):
-    """
-    Creates function to parse date segments in URL on dispatch.
-    """
-    def strpdate(str):
-        return datetime.strptime(str, '%Y-%m-%d').date()
-
-    def predicate(info, request):
-        for key in keys:
-            try:
-                info['match'][key] = strpdate(info['match'][key])
-            except ValueError:
-                return False
-        return True
-
-    return predicate

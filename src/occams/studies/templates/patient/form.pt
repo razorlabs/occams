@@ -1,0 +1,51 @@
+<html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
+  <metal:content-slot fill-slot="content-slot">
+
+    <div id="views-patient-main" style="display: none;" data-bind="visible: isReady">
+
+      <header class="page-header">
+        <div class="btn-toolbar pull-right">
+          <div metal:use-macro="load: header-btn-form-add.pt" />
+          <div metal:use-macro="load: header-btn-edit.pt" />
+          <div metal:use-macro="load: header-btn-delete.pt" />
+        </div>
+        <h1 i18n:translate="" data-bind="text: patient.pid"></h1>
+        <ul metal:use-macro="load: header-details.pt" />
+        <nav metal:use-macro="load: header-nav.pt" />
+
+        <!-- Use template so we can reuse in home view -->
+        <div metal:use-macro="load: modal-patient-edit.pt"></div>
+        <div metal:use-macro="load: modal-patient-delete.pt"></div>
+        <div metal:use-macro="load: modal-form-add.pt"></div>
+      </header>
+
+      <p>ID: <code>${entity.id}</code></p>
+      <h2>${schema.title}</h2>
+
+      <form tal:replace="structure: form"></form>
+
+      <hr />
+
+      <div class="clearfix">
+        <div class="btn-toolbar pull-right">
+          <a href="${cancel_url}"
+            tal:define="cancel_url cancel_url|request.current_route_path(_route_name='patient')"
+            i18n:translate="">Cancel</a>
+          <button type="submit" form="${form_id}" class="btn btn-primary" i18n:translate="">Save</button>
+        </div>
+      </div>
+
+    </div> <!-- /#views-patient-main -->
+  </metal:content-slot>
+  <metal:content-slot fill-slot="javascript-extras-slot">
+    <script>
+      $(function(){
+        var patient = JSON.parse($('#patient-data').text());
+        ko.applyBindings(new PatientView(patient, null, null), document.getElementById('views-patient-main'));
+      });
+    </script>
+    <tal:json define="json import:json">
+      <script id="patient-data" type="application/json">${json.dumps(patient)}</script>
+    </tal:json>
+  </metal:content-slot>
+</html>
