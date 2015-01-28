@@ -8,24 +8,24 @@ README = open(os.path.join(HERE, 'README.rst')).read()
 CHANGES = open(os.path.join(HERE, 'CHANGES.rst')).read()
 
 REQUIRES = [
-    'alembic',                  # Database table upgrades
-    'cssmin',                   # CSS asset compression
-    'jsmin>=2.0.11',            # JS asset compression
-    'python-dateutil',          # Date parsing
-    'pyramid>=1.5',             # Framework
-    'pyramid_chameleon',        # Templating
-    'pyramid_redis_sessions',   # HTTP session with redis backend
-    'pyramid_tm',               # Centralized request transactions
-    'pyramid_rewrite',          # Allows urls to end in "/"
-    'pyramid_webassets',        # Asset managements (ala grunt)
-    'pyramid_who',              # User authentication
-    'six',                      # Py 2 & 3 compatibility
-    'SQLAlchemy>=0.9.0',        # Database ORM
+    'alembic',                          # Database table upgrades
+    'cssmin',                           # CSS asset compression
+    'jsmin>=2.0.11',                    # JS asset compression
+    'python-dateutil',                  # Date parsing
+    'pyramid>=1.5',                     # Framework
+    'pyramid_chameleon',                # Templating
+    'pyramid_redis_sessions==1.0a2',    # HTTP session with redis backend
+    'pyramid_tm',                       # Centralized request transactions
+    'pyramid_rewrite',                  # Allows urls to end in "/"
+    'pyramid_webassets',                # Asset managements (ala grunt)
+    'pyramid_who',                      # User authentication
+    'six',                              # Py 2 & 3 compatibility
+    'SQLAlchemy>=0.9.0',                # Database ORM
     'wtforms>=2.0.0',
     'wtforms-json',
-    'zope.sqlalchemy',          # Connects sqlalchemy to pyramid_tm
+    'zope.sqlalchemy',                  # Connects sqlalchemy to pyramid_tm
 
-    'occams.datastore',         # EAV
+    'occams.datastore',                 # EAV
 ]
 
 EXTRAS = {
