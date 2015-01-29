@@ -7,9 +7,9 @@ function Stratum(data){
   self.id = ko.observable();
   self.study = ko.observable();
   self.arm = ko.observable();
-  self.label = ko.obesrvable();
+  self.label = ko.observable();
   self.block_number = ko.observable();
-  self.randid = ko.observableh
+  self.randid = ko.observable();
 
   self.update = function(data){
     self.__url__(data.__url__);
