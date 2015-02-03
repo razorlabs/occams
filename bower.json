@@ -1,0 +1,25 @@
+{
+  "name": "occams.accounts",
+  "dependencies": {
+    "bootstrap": "3.x",
+    "font-awesome": "4.x",
+    "jquery": "2.x"
+  },
+  "devDependencies": {
+    "mocha": "~2.1.0"
+  },
+  "version": "2.0.12",
+  "authors": [
+    "Marco Martinez <mam002@ucsd.edu>"
+  ],
+  "license": "MIT",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "src/occams/accounts/static/bower_components/",
+    "test",
+    "tests"
+  ]
+}

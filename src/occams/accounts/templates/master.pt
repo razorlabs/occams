@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="${request.locale_name}" i18n:domain="occams.accounts">
+
+  <head>
+    <meta charset="utf-8">
+    <meta tal:define="pkg import:occams.accounts" name="${pkg.__name__}" content="${pkg.__version__}" />
+    <title>${request.settings.app_title|'OCCAMS Accounts'}</title>
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <link tal:repeat="url request.webassets_env['default-css'].urls()" href="${url}" rel="stylesheet" />
+    <!--! Shortcut icons -->
+    <link
+        rel="shortcut icon"
+        href="${request.static_path('occams.accounts:static/images/favicon.ico')}"/>
+    <link rel="shortcut icon" sizes="1024x1024" href="${request.static_path('occams.accounts:static/images/favicon-highres.png')}" />
+    <link rel="shortcut icon" sizes="128x128" href="${request.static_path('occams.accounts:static/images/favicon.png')}" />
+    <link rel="apple-touch-icon" sizes="128x128" href="${request.static_path('occams.accounts:static/images/favicon.png')}" />
+    <link rel="apple-touch-icon-precomposed" sizes="128x128" href="${request.static_path('occams.accounts:static/images/favicon.png')}" />
+  </head>
+
+  <body
+      data-view-name="${request.matched_route.name}"
+      data-view-path="${request.current_route_path()}">
+
+    <!--! Wrap the content so we can push the footer to the bottom of the page -->
+    <div id="wrap">
+      <!--! Keep the app navbar separate from the content container -->
+      <nav
+          class="navbar navbar-default navbar-static-top hidden-print"
+          role="navigation"
+          tal:condition="request.authenticated_userid">
+
+        <div class="container">
+
+          <div class="navbar-header">
+            <button
+                type="button"
+                class="navbar-toggle"
+                data-toggle="collapse"
+                data-target=".navbar-collapse">
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand"
+                href="${request.route_path('accounts')}">OCCAMS Accounts</a>
+          </div> <!--/.navbar-header -->
+
+          <div class="collapse navbar-collapse">
+
+            <ul class="nav navbar-nav navbar-right"
+                tal:define="user request.environ['repoze.who.identity']['properties']|nothing;"
+                  tal:condition="user">
+              <li><p class="navbar-text">${user['first_name']}</p></li>
+              <li class="dropdown"
+                  tal:condition="request.apps">
+                <a href="#apps"
+                  role="button"
+                  class="dropdown-toggle"
+                  rel="tooltip"
+                  data-toggle="dropdown"
+                  data-placement="bottom"
+                  data-container="body"
+                  data-animation="false"
+                  title="Services"
+                  ><span class="glyphicon glyphicon-th"></span><span class="caret"></span></a>
+                <ul class="dropdown-menu" role="menu" aria-labelledby="Apps Menu">
+                  <tal:suites repeat="suite request.apps">
+                    <li role="presentation" class="dropdown-header">
+                      ${suite['title']}
+                    </li>
+                    <tal:apps repeat="app suite['apps']">
+                      <li role="presentation">
+                        <a href="${app['url']}" role="menuitem">${app['title']}</a>
+                      </li>
+                    </tal:apps>
+                    <li role="presentation" class="divider"
+                        tal:condition="not:repeat.suite.end"></li>
+                  </tal:suites>
+                </ul>
+              <li>
+                <a href="${request.accounts_logout_url}"
+                    rel="tooltip"
+                    data-placement="bottom"
+                    data-container="body"
+                    data-animation="false"
+                    title="Log Out"
+                  ><span class="glyphicon glyphicon-log-out"></span></a>
+              </li>
+            </ul>
+
+          </div><!--/.nav-collapse -->
+
+        </div>
+      </nav>
+
+      <div class="container">
+        <main id="${request.matched_route.name}">
+          <metal:content-slot define-slot="content-slot" />
+        </main>
+      </div> <!-- /.container -->
+    </div> <!-- /#wrap -->
+
+    <footer id="footer">
+      <div class="container">
+        <p class="text-muted credit">
+          <span i18n:translate="">Developed by the</span>
+          <a href="http://cfar.ucsd.edu/bit" i18n:translate="">UCSD Center For AIDS Research BIT Core</a>.
+        </p>
+      </div>
+    </footer>
+
+
+    <!--! Load scripts at the end so we don't block rendering -->
+    <script
+        tal:repeat="url request.webassets_env['default-js'].urls()"
+        src="${url}"
+        type="text/javascript"> </script>
+
+    <metal:content-slot define-slot="javascript-extras-slot">
+      <!--! Slot for injecting extra javascript into the applciation (e.g. ko initialization) -->
+    </metal:content-slot>
+
+  </body>
+
+</html>
