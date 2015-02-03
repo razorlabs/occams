@@ -48,9 +48,10 @@ def main(global_config, **settings):
     config.include('pyramid_tm')
 
     config.include('.assets')
-    config.include('.links')
     config.include('.models')
     config.include('.routes')
+
+    config.include('occams.accounts.plugin')
 
     config.scan()
     config.commit()
