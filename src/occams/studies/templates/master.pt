@@ -203,7 +203,7 @@
                 </ul>
               </li>
               <li>
-                <a href="${request.route_path('logout')}"
+                <a href="${request.accounts_logout_url}"
                     rel="tooltip"
                     data-placement="bottom"
                     data-container="body"

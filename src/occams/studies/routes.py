@@ -14,9 +14,6 @@ def includeme(config):
 
     config.add_route('socket.io',                   '/socket.io/*remaining')
 
-    config.add_route('login',                       '/login')
-    config.add_route('logout',                      '/logout')
-
     config.add_route('settings',                    '/settings')
 
 

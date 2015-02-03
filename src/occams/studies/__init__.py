@@ -54,10 +54,11 @@ def main(global_config, **settings):
 
     # App-specific configurations
     config.include('.assets')
-    config.include('.links')
     config.include('.models')
     config.include('.routes')
     config.include('.tasks')
+
+    config.include('occams.accounts.plugin')
 
     config.scan()
     config.commit()
