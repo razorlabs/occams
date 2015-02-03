@@ -7,7 +7,7 @@
     <title>${request.settings.app_title|'OCCAMS Accounts'}</title>
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <link tal:repeat="url request.webassets_env['default-css'].urls()" href="${url}" rel="stylesheet" />
+    <link tal:repeat="url request.webassets_env['default-css'].urls()" href="${url}" rel="stylesheet" type="text/css" />
     <!--! Shortcut icons -->
     <link
         rel="shortcut icon"
