@@ -1,7 +1,13 @@
 """
 Testing fixtures
 
-To specify a pyramid configuration use:
+The test suite is quite expensive to setup on a database such
+as postgres. So you'll need to run the `os_initdb` on the
+target testing database:
+
+    os_initdb --db postgres://user:pass@host/db
+
+To run the tests you'll then need to run the following command:
 
     nosetests --tc=db:postgres://user:pass@host/db
 
