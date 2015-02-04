@@ -13,8 +13,8 @@
           <thead>
             <tr>
               <th></th>
-              <th i18n:translate="">Total New Enrollments</th>
-              <th i18n:translate="">Total Terminations</th>
+              <th i18n:translate="">Enrolled</th>
+              <th i18n:translate="">Terminated</th>
             </tr>
           </thead>
           <tbody>
@@ -35,13 +35,17 @@
         <table class="table table-bordered">
           <thead>
             <tr>
-              <th i18n:translate="">Total Enrollments To Date</th>
-              <th i18n:translate="">Total Active Enrollments</th>
+              <th></th>
+              <th>Total Enrollments</th>
+            </tr>
+            <tr>
+              <th i18n:translate="">To Date</th>
+              <td>${all_time}</td>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td>${all_time}</td>
+              <th i18n:translate="">Active</th>
               <td>${active}</td>
             </tr>
           </tbody>
