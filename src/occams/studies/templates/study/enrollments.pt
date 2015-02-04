@@ -108,10 +108,6 @@
                   tal:omit-tag="not:enrollment.consent_overdue">${enrollment.consent_date}</strong>
             </td>
             <td>
-              <strong
-                  class="text-danger"
-                  tal:condition="enrollment.termination_overdue"
-                  i18n:translate="">TERMINATION OVERDUE</strong>
               <span
                   tal:omit-tag="not:enrollment.termination_overdue">
                 ${enrollment.termination_date}
