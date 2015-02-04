@@ -35,14 +35,12 @@
         <table class="table table-bordered">
           <thead>
             <tr>
-              <th></th>
               <th i18n:translate="">Total Enrollments To Date</th>
               <th i18n:translate="">Total Active Enrollments</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <th i18n:translate="">This month</th>
               <td>${all_time}</td>
               <td>${active}</td>
             </tr>
