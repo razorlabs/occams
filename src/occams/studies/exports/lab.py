@@ -120,7 +120,7 @@ class LabPlan(ExportPlan):
                 models.Patient.pid.label('pid'),
                 models.Patient.pid.label('our'),
                 models.Patient.nurse.label('nurse_email'),
-                (Session.query(models.PatientReference)
+                (Session.query(models.PatientReference.reference_number)
                  .join(models.ReferenceType)
                  .filter(models.ReferenceType.name == u'aeh_num')
                  .filter(models.PatientReference.patient_id == models.Patient.id)
