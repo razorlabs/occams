@@ -55,7 +55,7 @@ def cleanup_study():
             sa.Column('start_date', sa.Date()))
         op.add_column(
             table_name,
-            sa.Column('stop_date', sa.Date()))
+            sa.Column('end_date', sa.Date()))
         op.add_column(
             table_name,
             sa.Column('reference_pattern', sa.String(), nullable=True))
@@ -143,8 +143,8 @@ def cleanup_study():
         """
         start_date <= consent_date
         AND (
-            stop_date IS NULL
-            OR consent_date <= stop_date)
+            end_date IS NULL
+            OR consent_date <= end_date)
         """)
 
     op.create_table(
