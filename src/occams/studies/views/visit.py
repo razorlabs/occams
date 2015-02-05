@@ -7,7 +7,6 @@ from pyramid.view import view_config
 import sqlalchemy as sa
 from sqlalchemy import orm
 import wtforms
-from wtforms.ext.sqlalchemy.fields import QuerySelectMultipleField
 from wtforms.ext.dateutil.fields import DateField
 
 from occams.forms.renderers import \
@@ -154,11 +153,19 @@ def cycles_json(context, request):
     renderer='json')
 def validate_cycles(context, request):
     """
-    AJAX handler for validating cycles field
+    jQuery Validation callback
+    GET parameters:
+        cycles -- a comma delmited list of cycle ids
     """
-    form = VisitSchema(context, request)(request.GET)
-    if not form.validate() and 'cycles' in form.errors:
-        return form.errors['cycles'][0]
+    # Convert the select2 string delimited data into JSON
+    field = 'cycles'
+    raw = request.GET.getall(field)
+    inputs = {field: [c for dc in raw for c in dc.split(',')]}
+    form = VisitSchema(context, request).from_json(inputs)
+    if not form.validate() and field in form.errors:
+        # There doesn't seem to be a better way to send a delimited list
+        # since jQueryValidation only accepts the error message...
+        return '<br />'.join(e for es in form.errors[field] for e in es)
     else:
         return True
 
@@ -215,7 +222,7 @@ def edit_json(context, request):
                 .filter(CurrentSchema.name == models.Schema.name)
                 .correlate(models.Schema)
                 .as_scalar()))
-            .filter(models.Cycle.id.in_([c.id for c in form.cycles.dat])))
+            .filter(models.Cycle.id.in_([c.id for c in form.cycles.data])))
 
         if isinstance(context, models.Visit):
             # Ignore already-added schemata
@@ -418,22 +425,24 @@ def form_delete_json(context, request):
 
 def VisitSchema(context, request):
 
-    def unique_cycles(form, field):
+    def unique_cycle(form, field):
         is_new = isinstance(context, models.VisitFactory)
         patient = context.__parent__ if is_new else context.patient
-        taken_query = (
+        query = (
             Session.query(models.Visit)
-            .distinct()
             .filter(models.Visit.patient == patient)
-            .join(models.Visit.cycles)
-            .filter(models.Cycle.is_interim == sa.sql.false())
-            .filter(models.Cycle.id.in_([c.id for c in field.data])))
+            .filter(models.Visit.cycles.any(
+                (~models.Cycle.is_interim)
+                & (models.Cycle.id == field.data.id))))
         if not is_new:
-            taken_query = taken_query.filter(models.Visit.id != context.id)
-        taken = taken_query.all()
-        if taken:
+            query = query.filter(models.Visit.id != context.id)
+        other = query.first()
+        if other:
             raise wtforms.ValidationError(request.localizer.translate(
-                _(u'Some selected cycles are already in use')))
+                _(u'"${cycle}" already in use by visit on ${visit}'),
+                mapping={
+                    'cycle': field.data.title,
+                    'visit': other.visit_date}))
 
     def unique_visit_date(form, field):
         exists_query = (
@@ -446,17 +455,15 @@ def VisitSchema(context, request):
             raise wtforms.ValidationError(request.localizer.translate(
                 _(u'Visit already exists')))
 
-    def available_cycles():
-        return Session.query(models.Cycle).order_by('title')
-
     class VisitForm(wtforms.Form):
-        cycles = QuerySelectMultipleField(
-            query_factory=available_cycles,
-            get_label='title',
-            validators=[
-                wtforms.validators.InputRequired(),
-                wtforms.validators.Length(min=1),
-                unique_cycles])
+        cycles = wtforms.FieldList(
+            ModelField(
+                session=Session,
+                class_=models.Cycle,
+                validators=[
+                    wtforms.validators.InputRequired(),
+                    unique_cycle]),
+            min_entries=1)
         visit_date = DateField(
             validators=[
                 wtforms.validators.InputRequired(),

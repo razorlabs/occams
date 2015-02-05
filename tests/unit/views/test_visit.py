@@ -117,7 +117,9 @@ class TestValidateCycles(IntegrationFixture):
         Session.flush()
 
         response = self.call_view(patient['visits'], testing.DummyRequest(
-            params=MultiDict([('cycles', cycle1.id), ('cycles', cycle2.id)])))
+            params=MultiDict([
+                ('cycles', ','.join(map(str, [cycle1.id, cycle2.id])))
+            ])))
 
         self.assertTrue(response)
 
@@ -128,7 +130,6 @@ class TestValidateCycles(IntegrationFixture):
         from pyramid import testing
         from webob.multidict import MultiDict
         from occams.studies import models, Session
-        from occams.studies.validators import ERROR_NOT_FOUND
 
         patient = models.Patient(
             site=models.Site(name=u'ucsd', title=u'UCSD'),
@@ -138,9 +139,8 @@ class TestValidateCycles(IntegrationFixture):
         Session.flush()
 
         response = self.call_view(patient['visits'], testing.DummyRequest(
-            params=MultiDict([('cycles', 123)])))
-
-        self.assertEqual(ERROR_NOT_FOUND, response)
+            params=MultiDict([('cycles', '123')])))
+        self.assertIn('not found', response.lower())
 
 
 @mock.patch('occams.studies.views.visit.check_csrf_token')
@@ -158,7 +158,6 @@ class TestEditJson(IntegrationFixture):
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
         from occams.studies import models, Session
-        from occams.studies.validators import ERROR_NOT_FOUND
 
         self.config.add_route('patient', '/{patient}')
         self.config.add_route('visit', '/{patient}/{visit}')
@@ -175,11 +174,11 @@ class TestEditJson(IntegrationFixture):
         with self.assertRaises(HTTPBadRequest) as cm:
             self.call_view(patient['visits'], testing.DummyRequest(
                 json_body={
-                    'cycles': [123],
-                    'visit_date': date.today()}))
+                    'cycles': ['123'],
+                    'visit_date': str(date.today())}))
 
-        self.assertEqual(
-            ERROR_NOT_FOUND, cm.exception.json['errors']['cycles.0'])
+        self.assertIn(
+            'not found', cm.exception.json['errors']['cycles-0'].lower())
 
     def test_unique_cycle(self, check_csrf_token):
         """
@@ -221,15 +220,15 @@ class TestEditJson(IntegrationFixture):
             return self.call_view(patient['visits'], testing.DummyRequest(
                 json_body={
                     'cycles': [cycle.id],
-                    'visit_date': date.today() + timedelta(days=1)}
+                    'visit_date': str(date.today() + timedelta(days=1))}
                 ))
 
         with self.assertRaises(HTTPBadRequest) as cm:
             make_request()
 
         self.assertIn(
-            'is already used by visit',
-            cm.exception.json['errors']['cycles.0'])
+            'already in use',
+            cm.exception.json['errors']['cycles-0'].lower())
 
         # The exception is interims
         cycle.is_interim = True
@@ -281,7 +280,7 @@ class TestEditJson(IntegrationFixture):
         self.call_view(visit, testing.DummyRequest(
             json_body={
                 'cycles': [cycle2.id],
-                'visit_date': date.today()}
+                'visit_date': str(date.today())}
             ))
 
         # New visits cannot share dates
@@ -289,7 +288,7 @@ class TestEditJson(IntegrationFixture):
             self.call_view(patient['visits'], testing.DummyRequest(
                 json_body={
                     'cycles': [cycle2.id],
-                    'visit_date': date.today()}
+                    'visit_date': str(date.today())}
                 ))
 
         self.assertIn(
@@ -306,7 +305,7 @@ class TestEditJson(IntegrationFixture):
 
         self.config.add_route('patient', '/{patient}')
         self.config.add_route('visit', '/{patient}/{visit}')
-        self.config.add_route('form', '/forms/{form}')
+        self.config.add_route('visit_form', '/forms/{form}')
 
         Session.add(models.State(name='pending-entry', title=u''))
 
@@ -343,7 +342,7 @@ class TestEditJson(IntegrationFixture):
         response = self.call_view(patient['visits'], testing.DummyRequest(
             json_body={
                 'cycles': [cycle1.id],
-                'visit_date': date.today() + timedelta(days=1),
+                'visit_date': str(date.today() + timedelta(days=1)),
                 'include_forms': True}
             ))
 
@@ -358,7 +357,7 @@ class TestEditJson(IntegrationFixture):
         response = self.call_view(visit, testing.DummyRequest(
             json_body={
                 'cycles': [cycle1.id, cycle2.id],
-                'visit_date': date.today() + timedelta(days=1),
+                'visit_date': str(date.today() + timedelta(days=1)),
                 'include_forms': True}
             ))
 
@@ -401,8 +400,8 @@ class TestEditJson(IntegrationFixture):
 
         self.call_view(patient['visits'], testing.DummyRequest(
             json_body={
-                'cycles': [cycle1.id],
-                'visit_date': date.today()}))
+                'cycles': [str(cycle1.id)],
+                'visit_date': str(date.today())}))
 
         self.assertLess(old_modify_date, patient.modify_date)
 

@@ -761,7 +761,7 @@ def edit_schedule_json(context, request):
         return (
             Session.query(models.Schema)
             .join(models.study_schema_table)
-            .filter(models.study_schema_table.study_id == context.id)
+            .filter(models.study_schema_table.c.study_id == context.id)
             .order_by(models.Schema.name, models.Schema.publish_date))
 
     def available_cycles():
@@ -782,6 +782,7 @@ def edit_schedule_json(context, request):
     form = ScheduleForm.from_json(request.json_body)
 
     if not form.validate():
+        import nose; nose.tools.set_trace()
         raise HTTPBadRequest(json={'errors': wtferrors(form)})
 
     schema_name = form.schema.data.name

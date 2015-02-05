@@ -60,7 +60,9 @@ class TestEditJson(IntegrationFixture):
                     'code': '111',
                     'consent_date': date.today()}))
 
-        self.assertIn('already exists', cm.exception.json['errors']['name'])
+        self.assertIn(
+            'not a valid choice',
+            cm.exception.json['errors']['name'].lower())
 
     def test_edit_unique_name(self, check_csrf_token):
         """
@@ -516,8 +518,8 @@ class TestEditScheduleJson(IntegrationFixture):
                     'enabled': True}))
 
         self.assertIn(
-            'does not have form',
-            cm.exception.json['errors']['schema'])
+            'not a valid choice',
+            cm.exception.json['errors']['schema'].lower())
 
     def test_cycle_in_study(self, check_csrf_token):
         """
@@ -562,8 +564,8 @@ class TestEditScheduleJson(IntegrationFixture):
                     'enabled': True}))
 
         self.assertIn(
-            'does not have cycle',
-            cm.exception.json['errors']['cycle'])
+            'not a valid choice',
+            cm.exception.json['errors']['cycle'].lower())
 
     def test_enable(self, check_csrf_token):
         """

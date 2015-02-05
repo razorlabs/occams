@@ -72,7 +72,7 @@ class TestEditJson(IntegrationFixture):
 
         self.assertIn(
             'already exists',
-            cm.exception.json['errors']['name'])
+            cm.exception.json['errors']['name'].lower())
 
     def test_edit_unique_name(self, check_csrf_token):
         """

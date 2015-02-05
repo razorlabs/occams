@@ -7,18 +7,21 @@ import wtforms
 def wtferrors(form):
     errors = {}
 
-    def process(node):
+    def inspect(field):
+        if field.errors:
+            errors[field.id] = ' '.join(field.errors)
+
+    def traverse(node):
         for key, field in node._fields.items():
             if isinstance(field, wtforms.FieldList):
                 for entry in field.entries:
-                    process(entry.form)
+                    inspect(entry)
             elif isinstance(field, wtforms.FormField):
-                process(field.form)
+                traverse(field.form)
             else:
-                if field.errors:
-                    errors[field.id] = ' '.join(field.errors)
+                inspect(field)
 
-    process(form)
+    traverse(form)
     return errors
 
 
@@ -35,16 +38,23 @@ class ModelField(wtforms.Field):
         return six.text_type(self.data.id) if self.data else u''
 
     def process_formdata(self, valuelist):
-        if valuelist:
-            try:
-                id_ = int(valuelist[0])
-            except ValueError:
-                raise wtforms.ValidationError(self.gettext(u'Invalid value'))
+        self.data = None
+        # Keep a copy of the data until we can actually verify it
+        self._formdata = valuelist[0] if valuelist else None
+
+    def pre_validate(self, form):
+        if self._formdata is None:
+            return
+        try:
+            id_ = int(self._formdata)
+        except TypeError:
+            raise wtforms.validators.StopValidation(
+                self.gettext(u'Invalid value'))
+        else:
             self.data = self.session.query(self.class_).get(id_)
             if not self.data:
-                raise wtforms.ValidationError(self.gettext(u'Value not found'))
-        else:
-            self.data = None
+                raise wtforms.validators.StopValidation(
+                    self.gettext(u'Value not found'))
 
 
 class Pagination(object):

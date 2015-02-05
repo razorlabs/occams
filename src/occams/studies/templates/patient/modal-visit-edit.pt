@@ -33,6 +33,7 @@
                 type="text"
                 id="${name}"
                 name="${name}"
+                title="Please select a cycle"
                 data-placeholder="Select a cycle..."
                 data-cycles-url="${request.route_path('visits_cycles', patient=context.pid)}"
                 data-rule-remote="${request.route_path('visits', patient=context.pid)}"
