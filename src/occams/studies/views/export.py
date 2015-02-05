@@ -64,15 +64,17 @@ def checkout(context, request):
 
         def check_exportable(form, field):
             if any(value not in exportables for value in field.data):
-                raise wtforms.ValidationErro(request.localizer.translate(
+                raise wtforms.ValidationError(request.localizer.translate(
                     _(u'Invalid selection')))
 
         class CheckoutForm(wtforms.Form):
             contents = wtforms.FieldList(
                 wtforms.StringField(
-                    validators=[wtforms.AnyOf(exportables)]))
+                    validators=[wtforms.validators.AnyOf(
+                        exportables, message=_(u'Invalid selection'))]),
+                min_entries=1)
             expand_collections = wtforms.BooleanField(default=False)
-            use_choice_labels = wtforms.BooleanFIeld(default=False)
+            use_choice_labels = wtforms.BooleanField(default=False)
 
         form = CheckoutForm(request.POST)
 

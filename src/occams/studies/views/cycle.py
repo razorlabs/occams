@@ -3,8 +3,9 @@ from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 import wtforms
 
+from occams.forms.utils import form2json
+
 from .. import _, models, Session
-from . import form as form_views
 from ..utils import wtferrors
 
 
@@ -24,7 +25,7 @@ def view_json(context, request):
         'title': cycle.title,
         'week': cycle.week,
         'is_interim': cycle.is_interim,
-        'forms': form_views.form2json(cycle.schemata)
+        'forms': form2json(cycle.schemata)
         }
 
 

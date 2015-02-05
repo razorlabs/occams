@@ -7,19 +7,19 @@ import six
 import sqlalchemy as sa
 from sqlalchemy import orm
 import wtforms
-from wtforms.ext.sqlalchemy.fields import QuerySelectField
 from wtforms.ext.dateutil.fields import DateField
 
 from occams.roster import generate
 from occams.forms.renderers import \
     make_form, render_form, apply_data, entity_data
 
+from occams.forms.utils import form2json, version2json
+
 from .. import _, models, Session
 from ..utils import wtferrors, ModelField
 from . import (
     site as site_views,
     enrollment as enrollment_views,
-    form as form_views,
     visit as visit_views,
     reference_type as reference_type_views)
 
@@ -298,7 +298,7 @@ def delete_json(context, request):
         _('Patient ${pid} was successfully removed'),
         mapping={'pid': patient.pid})
     request.session.flash(msg, 'success')
-    return {'__next__': request.current_route_path(_route_name='home')}
+    return {'__next__': request.current_route_path(_route_name='studies')}
 
 
 @view_config(
@@ -551,9 +551,9 @@ def available_schemata(context, request):
 
     return {
         '__query__': form.data,
-        'schemata': (form_views.form2json(query)
+        'schemata': (form2json(query)
                      if form.grouped.data
-                     else [form_views.version2json(i) for i in query])
+                     else [version2json(i) for i in query])
     }
 
 
@@ -576,9 +576,10 @@ def PatientSchema(context, request):
     def check_reference_format(form, field):
         type_ = form.reference_type.data
         number = form.reference_number.data
-        if not type_.check(number):
-            raise wtforms.ValidationError(request.localizer.translate(_(
-                _(u'Invalid format'))))
+        # Only validate if the dependent field is valid
+        if not form.reference_type.errors and not type_.check(number):
+            raise wtforms.ValidationError(request.localizer.translate(
+                _(u'Invalid format')))
 
     def check_unique_reference(form, field):
         type_ = form.reference_type.data
@@ -590,26 +591,18 @@ def PatientSchema(context, request):
             query = query.filter(models.PatientReference.patient != context)
         ref = query.first()
         if ref:
-            raise wtforms.ValidationError(request.localizer.translate(_(
-                u'Already in use.')))
+            raise wtforms.ValidationError(request.localizer.translate(
+                _(u'Already assigned')))
 
-    def available_reference_types():
-        return Session.query(models.ReferenceType).order_by('title')
-
-    def available_sites():
-        allowed_site_ids = [
-            s.id
-            for s in Session.query(models.Site).order_by('title')
-            if request.has_permission('view', s)]
-        return (
-            Session.query(models.Site)
-            .filter(models.Site.id.in_(allowed_site_ids))
-            .order_by('title'))
+    def check_allowed(form, field):
+        if not request.has_permission('view', field.data):
+            raise wtforms.ValidationError(request.localizer.translate(
+                _(u'You do not belong to this site')))
 
     class ReferenceForm(wtforms.Form):
-        reference_type = QuerySelectField(
-            query_factory=available_reference_types,
-            get_label='title',
+        reference_type = ModelField(
+            session=Session,
+            class_=models.ReferenceType,
             validators=[
                 wtforms.validators.InputRequired()])
         reference_number = wtforms.StringField(
@@ -619,10 +612,12 @@ def PatientSchema(context, request):
                 check_unique_reference])
 
     class PatientForm(wtforms.Form):
-        site = QuerySelectField(
-            query_factory=available_sites,
-            get_label='title',
-            validators=[wtforms.validators.InputRequired()])
+        site = ModelField(
+            session=Session,
+            class_=models.Site,
+            validators=[
+                wtforms.validators.InputRequired(),
+                check_allowed])
         references = wtforms.FieldList(wtforms.FormField(ReferenceForm))
 
     return PatientForm

@@ -3,6 +3,12 @@ import mock
 from tests import IntegrationFixture
 
 
+def _register_routes(config):
+    config.add_route('studies', '/')
+    config.add_route('patient', '/p/{patient}')
+    config.add_route('site',    '/s/{site}')
+
+
 @mock.patch('occams.studies.views.patient.check_csrf_token')
 class TestEditJson(IntegrationFixture):
 
@@ -17,7 +23,7 @@ class TestEditJson(IntegrationFixture):
         from pyramid import testing
         from occams.studies import models, Session
 
-        self.config.add_route('patient', '/patients/{patient}')
+        _register_routes(self.config)
 
         site_la = models.Site(name=u'la', title=u'LA')
         site_sd = models.Site(name=u'sd', title=u'SD')
@@ -39,9 +45,8 @@ class TestEditJson(IntegrationFixture):
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
         from occams.studies import models, Session
-        from occams.studies.validators import ERROR_NOT_FOUND
 
-        self.config.add_route('patient', '/patients/{patient}')
+        _register_routes(self.config)
 
         site_la = models.Site(name=u'la', title=u'LA')
         patient = models.Patient(site=site_la, pid=u'12345')
@@ -54,8 +59,8 @@ class TestEditJson(IntegrationFixture):
         with self.assertRaises(HTTPBadRequest) as cm:
             self.call_view(patient, request)
         self.assertTrue(check_csrf_token.called)
-        self.assertEqual(
-            ERROR_NOT_FOUND, cm.exception.json['errors']['site'])
+        self.assertIn(
+            'not found', cm.exception.json['errors']['site'].lower())
 
     def test_reference_type_invalid(self, check_csrf_token):
         """
@@ -64,9 +69,8 @@ class TestEditJson(IntegrationFixture):
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
         from occams.studies import models, Session
-        from occams.studies.validators import ERROR_NOT_FOUND
 
-        self.config.add_route('patient', '/patients/{patient}')
+        _register_routes(self.config)
 
         site_la = models.Site(name=u'la', title=u'LA')
         patient = models.Patient(site=site_la, pid=u'12345')
@@ -82,9 +86,9 @@ class TestEditJson(IntegrationFixture):
         with self.assertRaises(HTTPBadRequest) as cm:
             self.call_view(patient, request)
         self.assertTrue(check_csrf_token.called)
-        self.assertEqual(
-            ERROR_NOT_FOUND,
-            cm.exception.json['errors']['references.0.reference_type'])
+        self.assertIn(
+            'not found',
+            cm.exception.json['errors']['references-0-reference_type'].lower())
 
     def test_reference_valid_number(self, check_csrf_token):
         """
@@ -94,7 +98,7 @@ class TestEditJson(IntegrationFixture):
         from pyramid.httpexceptions import HTTPBadRequest
         from occams.studies import models, Session
 
-        self.config.add_route('patient', '/patients/{patient}')
+        _register_routes(self.config)
 
         site_la = models.Site(name=u'la', title=u'LA')
         reftype = models.ReferenceType(
@@ -114,8 +118,8 @@ class TestEditJson(IntegrationFixture):
             self.call_view(patient, request)
         self.assertTrue(check_csrf_token.called)
         self.assertIn(
-            'not a valid format',
-            cm.exception.json['errors']['references.0'])
+            'Invalid format',
+            cm.exception.json['errors']['references-0-reference_number'])
 
     def test_reference_unique(self, check_csrf_token):
         """
@@ -125,7 +129,7 @@ class TestEditJson(IntegrationFixture):
         from pyramid.httpexceptions import HTTPBadRequest
         from occams.studies import models, Session
 
-        self.config.add_route('patient', '/patients/{patient}')
+        _register_routes(self.config)
 
         site_la = models.Site(name=u'la', title=u'LA')
         reftype = models.ReferenceType(name=u'foo', title=u'Foo')
@@ -147,8 +151,8 @@ class TestEditJson(IntegrationFixture):
             self.call_view(patient, request)
         self.assertTrue(check_csrf_token.called)
         self.assertIn(
-            'already assigned',
-            cm.exception.json['errors']['references.0'])
+            'Already assigned',
+            cm.exception.json['errors']['references-0-reference_number'])
 
     def test_references(self, check_csrf_token):
         """
@@ -157,7 +161,7 @@ class TestEditJson(IntegrationFixture):
         from pyramid import testing
         from occams.studies import models, Session
 
-        self.config.add_route('patient', '/patients/{patient}')
+        _register_routes(self.config)
 
         reftype1 = models.ReferenceType(name=u'foo', title=u'Foo')
         reftype2 = models.ReferenceType(name=u'bar', title=u'Bar')
@@ -197,7 +201,7 @@ class TestEditJson(IntegrationFixture):
         from pyramid import testing
         from occams.studies import models, Session
 
-        self.config.add_route('patient', '/patients/{patient}')
+        _register_routes(self.config)
 
         site_la = models.Site(name=u'la', title=u'LA')
         reftype = models.ReferenceType(name=u'foo', title=u'FOO')
@@ -241,7 +245,7 @@ class TestDeleteJSON(IntegrationFixture):
         from pyramid import testing
         from occams.studies import models, Session
 
-        self.config.add_route('home', '/home')
+        _register_routes(self.config)
 
         site_la = models.Site(name=u'la', title=u'LA')
         patient = models.Patient(site=site_la, pid=u'12345')

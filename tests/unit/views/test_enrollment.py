@@ -3,6 +3,13 @@ import mock
 from tests import IntegrationFixture
 
 
+def _register_routes(config):
+    config.add_route('patient', '/p/{patient}')
+    config.add_route('enrollment', '/e/{enrollment}')
+    config.add_route('enrollment_randomization', '/e/{enrollment}/rand')
+    config.add_route('enrollment_termination', '/e/{enrollment}/term')
+
+
 class TestViewJson(IntegrationFixture):
 
     def call_view(self, context, request):
@@ -17,7 +24,7 @@ class TestViewJson(IntegrationFixture):
         from pyramid import testing
         from occams.studies import models, Session
 
-        self.config.add_route('enrollment', '/{patient}/{enrollment}')
+        _register_routes(self.config)
 
         schema = models.Schema(name=u'criteria', title=u'Criteria')
 
@@ -78,7 +85,7 @@ class TestEditJson(IntegrationFixture):
         from pyramid.httpexceptions import HTTPBadRequest
         from occams.studies import models, Session
 
-        self.config.add_route('enrollment', '/{patient}/{enrollment}')
+        _register_routes(self.config)
 
         study = models.Study(
             name=u'somestudy',
@@ -118,7 +125,7 @@ class TestEditJson(IntegrationFixture):
 
         self.assertIn(
             'This enrollment already exists.',
-            cm.exception.json['errors'][''])
+            cm.exception.json['errors']['consent_date'])
 
     def test_disable_study_update(self, check_csrf_token):
         """
@@ -129,7 +136,7 @@ class TestEditJson(IntegrationFixture):
         from pyramid.httpexceptions import HTTPBadRequest
         from occams.studies import models, Session
 
-        self.config.add_route('enrollment', '/{patient}/{enrollment}')
+        _register_routes(self.config)
 
         study1 = models.Study(
             name=u'somestudy',
@@ -183,7 +190,7 @@ class TestEditJson(IntegrationFixture):
         from pyramid.httpexceptions import HTTPBadRequest
         from occams.studies import models, Session
 
-        self.config.add_route('enrollment', '/{patient}/{enrollment}')
+        _register_routes(self.config)
 
         today = date.today()
         invalid_date = today - timedelta(days=100)
@@ -209,14 +216,14 @@ class TestEditJson(IntegrationFixture):
             self.call_view(patient['enrollments'], testing.DummyRequest(
                 json_body={
                     'study': str(study.id),
-                    'consent_date': invalid_date,
-                    'latest_consent_date': invalid_date,
+                    'consent_date': str(invalid_date),
+                    'latest_consent_date': str(invalid_date),
                     }
                 ))
 
         self.assertIn(
             'Cannot enroll before the study start date',
-            cm.exception.json['errors'][''])
+            cm.exception.json['errors']['latest_consent_date'])
 
     def test_timeline_end_date(self, check_csrf_token):
         """
@@ -227,7 +234,7 @@ class TestEditJson(IntegrationFixture):
         from pyramid.httpexceptions import HTTPBadRequest
         from occams.studies import models, Session
 
-        self.config.add_route('enrollment', '/{patient}/{enrollment}')
+        _register_routes(self.config)
 
         today = date.today()
         t1 = today - timedelta(days=5)
@@ -255,14 +262,14 @@ class TestEditJson(IntegrationFixture):
             self.call_view(patient['enrollments'], testing.DummyRequest(
                 json_body={
                     'study': str(study.id),
-                    'consent_date': invalid_date,
-                    'latest_consent_date': invalid_date,
+                    'consent_date': str(invalid_date),
+                    'latest_consent_date': str(invalid_date),
                     }
                 ))
 
         self.assertIn(
             'Cannot enroll after the study end date',
-            cm.exception.json['errors'][''])
+            cm.exception.json['errors']['latest_consent_date'])
 
     def test_update_patient(self, check_csrf_token):
         """
@@ -272,8 +279,7 @@ class TestEditJson(IntegrationFixture):
         from pyramid import testing
         from occams.studies import models, Session
 
-        self.config.add_route('patient', '/{patient}')
-        self.config.add_route('enrollment', '/{patient}/{enrollment}')
+        _register_routes(self.config)
 
         study = models.Study(
             name=u'somestudy',
@@ -294,8 +300,8 @@ class TestEditJson(IntegrationFixture):
         self.call_view(patient['enrollments'], testing.DummyRequest(
             json_body={
                 'study': study.id,
-                'consent_date': date.today(),
-                'latest_consent_date': date.today()
+                'consent_date': str(date.today()),
+                'latest_consent_date': str(date.today())
                 }))
         self.assertLess(old_modify_date, patient.modify_date)
 
@@ -315,7 +321,7 @@ class TestDeleteJson(IntegrationFixture):
         from pyramid import testing
         from occams.studies import models, Session
 
-        self.config.add_route('patient', '/{patient}')
+        _register_routes(self.config)
 
         study = models.Study(
             name=u'somestudy',
@@ -349,7 +355,7 @@ class TestDeleteJson(IntegrationFixture):
         from pyramid import testing
         from occams.studies import models, Session
 
-        self.config.add_route('patient', '/{patient}')
+        _register_routes(self.config)
 
         schema = models.Schema(
             name=u'termination',

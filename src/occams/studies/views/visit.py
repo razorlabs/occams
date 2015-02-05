@@ -361,7 +361,10 @@ def form_add_json(context, request):
     class AddForm(wtforms.Form):
         schemata = wtforms.FieldList(ModelField(
             session=Session,
-            class_=models.Schema))
+            class_=models.Schema,
+            validators=[
+                wtforms.validators.InputRequired(),
+                check_study_form]))
 
     form = AddForm.from_json(request.json_body)
 

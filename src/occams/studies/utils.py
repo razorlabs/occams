@@ -7,21 +7,21 @@ import wtforms
 def wtferrors(form):
     errors = {}
 
-    def inspect(field):
-        if field.errors:
-            errors[field.id] = ' '.join(field.errors)
+    def inspect_field(field):
+        if isinstance(field, wtforms.FieldList):
+            for entry in field.entries:
+                inspect_field(entry)
+        elif isinstance(field, wtforms.FormField):
+            inspect_form(field.form)
+        else:
+            if field.errors:
+                errors[field.id] = ' '.join(field.errors)
 
-    def traverse(node):
-        for key, field in node._fields.items():
-            if isinstance(field, wtforms.FieldList):
-                for entry in field.entries:
-                    inspect(entry)
-            elif isinstance(field, wtforms.FormField):
-                traverse(field.form)
-            else:
-                inspect(field)
+    def inspect_form(form):
+        for key, field in form._fields.items():
+            inspect_field(field)
 
-    traverse(form)
+    inspect_form(form)
     return errors
 
 
@@ -43,18 +43,17 @@ class ModelField(wtforms.Field):
         self._formdata = valuelist[0] if valuelist else None
 
     def pre_validate(self, form):
-        if self._formdata is None:
-            return
-        try:
-            id_ = int(self._formdata)
-        except TypeError:
-            raise wtforms.validators.StopValidation(
-                self.gettext(u'Invalid value'))
-        else:
-            self.data = self.session.query(self.class_).get(id_)
-            if not self.data:
+        if self._formdata:
+            try:
+                id_ = int(self._formdata)
+            except TypeError:
                 raise wtforms.validators.StopValidation(
-                    self.gettext(u'Value not found'))
+                    self.gettext(u'Invalid value'))
+            else:
+                self.data = self.session.query(self.class_).get(id_)
+                if not self.data:
+                    raise wtforms.validators.StopValidation(
+                        self.gettext(u'Value not found'))
 
 
 class Pagination(object):

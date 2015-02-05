@@ -22,11 +22,11 @@ class TestEditJson(IntegrationFixture):
 
         self.call_view(models.StudyFactory(None), testing.DummyRequest(
             json_body={
-                'name': 'somestudy',
-                'title': 'Some study',
-                'short_title': 'sfstudy',
-                'code': '111',
-                'consent_date': date.today()}))
+                'name': u'somestudy',
+                'title': u'Some study',
+                'short_title': u'sfstudy',
+                'code': u'111',
+                'consent_date': str(date.today())}))
 
         self.assertIsNotNone(
             Session.query(models.Study).filter_by(name='somestudy').first())
@@ -58,10 +58,10 @@ class TestEditJson(IntegrationFixture):
                     'title': 'Should fail',
                     'short_title': 'sfstudy',
                     'code': '111',
-                    'consent_date': date.today()}))
+                    'consent_date': str(date.today())}))
 
         self.assertIn(
-            'not a valid choice',
+            'already exists',
             cm.exception.json['errors']['name'].lower())
 
     def test_edit_unique_name(self, check_csrf_token):
@@ -90,7 +90,7 @@ class TestEditJson(IntegrationFixture):
                 'title': study.title,
                 'short_title': study.short_title,
                 'code': study.code,
-                'consent_date': study.consent_date}))
+                'consent_date': str(study.consent_date)}))
 
         self.assertIsNotNone(response)
 
@@ -271,7 +271,7 @@ class TestAddSchemaJson(IntegrationFixture):
 
         self.assertIn(
             'not published',
-            cm.exception.json['errors']['versions.0'])
+            cm.exception.json['errors']['versions-0'])
 
     def test_fail_if_not_same_schema(self, check_csrf_token):
         """
@@ -302,7 +302,7 @@ class TestAddSchemaJson(IntegrationFixture):
 
         self.assertIn(
             'Incorrect versions',
-            cm.exception.json['errors']['versions'])
+            cm.exception.json['errors']['versions-0'])
 
     def test_fail_if_patient_schema(self, check_csrf_token):
         """
@@ -337,8 +337,8 @@ class TestAddSchemaJson(IntegrationFixture):
                 json_body={'schema': schema.name, 'versions': [schema.id]}))
 
         self.assertIn(
-            'already used as a patient form',
-            cm.exception.json['errors']['versions.0'])
+            'already a patient form',
+            cm.exception.json['errors']['schema'].lower())
 
     def test_fail_if_randomization_schema(self, check_csrf_token):
         """
@@ -370,8 +370,8 @@ class TestAddSchemaJson(IntegrationFixture):
                 json_body={'schema': schema.name, 'versions': [schema.id]}))
 
         self.assertIn(
-            'already used as a randomization form',
-            cm.exception.json['errors']['versions.0'])
+            'already a randomization form',
+            cm.exception.json['errors']['schema'].lower())
 
     def test_fail_if_termination_schema(self, check_csrf_token):
         """
@@ -402,8 +402,8 @@ class TestAddSchemaJson(IntegrationFixture):
                 json_body={'schema': schema.name, 'versions': [schema.id]}))
 
         self.assertIn(
-            'already used as a termination form',
-            cm.exception.json['errors']['versions.0'])
+            'already a termination form',
+            cm.exception.json['errors']['schema'].lower())
 
 
 @mock.patch('occams.studies.views.study.check_csrf_token')
@@ -513,7 +513,7 @@ class TestEditScheduleJson(IntegrationFixture):
         with self.assertRaises(HTTPBadRequest) as cm:
             self.call_view(study, testing.DummyRequest(
                 json_body={
-                    'schema': schema.id,
+                    'schema': schema.name,
                     'cycle': cycle.id,
                     'enabled': True}))
 
@@ -559,7 +559,7 @@ class TestEditScheduleJson(IntegrationFixture):
         with self.assertRaises(HTTPBadRequest) as cm:
             self.call_view(study, testing.DummyRequest(
                 json_body={
-                    'schema': schema.id,
+                    'schema': schema.name,
                     'cycle': other_cycle.id,
                     'enabled': True}))
 

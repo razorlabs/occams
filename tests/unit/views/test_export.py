@@ -4,6 +4,10 @@ import mock
 from tests import IntegrationFixture
 
 
+def _register_routes(config):
+    config.add_route('export_status', '/')
+
+
 @mock.patch('occams.studies.views.export.check_csrf_token')
 class TestAdd(IntegrationFixture):
 
@@ -58,10 +62,11 @@ class TestAdd(IntegrationFixture):
         from pyramid import testing
         from webob.multidict import MultiDict
         from occams.studies import models
+        self.config.testing_securitypolicy(userid='tester', permissive=True)
         request = testing.DummyRequest(
             post=MultiDict([('contents', 'does_not_exist')]))
         response = self.call_view(models.ExportFactory(request), request)
-        self.assertIn('Invalid selection', response['errors']['contents'])
+        self.assertIn('Invalid selection', response['errors']['contents-0'])
 
     @mock.patch('occams.studies.tasks.make_export')  # Don't invoke subtasks
     def test_valid(self, make_export, check_csrf_token):
@@ -74,8 +79,8 @@ class TestAdd(IntegrationFixture):
         from webob.multidict import MultiDict
         from occams.studies import Session, models
 
-        self.config.include('occams.studies.routes')
-        self.config.add_route('export_status', '/dummy')
+        _register_routes(self.config)
+
         self.config.registry.settings['app.export.dir'] = '/tmp'
 
         Session.add(models.User(key=u'joe'))
@@ -90,7 +95,7 @@ class TestAdd(IntegrationFixture):
         self.config.testing_securitypolicy(userid='joe')
         request = testing.DummyRequest(
             post=MultiDict([
-                ('contents', str('vitals'))
+                ('contents-0', str('vitals'))
             ]))
 
         response = self.call_view(models.ExportFactory(request), request)
