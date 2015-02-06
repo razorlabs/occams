@@ -31,13 +31,8 @@ from . import (
 def search_view(context, request):
     """
     Generates data for the search result listing web view.
-    If the search only yields a single result, a redirect to the patient view
-    will be returned.
     """
-    results = search_json(context, request)
-    if len(results['patients']) == 1:
-        return HTTPFound(location=results['patients'][0]['__url__'])
-    return {'results': results}
+    return {'results': search_json(context, request)}
 
 
 @view_config(
@@ -68,10 +63,8 @@ def search_json(context, request):
 
     class SearchForm(wtforms.Form):
         query = wtforms.StringField(
-            validators=[
-                wtforms.validators.Optional(),
-                wtforms.validators.Length(max=100)],
-            filters=[lambda v: v.strip()])
+            validators=[wtforms.validators.Optional()],
+            filters=[lambda v: v.strip()[:100] if v else None])
         page = wtforms.IntegerField(
             validators=[wtforms.validators.Optional()],
             filters=[lambda v: 1 if not v or v < 1 else v],
@@ -96,7 +89,7 @@ def search_json(context, request):
         .filter(models.Patient.site_id.in_(site_ids)))
 
     if form.query.data:
-        wildcard = '%{0}%'.format(form.query.data)
+        wildcard = u'%{}%'.format(form.query.data)
         query = (
             query.filter(
                 models.Patient.pid.ilike(wildcard)
@@ -190,6 +183,8 @@ def view_json(context, request):
                 request),
             'reference_number': reference.reference_number
             } for reference in references_query],
+        'create_date': patient.create_date.isoformat(),
+        'modify_date': patient.modify_date.isoformat()
         }
 
 

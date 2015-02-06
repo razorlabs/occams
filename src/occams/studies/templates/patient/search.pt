@@ -18,14 +18,14 @@
 
       <div style="display:none" data-bind="visible: isReady">
 
-        <!-- ko ifnot: hasResults -->
+        <!-- ko ifnot: hasPatients -->
           <div class="alert alert-warning">
             <strong i18n:translate="">No results found!</strong>
             <span i18n:translate="">Please refine your search and try again.</span>
           </div>
         <!-- /ko -->
-        <!-- ko if: hasResults -->
-          <!-- ko foreach: results -->
+        <!-- ko if: hasPatients -->
+          <!-- ko foreach: patients -->
             <p>
               <div class="pull-right">
                 <span class="label label-default" data-bind="text: site.title"></span>
@@ -84,17 +84,21 @@
 
       </div> <!-- /:isReady -->
     </div>
-
-    <tal:json define="json import: json">
-      <script id="results-data" type="application/json">${json.dumps(results)}</script>
-    </tal:json>
-
   </metal:content-slot>
+
   <metal:content-slot fill-slot="javascript-extras-slot">
     <script>
       $(function(){
-        ko.applyBindings(new PatientSearchView, document.getElementById('views-patient-search'));
+        'use strict';
+        ko.applyBindings(
+          new PatientSearchView({
+            resultsData: JSON.parse($('#results-data').text())
+            }),
+          document.getElementById('views-patient-search'));
       });
     </script>
+    <tal:json define="json import: json">
+      <script id="results-data" type="application/json">${json.dumps(results)}</script>
+    </tal:json>
   </metal:content-slot>
 </html>

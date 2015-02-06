@@ -7,6 +7,105 @@ def _register_routes(config):
     config.add_route('studies', '/')
     config.add_route('patient', '/p/{patient}')
     config.add_route('site',    '/s/{site}')
+    config.add_route('enrollment', '/e/{enrollment}')
+    config.add_route('enrollment_randomization', '/e/{enrollment}/r')
+    config.add_route('enrollment_termination', '/e/{enrollment}/t')
+
+
+class TestSearchJson(IntegrationFixture):
+
+    def call_view(self, context, request):
+        from occams.studies.views.patient import search_json as view
+        return view(context, request)
+
+    def test_by_pid(self):
+        """
+        It should search by PID
+        """
+        from pyramid import testing
+        from occams.studies import models, Session
+        from webob.multidict import MultiDict
+
+        _register_routes(self.config)
+
+        site_la = models.Site(name=u'la', title=u'LA')
+        patient = models.Patient(site=site_la, pid=u'12345')
+        Session.add_all([site_la, patient])
+        Session.flush()
+
+        request = testing.DummyRequest(
+            params=MultiDict([
+                ('query', u'12345')
+            ]))
+        response = self.call_view(models.PatientFactory(request), request)
+        self.assertEquals(patient.pid, response['patients'][0]['pid'])
+
+    def test_by_enrollment_number(self):
+        """
+        It should be able to search by Enrollment Number
+        """
+        from datetime import date
+        from pyramid import testing
+        from occams.studies import models, Session
+        from webob.multidict import MultiDict
+
+        _register_routes(self.config)
+
+        study = models.Study(
+            name=u'somestudy',
+            title=u'Some Study',
+            short_title=u'sstudy',
+            code=u'000',
+            start_date=date.today(),
+            consent_date=date.today())
+        site_la = models.Site(name=u'la', title=u'LA')
+        patient = models.Patient(
+            site=site_la, pid=u'12345',
+            enrollments=[
+                models.Enrollment(
+                    study=study,
+                    reference_number=u'xyz',
+                    consent_date=date.today())
+                ])
+        Session.add_all([site_la, patient])
+        Session.flush()
+
+        request = testing.DummyRequest(
+            params=MultiDict([
+                ('query', u'xyz')
+                ]))
+        response = self.call_view(models.PatientFactory(request), request)
+        self.assertEquals(patient.pid, response['patients'][0]['pid'])
+
+    def test_by_reference_number(self):
+        """
+        It should be able to search by external ID
+        """
+        from pyramid import testing
+        from occams.studies import models, Session
+        from webob.multidict import MultiDict
+
+        _register_routes(self.config)
+
+        site_la = models.Site(name=u'la', title=u'LA')
+        patient = models.Patient(
+            site=site_la, pid=u'12345',
+            references=[
+                models.PatientReference(
+                    reference_type=models.ReferenceType(
+                        name=u'ext',
+                        title=u'External ID'),
+                    reference_number=u'05-01-0000-5')
+                ])
+        Session.add_all([site_la, patient])
+        Session.flush()
+
+        request = testing.DummyRequest(
+            params=MultiDict([
+                ('query', u'05-01')
+                ]))
+        response = self.call_view(models.PatientFactory(request), request)
+        self.assertEquals(patient.pid, response['patients'][0]['pid'])
 
 
 @mock.patch('occams.studies.views.patient.check_csrf_token')
