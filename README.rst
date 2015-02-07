@@ -1,7 +1,7 @@
 OCCAMS Studies
 ==============
 
-Clinical trials data management software.
+Clinical research data management and analysis software.
 
 
 System Requirements
