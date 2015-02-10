@@ -33,13 +33,9 @@
             <label class="col-sm-3 required" i18n:translate="">Title</label>
             <div class="col-sm-9">
               <input type="text" class="form-control" required autofocus name="title" data-bind="value: title"/>
-            </div>
-          </div> <!-- /.form-group -->
-          <div class="form-group">
-            <label class="col-sm-3 required" i18n:translate="">System Name</label>
-            <div class="col-md-6">
-              <input type="text" class="form-control" required name="name" data-bind="value: name" pattern="^[a-z0-9_\-]+$" />
-
+              <!-- ko ifnot: isNew -->
+                <p class="help-block">Note: Updating this value with also update its URL</p>
+              <!-- /ko -->
             </div>
           </div> <!-- /.form-group -->
           <div class="form-group">
