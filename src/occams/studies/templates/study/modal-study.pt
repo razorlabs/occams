@@ -103,7 +103,7 @@
               <div class="checkbox">
                 <label>
                   <input type="checkbox" name="is_randomized" data-bind="checked: is_randomized" />
-                  <span i18n:translate="">Randomized</span>
+                  <span i18n:translate="">This study is <strong>randomized</strong></span>
                 </label>
               </div>
             </div>
@@ -114,7 +114,7 @@
                 <div class="checkbox">
                   <label>
                     <input type="checkbox" name="is_blinded" data-bind="checked: is_blinded" />
-                    <span i18n:translate="">Blinded</span>
+                    <span i18n:translate="">This study is <strong>blinded</strong></span>
                   </label>
                 </div>
               </div>
