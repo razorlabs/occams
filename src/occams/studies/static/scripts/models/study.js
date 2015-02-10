@@ -34,8 +34,14 @@ function Study(data){
     return forms;
   });
 
+  self.isNew = ko.pureComputed(function(){
+    return !self.id();
+  });
+
   self.update = function(data){
+    data = data || {};
     self.__url__(data.__url__);
+    self.id(data.id);
     self.name(data.name);
     self.title(data.title);
     self.short_title(data.short_title);
@@ -85,5 +91,5 @@ function Study(data){
     };
   };
 
-  self.update(data || {});
+  self.update(data);
 }

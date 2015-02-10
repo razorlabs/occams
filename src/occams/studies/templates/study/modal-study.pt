@@ -136,7 +136,7 @@
           <!-- /ko -->
         </div> <!-- /.modal-body -->
         <div class="modal-footer">
-          <!-- ko ifnot: id -->
+          <!-- ko if: isNew -->
             <label class="text-muted">
               <input type="checkbox" data-bind="checked: $parent.addMoreStudies" />
               <span i18n:translate="">Add another</span>
