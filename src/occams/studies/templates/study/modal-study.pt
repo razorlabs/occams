@@ -33,13 +33,9 @@
             <label class="col-sm-3 required" i18n:translate="">Title</label>
             <div class="col-sm-9">
               <input type="text" class="form-control" required autofocus name="title" data-bind="value: title"/>
-            </div>
-          </div> <!-- /.form-group -->
-          <div class="form-group">
-            <label class="col-sm-3 required" i18n:translate="">System Name</label>
-            <div class="col-md-6">
-              <input type="text" class="form-control" required name="name" data-bind="value: name" pattern="^[a-z0-9_\-]+$" />
-
+              <!-- ko ifnot: isNew -->
+                <p class="help-block">Note: Updating this value with also update its URL</p>
+              <!-- /ko -->
             </div>
           </div> <!-- /.form-group -->
           <div class="form-group">
@@ -56,20 +52,26 @@
           </div> <!-- /.form-group -->
           <div class="form-group">
             <label class="col-sm-3 required" i18n:translate="">Consent Date</label>
-            <div class="col-sm-3">
-              <input type="date" class="form-control" required data-date-format="YYYY-MM-DD" name="consent_date" data-bind="value: consent_date, datetimePicker: {useCurrent: false}"/>
+            <div class="col-sm-9">
+              <div class="row">
+                <div class="col-sm-4">
+                  <input type="date" class="form-control" required name="consent_date" data-bind="value: consent_date, datetimepicker: {format: 'YYYY-MM-DD', useCurrent: false, pickTime: false}" />
+                </div>
+              </div>
+              <div class="errors"></div>
+              <p class="help-block" i18n:translate="">The lastest consent for this study. All currently enrolled patients will be prompted to have consents signed by this date</p>
             </div>
           </div> <!-- /.form-group -->
           <div class="form-group">
             <label class="col-sm-3" i18n:translate="">Start Date</label>
-            <div class="col-sm-3">
-              <input type="date" class="form-control" data-date-format="YYYY-MM-DD" name="start_date" data-bind="value: start_date, datetimePicker: {useCurrent: false}"/>
-            </div>
-          </div> <!-- /.form-group -->
-          <div class="form-group">
-            <label class="col-sm-3" i18n:translate="">End Date</label>
-            <div class="col-sm-3">
-              <input type="date" class="form-control" data-date-format="YYYY-MM-DD" name="end_date" data-bind="value: end_date, datetimePicker: {useCurrent: false}"/>
+            <div class="col-sm-9">
+              <div class="row">
+                <div class="col-sm-4">
+                  <input type="date" class="form-control" name="start_date" data-bind="value: start_date, datetimepicker: {format: 'YYYY-MM-DD', useCurrent: false, pickTime: false}" />
+                </div>
+              </div>
+              <div class="errors"></div>
+              <p class="help-block" i18n:translate="">Denotes when the study began. In order for data to be collected for this study, a date must be specified</p>
             </div>
           </div> <!-- /.form-group -->
           <div class="form-group">
@@ -97,7 +99,7 @@
               <div class="checkbox">
                 <label>
                   <input type="checkbox" name="is_randomized" data-bind="checked: is_randomized" />
-                  <span i18n:translate="">Randomized</span>
+                  <span i18n:translate="">This study is <strong>randomized</strong></span>
                 </label>
               </div>
             </div>
@@ -108,7 +110,7 @@
                 <div class="checkbox">
                   <label>
                     <input type="checkbox" name="is_blinded" data-bind="checked: is_blinded" />
-                    <span i18n:translate="">Blinded</span>
+                    <span i18n:translate="">This study is <strong>blinded</strong></span>
                   </label>
                 </div>
               </div>
@@ -136,7 +138,7 @@
           <!-- /ko -->
         </div> <!-- /.modal-body -->
         <div class="modal-footer">
-          <!-- ko ifnot: id -->
+          <!-- ko if: isNew -->
             <label class="text-muted">
               <input type="checkbox" data-bind="checked: $parent.addMoreStudies" />
               <span i18n:translate="">Add another</span>

@@ -162,6 +162,15 @@ function StudyView(studyData, scheduleUrl){
         if (selected.id()){
           selected.update(data);
         }
+
+        // URL updated, need to refresh the page
+        // TODO: would be better to use KO for attribuets
+        // and push new URL to history.
+        // This will do for now because of deadlines.
+        if (window.location.pathname != selected.__url__()){
+          window.location = selected.__url__();
+        }
+
         self.clear();
       },
       complete: function(){

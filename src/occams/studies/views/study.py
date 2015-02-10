@@ -4,6 +4,7 @@ except ImportError:  # pragma: nocover
     import csv
 from datetime import date, timedelta
 
+from slugify import slugify
 from pyramid.events import subscriber, BeforeRender
 from pyramid.httpexceptions import \
     HTTPBadRequest, HTTPForbidden, HTTPNotFound, HTTPOk
@@ -456,15 +457,13 @@ def edit_json(context, request):
     else:
         study = context
 
-    study.name = form.name.data
+    study.name = slugify(form.title.data)
     study.title = form.title.data
     study.code = form.code.data
     study.short_title = form.short_title.data
     study.consent_date = form.consent_date.data
     study.start_date = form.start_date.data
-    study.end_date = form.end_date.data
     study.termination_schema = form.termination_form.data
-    study.is_locked = form.is_locked.data
     study.is_randomized = form.is_randomized.data
     study.is_blinded = \
         None if not study.is_randomized else form.is_blinded.data
@@ -908,26 +907,22 @@ def StudySchema(context, request):
     Returns a validator for incoming study modification data
     """
 
-    def check_unique_name(form, field):
-        query = Session.query(models.Study).filter_by(name=field.data)
+    def check_unique_url(form, field):
+        slug = slugify(field.data)
+        query = Session.query(models.Study).filter_by(name=slug)
         if isinstance(context, models.Study):
             query = query.filter(models.Study.id != context.id)
         (exists,) = Session.query(query.exists()).one()
         if exists:
             raise wtforms.ValidationError(request.localizer.translate(_(
-                u'Already exists')))
+                u'Does not yield a unique URL.')))
 
     class StudyForm(wtforms.Form):
-        name = wtforms.StringField(
-            validators=[
-                wtforms.validators.InputRequired(),
-                wtforms.validators.Length(min=3, max=32),
-                wtforms.validators.Regexp(r'^[a-z0-9_\-]+$'),
-                check_unique_name])
         title = wtforms.StringField(
             validators=[
                 wtforms.validators.InputRequired(),
-                wtforms.validators.Length(min=3, max=32)])
+                wtforms.validators.Length(min=3, max=32),
+                check_unique_url])
         code = wtforms.StringField(
             validators=[
                 wtforms.validators.InputRequired(),
@@ -938,8 +933,6 @@ def StudySchema(context, request):
                 wtforms.validators.Length(min=3, max=8)])
         consent_date = DateField()
         start_date = DateField()
-        end_date = DateField()
-        is_locked = wtforms.BooleanField()
         termination_form = ModelField(
             session=Session,
             class_=models.Schema)
