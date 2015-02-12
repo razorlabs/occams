@@ -6,7 +6,7 @@ def includeme(config):
     Configures URL routes
     """
 
-    config.add_static_view('static', 'static', cache_max_age=3600)
+    config.add_static_view('static', 'occams.forms:static', cache_max_age=3600)
 
     config.add_route('forms',               '/',                                                 factory=models.FormFactory)
 
