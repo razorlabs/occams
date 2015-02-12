@@ -361,7 +361,7 @@ function StudyView(studyData, scheduleUrl){
   };
 
   self.clear = function(){
-    self.errorMessage();
+    self.errorMessage(null);
     self.studyModalState(null)
     self.editableStudy(null);
     self.addMoreCycles(false);
