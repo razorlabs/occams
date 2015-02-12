@@ -3,7 +3,22 @@
 
     <div style="display: none;" data-bind="visible: isReady">
 
-      <header metal:use-macro="load: header.pt"></header>
+      <header class="page-header">
+        <div class="btn-toolbar pull-right">
+          <button metal:use-macro="load: header-btn-form.pt" />
+          <button metal:use-macro="load: header-btn-edit.pt" />
+          <button metal:use-macro="load: header-btn-delete.pt" />
+        </div>
+        <h1>
+          <span i18n:translate="">Visit</span>
+          <span data-bind="text: visit.visit_date"></span>
+        </h1>
+        <ul metal:use-macro="load: header-details.pt" />
+        <nav metal:use-macro="load: header-nav.pt" />
+
+        <div metal:use-macro="load: modal-visit-edit.pt"></div>
+        <div metal:use-macro="load: modal-visit-delete.pt"></div>
+      </header>
 
       <table class="table table-hover table-striped">
         <colgroup>
@@ -53,8 +68,11 @@
   <metal:content-slot fill-slot="javascript-extras-slot">
     <script>
       $(function(){
-        var visit = JSON.parse($('#visit-data').text());
-        ko.applyBindings(new VisitView(visit), document.getElementById('view-visit'));
+        ko.applyBindings(new VisitView({
+            visitData: JSON.parse($('#visit-data').text()),
+          }),
+          document.getElementById('view-visit')
+        );
       });
     </script>
     <tal:json define="json import:json">

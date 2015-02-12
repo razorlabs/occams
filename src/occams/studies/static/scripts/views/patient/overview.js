@@ -153,27 +153,6 @@ function PatientView(patientData, enrollmentsData, visitsData){
     self.editableItem(new Entity());
   };
 
-  self.visitSelect2Options = function(element){
-    return {
-      multiple: true,
-      ajax: {
-        url: $(element).data('cycles-url'),
-        quietMillis: 100,
-        minimumInputLength: 3,
-        data: function (term, page) {
-          return {q: term};
-        },
-        results: function (data) {
-          return {
-            results: data.cycles.map(function(cycle_data){
-              return new Cycle(cycle_data);
-            })
-          };
-        },
-      }
-    }
-  };
-
   self.savePatient = function(element){
     if ($(element).validate().form()){
       $.ajax({

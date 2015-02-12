@@ -17,8 +17,8 @@
         <div metal:use-macro="load: modal-patient-delete.pt"></div>
         <div metal:use-macro="load: modal-enrollment-edit.pt"></div>
         <div metal:use-macro="load: modal-enrollment-delete.pt"></div>
-        <div metal:use-macro="load: modal-visit-edit.pt"></div>
         <div metal:use-macro="load: modal-termination-edit.pt"></div>
+        <div metal:use-macro="load: ../visit/modal-visit-edit.pt"></div>
       </header>
 
       <div class="row">
@@ -35,12 +35,12 @@
               </div>
               <h4 class="panel-title" i18n:translate="">External IDs</h4>
             </div>
-            <!-- ko if: references().length <= 0 -->
+            <!-- ko ifnot: hasReferences -->
               <div class="panel-body">
                 <p class="text-muted text-center" i18n:translate="">No references</p>
               </div>
             <!-- /ko -->
-            <!-- ko if: references().length > 0 -->
+            <!-- ko if: hasReferences -->
               <table class="table table-striped">
                 <colgroup>
                   <col class="col-sm-8" />

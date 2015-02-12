@@ -1,0 +1,6 @@
+<button class="btn btn-default"
+  data-bind="click: startFormAdd"
+  tal:condition="request.has_permission('edit')">
+    <span class="fa fa-files-o"></span>
+    <span i18n:translate="">Add Forms</span>
+</button>

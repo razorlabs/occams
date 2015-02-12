@@ -1,10 +1,7 @@
 <div class="modal fade" data-bind="modalVisible: $root.showEditVisit">
   <div class="modal-dialog" data-bind="if: $root.showEditVisit">
     <div class="modal-content" data-bind="with: $root.editableItem">
-      <form
-          role="form"
-          action="${request.current_route_path(_route_name='visits')}"
-          data-bind="submit: $root.saveVisit, validate: {}">
+      <form role="form" data-bind="submit: $root.saveVisit, validate: {}">
         <div class="modal-header">
           <!-- ko if: id -->
             <h4 class="modal-title" i18n:translate="">Edit Visit</h4>
@@ -35,14 +32,14 @@
                 name="${name}"
                 title="Please select a cycle"
                 data-placeholder="Select a cycle..."
-                data-cycles-url="${request.route_path('visits_cycles', patient=context.pid)}"
-                data-rule-remote="${request.route_path('visits', patient=context.pid)}"
+                data-cycles-url="${request.current_route_path(_route_name='visits_cycles')}"
+                data-rule-remote="${request.current_route_path(_route_name='visits')}"
                 i18n:attributes="title data-placeholder"
                 data-bind="
                   dataKey: 'id',
                   dataLabel: 'title',
                   selectedData: ${name},
-                  select2: $root.visitSelect2Options($element)" />
+                  select2: cycleSelect2Options($element)" />
           </div> <!-- /.form-group -->
           <div class="form-group" tal:define="name 'visit_date'">
             <label i18n:translate="" for="${name}" class="required">Visit Date</label>

@@ -197,8 +197,16 @@ def edit_json(context, request):
         visit = context
 
     visit.patient.modify_date = datetime.now()
-    visit.cycles = form.cycles.data
     visit.visit_date = form.visit_date.data
+
+    # Filter only new cycles and prune removed/existing cycles
+    incoming_cycles = set(form.cycles.data)
+    for cycle in visit.cycles:
+        if cycle not in incoming_cycles:
+            visit.remove(cycle)
+        else:
+            incoming_cycles.remove(cycle)
+    visit.cycles.extend(list(incoming_cycles))
 
     # TODO: hard coded for now, will be removed when workflows are in place
     default_state = (
