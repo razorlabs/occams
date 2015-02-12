@@ -40,19 +40,16 @@ def main(global_config, **settings):
             groupfinder),
         authorization_policy=ACLAuthorizationPolicy())
 
-    # Required third-party plugins
     config.include('pyramid_chameleon')
     config.include('pyramid_redis_sessions')
     config.include('pyramid_redis')
+    config.include('pyramid_tm')
     config.include('pyramid_rewrite')
     config.add_rewrite_rule(r'/(?P<path>.*)/', r'/%(path)s')
-    config.include('pyramid_tm')
     config.include('pyramid_webassets')
 
-    # Required second-party plugins
     config.include(settings['pid.package'])
 
-    # App-specific configurations
     config.include('.assets')
     config.include('.models')
     config.include('.routes')

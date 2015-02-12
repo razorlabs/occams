@@ -12,6 +12,7 @@ def includeme(config):
     HERE = os.path.dirname(os.path.realpath(__file__))
     SCRIPTS = os.path.join(HERE, 'static/scripts')
 
+
     config.add_webasset('default-js', Bundle(
         # Dependency javascript libraries must be loaded in a specific order
         'bower_components/jquery/dist/jquery.min.js',
@@ -33,14 +34,14 @@ def includeme(config):
                 for root, dirnames, filenames in os.walk(SCRIPTS)
                 for filename in filenames if filename.endswith('.js')],
             filters='jsmin'),
-        output='gen/default.%(version)s.min.js'))
+        output='gen/default.%(version)s.js'))
 
     config.add_webasset('default-css', Bundle(
         Bundle(
             'styles/main.less',
             filters='less,cssmin',
             depends='styles/*.less',
-            output='gen/main.%(version)s.min.css'),
+            output='gen/main.%(version)s.css'),
         Bundle('bower_components/select2/select2.css', filters='cssrewrite'),
         'bower_components/select2-bootstrap-css/select2-bootstrap.css',
         Bundle('bower_components/bootstrap-fileinput/css/fileinput.min.css', filters='cssrewrite'),
