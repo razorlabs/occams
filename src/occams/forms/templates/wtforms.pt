@@ -48,7 +48,7 @@
           <div class="input-group select2-bootstrap-append">
             ${form.state(class_='form-control js-select2')}
             <span class="input-group-addon">
-              <label>${form.not_done()} ${form.not_done.label.text}<label>
+              <label>${form.not_done()} ${form.not_done.label.text}</label>
             </span>
           </div>
         </div>
