@@ -253,6 +253,26 @@ def edit_json(context, request):
                 collect_date=visit.visit_date,
                 state=default_state))
 
+    # Lab might not be enabled on a environments, check first
+    if form.include_specimen.data and models.LAB_ENABLED:
+        from occams.lab import models as lab
+        drawstate = (
+            Session.query(lab.SpecimenState)
+            .filter_by(name=u'pending-draw')
+            .one())
+        location_id = visit.patient.site.lab_location.id
+        for cycle in visit.cycles:
+            if cycle in incoming_cycles:
+                for specimen_type in cycle.specimen_types:
+                    Session.add(lab.Specimen(
+                        patient=visit.patient,
+                        cycle=cycle,
+                        specimen_type=specimen_type,
+                        state=drawstate,
+                        collect_date=visit.visit_date,
+                        location_id=location_id,
+                        tubes=specimen_type.default_tubes))
+
     Session.flush()
 
     return view_json(visit, request)

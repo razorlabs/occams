@@ -1216,3 +1216,12 @@ class Export(Base, Referenceable, Modifiable, Auditable):
             sa.Index(
                 'ix_%s_owner_user_id' % cls.__tablename__,
                 cls.owner_user_id))
+
+
+try:
+    # "activate" lab models (if installed)
+    import occams.lab.models  # flake8: noqa
+except ImportError:
+    LAB_ENABLED = False
+else:
+    LAB_ENABLED = True

@@ -76,7 +76,7 @@
               </div>
             </div>
           </div><!--/.form-group -->
-          <div class="form-group">
+          <div class="form-group" tal:define="models import:occams.studies.models" tal:condition="models.LAB_ENABLED">
             <div class="col-sm-offset-3 col-sm-9">
               <div class="checkbox">
                 <label>
