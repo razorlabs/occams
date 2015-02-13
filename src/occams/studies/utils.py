@@ -8,14 +8,18 @@ def wtferrors(form):
     errors = {}
 
     def inspect_field(field):
-        if isinstance(field, wtforms.FieldList):
-            for entry in field.entries:
-                inspect_field(entry)
-        elif isinstance(field, wtforms.FormField):
+        if isinstance(field, wtforms.FormField):
             inspect_form(field.form)
+
         else:
+            if isinstance(field, wtforms.FieldList):
+                for entry in field.entries:
+                    inspect_field(entry)
+
             if field.errors:
-                errors[field.id] = ' '.join(field.errors)
+                # Ignore field enclosure's children's errors
+                errors[field.id] = ' '.join(
+                    e for e in field.errors if not isinstance(e, (list, dict)))
 
     def inspect_form(form):
         for key, field in form._fields.items():
@@ -28,6 +32,8 @@ def wtferrors(form):
 class ModelField(wtforms.Field):
 
     widget = wtforms.widgets.TextInput()
+
+    _formdata = None
 
     def __init__(self, *args, **kwargs):
         self.class_ = kwargs.pop('class_')

@@ -22,14 +22,13 @@ class TestEditJson(IntegrationFixture):
 
         self.call_view(models.StudyFactory(None), testing.DummyRequest(
             json_body={
-                'name': u'somestudy',
                 'title': u'Some study',
                 'short_title': u'sfstudy',
                 'code': u'111',
                 'consent_date': str(date.today())}))
 
         self.assertIsNotNone(
-            Session.query(models.Study).filter_by(name='somestudy').first())
+            Session.query(models.Study).filter_by(name=u'some-study').first())
 
     def test_enforce_unique_name(self, check_csrf_token):
         """
@@ -41,7 +40,7 @@ class TestEditJson(IntegrationFixture):
         from occams.studies import models, Session
 
         study = models.Study(
-            name=u'somestudy',
+            name='some-study',
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
@@ -54,15 +53,14 @@ class TestEditJson(IntegrationFixture):
         with self.assertRaises(HTTPBadRequest) as cm:
             self.call_view(models.StudyFactory(None), testing.DummyRequest(
                 json_body={
-                    'name': 'somestudy',
-                    'title': 'Should fail',
-                    'short_title': 'sfstudy',
-                    'code': '111',
+                    'title': u'Some Study',
+                    'short_title': u'sfstudy',
+                    'code': u'111',
                     'consent_date': str(date.today())}))
 
         self.assertIn(
-            'already exists',
-            cm.exception.json['errors']['name'].lower())
+            'Does not yield a unique URL.',
+            cm.exception.json['errors']['title'])
 
     def test_edit_unique_name(self, check_csrf_token):
         """
@@ -75,7 +73,7 @@ class TestEditJson(IntegrationFixture):
         self.config.add_route('study', '/{study}')
 
         study = models.Study(
-            name=u'somestudy',
+            name='some-study',
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
@@ -86,8 +84,7 @@ class TestEditJson(IntegrationFixture):
         Session.flush()
         response = self.call_view(study, testing.DummyRequest(
             json_body={
-                'name': 'newname',
-                'title': study.title,
+                'title': u'New Study Title',
                 'short_title': study.short_title,
                 'code': study.code,
                 'consent_date': str(study.consent_date)}))
@@ -298,11 +295,11 @@ class TestAddSchemaJson(IntegrationFixture):
 
         with self.assertRaises(HTTPBadRequest) as cm:
             self.call_view(study, testing.DummyRequest(
-                json_body={'schema': 'otherform', 'versions': [schema.id]}))
+                json_body={'schema': u'otherform', 'versions': [schema.id]}))
 
         self.assertIn(
             'Incorrect versions',
-            cm.exception.json['errors']['versions-0'])
+            cm.exception.json['errors']['versions'])
 
     def test_fail_if_patient_schema(self, check_csrf_token):
         """

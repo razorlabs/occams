@@ -95,6 +95,7 @@ def view_json(context, request):
             'schema': {
                 'name': entity.schema.name,
                 'title': entity.schema.title,
+                'publish_date': entity.schema.publish_date.isoformat()
                 },
             'collect_date': entity.collect_date.isoformat(),
             'not_done': entity.not_done,
@@ -203,7 +204,7 @@ def edit_json(context, request):
     incoming_cycles = set(form.cycles.data)
     for cycle in visit.cycles:
         if cycle not in incoming_cycles:
-            visit.remove(cycle)
+            visit.cycles.remove(cycle)
         else:
             incoming_cycles.remove(cycle)
     visit.cycles.extend(list(incoming_cycles))
@@ -213,27 +214,35 @@ def edit_json(context, request):
         Session.query(models.State)
         .filter_by(name='pending-entry').one())
 
+    # Update collect date for those forms that were never modified
     if not is_new:
         for entity in visit.entities:
-            if entity.state.name != default_state:
-                entity.collect_date = form.visit_date.data
+            if entity.state == default_state \
+                    and entity.collect_date != visit.visit_date:
+                entity.collect_date = visit.visit_date
 
     if form.include_forms.data:
-        CurrentSchema = orm.aliased(models.Schema)
+
+        # find the most recent cycle form version relative to the visit
+        recents = (
+            Session.query(
+                models.Schema.name.label('name'),
+                sa.func.max(models.Schema.publish_date).label('publish_date'))
+            .join(models.Cycle.schemata)
+            .filter(models.Cycle.id.in_([c.id for c in visit.cycles]))
+            .filter(models.Schema.publish_date <= visit.visit_date)
+            .group_by(models.Schema.name)
+            .subquery('max_version'))
+
+        # retrive the full schema record of the previous find
         schemata_query = (
             Session.query(models.Schema)
-            .select_from(models.Cycle)
-            .join(models.Cycle.schemata)
-            .filter(models.Schema.publish_date <= form.visit_date.data)
-            .filter(models.Schema.publish_date == (
-                Session.query(sa.func.max(CurrentSchema.publish_date))
-                .filter(CurrentSchema.name == models.Schema.name)
-                .correlate(models.Schema)
-                .as_scalar()))
-            .filter(models.Cycle.id.in_([c.id for c in form.cycles.data])))
+            .join(recents, (
+                (models.Schema.name == recents.c.name)
+                & (models.Schema.publish_date == recents.c.publish_date))))
 
-        if isinstance(context, models.Visit):
-            # Ignore already-added schemata
+        # Ignore already-added schemata
+        if isinstance(context, models.Visit) and visit.entities:
             schemata_query = schemata_query.filter(
                 ~models.Schema.name.in_(
                     [entity.schema.name for entity in visit.entities]))
@@ -241,7 +250,7 @@ def edit_json(context, request):
         for schema in schemata_query:
             visit.entities.add(models.Entity(
                 schema=schema,
-                collect_date=form.visit_date.data,
+                collect_date=visit.visit_date,
                 state=default_state))
 
     Session.flush()

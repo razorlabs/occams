@@ -366,6 +366,56 @@ class TestEditJson(IntegrationFixture):
         self.assertIn(
             'form2', [e['schema']['name'] for e in response['entities']])
 
+    def test_include_relative_form(self, check_csrf_token):
+        """
+        It should use the latest version of the form relative to the visit date
+        """
+        from datetime import date, timedelta
+        from pyramid import testing
+        from occams.studies import models, Session
+
+        self.config.add_route('patient', '/{patient}')
+        self.config.add_route('visit', '/{patient}/{visit}')
+        self.config.add_route('visit_form', '/forms/{form}')
+
+        Session.add(models.State(name='pending-entry', title=u''))
+
+        t0 = date.today()
+        t1 = t0 + timedelta(days=1)
+        t2 = t1 + timedelta(days=1)
+
+        study = models.Study(
+            name=u'somestudy',
+            title=u'Some Study',
+            short_title=u'sstudy',
+            code=u'000',
+            start_date=date.today(),
+            consent_date=date.today())
+
+        cycle1 = models.Cycle(name='week-1', title=u'', week=1)
+        cycle1.schemata.update([
+            models.Schema(name='form1', title=u'', publish_date=t0),
+            models.Schema(name='form1', title=u'', publish_date=t2)])
+        study.cycles.append(cycle1)
+
+        patient = models.Patient(
+            site=models.Site(name=u'ucsd', title=u'UCSD'),
+            pid=u'12345')
+
+        Session.add_all([patient, study])
+        Session.flush()
+
+        response = self.call_view(patient['visits'], testing.DummyRequest(
+            json_body={
+                'cycles': [cycle1.id],
+                'visit_date': str(t1),
+                'include_forms': True}
+            ))
+
+        self.assertEqual(1, len(response['entities']))
+        self.assertEqual(
+            str(t0), response['entities'][0]['schema']['publish_date'])
+
     def test_update_patient(self, check_csrf_token):
         """
         It should also mark the patient as modified
@@ -513,6 +563,8 @@ class TestFormAddJson(IntegrationFixture):
         from pyramid.httpexceptions import HTTPOk
         from occams.studies import models, Session
 
+        self.config.add_route('visit_form', '/vf/{form}')
+
         default_state = models.State(name='pending-entry', title=u'')
 
         cycle = models.Cycle(name='week-1', title=u'', week=1)
@@ -540,65 +592,23 @@ class TestFormAddJson(IntegrationFixture):
         Session.add_all([default_state, visit_a, study])
         Session.flush()
 
-        response = self.call_view(visit_a['forms'], testing.DummyRequest(
+        self.call_view(visit_a['forms'], testing.DummyRequest(
             json_body={
-                'schemata': [schema.id],
+                'schema': schema.id,
+                'collect_date': str(visit_a.visit_date)
                 }))
 
         # refresh the session so we can get a correct listing
         Session.expunge_all()
         visit_a = Session.query(models.Visit).get(visit_a.id)
 
-        self.assertIsInstance(response, HTTPOk)
         self.assertEqual(1, len(visit_a.entities))
 
     def test_multiple(self, check_csrf_token):
         """
         It should allow adding multiple instances of the same form
+        TODO: cant do multiple, no time
         """
-        from datetime import date, timedelta
-        from pyramid import testing
-        from pyramid.httpexceptions import HTTPOk
-        from occams.studies import models, Session
-
-        default_state = models.State(name='pending-entry', title=u'')
-
-        cycle = models.Cycle(name='week-1', title=u'', week=1)
-
-        schema = models.Schema(
-            name=u'sample', title=u'', publish_date=date.today())
-
-        study = models.Study(
-            name=u'somestudy',
-            title=u'Some Study',
-            short_title=u'sstudy',
-            code=u'000',
-            start_date=date.today(),
-            consent_date=date.today(),
-            cycles=[cycle],
-            schemata=set([schema]))
-
-        site = models.Site(name=u'ucsd', title=u'UCSD')
-
-        t_a = date.today() + timedelta(days=5)
-        patient_a = models.Patient(site=site, pid=u'12345')
-        visit_a = models.Visit(
-            patient=patient_a, cycles=[cycle], visit_date=t_a)
-
-        Session.add_all([default_state, visit_a, study])
-        Session.flush()
-
-        response = self.call_view(visit_a['forms'], testing.DummyRequest(
-            json_body={
-                'schemata': [schema.id, schema.id],
-                }))
-
-        # refresh the session so we can get a correct listing
-        Session.expunge_all()
-        visit_a = Session.query(models.Visit).get(visit_a.id)
-
-        self.assertIsInstance(response, HTTPOk)
-        self.assertEqual(2, len(visit_a.entities))
 
     def test_not_in_study(self, check_csrf_token):
         """
@@ -638,12 +648,12 @@ class TestFormAddJson(IntegrationFixture):
         with self.assertRaises(HTTPBadRequest) as cm:
             self.call_view(visit_a['forms'], testing.DummyRequest(
                 json_body={
-                    'schemata': [schema.id],
+                    'schema': schema.id,
                     }))
 
         self.assertIn(
             'is not part of the studies',
-            cm.exception.json['errors']['schemata-0'])
+            cm.exception.json['errors']['schema'])
 
 
 @mock.patch('occams.studies.views.visit.check_csrf_token')

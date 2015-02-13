@@ -9,6 +9,9 @@ function Visit(data){
   self.cycles = ko.observableArray();
   self.entities = ko.observableArray();
 
+  self.include_forms = ko.observable(true);
+  self.include_specimen = ko.observable(true);
+
   self.hasCycles = ko.pureComputed(function(){
     return self.cycles().length > 0;
   });
@@ -70,6 +73,8 @@ function Visit(data){
     return {
       cycles: self.cycles().map(function(cycle){ return cycle.id(); }),
       visit_date: self.visit_date(),
+      include_forms: self.include_forms(),
+      include_specimen: self.include_specimen(),
     };
   };
 
