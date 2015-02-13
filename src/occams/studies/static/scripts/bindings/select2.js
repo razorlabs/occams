@@ -10,7 +10,12 @@
 
   // Apply select2 widget to non-ko-bound elements
   $(function(){
-    $('.js-select2:not([data-bind])').select2();
+      $('.js-select2:not([data-bind])').each(function(i, element){
+        // select2 doesn't check if already initialized...
+        if ($(element).data('select2') === undefined){
+          $(element).select2();
+        }
+      });
   });
 
   /**

@@ -1,4 +1,4 @@
-function PatientView(patientData, enrollmentsData, visitsData){
+function PatientView(options){
   var self = this;
 
   self.isReady = ko.observable(false);
@@ -6,6 +6,8 @@ function PatientView(patientData, enrollmentsData, visitsData){
 
   self.selectedItem = ko.observable();  // originally selected item
   self.editableItem = ko.observable();  // pending changes (will be applied to selected)
+
+  self.formsUrl = ko.observable(options.formsUrl);
 
   var VIEW = 'view', ADD = 'add', EDIT = 'edit', DELETE = 'delete', TERMINATE = 'terminate', RANDOMIZE = 'randomize';
 
@@ -36,13 +38,13 @@ function PatientView(patientData, enrollmentsData, visitsData){
   self.errorMessage = ko.observable();
 
   // UI Data
-  self.patient = new Patient(patientData);
+  self.patient = new Patient(options.patientData);
 
-  self.enrollments = ko.observableArray((enrollmentsData || []).map(function(value){
+  self.enrollments = ko.observableArray((options.enrollmentsData || []).map(function(value){
     return new Enrollment(value);
   }));
 
-  self.visits = ko.observableArray((visitsData || []).map(function(value){
+  self.visits = ko.observableArray((options.visitsData || []).map(function(value){
     return new Visit(value);
   }));
 
@@ -53,21 +55,6 @@ function PatientView(patientData, enrollmentsData, visitsData){
   self.hasVisits = ko.computed(function(){
     return self.visits().length > 0;
   });
-
-  // Select2 termination search parameters callback
-  self.formSearchParams = function(term, page){
-    return {vocabulary: 'available_schemata', term: term};
-  };
-
-  // Select2 termination results callback
-  self.formSearchResults = function(data){
-
-    return {
-      results: data.schemata.map(function(schema){
-        return new StudyForm({schema: schema, versions: [schema]});
-      })
-    };
-  };
 
   self.onChangeStudy = function(item, event){
     var $option = $($(event.target).find(':selected'))

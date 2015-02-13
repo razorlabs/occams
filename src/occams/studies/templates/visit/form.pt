@@ -45,8 +45,14 @@
   <metal:content-slot fill-slot="javascript-extras-slot">
     <script>
       $(function(){
-        var visit = JSON.parse($('#visit-data').text());
-        ko.applyBindings(new VisitView(visit), document.getElementById('view-visit'));
+        var visit =
+        ko.applyBindings(
+          new VisitView({
+            visitData: JSON.parse($('#visit-data').text()),
+            formsUrl: "${request.current_route_path(_route_name='visit_forms')}"
+          }),
+          document.getElementById('view-visit')
+        );
       });
     </script>
     <tal:json define="json import:json">

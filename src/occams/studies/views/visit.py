@@ -367,12 +367,14 @@ def form_add_json(context, request):
                 mapping={'schema': field.data.title}))
 
     class AddForm(wtforms.Form):
-        schemata = wtforms.FieldList(ModelField(
+        schema = ModelField(
             session=Session,
             class_=models.Schema,
             validators=[
                 wtforms.validators.InputRequired(),
-                check_study_form]))
+                check_study_form])
+        collect_date = DateField(
+            validators=[wtforms.validators.InputRequired()])
 
     form = AddForm.from_json(request.json_body)
 
@@ -384,17 +386,24 @@ def form_add_json(context, request):
         .filter_by(name='pending-entry')
         .one())
 
-    for schema in form.schemata.data:
-        entity = models.Entity(
-            schema=schema,
-            collect_date=context.__parent__.visit_date,
-            state=default_state)
-        context.__parent__.entities.add(entity)
-        context.__parent__.patient.entities.add(entity)
+    entity = models.Entity(
+        schema=form.schema.data,
+        collect_date=context.__parent__.visit_date,
+        state=default_state)
+    context.__parent__.entities.add(entity)
+    context.__parent__.patient.entities.add(entity)
 
     Session.flush()
 
-    return HTTPOk()
+    request.session.flash(
+        _('Successfully added new ${form}',
+            mapping={'form': entity.schema.title}),
+        'success')
+
+    return {
+        '__next__': request.current_route_path(
+            _route_name='visit_form', form=entity.id)
+    }
 
 
 @view_config(

@@ -12,7 +12,13 @@
       $form.validate()
 
       // Enable widgets
-      $('.js-select2:not([data-bind])').select2();
+      $('.js-select2:not([data-bind])').each(function(i, element){
+        // select2 doesn't check if already initialized...
+        if ($(element).data('select2') === undefined){
+          $(element).select2();
+        }
+      });
+
       $('input[type=date]:not([data-bind]),.js-date:not([data-bind])').datetimepicker({pickTime: false});
       $('input[type=datetime]:not([data-bind]),.js-datetime:not([data-bind])').datetimepicker();
 

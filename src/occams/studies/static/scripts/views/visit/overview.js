@@ -10,6 +10,8 @@ function VisitView(options){
 
   self.errorMessage = ko.observable();
 
+  self.formsUrl = ko.observable(options.formsUrl);
+
   var VIEW = 'view', ADD = 'add', EDIT = 'edit', DELETE = 'delete';
 
   self.visit = new Visit(options.visitData);
@@ -63,7 +65,9 @@ function VisitView(options){
   self.startFormAdd = function(){
     self.clear();
     self.statusForm(ADD);
-    self.editableItem(new Entity());
+    self.editableItem(new Entity({
+      collect_date: self.visit.visit_date(),
+    }));
   };
 
   self.saveVisit = function(element){

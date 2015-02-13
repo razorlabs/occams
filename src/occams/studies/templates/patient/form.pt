@@ -16,7 +16,7 @@
         <!-- Use template so we can reuse in home view -->
         <div metal:use-macro="load: modal-patient-edit.pt"></div>
         <div metal:use-macro="load: modal-patient-delete.pt"></div>
-        <div metal:use-macro="load: modal-form-add.pt"></div>
+        <div metal:use-macro="load: ../form/modal-form-add.pt"></div>
       </header>
 
       <p>ID: <code>${entity.id}</code></p>
@@ -40,8 +40,13 @@
   <metal:content-slot fill-slot="javascript-extras-slot">
     <script>
       $(function(){
-        var patient = JSON.parse($('#patient-data').text());
-        ko.applyBindings(new PatientView(patient, null, null), document.getElementById('views-patient-main'));
+        ko.applyBindings(
+          new PatientView({
+            patientData: JSON.parse($('#patient-data').text()),
+            formsUrl: "${request.current_route_path(_route_name='patient_forms')}"
+          }),
+          document.getElementById('views-patient-main')
+        );
       });
     </script>
     <tal:json define="json import:json">

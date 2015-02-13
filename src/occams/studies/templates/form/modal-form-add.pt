@@ -4,8 +4,12 @@
       <form
           role="form"
           class="form-horizontal"
-          action="${request.current_route_path(_route_name='patient_forms')}"
-          data-bind="submit: $root.saveForm, validate: {}">
+          data-bind="
+            attr:{
+              action: $root.formsUrl,
+            },
+            submit: $root.saveForm,
+            validate: {}">
         <div class="modal-header">
           <h4 class="modal-title" i18n:translate="">Add Form</h4>
         </div>
@@ -32,13 +36,8 @@
                     selectedData: schema,
                     dataKey: 'name',
                     dataLabel: 'titleWithVersion',
-                    select2: {
-                      allowClear: true,
-                      ajax: {
-                        data: $root.formSearchParams,
-                        results: $root.formSearchResults
-                      }
-                    }" />
+                    select2: formSelect2Options($element)
+                    " />
             </div>
           </div> <!-- /.form-group -->
           <div class="form-group" tal:define="name 'collect_date'">

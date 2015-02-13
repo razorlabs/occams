@@ -1,7 +1,10 @@
 <div class="modal fade" data-bind="modalVisible: $root.showEditVisit">
   <div class="modal-dialog" data-bind="if: $root.showEditVisit">
     <div class="modal-content" data-bind="with: $root.editableItem">
-      <form role="form" data-bind="submit: $root.saveVisit, validate: {}">
+      <form
+          role="form"
+          action="${request.current_route_path(_route_name='visits')}"
+          data-bind="submit: $root.saveVisit, validate: {}">
         <div class="modal-header">
           <!-- ko if: id -->
             <h4 class="modal-title" i18n:translate="">Edit Visit</h4>

@@ -16,6 +16,7 @@
         <ul metal:use-macro="load: header-details.pt" />
         <nav metal:use-macro="load: header-nav.pt" />
 
+        <div metal:use-macro="load: ../form/modal-form-add.pt"></div>
         <div metal:use-macro="load: modal-visit-edit.pt"></div>
         <div metal:use-macro="load: modal-visit-delete.pt"></div>
       </header>
@@ -70,6 +71,7 @@
       $(function(){
         ko.applyBindings(new VisitView({
             visitData: JSON.parse($('#visit-data').text()),
+            formsUrl: "${request.current_route_path(_route_name='visit_forms')}"
           }),
           document.getElementById('view-visit')
         );

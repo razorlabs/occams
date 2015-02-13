@@ -500,6 +500,18 @@ def form_add_json(context, request):
     xhr=True,
     request_param='vocabulary=available_schemata',
     renderer='json')
+@view_config(
+    route_name='visit',
+    permission='edit',
+    xhr=True,
+    request_param='vocabulary=available_schemata',
+    renderer='json')
+@view_config(
+    route_name='visit_form',
+    permission='edit',
+    xhr=True,
+    request_param='vocabulary=available_schemata',
+    renderer='json')
 def available_schemata(context, request):
     """
     Returns a listing of available schemata for the study

@@ -235,10 +235,15 @@
   <metal:content-slot fill-slot="javascript-extras-slot">
     <script>
       $(function(){
-        var patient = JSON.parse($('#patient-data').text()),
-            enrollments = JSON.parse($('#enrollments-data').text()),
-            visits = JSON.parse($('#visits-data').text());
-        ko.applyBindings(new PatientView(patient, enrollments, visits), document.getElementById('views-patient-main'));
+        ko.applyBindings(
+          new PatientView({
+            patientData: JSON.parse($('#patient-data').text()),
+            enrollmentsData: JSON.parse($('#enrollments-data').text()),
+            visitsData: JSON.parse($('#visits-data').text()),
+            formsUrl: "${request.current_route_path(_route_name='patient_forms')}"
+          }),
+          document.getElementById('views-patient-main')
+        );
       });
     </script>
     <tal:json define="json import:json">
