@@ -26,7 +26,7 @@ def setup_package():
     register(Session)
     db = config.get('db')
     engine = create_engine(db)
-    Session.configure(bind=engine, info={'user': _user})
+    Session.configure(bind=engine, info={'blame': models.User(key=_user)})
     models.DataStoreModel.metadata.create_all(Session.bind)
 
 

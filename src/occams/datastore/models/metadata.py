@@ -8,26 +8,22 @@ from sqlalchemy import (
     CheckConstraint, UniqueConstraint, ForeignKey,
     DateTime, Integer, String, Unicode, UnicodeText)
 from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import object_session, relationship
 
 from . import DataStoreModel as Model
-from ..exc import NonExistentUserError
 
 
 def updateMetadata(instance, created):
     session = object_session(instance)
-    key = session.info['user']
+    assert 'blame' in session.info, \
+        u'session was not configured with a blame user'
 
-    try:
-        user = session.query(User).filter_by(key=key).one()
-    except NoResultFound:
-        raise NonExistentUserError(key)
+    blame = session.info['blame']
 
     if created:
-        instance.create_user = user
+        instance.create_user = blame
 
-    instance.modify_user = user
+    instance.modify_user = blame
 
 
 class Referenceable(object):
