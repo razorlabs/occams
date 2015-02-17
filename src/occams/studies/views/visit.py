@@ -43,7 +43,8 @@ def list_json(context, request):
     renderer='../templates/visit/view.pt')
 def view(context, request):
     return {
-        'visit': view_json(context, request)
+        'visit': view_json(context, request),
+        'is_lab_enabled': Session.bind.has_table('specimen')
         }
 
 
@@ -254,7 +255,7 @@ def edit_json(context, request):
                 state=default_state))
 
     # Lab might not be enabled on a environments, check first
-    if form.include_specimen.data and models.LAB_ENABLED:
+    if form.include_specimen.data and Session.bind.has_table('specimen'):
         from occams.lab import models as lab
         drawstate = (
             Session.query(lab.SpecimenState)

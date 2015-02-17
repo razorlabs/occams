@@ -71,9 +71,10 @@ class IntegrationFixture(unittest.TestCase):
         self.addCleanup(transaction.abort)
         self.addCleanup(Session.remove)
 
-        Session.add(models.User(key=u'tester'))
+        blame = models.User(key=u'tester')
+        Session.add(blame)
         Session.flush()
-        Session.info['user'] = u'tester'
+        Session.info['blame'] = blame
 
         Base.metadata.info['settings'] = self.config.registry.settings
 

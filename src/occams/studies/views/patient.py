@@ -155,6 +155,7 @@ def view(context, request):
             context['enrollments'], request)['enrollments'],
         'visits': visit_views.list_json(
             context['visits'], request)['visits'],
+        'is_lab_enabled': Session.bind.has_table('specimen')
         }
 
 

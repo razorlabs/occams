@@ -106,7 +106,7 @@ class TestMakeExport(IntegrationFixture):
         from occams.studies.tasks import make_export
 
         owner = models.User(key=u'joe')
-        Session.info['user'] = u'joe'
+        Session.info['blame'] = owner
         Session.add(owner)
         Session.flush()
 

@@ -4,7 +4,7 @@ Pyramid-specific events
 
 from pyramid.events import subscriber, NewResponse, NewRequest
 
-from . import Session
+from . import Session, models
 
 
 @subscriber(NewResponse)
@@ -26,7 +26,10 @@ def track_user_on_request(event):
 
     # Keep track of the request so we can generate model URLs
     Session.info['request'] = request
-    Session.info['user'] = request.authenticated_userid
+    Session.info['blame'] = (
+        Session.query(models.User)
+        .filter_by(key=request.authenticated_userid)
+        .one())
 
     # Store the CSRF token in a cookie since we'll need to sent it back
     # frequently in single-page views.

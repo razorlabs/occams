@@ -83,9 +83,10 @@ class TestAdd(IntegrationFixture):
 
         self.config.registry.settings['app.export.dir'] = '/tmp'
 
-        Session.add(models.User(key=u'joe'))
+        blame = models.User(key=u'joe')
+        Session.add(blame)
         Session.flush()
-        Session.info['user'] = u'joe'
+        Session.info['blame'] = blame
 
         schema = models.Schema(
             name=u'vitals', title=u'Vitals', publish_date=date.today())
@@ -117,9 +118,10 @@ class TestAdd(IntegrationFixture):
 
         self.config.registry.settings['app.export.limit'] = 0
 
-        Session.add(models.User(key=u'joe'))
+        blame = models.User(key=u'joe')
+        Session.add(blame)
         Session.flush()
-        Session.info['user'] = u'joe'
+        Session.info['blame'] = blame
 
         previous_export = models.Export(
             owner_user=Session.query(models.User).filter_by(key='joe').one(),
@@ -161,10 +163,11 @@ class TestStatusJSON(IntegrationFixture):
         self.config.registry.settings['app.export.dir'] = '/tmp'
         self.config.include('occams.studies.routes')
 
-        Session.add(models.User(key='joe'))
+        blame = models.User(key=u'joe')
+        Session.add(blame)
         Session.add(models.User(key='jane'))
         Session.flush()
-        Session.info['user'] = 'joe'
+        Session.info['blame'] = blame
 
         Session.add_all([
             models.Export(
@@ -203,9 +206,10 @@ class TestStatusJSON(IntegrationFixture):
         self.config.registry.settings['app.export.dir'] = '/tmp'
         self.config.include('occams.studies.routes')
 
-        Session.add(models.User(key=u'joe'))
+        blame = models.User(key=u'joe')
+        Session.add(blame)
         Session.flush()
-        Session.info['user'] = u'joe'
+        Session.info['blame'] = blame
 
         now = datetime.now()
 
@@ -347,9 +351,10 @@ class TestDelete(IntegrationFixture):
         from pyramid.httpexceptions import HTTPOk
         from occams.studies import models, Session
 
-        Session.add(models.User(key=u'joe'))
+        blame = models.User(key=u'joe')
+        Session.add(blame)
         Session.flush()
-        Session.info['user'] = u'joe'
+        Session.info['blame'] = blame
 
         export = models.Export(
             owner_user=(
@@ -389,9 +394,10 @@ class TestDownload(IntegrationFixture):
         from pyramid.httpexceptions import HTTPNotFound
         from occams.studies import Session, models
 
-        Session.add(models.User(key=u'joe'))
+        blame = models.User(key=u'joe')
+        Session.add(blame)
         Session.flush()
-        Session.info['user'] = u'joe'
+        Session.info['blame'] = blame
 
         export = models.Export(
             id=123,

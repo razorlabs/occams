@@ -20,7 +20,12 @@
         </div> <!-- /.modal-body -->
         <div class="modal-footer">
           <button type="button" class="btn btn-default" data-bind="click: $root.clear">Cancel</button>
-          <button type="submit" class="btn btn-danger" i18n:translate="">Delete</button>
+          <button type="submit" class="btn btn-danger" i18n:translate="">
+            <span i18n:translate="">Delete</span>
+            <!-- ko if: $root.isSaving -->
+              <span class="fa fa-refresh fa-spin"></span>
+            <!-- /ko -->
+          </button>
         </div>
       </form>
     </div><!-- /.modal-content -->
