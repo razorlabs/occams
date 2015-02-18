@@ -124,26 +124,9 @@ def enrollments(context, request):
     Displays enrollment summary and allows the user to filter by date.
     """
 
-    result = (
-        Session.query(sa.func.max(models.Cycle.week).label('week'))
-        .filter_by(study=context)
-        .first())
-
-    if result and result.week > 0:
-        duration = timedelta(days=result.week * 7)
-    else:
-        duration = timedelta.max
-
     statuses = {
         'active': models.Enrollment.termination_date == sa.null(),
         'terminated': models.Enrollment.termination_date != sa.null(),
-        'termination_overdue': (
-            (models.Enrollment.termination_date == sa.null())
-            & (models.Enrollment.consent_date + duration < date.today())),
-        'consent_overdue': (
-            (models.Enrollment.termination_date == sa.null())
-            & (models.Enrollment.latest_consent_date
-                < models.Study.consent_date))
         }
 
     enrollments_query = (
@@ -204,14 +187,6 @@ def enrollments(context, request):
             context.enrollments.filter(statuses['active']).count()),
         'total_terminated': (
             context.enrollments.filter(statuses['terminated']).count()),
-        'total_termination_overdue': (
-            context.enrollments.filter(statuses['termination_overdue'])
-            .count()),
-        'total_consent_overdue': (
-            context.enrollments
-            .join('study')
-            .filter(statuses['consent_overdue'])
-            .count()),
         'make_page_url': make_page_url,
         'offset_start': pagination.offset + 1,
         'offset_end': pagination.offset + len(enrollments),

@@ -10,21 +10,14 @@
     <table class="table table-bordered table-condensed">
       <thead>
         <tr>
-          <th colspan="4" i18n:translate="">Overall study particiation</th>
-        </tr>
-        <tr>
           <th i18n:translate="">Active</th>
           <th i18n:translate="">Terminated</th>
-          <th i18n:translate="">Overdue Termination</th>
-          <th i18n:translate="">Overdue Consents</th>
         </tr>
       </thead>
       <tbody>
         <tr>
           <td><a href="${request.current_route_path(_query={'status': 'active'})}">${total_active}</a></td>
           <td><a href="${request.current_route_path(_query={'status': 'terminated'})}">${total_terminated}</a></td>
-          <td><a href="${request.current_route_path(_query={'status': 'termination_overdue'})}">${total_termination_overdue}</a></td>
-          <td><a href="${request.current_route_path(_query={'status': 'consent_overdue'})}">${total_consent_overdue}</a></td>
         </tr>
       </tbody>
     </table>
@@ -45,8 +38,6 @@
               <span i18n:translate="">Filterted by</span>
               <strong tal:case="'active'" i18n:translate="">Active</strong>
               <strong tal:case="'terminated'" i18n:translate="">Terminated</strong>
-              <strong tal:case="'termination_overdue'" i18n:translate="">Termination Overdue</strong>
-              <strong tal:case="'consent_overdue'" i18n:translate="">Consent Overdue</strong>
               <a href="${request.current_route_path(_query={
                 'status': None,
                 'start': params['start'],
@@ -102,17 +93,8 @@
           <tr tal:repeat="enrollment enrollments">
             <td><a href="${request.route_path('patient', patient=enrollment.pid)}">${enrollment.pid}</a></td>
             <td>${enrollment.reference_number}</td>
-            <td>
-              <strong
-                  class="text-danger"
-                  tal:omit-tag="not:enrollment.consent_overdue">${enrollment.consent_date}</strong>
-            </td>
-            <td>
-              <span
-                  tal:omit-tag="not:enrollment.termination_overdue">
-                ${enrollment.termination_date}
-              </span>
-            </td>
+            <td>${enrollment.consent_date}</td>
+            <td>${enrollment.termination_date}</td>
             <td>${enrollment.latest_consent_date}</td>
           </tr>
         </tbody>
