@@ -26,10 +26,12 @@ def track_user_on_request(event):
 
     # Keep track of the request so we can generate model URLs
     Session.info['request'] = request
-    Session.info['blame'] = (
-        Session.query(models.User)
-        .filter_by(key=request.authenticated_userid)
-        .one())
+
+    if request.authenticated_userid is not None:
+        Session.info['blame'] = (
+            Session.query(models.User)
+            .filter_by(key=request.authenticated_userid)
+            .one())
 
     # Store the CSRF token in a cookie since we'll need to sent it back
     # frequently in single-page views.
