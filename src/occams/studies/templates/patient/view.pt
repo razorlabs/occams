@@ -107,7 +107,7 @@
                       <code data-bind="text: reference_number"></code>
                     </td>
                     <td data-bind="with: stratum">
-                      <code data-bind="text: reference_number"></code>
+                      <code data-bind="text: randid"></code>
                     </td>
                     <td>
                       <!-- ko if: study.is_randomized -->
