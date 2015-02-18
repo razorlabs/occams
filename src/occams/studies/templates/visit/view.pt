@@ -42,7 +42,18 @@
           <td><code data-bind="text: id"></code></td>
           <td data-bind="text: schema.title"></td>
           <td data-bind="text: collect_date"></td>
-          <td data-bind="text: state.title"></td>
+          <!-- Hard-code for now... -->
+          <td>
+            <span class="label" data-bind="
+                css: {
+                  'label-danger': state.name == 'pending-entry',
+                  'label-info': state.name == 'in-progress',
+                  'label-warning': state.name == 'pending-review',
+                  'label-primary': state.name == 'pending-correction',
+                  'label-success': state.name == 'complete'
+                  },
+                text: state.title"></span>
+            </td>
           <td>
             <a data-bind="attr: {href: __url__}"><span class="fa fa-chevron-right"></span></a>
           </td>

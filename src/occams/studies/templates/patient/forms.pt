@@ -39,7 +39,17 @@
               <td><code>${entity.schema.name}</code></td>
               <td>${entity.schema.title}</td>
               <td>${entity.collect_date}</td>
-              <td>${entity.state.title}</td>
+              <td>
+                <!--! Hard-code for now... -->
+                <tal:switch switch="entity.state.name">
+                  <span tal:case="'pending-entry'" class="label label-danger">${entity.state.title}</span>
+                  <span tal:case="'in-progress'" class="label label-info">${entity.state.title}</span>
+                  <span tal:case="'pending-review'" class="label label-warning">${entity.state.title}</span>
+                  <span tal:case="'pending-correction'" class="label label-primary">${entity.state.title}</span>
+                  <span tal:case="'complete'" class="label label-success">${entity.state.title}</span>
+                  <span tal:case="default" class="label label-default">${entity.state.title}</span>
+                </tal:switch>
+              </td>
               <td><span class="fa fa-check" tal:condition="entity.not_done"></span></td>
               <td><code>${entity.id}</code></td>
               <td><a class="btn btn-link" href="${request.current_route_path(_route_name='patient_form', form=entity.id)}"><span class="fa fa-chevron-right"></span></a></td>
