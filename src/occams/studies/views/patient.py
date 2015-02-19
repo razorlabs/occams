@@ -33,7 +33,16 @@ def search_view(context, request):
     """
     Generates data for the search result listing web view.
     """
-    return {'results': search_json(context, request)}
+    sites = [
+        site
+        for site in Session.query(models.Site).order_by(models.Site.title)
+        if request.has_permission('view', site)]
+
+    return {
+        'sites': sites,
+        'sites_count': len(sites),
+        'results': search_json(context, request)
+        }
 
 
 @view_config(

@@ -3,7 +3,7 @@
 
     <div id="views-patient-search">
 
-      <p>
+      <div>
         <form method="GET" data-bind="submit: onSubmitSearch">
           <div class="input-group input-group-lg">
             <input type="text" class="form-control" autofocus data-bind="value: query" />
@@ -12,11 +12,22 @@
             </span>
           </div>
         </form>
-      </p>
+      </div>
+
+      <div tal:condition="sites_count">
+        <br />
+        <span i18n:translate="">Searching in:</span>
+        <ul class="list-comma"><li tal:repeat="site sites"><strong>${site.title}</strong></li></ul>
+      </div>
 
       <hr width="100%" />
 
-      <div style="display:none" data-bind="visible: isReady">
+      <div tal:condition="not:sites_count" class="alert alert-warning">
+        <strong i18n:translate="">Warning!</strong>
+        <span i18n:translate="">You currently do not have access to any sites which will drastically limit your results.</span>
+      </div>
+
+      <div style="display:none" data-bind="visible: isReady" tal:condition="sites_count">
 
         <!-- ko ifnot: hasPatients -->
           <div class="alert alert-warning">
