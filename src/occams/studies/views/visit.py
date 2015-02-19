@@ -153,6 +153,13 @@ def cycles_json(context, request):
     request_param='cycles',
     xhr=True,
     renderer='json')
+@view_config(
+    route_name='visit',
+    permission='view',
+    request_method='GET',
+    request_param='cycles',
+    xhr=True,
+    renderer='json')
 def validate_cycles(context, request):
     """
     jQuery Validation callback

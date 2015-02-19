@@ -38,7 +38,7 @@
                   title="Please select a cycle"
                   data-placeholder="Select a cycle..."
                   data-cycles-url="${request.current_route_path(_route_name='visits_cycles')}"
-                  data-rule-remote="${request.current_route_path(_route_name='visits')}"
+                  data-rule-remote="${request.current_route_path(_route_name='visit')|request.current_route_path(_route_name='visits')}"
                   i18n:attributes="title data-placeholder"
                   data-bind="
                     dataKey: 'id',
