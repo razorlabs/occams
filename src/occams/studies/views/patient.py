@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from datetime import datetime
 
 from pyramid.httpexceptions import HTTPBadRequest, HTTPFound, HTTPForbidden
@@ -135,12 +136,19 @@ def search_json(context, request):
     request_method='GET',
     renderer='../templates/patient/view.pt')
 def view(context, request):
-    patient = request.context
-    request.session.setdefault('viewed', {})
-    request.session['viewed'][patient.pid] = {
-        'pid': patient.pid,
-        'view_date': datetime.now()
-    }
+
+    # Keep track of recently viewed
+    viewed = request.session.setdefault('viewed', OrderedDict())
+    # Pop and re-enter data to maintain FIFO
+    try:
+        del viewed[context.pid]
+    except KeyError:
+        pass
+    finally:
+        viewed[context.pid] = {'pid': context.pid, 'view_date': datetime.now()}
+    # Tidy up the queue, we don't want it to get too big, (uses FIFO)
+    while len(viewed) > 10:
+        viewed.popitem(last=False)
     request.session.changed()
 
     # TODO: Need to limit PHI
@@ -290,6 +298,10 @@ def delete_json(context, request):
     patient = context
     Session.delete(patient)
     Session.flush()
+
+    del request.session.setdefault('viewed', OrderedDict())[context.pid]
+    request.session.changed()
+
     msg = request.localizer.translate(
         _('Patient ${pid} was successfully removed'),
         mapping={'pid': patient.pid})

@@ -12,6 +12,67 @@ def _register_routes(config):
     config.add_route('enrollment_termination', '/e/{enrollment}/t')
 
 
+class TestView(IntegrationFixture):
+
+    def call_view(self, context, request):
+        from occams.studies.views.patient import view
+        return view(context, request)
+
+    def test_track_recently_viewed(self):
+        """
+        It should track recently viewed patients
+        """
+        from pyramid import testing
+        from occams.studies import models, Session
+
+        _register_routes(self.config)
+
+        site_la = models.Site(name=u'la', title=u'LA')
+        patient = models.Patient(site=site_la, pid=u'12345')
+        Session.add(patient)
+        Session.flush()
+
+        request = testing.DummyRequest()
+        request.session.changed = mock.Mock()
+        self.call_view(patient, request)
+
+        self.assertIn('12345', request.session['viewed'])
+        self.assertEquals(1, len(request.session['viewed']))
+        self.assertTrue(request.session.changed.called)
+
+    def test_track_limit(self):
+        """
+        It should only keep track of the last 10 recently viewed patients
+        """
+        from collections import OrderedDict
+        from datetime import datetime
+        from pyramid import testing
+        from occams.studies import models, Session
+
+        _register_routes(self.config)
+
+        site_la = models.Site(name=u'la', title=u'LA')
+        patient = models.Patient(site=site_la, pid=u'12345')
+        Session.add(patient)
+        Session.flush()
+
+        request = testing.DummyRequest()
+        request.session['viewed'] = OrderedDict()
+        request.session.changed = mock.Mock()
+
+        previous = [str(i) for i in range(10)]
+
+        for pid in previous:
+            request.session['viewed'][pid] = \
+                {'pid': pid, 'view_date': datetime.now()}
+
+        self.call_view(patient, request)
+
+        self.assertIn('12345', request.session['viewed'])
+        self.assertNotIn(previous[0], request.session['viewed'])
+        self.assertEquals(10, len(request.session['viewed']))
+
+
 class TestSearchJson(IntegrationFixture):
 
     def call_view(self, context, request):
@@ -341,6 +402,7 @@ class TestDeleteJSON(IntegrationFixture):
         """
         It should allow a valid principal to delete a patient
         """
+        from collections import OrderedDict
         from pyramid import testing
         from occams.studies import models, Session
 
@@ -352,6 +414,10 @@ class TestDeleteJSON(IntegrationFixture):
         Session.flush()
         patient_id = patient.id
 
-        self.call_view(patient, testing.DummyRequest())
+        request = testing.DummyRequest()
+        request.session['viewed'] = OrderedDict([('12345', {})])
+        request.session.changed = mock.Mock()
+        self.call_view(patient, request)
 
         self.assertIsNone(Session.query(models.Patient).get(patient_id))
+        self.assertNotIn(u'12345', request.session['viewed'])
