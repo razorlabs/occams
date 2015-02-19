@@ -32,7 +32,7 @@ function Field(data){
   });
 
   self.isType = function(){
-    return Array.slice(arguments).some(function(value){
+    return Array.prototype.slice.call(arguments).some(function(value){
       return value == self.type();
     });
   };
