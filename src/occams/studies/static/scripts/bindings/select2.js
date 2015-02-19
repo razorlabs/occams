@@ -67,6 +67,10 @@
 
       $(element)
         .select2(select2Settings)
+        .on('change', function(){
+          // Re-validate this field so that "required" error messages do not linger
+          $(this).valid();
+        })
         .on('select2-blur', function(){
           // Trigger focusout on underlying element for validation
           $(this).trigger('focusout');
@@ -85,6 +89,13 @@
       }
     },
 
+    /**
+     * Notes:
+     *  - We rely on select2's internal event system to trigger the change
+     *    event when a value is updated. The reason is because blindly
+     *    callling update will immediately validate the input on render,
+     *    which we do not want.
+     */
     update: function (element, valueAccessor, allBindings, viewModel) {
 
       if (allBindings.has('enable')){
@@ -137,9 +148,6 @@
           return {id: value, text: textAccessor(value)};
         }));
       }
-
-      // Let listeners know that things have changed
-      $(element).trigger('change');
     }
   };
 
