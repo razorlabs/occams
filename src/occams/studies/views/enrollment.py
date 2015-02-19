@@ -75,7 +75,7 @@ def view_json(context, request):
             'start_date': study.start_date.isoformat(),
             'stop_date': (study.end_date and study.end_date.isoformat()),
             },
-        'stratum': None if not study.is_randomized else {
+        'stratum': None if not (study.is_randomized and enrollment.stratum) else {
             'id': enrollment.stratum.id,
             'arm': None if study.is_blinded or not can_randomize else {
                 'id': enrollment.stratum.arm.id,
@@ -91,7 +91,6 @@ def view_json(context, request):
             enrollment.termination_date
             and enrollment.termination_date.isoformat()),
         'reference_number': enrollment.reference_number,
-        'stratum_id': enrollment.stratum.id if study.is_randomized else None
         }
 
 
