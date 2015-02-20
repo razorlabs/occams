@@ -17,60 +17,63 @@
         <nav metal:use-macro="load: header-nav.pt" />
 
         <div metal:use-macro="load: ../form/modal-form-add.pt"></div>
+        <div metal:use-macro="load: ../form/modal-form-delete.pt"></div>
         <div metal:use-macro="load: modal-visit-edit.pt"></div>
         <div metal:use-macro="load: modal-visit-delete.pt"></div>
       </header>
 
-      <table class="table table-hover table-striped">
-        <colgroup>
-        </colgroup>
-        <thead>
-          <th><input type="checkbox" /></th>
-          <th i18n:translate="">ID</th>
-          <th i18n:translate="">Form</th>
-          <th i18n:translate="">Collect Date</th>
-          <th i18n:translate="">State</th>
-          <th></th>
-        </thead>
-        <tbody data-bind="foreach: visit.entities">
-          <td>
-            <input type="checkbox"
-                data-bind="
-                  attr: {value: id},
-                  click: $root.onClickForm" />
-          </td>
-          <td><code data-bind="text: id"></code></td>
-          <td data-bind="text: schema.title"></td>
-          <td data-bind="text: collect_date"></td>
-          <!-- Hard-code for now... -->
-          <td>
-            <span class="label" data-bind="
-                css: {
-                  'label-danger': state.name == 'pending-entry',
-                  'label-info': state.name == 'in-progress',
-                  'label-warning': state.name == 'pending-review',
-                  'label-primary': state.name == 'pending-correction',
-                  'label-success': state.name == 'complete'
-                  },
-                text: state.title"></span>
+      <div class="table-responsive">
+        <table class="table table-hover table-striped">
+          <thead>
+            <!--! Do not generate this if the user is not allowed to delete forms -->
+            <th tal:condition="request.has_permission('delete', context['forms'])">
+              <input type="checkbox" data-bind="click: selectAll, checked: isAllSelected" />
+            </th>
+            <th i18n:translate="">ID</th>
+            <th i18n:translate="">Schema</th>
+            <th i18n:translate="">Form</th>
+            <th i18n:translate="">Collect Date</th>
+            <th i18n:translate="">Status</th>
+            <th i18n:translate="">Not Done</th>
+            <th></th>
+          </thead>
+          <tbody data-bind="foreach: visit.entities">
+            <!--! Do not generate this if the user is not allowed to delete forms -->
+            <td tal:condition="request.has_permission('delete', context['forms'])">
+              <input type="checkbox" data-bind="checked: isSelected" />
             </td>
-          <td>
-            <a data-bind="attr: {href: __url__}"><span class="fa fa-chevron-right"></span></a>
-          </td>
-        </tbody>
-      </table>
+            <td><code data-bind="text: id"></code></td>
+            <td><code data-bind="text: schema().name"></code></td>
+            <td data-bind="text: schema().title"></td>
+            <td data-bind="text: collect_date"></td>
+            <td>
+              <!-- Hard-code for now... -->
+              <span class="label" data-bind="
+                  css: {
+                    'label-danger': state().name == 'pending-entry',
+                    'label-info': state().name == 'in-progress',
+                    'label-warning': state().name == 'pending-review',
+                    'label-primary': state().name == 'pending-correction',
+                    'label-success': state().name == 'complete'
+                    },
+                  text: state().title"></span>
+            </td>
+            <td>
+              <!-- ko if: not_done -->
+                <span class="fa fa-check" ></span>
+              <!-- /ko -->
+            </td>
+            <td>
+              <a class="btn btn-link" data-bind="attr: {href: __url__}"><span class="fa fa-chevron-right"></span></a>
+            </td>
+          </tbody>
+        </table>
+      </div> <!-- /.table-responsive -->
 
       <!-- ko if: hasSelectedForms -->
-        <div class="well well-sm">
-          <span class="btn-group">
-            <button class="btn btn-default" i18n:translate="">Move</button>
-            <button class="btn btn-default" i18n:translate="">Delete</button>
-          </span>
-          <strong>
-            <span data-bind="text: selectedForms().length"></span>
-            <span i18n:translate="">Selected</span>
-          </strong>
-        </div>
+        <span class="btn-group">
+          <button class="btn btn-default" data-bind="click: startDeleteForms" i18n:translate="">Delete Selected Forms</button>
+        </span>
       <!-- /ko -->
 
     </div> <!-- /:isReady -->

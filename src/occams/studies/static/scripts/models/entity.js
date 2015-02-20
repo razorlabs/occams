@@ -5,9 +5,12 @@ function Entity(data){
 
   self.id = ko.observable();
   self.schema = ko.observable();
-  self.status = ko.observable();
+  self.state = ko.observable();
   self.not_done = ko.observable();
   self.collect_date = ko.observable();
+
+  // Useful for UIs where this form can be selected and manipulated
+  self.isSelected = ko.observable(false);
 
   self.isNew = ko.pureComputed(function(){
     return !self.id();
@@ -17,8 +20,9 @@ function Entity(data){
     data = data || {}
     self.__url__(data.__url__);
     self.id(data.id);
-    self.schema(data.schema ? new StudyForm(data.schema) : null);
-    self.status = ko.observable(data.status);
+    // Do not use StudyForm, that's intented for STudy UIs and needs to be rethought
+    self.schema(data.schema);
+    self.state = ko.observable(data.state);
     self.not_done = ko.observable(data.not_done);
     self.collect_date = ko.observable(data.collect_date);
   };
@@ -26,7 +30,7 @@ function Entity(data){
   self.toRest = function(){
     return {
       schema: self.schema() ? self.schema().schema().id : null,
-      status: self.status(),
+      state: self.state(),
       not_done: self.not_done(),
       collect_date: self.collect_date()
     };

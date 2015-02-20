@@ -1,7 +1,6 @@
 from datetime import datetime
 
-from pyramid.httpexceptions import \
-    HTTPBadRequest, HTTPForbidden, HTTPFound, HTTPOk
+from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPFound
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 import sqlalchemy as sa
@@ -14,6 +13,7 @@ from occams.forms.renderers import \
 
 from .. import _, models, Session
 from ..utils import wtferrors, ModelField
+from . import form as form_views
 
 
 @view_config(
@@ -55,12 +55,6 @@ def view(context, request):
     renderer='json')
 def view_json(context, request):
     visit = context
-    entities_query = (
-        Session.query(models.Entity)
-        .options(orm.joinedload('schema'), orm.joinedload('state'))
-        .join(models.Context)
-        .filter_by(external='visit', key=visit.id))
-
     return {
         '__url__': request.route_path('visit',
                                       patient=visit.patient.pid,
@@ -87,25 +81,7 @@ def view_json(context, request):
             'pid': visit.patient.pid
             },
         'visit_date': visit.visit_date.isoformat(),
-        'entities': [{
-            '__url__': request.route_path('visit_form',
-                                          patient=visit.patient.pid,
-                                          visit=visit.visit_date.isoformat(),
-                                          form=entity.id),
-            'id': entity.id,
-            'schema': {
-                'name': entity.schema.name,
-                'title': entity.schema.title,
-                'publish_date': entity.schema.publish_date.isoformat()
-                },
-            'collect_date': entity.collect_date.isoformat(),
-            'not_done': entity.not_done,
-            'state': {
-                'id': entity.state.id,
-                'name': entity.state.name,
-                'title': entity.state.title,
-                }
-            } for entity in entities_query]
+        'entities': form_views.list_json(visit['forms'], request)['entities']
         }
 
 
@@ -306,32 +282,13 @@ def delete_json(context, request):
 
 @view_config(
     route_name='visit_form',
-    xhr=True,
-    permission='view',
-    renderer='string')
-def form_ajax(context, request):
-    version = request.GET.get('version')
-    if not version:
-        raise HTTPBadRequest()
-    if version == context.schema.publish_date.isoformat():
-        data = entity_data(context)
-        schema = context.schema
-    else:
-        schema = (
-            Session.query(models.Schema)
-            .filter_by(name=context.schema.name, publish_date=version)
-            .one())
-        data = None
-    Form = make_form(Session, schema, enable_metadata=False)
-    form = Form(request.POST, data=data)
-    return render_form(form)
-
-
-@view_config(
-    route_name='visit_form',
     permission='view',
     renderer='../templates/visit/form.pt')
 def form(context, request):
+    """
+    XXX: Cannot merge into single view
+        because of the way patient forms are handled
+    """
 
     visit = context.__parent__.__parent__
     allowed_schemata = (
@@ -377,107 +334,6 @@ def form(context, request):
             'role': 'form'
         }),
     }
-
-
-@view_config(
-    route_name='visit_forms',
-    xhr=True,
-    permission='add',
-    request_method='POST',
-    renderer='json')
-def form_add_json(context, request):
-    check_csrf_token(request)
-
-    def check_study_form(form, field):
-        query = (
-            Session.query(models.Visit)
-            .filter(models.Visit.id == context.__parent__.id)
-            .join(models.Visit.cycles)
-            .join(models.Cycle.study)
-            .filter(
-                models.Cycle.schemata.any(id=field.data.id)
-                | models.Study.schemata.any(id=field.data.id)))
-        (exists,) = Session.query(query.exists()).one()
-        if not exists:
-            raise wtforms.ValidationError(request.localizer.translate(
-                _('${schema} is not part of the studies for this visit'),
-                mapping={'schema': field.data.title}))
-
-    class AddForm(wtforms.Form):
-        schema = ModelField(
-            session=Session,
-            class_=models.Schema,
-            validators=[
-                wtforms.validators.InputRequired(),
-                check_study_form])
-        collect_date = DateField(
-            validators=[wtforms.validators.InputRequired()])
-
-    form = AddForm.from_json(request.json_body)
-
-    if not form.validate():
-        raise HTTPBadRequest(json={'errors': wtferrors(form)})
-
-    default_state = (
-        Session.query(models.State)
-        .filter_by(name='pending-entry')
-        .one())
-
-    entity = models.Entity(
-        schema=form.schema.data,
-        collect_date=context.__parent__.visit_date,
-        state=default_state)
-    context.__parent__.entities.add(entity)
-    context.__parent__.patient.entities.add(entity)
-
-    Session.flush()
-
-    request.session.flash(
-        _('Successfully added new ${form}',
-            mapping={'form': entity.schema.title}),
-        'success')
-
-    return {
-        '__next__': request.current_route_path(
-            _route_name='visit_form', form=entity.id)
-    }
-
-
-@view_config(
-    route_name='visit_forms',
-    xhr=True,
-    permission='delete',
-    request_method='DELETE',
-    renderer='json')
-def form_delete_json(context, request):
-    """
-    Deletes forms in bulk
-    """
-    check_csrf_token(request)
-
-    class DeleteForm(wtforms.Form):
-        forms = wtforms.FieldList(ModelField(
-            session=Session,
-            class_=models.Entity))
-
-    form = DeleteForm.from_json(request.json_body)
-
-    if not form.validate():
-        raise HTTPBadRequest(json={'errors': wtferrors(form)})
-
-    entity_ids = [entity.id for entity in form.forms.data]
-
-    (Session.query(models.Entity)
-        .filter(models.Entity.id.in_(
-            Session.query(models.Context.entity_id)
-            .filter(models.Context.entity_id.in_(entity_ids))
-            .filter(models.Context.external == u'visit')
-            .filter(models.Context.key == context.__parent__.id)))
-        .delete('fetch'))
-
-    Session.flush()
-
-    return HTTPOk()
 
 
 def VisitSchema(context, request):

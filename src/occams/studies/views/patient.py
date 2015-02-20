@@ -8,13 +8,10 @@ import six
 import sqlalchemy as sa
 from sqlalchemy import orm
 import wtforms
-from wtforms.ext.dateutil.fields import DateField
 
 from occams.roster import generate
 from occams.forms.renderers import \
     make_form, render_form, apply_data, entity_data
-
-from occams.forms.utils import form2json, version2json
 
 from .. import _, models, Session
 from ..utils import wtferrors, ModelField
@@ -22,7 +19,8 @@ from . import (
     site as site_views,
     enrollment as enrollment_views,
     visit as visit_views,
-    reference_type as reference_type_views)
+    reference_type as reference_type_views,
+    form as form_views)
 
 
 @view_config(
@@ -324,52 +322,11 @@ def delete_json(context, request):
     renderer='../templates/patient/forms.pt')
 def forms(context, request):
     patient = context.__parent__
-
-    # XXX: no time for simplicty, gotta deliver...
-
-    entities_query = (
-        Session.query(models.Entity)
-        .join(models.Context)
-        .filter(models.Context.external == 'patient')
-        .filter(models.Context.key == patient.id)
-        .join(models.Schema)
-        # Do not show PHI forms since there are dedicated tabs for them
-        .filter(~models.Schema.id.in_(
-            Session.query(models.patient_schema_table.c.schema_id)
-            .subquery()))
-        .order_by(models.Schema.name, models.Entity.collect_date))
-
-    entities_count = entities_query.count()
-
     return {
         'phi': get_phi_entities(patient, request),
         'patient': view_json(patient, request),
-        'entities': entities_query,
-        'entities_count': entities_count,
+        'entities': form_views.list_json(context, request)['entities']
     }
-
-
-@view_config(
-    route_name='patient_form',
-    xhr=True,
-    permission='view',
-    renderer='string')
-def form_ajax(context, request):
-    version = request.GET.get('version')
-    if not version:
-        raise HTTPBadRequest()
-    if version == context.schema.publish_date.isoformat():
-        data = entity_data(context)
-        schema = context.schema
-    else:
-        schema = (
-            Session.query(models.Schema)
-            .filter_by(name=context.schema.name, publish_date=version)
-            .one())
-        data = None
-    Form = make_form(Session, schema, enable_metadata=False)
-    form = Form(request.POST, data=data)
-    return render_form(form)
 
 
 @view_config(
@@ -377,6 +334,11 @@ def form_ajax(context, request):
     permission='view',
     renderer='../templates/patient/form.pt')
 def form(context, request):
+    """
+    XXX: Cannot merge into single view
+        because of the way patient forms are handled
+    """
+
     patient = context.__parent__.__parent__
     schema = context.schema
 
@@ -447,142 +409,6 @@ def form(context, request):
             'action': request.current_route_path(),
             'role': 'form'
         }),
-    }
-
-
-@view_config(
-    route_name='patient_forms',
-    xhr=True,
-    permission='add',
-    request_method='POST',
-    renderer='json')
-def form_add_json(context, request):
-    check_csrf_token(request)
-
-    def check_study_form(form, field):
-        query = (
-            Session.query(models.Schema)
-            .join(models.study_schema_table)
-            .join(models.Study)
-            .filter(models.Study.start_date != sa.null())
-            .filter(models.Schema.id == field.data.id))
-        (exists,) = Session.query(query.exists()).one()
-        if not exists:
-            raise wtforms.ValidationError(request.localizer.translate(
-                _(u'This form is not assosiated with a study')))
-
-    class AddForm(wtforms.Form):
-        schema = ModelField(
-            session=Session,
-            class_=models.Schema,
-            validators=[
-                wtforms.validators.InputRequired(),
-                check_study_form])
-        collect_date = DateField(
-            validators=[wtforms.validators.InputRequired()])
-
-    form = AddForm.from_json(request.json_body)
-
-    if not form.validate():
-        raise HTTPBadRequest(json={'errors': wtferrors(form)})
-
-    default_state = (
-        Session.query(models.State)
-        .filter_by(name='pending-entry')
-        .one())
-
-    entity = models.Entity(
-        schema=form.schema.data,
-        collect_date=form.collect_date.data,
-        state=default_state)
-    context.__parent__.entities.add(entity)
-
-    Session.flush()
-
-    request.session.flash(
-        _('Successfully added new ${form}',
-            mapping={'form': entity.schema.title}),
-        'success')
-
-    return {
-        '__next__': request.current_route_path(
-            _route_name='patient_form', form=entity.id)
-    }
-
-
-@view_config(
-    route_name='patient_forms',
-    permission='edit',
-    xhr=True,
-    request_param='vocabulary=available_schemata',
-    renderer='json')
-@view_config(
-    route_name='patient_form',
-    permission='edit',
-    xhr=True,
-    request_param='vocabulary=available_schemata',
-    renderer='json')
-@view_config(
-    route_name='visit',
-    permission='edit',
-    xhr=True,
-    request_param='vocabulary=available_schemata',
-    renderer='json')
-@view_config(
-    route_name='visit_form',
-    permission='edit',
-    xhr=True,
-    request_param='vocabulary=available_schemata',
-    renderer='json')
-def available_schemata(context, request):
-    """
-    Returns a listing of available schemata for the study
-
-    The results will try to exclude schemata configured for patients,
-    or schemata that is currently used by the context study (if editing).
-
-    GET parameters:
-        term -- (optional) filters by schema title or publish date
-        schema -- (optional) only shows results for specific schema name
-                  (useful for searching for a schema's publish dates)
-        grouped -- (optional) groups all results by schema name
-    """
-
-    class SearchForm(wtforms.Form):
-        term = wtforms.StringField()
-        schema = wtforms.StringField()
-        grouped = wtforms.BooleanField()
-
-    form = SearchForm(request.GET)
-    form.validate()
-
-    query = (
-        Session.query(models.Schema)
-        # only allow forms that are available to active studies
-        .join(models.study_schema_table)
-        .join(models.Study)
-        .filter(models.Study.start_date != sa.null()))
-
-    if form.schema.data:
-        query = query.filter(models.Schema.name == form.schema.data)
-
-    if form.term.data:
-        wildcard = u'%' + form.term.data + u'%'
-        query = query.filter(
-            models.Schema.title.ilike(wildcard)
-            | sa.cast(models.Schema.publish_date, sa.Unicode).ilike(wildcard))
-
-    query = (
-        query.order_by(
-            models.Schema.title,
-            models.Schema.publish_date.asc())
-        .limit(100))
-
-    return {
-        '__query__': form.data,
-        'schemata': (form2json(query)
-                     if form.grouped.data
-                     else [version2json(i) for i in query])
     }
 
 

@@ -29,10 +29,24 @@ function PatientView(options){
   self.statusVisit = ko.observable();
   self.showEditVisit = ko.pureComputed(function(){ return self.statusVisit() == EDIT; });
 
-
-  // Forms UI Settings
+  // Forms UI settings
+  self.entities = ko.observableArray((options.entitiesData || []).map(function(value){ return new Entity(value); } ));
   self.statusForm = ko.observable();
   self.showAddForm = ko.pureComputed(function(){ return self.statusForm() == ADD; });
+  self.showDeleteForm = ko.pureComputed(function(){ return self.statusForm() == DELETE; });
+  self.isAllSelected = ko.observable(false);
+
+  self.selectAll = function(){
+    var all = this.isAllSelected();
+    self.entities().forEach(function(entity) {
+      entity.isSelected(!all);
+    });
+    return true;
+  };
+
+  self.hasSelectedForms = ko.pureComputed(function(){
+    return self.entities().some(function(entity){ return entity.isSelected(); });
+  });
 
   // Modal UI Settings
   self.errorMessage = ko.observable();
@@ -138,6 +152,11 @@ function PatientView(options){
     self.clear();
     self.statusForm(ADD);
     self.editableItem(new Entity());
+  };
+
+  self.startDeleteForms = function(){
+    self.clear();
+    self.statusForm(DELETE);
   };
 
   self.savePatient = function(element){
@@ -302,6 +321,34 @@ function PatientView(options){
       });
     }
   };
+
+  self.deleteForms = function(element){
+    var entities = self.entities()
+      , selected = entities.filter(function(e){ return e.isSelected(); })
+      , ids = selected.map(function(e){ return e.id(); });
+
+    $.ajax({
+        url: self.formsUrl(),
+        method: 'DELETE',
+        contentType: 'application/json; charset=utf-8',
+        data: ko.toJSON({forms: ids}),
+        headers: {'X-CSRF-Token': $.cookie('csrf_token')},
+        error: handleXHRError({form: element, logger: self.errorMessage}),
+        beforeSend: function(){
+          self.isSaving(true);
+        },
+        success: function(data, textStatus, jqXHR){
+          var not_selected = entities.filter(function(e){ return !e.isSelected(); });
+          self.entities(not_selected);
+          self.isAllSelected(false);
+          self.clear();
+        },
+        complete: function(){
+          self.isSaving(false);
+        }
+    });
+  };
+
 
   // Object initalized, set flag to display main UI
   self.isReady(true);

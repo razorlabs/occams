@@ -14,6 +14,7 @@ function Patient(data){
   });
 
   self.update = function(data){
+    data = data || {};
     self.__url__(data.__url__);
     self.id(data.id);
     self.pid(data.pid);
@@ -67,5 +68,5 @@ function Patient(data){
     };
   };
 
-  self.update(data || {});
+  self.update(data);
 }

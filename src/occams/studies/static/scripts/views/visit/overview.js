@@ -23,12 +23,21 @@ function VisitView(options){
   // Forms UI settings
   self.statusForm = ko.observable();
   self.showAddForm = ko.pureComputed(function(){ return self.statusForm() == ADD; });
-
-  self.selectedForms = ko.observableArray();
+  self.showDeleteForm = ko.pureComputed(function(){ return self.statusForm() == DELETE; });
 
   self.hasSelectedForms = ko.pureComputed(function(){
-    return self.selectedForms().length > 0;
+    return self.visit.entities().some(function(entity){ return entity.isSelected(); });
   });
+
+  self.isAllSelected = ko.observable(false);
+
+  self.selectAll = function(){
+    var all = this.isAllSelected();
+    self.visit.entities().forEach(function(entity) {
+      entity.isSelected(!all);
+    });
+    return true;
+  };
 
   self.clear = function(){
     self.errorMessage(null);
@@ -36,19 +45,6 @@ function VisitView(options){
     self.editableItem(null);
     self.statusVisit(null);
     self.statusForm(null);
-  };
-
-  self.onClickForm = function(item, event){
-    var $element = $(event.target)
-      , value = $element.val();
-    if ($element.prop('checked')){
-      console.log('adding', value);
-      self.selectedForms.push(value);
-    } else {
-      console.log('removing', value);
-      self.selectedForms.remove(value);
-    }
-    return true;
   };
 
   self.startEdit = function(){
@@ -68,6 +64,11 @@ function VisitView(options){
     self.editableItem(new Entity({
       collect_date: self.visit.visit_date(),
     }));
+  };
+
+  self.startDeleteForms = function(){
+    self.clear();
+    self.statusForm(DELETE);
   };
 
   self.saveVisit = function(element){
@@ -132,6 +133,33 @@ function VisitView(options){
         }
       });
     }
+  };
+
+  self.deleteForms = function(element){
+    var entities = self.visit.entities()
+      , selected = entities.filter(function(e){ return e.isSelected(); })
+      , ids = selected.map(function(e){ return e.id(); });
+
+    $.ajax({
+        url: self.formsUrl(),
+        method: 'DELETE',
+        contentType: 'application/json; charset=utf-8',
+        data: ko.toJSON({forms: ids}),
+        headers: {'X-CSRF-Token': $.cookie('csrf_token')},
+        error: handleXHRError({form: element, logger: self.errorMessage}),
+        beforeSend: function(){
+          self.isSaving(true);
+        },
+        success: function(data, textStatus, jqXHR){
+          var not_selected = entities.filter(function(e){ return !e.isSelected(); });
+          self.visit.entities(not_selected);
+          self.isAllSelected(false);
+          self.clear();
+        },
+        complete: function(){
+          self.isSaving(false);
+        }
+    });
   };
 
   self.isReady(true);

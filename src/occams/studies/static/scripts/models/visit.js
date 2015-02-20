@@ -27,12 +27,14 @@ function Visit(data){
     self.cycles((data.cycles || []).map(function(value){
       return new Cycle(value);
     }));
-    self.entities(data.entities || []);
+    self.entities((data.entities || []).map(function(value){
+      return new Entity(value);
+    }));
   };
 
   self.entitiesNotStartedCount = ko.pureComputed(function(){
     return self.entities().filter(function(entity){
-      return entity.state.name == 'pending-entry';
+      return entity.state().name == 'pending-entry';
     }).length;
   });
 
@@ -45,7 +47,7 @@ function Visit(data){
 
   self.entitiesIncompleteCount = ko.pureComputed(function(){
     return self.entities().filter(function(entity){
-      return entity.state.name != 'pending-entry'&& entity.state.name != 'complete';
+      return entity.state().name != 'pending-entry'&& entity.state().name != 'complete';
     }).length;
   });
 
@@ -58,7 +60,7 @@ function Visit(data){
 
   self.entitiesCompletedCount = ko.pureComputed(function(){
     return self.entities().filter(function(entity){
-      return entity.state.name == 'complete';
+      return entity.state().name == 'complete';
     }).length;
   });
 

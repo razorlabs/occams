@@ -547,11 +547,11 @@ class TestDeleteJson(IntegrationFixture):
         self.assertEquals(0, Session.query(models.Entity).count())
 
 
-@mock.patch('occams.studies.views.visit.check_csrf_token')
+@mock.patch('occams.studies.views.form.check_csrf_token')
 class TestFormAddJson(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.visit import form_add_json as view
+        from occams.studies.views.form import add_json as view
         return view(context, request)
 
     def test_one(self, check_csrf_token):
@@ -560,7 +560,6 @@ class TestFormAddJson(IntegrationFixture):
         """
         from datetime import date, timedelta
         from pyramid import testing
-        from pyramid.httpexceptions import HTTPOk
         from occams.studies import models, Session
 
         self.config.add_route('visit_form', '/vf/{form}')
@@ -656,11 +655,11 @@ class TestFormAddJson(IntegrationFixture):
             cm.exception.json['errors']['schema'])
 
 
-@mock.patch('occams.studies.views.visit.check_csrf_token')
+@mock.patch('occams.studies.views.form.check_csrf_token')
 class TestFormDeleteJson(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.visit import form_delete_json as view
+        from occams.studies.views.form import bulk_delete_json as view
         return view(context, request)
 
     def test_success(self, check_csrf_token):

@@ -17,46 +17,63 @@
         <div metal:use-macro="load: modal-patient-edit.pt"></div>
         <div metal:use-macro="load: modal-patient-delete.pt"></div>
         <div metal:use-macro="load: ../form/modal-form-add.pt"></div>
+        <div metal:use-macro="load: ../form/modal-form-delete.pt"></div>
       </header>
 
       <div class="table-responsive">
         <table class="table table-hover table-striped">
           <thead>
-            <tr>
-              <th><input type="checkbox" /></th>
-              <th i18n:translate="">Schema</th>
-              <th i18n:translate="">Form</th>
-              <th i18n:translate="">Collected</th>
-              <th i18n:translate="">Status</th>
-              <th i18n:translate="">Not Done</th>
-              <th i18n:translate="">ID</th>
-              <th></th>
-            </tr>
+            <!--! Do not generate this if the user is not allowed to delete forms -->
+            <th tal:condition="request.has_permission('delete', context)">
+              <input type="checkbox" data-bind="click: selectAll, checked: isAllSelected" />
+            </th>
+            <th i18n:translate="">ID</th>
+            <th i18n:translate="">Schema</th>
+            <th i18n:translate="">Form</th>
+            <th i18n:translate="">Collect Date</th>
+            <th i18n:translate="">Status</th>
+            <th i18n:translate="">Not Done</th>
+            <th></th>
           </thead>
-          <tbody>
-            <tr tal:repeat="entity entities">
-              <td><input type="checkbox" /></td>
-              <td><code>${entity.schema.name}</code></td>
-              <td>${entity.schema.title}</td>
-              <td>${entity.collect_date}</td>
-              <td>
-                <!--! Hard-code for now... -->
-                <tal:switch switch="entity.state.name">
-                  <span tal:case="'pending-entry'" class="label label-danger">${entity.state.title}</span>
-                  <span tal:case="'in-progress'" class="label label-info">${entity.state.title}</span>
-                  <span tal:case="'pending-review'" class="label label-warning">${entity.state.title}</span>
-                  <span tal:case="'pending-correction'" class="label label-primary">${entity.state.title}</span>
-                  <span tal:case="'complete'" class="label label-success">${entity.state.title}</span>
-                  <span tal:case="default" class="label label-default">${entity.state.title}</span>
-                </tal:switch>
-              </td>
-              <td><span class="fa fa-check" tal:condition="entity.not_done"></span></td>
-              <td><code>${entity.id}</code></td>
-              <td><a class="btn btn-link" href="${request.current_route_path(_route_name='patient_form', form=entity.id)}"><span class="fa fa-chevron-right"></span></a></td>
-            </tr>
+          <tbody data-bind="foreach: entities">
+            <!--! Do not generate this if the user is not allowed to delete forms -->
+            <td tal:condition="request.has_permission('delete', context)">
+              <input type="checkbox" data-bind="checked: isSelected" />
+            </td>
+            <td><code data-bind="text: id"></code></td>
+            <td><code data-bind="text: schema().name"></code></td>
+            <td data-bind="text: schema().title"></td>
+            <td data-bind="text: collect_date"></td>
+            <td>
+              <!-- Hard-code for now... -->
+              <span class="label" data-bind="
+                  css: {
+                    'label-danger': state().name == 'pending-entry',
+                    'label-info': state().name == 'in-progress',
+                    'label-warning': state().name == 'pending-review',
+                    'label-primary': state().name == 'pending-correction',
+                    'label-success': state().name == 'complete'
+                    },
+                  text: state().title"></span>
+            </td>
+            <td>
+              <!-- ko if: not_done -->
+                <span class="fa fa-check" ></span>
+              <!-- /ko -->
+            </td>
+            <td>
+              <a class="btn btn-link" data-bind="attr: {href: __url__}"><span class="fa fa-chevron-right"></span></a>
+            </td>
           </tbody>
         </table>
-      </div>
+      </div> <!-- /.table-responsive -->
+
+      <!-- ko if: hasSelectedForms -->
+        <span class="btn-group">
+          <button class="btn btn-default" data-bind="click: startDeleteForms" i18n:translate="">Delete Selected Forms</button>
+        </span>
+      <!-- /ko -->
+
     </div> <!-- /#views-patient-main -->
   </metal:content-slot>
   <metal:content-slot fill-slot="javascript-extras-slot">
@@ -65,6 +82,7 @@
         ko.applyBindings(
           new PatientView({
             patientData: JSON.parse($('#patient-data').text()),
+            entitiesData: JSON.parse($('#entities-data').text()),
             formsUrl: "${request.current_route_path(_route_name='patient_forms')}"
           }),
           document.getElementById('views-patient-main')
@@ -73,6 +91,7 @@
     </script>
     <tal:json define="json import:json">
       <script id="patient-data" type="application/json">${json.dumps(patient)}</script>
+      <script id="entities-data" type="application/json" >${json.dumps(entities)}</script>
     </tal:json>
   </metal:content-slot>
 </html>
