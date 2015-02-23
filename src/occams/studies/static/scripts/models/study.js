@@ -78,11 +78,13 @@ function Study(data){
   };
 
   // Select2 termination search parameters callback
+  // TODO: How is this one different from the one in study.js?
   self.searchParams = function(term, page){
     return {vocabulary: 'available_schemata', term: term};
   };
 
   // Select2 termination results callback
+  // TODO: How is this one different from the one in study.js?
   self.searchResults = function(data){
     return {
       results: data.schemata.map(function(schema){

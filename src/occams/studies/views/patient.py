@@ -1,15 +1,18 @@
 from collections import OrderedDict
 from datetime import datetime
 
-from pyramid.httpexceptions import HTTPBadRequest, HTTPFound, HTTPForbidden
+from pyramid.httpexceptions import \
+    HTTPBadRequest, HTTPFound, HTTPForbidden, HTTPOk
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 import six
 import sqlalchemy as sa
 from sqlalchemy import orm
 import wtforms
+from zope.sqlalchemy import mark_changed
 
 from occams.roster import generate
+from occams.forms.utils import form2json
 from occams.forms.renderers import \
     make_form, render_form, apply_data, entity_data
 
@@ -213,8 +216,15 @@ def forms_list_json(context, request):
     """
     Returns a listing of available patient forms
     """
+    query = (
+        Session.query(models.Schema)
+        .join(models.patient_schema_table)
+        .order_by(
+            models.Schema.name,
+            models.Schema.publish_date))
+
     return {
-        'forms': []
+        'forms': [form2json(s) for s in query]
     }
 
 
@@ -224,11 +234,127 @@ def forms_list_json(context, request):
     request_method='POST',
     xhr=True,
     renderer='json')
-def forms_edit_json(context, request):
+def forms_add_json(context, request):
     """
     Updates the available patient forms
     """
-    return {}
+    check_csrf_token(request)
+
+    def check_not_study_form(form, field):
+        studies = (
+            Session.query(models.Study)
+            .filter(models.Study.schemata.any(id=field.data.id))
+            .order_by(models.Study.title)
+            .all())
+        if studies:
+            raise wtforms.ValidationError(request.localizer.translate(
+                _(u'This form is already used by: {studies}'),
+                mapping={'studies': ', '.join(s.title for s in studies)}))
+
+    def check_not_termination_form(form, field):
+        studies = (
+            Session.query(models.Study)
+            .filter(models.Study.termination_schema.has(name=field.data.name))
+            .order_by(models.Study.title)
+            .all())
+        if studies:
+            raise wtforms.ValidationError(request.localizer.translate(
+                _(u'This form is already a termination form for: {studies}'),
+                mapping={'studies': ', '.join(s.title for s in studies)}))
+
+    def check_not_randomization_form(form, field):
+        studies = (
+            Session.query(models.Study)
+            .filter(models.Study.randomization_schema.has(
+                name=field.data.name))
+            .order_by(models.Study.title)
+            .all())
+        if studies:
+            raise wtforms.ValidationError(request.localizer.translate(
+                _(u'This form is already a randomization form for: {studies}'),
+                mapping={'studies': ', '.join(s.title for s in studies)}))
+
+    def check_unique_form(form, field):
+        exists = (
+            Session.query(sa.literal(True))
+            .filter(
+                Session.query(models.Schema)
+                .join(models.patient_schema_table)
+                .filter(models.Schema.name == field.data.name)
+                .exists())
+            .scalar())
+        if exists:
+            raise wtforms.ValidationError(request.localizer.translate(
+                _(u'Only a single version of forms are currently supported')))
+
+    class AddForm(wtforms.Form):
+        form = ModelField(
+            session=Session,
+            class_=models.Schema,
+            validators=[
+                wtforms.validators.InputRequired(),
+                check_not_study_form,
+                check_not_randomization_form,
+                check_not_termination_form,
+                check_unique_form])
+
+    form = AddForm.from_json(request.json_body)
+
+    if not form.validate():
+        raise HTTPBadRequest(json={'errors': wtferrors(form)})
+
+    Session.execute(
+        models.patient_schema_table.insert()
+        .values(schema_id=form.form.data.id))
+
+    mark_changed(Session())
+
+    return form2json(form.form.data)
+
+
+@view_config(
+    route_name='patients_forms',
+    permission='admin',
+    request_method='DELETE',
+    xhr=True,
+    renderer='json')
+def forms_delete_json(context, request):
+    """
+    Removes a required patient form.
+    """
+    check_csrf_token(request)
+
+    def check_not_has_data(form, field):
+        (exists,) = (
+            Session.query(
+                Session.query(models.Entity)
+                .filter_by(schema=field.data)
+                .exists())
+            .one())
+        if exists:
+            raise wtforms.ValidationError(request.localizer.translate(
+                _(u'Unable to remove because data has already been entered')))
+
+    class DeleteForm(wtforms.Form):
+        form = ModelField(
+            session=Session,
+            class_=models.Schema,
+            validators=[
+                wtforms.validators.InputRequired(),
+                check_not_has_data])
+
+    form = DeleteForm.from_json(request.json_body)
+
+    if not form.validate():
+        raise HTTPBadRequest(body='<br />'.join(form.form.errors))
+
+    Session.execute(
+        models.patient_schema_table.delete()
+        .where(models.patient_schema_table.c.schema_id == form.form.data.id))
+
+    mark_changed(Session())
+
+    return HTTPOk()
 
 
 @view_config(

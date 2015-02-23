@@ -19,9 +19,8 @@ function handleXHRError(options){
   var logger = options.logger || defaultLogger,
       form = options.form;
 
-  return function(jqXHR, textStatus, errorThrown){
 
-    console.log(jqXHR, textStatus, errorThrown);
+  return function(jqXHR, textStatus, errorThrown){
 
     if (textStatus.indexOf('CSRF') > -1 ){
       // The session has expired and the user needs to be redirected

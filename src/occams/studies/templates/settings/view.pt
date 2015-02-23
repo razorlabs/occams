@@ -121,7 +121,6 @@
           </div><!-- /.modal-content -->
         </div><!-- /.modal-dialog -->
       </div><!-- /.modal -->
-
       <div class="modal fade" data-bind="modalVisible: showDeleteSite">
         <div class="modal-dialog" data-bind="if: showDeleteSite">
           <div class="modal-content" data-bind="with: selectedSite">
@@ -171,7 +170,145 @@
         </div>
       <!-- /ko -->
       <!-- ko if: hasForms -->
+        <table class="table table-hover table-striped">
+          <thead>
+            <tr>
+              <th i18n:translate="">Schema</th>
+              <th i18n:translate="">Form</th>
+              <th i18n:translate="">Version</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody data-bind="foreach: forms">
+            <tr>
+              <!-- ko with: versions()[0] -->
+                <td><code data-bind="text: name"></code></td>
+                <td data-bind="text: title"></td>
+                <td><code data-bind="text: publish_date"></code></td>
+              <!-- /ko -->
+              <td>
+                <div class="clearfix">
+                  <div class="btn-group pull-right">
+                    <button class="btn btn-default" data-bind="click: $parent.startDeleteForm"><span class="fa fa-trash"></span></button>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       <!-- /ko -->
+      <div class="clearfix">
+        <div class="pull-right">
+          <button class="btn btn-default" data-bind="click: startAddForm">
+            <span class="fa fa-file-o"></span>
+            <span i18n:translate="">Add new form</span>
+          </button>
+        </div>
+      </div>
+      <div class="modal fade" data-bind="modalVisible: showEditForm">
+        <div class="modal-dialog" data-bind="if: showEditForm">
+          <div class="modal-content" data-bind="with: selectedForm">
+            <form
+                class="form-horizontal"
+                method="POST"
+                data-bind="validate: {}, submit: $parent.saveForm">
+              <div class="modal-header">
+                <h4 class="modal-title" i18n:translate="">New Form</h4>
+              </div>
+              <div class="modal-body">
+                <!-- ko with: $parent.latestForm -->
+                  <div class="alert alert-success">
+                    <strong i18n:translate="">Success!</strong>
+                    <span i18n:translate="">Added:</span>
+                    <a class="alert-link" data-bind="attr: {href: __url__}, text: titleWithVersion"></a>
+                  </div>
+                <!-- /ko -->
+                <!-- ko with: $parent.errorMessage -->
+                  <div class="alert alert-danger" role="alert">
+                    <strong>Error!</strong> <span data-bind="text: $data"></span>
+                  </div>
+                <!-- /ko -->
+                <div class="form-group">
+                  <label class="col-sm-2 control-label required" i18n:translate="">Form</label>
+                  <div class="col-sm-10">
+                    <input type="hidden" class="form-control"
+                        required
+                        i18n:attributes="data-placeholder"
+                        data-placeholder="Select a form..."
+                        data-bind="
+                          selectedData: $parent.editableForm,
+                          dataKey: 'name',
+                          dataLabel: 'titleWithVersion',
+                          select2: {
+                            allowClear: true,
+                            ajax: {
+                              data: $parent.searchSchemaParams,
+                              results: $parent.searchSchemaResults
+                            }
+                          }" />
+                    <div  class="help-block">
+                      Select a form. Must not be a study, randomization or termination form
+                    </div>
+                  </div>
+                </div> <!-- /.form-group -->
+              </div> <!-- /.modal-body -->
+              <div class="modal-footer">
+                <!-- ko ifnot: isNew -->
+                  <label class="text-muted">
+                    <input type="checkbox" data-bind="checked: $parent.addMoreForms" />
+                    <span i18n:translate="">Add another</span>
+                  </label>
+                <!-- /ko -->
+                <button
+                    type="button"
+                    class="btn btn-link"
+                    data-bind="click: $parent.clear"
+                    i18n:translate="">Cancel</button>
+                <button type="submit" class="btn btn-primary">
+                  <span i18n:translate="">Save</span>
+                  <!-- ko if: $parent.isSaving -->
+                    <span class="fa fa-refresh fa-spin"></span>
+                  <!-- /ko -->
+                </button>
+              </div> <!-- /.modal-footer -->
+            </form>
+          </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+      </div><!-- /.modal -->
+      <div class="modal fade" data-bind="modalVisible: showDeleteForm">
+        <div class="modal-dialog" data-bind="if: showDeleteForm">
+          <div class="modal-content" data-bind="with: selectedForm">
+            <form class="form-horizontal" data-bind="submit: $parent.deleteForm">
+              <div class="modal-header">
+                <h4 class="modal-title" i18n:translate="">Remove a patient form</h4>
+              </div>
+              <div class="modal-body">
+                <!-- ko with: $parent.errorMessage -->
+                  <div class="alert alert-danger" role="alert">
+                    <strong>Error!</strong> <span data-bind="text: $data"></span>
+                  </div>
+                <!-- /ko -->
+                <p i18n:translate="">You are about to de-activate the following  patient form:</p>
+                <h4 data-bind="text: titleWithVersion"></h4>
+                <p i18n:translate="">Are you sure you want to continue?</p>
+              </div> <!-- /.modal-body -->
+              <div class="modal-footer">
+                <button
+                    type="button"
+                    class="btn btn-link"
+                    data-bind="click: $root.clear"
+                    i18n:translate="">No</button>
+                <button type="submit" class="btn btn-danger">
+                  <span i18n:translate="">Yes</span>
+                  <!-- ko if: $root.isSaving -->
+                    <span class="fa fa-refresh fa-spin"></span>
+                  <!-- /ko -->
+                </button>
+              </div> <!-- /.modal-footer -->
+            </form>
+          </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+      </div><!-- /.modal -->
     </section><!-- /#patient-forms -->
 
   </metal:content-slot>

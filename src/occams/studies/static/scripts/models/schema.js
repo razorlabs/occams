@@ -29,6 +29,7 @@ function StudyForm(data){
   });
 
   self.update = function(data){
+    data = data || {};
     self.isNew(data.isNew || false);
     self.schema(data.schema || null);
     self.versions(data.versions || []);
@@ -62,5 +63,5 @@ function StudyForm(data){
     return {results: data.schemata};
   };
 
-  self.update(data || {});
+  self.update(data);
 }
