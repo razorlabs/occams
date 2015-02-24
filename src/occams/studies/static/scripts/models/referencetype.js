@@ -12,7 +12,12 @@ function ReferenceType(data){
   self.reference_pattern = ko.observable();
   self.reference_hint = ko.observable();
 
+  self.isNew = ko.pureComputed(function(){
+    return !self.id();
+  });
+
   self.update = function(data){
+    data = data || {};
     self.__url__(data.__url__);
     self.id(data.id);
     self.name(data.name);
@@ -22,5 +27,5 @@ function ReferenceType(data){
     self.reference_hint(data.reference_hint);
   };
 
-  self.update(data || {});
+  self.update(data);
 }

@@ -21,8 +21,8 @@ def includeme(config):
     config.add_route('sites',                       '/sites',                           factory=models.SiteFactory)
     config.add_route('site',                        '/sites/{site}',                    factory=models.SiteFactory, traverse='/{site}')
 
-    config.add_route('reference_types',             '/reference_types')
-    config.add_route('reference_type',              '/reference_types/{reference_type}')
+    config.add_route('reference_types',             '/reference_types',                 factory=models.ReferenceTypeFactory)
+    config.add_route('reference_type',              '/reference_types/{reference_type}', factory=models.ReferenceTypeFactory, traverse='/{reference_type}')
 
     config.add_route('home',                        '/',                                factory=models.StudyFactory)
     config.add_route('studies',                     '/',                                factory=models.StudyFactory)

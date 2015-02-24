@@ -569,6 +569,25 @@ class Patient(Base, Referenceable, Modifiable, HasEntities, Auditable):
             sa.Index('ix_%s_initials' % cls.__tablename__, 'initials'))
 
 
+class ReferenceTypeFactory(object):
+
+    __acl__ = [
+        (Allow, groups.administrator(), ALL_PERMISSIONS),
+        ]
+
+    def __init__(self, request):
+        self.request = request
+
+    def __getitem__(self, key):
+        try:
+            reference_type = (
+                Session.query(ReferenceType).filter_by(name=key).one())
+        except orm.exc.NoResultFound:
+            raise KeyError
+        reference_type.__parent__ = self
+        return reference_type
+
+
 class ReferenceType(Base, Referenceable, Describeable, Modifiable):
     """
     Reference type sources

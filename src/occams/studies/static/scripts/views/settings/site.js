@@ -61,7 +61,7 @@ function SiteManageView(sitesUrl){
         contentType: 'application/json; charset=utf-8',
         data: ko.toJSON(self.editableSite()),
         headers: {'X-CSRF-Token': $.cookie('csrf_token')},
-        errors: handleXHRError({form: element, logger: self.errroMessage}),
+        error: handleXHRError({form: element, logger: self.errroMessage}),
         beforeSend: function(){
           self.isAjaxing(true);
         },
@@ -95,7 +95,7 @@ function SiteManageView(sitesUrl){
       url: selected.__url__(),
       method: 'DELETE',
       headers: {'X-CSRF-Token': $.cookie('csrf_token')},
-      errors: handleXHRError({form: element, logger: self.errroMessage}),
+      error: handleXHRError({form: element, logger: self.errroMessage}),
       beforeSend: function(){
         self.isAjaxing(true);
       },

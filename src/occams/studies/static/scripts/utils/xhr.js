@@ -39,7 +39,6 @@ function handleXHRError(options){
 
     } else {
       logger(errorThrown);
-
     }
   };
 }
