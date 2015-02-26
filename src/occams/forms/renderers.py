@@ -216,12 +216,13 @@ def make_longform(session, schemata):
     return LongForm
 
 
-def render_form(form, attr=None):
+def render_form(form, disabled=False, attr=None):
     """
     Helper function to render a WTForm by OCCAMS standards
     """
     return render('occams.forms:templates/form.pt', {
         'form': form,
+        'disabled': disabled,
         'attr': attr or {},
         })
 

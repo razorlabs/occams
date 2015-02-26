@@ -127,7 +127,7 @@
             <tal:case case="string:RadioInput">
               <div class="radio">
                 <label>
-                  ${structure: field(class_="ds-widget ds-choice")}
+                  ${structure: field(class_="ds-widget ds-choice", disabled=disabled)}
                   ${structure: field.label.text}
                   <code>${field._value()}</code>
                 </label>
@@ -136,44 +136,45 @@
             <tal:case case="string:CheckboxInput">
               <div class="checkbox">
                 <label>
-                  ${structure: field(class_="ds-widget")}
+                  ${structure: field(class_="ds-widget", disabled=disabled)}
                   ${structure: field.label.text}
                   <code>${field._value()}</code>
                 </label>
               </div>
             </tal:case>
             <tal:case case="string:DateInput">
-              ${structure: field(class_='form-control js-date ds-widget')}
+              ${structure: field(class_='form-control js-date ds-widget', disabled=disabled)}
             </tal:case>
             <tal:case case="string:DateTimeInput">
-              ${structure: field(class_='form-control js-datetime ds-widget')}
+              ${structure: field(class_='form-control js-datetime ds-widget', disabled=disabled)}
             </tal:case>
             <tal:case case="string:Select">
-              ${structure: field(class_='form-control js-select2 ds-widget')}
+              ${structure: field(class_='form-control js-select2 ds-widget', disabled=disabled)}
             </tal:case>
             <tal:case case="string:TelInput">
-              ${structure: field(class_='form-control ds-widget')}
+              ${structure: field(class_='form-control ds-widget', disabled=disbabled)}
             </tal:case>
             <tal:case case="string:EmailInput">
-              ${structure: field(class_='form-control ds-widget')}
+              ${structure: field(class_='form-control ds-widget', disabled=disabled)}
             </tal:case>
             <tal:case case="string:NumberInput">
-              ${structure: field(class_='form-control ds-widget')}
+              ${structure: field(class_='form-control ds-widget', disabled=disabled)}
             </tal:case>
             <tal:case case="string:TextArea">
-              ${structure: field(class_='form-control ds-widget', rows=5)}
+              ${structure: field(class_='form-control ds-widget', rows=5, disabled=disabled)}
             </tal:case>
             <tal:case case="string:TextInput">
-              ${structure: field(class_='form-control ds-widget')}
+              ${structure: field(class_='form-control ds-widget', disabled=disabled)}
             </tal:case>
             <tal:case case="string:FileInput">
               ${structure: field(**{
                   'class': 'form-control ds-widget file',
+                  'disbled': disabled,
                   'data-show-upload': 'false',
                   'data-show-preview': 'false'
                   })}
             </tal:case>
-            <tal:case case="default">${structure: field(class_='ds-widget')}</tal:case>
+            <tal:case case="default">${structure: field(class_='ds-widget', disabled=disabled)}</tal:case>
           </tal:switch>
         </tal:case>
       </tal:switch>
