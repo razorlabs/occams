@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pyramid.httpexceptions import HTTPBadRequest, HTTPOk
+from pyramid.httpexceptions import HTTPBadRequest, HTTPOk, HTTPNotFound
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 from sqlalchemy import orm
@@ -50,7 +50,7 @@ def view_json(context, request):
             'enrollment',
             patient=patient.pid,
             enrollment=enrollment.id),
-        '__randomize_url__': request.route_path(
+        '__randomization_url__': request.route_path(
             'enrollment_randomization',
             patient=patient.pid,
             enrollment=enrollment.id),
@@ -73,7 +73,6 @@ def view_json(context, request):
             'is_randomized': study.is_randomized,
             'is_blinded': study.is_blinded,
             'start_date': study.start_date.isoformat(),
-            'stop_date': (study.end_date and study.end_date.isoformat()),
             },
         'stratum': None if not (study.is_randomized and enrollment.stratum) else {
             'id': enrollment.stratum.id,
@@ -154,6 +153,12 @@ def terminate_ajax(context, request):
     try:
         entity = (
             Session.query(models.Entity)
+            .join(models.Entity.schema)
+            .filter(models.Schema.name.in_(
+                # Only search for forms being used as temrination forms
+                Session.query(models.Schema.name)
+                .join(models.Study.termination_schema)
+                .subquery()))
             .join(models.Context)
             .filter_by(external='enrollment', key=context.id)
             .one())
@@ -166,6 +171,7 @@ def terminate_ajax(context, request):
     else:
         schema = entity.schema
         data = entity_data(entity)
+
     Form = make_form(Session, schema)
     form = Form(request.POST, data=data)
 
@@ -191,6 +197,105 @@ def terminate_ajax(context, request):
         'action': request.current_route_path(),
         'role': 'form',
         'data-bind': 'formentry: {}, submit: $root.terminateEnrollment'
+    })
+
+
+@view_config(
+    route_name='enrollment_randomization',
+    permission='randomize',
+    renderer='../templates/enrollment/randomization.pt')
+def randomize_print(context, request):
+    try:
+        entity = (
+            Session.query(models.Entity)
+            .join(models.Entity.schema)
+            .filter(models.Schema.name.in_(
+                # Only search for forms being used as temrination forms
+                Session.query(models.Schema.name)
+                .join(models.Study.randomization_schema)
+                .subquery()))
+            .join(models.Context)
+            .filter_by(external='enrollment', key=context.id)
+            .one())
+    except orm.exc.MultipleResultsFound:
+        raise Exception('Should only have one...')
+    except orm.exc.NoResultFound:
+        raise HTTPNotFound()
+    else:
+        schema = entity.schema
+        data = entity_data(entity)
+
+    Form = make_form(Session, schema, enable_metadata=False)
+    form = Form(request.POST, data=data)
+
+    return {
+        'form': render_form(form, disabled=True, attr={
+            'id': 'enrollment-randomization',
+            'method': 'POST',
+            'action': request.current_route_path(),
+            'role': 'form'
+        })
+    }
+
+
+@view_config(
+    route_name='enrollment_randomization',
+    permission='randomize',
+    xhr=True,
+    renderer='string')
+def randomize_ajax(context, request):
+    try:
+        entity = (
+            Session.query(models.Entity)
+            .join(models.Entity.schema)
+            .filter(models.Schema.name.in_(
+                # Only search for forms being used as temrination forms
+                Session.query(models.Schema.name)
+                .join(models.Study.randomization_schema)
+                .subquery()))
+            .join(models.Context)
+            .filter_by(external='enrollment', key=context.id)
+            .one())
+    except orm.exc.MultipleResultsFound:
+        raise Exception('Should only have one...')
+    except orm.exc.NoResultFound:
+        entity = None
+        schema = context.study.randomization_schema
+        data = {}
+    else:
+        schema = entity.schema
+        data = entity_data(entity)
+
+    is_randomized = bool(context.stratum)
+
+    Form = make_form(Session, schema, enable_metadata=False)
+    form = Form(request.POST, data=data)
+
+    if request.method == 'POST':
+        check_csrf_token(request)
+        if is_randomized:
+            raise HTTPBadRequest(
+                body=_(u'This patient is already randomized for this study'))
+        if form.validate():
+            if not entity:
+                # changing termination version *should* not be
+                # allowed, just assign the schema that's already being used
+                entity = models.Entity(schema=schema)
+                context.entities.add(entity)
+            upload_dir = request.registry.settings['app.blob.dir']
+            apply_data(Session, entity, form.data, upload_dir)
+            context.termination_date = form.termination_date.data
+            Session.flush()
+            return HTTPOk(json=view_json(context, request))
+        else:
+            return HTTPBadRequest(json={'errors': wtferrors(form)})
+
+    return render_form(form, disabled=is_randomized, attr={
+        'id': 'enrollment-randomization',
+        'method': 'POST',
+        'action': request.current_route_path(),
+        'role': 'form',
+        'data-bind': 'formentry: {}, submit: $root.randomizeEnrollment'
     })
 
 

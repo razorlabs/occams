@@ -1,0 +1,110 @@
+<div class="modal fade" data-bind="modalVisible: $root.showRandomizeEnrollment">
+  <div class="modal-dialog" data-bind="if: $root.showRandomizeEnrollment">
+    <div class="modal-content" data-bind="with: $root.editableItem">
+      <div class="modal-header">
+        <!-- ko if: isRandomized -->
+          <div class="btn-toolbar pull-right">
+            <div class="btn-group">
+              <a class="btn btn-default"
+                target="_blank"
+                data-bind="
+                  attr: {
+                    href: __randomization_url__
+                  }"><span class="fa fa-print"></span> <span i18n:translate="">Print</span></a>
+            </div>
+          </div>
+          <h4 class="modal-title" i18n:translate="">Randomization Status</h4>
+        <!-- /ko -->
+        <!-- ko ifnot: isRandomized -->
+          <h4 class="modal-title" i18n:translate="">Randomize Patient</h4>
+        <!-- /ko -->
+      </div>
+      <div class="modal-body">
+        <!-- ko if: $root.hasErrorMessages -->
+          <div class="alert alert-danger">
+            <p i18n:translate="">
+              Could not complete the request for the following reasons:
+            </p>
+            <ul data-bind="foreach: $root.errorMessages">
+              <li data-bind="text: $data"></li>
+            </ul>
+          </div>
+        <!-- /ko -->
+        <!-- ko if: isRandomized -->
+          <dl class="dl-horizontal">
+            <dt i18n:translate="">PID</dt>
+            <!-- ko with: $root.patient -->
+              <dd><code data-bind="text: pid"></code></dd>
+            <!-- /ko -->
+
+            <dt i18n:translate="">Study</dt>
+            <!-- ko with: study -->
+              <dd class="study" data-bind="text: title"></dd>
+            <!-- /ko -->
+
+            <dt i18n:translate="">Joined</dt>
+            <dd><code data-bind="text: consent_date"></code></dd>
+
+            <dt i18n:translate="">Consented</dt>
+            <dd><code data-bind="text: latest_consent_date"></code></dd>
+
+            <!-- ko if: termination_date -->
+              <dt i18n:translate="">Terminated</dt>
+              <dd><code data-bind="text: termination_date"></code></dd>
+            <!-- /ko -->
+
+            <dt i18n:translate="">Study #</dt>
+            <dd data-bind="if: reference_number">
+              <code data-bind="text: reference_number"></code>
+            </dd>
+
+            <dt i18n:translate="">RANDID</dt>
+            <dd data-bind="with: stratum">
+              <code data-bind="text: randid"></code>
+            </dd>
+
+            <dt i18n:translate="">Arm</dt>
+            <dd>
+              <!-- ko if: study().is_randomized() -->
+                <!-- ko if: study().is_blinded() -->
+                  <em i18n:translate="">Blinded</em>
+                <!-- /ko -->
+                <!-- ko ifnot: study().is_blinded() -->
+                  <span data-bind="text: stratum().arm().title()"></span>
+                <!-- /ko -->
+              <!-- /ko -->
+            </dd>
+          </dl>
+
+          <hr />
+
+          <div data-bind="htmlBind: randomization_ui"></div>
+        <!-- /ko -->
+        <!-- ko ifnot: isRandomized -->
+        <!-- /ko -->
+      </div> <!-- /.modal-body -->
+      <div class="modal-footer">
+        <!-- ko ifnot: isRandomized -->
+          <button
+              type="button"
+              class="btn btn-link"
+              data-bind="click: $root.clear"
+              i18n:translate="">Cancel</button>
+          <button type="submit" class="btn btn-primary" form="enrollment-randomization">
+            <span i18n:translate="">Randomize</span>
+            <!-- ko if: $root.isSaving -->
+              <span class="fa fa-refresh fa-spin"></span>
+            <!-- /ko -->
+          </button>
+        <!-- /ko -->
+        <!-- ko if: isRandomized -->
+          <button
+              type="button"
+              class="btn btn-link"
+              data-bind="click: $root.clear"
+              i18n:translate="">Close</button>
+        <!-- /ko -->
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->

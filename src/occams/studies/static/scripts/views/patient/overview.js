@@ -21,7 +21,7 @@ function PatientView(options){
   self.statusEnrollment = ko.observable();
   self.showEditEnrollment = ko.pureComputed(function(){ return self.statusEnrollment() == EDIT; });
   self.showDeleteEnrollment = ko.pureComputed(function(){ return self.statusEnrollment() == DELETE; });
-  self.showRandomizeEnrollment = ko.pureComputed(function(){ return self.statusEnrollment() == RANDOMIZEE; });
+  self.showRandomizeEnrollment = ko.pureComputed(function(){ return self.statusEnrollment() == RANDOMIZE; });
   self.showTerminateEnrollment = ko.pureComputed(function(){ return self.statusEnrollment() == TERMINATE; });
 
   // Visit UI Settings
@@ -142,6 +142,17 @@ function PatientView(options){
     });
   };
 
+  self.startRandomizeEnrollment = function(item){
+    self.clear();
+    $.get(item.__randomization_url__(), function(data, textSatus, jqXHR){
+      self.statusEnrollment(RANDOMIZE);
+      self.selectedItem(item);
+      var editable = new Enrollment(ko.toJS(item))
+      editable.randomization_ui(data);
+      self.editableItem(editable);
+    });
+  };
+
   self.startAddVisit = function(){
     self.clear();
     self.statusVisit(EDIT);
@@ -255,6 +266,9 @@ function PatientView(options){
     }
   };
 
+  self.randomizeEnrollment = function(element){
+  };
+
   self.deleteEnrollment = function(element){
     var item = self.selectedItem();
 
@@ -348,7 +362,6 @@ function PatientView(options){
         }
     });
   };
-
 
   // Object initalized, set flag to display main UI
   self.isReady(true);

@@ -18,10 +18,27 @@ function Enrollment(data){
   self.reference_number = ko.observable();
   self.stratum = ko.observable();
 
+  // Dynamically loaded markup for modal window
   self.termination_ui = ko.observable();
   self.randomization_ui = ko.observable();
 
+  self.isNew = ko.pureComputed(function(){
+    return !self.id();
+  });
+
+  self.isRandomized = ko.pureComputed(function(){
+    var study = self.study(),
+        stratum = self.stratum() || {};
+
+    if (!study || !study.is_randomized()){
+      return false;
+    }
+
+    return stratum && !!stratum.randid();
+  });
+
   self.update = function(data){
+    data = data || {};
     self.__url__(data.__url__);
     self.__randomization_url__(data.__randomization_url__);
     self.__termination_url__(data.__termination_url__);
@@ -38,5 +55,5 @@ function Enrollment(data){
     self.stratum(data.stratum ? new Stratum(data.stratum) : null);
   };
 
-  self.update(data || {});
+  self.update(data);
 }
