@@ -110,14 +110,12 @@
                     <td data-bind="with: stratum">
                       <code data-bind="text: randid"></code>
                     </td>
-                    <td>
-                      <!-- ko if: study().is_randomized() -->
-                        <!-- ko if: study().is_blinded() -->
-                          <em i18n:translate="">Blinded</em>
-                        <!-- /ko -->
-                        <!-- ko ifnot: study().is_blinded() -->
-                          <span data-bind="text: stratum().arm().title()"></span>
-                        <!-- /ko -->
+                    <td data-bind="with: stratum">
+                      <!-- ko if: study().is_blinded() -->
+                        <em i18n:translate="">Blinded</em>
+                      <!-- /ko -->
+                      <!-- ko ifnot: study().is_blinded() -->
+                        <span data-bind="text: arm().title()"></span>
                       <!-- /ko -->
                     </td>
                     <td class="text-right">

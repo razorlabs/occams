@@ -27,13 +27,7 @@ function Enrollment(data){
   });
 
   self.isRandomized = ko.pureComputed(function(){
-    var study = self.study(),
-        stratum = self.stratum() || {};
-
-    if (!study || !study.is_randomized()){
-      return false;
-    }
-
+    var stratum = self.stratum();
     return stratum && !!stratum.randid();
   });
 
@@ -53,6 +47,15 @@ function Enrollment(data){
     self.termination_date(data.termination_date);
     self.reference_number(data.reference_number);
     self.stratum(data.stratum ? new Stratum(data.stratum) : null);
+  };
+
+  self.toRest = function(){
+    return {
+      study: self.study().id(),
+      consent_date: self.consent_date(),
+      latest_consent_date: self.latest_consent_date(),
+      reference_number: self.reference_number(),
+    };
   };
 
   self.update(data);

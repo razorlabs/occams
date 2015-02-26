@@ -62,31 +62,33 @@ function PatientView(options){
     return new Visit(value);
   }));
 
-  self.hasEnrollments = ko.computed(function(){
+  self.hasEnrollments = ko.pureComputed(function(){
     return self.enrollments().length > 0;
   });
 
-  self.hasVisits = ko.computed(function(){
+  self.hasVisits = ko.pureComputed(function(){
     return self.visits().length > 0;
   });
 
-  self.onChangeStudy = function(item, event){
-    var $option = $($(event.target).find(':selected'))
-      , $field = $('#reference_number')
-      , pattern = $option.data('reference_pattern')
-      , hint = $option.data('reference_hint');
-
-    if (pattern){
-      $field.attr('pattern', pattern);
-    } else {
-      $field.removeAttr('pattern');
-    }
-
-    if (hint){
-      $field.attr('placeholder', hint);
-    } else {
-      $field.removeAttr('placeholder');
-    }
+  /**
+   * Select2 Parameters for loading available studies via AJAX
+   */
+  self.select2StudyOptions = function(){
+    return {
+      allowClear: true,
+      ajax: {
+        data: function(term, page){
+          return {vocabulary: 'available_studies', term: term};
+        },
+        results: function(data){
+          return {
+            results: data.studies.map(function(value){
+              return new Study(value);
+            })
+          };
+        }
+      }
+    };
   };
 
   /**
@@ -219,7 +221,7 @@ function PatientView(options){
         url: selected.id() ? selected.__url__() : $(element).data('factory-url'),
         method: selected.id() ? 'PUT' : 'POST',
         contentType: 'application/json; charset=utf-8',
-        data: ko.toJSON(self.editableItem()),
+        data: ko.toJSON(self.editableItem().toRest()),
         headers: {'X-CSRF-Token': $.cookie('csrf_token')},
         error: handleXHRError({form: element, logger: self.errorMessage}),
         beforeSend: function(){

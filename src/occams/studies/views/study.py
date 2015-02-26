@@ -95,6 +95,8 @@ def view_json(context, request, deep=True):
         'consent_date': study.consent_date.isoformat(),
         'start_date': study.start_date and study.start_date.isoformat(),
         'end_date': study.end_date and study.end_date.isoformat(),
+        'reference_pattern': study.reference_pattern,
+        'reference_hint': study.reference_hint,
         'is_randomized': study.is_randomized,
         'is_blinded': study.is_blinded,
         'termination_form':
