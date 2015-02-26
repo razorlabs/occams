@@ -73,7 +73,7 @@
   <metal:macro define-macro="fieldset">
     <fieldset class="ds-section">
       <legend tal:define="label field.label.text|nothing" tal:condition="label">${label}</legend>
-      <p class="lead" tal:condition="field.description|nothing">${field.description}</p>
+      <p class="lead" tal:condition="field.description|nothing">${structure: field.description}</p>
       <metal:fields tal:define="form field.form" use-macro="macros.fields" />
     </fieldset>
   </metal:macro>
@@ -93,7 +93,7 @@
     <div class="form-group ds-attribute ${'has-error' if field.errors else ''}">
       <div class="pull-right"><code>${field.short_name}</code></div>
       ${structure: field.label(class_='required' if field.flags.required else '')}
-      <p class="help-block" tal:condition="field.description|nothing">${field.description}</p>
+      <p class="help-block" tal:condition="field.description|nothing">${structure: field.description}</p>
       <!--! Define a "widget" slot so the developer can override with custom markup -->
       <metal:widget define-slot="widget">
         <input  metal:use-macro="macros.widget" />
