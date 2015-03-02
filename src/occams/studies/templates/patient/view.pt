@@ -18,6 +18,7 @@
         <div metal:use-macro="load: modal-enrollment-edit.pt"></div>
         <div metal:use-macro="load: modal-enrollment-delete.pt"></div>
         <div metal:use-macro="load: modal-termination-edit.pt"></div>
+        <div metal:use-macro="load: modal-randomization-edit.pt"></div>
         <div metal:use-macro="load: ../visit/modal-visit-edit.pt"></div>
       </header>
 
@@ -109,14 +110,12 @@
                     <td data-bind="with: stratum">
                       <code data-bind="text: randid"></code>
                     </td>
-                    <td>
-                      <!-- ko if: study.is_randomized -->
-                        <!-- ko if: study.is_blinded -->
-                          <em i18n:translate="">Blinded</em>
-                        <!-- /ko -->
-                        <!-- ko ifnot: study.is_blinded -->
-                          <span data-bind="text: stratum.arm.title"></span>
-                        <!-- /ko -->
+                    <td data-bind="if: stratum">
+                      <!-- ko if: study().is_blinded() -->
+                        <em i18n:translate="">Blinded</em>
+                      <!-- /ko -->
+                      <!-- ko ifnot: study().is_blinded() -->
+                        <span data-bind="text: stratum().arm().title()"></span>
                       <!-- /ko -->
                     </td>
                     <td class="text-right">
@@ -126,19 +125,25 @@
                         </button>
                         <ul class="dropdown-menu" role="menu">
                           <!-- ko if: __can_edit__ -->
-                            <li role="presentation"><a role="menuitem" tabindex="-1" data-bind="click: $root.startEditEnrollment">Edit</a></li>
+                            <li role="presentation"><a role="menuitem" tabindex="-1" href="#/edit" data-bind="click: $root.startEditEnrollment">Edit</a></li>
                           <!-- /ko -->
                           <!-- ko if: __can_terminate__ -->
-                            <li role="presentation"><a role="menuitem" tabindex="-1" href="#" data-bind="click: $root.startTerminateEnrollment">Termination</a></li>
+                            <li role="presentation"><a role="menuitem" tabindex="-1" href="#/termination" data-bind="
+                                click: $root.startTerminateEnrollment">Termination</a></li>
                           <!-- /ko -->
-                          <!-- ko if: study.is_randomized -->
-                            <!-- ko if: study.stratum -->
-                              <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Randomization Status</a></li>
-                            <!-- /ko -->
-                            <!-- ko ifnot: study.stratum -->
-                              <!-- ko if: __can_randomize__ -->
-                                <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Randomize</a></li>
-                              <!-- /ko -->
+                          <!-- ko if: study().is_randomized() -->
+                            <!-- ko if: __can_randomize__ -->
+                              <li role="presentation">
+                                <a role="menuitem" tabindex="-1" href="#/randomization" data-bind="
+                                    click: $root.startRandomizeEnrollment">
+                                  <!-- ko if: isRandomized -->
+                                    <span i18n:translate="">Randomization Status</span>
+                                  <!-- /ko -->
+                                  <!-- ko ifnot: isRandomized -->
+                                    <span i18n:translate="">Randomize</span>
+                                  <!-- /ko -->
+                                </a>
+                              </li>
                             <!-- /ko -->
                           <!-- /ko -->
                           <!-- ko if: __can_delete__ -->
@@ -148,7 +153,7 @@
                         </ul>
                       </div>
                     </td>
-                   </tr>
+                  </tr>
                 </tbody>
               </table>
             <!-- /ko -->

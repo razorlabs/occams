@@ -27,24 +27,22 @@
           <!-- /ko -->
           <div class="form-group" tal:define="name 'study'">
             <label i18n:translate="" for="${name}" class="required">Study</label>
-            <select
-                class="form-control"
+            <input
+                type="hidden"
+                id="${name}"
+                name="${name}"
+                class="form-control ${name}"
                 required
                 title="Please select a study"
-                id="${name}"
-                data-placeholder="Select a study..."
+                data-placeholder="Please select a study"
                 i18n:attributes="title data-placeholder"
                 data-bind="
-                  disable: id,
+                  selectedData: ${name},
+                  dataKey: 'id',
+                  dataLabel: 'title',
+                  enable: isNew,
                   event: {change: $root.onChangeStudy},
-                  value: ${name}, select2: {}">
-              <option></option> <!-- for placeholder -->
-              <option tal:repeat="study available_studies"
-                  tal:attributes="
-                    data-reference_pattern python:study.reference_pattern or None;
-                    data-reference_hint python:study.reference_hint or None;"
-                  value="${study.id}">${study.title}</option>
-            </select>
+                  select2: $root.select2StudyOptions()" />
           </div> <!-- /.form-group -->
           <div class="form-group" tal:define="name 'consent_date'">
             <label i18n:translate="" for="${name}" class="required">Original Consent Date</label>
@@ -94,7 +92,13 @@
             <input type="text"
                 class="form-control"
                 id="${name}"
-                data-bind="value: ${name}, uniqueName:true" />
+                data-bind="
+                  attr: {
+                      pattern: study() && study().reference_pattern(),
+                      placeholder: study() && study().reference_hint(),
+                  },
+                  value: ${name},
+                  uniqueName:true" />
           </div> <!-- /.form-group -->
         </div> <!-- /.modal-body -->
         <div class="modal-footer">

@@ -23,6 +23,7 @@ from . import (
     enrollment as enrollment_views,
     visit as visit_views,
     reference_type as reference_type_views,
+    study as study_views,
     form as form_views)
 
 
@@ -175,6 +176,34 @@ def view(context, request):
             context['visits'], request)['visits'],
         'is_lab_enabled': Session.bind.has_table('specimen')
         }
+
+
+@view_config(
+    route_name='patient',
+    permission='edit',
+    xhr=True,
+    request_param='vocabulary=available_studies',
+    renderer='json')
+def available_studies(context, request):
+    """
+    Returns a list of studies that the patient can participate in
+    """
+    query = (
+        Session.query(models.Study)
+        .filter(models.Study.start_date != sa.null()))
+
+    if 'term' in request.GET:
+        wildcard = u'%' + request.GET['term'] + u'%'
+        query = query.filter(models.Study.title.ilike(wildcard))
+
+    query = query.order_by(models.Study.title)
+
+    return {
+        '__query__': request.GET.mixed(),
+        'studies': [
+            study_views.view_json(study, request, deep=False)
+            for study in query]
+    }
 
 
 @view_config(

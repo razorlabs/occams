@@ -1,0 +1,25 @@
+<div class="modal-content">
+  <div class="modal-header">
+    <h4 class="modal-title" i18n:translate="">Randomize Patient (Step 2 of 3)</h4>
+  </div>
+  <div class="modal-body">
+
+    <div class="alert alert-danger" i18n:translate="" tal:condition="error">${error}</div>
+
+    <form tal:replace="structure: form"></form>
+
+  </div> <!-- /.modal-body -->
+  <div class="modal-footer">
+      <button
+          type="button"
+          class="btn btn-link"
+          data-bind="click: $root.clear"
+          i18n:translate="">Cancel</button>
+      <button type="submit" class="btn btn-warning" form="enrollment-randomization">
+        <span i18n:translate="">Continue</span>
+        <!-- ko if: $root.isSaving -->
+          <span class="fa fa-refresh fa-spin"></span>
+        <!-- /ko -->
+      </button>
+  </div>
+</div><!-- /.modal-content -->

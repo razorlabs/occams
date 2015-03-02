@@ -1,0 +1,8 @@
+<!-- ko if: $root.showRandomizeEnrollment -->
+  <div class="modal fade" data-bind="modalVisible: $root.showRandomizeEnrollment">
+    <!-- ko with: $root.editableItem -->
+      <div class="modal-dialog" data-bind="htmlBind: randomization_ui">
+      </div><!-- /.modal-dialog -->
+    <!-- /ko -->
+  </div><!-- /.modal -->
+<!-- /ko -->
