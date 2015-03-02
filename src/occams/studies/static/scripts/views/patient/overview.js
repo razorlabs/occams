@@ -150,7 +150,7 @@ function PatientView(options){
       self.statusEnrollment(RANDOMIZE);
       self.selectedItem(item);
       var editable = new Enrollment(ko.toJS(item))
-      editable.randomization_ui(data);
+      editable.randomization_ui(data.content)
       self.editableItem(editable);
     });
   };
@@ -269,6 +269,34 @@ function PatientView(options){
   };
 
   self.randomizeEnrollment = function(element){
+    if ($(element).validate().form()){
+      var editable = self.editableItem();
+      $.ajax({
+        url: editable.__randomization_url__(),
+        method: 'POST',
+        data: $(element).serialize(),
+        headers: {'X-CSRF-Token': $.cookie('csrf_token')},
+        error: handleXHRError({form: element, logger: self.errorMessage}),
+        beforeSend: function(){
+          self.isSaving(true);
+        },
+        success: function(data, textStatus, jqXHR){
+          if (data.is_randomized){
+            var item = self.selectedItem();
+            item.update(data.enrollment);
+            self.clear();
+          } else {
+            // Keep rendering the form until the enrollment is
+            // randomized. The server will keep track of the process
+            editable.randomization_ui(null);
+            editable.randomization_ui(data.content);
+          }
+        },
+        complete: function(){
+          self.isSaving(false);
+        }
+      });
+    }
   };
 
   self.deleteEnrollment = function(element){

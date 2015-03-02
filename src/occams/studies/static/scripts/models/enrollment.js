@@ -27,8 +27,7 @@ function Enrollment(data){
   });
 
   self.isRandomized = ko.pureComputed(function(){
-    var stratum = self.stratum();
-    return stratum && !!stratum.randid();
+    return !!(self.stratum() && self.stratum().randid());
   });
 
   self.update = function(data){
@@ -54,7 +53,7 @@ function Enrollment(data){
       study: self.study().id(),
       consent_date: self.consent_date(),
       latest_consent_date: self.latest_consent_date(),
-      reference_number: self.reference_number(),
+      reference_number: self.reference_number()
     };
   };
 

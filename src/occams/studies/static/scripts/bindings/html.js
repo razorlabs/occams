@@ -1,18 +1,18 @@
 +function(){
   'use strict';
 
+  /**
+   * Dynamically updates and binds the HTML content of an element
+   *
+   * http://stackoverflow.com/a/17756777/148781
+   */
   ko.bindingHandlers.htmlBind = {
     init: function () {
       // we will handle the bindings of any descendants
       return { controlsDescendantBindings: true };
     },
     update: function (element, valueAccessor, allBindings, viewModel, bindingContext) {
-      // must read the value so it will update on changes to the value
-      var value = ko.unwrap(valueAccessor());
-      ko.cleanNode(element);
-      // create the child html using the value
-      ko.applyBindingsToNode(element, { html: value });
-      // apply bindings on the created html
+      ko.utils.setHtml(element, valueAccessor());
       ko.applyBindingsToDescendants(bindingContext, element);
     }
   };
