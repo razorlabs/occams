@@ -143,7 +143,7 @@ class CallLogPlan(ExportPlan):
         query = (
             Session.query(
                 PatientLog.id.label('id'),
-                models.Patient.our.label('pid'),
+                models.Patient.pid.label('pid'),
                 models.Site.name.label('site'),
 
                 PatientLog.patient_contact_date.label('contact_date'),
