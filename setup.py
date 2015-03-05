@@ -81,4 +81,9 @@ setup(
     install_requires=REQUIRES,
     extras_require=EXTRAS,
     tests_require=EXTRAS['test'],
-    test_suite='nose.collector')
+    test_suite='nose.collector',
+    entry_points="""\
+    [console_scripts]
+    od_initdb = occams.datastore.scripts.initdb:main
+    """
+)

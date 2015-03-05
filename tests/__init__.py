@@ -21,24 +21,19 @@ Session = orm.scoped_session(orm.sessionmaker())
 def setup_package():
     from sqlalchemy import create_engine
     from testconfig import config
-    from occams.datastore import models
     from occams.datastore.models.events import register
     register(Session)
     db = config.get('db')
     engine = create_engine(db)
-    Session.configure(bind=engine, info={'blame': models.User(key=_user)})
-    models.DataStoreModel.metadata.create_all(Session.bind)
-
-
-def teardown_package():
-    from occams.datastore import models
-    models.DataStoreModel.metadata.drop_all(Session.bind)
+    Session.configure(bind=engine)
 
 
 def begin_func():
     from occams.datastore import models
-    Session.add(models.User(key=_user))
+    blame = models.User(key=u'tester')
+    Session.add(blame)
     Session.flush()
+    Session.info['blame'] = blame
 
 
 def rollback_func():
