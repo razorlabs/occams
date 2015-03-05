@@ -262,36 +262,46 @@ Installation and setup::
 
 Starting a session::
 
+>>> DB_URL = 'postgresql://user:pw@yourhost/yourdb'
+>>>
 >>> from datetime import date
 >>> import sqlalchemy
 >>> from sqlalchemy import orm
 >>> from occams.datastore import models
+>>> from occams.datastore.models.events import register
 >>>
->>> engine = sa.create_engine('postgresql://user:pw@yourhost/yourdb')
->>> Session = orm.scoped_session(orm.sessionmaker())
->>> Session.configure(bind=engine, info={'blame': models.User(key='user@localhost'))
+>>> engine = sqlalchemy.create_engine(DB_URL)
+>>> Session = orm.scoped_session(orm.sessionmaker(bind=engine))
+>>> register(Session)
+>>> Session.info['blame'] = models.User(key='user@localhost')
 
-The above initializes your own database session.
+The above initializes your own database session. The ``register`` call intializes
+all the event handling callbacks (for auditing, default values, integrity checks etc).
 Notice the 'blame' info data passed. This tells datastore who is the current
 active user so that the auditing logic can keep track of who is responsible
-for the data commits.
+for the data commits. The sample assumes the blame user has not been created yet.
 
 Creating a schema::
 
 >>> myfirst = models.Schema(name=u'myfirst', title=u'My First Schema', publish_date=date.today())
->>> myfirst.attributes['myvar'] = models.Attribute(name=u'myvar', title=u'Does this help?', type='choice')
->>> myfirst.attributes['myvar'].choices['0'] = models.Choice(name='0', title=u'No')
->>> myfirst.attributes['myvar'].choices['1'] = models.Choice(name='1', title=u'Yes')
->>> myfirst.attributes['myvar'].choices['3'] = models.Choice(name='3', title=u'Maybe')
->>> Session.add(schema)
->>> Session.commit()
+>>> myfirst.attributes['myvar'] = models.Attribute(name=u'myvar', title=u'Does this help?', type='choice', order=0)
+>>> myfirst.attributes['myvar'].choices['0'] = models.Choice(name='0', title=u'No', order=0)
+>>> myfirst.attributes['myvar'].choices['1'] = models.Choice(name='1', title=u'Yes', order=1)
+>>> myfirst.attributes['myvar'].choices['3'] = models.Choice(name='3', title=u'Maybe', order=2)
+>>> Session.add(myfirst)
+>>> Session.flush()
 
 
 Saving data against a schema::
 
->>> mydata = models.Entity(schema=schema)
+>>> mydata = models.Entity(schema=myfirst)
 >>> mydata['myvar'] = '1'
 >>> Session.add(mydata)
+>>> Session.flush()
+
+
+Finishing your work::
+
 >>> Session.commit()
 
 
