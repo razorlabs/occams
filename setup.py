@@ -22,7 +22,7 @@ REQUIRES = [
     'pyramid>=1.5',                     # Framework
     'pyramid_chameleon',                # Templating
     'pyramid_tm',                       # Centralized transations
-    'pyramid_redis_sessions==1.0a2',    # HTTP session with redis backend
+    'pyramid_redis_sessions',           # HTTP session with redis backend
     'pyramid_redis',
     'pyramid_rewrite',                  # Allows urls to end in "/"
     'pyramid_webassets',                # Asset management (ala grunt)
@@ -35,6 +35,8 @@ REQUIRES = [
     'zope.sqlalchemy',                  # Connects sqlalchemy to pyramid_tm
 
     'occams.datastore',                 # EAV
+    'occams.accounts',
+    'occams.roster',
     'occams.forms',                     # EAV form renderer
 ]
 
