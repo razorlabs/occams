@@ -14,7 +14,7 @@ REQUIRES = [
     'python-dateutil',                  # Date parsing
     'pyramid>=1.5',                     # Framework
     'pyramid_chameleon',                # Templating
-    'pyramid_redis_sessions==1.0a2',    # HTTP session with redis backend
+    'pyramid_redis_sessions',           # HTTP session with redis backend
     'pyramid_tm',                       # Centralized request transactions
     'pyramid_rewrite',                  # Allows urls to end in "/"
     'pyramid_webassets',                # Asset managements (ala grunt)
