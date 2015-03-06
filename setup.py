@@ -20,7 +20,7 @@ REQUIRES = [
     'pyramid_redis_sessions==1.0a2',    # HTTP session with redis backend
     'pyramid_rewrite',                  # Allows urls to end in "/"
     'pyramid_webassets',                # Asset management (ala grunt)
-    'pyramid_who',                      # User authentication
+    'pyramid_who',                      # repoze.who v2 wrapper
     'six',                              # Py 2 & 3 compatibilty
     'SQLAlchemy>=0.9.0',                # Database ORM
     'wtforms',
