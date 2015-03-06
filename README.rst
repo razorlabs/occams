@@ -17,8 +17,7 @@ Goals
 Some goals of this product:
 
   * Handle form entry
-  * Facilitate form manipulation
-  * Show form statistics (usage, # instances, % entered, states)
+  * Facilitate form managmement
   * Form importing/exporting
 
 
@@ -39,3 +38,12 @@ Because many organizations have their politics of authentication, this app
 tries to not force any authentication paradigm on the client and instead
 uses `repoze.who` to allow clients to supply their own authentication via
 customized-organization-specific plugins.
+
+
+Installation
+------------
+
+The current version of this application heavily relies on occams.studies for
+installation and setup. In the future we hope to make this a ful-fledged
+standalone application. For further instructions please refer to ``occams.studies``
+documentation.

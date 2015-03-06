@@ -26,6 +26,7 @@ REQUIRES = [
     'zope.sqlalchemy',                  # Connects sqlalchemy to pyramid_tm
 
     'occams.datastore',                 # EAV
+    'occams.accounts',
 ]
 
 EXTRAS = {
