@@ -17,7 +17,7 @@ REQUIRES = [
     'pyramid>=1.5',                     # Framework
     'pyramid_chameleon',                # Templating
     'pyramid_tm',                       # Centralized transations
-    'pyramid_redis_sessions==1.0a2',    # HTTP session with redis backend
+    'pyramid_redis_sessions',           # HTTP session with redis backend
     'pyramid_rewrite',                  # Allows urls to end in "/"
     'pyramid_webassets',                # Asset management (ala grunt)
     'pyramid_who',                      # repoze.who v2 wrapper
