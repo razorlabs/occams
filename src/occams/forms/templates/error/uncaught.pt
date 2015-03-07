@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="${request.locale_name}" i18n:translate="occams.studies">
+
+<body>
+  <h1 i18n:translate="">Unexpected Error</h1>
+  <p i18n:translate="">
+    It seems you've triggered an unexpected problem in OCCAMS. We've been notified of the issue and will try to fix it as swiftly as posssible.
+  </p>
+</body>
+
+</html>
+
