@@ -1,5 +1,5 @@
 from pyramid.httpexceptions import HTTPForbidden
-from pyramid.view import forbidden_view_config
+from pyramid.view import forbidden_view_config, view_config
 
 
 @forbidden_view_config(renderer='../templates/error/forbidden.pt')
@@ -19,4 +19,18 @@ def forbidden(request):
     if not is_logged_in:
         return HTTPForbidden()
 
+    return {}
+
+
+@view_config(context=Exception, renderer='../templates/error/uncaught.pt')
+def uncaught(exc, request):
+    """
+    Handler for unexpected exceptions (Coding bugs, etc)
+
+    This handler will present a user-friendly page in production
+    systems, but otherwise will defer to pyramid_debugtoolbar debugging.
+    """
+
+    if request.registry.settings.get('debugtoolbar.enabled'):
+        raise exc
     return {}
