@@ -31,11 +31,12 @@ def main(argv=sys.argv):
         parser.print_help()
         exit(0)
 
-    datastore.DataStoreModel.metadata.create_all(engine)
-    models.Base.metadata.create_all(engine)
+    with engine.begin() as connection:
+        datastore.DataStoreModel.metadata.create_all(connection)
+        models.Base.metadata.create_all(connection)
 
     # "stamp" the new tables (so upgrades don't get confused)
-    alembic_cfg = Config()
-    with engine.begin() as connection:
-        alembic_cfg.attributes['connection'] = connection
-        command.stamp(alembic_cfg, 'head')
+    alembic_cfg = Config(args.config)
+    # XXX: There is no way to stamp in transaction until alembic # 0.7.5
+    # alembic_cfg.attributes['connection'] = connection
+    command.stamp(alembic_cfg, 'head')
