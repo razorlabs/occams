@@ -32,5 +32,5 @@ def uncaught(exc, request):
     """
 
     if request.registry.settings.get('debugtoolbar.enabled'):
-        raise exc
+        raise
     return {}
