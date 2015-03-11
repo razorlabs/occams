@@ -55,6 +55,6 @@ def login(request):
             return HTTPFound(location=referrer, headers=headers)
 
     # forcefully forget any credentials
-    request.response_headerlist = forget(request)
+    request.response.headerlist.extend(forget(request))
 
     return {'form': form}
