@@ -57,7 +57,7 @@
         </p>
         <!-- ko ifnot: hasStudies -->
           <div class="well well-lg">
-            <span i18n:translate="">No studies hadn been created yet.</span>
+            <span i18n:translate="">No studies have been created yet.</span>
             <button class="btn btn-link" data-bind="click: startAddStudy">Add one</button>
           </div>
         <!-- /ko -->
