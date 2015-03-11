@@ -230,7 +230,7 @@ def render_form(form, disabled=False, attr=None):
 def entity_data(entity):
     data = {
         'ofmetadata_': {
-            'state': entity.state.name,
+            'state': entity.state and entity.state.name,
             'not_done': entity.not_done,
             'collect_date': entity.collect_date,
             'version': str(entity.schema.publish_date),
