@@ -8,6 +8,8 @@ from occams.datastore.models.schema import RE_VALID_NAME, RESERVED_WORDS
 
 from .. import _, models, Session
 from ._utils import jquery_wtform_validator
+from ..utils import wtferrors
+
 
 types = [
     {'name': 'choice', 'title': _(u'Answer choices')},
@@ -104,7 +106,7 @@ def move_json(context, request):
     form = MoveForm.from_json(request.json_body)
 
     if not form.validate():
-        raise HTTPBadRequest(json={'errors': form.errors})
+        raise HTTPBadRequest(json={'errors': wtferrors(form)})
 
     attributes = sorted(six.itervalues(schema.attributes),
                         key=lambda a: a.order)
@@ -150,7 +152,7 @@ def edit_json(context, request):
     form = FieldFormFactory(context, request).from_json(request.json_body)
 
     if not form.validate():
-        raise HTTPBadRequest(json={'errors': form.errors})
+        raise HTTPBadRequest(json={'errors': wtferrors(form)})
 
     if isinstance(context, models.Attribute):
         attribute = context
@@ -213,7 +215,7 @@ def FieldFormFactory(context, request):
             query = query.filter(models.Attribute.id != context.id)
         (exists,) = Session.query(query.exists()).one()
         if exists:
-            raise wtforms.ValidatonError(
+            raise wtforms.ValidationError(
                 _(u'Variable name already exists in this form'))
 
     class ChoiceForm(wtforms.Form):

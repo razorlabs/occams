@@ -1,3 +1,5 @@
+import mock
+
 from tests import IntegrationFixture
 
 
@@ -75,3 +77,40 @@ class TestViewJSON(IntegrationFixture):
             schema.attributes['myfield'],
             testing.DummyRequest())
         self.assertEqual('myfield', response['name'])
+
+
+@mock.patch('occams.forms.views.field.check_csrf_token')
+class TestEditJSON(IntegrationFixture):
+
+    def _call_view(self, context, request):
+        from occams.forms.views.field import edit_json as view
+        return view(context, request)
+
+    def test_add_duplicate_variable_name(self, check_csrf_token):
+        """
+        It should make sure the variable name is not repeated
+        """
+        from pyramid import testing
+        from pyramid.httpexceptions import HTTPBadRequest
+        from occams.forms import models, Session
+
+        schema = models.Schema(
+            name='testform',
+            title=u'Test Form',
+            attributes={
+                'myvar': models.Attribute(
+                    name='myvar',
+                    title=u'My Var',
+                    type='string',
+                    order=0)
+                })
+        Session.add(schema)
+        Session.flush()
+
+        request = testing.DummyRequest(json_body={'name': 'myvar'})
+
+        with self.assertRaises(HTTPBadRequest) as cm:
+            self._call_view(schema['fields'], request)
+        self.assertTrue(check_csrf_token.called)
+        self.assertIn(
+            'name already exists', cm.exception.json['errors']['name'].lower())
