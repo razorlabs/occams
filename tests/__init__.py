@@ -35,23 +35,17 @@ def setup_package():
     """
     from sqlalchemy import create_engine
     from testconfig import config
-    from occams.studies import Session, models as studies
-    from occams.datastore import models as datastore
+    from occams.studies import Session
     from occams.roster import Session as RosterSession
     from occams.roster import models as roster
 
-    db = config.get('db') or 'sqlite:///'
+    db = config.get('db')
     studies_engine = create_engine(db)
-    roster_engine = create_engine('sqlite:///')
-
     Session.configure(bind=studies_engine)
-    RosterSession.configure(bind=roster_engine)
 
-    if (studies_engine.url.drivername == 'sqlite'
-            and studies_engine.url.database is None):
-        datastore.DataStoreModel.metadata.create_all(Session.bind)
-        studies.Base.metadata.create_all(Session.bind)
-        roster.Base.metadata.create_all(RosterSession.bind)
+    roster_engine = create_engine('sqlite:///')
+    RosterSession.configure(bind=roster_engine)
+    roster.Base.metadata.create_all(RosterSession.bind)
 
 
 class IntegrationFixture(unittest.TestCase):
@@ -87,10 +81,24 @@ class FunctionalFixture(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        import os
+        import tempfile
+        import six
         from pyramid.path import AssetResolver
         from occams.studies import main, Session
-        HERE = os.path.abspath(os.path.dirname(__file__))
+
+        # The pyramid_who plugin requires a who file, so let's create a
+        # barebones files for it...
+        cls.who_ini = tempfile.NamedTemporaryFile()
+        who = six.configparser()
+        who.add_section('general')
+        who.set('general', 'request_classifier',
+                'repoze.who.classifiers:default_request_classifier')
+        who.set('general', 'challenge_decider',
+                'pyramid_who.classifiers:forbidden_challenger')
+        who.set('general', 'remote_user_key', 'REMOTE_USER')
+        who.write(cls.who_ini)
+        cls.who_ini.flush()
+
         cls.app = main({}, **{
             'app.org.name': 'myorg',
             'app.org.title': 'MY ORGANIZATION',
@@ -108,9 +116,13 @@ class FunctionalFixture(unittest.TestCase):
             'webassets.debug': 'false',
             'celery.broker.url': REDIS_URL,
             'celery.backend.url': REDIS_URL,
-            'who.config_file': os.path.join(HERE, 'who.ini'),
+            'who.config_file': cls.who_ini.filename,
             'who.identifier_id': '',
             })
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.who_ini.close()
 
     def setUp(self):
         from webtest import TestApp
