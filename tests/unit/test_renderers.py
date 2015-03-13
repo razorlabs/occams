@@ -1,6 +1,7 @@
 from ddt import ddt, data, unpack
 from tests import IntegrationFixture
-import wtforms
+import wtforms.fields.html5
+import wtforms.ext.dateutil.fields
 
 
 class annotatedlist(list):
@@ -27,8 +28,8 @@ class TestMakeField(IntegrationFixture):
         expect_type('string', wtforms.StringField),
         expect_type('text', wtforms.TextAreaField),
         expect_type('blob', wtforms.FileField),
-        expect_type('date', wtforms.DateField),
-        expect_type('datetime', wtforms.DateTimeField),
+        expect_type('date', wtforms.ext.dateutil.fields.DateField),
+        expect_type('datetime', wtforms.ext.dateutil.fields.DateTimeField),
         expect_type('section', wtforms.FormField))
     @unpack
     def test_basic_types(self, type_, class_):
@@ -44,14 +45,14 @@ class TestMakeField(IntegrationFixture):
         attribute = models.Attribute(
             name=u'f', title=u'F', type='number', decimal_places=0)
         field = make_field(attribute)
-        self.assertIs(field.field_class, wtforms.IntegerField)
+        self.assertIs(field.field_class, wtforms.fields.html5.IntegerField)
 
     def test_decimal_any(self):
         from occams.forms import models
         from occams.forms.renderers import make_field
         attribute = models.Attribute(name=u'f', title=u'F', type='number')
         field = make_field(attribute)
-        self.assertIs(field.field_class, wtforms.DecimalField)
+        self.assertIs(field.field_class, wtforms.fields.html5.DecimalField)
 
     def test_decimal_precision(self):
         from occams.forms import models
@@ -59,7 +60,7 @@ class TestMakeField(IntegrationFixture):
         attribute = models.Attribute(
             name=u'f', title=u'F', type='number', decimal_places=1)
         field = make_field(attribute)
-        self.assertIs(field.field_class, wtforms.DecimalField)
+        self.assertIs(field.field_class, wtforms.fields.html5.DecimalField)
 
     def test_choice_single(self):
         from occams.forms import models

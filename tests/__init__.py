@@ -1,12 +1,13 @@
 """
 Testing fixutres
 
-If using a database other than sqlite, you must preinstall
-the database by first runnning:
+The test suite is quite expensive to setup on a database such
+as postgres. So you'll need to run the `os_initdb` on the
+target testing database:
 
-    initdb path/to/ini
+    od_initdb --db postgres://user:pass@host/db
 
-
+NOTE: the explicit use of od_ instead of of_
 
 To specify a pyramid configuration use:
 
@@ -36,11 +37,9 @@ def setup_package():
     """
     from sqlalchemy import create_engine
     from testconfig import config
-    from occams.datastore import models as datastore
     from occams.forms import Session
 
     Session.configure(bind=create_engine(config.get('db')))
-    datastore.DataStoreModel.metadata.create_all(Session.bind)
 
 
 class IntegrationFixture(unittest.TestCase):
@@ -76,10 +75,24 @@ class FunctionalFixture(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        import os
+        import tempfile
         from pyramid.path import AssetResolver
         from occams.forms import main, Session
-        HERE = os.path.abspath(os.path.dirname(__file__))
+        import six
+
+        # The pyramid_who plugin requires a who file, so let's create a
+        # barebones files for it...
+        cls.who_ini = tempfile.NamedTemporaryFile()
+        who = six.configparser()
+        who.add_section('general')
+        who.set('general', 'request_classifier',
+                'repoze.who.classifiers:default_request_classifier')
+        who.set('general', 'challenge_decider',
+                'pyramid_who.classifiers:forbidden_challenger')
+        who.set('general', 'remote_user_key', 'REMOTE_USER')
+        who.write(cls.who_ini)
+        cls.who_ini.flush()
+
         cls.app = main({}, **{
             'app.org.name': 'myorg',
             'app.org.title': 'MY ORGANIZATION',
@@ -91,9 +104,13 @@ class FunctionalFixture(unittest.TestCase):
                                    .abspath()),
             'webassets.base_url': '/static',
             'webassets.debug': 'false',
-            'who.config_file': os.path.join(HERE, 'who.ini'),
+            'who.config_file': cls.who_ini.filename,
             'who.identifier_id': '',
         })
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.who_ini.close()
 
     def setUp(self):
         from webtest import TestApp
