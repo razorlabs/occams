@@ -43,6 +43,10 @@ function VersionEditorView(options){
     return field;  // Replace the dropped sortable with the new field
   };
 
+  self.checkNotNested = function(){
+    console.log(this);
+  };
+
   self.startEdit = function(field){
     self.selectedField(field);
     self.editableField(new Field(ko.toJS(field)));
@@ -66,8 +70,16 @@ function VersionEditorView(options){
   };
 
   self.moveField = function(arg, event, ui){
-    var into = ko.dataFor(event.target),
-        data = {
+    var into = ko.dataFor(event.target);
+
+    // Prevent nested sections
+    if (into instanceof Field && into.isSection() && arg.item.isSection()){
+      arg.cancelDrop = true;
+      self.clear();
+      return;
+    }
+
+    var data = {
           move: 1,
           into: into instanceof Version ? null : into.name(),
           after: arg.targetIndex > 0 ? arg.targetParent()[arg.targetIndex - 1].name() : null
