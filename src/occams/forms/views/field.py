@@ -84,7 +84,9 @@ def move_json(context, request):
             raise wtforms.ValidationError(_(u'Cannot move value into itself'))
 
     def not_section(form, field):
-        if context.type == 'section' and schema[field.data].type == 'section':
+
+        if (context.type == 'section'
+                and schema.attributes[field.data].type == 'section'):
             raise wtforms.ValidationError(
                 _(u'Nested sections are not supported'))
 
@@ -154,7 +156,9 @@ def edit_json(context, request):
     if not form.validate():
         raise HTTPBadRequest(json={'errors': wtferrors(form)})
 
-    if isinstance(context, models.Attribute):
+    is_new = isinstance(context, models.AttributeFactory)
+
+    if not is_new:
         attribute = context
     else:
         # Add the attribute and temporarily set to large display order
@@ -162,11 +166,12 @@ def edit_json(context, request):
         Session.add(attribute)
 
     attribute.apply(form.data)
-    Session.flush()
 
-    if not isinstance(context, models.Attribute):
+    if is_new:
         # now we can move the attribute
         move_json(attribute, request)
+
+    Session.flush()
 
     return view_json(attribute, request)
 

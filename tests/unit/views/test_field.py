@@ -114,3 +114,37 @@ class TestEditJSON(IntegrationFixture):
         self.assertTrue(check_csrf_token.called)
         self.assertIn(
             'name already exists', cm.exception.json['errors']['name'].lower())
+
+    def test_add_section_into_section(self, check_csrf_token):
+        """
+        It should not allow adding a new section into a another section
+        """
+        from pyramid import testing
+        from pyramid.httpexceptions import HTTPBadRequest
+        from occams.forms import models, Session
+
+        schema = models.Schema(
+            name='testform',
+            title=u'Test Form',
+            attributes={
+                'section1': models.Attribute(
+                    name='section1',
+                    title=u'Section 1',
+                    type='section',
+                    order=0)
+                })
+        Session.add(schema)
+        Session.flush()
+
+        request = testing.DummyRequest(json_body={
+            'into': 'section1',
+            'name': 'section2',
+            'title': u'Section 2',
+            'type': 'section'})
+
+        with self.assertRaises(HTTPBadRequest) as cm:
+            self._call_view(schema['fields'], request)
+
+        self.assertIn(
+            'nested sections are not supported',
+            cm.exception.json['errors']['into'].lower())
