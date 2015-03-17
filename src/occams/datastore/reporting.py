@@ -217,7 +217,8 @@ def build_columns(session, schema_name, ids=None, expand_collections=False):
         .join(models.Attribute.schema)
         .filter(models.Schema.name == schema_name)
         .filter(models.Schema.publish_date != null())
-        .filter(models.Schema.retract_date == null()))
+        .filter(models.Schema.retract_date == null())
+        .filter(models.Attribute.type != u'section'))
 
     if ids:
         query = query.filter(models.Schema.id.in_(ids))
