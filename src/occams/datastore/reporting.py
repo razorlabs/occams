@@ -249,7 +249,7 @@ def build_columns(session, schema_name, ids=None, expand_collections=False):
     for attribute in query:
         if (expand_collections
                 and attribute.is_collection
-                and attribute.choices):
+                and attribute.type == 'choice'):
             for choice in itervalues(attribute.choices):
                 name = attribute.name + '_' + choice.name
                 plan.setdefault(name, []).append(attribute)
