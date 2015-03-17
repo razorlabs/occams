@@ -1,6 +1,7 @@
 from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
+from slugify import slugify
 import wtforms
 
 from occams.forms.utils import form2json
@@ -55,7 +56,7 @@ def edit_json(context, request):
     else:
         cycle = context
 
-    cycle.name = form.name.data
+    cycle.name = slugify(form.title.data)
     cycle.title = form.title.data
     cycle.week = form.week.data
     cycle.is_interim = form.is_interim.data
@@ -96,25 +97,22 @@ def delete_json(context, request):
 
 def CycleSchema(context, request):
 
-    def check_unique_name(form, field):
-        query = Session.query(models.Cycle).filter_by(name=field.data)
+    def check_unique_url(form, field):
+        slug = slugify(field.data)
+        query = Session.query(models.Cycle).filter_by(name=slug)
         if isinstance(context, models.Cycle):
             query = query.filter(models.Cycle.id != context.id)
         (exists,) = Session.query(query.exists()).one()
         if exists:
             raise wtforms.ValidationError(request.localizer.translate(_(
-                u'Already exists')))
+                u'Does not yield a unique URL.')))
 
     class CycleForm(wtforms.Form):
-        name = wtforms.StringField(
-            validators=[
-                wtforms.validators.InputRequired(),
-                wtforms.validators.Length(min=3, max=32),
-                check_unique_name])
         title = wtforms.StringField(
             validators=[
                 wtforms.validators.InputRequired(),
-                wtforms.validators.Length(min=3, max=32)])
+                wtforms.validators.Length(min=3, max=32),
+                check_unique_url])
         week = wtforms.IntegerField()
         is_interim = wtforms.BooleanField()
 
