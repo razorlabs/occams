@@ -334,6 +334,7 @@ function PatientView(options){
         },
         success: function(data, textStatus, jqXHR){
           self.visits.push(new Visit(data));
+          self.visits.sort(function(a, b){ return -1 * a.visit_date().localeCompare(b.visit_date()); });
           self.clear();
         },
         complete: function(){
