@@ -295,6 +295,6 @@ class DataColumn(object):
         if choice is not None:
             self.choices = {}
         else:
-            self.choices = dict([(c.name, c.title)
+            self.choices = dict((c.name, c.title)
                                 for a in attributes
-                                for c in itervalues(a.choices)])
+                                for c in itervalues(a.choices))
