@@ -217,7 +217,8 @@ def build_columns(session, schema_name, ids=None, expand_collections=False):
         .join(models.Attribute.schema)
         .filter(models.Schema.name == schema_name)
         .filter(models.Schema.publish_date != null())
-        .filter(models.Schema.retract_date == null()))
+        .filter(models.Schema.retract_date == null())
+        .filter(models.Attribute.type != u'section'))
 
     if ids:
         query = query.filter(models.Schema.id.in_(ids))
@@ -248,7 +249,7 @@ def build_columns(session, schema_name, ids=None, expand_collections=False):
     for attribute in query:
         if (expand_collections
                 and attribute.is_collection
-                and attribute.choices):
+                and attribute.type == 'choice'):
             for choice in itervalues(attribute.choices):
                 name = attribute.name + '_' + choice.name
                 plan.setdefault(name, []).append(attribute)
@@ -294,6 +295,6 @@ class DataColumn(object):
         if choice is not None:
             self.choices = {}
         else:
-            self.choices = dict([(c.name, c.title)
+            self.choices = dict((c.name, c.title)
                                 for a in attributes
-                                for c in itervalues(a.choices)])
+                                for c in itervalues(a.choices))
