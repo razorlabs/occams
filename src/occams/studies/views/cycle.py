@@ -1,6 +1,7 @@
 from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
+import six
 from slugify import slugify
 import wtforms
 
@@ -56,7 +57,7 @@ def edit_json(context, request):
     else:
         cycle = context
 
-    cycle.name = slugify(form.title.data)
+    cycle.name = six.text_type(slugify(form.title.data))
     cycle.title = form.title.data
     cycle.week = form.week.data
     cycle.is_interim = form.is_interim.data
@@ -98,7 +99,7 @@ def delete_json(context, request):
 def CycleSchema(context, request):
 
     def check_unique_url(form, field):
-        slug = slugify(field.data)
+        slug = six.text_type(slugify(field.data))
         query = Session.query(models.Cycle).filter_by(name=slug)
         if isinstance(context, models.Cycle):
             query = query.filter(models.Cycle.id != context.id)

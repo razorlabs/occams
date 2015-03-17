@@ -52,7 +52,7 @@ class TestEditJson(IntegrationFixture):
         cycle = models.Cycle(name='week-1', title=u'Week 1', week=1)
 
         study = models.Study(
-            name=u'somestudy',
+            name=u'some-study',
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
@@ -66,12 +66,11 @@ class TestEditJson(IntegrationFixture):
         with self.assertRaises(HTTPBadRequest) as cm:
             self.call_view(study['cycles'], testing.DummyRequest(
                 json_body={
-                    'name': 'week-1',
-                    'title': 'Should fail',
+                    'title': u'Should fail',
                     'week': 2}))
 
         self.assertIn(
-            'already exists',
+            'not yield a unique',
             cm.exception.json['errors']['name'].lower())
 
     def test_edit_unique_name(self, check_csrf_token):
