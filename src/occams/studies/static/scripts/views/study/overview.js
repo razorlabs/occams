@@ -222,6 +222,17 @@ function StudyView(studyData, scheduleUrl){
           selected.update(data);
         } else {
           self.study.cycles.push(new Cycle(data));
+          self.study.cycles.sort(function(a, b){
+            a = parseInt(ko.unwrap(a.week));
+            b = parseInt(ko.unwrap(b.week));
+            if (!isNaN(a) && isNaN(b)){
+              return -1;
+            } else if (isNaN(a) && !isNaN(b)){
+              return 1;
+            } else {
+              return a - b;
+            }
+          });
         }
         if (self.addMoreCycles()){
           self.previousCycle(selected);
@@ -286,6 +297,7 @@ function StudyView(studyData, scheduleUrl){
           selected.update(data);
         } else {
           self.study.forms.push(new StudyForm(data));
+          self.study.forms.sort(function(){ return a.title().localeCompare(b.title()); });
         }
         if (self.addMoreForms()){
           self.previousForm(selected);
