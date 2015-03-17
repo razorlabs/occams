@@ -358,10 +358,13 @@ def VisitSchema(context, request):
                     'visit': other.visit_date}))
 
     def unique_visit_date(form, field):
+        is_new = isinstance(context, models.VisitFactory)
+        patient = context.__parent__ if is_new else context.patient
         exists_query = (
             Session.query(models.Visit)
+            .filter_by(patient=patient)
             .filter_by(visit_date=field.data))
-        if isinstance(context, models.Visit):
+        if not is_new:
             exists_query = exists_query.filter(models.Visit.id != context.id)
         (exists,) = Session.query(exists_query.exists()).one()
         if exists:
