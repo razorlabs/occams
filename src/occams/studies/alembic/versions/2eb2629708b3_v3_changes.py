@@ -615,7 +615,7 @@ def merge_integer_decimal():
         sa.sql.column('revision'))
 
     integer_table = sa.sql.table(
-        'value_number',
+        'value_integer',
         sa.sql.column('entity_id'),
         sa.sql.column('attribute_id'),
         sa.sql.column('value'),

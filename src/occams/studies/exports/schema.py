@@ -282,7 +282,8 @@ class SchemaPlan(ExportPlan):
                 .group_by(models.Context.entity_id)
                 .correlate(report)
                 .as_scalar()
-                .label('enrollment_ids')))
+                .label('enrollment_ids'))
+            )
 
         if self._is_aeh_partner_form:
             PartnerPatient = orm.aliased(models.Patient)

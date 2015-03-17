@@ -11,7 +11,6 @@ import uuid
 
 from pyramid.paster import get_appsettings
 from six import itervalues
-from six.moves import map, filter
 from sqlalchemy import create_engine, engine_from_config
 from tabulate import tabulate
 
@@ -123,7 +122,7 @@ def print_list(args):
         return star(row.is_system), star(row.has_private), star(row.has_rand), row.name, row.title  # NOQA
 
     header = ['sys', 'priv', 'rand', 'name', 'title']
-    rows = iter(map(format, itervalues(exports.list_all())))
+    rows = iter(format(e) for e in itervalues(exports.list_all()))
     print(tabulate(rows, header, tablefmt='simple'))
 
 
@@ -139,14 +138,6 @@ def make_export(args):
             or args.names):
         sys.exit('You must specifiy something to export!')
 
-    def is_valid_target(item):
-        return (
-            args.all
-            or (args.all_private and item.has_private and not item.has_rand)
-            or (args.all_public and not item.has_private and not item.has_rand)
-            or (args.all_rand and item.has_rand)
-            or (args.names and item.name in args.names))
-
     exportables = exports.list_all()
 
     if args.atomic:
@@ -157,12 +148,21 @@ def make_export(args):
         if not os.path.exists(args.dir):
             os.makedirs(args.dir)
 
-    for plan in iter(filter(is_valid_target, itervalues(exportables))):
-        with open(os.path.join(out_dir, plan.file_name), 'w+b') as fp:
-            exports.write_data(fp, plan.data(
-                use_choice_labels=args.use_choice_labels,
-                expand_collections=args.expand_collections,
-                ignore_private=not args.show_private))
+    for plan in itervalues(exportables):
+        if (args.all
+                or (args.all_private
+                    and plan.has_private
+                    and not plan.has_rand)
+                or (args.all_public
+                    and not plan.has_private
+                    and not plan.has_rand)
+                or (args.all_rand and plan.has_rand)
+                or (args.names and plan.name in args.names)):
+            with open(os.path.join(out_dir, plan.file_name), 'w+b') as fp:
+                exports.write_data(fp, plan.data(
+                    use_choice_labels=args.use_choice_labels,
+                    expand_collections=args.expand_collections,
+                    ignore_private=not args.show_private))
 
     with open(os.path.join(out_dir, exports.codebook.FILE_NAME), 'w+b') as fp:
         codebooks = [p.codebook() for p in itervalues(exportables)]

@@ -64,7 +64,7 @@ def write_data(buffer, query):
     fieldnames = [d['name'] for d in query.column_descriptions]
     writer = csv.DictWriter(buffer, fieldnames=fieldnames)
     writer.writeheader()
-    writer.writerows([r._asdict() for r in query])
+    writer.writerows(r._asdict() for r in query)
     buffer.flush()
 
 
