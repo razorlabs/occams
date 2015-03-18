@@ -4,6 +4,7 @@ Metadata definitions
 
 from copy import copy, deepcopy
 from datetime import datetime
+from itertools import chain
 import re
 
 from six import iterkeys, iteritems, itervalues
@@ -173,6 +174,12 @@ class Schema(Model, Referenceable, Describeable, Modifiable, Auditable):
                                 key=lambda a: a.order):
             if attribute.type != 'section':
                 yield attribute
+
+    def iterlist(self):
+        """
+        Flattens the schema into a sorted list of all children
+        """
+        return chain.from_iterable(a.iterlist() for a in self.itertraverse())
 
     def __copy__(self):
         keys = ('name', 'title', 'description', 'storage')
@@ -384,6 +391,16 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
         Useful for iterating through attributes as a hierarchy
         """
         return iter(sorted(itervalues(self.attributes), key=lambda a: a.order))
+
+    def iterlist(self):
+        """
+        Flattens the current attribute into an sorted list with all children
+        """
+        yield self
+        if self.type == 'section':
+            for a in chain.from_iterable(
+                    a.iterlist() for a in self.itertraverse()):
+                yield a
 
     def iterchoices(self):
         """
