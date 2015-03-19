@@ -146,5 +146,6 @@ setup(
     [console_scripts]
     os_initdb = occams.studies.scripts.initdb:main
     os_export = occams.studies.scripts.export:main
+    os_buildassets = occams.studies.scripts.buildassets:main
     """,
 )
