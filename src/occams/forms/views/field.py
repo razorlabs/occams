@@ -1,4 +1,3 @@
-import six
 from pyramid.httpexceptions import HTTPOk, HTTPBadRequest
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
@@ -84,51 +83,47 @@ def move_json(context, request):
             raise wtforms.ValidationError(_(u'Cannot move value into itself'))
 
     def not_section(form, field):
-
         if (context.type == 'section'
                 and schema.attributes[field.data].type == 'section'):
             raise wtforms.ValidationError(
                 _(u'Nested sections are not supported'))
 
     class MoveForm(wtforms.Form):
-        into = wtforms.StringField(
+        target = wtforms.StringField(
             validators=[
                 wtforms.validators.Optional(),
                 wtforms.validators.AnyOf(
                     schema.attributes, message=_(u'Does not exist')),
                 not_self,
                 not_section])
-        after = wtforms.StringField(
-            validators=[
-                wtforms.validators.Optional(),
-                wtforms.validators.AnyOf(
-                    schema.attributes, message=_(u'Does not exist')),
-                not_self])
+        index = wtforms.IntegerField(
+            validators=[wtforms.validators.NumberRange(min=0)])
 
     form = MoveForm.from_json(request.json_body)
 
     if not form.validate():
         raise HTTPBadRequest(json={'errors': wtferrors(form)})
 
-    attributes = sorted(six.itervalues(schema.attributes),
-                        key=lambda a: a.order)
-    attributes.remove(context)
-
-    into = form.into.data and schema.attributes[form.into.data]
-    after = form.after.data and schema.attributes[form.after.data]
-
-    if after is None:
-        index = 0 if into is None else attributes.index(into) + 1
-    elif after.type == 'section':
-        index = attributes.index(after) + len(after.attributes)
+    if form.target.data:
+        section = target = schema.attributes[form.target.data]
     else:
-        index = attributes.index(after) + 1
+        target = schema
+        section = None
 
-    context.parent_attribute = into
-    attributes.insert(index, context)
+    attributes = [a for a in target.itertraverse() if a != context]
 
+    context.parent_attribute = section
+    attributes.insert(form.index.data, context)
+
+    # Apply new display orders before re-sorting the entire list
     for i, a in enumerate(attributes):
         a.order = i
+
+    # We need to resort the fields to avoid ordering collisions
+    for i, a in enumerate(schema.iterlist()):
+        a.order = i
+
+    Session.flush()
 
     return HTTPOk()
 

@@ -10,7 +10,6 @@
 
   // Apply select2 widget to non-ko-bound elements
   $(function(){
-    console.log('adfasdfs');
     $('.js-select2:not([data-bind])').select2();
   });
 

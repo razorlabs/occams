@@ -22,7 +22,7 @@ function Field(data){
   self.decimal_places = ko.observable();
   self.value_min = ko.observable();
   self.value_max = ko.observable();
-  self.fields = ko.observable();
+  self.fields = ko.observableArray();
   self.choices = ko.observableArray();
 
   self.isNew = ko.pureComputed(function(){ return !self.id(); });
@@ -60,26 +60,26 @@ function Field(data){
 
   self.update = function(data) {
     data = data || {};
-    self.__url__ = ko.observable(data.__url__);
-    self.id = ko.observable(data.id);
-    self.name = ko.observable(data.name);
-    self.title = ko.observable(data.title);
-    self.description = ko.observable(data.description);
-    self.type = ko.observable(data.type);
-    self.is_required = ko.observable(data.is_required);
-    self.is_collection = ko.observable(data.is_collection);
-    self.is_private = ko.observable(data.is_private);
-    self.is_shuffled = ko.observable(data.is_shuffled);
-    self.is_readonly = ko.observable(data.is_readonly);
-    self.is_system = ko.observable(data.is_system);
-    self.pattern = ko.observable(data.pattern);
-    self.decimal_places = ko.observable(data.decimpal_places);
-    self.value_min = ko.observable(data.value_min);
-    self.value_max = ko.observable(data.value_max);
-    self.fields = ko.observableArray((data.fields || []).map(function(value){
+    self.__url__(data.__url__);
+    self.id(data.id);
+    self.name(data.name);
+    self.title(data.title);
+    self.description(data.description);
+    self.type(data.type);
+    self.is_required(data.is_required);
+    self.is_collection(data.is_collection);
+    self.is_private(data.is_private);
+    self.is_shuffled(data.is_shuffled);
+    self.is_readonly(data.is_readonly);
+    self.is_system(data.is_system);
+    self.pattern(data.pattern);
+    self.decimal_places(data.decimpal_places);
+    self.value_min(data.value_min);
+    self.value_max(data.value_max);
+    self.fields((data.fields || []).map(function(value){
       return new Field(value);
     }));
-    self.choices = ko.observableArray((data.choices || []).map(function(value){
+    self.choices((data.choices || []).map(function(value){
       return new Choice(value);
     }));
   };
