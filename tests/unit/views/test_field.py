@@ -137,7 +137,7 @@ class TestEditJSON(IntegrationFixture):
         Session.flush()
 
         request = testing.DummyRequest(json_body={
-            'into': 'section1',
+            'target': 'section1',
             'name': 'section2',
             'title': u'Section 2',
             'type': 'section'})
@@ -147,4 +147,149 @@ class TestEditJSON(IntegrationFixture):
 
         self.assertIn(
             'nested sections are not supported',
-            cm.exception.json['errors']['into'].lower())
+            cm.exception.json['errors']['target'].lower())
+
+
+@mock.patch('occams.forms.views.field.check_csrf_token')
+class TestMoveJSON(IntegrationFixture):
+
+    def _call_view(self, context, request):
+        from occams.forms.views.field import move_json as view
+        return view(context, request)
+
+    def _comparable(self, schema):
+        """
+        Helper function to convert a schema into a (section, name, order) tuple
+        """
+        return [(a.parent_attribute.name if a.parent_attribute else None,
+                 a.name,
+                 a.order
+                 ) for a in schema.iterlist()]
+
+    def test_from_section_to_schema(self, check_csrf_token):
+        """
+        It should be able to move a field from a section to the root
+        """
+        from pyramid import testing
+        from occams.forms import models, Session
+
+        schema = models.Schema(
+            name='testform',
+            title=u'Test Form',
+            attributes={
+                'section1': models.Attribute(
+                    name='section1',
+                    title=u'Section 1',
+                    type='section',
+                    attributes={
+                        'myvar': models.Attribute(
+                            name='myvar',
+                            title=u'My Var',
+                            type='string',
+                            order=1)
+                        },
+                    order=0)
+                })
+        Session.add(schema)
+        Session.flush()
+
+        request = testing.DummyRequest(json_body={
+            'target': None,
+            'index': 1
+        })
+
+        self._call_view(schema.attributes['myvar'], request)
+
+        self.assertEqual(
+            [(None, 'section1', 0), (None, 'myvar', 1)],
+            self._comparable(schema))
+
+    def test_from_section_to_section(self, check_csrf_token):
+        """
+        It should be able to move a field from a section to another
+        """
+        from pyramid import testing
+        from occams.forms import models, Session
+
+        schema = models.Schema(
+            name='testform',
+            title=u'Test Form',
+            attributes={
+                'section1': models.Attribute(
+                    name='section1',
+                    title=u'Section 1',
+                    type='section',
+                    attributes={
+                        'myvar': models.Attribute(
+                            name='myvar',
+                            title=u'My Var',
+                            type='string',
+                            order=1)
+                        },
+                    order=0),
+                'section2': models.Attribute(
+                    name='section2',
+                    title=u'Section 2',
+                    type='section',
+                    order=2)
+                })
+        Session.add(schema)
+        Session.flush()
+
+        request = testing.DummyRequest(json_body={
+            'target': 'section2',
+            'index': 0
+        })
+
+        self._call_view(schema.attributes['myvar'], request)
+
+        self.assertEqual(
+            [(None, 'section1', 0),
+             (None, 'section2', 1),
+             ('section2', 'myvar', 2)],
+            self._comparable(schema))
+
+    def test_from_within_section(self, check_csrf_token):
+        """
+        It should be able to move a field within a section
+        """
+        from pyramid import testing
+        from occams.forms import models, Session
+
+        schema = models.Schema(
+            name='testform',
+            title=u'Test Form',
+            attributes={
+                'section1': models.Attribute(
+                    name='section1',
+                    title=u'Section 1',
+                    type='section',
+                    attributes={
+                        'myvar': models.Attribute(
+                            name='myvar',
+                            title=u'My Var',
+                            type='string',
+                            order=1),
+                        'myfoo': models.Attribute(
+                            name='myfoo',
+                            title=u'My Foo',
+                            type='string',
+                            order=2)
+                        },
+                    order=0),
+                })
+        Session.add(schema)
+        Session.flush()
+
+        request = testing.DummyRequest(json_body={
+            'target': 'section1',
+            'index': 1
+        })
+
+        self._call_view(schema.attributes['myvar'], request)
+
+        self.assertEqual(
+            [(None, 'section1', 0),
+             ('section1', 'myfoo', 1),
+             ('section1', 'myvar', 2)],
+            self._comparable(schema))
