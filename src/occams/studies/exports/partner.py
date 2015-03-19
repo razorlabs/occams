@@ -65,8 +65,8 @@ class PartnerPlan(ExportPlan):
         query = (
             Session.query(
                 models.Partner.id.label('partner_id'),
-                PartnerPatient.our.label('partner_pid'),
-                models.Patient.our.label('index_pid'),
+                PartnerPatient.pid.label('partner_pid'),
+                models.Patient.pid.label('index_pid'),
                 models.Site.name.label('site'),
 
                 models.Partner.report_date,
