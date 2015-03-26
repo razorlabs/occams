@@ -106,7 +106,7 @@
       <div class="container">
         <p class="text-muted credit">
           <span i18n:translate="">Developed by the</span>
-          <a href="http://cfar.ucsd.edu/bit" i18n:translate="">UCSD Center For AIDS Research BIT Core</a>.
+          <a href="http://bitcore.ucsd.edu" i18n:translate="">The Young Group at UCSD</a>
         </p>
       </div>
     </footer>
