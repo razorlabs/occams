@@ -1,0 +1,26 @@
+{
+  "name": "occams",
+  "dependencies": {
+    "bootstrap": "3.x",
+    "font-awesome": "4.x",
+    "jquery": "2.x",
+    "jquery-cookie": "~1.4.1"
+  },
+  "devDependencies": {
+    "mocha": "~2.1.0"
+  },
+  "version": "2.0.12",
+  "authors": [
+    "Marco Martinez <mam002@ucsd.edu>"
+  ],
+  "license": "MIT",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "occams/static/bower_components/",
+    "test",
+    "tests"
+  ]
+}

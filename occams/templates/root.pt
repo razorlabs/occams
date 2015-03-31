@@ -1,0 +1,5 @@
+<html metal:use-macro="load: master.pt">
+  <metal:content-slot fill-slot="content-slot">
+    <h1>Hello OCCAMS</h1>
+  </metal:content-slot>
+</html>

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="${request.locale_name}" i18n:domain="occams">
+
+  <tal:version define="pkg import:occams">
+  <!-- Application: ${pkg.__name__} -->
+  <!-- Version:     ${pkg.__version__} -->
+  </tal:version>
+
+  <head>
+    <meta charset="utf-8">
+
+    <title>${request.registry.settings['occams.org.title']|'OCCAMS'}</title>
+
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+    <link tal:repeat="url request.webassets_env['occams-css'].urls()" href="${url}" rel="stylesheet" type="text/css" />
+
+    <!-- Shortcut icons -->
+    <link
+        rel="shortcut icon"
+        href="${request.static_path('occams:static/images/favicon.ico')}"/>
+    <link rel="shortcut icon" sizes="1024x1024" href="${request.static_path('occams:static/images/favicon-highres.png')}">
+    <link rel="shortcut icon" sizes="128x128" href="${request.static_path('occams:static/images/favicon.png')}">
+    <link rel="apple-touch-icon" sizes="128x128" href="${request.static_path('occams:static/images/favicon.png')}">
+    <link rel="apple-touch-icon-precomposed" sizes="128x128" href="${request.static_path('occams:static/images/favicon.png')}">
+  </head>
+
+  <body>
+
+    <div id="wrap">
+      <!--! Keep the app navbar separate from the content container -->
+      <nav
+          class="navbar navbar-default navbar-static-top"
+          role="navigation"
+          i18n:domain="occams"
+          tal:define="user request.user|nothing;">
+
+        <div class="container">
+
+          <div class="navbar-header">
+            <button
+                type="button"
+                class="navbar-toggle"
+                data-toggle="collapse"
+                data-target=".navbar-collapse">
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand"
+                href="${request.route_path('occams')}">OCCAMS</a>
+          </div> <!--/.navbar-header -->
+
+          <div class="collapse navbar-collapse">
+
+            <ul class="nav navbar-nav navbar-right"
+                tal:define="user request.environ['repoze.who.identity']['properties']|nothing;"
+                  tal:condition="user">
+              <li><p class="navbar-text">${user['first_name']}</p></li>
+              <li class="dropdown"
+                  tal:condition="request.apps">
+                <a href="#apps"
+                  role="button"
+                  class="dropdown-toggle"
+                  rel="tooltip"
+                  data-toggle="dropdown"
+                  data-placement="bottom"
+                  data-container="body"
+                  data-animation="false"
+                  title="Services"
+                  ><span class="glyphicon glyphicon-th"></span><span class="caret"></span></a>
+                <ul class="dropdown-menu" role="menu" aria-labelledby="Apps Menu">
+                  <tal:suites repeat="suite request.apps">
+                    <li role="presentation" class="dropdown-header">
+                      ${suite['title']}
+                    </li>
+                    <tal:apps repeat="app suite['apps']">
+                      <li role="presentation">
+                        <a href="${app['url']}" role="menuitem">${app['title']}</a>
+                      </li>
+                    </tal:apps>
+                    <li role="presentation" class="divider"
+                        tal:condition="not:repeat.suite.end"></li>
+                  </tal:suites>
+                </ul>
+              </li>
+              <li>
+                <a href="${request.route_path('logout')}"
+                    rel="tooltip"
+                    data-placement="bottom"
+                    data-container="body"
+                    data-animation="false"
+                    title="Log Out"
+                  ><span class="glyphicon glyphicon-log-out"></span></a>
+              </li>
+            </ul>
+
+          </div><!--/.nav-collapse -->
+
+        </div>
+      </nav>
+      <main
+          id="view-${request.matched_route.name}"
+          class="container"
+          data-view-name="${request.matched_route.name}"
+          data-view-path="${request.current_route_path()}">
+
+        <tal:alerts define="types python:['danger', 'warning', 'success', 'info']" repeat="type types">
+          <div class="alert alert-${type}" tal:define="alerts python:request.session.pop_flash(type)" tal:repeat="alert alerts">${alert}</div>
+        </tal:alerts>
+
+        <metal:content-slot define-slot="content-slot" />
+      </main>
+    </div> <!-- /#wrap -->
+
+    <footer id="footer">
+      <div class="container">
+        <p class="text-muted credit">
+          <span i18n:translate="">Developed by the</span>
+          <a href="https://bitcore.ucsd.edu" i18n:translate="">Young Group at UCSD</a>.
+        </p>
+      </div>
+    </footer>
+
+    <!--! Load scripts at the end so we don't block rendering -->
+    <script
+        tal:repeat="url request.webassets_env['occams-js'].urls()"
+        src="${url}"
+        type="text/javascript"></script>
+
+    <metal:content-slot define-slot="javascript-slot">
+      <!--! Slot for injecting extra javascript into the applciation (e.g. ko initialization) -->
+    </metal:content-slot>
+
+  </body>
+</html>
