@@ -9,8 +9,10 @@
 ### In-house
 
 # ---> UPDATE THESE <----
--e /path/to/occams.datastore[test]
--e /path/to/occams.accounts[test]
--e /path/to/occams.forms[test,ldap,gunicorn,postgresql]
--e /path/to/occams.roster[test]
--e /path/to/occams.studies[test,ldap,gunicorn,postgresql]
+-e /PATH/TO/occams_datastore[test]
+-e /PATH/TO/occams_accounts[test]
+-e /PATH/TO/occams_forms[test]
+-e /PATH/TO/occams_roster[test]
+-e /PATH/TO/occams_studies[test]
+-e /PATH/TO/occams_lims[test]
+-e /PATH/TO/occams[test,ldap,gunicorn,postgresql]

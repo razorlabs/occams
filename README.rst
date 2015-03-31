@@ -9,6 +9,7 @@ System Requirements
 
   * Python 2.7+
   * npm
+    - bower
     - lessc (must be installed globally, i.e. with "-g" option)
   * redis
   * PostgreSQL 9.3+
@@ -18,6 +19,11 @@ Getting Started
 ---------------
 
 These instructions are intended for contributors only.
+
+Make sure you have the required node packages installed::
+
+  > npm install -g bower
+  > npm install -g lessc
 
 Create a virtual environment for your work::
 
@@ -52,7 +58,7 @@ following as well::
   > git clone git@bitbucket.org:YOURID/occams_lims
 
 
-Now that your projects are checked out, copy and update the ``requirements-sample.ini``
+Now that your projects are checked out, copy and update the ``requirements-sample.txt``
 found in the ``occams`` project directory.::
 
   > cd $VIRTUAL_ENV
