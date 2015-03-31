@@ -167,7 +167,8 @@
                   tal:condition="user">
               <li><p class="navbar-text">${user['first_name']}</p></li>
               <li>
-                <a href="${request.route_path('settings')}"
+                <a tal:condition="request.has_permission('admin', context)"
+                    href="${request.route_path('settings')}"
                     rel="tooltip"
                     data-placement="bottom"
                     data-container="body"
