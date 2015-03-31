@@ -53,7 +53,7 @@ def get_version():
 
 
 setup(
-    name=u'occams.roster',
+    name=u'occams_roster',
     version=get_version(),
     description=u'',
     classifiers=[
@@ -73,9 +73,7 @@ setup(
     author_email=u'bitcore@ucsd.edu',
     url=u'https://bitbucket.org/ucsdbitcore/occams.roster.git',
     license=u'GPL',
-    packages=find_packages('src', exclude=['ez_setup']),
-    package_dir={'': 'src'},
-    namespace_packages=['occams'],
+    packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
     install_requires=REQUIRES,
@@ -84,6 +82,6 @@ setup(
     test_suite='nose.collector',
     entry_points="""
     [console_scripts]
-    or_initdb = occams.roster.scripts.initdb:main
+    or_initdb = occams_roster.scripts.initdb:main
     """,
 )
