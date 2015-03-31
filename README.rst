@@ -1,5 +1,5 @@
-OCCAMS Studies
-==============
+OCCAMS
+======
 
 Clinical research data management and analysis software.
 
@@ -32,24 +32,31 @@ Next, create the necesary directories::
   > mkdir -p var/blobs
   > mkdir -p src
 
-You'll need to git checkout each web application individually. If you are
+You'll need to git checkout the web application. If you are
 using your own forks, change ``ucsdbitcore`` to yours. The reason we
 checkout each project individually is because pip will replace all
 git changes/history the next time your run pip install on a git
 repo, which can lead you to lose a lot of work and sanity::
 
   > cd src
-  > git clone git@bitbucket.org:ucsdbitcore/occams.datastore.git
-  > git clone git@bitbucket.org:ucsdbitcore/occams.forms.git
-  > git clone git@bitbucket.org:ucsdbitcore/occams.accounts.git
-  > git clone git@bitbucket.org:ucsdbitcore/occams.roster.git
-  > git clone git@bitbucket.org:ucsdbitcore/occams.studies.git
+  > git clone git@bitbucket.org:YOURID/occams.git
+
+If you plan on working on add-ons, it is recommended you install the
+following as well::
+
+  > git clone git@bitbucket.org:YOURID/occams_datastore
+  > git clone git@bitbucket.org:YOURID/occams_forms
+  > git clone git@bitbucket.org:YOURID/occams_accounts
+  > git clone git@bitbucket.org:YOURID/occams_roster
+  > git clone git@bitbucket.org:YOURID/occams_studies
+  > git clone git@bitbucket.org:YOURID/occams_lims
+
 
 Now that your projects are checked out, copy and update the ``requirements-sample.ini``
-found in the ``occams.studies`` project directory.::
+found in the ``occams`` project directory.::
 
   > cd $VIRTUAL_ENV
-  > cp src/occams.studies/requirements-sample.txt requirements.txt
+  > cp src/occams/requirements-sample.txt requirements.txt
   > vim requirements.txt
   > pip install -U -r requirements.txt
 
@@ -61,7 +68,7 @@ your desired development environment settings::
   > vim etc/development.ini
   > vim etc/who.ini
 
-Install the database tables::
+Install the appropriate database tables::
 
   > oc_initdb -c etc/development.ini
 
@@ -71,6 +78,7 @@ Start the web service::
   > gunicorn --reload --paste etc/development.ini
 
 
-In another terminal, start the celery worker, this handles all the exports::
+If you applications are using asynchronous tasks, you'll need to start the
+celery worker::
 
   > celery worker --autoreload --app "occams.studies.tasks" --loglevel INFO --without-gossip --ini etc/development.ini
