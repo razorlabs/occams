@@ -47,8 +47,12 @@ def list_(request):
         Session.query(models.Study)
         .order_by(models.Study.title.asc()))
 
+    sites_query = Session.query(models.Site)
+    site_ids = [s.id for s in sites_query if request.has_permission('view', s)]
+
     modified_query = (
         Session.query(models.Patient)
+        .filter(models.Patient.site.has(models.Site.id.in_(site_ids)))
         .order_by(models.Patient.modify_date.desc())
         .limit(10))
 

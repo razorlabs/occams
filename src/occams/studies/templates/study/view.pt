@@ -4,10 +4,12 @@
 
       <header class="page-header" data-bind="with: study">
         <div class="btn-toolbar pull-right">
-          <input type="checkbox"
-            data-bind="bootstrapSwitch: $root.isGridEnabled"
-            data-label-text="Grid"
-            />
+          <input
+              tal:condition="request.has_permission('edit', context)"
+              type="checkbox"
+              data-bind="bootstrapSwitch: $root.isGridEnabled"
+              data-label-text="Grid"
+              />
           <!-- ko if: randomization_form -->
             <button class="btn btn-default" data-bind="click: $root.startUploadRids">
               <span class="fa fa-random"></span>
@@ -17,8 +19,8 @@
               <!-- /ko -->
             </button>
           <!-- /ko -->
-          <button class="btn btn-default" data-bind="click: $root.startEditStudy"><span class="fa fa-edit"></span> Edit</button>
-          <button class="btn btn-default" data-bind="click: $root.startDeleteStudy"><span class="fa fa-trash-o"></span> Delete</button>
+          <button tal:condition="request.has_permission('edit', context)" class="btn btn-default" data-bind="click: $root.startEditStudy"><span class="fa fa-edit"></span> Edit</button>
+          <button tal:condition="request.has_permission('edit', context)" class="btn btn-default" data-bind="click: $root.startDeleteStudy"><span class="fa fa-trash-o"></span> Delete</button>
         </div>
         <h1>
           <span data-bind="text: title"></span>
@@ -84,7 +86,7 @@
                 <div class="rotated-container">
                   <div class="rotated-rotate">
                     <span class="rorated-text">
-                      <button class="btn btn-link" data-bind="click: startAddCycle">
+                      <button tal:condition="request.has_permission('edit', context)" class="btn btn-link" data-bind="click: startAddCycle">
                         <span class="fa fa-plus"></span>
                         <strong i18n:translate="">Add Cycle</strong>
                       </button>
@@ -114,7 +116,7 @@
             <!-- /ko -->
             <tr>
               <th>
-                <button class="btn btn-link" data-bind="click: $root.startAddForm">
+                <button tal:condition="request.has_permission('edit', context)" class="btn btn-link" data-bind="click: $root.startAddForm">
                   <span class="fa fa-plus"></span>
                   <strong i18n:translate="">Add Form</strong>
                 </button>
@@ -147,7 +149,7 @@
                 <div class="rotated-container">
                   <div class="rotated-rotate">
                     <span class="rorated-text">
-                      <button class="btn btn-link" data-bind="click: startAddCycle">
+                      <button tal:condition="request.has_permission('edit', context)" class="btn btn-link" data-bind="click: startAddCycle">
                         <span class="fa fa-plus"></span>
                         <strong i18n:translate="">Add Cycle</strong>
                       </button>
@@ -184,7 +186,7 @@
             <!-- /ko -->
             <tr>
               <th>
-                <button class="btn btn-link" data-bind="click: $root.startAddForm">
+                <button tal:condition="request.has_permission('edit', context)" class="btn btn-link" data-bind="click: $root.startAddForm">
                   <span class="fa fa-plus"></span>
                   <strong i18n:translate="">Add Form</strong>
                 </button>
