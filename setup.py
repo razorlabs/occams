@@ -34,10 +34,9 @@ REQUIRES = [
     'wtforms-json',
     'zope.sqlalchemy',                  # Connects sqlalchemy to pyramid_tm
 
-    'occams.datastore',                 # EAV
-    'occams.accounts',
-    'occams.roster',
-    'occams.forms',                     # EAV form renderer
+    'occams_datastore',                 # EAV
+    'occams_roster',
+    'occams_forms',                     # EAV form renderer
 ]
 
 EXTRAS = {
@@ -111,12 +110,11 @@ class _custom_develop(_develop):
 
 def _post_develop():
     from subprocess import call
-    call(['npm', 'install'], cwd=HERE)
-    call(['./node_modules/.bin/bower', 'install'], cwd=HERE)
+    call(['bower', 'install'], cwd=HERE)
 
 
 setup(
-    name='occams.studies',
+    name='occams_studies',
     version=get_version(),
     description='occams.studies',
     long_description=README + '\n\n' + CHANGES,
@@ -130,9 +128,7 @@ setup(
     author_email='bitcore@ucsd.edu',
     url='https://bitbutcket.org/ucsdbitcore/occams.studies',
     keywords='web wsgi bfg pylons pyramid',
-    packages=find_packages('src', exclude=['ez_setup']),
-    package_dir={'': 'src'},
-    namespace_packages=['occams'],
+    packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
     install_requires=REQUIRES,
@@ -141,11 +137,9 @@ setup(
     test_suite='nose.collector',
     cmdclass={'develop': _custom_develop},
     entry_points="""\
-    [paste.app_factory]
-    main = occams.studies:main
     [console_scripts]
-    os_initdb = occams.studies.scripts.initdb:main
-    os_export = occams.studies.scripts.export:main
-    os_buildassets = occams.studies.scripts.buildassets:main
+    os_initdb = occams_studies.scripts.initdb:main
+    os_export = occams_studies.scripts.export:main
+    os_buildassets = occams_studies.scripts.buildassets:main
     """,
 )
