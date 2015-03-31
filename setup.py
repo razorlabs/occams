@@ -53,7 +53,7 @@ def get_version():
 
 
 setup(
-    name='occams.datastore',
+    name='occams_datastore',
     version=get_version(),
     description='Provides storage solution for sparse data.',
     classifiers=[
@@ -71,11 +71,9 @@ setup(
     keywords='BIT OCCAMS datastore database eav sqlalchemy clinical',
     author='BIT Core Development Team',
     author_email='bitcore@ucsd.edu',
-    url='https://bitbucket.org/ucsdbitcore/occams.datastore.git',
+    url='https://bitbucket.org/ucsdbitcore/occams_datastore.git',
     license='GPL',
-    packages=find_packages('src', exclude=['ez_setup']),
-    package_dir={'': 'src'},
-    namespace_packages=['occams'],
+    packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
     install_requires=REQUIRES,
@@ -84,6 +82,6 @@ setup(
     test_suite='nose.collector',
     entry_points="""\
     [console_scripts]
-    od_initdb = occams.datastore.scripts.initdb:main
+    od_initdb = occams_datastore.scripts.initdb:main
     """
 )
