@@ -4,7 +4,8 @@ from pyramid.view import view_config
 import wtforms
 import wtforms.fields.html5
 
-from .. import _, Session, models
+from occams import Session
+from .. import _, models
 
 
 class LoginForm(wtforms.Form):
@@ -50,7 +51,8 @@ def login(request):
 
             referrer = request.GET.get('referrer')
             if not referrer or request.route_path('login') in referrer:
-                referrer = request.route_path('account', account=user.key)
+                # TODO: Maybe send the user to their user dashboard instead?
+                referrer = request.route_path('occams')
 
             return HTTPFound(location=referrer, headers=headers)
 

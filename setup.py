@@ -26,7 +26,7 @@ REQUIRES = [
     'wtforms',
     'zope.sqlalchemy',                  # Connects sqlalchemy to pyramid_tm
 
-    'occams.datastore'
+    'occams_datastore'
 ]
 
 EXTRAS = {
@@ -95,14 +95,13 @@ class _custom_develop(_develop):
 
 def _post_develop():
     from subprocess import call
-    call(['npm', 'install'], cwd=HERE)
-    call(['./node_modules/.bin/bower', 'install'], cwd=HERE)
+    call(['bower', 'install'], cwd=HERE)
 
 
 setup(
-    name='occams.accounts',
+    name='occams_accounts',
     version=get_version(),
-    description='occams.accounts',
+    description='occams_accounts',
     long_description=README + '\n\n' + CHANGES,
     classifiers=[
         "Programming Language :: Python",
@@ -112,11 +111,9 @@ setup(
     ],
     author='UCSD BIT Core Team',
     author_email='bitcore@ucsd.edu',
-    url='https://bitbutcket.org/ucsdbitcore/occams.accounts',
+    url='https://bitbutcket.org/ucsdbitcore/occams_accounts',
     keywords='web wsgi bfg pylons pyramid',
-    packages=find_packages('src', exclude=['ez_setup']),
-    package_dir={'': 'src'},
-    namespace_packages=['occams'],
+    packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
     install_requires=REQUIRES,
@@ -124,8 +121,4 @@ setup(
     tests_require=EXTRAS['test'],
     test_suite='nose.collector',
     cmdclass={'develop': _custom_develop},
-    entry_points="""\
-    [paste.app_factory]
-    main = occams.accounts:main
-    """,
 )
