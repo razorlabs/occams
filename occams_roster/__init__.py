@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 Session = scoped_session(sessionmaker(
     extension=zope.sqlalchemy.ZopeTransactionExtension()))
 
-from occams.roster.generator import OUR_PATTERN, generate  # NOQA
+from .generator import OUR_PATTERN, generate  # NOQA
 
 
 def includeme(config):
@@ -22,6 +22,6 @@ def includeme(config):
     Include as a pyramid application add-on
     """
     settings = config.registry.settings
-    Session.configure(bind=engine_from_config(settings, 'pid.db.'))
+    Session.configure(bind=engine_from_config(settings, 'roster.db.'))
     log.debug('Roster connected to: "%s"'
               % obfuscate_url_pw(Session.bind.url))

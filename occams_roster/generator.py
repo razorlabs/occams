@@ -2,7 +2,7 @@ import re
 
 from sqlalchemy.orm.exc import NoResultFound
 
-from occams.roster import models, Session
+from . import models, Session
 
 
 OUR_PATTERN = re.compile(
