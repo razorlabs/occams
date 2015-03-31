@@ -69,8 +69,8 @@ found in the ``occams`` project directory.::
 Once everything is installed you'll need to configure the application with
 your desired development environment settings::
 
-  > cp src/occams.studies/development-sample.ini etc/development.ini
-  > cp src/occams.studies/who-sample.ini etc/who.ini
+  > cp src/occams/development-sample.ini etc/development.ini
+  > cp src/occams/who-sample.ini etc/who.ini
   > vim etc/development.ini
   > vim etc/who.ini
 
