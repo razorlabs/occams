@@ -1,62 +1,8 @@
 from pyramid.security import Allow, Authenticated, ALL_PERMISSIONS
-from pyramid.settings import aslist
-import six
-import sqlalchemy as sa
 from sqlalchemy import orm
 
-from occams.datastore.models import *  # NOQA
-
-from . import log, Session
-
-
-def includeme(config):
-    """
-    Configures additional security utilities
-    """
-    settings = config.registry.settings
-
-    assert 'auth.groups' in settings
-
-    mappings = {}
-
-    for entry in aslist(settings['auth.groups'], flatten=False):
-        (site_domain, app_domain) = entry.split('=')
-        mappings[site_domain.strip()] = app_domain.strip()
-
-    config.add_request_method(
-        lambda request: mappings, name='group_mappings', reify=True)
-
-    # tests will override the session, use the setting for everything else
-    if isinstance(settings['app.db.url'], six.string_types):
-        Session.configure(bind=sa.engine_from_config(settings, 'app.db.'))
-
-    log.debug('occams.forms connected to: "%s"' % repr(Session.bind.url))
-    DataStoreModel.metadata.info['settings'] = settings
-
-
-def groupfinder(identity, request):
-    """
-    Parse the groups from the identity into internal app groups
-    """
-    assert 'groups' in identity, \
-        'Groups has not been set in the repoze identity!'
-    mappings = request.group_mappings
-    return [mappings[g] for g in identity['groups'] if g in mappings]
-
-
-class RootFactory(object):
-    """
-    Default root that enforces application permissions.
-
-    Client applications with their own principles should define
-    their own ``who.callback`` that maps client groups to application
-    groups.
-    """
-
-    __acl__ = [(Allow, Authenticated, 'view')]
-
-    def __init__(self, request):
-        self.request = request
+from occams import Session
+from occams_datastore.models import *  # NOQA
 
 
 class FormFactory(object):

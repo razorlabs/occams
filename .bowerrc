@@ -1,4 +1,4 @@
 {
-  "directory": "src/occams/forms/static/bower_components/",
+  "directory": "occams_forms/static/bower_components/",
   "analytics": false
 }

@@ -6,9 +6,11 @@ and associated plugins must be enabled.
 """
 
 from __future__ import division
+import collections
 import os
 import shutil
 import tempfile
+from itertools import groupby
 import uuid
 
 from pyramid.renderers import render
@@ -18,7 +20,60 @@ import wtforms.fields.html5
 import wtforms.widgets.html5
 import wtforms.ext.dateutil.fields
 
-from occams.forms import _, models, log
+from . import _, models, log
+
+
+def version2json(schema):
+    """
+    Returns a single schema json record
+    (this is how it's stored in the database)
+    """
+    data = {
+        'id': schema.id,
+        'name': schema.name,
+        'title': schema.title,
+        'publish_date': schema.publish_date.isoformat()}
+    return data
+
+
+def form2json(schemata):
+    """
+    Returns a representation of schemata grouped by versions.
+
+    This is useful for representing schemata grouped by their version.
+
+    The final dict contains the following values:
+        ``schema`` -- a dict containing:
+            ``name`` -- the schema name
+            ``title`` -- the schema's most recent human title
+        ``versions`` -- a list containining each version (see ``version2json``)
+
+    This method accepts a single value (in which it will be transformted into
+    a schema/versions pair, or a list which will be regrouped
+    into schema/versions pairs
+    """
+
+    def by_name(schema):
+        return schema.name
+
+    def by_version(schema):
+        return schema.publish_date
+
+    def make_json(groups):
+        groups = sorted(groups, key=by_version)
+        return {
+            'schema': {
+                'name': groups[0].name,
+                'title': groups[-1].title
+                },
+            'versions': list(map(version2json, groups))
+            }
+
+    if isinstance(schemata, collections.Iterable):
+        schemata = sorted(schemata, key=by_name)
+        return [make_json(g) for k, g in groupby(schemata, by_name)]
+    elif isinstance(schemata, models.Schema):
+        return make_json([schemata])
 
 
 def render_field(field, **kw):
@@ -220,7 +275,7 @@ def render_form(form, disabled=False, attr=None):
     """
     Helper function to render a WTForm by OCCAMS standards
     """
-    return render('occams.forms:templates/form.pt', {
+    return render('occams_forms:templates/form.pt', {
         'form': form,
         'disabled': disabled,
         'attr': attr or {},

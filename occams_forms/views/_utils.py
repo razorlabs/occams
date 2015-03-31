@@ -1,5 +1,5 @@
 from pyramid.httpexceptions import HTTPOk
-from occams.forms import _
+from .. import _
 
 
 def jquery_wtform_validator(class_, context, request):

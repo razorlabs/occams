@@ -1,7 +1,6 @@
 from pyramid.view import view_config
 
-from occams.datastore import models
-from .. import Session
+from .. import Session, models
 
 
 @view_config(
