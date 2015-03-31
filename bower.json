@@ -1,5 +1,5 @@
 {
-  "name": "occams.forms",
+  "name": "occams_forms",
   "dependencies": {
     "bootstrap": "3.x",
     "font-awesome": "4.x",

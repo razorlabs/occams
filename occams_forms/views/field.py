@@ -3,11 +3,11 @@ from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 import wtforms
 
-from occams.datastore.models.schema import RE_VALID_NAME, RESERVED_WORDS
+from occams.utils.forms import wtferrors
+from occams_datastore.models.schema import RE_VALID_NAME, RESERVED_WORDS
 
 from .. import _, models, Session
 from ._utils import jquery_wtform_validator
-from ..utils import wtferrors
 
 
 types = [

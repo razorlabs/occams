@@ -11,6 +11,7 @@ REQUIRES = [
     'alembic',                          # Database table upgrades
     'cssmin',                           # CSS asset compression
     'jsmin>=2.0.11',                    # JS asset compression
+    'reportlab',
     'python-dateutil',                  # Date parsing
     'pyramid>=1.5',                     # Framework
     'pyramid_chameleon',                # Templating
@@ -25,8 +26,7 @@ REQUIRES = [
     'wtforms-json',
     'zope.sqlalchemy',                  # Connects sqlalchemy to pyramid_tm
 
-    'occams.datastore',                 # EAV
-    'occams.accounts',
+    'occams_datastore',                 # EAV
 ]
 
 EXTRAS = {
@@ -91,12 +91,11 @@ class _custom_develop(_develop):
 
 def _post_develop():
     from subprocess import call
-    call(['npm', 'install'], cwd=HERE)
-    call(['./node_modules/.bin/bower', 'install'], cwd=HERE)
+    call(['bower', 'install'], cwd=HERE)
 
 
 setup(
-    name='occams.forms',
+    name='occams_forms',
     version=get_version(),
     description='A web application for managing dynamic forms',
     classifiers=[
@@ -114,11 +113,9 @@ setup(
     keywords='OCCAMS datastore database eav',
     author='UCSD BIT Core Team',
     author_email='bitcore@ucsd.edu',
-    url='https://bitbutcket.org/ucsdbitcore/occams.forms',
+    url='https://bitbutcket.org/ucsdbitcore/occams_forms',
     license='GPL',
-    packages=find_packages('src', exclude=['ez_setup']),
-    package_dir={'': 'src'},
-    namespace_packages=['occams'],
+    packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
     install_requires=REQUIRES,
@@ -127,9 +124,7 @@ setup(
     test_suite='nose.collector',
     cmdclass={'develop': _custom_develop},
     entry_points="""\
-    [paste.app_factory]
-    main = occams.forms:main
     [console_scripts]
-    of_initdb = occams.forms.scripts.initdb:main
+    of_initdb = occams_forms.scripts.initdb:main
     """,
 )
