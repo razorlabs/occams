@@ -39,7 +39,7 @@ git changes/history the next time your run pip install on a git
 repo, which can lead you to lose a lot of work and sanity::
 
   > cd src
-  > git clone git@bitbucket.org:YOURID/occams.git
+  > git clone git@bitbucket.org:YOURID/occams
 
 If you plan on working on add-ons, it is recommended you install the
 following as well::
