@@ -17,24 +17,24 @@
 Goals
 -----
 
-  * Form versioning
-  * Direct data entry instead of using paper forms
-  * Data auditing
-  * Singular data points with multiple references
-  * Data workflow captured by the system design, but flexible enough to work for multiple use-cases
-  * Secure, role-based data access control
-  * A Relational Database that could describe how data are related through structure instead of convention
+* Form versioning
+* Direct data entry instead of using paper forms
+* Data auditing
+* Singular data points with multiple references
+* Data workflow captured by the system design, but flexible enough to work for multiple use-cases
+* Secure, role-based data access control
+* A Relational Database that could describe how data are related through structure instead of convention
 
 
 System Requirements
 -------------------
 
-  * Python 2.7+
-  * npm
-      - bower
-      - lessc (must be installed globally, i.e. with "-g" option)
-  * redis
-  * PostgreSQL 9.3+
+* Python 2.7+
+* npm
+    - bower
+    - lessc (must be installed globally, i.e. with "-g" option)
+* redis
+* PostgreSQL 9.3+
 
 
 Getting Started
