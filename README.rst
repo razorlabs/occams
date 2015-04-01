@@ -11,7 +11,13 @@
   "Y88888P"   "Y8888P"   "Y8888P" d88P     888 888       888  "Y8888P"
 
 
-Clinical research data management and analysis software.
+**O**pen Source **C**linical **C**ontent **A**nalysis and **M**anagement **S**ystem
+
+
+Goals
+-----
+
+**TODO**
 
 
 System Requirements
