@@ -18,7 +18,7 @@ from .. import _, models, Session
 
 
 @view_config(
-    route_name='enrollments',
+    route_name='studies.enrollments',
     permission='view',
     xhr=True,
     renderer='json')
@@ -39,7 +39,7 @@ def list_json(context, request):
 
 
 @view_config(
-    route_name='enrollment',
+    route_name='studies.enrollment',
     permission='view',
     xhr=True,
     renderer='json')
@@ -50,15 +50,15 @@ def view_json(context, request):
     can_randomize = bool(request.has_permission('randomize', context))
     return {
         '__url__': request.route_path(
-            'enrollment',
+            'studies.enrollment',
             patient=patient.pid,
             enrollment=enrollment.id),
         '__randomization_url__': request.route_path(
-            'enrollment_randomization',
+            'studies.enrollment_randomization',
             patient=patient.pid,
             enrollment=enrollment.id),
         '__termination_url__': request.route_path(
-            'enrollment_termination',
+            'studies.enrollment_termination',
             patient=patient.pid,
             enrollment=enrollment.id),
         '__can_edit__':
@@ -98,13 +98,13 @@ def view_json(context, request):
 
 
 @view_config(
-    route_name='enrollments',
+    route_name='studies.enrollments',
     permission='add',
     xhr=True,
     request_method='POST',
     renderer='json')
 @view_config(
-    route_name='enrollment',
+    route_name='studies.enrollment',
     permission='edit',
     xhr=True,
     request_method='PUT',
@@ -133,7 +133,7 @@ def edit_json(context, request):
 
 
 @view_config(
-    route_name='enrollment',
+    route_name='studies.enrollment',
     permission='delete',
     request_method='DELETE',
     xhr=True,
@@ -144,12 +144,12 @@ def delete_json(context, request):
     Session.delete(context)
     Session.flush()
     request.session.flash(_(u'Deleted sucessfully'))
-    return {'__next__': request.route_path('patient',
+    return {'__next__': request.route_path('studies.patient',
                                            patient=context.patient.pid)}
 
 
 @view_config(
-    route_name='enrollment_termination',
+    route_name='studies.enrollment_termination',
     permission='terminate',
     xhr=True,
     renderer='string')
@@ -259,7 +259,7 @@ def _make_challenge_form(context, request):
 
 
 @view_config(
-    route_name='enrollment_randomization',
+    route_name='studies.enrollment_randomization',
     permission='randomize',
     renderer='../templates/enrollment/randomize-print.pt')
 def randomize_print(context, request):
@@ -268,7 +268,7 @@ def randomize_print(context, request):
 
 
 @view_config(
-    route_name='enrollment_randomization',
+    route_name='studies.enrollment_randomization',
     permission='randomize',
     xhr=True,
     renderer='json')

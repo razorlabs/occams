@@ -3,7 +3,7 @@
     <div class="modal-content" data-bind="with: editableItem">
       <form
           role="form"
-          action="${request.current_route_path(_route_name='patients')}"
+          action="${request.current_route_path(_route_name='studies.patients')}"
           data-bind="submit: $root.savePatient, validate: {}">
         <div class="modal-header">
           <h4 class="modal-title" i18n:translate="">Edit Patient</h4>
@@ -25,7 +25,7 @@
               required
               data-placeholder="Select a site..."
               i18n:attributes="data-placeholder"
-              tal:define="ajax request.route_path('sites')"
+              tal:define="ajax request.route_path('studies.sites')"
               data-bind="
                   selectedData: ${name},
                   dataKey: 'id',
@@ -50,7 +50,7 @@
                     required
                     data-placeholder="Select a reference type..."
                     i18n:attributes="data-placeholder"
-                    tal:define="ajax request.route_path('reference_types')"
+                    tal:define="ajax request.route_path('studies.reference_types')"
                     data-bind="
                         attr: {
                           name: 'references-' + $index() + '-${name}',

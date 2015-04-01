@@ -1,20 +1,20 @@
 <nav>
   <ul class="nav nav-header" tal:define="current request.current_route_path(_query={})">
-    <li tal:define="url request.route_path('studies')">
+    <li tal:define="url request.route_path('studies.main')">
       <a href="${url}">
         <span class="fa fa-chevron-left"></span>
       </a>
     </li>
-    <li tal:define="url request.current_route_path(_route_name='patient', _query={})"
+    <li tal:define="url request.current_route_path(_route_name='studies.patient', _query={})"
         class="${'active' if current == url else ''}">
       <a href="${url}" i18n:translate="">Overview</a>
     </li>
-    <li tal:define="url request.current_route_path(_route_name='patient_forms', _query={})"
+    <li tal:define="url request.current_route_path(_route_name='studies.patient_forms', _query={})"
         class="${'active' if url in current and not any(str(entity.id) in current for entity in phi) else ''}">
       <a href="${url}" i18n:translate="">Forms</a>
     </li>
     <tal:schemata repeat="entity phi">
-       <li tal:define="url request.current_route_path(_route_name='patient_form', form=entity.id, _query={})"
+       <li tal:define="url request.current_route_path(_route_name='studies.patient_form', form=entity.id, _query={})"
           class="${'active' if current == url else ''}">
         <a href="${url}" i18n:translate="">${entity.schema.title}</a>
       </li>

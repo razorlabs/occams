@@ -4,7 +4,7 @@
         <div class="btn-group">
           <a class="btn btn-default"
             target="_blank"
-            href="${request.current_route_path(_route_name='enrollment_randomization')}">
+            href="${request.current_route_path(_route_name='studies.enrollment_randomization')}">
               <span class="fa fa-print"></span> <span i18n:translate="">Print</span></a>
         </div>
       </div>

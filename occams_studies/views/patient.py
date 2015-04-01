@@ -28,7 +28,7 @@ from . import (
 
 
 @view_config(
-    route_name='patients',
+    route_name='studies.patients',
     permission='view',
     renderer='../templates/patient/search.pt')
 def search_view(context, request):
@@ -48,7 +48,7 @@ def search_view(context, request):
 
 
 @view_config(
-    route_name='patients',
+    route_name='studies.patients',
     permission='view',
     xhr=True,
     renderer='json')
@@ -142,7 +142,7 @@ def search_json(context, request):
 
 
 @view_config(
-    route_name='patient',
+    route_name='studies.patient',
     permission='view',
     request_method='GET',
     renderer='../templates/patient/view.pt')
@@ -179,7 +179,7 @@ def view(context, request):
 
 
 @view_config(
-    route_name='patient',
+    route_name='studies.patient',
     permission='edit',
     xhr=True,
     request_param='vocabulary=available_studies',
@@ -207,7 +207,7 @@ def available_studies(context, request):
 
 
 @view_config(
-    route_name='patient',
+    route_name='studies.patient',
     permission='view',
     request_method='GET',
     xhr=True,
@@ -221,7 +221,7 @@ def view_json(context, request):
         .options(orm.joinedload(models.PatientReference.reference_type))
         .order_by(models.ReferenceType.title.asc()))
     return {
-        '__url__': request.route_path('patient', patient=patient.pid),
+        '__url__': request.route_path('studies.patient', patient=patient.pid),
         'id': patient.id,
         'pid': patient.pid,
         'site': site_views.view_json(patient.site, request),
@@ -237,7 +237,7 @@ def view_json(context, request):
 
 
 @view_config(
-    route_name='patients_forms',
+    route_name='studies.patients_forms',
     permission='admin',
     xhr=True,
     renderer='json')
@@ -258,7 +258,7 @@ def forms_list_json(context, request):
 
 
 @view_config(
-    route_name='patients_forms',
+    route_name='studies.patients_forms',
     permission='admin',
     request_method='POST',
     xhr=True,
@@ -342,7 +342,7 @@ def forms_add_json(context, request):
 
 
 @view_config(
-    route_name='patients_forms',
+    route_name='studies.patients_forms',
     permission='admin',
     request_method='DELETE',
     xhr=True,
@@ -387,13 +387,13 @@ def forms_delete_json(context, request):
 
 
 @view_config(
-    route_name='patients',
+    route_name='studies.patients',
     permission='add',
     xhr=True,
     request_method='POST',
     renderer='json')
 @view_config(
-    route_name='patient',
+    route_name='studies.patient',
     permission='edit',
     xhr=True,
     request_method='PUT',
@@ -450,7 +450,7 @@ def edit_json(context, request):
 
 
 @view_config(
-    route_name='patient',
+    route_name='studies.patient',
     permission='delete',
     xhr=True,
     request_method='DELETE',
@@ -468,11 +468,11 @@ def delete_json(context, request):
         _('Patient ${pid} was successfully removed'),
         mapping={'pid': patient.pid})
     request.session.flash(msg, 'success')
-    return {'__next__': request.current_route_path(_route_name='studies')}
+    return {'__next__': request.current_route_path(_route_name='studies.main')}
 
 
 @view_config(
-    route_name='patient_forms',
+    route_name='studies.patient_forms',
     permission='view',
     renderer='../templates/patient/forms.pt')
 def forms(context, request):
@@ -485,7 +485,7 @@ def forms(context, request):
 
 
 @view_config(
-    route_name='patient_form',
+    route_name='studies.patient_form',
     permission='view',
     renderer='../templates/patient/form.pt')
 def form(context, request):
@@ -504,7 +504,7 @@ def form(context, request):
             .exists())
         .one())
     if not is_phi:
-        cancel_url = request.current_route_path(_route_name='patient_forms')
+        cancel_url = request.current_route_path(_route_name='studies.patient_forms')
         enable_metadata = True
         # We cannot determine which study this form will be applied to
         # so just use any version from active studies
@@ -518,7 +518,7 @@ def form(context, request):
         allowed_versions = sorted(set(
             s.publish_date for s in available_schemata))
     else:
-        cancel_url = request.current_route_path(_route_name='patient')
+        cancel_url = request.current_route_path(_route_name='studies.patient')
         enable_metadata = False
         allowed_versions = None
 

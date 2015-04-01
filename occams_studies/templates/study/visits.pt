@@ -93,7 +93,7 @@
         <tbody>
           <tr tal:repeat="cycle cycles">
             <td>
-              <a href="${request.current_route_path(_route_name='study_visits_cycle', cycle=cycle.name)}">${cycle.title}</a>
+              <a href="${request.current_route_path(_route_name='studies.study_visits_cycle', cycle=cycle.name)}">${cycle.title}</a>
             </td>
             <td>
               <span
@@ -102,7 +102,7 @@
                   tal:replace="value"></span>
             </td>
             <td tal:repeat="state states">
-              <a href="${request.current_route_path(_route_name='study_visits_cycle', cycle=cycle.name, _query={'by_state': state.name})}"
+              <a href="${request.current_route_path(_route_name='studies.study_visits_cycle', cycle=cycle.name, _query={'by_state': state.name})}"
                   tal:define="value python:getattr(cycle, state.name)"
                   tal:condition="value > 0">${value}</a>
             </td>

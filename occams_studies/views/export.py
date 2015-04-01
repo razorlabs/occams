@@ -22,7 +22,7 @@ from ..tasks import celery,  make_export
 
 
 @view_config(
-    route_name='exports',
+    route_name='studies.exports',
     permission='view',
     renderer='../templates/export/home.pt')
 def about(context, request):
@@ -33,7 +33,7 @@ def about(context, request):
 
 
 @view_config(
-    route_name='exports_faq',
+    route_name='studies.exports_faq',
     permission='view',
     renderer='../templates/export/faq.pt')
 def faq(context, request):
@@ -44,7 +44,7 @@ def faq(context, request):
 
 
 @view_config(
-    route_name='exports_checkout',
+    route_name='studies.exports_checkout',
     permission='add',
     renderer='../templates/export/checkout.pt')
 def checkout(context, request):
@@ -107,7 +107,7 @@ def checkout(context, request):
             msg = _(u'Your request has been received!')
             request.session.flash(msg, 'success')
 
-            return HTTPFound(location=request.route_path('export_status'))
+            return HTTPFound(location=request.route_path('studies.export_status'))
 
     return {
         'errors': errors,
@@ -118,7 +118,7 @@ def checkout(context, request):
 
 
 @view_config(
-    route_name='exports_codebook',
+    route_name='studies.exports_codebook',
     permission='view',
     renderer='../templates/export/codebook.pt')
 def codebook(context, request):
@@ -129,7 +129,7 @@ def codebook(context, request):
 
 
 @view_config(
-    route_name='exports_codebook',
+    route_name='studies.exports_codebook',
     permission='view',
     xhr=True,
     renderer='json')
@@ -159,7 +159,7 @@ def codebook_json(context, request):
 
 
 @view_config(
-    route_name='exports_codebook',
+    route_name='studies.exports_codebook',
     request_param='alt=csv',
     permission='fia_view')
 def codebook_download(context, request):
@@ -178,7 +178,7 @@ def codebook_download(context, request):
 
 
 @view_config(
-    route_name='exports_status',
+    route_name='studies.exports_status',
     permission='view',
     renderer='../templates/export/status.pt')
 def status(context, request):
@@ -191,7 +191,7 @@ def status(context, request):
 
 
 @view_config(
-    route_name='exports_status',
+    route_name='studies.exports_status',
     permission='view',
     xhr=True,
     renderer='json')
@@ -226,9 +226,9 @@ def status_json(context, request):
             'total': None,
             'file_size': (naturalsize(export.file_size)
                           if export.file_size else None),
-            'download_url': request.route_path('export_download',
+            'download_url': request.route_path('studies.export_download',
                                                export=export.id),
-            'delete_url': request.route_path('export', export=export.id),
+            'delete_url': request.route_path('studies.export', export=export.id),
             'create_date': format_datetime(export.create_date, locale=locale),
             'expire_date': format_datetime(export.expire_date, locale=locale)
         }
@@ -241,7 +241,7 @@ def status_json(context, request):
 
 
 @view_config(
-    route_name='export',
+    route_name='studies.export',
     permission='delete',
     request_method='DELETE',
     xhr=True)
@@ -258,7 +258,7 @@ def delete_json(context, request):
 
 
 @view_config(
-    route_name='export',
+    route_name='studies.export',
     request_param='alt=zip',
     permission='view')
 def download(context, request):

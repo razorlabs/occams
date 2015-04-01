@@ -9,7 +9,7 @@ from .. import _, models, Session
 
 
 @view_config(
-    route_name='sites',
+    route_name='studies.sites',
     permission='view',
     xhr=True,
     renderer='json')
@@ -25,13 +25,13 @@ def list_json(context, request):
 
 
 @view_config(
-    route_name='site',
+    route_name='studies.site',
     xhr=True,
     permission='view',
     renderer='json')
 def view_json(context, request):
     return {
-        '__url__': request.route_path('site', site=context.name),
+        '__url__': request.route_path('studies.site', site=context.name),
         'id': context.id,
         'name': context.name,
         'title': context.title
@@ -39,7 +39,7 @@ def view_json(context, request):
 
 
 @view_config(
-    route_name='sites',
+    route_name='studies.sites',
     permission='view',
     xhr=True,
     request_param='vocabulary=available_sites',
@@ -63,13 +63,13 @@ def available_sites(context, request):
 
 
 @view_config(
-    route_name='sites',
+    route_name='studies.sites',
     permission='add',
     request_method='POST',
     xhr=True,
     renderer='json')
 @view_config(
-    route_name='site',
+    route_name='studies.site',
     permission='edit',
     request_method='PUT',
     xhr=True,
@@ -96,7 +96,7 @@ def edit_json(context, request):
 
 
 @view_config(
-    route_name='site',
+    route_name='studies.site',
     permission='delete',
     request_method='DELETE',
     xhr=True,

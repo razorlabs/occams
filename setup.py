@@ -19,20 +19,11 @@ REQUIRES = [
     'lingua',                           # i18n
     'python-dateutil',                  # Date parsing
     'python-slugify',                   # path-friendly filenames
-    'pyramid>=1.5',                     # Framework
-    'pyramid_chameleon',                # Templating
-    'pyramid_tm',                       # Centralized transations
-    'pyramid_redis_sessions',           # HTTP session with redis backend
-    'pyramid_redis',
-    'pyramid_rewrite',                  # Allows urls to end in "/"
-    'pyramid_webassets',                # Asset management (ala grunt)
-    'pyramid_who',                      # User authentication
     'six',                              # Py 2 & 3 compatibilty
     'SQLAlchemy>=0.9.0',                # Database ORM
     'tabulate',                         # ASCII tables for CLI pretty-print
     'wtforms',
     'wtforms-json',
-    'zope.sqlalchemy',                  # Connects sqlalchemy to pyramid_tm
 
     'occams_datastore',                 # EAV
     'occams_roster',
@@ -140,6 +131,5 @@ setup(
     [console_scripts]
     os_initdb = occams_studies.scripts.initdb:main
     os_export = occams_studies.scripts.export:main
-    os_buildassets = occams_studies.scripts.buildassets:main
     """,
 )

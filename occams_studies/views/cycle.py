@@ -12,14 +12,14 @@ from .. import _, models, Session
 
 
 @view_config(
-    route_name='cycle',
+    route_name='studies.cycle',
     permission='view',
     xhr=True,
     renderer='json')
 def view_json(context, request):
     cycle = context
     return {
-        '__url__': request.route_path('cycle',
+        '__url__': request.route_path('studies.cycle',
                                       study=cycle.study.name,
                                       cycle=cycle.name),
         'id': cycle.id,
@@ -32,13 +32,13 @@ def view_json(context, request):
 
 
 @view_config(
-    route_name='cycles',
+    route_name='studies.cycles',
     permission='add',
     request_method='POST',
     xhr=True,
     renderer='json')
 @view_config(
-    route_name='cycle',
+    route_name='studies.cycle',
     permission='edit',
     request_method='PUT',
     xhr=True,
@@ -68,7 +68,7 @@ def edit_json(context, request):
 
 
 @view_config(
-    route_name='cycle',
+    route_name='studies.cycle',
     permission='delete',
     request_method='DELETE',
     xhr=True,
@@ -90,7 +90,7 @@ def delete_json(context, request):
     Session.flush()
 
     return {
-        '__next__': request.route_path('study', study=context.study.name),
+        '__next__': request.route_path('studies.study', study=context.study.name),
         'message': _(u'Successfully removed "${cycle}"',
                      mapping={'cycle': context.title})
         }

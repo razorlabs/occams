@@ -8,7 +8,7 @@ from .. import Session, models
 
 
 @view_config(
-    route_name='settings',
+    route_name='studies.settings',
     permission='admin',
     renderer='../templates/settings/view.pt')
 def view(context, request):
@@ -17,7 +17,7 @@ def view(context, request):
 
 # TODO: cleverly join this with the other available_schmata running around
 @view_config(
-    route_name='settings',
+    route_name='studies.settings',
     permission='admin',
     xhr=True,
     request_param='vocabulary=available_schemata',

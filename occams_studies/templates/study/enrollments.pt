@@ -91,7 +91,7 @@
         </thead>
         <tbody>
           <tr tal:repeat="enrollment enrollments">
-            <td><a href="${request.route_path('patient', patient=enrollment.pid)}">${enrollment.pid}</a></td>
+            <td><a href="${request.route_path('studies.patient', patient=enrollment.pid)}">${enrollment.pid}</a></td>
             <td>${enrollment.reference_number}</td>
             <td>${enrollment.consent_date}</td>
             <td>${enrollment.termination_date}</td>

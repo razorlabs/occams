@@ -85,7 +85,7 @@
       $(function(){
         ko.applyBindings(new VisitView({
             visitData: JSON.parse($('#visit-data').text()),
-            formsUrl: "${request.current_route_path(_route_name='visit_forms')}"
+            formsUrl: "${request.current_route_path(_route_name='studies.visit_forms')}"
           }),
           document.getElementById('view-visit')
         );

@@ -285,7 +285,7 @@
             <!-- ko if: $root.showEditCycle -->
               <form class="form-horizontal"
                   method="POST"
-                  action="${request.current_route_path('cycles')}"
+                  action="${request.current_route_path('studies.cycles')}"
                   data-bind="validate: {}, submit: $root.saveCycle">
                 <div class="modal-header">
                   <!-- ko if: id -->
@@ -432,7 +432,7 @@
             <!-- ko if: $root.showEditForm-->
               <form class="form-horizontal"
                   method="POST"
-                  action="${request.current_route_path(_route_name='study_schemata')}"
+                  action="${request.current_route_path(_route_name='studies.study_schemata')}"
                   data-bind="with: $root.editableForm, validate: {}, submit: $root.saveForm">
                 <div class="modal-header">
                   <h4 class="modal-title" i18n:translate="">Add form to study</h4>
@@ -519,7 +519,7 @@
             <!-- ko if: $root.showDeleteForm-->
               <form class="form-horizontal"
                   method="POST"
-                  action="${request.current_route_path(_route_name='study_schemata')}"
+                  action="${request.current_route_path(_route_name='studies.study_schemata')}"
                   data-bind="with: selectedForm, submit: $root.deleteForm">
                 <div class="modal-header">
                   <h4 class="modal-title" i18n:translate="">Remove form from study</h4>
@@ -559,7 +559,7 @@
   <metal:content-slot fill-slot="javascript-extras-slot">
     <script>
       $(function(){
-        var scheduleUrl = "${request.current_route_path(_route_name='study_schedule')}",
+        var scheduleUrl = "${request.current_route_path(_route_name='studies.study_schedule')}",
             studyData = JSON.parse($('#study-data').text());
         ko.applyBindings(new StudyView(studyData, scheduleUrl), document.getElementById('study-main'));
         setupScheduleGrid();

@@ -61,7 +61,7 @@
             <form
                 class="form-horizontal"
                 method="POST"
-                action="${request.route_path('sites')}"
+                action="${request.route_path('studies.sites')}"
                 data-bind="validate: {}, submit: $parent.saveSite">
               <div class="modal-header">
                 <!-- ko if: id -->
@@ -516,13 +516,13 @@
   <metal:content-slot fill-slot="javascript-extras-slot">
     <script>
       $(function(){
-        var sitesUrl = "${request.route_path('sites')}";
+        var sitesUrl = "${request.route_path('studies.sites')}";
         ko.applyBindings(new SiteManageView(sitesUrl), document.getElementById('sites-section'));
 
-        var formsUrl = "${request.route_path('patients_forms')}";
+        var formsUrl = "${request.route_path('studies.patients_forms')}";
         ko.applyBindings(new PatientFormsManageView(formsUrl), document.getElementById('patient-forms-section'));
 
-        var referenceTypesUrl = "${request.route_path('reference_types')}";
+        var referenceTypesUrl = "${request.route_path('studies.reference_types')}";
         ko.applyBindings(new ReferenceTypesManageView(referenceTypesUrl), document.getElementById('reference-types-section'));
 
       });

@@ -36,7 +36,7 @@ def add_studies(event):
 
 
 @view_config(
-    route_name='studies',
+    route_name='studies.main',
     permission='view',
     renderer='../templates/study/list.pt')
 def list_(request):
@@ -72,7 +72,7 @@ def list_(request):
 
 
 @view_config(
-    route_name='study',
+    route_name='studies.study',
     permission='view',
     renderer='../templates/study/view.pt')
 def view(context, request):
@@ -80,14 +80,14 @@ def view(context, request):
 
 
 @view_config(
-    route_name='study',
+    route_name='studies.study',
     permission='view',
     xhr=True,
     renderer='json')
 def view_json(context, request, deep=True):
     study = context
     data = {
-        '__url__': request.route_path('study', study=study.name),
+        '__url__': request.route_path('studies.study', study=study.name),
         'id': study.id,
         'name': study.name,
         'title': study.title,
@@ -119,7 +119,7 @@ def view_json(context, request, deep=True):
 
 
 @view_config(
-    route_name='study_enrollments',
+    route_name='studies.study_enrollments',
     permission='view',
     renderer='../templates/study/enrollments.pt')
 def enrollments(context, request):
@@ -199,7 +199,7 @@ def enrollments(context, request):
 
 
 @view_config(
-    route_name='study_visits',
+    route_name='studies.study_visits',
     permission='view',
     renderer='../templates/study/visits.pt')
 def visits(context, request):
@@ -294,7 +294,7 @@ def visits(context, request):
 
 
 @view_config(
-    route_name='study_visits_cycle',
+    route_name='studies.study_visits_cycle',
     permission='view',
     renderer='../templates/study/visits_cycle.pt')
 def visits_cycle(context, request):
@@ -404,13 +404,13 @@ def visits_cycle(context, request):
 
 
 @view_config(
-    route_name='studies',
+    route_name='studies.main',
     permission='add',
     request_method='POST',
     xhr=True,
     renderer='json')
 @view_config(
-    route_name='study',
+    route_name='studies.study',
     permission='edit',
     request_method='PUT',
     xhr=True,
@@ -448,13 +448,13 @@ def edit_json(context, request):
 
 
 @view_config(
-    route_name='studies',
+    route_name='studies.main',
     permission='edit',
     xhr=True,
     request_param='vocabulary=available_schemata',
     renderer='json')
 @view_config(
-    route_name='study',
+    route_name='studies.study',
     permission='edit',
     xhr=True,
     request_param='vocabulary=available_schemata',
@@ -534,7 +534,7 @@ def available_schemata(context, request):
 
 
 @view_config(
-    route_name='study',
+    route_name='studies.study',
     permission='delete',
     request_method='DELETE',
     xhr=True,
@@ -559,11 +559,11 @@ def delete_json(context, request):
             mapping={'study': context.title})
     request.session.flash(msg, 'success')
 
-    return {'__next__': request.route_path('studies')}
+    return {'__next__': request.route_path('studies.main')}
 
 
 @view_config(
-    route_name='study_schemata',
+    route_name='studies.study_schemata',
     permission='edit',
     request_method='POST',
     xhr=True,
@@ -656,7 +656,7 @@ def add_schema_json(context, request):
 
 
 @view_config(
-    route_name='study_schema',
+    route_name='studies.study_schema',
     permission='edit',
     request_method='DELETE',
     xhr=True,
@@ -708,7 +708,7 @@ def delete_schema_json(context, request):
 
 
 @view_config(
-    route_name='study_schedule',
+    route_name='studies.study_schedule',
     permission='edit',
     request_method='PUT',
     xhr=True,
@@ -776,7 +776,7 @@ def edit_schedule_json(context, request):
 
 
 @view_config(
-    route_name='study',
+    route_name='studies.study',
     xhr=True,
     permission='edit',
     request_method='POST',

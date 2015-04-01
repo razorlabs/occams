@@ -19,7 +19,7 @@
           <ul class="list-group" tal:condition="viewed_count > 0">
             <tal:patients tal:define="humanize import:humanize" repeat="patient viewed">
               <li class="list-group-item">
-                <a href="${request.route_path('patient', patient=patient.pid)}">${patient.pid}</a>
+                <a href="${request.route_path('studies.patient', patient=patient.pid)}">${patient.pid}</a>
                 &bull;
                 <small class="text-muted">
                   ${humanize.naturaltime(patient['view_date'])}
@@ -38,7 +38,7 @@
           <ul class="list-group" tal:condition="modified > 0">
             <tal:patients tal:define="humanize import:humanize" repeat="patient modified">
               <li class="list-group-item">
-                <a href="${request.route_path('patient', patient=patient.pid)}">${patient.pid}</a>
+                <a href="${request.route_path('studies.patient', patient=patient.pid)}">${patient.pid}</a>
                 &bull;
                 <small class="text-muted">
                   ${humanize.naturaltime(patient.modify_date)}
@@ -54,7 +54,7 @@
       <div id="studies-section" class="col-sm-8" style="display: none;" data-bind="visible: isReady">
         <p class="clearfix">
           <button
-              tal:define="models import:occams.studies.models"
+              tal:define="models import:occams_studies.models"
               tal:condition="request.has_permission('add', models.StudyFactory(request))"
               class="btn btn-default pull-right"
               data-bind="click: startAddStudy"><span class="fa fa-mortar-board"></span> Add Study</button>

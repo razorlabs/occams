@@ -3,7 +3,7 @@
     <div class="modal-content" data-bind="with: $root.editableItem">
       <form
           role="form"
-          data-factory-url="${request.current_route_path(_route_name='enrollments')}"
+          data-factory-url="${request.current_route_path(_route_name='studies.enrollments')}"
           data-bind="submit: $root.saveEnrollment, validate: {}">
         <div class="modal-header">
 

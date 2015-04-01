@@ -49,7 +49,7 @@
               <span class="icon-bar"></span>
             </button>
             <a class="navbar-brand"
-                href="${request.route_path('studies')}">OCCAMS Studies</a>
+                href="${request.route_path('studies.main')}">OCCAMS Studies</a>
           </div> <!--/.navbar-header -->
 
           <div class="collapse navbar-collapse">
@@ -60,7 +60,7 @@
               <li tal:define="
                     factory import:occams_studies.models.StudyFactory;
                     studies factory(request);
-                    url request.route_path('studies');
+                    url request.route_path('studies.main');
                     current_study request.matchdict['study']|nothing;
                     active request.matched_route.name.startswith('stud');"
                   tal:attributes="class python:'active' if active else ''"
@@ -84,7 +84,7 @@
                         class="js-study-option"
                         data-id="${study.id}"
                         tabindex="-1"
-                        href="${request.route_path('study', study=study.name)}">${study.title}</a>
+                        href="${request.route_path('studies.study', study=study.name)}">${study.title}</a>
                   </li>
                 </ul>
               </li> <!-- /#studies-menu -->
@@ -92,8 +92,8 @@
               <li tal:define="
                     factory import:occams_studies.models.ExportFactory;
                     exports factory(request);
-                    url request.route_path('exports');
-                    active request.matched_route.name.startswith('export');"
+                    url request.route_path('studies.exports');
+                    active request.matched_route.name.startswith('studies.export');"
                   tal:attributes="class python:'active' if active else ''"
                   tal:condition="request.has_permission('view', exports)"
                   id="exports-menu"
@@ -107,27 +107,27 @@
                     role="menu"
                     aria-labelledby="exports-dropdown">
                   <li role="presentation"
-                      tal:define="route string:exports"
+                      tal:define="route string:studies.exports"
                       class="${'active' if request.matched_route.name == route else ''}">
                     <a role="menuitem" tabindex="-1" href="${request.route_path(route)}" i18n:translate="">Overview</a>
                   </li>
                   <li role="presentation"
-                      tal:define="route string:exports_checkout"
+                      tal:define="route string:studies.exports_checkout"
                       class="${'active' if request.matched_route.name == route else ''}">
                     <a role="menuitem" tabindex="-1" href="${request.route_path(route)}" i18n:translate="">Create an Export</a>
                   </li>
                   <li role="presentation"
-                      tal:define="route string:exports_status"
+                      tal:define="route string:studies.exports_status"
                       class="${'active' if request.matched_route.name == route else ''}">
                     <a role="menuitem" tabindex="-1" href="${request.route_path(route)}" i18n:translate="">My Exports</a>
                   </li>
                   <li role="presentation"
-                      tal:define="route string:exports_codebook"
+                      tal:define="route string:studies.exports_codebook"
                       class="${'active' if request.matched_route.name == route else ''}">
                     <a role="menuitem" tabindex="-1" href="${request.route_path(route)}" i18n:translate="">Codebook</a>
                   </li>
                   <li role="presentation"
-                      tal:define="route string:exports_faq"
+                      tal:define="route string:studies.exports_faq"
                       class="${'active' if request.matched_route.name == route else ''}">
                     <a role="menuitem" tabindex="-1" href="${request.route_path(route)}" i18n:translate="">FAQ</a>
                   </li>
@@ -138,13 +138,13 @@
             <!--! Search box: do not display if already in the search view -->
             <form class="navbar-form navbar-left" role="search"
                 method="GET"
-                action="${request.route_path('patients')}"
+                action="${request.route_path('studies.patients')}"
                 tal:define="
                   factory import:occams_studies.models.PatientFactory;
                   patients factory(request)"
                 tal:condition="
                   request.has_permission('view', patients)
-                    and request.matched_route.name != 'patients'">
+                    and request.matched_route.name != 'studies.patients'">
               <div class="form-group">
                 <label class="sr-only" for="search">Search</label>
                 <div class="input-group">
@@ -168,7 +168,7 @@
               <li><p class="navbar-text">${user['first_name']}</p></li>
               <li>
                 <a tal:condition="request.has_permission('admin', context)"
-                    href="${request.route_path('settings')}"
+                    href="${request.route_path('studies.settings')}"
                     rel="tooltip"
                     data-placement="bottom"
                     data-container="body"
@@ -204,7 +204,7 @@
                 </ul>
               </li>
               <li>
-                <a href="${request.route_path('logout')}"
+                <a href="${request.route_path('accounts.logout')}"
                     rel="tooltip"
                     data-placement="bottom"
                     data-container="body"

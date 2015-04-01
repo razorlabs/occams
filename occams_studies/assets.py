@@ -13,7 +13,7 @@ def includeme(config):
     scripts = os.path.join(here, 'static/scripts')
 
     env = config.get_webassets_env()
-    env.append_path(os.path.join(here, 'static'), '/%s/static' % config.route_prefix)
+    env.append_path(os.path.join(here, 'static'), '/studies/static')
 
     # "resolves" the path relative to this package
     def rel(path):

@@ -10,7 +10,7 @@ from .. import _, models, Session
 
 
 @view_config(
-    route_name='reference_types',
+    route_name='studies.reference_types',
     permission='view',
     renderer='json')
 def list_json(context, request):
@@ -23,13 +23,13 @@ def list_json(context, request):
 
 
 @view_config(
-    route_name='reference_type',
+    route_name='studies.reference_type',
     permission='view',
     renderer='json')
 def view_json(context, request):
     return {
         '__url__': request.route_path(
-            'reference_type', reference_type=context.name),
+            'studies.reference_type', reference_type=context.name),
         'id': context.id,
         'name': context.name,
         'title': context.title,
@@ -40,12 +40,12 @@ def view_json(context, request):
 
 
 @view_config(
-    route_name='reference_types',
+    route_name='studies.reference_types',
     request_method='POST',
     permission='add',
     renderer='json')
 @view_config(
-    route_name='reference_type',
+    route_name='studies.reference_type',
     request_method='PUT',
     permission='edit',
     renderer='json')
@@ -101,7 +101,7 @@ def edit_json(context, request):
 
 
 @view_config(
-    route_name='reference_type',
+    route_name='studies.reference_type',
     request_method='DELETE',
     permission='delete',
     renderer='json')
@@ -123,7 +123,7 @@ def delete_json(context, request):
 
 
 @view_config(
-    route_name='reference_types',
+    route_name='studies.reference_types',
     permission='view',
     xhr=True,
     request_param='vocabulary=available_reference_types',

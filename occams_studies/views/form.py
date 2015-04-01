@@ -50,13 +50,13 @@ def view_json(context, request):
 
     if isinstance(external, models.Visit):
         url = request.route_path(
-            'visit_form',
+            'studies.visit_form',
             patient=external.patient.pid,
             visit=external.visit_date.isoformat(),
             form=context.id)
     elif isinstance(external, models.Patient):
         url = request.route_path(
-            'patient_form',
+            'studies.patient_form',
             patient=external.pid,
             form=context.id)
     else:
@@ -81,25 +81,25 @@ def view_json(context, request):
 
 
 @view_config(
-    route_name='patient_forms',
+    route_name='studies.patient_forms',
     permission='edit',
     xhr=True,
     request_param='vocabulary=available_schemata',
     renderer='json')
 @view_config(
-    route_name='patient_form',
+    route_name='studies.patient_form',
     permission='edit',
     xhr=True,
     request_param='vocabulary=available_schemata',
     renderer='json')
 @view_config(
-    route_name='visit',
+    route_name='studies.visit',
     permission='edit',
     xhr=True,
     request_param='vocabulary=available_schemata',
     renderer='json')
 @view_config(
-    route_name='visit_form',
+    route_name='studies.visit_form',
     permission='edit',
     xhr=True,
     request_param='vocabulary=available_schemata',
@@ -157,12 +157,12 @@ def available_schemata(context, request):
 
 
 @view_config(
-    route_name='visit_form',
+    route_name='studies.visit_form',
     xhr=True,
     permission='view',
     renderer='string')
 @view_config(
-    route_name='patient_form',
+    route_name='studies.patient_form',
     xhr=True,
     permission='view',
     renderer='string')
@@ -191,13 +191,13 @@ def markup_ajax(context, request):
 
 
 @view_config(
-    route_name='visit_forms',
+    route_name='studies.visit_forms',
     xhr=True,
     permission='add',
     request_method='POST',
     renderer='json')
 @view_config(
-    route_name='patient_forms',
+    route_name='studies.patient_forms',
     xhr=True,
     permission='add',
     request_method='POST',
@@ -261,11 +261,11 @@ def add_json(context, request):
         context.__parent__.entities.add(entity)
         context.__parent__.patient.entities.add(entity)
         next = request.current_route_path(
-            _route_name='visit_form', form=entity.id)
+            _route_name='studies.visit_form', form=entity.id)
     elif isinstance(context.__parent__, models.Patient):
         context.__parent__.entities.add(entity)
         next = request.current_route_path(
-            _route_name='patient_form', form=entity.id)
+            _route_name='studies.patient_form', form=entity.id)
 
     Session.flush()
 
@@ -278,13 +278,13 @@ def add_json(context, request):
 
 
 @view_config(
-    route_name='visit_forms',
+    route_name='studies.visit_forms',
     xhr=True,
     permission='delete',
     request_method='DELETE',
     renderer='json')
 @view_config(
-    route_name='patient_forms',
+    route_name='studies.patient_forms',
     xhr=True,
     permission='delete',
     request_method='DELETE',

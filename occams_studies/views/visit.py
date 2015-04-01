@@ -17,7 +17,7 @@ from . import form as form_views
 
 
 @view_config(
-    route_name='visits',
+    route_name='studies.visits',
     permission='view',
     xhr=True,
     renderer='json')
@@ -38,7 +38,7 @@ def list_json(context, request):
 
 
 @view_config(
-    route_name='visit',
+    route_name='studies.visit',
     permission='view',
     renderer='../templates/visit/view.pt')
 def view(context, request):
@@ -49,14 +49,14 @@ def view(context, request):
 
 
 @view_config(
-    route_name='visit',
+    route_name='studies.visit',
     permission='view',
     xhr=True,
     renderer='json')
 def view_json(context, request):
     visit = context
     return {
-        '__url__': request.route_path('visit',
+        '__url__': request.route_path('studies.visit',
                                       patient=visit.patient.pid,
                                       visit=visit.visit_date.isoformat()),
         'id': visit.id,
@@ -73,7 +73,7 @@ def view_json(context, request):
             'week': cycle.week
             } for cycle in visit.cycles],
         'patient': {
-            '__url__': request.route_path('patient',
+            '__url__': request.route_path('studies.patient',
                                           patient=visit.patient.pid),
             'site': {
                 'title': visit.patient.site.title,
@@ -86,7 +86,7 @@ def view_json(context, request):
 
 
 @view_config(
-    route_name='visits_cycles',
+    route_name='studies.visits_cycles',
     permission='view',
     xhr=True,
     renderer='json')
@@ -123,14 +123,14 @@ def cycles_json(context, request):
 
 
 @view_config(
-    route_name='visits',
+    route_name='studies.visits',
     permission='view',
     request_method='GET',
     request_param='cycles',
     xhr=True,
     renderer='json')
 @view_config(
-    route_name='visit',
+    route_name='studies.visit',
     permission='view',
     request_method='GET',
     request_param='cycles',
@@ -156,13 +156,13 @@ def validate_cycles(context, request):
 
 
 @view_config(
-    route_name='visits',
+    route_name='studies.visits',
     permission='add',
     request_method='POST',
     xhr=True,
     renderer='json')
 @view_config(
-    route_name='visit',
+    route_name='studies.visit',
     permission='edit',
     request_method='PUT',
     xhr=True,
@@ -263,7 +263,7 @@ def edit_json(context, request):
 
 
 @view_config(
-    route_name='visit',
+    route_name='studies.visit',
     permission='delete',
     request_method='DELETE',
     renderer='json')
@@ -276,12 +276,12 @@ def delete_json(context, request):
     request.session.flash(_(
         u'Sucessfully deleted ${visit_date}',
         mapping={'visit_date': context.visit_date}))
-    return {'__next__': request.route_path('patient',
+    return {'__next__': request.route_path('studies.patient',
                                            patient=context.patient.pid)}
 
 
 @view_config(
-    route_name='visit_form',
+    route_name='studies.visit_form',
     permission='view',
     renderer='../templates/visit/form.pt')
 def form(context, request):
