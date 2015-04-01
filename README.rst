@@ -1,5 +1,9 @@
-OCCAMS
-======
+::
+     ___   ___ ___   _   __  __ ___
+    / _ \ / __/ __| /_\ |  \/  / __|
+   | (_) | (_| (__ / _ \| |\/| \__ \
+    \___/ \___\___/_/ \_\_|  |_|___/
+
 
 Clinical research data management and analysis software.
 
@@ -9,8 +13,8 @@ System Requirements
 
   * Python 2.7+
   * npm
-    - bower
-    - lessc (must be installed globally, i.e. with "-g" option)
+      - bower
+      - lessc (must be installed globally, i.e. with "-g" option)
   * redis
   * PostgreSQL 9.3+
 
@@ -23,7 +27,7 @@ These instructions are intended for contributors only.
 Make sure you have the required node packages installed::
 
   > npm install -g bower
-  > npm install -g lessc
+  > npm install -g less
 
 Create a virtual environment for your work::
 
@@ -76,6 +80,7 @@ your desired development environment settings::
 
 Install the appropriate database tables::
 
+  > createdb -U DBADMIN -O DBUSER DBNAME
   > os_initdb -c etc/development.ini
 
 
