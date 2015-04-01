@@ -5,7 +5,9 @@ import wtforms
 import wtforms.fields.html5
 
 from occams import Session
-from .. import _, models
+from occams_datastore import models as datastore
+
+from .. import _
 
 
 class LoginForm(wtforms.Form):
@@ -42,11 +44,11 @@ def login(request):
             request.session.flash(_(u'Invalid credentials'), 'danger')
         else:
             user = (
-                Session.query(models.User)
+                Session.query(datastore.User)
                 .filter_by(key=form.login.data)
                 .first())
             if not user:
-                user = models.User(key=form.login.data)
+                user = datstore.User(key=form.login.data)
                 Session.add(user)
 
             referrer = request.GET.get('referrer')
