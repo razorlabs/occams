@@ -1,7 +1,7 @@
 <header class="page-header" data-bind="with: version">
   <div class="btn-toolbar pull-right" role="toolbar">
     <div class="btn-group">
-      <a href="${request.current_route_path(_route_name='version', _query={'download': 'json'})}"
+      <a href="${request.current_route_path(_route_name='forms.version', _query={'download': 'json'})}"
           class="btn btn-default">
         <span class="fa fa-download"></span>
         <span i18n:translate="">Download</span>
@@ -18,7 +18,7 @@
         <span class="fa fa-calendar"></span>
         <span i18n:translate="">Publish</span>
       </button>
-      <a href="${request.current_route_path(_route_name='version_editor')}"
+      <a href="${request.current_route_path(_route_name='forms.version_editor')}"
           class="btn btn-default">
         <span class="fa fa-edit"></span>
         <span i18n:translate="">Edit</span>
@@ -45,11 +45,11 @@
   </ul>
   <nav tal:define="section section|request.current_route_path(_query={})">
     <ul class="nav nav-header">
-      <li tal:define="url request.current_route_path(_route_name='version', _query={})"
+      <li tal:define="url request.current_route_path(_route_name='forms.version', _query={})"
           tal:attributes="class python:'active' if section == url else ''">
         <a href="${url}" i18n:translate="">Overview</a>
       </li>
-      <li tal:define="url request.current_route_path(_route_name='version_preview', _query={})"
+      <li tal:define="url request.current_route_path(_route_name='forms.version_preview', _query={})"
           tal:attributes="class python:'active' if section == url else ''">
         <a href="${url}" i18n:translate="">Preview</a>
       </li>

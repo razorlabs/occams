@@ -22,7 +22,7 @@ types = [
 
 
 @view_config(
-    route_name='fields',
+    route_name='forms.fields',
     permission='view',
     xhr=True,
     renderer='json')
@@ -30,7 +30,7 @@ def list_json(context, request):
     schema = context.__parent__
     return {
         '__url__':  request.route_path(
-            'fields',
+            'forms.fields',
             form=schema.name,
             version=str(schema.publish_date or schema.id)),
         'fields': [view_json(a, request) for a in schema.itertraverse()]
@@ -38,7 +38,7 @@ def list_json(context, request):
 
 
 @view_config(
-    route_name='field',
+    route_name='forms.field',
     permission='view',
     request_method='GET',
     xhr=True,
@@ -51,7 +51,7 @@ def view_json(context, request):
     data = context.to_json(False)
     data['id'] = context.id
     data['__url__'] = request.route_path(
-        'field',
+        'forms.field',
         form=schema.name,
         version=str(schema.publish_date or schema.id),
         field=context.name)
@@ -64,7 +64,7 @@ def view_json(context, request):
 
 
 @view_config(
-    route_name='field',
+    route_name='forms.field',
     permission='edit',
     request_method='PUT',
     request_param='move',
@@ -129,13 +129,13 @@ def move_json(context, request):
 
 
 @view_config(
-    route_name='fields',
+    route_name='forms.fields',
     permission='add',
     request_method='POST',
     xhr=True,
     renderer='json')
 @view_config(
-    route_name='field',
+    route_name='forms.field',
     permission='edit',
     request_method='PUT',
     xhr=True,
@@ -172,13 +172,13 @@ def edit_json(context, request):
 
 
 @view_config(
-    route_name='fields',
+    route_name='forms.fields',
     permission='edit',
     xhr=True,
     request_param='validate',
     renderer='json')
 @view_config(
-    route_name='field',
+    route_name='forms.field',
     permission='edit',
     xhr=True,
     request_param='validate',
@@ -189,7 +189,7 @@ def validate_value_json(context, request):
 
 
 @view_config(
-    route_name='field',
+    route_name='forms.field',
     permission='edit',
     request_method='DELETE',
     xhr=True,

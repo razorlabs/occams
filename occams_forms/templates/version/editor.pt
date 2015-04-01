@@ -381,8 +381,8 @@
       $(function(){
         'use strict';
         ko.applyBindings(new VersionEditorView({
-            versionUrl: "${request.current_route_path(_route_name='version')}",
-            fieldsUrl: "${request.current_route_path(_route_name='fields')}"
+            versionUrl: "${request.current_route_path(_route_name='forms.version')}",
+            fieldsUrl: "${request.current_route_path(_route_name='forms.fields')}"
           }),
           document.getElementById('version_editor')
         );
