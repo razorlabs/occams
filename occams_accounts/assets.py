@@ -14,7 +14,7 @@ def includeme(config):
 
     # Make sure the platform can find this app's assets
     env = config.get_webassets_env()
-    env.append_path(os.path.join(here, 'static'), '/%s/static' % config.route_prefix)
+    env.append_path(os.path.join(here, 'static'), '/accounts/static')
 
     # "resolves" the path relative to this package
     def rel(path):

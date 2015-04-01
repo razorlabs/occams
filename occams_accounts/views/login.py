@@ -25,7 +25,7 @@ class LoginForm(wtforms.Form):
             wtforms.validators.Length(max=1024)])
 
 
-@view_config(route_name='login', renderer='../templates/login.pt')
+@view_config(route_name='accounts.login', renderer='../templates/login.pt')
 def login(request):
 
     form = LoginForm(request.POST)
@@ -48,13 +48,13 @@ def login(request):
                 .filter_by(key=form.login.data)
                 .first())
             if not user:
-                user = datstore.User(key=form.login.data)
+                user = datastore.User(key=form.login.data)
                 Session.add(user)
 
             referrer = request.GET.get('referrer')
-            if not referrer or request.route_path('login') in referrer:
+            if not referrer or request.route_path('accounts.login') in referrer:
                 # TODO: Maybe send the user to their user dashboard instead?
-                referrer = request.route_path('occams')
+                referrer = request.route_path('occams.main')
 
             return HTTPFound(location=referrer, headers=headers)
 

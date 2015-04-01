@@ -5,9 +5,9 @@ from pyramid.view import view_config
 from .. import _
 
 
-@view_config(route_name='logout')
+@view_config(route_name='accounts.logout')
 def logout(request):
-    login_url = request.route_path('login')
+    login_url = request.route_path('accounts.login')
     forgotten_headers = forget(request)
     msg = _('You have been successfully logged out')
     request.session.invalidate()  # Clear all data
