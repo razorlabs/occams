@@ -1,14 +1,14 @@
 
 ::
 
-  .d88888b.   .d8888b.   .d8888b.        d8888 888b     d888  .d8888b.
- d88P" "Y88b d88P  Y88b d88P  Y88b      d88888 8888b   d8888 d88P  Y88b
- 888     888 888    888 888    888     d88P888 88888b.d88888 Y88b.
- 888     888 888        888           d88P 888 888Y88888P888  "Y888b.
- 888     888 888        888          d88P  888 888 Y888P 888     "Y88b.
- 888     888 888    888 888    888  d88P   888 888  Y8P  888       "888
- Y88b. .d88P Y88b  d88P Y88b  d88P d8888888888 888   "   888 Y88b  d88P
-  "Y88888P"   "Y8888P"   "Y8888P" d88P     888 888       888  "Y8888P"
+    .d88888b.   .d8888b.   .d8888b.        d8888 888b     d888  .d8888b.
+   d88P" "Y88b d88P  Y88b d88P  Y88b      d88888 8888b   d8888 d88P  Y88b
+   888     888 888    888 888    888     d88P888 88888b.d88888 Y88b.
+   888     888 888        888           d88P 888 888Y88888P888  "Y888b.
+   888     888 888        888          d88P  888 888 Y888P 888     "Y88b.
+   888     888 888    888 888    888  d88P   888 888  Y8P  888       "888
+   Y88b. .d88P Y88b  d88P Y88b  d88P d8888888888 888   "   888 Y88b  d88P
+    "Y88888P"   "Y8888P"   "Y8888P" d88P     888 888       888  "Y8888P"
 
 
 **O**pen Source **C**linical **C**ontent **A**nalysis and **M**anagement **S**ystem
@@ -17,7 +17,13 @@
 Goals
 -----
 
-**TODO**
+  * Form versioning
+  * Direct data entry instead of using paper forms
+  * Data auditing
+  * Singular data points with multiple references
+  * Data workflow captured by the system design, but flexible enough to work for multiple use-cases
+  * Secure, role-based data access control
+  * A Relational Database that could describe how data are related through structure instead of convention
 
 
 System Requirements
