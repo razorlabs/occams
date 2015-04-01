@@ -5,7 +5,6 @@ import pkg_resources
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.config import Configurator
 from pyramid.i18n import TranslationStringFactory
-from pyramid.path import DottedNameResolver
 from pyramid.settings import aslist
 from pyramid_who.whov2 import WhoV2AuthenticationPolicy
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -77,16 +76,8 @@ def main(global_config, **settings):
     config.scan()
 
     # Appliation includes
-    resolver = DottedNameResolver()
     for name in settings['occams.apps']:
-        app = resolver.maybe_resolve(name)
-        prefix = getattr(app, '__prefix__', None)
-        if prefix:
-            log.debug('Mounting %s at %s' % (name, prefix))
-            config.include(app, route_prefix=prefix)
-        else:
-            log.debug('Mounting %s at /' % name)
-            config.include(app)
+        config.include(name)
     config.commit()
 
     app = config.make_wsgi_app()

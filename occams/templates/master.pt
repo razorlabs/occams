@@ -49,7 +49,7 @@
               <span class="icon-bar"></span>
             </button>
             <a class="navbar-brand"
-                href="${request.route_path('occams')}">OCCAMS</a>
+                href="${request.route_path('occams.main')}">OCCAMS</a>
           </div> <!--/.navbar-header -->
 
           <div class="collapse navbar-collapse">
@@ -86,7 +86,7 @@
                 </ul>
               </li>
               <li>
-                <a href="${request.route_path('logout')}"
+                <a href="${request.route_path('accounts.logout')}"
                     rel="tooltip"
                     data-placement="bottom"
                     data-container="body"
