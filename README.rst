@@ -11,7 +11,7 @@
     "Y88888P"   "Y8888P"   "Y8888P" d88P     888 888       888  "Y8888P"
 
 
-**O**pen Source **C**linical **C**ontent **A**nalysis and **M**anagement **S**ystem
+**O**\ pen Source **C**\ linical **C**\ ontent **A**\ nalysis and **M**\ anagement **S**\ ystem
 
 
 Goals
@@ -111,3 +111,9 @@ If you applications are using asynchronous tasks, you'll need to start the
 celery worker::
 
   > celery worker --autoreload --app "occams.studies.tasks" --loglevel INFO --without-gossip --ini etc/development.ini
+
+
+Configuration
+-------------
+
+**TODO**
