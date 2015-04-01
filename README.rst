@@ -76,7 +76,7 @@ your desired development environment settings::
 
 Install the appropriate database tables::
 
-  > oc_initdb -c etc/development.ini
+  > os_initdb -c etc/development.ini
 
 
 Start the web service::
