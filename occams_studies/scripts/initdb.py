@@ -29,7 +29,7 @@ def main(argv=sys.argv):
         filename, _, app = args.config.partition('#')
         setup_logging(filename)
         settings = get_appsettings(args.config)
-        engine = engine_from_config(settings, 'app.db.')
+        engine = engine_from_config(settings, 'occams.db.')
         alembic_cfg = Config(filename)
 
     elif args.db:
