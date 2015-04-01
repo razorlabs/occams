@@ -1,5 +1,5 @@
 # flake8: NOQA
-from . import log, models
+from . import log
 
 
 def includeme(config):
