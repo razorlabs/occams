@@ -37,18 +37,18 @@ def includeme(config):
                 for root, dirnames, filenames in os.walk(scripts)
                 for filename in filenames if filename.endswith('.js')],
             filters='jsmin'),
-        output='gen/default.%(version)s.min.js'))
+        output='gen/forms.%(version)s.min.js'))
 
     config.add_webasset('forms-css', Bundle(
         Bundle(
             rel('styles/main.less'),
             filters='less',
             depends=rel('styles/*.less'),
-            output='gen/main.%(version)s.min.css'),
+            output='gen/forms-main.%(version)s.min.css'),
         Bundle(rel('bower_components/select2/select2.css'), filters='cssrewrite'),
         rel('bower_components/select2-bootstrap-css/select2-bootstrap.css'),
         Bundle(rel('bower_components/bootstrap-fileinput/css/fileinput.min.css'), filters='cssrewrite'),
         filters='cssmin',
-        output='gen/default.%(version)s.css'))
+        output='gen/forms.%(version)s.css'))
 
     log.debug('Assets configurated')
