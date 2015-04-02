@@ -88,8 +88,6 @@ parts
 sdist
 var
 develop.cfg
-development.ini
-production.ini
 res
 refs
 gen
