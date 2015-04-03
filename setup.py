@@ -20,6 +20,7 @@ REQUIRES = [
     'python-slugify',                   # path-friendly filenames
     'pyramid>=1.5',                     # Framework
     'pyramid_chameleon',                # Templating
+    'pyramid_exclog',                   # Logging for production
     'pyramid_tm',                       # Centralized transations
     'pyramid_redis_sessions',           # HTTP session with redis backend
     'pyramid_rewrite',                  # Allows urls to end in "/"
@@ -31,13 +32,17 @@ REQUIRES = [
     'wtforms',
     'wtforms-json',
     'zope.sqlalchemy',                  # Connects sqlalchemy to pyramid_tm
-
-    'occams_datastore',                 # Built-in app: database
-    'occams_accounts',                  # Build-in app: account management
 ]
 
 EXTRAS = {
-    'ldap': ['python3-ldap', 'who_ldap'],
+    'apps': [
+        'occams_datastore',
+        'occams_accounts',
+        'occams_studies',
+        'occams_forms'
+        'occams_lims'
+    ],
+    'ldap': ['who_ldap'],
     'sqlite': [],
     'postgresql': ['psycopg2', 'psycogreen'],
     'gunicorn': ['gunicorn'],

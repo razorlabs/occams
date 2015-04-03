@@ -5,7 +5,6 @@ import pkg_resources
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.config import Configurator
 from pyramid.i18n import TranslationStringFactory
-from pyramid.path import DottedNameResolver
 from pyramid.settings import aslist
 from pyramid_who.whov2 import WhoV2AuthenticationPolicy
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -45,11 +44,14 @@ def main(global_config, **settings):
     This function returns a Pyramid WSGI application.
     """
 
+    # Applies setting defaults if not specified
     for key, value in settings_defaults.items():
         settings.setdefault(key, value)
 
-    settings['occams.apps'] = set(aslist(settings.get('occams.apps') or ''))
-    settings['occams.apps'].update(['occams_datastore', 'occams_accounts'])
+    # Make sure we at least have te
+    required_apps = set(['occams_datastore', 'occams_accounts'])
+    included_apps = set(aslist(settings.get('occams.apps') or ''))
+    settings['occams.apps'] = required_apps | included_apps
 
     config = Configurator(
         settings=settings,
@@ -63,6 +65,8 @@ def main(global_config, **settings):
     # Built-in plugins
     config.include('pyramid_chameleon')
     config.include('pyramid_redis_sessions')
+    config.include('pyramid_rewrite')
+    config.add_rewrite_rule(r'/(?P<path>.*)/', r'/%(path)s')
     config.include('pyramid_tm')
     config.include('pyramid_webassets')
     config.commit()
@@ -73,20 +77,12 @@ def main(global_config, **settings):
     config.include('.models')
     config.include('.routes')
     config.include('.security')
-    config.commit()
     config.scan()
+    config.commit()
 
     # Appliation includes
-    resolver = DottedNameResolver()
     for name in settings['occams.apps']:
-        app = resolver.maybe_resolve(name)
-        prefix = getattr(app, '__prefix__', None)
-        if prefix:
-            log.debug('Mounting %s at %s' % (name, prefix))
-            config.include(app, route_prefix=prefix)
-        else:
-            log.debug('Mounting %s at /' % name)
-            config.include(app)
+        config.include(name)
     config.commit()
 
     app = config.make_wsgi_app()

@@ -1,20 +1,5 @@
-from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound
-from pyramid.view import \
-    forbidden_view_config, notfound_view_config, view_config
-
-
-@notfound_view_config(append_slash=True)
-def notfound(request):
-    """
-    Tries appending a slash at the end of the URL before giving up
-
-    Note that this does not work for POST requests as they will
-    be turned into GET requests:
-    http://docs.pylonsproject.org/projects/pyramid/en/latest/narr/urldispatch.html#redirecting-to-slash-appended-routes
-    This is a small price to pay instead of using pyramid_rewrite
-    """
-
-    return HTTPNotFound()
+from pyramid.httpexceptions import HTTPForbidden
+from pyramid.view import forbidden_view_config, view_config
 
 
 @forbidden_view_config(renderer='../templates/error/forbidden.pt')
