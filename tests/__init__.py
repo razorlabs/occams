@@ -37,7 +37,7 @@ def setup_package():
     """
     from sqlalchemy import create_engine
     from testconfig import config
-    from occams.forms import Session
+    from occams_forms import Session
 
     Session.configure(bind=create_engine(config.get('db')))
 
@@ -50,7 +50,7 @@ class IntegrationFixture(unittest.TestCase):
     def setUp(self):
         from pyramid import testing
         import transaction
-        from occams.forms import models, Session
+        from occams_forms import models, Session
 
         self.config = testing.setUp()
 
@@ -77,7 +77,7 @@ class FunctionalFixture(unittest.TestCase):
     def setUpClass(cls):
         import tempfile
         from pyramid.path import AssetResolver
-        from occams.forms import main, Session
+        from occams_forms import main, Session
         import six
 
         # The pyramid_who plugin requires a who file, so let's create a
@@ -100,7 +100,7 @@ class FunctionalFixture(unittest.TestCase):
             'redis.url': REDIS_URL,
             'redis.sessions.secret': 'sekrit',
             'webassets.base_dir': (AssetResolver()
-                                   .resolve('occams.forms:static')
+                                   .resolve('occams_forms:static')
                                    .abspath()),
             'webassets.base_url': '/static',
             'webassets.debug': 'false',
@@ -118,7 +118,7 @@ class FunctionalFixture(unittest.TestCase):
 
     def tearDown(self):
         import transaction
-        from occams.forms import Session, models
+        from occams_forms import Session, models
         with transaction.manager:
             Session.query(models.User).delete()
         Session.remove()
