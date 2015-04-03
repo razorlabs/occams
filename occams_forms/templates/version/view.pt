@@ -11,7 +11,7 @@
     <div class="alert alert-info">
       <span class="glyphicon glyphicon-info-sign"></span>
       <span i18n:translate="">
-        Variable definitions for the form. Please not that this list
+        Variable definitions for the form. Please note that this list
         contains only the variables managed throught the editor.
         External systems may supplement additional system variables not
         listed here.
