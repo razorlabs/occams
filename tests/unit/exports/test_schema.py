@@ -9,7 +9,7 @@ class TestSchemaPlan(IntegrationFixture):
         Note this is not the same as de-identification)
         """
         from datetime import date
-        from occams.studies import Session, models, exports
+        from occams_studies import Session, models, exports
 
         schema = models.Schema(
             name=u'contact',
@@ -38,7 +38,7 @@ class TestSchemaPlan(IntegrationFixture):
         It should not include randomization data if specified.
         """
         from datetime import date, timedelta
-        from occams.studies import Session, models, exports
+        from occams_studies import Session, models, exports
 
         schema = models.Schema(
             name=u'vitals',
@@ -84,7 +84,7 @@ class TestSchemaPlan(IntegrationFixture):
         It should add patient-specific metadata to the report
         """
         from datetime import date
-        from occams.studies import Session, models, exports
+        from occams_studies import Session, models, exports
 
         schema = models.Schema(
             name=u'contact',
@@ -126,7 +126,7 @@ class TestSchemaPlan(IntegrationFixture):
         It should add enrollment-specific metadata to the report
         """
         from datetime import date, timedelta
-        from occams.studies import Session, models, exports
+        from occams_studies import Session, models, exports
 
         schema = models.Schema(
             name=u'termination',
@@ -180,7 +180,7 @@ class TestSchemaPlan(IntegrationFixture):
         It should add visit-specific metadata to the report
         """
         from datetime import date, timedelta
-        from occams.studies import Session, models, exports
+        from occams_studies import Session, models, exports
 
         schema = models.Schema(
             name=u'vitals',
@@ -250,7 +250,7 @@ class TestSchemaPlan(IntegrationFixture):
         It should add randomization-specific metadata to the report
         """
         from datetime import date, timedelta
-        from occams.studies import Session, models, exports
+        from occams_studies import Session, models, exports
 
         schema = models.Schema(
             name=u'vitals',

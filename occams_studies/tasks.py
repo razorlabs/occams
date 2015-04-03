@@ -80,13 +80,13 @@ def on_preload_parsed(options, **kwargs):
     Use Pyramid applicaiton settings  for all types of celery commands
     """
     # Have the pyramid app initialize all settings
-    env = bootstrap(options['ini'] + '#occams.studies')
+    env = bootstrap(options['ini'])
 
     # Setup resources for tasks
     celery.settings = env['registry'].settings
     celery.redis = env['request'].redis
 
-    user = celery.settings['app.export.user']
+    user = celery.settings['studies..export.user']
 
     if not Session.query(models.User).filter_by(key=user).first():
         with transaction.manager:

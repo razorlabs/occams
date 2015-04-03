@@ -4,16 +4,16 @@ from tests import IntegrationFixture
 
 
 def _register_routes(config):
-    config.add_route('patient', '/p/{patient}')
-    config.add_route('enrollment', '/e/{enrollment}')
-    config.add_route('enrollment_randomization', '/e/{enrollment}/rand')
-    config.add_route('enrollment_termination', '/e/{enrollment}/term')
+    config.add_route('studies.patient', '/p/{patient}')
+    config.add_route('studies.enrollment', '/e/{enrollment}')
+    config.add_route('studies.enrollment_randomization', '/e/{enrollment}/rand')
+    config.add_route('studies.enrollment_termination', '/e/{enrollment}/term')
 
 
 class TestViewJson(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.enrollment import view_json as view
+        from occams_studies.views.enrollment import view_json as view
         return view(context, request)
 
     def test_hide_blinded_randomization(self):
@@ -22,7 +22,7 @@ class TestViewJson(IntegrationFixture):
         """
         from datetime import date
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         _register_routes(self.config)
 
@@ -69,11 +69,11 @@ class TestViewJson(IntegrationFixture):
         self.assertIsNone(response['stratum']['arm'])
 
 
-@mock.patch('occams.studies.views.enrollment.check_csrf_token')
+@mock.patch('occams_studies.views.enrollment.check_csrf_token')
 class TestEditJson(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.enrollment import edit_json as view
+        from occams_studies.views.enrollment import edit_json as view
         return view(context, request)
 
     def test_unique_consent(self, check_csrf_token):
@@ -83,7 +83,7 @@ class TestEditJson(IntegrationFixture):
         from datetime import date
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         _register_routes(self.config)
 
@@ -134,7 +134,7 @@ class TestEditJson(IntegrationFixture):
         from datetime import date
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         _register_routes(self.config)
 
@@ -188,7 +188,7 @@ class TestEditJson(IntegrationFixture):
         from datetime import date, timedelta
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         _register_routes(self.config)
 
@@ -232,7 +232,7 @@ class TestEditJson(IntegrationFixture):
         from datetime import date, timedelta
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         _register_routes(self.config)
 
@@ -277,7 +277,7 @@ class TestEditJson(IntegrationFixture):
         """
         from datetime import date
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         _register_routes(self.config)
 
@@ -306,11 +306,11 @@ class TestEditJson(IntegrationFixture):
         self.assertLess(old_modify_date, patient.modify_date)
 
 
-@mock.patch('occams.studies.views.enrollment.check_csrf_token')
+@mock.patch('occams_studies.views.enrollment.check_csrf_token')
 class TestDeleteJson(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.enrollment import delete_json as view
+        from occams_studies.views.enrollment import delete_json as view
         return view(context, request)
 
     def test_update_patient(self, check_csrf_token):
@@ -319,7 +319,7 @@ class TestDeleteJson(IntegrationFixture):
         """
         from datetime import date
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         _register_routes(self.config)
 
@@ -353,7 +353,7 @@ class TestDeleteJson(IntegrationFixture):
         """
         from datetime import date
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         _register_routes(self.config)
 

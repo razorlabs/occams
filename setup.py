@@ -107,7 +107,7 @@ def _post_develop():
 setup(
     name='occams_studies',
     version=get_version(),
-    description='occams.studies',
+    description='occams_studies',
     long_description=README + '\n\n' + CHANGES,
     classifiers=[
         "Programming Language :: Python",
@@ -117,7 +117,7 @@ setup(
     ],
     author='UCSD BIT Core Team',
     author_email='bitcore@ucsd.edu',
-    url='https://bitbutcket.org/ucsdbitcore/occams.studies',
+    url='https://bitbutcket.org/ucsdbitcore/occams_studies',
     keywords='web wsgi bfg pylons pyramid',
     packages=find_packages(),
     include_package_data=True,

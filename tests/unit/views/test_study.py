@@ -3,11 +3,11 @@ import mock
 from tests import IntegrationFixture
 
 
-@mock.patch('occams.studies.views.study.check_csrf_token')
+@mock.patch('occams_studies.views.study.check_csrf_token')
 class TestEditJson(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.study import edit_json as view
+        from occams_studies.views.study import edit_json as view
         return view(context, request)
 
     def test_add(self, check_csrf_token):
@@ -16,9 +16,9 @@ class TestEditJson(IntegrationFixture):
         """
         from datetime import date
         from pyramid import testing
-        from occams.studies import Session, models
+        from occams_studies import Session, models
 
-        self.config.add_route('study', '/{study}')
+        self.config.add_route('studies.study', '/{study}')
 
         self.call_view(models.StudyFactory(None), testing.DummyRequest(
             json_body={
@@ -37,7 +37,7 @@ class TestEditJson(IntegrationFixture):
         from datetime import date
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         study = models.Study(
             name='some-study',
@@ -68,9 +68,9 @@ class TestEditJson(IntegrationFixture):
         """
         from datetime import date
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
-        self.config.add_route('study', '/{study}')
+        self.config.add_route('studies.study', '/{study}')
 
         study = models.Study(
             name='some-study',
@@ -92,11 +92,11 @@ class TestEditJson(IntegrationFixture):
         self.assertIsNotNone(response)
 
 
-@mock.patch('occams.studies.views.study.check_csrf_token')
+@mock.patch('occams_studies.views.study.check_csrf_token')
 class TestDeleteJson(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.study import delete_json as view
+        from occams_studies.views.study import delete_json as view
         return view(context, request)
 
     def test_no_enrollments(self, check_csrf_token):
@@ -106,9 +106,9 @@ class TestDeleteJson(IntegrationFixture):
 
         from datetime import date
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
-        self.config.add_route('studies', '/')
+        self.config.add_route('studies.main', '/')
 
         study = models.Study(
             name=u'somestudy',
@@ -132,9 +132,9 @@ class TestDeleteJson(IntegrationFixture):
         from datetime import date
         from pyramid import testing
         from pyramid.httpexceptions import HTTPForbidden
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
-        self.config.add_route('studies', '/')
+        self.config.add_route('studies.main', '/')
 
         study = models.Study(
             name=u'somestudy',
@@ -164,11 +164,11 @@ class TestDeleteJson(IntegrationFixture):
         self.assertEqual(0, Session.query(models.Study).count())
 
 
-@mock.patch('occams.studies.views.study.check_csrf_token')
+@mock.patch('occams_studies.views.study.check_csrf_token')
 class TestAddSchemaJson(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.study import add_schema_json as view
+        from occams_studies.views.study import add_schema_json as view
         return view(context, request)
 
     def test_basic(self, check_csrf_token):
@@ -177,7 +177,7 @@ class TestAddSchemaJson(IntegrationFixture):
         """
         from datetime import date
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         schema = models.Schema(
             name='test', title=u'', publish_date=date.today())
@@ -204,7 +204,7 @@ class TestAddSchemaJson(IntegrationFixture):
         """
         from datetime import date, timedelta
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         today = date.today()
         tomorrow = today + timedelta(days=1)
@@ -242,7 +242,7 @@ class TestAddSchemaJson(IntegrationFixture):
         from datetime import date
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         schema = models.Schema(name='test', title=u'')
 
@@ -277,7 +277,7 @@ class TestAddSchemaJson(IntegrationFixture):
         from datetime import date
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         schema = models.Schema(
             name='test', title=u'', publish_date=date.today())
@@ -308,7 +308,7 @@ class TestAddSchemaJson(IntegrationFixture):
         from datetime import date
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         schema = models.Schema(
             name='test', title=u'', publish_date=date.today())
@@ -344,7 +344,7 @@ class TestAddSchemaJson(IntegrationFixture):
         from datetime import date
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         schema = models.Schema(
             name='test', title=u'', publish_date=date.today())
@@ -377,7 +377,7 @@ class TestAddSchemaJson(IntegrationFixture):
         from datetime import date
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         schema = models.Schema(
             name='test', title=u'', publish_date=date.today())
@@ -403,11 +403,11 @@ class TestAddSchemaJson(IntegrationFixture):
             cm.exception.json['errors']['schema'].lower())
 
 
-@mock.patch('occams.studies.views.study.check_csrf_token')
+@mock.patch('occams_studies.views.study.check_csrf_token')
 class TestDeleteSchemaJson(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.study import delete_schema_json as view
+        from occams_studies.views.study import delete_schema_json as view
         return view(context, request)
 
     def test_success(self, check_csrf_token):
@@ -416,7 +416,7 @@ class TestDeleteSchemaJson(IntegrationFixture):
         """
         from datetime import date
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         schema = models.Schema(
             name='test', title=u'', publish_date=date.today())
@@ -453,7 +453,7 @@ class TestDeleteSchemaJson(IntegrationFixture):
         from datetime import date
         from pyramid import testing
         from pyramid.httpexceptions import HTTPNotFound
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         study = models.Study(
             name=u'somestudy',
@@ -471,11 +471,11 @@ class TestDeleteSchemaJson(IntegrationFixture):
                 matchdict={'schema': 'idonotexist'}))
 
 
-@mock.patch('occams.studies.views.study.check_csrf_token')
+@mock.patch('occams_studies.views.study.check_csrf_token')
 class TestEditScheduleJson(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.study import edit_schedule_json as view
+        from occams_studies.views.study import edit_schedule_json as view
         return view(context, request)
 
     def test_schema_in_study(self, check_csrf_tokne):
@@ -485,7 +485,7 @@ class TestEditScheduleJson(IntegrationFixture):
         from datetime import date
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         schema = models.Schema(
             name='test', title=u'Test', publish_date=date.today())
@@ -525,7 +525,7 @@ class TestEditScheduleJson(IntegrationFixture):
         from datetime import date
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         schema = models.Schema(
             name='test', title=u'Test', publish_date=date.today())
@@ -570,7 +570,7 @@ class TestEditScheduleJson(IntegrationFixture):
         """
         from datetime import date
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         schema = models.Schema(
             name='test', title=u'Test', publish_date=date.today())
@@ -607,7 +607,7 @@ class TestEditScheduleJson(IntegrationFixture):
         """
         from datetime import date
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         schema = models.Schema(
             name='test', title=u'Test', publish_date=date.today())
@@ -640,11 +640,11 @@ class TestEditScheduleJson(IntegrationFixture):
         self.assertNotIn(schema, cycle.schemata)
 
 
-@mock.patch('occams.studies.views.study.check_csrf_token')
+@mock.patch('occams_studies.views.study.check_csrf_token')
 class TestAvailableSchemata(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.study import available_schemata as view
+        from occams_studies.views.study import available_schemata as view
         return view(context, request)
 
     def test_no_params(self, check_csrf_token):
@@ -654,7 +654,7 @@ class TestAvailableSchemata(IntegrationFixture):
         from datetime import date
         from pyramid import testing
         from webob.multidict import MultiDict
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         Session.add_all([
             models.Schema(name='v', title=u'V', publish_date=date.today())])
@@ -671,7 +671,7 @@ class TestAvailableSchemata(IntegrationFixture):
         from datetime import date
         from pyramid import testing
         from webob.multidict import MultiDict
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         Session.add_all([
             models.Schema(name='v', title=u'V', publish_date=date.today()),
@@ -690,7 +690,7 @@ class TestAvailableSchemata(IntegrationFixture):
         from datetime import date, timedelta
         from pyramid import testing
         from webob.multidict import MultiDict
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         today = date.today()
         tomorrow = date.today() + timedelta(days=1)
@@ -712,7 +712,7 @@ class TestAvailableSchemata(IntegrationFixture):
         from datetime import date
         from pyramid import testing
         from webob.multidict import MultiDict
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         x = models.Schema(name='x', title=u'x', publish_date=date.today())
         y = models.Schema(name='y', title=u'Y', publish_date=date.today())
@@ -742,7 +742,7 @@ class TestAvailableSchemata(IntegrationFixture):
         from datetime import date
         from pyramid import testing
         from webob.multidict import MultiDict
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         x = models.Schema(name='x', title=u'x', publish_date=date.today())
         y = models.Schema(name='y', title=u'Y', publish_date=date.today())
@@ -771,7 +771,7 @@ class TestAvailableSchemata(IntegrationFixture):
         from datetime import date
         from pyramid import testing
         from webob.multidict import MultiDict
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         x = models.Schema(name='x', title=u'x', publish_date=date.today())
         y = models.Schema(name='y', title=u'Y', publish_date=date.today())
@@ -794,11 +794,11 @@ class TestAvailableSchemata(IntegrationFixture):
         self.assertEqual('y', result['schemata'][0]['name'])
 
 
-@mock.patch('occams.studies.views.study.check_csrf_token')
+@mock.patch('occams_studies.views.study.check_csrf_token')
 class TestUploadRandomizationJson(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.study import \
+        from occams_studies.views.study import \
             upload_randomization_json as view
         return view(context, request)
 
@@ -810,7 +810,7 @@ class TestUploadRandomizationJson(IntegrationFixture):
         from datetime import date
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         study = models.Study(
             name=u'somestudy',
@@ -836,7 +836,7 @@ class TestUploadRandomizationJson(IntegrationFixture):
         from datetime import date
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         schema = models.Schema(
             name='rand', title=u'Rand', publish_date=date.today())
@@ -877,7 +877,7 @@ class TestUploadRandomizationJson(IntegrationFixture):
         from datetime import date
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         schema = models.Schema(
             name='rand', title=u'Rand', publish_date=date.today(),
@@ -928,7 +928,7 @@ class TestUploadRandomizationJson(IntegrationFixture):
         import csv
         from datetime import date
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         schema = models.Schema(
             name='rand', title=u'Rand', publish_date=date.today(),
@@ -985,7 +985,7 @@ class TestUploadRandomizationJson(IntegrationFixture):
         from datetime import date
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         schema = models.Schema(
             name='rand', title=u'Rand', publish_date=date.today(),

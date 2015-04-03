@@ -6,7 +6,7 @@ from tests import IntegrationFixture
 class TestCyclesJson(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.visit import cycles_json as view
+        from occams_studies.views.visit import cycles_json as view
         return view(context, request)
 
     def test_by_query(self):
@@ -15,7 +15,7 @@ class TestCyclesJson(IntegrationFixture):
         """
         from datetime import date
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
         from webob.multidict import MultiDict
 
         study = models.Study(
@@ -50,7 +50,7 @@ class TestCyclesJson(IntegrationFixture):
         """
         from datetime import date
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
         from webob.multidict import MultiDict
 
         study = models.Study(
@@ -83,7 +83,7 @@ class TestCyclesJson(IntegrationFixture):
 class TestValidateCycles(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.visit import validate_cycles as view
+        from occams_studies.views.visit import validate_cycles as view
         return view(context, request)
 
     def test_call_success(self):
@@ -92,7 +92,7 @@ class TestValidateCycles(IntegrationFixture):
         """
         from datetime import date
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
         from webob.multidict import MultiDict
 
         study = models.Study(
@@ -129,7 +129,7 @@ class TestValidateCycles(IntegrationFixture):
         """
         from pyramid import testing
         from webob.multidict import MultiDict
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         patient = models.Patient(
             site=models.Site(name=u'ucsd', title=u'UCSD'),
@@ -143,11 +143,11 @@ class TestValidateCycles(IntegrationFixture):
         self.assertIn('not found', response.lower())
 
 
-@mock.patch('occams.studies.views.visit.check_csrf_token')
+@mock.patch('occams_studies.views.visit.check_csrf_token')
 class TestEditJson(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.visit import edit_json as view
+        from occams_studies.views.visit import edit_json as view
         return view(context, request)
 
     def test_valid_cycle(self, check_csrf_token):
@@ -157,10 +157,10 @@ class TestEditJson(IntegrationFixture):
         from datetime import date
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
-        self.config.add_route('patient', '/{patient}')
-        self.config.add_route('visit', '/{patient}/{visit}')
+        self.config.add_route('studies.patient', '/{patient}')
+        self.config.add_route('studies.visit', '/{patient}/{visit}')
 
         Session.add(models.State(name='pending-entry', title=u''))
 
@@ -187,10 +187,10 @@ class TestEditJson(IntegrationFixture):
         from datetime import date, timedelta
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
-        self.config.add_route('patient', '/{patient}')
-        self.config.add_route('visit', '/{patient}/{visit}')
+        self.config.add_route('studies.patient', '/{patient}')
+        self.config.add_route('studies.visit', '/{patient}/{visit}')
 
         Session.add(models.State(name='pending-entry', title=u''))
 
@@ -243,10 +243,10 @@ class TestEditJson(IntegrationFixture):
         from datetime import date
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
-        self.config.add_route('patient', '/{patient}')
-        self.config.add_route('visit', '/{patient}/{visit}')
+        self.config.add_route('studies.patient', '/{patient}')
+        self.config.add_route('studies.visit', '/{patient}/{visit}')
 
         Session.add(models.State(name='pending-entry', title=u''))
 
@@ -301,11 +301,11 @@ class TestEditJson(IntegrationFixture):
         """
         from datetime import date, timedelta
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
-        self.config.add_route('patient', '/{patient}')
-        self.config.add_route('visit', '/{patient}/{visit}')
-        self.config.add_route('visit_form', '/forms/{form}')
+        self.config.add_route('studies.patient', '/{patient}')
+        self.config.add_route('studies.visit', '/{patient}/{visit}')
+        self.config.add_route('studies.visit_form', '/forms/{form}')
 
         Session.add(models.State(name='pending-entry', title=u''))
 
@@ -372,11 +372,11 @@ class TestEditJson(IntegrationFixture):
         """
         from datetime import date, timedelta
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
-        self.config.add_route('patient', '/{patient}')
-        self.config.add_route('visit', '/{patient}/{visit}')
-        self.config.add_route('visit_form', '/forms/{form}')
+        self.config.add_route('studies.patient', '/{patient}')
+        self.config.add_route('studies.visit', '/{patient}/{visit}')
+        self.config.add_route('studies.visit_form', '/forms/{form}')
 
         Session.add(models.State(name='pending-entry', title=u''))
 
@@ -422,10 +422,10 @@ class TestEditJson(IntegrationFixture):
         """
         from datetime import date
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
-        self.config.add_route('patient', '/{patient}')
-        self.config.add_route('visit', '/{patient}/{visit}')
+        self.config.add_route('studies.patient', '/{patient}')
+        self.config.add_route('studies.visit', '/{patient}/{visit}')
 
         Session.add(models.State(name='pending-entry', title=u''))
 
@@ -456,11 +456,11 @@ class TestEditJson(IntegrationFixture):
         self.assertLess(old_modify_date, patient.modify_date)
 
 
-@mock.patch('occams.studies.views.visit.check_csrf_token')
+@mock.patch('occams_studies.views.visit.check_csrf_token')
 class TestDeleteJson(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.visit import delete_json as view
+        from occams_studies.views.visit import delete_json as view
         return view(context, request)
 
     def test_update_patient(self, check_csrf_token):
@@ -469,9 +469,9 @@ class TestDeleteJson(IntegrationFixture):
         """
         from datetime import date
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
-        self.config.add_route('patient', '/{patient}')
+        self.config.add_route('studies.patient', '/{patient}')
 
         patient = models.Patient(
             site=models.Site(name=u'ucsd', title=u'UCSD'),
@@ -494,9 +494,9 @@ class TestDeleteJson(IntegrationFixture):
         """
         from datetime import date
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
-        self.config.add_route('patient', '/{patient}')
+        self.config.add_route('studies.patient', '/{patient}')
 
         schema = models.Schema(
             name=u'sample',
@@ -547,11 +547,11 @@ class TestDeleteJson(IntegrationFixture):
         self.assertEquals(0, Session.query(models.Entity).count())
 
 
-@mock.patch('occams.studies.views.form.check_csrf_token')
+@mock.patch('occams_studies.views.form.check_csrf_token')
 class TestFormAddJson(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.form import add_json as view
+        from occams_studies.views.form import add_json as view
         return view(context, request)
 
     def test_one(self, check_csrf_token):
@@ -560,9 +560,9 @@ class TestFormAddJson(IntegrationFixture):
         """
         from datetime import date, timedelta
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
-        self.config.add_route('visit_form', '/vf/{form}')
+        self.config.add_route('studies.visit_form', '/vf/{form}')
 
         default_state = models.State(name='pending-entry', title=u'')
 
@@ -616,7 +616,7 @@ class TestFormAddJson(IntegrationFixture):
         from datetime import date, timedelta
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         default_state = models.State(name='pending-entry', title=u'')
 
@@ -655,11 +655,11 @@ class TestFormAddJson(IntegrationFixture):
             cm.exception.json['errors']['schema'])
 
 
-@mock.patch('occams.studies.views.form.check_csrf_token')
+@mock.patch('occams_studies.views.form.check_csrf_token')
 class TestFormDeleteJson(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.form import bulk_delete_json as view
+        from occams_studies.views.form import bulk_delete_json as view
         return view(context, request)
 
     def test_success(self, check_csrf_token):
@@ -669,7 +669,7 @@ class TestFormDeleteJson(IntegrationFixture):
         from datetime import date, timedelta
         from pyramid import testing
         from pyramid.httpexceptions import HTTPOk
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         default_state = models.State(name='pending-entry', title=u'')
 

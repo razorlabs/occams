@@ -25,7 +25,7 @@ def upgrade():
     if context.is_offline_mode():
         raise Exception('Cannot migrate blob files in offline mode')
 
-    base_dir = os.path.normpath(context.config.get_section_option('app:occams.studies', 'app.blob.dir'))
+    base_dir = os.path.normpath(context.config.get_section_option('app:main', 'occams.blob.dir'))
     conn = op.get_bind()
 
     if os.path.isdir(base_dir):

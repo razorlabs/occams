@@ -3,11 +3,11 @@ import mock
 from tests import IntegrationFixture
 
 
-@mock.patch('occams.studies.views.cycle.check_csrf_token')
+@mock.patch('occams_studies.views.cycle.check_csrf_token')
 class TestEditJson(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.cycle import edit_json as view
+        from occams_studies.views.cycle import edit_json as view
         return view(context, request)
 
     def test_add(self, check_csrf_token):
@@ -16,9 +16,9 @@ class TestEditJson(IntegrationFixture):
         """
         from datetime import date
         from pyramid import testing
-        from occams.studies import Session, models
+        from occams_studies import Session, models
 
-        self.config.add_route('cycle', '/{study}/{cycle}')
+        self.config.add_route('studies.cycle', '/{study}/{cycle}')
 
         study = models.Study(
             name=u'somestudy',
@@ -47,7 +47,7 @@ class TestEditJson(IntegrationFixture):
         from datetime import date
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         cycle = models.Cycle(name='week-1', title=u'Week 1', week=1)
 
@@ -79,9 +79,9 @@ class TestEditJson(IntegrationFixture):
         """
         from datetime import date
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
-        self.config.add_route('cycle', '/{study}/{cycle}')
+        self.config.add_route('studies.cycle', '/{study}/{cycle}')
 
         cycle = models.Cycle(name='week-1', title=u'Week 1', week=1)
 
@@ -106,11 +106,11 @@ class TestEditJson(IntegrationFixture):
         self.assertIsNotNone(response)
 
 
-@mock.patch('occams.studies.views.cycle.check_csrf_token')
+@mock.patch('occams_studies.views.cycle.check_csrf_token')
 class TestDeleteJson(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.cycle import delete_json as view
+        from occams_studies.views.cycle import delete_json as view
         return view(context, request)
 
     def test_no_visit(self, check_csrf_token):
@@ -120,9 +120,9 @@ class TestDeleteJson(IntegrationFixture):
 
         from datetime import date
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
-        self.config.add_route('study', '/{study}')
+        self.config.add_route('studies.study', '/{study}')
 
         cycle = models.Cycle(name='week-1', title=u'Week 1', week=1)
 
@@ -149,9 +149,9 @@ class TestDeleteJson(IntegrationFixture):
         from datetime import date
         from pyramid import testing
         from pyramid.httpexceptions import HTTPForbidden
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
-        self.config.add_route('study', '/{study}')
+        self.config.add_route('studies.study', '/{study}')
 
         cycle = models.Cycle(name='week-1', title=u'Week 1', week=1)
 

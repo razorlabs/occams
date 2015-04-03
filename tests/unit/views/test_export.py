@@ -5,14 +5,14 @@ from tests import IntegrationFixture
 
 
 def _register_routes(config):
-    config.add_route('export_status', '/')
+    config.add_route('studies.export_status', '/')
 
 
-@mock.patch('occams.studies.views.export.check_csrf_token')
+@mock.patch('occams_studies.views.export.check_csrf_token')
 class TestAdd(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.export import checkout as view
+        from occams_studies.views.export import checkout as view
         return view(context, request)
 
     def test_get_exportables(self, check_csrf_token):
@@ -21,7 +21,7 @@ class TestAdd(IntegrationFixture):
         """
         from datetime import date
         from pyramid import testing
-        from occams.studies import Session, models
+        from occams_studies import Session, models
 
         # No schemata
         request = testing.DummyRequest()
@@ -50,7 +50,7 @@ class TestAdd(IntegrationFixture):
         """
         from pyramid import testing
         from webob.multidict import MultiDict
-        from occams.studies import models
+        from occams_studies import models
         request = testing.DummyRequest(post=MultiDict())
         response = self.call_view(models.ExportFactory(request), request)
         self.assertIsNotNone(response['errors'])
@@ -61,14 +61,14 @@ class TestAdd(IntegrationFixture):
         """
         from pyramid import testing
         from webob.multidict import MultiDict
-        from occams.studies import models
+        from occams_studies import models
         self.config.testing_securitypolicy(userid='tester', permissive=True)
         request = testing.DummyRequest(
             post=MultiDict([('contents', 'does_not_exist')]))
         response = self.call_view(models.ExportFactory(request), request)
         self.assertIn('Invalid selection', response['errors']['contents-0'])
 
-    @mock.patch('occams.studies.tasks.make_export')  # Don't invoke subtasks
+    @mock.patch('occams_studies.tasks.make_export')  # Don't invoke subtasks
     def test_valid(self, make_export, check_csrf_token):
         """
         It should add an export record and initiate an async task
@@ -77,7 +77,7 @@ class TestAdd(IntegrationFixture):
         from pyramid import testing
         from pyramid.httpexceptions import HTTPFound
         from webob.multidict import MultiDict
-        from occams.studies import Session, models
+        from occams_studies import Session, models
 
         _register_routes(self.config)
 
@@ -103,7 +103,7 @@ class TestAdd(IntegrationFixture):
         check_csrf_token.assert_called_with(request)
         self.assertIsInstance(response, HTTPFound)
         self.assertEqual(response.location,
-                         request.route_path('export_status'))
+                         request.route_path('studies.export_status'))
         export = Session.query(models.Export).one()
         self.assertEqual(export.owner_user.key, 'joe')
 
@@ -114,7 +114,7 @@ class TestAdd(IntegrationFixture):
         from datetime import date
         from pyramid import testing
         from webob.multidict import MultiDict
-        from occams.studies import Session, models
+        from occams_studies import Session, models
 
         self.config.registry.settings['app.export.limit'] = 0
 
@@ -150,7 +150,7 @@ class TestAdd(IntegrationFixture):
 class TestStatusJSON(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.export import status_json as view
+        from occams_studies.views.export import status_json as view
         return view(context, request)
 
     def test_get_current_user(self):
@@ -158,10 +158,10 @@ class TestStatusJSON(IntegrationFixture):
         It should return the authenticated user's exports
         """
         from pyramid import testing
-        from occams.studies import Session, models
+        from occams_studies import Session, models
 
         self.config.registry.settings['app.export.dir'] = '/tmp'
-        self.config.include('occams.studies.routes')
+        self.config.include('occams_studies.routes')
 
         blame = models.User(key=u'joe')
         Session.add(blame)
@@ -198,13 +198,13 @@ class TestStatusJSON(IntegrationFixture):
         """
         from datetime import datetime, timedelta
         from pyramid import testing
-        from occams.studies import Session, models
+        from occams_studies import Session, models
 
         EXPIRE_DAYS = 10
 
-        self.config.registry.settings['app.export.expire'] = EXPIRE_DAYS
-        self.config.registry.settings['app.export.dir'] = '/tmp'
-        self.config.include('occams.studies.routes')
+        self.config.registry.settings['studies.export.expire'] = EXPIRE_DAYS
+        self.config.registry.settings['studies.export.dir'] = '/tmp'
+        self.config.include('occams_studies.routes')
 
         blame = models.User(key=u'joe')
         Session.add(blame)
@@ -243,7 +243,7 @@ class TestStatusJSON(IntegrationFixture):
 class TestCodebookJSON(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.export import codebook_json as view
+        from occams_studies.views.export import codebook_json as view
         return view(context, request)
 
     def test_file_not_specified(self):
@@ -253,7 +253,7 @@ class TestCodebookJSON(IntegrationFixture):
         from pyramid import testing
         from pyramid.httpexceptions import HTTPNotFound
         from webob.multidict import MultiDict
-        from occams.studies import models
+        from occams_studies import models
 
         request = testing.DummyRequest(
             params=MultiDict([('file', '')])
@@ -269,7 +269,7 @@ class TestCodebookJSON(IntegrationFixture):
         from pyramid import testing
         from pyramid.httpexceptions import HTTPNotFound
         from webob.multidict import MultiDict
-        from occams.studies import models
+        from occams_studies import models
 
         request = testing.DummyRequest(
             params=MultiDict([('file', 'i_dont_exist')])
@@ -285,7 +285,7 @@ class TestCodebookJSON(IntegrationFixture):
         from datetime import date
         from pyramid import testing
         from webob.multidict import MultiDict
-        from occams.studies import Session, models
+        from occams_studies import Session, models
 
         Session.add(models.Schema(
             name=u'aform',
@@ -313,7 +313,7 @@ class TestCodebookJSON(IntegrationFixture):
 class TestCodebookDownload(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.export import codebook_download as view
+        from occams_studies.views.export import codebook_download as view
         return view(context, request)
 
     def test_download(self):
@@ -323,8 +323,8 @@ class TestCodebookDownload(IntegrationFixture):
         import os
         from pyramid import testing
         from pyramid.response import FileResponse
-        from occams.studies.exports.codebook import FILE_NAME
-        from occams.studies import models
+        from occams_studies.exports.codebook import FILE_NAME
+        from occams_studies import models
         self.config.registry.settings['app.export.dir'] = '/tmp'
         name = '/tmp/' + FILE_NAME
         with open(name, 'w+b'):
@@ -335,12 +335,12 @@ class TestCodebookDownload(IntegrationFixture):
         os.remove(name)
 
 
-@mock.patch('occams.studies.tasks.celery.control.revoke')
-@mock.patch('occams.studies.views.export.check_csrf_token')
+@mock.patch('occams_studies.tasks.celery.control.revoke')
+@mock.patch('occams_studies.views.export.check_csrf_token')
 class TestDelete(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.export import delete_json as view
+        from occams_studies.views.export import delete_json as view
         return view(context, request)
 
     def test_delete(self, check_csrf_token, revoke):
@@ -349,7 +349,7 @@ class TestDelete(IntegrationFixture):
         """
         from pyramid import testing
         from pyramid.httpexceptions import HTTPOk
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         blame = models.User(key=u'joe')
         Session.add(blame)
@@ -382,7 +382,7 @@ class TestDelete(IntegrationFixture):
 class TestDownload(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.export import download as view
+        from occams_studies.views.export import download as view
         return view(context, request)
 
     @data('failed', 'pending')
@@ -392,7 +392,7 @@ class TestDownload(IntegrationFixture):
         """
         from pyramid import testing
         from pyramid.httpexceptions import HTTPNotFound
-        from occams.studies import Session, models
+        from occams_studies import Session, models
 
         blame = models.User(key=u'joe')
         Session.add(blame)

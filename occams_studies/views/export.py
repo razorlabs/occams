@@ -216,7 +216,7 @@ def status_json(context, request):
             'title': localizer.pluralize(
                 _(u'Export containing ${count} item'),
                 _(u'Export containing ${count} items'),
-                count, 'occams.studies', mapping={'count': count}),
+                count, 'occams_studies', mapping={'count': count}),
             'name': export.name,
             'status': export.status,
             'use_choice_labels': export.use_choice_labels,

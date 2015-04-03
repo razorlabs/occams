@@ -74,7 +74,7 @@ def write_codebook(buffer, rows):
 
     Arguments:
     buffer -- a file object which will be used to write data contents
-    rows -- Code book rows. Seee `occams.studies.codebook`
+    rows -- Code book rows. Seee `occams_studies.codebook`
     """
     writer = csv.DictWriter(buffer, codebook.HEADER)
     writer.writeheader()

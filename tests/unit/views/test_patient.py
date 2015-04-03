@@ -4,18 +4,19 @@ from tests import IntegrationFixture
 
 
 def _register_routes(config):
-    config.add_route('studies', '/')
-    config.add_route('patient', '/p/{patient}')
-    config.add_route('site',    '/s/{site}')
-    config.add_route('enrollment', '/e/{enrollment}')
-    config.add_route('enrollment_randomization', '/e/{enrollment}/r')
-    config.add_route('enrollment_termination', '/e/{enrollment}/t')
+    config.add_route('studies.main', '/')
+    config.add_route('studies.patient', '/p/{patient}')
+    config.add_route('studies.site',    '/s/{site}')
+    config.add_route('studies.reference_type',    '/r/{reference_type}')
+    config.add_route('studies.enrollment', '/e/{enrollment}')
+    config.add_route('studies.enrollment_randomization', '/e/{enrollment}/r')
+    config.add_route('studies.enrollment_termination', '/e/{enrollment}/t')
 
 
 class TestView(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.patient import view
+        from occams_studies.views.patient import view
         return view(context, request)
 
     def test_track_recently_viewed(self):
@@ -23,7 +24,7 @@ class TestView(IntegrationFixture):
         It should track recently viewed patients
         """
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         _register_routes(self.config)
 
@@ -47,7 +48,7 @@ class TestView(IntegrationFixture):
         from collections import OrderedDict
         from datetime import datetime
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         _register_routes(self.config)
 
@@ -76,7 +77,7 @@ class TestView(IntegrationFixture):
 class TestSearchJson(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.patient import search_json as view
+        from occams_studies.views.patient import search_json as view
         return view(context, request)
 
     def test_by_pid(self):
@@ -84,7 +85,7 @@ class TestSearchJson(IntegrationFixture):
         It should search by PID
         """
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
         from webob.multidict import MultiDict
 
         _register_routes(self.config)
@@ -107,7 +108,7 @@ class TestSearchJson(IntegrationFixture):
         """
         from datetime import date
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
         from webob.multidict import MultiDict
 
         _register_routes(self.config)
@@ -143,7 +144,7 @@ class TestSearchJson(IntegrationFixture):
         It should be able to search by external ID
         """
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
         from webob.multidict import MultiDict
 
         _register_routes(self.config)
@@ -169,11 +170,11 @@ class TestSearchJson(IntegrationFixture):
         self.assertEquals(patient.pid, response['patients'][0]['pid'])
 
 
-@mock.patch('occams.studies.views.patient.check_csrf_token')
+@mock.patch('occams_studies.views.patient.check_csrf_token')
 class TestEditJson(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.patient import edit_json as view
+        from occams_studies.views.patient import edit_json as view
         return view(context, request)
 
     def test_site(self, check_csrf_token):
@@ -181,7 +182,7 @@ class TestEditJson(IntegrationFixture):
         It should update sites
         """
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         _register_routes(self.config)
 
@@ -204,7 +205,7 @@ class TestEditJson(IntegrationFixture):
         """
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         _register_routes(self.config)
 
@@ -228,7 +229,7 @@ class TestEditJson(IntegrationFixture):
         """
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         _register_routes(self.config)
 
@@ -256,7 +257,7 @@ class TestEditJson(IntegrationFixture):
         """
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         _register_routes(self.config)
 
@@ -287,7 +288,7 @@ class TestEditJson(IntegrationFixture):
         """
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         _register_routes(self.config)
 
@@ -319,7 +320,7 @@ class TestEditJson(IntegrationFixture):
         It should update references
         """
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         _register_routes(self.config)
 
@@ -353,13 +354,13 @@ class TestEditJson(IntegrationFixture):
             [(r.reference_type.id, r.reference_number)
              for r in patient.references])
 
-    @mock.patch('occams.studies.views.patient.generate')
+    @mock.patch('occams_studies.views.patient.generate')
     def test_generate_pid(self, generate, check_csrf_token):
         """
         It should generate a PID for new patients
         """
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         _register_routes(self.config)
 
@@ -391,11 +392,11 @@ class TestEditJson(IntegrationFixture):
              for r in response['references']])
 
 
-@mock.patch('occams.studies.views.patient.check_csrf_token')
+@mock.patch('occams_studies.views.patient.check_csrf_token')
 class TestDeleteJSON(IntegrationFixture):
 
     def call_view(self, context, request):
-        from occams.studies.views.patient import delete_json as view
+        from occams_studies.views.patient import delete_json as view
         return view(context, request)
 
     def test_delete(self, check_csrf_token):
@@ -404,7 +405,7 @@ class TestDeleteJSON(IntegrationFixture):
         """
         from collections import OrderedDict
         from pyramid import testing
-        from occams.studies import models, Session
+        from occams_studies import models, Session
 
         _register_routes(self.config)
 

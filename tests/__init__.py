@@ -35,9 +35,9 @@ def setup_package():
     """
     from sqlalchemy import create_engine
     from testconfig import config
-    from occams.studies import Session
-    from occams.roster import Session as RosterSession
-    from occams.roster import models as roster
+    from occams_studies import Session
+    from occams_roster import Session as RosterSession
+    from occams_roster import models as roster
 
     db = config.get('db')
     studies_engine = create_engine(db)
@@ -56,8 +56,8 @@ class IntegrationFixture(unittest.TestCase):
     def setUp(self):
         from pyramid import testing
         import transaction
-        from occams.studies import models, Session
-        from occams.studies.models import Base
+        from occams_studies import models, Session
+        from occams_studies.models import Base
 
         self.config = testing.setUp()
 
@@ -84,7 +84,7 @@ class FunctionalFixture(unittest.TestCase):
         import tempfile
         import six
         from pyramid.path import AssetResolver
-        from occams.studies import main, Session
+        from occams_studies import main, Session
 
         # The pyramid_who plugin requires a who file, so let's create a
         # barebones files for it...
@@ -110,7 +110,7 @@ class FunctionalFixture(unittest.TestCase):
             'redis.url': REDIS_URL,
             'redis.sessions.secret': 'sekrit',
             'webassets.base_dir': (AssetResolver()
-                                   .resolve('occams.studies:static')
+                                   .resolve('occams_studies:static')
                                    .abspath()),
             'webassets.base_url': '/static',
             'webassets.debug': 'false',
@@ -130,7 +130,7 @@ class FunctionalFixture(unittest.TestCase):
 
     def tearDown(self):
         import transaction
-        from occams.studies import Session, models as studies
+        from occams_studies import Session, models as studies
         from occams.roster import Session as RosterSession
         from occams.roster import models as roster
         with transaction.manager:

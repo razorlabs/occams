@@ -5,13 +5,13 @@ from tests import IntegrationFixture
 
 class TestExportNameSpace(IntegrationFixture):
 
-    @mock.patch('occams.studies.views.socketio.ExportNamespace.spawn')
+    @mock.patch('occams_studies.views.socketio.ExportNamespace.spawn')
     def test_initalize_not_allowed(self, spawn):
         """
         It should keep methods protected if the user does not have permissions
         """
         from pyramid import testing
-        from occams.studies.views.socketio import ExportNamespace
+        from occams_studies.views.socketio import ExportNamespace
 
         request = testing.DummyRequest(
             has_permission=mock.Mock(return_value=False),
@@ -24,13 +24,13 @@ class TestExportNameSpace(IntegrationFixture):
         self.assertNotIn('user', ns.session)
         self.assertNotIn('redis', ns.session)
 
-    @mock.patch('occams.studies.views.socketio.ExportNamespace.spawn')
+    @mock.patch('occams_studies.views.socketio.ExportNamespace.spawn')
     def test_initalize_allowed(self, spawn):
         """
         It should unlock methods if the user has the proper permissions
         """
         from pyramid import testing
-        from occams.studies.views.socketio import ExportNamespace
+        from occams_studies.views.socketio import ExportNamespace
 
         self.config.testing_securitypolicy(userid='joe', permissive=True)
 
@@ -51,20 +51,20 @@ class TestExportNameSpace(IntegrationFixture):
         It should initially lock all access to methods
         """
         from pyramid import testing
-        from occams.studies.views.socketio import ExportNamespace
+        from occams_studies.views.socketio import ExportNamespace
         request = testing.DummyRequest(
             environ={'socketio': mock.Mock(session={})})
         ns = ExportNamespace(request.environ, '/export', request)
         self.assertItemsEqual([], ns.get_initial_acl())
 
-    @mock.patch('occams.studies.views.socketio.ExportNamespace.emit')
+    @mock.patch('occams_studies.views.socketio.ExportNamespace.emit')
     def test_listener_current_progress(self, emit):
         """
         It should emit current progress for the current authenticated user
         """
         from pyramid import testing
-        from occams.studies import models, Session
-        from occams.studies.views.socketio import ExportNamespace
+        from occams_studies import models, Session
+        from occams_studies.views.socketio import ExportNamespace
 
         Session.add(models.User(key=u'jane'))
         Session.add(models.User(key=u'joe'))
@@ -105,14 +105,14 @@ class TestExportNameSpace(IntegrationFixture):
             {'export_id': pending_export.id,
              'owner_user': 'joe'})
 
-    @mock.patch('occams.studies.views.socketio.ExportNamespace.emit')
+    @mock.patch('occams_studies.views.socketio.ExportNamespace.emit')
     def test_listener_broadcast(self, emit):
         """
         It should emit ongoing progress for the authenticated user
         """
         import json
         from pyramid import testing
-        from occams.studies.views.socketio import ExportNamespace
+        from occams_studies.views.socketio import ExportNamespace
 
         def listen():
             return [

@@ -19,11 +19,11 @@ class PrintListTestCase(unittest.TestCase):
         # Don't configure the session since we already did that in the
         # the package setup
         self.create_engine_patch = \
-            mock.patch('occams.studies.scripts.export.create_engine').start()
+            mock.patch('occams_studies.scripts.export.create_engine').start()
         self.session_configure_patch = \
-            mock.patch('occams.studies.Session.configure').start()
+            mock.patch('occams_studies.Session.configure').start()
         self.engine_from_config_patch = \
-            mock.patch('occams.studies.scripts.export.engine_from_config')\
+            mock.patch('occams_studies.scripts.export.engine_from_config')\
             .start()
 
         self.dir = tempfile.mkdtemp()
@@ -41,13 +41,13 @@ class PrintListTestCase(unittest.TestCase):
         return sys.stdout.getvalue()
 
     def getCommand(self):
-        from occams.studies.scripts.export import main
+        from occams_studies.scripts.export import main
         return main
 
     def makePlan(self):
         from sqlalchemy import literal_column
-        from occams.studies.exports.plan import ExportPlan
-        from occams.studies import Session
+        from occams_studies.exports.plan import ExportPlan
+        from occams_studies import Session
 
         class DummyPlan(ExportPlan):
             name = u'aform'
@@ -68,7 +68,7 @@ class PrintListTestCase(unittest.TestCase):
         import mock
         plan = self.makePlan()
         # force list_all to return only the test form
-        with mock.patch('occams.studies.exports.list_all',
+        with mock.patch('occams_studies.exports.list_all',
                         return_value={plan.name: plan}):
             cmd = self.getCommand()
             cmd([None, '--db', 'fake://', '--list'])
@@ -83,7 +83,7 @@ class PrintListTestCase(unittest.TestCase):
         plan = self.makePlan()
         plan.has_private = True
         # force list_all to return only the test form
-        with mock.patch('occams.studies.exports.list_all',
+        with mock.patch('occams_studies.exports.list_all',
                         return_value={plan.name: plan}):
             cmd = self.getCommand()
             cmd([None, '--db', 'fake://', '--list'])
@@ -98,7 +98,7 @@ class PrintListTestCase(unittest.TestCase):
         plan = self.makePlan()
         plan.has_rand = True
         # force list_all to return only the test form
-        with mock.patch('occams.studies.exports.list_all',
+        with mock.patch('occams_studies.exports.list_all',
                         return_value={plan.name: plan}):
             cmd = self.getCommand()
             cmd([None, '--db', 'fake://', '--list'])
@@ -111,10 +111,10 @@ class PrintListTestCase(unittest.TestCase):
         """
         import os
         import mock
-        from occams.studies.exports.codebook import FILE_NAME
+        from occams_studies.exports.codebook import FILE_NAME
         plan = self.makePlan()
         # force list_all to return only the test form
-        with mock.patch('occams.studies.exports.list_all',
+        with mock.patch('occams_studies.exports.list_all',
                         return_value={plan.name: plan}):
             cmd = self.getCommand()
             cmd([None, '--db', 'fake://', '--dir', self.dir, '--all'])
@@ -130,7 +130,7 @@ class PrintListTestCase(unittest.TestCase):
         import mock
         plan = self.makePlan()
         # force list_all to return only the test form
-        with mock.patch('occams.studies.exports.list_all',
+        with mock.patch('occams_studies.exports.list_all',
                         return_value={plan.name: plan}):
             cmd = self.getCommand()
             cmd([None, '--db', 'fake://', '--dir', self.dir, '--all-private'])
@@ -148,7 +148,7 @@ class PrintListTestCase(unittest.TestCase):
         import mock
         plan = self.makePlan()
         # force list_all to return only the test form
-        with mock.patch('occams.studies.exports.list_all',
+        with mock.patch('occams_studies.exports.list_all',
                         return_value={plan.name: plan}):
             cmd = self.getCommand()
             plan.has_private = True
@@ -167,7 +167,7 @@ class PrintListTestCase(unittest.TestCase):
         import mock
         plan = self.makePlan()
         # force list_all to return only the test form
-        with mock.patch('occams.studies.exports.list_all',
+        with mock.patch('occams_studies.exports.list_all',
                         return_value={plan.name: plan}):
             cmd = self.getCommand()
             cmd([None, '--db', 'fake://', '--dir', self.dir, '--all-rand'])
@@ -185,7 +185,7 @@ class PrintListTestCase(unittest.TestCase):
         import mock
         plan = self.makePlan()
         # force list_all to return only the test form
-        with mock.patch('occams.studies.exports.list_all',
+        with mock.patch('occams_studies.exports.list_all',
                         return_value={plan.name: plan}):
             cmd = self.getCommand()
             cmd([None, '--db', 'fake://', '--dir', self.dir, plan.name])
@@ -201,11 +201,11 @@ class PrintListTestCase(unittest.TestCase):
         with tempfile.NamedTemporaryFile() as fp:
             fp.write("""
 [app:main]
-use = egg:occams.studies
+use = egg:occams_studies
 app.db.url = fake://
 """)
             fp.flush()
-            with mock.patch('occams.studies.exports.list_all',
+            with mock.patch('occams_studies.exports.list_all',
                             return_value={}):
                 cmd = self.getCommand()
                 cmd([None, '--config', fp.name, '--all', '--dir', self.dir])
@@ -227,7 +227,7 @@ app.db.url = fake://
         plan = self.makePlan()
         # force list_all to return only the test form
         with self.assertRaises(SystemExit):
-            with mock.patch('occams.studies.exports.list_all',
+            with mock.patch('occams_studies.exports.list_all',
                             return_value={plan.name: plan}):
                 cmd = self.getCommand()
                 cmd([None, '--db', 'fake://', '--dir', self.dir])
@@ -241,7 +241,7 @@ app.db.url = fake://
         plan = self.makePlan()
         dest_dir = os.path.join(self.dir, 'myfiles')
         # force list_all to return only the test form
-        with mock.patch('occams.studies.exports.list_all',
+        with mock.patch('occams_studies.exports.list_all',
                         return_value={plan.name: plan}):
             cmd = self.getCommand()
             cmd([None, '--db', 'fake://', '--all', '--dir', dest_dir,
@@ -260,7 +260,7 @@ app.db.url = fake://
         os.makedirs(old_dir)
         os.symlink(old_dir, dest_dir)
         # force list_all to return only the test form
-        with mock.patch('occams.studies.exports.list_all',
+        with mock.patch('occams_studies.exports.list_all',
                         return_value={plan.name: plan}):
             cmd = self.getCommand()
             cmd([None, '--db', 'fake://', '--all', '--dir', dest_dir,
@@ -275,7 +275,7 @@ app.db.url = fake://
         import mock
         dest_dir = os.path.join(self.dir, 'myfiles')
         # force list_all to return only the test form
-        with mock.patch('occams.studies.exports.list_all',
+        with mock.patch('occams_studies.exports.list_all',
                         return_value={}):
             cmd = self.getCommand()
             cmd([None, '--db', 'fake://', '--all', '--dir', dest_dir])
