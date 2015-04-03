@@ -29,7 +29,7 @@
       <nav
           class="navbar navbar-default navbar-static-top hidden-print"
           role="navigation"
-          tal:condition="request.authenticated_userid and request.matched_route.name != 'login'">
+          tal:condition="request.authenticated_userid and request.matched_route.name != 'accounts.login'">
 
         <div class="container">
 
@@ -44,7 +44,7 @@
               <span class="icon-bar"></span>
             </button>
             <a class="navbar-brand"
-                href="${request.route_path('accounts')}">OCCAMS Accounts</a>
+                href="${request.route_path('accounts.main')}">OCCAMS Accounts</a>
           </div> <!--/.navbar-header -->
 
           <div class="collapse navbar-collapse">
@@ -80,7 +80,7 @@
                   </tal:suites>
                 </ul>
               <li>
-                <a href="${request.accounts_logout_url}"
+                <a href="${request.route_path('accounts.logout')}"
                     rel="tooltip"
                     data-placement="bottom"
                     data-container="body"
