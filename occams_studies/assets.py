@@ -10,7 +10,6 @@ def includeme(config):
     Loads web assets
     """
     here = os.path.dirname(os.path.realpath(__file__))
-    scripts = os.path.join(here, 'static/scripts')
 
     env = config.get_webassets_env()
     env.append_path(os.path.join(here, 'static'), '/studies/static')
@@ -18,6 +17,8 @@ def includeme(config):
     # "resolves" the path relative to this package
     def rel(path):
         return os.path.join(here, 'static', path)
+
+    scriptsdir = os.path.join(here, 'static/scripts')
 
     config.add_webasset('studies-js', Bundle(
         # Dependency javascript libraries must be loaded in a specific order
@@ -37,21 +38,21 @@ def includeme(config):
         # App-specific scripts can be loaded in any order
         Bundle(
             *[os.path.join(root, filename)
-                for root, dirnames, filenames in os.walk(scripts)
+                for root, dirnames, filenames in os.walk(scriptsdir)
                 for filename in filenames if filename.endswith('.js')],
             filters='jsmin'),
-        output='gen/studies.%(version)s.js'))
+        output=rel('gen/studies.%(version)s.js')))
 
     config.add_webasset('studies-css', Bundle(
         Bundle(
             rel('styles/main.less'),
             filters='less,cssmin',
             depends=rel('styles/*.less'),
-            output='gen/studies-main.%(version)s.css'),
+            output=rel('gen/studies-main.%(version)s.css')),
         Bundle(rel('bower_components/select2/select2.css'), filters='cssrewrite'),
         rel('bower_components/select2-bootstrap-css/select2-bootstrap.css'),
         Bundle(rel('bower_components/bootstrap-fileinput/css/fileinput.min.css'), filters='cssrewrite'),
         rel('bower_components/bootstrap-switch/dist/css/bootstrap3/bootstrap-switch.min.css'),
-        output='gen/studies.%(version)s.css'))
+        output=rel('gen/studies.%(version)s.css')))
 
     log.debug('Assets configurated')
