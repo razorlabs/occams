@@ -18,7 +18,7 @@ from ..renderers import make_form, render_form, apply_data
 
 
 @view_config(
-    route_name='version',
+    route_name='forms.version',
     permission='view',
     renderer='../templates/version/view.pt')
 def view(context, request):
@@ -26,7 +26,7 @@ def view(context, request):
 
 
 @view_config(
-    route_name='version',
+    route_name='forms.version',
     xhr=True,
     renderer='json')
 def view_json(context, request):
@@ -35,7 +35,7 @@ def view_json(context, request):
     """
     return {
         '__url__': request.route_path(
-            'version',
+            'forms.version',
             form=context.name,
             version=str(context.publish_date or context.id)),
         '__types__': field_views.types,
@@ -50,7 +50,7 @@ def view_json(context, request):
 
 
 @view_config(
-    route_name='version',
+    route_name='forms.version',
     permission='view',
     request_param='download=json')
 def download_json(context, request):
@@ -67,7 +67,7 @@ def download_json(context, request):
 
 
 @view_config(
-    route_name='version_preview',
+    route_name='forms.version_preview',
     permission='view',
     renderer='../templates/version/preview.pt')
 def preview(context, request):
@@ -104,7 +104,7 @@ def preview(context, request):
 
 
 @view_config(
-    route_name='version',
+    route_name='forms.version',
     xhr=True,
     permission='edit',
     request_method='PUT',
@@ -174,7 +174,7 @@ class SchemaForm(wtforms.Form):
 
 
 @view_config(
-    route_name='version',
+    route_name='forms.version',
     xhr=True,
     permission='edit',
     request_method='PUT',
@@ -197,7 +197,7 @@ def edit_json(context, request):
 
 
 @view_config(
-    route_name='version_editor',
+    route_name='forms.version_editor',
     permission='edit',
     renderer='../templates/version/editor.pt')
 def editor(context, request):
@@ -205,7 +205,7 @@ def editor(context, request):
 
 
 @view_config(
-    route_name='version',
+    route_name='forms.version',
     permission='draft',
     request_method='POST',
     request_param='draft',
@@ -226,14 +226,14 @@ def draft_json(context, request):
     request.session.flash(_(u'Successfully drafted new version'))
     return {
         # Hint the next resource to look for data
-        '__next__': request.route_path('version',
+        '__next__': request.route_path('forms.version',
                                        form=draft.name,
                                        version=draft.id)
         }
 
 
 @view_config(
-    route_name='version',
+    route_name='forms.version',
     permission='delete',
     request_method='DELETE',
     xhr=True,
@@ -258,5 +258,5 @@ def delete_json(context, request):
 
     return {
         # Hint the next resource to look for data
-        '__next__': request.current_route_path(_route_name='forms')
+        '__next__': request.current_route_path(_route_name='forms.main')
         }

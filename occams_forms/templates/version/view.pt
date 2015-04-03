@@ -81,7 +81,7 @@
       $(function(){
         'use strict';
         ko.applyBindings(new VersionViewModel({
-            versionUrl: '${request.current_route_path(_route_name='version')}'
+            versionUrl: '${request.current_route_path(_route_name='forms.version')}'
           })
         );
       });

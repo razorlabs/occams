@@ -4,7 +4,7 @@ from .. import Session, models
 
 
 @view_config(
-    route_name='workflow',
+    route_name='forms.workflow',
     permission='view',
     renderer='../templates/workflow/view.pt')
 def view(context, request):

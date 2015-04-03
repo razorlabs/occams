@@ -6,7 +6,7 @@ from tests import IntegrationFixture
 class TestListJSON(IntegrationFixture):
 
     def _call_view(self, context, request):
-        from occams.forms.views.field import list_json
+        from occams_forms.views.field import list_json
         return list_json(context, request)
 
     def test_basic(self):
@@ -15,9 +15,9 @@ class TestListJSON(IntegrationFixture):
         """
         from datetime import date
         from pyramid import testing
-        from occams.forms import Session, models
-        self.config.add_route('fields', '/fields')
-        self.config.add_route('field', '/field/{field}')
+        from occams_forms import Session, models
+        self.config.add_route('forms.fields', '/fields')
+        self.config.add_route('forms.field', '/field/{field}')
         Session.add(models.Schema(
             name=u'myform',
             title=u'My Form',
@@ -50,7 +50,7 @@ class TestListJSON(IntegrationFixture):
 class TestViewJSON(IntegrationFixture):
 
     def _call_view(self, context, request):
-        from occams.forms.views.field import view_json
+        from occams_forms.views.field import view_json
         return view_json(context, request)
 
     def test_basic(self):
@@ -59,8 +59,8 @@ class TestViewJSON(IntegrationFixture):
         """
         from datetime import date
         from pyramid import testing
-        from occams.forms import Session, models
-        self.config.add_route('field', '/field/{field}')
+        from occams_forms import Session, models
+        self.config.add_route('forms.field', '/field/{field}')
         schema = models.Schema(
             name=u'myform',
             title=u'My Form',
@@ -79,11 +79,11 @@ class TestViewJSON(IntegrationFixture):
         self.assertEqual('myfield', response['name'])
 
 
-@mock.patch('occams.forms.views.field.check_csrf_token')
+@mock.patch('occams_forms.views.field.check_csrf_token')
 class TestEditJSON(IntegrationFixture):
 
     def _call_view(self, context, request):
-        from occams.forms.views.field import edit_json as view
+        from occams_forms.views.field import edit_json as view
         return view(context, request)
 
     def test_add_duplicate_variable_name(self, check_csrf_token):
@@ -92,7 +92,7 @@ class TestEditJSON(IntegrationFixture):
         """
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams.forms import models, Session
+        from occams_forms import models, Session
 
         schema = models.Schema(
             name='testform',
@@ -121,7 +121,7 @@ class TestEditJSON(IntegrationFixture):
         """
         from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams.forms import models, Session
+        from occams_forms import models, Session
 
         schema = models.Schema(
             name='testform',
@@ -150,11 +150,11 @@ class TestEditJSON(IntegrationFixture):
             cm.exception.json['errors']['target'].lower())
 
 
-@mock.patch('occams.forms.views.field.check_csrf_token')
+@mock.patch('occams_forms.views.field.check_csrf_token')
 class TestMoveJSON(IntegrationFixture):
 
     def _call_view(self, context, request):
-        from occams.forms.views.field import move_json as view
+        from occams_forms.views.field import move_json as view
         return view(context, request)
 
     def _comparable(self, schema):
@@ -171,7 +171,7 @@ class TestMoveJSON(IntegrationFixture):
         It should be able to move a field from a section to the root
         """
         from pyramid import testing
-        from occams.forms import models, Session
+        from occams_forms import models, Session
 
         schema = models.Schema(
             name='testform',
@@ -209,7 +209,7 @@ class TestMoveJSON(IntegrationFixture):
         It should be able to move a field from a section to another
         """
         from pyramid import testing
-        from occams.forms import models, Session
+        from occams_forms import models, Session
 
         schema = models.Schema(
             name='testform',
@@ -254,7 +254,7 @@ class TestMoveJSON(IntegrationFixture):
         It should be able to move a field within a section
         """
         from pyramid import testing
-        from occams.forms import models, Session
+        from occams_forms import models, Session
 
         schema = models.Schema(
             name='testform',

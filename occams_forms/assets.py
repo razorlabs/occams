@@ -9,14 +9,15 @@ def includeme(config):
     Configures static assets
     """
     here = os.path.dirname(os.path.realpath(__file__))
-    scripts = os.path.join(here, 'static/scripts')
 
     env = config.get_webassets_env()
-    env.append_path(os.path.join(here, 'static'), '/%s/static' % config.route_prefix)
+    env.append_path(os.path.join(here, 'static'), '/forms/static')
 
     # "resolves" the path relative to this package
     def rel(path):
         return os.path.join(here, 'static', path)
+
+    scriptsdir = os.path.join(here, 'static/scripts')
 
     config.add_webasset('forms-js', Bundle(
         # Dependency javascript libraries must be loaded in a specific order
@@ -34,21 +35,21 @@ def includeme(config):
         # App-specific scripts can be loaded in any order
         Bundle(
             *[os.path.join(root, filename)
-                for root, dirnames, filenames in os.walk(scripts)
+                for root, dirnames, filenames in os.walk(scriptsdir)
                 for filename in filenames if filename.endswith('.js')],
             filters='jsmin'),
-        output='gen/default.%(version)s.min.js'))
+        output=rel('gen/forms.%(version)s.min.js')))
 
     config.add_webasset('forms-css', Bundle(
         Bundle(
             rel('styles/main.less'),
             filters='less',
             depends=rel('styles/*.less'),
-            output='gen/main.%(version)s.min.css'),
+            output=rel('gen/forms-main.%(version)s.min.css')),
         Bundle(rel('bower_components/select2/select2.css'), filters='cssrewrite'),
         rel('bower_components/select2-bootstrap-css/select2-bootstrap.css'),
         Bundle(rel('bower_components/bootstrap-fileinput/css/fileinput.min.css'), filters='cssrewrite'),
         filters='cssmin',
-        output='gen/default.%(version)s.css'))
+        output=rel('gen/forms.%(version)s.css')))
 
     log.debug('Assets configurated')
