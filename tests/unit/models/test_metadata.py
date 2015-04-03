@@ -1,7 +1,7 @@
 from nose.tools import with_setup
 from sqlalchemy import Column, Integer
 
-from occams.datastore.models import ModelClass, Modifiable
+from occams_datastore.models import ModelClass, Modifiable
 
 from tests import begin_func, rollback_func
 
@@ -71,7 +71,7 @@ def test_modifable_non_existent_user():
     """
     from tests import Session
     from tests import assert_raises
-    from occams.datastore.exc import NonExistentUserError
+    from occams_datastore.exc import NonExistentUserError
 
     # Clear any info set by setup function
     Session.remove()

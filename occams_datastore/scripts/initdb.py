@@ -3,7 +3,7 @@ import sys
 
 from sqlalchemy import engine_from_config, create_engine
 
-from occams.datastore import models
+from occams_datastore import models
 
 parser = argparse.ArgumentParser(description='Initialize database')
 

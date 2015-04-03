@@ -13,7 +13,7 @@ def test_state_unique_name():
     """
     from tests import assert_raises
     import sqlalchemy.exc
-    from occams.datastore import models
+    from occams_datastore import models
 
     Session.add(models.State(name=u'pending-entry', title=u'Pending Entry'))
     Session.flush()
@@ -29,7 +29,7 @@ def test_state_entity_relationship():
     """
     from datetime import date
     from tests import assert_is_none, assert_is_not_none, assert_equals
-    from occams.datastore import models
+    from occams_datastore import models
 
     schema = models.Schema(name=u'Foo', title=u'Foo',
                            publish_date=date(2000, 1, 1))
@@ -54,8 +54,8 @@ def test_entity_add_unpublished_schema():
     It should not allow adding entities related to unpublished schemata
     """
     from tests import assert_raises
-    from occams.datastore import models
-    from occams.datastore.exc import InvalidEntitySchemaError
+    from occams_datastore import models
+    from occams_datastore.exc import InvalidEntitySchemaError
 
     schema = models.Schema(name=u'Foo', title=u'')
     entity = models.Entity(schema=schema)
@@ -71,7 +71,7 @@ def test_entity_default_collect_date():
     """
     from datetime import date
     from tests import assert_equals
-    from occams.datastore import models
+    from occams_datastore import models
     # Make sure the system can auto-assign a collect date for the entry
 
     schema = models.Schema(name=u'Foo', title=u'',
@@ -127,7 +127,7 @@ def check_entity_types(type, simple, update, collection):
     """
     from datetime import date
     from tests import assert_is_none, assert_equals, assert_items_equal
-    from occams.datastore import models
+    from occams_datastore import models
 
     schema = models.Schema(
         name=u'Foo', title=u'',
@@ -212,7 +212,7 @@ def test_entity_force_date():
     """
     from datetime import date, datetime
     from tests import assert_equals, assert_is_instance
-    from occams.datastore import models
+    from occams_datastore import models
 
     schema = models.Schema(name=u'Foo', title=u'',
                            publish_date=date(2000, 1, 1))
@@ -243,7 +243,7 @@ def test_entity_choices():
     """
     from datetime import date
     from tests import assert_is_none, assert_equals, assert_items_equal
-    from occams.datastore import models
+    from occams_datastore import models
 
     schema = models.Schema(name=u'Foo', title=u'',
                            publish_date=date(2000, 1, 1))
@@ -299,7 +299,7 @@ def test_entity_blob_type():
     It should be able to keep track of file uploads (will not be storing in DB)
     """
 
-    from occams.datastore import models
+    from occams_datastore import models
     from datetime import date
     from tests import assert_equals, assert_is_none
 
@@ -365,8 +365,8 @@ def check_value_min_constraint(type_, limit, below, equal, over):
     """
     from datetime import date
     from tests import assert_raises
-    from occams.datastore import models
-    from occams.datastore.exc import ConstraintError
+    from occams_datastore import models
+    from occams_datastore.exc import ConstraintError
 
     schema = models.Schema(
         name=u'Foo', title=u'', publish_date=date(2000, 1, 1))
@@ -429,8 +429,8 @@ def check_value_max_constraint(type_, limit, below, equal, over):
     """
     from datetime import date
     from tests import assert_raises
-    from occams.datastore import models
-    from occams.datastore.exc import ConstraintError
+    from occams_datastore import models
+    from occams_datastore.exc import ConstraintError
 
     schema = models.Schema(name=u'Foo', title=u'',
                            publish_date=date(2000, 1, 1))
@@ -466,8 +466,8 @@ def test_validator_constraint():
     """
     from datetime import date
     from tests import assert_raises, assert_equals
-    from occams.datastore import models
-    from occams.datastore.exc import ConstraintError
+    from occams_datastore import models
+    from occams_datastore.exc import ConstraintError
 
     schema = models.Schema(name=u'Foo', title=u'',
                            publish_date=date(2000, 1, 1))
@@ -506,8 +506,8 @@ def test_choice_constraint():
     """
     from datetime import date
     from tests import assert_raises, assert_equals
-    from occams.datastore import models
-    from occams.datastore.exc import ConstraintError
+    from occams_datastore import models
+    from occams_datastore.exc import ConstraintError
 
     schema = models.Schema(name=u'Foo', title=u'',
                            publish_date=date(2000, 1, 1))

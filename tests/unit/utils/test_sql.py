@@ -1,8 +1,8 @@
 from nose.tools import with_setup
 from sqlalchemy import Column, Integer
 
-from occams.datastore.models import ModelClass
-from occams.datastore.utils.sql import JSON
+from occams_datastore.models import ModelClass
+from occams_datastore.utils.sql import JSON
 
 from tests import Session, begin_func, rollback_func
 
@@ -14,7 +14,7 @@ def test_group_concat_single_value():
     """
     from sqlalchemy import literal_column, cast, Unicode
     from tests import assert_items_equal
-    from occams.datastore.utils.sql import group_concat
+    from occams_datastore.utils.sql import group_concat
 
     data = (
         Session.query(
@@ -38,7 +38,7 @@ def test_group_concat_multi_value():
     """
     from sqlalchemy import literal_column, cast, Unicode
     from tests import assert_items_equal
-    from occams.datastore.utils.sql import group_concat
+    from occams_datastore.utils.sql import group_concat
 
     data = (
         Session.query(
@@ -67,7 +67,7 @@ def test_group_concat_sqlite_one_arg():
     from sqlalchemy import literal_column
     from tests import assert_items_equal
     from nose.plugins.skip import SkipTest
-    from occams.datastore.utils.sql import group_concat
+    from occams_datastore.utils.sql import group_concat
 
     if Session.bind.url.drivername != 'sqlite':
         raise SkipTest('Not using SQLite')
@@ -99,7 +99,7 @@ def test_group_concat_sqlite_invalid_args():
     from sqlalchemy import literal_column
     from tests import assert_raises
     from nose.plugins.skip import SkipTest
-    from occams.datastore.utils.sql import group_concat
+    from occams_datastore.utils.sql import group_concat
 
     if Session.bind.url.drivername != 'sqlite':
         raise SkipTest('Not using SQLite')
@@ -131,7 +131,7 @@ def test_group_concat_postgresql_invalid_args():
     from sqlalchemy import literal_column
     from tests import assert_raises
     from nose.plugins.skip import SkipTest
-    from occams.datastore.utils.sql import group_concat
+    from occams_datastore.utils.sql import group_concat
 
     if Session.bind.url.drivername != 'postgresql':
         raise SkipTest('Not using PostgreSQL')
@@ -163,7 +163,7 @@ def test_to_date():
     import datetime
     from sqlalchemy import literal_column
     from tests import assert_equals
-    from occams.datastore.utils.sql import to_date
+    from occams_datastore.utils.sql import to_date
 
     expected = datetime.date(1976, 7, 4)
     query = (
@@ -182,7 +182,7 @@ def test_to_datetime():
     import datetime
     from sqlalchemy import literal_column
     from tests import assert_equals
-    from occams.datastore.utils.sql import to_datetime
+    from occams_datastore.utils.sql import to_datetime
 
     expected = datetime.datetime(1976, 7, 4, 5, 0)
     query = (

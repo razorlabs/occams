@@ -21,7 +21,7 @@ Session = orm.scoped_session(orm.sessionmaker())
 def setup_package():
     from sqlalchemy import create_engine
     from testconfig import config
-    from occams.datastore.models.events import register
+    from occams_datastore.models.events import register
     register(Session)
     db = config.get('db')
     engine = create_engine(db)
@@ -29,7 +29,7 @@ def setup_package():
 
 
 def begin_func():
-    from occams.datastore import models
+    from occams_datastore import models
     blame = models.User(key=u'tester')
     Session.add(blame)
     Session.flush()

@@ -14,7 +14,7 @@ def test_datadict_published_schema():
 
     from datetime import date, timedelta
     from tests import assert_in, assert_not_in
-    from occams.datastore import models, reporting
+    from occams_datastore import models, reporting
 
     schema = models.Schema(
         name=u'A',
@@ -57,7 +57,7 @@ def test_datadict_multpile_versions():
     from copy import deepcopy
     from datetime import date, timedelta
     from tests import assert_in, assert_equals
-    from occams.datastore import models, reporting
+    from occams_datastore import models, reporting
 
     today = date.today()
 
@@ -103,7 +103,7 @@ def test_datadict_multiple_choice():
     from datetime import date, timedelta
     from tests import assert_in, assert_items_equal
     from six import iterkeys
-    from occams.datastore import models, reporting
+    from occams_datastore import models, reporting
 
     today = date.today()
 
@@ -162,7 +162,7 @@ def test_datadict_duplicate_vocabulary_term():
     from datetime import date, timedelta
     from tests import assert_equals, assert_in
     from six import itervalues
-    from occams.datastore import models, reporting
+    from occams_datastore import models, reporting
 
     today = date.today()
 
@@ -236,7 +236,7 @@ def check_report_column_type(ds_type, sa_type):
 
     from datetime import date
     from tests import assert_is_instance
-    from occams.datastore import models, reporting
+    from occams_datastore import models, reporting
 
     schema = models.Schema(
         name=u'A',
@@ -275,7 +275,7 @@ def test_build_report_expected_metadata_columns():
 
     from datetime import date
     from tests import assert_in
-    from occams.datastore import models, reporting
+    from occams_datastore import models, reporting
 
     today = date.today()
 
@@ -304,7 +304,7 @@ def test_build_report_scalar_values():
 
     from datetime import date
     from tests import assert_equals
-    from occams.datastore import models, reporting
+    from occams_datastore import models, reporting
 
     today = date.today()
 
@@ -346,7 +346,7 @@ def test_build_report_datetime():
     """
     from datetime import date
     from tests import assert_equals
-    from occams.datastore import models, reporting
+    from occams_datastore import models, reporting
 
     today = date.today()
 
@@ -395,7 +395,7 @@ def test_build_report_choice_types():
 
     from datetime import date
     from tests import assert_is_none, assert_equals, assert_items_equal
-    from occams.datastore import models, reporting
+    from occams_datastore import models, reporting
 
     today = date.today()
 
@@ -493,7 +493,7 @@ def test_build_report_expand_none_selected():
     """
     from datetime import date
     from tests import assert_is_none
-    from occams.datastore import models, reporting
+    from occams_datastore import models, reporting
 
     today = date.today()
 
@@ -577,7 +577,7 @@ def test_build_report_ids():
     from copy import deepcopy
     from datetime import date, timedelta
     from tests import assert_in, assert_not_in
-    from occams.datastore import models, reporting
+    from occams_datastore import models, reporting
 
     today = date.today()
 
@@ -631,7 +631,7 @@ def test_build_report_context():
 
     from datetime import date
     from tests import assert_in, assert_not_in, assert_equals
-    from occams.datastore import models, reporting
+    from occams_datastore import models, reporting
 
     today = date.today()
 
@@ -681,7 +681,7 @@ def test_build_report_attributes():
     """
     from datetime import date
     from tests import assert_in, assert_not_in
-    from occams.datastore import models, reporting
+    from occams_datastore import models, reporting
 
     today = date.today()
 
@@ -725,7 +725,7 @@ def test_build_report_ignore_private():
 
     from datetime import date
     from tests import assert_equals
-    from occams.datastore import models, reporting
+    from occams_datastore import models, reporting
 
     today = date.today()
 

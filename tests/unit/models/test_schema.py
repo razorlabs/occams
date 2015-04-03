@@ -14,7 +14,7 @@ def test_schema_attribute():
     """
     from datetime import date
     from tests import assert_in
-    from occams.datastore import models
+    from occams_datastore import models
     schema = models.Schema(
         name=u'aform',
         title=u'A Form',
@@ -54,7 +54,7 @@ def test_schema_defaults():
     It should set schema defaults
     """
     from tests import assert_is_none, assert_is_not_none, assert_equals
-    from occams.datastore import models
+    from occams_datastore import models
 
     Session.add(models.Schema(name=u'sample', title=u'Sample'))
     Session.flush()
@@ -75,7 +75,7 @@ def test_schema_invalid_regexp_name():
     It should prevent invalid names (See RE_VALID_NAME)
     """
     from datetime import date
-    from occams.datastore import models
+    from occams_datastore import models
     from tests import assert_raises
     with assert_raises(ValueError):
         Session.add(models.Schema(
@@ -93,7 +93,7 @@ def test_schema_unique_case_insensitive():
     from tests import assert_raises
     from datetime import date
     import sqlalchemy.exc
-    from occams.datastore import models
+    from occams_datastore import models
 
     Session.add(models.Schema(
         name='Foo',
@@ -119,7 +119,7 @@ def test_schema_publish_date_unique():
     from tests import assert_raises
     from datetime import date
     import sqlalchemy.exc
-    from occams.datastore import models
+    from occams_datastore import models
 
     # First version
     Session.add(models.Schema(
@@ -160,7 +160,7 @@ def test_schema_has_private():
     """
     from tests import assert_true, assert_false
     from datetime import date
-    from occams.datastore import models
+    from occams_datastore import models
     schema = models.Schema(
         name='Foo',
         title=u'Foo',
@@ -194,7 +194,7 @@ def test_json():
     It should be able to load a schema from json data
     """
     import json
-    from occams.datastore import models
+    from occams_datastore import models
     schema1 = models.Schema.from_json(json.loads("""
     {
         "name": "sample",
@@ -246,7 +246,7 @@ def test_attribute_defaults():
     It should set attribute defaults
     """
     from tests import assert_equals
-    from occams.datastore import models
+    from occams_datastore import models
 
     schema = models.Schema(name=u'Foo', title=u'Foo')
     attribute = models.Attribute(
@@ -266,7 +266,7 @@ def test_attribute_invalid_regexp_name():
     It should prevent invalid attribute names (See RE_VALID_NAME)
     """
     from datetime import date
-    from occams.datastore import models
+    from occams_datastore import models
     from tests import assert_raises
 
     @with_setup(begin_func, rollback_func)
@@ -294,7 +294,7 @@ def test_attribute_valid_regexp_name():
     It should vallow valid names (See RE_VALID_NAME)
     """
     from datetime import date
-    from occams.datastore import models
+    from occams_datastore import models
 
     @with_setup(begin_func, rollback_func)
     def check_(name):
@@ -318,7 +318,7 @@ def test_attributea_invalid_reserved_name():
     It should prevent reserved words as attribute names
     """
     from datetime import date
-    from occams.datastore import models
+    from occams_datastore import models
     from tests import assert_raises
     schema = models.Schema(
         name='SomeForm',
@@ -343,7 +343,7 @@ def test_attribute_unique_case_insensitive():
     from tests import assert_raises
     from datetime import date
     import sqlalchemy.exc
-    from occams.datastore import models
+    from occams_datastore import models
 
     schema = models.Schema(
         name='Foo',
@@ -375,7 +375,7 @@ def test_choice_defaults():
     """
 
     from tests import assert_equals
-    from occams.datastore import models
+    from occams_datastore import models
 
     schema = models.Schema(name=u'Foo', title=u'Foo')
     attribute = models.Attribute(
@@ -404,7 +404,7 @@ def test_category_defaults():
     """
 
     from tests import assert_equals
-    from occams.datastore import models
+    from occams_datastore import models
 
     category = models.Category(name='Tests', title=u'Test Schemata')
     Session.add(category)
@@ -421,7 +421,7 @@ def test_add_category_to_schema():
     """
 
     from tests import assert_equals, assert_items_equal
-    from occams.datastore import models
+    from occams_datastore import models
 
     schema = models.Schema(name='Foo', title=u'')
     Session.add(schema)
@@ -470,7 +470,7 @@ def test_copy_schema_basic():
     """
     from tests import assert_equals
     from copy import deepcopy
-    from occams.datastore import models
+    from occams_datastore import models
 
     schema = models.Schema(
         name='Foo',
