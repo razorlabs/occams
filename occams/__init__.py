@@ -74,8 +74,8 @@ def main(global_config, **settings):
     config.include('.models')
     config.include('.routes')
     config.include('.security')
-    config.commit()
     config.scan()
+    config.commit()
 
     # Appliation includes
     for name in settings['occams.apps']:
