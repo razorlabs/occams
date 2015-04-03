@@ -80,19 +80,19 @@ following as well::
   > git clone git@bitbucket.org:YOURID/occams_lims
 
 
-Now that your projects are checked out, copy and update the ``requirements-sample.txt``
+Now that your projects are checked out, copy and update the ``requirements.txt``
 found in the ``occams`` project directory.::
 
   > cd $VIRTUAL_ENV
-  > cp src/occams/requirements-sample.txt requirements.txt
+  > cp src/occams/requirements.txt .
   > vim requirements.txt
   > pip install -U -r requirements.txt
 
 Once everything is installed you'll need to configure the application with
 your desired development environment settings::
 
-  > cp src/occams/development-sample.ini etc/development.ini
-  > cp src/occams/who-sample.ini etc/who.ini
+  > cp src/occams/development.ini .
+  > cp src/occams/who.ini .
   > vim etc/development.ini
   > vim etc/who.ini
 

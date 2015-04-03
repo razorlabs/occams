@@ -44,11 +44,14 @@ def main(global_config, **settings):
     This function returns a Pyramid WSGI application.
     """
 
+    # Applies setting defaults if not specified
     for key, value in settings_defaults.items():
         settings.setdefault(key, value)
 
-    settings['occams.apps'] = set(aslist(settings.get('occams.apps') or ''))
-    settings['occams.apps'].update(['occams_datastore', 'occams_accounts'])
+    # Make sure we at least have te
+    required_apps = set(['occams_datastore', 'occams_accounts'])
+    included_apps = set(aslist(settings.get('occams.apps') or ''))
+    settings['occams.apps'] = required_apps | included_apps
 
     config = Configurator(
         settings=settings,
