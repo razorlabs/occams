@@ -44,7 +44,7 @@
             <td><code data-bind="text: schema().name"></code></td>
             <td data-bind="text: schema().title"></td>
             <td data-bind="text: collect_date"></td>
-            <td>
+            <td data-bind="if: state">
               <!-- Hard-code for now... -->
               <span class="label" data-bind="
                   css: {
