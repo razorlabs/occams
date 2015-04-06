@@ -101,3 +101,6 @@ webassets-external
 ##### Installer Logs
 pip-log.txt
 
+#### Redis dump file
+dump.rdb
+
