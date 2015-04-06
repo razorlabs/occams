@@ -20,53 +20,59 @@
         <div metal:use-macro="load: ../form/modal-form-delete.pt"></div>
       </header>
 
-      <div class="table-responsive">
-        <table class="table table-hover table-striped">
-          <thead>
-            <!--! Do not generate this if the user is not allowed to delete forms -->
-            <th tal:condition="request.has_permission('delete', context)">
-              <input type="checkbox" data-bind="click: selectAll, checked: isAllSelected" />
-            </th>
-            <th i18n:translate="">ID</th>
-            <th i18n:translate="">Schema</th>
-            <th i18n:translate="">Form</th>
-            <th i18n:translate="">Collect Date</th>
-            <th i18n:translate="">Status</th>
-            <th i18n:translate="">Not Done</th>
-            <th></th>
-          </thead>
-          <tbody data-bind="foreach: entities">
-            <!--! Do not generate this if the user is not allowed to delete forms -->
-            <td tal:condition="request.has_permission('delete', context)">
-              <input type="checkbox" data-bind="checked: isSelected" />
-            </td>
-            <td><code data-bind="text: id"></code></td>
-            <td><code data-bind="text: schema().name"></code></td>
-            <td data-bind="text: schema().title"></td>
-            <td data-bind="text: collect_date"></td>
-            <td>
-              <!-- Hard-code for now... -->
-              <span class="label" data-bind="
-                  css: {
-                    'label-danger': state().name == 'pending-entry',
-                    'label-info': state().name == 'in-progress',
-                    'label-warning': state().name == 'pending-review',
-                    'label-primary': state().name == 'pending-correction',
-                    'label-success': state().name == 'complete'
-                    },
-                  text: state().title"></span>
-            </td>
-            <td>
-              <!-- ko if: not_done -->
-                <span class="fa fa-check" ></span>
-              <!-- /ko -->
-            </td>
-            <td>
-              <a class="btn btn-link" data-bind="attr: {href: __url__}"><span class="fa fa-chevron-right"></span></a>
-            </td>
-          </tbody>
-        </table>
-      </div> <!-- /.table-responsive -->
+      <!-- ko ifnot: entities().length > 0 -->
+        <div class="well well-lg">This patient has no forms.</div>
+      <!-- /ko -->
+
+      <!-- ko if: entities().length > 0 -->
+        <div class="table-responsive">
+          <table class="table table-hover table-striped">
+            <thead>
+              <!--! Do not generate this if the user is not allowed to delete forms -->
+              <th tal:condition="request.has_permission('delete', context)">
+                <input type="checkbox" data-bind="click: selectAll, checked: isAllSelected" />
+              </th>
+              <th i18n:translate="">ID</th>
+              <th i18n:translate="">Schema</th>
+              <th i18n:translate="">Form</th>
+              <th i18n:translate="">Collect Date</th>
+              <th i18n:translate="">Status</th>
+              <th i18n:translate="">Not Done</th>
+              <th></th>
+            </thead>
+            <tbody data-bind="foreach: entities">
+              <!--! Do not generate this if the user is not allowed to delete forms -->
+              <td tal:condition="request.has_permission('delete', context)">
+                <input type="checkbox" data-bind="checked: isSelected" />
+              </td>
+              <td><code data-bind="text: id"></code></td>
+              <td><code data-bind="text: schema().name"></code></td>
+              <td data-bind="text: schema().title"></td>
+              <td data-bind="text: collect_date"></td>
+              <td data-bind="if: state">
+                <!-- Hard-code for now... -->
+                <span class="label" data-bind="
+                    css: {
+                      'label-danger': state().name == 'pending-entry',
+                      'label-info': state().name == 'in-progress',
+                      'label-warning': state().name == 'pending-review',
+                      'label-primary': state().name == 'pending-correction',
+                      'label-success': state().name == 'complete'
+                      },
+                    text: state().title"></span>
+              </td>
+              <td>
+                <!-- ko if: not_done -->
+                  <span class="fa fa-check" ></span>
+                <!-- /ko -->
+              </td>
+              <td>
+                <a class="btn btn-link" data-bind="attr: {href: __url__}"><span class="fa fa-chevron-right"></span></a>
+              </td>
+            </tbody>
+          </table>
+        </div> <!-- /.table-responsive -->
+      <!-- /ko -->
 
       <!-- ko if: hasSelectedForms -->
         <span class="btn-group">
