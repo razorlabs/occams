@@ -23,18 +23,6 @@ def includeme(config):
     config.add_route('studies.reference_types',             '/studies/reference_types',                 factory=models.ReferenceTypeFactory)
     config.add_route('studies.reference_type',              '/studies/reference_types/{reference_type}', factory=models.ReferenceTypeFactory, traverse='/{reference_type}')
 
-    config.add_route('studies.main',                        '/studies',                         factory=models.StudyFactory)
-    config.add_route('studies.study',                       '/studies/{study}',                 factory=models.StudyFactory, traverse='/{study}')
-    config.add_route('studies.study_schedule',              '/studies/{study}/schedule',        factory=models.StudyFactory, traverse='/{study}')
-    config.add_route('studies.study_enrollments',           '/studies/{study}/enrollments',     factory=models.StudyFactory, traverse='/{study}')
-    config.add_route('studies.study_visits',                '/studies/{study}/visits',          factory=models.StudyFactory, traverse='/{study}')
-    config.add_route('studies.study_visits_cycle',          '/studies/{study}/visits/{cycle}',  factory=models.StudyFactory, traverse='/{study}')
-    config.add_route('studies.study_schemata',              '/studies/{study}/schemata',        factory=models.StudyFactory, traverse='/{study}')
-    config.add_route('studies.study_schema',                '/studies/{study}/schemata/{schema}', factory=models.StudyFactory, traverse='/{study}')
-
-    config.add_route('studies.cycles',                      '/studies/{study}/cycles',          factory=models.StudyFactory, traverse='/{study}/cycles')
-    config.add_route('studies.cycle',                       '/studies/{study}/cycles/{cycle}',  factory=models.StudyFactory, traverse='/{study}/cycles/{cycle}')
-
     config.add_route('studies.exports',                     '/studies/exports',                         factory=models.ExportFactory)
     config.add_route('studies.exports_checkout',            '/studies/exports/checkout',                factory=models.ExportFactory)
     config.add_route('studies.exports_status',              '/studies/exports/status',                  factory=models.ExportFactory)
@@ -43,8 +31,8 @@ def includeme(config):
     config.add_route('studies.export',                      '/studies/exports/{export:\d+}',            factory=models.ExportFactory, traverse='/{export}')
     config.add_route('studies.export_download',             '/studies/exports/{export:\d+}/download',   factory=models.ExportFactory, traverse='/{export}')
 
-    config.add_route('studies.patients',                    '/studies/patients',                        factory=models.PatientFactory, traverse='/')
-    config.add_route('studies.patients_forms',              '/studies/patients/forms',                  factory=models.PatientFactory, traverse='/')
+    config.add_route('studies.patients',                    '/studies/patients',                        factory=models.PatientFactory)
+    config.add_route('studies.patients_forms',              '/studies/patients/forms',                  factory=models.PatientFactory)
     config.add_route('studies.patient',                     '/studies/patients/{patient}',              factory=models.PatientFactory, traverse='/{patient}')
     config.add_route('studies.patient_forms',               '/studies/patients/{patient}/forms',        factory=models.PatientFactory, traverse='/{patient}/forms')
     config.add_route('studies.patient_form',                '/studies/patients/{patient}/forms/{form}', factory=models.PatientFactory, traverse='/{patient}/forms/{form}')
@@ -60,5 +48,18 @@ def includeme(config):
 
     config.add_route('studies.visit_forms',                 '/studies/patients/{patient}/visits/{visit}/forms',         factory=models.PatientFactory, traverse='/{patient}/visits/{visit}/forms')
     config.add_route('studies.visit_form',                  '/studies/patients/{patient}/visits/{visit}/forms/{form}',  factory=models.PatientFactory, traverse='/{patient}/visits/{visit}/forms/{form}')
+
+
+    config.add_route('studies.cycles',                      '/studies/{study}/cycles',          factory=models.StudyFactory, traverse='/{study}/cycles')
+    config.add_route('studies.cycle',                       '/studies/{study}/cycles/{cycle}',  factory=models.StudyFactory, traverse='/{study}/cycles/{cycle}')
+
+    config.add_route('studies.main',                        '/studies',                         factory=models.StudyFactory)
+    config.add_route('studies.study',                       '/studies/{study}',                 factory=models.StudyFactory, traverse='/{study}')
+    config.add_route('studies.study_schedule',              '/studies/{study}/schedule',        factory=models.StudyFactory, traverse='/{study}')
+    config.add_route('studies.study_enrollments',           '/studies/{study}/enrollments',     factory=models.StudyFactory, traverse='/{study}')
+    config.add_route('studies.study_visits',                '/studies/{study}/visits',          factory=models.StudyFactory, traverse='/{study}')
+    config.add_route('studies.study_visits_cycle',          '/studies/{study}/visits/{cycle}',  factory=models.StudyFactory, traverse='/{study}')
+    config.add_route('studies.study_schemata',              '/studies/{study}/schemata',        factory=models.StudyFactory, traverse='/{study}')
+    config.add_route('studies.study_schema',                '/studies/{study}/schemata/{schema}', factory=models.StudyFactory, traverse='/{study}')
 
     log.debug('Routes configured')
