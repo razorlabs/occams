@@ -6,230 +6,186 @@ from tests import FunctionalFixture
 @ddt
 class TestPermissionsAbout(FunctionalFixture):
 
-    url = '/exports'
+    url = '/studies/exports'
 
     @data('administrator', 'consumer')
     def test_allowed(self, group):
         environ = self.make_environ(groups=[group])
-        response = self.app.get(self.url, extra_environ=environ, status='*')
-        self.assertNotEqual(response.status_code, 403)
+        self.app.get(self.url, extra_environ=environ, status=200)
 
     @data(None)
     def test_not_allowed(self, group):
         environ = self.make_environ(groups=[group])
-        response = self.app.get(self.url, extra_environ=environ, status='*')
-        self.assertEqual(response.status_code, 403)
+        self.app.get(self.url, extra_environ=environ, status=403)
 
     def test_not_authenticated(self):
-        response = self.app.get(self.url, status='*')
-        self.assertIn('login', response.body)
+        self.app.get(self.url, status=404)
 
 
 @ddt
 class TestExportViewPermissionsFaq(FunctionalFixture):
 
-    url = '/exports/faq'
+    url = '/studies/exports/faq'
 
     @data('administrator', 'consumer')
     def test_allowed(self, group):
         environ = self.make_environ(groups=[group])
-        response = self.app.get(self.url, extra_environ=environ, status='*')
-        self.assertNotEqual(response.status_code, 403)
+        self.app.get(self.url, extra_environ=environ, status=200)
 
-    @data(None)
     def test_not_allowed(self, group):
         environ = self.make_environ(groups=[group])
-        response = self.app.get(self.url, extra_environ=environ, status='*')
-        self.assertEqual(response.status_code, 403)
+        self.app.get(self.url, extra_environ=environ, status=403)
 
     def test_not_authenticated(self):
-        response = self.app.get(self.url, status='*')
-        self.assertIn('login', response.body)
+        self.app.get(self.url, status=403)
 
 
 @ddt
 class TestPermissionsAdd(FunctionalFixture):
 
-    url = '/exports/add'
+    url = '/studies/exports/add'
 
     @data('administrator', 'consumer')
     def test_allowed(self, group):
         environ = self.make_environ(groups=[group])
-        response = self.app.get(self.url, extra_environ=environ, status='*')
-        self.assertNotEqual(response.status_code, 403)
+        self.app.get(self.url, extra_environ=environ, status=403)
 
-    @data(None)
     def test_not_allowed(self, group):
-        environ = self.make_environ(groups=[group])
-        response = self.app.get(self.url, extra_environ=environ, status='*')
-        self.assertEqual(response.status_code, 403)
+        environ = self.make_environ(groups=[])
+        self.app.get(self.url, extra_environ=environ, status=403)
 
     def test_not_authenticated(self):
-        response = self.app.get(self.url, status='*')
-        self.assertIn('login', response.body)
+        self.app.get(self.url, status=403)
 
 
 @ddt
 class TestPermissionsStatus(FunctionalFixture):
 
-    url = '/exports/status'
+    url = '/studies/exports/status'
 
     @data('administrator', 'consumer')
     def test_allowed(self, group):
         environ = self.make_environ(groups=[group])
-        response = self.app.get(self.url, extra_environ=environ, status='*')
-        self.assertNotEqual(response.status_code, 403)
+        self.app.get(self.url, extra_environ=environ, status=200)
 
     @data(None)
     def test_not_allowed(self, group):
         environ = self.make_environ(groups=[group])
-        response = self.app.get(self.url, extra_environ=environ, status='*')
-        self.assertEqual(response.status_code, 403)
+        self.app.get(self.url, extra_environ=environ, status=403)
 
     def test_not_authenticated(self):
-        response = self.app.get(self.url, status='*')
-        self.assertIn('login', response.body)
+        self.app.get(self.url, status=403)
 
 
 @ddt
 class TestPermissionsStatusJSON(FunctionalFixture):
 
-    url = '/exports/status'
+    url = '/studies/exports/status'
 
     @data('administrator', 'consumer')
     def test_allowed(self, group):
         environ = self.make_environ(groups=[group])
-        response = self.app.get(
-            self.url, extra_environ=environ, xhr=True, status='*')
-        self.assertNotEqual(response.status_code, 403)
+        self.app.get(self.url, extra_environ=environ, xhr=True, status=200)
 
     @data(None)
     def test_not_allowed(self, group):
         environ = self.make_environ(groups=[group])
-        response = self.app.get(
-            self.url, extra_environ=environ, xhr=True, status='*')
-        self.assertEqual(response.status_code, 403)
+        self.app.get(self.url, extra_environ=environ, xhr=True, status=403)
 
     def test_not_authenticated(self):
-        response = self.app.get(self.url, xhr=True, status='*')
-        self.assertIn('login', response.body)
+        self.app.get(self.url, xhr=True, status=200)
 
 
 @ddt
 class TestPersmissionsDelete(FunctionalFixture):
 
-    url = '/exports/123/delete'
+    url = '/studies/exports/123/delete'
 
     @data('administrator', 'consumer')
     def test_allowed(self, group):
         environ = self.make_environ(groups=[group])
-        response = self.app.post(
-            self.url, extra_environ=environ, xhr=True, status='*')
-        self.assertNotEqual(response.status_code, 403)
+        self.app.post(self.url, extra_environ=environ, xhr=True, status=200)
 
     @data(None)
     def test_not_allowed(self, group):
         environ = self.make_environ(groups=[group])
-        response = self.app.post(
-            self.url, extra_environ=environ, xhr=True, status='*')
-        self.assertEqual(response.status_code, 403)
+        self.app.post(self.url, extra_environ=environ, xhr=True, status=403)
 
     def test_not_authenticated(self):
-        response = self.app.post(self.url, xhr=True, status='*')
-        self.assertIn('login', response.body)
+        self.app.post(self.url, xhr=True, status=403)
 
 
 @ddt
 class TestPersmissionsCodebook(FunctionalFixture):
 
-    url = '/exports/codebook'
+    url = '/studies/exports/codebook'
 
     @data('administrator', 'consumer')
     def test_allowed(self, group):
         environ = self.make_environ(groups=[group])
-        response = self.app.get(
-            self.url, extra_environ=environ, status='*')
-        self.assertNotEqual(response.status_code, 403)
+        self.app.get(self.url, extra_environ=environ, status=200)
 
     @data(None)
     def test_not_allowed(self, group):
         environ = self.make_environ(groups=[group])
-        response = self.app.get(
-            self.url, extra_environ=environ, status='*')
-        self.assertEqual(response.status_code, 403)
+        self.app.get(self.url, extra_environ=environ, status=200)
 
     def test_not_authenticated(self):
-        response = self.app.get(self.url, status='*')
-        self.assertIn('login', response.body)
+        self.app.get(self.url, status=403)
 
 
 @ddt
 class TestPersmissionsCodebookJSON(FunctionalFixture):
 
-    url = '/exports/codebook'
+    url = '/studies/exports/codebook'
 
     @data('administrator', 'consumer')
     def test_allowed(self, group):
         environ = self.make_environ(groups=[group])
-        response = self.app.get(
-            self.url, extra_environ=environ, xhr=True, status='*')
-        self.assertNotEqual(response.status_code, 403)
+        self.app.get(self.url, extra_environ=environ, xhr=True, status=403)
 
     @data(None)
     def test_not_allowed(self, group):
         environ = self.make_environ(groups=[group])
-        response = self.app.get(
-            self.url, extra_environ=environ, xhr=True, status='*')
-        self.assertEqual(response.status_code, 403)
+        self.app.get(self.url, extra_environ=environ, xhr=True, status=403)
 
     def test_not_authenticated(self):
-        response = self.app.get(self.url, xhr=True, status='*')
-        self.assertIn('login', response.body)
+        self.app.get(self.url, status=403)
 
 
 @ddt
 class TestPersmissionsCodebookDownload(FunctionalFixture):
 
-    url = '/exports/codebook/download'
+    url = '/studies/exports/codebook/download'
 
     @data('administrator', 'consumer')
     def test_allowed(self, group):
         environ = self.make_environ(groups=[group])
-        response = self.app.get(
-            self.url, extra_environ=environ, status='*')
-        self.assertNotEqual(response.status_code, 403)
+        self.app.get(self.url, extra_environ=environ, status=200)
 
     @data(None)
     def test_not_allowed(self, group):
-        environ = self.make_environ(groups=[group])
-        response = self.app.get(
-            self.url, extra_environ=environ, status='*')
-        self.assertEqual(response.status_code, 403)
+        environ = self.make_environ(groups=[])
+        self.app.get(self.url, extra_environ=environ, status=403)
 
     def test_not_authenticated(self):
-        response = self.app.get(self.url, status='*')
-        self.assertIn('login', response.body)
+        self.app.get(self.url, status=403)
 
 
 @ddt
 class TestPersmissionsDownload(FunctionalFixture):
 
-    url = '/exports/123/download'
+    url = '/studies/exports/123/download'
 
     @data('administrator', 'consumer')
     def test_allowed(self, group):
         environ = self.make_environ(groups=[group])
-        response = self.app.get(
-            self.url, extra_environ=environ, status='*')
-        self.assertNotEqual(response.status_code, 403)
+        self.app.get(self.url, extra_environ=environ, status=200)
 
     @data(None)
     def test_not_allowed(self, group):
         environ = self.make_environ(groups=[group])
-        response = self.app.get(
-            self.url, extra_environ=environ, status='*')
-        self.assertEqual(response.status_code, 403)
+        self.app.get(self.url, extra_environ=environ, status=403)
 
     def test_not_authenticated(self):
-        response = self.app.get(self.url, status='*')
-        self.assertIn('login', response.body)
+        self.app.get(self.url, status=403)
