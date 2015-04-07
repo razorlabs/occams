@@ -62,6 +62,15 @@ def view_json(context, request):
     else:
         url = None
 
+    if not context.state:
+        state_data = None
+    else:
+        state_data = {
+            'id': context.state.id,
+            'name': context.state.name,
+            'title': context.state.title,
+        }
+
     return {
         '__url__': url,
         'id': context.id,
@@ -69,15 +78,11 @@ def view_json(context, request):
             'name': context.schema.name,
             'title': context.schema.title,
             'publish_date': context.schema.publish_date.isoformat()
-            },
+        },
         'collect_date': context.collect_date.isoformat(),
         'not_done': context.not_done,
-        'state': {
-            'id': context.state.id,
-            'name': context.state.name,
-            'title': context.state.title,
-            }
-        }
+        'state': state_data
+    }
 
 
 @view_config(
