@@ -83,13 +83,13 @@ class FunctionalFixture(unittest.TestCase):
     def setUpClass(cls):
         import tempfile
         import six
-        from pyramid.path import AssetResolver
-        from occams_studies import main, Session
+        from occams import main
+        from occams_studies import Session
 
         # The pyramid_who plugin requires a who file, so let's create a
         # barebones files for it...
         cls.who_ini = tempfile.NamedTemporaryFile()
-        who = six.configparser()
+        who = six.moves.configparser.ConfigParser()
         who.add_section('general')
         who.set('general', 'request_classifier',
                 'repoze.who.classifiers:default_request_classifier')
@@ -100,24 +100,26 @@ class FunctionalFixture(unittest.TestCase):
         cls.who_ini.flush()
 
         cls.app = main({}, **{
-            'app.org.name': 'myorg',
-            'app.org.title': 'MY ORGANIZATION',
-            'app.export.dir': '/tmp',
-            'app.export.user': 'celery@localhost',
-            'app.db.url': Session.bind,
-            'pid.package': 'occams.roster',
-            'pid.db.url': 'sqlite:///',
             'redis.url': REDIS_URL,
             'redis.sessions.secret': 'sekrit',
-            'webassets.base_dir': (AssetResolver()
-                                   .resolve('occams_studies:static')
-                                   .abspath()),
-            'webassets.base_url': '/static',
-            'webassets.debug': 'false',
-            'celery.broker.url': REDIS_URL,
-            'celery.backend.url': REDIS_URL,
-            'who.config_file': cls.who_ini.filename,
+
+            'who.config_file': cls.who_ini.name,
             'who.identifier_id': '',
+
+            'occams.apps': 'occams_studies',
+
+            'occams.db.url': Session.bind,
+            'occams.org.name': 'myorg',
+            'occams.org.title': 'MY ORGANIZATION',
+            'occams.groups': [],
+
+            'studies.export.dir': '/tmp',
+            'studies.export.user': 'celery@localhost',
+            'studies.celery.broker.url': REDIS_URL,
+            'studies.celery.backend.url': REDIS_URL,
+            'studies.pid.package': 'occams.roster',
+
+            'roster.db.url': 'sqlite:///',
             })
 
     @classmethod
@@ -131,8 +133,7 @@ class FunctionalFixture(unittest.TestCase):
     def tearDown(self):
         import transaction
         from occams_studies import Session, models as studies
-        from occams.roster import Session as RosterSession
-        from occams.roster import models as roster
+        from occams_roster import Session as RosterSession, models as roster
         with transaction.manager:
             Session.query(studies.User).delete()
             Session.query(roster.Site).delete()
