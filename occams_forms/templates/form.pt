@@ -3,5 +3,8 @@
   enctype="multipart/form-data"
   tal:attributes="attr|nothing"
   tal:define="macros load:wtforms.pt">
+  <div class="alert alert-danger" tal:condition="form.errors">
+    <strong>Please see error messages below.</strong>
+  </div>
   <metal:fields use-macro="macros.fields" />
 </form>

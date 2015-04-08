@@ -90,7 +90,7 @@
           field - The wtform.field instance
     -->
   <metal:macro define-macro="default">
-    <div class="form-group ds-attribute ${'has-error' if field.errors else ''}">
+    <div class="form-group ds-attribute ${'has-error alert alert-danger' if field.errors else ''}">
       <div class="pull-right"><code>${field.short_name}</code></div>
       ${structure: field.label(class_='required' if field.flags.required else '')}
       <p class="help-block" tal:condition="field.description|nothing">${structure: field.description}</p>
