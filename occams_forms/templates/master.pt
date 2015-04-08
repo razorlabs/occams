@@ -92,6 +92,7 @@
                         tal:condition="not:repeat.suite.end"></li>
                   </tal:suites>
                 </ul>
+              </li>
               <li>
                 <a href="${request.route_path('accounts.logout')}"
                     rel="tooltip"
