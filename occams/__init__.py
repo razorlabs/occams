@@ -2,6 +2,7 @@ from __future__ import unicode_literals
 import logging
 import pkg_resources
 
+import six
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.config import Configurator
 from pyramid.i18n import TranslationStringFactory
@@ -51,7 +52,7 @@ def main(global_config, **settings):
     # Make sure we at least have te
     required_apps = set(['occams_datastore', 'occams_accounts'])
     included_apps = set(aslist(settings.get('occams.apps') or ''))
-    settings['occams.apps'] = required_apps | included_apps
+    settings['occams.apps'] = dict.fromkeys(required_apps | included_apps)
 
     config = Configurator(
         settings=settings,
@@ -73,7 +74,6 @@ def main(global_config, **settings):
 
     # Main includes
     config.include('.assets')
-    config.include('.links')
     config.include('.models')
     config.include('.routes')
     config.include('.security')
@@ -81,8 +81,12 @@ def main(global_config, **settings):
     config.commit()
 
     # Appliation includes
-    for name in settings['occams.apps']:
+
+    for name in six.iterkeys(settings['occams.apps']):
         config.include(name)
+    config.commit()
+
+    config.add_request_method(_apps, name=str('apps'), reify=True)
     config.commit()
 
     app = config.make_wsgi_app()
@@ -90,3 +94,10 @@ def main(global_config, **settings):
     log.info('Ready')
 
     return app
+
+
+def _apps(request):
+    all_apps = six.itervalues(request.registry.settings['occams.apps'])
+    filtered_apps = iter(a for a in all_apps if a)
+    sorted_apps = sorted(filtered_apps, key=lambda f: f['title'])
+    return sorted_apps

@@ -49,16 +49,13 @@ Make sure you have the required node packages installed::
 
 Create a virtual environment for your work::
 
-  > virtualenv occams
+  > virtualenv myproject
   > source occams/bin/activate
 
 Next, create the necesary directories::
 
-  > cd occams
-  > mkdir -p etc
-  > mkdir -p var/exports
-  > mkdir -p var/blobs
-  > mkdir -p src
+  > cd myproject
+  > mkdir -p  etc  var/exports  var/blobs  src
 
 You'll need to git checkout the web application. If you are
 using your own forks, change ``ucsdbitcore`` to yours. The reason we
@@ -91,10 +88,8 @@ found in the ``occams`` project directory.::
 Once everything is installed you'll need to configure the application with
 your desired development environment settings::
 
-  > cp src/occams/development.ini .
-  > cp src/occams/who.ini .
+  > cp src/occams/development.ini etc
   > vim etc/development.ini
-  > vim etc/who.ini
 
 Install the appropriate database tables::
 

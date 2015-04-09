@@ -13,6 +13,7 @@ REQUIRES = [
     'babel',                            # i18n
     'cssmin',                           # CSS asset compression
     'humanize',                         # human readable measurements
+    'gunicorn',                         # WSGI server
     'jsmin',                            # JS asset compression
     'lingua',                           # i18n
     'gevent-socketio',
@@ -35,17 +36,29 @@ REQUIRES = [
 ]
 
 EXTRAS = {
-    'apps': [
+
+    'apps': [                           # Default applications
         'occams_datastore',
         'occams_accounts',
         'occams_studies',
         'occams_forms'
         'occams_lims'
     ],
-    'ldap': ['who_ldap'],
+
+    'docs': [                           # Documentation building
+        'sphinx',
+        'sphinx-autobuild'
+    ],
+
+    'ldap': ['who_ldap'],               # LDAP authorization
+
     'sqlite': [],
-    'postgresql': ['psycopg2', 'psycogreen'],
-    'gunicorn': ['gunicorn'],
+
+    'postgresql': [
+        'psycopg2',
+        'psycogreen'
+    ],
+
     'test': [
         'pyramid_debugtoolbar',
         'nose',
@@ -54,7 +67,8 @@ EXTRAS = {
         'WebTest',
         'beautifulsoup4',
         'mock',
-        'ddt'],
+        'ddt'
+    ],
 }
 
 
