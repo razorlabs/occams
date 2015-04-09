@@ -79,18 +79,11 @@
                   title="Services"
                   ><span class="glyphicon glyphicon-th"></span><span class="caret"></span></a>
                 <ul class="dropdown-menu" role="menu" aria-labelledby="Apps Menu">
-                  <tal:suites repeat="suite request.apps">
-                    <li role="presentation" class="dropdown-header">
-                      ${suite['title']}
+                  <tal:apps repeat="app request.apps">
+                    <li role="presentation">
+                      <a href="${request.route_path(app['route'])}" role="menuitem">${app['title']}</a>
                     </li>
-                    <tal:apps repeat="app suite['apps']">
-                      <li role="presentation">
-                        <a href="${app['url']}" role="menuitem">${app['title']}</a>
-                      </li>
-                    </tal:apps>
-                    <li role="presentation" class="divider"
-                        tal:condition="not:repeat.suite.end"></li>
-                  </tal:suites>
+                  </tal:apps>
                 </ul>
               </li>
               <li>
