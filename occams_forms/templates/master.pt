@@ -113,7 +113,7 @@
       <div class="container">
         <p class="text-muted credit">
           <span i18n:translate="">Developed by the</span>
-          <a href="http://cfar.ucsd.edu/bit" i18n:translate="">UCSD Center For AIDS Research Bit Core</a>.
+          <a href="http://cfar.ucsd.edu/bit" i18n:translate="">YoungLabs</a>.
         </p>
       </div>
     </footer>
