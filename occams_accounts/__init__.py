@@ -4,7 +4,7 @@ import pkg_resources
 
 from pyramid.i18n import TranslationStringFactory
 
-log = logging.getLogger(__name__)
+log = logging.getLogger('occams').getChild(__name__)
 
 _ = TranslationStringFactory(__name__)
 
