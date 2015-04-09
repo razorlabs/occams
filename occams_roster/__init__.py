@@ -9,7 +9,7 @@ import zope.sqlalchemy
 
 __version__ = pkg_resources.require(__name__)[0].version
 
-log = logging.getLogger(__name__)
+log = logging.getLogger('occams').getChild(__name__)
 
 Session = scoped_session(sessionmaker(
     extension=zope.sqlalchemy.ZopeTransactionExtension()))
