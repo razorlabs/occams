@@ -17,7 +17,6 @@ Icon?
 .Trashes
 
 ##### Linux Files
-.*
 !.gitignore
 *~
 .directory
@@ -92,6 +91,7 @@ res
 refs
 gen
 webassets-external
+.webassets-cache
 
 ##### Translations
 *.mo
