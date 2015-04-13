@@ -244,21 +244,38 @@ def FieldFormFactory(context, request):
         title = wtforms.StringField(validators=[
             wtforms.validators.InputRequired()])
         description = wtforms.StringField(
-            widget=wtforms.widgets.TextInput())
+            widget=wtforms.widgets.TextInput(),
+            validators=[wtforms.validators.Optional()])
         type = wtforms.StringField(
             validators=[
                 wtforms.validators.InputRequired(),
                 wtforms.validators.AnyOf(set(t['name'] for t in types))])
-        is_required = wtforms.BooleanField()
-        is_private = wtforms.BooleanField()
-        is_system = wtforms.BooleanField()
-        is_readonly = wtforms.BooleanField()
-        is_collection = wtforms.BooleanField()      # Choice
-        is_shuffled = wtforms.BooleanField()        # Choice
-        decimal_places = wtforms.IntegerField()     # Numbers
-        value_min = wtforms.IntegerField()          # Number/String/Multichoice
-        value_max = wtforms.IntegerField()          # Number/String/Multichoice
-        pattern = wtforms.StringField()             # String
+        is_required = wtforms.BooleanField(
+            validators=[wtforms.validators.Optional()])
+        is_private = wtforms.BooleanField(
+            validators=[wtforms.validators.Optional()])
+        is_system = wtforms.BooleanField(
+            validators=[wtforms.validators.Optional()])
+        is_readonly = wtforms.BooleanField(
+            validators=[wtforms.validators.Optional()])
+        # Choice
+        is_collection = wtforms.BooleanField(
+            validators=[wtforms.validators.Optional()])
+        # Choice
+        is_shuffled = wtforms.BooleanField(
+            validators=[wtforms.validators.Optional()])
+        # Numbers
+        decimal_places = wtforms.IntegerField(
+            validators=[wtforms.validators.Optional()])
+        # Number/String/Multichoice
+        value_min = wtforms.IntegerField(
+            validators=[wtforms.validators.Optional()])
+        # Number/String/Multichoice
+        value_max = wtforms.IntegerField(
+            validators=[wtforms.validators.Optional()])
+        # String
+        pattern = wtforms.StringField(
+            validators=[wtforms.validators.Optional()])
         choices = wtforms.FieldList(wtforms.FormField(ChoiceForm))
 
     return FieldForm
