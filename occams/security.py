@@ -1,5 +1,5 @@
 from pyramid.settings import aslist
-from pyramid.security import Allow, Authenticated
+from pyramid.security import Allow, Authenticated, ALL_PERMISSIONS
 
 from . import log
 
@@ -36,7 +36,9 @@ def groupfinder(identity, request):
 
 class RootFactory(dict):
 
-    __acl__ = [(Allow, Authenticated, 'view')]
+    __acl__ = [
+        (Allow, 'administrator', ALL_PERMISSIONS),
+        (Allow, Authenticated, 'view')]
 
     def __init__(self, request):
         self.request = request
