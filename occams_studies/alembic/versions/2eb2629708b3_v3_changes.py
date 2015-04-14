@@ -31,6 +31,7 @@ def upgrade():
     merge_integer_decimal()
     merge_attribute_section()
     overhaul_attribute()
+    cleanup_addis()
 
 
 def cleanup_study():
@@ -791,3 +792,9 @@ def overhaul_attribute():
                 END
         END
         """)
+
+def cleanup_addis():
+    if 'addis' not in context.config.get_main_option('sqlalchemy.url'):
+        return
+
+    op.execute("DELETE FROM schema WHERE name = 'IBio'")
