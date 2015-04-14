@@ -141,7 +141,7 @@
           </div>
           <div class="panel-body">
             All exports are generated with an accompanying <code>codebook.csv</code> file
-            that display how a question has changed accross versions.
+            that displays how a question has changed across versions.
           </div>
         </div>
 
