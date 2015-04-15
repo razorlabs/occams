@@ -24,6 +24,15 @@ Base = ModelClass(u'Base')
 
 
 class groups:
+    """
+    Generates the OCCAMS-compatble group names that distinguaish site-level
+    permissions.
+
+    There are "dynamic" constants.
+
+    The purpose of this utility is that there are no silent errors if the
+    site/group names are mispelled (instead we'll get a synax error).
+    """
 
     @staticmethod
     def principal(site=None, group=None):
