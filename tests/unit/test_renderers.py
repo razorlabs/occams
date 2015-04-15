@@ -77,3 +77,29 @@ class TestMakeField(IntegrationFixture):
             name=u'f', title=u'F', type='choice', is_collection=True)
         field = make_field(attribute)
         self.assertIs(field.field_class, wtforms.SelectMultipleField)
+
+    def test_string_min_max(self):
+        from occams_forms import models
+        from occams_forms.renderers import make_field
+        import wtforms
+        from wtforms.validators import Length
+        attribute = models.Attribute(
+            name=u'string_test', title=u'string_test', type='string',
+            value_min=1, value_max=12)
+        field = make_field(attribute)
+        field = field.bind(wtforms.Form(), attribute.name)
+        self.assertTrue(
+            any(isinstance(v, Length) for v in field.validators))
+
+    def test_number_min_max(self):
+        from occams_forms import models
+        from occams_forms.renderers import make_field
+        import wtforms
+        from wtforms.validators import NumberRange
+        attribute = models.Attribute(
+            name=u'number_test', title=u'number_test', type='number',
+            value_min=1, value_max=12)
+        field = make_field(attribute)
+        field = field.bind(wtforms.Form(), attribute.name)
+        self.assertTrue(
+            any(isinstance(v, NumberRange) for v in field.validators))

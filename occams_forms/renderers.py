@@ -195,9 +195,16 @@ def make_field(attribute):
         kw['validators'].append(wtforms.validators.Optional())
 
     if attribute.value_min or attribute.value_max:
-        kw['validators'].append(wtforms.validators.Length(
-            min=attribute.value_min,
-            max=attribute.value_max))
+        # for string min and max are used to test length
+        if attribute.type == 'string':
+            kw['validators'].append(wtforms.validators.Length(
+                min=attribute.value_min,
+                max=attribute.value_max))
+        # for number min and max are used to test the value
+        elif attribute.type == 'number':
+            kw['validators'].append(wtforms.validators.NumberRange(
+                min=attribute.value_min,
+                max=attribute.value_max))
 
     if attribute.pattern:
         kw['validators'].append(wtforms.validators.Regexp(attribute.pattern))
