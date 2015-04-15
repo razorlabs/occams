@@ -96,7 +96,7 @@ def main(argv=sys.argv):
     args = parse_args(argv[1:])
 
     if args.config:
-        engine = engine_from_config(get_appsettings(args.config), 'app.db.')
+        engine = engine_from_config(get_appsettings(args.config), 'occams.db.')
     elif args.db:
         engine = create_engine(args.db)
     else:
