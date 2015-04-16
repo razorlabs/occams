@@ -82,7 +82,7 @@ class LabPlan(ExportPlan):
              ignore_private=True):
 
         # Import here to avoid breaking installations that don't use lab.
-        from occams.lims import models as lab
+        from occams_lims import models as lab
 
         AliquotLocation = aliased(lab.Location)
         SpecimenLocation = aliased(lab.Location)
