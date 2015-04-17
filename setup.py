@@ -9,7 +9,7 @@ HERE = os.path.abspath(os.path.dirname(__file__))
 REQUIRES = [
     'alembic',
     'six',
-    'SQLAlchemy']
+    'SQLAlchemy>=0.9.0,<0.9.99']
 
 EXTRAS = {
     'postgresql': ['psycopg2'],
