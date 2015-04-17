@@ -11,9 +11,11 @@ CHANGES = open(os.path.join(HERE, 'CHANGES.rst')).read()
 REQUIRES = [
     'alembic',                          # Database table upgrades
     'babel',                            # i18n
+    'celery[redis]>=3.1,<3.1.99',       # Asynchronous queue API
     'cssmin',                           # CSS asset compression
-    'humanize',                         # human readable measurements
+    'gevent-socketio>=0.3.6,<0.3.99',   # websockets
     'gunicorn',                         # WSGI server
+    'humanize',                         # human readable measurements
     'jsmin',                            # JS asset compression
     'lingua',                           # i18n
     'gevent-socketio',
@@ -28,21 +30,24 @@ REQUIRES = [
     'pyramid_webassets',                # Asset management (ala grunt)
     'pyramid_who',                      # User authentication
     'six',                              # Py 2 & 3 compatibilty
-    'SQLAlchemy>=0.9.0',                # Database ORM
+    'SQLAlchemy',                       # Database ORM
     'tabulate',                         # ASCII tables for CLI pretty-print
-    'wtforms',
+    'wtforms>=2.0.0',
     'wtforms-json',
+    'wtforms-components',
     'zope.sqlalchemy',                  # Connects sqlalchemy to pyramid_tm
+
+    'occams_datastore',                 # It's an utility, not an app
 ]
 
 EXTRAS = {
 
     'apps': [                           # Default applications
-        'occams_datastore',
         'occams_accounts',
         'occams_studies',
         'occams_forms'
         'occams_lims'
+        'occams_reports',
     ],
 
     'docs': [                           # Documentation building
