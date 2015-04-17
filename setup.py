@@ -10,32 +10,13 @@ CHANGES = open(os.path.join(HERE, 'CHANGES.rst')).read()
 
 REQUIRES = [
     'alembic',                          # Database table upgrades
-    'babel',                            # i18n
-    'cssmin',                           # CSS asset compression
-    'jsmin',                            # JS asset compression
-    'lingua',                           # i18n
-    'pyramid>=1.5',                     # Framework
-    'pyramid_chameleon',                # Templating
-    'pyramid_tm',                       # Centralized transations
-    'pyramid_redis_sessions',           # HTTP session with redis backend
-    'pyramid_rewrite',                  # Allows urls to end in "/"
-    'pyramid_webassets',                # Asset management (ala grunt)
-    'pyramid_who',                      # repoze.who v2 wrapper
     'six',                              # Py 2 & 3 compatibilty
-    'SQLAlchemy>=0.9.0',                # Database ORM
-    'wtforms',
-    'zope.sqlalchemy',                  # Connects sqlalchemy to pyramid_tm
 
-    'occams_datastore'
+    'occams',
 ]
 
 EXTRAS = {
-    'ldap': ['python3-ldap', 'who_ldap'],
-    'sqlite': [],
-    'postgresql': ['psycopg2', 'psycogreen'],
-    'gunicorn': ['gunicorn'],
     'test': [
-        'pyramid_debugtoolbar',
         'nose',
         'nose-testconfig',
         'coverage',
