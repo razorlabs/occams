@@ -1,7 +1,6 @@
 import os
 from setuptools import setup, find_packages
 from setuptools.command.develop import develop as _develop
-import sys
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(HERE, 'README.rst')).read()
@@ -10,33 +9,16 @@ CHANGES = open(os.path.join(HERE, 'CHANGES.rst')).read()
 
 REQUIRES = [
     'alembic',                          # Database table upgrades
-    'babel',                            # i18n
-    'celery[redis]>=3.1,<3.1.99',       # Asynchronous queue API
-    'cssmin',                           # CSS asset compression
-    'gevent-socketio>=0.3.6,<0.3.99',   # websockets
     'humanize',                         # human readable measurements
-    'jsmin',                            # JS asset compression
-    'lingua',                           # i18n
-    'python-dateutil',                  # Date parsing
-    'python-slugify',                   # path-friendly filenames
-    'six',                              # Py 2 & 3 compatibilty
-    'SQLAlchemy>=0.9.0',                # Database ORM
-    'tabulate',                         # ASCII tables for CLI pretty-print
-    'wtforms',
-    'wtforms-json',
 
+    'occams',
     'occams_datastore',                 # EAV
     'occams_roster',
     'occams_forms',                     # EAV form renderer
 ]
 
 EXTRAS = {
-    'ldap': ['python3-ldap', 'who_ldap'],
-    'sqlite': [],
-    'postgresql': ['psycopg2', 'psycogreen'],
-    'gunicorn': ['gunicorn'],
     'test': [
-        'pyramid_debugtoolbar',
         'nose',
         'nose-testconfig',
         'coverage',
@@ -45,15 +27,6 @@ EXTRAS = {
         'mock',
         'ddt'],
 }
-
-
-if sys.version_info < (2, 7):
-    REQUIRES.extend(['argparse', 'ordereddict'])
-    EXTRAS['test'].extend(['unittest2'])
-
-
-if sys.version_info < (3, 0):
-    REQUIRES.extend(['unicodecsv'])
 
 
 def get_version():
