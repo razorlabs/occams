@@ -7,18 +7,11 @@ import sys
 HERE = os.path.abspath(os.path.dirname(__file__))
 
 REQUIRES = [
-    'alembic',
-    'SQLAlchemy',
-    'six',
+    'occams',
 ]
 
 EXTRAS = {
-    'postgresql': ['psycopg2'],
-    'test': [
-        'nose',
-        'coverage',
-        'mock',
-        'ddt'],
+    'test': ['nose', 'nose-testconfig', 'coverage', 'mock', 'ddt'],
 }
 
 

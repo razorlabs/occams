@@ -17,7 +17,6 @@ Icon?
 .Trashes
 
 ##### Linux Files
-.*
 !.gitignore
 *~
 .directory
@@ -63,6 +62,12 @@ Session.vim
 *.egg
 *.egg-info*
 *PKG-INFO
+VERSION
+
+##### Node
+npm_modules
+node_modules
+bower_components
 
 ##### Buildout / Unit test / Coverage Reports
 .coverage
@@ -81,10 +86,16 @@ lib
 parts
 sdist
 var
-VERSION
+develop.cfg
+res
+refs
+gen
+webassets-external
+.webassets-cache
 
 ##### Translations
 *.mo
 
 ##### Installer Logs
 pip-log.txt
+
