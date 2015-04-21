@@ -106,7 +106,9 @@
                       <td class="study" data-bind="text: title"></td>
                     <!-- /ko -->
                     <td><code data-bind="text: consent_date"></code></td>
-                    <td><code data-bind="text: termination_date"></code></td>
+                    <td data-bind="if: termination_date">
+                      <code data-bind="text: termination_date"></code>
+                    </td>
                     <td data-bind="if: reference_number">
                       <code data-bind="text: reference_number"></code>
                     </td>
