@@ -544,7 +544,7 @@ def form(context, request):
         if not request.has_permission('edit', context):
             raise HTTPForbidden()
         if form.validate():
-            upload_dir = request.registry.settings['app.blob.dir']
+            upload_dir = request.registry.settings['studies.blob.dir']
             apply_data(Session, context, form.data, upload_dir)
             Session.flush()
             request.session.flash(_(u'Changes saved'), 'success')

@@ -187,7 +187,7 @@ def terminate_ajax(context, request):
                 # allowed, just assign the schema that's already being used
                 entity = models.Entity(schema=schema)
                 context.entities.add(entity)
-            upload_dir = request.registry.settings['app.blob.dir']
+            upload_dir = request.registry.settings['studies.blob.dir']
             apply_data(Session, entity, form.data, upload_dir)
             context.termination_date = form.termination_date.data
             Session.flush()
