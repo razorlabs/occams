@@ -11,6 +11,8 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+   roles_permissions
+
 
 
 Indices and tables
