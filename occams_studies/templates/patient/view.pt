@@ -84,6 +84,7 @@
                   <col class="col-sm-4" />
                   <col class="col-sm-2" />
                   <col class="col-sm-2" />
+                  <col class="col-sm-2" />
                   <col class="col-sm-1" />
                   <col class="col-sm-2" />
                   <col class="col-sm-1" />
@@ -92,6 +93,7 @@
                   <tr>
                     <th i18n:translate="">Study</th>
                     <th i18n:translate="">Consent</th>
+                    <th i18n:translate="">Termination</th>
                     <th i18n:translate="">Reference #</th>
                     <th i18n:translate="">RANDID</th>
                     <th i18n:translate="">Arm</th>
@@ -104,6 +106,7 @@
                       <td class="study" data-bind="text: title"></td>
                     <!-- /ko -->
                     <td><code data-bind="text: consent_date"></code></td>
+                    <td><code data-bind="text: termination_date"></code></td>
                     <td data-bind="if: reference_number">
                       <code data-bind="text: reference_number"></code>
                     </td>
