@@ -57,7 +57,7 @@
 
   </metal:content-slot>
 
-  <metal:content-slot fill-slot="javascript-slot">
+  <metal:javascript-slot fill-slot="javascript-slot">
     <script>
       $(function(){
         'use strict';
@@ -67,7 +67,7 @@
         );
       });
     </script>
-  </metal:content-slot>
+  </metal:javascript-slot>
 
 </html>
 
