@@ -239,7 +239,7 @@ def edit_json(context, request):
 
     # Lab might not be enabled on a environments, check first
     if form.include_specimen.data and Session.bind.has_table('specimen'):
-        from occams.lims import models as lab
+        from occams_lims import models as lab
         drawstate = (
             Session.query(lab.SpecimenState)
             .filter_by(name=u'pending-draw')
