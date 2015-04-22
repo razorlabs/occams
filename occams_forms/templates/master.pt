@@ -118,16 +118,16 @@
       </div>
     </footer>
 
+    <!--! Load scripts at the end so we don't block rendering -->
+    <script
+        tal:repeat="url request.webassets_env['forms-js'].urls()"
+        src="${url}"
+        type="text/javascript"></script>
+
+    <metal:javascript-slot define-slot="javascript-slot">
+      <!--! Slot for injecting extra javascript into the applciation (e.g. ko initialization) -->
+    </metal:javascript-slot>
+
   </body>
-
-  <!--! Load scripts at the end so we don't block rendering -->
-  <script
-      tal:repeat="url request.webassets_env['forms-js'].urls()"
-      src="${url}"
-      type="text/javascript"> </script>
-
-  <metal:content-slot define-slot="javascript-slot">
-    <!--! Slot for injecting extra javascript into the applciation (e.g. ko initialization) -->
-  </metal:content-slot>
 
 </html>
