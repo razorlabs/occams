@@ -51,7 +51,7 @@ def includeme(config):
 
     settings['studies.export.dir'] = os.path.abspath(settings['studies.export.dir'])
     assert os.path.exists(settings['studies.export.dir']), \
-        'Does not exist: %s' % settings['app.export.dir']
+        'Does not exist: %s' % settings['studies.export.dir']
 
     if 'studies.export.limit' in settings:
         settings['studies.export.limit'] = int(settings['studies.export.limit'])
@@ -86,7 +86,7 @@ def on_preload_parsed(options, **kwargs):
     celery.settings = env['registry'].settings
     celery.redis = env['request'].redis
 
-    user = celery.settings['studies..export.user']
+    user = celery.settings['studies.export.user']
 
     if not Session.query(models.User).filter_by(key=user).first():
         with transaction.manager:
