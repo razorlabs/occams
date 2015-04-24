@@ -33,4 +33,8 @@ def uncaught(exc, request):
 
     if request.registry.settings.get('debugtoolbar.enabled'):
         raise
+
+    # explicity render template as 500, otherwise 200 was being passed.
+    request.response.status_code = 500
+
     return {}
