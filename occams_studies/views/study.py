@@ -47,11 +47,19 @@ def list_(request):
     sites_query = Session.query(models.Site)
     site_ids = [s.id for s in sites_query if request.has_permission('view', s)]
 
-    modified_query = (
-        Session.query(models.Patient)
-        .filter(models.Patient.site.has(models.Site.id.in_(site_ids)))
-        .order_by(models.Patient.modify_date.desc())
-        .limit(10))
+    if not site_ids:
+        modified_query = []
+        modified_count = 0
+
+    else:
+
+        modified_query = (
+            Session.query(models.Patient)
+            .filter(models.Patient.site.has(models.Site.id.in_(site_ids)))
+            .order_by(models.Patient.modify_date.desc())
+            .limit(10))
+
+        modified_count = modified_query.count()
 
     viewed = sorted((request.session.get('viewed') or {}).values(),
                     key=lambda v: v['view_date'],
@@ -64,7 +72,7 @@ def list_(request):
         'studies_count': len(studies_data),
 
         'modified': modified_query,
-        'modified_count': modified_query.count(),
+        'modified_count': modified_count,
 
         'viewed': viewed,
         'viewed_count': len(viewed),

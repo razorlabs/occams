@@ -25,6 +25,8 @@ warnings.filterwarnings('error', category=SAWarning)
 
 REDIS_URL = 'redis://localhost/9'
 
+USERID = 'test_user'
+
 
 def setup_package():
     """
@@ -79,16 +81,16 @@ class FunctionalFixture(unittest.TestCase):
     Tests under this fixture will be very slow, so use sparingly.
     """
 
-    @classmethod
-    def setUpClass(cls):
+    def setUp(self):
         import tempfile
         import six
+        from webtest import TestApp
         from occams import main
         from occams_studies import Session
 
         # The pyramid_who plugin requires a who file, so let's create a
         # barebones files for it...
-        cls.who_ini = tempfile.NamedTemporaryFile()
+        self.who_ini = tempfile.NamedTemporaryFile()
         who = six.moves.configparser.ConfigParser()
         who.add_section('general')
         who.set('general', 'request_classifier',
@@ -96,15 +98,18 @@ class FunctionalFixture(unittest.TestCase):
         who.set('general', 'challenge_decider',
                 'pyramid_who.classifiers:forbidden_challenger')
         who.set('general', 'remote_user_key', 'REMOTE_USER')
-        who.write(cls.who_ini)
-        cls.who_ini.flush()
+        who.write(self.who_ini)
+        self.who_ini.flush()
 
-        cls.app = main({}, **{
+        app = main({}, **{
             'redis.url': REDIS_URL,
             'redis.sessions.secret': 'sekrit',
 
-            'who.config_file': cls.who_ini.name,
+            'who.config_file': self.who_ini.name,
             'who.identifier_id': '',
+
+            # Enable regular error messages so we can see useful traceback
+            'debugtoolbar.enabled': True,
 
             'occams.apps': 'occams_studies',
 
@@ -122,13 +127,7 @@ class FunctionalFixture(unittest.TestCase):
             'roster.db.url': 'sqlite:///',
             })
 
-    @classmethod
-    def tearDownClass(cls):
-        cls.who_ini.close()
-
-    def setUp(self):
-        from webtest import TestApp
-        self.app = TestApp(self.app)
+        self.app = TestApp(app)
 
     def tearDown(self):
         import transaction
@@ -139,15 +138,19 @@ class FunctionalFixture(unittest.TestCase):
             Session.query(roster.Site).delete()
         Session.remove()
         RosterSession.remove()
+        self.who_ini.close()
+        del self.app
 
-    def make_environ(self, userid='testuser', properties={}, groups=()):
+    def make_environ(self, userid=USERID, properties={}, groups=()):
         """
         Creates dummy environ variables for mock-authentication
         """
-        if userid:
-            return {
-                'REMOTE_USER': userid,
-                'repoze.who.identity': {
-                    'repoze.who.userid': userid,
-                    'properties': properties,
-                    'groups': groups}}
+        if not userid:
+            return
+
+        return {
+            'REMOTE_USER': userid,
+            'repoze.who.identity': {
+                'repoze.who.userid': userid,
+                'properties': properties,
+                'groups': groups}}
