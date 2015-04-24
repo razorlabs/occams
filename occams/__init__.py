@@ -50,9 +50,8 @@ def main(global_config, **settings):
         settings.setdefault(key, value)
 
     # Make sure we at least have te
-    required_apps = set(['occams_datastore', 'occams_accounts'])
-    included_apps = set(aslist(settings.get('occams.apps') or ''))
-    settings['occams.apps'] = dict.fromkeys(required_apps | included_apps)
+    apps = aslist(settings.get('occams.apps') or '')
+    settings['occams.apps'] = dict.fromkeys(apps)
 
     config = Configurator(
         settings=settings,
