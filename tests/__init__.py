@@ -130,12 +130,15 @@ class FunctionalFixture(unittest.TestCase):
         self.app = TestApp(app)
 
     def tearDown(self):
+        from zope.sqlalchemy import mark_changed
         import transaction
         from occams_studies import Session, models as studies
         from occams_roster import Session as RosterSession, models as roster
         with transaction.manager:
-            Session.query(studies.User).delete()
-            Session.query(roster.Site).delete()
+            Session.execute('TRUNCATE "user" CASCADE')
+            mark_changed(Session())
+            # Session.query(studies.User).delete()
+            RosterSession.query(roster.Site).delete()
         Session.remove()
         RosterSession.remove()
         self.who_ini.close()
