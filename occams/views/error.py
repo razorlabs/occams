@@ -1,4 +1,3 @@
-from pyramid.httpexceptions import HTTPForbidden
 from pyramid.view import forbidden_view_config, view_config
 
 
@@ -12,12 +11,18 @@ def forbidden(request):
     does not have sufficient prilidges or is not logged in. If they user
     is not logged in we need to continue the Forbidden exception so it gets
     picked up by the single-sign-on mechanism (hopefully)
+
+    This distinction between 401 and 403 is related to the below ticket:
+    Issue 436 of Pylons/pyramid -  Authorisation incorrectly implements
+    403 Forbidden against RFC 2616
     """
 
     is_logged_in = bool(request.authenticated_userid)
 
     if not is_logged_in:
-        return HTTPForbidden()
+        request.response.status_code = 401
+    else:
+        request.response.status_code = 403
 
     return {}
 
