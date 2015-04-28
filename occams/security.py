@@ -31,7 +31,7 @@ def groupfinder(identity, request):
     assert 'groups' in identity, \
         'Groups has not been set in the repoze identity!'
     mappings = request.group_mappings
-    return [mappings[g] for g in identity['groups'] if g in mappings]
+    return [mappings[g] if g in mappings else g for g in identity['groups']]
 
 
 class RootFactory(dict):
