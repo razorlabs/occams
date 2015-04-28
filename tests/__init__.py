@@ -22,7 +22,6 @@ import warnings
 from sqlalchemy.schema import CreateTable
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.exc import SAWarning
-warnings.filterwarnings('error', category=SAWarning)
 
 
 REDIS_URL = 'redis://localhost/9'
