@@ -166,7 +166,7 @@ def codebook_download(context, request):
     """
     Returns full codebook file
     """
-    export_dir = request.registry.settings['app.export.dir']
+    export_dir = request.registry.settings['studies.export.dir']
     codebook_name = exports.codebook.FILE_NAME
     path = os.path.join(export_dir, codebook_name)
     if not os.path.isfile(path):
