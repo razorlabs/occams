@@ -19,6 +19,8 @@ except ImportError:
 
 # Raise unicode warnings as errors so we can fix them
 import warnings
+from sqlalchemy.schema import CreateTable
+from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.exc import SAWarning
 warnings.filterwarnings('error', category=SAWarning)
 
@@ -26,6 +28,17 @@ warnings.filterwarnings('error', category=SAWarning)
 REDIS_URL = 'redis://localhost/9'
 
 USERID = 'test_user'
+
+
+@compiles(CreateTable, 'postgresql')
+def compile_unlogged(create, compiler, **kwargs):
+    """
+    Enables unlogged-tables for testing purposes.
+    This will make table creates slower, but data writes faster.
+    """
+    if 'UNLOGGED' not in create.element._prefixes:
+        create.element._prefixes.append('UNLOGGED')
+        return compiler.visit_create_table(create)
 
 
 def setup_package():
@@ -37,17 +50,35 @@ def setup_package():
     """
     from sqlalchemy import create_engine
     from testconfig import config
-    from occams_studies import Session
-    from occams_roster import Session as RosterSession
-    from occams_roster import models as roster
+    from occams_datastore import models as datastore
+    from occams_studies import Session, models
+    from occams_roster import models as roster, Session as RosterSession
 
     db = config.get('db')
     studies_engine = create_engine(db)
     Session.configure(bind=studies_engine)
 
-    roster_engine = create_engine('sqlite:///')
+    datastore.DataStoreModel.metadata.create_all(studies_engine)
+    models.Base.metadata.create_all(studies_engine)
+
+    roster_engine = create_engine('sqlite://')
     RosterSession.configure(bind=roster_engine)
     roster.Base.metadata.create_all(RosterSession.bind)
+
+
+def teardown_package():
+    import os
+    from occams_datastore import models as datastore
+    from occams_studies import Session, models
+
+    url = Session.bind.url
+
+    if Session.bind.url.drivername == 'sqlite':
+        if Session.bind.url.database not in ('', ':memory:'):
+            os.unlink(url.database)
+    else:
+        models.Base.metadata.drop_all(Session.bind)
+        datastore.DataStoreModel.metadata.drop_all(Session.bind)
 
 
 class IntegrationFixture(unittest.TestCase):
@@ -63,16 +94,16 @@ class IntegrationFixture(unittest.TestCase):
 
         self.config = testing.setUp()
 
-        self.addCleanup(testing.tearDown)
-        self.addCleanup(transaction.abort)
-        self.addCleanup(Session.remove)
-
         blame = models.User(key=u'tester')
         Session.add(blame)
         Session.flush()
         Session.info['blame'] = blame
 
         Base.metadata.info['settings'] = self.config.registry.settings
+
+        self.addCleanup(testing.tearDown)
+        self.addCleanup(transaction.abort)
+        self.addCleanup(Session.remove)
 
 
 class FunctionalFixture(unittest.TestCase):
@@ -96,7 +127,7 @@ class FunctionalFixture(unittest.TestCase):
         who.set('general', 'request_classifier',
                 'repoze.who.classifiers:default_request_classifier')
         who.set('general', 'challenge_decider',
-                'pyramid_who.classifiers:forbidden_challenger')
+                'repoze.who.classifiers:default_challenge_decider')
         who.set('general', 'remote_user_key', 'REMOTE_USER')
         who.write(self.who_ini)
         self.who_ini.flush()
@@ -111,11 +142,12 @@ class FunctionalFixture(unittest.TestCase):
             # Enable regular error messages so we can see useful traceback
             'debugtoolbar.enabled': True,
 
+            'webassets.debug': True,
+            'webassets.auto_build': False,
+
             'occams.apps': 'occams_studies',
 
             'occams.db.url': Session.bind,
-            'occams.org.name': 'myorg',
-            'occams.org.title': 'MY ORGANIZATION',
             'occams.groups': [],
 
             'studies.export.dir': '/tmp',
@@ -124,23 +156,23 @@ class FunctionalFixture(unittest.TestCase):
             'studies.celery.backend.url': REDIS_URL,
             'studies.pid.package': 'occams.roster',
 
-            'roster.db.url': 'sqlite:///',
-            })
+            'roster.db.url': 'sqlite://',
+        })
 
         self.app = TestApp(app)
 
     def tearDown(self):
-        from zope.sqlalchemy import mark_changed
         import transaction
-        from occams_studies import Session, models as studies
-        from occams_roster import Session as RosterSession, models as roster
+        from zope.sqlalchemy import mark_changed
+        from occams_studies import Session
         with transaction.manager:
-            Session.execute('TRUNCATE "user" CASCADE')
+            # DELETE is significantly faster than TRUNCATE
+            # http://stackoverflow.com/a/11423886/148781
+            # We also have to do this as a raw query becuase SA does
+            # not have a way to invoke server-side cascade
+            Session.execute('DELETE FROM "user" CASCADE')
             mark_changed(Session())
-            # Session.query(studies.User).delete()
-            RosterSession.query(roster.Site).delete()
         Session.remove()
-        RosterSession.remove()
         self.who_ini.close()
         del self.app
 
