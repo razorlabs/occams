@@ -25,7 +25,6 @@ class TestPermissionsStudyList(FunctionalFixture):
     def test_allowed(self, group):
         environ = self.make_environ(userid=USERID, groups=[group])
         response = self.app.get(self.url, extra_environ=environ)
-        # from nose.tools import set_trace; set_trace()
         self.assertEquals(200, response.status_code)
 
     def test_not_authenticated(self):
@@ -67,7 +66,6 @@ class TestPermissionsStudyView(FunctionalFixture):
     def test_allowed(self, group):
         environ = self.make_environ(userid=USERID, groups=[group])
         response = self.app.get(self.url, extra_environ=environ)
-        # from nose.tools import set_trace; set_trace()
         self.assertEquals(200, response.status_code)
 
     def test_not_authenticated(self):
@@ -110,7 +108,6 @@ class TestPermissionsStudyEdit(FunctionalFixture):
         response = self.app.get(self.url, extra_environ=environ, xhr=True)
         data = response.json
         csrf_token = self.app.cookies['csrf_token']
-        # from nose.tools import set_trace; set_trace()
         response = self.app.put_json(
             self.url,
             extra_environ=environ,
@@ -120,7 +117,6 @@ class TestPermissionsStudyEdit(FunctionalFixture):
                 'X-REQUESTED-WITH': str('XMLHttpRequest')
             },
             params=data)
-        # from nose.tools import set_trace; set_trace()
         self.assertEquals(200, response.status_code)
 
     @data('enterer', 'reviewer', 'consumer', 'member', None)
@@ -204,6 +200,34 @@ class TestPermissionsStudyDelete(FunctionalFixture):
             params=data)
 
         self.assertEquals(403, response.status_code)
+
+    def test_not_authenticated(self):
+        self.app.get(self.url, status=401)
+
+
+@ddt
+class TestPermissionsPatientList(FunctionalFixture):
+
+    url = '/studies/patients'
+
+    def setUp(self):
+        super(TestPermissionsPatientList, self).setUp()
+
+        import transaction
+        from occams import Session
+        from occams_datastore import models as datastore
+
+        # Any view-dependent data goes here
+        # Webtests will use a different scope for its transaction
+        with transaction.manager:
+            Session.add(datastore.User(key=USERID))
+
+    @data('administrator', 'manager', 'enterer', 'reviewer',
+          'consumer', 'member', None)
+    def test_allowed(self, group):
+        environ = self.make_environ(userid=USERID, groups=[group])
+        response = self.app.get(self.url, extra_environ=environ)
+        self.assertEquals(200, response.status_code)
 
     def test_not_authenticated(self):
         self.app.get(self.url, status=401)
