@@ -424,6 +424,7 @@ def visits_cycle(context, request):
     xhr=True,
     renderer='json')
 def edit_json(context, request):
+    from nose.tools import set_trace; set_trace()
     check_csrf_token(request)
 
     form = StudySchema(context, request).from_json(request.json_body)
