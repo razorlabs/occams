@@ -25,53 +25,53 @@ class TestPermissionsStudyList(FunctionalFixture):
     def test_allowed(self, group):
         environ = self.make_environ(userid=USERID, groups=[group])
         response = self.app.get(self.url, extra_environ=environ)
-        from nose.tools import set_trace; set_trace()
+        # from nose.tools import set_trace; set_trace()
         self.assertEquals(200, response.status_code)
 
     def test_not_authenticated(self):
         self.app.get(self.url, status=401)
 
 
-# @ddt
-# class TestPermissionsStudyView(FunctionalFixture):
+@ddt
+class TestPermissionsStudyView(FunctionalFixture):
 
-#     study = 'test'
-#     url = '/studies/{}'.format(study)
+    study = 'test'
+    url = '/studies/{}'.format(study)
 
-#     def setUp(self):
-#         super(TestPermissionsStudyView, self).setUp()
+    def setUp(self):
+        super(TestPermissionsStudyView, self).setUp()
 
-#         import transaction
-#         from occams import Session
-#         from occams_studies import models as studies
-#         from occams_datastore import models as datastore
-#         from datetime import date
+        import transaction
+        from occams import Session
+        from occams_studies import models as studies
+        from occams_datastore import models as datastore
+        from datetime import date
 
-#         # Any view-dependent data goes here
-#         # Webtests will use a different scope for its transaction
-#         with transaction.manager:
-#             user = datastore.User(key=USERID)
-#             Session.info['blame'] = user
-#             Session.add(user)
-#             Session.flush()
-#             Session.add(studies.Study(
-#                         name=u'test',
-#                         title=u'test',
-#                         short_title=u'test',
-#                         code=u'test',
-#                         consent_date=date.today(),
-#                         is_randomized=False))
+        # Any view-dependent data goes here
+        # Webtests will use a different scope for its transaction
+        with transaction.manager:
+            user = datastore.User(key=USERID)
+            Session.info['blame'] = user
+            Session.add(user)
+            Session.flush()
+            Session.add(studies.Study(
+                        name=u'test',
+                        title=u'test',
+                        short_title=u'test',
+                        code=u'test',
+                        consent_date=date.today(),
+                        is_randomized=False))
 
-#     @data('administrator', 'manager', 'enterer', 'reviewer',
-#           'consumer', 'member', None)
-#     def test_allowed(self, group):
-#         environ = self.make_environ(userid=USERID, groups=[group])
-#         response = self.app.get(self.url, extra_environ=environ)
-#         from nose.tools import set_trace; set_trace()
-#         self.assertEquals(200, response.status_code)
+    @data('administrator', 'manager', 'enterer', 'reviewer',
+          'consumer', 'member', None)
+    def test_allowed(self, group):
+        environ = self.make_environ(userid=USERID, groups=[group])
+        response = self.app.get(self.url, extra_environ=environ)
+        # from nose.tools import set_trace; set_trace()
+        self.assertEquals(200, response.status_code)
 
-#     def test_not_authenticated(self):
-#         self.app.get(self.url, status=401)
+    def test_not_authenticated(self):
+        self.app.get(self.url, status=401)
 
 
 @ddt
@@ -107,61 +107,103 @@ class TestPermissionsStudyEdit(FunctionalFixture):
     @data('administrator', 'manager')
     def test_allowed(self, group):
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.put(self.url, extra_environ=environ, xhr=True, status='*')
+        response = self.app.get(self.url, extra_environ=environ, xhr=True)
+        data = response.json
+        csrf_token = self.app.cookies['csrf_token']
+        # from nose.tools import set_trace; set_trace()
+        response = self.app.put_json(
+            self.url,
+            extra_environ=environ,
+            status='*',
+            headers={
+                'X-CSRF-Token': csrf_token,
+                'X-REQUESTED-WITH': str('XMLHttpRequest')
+            },
+            params=data)
         # from nose.tools import set_trace; set_trace()
         self.assertEquals(200, response.status_code)
 
     @data('enterer', 'reviewer', 'consumer', 'member', None)
     def test_not_allowed(self, group):
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.put(self.url, extra_environ=environ, xhr=True, status='*')
+        response = self.app.put(
+            self.url,
+            extra_environ=environ,
+            xhr=True,
+            status='*')
         self.assertEquals(403, response.status_code)
 
     def test_not_authenticated(self):
         self.app.get(self.url, status=401)
 
 
-# @ddt
-# class TestPermissionsStudyDelete(FunctionalFixture):
+@ddt
+class TestPermissionsStudyDelete(FunctionalFixture):
 
-#     study = 'test'
-#     url = '/studies/{}'.format(study)
+    study = 'test'
+    url = '/studies/{}'.format(study)
 
-#     def setUp(self):
-#         super(TestPermissionsStudyDelete, self).setUp()
+    def setUp(self):
+        super(TestPermissionsStudyDelete, self).setUp()
 
-#         import transaction
-#         from occams import Session
-#         from occams_studies import models as studies
-#         from occams_datastore import models as datastore
-#         from datetime import date
+        import transaction
+        from occams import Session
+        from occams_studies import models as studies
+        from occams_datastore import models as datastore
+        from datetime import date
 
-#         # Any view-dependent data goes here
-#         # Webtests will use a different scope for its transaction
-#         with transaction.manager:
-#             user = datastore.User(key=USERID)
-#             Session.info['blame'] = user
-#             Session.add(user)
-#             Session.flush()
-#             Session.add(studies.Study(
-#                         name=u'test',
-#                         title=u'test',
-#                         short_title=u'test',
-#                         code=u'test',
-#                         consent_date=date.today(),
-#                         is_randomized=False))
+        # Any view-dependent data goes here
+        # Webtests will use a different scope for its transaction
+        with transaction.manager:
+            user = datastore.User(key=USERID)
+            Session.info['blame'] = user
+            Session.add(user)
+            Session.flush()
+            Session.add(studies.Study(
+                        name=u'test',
+                        title=u'test',
+                        short_title=u'test',
+                        code=u'test',
+                        consent_date=date.today(),
+                        is_randomized=False))
 
-#     @data('administrator', 'manager', 'whatever')
-#     def test_allowed(self, group):
-#         environ = self.make_environ(userid=USERID, groups=[group])
-#         response = self.app.delete(self.url, extra_environ=environ, xhr=True)
-#         self.assertEquals(200, response.status_code)
+    @data('administrator', 'manager')
+    def test_allowed(self, group):
+        environ = self.make_environ(userid=USERID, groups=[group])
+        response = self.app.get(self.url, extra_environ=environ, xhr=True)
+        data = response.json
+        csrf_token = self.app.cookies['csrf_token']
 
-#     # @data('enterer', 'reviewer', 'consumer', 'member', None)
-#     # def test_not_allowed(self, group):
-#     #     environ = self.make_environ(userid=USERID, groups=[group])
-#     #     response = self.app.delete(self.url, extra_environ=environ, xhr=True)
-#     #     self.assertEquals(403, response.status_code)
+        response = self.app.delete_json(
+            self.url,
+            extra_environ=environ,
+            status='*',
+            headers={
+                'X-CSRF-Token': csrf_token,
+                'X-REQUESTED-WITH': str('XMLHttpRequest')
+            },
+            params=data)
 
-#     def test_not_authenticated(self):
-#         self.app.get(self.url, status=403)
+        self.assertEquals(200, response.status_code)
+
+    @data('enterer', 'reviewer', 'consumer', 'member', None)
+    def test_not_allowed(self, group):
+        environ = self.make_environ(userid=USERID, groups=[group])
+        response = self.app.get(self.url, extra_environ=environ, xhr=True)
+        data = response.json
+        csrf_token = self.app.cookies['csrf_token']
+
+        response = self.app.delete_json(
+            self.url,
+            extra_environ=environ,
+            status='*',
+            headers={
+                'X-CSRF-Token': csrf_token,
+                'X-REQUESTED-WITH': str('XMLHttpRequest')
+            },
+            params=data)
+
+        self.assertEquals(403, response.status_code)
+
+    def test_not_authenticated(self):
+        self.app.get(self.url, status=401)
