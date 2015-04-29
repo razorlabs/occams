@@ -387,13 +387,27 @@ class Arm(Base, Referenceable, Describeable,  Modifiable, Auditable):
 
 class PatientFactory(object):
 
-    __acl__ = [
-        (Allow, groups.administrator(), ALL_PERMISSIONS),
-        (Allow, groups.manager(), ('add', 'view')),
-        (Allow, groups.reviewer(), ('add', 'view')),
-        (Allow, groups.enterer(), ('add', 'view')),
-        (Allow, Authenticated, 'view')
+    @property
+    def __acl__(self):
+        acl = [
+            (Allow, groups.administrator(), ALL_PERMISSIONS),
+            (Allow, groups.manager(), ('view', 'add'))
         ]
+
+        # Grant access to any member of any site and
+        # filter patients within the view listing based
+        # on which sites the user has access.
+        for site in Session.query(Site):
+            acl.extend([
+                (Allow, groups.enterer(site), ('view', 'add')),
+                (Allow, groups.reviewer(site), ('view',)),
+                (Allow, groups.consumer(site), ('view',)),
+                (Allow, groups.member(site), ('view',)),
+            ])
+
+        acl.extend([(Allow, Authenticated, 'view')])
+
+        return acl
 
     def __init__(self, request):
         self.request = request
@@ -433,7 +447,7 @@ class SiteFactory(object):
         return site
 
 
-class Site(Base,  Referenceable, Describeable, Modifiable, Auditable):
+class Site(Base, Referenceable, Describeable, Modifiable, Auditable):
     """
     A facility within an organization
     """
@@ -449,7 +463,10 @@ class Site(Base,  Referenceable, Describeable, Modifiable, Auditable):
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
             (Allow, groups.manager(), ('view', 'edit', 'delete')),
-            (Allow, groups.member(site=self), 'view'),
+            (Allow, groups.enterer(self), ('view',)),
+            (Allow, groups.consumer(self), ('view',)),
+            (Allow, groups.reviewer(self), ('view',)),
+            (Allow, groups.member(self), 'view'),
             ]
 
     # patients backref'd from patient
