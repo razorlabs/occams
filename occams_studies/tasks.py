@@ -226,7 +226,7 @@ def make_codebook(self):
     """
     try:
         codebook_chain = [p.codebook() for p in itervalues(exports.list_all())]
-        path = os.path.join(celery.settings['app.export.dir'],
+        path = os.path.join(celery.settings['studies.export.dir'],
                             exports.codebook.FILE_NAME)
         with open(path, 'w+b') as fp:
             exports.write_codebook(fp, chain.from_iterable(codebook_chain))
