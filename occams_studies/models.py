@@ -505,7 +505,7 @@ class Patient(Base, Referenceable, Modifiable, HasEntities, Auditable):
         site = self.site
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
-            (Allow, groups.manager(site), ('view', 'edit', 'delete')),
+            (Allow, groups.manager(), ('view', 'edit', 'delete')),
             (Allow, groups.reviewer(site), ('view', 'edit', 'delete')),
             (Allow, groups.enterer(site), ('view', 'edit', 'delete')),
             (Allow, groups.consumer(site), 'view')
