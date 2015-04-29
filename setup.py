@@ -26,6 +26,7 @@ REQUIRES = [
     'pyramid_exclog',                   # Logging for production
     'pyramid_tm',                       # Centralized transations
     'pyramid_redis_sessions',           # HTTP session with redis backend
+    'pryamid_redis',
     'pyramid_rewrite',                  # Allows urls to end in "/"
     'pyramid_webassets',                # Asset management (ala grunt)
     'pyramid_who',                      # User authentication
