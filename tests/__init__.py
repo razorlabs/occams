@@ -18,10 +18,8 @@ except ImportError:
     import unittest
 
 # Raise unicode warnings as errors so we can fix them
-import warnings
 from sqlalchemy.schema import CreateTable
 from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.exc import SAWarning
 
 
 REDIS_URL = 'redis://localhost/9'
@@ -171,6 +169,7 @@ class FunctionalFixture(unittest.TestCase):
             # not have a way to invoke server-side cascade
             Session.execute('DELETE FROM "study" CASCADE')
             Session.execute('DELETE FROM "patient" CASCADE')
+            Session.execute('DELETE FROM "site" CASCADE')
             Session.execute('DELETE FROM "export" CASCADE')
             Session.execute('DELETE FROM "user" CASCADE')
             mark_changed(Session())

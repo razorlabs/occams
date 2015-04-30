@@ -415,6 +415,10 @@ class SiteFactory(object):
 
     __acl__ = [
         (Allow, groups.administrator(), ALL_PERMISSIONS),
+
+        # Authenticated users can access the resource,
+        # but individual items will be filterd by access
+        (Allow, Authenticated, 'view')
         ]
 
     def __init__(self, request):
