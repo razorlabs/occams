@@ -165,6 +165,7 @@ class FunctionalFixture(unittest.TestCase):
             Session.execute('DELETE FROM "site" CASCADE')
             Session.execute('DELETE FROM "schema" CASCADE')
             Session.execute('DELETE FROM "export" CASCADE')
+            Session.execute('DELETE FROM "state" CASCADE')
             Session.execute('DELETE FROM "user" CASCADE')
             mark_changed(Session())
         Session.remove()
