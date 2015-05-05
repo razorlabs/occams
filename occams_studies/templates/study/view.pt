@@ -285,7 +285,7 @@
             <!-- ko if: $root.showEditCycle -->
               <form class="form-horizontal"
                   method="POST"
-                  action="${request.current_route_path('studies.cycles')}"
+                  action="${request.current_route_path(_route_name='studies.cycles')}"
                   data-bind="validate: {}, submit: $root.saveCycle">
                 <div class="modal-header">
                   <!-- ko if: id -->
