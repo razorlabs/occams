@@ -506,7 +506,7 @@ class Patient(Base, Referenceable, Modifiable, HasEntities, Auditable):
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
             (Allow, groups.manager(), ('view', 'edit', 'delete')),
-            (Allow, groups.reviewer(site), ('view', 'edit')),
+            (Allow, groups.reviewer(site), ('view',)),
             (Allow, groups.enterer(site), ('view', 'edit')),
             (Allow, groups.consumer(site), 'view')
             ]
@@ -719,7 +719,7 @@ class EnrollmentFactory(object):
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
             (Allow, groups.manager(site), ('view', 'add')),
-            (Allow, groups.reviewer(site), ('view', 'add')),
+            (Allow, groups.reviewer(site), ('view')),
             (Allow, groups.enterer(site), ('view', 'add')),
             (Allow, groups.consumer(site), 'view'),
             ]
@@ -769,9 +769,9 @@ class Enrollment(Base,  Referenceable, Modifiable, HasEntities, Auditable):
         site = self.patient.site
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
-            (Allow, groups.manager(site), ('view', 'edit', 'delete', 'randomize', 'terminate')),  # NOQA
-            (Allow, groups.reviewer(site), ('view', 'edit', 'delete', 'randomize', 'terminate')),  # NOQA
-            (Allow, groups.enterer(site), ('view', 'edit', 'delete')),  # NOQA
+            (Allow, groups.manager(), ('view', 'edit', 'delete', 'randomize', 'terminate')),  # NOQA
+            (Allow, groups.reviewer(site), ('view')),  # NOQA
+            (Allow, groups.enterer(site), ('view', 'edit', 'delete', 'terminate')),  # NOQA
             (Allow, groups.consumer(site), 'view')
             ]
 
