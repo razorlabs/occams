@@ -14,7 +14,7 @@ from occams_forms.renderers import \
     make_form, render_form, apply_data, entity_data
 from occams_datastore.reporting import build_report
 
-from .. import _, models, Session
+from .. import _, log, models, Session
 
 
 @view_config(
@@ -175,6 +175,10 @@ def terminate_ajax(context, request):
     else:
         schema = entity.schema
         data = entity_data(entity)
+
+    if 'termination_date' not in schema.attributes:
+        msg = 'There is no "termination_date" configured on: {}'
+        log.warn(msg.format(schema.name))
 
     Form = make_form(Session, schema)
     form = Form(request.POST, data=data)
