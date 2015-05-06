@@ -94,7 +94,7 @@ your desired development environment settings::
 Install the appropriate database tables::
 
   > createdb -U DBADMIN -O DBUSER DBNAME
-  > os_initdb -c etc/development.ini
+  > os_initdb etc/development.ini
 
 
 Start the web service::
