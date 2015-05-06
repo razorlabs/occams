@@ -28,8 +28,10 @@ def groupfinder(identity, request):
     """
     Parse the groups from the identity into internal app groups
     """
-    assert 'groups' in identity, \
-        'Groups has not been set in the repoze identity!'
+    if 'groups' not in identity:
+        log.warn('Groups has not been set in the repoze identity!')
+        return []
+
     mappings = request.group_mappings
     return [mappings[g] if g in mappings else g for g in identity['groups']]
 
