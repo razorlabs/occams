@@ -631,8 +631,9 @@ def add_schema_json(context, request):
                 validators=[
                     wtforms.validators.InputRequired(),
                     check_published]),
-            validators=[check_same_schema],
-            min_entries=1)
+            validators=[
+                wtforms.validators.DataRequired(),
+                check_same_schema])
 
     form = SchemaManagementForm.from_json(request.json_body)
 
