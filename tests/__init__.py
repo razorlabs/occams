@@ -145,6 +145,7 @@ class FunctionalFixture(unittest.TestCase):
             'studies.celery.broker.url': REDIS_URL,
             'studies.celery.backend.url': REDIS_URL,
             'studies.pid.package': 'occams.roster',
+            'studies.blob.dir': '/tmp',
 
             'roster.db.url': 'sqlite://',
         })
