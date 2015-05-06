@@ -644,3 +644,199 @@ class TestPermissionsPatientFormsDelete(FunctionalFixture):
 
     def test_not_authenticated(self):
         self.app.get(self.url, status=401)
+
+
+@ddt
+class TestPermissionsPatientFormView(FunctionalFixture):
+
+    url = '/studies/patients/123/forms/{}'
+
+    def setUp(self):
+        super(TestPermissionsPatientFormView, self).setUp()
+
+        import transaction
+        from occams import Session
+        from occams_studies import models as studies
+        from occams_datastore import models as datastore
+        from datetime import date
+
+        # Any view-dependent data goes here
+        # Webtests will use a different scope for its transaction
+        with transaction.manager:
+            user = datastore.User(key=USERID)
+            Session.info['blame'] = user
+            Session.add(user)
+            Session.flush()
+            site = studies.Site(
+                name=u'UCSD',
+                title=u'UCSD',
+                description=u'UCSD Campus',
+                create_date=date.today())
+
+            patient = studies.Patient(
+                initials=u'ian',
+                nurse=u'imanurse@ucsd.edu',
+                site=site,
+                pid=u'123'
+            )
+
+            form = datastore.Schema(
+                name=u'test_schema',
+                title=u'test_title',
+                publish_date=date(2015, 1, 1)
+            )
+
+            study = studies.Study(
+                name=u'test_study',
+                code=u'test_code',
+                consent_date=date(2014, 12, 23),
+                is_randomized=False,
+                title=u'test_title',
+                short_title=u'test_short',
+                start_date=date(2014, 12, 12),
+                schemata=set([form])
+            )
+
+            state = studies.State(
+                name=u'pending-entry',
+                title=u'pending-entry'
+            )
+
+            Session.add(datastore.Entity(
+                state=state,
+                schema=form,
+                collect_date=date(2015, 02, 1)
+            ))
+
+            Session.add(studies.Enrollment(
+                patient=patient,
+                study=study,
+                consent_date=date(2014, 12, 22)
+            ))
+
+    @data('administrator', 'manager', 'UCSD:enterer',
+          'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member')
+    def test_allowed(self, group):
+        from occams import Session
+        from occams_datastore import models as datastore
+
+        environ = self.make_environ(userid=USERID, groups=[group])
+        entity_id = Session.query(datastore.Entity.id).filter(
+            datastore.Entity.schema.has(name=u'test_schema')).scalar()
+        response = self.app.get(
+            self.url.format(entity_id), extra_environ=environ)
+
+        self.assertEquals(200, response.status_code)
+
+    def test_not_authenticated(self):
+        from occams import Session
+        from occams_datastore import models as datastore
+        entity_id = Session.query(datastore.Entity.id).filter(
+            datastore.Entity.schema.has(name=u'test_schema')).scalar()
+
+        self.app.get(self.url.format(entity_id), status=401)
+
+
+@ddt
+class TestPermissionsPatientFormsEdit(FunctionalFixture):
+
+    url = '/studies/patients/123/forms/{}'
+
+    def setUp(self):
+        super(TestPermissionsPatientFormsEdit, self).setUp()
+
+        import transaction
+        from occams import Session
+        from occams_studies import models as studies
+        from occams_datastore import models as datastore
+        from datetime import date
+
+        # Any view-dependent data goes here
+        # Webtests will use a different scope for its transaction
+        with transaction.manager:
+            user = datastore.User(key=USERID)
+            Session.info['blame'] = user
+            Session.add(user)
+            Session.flush()
+            site = studies.Site(
+                name=u'UCSD',
+                title=u'UCSD',
+                description=u'UCSD Campus',
+                create_date=date.today())
+
+            patient = studies.Patient(
+                initials=u'ian',
+                nurse=u'imanurse@ucsd.edu',
+                site=site,
+                pid=u'123'
+            )
+
+            form = datastore.Schema(
+                name=u'test_schema',
+                title=u'test_title',
+                publish_date=date(2015, 1, 1)
+            )
+
+            study = studies.Study(
+                name=u'test_study',
+                code=u'test_code',
+                consent_date=date(2014, 12, 23),
+                is_randomized=False,
+                title=u'test_title',
+                short_title=u'test_short',
+                start_date=date(2014, 12, 12),
+                schemata=set([form])
+            )
+
+            state = studies.State(
+                name=u'pending-entry',
+                title=u'pending-entry'
+            )
+
+            Session.add(datastore.Entity(
+                state=state,
+                schema=form,
+                collect_date=date(2015, 02, 1)
+            ))
+
+            Session.add(studies.Enrollment(
+                patient=patient,
+                study=study,
+                consent_date=date(2014, 12, 22)
+            ))
+
+    @data('administrator', 'manager', 'UCSD:enterer')
+    def test_allowed(self, group):
+        from occams import Session
+        from occams_datastore import models as datastore
+
+        environ = self.make_environ(userid=USERID, groups=[group])
+        entity_id = Session.query(datastore.Entity.id).filter(
+            datastore.Entity.schema.has(name=u'test_schema')).scalar()
+        response = self.app.post(
+            self.url.format(entity_id), extra_environ=environ,
+            params={'id_1': entity_id})
+
+        self.assertEquals(200, response.status_code)
+
+    @data('UCSD:reviewer', 'UCSD:consumer', 'UCSD:member')
+    def test_not_allowed(self, group):
+        from occams import Session
+        from occams_datastore import models as datastore
+
+        environ = self.make_environ(userid=USERID, groups=[group])
+        entity_id = Session.query(datastore.Entity.id).filter(
+            datastore.Entity.schema.has(name=u'test_schema')).scalar()
+        response = self.app.post(
+            self.url.format(entity_id), extra_environ=environ,
+            params={'id_1': entity_id}, status='*')
+
+        self.assertEquals(403, response.status_code)
+
+    def test_not_authenticated(self):
+        from occams import Session
+        from occams_datastore import models as datastore
+        entity_id = Session.query(datastore.Entity.id).filter(
+            datastore.Entity.schema.has(name=u'test_schema')).scalar()
+
+        self.app.get(self.url.format(entity_id), status=401)
