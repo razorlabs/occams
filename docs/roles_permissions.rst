@@ -33,90 +33,228 @@ Studies
 *******
 ``/studies``
 
-========  =============  =======  =======  ========  ========  ======
-Name      administrator  manager  enterer  reviewer  consumer  member
-========  =============  =======  =======  ========  ========  ======
-view      x              x        x        x         x         x
-add       x              x
-========  =============  =======  =======  ========  ========  ======
+==============  ====  ===
+Name            view  add
+==============  ====  ===
+administrator   X     X
+manager         X     X
+enterer         X
+reviewer        X
+consumer        X
+member          X
+==============  ====  ===
 
 
 ``/studies/595``
 
-========  =============  =======  =======  ========  ========  ======
-Name      administrator  manager  enterer  reviewer  consumer  member
-========  =============  =======  =======  ========  ========  ======
-view      x              x        x        x         x         x
-edit      x              x
-delete    x              x
-========  =============  =======  =======  ========  ========  ======
+==============  ====  ====  ======
+Name            view  edit  delete
+==============  ====  ====  ======
+administrator   X     X     X
+manager         X     X     X
+enterer         X
+reviewer        X
+consumer        X
+member          X
+==============  ====  ====  ======
 
 Patients
 ********
 ``/patients``
 
-========  =============  =======  =======  ========  ========  ======
-Name      administrator  manager  enterer  reviewer  consumer  member
-========  =============  =======  =======  ========  ========  ======
-view      x              x        s        s         s         s
-add       x              x        s
-========  =============  =======  =======  ========  ========  ======
+==============  ====  ===
+Name            view  add
+==============  ====  ===
+administrator   X     X
+manager         X     X
+enterer         S     S
+reviewer        S
+consumer        S
+member          S
+==============  ====  ===
 
 
 ``/patients/xxx-xxx``
 
-========  =============  =======  =======  ========  ========  ======
-Name      administrator  manager  enterer  reviewer  consumer  member
-========  =============  =======  =======  ========  ========  ======
-view      x              x        s        s         s         s
-edit      x              x        s
-delete    x              x
-========  =============  =======  =======  ========  ========  ======
+==============  ====  ====  ======
+Name            view  edit  delete
+==============  ====  ====  ======
+administrator   X     X     X
+manager         X     X     X
+enterer         S     S
+reviewer        S
+consumer        S
+member          S
+==============  ====  ====  ======
 
 Forms
 ********
 ``/patients/xxx-xxx/forms``
 
-========  =============  =======  =======  ========  ========  ======
-Name      administrator  manager  enterer  reviewer  consumer  member
-========  =============  =======  =======  ========  ========  ======
-view      x              x        s
-add       x              x        s        s         s         s
-========  =============  =======  =======  ========  ========  ======
+==============  ====  ===
+Name            view  add
+==============  ====  ===
+administrator   X     X
+manager         X     X
+enterer         S     S
+reviewer        S
+consumer        S
+member          S
+==============  ====  ===
 
 
 ``/patients/xxx-xxx/forms/123``
 
-===========  =============  =======  =======  ========  ========  ======
-Name         administrator  manager  enterer  reviewer  consumer  member
-===========  =============  =======  =======  ========  ========  ======
-view         x              x        s
-edit         x              x
-delete       x              x        s        s         s         s
-transitions  x              x        ask m    s
-===========  =============  =======  =======  ========  ========  ======
+==============  ====  ====  ======  ================
+Name            view  edit  delete  transition
+==============  ====  ====  ======  ================
+administrator   X     X     X       X
+manager         X     X     X       X
+enterer         S     S             Random Automated
+reviewer        S                   S
+consumer        S
+member          S
+==============  ====  ====  ======  ================
 
 Enrollments
 ***********
 ``/patients/xxx-xxx/enrollments``
 
-========  =============  =======  =======  ========  ========  ======  =======
-Name      administrator  manager  enterer  reviewer  consumer  member  blinder
-========  =============  =======  =======  ========  ========  ======  =======
-view      x              x        s        s         s         s
-add       x              x        s
-========  =============  =======  =======  ========  ========  ======  =======
+==============  ====  ===
+Name            view  add
+==============  ====  ===
+administrator   X     X
+manager         X     X
+enterer         S     S
+reviewer        S
+consumer        S
+member          S
+blinder
+==============  ====  ===
 
 
 ``/patients/xxx-xxx/enrollments/1234``
 
-===========  =============  =======  =======  ========  ========  ======  =======
-Name         administrator  manager  enterer  reviewer  consumer  member  blinder
-===========  =============  =======  =======  ========  ========  ======  =======
-view         x              x        s        s         s         s       s
-edit         x              x        s
-randomize    x              x        s
-transition   x              x        s
-delete       x              x
-blinded      x                                                            s
-===========  =============  =======  =======  ========  ========  ======  =======
+==============  ====  ====  ======  =========  =========  =======
+Name            view  edit  delete  randomize  terminate  blinded
+==============  ====  ====  ======  =========  =========  =======
+administrator   X     X     X       X          X          X
+manager         X     X     X       X          X
+enterer         S     S             S          S
+reviewer        S
+consumer        S
+member          S
+blinder         S                                         S
+==============  ====  ====  ======  =========  =========  =======
+
+Cycles
+******
+``/studies/595/cycles``
+
+==============  ====  ===
+name            view  add
+==============  ====  ===
+administrator   X     X
+manager         X     X
+enterer         X
+reviewer        X
+consumer        X
+member          X
+==============  ====  ===
+
+``/studies/595/cycles/week-1``
+
+==============  ====  ====  ======
+name            view  edit  delete
+==============  ====  ====  ======
+administrator   X     X     X
+manager         X     X     X
+enterer         X
+reviewer        X
+consumer        X
+member          X
+==============  ====  ====  ======
+
+
+Visits
+******
+``/studies/patients/xxx-xxx/visits``
+
+==============  ====  ===
+name            view  add
+==============  ====  ===
+administrator   X     X
+manager         X     X
+enterer         S     S
+reviewer        S
+consumer        S
+member          S
+==============  ====  ===
+
+``/studies/patients/xxx-xxx/visits/12345``
+
+==============  ====  ====  ======
+name            view  edit  delete
+==============  ====  ====  ======
+administrator   X     X     X
+manager         X     X     X
+enterer         S     S
+reviewer        S
+consumer        S
+member          S
+==============  ====  ====  ======
+
+``/studies/patients/xxx-xxx/visits/12345/forms``
+
+==============  ====  ===  ======
+name            view  add  delete
+==============  ====  ===  ======
+administrator   X     X     X
+manager         X     X     X
+enterer         S     S
+reviewer        S
+consumer        S
+member          S
+==============  ====  ===  ======
+
+``/studies/patients/xxx-xxx/visits/12345/forms/9999``
+
+==============  ====  ====  ==========
+name            view  edit  transition
+==============  ====  ====  ==========
+administrator   X     X     X
+manager         X     X     X
+enterer         S     S     Automated
+reviewer        S           S
+consumer        S
+member          S
+==============  ====  ====  ==========
+
+Exports
+*******
+``/studies/exports/faq|overview|checkout|cookbook``
+
+==============  ====  ===
+name            view  add
+==============  ====  ===
+administrator   X     X
+manager         X     X
+enterer
+reviewer
+consumer        X     X
+member
+==============  ====  ===
+
+``/studies/exports/12345``
+
+==============  ======  ======
+name            view    delete
+==============  ======  ======
+administrator   Owner   Owner
+manager         Owner   Owner
+enterer
+reviewer
+consumer        Owner   Owner
+member
+==============  ======  ======
+
