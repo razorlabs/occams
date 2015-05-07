@@ -416,6 +416,57 @@ class TestEditJson(IntegrationFixture):
         self.assertEqual(
             str(t0), response['entities'][0]['schema']['publish_date'])
 
+    def test_include_not_retracted_form(self, check_csrf_token):
+        """
+        It should not use retracted forms, even if there are the most recent
+        """
+        from datetime import date, timedelta
+        from pyramid import testing
+        from occams_studies import models, Session
+
+        self.config.add_route('studies.patient', '/{patient}')
+        self.config.add_route('studies.visit', '/{patient}/{visit}')
+        self.config.add_route('studies.visit_form', '/forms/{form}')
+
+        Session.add(models.State(name='pending-entry', title=u''))
+
+        t0 = date.today()
+        t1 = t0 + timedelta(days=1)
+        t2 = t1 + timedelta(days=1)
+
+        study = models.Study(
+            name=u'somestudy',
+            title=u'Some Study',
+            short_title=u'sstudy',
+            code=u'000',
+            start_date=date.today(),
+            consent_date=date.today())
+
+        cycle1 = models.Cycle(name='week-1', title=u'', week=1)
+        cycle1.schemata.update([
+            models.Schema(name='form1', title=u'', publish_date=t0),
+            models.Schema(name='form1', title=u'', publish_date=t2, retract_date=t2)])
+        study.cycles.append(cycle1)
+
+        patient = models.Patient(
+            site=models.Site(name=u'ucsd', title=u'UCSD'),
+            pid=u'12345')
+
+        Session.add_all([patient, study])
+        Session.flush()
+
+        response = self.call_view(patient['visits'], testing.DummyRequest(
+            json_body={
+                'cycles': [cycle1.id],
+                'visit_date': str(t2),
+                'include_forms': True}
+            ))
+
+        self.assertEqual(1, len(response['entities']))
+        self.assertEqual(
+            str(t0), response['entities'][0]['schema']['publish_date'])
+
+
     def test_update_patient(self, check_csrf_token):
         """
         It should also mark the patient as modified

@@ -32,6 +32,7 @@ def upgrade():
     merge_attribute_section()
     overhaul_attribute()
     cleanup_addis()
+    cleanup_cctg()
 
 
 def cleanup_study():
@@ -366,6 +367,59 @@ def cleanup_patient():
             FROM schema
             WHERE name IN ('IBio', 'IContact'))
         """)
+
+    if 'cctg' in context.config.get_main_option('sqlalchemy.url'):
+        # CCTG has 3 IBio forms, two of which were almost never used,
+        # so migrate them to conform to the one that is actually being used.
+
+        op.execute(
+            """
+            DELETE FROM "patient_schema"
+            USING schema
+            WHERE schema.id = patient_schema.schema_id
+            AND schema.name = 'IBio'
+            AND schema.publish_date != '2013-02-26'
+            """)
+
+        op.excecute(
+            """
+            UPDATE entity
+            SET schema_id = (
+                SELECT id
+                FROM schema
+                WHERE name = 'IBio'
+                AND publish_date = '2013-02-26')
+            FROM schema
+            WHERE schema.id = entity.schema_id
+            AND schema.name = 'IBio'
+            AND schema.publish_date != '2013-02-26'
+            """)
+
+        # Delete birth_date field data
+        op.execute("""
+            DELETE FROM value_datetime
+            USING attribute, schema
+            WHERE value_datetime.attribute_id = attribute.id
+            AND attribute.schema_id = schema.id
+            AND schema.name = 'IBio'
+            """)
+
+        # Move field data to the new main form
+        op.execute("""
+            UPDATE value_string
+            SET attribute_id = (
+                SELECT attribute.id
+                FROM attribute
+                JOIN schema ON schema.id = attribute.schema_id
+                WHERE schema.name = 'IBio'
+                AND schema.publish_date = '2013-02-26'
+                AND attribute.name = og_attribute.name)
+            FROM attribute AS og_attribute, schema as og_schema
+            WHERE og_attribute.id = value_string.attribute_id
+            AND og_schema.id = og_attribute.schema_id
+            AND og_schema.name = 'IBio'
+            AND og_schema.publish_date != '2013-02-26'
+            """)
 
 
 def cleanup_enrollment():

@@ -1,6 +1,6 @@
 <html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
   <metal:content-slot fill-slot="content-slot">
-    <div id="${route_name}">
+    <div id="exports_codebook">
       <header class="page-header">
         <h1 i18n:translate="">Exports</h1>
         <nav metal:use-macro="load: header-nav.pt" />
@@ -113,7 +113,10 @@
   <metal:content-slot fill-slot="javascript-extras-slot">
     <script>
       $(function(){
-        ko.applyBindings(new CodebookViewModel, document.getElementById('${route_name}'));
+        ko.applyBindings(
+          new CodebookViewModel,
+          document.getElementById('exports_codebook')
+        );
       });
     </script>
   </metal:content-slot>

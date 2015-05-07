@@ -285,7 +285,7 @@
             <!-- ko if: $root.showEditCycle -->
               <form class="form-horizontal"
                   method="POST"
-                  action="${request.current_route_path('studies.cycles')}"
+                  action="${request.current_route_path(_route_name='studies.cycles')}"
                   data-bind="validate: {}, submit: $root.saveCycle">
                 <div class="modal-header">
                   <!-- ko if: id -->
@@ -393,9 +393,9 @@
 
       <div class="modal fade" data-bind="modalVisible: selectedForm">
         <div class="modal-dialog" data-bind="if: selectedForm">
-          <div class="modal-content">
+          <div class="modal-content" data-bind="with: selectedForm">
             <!-- ko if: $root.showViewForm-->
-              <form class="form-horizontal" data-bind="with: selectedForm">
+              <form class="form-horizontal">
                 <div class="modal-header">
                   <div class="btn-toolbar pull-right">
                     <div class="btn-group">
@@ -433,11 +433,11 @@
               <form class="form-horizontal"
                   method="POST"
                   action="${request.current_route_path(_route_name='studies.study_schemata')}"
-                  data-bind="with: $root.editableForm, validate: {}, submit: $root.saveForm">
+                  data-bind="validate: {}, submit: $root.saveForm">
                 <div class="modal-header">
                   <h4 class="modal-title" i18n:translate="">Add form to study</h4>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body" data-bind="with: $root.editableForm">
                   <!-- ko with: $root.errorMessage -->
                     <div class="alert alert-danger" role="alert">
                       <strong>Error!</strong> <span data-bind="text: $data"></span>
@@ -447,6 +447,7 @@
                     <label class="col-sm-2 control-label required" i18n:translate="">Form</label>
                     <div class="col-sm-10">
                       <input type="hidden" class="form-control"
+                          name="schema"
                           required
                           i18n:attributes="data-placeholder"
                           data-placeholder="Select a form..."
@@ -468,6 +469,7 @@
                     <label class="col-sm-2 control-label required" i18n:translate="">Versions</label>
                     <div class="col-sm-10">
                       <input type="hidden" class="form-control"
+                          name="versions"
                           i18n:attributes="data-placeholder"
                           required
                           data-placeholder="Select a version..."
@@ -520,7 +522,7 @@
               <form class="form-horizontal"
                   method="POST"
                   action="${request.current_route_path(_route_name='studies.study_schemata')}"
-                  data-bind="with: selectedForm, submit: $root.deleteForm">
+                  data-bind="submit: $root.deleteForm">
                 <div class="modal-header">
                   <h4 class="modal-title" i18n:translate="">Remove form from study</h4>
                 </div>

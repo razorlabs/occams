@@ -1,6 +1,6 @@
 <html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
   <metal:content-slot fill-slot="content-slot">
-    <div id="${route_name}">
+    <div id="exports_status">
       <header class="page-header">
         <h1 i18n:translate="">Exports</h1>
         <nav metal:use-macro="load: header-nav.pt" />
@@ -33,7 +33,7 @@
         </div>
 
         <!--! Export status panels -->
-        <div id="exports" data-bind="template: {foreach: exports}">
+        <div data-bind="template: {foreach: exports}">
           <div data-bind="attr: { id:       'export-' + id,
                                   'class':  'export panel panel-' + status()}">
             <div class="panel-heading clearfix">
@@ -224,7 +224,10 @@
   <metal:content-slot fill-slot="javascript-extras-slot">
   <script>
     $(function(){
-      ko.applyBindings(new StatusViewModel, document.getElementById('${route_name}'));
+      ko.applyBindings(
+        new StatusViewModel,
+        document.getElementById('exports_status')
+      );
     });
   </script>
  </metal:content-slot>

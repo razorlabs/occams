@@ -20,7 +20,7 @@
     validClass: 'has-success',  // use bootstrap's classes to indicate valid
     wrapper: 'p',
     // Ignore helper form elements
-    ignore: 'select2-input, .select2-focusser',
+    ignore: '.select2-input, .select2-focusser',
     errorPlacement: function(error, element){
       error.addClass('help-block');
       var $container = $(element).closest('.form-group').find('.errors').append(error);

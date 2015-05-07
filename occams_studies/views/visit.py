@@ -215,6 +215,7 @@ def edit_json(context, request):
             .join(models.Cycle.schemata)
             .filter(models.Cycle.id.in_([c.id for c in visit.cycles]))
             .filter(models.Schema.publish_date <= visit.visit_date)
+            .filter(models.Schema.retract_date == sa.null())
             .group_by(models.Schema.name)
             .subquery('max_version'))
 

@@ -297,7 +297,7 @@ function StudyView(studyData, scheduleUrl){
           selected.update(data);
         } else {
           self.study.forms.push(new StudyForm(data));
-          self.study.forms.sort(function(){ return a.title().localeCompare(b.title()); });
+          self.study.forms.sort(function(a, b){ return a.title().localeCompare(b.title()); });
         }
         if (self.addMoreForms()){
           self.previousForm(selected);
@@ -376,11 +376,14 @@ function StudyView(studyData, scheduleUrl){
     self.errorMessage(null);
     self.studyModalState(null)
     self.editableStudy(null);
+
     self.addMoreCycles(false);
     self.previousCycle(null);
     self.selectedCycle(null);
     self.editableCycle(null);
     self.cycleModalState(null);
+
+    self.addMoreForms(false);
     self.previousForm(null);
     self.selectedForm(null);
     self.editableForm(null);
