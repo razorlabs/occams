@@ -946,10 +946,10 @@ class VisitFactory(object):
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
             (Allow, groups.manager(site), ('view', 'add')),
-            (Allow, groups.reviewer(site), ('view', 'add')),
+            (Allow, groups.reviewer(site), ('view')),
             (Allow, groups.enterer(site), ('view', 'add')),
             (Allow, groups.consumer(site), 'view'),
-            ]
+        ]
 
     def __init__(self, parent):
         self.__parent__ = parent
