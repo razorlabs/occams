@@ -1007,8 +1007,8 @@ class Visit(Base, Referenceable, Modifiable, HasEntities, Auditable):
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
             (Allow, groups.manager(site), ('view', 'edit', 'delete')),  # NOQA
-            (Allow, groups.reviewer(site), ('view', 'edit', 'delete')),  # NOQA
-            (Allow, groups.enterer(site), ('view', 'edit', 'delete')),  # NOQA
+            (Allow, groups.reviewer(site), ('view', 'edit')),  # NOQA
+            (Allow, groups.enterer(site), ('view', 'edit')),  # NOQA
             (Allow, groups.consumer(site), 'view')
             ]
 
