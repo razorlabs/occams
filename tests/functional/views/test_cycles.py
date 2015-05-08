@@ -240,6 +240,7 @@ class TestPermissionsCyclesDelete(FunctionalFixture):
     def test_not_authenticated(self):
         self.app.delete(self.url, status=401, xhr=True)
 
+
 @ddt
 class TestPermissionsCyclesEdit(FunctionalFixture):
 
@@ -444,8 +445,8 @@ class TestPermissionsCyclesView(FunctionalFixture):
             Session.add(patient)
             Session.add(cycle)
 
-    @data('administrator', 'manager', 'UCSD:enterer',
-          'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member')
+    @data('administrator', 'manager', 'enterer',
+          'reviewer', 'consumer', 'member')
     def test_allowed(self, group):
         environ = self.make_environ(userid=USERID, groups=[group])
         response = self.app.get('/studies',
