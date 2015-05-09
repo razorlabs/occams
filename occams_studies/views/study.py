@@ -892,6 +892,11 @@ def StudySchema(context, request):
             raise wtforms.ValidationError(request.localizer.translate(_(
                 u'Does not yield a unique URL.')))
 
+    def check_has_termination_date(form, field):
+        if 'termination_date' not in field.data.attributes:
+            raise wtforms.ValidationError(request.localizer.translate(_(
+                u'This form needs to have a "termination_date" field')))
+
     class StudyForm(wtforms.Form):
         title = wtforms.StringField(
             validators=[
@@ -910,7 +915,10 @@ def StudySchema(context, request):
         start_date = DateField()
         termination_form = ModelField(
             session=Session,
-            class_=models.Schema)
+            class_=models.Schema,
+            validators=[
+                wtforms.validators.Optional(),
+                check_has_termination_date])
         is_randomized = wtforms.BooleanField()
         is_blinded = wtforms.BooleanField()
         randomzation_form = ModelField(
