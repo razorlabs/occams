@@ -468,6 +468,33 @@ def cleanup_enrollment():
             WHERE name IN ('Termination'))
         """)
 
+    if 'mhealth' in context.config.get_main_option('sqlalchemy.url'):
+        # mHealth uses termdate instead of termination_date, let's standardize this
+
+        op.execute("""
+            UPDATE attribute
+            SET name = 'termination_date'
+            FROM schema
+            WHERE schema.id = attribute.schema_id
+            AND schema.name = 'Termination'
+            AND attribute.name = 'termdate'
+            """)
+
+        # Not that this might not update all the records if the the form
+        # has not had the termination_date field entered yet.
+        op.update("""
+            UPDATE enrollment
+            SET termination_date = value_datetime.value
+            FROM  context, entity, schema, value_datetime, attribute
+            WHERE (enrollment.id = context.key AND context.external = 'enrollment')
+            AND context.entity_id = entity.id
+            AND schema.id = entity.schema_id
+            AND value_datetime.entity_id = entity.id
+            AND value_datetime.attribute_id = attribute.id
+            AND attribute.name = 'termination_date'
+            AND schema.name = 'Termination'
+        """)
+
 
 def cleanup_visit():
     blame = context.config.get_main_option('blame')
