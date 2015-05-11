@@ -112,7 +112,7 @@ class TestPermissionsPatientAdd(FunctionalFixture):
         self.assertEquals(403, response.status_code)
 
     def test_not_authenticated(self):
-        self.app.get(self.url, status=401)
+        self.app.post(self.url, status=401)
 
 
 @ddt
@@ -253,7 +253,7 @@ class TestPermissionsPatientDelete(FunctionalFixture):
         self.assertEquals(403, response.status_code)
 
     def test_not_authenticated(self):
-        self.app.get(self.url.format('123'), status=401)
+        self.app.delete(self.url.format('123'), status=401, xhr=True)
 
 
 @ddt
@@ -338,7 +338,7 @@ class TestPermissionsPatientEdit(FunctionalFixture):
             'site': patient.site_id
         }
 
-        response = self.app.delete_json(
+        response = self.app.put_json(
             self.url.format('123'),
             extra_environ=environ,
             status='*',
@@ -351,7 +351,7 @@ class TestPermissionsPatientEdit(FunctionalFixture):
         self.assertEquals(403, response.status_code)
 
     def test_not_authenticated(self):
-        self.app.get(self.url.format('123'), status=401)
+        self.app.put(self.url.format('123'), status=401, xhr=True)
 
 
 @ddt
@@ -521,7 +521,7 @@ class TestPermissionsPatientFormsAdd(FunctionalFixture):
         self.assertEquals(403, response.status_code)
 
     def test_not_authenticated(self):
-        self.app.get(self.url.format('123'), status=401)
+        self.app.post(self.url.format('123'), status=401)
 
 
 @ddt
@@ -643,7 +643,7 @@ class TestPermissionsPatientFormsDelete(FunctionalFixture):
         self.assertEquals(403, response.status_code)
 
     def test_not_authenticated(self):
-        self.app.get(self.url, status=401)
+        self.app.delete(self.url, status=401)
 
 
 @ddt
@@ -839,4 +839,4 @@ class TestPermissionsPatientFormsEdit(FunctionalFixture):
         entity_id = Session.query(datastore.Entity.id).filter(
             datastore.Entity.schema.has(name=u'test_schema')).scalar()
 
-        self.app.get(self.url.format(entity_id), status=401)
+        self.app.post(self.url.format(entity_id), status=401)
