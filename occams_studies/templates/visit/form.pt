@@ -3,12 +3,6 @@
 
     <header class="page-header">
       <div class="btn-toolbar pull-right">
-        <button class="btn btn-default"
-            data-bind="click: startDelete"
-            tal:condition="request.has_permission('delete')">
-          <span class="fa fa-trash-o"></span>
-          <span i18n:translate="">Delete</span>
-        </button>
       </div>
       <h1 i18n:translate="">
         <span i18n:translate="">${context.schema.title}</span>
@@ -41,22 +35,5 @@
       </div>
     </div>
 
-  </metal:content-slot>
-  <metal:content-slot fill-slot="javascript-extras-slot">
-    <script>
-      $(function(){
-        var visit =
-        ko.applyBindings(
-          new VisitView({
-            visitData: JSON.parse($('#visit-data').text()),
-            formsUrl: "${request.current_route_path(_route_name='studies.visit_forms')}"
-          }),
-          document.getElementById('view-visit')
-        );
-      });
-    </script>
-    <tal:json define="json import:json">
-      <script id="visit-data" type="application/json" >${json.dumps(visit)}</script>
-    </tal:json>
   </metal:content-slot>
 </html>

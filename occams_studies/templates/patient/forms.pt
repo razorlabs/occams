@@ -6,16 +6,12 @@
       <header class="page-header">
         <div class="btn-toolbar pull-right">
           <div metal:use-macro="load: header-btn-form-add.pt" />
-          <div metal:use-macro="load: header-btn-edit.pt" />
-          <div metal:use-macro="load: header-btn-delete.pt" />
         </div>
         <h1 i18n:translate="" data-bind="text: patient.pid"></h1>
         <ul metal:use-macro="load: header-details.pt" />
         <nav metal:use-macro="load: header-nav.pt" />
 
         <!-- Use template so we can reuse in home view -->
-        <div metal:use-macro="load: modal-patient-edit.pt"></div>
-        <div metal:use-macro="load: modal-patient-delete.pt"></div>
         <div metal:use-macro="load: ../form/modal-form-add.pt"></div>
         <div metal:use-macro="load: ../form/modal-form-delete.pt"></div>
       </header>
