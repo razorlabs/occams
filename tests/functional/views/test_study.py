@@ -41,9 +41,7 @@ class TestPermissionsStudyAdd(FunctionalFixture):
 
         import transaction
         from occams import Session
-        from occams_studies import models as studies
         from occams_datastore import models as datastore
-        from datetime import date
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
@@ -85,7 +83,7 @@ class TestPermissionsStudyAdd(FunctionalFixture):
         self.assertEquals(403, response.status_code)
 
     def test_not_authenticated(self):
-        self.app.get(self.url, status=401)
+        self.app.post(self.url, status=401)
 
 
 @ddt
@@ -259,4 +257,4 @@ class TestPermissionsStudyDelete(FunctionalFixture):
         self.assertEquals(403, response.status_code)
 
     def test_not_authenticated(self):
-        self.app.get(self.url, status=401)
+        self.app.delete(self.url, status=401)
