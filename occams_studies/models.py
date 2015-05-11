@@ -771,7 +771,7 @@ class Enrollment(Base,  Referenceable, Modifiable, HasEntities, Auditable):
             (Allow, groups.administrator(), ALL_PERMISSIONS),
             (Allow, groups.manager(), ('view', 'edit', 'delete', 'randomize', 'terminate')),  # NOQA
             (Allow, groups.reviewer(site), ('view')),  # NOQA
-            (Allow, groups.enterer(site), ('view', 'edit', 'delete', 'terminate')),  # NOQA
+            (Allow, groups.enterer(site), ('view', 'edit', 'terminate')),  # NOQA
             (Allow, groups.consumer(site), 'view')
             ]
 
