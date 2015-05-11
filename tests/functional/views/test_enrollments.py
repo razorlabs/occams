@@ -502,7 +502,7 @@ class TestPermissionsEnrollmentDelete(FunctionalFixture):
                 consent_date=date(2014, 12, 22)
             ))
 
-    @data('administrator', 'manager', 'UCSD:enterer')
+    @data('administrator', 'manager')
     def test_allowed(self, group):
         from occams import Session
         from occams_studies import models as studies
