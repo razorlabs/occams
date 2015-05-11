@@ -844,7 +844,6 @@ class TestPermissionsVisitFormsDelete(FunctionalFixture):
                 short_title=u'test_short',
                 start_date=date(2014, 12, 12),
                 schemata=set([form])
-                # termination_schema=form
             )
 
             cycle = studies.Cycle(
@@ -860,6 +859,11 @@ class TestPermissionsVisitFormsDelete(FunctionalFixture):
                 visit_date='2015-01-01'
             )
 
+            entity = studies.Entity(
+                schema=form,
+                collect_date=date(2015, 1, 1)
+            )
+
             Session.add(studies.State(
                 name=u'pending-entry',
                 title=u'pending-entry'
@@ -868,12 +872,24 @@ class TestPermissionsVisitFormsDelete(FunctionalFixture):
             Session.add(study)
             Session.add(patient)
             Session.add(visit)
+            Session.add(entity)
+            patient.entities.add(entity)
 
     @data('administrator', 'manager')
     def test_allowed(self, group):
+        from occams import Session
+        from occams_datastore import models as datastore
+        from occams_studies import models as studies
+
         environ = self.make_environ(userid=USERID, groups=[group])
         response = self.app.get('/studies',
                                 extra_environ=environ)
+
+        form_id = Session.query(datastore.Schema.id).filter(
+            datastore.Schema.name == u'test_schema').scalar()
+
+        entity_id = Session.query(studies.Entity.id).filter(
+            studies.Entity.schema_id == form_id).scalar()
 
         csrf_token = self.app.cookies['csrf_token']
         response = self.app.delete_json(
@@ -884,7 +900,7 @@ class TestPermissionsVisitFormsDelete(FunctionalFixture):
                 'X-CSRF-Token': csrf_token,
                 'X-REQUESTED-WITH': str('XMLHttpRequest')
             },
-            params={})
+            params={'forms': [entity_id]})
 
         self.assertEquals(200, response.status_code)
 
