@@ -50,7 +50,7 @@ def available_sites(context, request):
     query = Session.query(models.Site)
 
     if term:
-        query = query.filter_by(models.Site.title.ilike('%' + term + '%'))
+        query = query.filter(models.Site.title.ilike('%' + term + '%'))
 
     query = query.order_by(models.Site.title.asc()).limit(100)
 
