@@ -20,8 +20,8 @@ class TestPermissionsPatientList(FunctionalFixture):
         with transaction.manager:
             Session.add(datastore.User(key=USERID))
 
-    @data('administrator', 'manager', 'enterer', 'reviewer',
-          'consumer', 'member', None)
+    @data('administrator', 'manager', 'UCSD:enterer', 'UCSD:reviewer',
+          'UCSD:consumer', 'UCSD:member', None)
     def test_allowed(self, group):
         environ = self.make_environ(userid=USERID, groups=[group])
         response = self.app.get(self.url, extra_environ=environ)
@@ -150,7 +150,7 @@ class TestPermissionsPatientView(FunctionalFixture):
             ))
 
     @data('administrator', 'manager', 'UCSD:enterer', 'UCSD:reviewer',
-          'UCSD:consumer', 'UCSD:member')
+          'UCSD:consumer', 'UCSD:member', None)
     def test_allowed(self, group):
         environ = self.make_environ(userid=USERID, groups=[group])
         response = self.app.get(self.url.format('123'), extra_environ=environ)
@@ -223,7 +223,7 @@ class TestPermissionsPatientDelete(FunctionalFixture):
 
         self.assertEquals(200, response.status_code)
 
-    @data('UCSD:enterer', 'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member')
+    @data('UCSD:enterer', 'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member', None)
     def test_not_allowed(self, group):
         from occams import Session
         from occams_studies import models as studies
@@ -320,7 +320,7 @@ class TestPermissionsPatientEdit(FunctionalFixture):
 
         self.assertEquals(200, response.status_code)
 
-    @data('UCSD:reviewer', 'UCSD:consumer', 'UCSD:member')
+    @data('UCSD:reviewer', 'UCSD:consumer', 'UCSD:member', None)
     def test_not_allowed(self, group):
         from occams import Session
         from occams_studies import models as studies
@@ -389,7 +389,7 @@ class TestPermissionsPatientFormsView(FunctionalFixture):
             ))
 
     @data('administrator', 'manager', 'UCSD:enterer', 'UCSD:reviewer',
-          'UCSD:consumer', 'UCSD:member')
+          'UCSD:consumer', 'UCSD:member', None)
     def test_allowed(self, group):
         environ = self.make_environ(userid=USERID, groups=[group])
         response = self.app.get(self.url, extra_environ=environ)
@@ -614,7 +614,7 @@ class TestPermissionsPatientFormsDelete(FunctionalFixture):
 
         self.assertEquals(200, response.status_code)
 
-    @data('UCSD:enterer', 'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member')
+    @data('UCSD:enterer', 'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member', None)
     def test_not_allowed(self, group):
         from occams import Session
         from occams_datastore import models as datastore
@@ -819,7 +819,7 @@ class TestPermissionsPatientFormsEdit(FunctionalFixture):
 
         self.assertEquals(200, response.status_code)
 
-    @data('UCSD:reviewer', 'UCSD:consumer', 'UCSD:member')
+    @data('UCSD:reviewer', 'UCSD:consumer', 'UCSD:member', None)
     def test_not_allowed(self, group):
         from occams import Session
         from occams_datastore import models as datastore
