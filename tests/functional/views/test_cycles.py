@@ -94,7 +94,8 @@ class TestPermissionsCyclesAdd(FunctionalFixture):
 
         self.assertEquals(200, response.status_code)
 
-    @data('UCSD:enterer', 'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member')
+    @data('UCSD:enterer', 'UCSD:reviewer', 'UCSD:consumer',
+          'UCSD:member', None)
     def test_not_allowed(self, group):
         environ = self.make_environ(userid=USERID, groups=[group])
         response = self.app.get('/studies',
@@ -217,7 +218,8 @@ class TestPermissionsCyclesDelete(FunctionalFixture):
 
         self.assertEquals(200, response.status_code)
 
-    @data('UCSD:enterer', 'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member')
+    @data('UCSD:enterer', 'UCSD:reviewer', 'UCSD:consumer',
+          'UCSD:member', None)
     def test_not_allowed(self, group):
         environ = self.make_environ(userid=USERID, groups=[group])
         response = self.app.get('/studies',
@@ -341,7 +343,8 @@ class TestPermissionsCyclesEdit(FunctionalFixture):
 
         self.assertEquals(200, response.status_code)
 
-    @data('UCSD:enterer', 'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member')
+    @data('UCSD:enterer', 'UCSD:reviewer', 'UCSD:consumer',
+          'UCSD:member', None)
     def test_not_allowed(self, group):
         environ = self.make_environ(userid=USERID, groups=[group])
         response = self.app.get('/studies',
