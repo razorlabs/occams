@@ -321,8 +321,10 @@ def form(context, request):
             upload_dir = request.registry.settings['studies.blob.dir']
             apply_data(Session, context, form.data, upload_dir)
             Session.flush()
-            request.session.flash(_(u'Changes saved'), 'success')
-            return HTTPFound(location=request.current_route_path())
+            request.session.flash(
+                _(u'Changes saved for: ${form}', mapping={'form': schema.title}),
+                'success')
+            return HTTPFound(location=request.current_route_path(_route_name='studies.visit'))
 
     form_id = 'visit-form'
     return {
