@@ -602,9 +602,9 @@ class TestPermissionsEnrollmentTermination(FunctionalFixture):
             )
 
             form.attributes['termination_date'] = studies.Attribute(
-                name='termination_date',
-                title='termination_date',
-                type='datetime',
+                name=u'termination_date',
+                title=u'termination_date',
+                type=u'datetime',
                 order=0
             )
 
