@@ -12,6 +12,8 @@ import wtforms
 import wtforms.widgets.html5
 import wtforms.ext.dateutil.fields
 
+from occams.utils.form import Form
+
 from .. import _, models, Session
 from . import field as field_views
 from ..renderers import make_form, render_form, apply_data
@@ -137,7 +139,7 @@ def publish_json(context, request):
 
     # TODO: should move this out, but need to ensure context is removed
     # from helper validators
-    class PublishForm(wtforms.Form):
+    class PublishForm(Form):
         publish_date = wtforms.ext.dateutil.fields.DateField(
             validators=[
                 wtforms.validators.Optional(),
@@ -162,7 +164,7 @@ def publish_json(context, request):
     return view_json(context, request)
 
 
-class SchemaForm(wtforms.Form):
+class SchemaForm(Form):
 
     title = wtforms.StringField(
         validators=[

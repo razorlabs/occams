@@ -3,7 +3,7 @@ from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 import wtforms
 
-from occams.utils.forms import wtferrors
+from occams.utils.forms import wtferrors, Form
 from occams_datastore.models.schema import RE_VALID_NAME, RESERVED_WORDS
 
 from .. import _, models, Session
@@ -88,7 +88,7 @@ def move_json(context, request):
             raise wtforms.ValidationError(
                 _(u'Nested sections are not supported'))
 
-    class MoveForm(wtforms.Form):
+    class MoveForm(Form):
         target = wtforms.StringField(
             validators=[
                 wtforms.validators.Optional(),
@@ -218,7 +218,7 @@ def FieldFormFactory(context, request):
             raise wtforms.ValidationError(
                 _(u'Variable name already exists in this form'))
 
-    class ChoiceForm(wtforms.Form):
+    class ChoiceForm(Form):
         name = wtforms.StringField(
             validators=[
                 wtforms.validators.InputRequired(),
@@ -229,7 +229,7 @@ def FieldFormFactory(context, request):
 
     # TODO: should move this out, but need to ensure context is removed
     # from helper validators
-    class FieldForm(wtforms.Form):
+    class FieldForm(Form):
         name = wtforms.StringField(
             validators=[
                 wtforms.validators.InputRequired(),

@@ -1,14 +1,6 @@
 """
 Testing fixutres
 
-The test suite is quite expensive to setup on a database such
-as postgres. So you'll need to run the `os_initdb` on the
-target testing database:
-
-    od_initdb --db postgres://user:pass@host/db
-
-NOTE: the explicit use of od_ instead of of_
-
 To specify a pyramid configuration use:
 
     nosetests --tc=db:postgres://user:pass@host/db
@@ -19,13 +11,24 @@ try:
 except ImportError:
     import unittest
 
-# Raise unicode warnings as errors so we can fix them
-import warnings
-from sqlalchemy.exc import SAWarning
-warnings.filterwarnings('error', category=SAWarning)
+from sqlalchemy.schema import CreateTable
+from sqlalchemy.ext.compiler import compiles
 
 
 REDIS_URL = 'redis://localhost/9'
+
+USERID = 'test_user'
+
+
+@compiles(CreateTable, 'postgresql')
+def compile_unlogged(create, compiler, **kwargs):
+    """
+    Enables unlogged-tables for testing purposes.
+    This will make table creates slower, but data writes faster.
+    """
+    if 'UNLOGGED' not in create.element._prefixes:
+        create.element._prefixes.append('UNLOGGED')
+        return compiler.visit_create_table(create)
 
 
 def setup_package():
@@ -37,9 +40,28 @@ def setup_package():
     """
     from sqlalchemy import create_engine
     from testconfig import config
+    from occams_datastore import models as datastore
     from occams_forms import Session
 
-    Session.configure(bind=create_engine(config.get('db')))
+    db = config.get('db')
+    studies_engine = create_engine(db)
+    Session.configure(bind=studies_engine)
+
+    datastore.DataStoreModel.metadata.create_all(studies_engine)
+
+
+def teardown_package():
+    import os
+    from occams_datastore import models as datastore
+    from occams_forms import Session
+
+    url = Session.bind.url
+
+    if Session.bind.url.drivername == 'sqlite':
+        if Session.bind.url.database not in ('', ':memory:'):
+            os.unlink(url.database)
+    else:
+        datastore.DataStoreModel.metadata.drop_all(Session.bind)
 
 
 class IntegrationFixture(unittest.TestCase):
@@ -54,10 +76,6 @@ class IntegrationFixture(unittest.TestCase):
 
         self.config = testing.setUp()
 
-        self.addCleanup(testing.tearDown)
-        self.addCleanup(transaction.abort)
-        self.addCleanup(Session.remove)
-
         blame = models.User(key=u'tester')
         Session.add(blame)
         Session.flush()
@@ -66,6 +84,10 @@ class IntegrationFixture(unittest.TestCase):
         models.DataStoreModel.metadata.info['settings'] = \
             self.config.registry.settings
 
+        self.addCleanup(testing.tearDown)
+        self.addCleanup(transaction.abort)
+        self.addCleanup(Session.remove)
+
 
 class FunctionalFixture(unittest.TestCase):
     """
@@ -73,57 +95,58 @@ class FunctionalFixture(unittest.TestCase):
     Tests under this fixture will be very slow, so use sparingly.
     """
 
-    @classmethod
-    def setUpClass(cls):
+    def setUp(self):
         import tempfile
-        from pyramid.path import AssetResolver
-        from occams_forms import main, Session
         import six
+        from webtest import TestApp
+
+        from occams_forms import main, Session
 
         # The pyramid_who plugin requires a who file, so let's create a
         # barebones files for it...
-        cls.who_ini = tempfile.NamedTemporaryFile()
+        self.who_ini = tempfile.NamedTemporaryFile()
         who = six.configparser()
         who.add_section('general')
         who.set('general', 'request_classifier',
                 'repoze.who.classifiers:default_request_classifier')
         who.set('general', 'challenge_decider',
-                'pyramid_who.classifiers:forbidden_challenger')
+                'repoze.who.classifiers:default_challenge_decider')
         who.set('general', 'remote_user_key', 'REMOTE_USER')
-        who.write(cls.who_ini)
-        cls.who_ini.flush()
+        who.write(self.who_ini)
+        self.who_ini.flush()
 
-        cls.app = main({}, **{
-            'app.org.name': 'myorg',
-            'app.org.title': 'MY ORGANIZATION',
-            'app.db.url': Session.bind,
+        app = main({}, **{
             'redis.url': REDIS_URL,
             'redis.sessions.secret': 'sekrit',
-            'webassets.base_dir': (AssetResolver()
-                                   .resolve('occams_forms:static')
-                                   .abspath()),
-            'webassets.base_url': '/static',
-            'webassets.debug': 'false',
-            'who.config_file': cls.who_ini.filename,
+
+            'who.config_file': self.who_ini.filename,
             'who.identifier_id': '',
+
+            'occams.apps': 'occams_forms',
+            'occams.db.url': Session.bind,
         })
 
-    @classmethod
-    def tearDownClass(cls):
-        cls.who_ini.close()
-
-    def setUp(self):
-        from webtest import TestApp
-        self.app = TestApp(self.app)
+        self.app = TestApp(app)
 
     def tearDown(self):
         import transaction
-        from occams_forms import Session, models
+        from zope.sqlalchemy import mark_changed
+        from occams_forms import Session
         with transaction.manager:
-            Session.query(models.User).delete()
+            # DELETE is significantly faster than TRUNCATE
+            # http://stackoverflow.com/a/11423886/148781
+            # We also have to do this as a raw query becuase SA does
+            # not have a way to invoke server-side cascade
+            Session.execute('DELETE FROM "entity" CASCADE')
+            Session.execute('DELETE FROM "state" CASCADE')
+            Session.execute('DELETE FROM "schema" CASCADE')
+            Session.execute('DELETE FROM "user" CASCADE')
+            mark_changed(Session())
         Session.remove()
+        self.who_ini.close()
+        del self.app
 
-    def make_environ(self, userid='testuser', properties={}, groups=()):
+    def make_environ(self, userid=USERID, properties={}, groups=()):
         """
         Creates dummy environ variables for mock-authentication
         """

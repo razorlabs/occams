@@ -7,6 +7,8 @@ import sqlalchemy as sa
 from sqlalchemy import orm
 import wtforms
 
+from occams.utils.forms import Form
+
 from .. import _, Session, models
 from ._utils import jquery_wtform_validator
 
@@ -158,7 +160,7 @@ def check_unique_name(form, field):
         raise wtforms.ValidationError(_(u'Form name already in use'))
 
 
-class FormForm(wtforms.Form):
+class FormForm(Form):
 
     name = wtforms.StringField(
         validators=[
