@@ -12,7 +12,7 @@ import wtforms
 import wtforms.widgets.html5
 import wtforms.ext.dateutil.fields
 
-from occams.utils.form import Form
+from occams.utils.forms import Form
 
 from .. import _, models, Session
 from . import field as field_views
