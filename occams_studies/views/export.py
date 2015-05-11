@@ -14,7 +14,7 @@ import six
 import transaction
 import wtforms
 
-from occams.utils.forms import wtferrors
+from occams.utils.forms import wtferrors, Form
 from occams.utils.pagination import Pagination
 
 from .. import _, log, models, Session, exports
@@ -69,7 +69,7 @@ def checkout(context, request):
                 raise wtforms.ValidationError(request.localizer.translate(
                     _(u'Invalid selection')))
 
-        class CheckoutForm(wtforms.Form):
+        class CheckoutForm(Form):
             contents = wtforms.FieldList(
                 wtforms.StringField(
                     validators=[wtforms.validators.AnyOf(

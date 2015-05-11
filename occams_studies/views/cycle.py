@@ -5,7 +5,7 @@ import six
 from slugify import slugify
 import wtforms
 
-from occams.utils.forms import wtferrors
+from occams.utils.forms import wtferrors, Form
 from occams_forms.renderers import form2json
 
 from .. import _, models, Session
@@ -108,7 +108,7 @@ def CycleSchema(context, request):
             raise wtforms.ValidationError(request.localizer.translate(_(
                 u'Does not yield a unique URL.')))
 
-    class CycleForm(wtforms.Form):
+    class CycleForm(Form):
         title = wtforms.StringField(
             validators=[
                 wtforms.validators.InputRequired(),

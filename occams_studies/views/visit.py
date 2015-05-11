@@ -8,7 +8,7 @@ from sqlalchemy import orm
 import wtforms
 from wtforms.ext.dateutil.fields import DateField
 
-from occams.utils.forms import wtferrors, ModelField
+from occams.utils.forms import wtferrors, ModelField, Form
 from occams_forms.renderers import \
     make_form, render_form, apply_data, entity_data
 
@@ -374,7 +374,7 @@ def VisitSchema(context, request):
             raise wtforms.ValidationError(request.localizer.translate(
                 _(u'Visit already exists')))
 
-    class VisitForm(wtforms.Form):
+    class VisitForm(Form):
         cycles = wtforms.FieldList(
             ModelField(
                 session=Session,

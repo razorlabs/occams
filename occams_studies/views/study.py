@@ -16,7 +16,7 @@ import wtforms
 from wtforms.ext.dateutil.fields import DateField
 from zope.sqlalchemy import mark_changed
 
-from occams.utils.forms import wtferrors, ModelField
+from occams.utils.forms import Form, wtferrors, ModelField
 from occams.utils.pagination import Pagination
 from occams_forms.renderers import form2json, version2json
 
@@ -154,7 +154,7 @@ def enrollments(context, request):
         .filter(models.Enrollment.study == context)
         .order_by(models.Enrollment.consent_date.desc()))
 
-    class FilterForm(wtforms.Form):
+    class FilterForm(Form):
         page = wtforms.IntegerField()
         status = wtforms.StringField(
             validators=[
@@ -481,7 +481,7 @@ def available_schemata(context, request):
         grouped -- (optional) groups all results by schema name
     """
 
-    class SearchForm(wtforms.Form):
+    class SearchForm(Form):
         term = wtforms.StringField()
         schema = wtforms.StringField()
         grouped = wtforms.BooleanField()
@@ -617,7 +617,7 @@ def add_schema_json(context, request):
             raise wtforms.ValidationError(request.localizer.translate(
                 _(u'Selected version is not published')))
 
-    class SchemaManagementForm(wtforms.Form):
+    class SchemaManagementForm(Form):
         schema = wtforms.StringField(
             validators=[
                 wtforms.validators.InputRequired(),
@@ -749,7 +749,7 @@ def edit_schedule_json(context, request):
             raise wtforms.ValidationError(request.localizer.translate(_(
                 u'Not a valid choice')))
 
-    class ScheduleForm(wtforms.Form):
+    class ScheduleForm(Form):
         schema = wtforms.StringField(
             validators=[
                 wtforms.validators.InputRequired(),
@@ -897,20 +897,20 @@ def StudySchema(context, request):
             raise wtforms.ValidationError(request.localizer.translate(_(
                 u'This form needs to have a "termination_date" field')))
 
-    class StudyForm(wtforms.Form):
+    class StudyForm(Form):
         title = wtforms.StringField(
             validators=[
                 wtforms.validators.InputRequired(),
-                wtforms.validators.Length(min=3, max=32),
+                wtforms.validators.Length(min=1, max=32),
                 check_unique_url])
         code = wtforms.StringField(
             validators=[
                 wtforms.validators.InputRequired(),
-                wtforms.validators.Length(min=3, max=8)])
+                wtforms.validators.Length(min=1, max=8)])
         short_title = wtforms.StringField(
             validators=[
                 wtforms.validators.InputRequired(),
-                wtforms.validators.Length(min=3, max=8)])
+                wtforms.validators.Length(min=1, max=8)])
         consent_date = DateField()
         start_date = DateField()
         termination_form = ModelField(

@@ -2,6 +2,7 @@ from pyramid.view import view_config
 import sqlalchemy as sa
 import wtforms
 
+from occams.utils.forms import Form
 from occams_forms.renderers import form2json, version2json
 
 from .. import Session, models
@@ -36,7 +37,7 @@ def available_schemata(context, request):
         grouped -- (optional) groups all results by schema name
     """
 
-    class SearchForm(wtforms.Form):
+    class SearchForm(Form):
         term = wtforms.StringField()
         schema = wtforms.StringField()
         grouped = wtforms.BooleanField()

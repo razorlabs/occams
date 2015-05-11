@@ -6,7 +6,7 @@ from sqlalchemy import orm
 import wtforms
 from wtforms.ext.dateutil.fields import DateField
 
-from occams.utils.forms import wtferrors, ModelField
+from occams.utils.forms import wtferrors, ModelField, Form
 from occams_forms.renderers import \
     make_form, render_form, entity_data, \
     form2json, version2json
@@ -123,7 +123,7 @@ def available_schemata(context, request):
         grouped -- (optional) groups all results by schema name
     """
 
-    class SearchForm(wtforms.Form):
+    class SearchForm(Form):
         term = wtforms.StringField()
         schema = wtforms.StringField()
         grouped = wtforms.BooleanField()
@@ -237,7 +237,7 @@ def add_json(context, request):
                     _('${schema} is not part of the studies for this visit'),
                     mapping={'schema': field.data.title}))
 
-    class AddForm(wtforms.Form):
+    class AddForm(Form):
         schema = ModelField(
             session=Session,
             class_=models.Schema,
@@ -300,7 +300,7 @@ def bulk_delete_json(context, request):
     """
     check_csrf_token(request)
 
-    class DeleteForm(wtforms.Form):
+    class DeleteForm(Form):
         forms = wtforms.FieldList(ModelField(
             session=Session,
             class_=models.Entity))

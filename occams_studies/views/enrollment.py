@@ -9,7 +9,7 @@ from sqlalchemy import orm
 import wtforms
 from wtforms.ext.dateutil.fields import DateField
 
-from occams.utils.forms import wtferrors, ModelField
+from occams.utils.forms import wtferrors, ModelField, Form
 from occams_forms.renderers import \
     make_form, render_form, apply_data, entity_data
 from occams_datastore.reporting import build_report
@@ -241,7 +241,7 @@ def _make_challenge_form(context, request):
                 """,
                 mapping={'identifier_name': identifier_name}))
 
-    class ChallengeForm(wtforms.Form):
+    class ChallengeForm(Form):
         confirm = wtforms.StringField(
             _(u'You are about to randomize this patient'),
             description=request.localizer.translate(_(
@@ -455,7 +455,7 @@ def EnrollmentSchema(context, request):
             raise wtforms.ValidationError(request.localizer.translate(_(
                 u'This enrollment already exists.')))
 
-    class EnrollmentForm(wtforms.Form):
+    class EnrollmentForm(Form):
         study = ModelField(
             session=Session,
             class_=models.Study,

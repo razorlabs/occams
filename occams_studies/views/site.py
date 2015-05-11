@@ -3,7 +3,7 @@ from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 import wtforms
 
-from occams.utils.forms import wtferrors
+from occams.utils.forms import wtferrors, Form
 
 from .. import _, models, Session
 
@@ -121,7 +121,7 @@ def SiteSchema(context, request):
             raise wtforms.ValidationError(request.localizer.translate(
                 _(u'Site name already exists')))
 
-    class SiteForm(wtforms.Form):
+    class SiteForm(Form):
         name = wtforms.StringField(
             validators=[
                 wtforms.validators.InputRequired(),

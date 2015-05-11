@@ -11,7 +11,7 @@ from sqlalchemy import orm
 import wtforms
 from zope.sqlalchemy import mark_changed
 
-from occams.utils.forms import wtferrors, ModelField
+from occams.utils.forms import wtferrors, ModelField, Form
 from occams_roster import generate
 from occams_forms.renderers import \
     make_form, render_form, apply_data, entity_data, \
@@ -73,7 +73,7 @@ def search_json(context, request):
     """
     per_page = 10
 
-    class SearchForm(wtforms.Form):
+    class SearchForm(Form):
         query = wtforms.StringField(
             validators=[wtforms.validators.Optional()],
             filters=[lambda v: v.strip()[:100] if v else None])
@@ -316,7 +316,7 @@ def forms_add_json(context, request):
             raise wtforms.ValidationError(request.localizer.translate(
                 _(u'Only a single version of forms are currently supported')))
 
-    class AddForm(wtforms.Form):
+    class AddForm(Form):
         form = ModelField(
             session=Session,
             class_=models.Schema,
@@ -364,7 +364,7 @@ def forms_delete_json(context, request):
             raise wtforms.ValidationError(request.localizer.translate(
                 _(u'Unable to remove because data has already been entered')))
 
-    class DeleteForm(wtforms.Form):
+    class DeleteForm(Form):
         form = ModelField(
             session=Session,
             class_=models.Schema,
@@ -609,7 +609,7 @@ def PatientSchema(context, request):
             raise wtforms.ValidationError(request.localizer.translate(
                 _(u'You do not belong to this site')))
 
-    class ReferenceForm(wtforms.Form):
+    class ReferenceForm(Form):
         reference_type = ModelField(
             session=Session,
             class_=models.ReferenceType,
@@ -621,7 +621,7 @@ def PatientSchema(context, request):
                 check_reference_format,
                 check_unique_reference])
 
-    class PatientForm(wtforms.Form):
+    class PatientForm(Form):
         site = ModelField(
             session=Session,
             class_=models.Site,
