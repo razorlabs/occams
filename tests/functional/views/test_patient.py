@@ -66,7 +66,8 @@ class TestPermissionsPatientAdd(FunctionalFixture):
 
         environ = self.make_environ(userid=USERID, groups=[group])
         response = self.app.get(self.url, extra_environ=environ, xhr=True)
-        site = Session.query(studies.Site).filter(studies.Site.name == u'UCSD').one()
+        site = Session.query(studies.Site).filter(
+            studies.Site.name == u'UCSD').one()
         site_id = site.id
         data = {
             'site': site_id,
@@ -91,7 +92,8 @@ class TestPermissionsPatientAdd(FunctionalFixture):
 
         environ = self.make_environ(userid=USERID, groups=[group])
         response = self.app.get(self.url, extra_environ=environ, xhr=True)
-        site = Session.query(studies.Site).filter(studies.Site.name == u'UCSD').one()
+        site = Session.query(studies.Site).filter(
+            studies.Site.name == u'UCSD').one()
         site_id = site.id
 
         data = {
@@ -203,7 +205,8 @@ class TestPermissionsPatientDelete(FunctionalFixture):
         response = self.app.get(self.url.format('123'), extra_environ=environ)
         csrf_token = self.app.cookies['csrf_token']
 
-        patient = Session.query(studies.Patient).filter(studies.Patient.pid == u'123').one()
+        patient = Session.query(studies.Patient).filter(
+            studies.Patient.pid == u'123').one()
         data = {
             'initials': patient.initials,
             'nurse': patient.nurse,
@@ -223,7 +226,8 @@ class TestPermissionsPatientDelete(FunctionalFixture):
 
         self.assertEquals(200, response.status_code)
 
-    @data('UCSD:enterer', 'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member', None)
+    @data('UCSD:enterer', 'UCSD:reviewer', 'UCSD:consumer',
+          'UCSD:member', None)
     def test_not_allowed(self, group):
         from occams import Session
         from occams_studies import models as studies
@@ -232,7 +236,8 @@ class TestPermissionsPatientDelete(FunctionalFixture):
         response = self.app.get(self.url.format('123'), extra_environ=environ)
         csrf_token = self.app.cookies['csrf_token']
 
-        patient = Session.query(studies.Patient).filter(studies.Patient.pid == u'123').one()
+        patient = Session.query(studies.Patient).filter(
+            studies.Patient.pid == u'123').one()
         data = {
             'initials': patient.initials,
             'nurse': patient.nurse,
@@ -299,7 +304,8 @@ class TestPermissionsPatientEdit(FunctionalFixture):
         response = self.app.get(self.url.format('123'), extra_environ=environ)
         csrf_token = self.app.cookies['csrf_token']
 
-        patient = Session.query(studies.Patient).filter(studies.Patient.pid == u'123').one()
+        patient = Session.query(studies.Patient).filter(
+            studies.Patient.pid == u'123').one()
         data = {
             'initials': patient.initials,
             'nurse': patient.nurse,
@@ -329,7 +335,8 @@ class TestPermissionsPatientEdit(FunctionalFixture):
         response = self.app.get(self.url.format('123'), extra_environ=environ)
         csrf_token = self.app.cookies['csrf_token']
 
-        patient = Session.query(studies.Patient).filter(studies.Patient.pid == u'123').one()
+        patient = Session.query(studies.Patient).filter(
+            studies.Patient.pid == u'123').one()
         data = {
             'initials': patient.initials,
             'nurse': patient.nurse,
@@ -471,7 +478,8 @@ class TestPermissionsPatientFormsAdd(FunctionalFixture):
         response = self.app.get(self.url, extra_environ=environ)
         csrf_token = self.app.cookies['csrf_token']
 
-        schema = Session.query(datastore.Schema).filter(datastore.Schema.name == u'test_schema').one()
+        schema = Session.query(datastore.Schema).filter(
+            datastore.Schema.name == u'test_schema').one()
         schema_id = schema.id
 
         data = {
@@ -500,7 +508,8 @@ class TestPermissionsPatientFormsAdd(FunctionalFixture):
         response = self.app.get(self.url, extra_environ=environ)
         csrf_token = self.app.cookies['csrf_token']
 
-        schema = Session.query(datastore.Schema).filter(datastore.Schema.name == u'test_schema').one()
+        schema = Session.query(datastore.Schema).filter(
+            datastore.Schema.name == u'test_schema').one()
         schema_id = schema.id
 
         data = {
@@ -595,7 +604,8 @@ class TestPermissionsPatientFormsDelete(FunctionalFixture):
         response = self.app.get(self.url, extra_environ=environ)
         csrf_token = self.app.cookies['csrf_token']
 
-        schema = Session.query(datastore.Schema).filter(datastore.Schema.name == u'test_schema').one()
+        schema = Session.query(datastore.Schema).filter(
+            datastore.Schema.name == u'test_schema').one()
         schema_id = schema.id
 
         data = {
@@ -614,7 +624,8 @@ class TestPermissionsPatientFormsDelete(FunctionalFixture):
 
         self.assertEquals(200, response.status_code)
 
-    @data('UCSD:enterer', 'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member', None)
+    @data('UCSD:enterer', 'UCSD:reviewer', 'UCSD:consumer',
+          'UCSD:member', None)
     def test_not_allowed(self, group):
         from occams import Session
         from occams_datastore import models as datastore
@@ -623,7 +634,8 @@ class TestPermissionsPatientFormsDelete(FunctionalFixture):
         response = self.app.get(self.url, extra_environ=environ)
         csrf_token = self.app.cookies['csrf_token']
 
-        schema = Session.query(datastore.Schema).filter(datastore.Schema.name == u'test_schema').one()
+        schema = Session.query(datastore.Schema).filter(
+            datastore.Schema.name == u'test_schema').one()
         schema_id = schema.id
 
         data = {
