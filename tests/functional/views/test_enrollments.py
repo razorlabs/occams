@@ -2,6 +2,7 @@ from ddt import ddt, data
 
 from tests import FunctionalFixture, USERID
 
+
 @ddt
 class TestPermissionsEnrollmentsListView(FunctionalFixture):
 
@@ -64,10 +65,9 @@ class TestPermissionsEnrollmentsListView(FunctionalFixture):
                 consent_date=date(2014, 12, 22)
             ))
 
-    @data('administrator', 'manager', 'UCSD:enterer', 'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member')
+    @data('administrator', 'manager', 'UCSD:enterer', 'UCSD:reviewer',
+          'UCSD:consumer', 'UCSD:member')
     def test_allowed(self, group):
-        from occams import Session
-
         environ = self.make_environ(userid=USERID, groups=[group])
 
         response = self.app.get(
@@ -152,7 +152,8 @@ class TestPermissionsEnrollmentsAdd(FunctionalFixture):
 
         environ = self.make_environ(userid=USERID, groups=[group])
         response = self.app.get(self.url, extra_environ=environ, xhr=True)
-        study_id = Session.query(studies.Study.id).filter(studies.Study.name == u'test_study').scalar()
+        study_id = Session.query(studies.Study.id).filter(
+            studies.Study.name == u'test_study').scalar()
 
         data = {
             'consent_date': '2015-01-01',
@@ -180,7 +181,8 @@ class TestPermissionsEnrollmentsAdd(FunctionalFixture):
 
         environ = self.make_environ(userid=USERID, groups=[group])
         response = self.app.get(self.url, extra_environ=environ, xhr=True)
-        study_id = Session.query(studies.Study.id).filter(studies.Study.name == u'test_study').scalar()
+        study_id = Session.query(studies.Study.id).filter(
+            studies.Study.name == u'test_study').scalar()
 
         data = {
             'consent_date': '2015-01-01',
@@ -298,6 +300,7 @@ class TestPermissionsEnrollmentView(FunctionalFixture):
             studies.Study.name == u'test_study').scalar()
 
         self.app.get(self.url.format(enrollment_id), status=401, xhr=True)
+
 
 @ddt
 class TestPermissionsEnrollmentEdit(FunctionalFixture):
@@ -436,6 +439,7 @@ class TestPermissionsEnrollmentEdit(FunctionalFixture):
 
         self.app.get(self.url.format(enrollment_id), status=401, xhr=True)
 
+
 @ddt
 class TestPermissionsEnrollmentDelete(FunctionalFixture):
 
@@ -554,6 +558,7 @@ class TestPermissionsEnrollmentDelete(FunctionalFixture):
             studies.Study.name == u'test_study').scalar()
 
         self.app.get(self.url.format(enrollment_id), status=401, xhr=True)
+
 
 @ddt
 class TestPermissionsEnrollmentTermination(FunctionalFixture):
