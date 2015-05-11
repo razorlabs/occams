@@ -526,7 +526,8 @@ class TestPermissionsEnrollmentDelete(FunctionalFixture):
 
         self.assertEquals(200, response.status_code)
 
-    @data('UCSD:reviewer', 'UCSD:consumer', 'UCSD:member', None)
+    @data('UCSD:enterer', 'UCSD:reviewer', 'UCSD:consumer',
+          'UCSD:member', None)
     def test_not_allowed(self, group):
         from occams import Session
         from occams_studies import models as studies
