@@ -9,6 +9,10 @@ function Patient(data){
   self.site = ko.observable();
   self.references = ko.observableArray();
 
+  self.isNew = ko.pureComputed(function(){
+    return !self.id();
+  });
+
   self.hasReferences = ko.pureComputed(function(){
     return self.references().length > 0;
   });

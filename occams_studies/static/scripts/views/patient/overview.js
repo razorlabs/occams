@@ -1,4 +1,8 @@
 function PatientView(options){
+  'use strict';
+
+  options = options || {};
+
   var self = this;
 
   self.isReady = ko.observable(false);
@@ -6,8 +10,6 @@ function PatientView(options){
 
   self.selectedItem = ko.observable();  // originally selected item
   self.editableItem = ko.observable();  // pending changes (will be applied to selected)
-
-  self.formsUrl = ko.observable(options.formsUrl);
 
   var VIEW = 'view', ADD = 'add', EDIT = 'edit', DELETE = 'delete', TERMINATE = 'terminate', RANDOMIZE = 'randomize';
 
@@ -104,6 +106,12 @@ function PatientView(options){
     self.statusForm(null);
   };
 
+  self.startAddPatient = function(){
+    self.clear();
+    self.statusPatient(EDIT);
+    self.editableItem(new Patient());
+  };
+
   self.startEditPatient = function(){
     self.clear();
     self.statusPatient(EDIT);
@@ -174,9 +182,12 @@ function PatientView(options){
 
   self.savePatient = function(element){
     if ($(element).validate().form()){
+      var patient = self.patient,
+          isNew = patient.isNew();
+
       $.ajax({
-        url: self.patient.__url__(),
-        method: 'PUT',
+        url: isNew ? $(element).attr('action') : patient.__url__(),
+        method: isNew ? 'POST' : 'PUT',
         contentType: 'application/json; charset=utf-8',
         data: ko.toJSON(self.editableItem().toRest()),
         headers: {'X-CSRF-Token': $.cookie('csrf_token')},
@@ -185,11 +196,18 @@ function PatientView(options){
           self.isSaving(true);
         },
         success: function(data, textStatus, jqXHR){
-          self.patient.update(data);
-          self.clear();
+          if (isNew){
+            window.location = data.__url__
+          } else {
+            patient.update(data);
+            self.clear();
+          }
         },
         complete: function(){
-          self.isSaving(false);
+          // Re-directing takes a while, keep the user in the modal if it's a record
+          if (!isNew){
+            self.isSaving(false);
+          }
         }
       });
     }
@@ -373,7 +391,7 @@ function PatientView(options){
       , ids = selected.map(function(e){ return e.id(); });
 
     $.ajax({
-        url: self.formsUrl(),
+        url: options.formsUrl,
         method: 'DELETE',
         contentType: 'application/json; charset=utf-8',
         data: ko.toJSON({forms: ids}),

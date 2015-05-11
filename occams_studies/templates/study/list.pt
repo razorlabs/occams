@@ -105,7 +105,7 @@
   <metal:content-slot fill-slot="javascript-extras-slot">
     <script>
       $(function(){
-        ko.applyBindings(new PatientAddView, document.getElementById('patients-section'));
+        ko.applyBindings(new PatientView, document.getElementById('patients-section'));
 
         var studiesData = JSON.parse($('#studies-data').text());
         ko.applyBindings(new StudyListingView(studiesData), document.getElementById('studies-section'));
