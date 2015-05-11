@@ -367,7 +367,7 @@ class TestPermissionsCyclesEdit(FunctionalFixture):
         self.assertEquals(403, response.status_code)
 
     def test_not_authenticated(self):
-        self.app.delete(self.url, status=401, xhr=True)
+        self.app.put(self.url, status=401, xhr=True)
 
 
 @ddt
@@ -467,4 +467,4 @@ class TestPermissionsCyclesView(FunctionalFixture):
         self.assertEquals(200, response.status_code)
 
     def test_not_authenticated(self):
-        self.app.delete(self.url, status=401, xhr=True)
+        self.app.get(self.url, status=401, xhr=True)
