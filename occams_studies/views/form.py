@@ -21,6 +21,7 @@ def list_json(context, request):
     query = (
         Session.query(models.Entity)
         .options(orm.joinedload('schema'), orm.joinedload('state'))
+        .join(models.Schema)
         .join(models.Context)
         .filter_by(external=external.__tablename__, key=external.id)
         # Do not show PHI forms since there are dedicated tabs for them
