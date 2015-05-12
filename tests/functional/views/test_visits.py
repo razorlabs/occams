@@ -705,7 +705,6 @@ class TestPermissionsVisitFormsAdd(FunctionalFixture):
                 short_title=u'test_short',
                 start_date=date(2014, 12, 12),
                 schemata=set([form])
-                # termination_schema=form
             )
 
             cycle = studies.Cycle(
@@ -1094,7 +1093,6 @@ class TestPermissionsVisitFormEdit(FunctionalFixture):
                 short_title=u'test_short',
                 start_date=date(2014, 12, 12),
                 schemata=set([form])
-                # termination_schema=form
             )
 
             cycle = studies.Cycle(
