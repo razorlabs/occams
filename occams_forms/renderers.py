@@ -240,7 +240,7 @@ def make_form(session, schema, enable_metadata=True, allowed_versions=None):
                 'Inconsitent versions: %s != %s' % (
                     allowed_versions, actual_versions))
 
-        states = session.query(models.State)
+        states = session.query(models.State).order_by(models.State.title)
 
         class Metadata(wtforms.Form):
             state = wtforms.SelectField(_(u'Status'), choices=[
