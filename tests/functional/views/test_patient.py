@@ -11,17 +11,29 @@ class TestPermissionsPatientList(FunctionalFixture):
     def setUp(self):
         super(TestPermissionsPatientList, self).setUp()
 
+        from datetime import date
+
         import transaction
         from occams import Session
+        from occams_studies import models as studies
         from occams_datastore import models as datastore
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
-            Session.add(datastore.User(key=USERID))
+            user = datastore.User(key=USERID)
+            Session.info['blame'] = user
+            Session.add(user)
+            Session.flush()
+            Session.add(studies.Site(
+                name=u'UCSD',
+                title=u'UCSD',
+                description=u'UCSD Campus',
+                create_date=date.today()))
+            Session.flush()
 
     @data('administrator', 'manager', 'UCSD:enterer', 'UCSD:reviewer',
-          'UCSD:consumer', 'UCSD:member', None)
+          'UCSD:consumer', 'UCSD:member')
     def test_allowed(self, group):
         environ = self.make_environ(userid=USERID, groups=[group])
         response = self.app.get(self.url, extra_environ=environ)
@@ -71,7 +83,7 @@ class TestPermissionsPatientAdd(FunctionalFixture):
         site_id = site.id
         data = {
             'site': site_id,
-            'references': []
+            'references': [],
         }
         csrf_token = self.app.cookies['csrf_token']
         response = self.app.post_json(
@@ -91,7 +103,7 @@ class TestPermissionsPatientAdd(FunctionalFixture):
         from occams_studies import models as studies
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get(self.url, extra_environ=environ, xhr=True)
+        response = self.app.get('/studies', extra_environ=environ, xhr=True)
         site = Session.query(studies.Site).filter(
             studies.Site.name == u'UCSD').one()
         site_id = site.id
