@@ -72,9 +72,11 @@ def checkout(context, request):
         class CheckoutForm(Form):
             contents = wtforms.FieldList(
                 wtforms.StringField(
-                    validators=[wtforms.validators.AnyOf(
-                        exportables, message=_(u'Invalid selection'))]),
-                min_entries=1)
+                    validators=[
+                        wtforms.validators.InputRequired(),
+                        wtforms.validators.AnyOf(
+                            exportables,
+                            message=_(u'Invalid selection')) ]))
             expand_collections = wtforms.BooleanField(default=False)
             use_choice_labels = wtforms.BooleanField(default=False)
 
@@ -91,8 +93,8 @@ def checkout(context, request):
                 owner_user=(Session.query(models.User)
                             .filter_by(key=request.authenticated_userid)
                             .one()),
-                contents=[exportables[k].to_json()
-                          for k in form.contents.data]))
+                contents=[
+                    exportables[k].to_json() for k in form.contents.entries]))
 
             def apply_after_commit(success):
                 if success:
@@ -107,7 +109,7 @@ def checkout(context, request):
             msg = _(u'Your request has been received!')
             request.session.flash(msg, 'success')
 
-            return HTTPFound(location=request.route_path('studies.export_status'))
+            return HTTPFound(location=request.route_path('studies.exports_status'))
 
     return {
         'errors': errors,

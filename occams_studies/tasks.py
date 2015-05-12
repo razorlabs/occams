@@ -94,7 +94,6 @@ def on_preload_parsed(options, **kwargs):
 
     # Clear the registry so we ALWAYS get the correct userid
     Session.remove()
-    Session.configure(info={'user': user})
 
 
 @worker_init.connect
@@ -120,6 +119,9 @@ def in_transaction(func):
     """
     def decorated(*args, **kw):
         with transaction.manager:
+            userid = celery.settings['studies.export.user']
+            user = Session.query(models.User).filter_by(key=userid).one()
+            Session.info['blame'] = user
             result = func(*args, **kw)
         Session.remove()
         return result

@@ -26,7 +26,7 @@
         <span tal:omit-tag="" i18n:translate="">
           The most up-to-date records will be used.
         </span>
-        <a href="${request.route_path('exports_faq', _anchor='version')}"
+        <a href="${request.route_path('studies.exports_faq', _anchor='version')}"
           ><span class="glyphicon glyphicon-info-sign"></span></a>
 
       </p>
