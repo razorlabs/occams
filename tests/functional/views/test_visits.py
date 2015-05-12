@@ -39,19 +39,6 @@ class TestPermissionsVisitsView(FunctionalFixture):
                 pid=u'123'
             )
 
-            form = datastore.Schema(
-                name=u'test_schema',
-                title=u'test_title',
-                publish_date=date(2015, 1, 1)
-            )
-
-            form.attributes['termination_date'] = studies.Attribute(
-                name=u'termination_date',
-                title=u'termination_date',
-                type=u'datetime',
-                order=0
-            )
-
             study = studies.Study(
                 name=u'test_study',
                 code=u'test_code',
@@ -59,14 +46,8 @@ class TestPermissionsVisitsView(FunctionalFixture):
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12),
-                termination_schema=form
+                start_date=date(2014, 12, 12)
             )
-
-            Session.add(studies.State(
-                name=u'pending-entry',
-                title=u'pending-entry'
-            ))
 
             Session.add(study)
             Session.add(patient)
@@ -131,19 +112,6 @@ class TestPermissionsVisitsAdd(FunctionalFixture):
                 pid=u'123'
             )
 
-            form = datastore.Schema(
-                name=u'test_schema',
-                title=u'test_title',
-                publish_date=date(2015, 1, 1)
-            )
-
-            form.attributes['termination_date'] = studies.Attribute(
-                name=u'termination_date',
-                title=u'termination_date',
-                type=u'datetime',
-                order=0
-            )
-
             study = studies.Study(
                 name=u'test_study',
                 code=u'test_code',
@@ -151,8 +119,7 @@ class TestPermissionsVisitsAdd(FunctionalFixture):
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12),
-                termination_schema=form
+                start_date=date(2014, 12, 12)
             )
 
             cycle = studies.Cycle(
@@ -274,19 +241,6 @@ class TestPermissionsVisitView(FunctionalFixture):
                 pid=u'123'
             )
 
-            form = datastore.Schema(
-                name=u'test_schema',
-                title=u'test_title',
-                publish_date=date(2015, 1, 1)
-            )
-
-            form.attributes['termination_date'] = studies.Attribute(
-                name=u'termination_date',
-                title=u'termination_date',
-                type=u'datetime',
-                order=0
-            )
-
             study = studies.Study(
                 name=u'test_study',
                 code=u'test_code',
@@ -294,8 +248,7 @@ class TestPermissionsVisitView(FunctionalFixture):
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12),
-                termination_schema=form
+                start_date=date(2014, 12, 12)
             )
 
             cycle = studies.Cycle(
@@ -310,11 +263,6 @@ class TestPermissionsVisitView(FunctionalFixture):
                 cycles=[cycle],
                 visit_date='2015-01-01'
             )
-
-            Session.add(studies.State(
-                name=u'pending-entry',
-                title=u'pending-entry'
-            ))
 
             Session.add(study)
             Session.add(patient)
@@ -391,19 +339,6 @@ class TestPermissionsVisitDelete(FunctionalFixture):
                 pid=u'123'
             )
 
-            form = datastore.Schema(
-                name=u'test_schema',
-                title=u'test_title',
-                publish_date=date(2015, 1, 1)
-            )
-
-            form.attributes['termination_date'] = studies.Attribute(
-                name=u'termination_date',
-                title=u'termination_date',
-                type=u'datetime',
-                order=0
-            )
-
             study = studies.Study(
                 name=u'test_study',
                 code=u'test_code',
@@ -411,8 +346,7 @@ class TestPermissionsVisitDelete(FunctionalFixture):
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12),
-                termination_schema=form
+                start_date=date(2014, 12, 12)
             )
 
             cycle = studies.Cycle(
@@ -427,11 +361,6 @@ class TestPermissionsVisitDelete(FunctionalFixture):
                 cycles=[cycle],
                 visit_date='2015-01-01'
             )
-
-            Session.add(studies.State(
-                name=u'pending-entry',
-                title=u'pending-entry'
-            ))
 
             Session.add(study)
             Session.add(patient)
@@ -534,19 +463,6 @@ class TestPermissionsVisitEdit(FunctionalFixture):
                 pid=u'123'
             )
 
-            form = datastore.Schema(
-                name=u'test_schema',
-                title=u'test_title',
-                publish_date=date(2015, 1, 1)
-            )
-
-            form.attributes['termination_date'] = studies.Attribute(
-                name=u'termination_date',
-                title=u'termination_date',
-                type=u'datetime',
-                order=0
-            )
-
             study = studies.Study(
                 name=u'test_study',
                 code=u'test_code',
@@ -554,8 +470,7 @@ class TestPermissionsVisitEdit(FunctionalFixture):
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12),
-                termination_schema=form
+                start_date=date(2014, 12, 12)
             )
 
             cycle = studies.Cycle(
@@ -977,7 +892,6 @@ class TestPermissionsVisitFormView(FunctionalFixture):
                 short_title=u'test_short',
                 start_date=date(2014, 12, 12),
                 schemata=set([form])
-                # termination_schema=form
             )
 
             cycle = studies.Cycle(
