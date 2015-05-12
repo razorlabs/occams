@@ -145,6 +145,7 @@ class FunctionalFixture(unittest.TestCase):
             'studies.celery.broker.url': REDIS_URL,
             'studies.celery.backend.url': REDIS_URL,
             'studies.pid.package': 'occams.roster',
+            'studies.blob.dir': '/tmp',
 
             'roster.db.url': 'sqlite://',
         })
@@ -163,7 +164,9 @@ class FunctionalFixture(unittest.TestCase):
             Session.execute('DELETE FROM "study" CASCADE')
             Session.execute('DELETE FROM "patient" CASCADE')
             Session.execute('DELETE FROM "site" CASCADE')
+            Session.execute('DELETE FROM "schema" CASCADE')
             Session.execute('DELETE FROM "export" CASCADE')
+            Session.execute('DELETE FROM "state" CASCADE')
             Session.execute('DELETE FROM "user" CASCADE')
             mark_changed(Session())
         Session.remove()

@@ -30,8 +30,6 @@ class TestViewJSON(IntegrationFixture):
         mydata.__parent__ = mock.MagicMock()
         mydata.__parent__.__parent__ = mock.MagicMock()
 
-        # import nose; nose.tools.set_trace()
-
         request = testing.DummyRequest()
         request.session.changed = mock.Mock()
         response = self.call_view(mydata, request)
@@ -56,8 +54,6 @@ class TestViewJSON(IntegrationFixture):
         Session.flush()
         mydata.__parent__ = mock.MagicMock()
         mydata.__parent__.__parent__ = mock.MagicMock()
-
-        # import nose; nose.tools.set_trace()
 
         request = testing.DummyRequest()
         request.session.changed = mock.Mock()

@@ -387,13 +387,27 @@ class Arm(Base, Referenceable, Describeable,  Modifiable, Auditable):
 
 class PatientFactory(object):
 
-    __acl__ = [
-        (Allow, groups.administrator(), ALL_PERMISSIONS),
-        (Allow, groups.manager(), ('add', 'view')),
-        (Allow, groups.reviewer(), ('add', 'view')),
-        (Allow, groups.enterer(), ('add', 'view')),
-        (Allow, Authenticated, 'view')
+    @property
+    def __acl__(self):
+        acl = [
+            (Allow, groups.administrator(), ALL_PERMISSIONS),
+            (Allow, groups.manager(), ('view', 'add'))
         ]
+
+        # Grant access to any member of any site and
+        # filter patients within the view listing based
+        # on which sites the user has access.
+        for site in Session.query(Site):
+            acl.extend([
+                (Allow, groups.enterer(site), ('view', 'add')),
+                (Allow, groups.reviewer(site), ('view',)),
+                (Allow, groups.consumer(site), ('view',)),
+                (Allow, groups.member(site), ('view',)),
+            ])
+
+        acl.extend([(Allow, Authenticated, 'view')])
+
+        return acl
 
     def __init__(self, request):
         self.request = request
@@ -433,7 +447,7 @@ class SiteFactory(object):
         return site
 
 
-class Site(Base,  Referenceable, Describeable, Modifiable, Auditable):
+class Site(Base, Referenceable, Describeable, Modifiable, Auditable):
     """
     A facility within an organization
     """
@@ -449,7 +463,10 @@ class Site(Base,  Referenceable, Describeable, Modifiable, Auditable):
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
             (Allow, groups.manager(), ('view', 'edit', 'delete')),
-            (Allow, groups.member(site=self), 'view'),
+            (Allow, groups.enterer(self), ('view',)),
+            (Allow, groups.consumer(self), ('view',)),
+            (Allow, groups.reviewer(self), ('view',)),
+            (Allow, groups.member(self), 'view'),
             ]
 
     # patients backref'd from patient
@@ -488,9 +505,9 @@ class Patient(Base, Referenceable, Modifiable, HasEntities, Auditable):
         site = self.site
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
-            (Allow, groups.manager(site), ('view', 'edit', 'delete')),
-            (Allow, groups.reviewer(site), ('view', 'edit', 'delete')),
-            (Allow, groups.enterer(site), ('view', 'edit', 'delete')),
+            (Allow, groups.manager(), ('view', 'edit', 'delete')),
+            (Allow, groups.reviewer(site), ('view',)),
+            (Allow, groups.enterer(site), ('view', 'edit')),
             (Allow, groups.consumer(site), 'view')
             ]
 
@@ -702,7 +719,7 @@ class EnrollmentFactory(object):
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
             (Allow, groups.manager(site), ('view', 'add')),
-            (Allow, groups.reviewer(site), ('view', 'add')),
+            (Allow, groups.reviewer(site), ('view')),
             (Allow, groups.enterer(site), ('view', 'add')),
             (Allow, groups.consumer(site), 'view'),
             ]
@@ -752,9 +769,9 @@ class Enrollment(Base,  Referenceable, Modifiable, HasEntities, Auditable):
         site = self.patient.site
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
-            (Allow, groups.manager(site), ('view', 'edit', 'delete', 'randomize', 'terminate')),  # NOQA
-            (Allow, groups.reviewer(site), ('view', 'edit', 'delete', 'randomize', 'terminate')),  # NOQA
-            (Allow, groups.enterer(site), ('view', 'edit', 'delete')),  # NOQA
+            (Allow, groups.manager(), ('view', 'edit', 'delete', 'randomize', 'terminate')),  # NOQA
+            (Allow, groups.reviewer(site), ('view')),  # NOQA
+            (Allow, groups.enterer(site), ('view', 'edit', 'terminate')),  # NOQA
             (Allow, groups.consumer(site), 'view')
             ]
 
@@ -929,10 +946,10 @@ class VisitFactory(object):
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
             (Allow, groups.manager(site), ('view', 'add')),
-            (Allow, groups.reviewer(site), ('view', 'add')),
+            (Allow, groups.reviewer(site), ('view')),
             (Allow, groups.enterer(site), ('view', 'add')),
             (Allow, groups.consumer(site), 'view'),
-            ]
+        ]
 
     def __init__(self, parent):
         self.__parent__ = parent
@@ -990,8 +1007,8 @@ class Visit(Base, Referenceable, Modifiable, HasEntities, Auditable):
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
             (Allow, groups.manager(site), ('view', 'edit', 'delete')),  # NOQA
-            (Allow, groups.reviewer(site), ('view', 'edit', 'delete')),  # NOQA
-            (Allow, groups.enterer(site), ('view', 'edit', 'delete')),  # NOQA
+            (Allow, groups.reviewer(site), ('view')),  # NOQA
+            (Allow, groups.enterer(site), ('view', 'edit')),  # NOQA
             (Allow, groups.consumer(site), 'view')
             ]
 

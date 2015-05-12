@@ -409,7 +409,8 @@ def edit_json(context, request):
 
     if is_new:
         # if any errors occurr after this, this PID is essentially wasted
-        patient = models.Patient(pid=generate(form.site.data.name))
+        patient = models.Patient(
+            pid=six.text_type(generate(form.site.data.name)))
         Session.add(patient)
     else:
         patient = context
