@@ -37,12 +37,6 @@ class TestPermissionsEnrollmentsListView(FunctionalFixture):
                 pid=u'123'
             )
 
-            form = datastore.Schema(
-                name=u'test_schema',
-                title=u'test_title',
-                publish_date=date(2015, 1, 1)
-            )
-
             study = studies.Study(
                 name=u'test_study',
                 code=u'test_code',
@@ -50,14 +44,8 @@ class TestPermissionsEnrollmentsListView(FunctionalFixture):
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12),
-                schemata=set([form])
+                start_date=date(2014, 12, 12)
             )
-
-            Session.add(studies.State(
-                name=u'pending-entry',
-                title=u'pending-entry'
-            ))
 
             Session.add(studies.Enrollment(
                 patient=patient,
@@ -117,12 +105,6 @@ class TestPermissionsEnrollmentsAdd(FunctionalFixture):
                 pid=u'123'
             )
 
-            form = datastore.Schema(
-                name=u'test_schema',
-                title=u'test_title',
-                publish_date=date(2015, 1, 1)
-            )
-
             study = studies.Study(
                 name=u'test_study',
                 code=u'test_code',
@@ -130,14 +112,8 @@ class TestPermissionsEnrollmentsAdd(FunctionalFixture):
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12),
-                schemata=set([form])
+                start_date=date(2014, 12, 12)
             )
-
-            Session.add(studies.State(
-                name=u'pending-entry',
-                title=u'pending-entry'
-            ))
 
             Session.add(studies.Enrollment(
                 patient=patient,
@@ -241,12 +217,6 @@ class TestPermissionsEnrollmentView(FunctionalFixture):
                 pid=u'123'
             )
 
-            form = datastore.Schema(
-                name=u'test_schema',
-                title=u'test_title',
-                publish_date=date(2015, 1, 1)
-            )
-
             study = studies.Study(
                 name=u'test_study',
                 code=u'test_code',
@@ -254,14 +224,8 @@ class TestPermissionsEnrollmentView(FunctionalFixture):
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12),
-                schemata=set([form])
+                start_date=date(2014, 12, 12)
             )
-
-            Session.add(studies.State(
-                name=u'pending-entry',
-                title=u'pending-entry'
-            ))
 
             Session.add(studies.Enrollment(
                 patient=patient,
@@ -336,12 +300,6 @@ class TestPermissionsEnrollmentEdit(FunctionalFixture):
                 pid=u'123'
             )
 
-            form = datastore.Schema(
-                name=u'test_schema',
-                title=u'test_title',
-                publish_date=date(2015, 1, 1)
-            )
-
             study = studies.Study(
                 name=u'test_study',
                 code=u'test_code',
@@ -349,14 +307,8 @@ class TestPermissionsEnrollmentEdit(FunctionalFixture):
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12),
-                schemata=set([form])
+                start_date=date(2014, 12, 12)
             )
-
-            Session.add(studies.State(
-                name=u'pending-entry',
-                title=u'pending-entry'
-            ))
 
             Session.add(studies.Enrollment(
                 patient=patient,
@@ -474,12 +426,6 @@ class TestPermissionsEnrollmentDelete(FunctionalFixture):
                 pid=u'123'
             )
 
-            form = datastore.Schema(
-                name=u'test_schema',
-                title=u'test_title',
-                publish_date=date(2015, 1, 1)
-            )
-
             study = studies.Study(
                 name=u'test_study',
                 code=u'test_code',
@@ -487,14 +433,8 @@ class TestPermissionsEnrollmentDelete(FunctionalFixture):
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12),
-                schemata=set([form])
+                start_date=date(2014, 12, 12)
             )
-
-            Session.add(studies.State(
-                name=u'pending-entry',
-                title=u'pending-entry'
-            ))
 
             Session.add(studies.Enrollment(
                 patient=patient,
