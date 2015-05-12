@@ -21,6 +21,7 @@ function Visit(data){
   });
 
   self.update = function(data) {
+    data = data || {};
     self.__url__(data.__url__);
     self.id(data.id);
     self.visit_date(data.visit_date);
@@ -32,43 +33,32 @@ function Visit(data){
     }));
   };
 
-  self.entitiesNotStartedCount = ko.pureComputed(function(){
-    return self.entities().filter(function(entity){
-      return entity.state().name == 'pending-entry';
-    }).length;
-  });
+  self.progress = ko.pureComputed(function(){
+    var states = {
+          'complete': {'order': 0, 'css': 'progress-bar progress-bar-success'},
+          'pending-correction': {'order': 1, 'css': 'progress-bar progress-bar-primary'},
+          'pending-review': {'order': 2,  'css': 'progress-bar progress-bar-warning'},
+          'in-progress': {'order': 3,  'css': 'progress-bar progress-bar-info'},
+          'pending-entry': {'order': 4, 'css': 'progress-bar progress-bar-danger'}
+        },
+        grouped = groupBy(self.entities(), function(e){
+          return e.state().name;
+        }),
+        mapped = grouped.map(function(items){
+          var state = items[0].state();
+          return {
+            'state': state,
+            'css': states[state.name].css,
+            'order': states[state.name].order,
+            'count': items.length,
+            'percent': ((items.length / self.entities().length) * 100).toFixed(1)
+          };
+        }),
+        result = mapped.sort(function(a, b){
+          return a.order - b.order;
+        });
 
-  self.entitiesNotStartedProgress = ko.pureComputed(function(){
-    if (!self.hasEntities()){
-      return 0;
-    }
-    return Math.round((self.entitiesNotStartedCount() / self.entities().length) * 100);
-  });
-
-  self.entitiesIncompleteCount = ko.pureComputed(function(){
-    return self.entities().filter(function(entity){
-      return entity.state().name != 'pending-entry'&& entity.state().name != 'complete';
-    }).length;
-  });
-
-  self.entitiesIncompleteProgress = ko.pureComputed(function(){
-    if (!self.hasEntities()){
-      return 0;
-    }
-    return Math.round((self.entitiesIncompleteCount() / self.entities().length) * 100);
-  });
-
-  self.entitiesCompletedCount = ko.pureComputed(function(){
-    return self.entities().filter(function(entity){
-      return entity.state().name == 'complete';
-    }).length;
-  });
-
-  self.entitiesCompletedProgress = ko.pureComputed(function(){
-    if (self.entities().length < 1) {
-      return 0;
-    }
-    return Math.round((self.entitiesCompletedCount() / self.entities().length) * 100);
+    return result;
   });
 
   self.toRest = function(){
@@ -80,5 +70,5 @@ function Visit(data){
     };
   };
 
-  self.update(data || {});
+  self.update(data);
 }

@@ -207,23 +207,15 @@
                   <div data-bind="text: title"></div>
                 </td>
                 <td>
-                  <div class="progress">
-                    <!-- ko if: hasEntities -->
-                      <div class="progress-bar progress-bar-success"
-                          data-bind="style: {width: entitiesCompletedProgress() + '%'}">
-                        <span data-bind="text: entitiesCompletedCount"></span>
+                  <div class="progress" data-bind="if: hasEntities">
+                    <!-- ko foreach: progress -->
+                      <div
+                          data-bind="
+                            css: css,
+                            tooltip: {title: state.title, placement: 'bottom'},
+                            style: {width: percent + '%'}">
+                        <span data-bind="text: count"></span>
                       </div>
-                      <div class="progress-bar progress-bar-warning"
-                          data-bind="style: {width: entitiesIncompleteProgress() + '%'}">
-                        <span data-bind="text: entitiesIncompleteCount"></span>
-                      </div>
-                      <div class="progress-bar progress-bar-danger"
-                          data-bind="style: {width: entitiesNotStartedProgress() + '%'}">
-                        <span data-bind="text: entitiesNotStartedCount"></span>
-                      </div>
-                    <!-- /ko -->
-                    <!-- ko ifnot: hasEntities -->
-                      <div class="progress-bar progress-bar-warning" style="width: 100%"></div>
                     <!-- /ko -->
                   </div>
                 </td>
