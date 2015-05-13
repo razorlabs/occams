@@ -131,6 +131,7 @@ class FunctionalFixture(unittest.TestCase):
 
             # Enable regular error messages so we can see useful traceback
             'debugtoolbar.enabled': True,
+            'pyramid.debug_authorization': True,
 
             'webassets.debug': True,
             'webassets.auto_build': False,
