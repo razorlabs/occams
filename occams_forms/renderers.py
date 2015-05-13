@@ -212,15 +212,45 @@ def make_field(attribute):
     return field_class(**kw)
 
 
-def make_form(session, schema, enable_metadata=True, allowed_versions=None):
+def make_form(session,
+              schema,
+              formdata=None,
+              enable_metadata=True,
+              allowed_versions=None):
     """
-    Converts a Datastore schema to a WTForm.
+    Converts a Datastore schema to a WTForm for data entry
+
+    Parameters:
+    session -- the database session to query for form metata
+    schema -- the assumed form for data entry
+    formdata -- (optional) incoming data for lookahead purposes:
+                * if ``not_done`` is specified, no fields will be generated
+                * if ``version`` changes, then the specified version will
+                  override the ``schema`` parameter
+    enable_metadata -- (optional) enables metada entry of the form
+    allowed_versions -- list of schemata versions that can override ``schema``
     """
+
+    formdata = formdata or {}
 
     class DatastoreForm(wtforms.Form):
-        pass
+
+        def validate(self, **kw):
+            if 'ofmetadata_' in self and self.ofmetadata_.not_done.data:
+                return self.ofmetadata_.validate(self)
+            else:
+                return super(DatastoreForm, self).validate(**kw)
 
     if enable_metadata:
+
+        # If there was a version change so we render the correct form
+        if 'ofmetadata_-version' in formdata:
+            schema = (
+                session.query(models.Schema)
+                .filter_by(
+                    name=schema.name,
+                    publish_date=formdata['ofmetadata_-version'])
+                .one())
 
         if not allowed_versions:
             allowed_versions = []
@@ -282,6 +312,10 @@ def render_form(form, disabled=False, attr=None):
     """
     Helper function to render a WTForm by OCCAMS standards
     """
+
+    if 'ofmetadata_' in form and form.ofmetadata_.not_done.data:
+        disabled = True
+
     return render('occams_forms:templates/form.pt', {
         'form': form,
         'disabled': disabled,
@@ -338,6 +372,10 @@ def apply_data(session, entity, data, upload_path):
         return
 
     for attribute in entity.schema.iterleafs():
+
+        if entity.not_done:
+            entity[attribute.name] = None
+            continue
 
         # Find the appropriate sub-attribute to update
         if attribute.parent_attribute:
