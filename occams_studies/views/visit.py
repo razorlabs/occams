@@ -300,29 +300,26 @@ def form(context, request):
         .filter(models.Cycle.id.in_([cycle.id for cycle in visit.cycles])))
     allowed_versions = [s.publish_date for s in allowed_schemata]
 
-    # Determine if there was a version change so we render the correct form
-    if 'ofmetadata_-version' in request.POST:
-        schema = (
-            Session.query(models.Schema)
-            .filter_by(
-                name=context.schema.name,
-                publish_date=request.POST['ofmetadata_-version'])
-            .one())
-    else:
-        schema = context.schema
+    Form = make_form(
+        Session,
+        context.schema,
+        request.POST,
+        allowed_versions=allowed_versions)
 
-    Form = make_form(Session, schema, allowed_versions=allowed_versions)
     form = Form(request.POST, data=entity_data(context))
 
     if request.method == 'POST':
+
         if not request.has_permission('edit', context):
             raise HTTPForbidden()
+
         if form.validate():
             upload_dir = request.registry.settings['studies.blob.dir']
             apply_data(Session, context, form.data, upload_dir)
             Session.flush()
             request.session.flash(
-                _(u'Changes saved for: ${form}', mapping={'form': schema.title}),
+                _(u'Changes saved for: ${form}', mapping={
+                    'form': context.schema.title}),
                 'success')
             return HTTPFound(location=request.current_route_path(_route_name='studies.visit'))
 

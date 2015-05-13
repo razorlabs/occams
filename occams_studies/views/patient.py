@@ -523,20 +523,9 @@ def form(context, request):
         enable_metadata = False
         allowed_versions = None
 
-    # Determine if there was a version change so we render the correct form
-    if 'ofmetadata_-version' in request.POST:
-        schema = (
-            Session.query(models.Schema)
-            .filter_by(
-                name=context.schema.name,
-                publish_date=request.POST['ofmetadata_-version'])
-            .one())
-    else:
-        schema = context.schema
-
     Form = make_form(
         Session,
-        schema,
+        context.schema,
         enable_metadata=enable_metadata,
         allowed_versions=allowed_versions)
     form = Form(request.POST, data=entity_data(context))
