@@ -51,7 +51,7 @@ function Visit(data){
             'css': states[state.name].css,
             'order': states[state.name].order,
             'count': items.length,
-            'percent': ((items.length / self.entities().length) * 100).toFixed(1)
+            'percent': ((items.length / self.entities().length) * 100)
           };
         }),
         result = mapped.sort(function(a, b){
