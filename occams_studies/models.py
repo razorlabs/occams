@@ -421,7 +421,7 @@ class PatientFactory(object):
                 .one())
         except orm.exc.NoResultFound:
             raise KeyError
-        patient.__parent__ = self
+        # patient.__parent__ = self
         return patient
 
 
@@ -505,10 +505,11 @@ class Patient(Base, Referenceable, Modifiable, HasEntities, Auditable):
         site = self.site
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
-            (Allow, groups.manager(), ('view', 'edit', 'delete')),
+            (Allow, groups.manager(), ('view', 'edit', 'add', 'delete')),
             (Allow, groups.reviewer(site), ('view',)),
-            (Allow, groups.enterer(site), ('view', 'edit')),
-            (Allow, groups.consumer(site), 'view')
+            (Allow, groups.enterer(site), ('view', 'edit', 'add')),
+            (Allow, groups.consumer(site), 'view'),
+            (Allow, groups.member(site), 'view')
             ]
 
     site_id = sa.Column(sa.Integer, nullable=False)
