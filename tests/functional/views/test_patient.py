@@ -164,10 +164,12 @@ class TestPermissionsPatientView(FunctionalFixture):
             ))
 
     @data('administrator', 'manager', 'UCSD:enterer', 'UCSD:reviewer',
-          'UCSD:consumer', 'UCSD:member', None)
+          'UCSD:consumer', 'UCSD:member')
     def test_allowed(self, group):
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get(self.url.format('123'), extra_environ=environ)
+        response = self.app.get(
+            self.url.format('123'), extra_environ=environ, status='*')
+
         self.assertEquals(200, response.status_code)
 
     def test_not_authenticated(self):
@@ -245,7 +247,7 @@ class TestPermissionsPatientDelete(FunctionalFixture):
         from occams_studies import models as studies
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get(self.url.format('123'), extra_environ=environ)
+        response = self.app.get('/studies', extra_environ=environ, status='*')
         csrf_token = self.app.cookies['csrf_token']
 
         patient = Session.query(studies.Patient).filter(
@@ -344,7 +346,7 @@ class TestPermissionsPatientEdit(FunctionalFixture):
         from occams_studies import models as studies
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get(self.url.format('123'), extra_environ=environ)
+        response = self.app.get('/studies', extra_environ=environ, status='*')
         csrf_token = self.app.cookies['csrf_token']
 
         patient = Session.query(studies.Patient).filter(
@@ -371,6 +373,57 @@ class TestPermissionsPatientEdit(FunctionalFixture):
 
     def test_not_authenticated(self):
         self.app.put(self.url.format('123'), status=401, xhr=True)
+
+
+@ddt
+class TestPermissionsPatientViewDiffSite(FunctionalFixture):
+
+    url = '/studies/patients/123'
+
+    def setUp(self):
+        super(TestPermissionsPatientViewDiffSite, self).setUp()
+
+        import transaction
+        from occams import Session
+        from occams_studies import models as studies
+        from occams_datastore import models as datastore
+        from datetime import date
+
+        # Any view-dependent data goes here
+        # Webtests will use a different scope for its transaction
+        with transaction.manager:
+            user = datastore.User(key=USERID)
+            Session.info['blame'] = user
+            Session.add(user)
+            Session.flush()
+            site = studies.Site(
+                name=u'UCSD',
+                title=u'UCSD',
+                description=u'UCSD Campus',
+                create_date=date.today())
+
+            Session.add(studies.Site(
+                name=u'UCLA',
+                title=u'UCLA',
+                description=u'UCLA Campus',
+                create_date=date.today()))
+
+            Session.add(studies.Patient(
+                initials=u'ian',
+                nurse=u'imanurse@ucsd.edu',
+                site=site,
+                pid=u'123'
+            ))
+
+            Session.flush()
+
+    @data('UCLA:member')
+    def test_not_allowed(self, group):
+        environ = self.make_environ(userid=USERID, groups=[group])
+        response = self.app.get(
+            self.url.format('123'), extra_environ=environ, status='*')
+
+        self.assertEquals(403, response.status_code)
 
 
 @ddt
@@ -408,10 +461,10 @@ class TestPermissionsPatientFormsView(FunctionalFixture):
             ))
 
     @data('administrator', 'manager', 'UCSD:enterer', 'UCSD:reviewer',
-          'UCSD:consumer', 'UCSD:member', None)
+          'UCSD:consumer', 'UCSD:member')
     def test_allowed(self, group):
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get(self.url, extra_environ=environ)
+        response = self.app.get(self.url, extra_environ=environ, status='*')
 
         self.assertEquals(200, response.status_code)
 
@@ -517,7 +570,7 @@ class TestPermissionsPatientFormsAdd(FunctionalFixture):
         from occams_datastore import models as datastore
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get(self.url, extra_environ=environ)
+        response = self.app.get('/studies', extra_environ=environ, status='*')
         csrf_token = self.app.cookies['csrf_token']
 
         schema = Session.query(datastore.Schema).filter(
@@ -643,7 +696,7 @@ class TestPermissionsPatientFormsDelete(FunctionalFixture):
         from occams_datastore import models as datastore
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get(self.url, extra_environ=environ)
+        response = self.app.get('/studies', extra_environ=environ, status='*')
         csrf_token = self.app.cookies['csrf_token']
 
         schema = Session.query(datastore.Schema).filter(
