@@ -156,7 +156,7 @@ class TestPermissionsEnrollmentsAdd(FunctionalFixture):
         from occams_studies import models as studies
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get(self.url, extra_environ=environ, xhr=True)
+        response = self.app.get('/studies', extra_environ=environ, xhr=True)
         study_id = Session.query(studies.Study.id).filter(
             studies.Study.name == u'test_study').scalar()
 
@@ -355,7 +355,7 @@ class TestPermissionsEnrollmentEdit(FunctionalFixture):
         from occams_studies import models as studies
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies/patients/123/enrollments',
+        response = self.app.get('/studies',
                                 extra_environ=environ, xhr=True)
         study_id = Session.query(studies.Study.id).filter(
             studies.Study.name == u'test_study').scalar()
@@ -473,7 +473,7 @@ class TestPermissionsEnrollmentDelete(FunctionalFixture):
         from occams_studies import models as studies
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies/patients/123/enrollments',
+        response = self.app.get('/studies',
                                 extra_environ=environ, xhr=True)
         enrollment_id = Session.query(studies.Enrollment.id).filter(
             studies.Study.name == u'test_study').scalar()
@@ -607,7 +607,7 @@ class TestPermissionsEnrollmentTermination(FunctionalFixture):
         from occams_studies import models as studies
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies/patients/123',
+        response = self.app.get('/studies',
                                 extra_environ=environ)
         enrollment_id = Session.query(studies.Enrollment.id).filter(
             studies.Study.name == u'test_study').scalar()
