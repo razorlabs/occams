@@ -421,7 +421,6 @@ class PatientFactory(object):
                 .one())
         except orm.exc.NoResultFound:
             raise KeyError
-        # patient.__parent__ = self
         return patient
 
 
