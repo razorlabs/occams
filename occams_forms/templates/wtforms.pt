@@ -42,22 +42,48 @@
 
   <metal:macro define-macro="metadata">
     <div class="entity">
-      <div class="row">
-        <div class="col-md-1">${form.state.label(class_='control-label required')}</div>
-        <div class="col-md-5">
-          <div class="input-group select2-bootstrap-append">
-            ${form.state(class_='form-control js-select2')}
-            <span class="input-group-addon">
-              <label>${form.not_done()} ${form.not_done.label.text}</label>
-            </span>
+      <div class="row ${'alert alert-danger' if form.errors else ''}">
+
+        <tal:field define="
+            name  'state';
+            field form[name];
+            errors field.errors;
+            css_status python:'has-error' if errors else ''">
+          <div class="col-md-1">${field.label(class_='control-label required')}</div>
+          <div class="col-md-5">
+            <div class="input-group select2-bootstrap-append">
+              ${field(class_='form-control js-select2')}
+              <span class="input-group-addon">
+                <label>${form.not_done()} ${form.not_done.label.text}</label>
+              </span>
+            </div>
+            <p tal:repeat="error errors" class="help-block">${error}</p>
           </div>
-        </div>
+        </tal:field>
 
-        <div class="col-md-1">${form.collect_date.label(class_='control-label required')}</div>
-        <div class="col-md-2">${form.collect_date(class_='form-control js-date')}</div>
+        <tal:field define="
+            name  'collect_date';
+            field form[name];
+            errors field.errors;
+            css_status python:'has-error' if errors else ''">
+          <div class="col-md-1 ${css_status}">${field.label(class_='control-label required')}</div>
+          <div class="col-md-2 ${css_status}">
+            ${field(class_='form-control js-date')}
+            <p tal:repeat="error errors" class="help-block">${error}</p>
+          </div>
+        </tal:field>
 
-        <div class="col-md-1">${form.version.label(class_='control-label required')}</div>
-        <div class="col-md-2">${form.version(class_='form-control js-select2')} </div>
+        <tal:field define="
+            name  'version';
+            field form[name];
+            errors field.errors;
+            css_status python:'has-error' if errors else ''">
+          <div class="col-md-1">${field.label(class_='control-label required')}</div>
+          <div class="col-md-2">
+            ${field(class_='form-control js-select2')}
+            <p tal:repeat="error errors" class="help-block">${error}</p>
+          </div>
+        </tal:field>
       </div>
 
       <hr />
