@@ -421,6 +421,14 @@ class PatientFactory(object):
                 .one())
         except orm.exc.NoResultFound:
             raise KeyError
+
+        # We do not specifically set the __parent__ attribute in this case
+        # because we want users to be able to view the "/patients" URL
+        # (with site-specific filtered results), but we do not want children
+        # to inherit the permissions. Otherwise it allows
+        # users of different sites to "view" the patient because of the
+        # view permission on this node of hierarchy.
+
         return patient
 
 
