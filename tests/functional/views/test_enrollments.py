@@ -67,6 +67,20 @@ class TestPermissionsEnrollmentsListView(FunctionalFixture):
 
         self.assertEquals(200, response.status_code)
 
+    @data('UCLA:enterer', 'UCLA:reviewer',
+          'UCLA:consumer', 'UCLA:member')
+    def test_not_allowed(self, group):
+        environ = self.make_environ(userid=USERID, groups=[group])
+
+        response = self.app.get(
+            self.url,
+            extra_environ=environ,
+            status='*',
+            xhr=True,
+            params={})
+
+        self.assertEquals(403, response.status_code)
+
     def test_not_authenticated(self):
         self.app.get(self.url, status=401, xhr=True)
 
@@ -150,7 +164,8 @@ class TestPermissionsEnrollmentsAdd(FunctionalFixture):
 
         self.assertEquals(200, response.status_code)
 
-    @data('UCSD:reviewer', 'UCSD:consumer', 'UCSD:member', None)
+    @data('UCSD:reviewer', 'UCSD:consumer', 'UCSD:member',
+          'UCLA:enterer', None)
     def test_not_allowed(self, group):
         from occams import Session
         from occams_studies import models as studies
@@ -256,6 +271,29 @@ class TestPermissionsEnrollmentView(FunctionalFixture):
 
         self.assertEquals(200, response.status_code)
 
+    @data('UCLA:enterer', 'UCLA:reviewer',
+          'UCLA:consumer', 'UCLA:member')
+    def test_not_allowed(self, group):
+        from occams import Session
+        from occams_studies import models as studies
+
+        environ = self.make_environ(userid=USERID, groups=[group])
+        enrollment_id = Session.query(studies.Enrollment.id).filter(
+            studies.Study.name == u'test_study').scalar()
+
+        data = {
+            'id_1': enrollment_id
+        }
+
+        response = self.app.get(
+            self.url.format(enrollment_id),
+            extra_environ=environ,
+            status='*',
+            xhr=True,
+            params=data)
+
+        self.assertEquals(403, response.status_code)
+
     def test_not_authenticated(self):
         from occams import Session
         from occams_studies import models as studies
@@ -349,7 +387,8 @@ class TestPermissionsEnrollmentEdit(FunctionalFixture):
 
         self.assertEquals(200, response.status_code)
 
-    @data('UCSD:reviewer', 'UCSD:consumer', 'UCSD:member', None)
+    @data('UCSD:reviewer', 'UCSD:consumer', 'UCSD:member',
+          'UCLA:enterer', None)
     def test_not_allowed(self, group):
         from occams import Session
         from occams_studies import models as studies
@@ -601,7 +640,8 @@ class TestPermissionsEnrollmentTermination(FunctionalFixture):
 
         self.assertEquals(200, response.status_code)
 
-    @data('UCSD:reviewer', 'UCSD:consumer', 'UCSD:member', None)
+    @data('UCSD:reviewer', 'UCSD:consumer', 'UCSD:member',
+          'UCLA:enterer', None)
     def test_not_allowed(self, group):
         from occams import Session
         from occams_studies import models as studies
