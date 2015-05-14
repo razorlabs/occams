@@ -559,7 +559,7 @@ class TestPermissionsPatientFormsAdd(FunctionalFixture):
         from occams_datastore import models as datastore
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get(self.url, extra_environ=environ)
+        response = self.app.get('/', extra_environ=environ)
         csrf_token = self.app.cookies['csrf_token']
 
         schema = Session.query(datastore.Schema).filter(
