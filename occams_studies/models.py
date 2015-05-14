@@ -512,9 +512,9 @@ class Patient(Base, Referenceable, Modifiable, HasEntities, Auditable):
         site = self.site
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
-            (Allow, groups.manager(), ('view', 'edit', 'add', 'delete')),
+            (Allow, groups.manager(), ('view', 'edit', 'delete')),
             (Allow, groups.reviewer(site), ('view',)),
-            (Allow, groups.enterer(site), ('view', 'edit', 'add')),
+            (Allow, groups.enterer(site), ('view', 'edit')),
             (Allow, groups.consumer(site), 'view'),
             (Allow, groups.member(site), 'view')
             ]
@@ -726,7 +726,7 @@ class EnrollmentFactory(object):
         site = self.__parent__.site
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
-            (Allow, groups.manager(site), ('view', 'add')),
+            (Allow, groups.manager(), ('view', 'add')),
             (Allow, groups.reviewer(site), ('view')),
             (Allow, groups.enterer(site), ('view', 'add')),
             (Allow, groups.consumer(site), 'view'),
@@ -953,7 +953,7 @@ class VisitFactory(object):
         site = self.__parent__.site
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
-            (Allow, groups.manager(site), ('view', 'add')),
+            (Allow, groups.manager(), ('view', 'add')),
             (Allow, groups.reviewer(site), ('view')),
             (Allow, groups.enterer(site), ('view', 'add')),
             (Allow, groups.consumer(site), 'view'),
@@ -1014,7 +1014,7 @@ class Visit(Base, Referenceable, Modifiable, HasEntities, Auditable):
         site = self.patient.site
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
-            (Allow, groups.manager(site), ('view', 'edit', 'delete')),  # NOQA
+            (Allow, groups.manager(), ('view', 'edit', 'delete')),  # NOQA
             (Allow, groups.reviewer(site), ('view')),  # NOQA
             (Allow, groups.enterer(site), ('view', 'edit')),  # NOQA
             (Allow, groups.consumer(site), 'view')
@@ -1066,7 +1066,8 @@ class FormFactory(object):
         site = self.__parent__.patient.site
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
-            (Allow, groups.manager(site), ('view', 'add')),
+            (Allow, groups.manager(), ('view', 'add')),
+            (Allow, groups.enterer(site), ('view', 'add')),
             (Allow, groups.consumer(site), 'view')
             ]
 
@@ -1098,7 +1099,7 @@ def _entity_acl(self):
     if self.schema.has_private:
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
-            (Allow, groups.manager(site), ('view', 'edit', 'delete')),
+            (Allow, groups.manager(), ('view', 'edit', 'delete')),
             (Allow, groups.reviewer(site), ('view', 'edit', 'delete')),
             (Allow, groups.enterer(site), ('view', 'edit', 'delete')),
             (Allow, groups.consumer(site), 'view')
@@ -1106,7 +1107,7 @@ def _entity_acl(self):
     else:
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
-            (Allow, groups.manager(site), ('view', 'edit', 'delete')),
+            (Allow, groups.manager(), ('view', 'edit', 'delete')),
             (Allow, groups.reviewer(site), 'view'),
             (Allow, groups.enterer(site), 'view'),
             (Allow, groups.consumer(site), 'view'),
