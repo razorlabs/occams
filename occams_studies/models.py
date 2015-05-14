@@ -1063,7 +1063,13 @@ class FormFactory(object):
 
     @property
     def __acl__(self):
-        site = self.__parent__.patient.site
+        if isinstance(self.__parent__, (Enrollment, Visit)):
+            site = self.__parent__.patient.site
+        elif isinstance(self.__parent__, Patient):
+            site = self.__parent__.site
+        else:
+            raise Exception('Unable to determiine patient')
+
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
             (Allow, groups.manager(), ('view', 'add')),
