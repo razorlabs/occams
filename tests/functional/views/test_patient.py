@@ -77,15 +77,17 @@ class TestPermissionsPatientAdd(FunctionalFixture):
         from occams_studies import models as studies
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get(self.url, extra_environ=environ, xhr=True)
+        csrf_token = self.get_csrf_token(environ)
+
         site = Session.query(studies.Site).filter(
             studies.Site.name == u'UCSD').one()
         site_id = site.id
+
         data = {
             'site': site_id,
             'references': [],
         }
-        csrf_token = self.app.cookies['csrf_token']
+
         response = self.app.post_json(
             self.url,
             extra_environ=environ,
@@ -104,7 +106,8 @@ class TestPermissionsPatientAdd(FunctionalFixture):
         from occams_studies import models as studies
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies', extra_environ=environ, xhr=True)
+        csrf_token = self.get_csrf_token(environ)
+
         site = Session.query(studies.Site).filter(
             studies.Site.name == u'UCSD').one()
         site_id = site.id
@@ -113,7 +116,7 @@ class TestPermissionsPatientAdd(FunctionalFixture):
             'site': site_id,
             'references': []
         }
-        csrf_token = self.app.cookies['csrf_token']
+
         response = self.app.post_json(
             self.url,
             extra_environ=environ,
@@ -226,11 +229,11 @@ class TestPermissionsPatientDelete(FunctionalFixture):
         from occams_studies import models as studies
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get(self.url.format('123'), extra_environ=environ)
-        csrf_token = self.app.cookies['csrf_token']
+        csrf_token = self.get_csrf_token(environ)
 
         patient = Session.query(studies.Patient).filter(
             studies.Patient.pid == u'123').one()
+
         data = {
             'initials': patient.initials,
             'nurse': patient.nurse,
@@ -257,8 +260,7 @@ class TestPermissionsPatientDelete(FunctionalFixture):
         from occams_studies import models as studies
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies', extra_environ=environ, status='*')
-        csrf_token = self.app.cookies['csrf_token']
+        csrf_token = self.get_csrf_token(environ)
 
         patient = Session.query(studies.Patient).filter(
             studies.Patient.pid == u'123').one()
@@ -325,8 +327,7 @@ class TestPermissionsPatientEdit(FunctionalFixture):
         from occams_studies import models as studies
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get(self.url.format('123'), extra_environ=environ)
-        csrf_token = self.app.cookies['csrf_token']
+        csrf_token = self.get_csrf_token(environ)
 
         patient = Session.query(studies.Patient).filter(
             studies.Patient.pid == u'123').one()
@@ -351,14 +352,13 @@ class TestPermissionsPatientEdit(FunctionalFixture):
         self.assertEquals(200, response.status_code)
 
     @data('UCSD:reviewer', 'UCSD:consumer', 'UCSD:member',
-          'UCLA:enterer',  None)
+          'UCLA:enterer', None)
     def test_not_allowed(self, group):
         from occams import Session
         from occams_studies import models as studies
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies', extra_environ=environ, status='*')
-        csrf_token = self.app.cookies['csrf_token']
+        csrf_token = self.get_csrf_token(environ)
 
         patient = Session.query(studies.Patient).filter(
             studies.Patient.pid == u'123').one()
@@ -559,8 +559,7 @@ class TestPermissionsPatientFormsAdd(FunctionalFixture):
         from occams_datastore import models as datastore
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/', extra_environ=environ)
-        csrf_token = self.app.cookies['csrf_token']
+        csrf_token = self.get_csrf_token(environ)
 
         schema = Session.query(datastore.Schema).filter(
             datastore.Schema.name == u'test_schema').one()
@@ -590,8 +589,7 @@ class TestPermissionsPatientFormsAdd(FunctionalFixture):
         from occams_datastore import models as datastore
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies', extra_environ=environ, status='*')
-        csrf_token = self.app.cookies['csrf_token']
+        csrf_token = self.get_csrf_token(environ)
 
         schema = Session.query(datastore.Schema).filter(
             datastore.Schema.name == u'test_schema').one()
@@ -686,8 +684,7 @@ class TestPermissionsPatientFormsDelete(FunctionalFixture):
         from occams_datastore import models as datastore
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get(self.url, extra_environ=environ)
-        csrf_token = self.app.cookies['csrf_token']
+        csrf_token = self.get_csrf_token(environ)
 
         schema = Session.query(datastore.Schema).filter(
             datastore.Schema.name == u'test_schema').one()
@@ -716,8 +713,7 @@ class TestPermissionsPatientFormsDelete(FunctionalFixture):
         from occams_datastore import models as datastore
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies', extra_environ=environ, status='*')
-        csrf_token = self.app.cookies['csrf_token']
+        csrf_token = self.get_csrf_token(environ)
 
         schema = Session.query(datastore.Schema).filter(
             datastore.Schema.name == u'test_schema').one()

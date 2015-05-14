@@ -56,10 +56,8 @@ class TestPermissionsVisitsView(FunctionalFixture):
           'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member')
     def test_allowed(self, group):
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies',
-                                extra_environ=environ)
+        csrf_token = self.get_csrf_token(environ)
 
-        csrf_token = self.app.cookies['csrf_token']
         response = self.app.get(
             self.url,
             extra_environ=environ,
@@ -77,10 +75,8 @@ class TestPermissionsVisitsView(FunctionalFixture):
           'UCLA:consumer', 'UCLA:member')
     def test_not_allowed(self, group):
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies',
-                                extra_environ=environ)
+        csrf_token = self.get_csrf_token(environ)
 
-        csrf_token = self.app.cookies['csrf_token']
         response = self.app.get(
             self.url,
             extra_environ=environ,
@@ -165,8 +161,7 @@ class TestPermissionsVisitsAdd(FunctionalFixture):
         from occams_studies import models as studies
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies',
-                                extra_environ=environ)
+        csrf_token = self.get_csrf_token(environ)
 
         cycle_id = Session.query(studies.Cycle.id).filter(
             studies.Cycle.name == u'TestCycle').scalar()
@@ -178,7 +173,6 @@ class TestPermissionsVisitsAdd(FunctionalFixture):
             'include_speciman': False
         }
 
-        csrf_token = self.app.cookies['csrf_token']
         response = self.app.post_json(
             self.url,
             extra_environ=environ,
@@ -198,8 +192,7 @@ class TestPermissionsVisitsAdd(FunctionalFixture):
         from occams_studies import models as studies
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies',
-                                extra_environ=environ)
+        csrf_token = self.get_csrf_token(environ)
 
         cycle_id = Session.query(studies.Cycle.id).filter(
             studies.Cycle.name == u'TestCycle').scalar()
@@ -211,7 +204,6 @@ class TestPermissionsVisitsAdd(FunctionalFixture):
             'include_speciman': False
         }
 
-        csrf_token = self.app.cookies['csrf_token']
         response = self.app.post_json(
             self.url,
             extra_environ=environ,
@@ -297,13 +289,11 @@ class TestPermissionsVisitView(FunctionalFixture):
         from occams_studies import models as studies
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies',
-                                extra_environ=environ)
+        csrf_token = self.get_csrf_token(environ)
 
         visit_date = Session.query(studies.Visit.visit_date).filter(
             studies.Patient.pid == u'123').scalar()
 
-        csrf_token = self.app.cookies['csrf_token']
         response = self.app.get(
             self.url.format(visit_date),
             extra_environ=environ,
@@ -324,13 +314,11 @@ class TestPermissionsVisitView(FunctionalFixture):
         from occams_studies import models as studies
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies',
-                                extra_environ=environ)
+        csrf_token = self.get_csrf_token(environ)
 
         visit_date = Session.query(studies.Visit.visit_date).filter(
             studies.Patient.pid == u'123').scalar()
 
-        csrf_token = self.app.cookies['csrf_token']
         response = self.app.get(
             self.url.format(visit_date),
             extra_environ=environ,
@@ -421,13 +409,11 @@ class TestPermissionsVisitDelete(FunctionalFixture):
         from occams_studies import models as studies
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies',
-                                extra_environ=environ)
+        csrf_token = self.get_csrf_token(environ)
 
         visit_date = Session.query(studies.Visit.visit_date).filter(
             studies.Patient.pid == u'123').scalar()
 
-        csrf_token = self.app.cookies['csrf_token']
         response = self.app.delete(
             self.url.format(visit_date),
             extra_environ=environ,
@@ -448,13 +434,11 @@ class TestPermissionsVisitDelete(FunctionalFixture):
         from occams_studies import models as studies
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies',
-                                extra_environ=environ)
+        csrf_token = self.get_csrf_token(environ)
 
         visit_date = Session.query(studies.Visit.visit_date).filter(
             studies.Patient.pid == u'123').scalar()
 
-        csrf_token = self.app.cookies['csrf_token']
         response = self.app.delete(
             self.url.format(visit_date),
             extra_environ=environ,
@@ -550,8 +534,7 @@ class TestPermissionsVisitEdit(FunctionalFixture):
         from occams_studies import models as studies
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies',
-                                extra_environ=environ)
+        csrf_token = self.get_csrf_token(environ)
 
         visit_date = Session.query(studies.Visit.visit_date).filter(
             studies.Patient.pid == u'123').scalar()
@@ -564,7 +547,6 @@ class TestPermissionsVisitEdit(FunctionalFixture):
             'visit_date': '2015-01-02'
         }
 
-        csrf_token = self.app.cookies['csrf_token']
         response = self.app.put_json(
             self.url.format(visit_date),
             extra_environ=environ,
@@ -584,8 +566,7 @@ class TestPermissionsVisitEdit(FunctionalFixture):
         from occams_studies import models as studies
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies',
-                                extra_environ=environ)
+        csrf_token = self.get_csrf_token(environ)
 
         visit_date = Session.query(studies.Visit.visit_date).filter(
             studies.Patient.pid == u'123').scalar()
@@ -598,7 +579,6 @@ class TestPermissionsVisitEdit(FunctionalFixture):
             'visit_date': '2015-01-02'
         }
 
-        csrf_token = self.app.cookies['csrf_token']
         response = self.app.put_json(
             self.url.format(visit_date),
             extra_environ=environ,
@@ -700,8 +680,7 @@ class TestPermissionsVisitFormsAdd(FunctionalFixture):
         from occams_datastore import models as datastore
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies',
-                                extra_environ=environ)
+        csrf_token = self.get_csrf_token(environ)
 
         form_id = Session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema').scalar()
@@ -711,7 +690,6 @@ class TestPermissionsVisitFormsAdd(FunctionalFixture):
             'collect_date': '2015-01-01'
         }
 
-        csrf_token = self.app.cookies['csrf_token']
         response = self.app.post_json(
             self.url,
             extra_environ=environ,
@@ -731,8 +709,7 @@ class TestPermissionsVisitFormsAdd(FunctionalFixture):
         from occams_datastore import models as datastore
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies',
-                                extra_environ=environ)
+        csrf_token = self.get_csrf_token(environ)
 
         form_id = Session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema').scalar()
@@ -742,7 +719,6 @@ class TestPermissionsVisitFormsAdd(FunctionalFixture):
             'collect_date': '2015-01-01'
         }
 
-        csrf_token = self.app.cookies['csrf_token']
         response = self.app.post_json(
             self.url,
             extra_environ=environ,
@@ -847,8 +823,7 @@ class TestPermissionsVisitFormsDelete(FunctionalFixture):
         from occams_studies import models as studies
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies',
-                                extra_environ=environ)
+        csrf_token = self.get_csrf_token(environ)
 
         form_id = Session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema').scalar()
@@ -856,7 +831,6 @@ class TestPermissionsVisitFormsDelete(FunctionalFixture):
         entity_id = Session.query(studies.Entity.id).filter(
             studies.Entity.schema_id == form_id).scalar()
 
-        csrf_token = self.app.cookies['csrf_token']
         response = self.app.delete_json(
             self.url,
             extra_environ=environ,
@@ -873,10 +847,8 @@ class TestPermissionsVisitFormsDelete(FunctionalFixture):
           'UCSD:member', None)
     def test_not_allowed(self, group):
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies',
-                                extra_environ=environ)
+        csrf_token = self.get_csrf_token(environ)
 
-        csrf_token = self.app.cookies['csrf_token']
         response = self.app.delete_json(
             self.url,
             extra_environ=environ,
