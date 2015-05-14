@@ -67,8 +67,7 @@ class TestPermissionsStudyAdd(FunctionalFixture):
             extra_environ=environ,
             status='*',
             headers={
-                'X-CSRF-Token': csrf_token,
-                'X-REQUESTED-WITH': str('XMLHttpRequest')
+                'X-CSRF-Token': csrf_token
             },
             params=data)
         self.assertEquals(200, response.status_code)
@@ -171,8 +170,7 @@ class TestPermissionsStudyEdit(FunctionalFixture):
             extra_environ=environ,
             status='*',
             headers={
-                'X-CSRF-Token': csrf_token,
-                'X-REQUESTED-WITH': str('XMLHttpRequest')
+                'X-CSRF-Token': csrf_token
             },
             params=data)
         self.assertEquals(200, response.status_code)
@@ -233,8 +231,7 @@ class TestPermissionsStudyDelete(FunctionalFixture):
             extra_environ=environ,
             status='*',
             headers={
-                'X-CSRF-Token': csrf_token,
-                'X-REQUESTED-WITH': str('XMLHttpRequest')
+                'X-CSRF-Token': csrf_token
             },
             params=data)
 
