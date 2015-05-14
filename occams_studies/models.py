@@ -421,7 +421,14 @@ class PatientFactory(object):
                 .one())
         except orm.exc.NoResultFound:
             raise KeyError
-        patient.__parent__ = self
+
+        # We do not specifically set the __parent__ attribute in this case
+        # because we want users to be able to view the "/patients" URL
+        # (with site-specific filtered results), but we do not want children
+        # to inherit the permissions. Otherwise it allows
+        # users of different sites to "view" the patient because of the
+        # view permission on this node of hierarchy.
+
         return patient
 
 
@@ -508,7 +515,8 @@ class Patient(Base, Referenceable, Modifiable, HasEntities, Auditable):
             (Allow, groups.manager(), ('view', 'edit', 'delete')),
             (Allow, groups.reviewer(site), ('view',)),
             (Allow, groups.enterer(site), ('view', 'edit')),
-            (Allow, groups.consumer(site), 'view')
+            (Allow, groups.consumer(site), 'view'),
+            (Allow, groups.member(site), 'view')
             ]
 
     site_id = sa.Column(sa.Integer, nullable=False)
@@ -718,7 +726,7 @@ class EnrollmentFactory(object):
         site = self.__parent__.site
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
-            (Allow, groups.manager(site), ('view', 'add')),
+            (Allow, groups.manager(), ('view', 'add')),
             (Allow, groups.reviewer(site), ('view')),
             (Allow, groups.enterer(site), ('view', 'add')),
             (Allow, groups.consumer(site), 'view'),
@@ -945,7 +953,7 @@ class VisitFactory(object):
         site = self.__parent__.site
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
-            (Allow, groups.manager(site), ('view', 'add')),
+            (Allow, groups.manager(), ('view', 'add')),
             (Allow, groups.reviewer(site), ('view')),
             (Allow, groups.enterer(site), ('view', 'add')),
             (Allow, groups.consumer(site), 'view'),
@@ -1006,7 +1014,7 @@ class Visit(Base, Referenceable, Modifiable, HasEntities, Auditable):
         site = self.patient.site
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
-            (Allow, groups.manager(site), ('view', 'edit', 'delete')),  # NOQA
+            (Allow, groups.manager(), ('view', 'edit', 'delete')),  # NOQA
             (Allow, groups.reviewer(site), ('view')),  # NOQA
             (Allow, groups.enterer(site), ('view', 'edit')),  # NOQA
             (Allow, groups.consumer(site), 'view')
@@ -1055,10 +1063,17 @@ class FormFactory(object):
 
     @property
     def __acl__(self):
-        site = self.__parent__.patient.site
+        if isinstance(self.__parent__, (Enrollment, Visit)):
+            site = self.__parent__.patient.site
+        elif isinstance(self.__parent__, Patient):
+            site = self.__parent__.site
+        else:
+            raise Exception('Unable to determiine patient')
+
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
-            (Allow, groups.manager(site), ('view', 'add')),
+            (Allow, groups.manager(), ('view', 'add')),
+            (Allow, groups.enterer(site), ('view', 'add')),
             (Allow, groups.consumer(site), 'view')
             ]
 
@@ -1090,7 +1105,7 @@ def _entity_acl(self):
     if self.schema.has_private:
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
-            (Allow, groups.manager(site), ('view', 'edit', 'delete')),
+            (Allow, groups.manager(), ('view', 'edit', 'delete')),
             (Allow, groups.reviewer(site), ('view', 'edit', 'delete')),
             (Allow, groups.enterer(site), ('view', 'edit', 'delete')),
             (Allow, groups.consumer(site), 'view')
@@ -1098,7 +1113,7 @@ def _entity_acl(self):
     else:
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
-            (Allow, groups.manager(site), ('view', 'edit', 'delete')),
+            (Allow, groups.manager(), ('view', 'edit', 'delete')),
             (Allow, groups.reviewer(site), 'view'),
             (Allow, groups.enterer(site), 'view'),
             (Allow, groups.consumer(site), 'view'),

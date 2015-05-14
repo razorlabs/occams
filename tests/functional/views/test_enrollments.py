@@ -67,6 +67,20 @@ class TestPermissionsEnrollmentsListView(FunctionalFixture):
 
         self.assertEquals(200, response.status_code)
 
+    @data('UCLA:enterer', 'UCLA:reviewer',
+          'UCLA:consumer', 'UCLA:member')
+    def test_not_allowed(self, group):
+        environ = self.make_environ(userid=USERID, groups=[group])
+
+        response = self.app.get(
+            self.url,
+            extra_environ=environ,
+            status='*',
+            xhr=True,
+            params={})
+
+        self.assertEquals(403, response.status_code)
+
     def test_not_authenticated(self):
         self.app.get(self.url, status=401, xhr=True)
 
@@ -127,7 +141,8 @@ class TestPermissionsEnrollmentsAdd(FunctionalFixture):
         from occams_studies import models as studies
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get(self.url, extra_environ=environ, xhr=True)
+        csrf_token = self.get_csrf_token(environ)
+
         study_id = Session.query(studies.Study.id).filter(
             studies.Study.name == u'test_study').scalar()
 
@@ -137,7 +152,6 @@ class TestPermissionsEnrollmentsAdd(FunctionalFixture):
             'study': study_id
         }
 
-        csrf_token = self.app.cookies['csrf_token']
         response = self.app.post_json(
             self.url,
             extra_environ=environ,
@@ -150,13 +164,15 @@ class TestPermissionsEnrollmentsAdd(FunctionalFixture):
 
         self.assertEquals(200, response.status_code)
 
-    @data('UCSD:reviewer', 'UCSD:consumer', 'UCSD:member', None)
+    @data('UCSD:reviewer', 'UCSD:consumer', 'UCSD:member',
+          'UCLA:enterer', None)
     def test_not_allowed(self, group):
         from occams import Session
         from occams_studies import models as studies
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get(self.url, extra_environ=environ, xhr=True)
+        csrf_token = self.get_csrf_token(environ)
+
         study_id = Session.query(studies.Study.id).filter(
             studies.Study.name == u'test_study').scalar()
 
@@ -166,7 +182,6 @@ class TestPermissionsEnrollmentsAdd(FunctionalFixture):
             'study': study_id
         }
 
-        csrf_token = self.app.cookies['csrf_token']
         response = self.app.post_json(
             self.url,
             extra_environ=environ,
@@ -255,6 +270,29 @@ class TestPermissionsEnrollmentView(FunctionalFixture):
             params=data)
 
         self.assertEquals(200, response.status_code)
+
+    @data('UCLA:enterer', 'UCLA:reviewer',
+          'UCLA:consumer', 'UCLA:member')
+    def test_not_allowed(self, group):
+        from occams import Session
+        from occams_studies import models as studies
+
+        environ = self.make_environ(userid=USERID, groups=[group])
+        enrollment_id = Session.query(studies.Enrollment.id).filter(
+            studies.Study.name == u'test_study').scalar()
+
+        data = {
+            'id_1': enrollment_id
+        }
+
+        response = self.app.get(
+            self.url.format(enrollment_id),
+            extra_environ=environ,
+            status='*',
+            xhr=True,
+            params=data)
+
+        self.assertEquals(403, response.status_code)
 
     def test_not_authenticated(self):
         from occams import Session
@@ -349,14 +387,15 @@ class TestPermissionsEnrollmentEdit(FunctionalFixture):
 
         self.assertEquals(200, response.status_code)
 
-    @data('UCSD:reviewer', 'UCSD:consumer', 'UCSD:member', None)
+    @data('UCSD:reviewer', 'UCSD:consumer', 'UCSD:member',
+          'UCLA:enterer', None)
     def test_not_allowed(self, group):
         from occams import Session
         from occams_studies import models as studies
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies/patients/123/enrollments',
-                                extra_environ=environ, xhr=True)
+        csrf_token = self.get_csrf_token(environ)
+
         study_id = Session.query(studies.Study.id).filter(
             studies.Study.name == u'test_study').scalar()
         enrollment_id = Session.query(studies.Enrollment.id).filter(
@@ -369,7 +408,6 @@ class TestPermissionsEnrollmentEdit(FunctionalFixture):
             'reference_number': ''
         }
 
-        csrf_token = self.app.cookies['csrf_token']
         response = self.app.put_json(
             self.url.format(enrollment_id),
             extra_environ=environ,
@@ -448,12 +486,11 @@ class TestPermissionsEnrollmentDelete(FunctionalFixture):
         from occams_studies import models as studies
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies/patients/123/enrollments',
-                                extra_environ=environ, xhr=True)
+        csrf_token = self.get_csrf_token(environ)
+
         enrollment_id = Session.query(studies.Enrollment.id).filter(
             studies.Study.name == u'test_study').scalar()
 
-        csrf_token = self.app.cookies['csrf_token']
         response = self.app.delete_json(
             self.url.format(enrollment_id),
             extra_environ=environ,
@@ -473,12 +510,11 @@ class TestPermissionsEnrollmentDelete(FunctionalFixture):
         from occams_studies import models as studies
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies/patients/123/enrollments',
-                                extra_environ=environ, xhr=True)
+        csrf_token = self.get_csrf_token(environ)
+
         enrollment_id = Session.query(studies.Enrollment.id).filter(
             studies.Study.name == u'test_study').scalar()
 
-        csrf_token = self.app.cookies['csrf_token']
         response = self.app.delete_json(
             self.url.format(enrollment_id),
             extra_environ=environ,
@@ -576,8 +612,8 @@ class TestPermissionsEnrollmentTermination(FunctionalFixture):
         from occams_studies import models as studies
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies/patients/123',
-                                extra_environ=environ)
+        csrf_token = self.get_csrf_token(environ)
+
         enrollment_id = Session.query(studies.Enrollment.id).filter(
             studies.Study.name == u'test_study').scalar()
 
@@ -587,7 +623,6 @@ class TestPermissionsEnrollmentTermination(FunctionalFixture):
             'ofmetadata_-state': 'pending-entry',
         }
 
-        csrf_token = self.app.cookies['csrf_token']
         response = self.app.post(
             self.url.format(enrollment_id),
             extra_environ=environ,
@@ -601,14 +636,15 @@ class TestPermissionsEnrollmentTermination(FunctionalFixture):
 
         self.assertEquals(200, response.status_code)
 
-    @data('UCSD:reviewer', 'UCSD:consumer', 'UCSD:member', None)
+    @data('UCSD:reviewer', 'UCSD:consumer', 'UCSD:member',
+          'UCLA:enterer', None)
     def test_not_allowed(self, group):
         from occams import Session
         from occams_studies import models as studies
 
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies/patients/123',
-                                extra_environ=environ)
+        csrf_token = self.get_csrf_token(environ)
+
         enrollment_id = Session.query(studies.Enrollment.id).filter(
             studies.Study.name == u'test_study').scalar()
 
@@ -618,7 +654,6 @@ class TestPermissionsEnrollmentTermination(FunctionalFixture):
             'ofmetadata_-state': 'pending-entry',
         }
 
-        csrf_token = self.app.cookies['csrf_token']
         response = self.app.post(
             self.url.format(enrollment_id),
             extra_environ=environ,
