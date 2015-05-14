@@ -17,7 +17,7 @@ from occams_forms.renderers import \
     make_form, render_form, apply_data, entity_data, \
     form2json
 
-from .. import _, models, Session
+from .. import _, log, models, Session
 from . import (
     site as site_views,
     enrollment as enrollment_views,
@@ -462,8 +462,14 @@ def delete_json(context, request):
     Session.delete(patient)
     Session.flush()
 
-    del request.session.setdefault('viewed', OrderedDict())[context.pid]
-    request.session.changed()
+    viewed = request.session.setdefault('viewed', OrderedDict())
+
+    try:
+        del viewed[context.pid]
+    except KeyError:
+        log.warn('This patient was never viewed in the browser')
+    else:
+        request.session.changed()
 
     msg = request.localizer.translate(
         _('Patient ${pid} was successfully removed'),
