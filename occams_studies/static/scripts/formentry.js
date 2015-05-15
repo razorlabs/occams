@@ -4,6 +4,7 @@
   /**
    * Datastore client-side data entry behaviors
    */
+
   $.fn.formentry = function(){
     return this.each(function(){
       var $form = $(this);
@@ -19,8 +20,10 @@
         }
       });
 
-      $('input[type=date]:not([data-bind]),.js-date:not([data-bind])').datetimepicker({pickTime: false});
-      $('input[type=datetime]:not([data-bind]),.js-datetime:not([data-bind])').datetimepicker();
+      if (!window.supportsDateInput){
+          $('input[type=date]:not([data-bind]),.js-date:not([data-bind])').datetimepicker({pickTime: false});
+          $('input[type=datetime]:not([data-bind]),.js-datetime:not([data-bind])').datetimepicker();
+      }
 
       // Load the specified version of the form
       $form.on('change', '[name="ofmetadata_-version"]', function(event){
