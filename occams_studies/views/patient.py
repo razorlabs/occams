@@ -15,7 +15,7 @@ from occams.utils.forms import wtferrors, ModelField, Form
 from occams_roster import generate
 from occams_forms.renderers import \
     make_form, render_form, apply_data, entity_data, \
-    form2json
+    form2json, modes
 
 from .. import _, models, Session
 from . import (
@@ -504,9 +504,11 @@ def form(context, request):
             .filter_by(schema_id=schema.id)
             .exists())
         .one())
+
     if not is_phi:
-        cancel_url = request.current_route_path(_route_name='studies.patient_forms')
-        enable_metadata = True
+        cancel_url = request.current_route_path(
+            _route_name='studies.patient_forms')
+        show_metadata = True
         # We cannot determine which study this form will be applied to
         # so just use any version from active studies
         available_schemata = (
@@ -519,15 +521,27 @@ def form(context, request):
         allowed_versions = sorted(set(
             s.publish_date for s in available_schemata))
     else:
-        cancel_url = request.current_route_path(_route_name='studies.patient')
-        enable_metadata = False
+        cancel_url = request.current_route_path(
+            _route_name='studies.patient')
+        show_metadata = False
         allowed_versions = None
+
+    if request.has_permission('admin'):
+        transition = modes.ALL
+    elif request.has_permission('transition'):
+        transition = modes.AVAILABLE
+    else:
+        transition = modes.AUTO
 
     Form = make_form(
         Session,
         context.schema,
-        enable_metadata=enable_metadata,
-        allowed_versions=allowed_versions)
+        entity=context,
+        show_metadata=show_metadata,
+        transition=transition,
+        allowed_versions=allowed_versions,
+    )
+
     form = Form(request.POST, data=entity_data(context))
 
     if request.method == 'POST':
@@ -537,23 +551,25 @@ def form(context, request):
             upload_dir = request.registry.settings['studies.blob.dir']
             apply_data(Session, context, form.data, upload_dir)
             Session.flush()
-            request.session.flash(_(u'Changes saved'), 'success')
-            return HTTPFound(location=request.current_route_path())
+            request.session.flash(
+                _(u'Changes saved to: %s' % context.schema.title), 'success')
+            return HTTPFound(location=request.current_route_path(
+                _route_name='studies.patient_forms'))
 
-    form_id = 'patient-form'
     return {
-        'cancel_url': cancel_url,
         'phi': get_phi_entities(patient, request),
         'patient': view_json(patient, request),
-        'form_id': form_id,
-        'schema': context.schema,
-        'entity': context,
-        'form': render_form(form, attr={
-            'id': form_id,
-            'method': 'POST',
-            'action': request.current_route_path(),
-            'role': 'form'
-        }),
+        'form': render_form(
+            form,
+            entity=context,
+            schema=context.schema,
+            cancel_url=cancel_url,
+            attr={
+                'method': 'POST',
+                'action': request.current_route_path(),
+                'role': 'form'
+            }
+        ),
     }
 
 

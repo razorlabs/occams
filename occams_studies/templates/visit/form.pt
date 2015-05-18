@@ -26,14 +26,5 @@
 
     <form tal:replace="structure: form"></form>
 
-    <hr />
-
-    <div class="clearfix">
-      <div class="btn-toolbar pull-right">
-        <a href="${request.current_route_path(_route_name='studies.visit')}" class="btn btn-link" i18n:translate="">Cancel</a>
-        <button type="submit" form="${form_id}" class="btn btn-primary" i18n:translate="">Save</button>
-      </div>
-    </div>
-
   </metal:content-slot>
 </html>

@@ -32,9 +32,9 @@
 
       // Disable all fields if not done is checked
       $form.on('change', '[name="ofmetadata_-not_done"]', function(event){
-        $form.validate().resetForm();
-        $('.form-group', $form).removeClass('alert alert-danger has-error');
-        $('.errors').remove();
+          $form.validate().resetForm();
+        $('.form-group', $form).removeClass('alert alert-danger has-error has-success');
+        $('.errors').empty();
         $('.ds-widget', $form).prop('disabled', event.target.checked);
       });
 

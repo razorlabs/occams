@@ -11,21 +11,7 @@
         <nav metal:use-macro="load: header-nav.pt" />
       </header>
 
-      <p>ID: <code>${entity.id}</code></p>
-      <h2>${schema.title}</h2>
-
       <form tal:replace="structure: form"></form>
-
-      <hr />
-
-      <div class="clearfix">
-        <div class="btn-toolbar pull-right">
-          <a href="${cancel_url}"
-            tal:define="cancel_url cancel_url|request.current_route_path(_route_name='studies.patient')"
-            i18n:translate="">Cancel</a>
-          <button type="submit" form="${form_id}" class="btn btn-primary" i18n:translate="">Save</button>
-        </div>
-      </div>
 
     </div> <!-- /#views-patient-main -->
   </metal:content-slot>
