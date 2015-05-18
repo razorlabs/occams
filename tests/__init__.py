@@ -131,6 +131,7 @@ class FunctionalFixture(unittest.TestCase):
 
             # Enable regular error messages so we can see useful traceback
             'debugtoolbar.enabled': True,
+            'pyramid.debug_all': True,
 
             'webassets.debug': True,
             'webassets.auto_build': False,
@@ -186,3 +187,9 @@ class FunctionalFixture(unittest.TestCase):
                 'repoze.who.userid': userid,
                 'properties': properties,
                 'groups': groups}}
+
+    def get_csrf_token(self, environ):
+        """Request the app so csrf cookie is available"""
+        self.app.get('/', extra_environ=environ)
+
+        return self.app.cookies['csrf_token']

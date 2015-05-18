@@ -54,15 +54,13 @@ class TestPermissionsCyclesAdd(FunctionalFixture):
     @data('administrator', 'manager')
     def test_allowed(self, group):
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies',
-                                extra_environ=environ)
+        csrf_token = self.get_csrf_token(environ)
 
         data = {
             'title': 'test_study Week 1',
             'week': '1'
         }
 
-        csrf_token = self.app.cookies['csrf_token']
         response = self.app.post_json(
             self.url.format('test_study'),
             extra_environ=environ,
@@ -79,15 +77,13 @@ class TestPermissionsCyclesAdd(FunctionalFixture):
           'UCSD:member', None)
     def test_not_allowed(self, group):
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies',
-                                extra_environ=environ)
+        csrf_token = self.get_csrf_token(environ)
 
         data = {
             'title': 'test_study Week 1',
             'week': '1'
         }
 
-        csrf_token = self.app.cookies['csrf_token']
         response = self.app.post_json(
             self.url.format('test_study'),
             extra_environ=environ,
@@ -163,10 +159,8 @@ class TestPermissionsCyclesDelete(FunctionalFixture):
     @data('administrator', 'manager')
     def test_allowed(self, group):
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies',
-                                extra_environ=environ)
+        csrf_token = self.get_csrf_token(environ)
 
-        csrf_token = self.app.cookies['csrf_token']
         response = self.app.delete(
             self.url,
             extra_environ=environ,
@@ -184,10 +178,8 @@ class TestPermissionsCyclesDelete(FunctionalFixture):
           'UCSD:member', None)
     def test_not_allowed(self, group):
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies',
-                                extra_environ=environ)
+        csrf_token = self.get_csrf_token(environ)
 
-        csrf_token = self.app.cookies['csrf_token']
         response = self.app.delete(
             self.url,
             extra_environ=environ,
@@ -264,8 +256,7 @@ class TestPermissionsCyclesEdit(FunctionalFixture):
     @data('administrator', 'manager')
     def test_allowed(self, group):
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies',
-                                extra_environ=environ)
+        csrf_token = self.get_csrf_token(environ)
 
         data = {
             'name': 'TestDelete',
@@ -273,7 +264,6 @@ class TestPermissionsCyclesEdit(FunctionalFixture):
             'week': 4
         }
 
-        csrf_token = self.app.cookies['csrf_token']
         response = self.app.put_json(
             self.url,
             extra_environ=environ,
@@ -290,8 +280,7 @@ class TestPermissionsCyclesEdit(FunctionalFixture):
           'UCSD:member', None)
     def test_not_allowed(self, group):
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies',
-                                extra_environ=environ)
+        csrf_token = self.get_csrf_token(environ)
 
         data = {
             'name': 'TestDelete',
@@ -299,7 +288,6 @@ class TestPermissionsCyclesEdit(FunctionalFixture):
             'week': 4
         }
 
-        csrf_token = self.app.cookies['csrf_token']
         response = self.app.put_json(
             self.url,
             extra_environ=environ,
@@ -376,10 +364,8 @@ class TestPermissionsCyclesView(FunctionalFixture):
           'reviewer', 'consumer', 'member')
     def test_allowed(self, group):
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get('/studies',
-                                extra_environ=environ)
+        csrf_token = self.get_csrf_token(environ)
 
-        csrf_token = self.app.cookies['csrf_token']
         response = self.app.get(
             self.url,
             extra_environ=environ,

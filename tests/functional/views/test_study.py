@@ -54,20 +54,20 @@ class TestPermissionsStudyAdd(FunctionalFixture):
     @data('administrator', 'manager')
     def test_allowed(self, group):
         environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get(self.url, extra_environ=environ, xhr=True)
+        csrf_token = self.get_csrf_token(environ)
+
         data = {'name': u'test',
                 'title': u'test_title',
                 'short_title': u'test2',
                 'code': u'test3',
                 'consent_date': '2015-01-01'}
-        csrf_token = self.app.cookies['csrf_token']
+
         response = self.app.post_json(
             self.url,
             extra_environ=environ,
             status='*',
             headers={
-                'X-CSRF-Token': csrf_token,
-                'X-REQUESTED-WITH': str('XMLHttpRequest')
+                'X-CSRF-Token': csrf_token
             },
             params=data)
         self.assertEquals(200, response.status_code)
@@ -162,14 +162,15 @@ class TestPermissionsStudyEdit(FunctionalFixture):
         environ = self.make_environ(userid=USERID, groups=[group])
         response = self.app.get(self.url, extra_environ=environ, xhr=True)
         data = response.json
-        csrf_token = self.app.cookies['csrf_token']
+
+        csrf_token = self.get_csrf_token(environ)
+
         response = self.app.put_json(
             self.url,
             extra_environ=environ,
             status='*',
             headers={
-                'X-CSRF-Token': csrf_token,
-                'X-REQUESTED-WITH': str('XMLHttpRequest')
+                'X-CSRF-Token': csrf_token
             },
             params=data)
         self.assertEquals(200, response.status_code)
@@ -223,15 +224,14 @@ class TestPermissionsStudyDelete(FunctionalFixture):
         environ = self.make_environ(userid=USERID, groups=[group])
         response = self.app.get(self.url, extra_environ=environ, xhr=True)
         data = response.json
-        csrf_token = self.app.cookies['csrf_token']
+        csrf_token = self.get_csrf_token(environ)
 
         response = self.app.delete_json(
             self.url,
             extra_environ=environ,
             status='*',
             headers={
-                'X-CSRF-Token': csrf_token,
-                'X-REQUESTED-WITH': str('XMLHttpRequest')
+                'X-CSRF-Token': csrf_token
             },
             params=data)
 
@@ -242,7 +242,7 @@ class TestPermissionsStudyDelete(FunctionalFixture):
         environ = self.make_environ(userid=USERID, groups=[group])
         response = self.app.get(self.url, extra_environ=environ, xhr=True)
         data = response.json
-        csrf_token = self.app.cookies['csrf_token']
+        csrf_token = self.get_csrf_token(environ)
 
         response = self.app.delete_json(
             self.url,
