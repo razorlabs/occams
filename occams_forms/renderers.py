@@ -294,7 +294,7 @@ def make_form(session,
                     allowed_versions, actual_versions))
 
         class Metadata(wtforms.Form):
-            not_done = wtforms.BooleanField(_(u'Not Done'))
+            not_done = wtforms.BooleanField(_(u'Not Collected'))
             collect_date = wtforms.ext.dateutil.fields.DateField(
                 _(u'Collect Date'),
                 widget=wtforms.widgets.html5.DateInput(),
