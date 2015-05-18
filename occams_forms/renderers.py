@@ -379,7 +379,8 @@ def render_form(form,
 
     if not disabled and entity:
         disabled = entity.not_done \
-            or entity.state.name in ('pending-review', 'complete')
+            or (entity.state
+                and entity.state.name in ('pending-review', 'complete'))
 
     return render('occams_forms:templates/form.pt', {
         'show_header': show_header,
