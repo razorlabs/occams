@@ -11,7 +11,7 @@ from wtforms.ext.dateutil.fields import DateField
 
 from occams.utils.forms import wtferrors, ModelField, Form
 from occams_forms.renderers import \
-    make_form, render_form, apply_data, entity_data
+    make_form, render_form, apply_data, entity_data, modes
 from occams_datastore.reporting import build_report
 
 from .. import _, log, models, Session
@@ -169,27 +169,31 @@ def terminate_ajax(context, request):
     except orm.exc.MultipleResultsFound:
         raise Exception('Should only have one...')
     except orm.exc.NoResultFound:
-        entity = None
         schema = context.study.termination_schema
-        data = {}
+        entity = models.Entity(schema=schema)
     else:
         schema = entity.schema
-        data = entity_data(entity)
 
     if 'termination_date' not in schema.attributes:
         msg = 'There is no "termination_date" configured on: {}'
         log.warn(msg.format(schema.name))
 
-    Form = make_form(Session, schema)
-    form = Form(request.POST, data=data)
+    if request.has_permission('admin'):
+        transition = modes.ALL
+    elif request.has_permission('transition'):
+        transition = modes.AVAILABLE
+    else:
+        transition = modes.AUTO
+
+    Form = make_form(Session, schema, entity=entity, transition=transition, show_metadata=False)
+    form = Form(request.POST, data=entity_data(entity))
 
     if request.method == 'POST':
         check_csrf_token(request)
         if form.validate():
-            if not entity:
+            if not entity.id:
                 # changing termination version *should* not be
                 # allowed, just assign the schema that's already being used
-                entity = models.Entity(schema=schema)
                 context.entities.add(entity)
             upload_dir = request.registry.settings['studies.blob.dir']
             apply_data(Session, entity, form.data, upload_dir)
@@ -199,13 +203,18 @@ def terminate_ajax(context, request):
         else:
             return HTTPBadRequest(json={'errors': wtferrors(form)})
 
-    return render_form(form, attr={
-        'id': 'enrollment-termination',
-        'method': 'POST',
-        'action': request.current_route_path(),
-        'role': 'form',
-        'data-bind': 'formentry: {}, submit: $root.terminateEnrollment'
-    })
+    return render_form(
+        form,
+        schema=schema,
+        entity=entity,
+        cancel_url=request.current_route_path(_route_name='studies.patient'),
+        attr={
+            'method': 'POST',
+            'action': request.current_route_path(),
+            'role': 'form',
+            'data-bind': 'formentry: {}, submit: $root.terminateEnrollment'
+        }
+    )
 
 
 def _get_randomization_form(context, request):
@@ -220,7 +229,7 @@ def _get_randomization_form(context, request):
     except orm.exc.NoResultFound:
         raise HTTPNotFound()
     else:
-        Form = make_form(Session, entity.schema, enable_metadata=False)
+        Form = make_form(Session, entity.schema, show_metadata=False)
         form = Form(data=entity_data(entity))
     return form
 
@@ -368,11 +377,11 @@ def randomize_ajax(context, request):
         form = _get_randomization_form(context, request)
     elif request.session.get(STAGE_KEY) == ENTER:
         template = '../templates/enrollment/randomize-enter.pt'
-        Form = make_form(Session, randomization_schema, enable_metadata=False)
+        Form = make_form(Session, randomization_schema, show_metadata=False)
         form = Form()
     elif request.session.get(STAGE_KEY) == VERIFY:
         template = '../templates/enrollment/randomize-verify.pt'
-        Form = make_form(Session, randomization_schema, enable_metadata=False)
+        Form = make_form(Session, randomization_schema, show_metadata=False)
         form = Form()
     else:
         template = '../templates/enrollment/randomize-challenge.pt'
@@ -386,13 +395,17 @@ def randomize_ajax(context, request):
             'error': error_message,
             'context': context,
             'request': request,
-            'form': render_form(form, disabled=is_randomized, attr={
-                'id': 'enrollment-randomization',
-                'method': 'POST',
-                'role': 'form',
-                'data-bind':
-                    'formentry: {}, submit: $root.randomizeEnrollment'
-            })
+            'form': render_form(
+                form,
+                schema=randomization_schema,
+                disabled=is_randomized,
+                attr={
+                    'id': 'enrollment-randomization',
+                    'method': 'POST',
+                    'role': 'form',
+                    'data-bind':
+                        'formentry: {}, submit: $root.randomizeEnrollment'
+                })
         })
     }
 

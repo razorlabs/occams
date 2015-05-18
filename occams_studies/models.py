@@ -1087,22 +1087,18 @@ def _entity_acl(self):
         site = study_item.patient.site
     else:
         Exception(u'Cannot find site for entity')
-    if self.schema.has_private:
-        return [
-            (Allow, groups.administrator(), ALL_PERMISSIONS),
-            (Allow, groups.manager(site), ('view', 'edit', 'delete')),
-            (Allow, groups.reviewer(site), ('view', 'edit', 'delete')),
-            (Allow, groups.enterer(site), ('view', 'edit', 'delete')),
-            (Allow, groups.consumer(site), 'view')
-            ]
-    else:
-        return [
-            (Allow, groups.administrator(), ALL_PERMISSIONS),
-            (Allow, groups.manager(site), ('view', 'edit', 'delete')),
-            (Allow, groups.reviewer(site), 'view'),
-            (Allow, groups.enterer(site), 'view'),
-            (Allow, groups.consumer(site), 'view'),
-            ]
+
+    # We used to restrict view based on whether the user
+    # could view PHI, but now we make everyone pass a HIPAA compliance
+    # course
+
+    return [
+        (Allow, groups.administrator(), ALL_PERMISSIONS),
+        (Allow, groups.manager(), ('view', 'edit', 'delete', 'transition')),
+        (Allow, groups.reviewer(site), ('view', 'edit', 'delete', 'transition')),
+        (Allow, groups.enterer(site), ('view', 'edit', 'delete')),
+        (Allow, groups.consumer(site), 'view')
+    ]
 
 
 Entity.__acl__ = property(_entity_acl)

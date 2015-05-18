@@ -10,7 +10,7 @@ from wtforms.ext.dateutil.fields import DateField
 
 from occams.utils.forms import wtferrors, ModelField, Form
 from occams_forms.renderers import \
-    make_form, render_form, apply_data, entity_data
+    make_form, render_form, apply_data, entity_data, modes
 
 from .. import _, models, Session
 from . import form as form_views
@@ -300,11 +300,21 @@ def form(context, request):
         .filter(models.Cycle.id.in_([cycle.id for cycle in visit.cycles])))
     allowed_versions = [s.publish_date for s in allowed_schemata]
 
+    if request.has_permission('admin'):
+        transition = modes.ALL
+    elif request.has_permission('transition'):
+        transition = modes.AVAILABLE
+    else:
+        transition = modes.AUTO
+
     Form = make_form(
         Session,
         context.schema,
-        request.POST,
-        allowed_versions=allowed_versions)
+        entity=context,
+        show_metadata=True,
+        transition=transition,
+        allowed_versions=allowed_versions,
+    )
 
     form = Form(request.POST, data=entity_data(context))
 
@@ -321,18 +331,22 @@ def form(context, request):
                 _(u'Changes saved for: ${form}', mapping={
                     'form': context.schema.title}),
                 'success')
-            return HTTPFound(location=request.current_route_path(_route_name='studies.visit'))
+            return HTTPFound(location=request.current_route_path(
+                _route_name='studies.visit'))
 
-    form_id = 'visit-form'
     return {
         'visit': view_json(visit, request),
-        'form_id': form_id,
-        'form': render_form(form, attr={
-            'id': form_id,
-            'method': 'POST',
-            'action': request.current_route_path(),
-            'role': 'form'
-        }),
+        'form': render_form(
+            form,
+            entity=context,
+            schema=context.schema,
+            cancel_url=request.current_route_path(_route_name='studies.visit'),
+            attr={
+                'method': 'POST',
+                'action': request.current_route_path(),
+                'role': 'form'
+            }
+        ),
     }
 
 
