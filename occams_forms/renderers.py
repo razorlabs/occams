@@ -8,8 +8,6 @@ and associated plugins must be enabled.
 from __future__ import division
 import collections
 import os
-import shutil
-import tempfile
 from itertools import groupby
 import uuid
 
@@ -23,17 +21,30 @@ import wtforms.ext.dateutil.fields
 from . import _, models, log
 
 
+TRANSITIONS = {
+    'pending-entry': ['pending-review'],
+    'pending-review': ['pending-correction', 'complete'],
+    'pending-correction': ['pending-review'],
+    'complete': [],
+}
+
+
+class modes:
+    AUTO, AVAILABLE, ALL = range(3)
+
+
 def version2json(schema):
     """
     Returns a single schema json record
     (this is how it's stored in the database)
     """
-    data = {
+
+    return {
         'id': schema.id,
         'name': schema.name,
         'title': schema.title,
-        'publish_date': schema.publish_date.isoformat()}
-    return data
+        'publish_date': schema.publish_date.isoformat()
+    }
 
 
 def form2json(schemata):
@@ -61,13 +72,14 @@ def form2json(schemata):
 
     def make_json(groups):
         groups = sorted(groups, key=by_version)
+
         return {
             'schema': {
                 'name': groups[0].name,
                 'title': groups[-1].title
-                },
+            },
             'versions': list(map(version2json, groups))
-            }
+        }
 
     if isinstance(schemata, collections.Iterable):
         schemata = sorted(schemata, key=by_name)
@@ -120,7 +132,7 @@ def make_field(attribute):
         'description': attribute.description,
         'filters': [],
         'validators': []
-        }
+    }
 
     if attribute.type == 'section':
 
@@ -214,8 +226,10 @@ def make_field(attribute):
 
 def make_form(session,
               schema,
+              entity=None,
               formdata=None,
-              enable_metadata=True,
+              show_metadata=True,
+              transition=modes.AUTO,
               allowed_versions=None):
     """
     Converts a Datastore schema to a WTForm for data entry
@@ -224,11 +238,14 @@ def make_form(session,
     session -- the database session to query for form metata
     schema -- the assumed form for data entry
     formdata -- (optional) incoming data for lookahead purposes:
-                * if ``not_done`` is specified, no fields will be generated
                 * if ``version`` changes, then the specified version will
                   override the ``schema`` parameter
     enable_metadata -- (optional) enables metada entry of the form
     allowed_versions -- list of schemata versions that can override ``schema``
+
+    Returns:
+    A WTForm class. The reason why an instance is not returns is in case
+    the user wants to sitch together multiple forms for Long Forms.
     """
 
     formdata = formdata or {}
@@ -236,12 +253,18 @@ def make_form(session,
     class DatastoreForm(wtforms.Form):
 
         def validate(self, **kw):
-            if 'ofmetadata_' in self and self.ofmetadata_.not_done.data:
+
+            # Only validate the workflow if the orignal entity WAS editable
+            if entity.state.name in ('complete', 'pending-review'):
+                return self.ofworkflow_.validate(self)
+
+            elif 'ofmetadata_' in self and self.ofmetadata_.not_done.data:
                 return self.ofmetadata_.validate(self)
+
             else:
                 return super(DatastoreForm, self).validate(**kw)
 
-    if enable_metadata:
+    if show_metadata:
 
         # If there was a version change so we render the correct form
         if 'ofmetadata_-version' in formdata:
@@ -270,14 +293,10 @@ def make_form(session,
                 'Inconsitent versions: %s != %s' % (
                     allowed_versions, actual_versions))
 
-        states = session.query(models.State).order_by(models.State.title)
-
         class Metadata(wtforms.Form):
-            state = wtforms.SelectField(_(u'Status'), choices=[
-                (state.name, state.title) for state in states])
             not_done = wtforms.BooleanField(_(u'Not Done'))
             collect_date = wtforms.ext.dateutil.fields.DateField(
-                _(u'Collected'),
+                _(u'Collect Date'),
                 widget=wtforms.widgets.html5.DateInput(),
                 validators=[wtforms.validators.InputRequired()])
             version = wtforms.SelectField(
@@ -286,6 +305,42 @@ def make_form(session,
                 validators=[wtforms.validators.InputRequired()])
 
         setattr(DatastoreForm, 'ofmetadata_', wtforms.FormField(Metadata))
+
+    if transition == modes.ALL:
+        allowed_states = TRANSITIONS.keys()
+
+    elif transition == modes.AVAILABLE:
+
+        try:
+            current_state = entity.state.name
+        except AttributeError:
+            current_state = 'pending-entry'
+
+        allowed_states = TRANSITIONS[current_state]
+
+    else:
+        allowed_states = []
+
+    if allowed_states:
+
+        states = (
+            session.query(models.State)
+            .filter(models.State.name.in_(allowed_states))
+            .order_by(models.State.title)
+        )
+
+        choices = [('', '')] + [(state.name, state.title) for state in states]
+
+        class Workflow(wtforms.Form):
+            state = wtforms.SelectField(
+                _(u'Set state to...'),
+                choices=choices,
+                validators=[
+                    wtforms.validators.InputRequired(
+                        _('Please select a state'))
+                ])
+
+        setattr(DatastoreForm, 'ofworkflow_', wtforms.FormField(Workflow))
 
     for attribute in schema.itertraverse():
         setattr(DatastoreForm, attribute.name, make_field(attribute))
@@ -308,36 +363,59 @@ def make_longform(session, schemata):
     return LongForm
 
 
-def render_form(form, disabled=False, attr=None):
+def render_form(form,
+                cancel_url=None,
+                entity=None,
+                schema=None,
+                show_header=True,
+                show_footer=True,
+                disabled=False,
+                attr=None):
     """
     Helper function to render a WTForm by OCCAMS standards
     """
 
-    if 'ofmetadata_' in form and form.ofmetadata_.not_done.data:
-        disabled = True
+    attr = attr or {}
+
+    if not disabled and entity:
+        disabled = entity.not_done \
+            or entity.state.name in ('pending-review', 'complete')
 
     return render('occams_forms:templates/form.pt', {
+        'show_header': show_header,
+        'show_footer': show_footer,
+        'cancel_url': cancel_url,
+        'schema': schema,
+        'entity': entity,
         'form': form,
         'disabled': disabled,
-        'attr': attr or {},
-        })
+        'attr': attr,
+    })
 
 
 def entity_data(entity):
+    """
+    Serializes an entity into a dictionary for data entry
+    """
+
     data = {
         'ofmetadata_': {
             'state': entity.state and entity.state.name,
             'not_done': entity.not_done,
             'collect_date': entity.collect_date,
             'version': str(entity.schema.publish_date),
-            }
         }
+    }
+
     for attribute in entity.schema.iterleafs():
+
         if attribute.parent_attribute:
-            sub = data.setdefault(attribute.parent_attribute.name, {})
+            parent = data.setdefault(attribute.parent_attribute.name, {})
         else:
-            sub = data
-        sub[attribute.name] = entity[attribute.name]
+            parent = data
+
+        parent[attribute.name] = entity[attribute.name]
+
     return data
 
 
@@ -348,13 +426,43 @@ def apply_data(session, entity, data, upload_path):
 
     assert upload_path is not None, u'Destination path is required'
 
+    clear_data = False
+    update_data = True
+    current_state = entity.state and entity.state.name or 'pending-entry'
+
+    # Assume the user can control transitions if we promped for it
+    if 'ofworkflow_' in data:
+
+        workflow = data['ofworkflow_']
+        next_state = workflow['state']
+
+        if next_state == 'pending-entry':
+            clear_data = True
+
+        update_data = next_state in ('pending-entry', 'pending-correction')
+
+    else:
+
+        # Do not allow a user who can't control workflow to
+        # make any unwanted changes
+        if current_state in ('pending-review', 'complete'):
+            return entity
+
+        next_state = 'pending-review'
+        update_data = True
+
+    # States are the only metadata that can change regardless of transition
+    if current_state != next_state:
+        entity.state = (
+            session.query(models.State).filter_by(name=next_state).one())
+
+    if not update_data:
+        return entity
+
     if 'ofmetadata_' in data:
         metadata = data['ofmetadata_']
-        entity.state = (
-            session.query(models.State)
-            .filter_by(name=metadata['state'])
-            .one())
         entity.not_done = metadata['not_done']
+        clear_data = entity.not_done
         entity.collect_date = metadata['collect_date']
         entity.schema = (
             session.query(models.Schema)
@@ -363,28 +471,20 @@ def apply_data(session, entity, data, upload_path):
                 publish_date=metadata['version'])
             .one())
 
-    if upload_path is None:
-        upload_path = tempfile.mkdtemp()
-        try:
-            apply_data(entity, data, upload_path)
-        finally:
-            shutil.rmtree(upload_path)
-        return
-
     for attribute in entity.schema.iterleafs():
 
-        if entity.not_done:
+        if clear_data:
             entity[attribute.name] = None
             continue
 
-        # Find the appropriate sub-attribute to update
+        # Find the appropriate attribute to update
         if attribute.parent_attribute:
-            sub = data[attribute.parent_attribute.name]
+            parent = data[attribute.parent_attribute.name]
         else:
-            sub = data
+            parent = data
 
         # Accomodate patch data (i.e. incomplete data, for updates)
-        if attribute.name not in sub:
+        if attribute.name not in parent:
             continue
 
         if attribute.type == 'blob':
@@ -418,7 +518,7 @@ def apply_data(session, entity, data, upload_path):
 
             value = models.BlobInfo(original_name, dest_path, mime_type)
         else:
-            value = sub[attribute.name]
+            value = parent[attribute.name]
 
         entity[attribute.name] = value
 

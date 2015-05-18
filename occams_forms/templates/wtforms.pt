@@ -26,11 +26,12 @@
           field - The wtform.Field instance
     -->
   <metal:macro define-macro="field">
-      <tal:switch switch="field.name.startswith('ofmeta')">
-        <tal:case case="True">
+      <tal:switch switch="field.name">
+        <tal:case case="string:ofmetadata_">
           <tal:field define="form field.form" metal:use-macro="macros.metadata" />
         </tal:case>
-        <tal:case case="False">
+        <tal:case case="string:ofworkflow_"></tal:case>
+        <tal:case case="default">
           <tal:switch switch="field.type">
             <tal:case case="string:HiddenField" metal:use-macro="macros.widget" />
             <tal:case case="string:FormField" metal:use-macro="macros.fieldset" />
@@ -41,54 +42,66 @@
   </metal:macro>
 
   <metal:macro define-macro="metadata">
-    <div class="entity">
-      <div class="row ${'alert alert-danger' if form.errors else ''}">
 
-        <tal:field define="
-            name  'state';
-            field form[name];
-            errors field.errors;
-            css_status python:'has-error' if errors else ''">
-          <div class="col-md-1">${field.label(class_='control-label required')}</div>
-          <div class="col-md-5">
-            <div class="input-group select2-bootstrap-append">
-              ${field(class_='form-control js-select2')}
-              <span class="input-group-addon">
-                <label>${form.not_done()} ${form.not_done.label.text}</label>
-              </span>
-            </div>
-            <p tal:repeat="error errors" class="help-block">${error}</p>
-          </div>
-        </tal:field>
+    <fieldset
+      class="row entity ${'alert alert-danger' if form.errors else ''}">
 
-        <tal:field define="
+      <tal:field
+          tal:define="
             name  'collect_date';
             field form[name];
             errors field.errors;
             css_status python:'has-error' if errors else ''">
-          <div class="col-md-1 ${css_status}">${field.label(class_='control-label required')}</div>
-          <div class="col-md-2 ${css_status}">
-            ${field(class_='form-control js-date')}
-            <p tal:repeat="error errors" class="help-block">${error}</p>
+        <div class="col-sm-5 ${css_status}">
+          <div class="form-group">
+            <div class="input-group">
+              <span class="input-group-addon">${field.label(class_='required')}</span>
+              ${field(class_='form-control js-date', disabled=disabled)}
+            </div>
+            <div class="errors"><p tal:repeat="error errors" class="help-block">${error}</p></div>
           </div>
-        </tal:field>
+        </div>
+      </tal:field>
 
-        <tal:field define="
+      <tal:field
+          tal:define="
             name  'version';
             field form[name];
             errors field.errors;
             css_status python:'has-error' if errors else ''">
-          <div class="col-md-1">${field.label(class_='control-label required')}</div>
-          <div class="col-md-2">
-            ${field(class_='form-control js-select2')}
-            <p tal:repeat="error errors" class="help-block">${error}</p>
+        <div class="col-sm-5 ${css_status}">
+          <div class="form-group">
+            <div class="input-group select2-bootstrap-prepend">
+              <span class="input-group-addon">${field.label(class_='control-label required')}</span>
+              ${field(class_='form-control js-select2', disabled=disabled)}
+            </div>
+            <div class="errors"><p tal:repeat="error errors" class="help-block">${error}</p></div>
           </div>
-        </tal:field>
-      </div>
+        </div>
+      </tal:field>
 
-      <hr />
+      <tal:field
+          tal:define="
+            name  'not_done';
+            field form[name];
+            errors field.errors;
+            css_status python:'has-error' if errors else ''">
+          <div class="col-sm-2">
+            <div class="form-group ${css_status}">
+              <div class="checkbox">
+                  <label>
+                    ${form.not_done(disabled=disabled)}
+                    <strong>${form.not_done.label.text}</strong>
+                  </label>
+              </div>
+            </div>
+          </div>
+      </tal:field>
 
-    </div> <!-- /.entity -->
+    </fieldset>
+
+    <hr />
+
   </metal:macro>
 
   <!--! Renders a field set and its fields
@@ -153,7 +166,7 @@
             <tal:case case="string:RadioInput">
               <div class="radio">
                 <label>
-                  ${structure: field(class_="ds-widget ds-choice", disabled=disabled)}
+                  ${structure: field(class_="ds-widget ds-choice",  disabled=disabled)}
                   ${structure: field.label.text}
                   <code>${field._value()}</code>
                 </label>
@@ -162,35 +175,35 @@
             <tal:case case="string:CheckboxInput">
               <div class="checkbox">
                 <label>
-                  ${structure: field(class_="ds-widget", disabled=disabled)}
+                  ${structure: field(class_="ds-widget",  disabled=disabled)}
                   ${structure: field.label.text}
                   <code>${field._value()}</code>
                 </label>
               </div>
             </tal:case>
             <tal:case case="string:DateInput">
-              ${structure: field(class_='form-control js-date ds-widget', disabled=disabled)}
+              ${structure: field(class_='form-control js-date ds-widget',  disabled=disabled)}
             </tal:case>
             <tal:case case="string:DateTimeInput">
-              ${structure: field(class_='form-control js-datetime ds-widget', disabled=disabled)}
+              ${structure: field(class_='form-control js-datetime ds-widget',  disabled=disabled)}
             </tal:case>
             <tal:case case="string:Select">
-              ${structure: field(class_='form-control js-select2 ds-widget', disabled=disabled)}
+              ${structure: field(class_='form-control js-select2 ds-widget',  disabled=disabled)}
             </tal:case>
             <tal:case case="string:TelInput">
               ${structure: field(class_='form-control ds-widget', disabled=disbabled)}
             </tal:case>
             <tal:case case="string:EmailInput">
-              ${structure: field(class_='form-control ds-widget', disabled=disabled)}
+              ${structure: field(class_='form-control ds-widget',  disabled=disabled)}
             </tal:case>
             <tal:case case="string:NumberInput">
-              ${structure: field(class_='form-control ds-widget', disabled=disabled)}
+              ${structure: field(class_='form-control ds-widget',  disabled=disabled)}
             </tal:case>
             <tal:case case="string:TextArea">
-              ${structure: field(class_='form-control ds-widget', rows=5, disabled=disabled)}
+              ${structure: field(class_='form-control ds-widget', rows=5,  disabled=disabled)}
             </tal:case>
             <tal:case case="string:TextInput">
-              ${structure: field(class_='form-control ds-widget', disabled=disabled)}
+              ${structure: field(class_='form-control ds-widget',  disabled=disabled)}
             </tal:case>
             <tal:case case="string:FileInput">
               ${structure: field(**{
@@ -200,7 +213,7 @@
                   'data-show-preview': 'false'
                   })}
             </tal:case>
-            <tal:case case="default">${structure: field(class_='ds-widget', disabled=disabled)}</tal:case>
+            <tal:case case="default">${structure: field(class_='ds-widget',  disabled=disabled)}</tal:case>
           </tal:switch>
         </tal:case>
       </tal:switch>
