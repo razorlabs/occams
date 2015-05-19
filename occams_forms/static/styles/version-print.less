@@ -1,0 +1,15 @@
+@media print {
+  // This shows up in development and is annoying to see in printed pages
+  #pDebug { display: none !important; }
+
+  .of-form {
+    fieldset {
+      overflow: visible;
+    }
+
+    .form-group {
+      page-break-inside: avoid;
+    }
+  }
+
+}

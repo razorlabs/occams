@@ -1,0 +1,223 @@
+<!--  Reusable WTFORMS field template macros
+
+      WTFORMS only renders the HTML widget portion of a field
+      (e.g. <input>, <textarea>), leaving the rest of the markup up to
+      the developer, these macros try to standardize a general look and feel
+      using Boostrap for all types of fields.
+
+      Please note that these are not required for rendering a WTFORM form.
+      If you want a highligh customized form UI, you should probably do so
+      in the respective view's markup.
+-->
+<metal:wtforms tal:condition="False">
+
+  <!--! Renders all fields in a form
+
+        Parameters:
+          form - The wtform.Form instance
+    -->
+  <metal:macro define-macro="fields">
+    <tal:fields tal:repeat="field form" metal:use-macro="macros.field" />
+  </metal:macro>
+
+  <!--! Renders an individual field based on its field type.
+
+        Parameters:
+          field - The wtform.Field instance
+    -->
+  <metal:macro define-macro="field">
+      <tal:switch switch="field.name">
+        <tal:case case="string:ofmetadata_">
+          <tal:field define="form field.form" metal:use-macro="macros.metadata" />
+        </tal:case>
+        <tal:case case="string:ofworkflow_"></tal:case>
+        <tal:case case="default">
+          <tal:switch switch="field.type">
+            <tal:case case="string:HiddenField" metal:use-macro="macros.widget" />
+            <tal:case case="string:FormField" metal:use-macro="macros.fieldset" />
+            <tal:case case="default" metal:use-macro="macros.default" />
+          </tal:switch>
+        </tal:case>
+      </tal:switch>
+  </metal:macro>
+
+  <metal:macro define-macro="metadata">
+
+    <fieldset
+      class="row entity ${'alert alert-danger' if form.errors else ''}">
+
+      <tal:field
+          tal:define="
+            name  'collect_date';
+            field form[name];
+            errors field.errors;
+            css_status python:'has-error' if errors else ''">
+        <div class="col-sm-5 ${css_status}">
+          <div class="form-group">
+            <div class="input-group">
+              <span class="input-group-addon">${field.label(class_='required')}</span>
+              ${field(class_='form-control js-date', disabled=disabled)}
+            </div>
+            <div class="errors"><p tal:repeat="error errors" class="help-block">${error}</p></div>
+          </div>
+        </div>
+      </tal:field>
+
+      <tal:field
+          tal:define="
+            name  'version';
+            field form[name];
+            errors field.errors;
+            css_status python:'has-error' if errors else ''">
+        <div class="col-sm-5 ${css_status}">
+          <div class="form-group">
+            <div class="input-group select2-bootstrap-prepend">
+              <span class="input-group-addon">${field.label(class_='control-label required')}</span>
+              ${field(class_='form-control js-select2', disabled=disabled)}
+            </div>
+            <div class="errors"><p tal:repeat="error errors" class="help-block">${error}</p></div>
+          </div>
+        </div>
+      </tal:field>
+
+      <tal:field
+          tal:define="
+            name  'not_done';
+            field form[name];
+            errors field.errors;
+            css_status python:'has-error' if errors else ''">
+          <div class="col-sm-2">
+            <div class="form-group ${css_status}">
+              <div class="checkbox">
+                  <label>
+                    ${form.not_done(disabled=disabled)}
+                    <strong>${form.not_done.label.text}</strong>
+                  </label>
+              </div>
+            </div>
+          </div>
+      </tal:field>
+
+    </fieldset>
+
+    <hr />
+
+  </metal:macro>
+
+  <!--! Renders a field set and its fields
+
+        Parameters:
+          field - The wtform.FormField instance
+    -->
+  <metal:macro define-macro="fieldset">
+    <fieldset class="ds-section">
+      <legend tal:define="label field.label.text|nothing" tal:condition="label">${label}</legend>
+      <p class="lead" tal:condition="field.description|nothing">${structure: field.description}</p>
+      <metal:fields tal:define="form field.form" use-macro="macros.fields" />
+    </fieldset>
+  </metal:macro>
+
+
+  <!--! Default form field component rendering
+
+        Renders a field wrapped in Bootstrap markup
+
+        Optionally, its "field" slot may be overrriden to provde manual control
+        of how the HTML widget should be rendered.
+
+        Parameters:
+          field - The wtform.field instance
+    -->
+  <metal:macro define-macro="default">
+    <div class="form-group ds-attribute ${'has-error alert alert-danger' if field.errors else ''}">
+      <div class="pull-right"><code>${field.short_name}</code></div>
+      ${structure: field.label(class_='required' if field.flags.required else '')}
+      <p class="help-block" tal:condition="field.description|nothing">${structure: field.description}</p>
+      <!--! Define a "widget" slot so the developer can override with custom markup -->
+      <metal:widget define-slot="widget">
+        <input  metal:use-macro="macros.widget" />
+      </metal:widget>
+      <div class="errors">
+        <p class="help-block" tal:repeat="error field.errors"><strong>${error}</strong></p>
+      </div>
+    </div>
+  </metal:macro>
+
+  <!--! Renders a standalone HTML widget
+
+        Parameters:
+          field - The wtform.field instance
+    -->
+  <metal:macro define-macro="widget">
+    <tal:widget define="
+          widget_cls    type(field.widget).__name__;
+          option_cls    type(field.option_widget).__name__ if hasattr(field, 'option_widget') else None;
+          name          field.short_name;
+          ">
+      <tal:switch switch="option_cls">
+        <tal:case case="string:RadioInput">
+          <tal:fields define="this_field field" repeat="field this_field" metal:use-macro="macros.widget">
+        </tal:case>
+        <tal:case case="string:CheckboxInput">
+          <tal:fields define="this_field field" repeat="field this_field" metal:use-macro="macros.widget">
+        </tal:case>
+        <tal:case case="default">
+          <tal:switch switch="widget_cls">
+            <tal:case case="string:RadioInput">
+              <div class="radio">
+                <label>
+                  ${structure: field(class_="ds-widget ds-choice",  disabled=disabled)}
+                  ${structure: field.label.text}
+                  <code>${field._value()}</code>
+                </label>
+              </div>
+            </tal:case>
+            <tal:case case="string:CheckboxInput">
+              <div class="checkbox">
+                <label>
+                  ${structure: field(class_="ds-widget",  disabled=disabled)}
+                  ${structure: field.label.text}
+                  <code>${field._value()}</code>
+                </label>
+              </div>
+            </tal:case>
+            <tal:case case="string:DateInput">
+              ${structure: field(class_='form-control js-date ds-widget',  disabled=disabled)}
+            </tal:case>
+            <tal:case case="string:DateTimeInput">
+              ${structure: field(class_='form-control js-datetime ds-widget',  disabled=disabled)}
+            </tal:case>
+            <tal:case case="string:Select">
+              ${structure: field(class_='form-control js-select2 ds-widget',  disabled=disabled)}
+            </tal:case>
+            <tal:case case="string:TelInput">
+              ${structure: field(class_='form-control ds-widget', disabled=disbabled)}
+            </tal:case>
+            <tal:case case="string:EmailInput">
+              ${structure: field(class_='form-control ds-widget',  disabled=disabled)}
+            </tal:case>
+            <tal:case case="string:NumberInput">
+              ${structure: field(class_='form-control ds-widget',  disabled=disabled)}
+            </tal:case>
+            <tal:case case="string:TextArea">
+              ${structure: field(class_='form-control ds-widget', rows=5,  disabled=disabled)}
+            </tal:case>
+            <tal:case case="string:TextInput">
+              ${structure: field(class_='form-control ds-widget',  disabled=disabled)}
+            </tal:case>
+            <tal:case case="string:FileInput">
+              ${structure: field(**{
+                  'class': 'form-control ds-widget file',
+                  'disbled': disabled,
+                  'data-show-upload': 'false',
+                  'data-show-preview': 'false'
+                  })}
+            </tal:case>
+            <tal:case case="default">${structure: field(class_='ds-widget',  disabled=disabled)}</tal:case>
+          </tal:switch>
+        </tal:case>
+      </tal:switch>
+    </tal:widget>
+  </metal:macro>
+
+</metal:wtforms>

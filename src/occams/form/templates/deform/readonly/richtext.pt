@@ -1,2 +1,0 @@
-<span id="${oid|field.oid}" name="${name|field.name}" 
-      tal:content="structure cstruct" />
