@@ -1,0 +1,99 @@
+<html i18n:domain="occams.studies" metal:use-macro="load:../master.pt">
+  <metal:content-slot fill-slot="content-slot">
+
+    <div style="display: none;" data-bind="visible: isReady">
+
+      <header class="page-header">
+        <div class="btn-toolbar pull-right">
+          <button metal:use-macro="load: header-btn-form.pt" />
+          <button metal:use-macro="load: header-btn-edit.pt" />
+          <button metal:use-macro="load: header-btn-delete.pt" />
+        </div>
+        <h1>
+          <span i18n:translate="">Visit</span>
+          <span data-bind="text: visit.visit_date"></span>
+        </h1>
+        <ul metal:use-macro="load: header-details.pt" />
+        <nav metal:use-macro="load: header-nav.pt" />
+
+        <div metal:use-macro="load: ../form/modal-form-add.pt"></div>
+        <div metal:use-macro="load: ../form/modal-form-delete.pt"></div>
+        <div metal:use-macro="load: modal-visit-edit.pt"></div>
+        <div metal:use-macro="load: modal-visit-delete.pt"></div>
+      </header>
+
+      <div class="table-responsive">
+        <table class="table table-hover table-striped">
+          <thead>
+            <!--! Do not generate this if the user is not allowed to delete forms -->
+            <th tal:condition="request.has_permission('delete', context['forms'])">
+              <input type="checkbox" data-bind="click: selectAll, checked: isAllSelected" />
+            </th>
+            <th i18n:translate="">ID</th>
+            <th i18n:translate="">Schema</th>
+            <th i18n:translate="">Form</th>
+            <th i18n:translate="">Collect Date</th>
+            <th i18n:translate="">Status</th>
+            <th i18n:translate="">Not Done</th>
+            <th></th>
+          </thead>
+          <tbody data-bind="foreach: visit.entities">
+            <!--! Do not generate this if the user is not allowed to delete forms -->
+            <td tal:condition="request.has_permission('delete', context['forms'])">
+              <input type="checkbox" data-bind="checked: isSelected" />
+            </td>
+            <td><code data-bind="text: id"></code></td>
+            <td><code data-bind="text: schema().name"></code></td>
+            <td data-bind="text: schema().title"></td>
+            <td data-bind="text: collect_date"></td>
+            <td>
+              <!-- Hard-code for now... -->
+              <span class="label" data-bind="
+                  css: {
+                    'label-danger': state().name == 'pending-entry',
+                    'label-info': state().name == 'in-progress',
+                    'label-warning': state().name == 'pending-review',
+                    'label-primary': state().name == 'pending-correction',
+                    'label-success': state().name == 'complete'
+                    },
+                  text: state().title"></span>
+            </td>
+            <td>
+              <!-- ko if: not_done -->
+                <span class="fa fa-check" ></span>
+              <!-- /ko -->
+            </td>
+            <td>
+              <a class="btn btn-link" data-bind="attr: {href: __url__}"><span class="fa fa-chevron-right"></span></a>
+            </td>
+          </tbody>
+        </table>
+      </div> <!-- /.table-responsive -->
+
+      <!-- ko if: hasSelectedForms -->
+        <span class="btn-group">
+          <button class="btn btn-default" data-bind="click: startDeleteForms" i18n:translate="">Delete Selected Forms</button>
+        </span>
+      <!-- /ko -->
+
+    </div> <!-- /:isReady -->
+
+
+  </metal:content-slot>
+  <metal:content-slot fill-slot="javascript-extras-slot">
+    <script>
+      $(function(){
+        ko.applyBindings(new VisitView({
+            visitData: JSON.parse($('#visit-data').text()),
+            formsUrl: "${request.current_route_path(_route_name='studies.visit_forms')}"
+          }),
+          document.getElementById('view-visit')
+        );
+      });
+    </script>
+    <tal:json define="json import:json">
+      <script id="visit-data" type="application/json" >${json.dumps(visit)}</script>
+    </tal:json>
+
+  </metal:content-slot>
+</html>

@@ -1,0 +1,107 @@
+<div class="modal fade" data-bind="modalVisible: $root.showEditVisit">
+  <div class="modal-dialog" data-bind="if: $root.showEditVisit">
+    <div class="modal-content" data-bind="with: $root.editableItem">
+      <form
+          role="form"
+          class="form-horizontal"
+          action="${request.current_route_path(_route_name='studies.visits')}"
+          data-bind="submit: $root.saveVisit, validate: {}">
+        <div class="modal-header">
+          <!-- ko if: id -->
+            <h4 class="modal-title" i18n:translate="">Edit Visit</h4>
+          <!--/ko -->
+          <!-- ko ifnot: id -->
+            <h4 class="modal-title" i18n:translate="">Add Visit</h4>
+          <!-- /ko -->
+        </div>
+        <div class="modal-body">
+          <!-- ko if: $root.hasErrorMessages -->
+            <div class="alert alert-danger">
+              <p i18n:translate="">
+                Could not complete the request for the following reasons:
+              </p>
+              <ul data-bind="foreach: $root.errorMessages">
+                <li data-bind="text: $data"></li>
+              </ul>
+            </div>
+          <!-- /ko -->
+          <div class="form-group" tal:define="name 'cycles'">
+            <label i18n:translate="" for="${name}" class="col-sm-3 required">Study Cycles</label>
+            <!--! Select2 uses "hidden" for multi-selects -->
+            <div class="col-sm-9">
+              <input
+                  class="form-control"
+                  required
+                  type="text"
+                  id="${name}"
+                  name="${name}"
+                  title="Please select a cycle"
+                  data-placeholder="Select a cycle..."
+                  data-cycles-url="${request.current_route_path(_route_name='studies.visits_cycles')}"
+                  data-rule-remote="${request.current_route_path(_route_name='studies.visit')|request.current_route_path(_route_name='studies.visits')}"
+                  i18n:attributes="title data-placeholder"
+                  data-bind="
+                    dataKey: 'id',
+                    dataLabel: 'title',
+                    selectedData: ${name},
+                    select2: cycleSelect2Options($element)" />
+            </div>
+          </div> <!-- /.form-group -->
+          <div class="form-group" tal:define="name 'visit_date'">
+            <label i18n:translate="" for="${name}" class="col-sm-3 required">Visit Date</label>
+            <div class="col-sm-9">
+              <input type="date"
+                  class="form-control"
+                  required
+                  id="${name}"
+                  data-type-hint="date"
+                  placeholder="YYYY-MM-DD"
+                  data-date-format="YYYY-MM-DD"
+                  data-date-picktime="false"
+                  data-date-usecurrent="false"
+                  data-rule-dateISO
+                  data-bind="
+                    value: ${name},
+                    datetimepicker: {},
+                    uniqueName: true" />
+            </div>
+          </div> <!-- /.form-group -->
+          <div class="form-group">
+            <div class="col-sm-offset-3 col-sm-9">
+              <div class="checkbox">
+                <label>
+                  <input type="checkbox" name="include_forms" data-bind="checked: include_forms" />
+                  Create <strong>required forms</strong>.
+                </label>
+              </div>
+            </div>
+          </div><!--/.form-group -->
+          <div class="form-group" tal:condition="is_lab_enabled|nothing">
+            <div class="col-sm-offset-3 col-sm-9">
+              <div class="checkbox">
+                <label>
+                  <input type="checkbox" name="include_specimen" data-bind="checked: include_specimen" />
+                  Create <strong>required specimen</strong>.
+                </label>
+              </div>
+            </div>
+          </div><!--/.form-group -->
+        </div> <!-- /.modal-body -->
+        <div class="modal-footer">
+          <button
+              type="button"
+              class="btn btn-link"
+              data-bind="click: $root.clear"
+              i18n:translate="">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <span i18n:translate="">Save</span>
+            <!-- ko if: $root.isSaving -->
+              <span class="fa fa-refresh fa-spin"></span>
+            <!-- /ko -->
+          </button>
+        </div>
+      </form>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+

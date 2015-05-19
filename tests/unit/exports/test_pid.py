@@ -6,7 +6,7 @@ from tests import IntegrationFixture
 class TestPidPlan(IntegrationFixture):
 
     def test_file_name(self):
-        from occams.studies import exports
+        from occams_studies import exports
         plan = exports.PidPlan()
         self.assertEqual(plan.file_name, 'pid.csv')
 
@@ -15,7 +15,7 @@ class TestPidPlan(IntegrationFixture):
         It should generate a table of all the pids in the database
         """
 
-        from occams.studies import exports
+        from occams_studies import exports
         plan = exports.PidPlan()
 
         codebook = list(plan.codebook())
@@ -30,15 +30,11 @@ class TestPidPlan(IntegrationFixture):
         """
         It should be able to generate reports without refs
         """
-        from occams.studies import exports, models, Session
-        from tests import track_user
+        from occams_studies import exports, models, Session
         plan = exports.PidPlan()
-
-        track_user('joe')
 
         patient = models.Patient(
             pid=u'xxx-xxx',
-            legacy_number=u'12345',
             site=models.Site(name=u'someplace', title=u'Some Place')
         )
 
@@ -56,26 +52,21 @@ class TestPidPlan(IntegrationFixture):
         self.assertEqual(data['pid'], patient.pid)
         self.assertEqual(data['site'], patient.site.name)
         self.assertIsNone(data['early_id'])
-        self.assertEqual(data['aeh_num'], patient.legacy_number)
 
     def test_data_with_refs(self):
         """
         It should generate a basic listing of all the PIDs in the database
         """
-        from occams.studies import exports, models, Session
-        from tests import track_user
+        from occams_studies import exports, models, Session
         plan = exports.PidPlan()
 
-        track_user('joe')
-
-        reftype = models.RefType(name=u'med_num', title=u'Medical Number')
+        reference_type = models.ReferenceType(name=u'med_num', title=u'Medical Number')
 
         patient = models.Patient(
             pid=u'xxx-xxx',
-            legacy_number=u'12345',
-            reference_numbers=[
+            references=[
                 models.PatientReference(
-                    reftype=reftype,
+                    reference_type=reference_type,
                     reference_number=u'999')
                 ],
             site=models.Site(name=u'someplace', title=u'Some Place')
@@ -99,15 +90,11 @@ class TestPidPlan(IntegrationFixture):
         It should output earlytest ids (for backwards-compatibilty)
         """
         from datetime import date
-        from occams.studies import exports, models, Session
-        from tests import track_user
+        from occams_studies import exports, models, Session
         plan = exports.PidPlan()
-
-        track_user('joe')
 
         patient = models.Patient(
             pid=u'xxx-xxx',
-            legacy_number=u'12345',
             site=models.Site(name=u'someplace', title=u'Some Place'),
             enrollments=[
                 models.Enrollment(

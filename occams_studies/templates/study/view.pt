@@ -1,0 +1,574 @@
+<html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
+  <metal:content-slot fill-slot="content-slot">
+    <div id="study-main" style="display: none;" data-bind="visible: isReady">
+
+      <header class="page-header" data-bind="with: study">
+        <div class="btn-toolbar pull-right">
+          <input
+              tal:condition="request.has_permission('edit', context)"
+              type="checkbox"
+              data-bind="bootstrapSwitch: $root.isGridEnabled"
+              data-label-text="Grid"
+              />
+          <!-- ko if: randomization_form -->
+            <button class="btn btn-default" data-bind="click: $root.startUploadRids">
+              <span class="fa fa-random"></span>
+              Upload RIDs
+              <!-- ko if: $root.isUploading -->
+                <span class="fa fa-refresh fa-spin"></span>
+              <!-- /ko -->
+            </button>
+          <!-- /ko -->
+          <button tal:condition="request.has_permission('edit', context)" class="btn btn-default" data-bind="click: $root.startEditStudy"><span class="fa fa-edit"></span> Edit</button>
+          <button tal:condition="request.has_permission('edit', context)" class="btn btn-default" data-bind="click: $root.startDeleteStudy"><span class="fa fa-trash-o"></span> Delete</button>
+        </div>
+        <h1>
+          <span data-bind="text: title"></span>
+          <small>
+            <!-- ko if: is_randomized -->
+              <span class="fa fa-random" title="Randomized" i18n:attributes="title"></span>
+            <!-- /ko -->
+            <!-- ko if: is_blinded -->
+              <span class="fa fa-eye-slash" title="Blinded" i18n:attributes="title"></span>
+            <!-- /ko -->
+          </small>
+        </h1>
+        <ul metal:use-macro="load: header-details.pt" />
+        <nav metal:use-macro="load: header-nav.pt" />
+      </header>
+
+      <!-- ko if: showUploadRids -->
+        <!-- ko if: hasErrorMessages  -->
+          <div class="alert alert-danger" data-bind="text: errorMessage"></div>
+        <!-- /ko -->
+      <!-- /ko -->
+
+      <!-- ko if: successMessage -->
+        <div class="alert alert-success">
+          <span data-bind="text successMessage"></span>
+          <button type="button" class="close" data-dismiss="alert">
+            <span aria-hidden="true">&times;</span>
+            <span class="sr-only">Close</span>
+          </button>
+        </div>
+      <!-- /ko -->
+
+      <div id="js-schedule" class="table-responsive table-scrollable">
+        <!-- Pre-generated corner -->
+        <table id="js-schedule-corner" class="table table-bordered table-striped table-dimensional table-rotated-header">
+          <thead>
+            <!-- "width: auto" affects cell width, neect to use div -->
+            <th i18n:translate=""><div class="form">Visit Forms</div></th>
+          </thead>
+        </table>
+        <!-- Pre-generated header bar -->
+        <table id="js-schedule-header" class="table table-bordered table-striped table-dimensional table-rotated-header">
+          <thead>
+            <tr>
+              <!-- "width: auto" affects cell width, neect to use div -->
+              <th i18n:translate=""><div class="form">Visit Forms</div></th>
+              <!-- ko foreach: study.cycles -->
+                <th class="rotated">
+                  <span class="rotated-container">
+                    <span class="rotated-rotate">
+                      <span class="rotated-text">
+                        <button class="link js-popover-trigger"
+                            data-placement="bottom"
+                            data-bind="
+                              text: title,
+                              click: $root.startViewCycle"></button>
+                      </span>
+                    </span>
+                  </span>
+                </th>
+              <!-- /ko -->
+              <th class="rotated">
+                <div class="rotated-container">
+                  <div class="rotated-rotate">
+                    <span class="rorated-text">
+                      <button tal:condition="request.has_permission('edit', context)" class="btn btn-link" data-bind="click: startAddCycle">
+                        <span class="fa fa-plus"></span>
+                        <strong i18n:translate="">Add Cycle</strong>
+                      </button>
+                    </span>
+                  </div>
+                </div>
+              </th>
+            </tr>
+          </thead>
+        </table>
+        <!-- Pre-generated side bar -->
+        <table id="js-schedule-sidebar" class="table table-bordered table-striped table-dimensional table-rotated-header">
+          <tbody>
+            <!-- ko foreach: {data: study.forms , as: 'form'} -->
+              <tr>
+                <th>
+                  <div class="form clearfix">
+                    <div class="pull-right">
+                      <!-- ko if: hasMultipleVersions -->
+                        <span class="badge" data-bind="text: versionsLength"></span>
+                      <!-- /ko -->
+                    </div>
+                    <button class="link" data-bind="click: $root.startViewForm, text: title"></button>
+                  </div>
+                </th>
+              </tr>
+            <!-- /ko -->
+            <tr>
+              <th>
+                <button tal:condition="request.has_permission('edit', context)" class="btn btn-link" data-bind="click: $root.startAddForm">
+                  <span class="fa fa-plus"></span>
+                  <strong i18n:translate="">Add Form</strong>
+                </button>
+              </th>
+            </tr>
+          </tbody>
+        </table>
+        <!-- Main data table -->
+        <table id="js-schedule-table" class="table table-bordered table-striped table-dimensional table-rotated-header">
+          <thead>
+            <tr>
+              <!-- "width: auto" affects cell width, neect to use div -->
+              <th i18n:translate=""><div class="form">Visit Forms</div></th>
+              <!-- ko foreach: study.cycles -->
+                <th class="rotated js-popover">
+                  <span class="rotated-container">
+                    <span class="rotated-rotate">
+                      <span class="rotated-text">
+                        <button class="link js-popover-trigger"
+                            data-placement="bottom"
+                            data-bind="
+                              text: title,
+                              click: $root.startViewCycle"></button>
+                      </span>
+                    </span>
+                  </span>
+                </th>
+              <!-- /ko -->
+              <th class="rotated">
+                <div class="rotated-container">
+                  <div class="rotated-rotate">
+                    <span class="rorated-text">
+                      <button tal:condition="request.has_permission('edit', context)" class="btn btn-link" data-bind="click: startAddCycle">
+                        <span class="fa fa-plus"></span>
+                        <strong i18n:translate="">Add Cycle</strong>
+                      </button>
+                    </span>
+                  </div>
+                </div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- ko foreach: {data: study.forms, as: 'form'} -->
+              <tr>
+                <th>
+                  <div class="form clearfix">
+                    <div class="pull-right">
+                      <!-- ko if: hasMultipleVersions -->
+                        <span class="badge" data-bind="text: versionsLength"></span>
+                      <!-- /ko -->
+                    </div>
+                    <button class="link" data-bind="click: $root.startViewForm, text: title"></button>
+                  </div>
+                </th>
+                <!-- ko foreach: {data: $root.study.cycles, as: 'cycle'} -->
+                  <td data-bind="
+                      css: {'js-clickable-cell': $root.isGridEnabled},
+                      event: {dblclick: $root.toggleForm.bind($root, cycle, form)}
+                      ">
+                    <!-- ko if: cycle.containsForm(form) -->
+                      <span class="fa fa-check"></span>
+                    <!-- /ko -->
+                  </td>
+                <!-- /ko -->
+              </tr>
+            <!-- /ko -->
+            <tr>
+              <th>
+                <button tal:condition="request.has_permission('edit', context)" class="btn btn-link" data-bind="click: $root.startAddForm">
+                  <span class="fa fa-plus"></span>
+                  <strong i18n:translate="">Add Form</strong>
+                </button>
+              </th>
+            </tr>
+          </tbody>
+        </table>
+      </div> <!-- /#js-schedule -->
+
+      <!--! Re-usable study editor template -->
+      <div metal:use-macro="load: modal-study.pt"></div>
+
+      <div class="modal fade" data-bind="modalVisible: showDeleteStudy">
+        <div class="modal-dialog" data-bind="if: showDeleteStudy">
+          <div class="modal-content" data-bind="with:selectedStudy">
+            <form class="form-horizontal" data-bind="submit: $root.deleteStudy">
+              <div class="modal-header">
+                <h4 class="modal-title" i18n:translate="">Delete study</h4>
+              </div>
+              <div class="modal-body">
+                <!-- ko with: $root.errorMessage -->
+                  <div class="alert alert-danger" role="alert">
+                    <strong>Error!</strong> <span data-bind="text: $data"></span>
+                  </div>
+                <!-- /ko -->
+                <p i18n:translate="">You are about to delete the following study and all it's collected data:</p>
+                <h4 data-bind="text: title"></h4>
+                <p i18n:translate="">Are you sure you want to continue?</p>
+              </div> <!-- /.modal-body -->
+              <div class="modal-footer">
+                <button
+                    type="button"
+                    class="btn btn-link"
+                    data-bind="click: $root.clear"
+                    i18n:translate="">No</button>
+                <button type="submit" class="btn btn-danger">
+                  <span i18n:translate="">Yes</span>
+                  <!-- ko if: $root.isSaving -->
+                    <span class="fa fa-refresh fa-spin"></span>
+                  <!-- /ko -->
+                </button>
+              </div> <!-- /.modal-footer -->
+            </form>
+          </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+      </div><!-- /.modal -->
+
+      <div class="modal fade" data-bind="modalVisible: selectedCycle">
+        <div class="modal-dialog">
+          <div class="modal-content" data-bind="with: selectedCycle">
+            <!-- ko if: $root.showViewCycle -->
+              <form class="form-horizontal">
+                <div class="modal-header">
+                  <div class="btn-toolbar pull-right">
+                    <div class="btn-group">
+                      <button class="btn btn-default" data-bind="click: $root.startEditCycle"><span class="fa fa-edit"></span></button>
+                      <button class="btn btn-default" data-bind="click: $root.startDeleteCycle"><span class="fa fa-trash-o"></span></button>
+                    </div>
+                  </div>
+                  <h4 class="modal-title" data-bind="text: title"></h4>
+                </div>
+                <div class="modal-body">
+                  <div class="form-group">
+                    <label class="col-sm-2 control-label required" i18n:translate="">Title</label>
+                    <div class="col-sm-10">
+                      <p class="form-control-static" data-bind="text: title"></p>
+                    </div>
+                  </div> <!-- /.form-group -->
+                  <div class="form-group">
+                    <label class="col-sm-2 control-label" i18n:translate="">Week</label>
+                    <div class="col-sm-10">
+                      <!-- ko if: week -->
+                        <p class="form-control-static"><code data-bind="text: week"></code></p>
+                      <!-- /ko -->
+                    </div>
+                  </div> <!-- /.form-group -->
+                  <div class="form-group">
+                    <div class="col-sm-offset-2 col-sm-10">
+                      <div class="checkbox">
+                        <label>
+                          <input type="checkbox" disabled data-bind="checked: is_interim" />
+                          <span i18n:translate="">Off-schedule</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div> <!-- /.form-group -->
+                </div> <!-- /.modal-body -->
+                <div class="modal-footer">
+                  <button type="button"
+                      class="btn btn-link"
+                      data-bind="click: $root.clear"
+                      i18n:translate="">Close</button>
+                </div> <!-- /.modal-footer -->
+              </form>
+            <!-- /ko -->
+            <!-- ko if: $root.showEditCycle -->
+              <form class="form-horizontal"
+                  method="POST"
+                  action="${request.current_route_path(_route_name='studies.cycles')}"
+                  data-bind="validate: {}, submit: $root.saveCycle">
+                <div class="modal-header">
+                  <!-- ko if: id -->
+                    <h4 class="modal-title" data-bind="text: title"></h4>
+                  <!-- /ko -->
+                  <!-- ko ifnot: id -->
+                    <h4 class="modal-title" i18n:translate="">New Cycle</h4>
+                  <!-- /ko -->
+                </div>
+                <div class="modal-body" data-bind="with: $root.editableCycle">
+                  <!-- ko with: $root.previousCycle -->
+                    <div class="alert alert-success">
+                      <span i18n:translate="">Successfully added</span>
+                      <strong data-bind="text: title"></strong>!
+                    </div>
+                  <!-- /ko -->
+                  <!-- ko with: $root.errorMessage -->
+                    <div class="alert alert-danger" role="alert">
+                      <strong>Error!</strong> <span data-bind="text: $data"></span>
+                    </div>
+                  <!-- /ko -->
+                  <div class="form-group">
+                    <label class="col-sm-2 control-label required" i18n:translate="">Title</label>
+                    <div class="col-sm-10">
+                      <input type="text" class="form-control" required name="title" data-bind="value: title"/>
+                    </div>
+                  </div> <!-- /.form-group -->
+                  <div class="form-group">
+                    <label class="col-sm-2 control-label" i18n:translate="">Week</label>
+                    <div class="col-sm-10">
+                      <input type="number" step="1" class="form-control" name="week" data-bind="value: week"/>
+                    </div>
+                  </div> <!-- /.form-group -->
+                  <div class="form-group">
+                    <div class="col-sm-offset-2 col-sm-10">
+                      <div class="checkbox">
+                        <label>
+                          <input type="checkbox" name="is_interim" data-bind="checked: is_interim" />
+                          <span i18n:translate="">Off-schedule</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div> <!-- /.form-group -->
+                </div> <!-- /.modal-body -->
+                <div class="modal-footer">
+                  <!-- ko ifnot: id -->
+                    <label class="text-muted">
+                      <input type="checkbox" name="add_another" data-bind="checked: $root.addMoreCycles" />
+                      <span i18n:translate="">Add another</span>
+                    </label>
+                  <!-- /ko -->
+                  <!-- ko if: id -->
+                    <button
+                        type="button"
+                        class="btn btn-link"
+                        data-bind="click: $root.startViewCycle"
+                        i18n:translate="">Cancel</button>
+                  <!-- /ko -->
+                  <!-- ko ifnot: id -->
+                    <button
+                        type="button"
+                        class="btn btn-link"
+                        data-bind="click: $root.clear"
+                        i18n:translate="">Cancel</button>
+                  <!-- /ko -->
+                  <button type="submit" class="btn btn-primary">
+                    <span i18n:translate="">Save</span>
+                    <!-- ko if: $root.isSaving -->
+                      <span class="fa fa-refresh fa-spin"></span>
+                    <!-- /ko -->
+                  </button>
+                </div> <!-- /.modal-footer -->
+              </form>
+            <!-- /ko -->
+            <!-- ko if: $root.showDeleteCycle -->
+              <form class="form-horizontal" data-bind="submit: $root.deleteCycle">
+                <div class="modal-header">
+                  <h4 class="modal-title" i18n:translate="">Delete Cycle</h4>
+                </div>
+                <div class="modal-body">
+                  <p>
+                    <span i18n:translate="">You are about to delete</span>
+                    <strong data-bind="text: title"></strong>.
+                    <span i18n:translate="">Are you sure you want to continue?</span>
+                  </p>
+                </div> <!-- /.modal-body -->
+                <div class="modal-footer">
+                  <button
+                      type="button"
+                      class="btn btn-link"
+                      data-bind="click: $root.startViewCycle"
+                      i18n:translate="">No</button>
+                  <button type="submit" class="btn btn-danger">
+                    <span i18n:translate="">Yes</span>
+                    <!-- ko if: $root.isSaving -->
+                      <span class="fa fa-refresh fa-spin"></span>
+                    <!-- /ko -->
+                  </button>
+                </div> <!-- /.modal-footer -->
+              </form>
+            <!-- /ko -->
+          </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+      </div><!-- /.modal -->
+
+      <div class="modal fade" data-bind="modalVisible: selectedForm">
+        <div class="modal-dialog" data-bind="if: selectedForm">
+          <div class="modal-content" data-bind="with: selectedForm">
+            <!-- ko if: $root.showViewForm-->
+              <form class="form-horizontal">
+                <div class="modal-header">
+                  <div class="btn-toolbar pull-right">
+                    <div class="btn-group">
+                      <button class="btn btn-default" data-bind="click: $root.startEditForm"><span class="fa fa-edit"></span></button>
+                      <button class="btn btn-default" data-bind="click: $root.startDeleteForm"><span class="fa fa-trash-o"></span></button>
+                    </div>
+                  </div>
+                  <h4 class="modal-title" data-bind="text: title"></h4>
+                </div>
+                <div class="modal-body">
+                  <div class="form-group">
+                    <label class="col-sm-2 control-label required" i18n:translate="">Form</label>
+                    <div class="col-sm-10">
+                      <p class="form-control-static" data-bind="text: title"></p>
+                    </div>
+                  </div> <!-- /.form-group -->
+                  <div class="form-group">
+                    <label class="col-sm-2 control-label required" i18n:translate="">Versions</label>
+                    <div class="col-sm-10">
+                      <!-- ko foreach: versions -->
+                        <p class="form-control-static"><code data-bind="text: publish_date"></code></p>
+                      <!-- /ko -->
+                    </div>
+                  </div> <!-- /.form-group -->
+                </div> <!-- /.modal-body -->
+                <div class="modal-footer">
+                  <button type="button"
+                      class="btn btn-link"
+                      data-bind="click: $root.clear"
+                      i18n:translate="">Close</button>
+                </div> <!-- /.modal-footer -->
+              </form>
+            <!-- /ko -->
+            <!-- ko if: $root.showEditForm-->
+              <form class="form-horizontal"
+                  method="POST"
+                  action="${request.current_route_path(_route_name='studies.study_schemata')}"
+                  data-bind="validate: {}, submit: $root.saveForm">
+                <div class="modal-header">
+                  <h4 class="modal-title" i18n:translate="">Add form to study</h4>
+                </div>
+                <div class="modal-body" data-bind="with: $root.editableForm">
+                  <!-- ko with: $root.errorMessage -->
+                    <div class="alert alert-danger" role="alert">
+                      <strong>Error!</strong> <span data-bind="text: $data"></span>
+                    </div>
+                  <!-- /ko -->
+                  <div class="form-group">
+                    <label class="col-sm-2 control-label required" i18n:translate="">Form</label>
+                    <div class="col-sm-10">
+                      <input type="hidden" class="form-control"
+                          name="schema"
+                          required
+                          i18n:attributes="data-placeholder"
+                          data-placeholder="Select a form..."
+                          data-bind="
+                            enable: isNew,
+                            selectedData: schema,
+                            dataKey: 'name',
+                            dataLabel: 'title',
+                            select2: {
+                              allowClear: true,
+                              ajax: {
+                                data: searchSchemaParams,
+                                results: searchSchemaResults
+                              }
+                            }" />
+                    </div>
+                  </div> <!-- /.form-group -->
+                  <div class="form-group">
+                    <label class="col-sm-2 control-label required" i18n:translate="">Versions</label>
+                    <div class="col-sm-10">
+                      <input type="hidden" class="form-control"
+                          name="versions"
+                          i18n:attributes="data-placeholder"
+                          required
+                          data-placeholder="Select a version..."
+                          data-bind="
+                            enable: schema,
+                            selectedData: versions,
+                            dataKey: 'publish_date',
+                            dataLabel: 'publish_date',
+                            select2: {
+                              multiple: true,
+                              ajax: {
+                                data: searchVersionsParams,
+                                results: searchVersionsResults
+                              }
+                            }" />
+                    </div>
+                  </div> <!-- /.form-group -->
+                </div> <!-- /.modal-body -->
+                <div class="modal-footer">
+                  <!-- ko if: isNew -->
+                    <label class="text-muted">
+                      <input type="checkbox" name="add_another" data-bind="checked: $root.addMoreForms" />
+                      <span i18n:translate="">Add another</span>
+                    </label>
+                  <!-- /ko -->
+                  <!-- ko ifnot: isNew -->
+                    <button
+                        type="button"
+                        class="btn btn-link"
+                        data-bind="click: $root.startViewForm"
+                        i18n:translate="">Cancel</button>
+                  <!-- /ko -->
+                  <!-- ko if: isNew -->
+                    <button
+                        type="button"
+                        class="btn btn-link"
+                        data-bind="click: $root.clear"
+                        i18n:translate="">Cancel</button>
+                  <!-- /ko -->
+                  <button type="submit" class="btn btn-primary">
+                    <span i18n:translate="">Save</span>
+                    <!-- ko if: $root.isSaving -->
+                      <span class="fa fa-refresh fa-spin"></span>
+                    <!-- /ko -->
+                  </button>
+                </div><!-- /.modal-footer -->
+              </form>
+            <!-- /ko -->
+            <!-- ko if: $root.showDeleteForm-->
+              <form class="form-horizontal"
+                  method="POST"
+                  action="${request.current_route_path(_route_name='studies.study_schemata')}"
+                  data-bind="submit: $root.deleteForm">
+                <div class="modal-header">
+                  <h4 class="modal-title" i18n:translate="">Remove form from study</h4>
+                </div>
+                <div class="modal-body">
+                  <!-- ko with: $root.errorMessage -->
+                    <div class="alert alert-danger" role="alert">
+                      <strong>Error!</strong> <span data-bind="text: $data"></span>
+                    </div>
+                  <!-- /ko -->
+                  <p>
+                    <span i18n:translate="">You are about to remove</span>
+                    <strong data-bind="text: title"></strong>
+                    <span i18n:translate="">from this study. Are you sure you want to continue?</span>
+                  </p>
+                </div> <!-- /.modal-body -->
+                <div class="modal-footer">
+                  <button
+                      type="button"
+                      class="btn btn-link"
+                      data-bind="click: $root.startViewForm"
+                      i18n:translate="">No</button>
+                  <button type="submit" class="btn btn-danger">
+                    <span i18n:translate="">Yes</span>
+                    <!-- ko if: $root.isSaving -->
+                      <span class="fa fa-refresh fa-spin"></span>
+                    <!-- /ko -->
+                  </button>
+                </div> <!-- /.modal-footer -->
+              </form>
+            <!-- /ko -->
+          </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+      </div><!-- /.modal -->
+    </div> <!-- /:isReady -->
+  </metal:content-slot>
+  <metal:content-slot fill-slot="javascript-extras-slot">
+    <script>
+      $(function(){
+        var scheduleUrl = "${request.current_route_path(_route_name='studies.study_schedule')}",
+            studyData = JSON.parse($('#study-data').text());
+        ko.applyBindings(new StudyView(studyData, scheduleUrl), document.getElementById('study-main'));
+        setupScheduleGrid();
+      });
+    </script>
+    <tal:json define="json import:json">
+      <script id="study-data" type="application/json">${json.dumps(study)}</script>
+    </tal:json>
+  </metal:content-slot>
+</html>

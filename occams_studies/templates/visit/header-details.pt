@@ -1,0 +1,8 @@
+<ul class="details list-inline">
+  <li data-bind="">
+    <span class="text-muted" i18n:translate="">Cycles:</span>
+    <ul class="list-comma" data-bind="foreach: visit.cycles">
+      <li data-bind="text: title"></li>
+    </ul>
+  </li>
+</ul>

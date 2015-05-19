@@ -1,0 +1,11 @@
+label.required:after {
+  color: @brand-danger;
+  content: '\25A0';
+
+  // We want the required icon to show up as superscript,
+  // but don't want it affeting the line-height, so we
+  // must do the following hack.
+  vertical-align: baseline;
+  position: relative;
+  top: -0.4em;
+}

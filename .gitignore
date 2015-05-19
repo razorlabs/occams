@@ -17,7 +17,6 @@ Icon?
 .Trashes
 
 ##### Linux Files
-.*
 !.gitignore
 *~
 .directory
@@ -65,6 +64,11 @@ Session.vim
 *PKG-INFO
 VERSION
 
+##### Node
+npm_modules
+node_modules
+bower_components
+
 ##### Buildout / Unit test / Coverage Reports
 .coverage
 .installed.cfg
@@ -83,12 +87,11 @@ parts
 sdist
 var
 develop.cfg
-development.ini
-production.ini
 res
 refs
 gen
 webassets-external
+.webassets-cache
 
 ##### Translations
 *.mo

@@ -1,0 +1,34 @@
+<html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
+  <metal:content-slot fill-slot="content-slot">
+
+    <div id="views-patient-main" style="display: none;" data-bind="visible: isReady">
+
+      <header class="page-header">
+        <div class="btn-toolbar pull-right">
+        </div>
+        <h1 i18n:translate="" data-bind="text: patient.pid"></h1>
+        <ul metal:use-macro="load: header-details.pt" />
+        <nav metal:use-macro="load: header-nav.pt" />
+      </header>
+
+      <form tal:replace="structure: form"></form>
+
+    </div> <!-- /#views-patient-main -->
+  </metal:content-slot>
+  <metal:content-slot fill-slot="javascript-extras-slot">
+    <script>
+      $(function(){
+        ko.applyBindings(
+          new PatientView({
+            patientData: JSON.parse($('#patient-data').text()),
+            formsUrl: "${request.current_route_path(_route_name='studies.patient_forms')}"
+          }),
+          document.getElementById('views-patient-main')
+        );
+      });
+    </script>
+    <tal:json define="json import:json">
+      <script id="patient-data" type="application/json">${json.dumps(patient)}</script>
+    </tal:json>
+  </metal:content-slot>
+</html>

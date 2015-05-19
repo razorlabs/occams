@@ -1,0 +1,531 @@
+<html i18n:domain="occams.studies" metal:use-macro="load:../master.pt">
+  <metal:content-slot fill-slot="content-slot">
+
+    <h1 class="page-header" i18n:translate="">Setup</h1>
+
+    <p class="lead" i18n:translate="">This page contains system-wide configurations. Please proceed with caution...</p>
+
+    <section id="sites-section" style="display: none;" data-bind="visible: isReady">
+      <h2>
+        <span i18n:translate="">Sites</span>
+        <small data-bind="if: isAjaxing">
+          <span class="fa fa-spin fa-refresh"></span>
+        </small>
+      </h2>
+      <!-- ko ifnot: hasSites -->
+        <div class="alert alert-info" i18n:translate="">
+          This application has not been configured with sites yet.
+        </div>
+      <!-- /ko -->
+      <!-- ko if: hasSites -->
+        <table class="table table-hover table-striped">
+          <colgroup>
+            <col class="title"></col>
+            <col class="name"></col>
+            <col class="actions"></col>
+          </colgroup>
+          <thead>
+            <tr>
+              <th i18n:translate="">Title</th>
+              <th i18n:translate="">System Name</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody data-bind="foreach: sites">
+            <tr>
+              <td><span data-bind="text: title"></span></td>
+              <td><code data-bind="text: name"></code></td>
+              <td>
+                <div class="clearfix">
+                  <div class="btn-group pull-right">
+                    <button class="btn btn-default" data-bind="click: $parent.startEditSite"><span class="fa fa-edit"></span></button>
+                    <button class="btn btn-default" data-bind="click: $parent.startDeleteSite"><span class="fa fa-trash"></span></button>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      <!-- /ko -->
+      <div class="clearfix">
+        <div class="pull-right">
+          <button class="btn btn-default" data-bind="click: startAddSite">
+            <span class="fa fa-map-marker"></span>
+            <span i18n:translate="">Add new site</span>
+          </button>
+        </div>
+      </div>
+      <div class="modal fade" data-bind="modalVisible: showEditSite">
+        <div class="modal-dialog" data-bind="if: showEditSite">
+          <div class="modal-content" data-bind="with: selectedSite">
+            <form
+                class="form-horizontal"
+                method="POST"
+                action="${request.route_path('studies.sites')}"
+                data-bind="validate: {}, submit: $parent.saveSite">
+              <div class="modal-header">
+                <!-- ko if: id -->
+                  <h4 class="modal-title" data-bind="text: title"></h4>
+                <!-- /ko -->
+                <!-- ko ifnot: id -->
+                  <h4 class="modal-title" i18n:translate="">New Site</h4>
+                <!-- /ko -->
+              </div>
+              <div class="modal-body" data-bind="with: $parent.editableSite">
+                <!-- ko with: $parent.latestSite -->
+                  <div class="alert alert-success">
+                    <strong i18n:translate="">Success!</strong>
+                    <span i18n:translate="">Added:</span>
+                    <a class="alert-link" data-bind="attr: {href: __url__}, text: title"></a>
+                  </div>
+                <!-- /ko -->
+                <!-- ko with: $parent.errorMessage -->
+                  <div class="alert alert-danger" role="alert">
+                    <strong>Error!</strong> <span data-bind="text: $data"></span>
+                  </div>
+                <!-- /ko -->
+                <div class="form-group">
+                  <label class="col-sm-3 required" i18n:translate="">Title</label>
+                  <div class="col-sm-9">
+                    <input type="text" class="form-control" required autofocus name="title" data-bind="value: title"/>
+                  </div>
+                </div> <!-- /.form-group -->
+                <div class="form-group">
+                  <label class="col-sm-3 required" i18n:translate="">System Name</label>
+                  <div class="col-md-6">
+                    <input type="text" class="form-control" required name="name" data-bind="value: name" pattern="^[a-z0-9_\-]+$" />
+
+                  </div>
+                </div> <!-- /.form-group -->
+              </div> <!-- /.modal-body -->
+              <div class="modal-footer">
+                <!-- ko ifnot: id -->
+                  <label class="text-muted">
+                    <input type="checkbox" data-bind="checked: $parent.addMoreSites" />
+                    <span i18n:translate="">Add another</span>
+                  </label>
+                <!-- /ko -->
+                <button
+                    type="button"
+                    class="btn btn-link"
+                    data-bind="click: $parent.clear"
+                    i18n:translate="">Cancel</button>
+                <button type="submit" class="btn btn-primary">
+                  <span i18n:translate="">Save</span>
+                  <!-- ko if: $parent.isAjaxing -->
+                    <span class="fa fa-refresh fa-spin"></span>
+                  <!-- /ko -->
+                </button>
+              </div> <!-- /.modal-footer -->
+            </form>
+          </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+      </div><!-- /.modal -->
+      <div class="modal fade" data-bind="modalVisible: showDeleteSite">
+        <div class="modal-dialog" data-bind="if: showDeleteSite">
+          <div class="modal-content" data-bind="with: selectedSite">
+            <form class="form-horizontal" data-bind="submit: $parent.deleteSite">
+              <div class="modal-header">
+                <h4 class="modal-title" i18n:translate="">Delete study</h4>
+              </div>
+              <div class="modal-body">
+                <!-- ko with: $parent.errorMessage -->
+                  <div class="alert alert-danger" role="alert">
+                    <strong>Error!</strong> <span data-bind="text: $data"></span>
+                  </div>
+                <!-- /ko -->
+                <p i18n:translate="">You are about to delete the following site and all its collected data:</p>
+                <h4 data-bind="text: title"></h4>
+                <p i18n:translate="">Are you sure you want to continue?</p>
+              </div> <!-- /.modal-body -->
+              <div class="modal-footer">
+                <button
+                    type="button"
+                    class="btn btn-link"
+                    data-bind="click: $root.clear"
+                    i18n:translate="">No</button>
+                <button type="submit" class="btn btn-danger">
+                  <span i18n:translate="">Yes</span>
+                  <!-- ko if: $root.isAjaxing -->
+                    <span class="fa fa-refresh fa-spin"></span>
+                  <!-- /ko -->
+                </button>
+              </div> <!-- /.modal-footer -->
+            </form>
+          </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+      </div><!-- /.modal -->
+    </section> <!-- /#sites-section -->
+
+    <section id="patient-forms-section" style="display: none;" data-bind="visible: isReady">
+      <h2>
+        <span i18n:translate="">Patient Forms</span>
+        <small data-bind="if: isAjaxing">
+          <span class="fa fa-spin fa-refresh"></span>
+        </small>
+      </h2>
+      <!-- ko ifnot: hasForms -->
+        <div class="alert alert-info" i18n:translate="">
+          This application has not been configured with patient forms yet.
+        </div>
+      <!-- /ko -->
+      <!-- ko if: hasForms -->
+        <table class="table table-hover table-striped">
+          <thead>
+            <tr>
+              <th i18n:translate="">Schema</th>
+              <th i18n:translate="">Form</th>
+              <th i18n:translate="">Version</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody data-bind="foreach: forms">
+            <tr>
+              <!-- ko with: versions()[0] -->
+                <td><code data-bind="text: name"></code></td>
+                <td data-bind="text: title"></td>
+                <td><code data-bind="text: publish_date"></code></td>
+              <!-- /ko -->
+              <td>
+                <div class="clearfix">
+                  <div class="btn-group pull-right">
+                    <button class="btn btn-default" data-bind="click: $parent.startDeleteForm"><span class="fa fa-trash"></span></button>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      <!-- /ko -->
+      <div class="clearfix">
+        <div class="pull-right">
+          <button class="btn btn-default" data-bind="click: startAddForm">
+            <span class="fa fa-file-o"></span>
+            <span i18n:translate="">Add new form</span>
+          </button>
+        </div>
+      </div>
+      <div class="modal fade" data-bind="modalVisible: showEditForm">
+        <div class="modal-dialog" data-bind="if: showEditForm">
+          <div class="modal-content" data-bind="with: selectedForm">
+            <form
+                class="form-horizontal"
+                method="POST"
+                data-bind="validate: {}, submit: $parent.saveForm">
+              <div class="modal-header">
+                <h4 class="modal-title" i18n:translate="">New Form</h4>
+              </div>
+              <div class="modal-body">
+                <!-- ko with: $parent.latestForm -->
+                  <div class="alert alert-success">
+                    <strong i18n:translate="">Success!</strong>
+                    <span i18n:translate="">Added:</span>
+                    <a class="alert-link" data-bind="attr: {href: __url__}, text: titleWithVersion"></a>
+                  </div>
+                <!-- /ko -->
+                <!-- ko with: $parent.errorMessage -->
+                  <div class="alert alert-danger" role="alert">
+                    <strong>Error!</strong> <span data-bind="text: $data"></span>
+                  </div>
+                <!-- /ko -->
+                <div class="form-group">
+                  <label class="col-sm-2 control-label required" i18n:translate="">Form</label>
+                  <div class="col-sm-10">
+                    <input type="hidden" class="form-control"
+                        required
+                        i18n:attributes="data-placeholder"
+                        data-placeholder="Select a form..."
+                        data-bind="
+                          selectedData: $parent.editableForm,
+                          dataKey: 'name',
+                          dataLabel: 'titleWithVersion',
+                          select2: {
+                            allowClear: true,
+                            ajax: {
+                              data: $parent.searchSchemaParams,
+                              results: $parent.searchSchemaResults
+                            }
+                          }" />
+                    <div  class="help-block">
+                      Select a form. Must not be a study, randomization or termination form
+                    </div>
+                  </div>
+                </div> <!-- /.form-group -->
+              </div> <!-- /.modal-body -->
+              <div class="modal-footer">
+                <!-- ko ifnot: isNew -->
+                  <label class="text-muted">
+                    <input type="checkbox" data-bind="checked: $parent.addMoreForms" />
+                    <span i18n:translate="">Add another</span>
+                  </label>
+                <!-- /ko -->
+                <button
+                    type="button"
+                    class="btn btn-link"
+                    data-bind="click: $parent.clear"
+                    i18n:translate="">Cancel</button>
+                <button type="submit" class="btn btn-primary">
+                  <span i18n:translate="">Save</span>
+                  <!-- ko if: $parent.isAjaxing -->
+                    <span class="fa fa-refresh fa-spin"></span>
+                  <!-- /ko -->
+                </button>
+              </div> <!-- /.modal-footer -->
+            </form>
+          </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+      </div><!-- /.modal -->
+      <div class="modal fade" data-bind="modalVisible: showDeleteForm">
+        <div class="modal-dialog" data-bind="if: showDeleteForm">
+          <div class="modal-content" data-bind="with: selectedForm">
+            <form class="form-horizontal" data-bind="submit: $parent.deleteForm">
+              <div class="modal-header">
+                <h4 class="modal-title" i18n:translate="">Remove a patient form</h4>
+              </div>
+              <div class="modal-body">
+                <!-- ko with: $parent.errorMessage -->
+                  <div class="alert alert-danger" role="alert">
+                    <strong>Error!</strong> <span data-bind="text: $data"></span>
+                  </div>
+                <!-- /ko -->
+                <p i18n:translate="">You are about to de-activate the following  patient form:</p>
+                <h4 data-bind="text: titleWithVersion"></h4>
+                <p i18n:translate="">Are you sure you want to continue?</p>
+              </div> <!-- /.modal-body -->
+              <div class="modal-footer">
+                <button
+                    type="button"
+                    class="btn btn-link"
+                    data-bind="click: $root.clear"
+                    i18n:translate="">No</button>
+                <button type="submit" class="btn btn-danger">
+                  <span i18n:translate="">Yes</span>
+                  <!-- ko if: $root.isAjaxing -->
+                    <span class="fa fa-refresh fa-spin"></span>
+                  <!-- /ko -->
+                </button>
+              </div> <!-- /.modal-footer -->
+            </form>
+          </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+      </div><!-- /.modal -->
+    </section><!-- /#patient-forms -->
+
+    <section id="reference-types-section" style="display: none;" data-bind="visible: isReady">
+      <h2>
+        <span i18n:translate="">Reference Types</span>
+        <small data-bind="if: isAjaxing">
+          <span class="fa fa-spin fa-refresh"></span>
+        </small>
+      </h2>
+      <!-- ko ifnot: hasReferenceTypes -->
+        <div class="alert alert-info" i18n:translate="">
+          This application has not been configured with reference types.
+        </div>
+      <!-- /ko -->
+      <!-- ko if: hasReferenceTypes -->
+        <table class="table table-hover table-striped">
+          <colgroup>
+            <col class="title"></col>
+            <col class="name"></col>
+            <col class="description"></col>
+            <col class="reference_pattern"></col>
+            <col class="reference_hint"></col>
+            <col class="actions"></col>
+          </colgroup>
+          <thead>
+            <tr>
+              <th i18n:translate="">Title</th>
+              <th i18n:translate="">Variable</th>
+              <th i18n:translate="">Description</th>
+              <th i18n:translate="">Pattern</th>
+              <th i18n:translate="">Hint</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody data-bind="foreach: referenceTypes">
+            <tr>
+              <td><span data-bind="text: title"></span></td>
+              <td><code data-bind="text: name"></code></td>
+              <td data-bind="if: description"><div data-bind="text: description"></div></td>
+              <td data-bind="if: reference_pattern"><code data-bind="text: reference_pattern"></code></td>
+              <td data-bind="if: reference_hint"><em data-bind="text: reference_hint"></em></td>
+              <td>
+                <div class="clearfix">
+                  <div class="btn-group pull-right">
+                    <button class="btn btn-default" data-bind="click: $parent.startEditReferenceType"><span class="fa fa-edit"></span></button>
+                    <button class="btn btn-default" data-bind="click: $parent.startDeleteReferenceType"><span class="fa fa-trash"></span></button>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      <!-- /ko -->
+      <div class="clearfix">
+        <div class="pull-right">
+          <button class="btn btn-default" data-bind="click: startAddReferenceType">
+            <span class="fa fa-crosshairs"></span>
+            <span i18n:translate="">Add Reference Type</span>
+          </button>
+        </div>
+      </div>
+      <div class="modal fade" data-bind="modalVisible: showEditReferenceType">
+        <div class="modal-dialog" data-bind="if: showEditReferenceType">
+          <div class="modal-content" data-bind="with: selectedReferenceType">
+            <form
+                class="form-horizontal"
+                method="POST"
+                data-bind="validate: {}, submit: $parent.saveReferenceType">
+              <div class="modal-header">
+                <!-- ko ifnot: isNew -->
+                  <h4 class="modal-title" data-bind="text: title"></h4>
+                <!-- /ko -->
+                <!-- ko if: isNew -->
+                  <h4 class="modal-title" i18n:translate="">New Reference Type</h4>
+                <!-- /ko -->
+              </div>
+              <div class="modal-body" data-bind="with: $parent.editableReferenceType">
+                <!-- ko with: $root.latestReferenceType -->
+                  <div class="alert alert-success">
+                    <strong i18n:translate="">Success!</strong>
+                    <span i18n:translate="">Added:</span>
+                    <span data-bind="text: title"></span>
+                  </div>
+                <!-- /ko -->
+                <!-- ko with: $parent.errorMessage -->
+                  <div class="alert alert-danger" role="alert">
+                    <strong>Error!</strong> <span data-bind="text: $data"></span>
+                  </div>
+                <!-- /ko -->
+                <div class="form-group">
+                  <label class="col-sm-3 required" i18n:translate="">Title</label>
+                  <div class="col-sm-9">
+                    <div class="row">
+                      <div class="col-sm-12">
+                        <input type="text" class="form-control" required autofocus name="title" data-bind="value: title"/>
+                      </div>
+                    </div>
+                    <p class="help-block" i18n:translate="">The displayed label when adding a new reference type to a patient.</p>
+                    <div class="errors"></div>
+                  </div>
+                </div> <!-- /.form-group -->
+                <div class="form-group">
+                  <label class="col-sm-3 required" i18n:translate="">Variable</label>
+                  <div class="col-md-9">
+                    <div class="row">
+                      <div class="col-md-6">
+                        <input type="text" class="form-control" required name="name" data-bind="value: name" pattern="^[a-z0-9_]+$" />
+                      </div>
+                    </div>
+                    <p class="help-block" i18n:translate="">The reported variable name in the data files. Must unique.</p>
+                    <div class="errors"></div>
+                  </div>
+                </div> <!-- /.form-group -->
+                <div class="form-group">
+                  <label class="col-sm-3" i18n:translate="">Description</label>
+                  <div class="col-md-9">
+                    <textarea type="text" class="form-control" name="description" data-bind="value: description"></textarea>
+                  </div>
+                </div> <!-- /.form-group -->
+                <div class="form-group">
+                  <label class="col-sm-3" i18n:translate="">Pattern</label>
+                  <div class="col-md-9">
+                    <div class="row">
+                      <div class="col-md-12">
+                        <input type="text" class="form-control" name="reference_pattern" data-bind="value: reference_pattern" />
+                      </div>
+                    </div>
+                    <p class="help-block" i18n:translate="">(Optional) Restrict value formatting with a regular expression</p>
+                    <div class="errors"></div>
+                  </div>
+                </div> <!-- /.form-group -->
+                <div class="form-group">
+                  <label class="col-sm-3" i18n:translate="">Hint</label>
+                  <div class="col-sm-9">
+                    <div class="row">
+                      <div class="col-md-12">
+                        <input type="text" class="form-control" name="reference_hint" data-bind="value: reference_hint"/>
+                      </div>
+                    </div>
+                    <p class="help-block" i18n:translate="">(Optional) Placholder message displayed to the user to <em>hint</em> the value pattern.</p>
+                    <div class="errors"></div>
+                  </div>
+                </div> <!-- /.form-group -->
+              </div> <!-- /.modal-body -->
+              <div class="modal-footer">
+                <!-- ko ifnot: id -->
+                  <label class="text-muted">
+                    <input type="checkbox" data-bind="checked: $parent.addMoreReferenceTypes" />
+                    <span i18n:translate="">Add another</span>
+                  </label>
+                <!-- /ko -->
+                <button
+                    type="button"
+                    class="btn btn-link"
+                    data-bind="click: $parent.clear"
+                    i18n:translate="">Cancel</button>
+                <button type="submit" class="btn btn-primary">
+                  <span i18n:translate="">Save</span>
+                  <!-- ko if: $parent.isAjaxing -->
+                    <span class="fa fa-refresh fa-spin"></span>
+                  <!-- /ko -->
+                </button>
+              </div> <!-- /.modal-footer -->
+            </form>
+          </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+      </div><!-- /.modal -->
+      <div class="modal fade" data-bind="modalVisible: showDeleteReferenceType">
+        <div class="modal-dialog" data-bind="if: showDeleteReferenceType">
+          <div class="modal-content" data-bind="with: selectedReferenceType">
+            <form class="form-horizontal" data-bind="submit: $parent.deleteReferenceType">
+              <div class="modal-header">
+                <h4 class="modal-title" i18n:translate="">Delete Reference Type</h4>
+              </div>
+              <div class="modal-body">
+                <!-- ko with: $parent.errorMessage -->
+                  <div class="alert alert-danger" role="alert">
+                    <strong>Error!</strong> <span data-bind="text: $data"></span>
+                  </div>
+                <!-- /ko -->
+                <p i18n:translate="">You are about to delete the following reference type  and all its collected data:</p>
+                <h4 data-bind="text: title"></h4>
+                <p i18n:translate="">Are you sure you want to continue?</p>
+              </div> <!-- /.modal-body -->
+              <div class="modal-footer">
+                <button
+                    type="button"
+                    class="btn btn-link"
+                    data-bind="click: $root.clear"
+                    i18n:translate="">No</button>
+                <button type="submit" class="btn btn-danger">
+                  <span i18n:translate="">Yes</span>
+                  <!-- ko if: $root.isAjaxing -->
+                    <span class="fa fa-refresh fa-spin"></span>
+                  <!-- /ko -->
+                </button>
+              </div> <!-- /.modal-footer -->
+            </form>
+          </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+      </div><!-- /.modal -->
+    </section> <!-- /#sites-section -->
+
+  </metal:content-slot>
+  <metal:content-slot fill-slot="javascript-extras-slot">
+    <script>
+      $(function(){
+        var sitesUrl = "${request.route_path('studies.sites')}";
+        ko.applyBindings(new SiteManageView(sitesUrl), document.getElementById('sites-section'));
+
+        var formsUrl = "${request.route_path('studies.patients_forms')}";
+        ko.applyBindings(new PatientFormsManageView(formsUrl), document.getElementById('patient-forms-section'));
+
+        var referenceTypesUrl = "${request.route_path('studies.reference_types')}";
+        ko.applyBindings(new ReferenceTypesManageView(referenceTypesUrl), document.getElementById('reference-types-section'));
+
+      });
+    </script>
+  </metal:content-slot>
+</html>

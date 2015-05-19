@@ -1,84 +1,35 @@
-occams.studies
-===============
+OCCAMS Studies
+==============
 
-Clinical trials data management software.
+Study management application
 
-System Requirements
--------------------
-
-* Python 2.7+
-* redis
-* PostgreSQL 9.3+
-* lessc (installed via npm)
-
-
-Extra Python Requirements
--------------------------
-
-These dependencies are not listed in the `setup.py` because
-ideally you should be able to use any gevent-enabled WSGI server.
-
-* gUnicorn
-* watchdog
 
 Getting Started
 ---------------
 
-::
+These instructions are intended for contributors only.
 
-  cd $venv
+Configure your OCCAMS application using the instructions located at:
+https://bitbucket.org/ucsdbitcore/occams
 
-  # Optional put these in a requirements.txt...
-  pip install -e <path/to/occams.datastore>
-  pip install -e <path/to/occams.roster>
-  pip install -e <path/to/occams.form>
-  pip install -e <path/to/occams.lab>
-  pip install -e <path/to/occams.clniical>
+Once you've set up the platform, speciy this application in
+your configuration::
 
-  # If you're starting with a fresh installation
-  $venv/bin/oc_initdb <YOURINI>
+  occams.apps =
+      ...
+      occams_studies
 
 
-Serving with gUnicorn (for development)
-+++++++++++++++++++++++++++++++++++++++
+To install the database tables::
 
-::
+  > oc_initdb -c etc/development.ini
 
-  watchmedo auto-restart \
-            --ignore-pattern "*/alembic/*;*/tests/*" \
-            --pattern "*.py;*.ini" \
-            --directory ./src \
-            --recursive \
-            -- \
-            gunicorn --paste <YOURINI>
+This application uses celery tasks, so make sure you are running the service::
 
-::
-
-  watchmedo auto-restart \
-            --ignore-pattern "*/alembic/*;*/tests/*" \
-            --pattern "*.py;*.ini" \
-            --directory ./src \
-            --recursive \
-            -- \
-            celery worker \
-            --app "occams.studies.tasks" \
-            --loglevel INFO \
-            --without-gossip \
-            --ini <YOURINI>
+  > celery worker --autoreload --app "occams.studies.tasks" --loglevel INFO --without-gossip --ini etc/development.ini
 
 
-Serving with gUnicorn (for production)
-++++++++++++++++++++++++++++++++++++++
+Configuration
+-------------
 
-::
-
-  gunicorn --paste <YOURINI>
-
-
-::
-
-  celery worker \
-           --app "occams.studies.tasks" \
-           --without-gossip \
-           --loglevel INFO \
-           --ini <YOURINI>
+TODO

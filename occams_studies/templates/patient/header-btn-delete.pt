@@ -1,0 +1,6 @@
+<button class="btn btn-default"
+    data-bind="click: $root.startDeletePatient"
+    tal:condition="request.has_permission('delete')">
+  <span class="fa fa-trash-o"></span>
+  <span i18n:translate="">Delete</span>
+</button>

@@ -1,0 +1,29 @@
+/**
+ * Displays an unordered list as an inline comma-delimited list
+ */
+.list-comma {
+  display: inline-block;
+  list-style: none;
+  padding-left: 0;
+
+  > li {
+    display: inline-block;
+    padding-left: 5px;
+
+    &:after {
+      content: ", ";
+    }
+
+    &:last-child:after {
+      content: '';
+    }
+
+    &:first-child {
+      padding-left: 0;
+    }
+
+  }
+
+}
+
+

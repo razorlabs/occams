@@ -1,0 +1,76 @@
+[data-view-name="studies.study"] {
+
+  .js-clickable-cell:hover {
+    background-color: @alert-info-bg;
+    cursor: pointer;
+  }
+
+  #js-schedule {
+    position: relative;
+  }
+
+  #js-schedule table {
+    background-color: #fff;
+  }
+
+  #js-schedule-corner,
+  #js-schedule-sidebar,
+  #js-schedule-header {
+    display: none;
+    position: absolute;
+  }
+
+  #js-schedule-sidebar {
+    z-index: 1;
+  }
+
+  #js-schedule-header {
+    z-index: 2;
+  }
+
+  #js-schedule-corner {
+    z-index: 3;
+  }
+
+  #js-schedule-corner th {
+    vertical-align: bottom;
+  }
+
+  #js-schedule-corner,
+  #js-schedule-header,
+  #js-schedule-sidebar,
+  #js-schedule-table {
+    width: auto;
+
+    .form {
+      width: 20em;
+      button {
+        display: inline-block;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        width: 18em;
+        white-space: nowrap;
+      }
+    }
+  }
+
+  #js-schedule-header,
+  #js-schedule-table {
+    // Remove the a awkward borders from the add button cells
+    thead th:last-child {
+      border: none;
+      background-color: #fff;
+    }
+  }
+
+  #js-schedule-sidebar,
+  #js-schedule-table {
+    // Remove the a awkward borders from the add button cells
+    tbody tr:last-child > th:first-child {
+      border: none;
+      background-color: #fff;
+    }
+  }
+
+}
+

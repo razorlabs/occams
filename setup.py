@@ -1,7 +1,6 @@
 import os
-from subprocess import Popen, PIPE
 from setuptools import setup, find_packages
-import sys
+from setuptools.command.develop import develop as _develop
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(HERE, 'README.rst')).read()
@@ -9,44 +8,17 @@ CHANGES = open(os.path.join(HERE, 'CHANGES.rst')).read()
 
 
 REQUIRES = [
-    'alembic',
-    'babel',
-    'celery[redis]',
-    'colander',
-    'cssmin',
-    'deform',
-    'gevent-socketio',
-    'humanize',
-    'jsmin',
-    'lingua',
-    'pyramid',
-    'pyramid_chameleon',
-    'pyramid_deform',
-    'pyramid_mailer',
-    'pyramid_tm',
-    'pyramid_redis_sessions',
-    'pyramid_redis',
-    'pyramid_rewrite',
-    'pyramid_webassets',
-    'pyramid_who',
-    'redis',
-    'SQLAlchemy',
-    'six',
-    'tabulate',
-    'transaction',
-    'webassets',
-    'zope.sqlalchemy',
+    'alembic',                          # Database table upgrades
+    'humanize',                         # human readable measurements
 
-    'occams.datastore',
-    'occams.form',
+    'occams',
+    'occams_datastore',                 # EAV
+    'occams_roster',
+    'occams_forms',                     # EAV form renderer
 ]
 
 EXTRAS = {
-    'sqlite': [],
-    'postgresql': ['psycopg2', 'psycogreen'],
-    'gunicorn': ['gunicorn'],
     'test': [
-        'pyramid_debugtoolbar',
         'nose',
         'nose-testconfig',
         'coverage',
@@ -57,17 +29,15 @@ EXTRAS = {
 }
 
 
-if sys.version_info < (2, 7):
-    REQUIRES.extend(['argparse', 'ordereddict'])
-    EXTRAS['test'].extend(['unittest2'])
-
-
-if sys.version_info < (3, 0):
-    REQUIRES.extend(['unicodecsv'])
-
-
 def get_version():
-    version_file = os.path.join(HERE, 'VERSION')
+    """
+    Generates python version from projects git tag
+    """
+    import os
+    from subprocess import Popen, PIPE
+    import sys
+    here = os.path.abspath(os.path.dirname(__file__))
+    version_file = os.path.join(here, 'VERSION')
 
     # read fallback file
     try:
@@ -79,7 +49,7 @@ def get_version():
     # read git version (if available)
     try:
         version_git = (
-            Popen(['git', 'describe'], stdout=PIPE, stderr=PIPE, cwd=HERE)
+            Popen(['git', 'describe'], stdout=PIPE, stderr=PIPE, cwd=here)
             .communicate()[0]
             .strip()
             .decode(sys.getdefaultencoding()))
@@ -96,10 +66,21 @@ def get_version():
     return version
 
 
+class _custom_develop(_develop):
+    def run(self):
+        _develop.run(self)
+        self.execute(_post_develop, [], msg="Running post-develop task")
+
+
+def _post_develop():
+    from subprocess import call
+    call(['bower', 'install'], cwd=HERE)
+
+
 setup(
-    name='occams.studies',
+    name='occams_studies',
     version=get_version(),
-    description='occams.studies',
+    description='occams_studies',
     long_description=README + '\n\n' + CHANGES,
     classifiers=[
         "Programming Language :: Python",
@@ -109,22 +90,19 @@ setup(
     ],
     author='UCSD BIT Core Team',
     author_email='bitcore@ucsd.edu',
-    url='https://bitbutcket.org/ucsdbitcore/occams.studies',
+    url='https://bitbutcket.org/ucsdbitcore/occams_studies',
     keywords='web wsgi bfg pylons pyramid',
-    packages=find_packages('src', exclude=['ez_setup']),
-    package_dir={'': 'src'},
-    namespace_packages=['occams'],
+    packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
     install_requires=REQUIRES,
     extras_require=EXTRAS,
     tests_require=EXTRAS['test'],
     test_suite='nose.collector',
+    cmdclass={'develop': _custom_develop},
     entry_points="""\
-    [paste.app_factory]
-    main = occams.studies:main
     [console_scripts]
-    os_initdb = occams.studies.scripts.initdb:main
-    os_export = occams.studies.scripts.export:main
+    os_initdb = occams_studies.scripts.initdb:main
+    os_export = occams_studies.scripts.export:main
     """,
 )

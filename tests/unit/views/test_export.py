@@ -4,28 +4,28 @@ import mock
 from tests import IntegrationFixture
 
 
+def _register_routes(config):
+    config.add_route('studies.export_status', '/')
+
+
+@mock.patch('occams_studies.views.export.check_csrf_token')
 class TestAdd(IntegrationFixture):
 
-    @property
-    def view_func(self):
-        from occams.studies.views.export import add
-        return add
+    def call_view(self, context, request):
+        from occams_studies.views.export import checkout as view
+        return view(context, request)
 
-    def test_get_exportables(self):
+    def test_get_exportables(self, check_csrf_token):
         """
         It should render only published schemata
         """
         from datetime import date
         from pyramid import testing
-        from tests import track_user
-        from occams.studies import Session, models
-
-        #self.config.testing_securitypolicy(userid='joe', permissive=True)
-        track_user('joe')
+        from occams_studies import Session, models
 
         # No schemata
         request = testing.DummyRequest()
-        response = self.view_func(request)
+        response = self.call_view(models.ExportFactory(request), request)
         self.assertEquals(len(response['exportables']), 3)  # Only pre-cooked
 
         # Not-yet-published schemata
@@ -34,52 +34,42 @@ class TestAdd(IntegrationFixture):
         Session.add(schema)
         Session.flush()
         request = testing.DummyRequest()
-        response = self.view_func(request)
+        response = self.call_view(models.ExportFactory(request), request)
         self.assertEquals(len(response['exportables']), 3)
 
         # Published schemata
         schema.publish_date = date.today()
         Session.flush()
         request = testing.DummyRequest()
-        response = self.view_func(request)
+        response = self.call_view(models.ExportFactory(request), request)
         self.assertEquals(len(response['exportables']), 4)
 
-    def test_post_empty(self):
+    def test_post_empty(self, check_csrf_token):
         """
         It should raise validation errors on empty imput
         """
         from pyramid import testing
         from webob.multidict import MultiDict
-        request = testing.DummyRequest(
-            post=MultiDict())
-        response = self.view_func(request)
-        self.assertIsNotNone(response['errors']['contents'])
+        from occams_studies import models
+        request = testing.DummyRequest(post=MultiDict())
+        response = self.call_view(models.ExportFactory(request), request)
+        self.assertIsNotNone(response['errors'])
 
-    def test_post_non_existent_schema(self):
+    def test_post_non_existent_schema(self, check_csrf_token):
         """
         It should raise validation errors for non-existent schemata
         """
         from pyramid import testing
         from webob.multidict import MultiDict
+        from occams_studies import models
+        self.config.testing_securitypolicy(userid='tester', permissive=True)
         request = testing.DummyRequest(
             post=MultiDict([('contents', 'does_not_exist')]))
-        response = self.view_func(request)
-        self.assertIsNotNone(response['errors']['contents'])
+        response = self.call_view(models.ExportFactory(request), request)
+        self.assertIn('Invalid selection', response['errors']['contents-0'])
 
-    def test_post_invalid_csrf(self):
-        """
-        It should check for cross-site forgery
-        """
-        from pyramid import testing
-        from webob.multidict import MultiDict
-        request = testing.DummyRequest(
-            post=MultiDict([('csrf_token', 'd3v10us')]))
-        response = self.view_func(request)
-        self.assertIsNotNone(response['errors']['csrf_token'])
-
-    # Don't actually invoke the subtasks
-    @mock.patch('occams.studies.tasks.make_export')
-    def test_valid(self, make_export):
+    @mock.patch('occams_studies.tasks.make_export')  # Don't invoke subtasks
+    def test_valid(self, make_export, check_csrf_token):
         """
         It should add an export record and initiate an async task
         """
@@ -87,13 +77,16 @@ class TestAdd(IntegrationFixture):
         from pyramid import testing
         from pyramid.httpexceptions import HTTPFound
         from webob.multidict import MultiDict
-        from tests import track_user
-        from occams.studies import Session, models
+        from occams_studies import Session, models
 
-        self.config.include('occams.studies.routes')
+        _register_routes(self.config)
+
         self.config.registry.settings['app.export.dir'] = '/tmp'
 
-        track_user('joe')
+        blame = models.User(key=u'joe')
+        Session.add(blame)
+        Session.flush()
+        Session.info['blame'] = blame
 
         schema = models.Schema(
             name=u'vitals', title=u'Vitals', publish_date=date.today())
@@ -103,30 +96,33 @@ class TestAdd(IntegrationFixture):
         self.config.testing_securitypolicy(userid='joe')
         request = testing.DummyRequest(
             post=MultiDict([
-                ('contents', str('vitals'))
+                ('contents-0', str('vitals'))
             ]))
-        request.POST['csrf_token'] = request.session.get_csrf_token()
-        response = self.view_func(request)
 
+        response = self.call_view(models.ExportFactory(request), request)
+        check_csrf_token.assert_called_with(request)
         self.assertIsInstance(response, HTTPFound)
         self.assertEqual(response.location,
-                         request.route_path('export_status'))
+                         request.route_path('studies.export_status'))
         export = Session.query(models.Export).one()
         self.assertEqual(export.owner_user.key, 'joe')
 
-    def test_exceed_limit(self):
+    def test_exceed_limit(self, check_csrf_token):
         """
         It should not let the user exceed their allocated export limit
         """
         from datetime import date
         from pyramid import testing
         from webob.multidict import MultiDict
-        from tests import track_user
-        from occams.studies import Session, models
+        from occams_studies import Session, models
 
         self.config.registry.settings['app.export.limit'] = 0
 
-        track_user('joe')
+        blame = models.User(key=u'joe')
+        Session.add(blame)
+        Session.flush()
+        Session.info['blame'] = blame
+
         previous_export = models.Export(
             owner_user=Session.query(models.User).filter_by(key='joe').one(),
             contents=[{
@@ -139,7 +135,7 @@ class TestAdd(IntegrationFixture):
         # The renderer should know about it
         self.config.testing_securitypolicy(userid='joe')
         request = testing.DummyRequest()
-        response = self.view_func(request)
+        response = self.call_view(models.ExportFactory(request), request)
         self.assertTrue(response['exceeded'])
 
         # If the user insists, they'll get a validation error as well
@@ -148,30 +144,30 @@ class TestAdd(IntegrationFixture):
             post=MultiDict([
                 ('contents', 'vitals')
                 ]))
-        request.POST['csrf_token'] = request.session.get_csrf_token()
         self.assertTrue(response['exceeded'])
 
 
 class TestStatusJSON(IntegrationFixture):
 
-    @property
-    def view_func(self):
-        from occams.studies.views.export import status_json
-        return status_json
+    def call_view(self, context, request):
+        from occams_studies.views.export import status_json as view
+        return view(context, request)
 
     def test_get_current_user(self):
         """
         It should return the authenticated user's exports
         """
         from pyramid import testing
-        from tests import track_user
-        from occams.studies import Session, models
+        from occams_studies import Session, models
 
         self.config.registry.settings['app.export.dir'] = '/tmp'
-        self.config.include('occams.studies.routes')
+        self.config.include('occams_studies.routes')
 
-        track_user('jane')
-        track_user('joe')
+        blame = models.User(key=u'joe')
+        Session.add(blame)
+        Session.add(models.User(key='jane'))
+        Session.flush()
+        Session.info['blame'] = blame
 
         Session.add_all([
             models.Export(
@@ -192,7 +188,7 @@ class TestStatusJSON(IntegrationFixture):
 
         self.config.testing_securitypolicy(userid='joe')
         request = testing.DummyRequest()
-        response = self.view_func(request)
+        response = self.call_view(models.ExportFactory(request), request)
         exports = response['exports']
         self.assertEquals(len(exports), 1)
 
@@ -202,16 +198,18 @@ class TestStatusJSON(IntegrationFixture):
         """
         from datetime import datetime, timedelta
         from pyramid import testing
-        from tests import track_user
-        from occams.studies import Session, models
+        from occams_studies import Session, models
 
         EXPIRE_DAYS = 10
 
-        self.config.registry.settings['app.export.expire'] = EXPIRE_DAYS
-        self.config.registry.settings['app.export.dir'] = '/tmp'
-        self.config.include('occams.studies.routes')
+        self.config.registry.settings['studies.export.expire'] = EXPIRE_DAYS
+        self.config.registry.settings['studies.export.dir'] = '/tmp'
+        self.config.include('occams_studies.routes')
 
-        track_user('joe')
+        blame = models.User(key=u'joe')
+        Session.add(blame)
+        Session.flush()
+        Session.info['blame'] = blame
 
         now = datetime.now()
 
@@ -229,7 +227,7 @@ class TestStatusJSON(IntegrationFixture):
 
         self.config.testing_securitypolicy(userid='joe')
         request = testing.DummyRequest()
-        response = self.view_func(request)
+        response = self.call_view(models.ExportFactory(request), request)
         exports = response['exports']
         self.assertEquals(len(exports), 1)
 
@@ -237,17 +235,16 @@ class TestStatusJSON(IntegrationFixture):
             now - timedelta(EXPIRE_DAYS + 1)
         Session.flush()
         request = testing.DummyRequest()
-        response = self.view_func(request)
+        response = self.call_view(models.ExportFactory(request), request)
         exports = response['exports']
         self.assertEquals(len(exports), 0)
 
 
 class TestCodebookJSON(IntegrationFixture):
 
-    @property
-    def view_func(self):
-        from occams.studies.views.export import codebook_json
-        return codebook_json
+    def call_view(self, context, request):
+        from occams_studies.views.export import codebook_json as view
+        return view(context, request)
 
     def test_file_not_specified(self):
         """
@@ -256,13 +253,14 @@ class TestCodebookJSON(IntegrationFixture):
         from pyramid import testing
         from pyramid.httpexceptions import HTTPNotFound
         from webob.multidict import MultiDict
+        from occams_studies import models
 
         request = testing.DummyRequest(
             params=MultiDict([('file', '')])
         )
 
         with self.assertRaises(HTTPNotFound):
-            self.view_func(request)
+            self.call_view(models.ExportFactory(request), request)
 
     def test_file_not_exists(self):
         """
@@ -271,13 +269,14 @@ class TestCodebookJSON(IntegrationFixture):
         from pyramid import testing
         from pyramid.httpexceptions import HTTPNotFound
         from webob.multidict import MultiDict
+        from occams_studies import models
 
         request = testing.DummyRequest(
             params=MultiDict([('file', 'i_dont_exist')])
         )
 
         with self.assertRaises(HTTPNotFound):
-            self.view_func(request)
+            self.call_view(models.ExportFactory(request), request)
 
     def test_file(self):
         """
@@ -286,10 +285,7 @@ class TestCodebookJSON(IntegrationFixture):
         from datetime import date
         from pyramid import testing
         from webob.multidict import MultiDict
-        from occams.studies import Session, models
-        from tests import track_user
-
-        track_user('joe')
+        from occams_studies import Session, models
 
         Session.add(models.Schema(
             name=u'aform',
@@ -310,16 +306,15 @@ class TestCodebookJSON(IntegrationFixture):
             params=MultiDict([('file', 'aform')])
         )
 
-        response = self.view_func(request)
+        response = self.call_view(models.ExportFactory(request), request)
         self.assertIsNotNone(response)
 
 
 class TestCodebookDownload(IntegrationFixture):
 
-    @property
-    def view_func(self):
-        from occams.studies.views.export import codebook_download
-        return codebook_download
+    def call_view(self, context, request):
+        from occams_studies.views.export import codebook_download as view
+        return view(context, request)
 
     def test_download(self):
         """
@@ -328,114 +323,38 @@ class TestCodebookDownload(IntegrationFixture):
         import os
         from pyramid import testing
         from pyramid.response import FileResponse
-        from occams.studies.exports.codebook import FILE_NAME
+        from occams_studies.exports.codebook import FILE_NAME
+        from occams_studies import models
         self.config.registry.settings['app.export.dir'] = '/tmp'
         name = '/tmp/' + FILE_NAME
         with open(name, 'w+b'):
             self.config.testing_securitypolicy(userid='jane')
             request = testing.DummyRequest()
-            response = self.view_func(request)
+            response = self.call_view(models.ExportFactory(request), request)
             self.assertIsInstance(response, FileResponse)
         os.remove(name)
 
 
+@mock.patch('occams_studies.tasks.celery.control.revoke')
+@mock.patch('occams_studies.views.export.check_csrf_token')
 class TestDelete(IntegrationFixture):
 
-    @property
-    def view_func(self):
-        from occams.studies.views.export import delete
-        return delete
+    def call_view(self, context, request):
+        from occams_studies.views.export import delete_json as view
+        return view(context, request)
 
-    @mock.patch('occams.studies.tasks.celery.control.revoke')
-    def test_deletable_not_owner(self, revoke):
-        """
-        It should issue a 404 if the user does not own the export
-        """
-        from pyramid import testing
-        from pyramid.httpexceptions import HTTPNotFound
-        from occams.studies import models, Session
-        from tests import track_user
-
-        track_user('jane', is_current=False)
-        track_user('joe')
-
-        export = models.Export(
-            owner_user=(
-                Session.query(models.User)
-                .filter_by(key='jane')
-                .one()),
-            contents=[],
-            status='complete')
-        Session.add(export)
-        Session.flush()
-        export_id = export.id
-        Session.expunge_all()
-
-        request = testing.DummyRequest(
-            matchdict={'id': str(export_id)})
-        request.POST['csrf_token'] = request.session.get_csrf_token()
-
-        with self.assertRaises(HTTPNotFound):
-            self.view_func(request)
-
-    @mock.patch('occams.studies.tasks.celery.control.revoke')
-    def test_not_found(self, revoke):
-        """
-        It should issue a 404 if the export does not exist
-        """
-        from pyramid import testing
-        from pyramid.httpexceptions import HTTPNotFound
-
-        request = testing.DummyRequest(
-            matchdict={'id': str('123')})
-        request.POST['csrf_token'] = request.session.get_csrf_token()
-
-        with self.assertRaises(HTTPNotFound):
-            self.view_func(request)
-
-    @mock.patch('occams.studies.tasks.celery.control.revoke')
-    def test_invalid_csrf(self, revoke):
-        """
-        It should deny invalid CSRF tokens
-        """
-        from pyramid import testing
-        from pyramid.httpexceptions import HTTPForbidden
-        from occams.studies import models, Session
-        from tests import track_user
-
-        track_user('joe')
-
-        export = models.Export(
-            owner_user=(
-                Session.query(models.User)
-                .filter_by(key='joe')
-                .one()),
-            contents=[],
-            status='complete')
-        Session.add(export)
-        Session.flush()
-        export_id = export.id
-        Session.expunge_all()
-
-        self.config.testing_securitypolicy(userid='joe')
-        request = testing.DummyRequest(
-            matchdict={'id': str(export_id)})
-        request.POST['csrf_token'] = 'd3v10us'
-
-        with self.assertRaises(HTTPForbidden):
-            self.view_func(request)
-
-    @mock.patch('occams.studies.tasks.celery.control.revoke')
-    def test_deleteable_by_owner(self, revoke):
+    def test_delete(self, check_csrf_token, revoke):
         """
         It should allow the owner of the export to cancel/delete the export
         """
         from pyramid import testing
         from pyramid.httpexceptions import HTTPOk
-        from occams.studies import models, Session
-        from tests import track_user
+        from occams_studies import models, Session
 
-        track_user('joe')
+        blame = models.User(key=u'joe')
+        Session.add(blame)
+        Session.flush()
+        Session.info['blame'] = blame
 
         export = models.Export(
             owner_user=(
@@ -451,11 +370,9 @@ class TestDelete(IntegrationFixture):
         Session.expunge_all()
 
         self.config.testing_securitypolicy(userid='joe')
-        request = testing.DummyRequest(
-            matchdict={'id': str(export_id)})
-        request.POST['csrf_token'] = request.session.get_csrf_token()
-
-        response = self.view_func(request)
+        request = testing.DummyRequest()
+        response = self.call_view(export, request)
+        check_csrf_token.assert_called_with(request)
         self.assertIsInstance(response, HTTPOk)
         self.assertIsNone(Session.query(models.Export).get(export_id))
         revoke.assert_called_with(export_name)
@@ -464,49 +381,9 @@ class TestDelete(IntegrationFixture):
 @ddt
 class TestDownload(IntegrationFixture):
 
-    @property
-    def view_func(self):
-        from occams.studies.views.export import download
-        return download
-
-    def test_get_owner_exports(self):
-        """
-        It should only allow owners of the export to download it
-        """
-        import os
-        from pyramid import testing
-        from pyramid.httpexceptions import HTTPNotFound
-        from pyramid.response import FileResponse
-        from tests import track_user
-        from occams.studies import Session, models
-
-        self.config.registry.settings['app.export.dir'] = '/tmp'
-        track_user('joe')
-        track_user('jane')
-        export = models.Export(
-            id=123,
-            owner_user=(
-                Session.query(models.User)
-                .filter_by(key='jane')
-                .one()),
-            contents=[],
-            status='complete')
-        Session.add(export)
-        Session.flush()
-
-        name = '/tmp/' + export.name
-        with open(name, 'w+b'):
-            request = testing.DummyRequest(
-                matchdict={'id': 123})
-            with self.assertRaises(HTTPNotFound):
-                self.view_func(request)
-
-            self.config.testing_securitypolicy(userid='jane')
-            request = testing.DummyRequest(
-                matchdict={'id': 123})
-            response = self.view_func(request)
-            self.assertIsInstance(response, FileResponse)
-        os.remove(name)
+    def call_view(self, context, request):
+        from occams_studies.views.export import download as view
+        return view(context, request)
 
     @data('failed', 'pending')
     def test_get_not_found_status(self, status):
@@ -515,20 +392,24 @@ class TestDownload(IntegrationFixture):
         """
         from pyramid import testing
         from pyramid.httpexceptions import HTTPNotFound
-        from tests import track_user
-        from occams.studies import Session, models
+        from occams_studies import Session, models
 
-        track_user('joe')
-        Session.add(models.Export(
+        blame = models.User(key=u'joe')
+        Session.add(blame)
+        Session.flush()
+        Session.info['blame'] = blame
+
+        export = models.Export(
             id=123,
             owner_user=(
                 Session.query(models.User)
                 .filter_by(key='joe')
                 .one()),
             contents=[],
-            status=status))
+            status=status)
+        Session.add(export)
+        Session.flush()
 
-        request = testing.DummyRequest(
-            matchdict={'id': 123})
+        request = testing.DummyRequest()
         with self.assertRaises(HTTPNotFound):
-            self.view_func(request)
+            self.call_view(export, request)

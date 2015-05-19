@@ -1,3 +1,0 @@
-[submodule "src/occams/studies/static/libs/bootstrap"]
-	path = src/occams/studies/static/libs/bootstrap
-  url = https://github.com/twbs/bootstrap.git

@@ -6,7 +6,7 @@ from tests import IntegrationFixture
 class TestListAll(IntegrationFixture):
 
     def test_no_schemata(self):
-        from occams.studies import exports
+        from occams_studies import exports
         exportables = exports.list_all()
         self.assertItemsEqual(
             ['pid', 'enrollment', 'visit'],
@@ -22,8 +22,8 @@ class TestWriteData(IntegrationFixture):
         from contextlib import closing
         import six
         from sqlalchemy import literal_column, Integer, Unicode
-        from occams.studies import Session
-        from occams.studies import exports
+        from occams_studies import Session
+        from occams_studies import exports
 
         query = Session.query(
             literal_column(u"'420'", Integer).label(u'anumeric'),
@@ -47,7 +47,7 @@ class TestDumpCodeBook(IntegrationFixture):
         """
         from contextlib import closing
         import six
-        from occams.studies import exports
+        from occams_studies import exports
 
         with closing(six.BytesIO()) as fp:
             exports.write_codebook(fp, [])

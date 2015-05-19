@@ -1,0 +1,169 @@
+<html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
+  <metal:content-slot fill-slot="content-slot">
+    <header class="page-header">
+      <h1 i18n:translate="">Exports</h1>
+      <nav metal:use-macro="load: header-nav.pt" />
+    </header>
+
+    <div class="row" id="top">
+
+      <div class="col-md-4">
+        <div id="export-faq-sidebar" class="sidebar">
+          <ul class="nav">
+            <li><a href="#private">Will private data be exported?</a></li>
+            <li><a href="#randomization">Will randomization data be included?</a></li>
+            <li><a href="#download">Where can I download my exports?</a></li>
+            <li><a href="#private-flag">How does the system know what is private data?</a></li>
+            <li><a href="#version">Which version of the data is used?</a></li>
+            <li><a href="#process">How are the variables exported?</a></li>
+            <li><a href="#attributes">How will data values in responses to form questions be aligned if they have changed over time?</a></li>
+            <li><a href="#history">How will we know what differences exist between forms?</a></li>
+            <li><a href="#codebook">What will data dictionaries look like?</a></li>
+          </ul>
+          <a class="back-to-top" href="#body">Back to top</a>
+        </div>
+      </div> <!-- /.col-md-4 -->
+
+      <div id="export-faq-content" class="col-md-8">
+
+        <div class="panel panel-default" id="private">
+          <div class="panel-heading">
+            <h3 class="panel-title" i18n:translate="">
+              Will private data be exported?
+            </h3>
+          </div>
+          <div class="panel-body">
+            <p i18n:translate="">No.</p>
+            <p i18n:translate="">
+              For security reasons (as well as for the protection of patient's
+              private information), this tool will not export private data.
+              Instead, private data will be de-identified with a
+              <span class="label label-default">[PRIVATE]</span> string.
+            </p>
+            <p i18n:translate="">
+              If you need to access
+              a patient's private information, please contact personnel with the
+              appropriate access priviledges to accomodate your needs.
+            </p>
+          </div>
+        </div>
+
+        <div class="panel panel-default" id="randomization">
+          <div class="panel-heading">
+            <h3 class="panel-title" i18n:translate="">
+              Will randomization data be included?
+            </h3>
+          </div>
+          <div class="panel-body">
+            <p i18n:translate="">
+              No because randomization data is intended for analysts only and
+              therefore considered classified. If you need access please contact
+              your system administrator.
+            </p>
+          </div>
+        </div>
+
+        <div class="panel panel-default" id="download">
+          <div class="panel-heading">
+            <h3 class="panel-title" i18n:translate="">
+              Where can I download my exports?
+            </h3>
+          </div>
+          <div class="panel-body">
+            <p i18n:translate="">
+              You can download your exports anywhere you can log in to OCCAMS.
+              The system cannot control your export once it is downloaded, so please
+              follow proper data safety procedures such as encrypting your
+              hard drive and keeping data on your machine. In addition, refrain from emailing
+              it via public services such as Gmail, Yahoo Mail, or Outlook.
+            </p>
+          </div>
+        </div>
+
+        <div class="panel panel-default" id="private-flag">
+          <div class="panel-heading">
+            <h3 class="panel-title" i18n:translate="">
+              How does the system know what is private data?
+            </h3>
+          </div>
+          <div class="panel-body">
+            <p i18n:translate="">
+              Fields that have been marked as <code>private</code> by the
+              OCCAMS form editor will be acknowledged as private data.
+            </p>
+          </div>
+        </div>
+
+        <div class="panel panel-default" id="version">
+          <div class="panel-heading">
+            <h3 class="panel-title" i18n:translate="">
+              Which version of the data is used?
+            </h3>
+          </div>
+          <div class="panel-body">
+            Only published forms are exported. Extracted or working copies are
+            ignored.
+          </div>
+        </div>
+
+        <div class="panel panel-default" id="process">
+          <div class="panel-heading">
+            <h3 class="panel-title" i18n:translate="">
+              How are the variables exported?
+            </h3>
+          </div>
+          <div class="panel-body">
+            All variables are exported to one column per variable. The export
+            tool also gives you the option to "expand" multiple choice
+            questions to one column per possible answer choice. Note that
+            these columns will have the answer choice appended to the column
+            name.
+          </div>
+        </div>
+
+        <div class="panel panel-default" id="attributes">
+          <div class="panel-heading">
+            <h3 class="panel-title" i18n:translate="">
+              How will data values in responses to form questions be aligned if they have changed over time?
+            </h3>
+          </div>
+          <div class="panel-body">
+            Answer choices use key codes to map to their respective labels,
+            please try to ensure consistent key codes are used.
+          </div>
+        </div>
+
+        <div class="panel panel-default" id="history">
+          <div class="panel-heading">
+            <h3 class="panel-title" i18n:translate="">
+              How will we know what differences exist between forms?
+            </h3>
+          </div>
+          <div class="panel-body">
+            All exports are generated with an accompanying <code>codebook.csv</code> file
+            that displays how a question has changed across versions.
+          </div>
+        </div>
+
+        <div class="panel panel-default" id="codebook">
+          <div class="panel-heading">
+            <h3 class="panel-title" i18n:translate="">
+              What will data dictionaries look like?
+            </h3>
+          </div>
+          <div class="panel-body">
+            Each <code>codebook.csv</code> file will describe a
+            question's history and will contain a code-to-label mapping for
+            answer choices.
+          </div>
+        </div>
+    </div> <!-- /.row -->
+  </metal:content-slot>
+
+  <metal:content-slot fill-slot="javascript-extras-slot">
+    <script>
+      $(setup_exports_faq);
+    </script>
+  </metal:content-slot>
+
+</html>

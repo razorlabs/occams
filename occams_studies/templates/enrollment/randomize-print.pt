@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="${request.locale_name}" i18n:domain="occams.studies">
+  <head>
+    <meta charset="utf-8">
+    <title>Randomization</title>
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  </head>
+  <body>
+    <div metal:use-macro="load: randomize-details.pt"></div>
+  </body>
+</html>

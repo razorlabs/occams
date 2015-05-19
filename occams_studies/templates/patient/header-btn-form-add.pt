@@ -1,0 +1,6 @@
+<button class="btn btn-default"
+    data-bind="click: $root.startAddForm"
+    tal:condition="request.has_permission('edit')">
+  <span class="fa fa-file-o"></span>
+  <span i18n:translate="">Add Form</span>
+</button>
