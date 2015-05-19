@@ -32,7 +32,6 @@ def upgrade():
     merge_attribute_section()
     overhaul_attribute()
     cleanup_addis()
-    cleanup_cctg()
 
 
 def cleanup_study():
