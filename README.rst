@@ -2,16 +2,15 @@
 OCCAMS DataStore
 ================
 
-
-The purpose of this plug-in is to facilitate the management of sparse data that
-is changing over time, namely clinical trials data.
+API and backend for managing sparse data that is changing over time,
+namely clinical research data.
 
 
 ----------------------------
 Entity-Attribute-Value (EAV)
 ----------------------------
 
-This system employs a database framework known as
+This system employs a database heuristic known as
 `Entity-Attribute-Value with Schema-Relationships` or simply `EAV`_ for
 short.
 
@@ -103,8 +102,8 @@ Due to the nature of clinical trials in the demand for evolving data and the
 importance of auditing, there are **two** different types of history tracking:
 
 
-Versioning (Cabinet Theory)
-+++++++++++++++++++++++++++
+Versioning
+++++++++++
 
 A brief history: In an earlier incarnation of ``DataStore``, we used "delta"
 entries to keep track of schema changes over its lifetime. This proved to be
@@ -138,8 +137,8 @@ that a sub schemata can only really have one parent and not be shared accross
 schemata.
 
 
-Auditing (aka C.Y.A. or "Cover-Your-Ass")
-+++++++++++++++++++++++++++++++++++++++++
+Auditing
+++++++++
 
 In addition to form revisions, we also care about **how** the data itself
 has changed over time (e.g. spelling errors, misentered entry data).
@@ -241,9 +240,95 @@ Example: Auditing
     table across all row versions.
 
 
-----------------------
-Where's the interface?
-----------------------
+------------
+Requirements
+------------
+
+* PostgreSQL 9.3+
+* Python 2.7+
+
+
+------------
+Installation
+------------
+
+Installation and setup::
+
+> source /path/to/your/virtualenv/bin/activate
+> pip install occams.datastore
+> od_initdb --db postgresql://user:pw@yourhost/yourdb
+> python
+
+
+Starting a session::
+
+>>> DB_URL = 'postgresql://user:pw@yourhost/yourdb'
+>>>
+>>> from datetime import date
+>>> import sqlalchemy
+>>> from sqlalchemy import orm
+>>> from occams.datastore import models
+>>> from occams.datastore.models.events import register
+>>>
+>>> engine = sqlalchemy.create_engine(DB_URL)
+>>> Session = orm.scoped_session(orm.sessionmaker(bind=engine))
+>>> register(Session)
+>>> Session.info['blame'] = models.User(key='user@localhost')
+
+The above initializes your own database session. The ``register`` call intializes
+all the event handling callbacks (for auditing, default values, integrity checks etc).
+Notice the 'blame' info data passed. This tells datastore who is the current
+active user so that the auditing logic can keep track of who is responsible
+for the data commits. The sample assumes the blame user has not been created yet.
+
+Creating a schema::
+
+>>> myfirst = models.Schema(name=u'myfirst', title=u'My First Schema', publish_date=date.today())
+>>> myfirst.attributes['myvar'] = models.Attribute(name=u'myvar', title=u'Does this help?', type='choice', order=0)
+>>> myfirst.attributes['myvar'].choices['0'] = models.Choice(name='0', title=u'No', order=0)
+>>> myfirst.attributes['myvar'].choices['1'] = models.Choice(name='1', title=u'Yes', order=1)
+>>> myfirst.attributes['myvar'].choices['3'] = models.Choice(name='3', title=u'Maybe', order=2)
+>>> Session.add(myfirst)
+>>> Session.flush()
+
+
+Saving data against a schema::
+
+>>> mydata = models.Entity(schema=myfirst)
+>>> mydata['myvar'] = '1'
+>>> Session.add(mydata)
+>>> Session.flush()
+
+
+Finishing your work::
+
+>>> Session.commit()
+
+
+-------------------------------------
+Installation as a development package
+-------------------------------------
+
+**Make sure you USE A TESTING DATABASE to avoid corrupting your production data.**
+
+You'll need to install as a test package and create a testing database::
+
+> source /path/to/your/virtualenv/bin/activate
+> pip install -e git+ssh://git@bitbucket.org/ucsdbitcore/occams.datastore.git@develop#egg=occams.datastore[postgresql]
+> od_initdb --db postgresql://user:pw@yourhost/youttestdb
+
+We do not create the tables in the unittests because they take too much time
+to create in between testing.
+
+Running the unit tests::
+
+> cd /path/to/your/virtualenv/src/occams.datastore
+> nosetests --tc=db:postgresql://user:pw@yourhost/youttestdb
+
+
+---------------------------
+Where's the user interface?
+---------------------------
 
 This module only implements the EAV system using `SQLAlchemy`_, to maintain
 the implementation vendor-agnostic as much as possible. As such, much of
@@ -251,25 +336,7 @@ the functionality is integrated into the model classes so that the ORM
 can be used as the API. Additionally, there is no web interface built-in as
 the general goal here is to offer a generic sparse-data solution that can be
 used further customized on a per-institution basis. For one such example, see
-`occams.form`_
+`occams.forms`_
 
 .. _SQLAlchemy: http://www.sqlalchemy.org/
-.. _occams.form: https://github.com/beastcore/occams.form.git
-
-------------------
-Self-Certification
-------------------
-
-    [-] Internationalized
-
-    [X] Unit tests
-
-    [ ] End-user documentation
-
-    [X] Internal documentation (documentation, interfaces, etc.)
-
-    [X] Existed and maintained for at least 6 months
-
-    [X] Installs and uninstalls cleanly
-
-    [X] Code structure follows best practice
+.. _occams.form: https://bitbucket.org/ucsdbitcore/occams.forms.git

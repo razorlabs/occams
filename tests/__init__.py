@@ -1,5 +1,8 @@
 """
 Testing fixtures
+
+Run with:
+    --tc=db:URL
 """
 
 try:
@@ -16,34 +19,21 @@ Session = orm.scoped_session(orm.sessionmaker())
 
 
 def setup_package():
-    import os
-    from six.moves.configparser import SafeConfigParser
     from sqlalchemy import create_engine
     from testconfig import config
-    from occams.datastore import models
-    from occams.datastore.models.events import register
+    from occams_datastore.models.events import register
     register(Session)
-    HERE = os.path.abspath(os.path.dirname(__file__))
-    cfg = SafeConfigParser()
-    cfg.read(os.path.join(HERE, '..', 'setup.cfg'))
-    db = config.get('db') or 'default'
-    engine = create_engine(cfg.get('db', db))
-    models.DataStoreModel.metadata.create_all(engine)
-    Session.configure(bind=engine, info={'user': _user})
-
-
-def teardown_package():
-    """
-    Destroys the database structures.
-    """
-    from occams.datastore import models
-    models.DataStoreModel.metadata.drop_all(Session.bind)
+    db = config.get('db')
+    engine = create_engine(db)
+    Session.configure(bind=engine)
 
 
 def begin_func():
-    from occams.datastore import models
-    Session.add(models.User(key=_user))
+    from occams_datastore import models
+    blame = models.User(key=u'tester')
+    Session.add(blame)
     Session.flush()
+    Session.info['blame'] = blame
 
 
 def rollback_func():

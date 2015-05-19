@@ -11,6 +11,7 @@ from sqlalchemy import (
     event,
     text,
     Column,
+    CheckConstraint,
     ForeignKey, ForeignKeyConstraint, Index, UniqueConstraint,
     Date, DateTime, Boolean, LargeBinary, Numeric, Integer,
     Unicode, UnicodeText, String)
@@ -63,7 +64,8 @@ class Context(Model, Referenceable, Modifiable, Auditable):
                 refcolumns=['entity.id'],
                 name='fk_%s_entity_id' % cls.__tablename__,
                 ondelete='CASCADE'),
-            UniqueConstraint('entity_id', 'external', 'key'))
+            UniqueConstraint('entity_id', 'external', 'key'),
+            Index('ix_%s_external_key' % cls.__tablename__, 'external', 'key'))
 
 
 class GroupedCollection(object):
@@ -117,7 +119,7 @@ class State(Model, Referenceable, Describeable, Modifiable, Auditable):
         return (UniqueConstraint('name'),)
 
 
-class Entity(Model, Referenceable, Describeable, Modifiable, Auditable):
+class Entity(Model, Referenceable, Modifiable, Auditable):
     """
     An object that describes how an EAV object is generated.
     """
@@ -171,16 +173,13 @@ class Entity(Model, Referenceable, Describeable, Modifiable, Auditable):
                 refcolumns=['state.id'],
                 name='fk_%s_state_id' % cls.__tablename__,
                 ondelete='CASCADE'),
-            UniqueConstraint('schema_id', 'name'),
             Index('ix_%s_schema_id' % cls.__tablename__, 'schema_id'),
             Index('ix_%s_state_id' % cls.__tablename__, 'state_id'),
             Index('ix_%s_collect_date' % cls.__tablename__, 'collect_date'))
 
     def _getCollector(self, key):
         type_ = self.schema.attributes[key].type
-        if type_ == 'boolean':
-            type_ = 'integer'
-        elif type_ == 'date':
+        if type_ == 'date':
             type_ = 'datetime'
         try:
             return getattr(self, '_%s_values' % type_)
@@ -224,13 +223,9 @@ class Entity(Model, Referenceable, Describeable, Modifiable, Auditable):
         attribute = self.schema.attributes[key]
         wrapperFactory = nameModelMap[attribute.type]
 
-        # Helper method for getting the appropriate parameters for
-        # an attribute/value
-        params = lambda a, v: dict(list(zip(('attribute', 'value'), (a, v))))
-
-        # Helper methot to add an item to the value collector
-        collect = lambda v: collector.__setitem__(
-            attribute.name, wrapperFactory(**params(attribute, v)))
+        if value is None:
+            del self[key]
+            return
 
         def convert(value, type_):
             if value is None:
@@ -253,7 +248,10 @@ class Entity(Model, Referenceable, Describeable, Modifiable, Auditable):
             # don't even bother getting a diff, just create a new list
             del self[key]
             for v in value:
-                collect(convert(v, attribute.type))
+                convertedValue = convert(v, attribute.type)
+                collector[attribute.name] = wrapperFactory(
+                    attribute=attribute,
+                    value=convertedValue)
         else:
             # For scalars, we're only dealing with one value, so it's OK to
             # try and update it
@@ -262,7 +260,9 @@ class Entity(Model, Referenceable, Describeable, Modifiable, Auditable):
             if value_entries:
                 value_entries[0].value = convertedValue
             else:
-                collect(convertedValue)
+                collector[attribute.name] = wrapperFactory(
+                    attribute=attribute,
+                    value=convertedValue)
 
     def __delitem__(self, key):
         collector = self._getCollector(key)
@@ -369,11 +369,8 @@ def TypeMappingClass(typeName, className, tableName, valueType, index=True):
 ValueDatetime = TypeMappingClass(
     'datetime', 'ValueDatetime', 'value_datetime', DateTime)
 
-ValueInteger = TypeMappingClass(
-    'integer', 'ValueInteger', 'value_integer', Integer)
-
-ValueDecimal = TypeMappingClass(
-    'decimal', 'ValueDecimal', 'value_decimal', Numeric)
+ValueNumber = TypeMappingClass(
+    'number', 'ValueNumber', 'value_number', Numeric)
 
 ValueString = TypeMappingClass(
     'string', 'ValueString', 'value_string', Unicode)
@@ -385,24 +382,50 @@ ValueChoice = TypeMappingClass(
     'choice', 'ValueChoice', 'value_choice',
     ForeignKey('choice.id', name='fk_value_choice_value', ondelete='CASCADE'))
 
-# TODO: Note that for large files, ``memoryview`` should be investigated
-#       as a buffer so that large files aren't read into memor when being
-#       stored in the database.
 ValueBlob = TypeMappingClass(
-    'blob', 'ValueBlob', 'value_blob', LargeBinary, index=False)
+    'blob', 'ValueBlob', 'value_blob', String, index=False)
 
 # Specify how the ``value`` properties behave, pretty much they're synonymns
 # of the ``_value`` property,
 valueProperty = hybrid_property(lambda s: s._value,
                                 lambda s, v: setattr(s, '_value', v))
 ValueDatetime.value = valueProperty
-ValueInteger.value = valueProperty
-ValueDecimal.value = valueProperty
+ValueNumber.value = valueProperty
 ValueString.value = valueProperty
 ValueText.value = valueProperty
 ValueChoice.value = relationship(Choice,
                                  primaryjoin='Choice.id == ValueChoice._value')
-ValueBlob.value = valueProperty
+
+
+class BlobInfo(object):
+
+    def __init__(self, file_name, path, mime_type=None):
+        self.file_name = file_name
+        self.path = path
+        self.mime_type = mime_type
+
+
+def get_blob(self):
+    if self.path:
+        return BlobInfo(self.file_name, self.path, self.mime_type)
+
+
+def set_blob(self, value):
+    self.file_name = value.file_name if value else None
+    self.path = value.path if value else None
+    self.mime_type = value.mime_type if value else None
+
+
+ValueBlob.file_name = Column(
+    Unicode,
+    CheckConstraint(
+        'CASE WHEN value IS NOT NULL THEN file_name IS NOT NULL END',
+        name='ck_name_has_value'),
+    doc='The original file name (we use a sanitized file name internally)')
+ValueBlob.mime_type = Column(String, doc='The MIME type of the file')
+# path is an alias of the value (to keep things consisten, albeit confusing)
+ValueBlob.path = valueProperty
+ValueBlob.value = property(get_blob, set_blob)
 
 
 def validateValue(target, value, oldvalue, initiator):
@@ -423,9 +446,7 @@ def validateValue(target, value, oldvalue, initiator):
         """
         if type_ in ('string', 'text'):
             interpreted = len(value)
-        elif type_ in ('integer'):
-            pass
-        elif type_ in ('decimal'):
+        elif type_ in ('number'):
             check = Decimal(check)
         elif type_ in ('date'):
             check = date.fromtimestamp(check)
@@ -456,30 +477,26 @@ def validateValue(target, value, oldvalue, initiator):
 
     # TODO: collections
 
-    if attribute.validator is not None \
-            and not re.match(attribute.validator, str(value)):
+    if attribute.pattern is not None \
+            and not re.match(attribute.pattern, str(value)):
         raise ConstraintError(
-            attribute.schema.name, attribute.name, attribute.validator, value)
+            attribute.schema.name, attribute.name, attribute.pattern, value)
 
 
 event.listen(ValueDatetime.value, 'set', validateValue)
-event.listen(ValueInteger.value, 'set', validateValue)
-event.listen(ValueDecimal.value, 'set', validateValue)
+event.listen(ValueNumber.value, 'set', validateValue)
 event.listen(ValueString.value, 'set', validateValue)
 event.listen(ValueText.value, 'set', validateValue)
 event.listen(ValueChoice.value, 'set', validateValue)
-event.listen(ValueBlob.value, 'set', validateValue)
 
 
 # Where the types are stored
 nameModelMap = dict(
-    integer=ValueInteger,
-    boolean=ValueInteger,
     string=ValueString,
     text=ValueText,
-    decimal=ValueDecimal,
+    number=ValueNumber,
     date=ValueDatetime,
     datetime=ValueDatetime,
     choice=ValueChoice,
     blob=ValueBlob,
-    )
+)

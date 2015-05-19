@@ -3,7 +3,6 @@ Tests for storage implementations and services
 """
 
 from nose.tools import with_setup
-
 from tests import Session, begin_func, rollback_func
 
 
@@ -14,7 +13,7 @@ def test_state_unique_name():
     """
     from tests import assert_raises
     import sqlalchemy.exc
-    from occams.datastore import models
+    from occams_datastore import models
 
     Session.add(models.State(name=u'pending-entry', title=u'Pending Entry'))
     Session.flush()
@@ -30,12 +29,12 @@ def test_state_entity_relationship():
     """
     from datetime import date
     from tests import assert_is_none, assert_is_not_none, assert_equals
-    from occams.datastore import models
+    from occams_datastore import models
 
     schema = models.Schema(name=u'Foo', title=u'Foo',
                            publish_date=date(2000, 1, 1))
     pending_entry = models.State(name=u'pending-entry', title=u'Pending Entry')
-    entity = models.Entity(schema=schema, name='foo', title=u'Foo')
+    entity = models.Entity(schema=schema)
     Session.add_all([pending_entry, entity])
     Session.flush()
 
@@ -55,11 +54,11 @@ def test_entity_add_unpublished_schema():
     It should not allow adding entities related to unpublished schemata
     """
     from tests import assert_raises
-    from occams.datastore import models
-    from occams.datastore.exc import InvalidEntitySchemaError
+    from occams_datastore import models
+    from occams_datastore.exc import InvalidEntitySchemaError
 
     schema = models.Schema(name=u'Foo', title=u'')
-    entity = models.Entity(schema=schema, name=u'Foo', title=u'')
+    entity = models.Entity(schema=schema)
     Session.add(entity)
     with assert_raises(InvalidEntitySchemaError):
         Session.flush()
@@ -72,12 +71,12 @@ def test_entity_default_collect_date():
     """
     from datetime import date
     from tests import assert_equals
-    from occams.datastore import models
+    from occams_datastore import models
     # Make sure the system can auto-assign a collect date for the entry
 
     schema = models.Schema(name=u'Foo', title=u'',
                            publish_date=date(2000, 1, 1))
-    entity = models.Entity(schema=schema, name=u'Foo', title=u'')
+    entity = models.Entity(schema=schema)
     Session.add(entity)
     Session.flush()
     assert_equals(date.today(), entity.collect_date)
@@ -86,8 +85,6 @@ def test_entity_default_collect_date():
     collect_date = date(2010, 9, 1)
     entity = models.Entity(
         schema=schema,
-        name=u'Entry 2',
-        title=u'Entry 2',
         collect_date=collect_date)
     Session.add(entity)
     Session.flush()
@@ -103,12 +100,10 @@ def test_entity_types():
     from decimal import Decimal
 
     data = [
-        ('integer', 5, 8, [1, 2, 3]),
-        ('decimal',
+        ('number',
             Decimal('16.4'),
             Decimal('12.3'),
             [Decimal('1.5'), Decimal('12.1'), Decimal('3.0')]),
-        ('boolean', True, False, [True, False]),
         ('string', u'foo', u'bar', [u'foo', u'bar', u'baz']),
         ('text', u'foo\nbar', u'foo\nbario',
             [u'par\n1', u'par\n2', u'par\n3']),
@@ -132,32 +127,35 @@ def check_entity_types(type, simple, update, collection):
     """
     from datetime import date
     from tests import assert_is_none, assert_equals, assert_items_equal
-    from occams.datastore import models
+    from occams_datastore import models
 
-    schema = models.Schema(name=u'Foo', title=u'',
-                           publish_date=date(2000, 1, 1))
-    section = models.Section(
-        schema=schema, name='section', title=u'Section 1', order=0)
-    entity = models.Entity(schema=schema, name=u'Foo', title=u'')
+    schema = models.Schema(
+        name=u'Foo', title=u'',
+        publish_date=date(2000, 1, 1),
+        attributes={
+            's1': models.Attribute(
+                name='s1', title=u'Section 1', type='section', order=1)})
+    entity = models.Entity(schema=schema)
     Session.add(entity)
     Session.flush()
 
-    order = 0
+    order = 1
 
     ModelClass = models.nameModelMap[type]
 
     # Do simple values
     simpleName = type + 'simple'
 
-    schema.attributes[simpleName] = models.Attribute(
+    # Try null first
+    schema.attributes['s1'].attributes[simpleName] = models.Attribute(
         name=simpleName,
-        section=section,
         title=u'', type=type, is_required=False, order=order)
     assert_is_none(entity[simpleName])
     entity[simpleName] = None
     Session.flush()
     assert_is_none(entity[simpleName])
 
+    # Update value
     entity[simpleName] = simple
     Session.flush()
     assert_equals(simple, entity[simpleName])
@@ -169,7 +167,7 @@ def check_entity_types(type, simple, update, collection):
     valueObject = valueQuery.one()
     assert_equals(2, valueObject.revision)
 
-    # Try updating
+    # Update again
     entity[simpleName] = update
     Session.flush()
     assert_equals(update, entity[simpleName])
@@ -182,10 +180,9 @@ def check_entity_types(type, simple, update, collection):
 
     # Now try collections
     collectionName = type + 'collection'
-    schema.attributes[collectionName] = models.Attribute(
+    schema.attributes['s1'].attributes[collectionName] = models.Attribute(
         name=collectionName,
         schema=schema,
-        section=section,
         title=u'', type=type, is_collection=True, order=order)
     entity[collectionName] = collection
     Session.flush()
@@ -215,19 +212,19 @@ def test_entity_force_date():
     """
     from datetime import date, datetime
     from tests import assert_equals, assert_is_instance
-    from occams.datastore import models
+    from occams_datastore import models
 
     schema = models.Schema(name=u'Foo', title=u'',
                            publish_date=date(2000, 1, 1))
-    section = models.Section(
-        schema=schema, name='section', title=u'Section 1', order=0)
-    entity = models.Entity(schema=schema, name=u'Foo', title=u'')
+    s1 = models.Attribute(
+        schema=schema, name='s1', title=u'Section 1', type='section', order=0)
+    entity = models.Entity(schema=schema)
 
     # Do simple values
     simpleName = 'choicesimple'
     schema.attributes[simpleName] = models.Attribute(
         schema=schema,
-        section=section,
+        parent_attribute=s1,
         title=u'', type='date', is_required=False, order=1)
 
     now = datetime.now()
@@ -246,13 +243,13 @@ def test_entity_choices():
     """
     from datetime import date
     from tests import assert_is_none, assert_equals, assert_items_equal
-    from occams.datastore import models
+    from occams_datastore import models
 
     schema = models.Schema(name=u'Foo', title=u'',
                            publish_date=date(2000, 1, 1))
-    section = models.Section(
-        schema=schema, name='section', title=u'Section 1', order=0)
-    entity = models.Entity(schema=schema, name=u'Foo', title=u'')
+    s1 = models.Attribute(
+        schema=schema, name='s1', title=u'Section 1', type='section', order=0)
+    entity = models.Entity(schema=schema)
     Session.add(entity)
     Session.flush()
 
@@ -260,7 +257,7 @@ def test_entity_choices():
     simpleName = 'choicesimple'
     schema.attributes[simpleName] = models.Attribute(
         schema=schema,
-        section=section,
+        parent_attribute=s1,
         name=simpleName,
         title=u'', type='choice', is_required=False, order=1,
         choices={
@@ -282,7 +279,7 @@ def test_entity_choices():
     collectionName = 'choicecollection'
     schema.attributes[collectionName] = models.Attribute(
         schema=schema,
-        section=section,
+        parent_attribute=s1,
         name=collectionName,
         title=u'', type='choice', is_collection=True, order=2,
         choices={
@@ -299,33 +296,41 @@ def test_entity_choices():
 @with_setup(begin_func, rollback_func)
 def test_entity_blob_type():
     """
-    It should support files storage
+    It should be able to keep track of file uploads (will not be storing in DB)
     """
 
-    from occams.datastore import models
+    from occams_datastore import models
     from datetime import date
-    import os
-    from tests import assert_equals
+    from tests import assert_equals, assert_is_none
 
     schema = models.Schema(name='HasBlob', title=u'',
                            publish_date=date(2000, 1, 1))
-    section = models.Section(
-        schema=schema, name='section', title=u'Section 1', order=0)
+    s1 = models.Attribute(
+        schema=schema, name='s1', title=u'Section 1', type='section', order=0)
     schema.attributes['theblob'] = models.Attribute(
-        section=section, name=u'theblob', title=u'', type='blob', order=0)
-    entity = models.Entity(schema=schema, name='blobish', title=u'')
-    contents = os.urandom(1000)
-    entity['theblob'] = contents
+        parent_attribute=s1,
+        name=u'theblob', title=u'', type='blob', order=0)
+
+    entity = models.Entity(schema=schema)
     Session.add(entity)
     Session.flush()
     entity_id = entity.id
-    # remove all isntances from the Session so we can see if they are
-    # properly fetched
-    Session.expunge_all()
 
+    # Add value
+    entity['theblob'] = models.BlobInfo(file_name=u'foo', path='bar/baz.gif')
+    Session.add(entity)
+    Session.flush()
     entity = Session.query(models.Entity).get(entity_id)
-    assert_equals(contents, entity['theblob'])
-    assert_equals(1, Session.query(models.ValueBlob).count())
+    blob = entity['theblob']
+    assert_equals(u'foo', blob.file_name)
+    assert_equals('bar/baz.gif', blob.path)
+
+    # Clear value
+    entity['theblob'] = None
+    Session.flush()
+    entity = Session.query(models.Entity).get(entity_id)
+    blob = entity['theblob']
+    assert_is_none(blob)
 
 
 def test_value_min_constraint():
@@ -338,8 +343,7 @@ def test_value_min_constraint():
 
     data = [
         ('string', 5, u'foo', u'foooo', u'foobario'),
-        ('integer', 5, 2, 5, 10),
-        ('decimal', 5, Decimal('2.0'), Decimal('5.0'), Decimal('10.0')),
+        ('number', 5, Decimal('2.0'), Decimal('5.0'), Decimal('10.0')),
         ('date',
             time.mktime(date(2009, 5, 6).timetuple()),
             date(2001, 2, 8), date(2009, 5, 6),
@@ -361,19 +365,19 @@ def check_value_min_constraint(type_, limit, below, equal, over):
     """
     from datetime import date
     from tests import assert_raises
-    from occams.datastore import models
-    from occams.datastore.exc import ConstraintError
+    from occams_datastore import models
+    from occams_datastore.exc import ConstraintError
 
     schema = models.Schema(
         name=u'Foo', title=u'', publish_date=date(2000, 1, 1))
-    section = models.Section(
-        schema=schema, name='section', title=u'Section 1', order=0)
-    entity = models.Entity(schema=schema, name=u'Foo', title=u'')
+    s1 = models.Attribute(
+        schema=schema, name='s1', title=u'Section 1', type='section', order=0)
+    entity = models.Entity(schema=schema)
     Session.add(entity)
     Session.flush()
 
     models.Attribute(
-        schema=schema, section=section,
+        schema=schema, parent_attribute=s1,
         name=type_, title=u'',
         type=type_, is_required=False, value_min=limit, order=0)
 
@@ -385,7 +389,7 @@ def check_value_min_constraint(type_, limit, below, equal, over):
     entity[type_] = over
 
     models.Attribute(
-        schema=schema, section=section,
+        schema=schema, parent_attribute=s1,
         name=u'boolean', title=u'', type=u'boolean', value_min=10, order=1)
 
     with assert_raises(NotImplementedError):
@@ -403,8 +407,7 @@ def test_value_max_constraint():
     data = [
         # (type, limit, below, equal, over)
         ('string', 5, u'foo', u'foooo', u'foobario'),
-        ('integer', 5, 2, 5, 10),
-        ('decimal', 5, Decimal('2.0'), Decimal('5.0'), Decimal('10.0')),
+        ('number', 5, Decimal('2.0'), Decimal('5.0'), Decimal('10.0')),
         ('date',
             time.mktime(date(2009, 5, 6).timetuple()),
             date(2001, 2, 8), date(2009, 5, 6),
@@ -426,19 +429,19 @@ def check_value_max_constraint(type_, limit, below, equal, over):
     """
     from datetime import date
     from tests import assert_raises
-    from occams.datastore import models
-    from occams.datastore.exc import ConstraintError
+    from occams_datastore import models
+    from occams_datastore.exc import ConstraintError
 
     schema = models.Schema(name=u'Foo', title=u'',
                            publish_date=date(2000, 1, 1))
-    section = models.Section(
-        schema=schema, name='section', title=u'Section 1', order=0)
-    entity = models.Entity(schema=schema, name=u'Foo', title=u'')
+    s1 = models.Attribute(
+        schema=schema, name='s1', title=u'Section 1', type='section', order=0)
+    entity = models.Entity(schema=schema)
     Session.add(entity)
     Session.flush()
 
     models.Attribute(
-        schema=schema, section=section,
+        schema=schema, parent_attribute=s1,
         name=type_, title=u'', type=type_, is_required=False,
         value_max=limit, order=0)
 
@@ -450,7 +453,7 @@ def check_value_max_constraint(type_, limit, below, equal, over):
         entity[type_] = over
 
     models.Attribute(
-        schema=schema, section=section,
+        schema=schema, parent_attribute=s1,
         name=u'boolean', title=u'', type=u'boolean', value_max=10, order=1)
     with assert_raises(NotImplementedError):
         entity['boolean'] = True
@@ -463,27 +466,27 @@ def test_validator_constraint():
     """
     from datetime import date
     from tests import assert_raises, assert_equals
-    from occams.datastore import models
-    from occams.datastore.exc import ConstraintError
+    from occams_datastore import models
+    from occams_datastore.exc import ConstraintError
 
     schema = models.Schema(name=u'Foo', title=u'',
                            publish_date=date(2000, 1, 1))
-    section = models.Section(
-        schema=schema, name='section', title=u'Section 1', order=0)
+    s1 = models.Attribute(
+        schema=schema, name='s1', title=u'Section 1', type='section', order=0)
     models.Attribute(
         schema=schema,
-        section=section,
+        parent_attribute=s1,
         name=u'test',
         title=u'',
         type=u'string',
         is_required=False,
         # Valid US phone number
-        validator=r'\d{3}-\d{3}-\d{4}',
+        pattern=r'\d{3}-\d{3}-\d{4}',
         order=0)
     Session.add(schema)
     Session.flush()
 
-    entity = models.Entity(schema=schema, name=u'Foo', title=u'')
+    entity = models.Entity(schema=schema)
     Session.add(entity)
 
     entity['test'] = None
@@ -503,15 +506,15 @@ def test_choice_constraint():
     """
     from datetime import date
     from tests import assert_raises, assert_equals
-    from occams.datastore import models
-    from occams.datastore.exc import ConstraintError
+    from occams_datastore import models
+    from occams_datastore.exc import ConstraintError
 
     schema = models.Schema(name=u'Foo', title=u'',
                            publish_date=date(2000, 1, 1))
-    section = models.Section(
-        schema=schema, name='section', title=u'Section 1', order=0)
+    s1 = models.Attribute(
+        schema=schema, name='s1', title=u'Section 1', type='section', order=0)
     models.Attribute(
-        schema=schema, section=section,
+        schema=schema, parent_attribute=s1,
         name=u'test', title=u'', type=u'choice', is_required=False, order=0,
         choices={
             '001': models.Choice(name=u'001', title=u'Foo', order=0),
@@ -520,7 +523,7 @@ def test_choice_constraint():
     Session.add(schema)
     Session.flush()
 
-    entity = models.Entity(schema=schema, name=u'FooEntry', title=u'')
+    entity = models.Entity(schema=schema)
     Session.add(entity)
 
     entity['test'] = None
@@ -538,154 +541,3 @@ def test_choice_constraint():
 
     with assert_raises(ConstraintError):
         entity['test'] = u'999'
-
-
-def test_has_entities():
-    """
-    It should allow any table to be associated with entities (yuk!)
-    """
-    from datetime import date
-    from tests import (
-        assert_is_not_none, assert_equals, assert_items_equal)
-    from sqlalchemy import create_engine, Column, Integer, String
-    from sqlalchemy.orm import scoped_session, sessionmaker
-    from occams.datastore import models
-    from occams.datastore.models.events import register
-
-    Session = scoped_session(sessionmaker(
-        bind=create_engine('sqlite://'),
-        info={'user': 'foo@foo.com'}))
-    register(Session)
-
-    class SampleClass1(models.DataStoreModel, models.HasEntities):
-        __tablename__ = 'sampleclass1'
-
-        id = Column(Integer, primary_key=True)
-
-        name = Column(String, nullable=False)
-
-    class SampleClass2(models.DataStoreModel, models.HasEntities):
-        __tablename__ = 'sampleclass2'
-
-        id = Column(Integer, primary_key=True)
-
-        name = Column(String, nullable=False)
-
-    # Register a default user
-    models.DataStoreModel.metadata.create_all(Session.bind)
-    Session.add(models.User(key='foo@foo.com'))
-    Session.flush()
-
-    # Sample schemata
-    schemaA = models.Schema(name=u'A', title=u'',
-                            publish_date=date(2000, 1, 1))
-    schemaB = models.Schema(name=u'B', title=u'',
-                            publish_date=date(2000, 1, 1))
-
-    Session.add_all([
-        SampleClass1(
-            name='Foo',
-            entities=[
-                models.Entity(schema=schemaA, name='foo', title=u''),
-                models.Entity(schema=schemaA, name='bar', title=u''),
-                models.Entity(schema=schemaB, name='baz', title=u'')]),
-        SampleClass2(
-            name='Bar',
-            entities=[
-                models.Entity(schema=schemaA, name='caz', title=u''),
-                models.Entity(schema=schemaB, name='raz', title=u'')])])
-
-    Session.flush()
-
-    # Verify that the data was correctly associated
-    sc1 = Session.query(SampleClass1).filter_by(name='Foo').one()
-    assert_equals(3, len(sc1.entities))
-    assert_items_equal(['foo', 'bar', 'baz'], [e.name for e in sc1.entities])
-
-    # Add one more to verify collection_class is of type "set"
-    sc1.entities.add(models.Entity(schema=schemaB, name='car', title=u''),)
-    Session.flush()
-    assert_items_equal(['foo', 'bar', 'baz', 'car'],
-                       [e.name for e in sc1.entities])
-
-    sc2 = Session.query(SampleClass2).filter_by(name='Bar').one()
-    assert_equals(2, len(sc2.entities))
-    assert_items_equal(['raz', 'caz'], [e.name for e in sc2.entities])
-
-    # I want a SampleClass1 that contains specific schemata
-    query = (
-        Session.query(SampleClass1)
-        .filter(SampleClass1.name == 'Foo')
-        .filter(SampleClass1.entities.any(models.Schema.name == u'A')))
-
-    sc1 = query.one()
-    assert_is_not_none(sc1)
-
-    # Now suppose that we only have an fooEntity and want to know its parents
-    # Example: get all the SomeClassX references of an fooEntity
-
-    fooEntity = Session.query(models.Entity).filter_by(name=u'foo').one()
-
-    sc1list = [c.sampleclass1_parent.name
-               for c in fooEntity.contexts if c.sampleclass1_parent]
-    assert_items_equal(['Foo'], sc1list)
-
-    # Querying them directly
-    # There is no clean way of querying for an fooEntity by context in
-    # a generic association setting, as it would have to know about
-    # all ``HasEntities`` classes that reference it
-    sc1EntitiesQuery = (
-        Session.query(models.Entity)
-        .join(models.Entity.contexts)
-        .filter(models.Context.external == u'sampleclass1')
-        .join(SampleClass1, (SampleClass1.id == models.Context.key))
-        .filter(SampleClass1.name == 'Foo'))
-
-    entitylist = [e.name for e in sc1EntitiesQuery]
-    assert_items_equal(['foo', 'bar', 'car', 'baz'], entitylist)
-
-    # Now try adding the fooEntity to an additional context
-    Session.add(SampleClass1(name='Jar', entities=[fooEntity]))
-    Session.flush()
-
-    sc1list = [c.sampleclass1_parent.name
-               for c in fooEntity.contexts if c.sampleclass1_parent]
-    assert_items_equal(['Foo', 'Jar'], sc1list)
-
-    # But what if you want to query them directly? Same as above, query
-    # for a SampleClass that contains the specific schemata you want
-    hasFooQuery = (
-        Session.query(SampleClass1)
-        .filter(SampleClass1.entities.any(models.Entity.name == u'foo')))
-
-    sc1list = [i.name for i in hasFooQuery]
-    assert_items_equal(['Foo', 'Jar'], sc1list)
-
-    # Now try deleting a context object
-    sc1 = Session.query(SampleClass1).filter_by(name=u'Foo').one()
-    Session.delete(sc1)
-    Session.flush()
-
-    assert_equals(0, sc1EntitiesQuery.count())
-
-    # Make sure we didn't accidentally remote the data from 'Jar'
-    sc1list = [i.name for i in hasFooQuery]
-    assert_items_equal(['Jar'], sc1list)
-
-    # Double check just in case
-    count = (
-        Session.query(models.Context)
-        .filter_by(external='sampleclass1')
-        .count())
-    assert_equals(count, 1)
-
-    count = (
-        Session.query(models.Entity)
-        .filter_by(name=u'foo')
-        .count())
-    assert_equals(1, count)
-
-    # TODO Currently there is absolutely no way to remove orphans. The
-    # application must do this manually. This is because assocation proxies
-    # cannot delete orphans and the way the relationships are setup, it
-    # does not allow this..

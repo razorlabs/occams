@@ -9,7 +9,7 @@ HERE = os.path.abspath(os.path.dirname(__file__))
 REQUIRES = [
     'alembic',
     'six',
-    'SQLAlchemy']
+    'SQLAlchemy>=1.0.4,<1.0.99']
 
 EXTRAS = {
     'postgresql': ['psycopg2'],
@@ -53,7 +53,7 @@ def get_version():
 
 
 setup(
-    name='occams.datastore',
+    name='occams_datastore',
     version=get_version(),
     description='Provides storage solution for sparse data.',
     classifiers=[
@@ -71,14 +71,17 @@ setup(
     keywords='BIT OCCAMS datastore database eav sqlalchemy clinical',
     author='BIT Core Development Team',
     author_email='bitcore@ucsd.edu',
-    url='https://bitbucket.org/ucsdbitcore/occams.datastore.git',
+    url='https://bitbucket.org/ucsdbitcore/occams_datastore.git',
     license='GPL',
-    packages=find_packages('src', exclude=['ez_setup']),
-    package_dir={'': 'src'},
-    namespace_packages=['occams'],
+    packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
     install_requires=REQUIRES,
     extras_require=EXTRAS,
     tests_require=EXTRAS['test'],
-    test_suite='nose.collector')
+    test_suite='nose.collector',
+    entry_points="""\
+    [console_scripts]
+    od_initdb = occams_datastore.scripts.initdb:main
+    """
+)

@@ -6,7 +6,6 @@ try:
     from collections import OrderedDict
 except ImportError:  # pragma: nocover
     from ordereddict import OrderedDict
-from operator import or_
 
 from six import itervalues, iteritems
 from sqlalchemy import orm, cast, null, literal, Integer, case, Unicode
@@ -78,6 +77,9 @@ def build_report(session,
     attributes = None if attributes is None else set(attributes)
 
     for column in itervalues(columns):
+        if column.type == 'section':  # Sections are not used in reports
+            continue
+
         if attributes is not None and column.name not in attributes:
             continue
 
@@ -215,7 +217,8 @@ def build_columns(session, schema_name, ids=None, expand_collections=False):
         .join(models.Attribute.schema)
         .filter(models.Schema.name == schema_name)
         .filter(models.Schema.publish_date != null())
-        .filter(models.Schema.retract_date == null()))
+        .filter(models.Schema.retract_date == null())
+        .filter(models.Attribute.type != u'section'))
 
     if ids:
         query = query.filter(models.Schema.id.in_(ids))
@@ -246,7 +249,7 @@ def build_columns(session, schema_name, ids=None, expand_collections=False):
     for attribute in query:
         if (expand_collections
                 and attribute.is_collection
-                and attribute.choices):
+                and attribute.type == 'choice'):
             for choice in itervalues(attribute.choices):
                 name = attribute.name + '_' + choice.name
                 plan.setdefault(name, []).append(attribute)
@@ -286,12 +289,12 @@ class DataColumn(object):
         self.name = name
         self.type = types.pop()
         self.is_collection = collections.pop()
-        self.is_private = reduce(or_, [a.is_private for a in attributes])
+        self.is_private = any(a.is_private for a in attributes)
         self.attributes = tuple(attributes)
         self.choice = choice
         if choice is not None:
             self.choices = {}
         else:
-            self.choices = dict([(c.name, c.title)
+            self.choices = dict((c.name, c.title)
                                 for a in attributes
-                                for c in itervalues(a.choices)])
+                                for c in itervalues(a.choices))
