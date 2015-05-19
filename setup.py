@@ -10,32 +10,13 @@ CHANGES = open(os.path.join(HERE, 'CHANGES.rst')).read()
 
 REQUIRES = [
     'alembic',                          # Database table upgrades
-    'babel',                            # i18n
-    'cssmin',                           # CSS asset compression
-    'jsmin',                            # JS asset compression
-    'lingua',                           # i18n
-    'pyramid>=1.5',                     # Framework
-    'pyramid_chameleon',                # Templating
-    'pyramid_tm',                       # Centralized transations
-    'pyramid_redis_sessions==1.0a2',    # HTTP session with redis backend
-    'pyramid_rewrite',                  # Allows urls to end in "/"
-    'pyramid_webassets',                # Asset management (ala grunt)
-    'pyramid_who',                      # User authentication
     'six',                              # Py 2 & 3 compatibilty
-    'SQLAlchemy>=0.9.0',                # Database ORM
-    'wtforms',
-    'zope.sqlalchemy',                  # Connects sqlalchemy to pyramid_tm
 
-    'occams.datastore'
+    'occams',
 ]
 
 EXTRAS = {
-    'ldap': ['python3-ldap', 'who_ldap'],
-    'sqlite': [],
-    'postgresql': ['psycopg2', 'psycogreen'],
-    'gunicorn': ['gunicorn'],
     'test': [
-        'pyramid_debugtoolbar',
         'nose',
         'nose-testconfig',
         'coverage',
@@ -95,14 +76,13 @@ class _custom_develop(_develop):
 
 def _post_develop():
     from subprocess import call
-    call(['npm', 'install'], cwd=HERE)
-    call(['./node_modules/.bin/bower', 'install'], cwd=HERE)
+    call(['bower', 'install'], cwd=HERE)
 
 
 setup(
-    name='occams.accounts',
+    name='occams_accounts',
     version=get_version(),
-    description='occams.accounts',
+    description='occams_accounts',
     long_description=README + '\n\n' + CHANGES,
     classifiers=[
         "Programming Language :: Python",
@@ -112,11 +92,9 @@ setup(
     ],
     author='UCSD BIT Core Team',
     author_email='bitcore@ucsd.edu',
-    url='https://bitbutcket.org/ucsdbitcore/occams.accounts',
+    url='https://bitbutcket.org/ucsdbitcore/occams_accounts',
     keywords='web wsgi bfg pylons pyramid',
-    packages=find_packages('src', exclude=['ez_setup']),
-    package_dir={'': 'src'},
-    namespace_packages=['occams'],
+    packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
     install_requires=REQUIRES,
@@ -124,8 +102,4 @@ setup(
     tests_require=EXTRAS['test'],
     test_suite='nose.collector',
     cmdclass={'develop': _custom_develop},
-    entry_points="""\
-    [paste.app_factory]
-    main = occams.accounts:main
-    """,
 )

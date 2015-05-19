@@ -4,7 +4,10 @@ from pyramid.view import view_config
 import wtforms
 import wtforms.fields.html5
 
-from .. import _, Session, models
+from occams import Session
+from occams_datastore import models as datastore
+
+from .. import _
 
 
 class LoginForm(wtforms.Form):
@@ -22,7 +25,7 @@ class LoginForm(wtforms.Form):
             wtforms.validators.Length(max=1024)])
 
 
-@view_config(route_name='login', renderer='../templates/login.pt')
+@view_config(route_name='accounts.login', renderer='../templates/login.pt')
 def login(request):
 
     form = LoginForm(request.POST)
@@ -41,20 +44,21 @@ def login(request):
             request.session.flash(_(u'Invalid credentials'), 'danger')
         else:
             user = (
-                Session.query(models.User)
+                Session.query(datastore.User)
                 .filter_by(key=form.login.data)
                 .first())
             if not user:
-                user = models.User(key=form.login.data)
+                user = datastore.User(key=form.login.data)
                 Session.add(user)
 
             referrer = request.GET.get('referrer')
-            if not referrer or request.route_path('login') in referrer:
-                referrer = request.route_path('account', account=user.key)
+            if not referrer or request.route_path('accounts.login') in referrer:
+                # TODO: Maybe send the user to their user dashboard instead?
+                referrer = request.route_path('occams.main')
 
             return HTTPFound(location=referrer, headers=headers)
 
     # forcefully forget any credentials
-    request.response_headerlist = forget(request)
+    request.response.headerlist.extend(forget(request))
 
     return {'form': form}

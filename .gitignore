@@ -17,7 +17,6 @@ Icon?
 .Trashes
 
 ##### Linux Files
-.*
 !.gitignore
 *~
 .directory
@@ -88,12 +87,11 @@ parts
 sdist
 var
 develop.cfg
-development.ini
-production.ini
 res
 refs
 gen
 webassets-external
+.webassets-cache
 
 ##### Translations
 *.mo
