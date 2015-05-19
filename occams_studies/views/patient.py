@@ -569,6 +569,7 @@ def form(context, request):
             form,
             entity=context,
             schema=context.schema,
+            disabled=not request.has_permission('edit'),
             cancel_url=cancel_url,
             attr={
                 'method': 'POST',

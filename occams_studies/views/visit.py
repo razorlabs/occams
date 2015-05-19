@@ -340,6 +340,7 @@ def form(context, request):
             form,
             entity=context,
             schema=context.schema,
+            disabled=not request.has_permission('edit'),
             cancel_url=request.current_route_path(_route_name='studies.visit'),
             attr={
                 'method': 'POST',

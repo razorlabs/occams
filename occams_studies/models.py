@@ -1110,7 +1110,7 @@ def _entity_acl(self):
     return [
         (Allow, groups.administrator(), ALL_PERMISSIONS),
         (Allow, groups.manager(), ('view', 'edit', 'delete', 'transition')),
-        (Allow, groups.reviewer(site), ('view', 'edit', 'delete', 'transition')),
+        (Allow, groups.reviewer(site), ('view', 'transition')),
         (Allow, groups.enterer(site), ('view', 'edit', 'delete')),
         (Allow, groups.consumer(site), 'view')
     ]

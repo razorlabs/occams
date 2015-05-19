@@ -600,6 +600,11 @@ class TestPermissionsEnrollmentTermination(FunctionalFixture):
                 title=u'pending-entry'
             ))
 
+            Session.add(studies.State(
+                name=u'pending-review',
+                title=u'pending-review'
+            ))
+
             Session.add(studies.Enrollment(
                 patient=patient,
                 study=study,
@@ -620,7 +625,7 @@ class TestPermissionsEnrollmentTermination(FunctionalFixture):
         data = {
             'ofmetadata_-collect_date': '2015-01-01',
             'ofmetadata_-version': '2015-01-01',
-            'ofmetadata_-state': 'pending-entry',
+            'ofworkflow_-state': 'pending-review',
         }
 
         response = self.app.post(
