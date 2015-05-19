@@ -1,20 +1,4 @@
-from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound
-from pyramid.view import \
-    forbidden_view_config, notfound_view_config, view_config
-
-
-@notfound_view_config(append_slash=True)
-def notfound(request):
-    """
-    Tries appending a slash at the end of the URL before giving up
-
-    Note that this does not work for POST requests as they will
-    be turned into GET requests:
-    http://docs.pylonsproject.org/projects/pyramid/en/latest/narr/urldispatch.html#redirecting-to-slash-appended-routes
-    This is a small price to pay instead of using pyramid_rewrite
-    """
-
-    return HTTPNotFound()
+from pyramid.view import forbidden_view_config, view_config
 
 
 @forbidden_view_config(renderer='../templates/error/forbidden.pt')
@@ -27,12 +11,18 @@ def forbidden(request):
     does not have sufficient prilidges or is not logged in. If they user
     is not logged in we need to continue the Forbidden exception so it gets
     picked up by the single-sign-on mechanism (hopefully)
+
+    This distinction between 401 and 403 is related to the below ticket:
+    Issue 436 of Pylons/pyramid -  Authorisation incorrectly implements
+    403 Forbidden against RFC 2616
     """
 
     is_logged_in = bool(request.authenticated_userid)
 
     if not is_logged_in:
-        return HTTPForbidden()
+        request.response.status_code = 401
+    else:
+        request.response.status_code = 403
 
     return {}
 
@@ -48,4 +38,8 @@ def uncaught(exc, request):
 
     if request.registry.settings.get('debugtoolbar.enabled'):
         raise
+
+    # explicity render template as 500, otherwise 200 was being passed.
+    request.response.status_code = 500
+
     return {}

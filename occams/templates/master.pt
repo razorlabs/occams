@@ -49,7 +49,7 @@
               <span class="icon-bar"></span>
             </button>
             <a class="navbar-brand"
-                href="${request.route_path('occams')}">OCCAMS</a>
+                href="${request.route_path('occams.main')}">OCCAMS</a>
           </div> <!--/.navbar-header -->
 
           <div class="collapse navbar-collapse">
@@ -71,22 +71,15 @@
                   title="Services"
                   ><span class="glyphicon glyphicon-th"></span><span class="caret"></span></a>
                 <ul class="dropdown-menu" role="menu" aria-labelledby="Apps Menu">
-                  <tal:suites repeat="suite request.apps">
-                    <li role="presentation" class="dropdown-header">
-                      ${suite['title']}
+                  <tal:apps repeat="app request.apps">
+                    <li role="presentation">
+                      <a href="${request.route_path(app['route'])}" role="menuitem">${app['title']}</a>
                     </li>
-                    <tal:apps repeat="app suite['apps']">
-                      <li role="presentation">
-                        <a href="${app['url']}" role="menuitem">${app['title']}</a>
-                      </li>
-                    </tal:apps>
-                    <li role="presentation" class="divider"
-                        tal:condition="not:repeat.suite.end"></li>
-                  </tal:suites>
+                  </tal:apps>
                 </ul>
               </li>
               <li>
-                <a href="${request.route_path('logout')}"
+                <a href="${request.route_path('accounts.logout')}"
                     rel="tooltip"
                     data-placement="bottom"
                     data-container="body"
@@ -118,7 +111,7 @@
       <div class="container">
         <p class="text-muted credit">
           <span i18n:translate="">Developed by the</span>
-          <a href="https://bitcore.ucsd.edu" i18n:translate="">Young Group at UCSD</a>.
+          <a href="https://bitcore.ucsd.edu" i18n:translate="">YoungLabs</a>.
         </p>
       </div>
     </footer>

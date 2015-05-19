@@ -2,10 +2,10 @@ from __future__ import unicode_literals
 import logging
 import pkg_resources
 
+import six
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.config import Configurator
 from pyramid.i18n import TranslationStringFactory
-from pyramid.path import DottedNameResolver
 from pyramid.settings import aslist
 from pyramid_who.whov2 import WhoV2AuthenticationPolicy
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -45,11 +45,13 @@ def main(global_config, **settings):
     This function returns a Pyramid WSGI application.
     """
 
+    # Applies setting defaults if not specified
     for key, value in settings_defaults.items():
         settings.setdefault(key, value)
 
-    settings['occams.apps'] = set(aslist(settings.get('occams.apps') or ''))
-    settings['occams.apps'].update(['occams_datastore', 'occams_accounts'])
+    # Make sure we at least have te
+    apps = aslist(settings.get('occams.apps') or '')
+    settings['occams.apps'] = dict.fromkeys(apps)
 
     config = Configurator(
         settings=settings,
@@ -62,31 +64,29 @@ def main(global_config, **settings):
 
     # Built-in plugins
     config.include('pyramid_chameleon')
+    config.include('pyramid_redis')
     config.include('pyramid_redis_sessions')
+    config.include('pyramid_rewrite')
+    config.add_rewrite_rule(r'/(?P<path>.*)/', r'/%(path)s')
     config.include('pyramid_tm')
     config.include('pyramid_webassets')
     config.commit()
 
     # Main includes
     config.include('.assets')
-    config.include('.links')
     config.include('.models')
     config.include('.routes')
     config.include('.security')
-    config.commit()
     config.scan()
+    config.commit()
 
     # Appliation includes
-    resolver = DottedNameResolver()
-    for name in settings['occams.apps']:
-        app = resolver.maybe_resolve(name)
-        prefix = getattr(app, '__prefix__', None)
-        if prefix:
-            log.debug('Mounting %s at %s' % (name, prefix))
-            config.include(app, route_prefix=prefix)
-        else:
-            log.debug('Mounting %s at /' % name)
-            config.include(app)
+
+    for name in six.iterkeys(settings['occams.apps']):
+        config.include(name)
+    config.commit()
+
+    config.add_request_method(_apps, name=str('apps'), reify=True)
     config.commit()
 
     app = config.make_wsgi_app()
@@ -94,3 +94,10 @@ def main(global_config, **settings):
     log.info('Ready')
 
     return app
+
+
+def _apps(request):
+    all_apps = six.itervalues(request.registry.settings['occams.apps'])
+    filtered_apps = iter(a for a in all_apps if a)
+    sorted_apps = sorted(filtered_apps, key=lambda f: f['title'])
+    return sorted_apps

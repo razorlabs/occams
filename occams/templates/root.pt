@@ -1,5 +1,13 @@
 <html metal:use-macro="load: master.pt">
   <metal:content-slot fill-slot="content-slot">
-    <h1>Hello OCCAMS</h1>
+
+  <div class="list-group">
+
+  <a tal:repeat="app request.apps" href="${request.route_path(app['route'])}" class="list-group-item">
+    <h4 class="list-group-item-heading">${app['title']}</h4>
+    <p tal:define="description app['description']|nothing" tal:condition="description" lass="list-group-item-text">${description}</p>
+  </a>
+  </div>
+
   </metal:content-slot>
 </html>
