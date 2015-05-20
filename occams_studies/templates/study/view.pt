@@ -241,7 +241,8 @@
               <form class="form-horizontal">
                 <div class="modal-header">
                   <div class="btn-toolbar pull-right">
-                    <div class="btn-group">
+                    <!--! Do not show controls if the user is not allowed to edit the study -->
+                    <div class="btn-group" tal:condition="request.has_permission('edit')">
                       <button class="btn btn-default" data-bind="click: $root.startEditCycle"><span class="fa fa-edit"></span></button>
                       <button class="btn btn-default" data-bind="click: $root.startDeleteCycle"><span class="fa fa-trash-o"></span></button>
                     </div>
@@ -398,7 +399,8 @@
               <form class="form-horizontal">
                 <div class="modal-header">
                   <div class="btn-toolbar pull-right">
-                    <div class="btn-group">
+                    <!--! Do not show controls if the user is not allowed to edit the study -->
+                    <div class="btn-group" tal:condition="request.has_permission('edit')">
                       <button class="btn btn-default" data-bind="click: $root.startEditForm"><span class="fa fa-edit"></span></button>
                       <button class="btn btn-default" data-bind="click: $root.startDeleteForm"><span class="fa fa-trash-o"></span></button>
                     </div>
