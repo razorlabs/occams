@@ -4,13 +4,13 @@
   /**
    * Check if the browser supports (and can actually validate) dates
    */
-  var supportsDateInput = (function() {
+  window.supportsDateInput = +function() {
     var input = document.createElement('input');
     input.setAttribute('type','date');
     var notADateValue = 'not-a-date';
     input.setAttribute('value', notADateValue);
     return !(input.value === notADateValue);
-  })();
+  }();
 
   // Apply datetime widget to non-ko-bound elements
   $(function(){
