@@ -9,23 +9,27 @@
     </div>
     <div class="btn-group">
       <!-- ko if: publish_date -->
-        <button class="btn btn-default" data-bind="click: $root.startDraftVersion">
+        <button class="btn btn-default" data-bind="click: $root.startDraftVersion"
+          tal:condition="request.has_permission('draft')">
           <span class="fa fa-copy"></span>
           <span i18n:translate="">Draft New</span>
         </button>
       <!-- /ko -->
-      <button class="btn btn-default" data-bind="click: $root.startPublishVersion">
+      <button class="btn btn-default" data-bind="click: $root.startPublishVersion"
+          tal:condition="request.has_permission('edit')">
         <span class="fa fa-calendar"></span>
         <span i18n:translate="">Publish</span>
       </button>
       <a href="${request.current_route_path(_route_name='forms.version_editor')}"
-          class="btn btn-default">
+          class="btn btn-default"
+          tal:condition="request.has_permission('edit')">
         <span class="fa fa-edit"></span>
         <span i18n:translate="">Edit</span>
       </a>
       <button
           class="btn btn-default"
-          data-bind="click: $root.startDeleteVersion">
+          data-bind="click: $root.startDeleteVersion"
+          tal:condition="request.has_permission('delete')">
         <span class="fa fa-trash-o"></span>
         <span i18n:translate="">Delete</span>
       </button>
