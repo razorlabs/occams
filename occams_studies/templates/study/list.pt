@@ -4,7 +4,9 @@
       <div id="patients-section" class="col-sm-4" style="display: none" data-bind="visible: isReady">
         <p>
           <button class="btn btn-primary"
-              data-bind=" click: startAddPatient">
+              data-bind=" click: startAddPatient"
+              tal:define="models import:occams_studies.models"
+              tal:condition="request.has_permission('add', models.PatientFactory(request))">
             <span class="fa fa-user"></span>
             <span i18n:translate="">Add Patient</span>
           </button>

@@ -36,7 +36,7 @@
       </tbody>
     </table>
 
-    <p>
+    <p tal:condition="visits">
       <span i18n:translate="">
         Visits
         <strong i18n:name="offset">${offset_start}</strong> - <strong i18n:name="offset_end">${offset_end}</strong>
@@ -50,7 +50,7 @@
         tal:condition="by_state"><span class="fa fa-close"></span></a>
     </p>
 
-    <table class="table table-bordered table-striped">
+    <table class="table table-bordered table-striped" tal:condition="visits">
       <thead>
         <tr>
           <th rowspan="2" i18n:translate="">PID</th>
@@ -77,7 +77,7 @@
       </tbody>
     </table>
 
-    <ul class="pagination">
+    <ul class="pagination" tal:condition="visits">
       <li class="${'disabled' if pagination.is_first else ''}">
         <a href="${make_page_url(1)}">&laquo;</a>
       </li>

@@ -140,20 +140,6 @@ def enrollments(context, request):
         'terminated': models.Enrollment.termination_date != sa.null(),
         }
 
-    enrollments_query = (
-        Session.query(
-            models.Patient.pid,
-            models.Enrollment.reference_number,
-            models.Enrollment.consent_date,
-            models.Enrollment.latest_consent_date,
-            models.Enrollment.termination_date)
-        .add_columns(*[expr.label(name) for name, expr in statuses.items()])
-        .select_from(models.Enrollment)
-        .join(models.Enrollment.patient)
-        .join(models.Enrollment.study)
-        .filter(models.Enrollment.study == context)
-        .order_by(models.Enrollment.consent_date.desc()))
-
     class FilterForm(Form):
         page = wtforms.IntegerField()
         status = wtforms.StringField(
@@ -166,26 +152,53 @@ def enrollments(context, request):
     form = FilterForm(request.GET)
     form.validate()
 
-    if form.start.data:
-        enrollments_query = enrollments_query.filter(
-            models.Enrollment.consent_date >= form.start.data)
+    sites_query = Session.query(models.Site)
+    site_ids = [s.id for s in sites_query if request.has_permission('view', s)]
 
-    if form.end.data:
-        enrollments_query = enrollments_query.filter(
-            models.Enrollment.consent_date <= form.end.data)
+    if site_ids:
 
-    if form.status.data:
-        enrollments_query = enrollments_query.filter(
-            statuses[form.status.data])
+        enrollments_query = (
+            Session.query(
+                models.Patient.pid,
+                models.Enrollment.reference_number,
+                models.Enrollment.consent_date,
+                models.Enrollment.latest_consent_date,
+                models.Enrollment.termination_date)
+            .add_columns(*[expr.label(name) for name, expr in statuses.items()])
+            .select_from(models.Enrollment)
+            .join(models.Enrollment.patient)
+            .join(models.Enrollment.study)
+            .filter(models.Enrollment.study == context)
+            .order_by(models.Enrollment.consent_date.desc()))
 
-    pagination = Pagination(
-        form.page.data, 25, enrollments_query.count())
 
-    enrollments = (
-        enrollments_query
-        .offset(pagination.offset)
-        .limit(pagination.per_page)
-        .all())
+        if form.start.data:
+            enrollments_query = enrollments_query.filter(
+                models.Enrollment.consent_date >= form.start.data)
+
+        if form.end.data:
+            enrollments_query = enrollments_query.filter(
+                models.Enrollment.consent_date <= form.end.data)
+
+        if form.status.data:
+            enrollments_query = enrollments_query.filter(
+                statuses[form.status.data])
+
+        total_enrollments = enrollments_query.count()
+
+    else:
+        total_enrollments = 0
+
+    pagination = Pagination(form.page.data, 25, total_enrollments)
+
+    if site_ids:
+        enrollments = (
+            enrollments_query
+            .offset(pagination.offset)
+            .limit(pagination.per_page)
+            .all())
+    else:
+        enrollments = []
 
     def make_page_url(page):
         _query = form.data
@@ -353,31 +366,42 @@ def visits_cycle(context, request):
                 (models.State.name == name, sa.true())],
                 else_=sa.null()))
 
-    visits_query = (
-        Session.query(
-            models.Patient.pid,
-            models.Visit.visit_date)
-        .select_from(models.Visit)
-        .filter(models.Visit.cycles.any(id=cycle.id))
-        .join(models.Visit.patient)
-        .join(
-            models.Context,
-            (models.Context.external == sa.sql.literal_column(u"'visit'"))
-            & (models.Context.key == models.Visit.id))
-        .join(models.Context.entity)
-        .join(models.Entity.state)
-        .add_columns(*[
-            count_state_exp(state.name).label(state.name)
-            for state in states])
-        .group_by(
-            models.Patient.pid,
-            models.Visit.visit_date)
-        .order_by(models.Visit.visit_date.desc()))
+    site_ids = [site.id
+                for site in Session.query(models.Site)
+                if request.has_permission('view', site)]
 
-    if by_state:
-        visits_query = visits_query.having(count_state_exp(by_state.name) > 0)
+    if site_ids:
 
-    total_visits = visits_query.count()
+        visits_query = (
+            Session.query(
+                models.Patient.pid,
+                models.Visit.visit_date)
+            .select_from(models.Visit)
+            .filter(models.Visit.cycles.any(id=cycle.id))
+            .join(models.Visit.patient)
+            .join(
+                models.Context,
+                (models.Context.external == sa.sql.literal_column(u"'visit'"))
+                & (models.Context.key == models.Visit.id))
+            .join(models.Context.entity)
+            .join(models.Entity.state)
+            .add_columns(*[
+                count_state_exp(state.name).label(state.name)
+                for state in states])
+            .filter(models.Patient.site.any(models.Site.id._in(site_ids)))
+            .group_by(
+                models.Patient.pid,
+                models.Visit.visit_date)
+            .order_by(models.Visit.visit_date.desc()))
+
+        if by_state:
+            visits_query = visits_query.having(count_state_exp(by_state.name) > 0)
+
+        total_visits = visits_query.count()
+
+    else:
+
+        total_visits = 0
 
     try:
         page = int((request.GET.get('page') or '').strip())
@@ -386,11 +410,14 @@ def visits_cycle(context, request):
 
     pagination = Pagination(page, 25, total_visits)
 
-    visits = (
-        visits_query
-        .offset(pagination.offset)
-        .limit(pagination.per_page)
-        .all())
+    if site_ids:
+        visits = (
+            visits_query
+            .offset(pagination.offset)
+            .limit(pagination.per_page)
+            .all())
+    else:
+        visits = []
 
     def make_page_url(page):
         return request.current_route_path(_query={
