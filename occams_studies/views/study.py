@@ -353,31 +353,42 @@ def visits_cycle(context, request):
                 (models.State.name == name, sa.true())],
                 else_=sa.null()))
 
-    visits_query = (
-        Session.query(
-            models.Patient.pid,
-            models.Visit.visit_date)
-        .select_from(models.Visit)
-        .filter(models.Visit.cycles.any(id=cycle.id))
-        .join(models.Visit.patient)
-        .join(
-            models.Context,
-            (models.Context.external == sa.sql.literal_column(u"'visit'"))
-            & (models.Context.key == models.Visit.id))
-        .join(models.Context.entity)
-        .join(models.Entity.state)
-        .add_columns(*[
-            count_state_exp(state.name).label(state.name)
-            for state in states])
-        .group_by(
-            models.Patient.pid,
-            models.Visit.visit_date)
-        .order_by(models.Visit.visit_date.desc()))
+    site_ids = [site.id
+                for site in Session.query(models.Site)
+                if request.has_permission('view', site)]
 
-    if by_state:
-        visits_query = visits_query.having(count_state_exp(by_state.name) > 0)
+    if site_ids:
 
-    total_visits = visits_query.count()
+        visits_query = (
+            Session.query(
+                models.Patient.pid,
+                models.Visit.visit_date)
+            .select_from(models.Visit)
+            .filter(models.Visit.cycles.any(id=cycle.id))
+            .join(models.Visit.patient)
+            .join(
+                models.Context,
+                (models.Context.external == sa.sql.literal_column(u"'visit'"))
+                & (models.Context.key == models.Visit.id))
+            .join(models.Context.entity)
+            .join(models.Entity.state)
+            .add_columns(*[
+                count_state_exp(state.name).label(state.name)
+                for state in states])
+            .filter(models.Patient.site.any(models.Site.id._in(site_ids)))
+            .group_by(
+                models.Patient.pid,
+                models.Visit.visit_date)
+            .order_by(models.Visit.visit_date.desc()))
+
+        if by_state:
+            visits_query = visits_query.having(count_state_exp(by_state.name) > 0)
+
+        total_visits = visits_query.count()
+
+    else:
+
+        total_visits = 0
 
     try:
         page = int((request.GET.get('page') or '').strip())
@@ -386,11 +397,14 @@ def visits_cycle(context, request):
 
     pagination = Pagination(page, 25, total_visits)
 
-    visits = (
-        visits_query
-        .offset(pagination.offset)
-        .limit(pagination.per_page)
-        .all())
+    if site_ids:
+        visits = (
+            visits_query
+            .offset(pagination.offset)
+            .limit(pagination.per_page)
+            .all())
+    else:
+        visits = []
 
     def make_page_url(page):
         return request.current_route_path(_query={
