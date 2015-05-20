@@ -140,20 +140,6 @@ def enrollments(context, request):
         'terminated': models.Enrollment.termination_date != sa.null(),
         }
 
-    enrollments_query = (
-        Session.query(
-            models.Patient.pid,
-            models.Enrollment.reference_number,
-            models.Enrollment.consent_date,
-            models.Enrollment.latest_consent_date,
-            models.Enrollment.termination_date)
-        .add_columns(*[expr.label(name) for name, expr in statuses.items()])
-        .select_from(models.Enrollment)
-        .join(models.Enrollment.patient)
-        .join(models.Enrollment.study)
-        .filter(models.Enrollment.study == context)
-        .order_by(models.Enrollment.consent_date.desc()))
-
     class FilterForm(Form):
         page = wtforms.IntegerField()
         status = wtforms.StringField(
@@ -166,26 +152,53 @@ def enrollments(context, request):
     form = FilterForm(request.GET)
     form.validate()
 
-    if form.start.data:
-        enrollments_query = enrollments_query.filter(
-            models.Enrollment.consent_date >= form.start.data)
+    sites_query = Session.query(models.Site)
+    site_ids = [s.id for s in sites_query if request.has_permission('view', s)]
 
-    if form.end.data:
-        enrollments_query = enrollments_query.filter(
-            models.Enrollment.consent_date <= form.end.data)
+    if site_ids:
 
-    if form.status.data:
-        enrollments_query = enrollments_query.filter(
-            statuses[form.status.data])
+        enrollments_query = (
+            Session.query(
+                models.Patient.pid,
+                models.Enrollment.reference_number,
+                models.Enrollment.consent_date,
+                models.Enrollment.latest_consent_date,
+                models.Enrollment.termination_date)
+            .add_columns(*[expr.label(name) for name, expr in statuses.items()])
+            .select_from(models.Enrollment)
+            .join(models.Enrollment.patient)
+            .join(models.Enrollment.study)
+            .filter(models.Enrollment.study == context)
+            .order_by(models.Enrollment.consent_date.desc()))
 
-    pagination = Pagination(
-        form.page.data, 25, enrollments_query.count())
 
-    enrollments = (
-        enrollments_query
-        .offset(pagination.offset)
-        .limit(pagination.per_page)
-        .all())
+        if form.start.data:
+            enrollments_query = enrollments_query.filter(
+                models.Enrollment.consent_date >= form.start.data)
+
+        if form.end.data:
+            enrollments_query = enrollments_query.filter(
+                models.Enrollment.consent_date <= form.end.data)
+
+        if form.status.data:
+            enrollments_query = enrollments_query.filter(
+                statuses[form.status.data])
+
+        total_enrollments = enrollments_query.count()
+
+    else:
+        total_enrollments = 0
+
+    pagination = Pagination(form.page.data, 25, total_enrollments)
+
+    if site_ids:
+        enrollments = (
+            enrollments_query
+            .offset(pagination.offset)
+            .limit(pagination.per_page)
+            .all())
+    else:
+        enrollments = []
 
     def make_page_url(page):
         _query = form.data

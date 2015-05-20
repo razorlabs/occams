@@ -23,7 +23,7 @@
     </table>
 
     <div class="alert alert-info" tal:condition="not:enrollments">
-      This study does not have enrollments yet.
+      No enrollments found.
     </div>
 
     <tal:enrollments condition="enrollments">
