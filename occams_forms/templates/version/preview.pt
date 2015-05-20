@@ -15,10 +15,6 @@
           </span>
         </div>
         <form tal:replace="structure form_content"></form>
-        <hr />
-        <div class="clearfix">
-          <button type="submit" form="${form_id}" class="btn btn-primary pull-right" i18n:translate="">Submit</button>
-        </div>
       </tal:form>
 
       <tal:entity condition="entity">

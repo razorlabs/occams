@@ -84,8 +84,8 @@ def schema_acl(self):
     else:
         return [
             (Allow, 'administrator', ALL_PERMISSIONS),
-            (Allow, 'manager', ('view', 'edit', 'delete')),
-            (Allow, 'editor', 'view')]
+            (Allow, 'manager', ('view', 'edit', 'delete', 'draft')),
+            (Allow, 'editor', ('view', 'draft'))]
 
 
 def schema_getitem(self, key):

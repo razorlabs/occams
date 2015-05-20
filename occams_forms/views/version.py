@@ -76,7 +76,7 @@ def preview(context, request):
     """
     Preview form for test-drivining.
     """
-    form_class = make_form(Session, context, enable_metadata=False)
+    form_class = make_form(Session, context, show_metadata=False)
     form = form_class(request.POST)
     form_id = 'form-preview'
     entity = None
@@ -96,12 +96,16 @@ def preview(context, request):
     return {
         'entity': entity,
         'form_id': form_id,
-        'form_content': render_form(form, attr={
-            'id': form_id,
-            'method': 'POST',
-            'action': request.current_route_path(_query={}),
-            'role': 'form'
-            })
+        'form_content': render_form(
+            form,
+            schema=context,
+            cancel_url=request.current_route_path(),
+            attr={
+                'id': form_id,
+                'method': 'POST',
+                'action': request.current_route_path(_query={}),
+                'role': 'form'
+                })
         }
 
 
