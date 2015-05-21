@@ -93,3 +93,8 @@ class TestPermissionForms(FunctionalFixture):
         environ = self.make_environ(userid=USERID, groups=[group])
         response = self.app.get(url, extra_environ=environ)
         self.assertEquals(200, response.status_code)
+
+    def test_not_authenticated(self):
+        url = '/forms'
+        response = self.app.get(url, status='*')
+        self.assertEquals(401, response.status_code)
