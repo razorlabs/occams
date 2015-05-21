@@ -31,3 +31,38 @@ class TestPermissionForms(FunctionalFixture):
 
             Session.add(form)
             Session.flush()
+
+    @data('administrator')
+    def test_forms_view(self, group):
+        url = '/forms'
+
+        environ = self.make_environ(userid=USERID, groups=[group])
+        response = self.app.get(url, extra_environ=environ)
+        self.assertEquals(200, response.status_code)
+
+    @data('administrator')
+    def test_forms_add(self, group):
+        url = '/forms'
+
+        environ = self.make_environ(userid=USERID, groups=[group])
+        csrf_token = self.get_csrf_token(environ)
+
+        data = {
+            'name': 'test_form',
+            'title': 'test_form',
+            'versions': [],
+            'isNew': True,
+            'hasVersions': False
+        }
+
+        response = self.app.post_json(
+            url,
+            extra_environ=environ,
+            status='*',
+            headers={
+                'X-CSRF-Token': csrf_token,
+                'X-REQUESTED-WITH': str('XMLHttpRequest')
+            },
+            params=data)
+
+        self.assertEquals(200, response.status_code)
