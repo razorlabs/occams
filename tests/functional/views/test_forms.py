@@ -86,3 +86,10 @@ class TestPermissionForms(FunctionalFixture):
 
         self.assertEquals(403, response.status_code)
 
+    @data('administrator')
+    def test_forms_workflows(self, group):
+        url = '/forms/workflows/default'
+
+        environ = self.make_environ(userid=USERID, groups=[group])
+        response = self.app.get(url, extra_environ=environ)
+        self.assertEquals(200, response.status_code)
