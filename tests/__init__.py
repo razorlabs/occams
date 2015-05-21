@@ -110,12 +110,12 @@ class FunctionalFixture(unittest.TestCase):
         import six
         from webtest import TestApp
 
-        from occams_forms import main, Session
+        from occams import main, Session
 
         # The pyramid_who plugin requires a who file, so let's create a
         # barebones files for it...
         self.who_ini = tempfile.NamedTemporaryFile()
-        who = six.configparser()
+        who = six.moves.configparser.ConfigParser()
         who.add_section('general')
         who.set('general', 'request_classifier',
                 'repoze.who.classifiers:default_request_classifier')
@@ -129,11 +129,21 @@ class FunctionalFixture(unittest.TestCase):
             'redis.url': REDIS_URL,
             'redis.sessions.secret': 'sekrit',
 
-            'who.config_file': self.who_ini.filename,
+            'who.config_file': self.who_ini.name,
             'who.identifier_id': '',
 
             'occams.apps': 'occams_forms',
             'occams.db.url': Session.bind,
+            'occams.groups': [],
+
+            'studies.export.dir': '/tmp',
+            'studies.export.user': 'celery@localhost',
+            'studies.celery.broker.url': REDIS_URL,
+            'studies.celery.backend.url': REDIS_URL,
+            'studies.pid.package': 'occams.roster',
+            'studies.blob.dir': '/tmp',
+
+            'roster.db.url': 'sqlite://',
         })
 
         self.app = TestApp(app)
@@ -167,3 +177,9 @@ class FunctionalFixture(unittest.TestCase):
                     'repoze.who.userid': userid,
                     'properties': properties,
                     'groups': groups}}
+
+    def get_csrf_token(self, environ):
+        """Request the app so csrf cookie is available"""
+        self.app.get('/', extra_environ=environ)
+
+        return self.app.cookies['csrf_token']
