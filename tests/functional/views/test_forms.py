@@ -66,3 +66,23 @@ class TestPermissionForms(FunctionalFixture):
             params=data)
 
         self.assertEquals(200, response.status_code)
+
+    @data('member')
+    def test_forms_add_not_allowed(self, group):
+        url = '/forms'
+
+        environ = self.make_environ(userid=USERID, groups=[group])
+        csrf_token = self.get_csrf_token(environ)
+
+        response = self.app.post_json(
+            url,
+            extra_environ=environ,
+            status='*',
+            headers={
+                'X-CSRF-Token': csrf_token,
+                'X-REQUESTED-WITH': str('XMLHttpRequest')
+            },
+            params={})
+
+        self.assertEquals(403, response.status_code)
+
