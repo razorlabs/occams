@@ -441,8 +441,15 @@ def edit_json(context, request):
         schemata_query = (
             Session.query(models.Schema)
             .join(models.patient_schema_table))
+        pending_entry = (
+            Session.query(models.State)
+            .filter_by(name=u'pending-entry')
+            .one())
         for schema in schemata_query:
-            patient.entities.add(models.Entity(schema=schema))
+            patient.entities.add(models.Entity(
+                schema=schema,
+                state=pending_entry
+            ))
 
     Session.flush()
     Session.refresh(patient)
@@ -512,7 +519,7 @@ def form(context, request):
         .one())
 
     if not is_phi:
-        cancel_url = request.current_route_path(
+        previous_url = request.current_route_path(
             _route_name='studies.patient_forms')
         show_metadata = True
         # We cannot determine which study this form will be applied to
@@ -527,7 +534,7 @@ def form(context, request):
         allowed_versions = sorted(set(
             s.publish_date for s in available_schemata))
     else:
-        cancel_url = request.current_route_path(
+        previous_url = request.current_route_path(
             _route_name='studies.patient')
         show_metadata = False
         allowed_versions = None
@@ -559,8 +566,7 @@ def form(context, request):
             Session.flush()
             request.session.flash(
                 _(u'Changes saved to: %s' % context.schema.title), 'success')
-            return HTTPFound(location=request.current_route_path(
-                _route_name='studies.patient_forms'))
+            return HTTPFound(location=previous_url)
 
     return {
         'phi': get_phi_entities(patient, request),
@@ -570,7 +576,7 @@ def form(context, request):
             entity=context,
             schema=context.schema,
             disabled=not request.has_permission('edit'),
-            cancel_url=cancel_url,
+            cancel_url=previous_url,
             attr={
                 'method': 'POST',
                 'action': request.current_route_path(),

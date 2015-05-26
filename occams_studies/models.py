@@ -1089,7 +1089,20 @@ class FormFactory(object):
                 .one())
         except orm.exc.NoResultFound:
             raise KeyError
+
+        # Force a state for now until we implement customizable workflows
+        # Side-effect: will commit state change to the database
+        # XXX: This is really bad form as we're applying
+        # side-effects to a GET request, but there is no time
+        # to make this look prety...
+        if not entity.state:
+            entity.state = (
+                Session.query(State)
+                .filter_by(name='pending-entry')
+                .one())
+
         entity.__parent__ = self
+
         return entity
 
 
