@@ -481,7 +481,7 @@ def cleanup_enrollment():
 
         # Not that this might not update all the records if the the form
         # has not had the termination_date field entered yet.
-        op.update("""
+        op.execute("""
             UPDATE enrollment
             SET termination_date = value_datetime.value
             FROM  context, entity, schema, value_datetime, attribute
