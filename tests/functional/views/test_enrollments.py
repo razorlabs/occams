@@ -595,16 +595,6 @@ class TestPermissionsEnrollmentTermination(FunctionalFixture):
                 termination_schema=form
             )
 
-            Session.add(studies.State(
-                name=u'pending-entry',
-                title=u'pending-entry'
-            ))
-
-            Session.add(studies.State(
-                name=u'pending-review',
-                title=u'pending-review'
-            ))
-
             Session.add(studies.Enrollment(
                 patient=patient,
                 study=study,
