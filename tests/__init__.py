@@ -105,9 +105,10 @@ class FunctionalFixture(unittest.TestCase):
     def setUp(self):
         import tempfile
         import six
+        import transaction
         from webtest import TestApp
         from occams import main
-        from occams_studies import Session
+        from occams_studies import Session, models
 
         # The pyramid_who plugin requires a who file, so let's create a
         # barebones files for it...
@@ -152,6 +153,20 @@ class FunctionalFixture(unittest.TestCase):
         })
 
         self.app = TestApp(app)
+
+        # Add hard-coded workflow that needs to one day be replaced...
+        with transaction.manager:
+            blame = models.User(key=u'autostate')
+            Session.add(blame)
+            Session.flush()
+            Session.info['blame'] = blame
+
+            Session.add_all([
+                models.State(name=u'pending-entry', title=u'Pending Entry'),
+                models.State(name=u'pending-review', title=u'Pending Review'),
+                models.State(name=u'pending-correction', title=u'Pending Correction'),
+                models.State(name=u'complete', title=u'Complete')
+            ])
 
     def tearDown(self):
         import transaction
