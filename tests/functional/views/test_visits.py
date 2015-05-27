@@ -146,11 +146,6 @@ class TestPermissionsVisitsAdd(FunctionalFixture):
                 study=study
             )
 
-            Session.add(studies.State(
-                name=u'pending-entry',
-                title=u'pending-entry'
-            ))
-
             Session.add(study)
             Session.add(patient)
             Session.add(cycle)
@@ -519,11 +514,6 @@ class TestPermissionsVisitEdit(FunctionalFixture):
                 visit_date='2015-01-01'
             )
 
-            Session.add(studies.State(
-                name=u'pending-entry',
-                title=u'pending-entry'
-            ))
-
             Session.add(study)
             Session.add(patient)
             Session.add(visit)
@@ -665,11 +655,6 @@ class TestPermissionsVisitFormsAdd(FunctionalFixture):
                 visit_date='2015-01-01'
             )
 
-            Session.add(studies.State(
-                name=u'pending-entry',
-                title=u'pending-entry'
-            ))
-
             Session.add(study)
             Session.add(patient)
             Session.add(visit)
@@ -805,11 +790,6 @@ class TestPermissionsVisitFormsDelete(FunctionalFixture):
                 collect_date=date(2015, 1, 1)
             )
 
-            Session.add(studies.State(
-                name=u'pending-entry',
-                title=u'pending-entry'
-            ))
-
             Session.add(study)
             Session.add(patient)
             Session.add(visit)
@@ -934,11 +914,6 @@ class TestPermissionsVisitFormView(FunctionalFixture):
                 schema=form,
                 collect_date=date(2015, 1, 1)
             )
-
-            Session.add(studies.State(
-                name=u'pending-entry',
-                title=u'pending-entry'
-            ))
 
             Session.add(study)
             Session.add(patient)
@@ -1069,11 +1044,6 @@ class TestPermissionsVisitFormEdit(FunctionalFixture):
                 schema=form,
                 collect_date=date(2015, 1, 1)
             )
-
-            Session.add(studies.State(
-                name=u'pending-entry',
-                title=u'pending-entry'
-            ))
 
             Session.add(study)
             Session.add(patient)

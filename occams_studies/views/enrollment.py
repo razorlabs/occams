@@ -171,8 +171,20 @@ def terminate_ajax(context, request):
     except orm.exc.NoResultFound:
         schema = context.study.termination_schema
         entity = models.Entity(schema=schema)
+        # XXX: This is really bad form as we're applying
+        # side-effects to a GET request, but there is no time
+        # to make this look prety...
+        # If you remove this line you will be creating random termination
+        # entries...
+        context.entities.add(entity)
     else:
         schema = entity.schema
+
+    if not entity.state:
+        entity.state = (
+            Session.query(models.State)
+            .filter_by(name='pending-entry')
+            .one())
 
     if 'termination_date' not in schema.attributes:
         msg = 'There is no "termination_date" configured on: {}'

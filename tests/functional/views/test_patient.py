@@ -542,11 +542,6 @@ class TestPermissionsPatientFormsAdd(FunctionalFixture):
                 schemata=set([form])
             )
 
-            Session.add(studies.State(
-                name=u'pending-entry',
-                title=u'pending-entry'
-            ))
-
             Session.add(studies.Enrollment(
                 patient=patient,
                 study=study,
@@ -667,11 +662,6 @@ class TestPermissionsPatientFormsDelete(FunctionalFixture):
                 schemata=set([form])
             )
 
-            Session.add(studies.State(
-                name=u'pending-entry',
-                title=u'pending-entry'
-            ))
-
             Session.add(studies.Enrollment(
                 patient=patient,
                 study=study,
@@ -790,10 +780,10 @@ class TestPermissionsPatientFormView(FunctionalFixture):
                 schemata=set([form])
             )
 
-            state = studies.State(
-                name=u'pending-entry',
-                title=u'pending-entry'
-            )
+            state = (
+                Session.query(studies.State)
+                .filter_by(name=u'pending-entry')
+                .one())
 
             Session.add(datastore.Entity(
                 state=state,
@@ -895,10 +885,10 @@ class TestPermissionsPatientFormsEdit(FunctionalFixture):
                 schemata=set([form])
             )
 
-            state = studies.State(
-                name=u'pending-entry',
-                title=u'pending-entry'
-            )
+            state = (
+                Session.query(studies.State)
+                .filter_by(name=u'pending-entry')
+                .one())
 
             Session.add(datastore.Entity(
                 state=state,

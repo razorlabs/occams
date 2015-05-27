@@ -33,7 +33,7 @@
               <th i18n:translate="">Form</th>
               <th i18n:translate="">Collect Date</th>
               <th i18n:translate="">Status</th>
-              <th i18n:translate="">Not Done</th>
+              <th i18n:translate="">Not Collected</th>
               <th></th>
             </thead>
             <tbody data-bind="foreach: entities">
