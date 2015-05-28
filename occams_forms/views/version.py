@@ -30,6 +30,7 @@ def view(context, request):
 @view_config(
     route_name='forms.version',
     xhr=True,
+    permission='view',
     renderer='json')
 def view_json(context, request):
     """
