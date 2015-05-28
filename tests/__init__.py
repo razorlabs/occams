@@ -132,16 +132,17 @@ class FunctionalFixture(unittest.TestCase):
             'who.config_file': self.who_ini.name,
             'who.identifier_id': '',
 
+            # Enable regular error messages so we can see useful traceback
+            'debugtoolbar.enabled': True,
+            'pyramid.debug_all': True,
+
+            'webassets.debug': True,
+            'webassets.auto_build': False,
+
             'occams.apps': 'occams_forms',
+
             'occams.db.url': Session.bind,
             'occams.groups': [],
-
-            'studies.export.dir': '/tmp',
-            'studies.export.user': 'celery@localhost',
-            'studies.celery.broker.url': REDIS_URL,
-            'studies.celery.backend.url': REDIS_URL,
-            'studies.pid.package': 'occams.roster',
-            'studies.blob.dir': '/tmp',
 
             'roster.db.url': 'sqlite://',
         })
