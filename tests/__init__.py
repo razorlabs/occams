@@ -81,6 +81,16 @@ class IntegrationFixture(unittest.TestCase):
         Session.flush()
         Session.info['blame'] = blame
 
+        # HACK: add hardcoded workflow until we can implement it
+        Session.add_all([
+            models.State(name=u'pending-entry', title=u'Pending Entry'),
+            models.State(name=u'pending-review', title=u'Pending Review'),
+            models.State(name=u'pending-correction',
+                         title=u'Pending Correction'),
+            models.State(name=u'complete', title=u'Complete'),
+        ])
+        Session.flush()
+
         models.DataStoreModel.metadata.info['settings'] = \
             self.config.registry.settings
 
