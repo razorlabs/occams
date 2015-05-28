@@ -21,11 +21,18 @@ import wtforms.ext.dateutil.fields
 from . import _, models, log
 
 
+class states:
+    PENDING_ENTRY = u'pending-entry'
+    PENDING_REVIEW = u'pending-review'
+    PENDING_CORRECTION = u'pending-correction'
+    COMPLETE = u'complete'
+
+
 TRANSITIONS = {
-    'pending-entry': ['pending-review'],
-    'pending-review': ['pending-correction', 'complete'],
-    'pending-correction': ['pending-review'],
-    'complete': [],
+    states.PENDING_ENTRY: [states.PENDING_REVIEW],
+    states.PENDING_REVIEW: [states.PENDING_CORRECTION, states.COMPLETE],
+    states.PENDING_CORRECTION: [states.PENDING_REVIEW],
+    states.COMPLETE: []
 }
 
 
@@ -256,10 +263,10 @@ def make_form(session,
             try:
                 current_state = entity.state.name
             except AttributeError:
-                current_state = 'pending-entry'
+                current_state = states.PENDING_ENTRY
 
             # Only validate the workflow if the orignal entity WAS editable
-            if current_state in ('complete', 'pending-review'):
+            if current_state in (states.COMPLETE, states.PENDING_REVIEW):
                 return self.ofworkflow_.validate(self)
 
             elif 'ofmetadata_' in self and self.ofmetadata_.not_done.data:
@@ -318,7 +325,7 @@ def make_form(session,
         try:
             current_state = entity.state.name
         except AttributeError:
-            current_state = 'pending-entry'
+            current_state = states.PENDING_ENTRY
 
         allowed_states = TRANSITIONS[current_state]
 
@@ -327,13 +334,14 @@ def make_form(session,
 
     if allowed_states:
 
-        states = (
+        allowed_states = (
             session.query(models.State)
             .filter(models.State.name.in_(allowed_states))
             .order_by(models.State.title)
         )
 
-        choices = [('', '')] + [(state.name, state.title) for state in states]
+        choices = [('', '')] \
+            + [(state.name, state.title) for state in allowed_states]
 
         class Workflow(wtforms.Form):
             state = wtforms.SelectField(
@@ -384,7 +392,8 @@ def render_form(form,
     if not disabled and entity:
         disabled = entity.not_done \
             or (entity.state
-                and entity.state.name in ('pending-review', 'complete'))
+                and entity.state.name in (
+                    states.PENDING_REVIEW, states.COMPLETE))
 
     return render('occams_forms:templates/form.pt', {
         'show_header': show_header,
@@ -431,43 +440,28 @@ def apply_data(session, entity, data, upload_path):
 
     assert upload_path is not None, u'Destination path is required'
 
-    clear_data = False
-    update_data = True
-    current_state = entity.state and entity.state.name or 'pending-entry'
+    previous_state = entity.state and entity.state.name
 
     # Assume the user can control transitions if we promped for it
     if 'ofworkflow_' in data:
+        next_state = data['ofworkflow_']['state']
 
-        workflow = data['ofworkflow_']
-        next_state = workflow['state']
-
-        if next_state == 'pending-entry':
-            clear_data = True
-
-        update_data = next_state in ('pending-entry', 'pending-correction')
-
+    # Anyone without the ability to transition needs to be approved
     else:
-
-        # Do not allow a user who can't control workflow to
-        # make any unwanted changes
-        if current_state in ('pending-review', 'complete'):
-            return entity
-
-        next_state = 'pending-review'
-        update_data = True
+        next_state = states.PENDING_REVIEW
 
     # States are the only metadata that can change regardless of transition
-    if current_state != next_state:
+    if previous_state != next_state:
         entity.state = (
             session.query(models.State).filter_by(name=next_state).one())
 
-    if not update_data:
+    # Do not update data if we're transitioning from a readonly-state
+    if previous_state in (states.PENDING_REVIEW, states.COMPLETE):
         return entity
 
     if 'ofmetadata_' in data:
         metadata = data['ofmetadata_']
         entity.not_done = metadata['not_done']
-        clear_data = entity.not_done
         entity.collect_date = metadata['collect_date']
         entity.schema = (
             session.query(models.Schema)
@@ -475,6 +469,8 @@ def apply_data(session, entity, data, upload_path):
                 name=entity.schema.name,
                 publish_date=metadata['version'])
             .one())
+
+    clear_data = entity.not_done or next_state == states.PENDING_ENTRY
 
     for attribute in entity.schema.iterleafs():
 
