@@ -1,7 +1,8 @@
 from ddt import ddt, data, unpack
-from tests import IntegrationFixture
 import wtforms.fields.html5
 import wtforms.ext.dateutil.fields
+
+from tests import IntegrationFixture
 
 
 class annotatedlist(list):
@@ -103,3 +104,164 @@ class TestMakeField(IntegrationFixture):
         field = field.bind(wtforms.Form(), attribute.name)
         self.assertTrue(
             any(isinstance(v, NumberRange) for v in field.validators))
+
+
+class TestApplyData(IntegrationFixture):
+
+    def setUp(self):
+        super(TestApplyData, self).setUp()
+        import tempfile
+        self.tmpdir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.tmpdir)
+
+    def _call(self, *args, **kw):
+        from occams_forms.renderers import apply_data
+        return apply_data(*args, **kw)
+
+    def _make_entity(self):
+        from datetime import date
+        from occams_forms import models
+        schema = models.Schema(
+            name=u'test', title=u'', publish_date=date.today(),
+            attributes={
+                'q1': models.Attribute(
+                    name=u'q1',
+                    title=u'',
+                    type='string',
+                    order=0,
+                )
+            })
+        entity = models.Entity(schema=schema)
+        return entity
+
+    def test_clear_if_not_done(self):
+        from datetime import date
+        from occams_forms import Session
+
+        entity = self._make_entity()
+        entity['q1'] = u'Some value'
+
+        formdata = {'ofmetadata_': {
+            'not_done': True,
+            'collect_date': date.today(),
+            'version': entity.schema.publish_date
+        }}
+
+        self._call(Session, entity, formdata, self.tmpdir)
+
+        self.assertIsNone(entity['q1'])
+
+    def test_unknown_state_to_pending_entry(self):
+        """
+        It should clear data if transitioning to "Pending Entry"
+        """
+        from occams_forms import Session
+        from occams_forms.renderers import states
+
+        entity = self._make_entity()
+        entity['q1'] = u'Some value'
+
+        formdata = {
+            'ofworkflow_': {
+                'state': states.PENDING_ENTRY
+            }
+        }
+
+        self._call(Session, entity, formdata, self.tmpdir)
+
+        self.assertEquals(entity.state.name, states.PENDING_ENTRY)
+        self.assertIsNone(entity['q1'])
+
+    def test_pending_entry_to_pending_correction(self):
+        from occams_forms import Session
+        from occams_forms.renderers import states
+
+        entity = self._make_entity()
+        entity['q1'] = u'Some value'
+
+        formdata = {
+            'ofworkflow_': {
+                'state': states.PENDING_CORRECTION,
+            },
+            'q1': u'Some new value'
+        }
+
+        self._call(Session, entity, formdata, self.tmpdir)
+
+        self.assertEquals(entity.state.name, states.PENDING_CORRECTION)
+        self.assertEquals(entity['q1'], formdata['q1'])
+
+    def test_pending_entry_to_pending_review(self):
+        from occams_forms import Session
+        from occams_forms.renderers import states
+
+        entity = self._make_entity()
+        entity['q1'] = u'Some value'
+
+        formdata = {
+            'ofworkflow_': {
+                'state': states.PENDING_REVIEW,
+            },
+            'q1': u'Some new value'
+        }
+
+        self._call(Session, entity, formdata, self.tmpdir)
+
+        self.assertEquals(entity.state.name, states.PENDING_REVIEW)
+        self.assertEquals(entity['q1'], formdata['q1'])
+
+    def test_pending_entry_to_complete(self):
+        from occams_forms import Session
+        from occams_forms.renderers import states
+
+        entity = self._make_entity()
+        entity['q1'] = u'Some value'
+
+        formdata = {
+            'ofworkflow_': {
+                'state': states.COMPLETE,
+            },
+            'q1': u'Some new value'
+        }
+
+        self._call(Session, entity, formdata, self.tmpdir)
+
+        self.assertEquals(entity.state.name, states.COMPLETE)
+        self.assertEquals(entity['q1'], formdata['q1'])
+
+    def test_auto_pending_entry_to_pending_review(self):
+
+        from occams_forms import Session
+        from occams_forms.renderers import states
+
+        entity = self._make_entity()
+        entity['q1'] = u'Some value'
+
+        formdata = {'q1': 'Some new value'}
+
+        self._call(Session, entity, formdata, self.tmpdir)
+
+        self.assertEquals(entity.state.name, states.PENDING_REVIEW)
+        self.assertEqual(entity['q1'], formdata['q1'])
+
+    def test_auto_pending_correction_to_pending_review(self):
+
+        from occams_forms import Session, models
+        from occams_forms.renderers import states
+
+        entity = self._make_entity()
+        entity.state = (
+            Session.query(models.State)
+            .filter_by(name=states.PENDING_CORRECTION)
+            .one())
+        entity['q1'] = u'Some value'
+
+        formdata = {'q1': 'Some new value'}
+
+        self._call(Session, entity, formdata, self.tmpdir)
+
+        self.assertEquals(entity.state.name, states.PENDING_REVIEW)
+        self.assertEqual(entity['q1'], formdata['q1'])
