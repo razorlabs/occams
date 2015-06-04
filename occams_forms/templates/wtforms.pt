@@ -56,7 +56,7 @@
           <div class="form-group">
             <div class="input-group">
               <span class="input-group-addon">${field.label(class_='required')}</span>
-              ${field(class_='form-control js-date', disabled=disabled)}
+              ${field(class_='form-control js-date', disabled=metadata_disabled)}
             </div>
             <div class="errors"><p tal:repeat="error errors" class="help-block">${error}</p></div>
           </div>
@@ -73,7 +73,7 @@
           <div class="form-group">
             <div class="input-group select2-bootstrap-prepend">
               <span class="input-group-addon">${field.label(class_='control-label required')}</span>
-              ${field(class_='form-control js-select2', disabled=disabled)}
+              ${field(class_='form-control js-select2', disabled=metadata_disabled)}
             </div>
             <div class="errors"><p tal:repeat="error errors" class="help-block">${error}</p></div>
           </div>
@@ -90,7 +90,7 @@
             <div class="form-group ${css_status}">
               <div class="checkbox">
                   <label>
-                    ${form.not_done(disabled=disabled)}
+                    ${form.not_done(disabled=metadata_disabled)}
                     <strong>${form.not_done.label.text}</strong>
                   </label>
               </div>
@@ -153,6 +153,7 @@
           widget_cls    type(field.widget).__name__;
           option_cls    type(field.option_widget).__name__ if hasattr(field, 'option_widget') else None;
           name          field.short_name;
+          disabled      fields_disabled|nothing;
           ">
       <tal:switch switch="option_cls">
         <tal:case case="string:RadioInput">
