@@ -260,13 +260,9 @@ def make_form(session,
     class DatastoreForm(wtforms.Form):
 
         def validate(self, **kw):
-            try:
-                current_state = entity.state.name
-            except AttributeError:
-                current_state = states.PENDING_ENTRY
 
             # Only validate the workflow if the orignal entity WAS editable
-            if current_state in (states.COMPLETE, states.PENDING_REVIEW):
+            if 'ofworkflow_' in self:
                 return self.ofworkflow_.validate(self)
 
             elif 'ofmetadata_' in self and self.ofmetadata_.not_done.data:
@@ -379,31 +375,27 @@ def render_form(form,
                 cancel_url=None,
                 entity=None,
                 schema=None,
-                show_header=True,
-                show_footer=True,
                 disabled=False,
                 attr=None):
     """
     Helper function to render a WTForm by OCCAMS standards
     """
 
-    attr = attr or {}
-
-    if not disabled and entity:
-        disabled = entity.not_done \
-            or (entity.state
-                and entity.state.name in (
-                    states.PENDING_REVIEW, states.COMPLETE))
+    # We differentiate beween metadata and fields here because
+    # sometimes we want the data fields to be disabled (when the form
+    # is not collected) or the whole form disabled (when complete)
+    metadata_disabled = disabled or entity.state.name == states.COMPLETE
+    fields_disabled = disabled or metadata_disabled or entity.not_done
 
     return render('occams_forms:templates/form.pt', {
-        'show_header': show_header,
-        'show_footer': show_footer,
         'cancel_url': cancel_url,
         'schema': schema,
         'entity': entity,
         'form': form,
         'disabled': disabled,
-        'attr': attr,
+        'metadata_disabled': metadata_disabled,
+        'field_disabled': fields_disabled,
+        'attr': attr or {},
     })
 
 
@@ -456,7 +448,7 @@ def apply_data(session, entity, data, upload_path):
             session.query(models.State).filter_by(name=next_state).one())
 
     # Do not update data if we're transitioning from a readonly-state
-    if previous_state in (states.PENDING_REVIEW, states.COMPLETE):
+    if previous_state == states.COMPLETE:
         return entity
 
     if 'ofmetadata_' in data:
