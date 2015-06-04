@@ -260,13 +260,9 @@ def make_form(session,
     class DatastoreForm(wtforms.Form):
 
         def validate(self, **kw):
-            try:
-                current_state = entity.state.name
-            except AttributeError:
-                current_state = states.PENDING_ENTRY
 
             # Only validate the workflow if the orignal entity WAS editable
-            if current_state in (states.COMPLETE, states.PENDING_REVIEW):
+            if 'ofworkflow_' in self:
                 return self.ofworkflow_.validate(self)
 
             elif 'ofmetadata_' in self and self.ofmetadata_.not_done.data:
