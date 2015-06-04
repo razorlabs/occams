@@ -81,8 +81,33 @@
                   uniqueName: true" />
           </div> <!-- /.form-group -->
 
-          <!--! Termination date is not edited manually, it is filled
-                in by the studie's termination form -->
+          <!--! Termination is edited manually only if there is no termination schema -->
+
+          <!--! Do not show for now, since it's difficult to dynamically
+                disable a datetimewidget -->
+
+          <!-- ko ifnot: hasTerminationSchema -->
+
+            <div class="form-group" tal:define="name 'termination_date'">
+              <label i18n:translate="" for="${name}">Termination Date</label>
+              <input type="date"
+                  class="form-control"
+                  id="${name}"
+                  placeholder="YYYY-MM-DD"
+                  data-type-hint="date"
+                  data-date-format="YYYY-MM-DD"
+                  data-date-picktime="false"
+                  data-date-usecurrent="false"
+                  data-rule-dateISO
+                  data-rule-greaterThanEqualTo="#latest_consent_date"
+                  data-msg-greaterThanEqualTo="Must be after latest consent date"
+                  data-bind="
+                    value: ${name},
+                    datetimepicker: {},
+                    uniqueName: true" />
+            </div> <!-- /.form-group -->
+
+          <!-- /ko -->
 
           <div class="form-group" tal:define="name 'reference_number'">
             <label i18n:translate="" for="${name}">Reference Number</label>

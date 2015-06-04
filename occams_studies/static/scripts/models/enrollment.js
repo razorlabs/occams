@@ -30,6 +30,10 @@ function Enrollment(data){
     return !!(self.stratum() && self.stratum().randid());
   });
 
+  self.hasTerminationSchema = ko.pureComputed(function(){
+    return !!(self.study() && self.study().termination_form());
+  });
+
   self.update = function(data){
     data = data || {};
     self.__url__(data.__url__);
@@ -53,6 +57,7 @@ function Enrollment(data){
       study: self.study().id(),
       consent_date: self.consent_date(),
       latest_consent_date: self.latest_consent_date(),
+      termination_date: self.termination_date(),
       reference_number: self.reference_number()
     };
   };
