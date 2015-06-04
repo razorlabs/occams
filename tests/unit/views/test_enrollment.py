@@ -305,6 +305,113 @@ class TestEditJson(IntegrationFixture):
                 }))
         self.assertLess(old_modify_date, patient.modify_date)
 
+    def test_temination_date_disabled_if_form_configured(self, csrf_token):
+
+        from datetime import date, timedelta
+        from pyramid import testing
+        from occams_studies import models, Session
+
+        _register_routes(self.config)
+
+        today = date.today()
+        t1 = today - timedelta(days=5)
+        t2 = today
+        t3 = today + timedelta(days=100)
+        t4 = today + timedelta(days=200)
+
+        study = models.Study(
+            name=u'somestudy',
+            title=u'Some Study',
+            short_title=u'sstudy',
+            code=u'000',
+            start_date=t1,
+            consent_date=t3,
+            termination_schema=models.Schema(
+                name=u'termination',
+                title=u'Termination',
+                publish_date=t1,
+                attributes={
+                    'termination_date': models.Attribute(
+                        name=u'termination_date',
+                        title=u'Termination Date',
+                        type=u'date',
+                        order=0)
+                }))
+
+        patient = models.Patient(
+            site=models.Site(name=u'ucsd', title=u'UCSD'),
+            pid=u'12345')
+
+        enrollment = models.Enrollment(
+            study=study,
+            patient=patient,
+            consent_date=t1,
+            termination_date=t3)
+
+        Session.add_all([enrollment])
+        Session.flush()
+
+        self.call_view(enrollment, testing.DummyRequest(
+            json_body={
+                'study': study.id,
+                'consent_date': str(t1),
+                'latest_consent_date': str(t2),
+                'termination_date': str(t4)
+                }
+            ))
+
+        # Termination date should not have changed because
+        # it's controlled via termination schema
+        self.assertEquals(t3, enrollment.termination_date)
+
+    def test_temination_date_enabled_if_no_termination(self, csrf_token):
+
+        from datetime import date, timedelta
+        from pyramid import testing
+        from occams_studies import models, Session
+
+        _register_routes(self.config)
+
+        today = date.today()
+        t1 = today - timedelta(days=5)
+        t2 = today
+        t3 = today + timedelta(days=100)
+        t4 = today + timedelta(days=200)
+
+        study = models.Study(
+            name=u'somestudy',
+            title=u'Some Study',
+            short_title=u'sstudy',
+            code=u'000',
+            start_date=t1,
+            consent_date=t3)
+
+        patient = models.Patient(
+            site=models.Site(name=u'ucsd', title=u'UCSD'),
+            pid=u'12345')
+
+        enrollment = models.Enrollment(
+            study=study,
+            patient=patient,
+            consent_date=t1,
+            termination_date=t3)
+
+        Session.add_all([enrollment])
+        Session.flush()
+
+        self.call_view(enrollment, testing.DummyRequest(
+            json_body={
+                'study': study.id,
+                'consent_date': str(t1),
+                'latest_consent_date': str(t2),
+                'termination_date': str(t4)
+                }
+            ))
+
+        # Termination date should have changed because there
+        # is not termination schema that controls it
+        self.assertEquals(t4, enrollment.termination_date)
+
 
 @mock.patch('occams_studies.views.enrollment.check_csrf_token')
 class TestDeleteJson(IntegrationFixture):
