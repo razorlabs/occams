@@ -132,7 +132,7 @@
                           <!-- ko if: __can_edit__ -->
                             <li role="presentation"><a role="menuitem" tabindex="-1" href="#/edit" data-bind="click: $root.startEditEnrollment">Edit</a></li>
                           <!-- /ko -->
-                          <!-- ko if: __can_terminate__ -->
+                          <!-- ko if: __can_terminate__() -->
                             <li role="presentation"><a role="menuitem" tabindex="-1" href="#/termination" data-bind="
                                 click: $root.startTerminateEnrollment">Termination</a></li>
                           <!-- /ko -->
