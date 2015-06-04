@@ -75,7 +75,7 @@
                 type="submit"
                 class="btn btn-primary"
                 tal:define="state_name entity.state.name|'pending-entry'"
-                tal:condition="python: field or state_name in ('pending-entry', 'pending-correction')"
+                tal:condition="python: field or state_name != 'complete'"
                 i18n:translate="">Save</button>
 
           </span>

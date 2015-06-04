@@ -456,7 +456,7 @@ def apply_data(session, entity, data, upload_path):
             session.query(models.State).filter_by(name=next_state).one())
 
     # Do not update data if we're transitioning from a readonly-state
-    if previous_state in (states.PENDING_REVIEW, states.COMPLETE):
+    if previous_state == states.COMPLETE:
         return entity
 
     if 'ofmetadata_' in data:

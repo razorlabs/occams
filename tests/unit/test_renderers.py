@@ -232,6 +232,29 @@ class TestApplyData(IntegrationFixture):
         self.assertEquals(entity.state.name, states.COMPLETE)
         self.assertEquals(entity['q1'], formdata['q1'])
 
+    def test_pending_review_to_complete(self):
+        from occams_forms import Session, models
+        from occams_forms.renderers import states
+
+        entity = self._make_entity()
+        entity.state = (
+            Session.query(models.State)
+            .filter_by(name=states.PENDING_REVIEW)
+            .one())
+        entity['q1'] = u'Some value'
+
+        formdata = {
+            'ofworkflow_': {
+                'state': states.COMPLETE,
+            },
+            'q1': u'Last minute changes'
+        }
+
+        self._call(Session, entity, formdata, self.tmpdir)
+
+        self.assertEquals(entity.state.name, states.COMPLETE)
+        self.assertEquals(entity['q1'], formdata['q1'])
+
     def test_auto_pending_entry_to_pending_review(self):
 
         from occams_forms import Session
