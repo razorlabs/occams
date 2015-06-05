@@ -209,7 +209,7 @@
             <tal:case case="string:FileInput">
               ${structure: field(**{
                   'class': 'form-control ds-widget file',
-                  'disbled': disabled,
+                  'disabled': disabled,
                   'data-show-upload': 'false',
                   'data-show-preview': 'false'
                   })}
