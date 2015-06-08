@@ -1,7 +1,7 @@
 /**
  * Application view model
  */
-function StatusViewModel() {
+function StatusViewModel(options) {
   var self = this;
 
   self.ready = ko.observable(false);      // Used for display when AJAX is done
@@ -84,8 +84,7 @@ function StatusViewModel() {
      * Configures Socket.io to listen for progress notifications
      */
     // Use the template-embedded socket.io URL
-    var socket = io.connect('/export', {
-      resource: $('body').data('socket-io-resource')});
+    var socket = io.connect(options.socketio_namespace, {resource: options.socketio_resource});
     socket.on('connect', function(){
       socket.on('export', function(data){
         self.exports().every(function(export_){
