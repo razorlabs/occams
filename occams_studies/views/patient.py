@@ -573,8 +573,6 @@ def form(context, request):
         'patient': view_json(patient, request),
         'form': render_form(
             form,
-            entity=context,
-            schema=context.schema,
             disabled=not request.has_permission('edit'),
             cancel_url=previous_url,
             attr={
