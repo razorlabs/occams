@@ -98,10 +98,9 @@ function StatusViewModel(options) {
       });
     });
 
-    var query = parse_url_query();
-    if (query.page !== undefined){
-      console.log(query);
-      self.loadPage(query.page);
-    }
+    var query = parse_url_query(),
+        page = query.page || 1;
+
+    self.loadPage(query.page);
   }();
 }

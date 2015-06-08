@@ -1214,7 +1214,7 @@ class Export(Base, Referenceable, Modifiable, Auditable):
         """
         Virtual attribute that returns the export's path in the filesystem
         """
-        export_dir = self.metadata.info['settings']['studies.export.dir']
+        export_dir = Session.info['settings']['studies.export.dir']
         return os.path.join(export_dir, self.name)
 
     @property
@@ -1230,7 +1230,7 @@ class Export(Base, Referenceable, Modifiable, Auditable):
         """
         Virtual attribute that returns the export's expiration date (if avail)
         """
-        delta = self.metadata.info['settings'].get('studies.export.expire')
+        delta = Session.info['settings'].get('studies.export.expire')
         if delta:
             return self.modify_date + timedelta(delta)
 
