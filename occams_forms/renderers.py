@@ -255,26 +255,36 @@ def make_form(session,
     the user wants to sitch together multiple forms for Long Forms.
     """
 
-    formdata = formdata or {}
-
     class DatastoreForm(wtforms.Form):
+
+        class Meta:
+            pass
+
+        setattr(Meta, 'schema', schema)
+        setattr(Meta, 'entity', entity)
 
         def validate(self, **kw):
 
-            # Only validate the workflow if the orignal entity WAS editable
-            if 'ofworkflow_' in self:
-                return self.ofworkflow_.validate(self)
+            status = True
 
-            elif 'ofmetadata_' in self and self.ofmetadata_.not_done.data:
-                return self.ofmetadata_.validate(self)
+            if 'ofworkflow_' in self:
+                status = status and self.ofworkflow_.validate(self)
+
+                # No further validation needed if we're going to
+                # erase the data anyway
+                if self.ofworkflow_.state.data == states.PENDING_ENTRY:
+                    return status
+
+            if 'ofmetadata_' in self and self.ofmetadata_.not_done.data:
+                return status and self.ofmetadata_.validate(self)
 
             else:
-                return super(DatastoreForm, self).validate(**kw)
+                return status and super(DatastoreForm, self).validate(**kw)
 
     if show_metadata:
 
         # If there was a version change so we render the correct form
-        if 'ofmetadata_-version' in formdata:
+        if formdata and 'ofmetadata_-version' in formdata:
             schema = (
                 session.query(models.Schema)
                 .filter_by(
@@ -373,28 +383,32 @@ def make_longform(session, schemata):
 
 def render_form(form,
                 cancel_url=None,
-                entity=None,
-                schema=None,
                 disabled=False,
                 attr=None):
     """
     Helper function to render a WTForm by OCCAMS standards
     """
 
+    entity = form.meta.entity
+    schema = form.meta.schema
+
     # We differentiate beween metadata and fields here because
     # sometimes we want the data fields to be disabled (when the form
     # is not collected) or the whole form disabled (when complete)
-    metadata_disabled = disabled or entity.state.name == states.COMPLETE
-    fields_disabled = disabled or metadata_disabled or entity.not_done
+    # Also, we need to convert to bool and not true-ish or false-ish
+    # because wtforms will still render the attribute if not explicitly boolean
+    metadata_disabled = bool(disabled or (
+        entity and entity.state and entity.state.name == states.COMPLETE))
+    fields_disabled = bool(disabled or metadata_disabled or (
+        entity and entity.not_done))
 
     return render('occams_forms:templates/form.pt', {
         'cancel_url': cancel_url,
         'schema': schema,
         'entity': entity,
         'form': form,
-        'disabled': disabled,
         'metadata_disabled': metadata_disabled,
-        'field_disabled': fields_disabled,
+        'fields_disabled': fields_disabled,
         'attr': attr or {},
     })
 
@@ -453,7 +467,10 @@ def apply_data(session, entity, data, upload_path):
 
     if 'ofmetadata_' in data:
         metadata = data['ofmetadata_']
-        entity.not_done = metadata['not_done']
+        if next_state == states.PENDING_ENTRY:
+            entity.not_done = False
+        else:
+            entity.not_done = metadata['not_done']
         entity.collect_date = metadata['collect_date']
         entity.schema = (
             session.query(models.Schema)

@@ -106,6 +106,152 @@ class TestMakeField(IntegrationFixture):
             any(isinstance(v, NumberRange) for v in field.validators))
 
 
+class TestMakeForm(IntegrationFixture):
+
+    def _make_schema(self):
+        from datetime import date
+        from occams_forms import models, Session
+        schema = models.Schema(
+            name=u'dymmy_schema',
+            title=u'Dummy Schema',
+            publish_date=date.today(),
+            attributes={
+                'dummy_field': models.Attribute(
+                    name=u'dummy_field',
+                    title=u'Dummy Field',
+                    type='string',
+                    is_required=True,
+                    order=0
+                )
+            })
+
+        Session.add(schema)
+        Session.flush()
+
+        return schema
+
+    def test_skip_validation_if_pending_entry(self):
+        from webob.multidict import MultiDict
+        from occams_forms import Session
+        from occams_forms.renderers import make_form, states, modes
+
+        schema = self._make_schema()
+        Form = make_form(Session, schema, transition=modes.ALL)
+        form = Form(MultiDict({
+            'ofworkflow_-state': states.PENDING_ENTRY,
+        }))
+        self.assertTrue(form.validate(), form.errors)
+
+    def test_skip_validation_if_not_collected(self):
+        from datetime import date
+        from webob.multidict import MultiDict
+        from occams_forms import Session
+        from occams_forms.renderers import make_form
+
+        schema = self._make_schema()
+        Form = make_form(Session, schema)
+
+        form = Form(MultiDict({
+            'ofmetadata_-collect_date': str(date.today()),
+            'ofmetadata_-version': str(schema.publish_date),
+            'ofmetadata_-not_done': '1',
+        }))
+        self.assertTrue(form.validate(), form.errors)
+
+    def test_validation_if_collected(self):
+        from datetime import date
+        from webob.multidict import MultiDict
+        from occams_forms import Session
+        from occams_forms.renderers import make_form
+
+        schema = self._make_schema()
+        Form = make_form(Session, schema)
+
+        form = Form(MultiDict({
+            'ofmetadata_-collect_date': str(date.today()),
+            'ofmetadata_-version': str(schema.publish_date),
+            'ofmetadata_-not_done': '',
+        }))
+
+        self.assertFalse(form.validate())
+        self.assertIn('dummy_field', form.errors)
+
+
+@ddt
+class TestRenderForm(IntegrationFixture):
+
+    def setUp(self):
+        super(TestRenderForm, self).setUp()
+        self.config.include('pyramid_chameleon')
+
+    def _make_form(self):
+        from datetime import date
+        from occams_forms import models, Session
+        from occams_forms.renderers import make_form
+
+        schema = models.Schema(
+            name=u'dymmy_schema',
+            title=u'Dummy Schema',
+            publish_date=date.today(),
+            attributes={
+                'dummy_field': models.Attribute(
+                    name=u'dummy_field',
+                    title=u'Dummy Field',
+                    type='string',
+                    order=0
+                )
+            })
+
+        entity = models.Entity(schema=schema)
+        Session.add(entity)
+        Session.flush()
+
+        return make_form(Session, schema, entity=entity)
+
+    @data('pending-entry', 'pending-review', 'pending-correction')
+    def test_enabled_for_editable_states(self, state):
+
+        from occams_forms import models, Session
+        from occams_forms.renderers import render_form
+        from bs4 import BeautifulSoup
+
+        Form = self._make_form()
+        form = Form()
+
+        form.meta.entity.state = (
+            Session.query(models.State)
+            .filter_by(name=state)
+            .one())
+
+        markup = render_form(form)
+        soup = BeautifulSoup(markup)
+
+        field = soup.find(id='dummy_field')
+
+        self.assertFalse(field.has_attr('disabled'))
+
+    def test_disabled_if_complete(self):
+
+        from occams_forms import models, Session
+        from occams_forms.renderers import render_form, states
+        from bs4 import BeautifulSoup
+
+        Form = self._make_form()
+        form = Form()
+
+        form.meta.entity.state = (
+            Session.query(models.State)
+            .filter_by(name=states.COMPLETE)
+            .one())
+
+        markup = render_form(form)
+        soup = BeautifulSoup(markup)
+
+        field = soup.find(id='dummy_field')
+
+        self.assertTrue(field.has_attr('disabled'))
+
+
 class TestApplyData(IntegrationFixture):
 
     def setUp(self):
@@ -152,6 +298,30 @@ class TestApplyData(IntegrationFixture):
 
         self._call(Session, entity, formdata, self.tmpdir)
 
+        self.assertIsNone(entity['q1'])
+
+    def test_clear_if_pending_entry(self):
+        from datetime import date
+        from occams_forms import Session
+        from occams_forms.renderers import states
+
+        entity = self._make_entity()
+        entity['q1'] = u'Some value'
+
+        formdata = {
+            'ofmetadata_': {
+                'not_done': True,
+                'collect_date': date.today(),
+                'version': entity.schema.publish_date
+            },
+            'ofworkflow_': {
+                'state': states.PENDING_ENTRY
+            }
+        }
+
+        self._call(Session, entity, formdata, self.tmpdir)
+
+        self.assertFalse(entity.not_done)
         self.assertIsNone(entity['q1'])
 
     def test_unknown_state_to_pending_entry(self):

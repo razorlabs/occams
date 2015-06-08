@@ -98,7 +98,6 @@ def preview(context, request):
         'form_id': form_id,
         'form_content': render_form(
             form,
-            schema=context,
             cancel_url=request.current_route_path(),
             attr={
                 'id': form_id,
