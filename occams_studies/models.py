@@ -1139,8 +1139,8 @@ class ExportFactory(object):
         (Allow, groups.consumer(), 'view')
         ]
 
-    def __init__(self, parent):
-        self.__parent__ = parent
+    def __init__(self, request):
+        self.request = request
 
     def __getitem__(self, key):
         try:

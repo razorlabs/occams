@@ -45,8 +45,8 @@ class ExportNamespace(BaseNamespace):
         Determines from the request if this socket can accept events
         """
         log.debug('Initializing socket.io service')
-        log.debug(self.request.has_permission('fia_view'))
-        if self.request.has_permission('fia_view'):
+        exports = models.ExportFactory(self.request)
+        if self.request.has_permission('view', exports):
             self.lift_acl_restrictions()
             self.session['user'] = self.request.authenticated_userid
             self.session['redis'] = self.request.redis
