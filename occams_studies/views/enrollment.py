@@ -220,8 +220,6 @@ def terminate_ajax(context, request):
 
     return render_form(
         form,
-        schema=schema,
-        entity=entity,
         cancel_url=request.current_route_path(_route_name='studies.patient'),
         attr={
             'method': 'POST',
@@ -412,7 +410,6 @@ def randomize_ajax(context, request):
             'request': request,
             'form': render_form(
                 form,
-                schema=randomization_schema,
                 disabled=is_randomized,
                 attr={
                     'id': 'enrollment-randomization',
