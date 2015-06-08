@@ -153,7 +153,7 @@
           widget_cls    type(field.widget).__name__;
           option_cls    type(field.option_widget).__name__ if hasattr(field, 'option_widget') else None;
           name          field.short_name;
-          disabled      fields_disabled|nothing;
+          disabled      python:bool(fields_disabled);
           ">
       <tal:switch switch="option_cls">
         <tal:case case="string:RadioInput">
