@@ -28,6 +28,7 @@ def track_user_on_request(event):
 
     # Keep track of the request so we can generate model URLs
     Session.info['request'] = request
+    Session.info['settings'] = request.registry.settings
 
     if request.authenticated_userid is not None:
         Session.info['blame'] = (
