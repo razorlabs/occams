@@ -70,13 +70,10 @@ def checkout(context, request):
                     _(u'Invalid selection')))
 
         class CheckoutForm(Form):
-            contents = wtforms.FieldList(
-                wtforms.StringField(
-                    validators=[
-                        wtforms.validators.InputRequired(),
-                        wtforms.validators.AnyOf(
-                            exportables,
-                            message=_(u'Invalid selection')) ]))
+            contents = wtforms.SelectMultipleField(
+                choices=[(k, v.title) for k, v in six.iteritems(exportables)],
+                validators=[
+                    wtforms.validators.InputRequired()])
             expand_collections = wtforms.BooleanField(default=False)
             use_choice_labels = wtforms.BooleanField(default=False)
 
@@ -93,8 +90,8 @@ def checkout(context, request):
                 owner_user=(Session.query(models.User)
                             .filter_by(key=request.authenticated_userid)
                             .one()),
-                contents=[
-                    exportables[k].to_json() for k in form.contents.entries]))
+                contents=[exportables[k].to_json() for k in form.contents.data]
+            ))
 
             def apply_after_commit(success):
                 if success:
@@ -237,7 +234,7 @@ def status_json(context, request):
 
     return {
         'csrf_token': request.session.get_csrf_token(),
-        'pagination': pagination.serialize(),
+        'pager': pagination.serialize(),
         'exports': [export2json(e) for e in exports_query]
     }
 

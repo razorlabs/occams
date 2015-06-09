@@ -26,14 +26,12 @@ function StatusViewModel(options) {
    */
   self.deleteExport = function(export_) {
     $.ajax({
-      url: export_.delete_url,
-      method: 'POST',
+      url: export_.delete_url(),
+      method: 'DELETE',
       headers: {'X-CSRF-Token': $.cookie('csrf_token')},
       success: function(data, textStatus, jqXHR){
-        // Refresh the current page
+        self.loadPage(self.pager().page);
         self.selectedExport(null);
-        self.exports.remove(export_);
-        location.hash = '/' + self.pager().page;
       }
     });
   };
@@ -61,12 +59,7 @@ function StatusViewModel(options) {
   }
 
   self.loadPage = function (page){
-    var query = {page: page},
-        url = window.location.pathname;
-    $.get(url, query, function(data){
-      if (history.pushState){
-        history.pushState(query, page, url);
-      }
+    $.get(window.location.pathname, {page: page}, function(data){
       self.pager(data.pager);
       self.exports(data.exports.map(function(item){
         return new Export(item);
@@ -76,7 +69,15 @@ function StatusViewModel(options) {
   };
 
   self.onPageClick = function(item, event){
-    self.loadPage($(event.target).data('page'));
+    var $target = $(event.target),
+        url = $target.attr('href'),
+        page = $target.data('page');
+
+    if (history.pushState){
+      history.pushState({}, '', url);
+    }
+
+    self.loadPage(page);
   };
 
   +function(){
@@ -87,20 +88,24 @@ function StatusViewModel(options) {
     var socket = io.connect(options.socketio_namespace, {resource: options.socketio_resource});
     socket.on('connect', function(){
       socket.on('export', function(data){
-        self.exports().every(function(export_){
-           // find the appropriate export and update it's data
-          if (export_.id == data['export_id']) {
-            export_.update(data);
-            return false; // "break"
-          }
-          return true;
+
+        var export_ = ko.utils.arrayFirst(self.exports(), function(e){
+          return e.id() == data['export_id'];
         });
+
+        if (export_){
+          export_.count(data['count']);
+          export_.total(data['total']);
+          export_.status(data['status']);
+          export_.file_size(data['file_size']);
+        }
+
       });
     });
 
     var query = parse_url_query(),
         page = query.page || 1;
 
-    self.loadPage(query.page);
+    self.loadPage(page);
   }();
 }

@@ -122,6 +122,7 @@ def in_transaction(func):
             userid = celery.settings['studies.export.user']
             user = Session.query(models.User).filter_by(key=userid).one()
             Session.info['blame'] = user
+            Session.info['settings'] = celery.settings
             result = func(*args, **kw)
         Session.remove()
         return result
@@ -192,7 +193,7 @@ def make_export(name):
         'owner_user': export.owner_user.key,
         'status': export.status,
         'count': 0,
-        'total': len(export.contents)
+        'total': len(export.contents),
     })
 
     with closing(ZipFile(export.path, 'w', ZIP_DEFLATED)) as zfp:
@@ -209,10 +210,13 @@ def make_export(name):
                 zfp.write(tfp.name, plan.file_name)
 
             redis.hincrby(export.redis_key, 'count')
-            message = json.dumps(redis.hgetall(export.redis_key))
-            redis.publish('export', message)
-            count, total = redis.hmget(export.redis_key, 'count', 'total')
-            log.info(', '.join([count, total, item['name']]))
+            data = redis.hgetall(export.redis_key)
+            # redis-py returns everything as string, so we need to clean it
+            for key in ('export_id', 'count', 'total'):
+                data[key] = int(data[key])
+            redis.publish('export', json.dumps(data))
+            count, total = data['count'], data['total']
+            log.info(', '.join(map(str, [count, total, item['name']])))
 
         with tempfile.NamedTemporaryFile() as tfp:
             codebook_chain = [p.codebook() for p in itervalues(exportables)]

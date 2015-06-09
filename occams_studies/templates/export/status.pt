@@ -34,7 +34,7 @@
 
         <!--! Export status panels -->
         <div data-bind="template: {foreach: exports}">
-          <div data-bind="attr: { id:       'export-' + id,
+          <div data-bind="attr: { id:       'export-' + id(),
                                   'class':  'export panel panel-' + status()}">
             <div class="panel-heading clearfix">
               <div class="pull-right export-status">
@@ -114,7 +114,7 @@
                     data-toggle="collapse"
                     data-bind="
                       attr: {
-                        'data-target': '#export-collapse-' + id
+                        'data-target': '#export-collapse-' + id()
                       }"
                     i18n:translate=""
                   >Contents</button>
@@ -127,7 +127,7 @@
             </div> <!-- /panel-body -->
             <div
                 class="collapse table-responsive export-contents"
-                data-bind="attr: {id: 'export-collapse-' + id}">
+                data-bind="attr: {id: 'export-collapse-' + id()}">
               <table class="table table-condensed">
                 <thead>
                   <tr>
@@ -165,21 +165,21 @@
         </div> <!-- /#exports -->
 
         <div data-bind="with: pager">
-          <!-- ko if: total_count() > per_page() -->
+          <!-- ko if: total_count > per_page -->
           <ul class="pager">
-            <li class="previous" data-bind="css: {'disabled': !has_previous()}">
+            <li class="previous" data-bind="css: {'disabled': is_first}">
               <a data-bind="
                   click: $root.onPageClick,
                   attr: {
                     'data-page': previous_page,
-                    'href': '?page=' + previous_page()}">&larr; Newer</a>
+                    'href': '?page=' + previous_page}">&larr; Newer</a>
             </li>
-            <li class="next" data-bind="css: {'disabled': !has_next()}">
+            <li class="next" data-bind="css: {'disabled': is_last}">
               <a data-bind="
                   click: $root.onPageClick,
                   attr: {
                     'data-page': next_page,
-                    'href': '?page=' + next_page()}">Older &rarr;</a>
+                    'href': '?page=' + next_page}">Older &rarr;</a>
             </li>
           </ul>
           <!-- /ko -->
