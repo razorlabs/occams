@@ -257,8 +257,7 @@ def delete_json(context, request):
 
 
 @view_config(
-    route_name='studies.export',
-    request_param='alt=zip',
+    route_name='studies.export_download',
     permission='view')
 def download(context, request):
     """
@@ -268,13 +267,10 @@ def download(context, request):
     """
     export = context
 
-    if not request.has_permission('view', export):
-        raise HTTPForbidden()
-
     if export.status != 'complete':
         raise HTTPNotFound
 
-    export_dir = request.registry.settings['app.export.dir']
+    export_dir = request.registry.settings['studies.export.dir']
     path = os.path.join(export_dir, export.name)
 
     response = FileResponse(path)
