@@ -501,7 +501,8 @@ def apply_data(session, entity, data, upload_path):
         if attribute.name not in parent:
             continue
 
-        if attribute.type == 'blob':
+        # if data[attribute.name] is empty, it means field was empty
+        if attribute.type == 'blob' and data[attribute.name]:
             original_name = os.path.basename(data[attribute.name].filename)
             input_file = data[attribute.name].file
 
@@ -539,6 +540,7 @@ def apply_data(session, entity, data, upload_path):
             mime_type = None
 
             value = models.BlobInfo(original_name, dest_path, mime_type)
+
         else:
             value = parent[attribute.name]
 
