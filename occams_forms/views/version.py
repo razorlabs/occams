@@ -93,6 +93,9 @@ def preview(context, request):
             )
         finally:
             shutil.rmtree(upload_path)
+            # Remove from session so entity or attributes don't persist in db
+            if entity:
+                Session.expunge(entity)
 
     return {
         'entity': entity,
