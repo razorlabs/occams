@@ -5,7 +5,9 @@ from tests import IntegrationFixture
 
 
 def _register_routes(config):
-    config.add_route('studies.export_status', '/')
+    config.add_route('studies.exports_status', '/')
+    config.add_route('studies.export', '/{export}')
+    config.add_route('studies.export_download', '/{export}/dl')
 
 
 @mock.patch('occams_studies.views.export.check_csrf_token')
@@ -66,7 +68,7 @@ class TestAdd(IntegrationFixture):
         request = testing.DummyRequest(
             post=MultiDict([('contents', 'does_not_exist')]))
         response = self.call_view(models.ExportFactory(request), request)
-        self.assertIn('Invalid selection', response['errors']['contents-0'])
+        self.assertIn('not a valid choice', response['errors']['contents'])
 
     @mock.patch('occams_studies.tasks.make_export')  # Don't invoke subtasks
     def test_valid(self, make_export, check_csrf_token):
@@ -96,14 +98,14 @@ class TestAdd(IntegrationFixture):
         self.config.testing_securitypolicy(userid='joe')
         request = testing.DummyRequest(
             post=MultiDict([
-                ('contents-0', str('vitals'))
+                ('contents', str('vitals'))
             ]))
 
         response = self.call_view(models.ExportFactory(request), request)
         check_csrf_token.assert_called_with(request)
         self.assertIsInstance(response, HTTPFound)
         self.assertEqual(response.location,
-                         request.route_path('studies.export_status'))
+                         request.route_path('studies.exports_status'))
         export = Session.query(models.Export).one()
         self.assertEqual(export.owner_user.key, 'joe')
 
@@ -160,8 +162,8 @@ class TestStatusJSON(IntegrationFixture):
         from pyramid import testing
         from occams_studies import Session, models
 
-        self.config.registry.settings['app.export.dir'] = '/tmp'
-        self.config.include('occams_studies.routes')
+        self.config.registry.settings['studies.export.dir'] = '/tmp'
+        _register_routes(self.config)
 
         blame = models.User(key=u'joe')
         Session.add(blame)
@@ -169,25 +171,28 @@ class TestStatusJSON(IntegrationFixture):
         Session.flush()
         Session.info['blame'] = blame
 
-        Session.add_all([
-            models.Export(
-                owner_user=(
-                    Session.query(models.User)
-                    .filter_by(key='joe')
-                    .one()),
-                contents=[],
-                status='pending'),
-            models.Export(
-                owner_user=(
-                    Session.query(models.User)
-                    .filter_by(key='jane')
-                    .one()),
-                contents=[],
-                status='pending')])
+        export1 = models.Export(
+            owner_user=(
+                Session.query(models.User)
+                .filter_by(key='joe')
+                .one()),
+            contents=[],
+            status='pending')
+        export2 = models.Export(
+            owner_user=(
+                Session.query(models.User)
+                .filter_by(key='jane')
+                .one()),
+            contents=[],
+            status='pending')
+        Session.add_all([export1, export2])
         Session.flush()
 
         self.config.testing_securitypolicy(userid='joe')
         request = testing.DummyRequest()
+        context = models.ExportFactory(request)
+        export1.__parent__ = context
+        export2.__parent__ = context
         response = self.call_view(models.ExportFactory(request), request)
         exports = response['exports']
         self.assertEquals(len(exports), 1)
@@ -227,7 +232,9 @@ class TestStatusJSON(IntegrationFixture):
 
         self.config.testing_securitypolicy(userid='joe')
         request = testing.DummyRequest()
-        response = self.call_view(models.ExportFactory(request), request)
+        context = models.ExportFactory(request)
+        export.__parent__ = context
+        response = self.call_view(context, request)
         exports = response['exports']
         self.assertEquals(len(exports), 1)
 
@@ -235,7 +242,9 @@ class TestStatusJSON(IntegrationFixture):
             now - timedelta(EXPIRE_DAYS + 1)
         Session.flush()
         request = testing.DummyRequest()
-        response = self.call_view(models.ExportFactory(request), request)
+        context = models.ExportFactory(request)
+        export.__parent__ = context
+        response = self.call_view(context, request)
         exports = response['exports']
         self.assertEquals(len(exports), 0)
 
@@ -251,7 +260,7 @@ class TestCodebookJSON(IntegrationFixture):
         It should return 404 if the file not specified
         """
         from pyramid import testing
-        from pyramid.httpexceptions import HTTPNotFound
+        from pyramid.httpexceptions import HTTPBadRequest
         from webob.multidict import MultiDict
         from occams_studies import models
 
@@ -259,7 +268,7 @@ class TestCodebookJSON(IntegrationFixture):
             params=MultiDict([('file', '')])
         )
 
-        with self.assertRaises(HTTPNotFound):
+        with self.assertRaises(HTTPBadRequest):
             self.call_view(models.ExportFactory(request), request)
 
     def test_file_not_exists(self):
@@ -267,7 +276,7 @@ class TestCodebookJSON(IntegrationFixture):
         It should return 404 if the file does not exist
         """
         from pyramid import testing
-        from pyramid.httpexceptions import HTTPNotFound
+        from pyramid.httpexceptions import HTTPBadRequest
         from webob.multidict import MultiDict
         from occams_studies import models
 
@@ -275,7 +284,7 @@ class TestCodebookJSON(IntegrationFixture):
             params=MultiDict([('file', 'i_dont_exist')])
         )
 
-        with self.assertRaises(HTTPNotFound):
+        with self.assertRaises(HTTPBadRequest):
             self.call_view(models.ExportFactory(request), request)
 
     def test_file(self):
@@ -325,7 +334,7 @@ class TestCodebookDownload(IntegrationFixture):
         from pyramid.response import FileResponse
         from occams_studies.exports.codebook import FILE_NAME
         from occams_studies import models
-        self.config.registry.settings['app.export.dir'] = '/tmp'
+        self.config.registry.settings['studies.export.dir'] = '/tmp'
         name = '/tmp/' + FILE_NAME
         with open(name, 'w+b'):
             self.config.testing_securitypolicy(userid='jane')
@@ -391,7 +400,7 @@ class TestDownload(IntegrationFixture):
         It should return 404 if the record is not ready
         """
         from pyramid import testing
-        from pyramid.httpexceptions import HTTPNotFound
+        from pyramid.httpexceptions import HTTPBadRequest
         from occams_studies import Session, models
 
         blame = models.User(key=u'joe')
@@ -411,5 +420,5 @@ class TestDownload(IntegrationFixture):
         Session.flush()
 
         request = testing.DummyRequest()
-        with self.assertRaises(HTTPNotFound):
+        with self.assertRaises(HTTPBadRequest):
             self.call_view(export, request)

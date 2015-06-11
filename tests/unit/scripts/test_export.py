@@ -1,10 +1,7 @@
-try:
-    import unitest2 as unittest
-except ImportError:
-    import unittest
+from tests import IntegrationFixture
 
 
-class PrintListTestCase(unittest.TestCase):
+class PrintListTestCase(IntegrationFixture):
 
     def setUp(self):
         import tempfile
@@ -201,8 +198,8 @@ class PrintListTestCase(unittest.TestCase):
         with tempfile.NamedTemporaryFile() as fp:
             fp.write("""
 [app:main]
-use = egg:occams_studies
-app.db.url = fake://
+use = egg:occams
+occams.db.url = fake://
 """)
             fp.flush()
             with mock.patch('occams_studies.exports.list_all',

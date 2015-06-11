@@ -302,9 +302,12 @@ def bulk_delete_json(context, request):
     check_csrf_token(request)
 
     class DeleteForm(Form):
-        forms = wtforms.FieldList(ModelField(
-            session=Session,
-            class_=models.Entity))
+        forms = wtforms.FieldList(
+            ModelField(
+                session=Session,
+                class_=models.Entity),
+            validators=[
+                wtforms.validators.DataRequired()])
 
     form = DeleteForm.from_json(request.json_body)
 

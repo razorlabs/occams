@@ -5,8 +5,7 @@ import uuid
 from babel.dates import format_datetime
 from humanize import naturalsize
 from pyramid.i18n import get_localizer, negotiate_locale_name
-from pyramid.httpexceptions import \
-    HTTPForbidden, HTTPFound, HTTPNotFound, HTTPOk
+from pyramid.httpexceptions import HTTPBadRequest, HTTPFound, HTTPOk
 from pyramid.response import FileResponse
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
@@ -106,7 +105,8 @@ def checkout(context, request):
             msg = _(u'Your request has been received!')
             request.session.flash(msg, 'success')
 
-            return HTTPFound(location=request.route_path('studies.exports_status'))
+            next_url = request.route_path('studies.exports_status')
+            return HTTPFound(location=next_url)
 
     return {
         'errors': errors,
@@ -137,11 +137,6 @@ def codebook_json(context, request):
     Loads codebook rows for the specified data file
     """
 
-    file = request.GET.get('file')
-
-    if not file:
-        raise HTTPNotFound
-
     def massage(row):
         publish_date = row['publish_date']
         if publish_date:
@@ -150,8 +145,10 @@ def codebook_json(context, request):
 
     exportables = exports.list_all()
 
+    file = request.GET.get('file')
+
     if file not in exportables:
-        raise HTTPNotFound
+        raise HTTPBadRequest(u'File specified does not exist')
 
     plan = exportables[file]
     return [massage(row) for row in plan.codebook()]
@@ -160,7 +157,7 @@ def codebook_json(context, request):
 @view_config(
     route_name='studies.exports_codebook',
     request_param='alt=csv',
-    permission='fia_view')
+    permission='view')
 def codebook_download(context, request):
     """
     Returns full codebook file
@@ -170,7 +167,7 @@ def codebook_download(context, request):
     path = os.path.join(export_dir, codebook_name)
     if not os.path.isfile(path):
         log.warn('Trying to download codebook before it\'s pre-cooked!')
-        raise HTTPNotFound
+        raise HTTPBadRequest(u'Codebook file is not ready yet')
     response = FileResponse(path)
     response.content_disposition = 'attachment;filename=%s' % codebook_name
     return response
@@ -227,7 +224,8 @@ def status_json(context, request):
                           if export.file_size else None),
             'download_url': request.route_path('studies.export_download',
                                                export=export.id),
-            'delete_url': request.route_path('studies.export', export=export.id),
+            'delete_url': request.route_path('studies.export',
+                                             export=export.id),
             'create_date': format_datetime(export.create_date, locale=locale),
             'expire_date': format_datetime(export.expire_date, locale=locale)
         }
@@ -268,7 +266,7 @@ def download(context, request):
     export = context
 
     if export.status != 'complete':
-        raise HTTPNotFound
+        raise HTTPBadRequest('Export is not complete')
 
     export_dir = request.registry.settings['studies.export.dir']
     path = os.path.join(export_dir, export.name)
@@ -283,7 +281,7 @@ def query_exports(request):
     Helper method to query current exports for the authenticated user
     """
     userid = request.authenticated_userid
-    export_expire = request.registry.settings.get('app.export.expire')
+    export_expire = request.registry.settings.get('studies.export.expire')
 
     query = (
         Session.query(models.Export)

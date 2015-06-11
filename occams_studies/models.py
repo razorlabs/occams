@@ -1136,7 +1136,7 @@ class ExportFactory(object):
     __acl__ = [
         (Allow, groups.administrator(), ALL_PERMISSIONS),
         (Allow, groups.manager(), ('view', 'add')),
-        (Allow, groups.consumer(), 'view')
+        (Allow, groups.consumer(), ('view', 'add'))
         ]
 
     def __init__(self, request):

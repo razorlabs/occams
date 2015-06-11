@@ -49,6 +49,8 @@ class TestEditJson(IntegrationFixture):
         from pyramid.httpexceptions import HTTPBadRequest
         from occams_studies import models, Session
 
+        self.config.add_route('studies.cycle', '/{study}/{cycle}')
+
         cycle = models.Cycle(name='week-1', title=u'Week 1', week=1)
 
         study = models.Study(
@@ -66,12 +68,12 @@ class TestEditJson(IntegrationFixture):
         with self.assertRaises(HTTPBadRequest) as cm:
             self.call_view(study['cycles'], testing.DummyRequest(
                 json_body={
-                    'title': u'Should fail',
+                    'title': u'Week 1',
                     'week': 2}))
 
         self.assertIn(
             'not yield a unique',
-            cm.exception.json['errors']['name'].lower())
+            cm.exception.json['errors']['title'].lower())
 
     def test_edit_unique_name(self, check_csrf_token):
         """
