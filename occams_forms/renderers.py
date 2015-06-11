@@ -10,6 +10,7 @@ import collections
 import os
 from itertools import groupby
 import uuid
+from datetime import date, datetime
 
 from pyramid.renderers import render
 import six
@@ -17,6 +18,7 @@ import wtforms
 import wtforms.fields.html5
 import wtforms.widgets.html5
 import wtforms.ext.dateutil.fields
+from wtforms_components import DateRange
 
 from . import _, models, log
 
@@ -178,10 +180,12 @@ def make_field(attribute):
     elif attribute.type == 'date':
         field_class = wtforms.ext.dateutil.fields.DateField
         kw['widget'] = wtforms.widgets.html5.DateInput()
+        kw['validators'].append(DateRange(min=date(1899, 12, 31)))
 
     elif attribute.type == 'datetime':
         field_class = wtforms.ext.dateutil.fields.DateTimeField
         kw['widget'] = wtforms.widgets.html5.DateTimeInput()
+        kw['validators'].append(DateRange(min=datetime(1899, 12, 31)))
 
     elif attribute.type == 'choice':
         kw['choices'] = [(c.name, c.title) for c in attribute.iterchoices()]
