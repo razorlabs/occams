@@ -120,7 +120,7 @@ class TestPermissionForms(FunctionalFixture):
         self.assertEquals(401, response.status_code)
 
     @data(*DEFAULT_ALLOWED)
-    def test_forms_add_json(self, group):
+    def test_forms_upload_json(self, group):
         import json
 
         url = '/forms?files'
@@ -149,7 +149,7 @@ class TestPermissionForms(FunctionalFixture):
         self.assertEquals(200, response.status_code)
 
     @data(*DEFAULT_NOT_ALLOWED)
-    def test_not_allowed_forms_add_json(self, group):
+    def test_not_allowed_forms_upload_json(self, group):
         import json
 
         url = '/forms?files'
