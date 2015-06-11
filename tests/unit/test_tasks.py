@@ -21,17 +21,19 @@ class TestIncludeme(IntegrationFixture):
         """
         from tests import REDIS_URL
         input = {
-            'app.export.user': 'dummy',
-            'app.export.dir': '/tmp',
-            'celery.broker.url': REDIS_URL,
-            'celery.backend.url': REDIS_URL,
-            'app.export.limit': '1234',
-            'app.export.expire': '123'
+            'studies.celery.backend.url': REDIS_URL,
+            'studies.celery.broker.url': REDIS_URL,
+            'studies.export.user': 'dummy',
+            'studies.export.dir': '/tmp',
+            'studies.export.limit': '1234',
+            'studies.export.expire': '123'
         }
 
         expected = input.copy()
-        expected['app.export.limit'] = int(expected['app.export.limit'])
-        expected['app.export.expire'] = int(expected['app.export.expire'])
+        expected['studies.export.limit'] = \
+            int(expected['studies.export.limit'])
+        expected['studies.export.expire'] = \
+            int(expected['studies.export.expire'])
 
         self.config.registry.settings.update(input)
         self.config.include('occams_studies.tasks')
@@ -55,7 +57,7 @@ class TestInit(IntegrationFixture):
             bootstrap.return_value = {
                 'registry': mock.Mock(
                     settings={
-                        'app.export.user': 'celery_user',
+                        'studies.export.user': 'celery_user',
                     }),
                 'request': mock.Mock(redis=mock.Mock())}
 
@@ -63,7 +65,7 @@ class TestInit(IntegrationFixture):
                 on_preload_parsed({'ini': 'app.ini'})
 
                 # App should now be configured with pyramid's settings
-                self.assertIn('app.export.user', celery.settings)
+                self.assertIn('studies.export.user', celery.settings)
                 self.assertIsNotNone(celery.redis)
                 self.assertIsNotNone(
                     Session.query(models.User)
@@ -78,10 +80,14 @@ class TestMakeExport(IntegrationFixture):
         import tempfile
         import mock
         from redis import StrictRedis
+        from occams_studies import models, Session
         from occams_studies.tasks import celery
         from tests import REDIS_URL
 
-        self.config.registry.settings['app.export.dir'] = tempfile.mkdtemp()
+        self.config.registry.settings['studies.export.dir'] = tempfile.mkdtemp()
+        self.config.registry.settings['studies.export.user'] = 'dummy'
+        Session.add(models.User(key='dummy'))
+        Session.flush()
         self.celery = celery
         self.celery.redis = StrictRedis.from_url(REDIS_URL)
         self.celery.settings = self.config.registry.settings
@@ -94,7 +100,7 @@ class TestMakeExport(IntegrationFixture):
         super(TestMakeExport, self).tearDown()
         import shutil
         import mock
-        shutil.rmtree(self.celery.settings['app.export.dir'])
+        shutil.rmtree(self.celery.settings['studies.export.dir'])
         mock.patch.stopall()
 
     def test_zip(self):
@@ -107,6 +113,7 @@ class TestMakeExport(IntegrationFixture):
 
         owner = models.User(key=u'joe')
         Session.info['blame'] = owner
+        Session.info['settings'] = self.config.registry.settings
         Session.add(owner)
         Session.flush()
 
@@ -118,6 +125,9 @@ class TestMakeExport(IntegrationFixture):
         Session.flush()
 
         make_export(export.name)
+
+        # @in_transaction removes the session metadata, so we gotta do this
+        Session.info['settings'] = self.config.registry.settings
 
         with ZipFile(export.path, 'r') as zfp:
             self.assertItemsEqual(['pid.csv', 'codebook.csv'], zfp.namelist())

@@ -20,7 +20,7 @@ class TestExportNameSpace(IntegrationFixture):
         ns = ExportNamespace(request.environ, '/export', request)
         ns.initialize()
 
-        request.has_permission.assert_called_with('fia_view')
+        request.has_permission.assert_called_with('view', mock.ANY)
         self.assertNotIn('user', ns.session)
         self.assertNotIn('redis', ns.session)
 
@@ -41,7 +41,7 @@ class TestExportNameSpace(IntegrationFixture):
         ns = ExportNamespace(request.environ, '/export', request)
         ns.initialize()
 
-        request.has_permission.assert_called_with('fia_view')
+        request.has_permission.assert_called_with('view', mock.ANY)
         self.assertEquals(ns.session['user'], 'joe')
         self.assertIn('redis', ns.session)
         spawn.assert_called_once_with(ns.listener)

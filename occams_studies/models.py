@@ -1136,11 +1136,11 @@ class ExportFactory(object):
     __acl__ = [
         (Allow, groups.administrator(), ALL_PERMISSIONS),
         (Allow, groups.manager(), ('view', 'add')),
-        (Allow, groups.consumer(), 'view')
+        (Allow, groups.consumer(), ('view', 'add'))
         ]
 
-    def __init__(self, parent):
-        self.__parent__ = parent
+    def __init__(self, request):
+        self.request = request
 
     def __getitem__(self, key):
         try:
@@ -1214,7 +1214,8 @@ class Export(Base, Referenceable, Modifiable, Auditable):
         """
         Virtual attribute that returns the export's path in the filesystem
         """
-        export_dir = self.metadata.info['settings']['studies.export.dir']
+        # XXX: This might come back and haunt us if Session is not configured
+        export_dir = Session.info['settings']['studies.export.dir']
         return os.path.join(export_dir, self.name)
 
     @property
@@ -1230,7 +1231,8 @@ class Export(Base, Referenceable, Modifiable, Auditable):
         """
         Virtual attribute that returns the export's expiration date (if avail)
         """
-        delta = self.metadata.info['settings'].get('studies.export.expire')
+        # XXX: This might come back and haunt us if Session is not configured
+        delta = Session.info['settings'].get('studies.export.expire')
         if delta:
             return self.modify_date + timedelta(delta)
 
