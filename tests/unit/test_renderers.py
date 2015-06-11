@@ -105,6 +105,30 @@ class TestMakeField(IntegrationFixture):
         self.assertTrue(
             any(isinstance(v, NumberRange) for v in field.validators))
 
+    def test_daterange_date(self):
+        from occams_forms import models
+        from occams_forms.renderers import make_field
+        import wtforms
+        from wtforms_components import DateRange
+        attribute = models.Attribute(
+            name=u'daterange_test', title=u'daterange_test', type='date')
+        field = make_field(attribute)
+        field = field.bind(wtforms.Form(), attribute.name)
+        self.assertTrue(
+            any(isinstance(v, DateRange) for v in field.validators))
+
+    def test_daterange_datetime(self):
+        from occams_forms import models
+        from occams_forms.renderers import make_field
+        import wtforms
+        from wtforms_components import DateRange
+        attribute = models.Attribute(
+            name=u'daterange_test', title=u'daterange_test', type='datetime')
+        field = make_field(attribute)
+        field = field.bind(wtforms.Form(), attribute.name)
+        self.assertTrue(
+            any(isinstance(v, DateRange) for v in field.validators))
+
 
 class TestApplyData(IntegrationFixture):
 
