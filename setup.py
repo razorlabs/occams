@@ -10,6 +10,7 @@ CHANGES = open(os.path.join(HERE, 'CHANGES.rst')).read()
 REQUIRES = [
     'alembic',                          # Database table upgrades
     'six',                              # Py 2 & 3 compatibility
+    'filemagic',
 
     'occams',
 ]
