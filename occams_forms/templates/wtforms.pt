@@ -209,10 +209,12 @@
             <tal:case case="string:FileInput">
               ${structure: field(**{
                   'class': 'form-control ds-widget file',
-                  'disbled': disabled,
+                  'disabled': disabled,
                   'data-show-upload': 'false',
-                  'data-show-preview': 'false'
-                  })}
+                  'data-show-preview': 'false',
+                  'data-overwrite-initial': 'true',
+                  'data-initial-caption': field.data and field.data.file_name
+                })}
             </tal:case>
             <tal:case case="default">${structure: field(class_='ds-widget',  disabled=disabled)}</tal:case>
           </tal:switch>
