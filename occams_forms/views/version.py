@@ -84,18 +84,14 @@ def preview(context, request):
 
     if request.method == 'POST' and form.validate():
         upload_path = tempfile.mkdtemp()
+        entity = models.Entity(schema=context)
         try:
-            entity = apply_data(
-                Session,
-                models.Entity(schema=context),
-                form.patch_data,
-                upload_path
-            )
+            apply_data(Session, entity, form.patch_data, upload_path)
         finally:
             shutil.rmtree(upload_path)
-            # Remove from session so entity or attributes don't persist in db
-            if entity:
-                Session.expunge(entity)
+
+        # Remove from session so entity or attributes don't persist in db
+        Session.expunge(entity)
 
     return {
         'entity': entity,
