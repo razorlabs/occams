@@ -97,6 +97,14 @@ class IntegrationFixture(unittest.TestCase):
         Session.info['blame'] = blame
         Session.info['settings'] = self.config.registry.settings
 
+        # Add hard-coded default states
+        Session.add_all([
+            models.State(name=u'pending-entry', title=u'Pending Entry'),
+            models.State(name=u'pending-review', title=u'Pending Review'),
+            models.State(name=u'pending-correction', title=u'Pending Correction'),
+            models.State(name=u'complete', title=u'Complete')
+        ])
+
         self.addCleanup(testing.tearDown)
         self.addCleanup(transaction.abort)
         self.addCleanup(Session.remove)
