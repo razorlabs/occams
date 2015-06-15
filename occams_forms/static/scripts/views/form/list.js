@@ -75,9 +75,10 @@ function FormListView() {
     self.clearSelected();
     $('<input type="file" multiple />').click().on('change', function(event){
         var upload = new FormData();
-        event.target.files.forEach(function(file){
+        var files = event.target.files;
+        for (var i = 0, file; file = files[i]; i++){
           upload.append('files', file);
-        });
+        };
 
         $.ajax({
           url: window.location,
@@ -92,7 +93,7 @@ function FormListView() {
           },
           success: function(data, textStatus, jqXHR){
 
-            var updated = data.forms.map(function(raw_forms){
+            var updated = data.forms.map(function(raw_form){
               var form = ko.utils.arrayFirst(self.forms(), function(form) {
                 return form.name() == raw_form.name;
               });

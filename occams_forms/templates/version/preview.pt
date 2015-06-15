@@ -38,7 +38,11 @@
                   value     entity[attribute.name]|nothing;
                   is_list   isinstance(value, list);
                   ui_value  python:','.join(value) if is_list else value;">
-                  <code tal:condition="value">${ui_value}</code>
+                  <code tal:condition="attribute.type != 'blob' and value">${ui_value}</code>
+                  <tal:blob tal:condition="attribute.type == 'blob' and value">
+                    <code>${value.file_name}</code>
+                    <span class="label label-info">${value.mime_type}</span>
+                  </tal:blob>
               </td>
             </tr>
           </tbody>

@@ -20,7 +20,7 @@ def jquery_wtform_validator(class_, context, request):
     field = request.GET.get('validate')
     if not field or not hasattr(class_, field):
         return HTTPOk(json=_(u'Unknown field: {field}',
-                             mappings={'field': field}))
+                             mapping={'field': field}))
     form = class_.from_json({field: request.GET.get(field)})
     if not form.validate() and field in form.errors:
         # Send only the first error, jquery validation doesn't support lists

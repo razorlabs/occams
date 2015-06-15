@@ -30,6 +30,7 @@ def view(context, request):
 @view_config(
     route_name='forms.version',
     xhr=True,
+    permission='view',
     renderer='json')
 def view_json(context, request):
     """
@@ -83,15 +84,14 @@ def preview(context, request):
 
     if request.method == 'POST' and form.validate():
         upload_path = tempfile.mkdtemp()
+        entity = models.Entity(schema=context)
         try:
-            entity = apply_data(
-                Session,
-                models.Entity(schema=context),
-                form.patch_data,
-                upload_path
-            )
+            apply_data(Session, entity, form.patch_data, upload_path)
         finally:
             shutil.rmtree(upload_path)
+
+        # Remove from session so entity or attributes don't persist in db
+        Session.expunge(entity)
 
     return {
         'entity': entity,

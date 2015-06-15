@@ -10,13 +10,16 @@ import collections
 import os
 from itertools import groupby
 import uuid
+from datetime import date, datetime
 
+import magic
 from pyramid.renderers import render
 import six
 import wtforms
 import wtforms.fields.html5
 import wtforms.widgets.html5
 import wtforms.ext.dateutil.fields
+from wtforms_components import DateRange
 
 from . import _, models, log
 
@@ -178,10 +181,12 @@ def make_field(attribute):
     elif attribute.type == 'date':
         field_class = wtforms.ext.dateutil.fields.DateField
         kw['widget'] = wtforms.widgets.html5.DateInput()
+        kw['validators'].append(DateRange(min=date(1899, 12, 31)))
 
     elif attribute.type == 'datetime':
         field_class = wtforms.ext.dateutil.fields.DateTimeField
         kw['widget'] = wtforms.widgets.html5.DateTimeInput()
+        kw['validators'].append(DateRange(min=datetime(1899, 12, 31)))
 
     elif attribute.type == 'choice':
         kw['choices'] = [(c.name, c.title) for c in attribute.iterchoices()]
@@ -497,15 +502,26 @@ def apply_data(session, entity, data, upload_path):
         if attribute.name not in parent:
             continue
 
-        if attribute.type == 'blob':
+        # if data[attribute.name] is empty, it means field was empty
+        # Python 2.7-3.3 has a bug where FieldStorage will yield False unexpectetly,
+        # so ensure that the actual key value is not null
+        if attribute.type == 'blob' and data[attribute.name] is not None:
             original_name = os.path.basename(data[attribute.name].filename)
             input_file = data[attribute.name].file
 
             generated_path = os.path.join(*str(uuid.uuid4()).split('-'))
             dest_path = os.path.join(upload_path, generated_path)
 
+            # create a directory excluding the filename
+            try:
+                os.makedirs(os.path.dirname(dest_path))
+            except OSError, error:
+                msg = 'Create directory error for blob upload preview: {} - {}'
+                log.warn(msg.format(dest_path, error))
+
             # Write to a temporary file to prevent using incomplete files
             temp_dest_path = dest_path + '~'
+
             output_file = open(temp_dest_path, 'wb')
 
             input_file.seek(0)
@@ -524,9 +540,11 @@ def apply_data(session, entity, data, upload_path):
             # Rename successfully uploaded file
             os.rename(temp_dest_path, dest_path)
 
-            mime_type = None
+            with magic.Magic(flags=magic.MAGIC_MIME_TYPE) as m:
+                mime_type = m.id_filename(dest_path)
 
             value = models.BlobInfo(original_name, dest_path, mime_type)
+
         else:
             value = parent[attribute.name]
 
