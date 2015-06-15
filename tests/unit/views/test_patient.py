@@ -364,10 +364,9 @@ class TestEditJson(IntegrationFixture):
 
         _register_routes(self.config)
 
-        pending_entry = models.State(name='pending-entry', title=u'')
         site_la = models.Site(name=u'la', title=u'LA')
         reftype = models.ReferenceType(name=u'foo', title=u'FOO')
-        Session.add_all([site_la, reftype, pending_entry])
+        Session.add_all([site_la, reftype])
         Session.flush()
 
         request = testing.DummyRequest(
