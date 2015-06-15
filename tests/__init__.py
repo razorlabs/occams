@@ -11,8 +11,15 @@ try:
 except ImportError:
     import unittest
 
+from nose.plugins.attrib import attr
+
 from sqlalchemy.schema import CreateTable
 from sqlalchemy.ext.compiler import compiles
+
+
+import warnings
+from sqlalchemy.exc import SAWarning
+warnings.simplefilter('error', category=SAWarning)
 
 
 REDIS_URL = 'redis://localhost/9'
@@ -71,6 +78,7 @@ def teardown_package():
         datastore.DataStoreModel.metadata.drop_all(Session.bind)
 
 
+@attr('integration')
 class IntegrationFixture(unittest.TestCase):
     """
     Fixure for testing component integration
@@ -80,7 +88,6 @@ class IntegrationFixture(unittest.TestCase):
         from pyramid import testing
         import transaction
         from occams_studies import models, Session
-        from occams_studies.models import Base
 
         self.config = testing.setUp()
 
@@ -88,14 +95,22 @@ class IntegrationFixture(unittest.TestCase):
         Session.add(blame)
         Session.flush()
         Session.info['blame'] = blame
+        Session.info['settings'] = self.config.registry.settings
 
-        Base.metadata.info['settings'] = self.config.registry.settings
+        # Add hard-coded default states
+        Session.add_all([
+            models.State(name=u'pending-entry', title=u'Pending Entry'),
+            models.State(name=u'pending-review', title=u'Pending Review'),
+            models.State(name=u'pending-correction', title=u'Pending Correction'),
+            models.State(name=u'complete', title=u'Complete')
+        ])
 
         self.addCleanup(testing.tearDown)
         self.addCleanup(transaction.abort)
         self.addCleanup(Session.remove)
 
 
+@attr('functional')
 class FunctionalFixture(unittest.TestCase):
     """
     Fixture for testing the full application stack.

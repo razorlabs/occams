@@ -668,20 +668,19 @@ class TestPermissionsPatientFormsDelete(FunctionalFixture):
                 consent_date=date(2014, 12, 22)
             ))
 
+            entity = datastore.Entity(schema=form)
+            Session.add(entity)
+            Session.flush()
+            self.entity_id = entity.id
+
     @data('administrator', 'manager')
     def test_allowed(self, group):
-        from occams import Session
-        from occams_datastore import models as datastore
 
         environ = self.make_environ(userid=USERID, groups=[group])
         csrf_token = self.get_csrf_token(environ)
 
-        schema = Session.query(datastore.Schema).filter(
-            datastore.Schema.name == u'test_schema').one()
-        schema_id = schema.id
-
         data = {
-            'forms': schema_id
+            'forms': [self.entity_id]
         }
 
         response = self.app.delete_json(
@@ -699,18 +698,12 @@ class TestPermissionsPatientFormsDelete(FunctionalFixture):
     @data('UCSD:enterer', 'UCSD:reviewer', 'UCSD:consumer',
           'UCSD:member', None)
     def test_not_allowed(self, group):
-        from occams import Session
-        from occams_datastore import models as datastore
 
         environ = self.make_environ(userid=USERID, groups=[group])
         csrf_token = self.get_csrf_token(environ)
 
-        schema = Session.query(datastore.Schema).filter(
-            datastore.Schema.name == u'test_schema').one()
-        schema_id = schema.id
-
         data = {
-            'forms': schema_id
+            'forms': [self.entity_id]
         }
 
         response = self.app.delete_json(

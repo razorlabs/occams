@@ -939,8 +939,6 @@ class TestUploadRandomizationJson(IntegrationFixture):
                     type='string',
                     order=0)})
 
-        state = models.State(name='complete', title=u'Complete')
-
         study = models.Study(
             name=u'somestudy',
             title=u'Some Study',
@@ -950,7 +948,7 @@ class TestUploadRandomizationJson(IntegrationFixture):
             randomization_schema=schema,
             consent_date=date.today())
 
-        Session.add_all([study, state])
+        Session.add_all([study])
         Session.flush()
 
         class DummyUpload:
@@ -996,8 +994,6 @@ class TestUploadRandomizationJson(IntegrationFixture):
                     type='string',
                     order=0)})
 
-        state = models.State(name='complete', title=u'Complete')
-
         study = models.Study(
             name=u'somestudy',
             title=u'Some Study',
@@ -1007,7 +1003,7 @@ class TestUploadRandomizationJson(IntegrationFixture):
             randomization_schema=schema,
             consent_date=date.today())
 
-        Session.add_all([study, state])
+        Session.add_all([study])
         Session.flush()
 
         class DummyUpload:

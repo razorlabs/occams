@@ -233,10 +233,12 @@ def edit_json(context, request):
                     [entity.schema.name for entity in visit.entities]))
 
         for schema in schemata_query:
-            visit.entities.add(models.Entity(
+            entity = models.Entity(
                 schema=schema,
                 collect_date=visit.visit_date,
-                state=default_state))
+                state=default_state)
+            visit.patient.entities.add(entity)
+            visit.entities.add(entity)
 
     # Lab might not be enabled on a environments, check first
     if form.include_specimen.data and Session.bind.has_table('specimen'):
