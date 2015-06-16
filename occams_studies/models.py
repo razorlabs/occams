@@ -574,6 +574,7 @@ class ReferenceTypeFactory(object):
 
     __acl__ = [
         (Allow, groups.administrator(), ALL_PERMISSIONS),
+        (Allow, Authenticated, 'view')
         ]
 
     def __init__(self, request):
