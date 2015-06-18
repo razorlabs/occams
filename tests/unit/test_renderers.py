@@ -482,3 +482,302 @@ class TestApplyData(IntegrationFixture):
 
         self.assertEquals(entity.state.name, states.PENDING_REVIEW)
         self.assertEqual(entity['q1'], formdata['q1'])
+
+    def test_file_is_deleted(self):
+        """
+        Test file is deleted on the system after a non-FieldStorage
+        object is passed to apply_data
+        """
+
+        import os
+        from datetime import date
+
+        from occams_forms import models
+        from occams_forms import Session
+
+        from mock import Mock
+
+        schema = models.Schema(
+            name=u'test', title=u'', publish_date=date.today(),
+            attributes={
+                'q1': models.Attribute(
+                    name=u'q1',
+                    title=u'',
+                    type='blob',
+                    order=0
+                )
+            })
+
+        entity = models.Entity(schema=schema)
+
+        formdata = {'q1': u''}
+
+        with open(os.path.join(self.tmpdir, 'test.txt'), 'w'):
+            fullpath = os.path.join(self.tmpdir, 'test.txt')
+
+        entity['q1'] = Mock(path=fullpath)
+
+        self._call(Session, entity, formdata, self.tmpdir)
+        self.assertFalse(os.path.exists(fullpath))
+
+    def test_previous_file_is_deleted(self):
+        """
+        Test if previous file is deleted from the
+        system after a new non-FieldStoarage object
+        is passed to apply_data
+        """
+
+        import os
+        import cgi
+        from datetime import date
+
+        from occams_forms import models
+        from occams_forms import Session
+
+        from mock import Mock
+
+        schema = models.Schema(
+            name=u'test', title=u'', publish_date=date.today(),
+            attributes={
+                'q1': models.Attribute(
+                    name=u'q1',
+                    title=u'',
+                    type='blob',
+                    order=0
+                )
+            })
+
+        entity = models.Entity(schema=schema)
+
+        form = cgi.FieldStorage()
+        form.filename = u'test.txt'
+        form.file = form.make_file()
+        form.file.write(u'test_content')
+        form.file.seek(0)
+
+        formdata = {'q1': form}
+
+        with open(os.path.join(self.tmpdir, 'test.txt'), 'w'):
+            fullpath = os.path.join(self.tmpdir, 'test.txt')
+
+        entity['q1'] = Mock(path=fullpath)
+
+        self._call(Session, entity, formdata, self.tmpdir)
+
+        formdata = {'q1': u''}
+        self._call(Session, entity, formdata, self.tmpdir)
+        self.assertFalse(os.path.exists(fullpath))
+
+    def test_old_file_is_deleted_after_update(self):
+        """
+        Test if previous file is deleted from the
+        system after a new FieldStoarage object
+        is passed to apply_data
+        """
+        import os
+        import cgi
+        from datetime import date
+
+        from occams_forms import models
+        from occams_forms import Session
+
+        from mock import Mock
+
+        schema = models.Schema(
+            name=u'test', title=u'', publish_date=date.today(),
+            attributes={
+                'q1': models.Attribute(
+                    name=u'q1',
+                    title=u'',
+                    type='blob',
+                    order=0
+                )
+            })
+
+        entity = models.Entity(schema=schema)
+
+        form = cgi.FieldStorage()
+        form.filename = u'test.txt'
+        form.file = form.make_file()
+        form.file.write(u'test_content')
+        form.file.seek(0)
+
+        formdata = {'q1': form}
+
+        with open(os.path.join(self.tmpdir, 'test.txt'), 'w'):
+            fullpath = os.path.join(self.tmpdir, 'test.txt')
+
+        entity['q1'] = Mock(path=fullpath)
+
+        self._call(Session, entity, formdata, self.tmpdir)
+
+        form_update = cgi.FieldStorage()
+        form_update.filename = u'test2.txt'
+        form_update.file = form.make_file()
+        form_update.file.write(u'test_content')
+        form_update.file.seek(0)
+
+        formdata2 = {'q1': form_update}
+        self._call(Session, entity, formdata2, self.tmpdir)
+
+        self.assertFalse(os.path.exists(fullpath))
+
+    def test_file_is_inserted_to_db(self):
+        """
+        Test if a new record is inserted to value_blob
+        table after a FieldStorage object is passed to apply_data
+        """
+
+        import os
+        import cgi
+        from datetime import date
+
+        from occams_forms import models
+        from occams_datastore import models as datastore
+        from occams_forms import Session
+
+        from mock import Mock
+
+        schema = models.Schema(
+            name=u'test', title=u'', publish_date=date.today(),
+            attributes={
+                'q1': models.Attribute(
+                    name=u'q1',
+                    title=u'',
+                    type='blob',
+                    order=0
+                )
+            })
+
+        entity = models.Entity(schema=schema)
+
+        form = cgi.FieldStorage()
+        form.filename = u'test.txt'
+        form.file = form.make_file()
+        form.file.write(u'test_content')
+        form.file.seek(0)
+
+        formdata = {'q1': form}
+
+        with open(os.path.join(self.tmpdir, 'test.txt'), 'w'):
+            fullpath = os.path.join(self.tmpdir, 'test.txt')
+
+        entity['q1'] = Mock(path=fullpath)
+
+        self._call(Session, entity, formdata, self.tmpdir)
+
+        blob = Session.query(datastore.ValueBlob).filter_by(
+            file_name=u'test.txt').one()
+        self.assertEquals(blob.file_name, u'test.txt')
+
+    def test_old_file_is_deleted_db_after_empty_string_applied(self):
+        """
+        Test if previous file is deleted from db after
+        a non-FieldStoarage is passed to apply_data
+        """
+
+        import os
+        import cgi
+        from datetime import date
+
+        from occams_forms import models
+        from occams_datastore import models as datastore
+        from occams_forms import Session
+
+        from mock import Mock
+
+        schema = models.Schema(
+            name=u'test', title=u'', publish_date=date.today(),
+            attributes={
+                'q1': models.Attribute(
+                    name=u'q1',
+                    title=u'',
+                    type='blob',
+                    order=0
+                )
+            })
+
+        entity = models.Entity(schema=schema)
+
+        form = cgi.FieldStorage()
+        form.filename = u'test.txt'
+        form.file = form.make_file()
+        form.file.write(u'test_content')
+        form.file.seek(0)
+
+        formdata = {'q1': form}
+
+        with open(os.path.join(self.tmpdir, 'test.txt'), 'w'):
+            fullpath = os.path.join(self.tmpdir, 'test.txt')
+
+        entity['q1'] = Mock(path=fullpath)
+
+        self._call(Session, entity, formdata, self.tmpdir)
+
+        formdata = {'q1': u''}
+        self._call(Session, entity, formdata, self.tmpdir)
+
+        blob = Session.query(datastore.ValueBlob).filter_by(
+            file_name=u'test.txt').first()
+        self.assertEquals(blob, None)
+
+    def test_one_record_exists_db_after_update(self):
+        """
+        Test if one updated record exists in value_blob tbl
+        after FieldStorage object passed to apply_data
+        """
+
+        import os
+        import cgi
+        from datetime import date
+
+        from occams_forms import models
+        from occams_datastore import models as datastore
+        from occams_forms import Session
+
+        from mock import Mock
+
+        schema = models.Schema(
+            name=u'test', title=u'', publish_date=date.today(),
+            attributes={
+                'q1': models.Attribute(
+                    name=u'q1',
+                    title=u'',
+                    type='blob',
+                    order=0
+                )
+            })
+
+        entity = models.Entity(schema=schema)
+
+        form = cgi.FieldStorage()
+        form.filename = u'test.txt'
+        form.file = form.make_file()
+        form.file.write(u'test_content')
+        form.file.seek(0)
+
+        formdata = {'q1': form}
+
+        with open(os.path.join(self.tmpdir, 'test.txt'), 'w'):
+            fullpath = os.path.join(self.tmpdir, 'test.txt')
+
+        entity['q1'] = Mock(path=fullpath)
+
+        self._call(Session, entity, formdata, self.tmpdir)
+
+        blob = Session.query(datastore.ValueBlob).one()
+        entity_id = blob.entity.id
+
+        form_update = cgi.FieldStorage()
+        form_update.filename = u'test2.txt'
+        form_update.file = form.make_file()
+        form_update.file.write(u'test_content')
+        form_update.file.seek(0)
+
+        formdata2 = {'q1': form_update}
+        self._call(Session, entity, formdata2, self.tmpdir)
+
+        blob = Session.query(datastore.ValueBlob).filter_by(
+            file_name=u'test2.txt').first()
+        entity_id_after_update = blob.entity_id
+        self.assertEquals(entity_id, entity_id_after_update)
