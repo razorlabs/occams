@@ -10,6 +10,7 @@ import collections
 import os
 from itertools import groupby
 import uuid
+import cgi
 from datetime import date, datetime
 
 import magic
@@ -502,48 +503,64 @@ def apply_data(session, entity, data, upload_path):
         if attribute.name not in parent:
             continue
 
-        # if data[attribute.name] is empty, it means field was empty
-        # Python 2.7-3.3 has a bug where FieldStorage will yield False unexpectetly,
-        # so ensure that the actual key value is not null
-        if attribute.type == 'blob' and data[attribute.name] is not None:
-            original_name = os.path.basename(data[attribute.name].filename)
-            input_file = data[attribute.name].file
+        if attribute.type == 'blob':
+            # if data[attribute.name] is empty, it means field was empty
+            # Python 2.7-3.3 has a bug where FieldStorage will yield False
+            # unexpectetly, so ensure that the actual key value is an
+            # instance of FieldStorage
 
-            generated_path = os.path.join(*str(uuid.uuid4()).split('-'))
-            dest_path = os.path.join(upload_path, generated_path)
+            if isinstance(data[attribute.name], cgi.FieldStorage):
+                original_name = os.path.basename(data[attribute.name].filename)
+                input_file = data[attribute.name].file
 
-            # create a directory excluding the filename
-            try:
-                os.makedirs(os.path.dirname(dest_path))
-            except OSError, error:
-                msg = 'Create directory error for blob upload preview: {} - {}'
-                log.warn(msg.format(dest_path, error))
+                generated_path = os.path.join(*str(uuid.uuid4()).split('-'))
+                dest_path = os.path.join(upload_path, generated_path)
 
-            # Write to a temporary file to prevent using incomplete files
-            temp_dest_path = dest_path + '~'
+                # create a directory excluding the filename
+                try:
+                    os.makedirs(os.path.dirname(dest_path))
+                except OSError, error:
+                    msg = 'Create directory error for blob upload preview: ' \
+                          '{} - {}'
+                    log.warn(msg.format(dest_path, error))
 
-            output_file = open(temp_dest_path, 'wb')
+                # Write to a temporary file to prevent using incomplete files
+                temp_dest_path = dest_path + '~'
 
-            input_file.seek(0)
-            while True:
-                data = input_file.read(2 << 16)
-                if not data:
-                    break
-                output_file.write(data)
+                output_file = open(temp_dest_path, 'wb')
 
-            # Make sure the data is commited to the file system before closing
-            output_file.flush()
-            os.fsync(output_file.fileno())
+                input_file.seek(0)
+                while True:
+                    data = input_file.read(2 << 16)
+                    if not data:
+                        break
+                    output_file.write(data)
 
-            output_file.close()
+                # Make sure the data is commited to the file system
+                # before closing
+                output_file.flush()
+                os.fsync(output_file.fileno())
 
-            # Rename successfully uploaded file
-            os.rename(temp_dest_path, dest_path)
+                output_file.close()
 
-            with magic.Magic(flags=magic.MAGIC_MIME_TYPE) as m:
-                mime_type = m.id_filename(dest_path)
+                # Rename successfully uploaded file
+                os.rename(temp_dest_path, dest_path)
 
-            value = models.BlobInfo(original_name, dest_path, mime_type)
+                # get mime type using filemagic
+                # this depends on os program libmagic
+                # look for alternate method in the future
+                # to reduce dependencies
+                with magic.Magic(flags=magic.MAGIC_MIME_TYPE) as m:
+                    mime_type = m.id_filename(dest_path)
+
+                value = models.BlobInfo(original_name, dest_path, mime_type)
+
+            else:
+
+                value = None
+
+            if isinstance(entity[attribute.name], models.BlobInfo):
+                os.unlink(entity[attribute.name].path)
 
         else:
             value = parent[attribute.name]
