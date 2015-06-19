@@ -321,7 +321,7 @@ def randomize_ajax(context, request):
                 body=_(u'This patient is already randomized for this study'))
         if request.session.get(STAGE_KEY) in (ENTER, VERIFY):
             Form = make_form(
-                Session, randomization_schema, enable_metadata=False)
+                Session, randomization_schema, show_metadata=False)
         else:
             Form = _make_challenge_form(context, request)
         form = Form(request.POST)
@@ -400,6 +400,9 @@ def randomize_ajax(context, request):
         template = '../templates/enrollment/randomize-challenge.pt'
         Form = _make_challenge_form(context, request)
         form = Form()
+        form.meta.entity = None
+        form.meta.schema = randomization_schema
+
 
     return {
         'is_randomized': is_randomized,
