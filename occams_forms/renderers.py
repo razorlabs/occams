@@ -23,6 +23,7 @@ import wtforms.ext.dateutil.fields
 from wtforms_components import DateRange
 
 from . import _, models, log
+from .fields import FileField
 
 
 class states:
@@ -209,7 +210,7 @@ def make_field(attribute):
                 kw['option_widget'] = wtforms.widgets.RadioInput()
 
     elif attribute.type == 'blob':
-        field_class = wtforms.FileField
+        field_class = FileField
 
     else:
         raise Exception(u'Unknown type: %s' % attribute.type)
@@ -519,7 +520,7 @@ def apply_data(session, entity, data, upload_path):
                 # create a directory excluding the filename
                 try:
                     os.makedirs(os.path.dirname(dest_path))
-                except OSError, error:
+                except OSError as error:
                     msg = 'Create directory error for blob upload preview: ' \
                           '{} - {}'
                     log.warn(msg.format(dest_path, error))

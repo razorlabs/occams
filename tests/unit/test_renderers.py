@@ -2,6 +2,8 @@ from ddt import ddt, data, unpack
 import wtforms.fields.html5
 import wtforms.ext.dateutil.fields
 
+from occams_forms.fields import FileField
+
 from tests import IntegrationFixture
 
 
@@ -28,7 +30,7 @@ class TestMakeField(IntegrationFixture):
     @data(
         expect_type('string', wtforms.StringField),
         expect_type('text', wtforms.TextAreaField),
-        expect_type('blob', wtforms.FileField),
+        expect_type('blob', FileField),
         expect_type('date', wtforms.ext.dateutil.fields.DateField),
         expect_type('datetime', wtforms.ext.dateutil.fields.DateTimeField),
         expect_type('section', wtforms.FormField))
