@@ -414,6 +414,7 @@ def randomize_ajax(context, request):
             'form': render_form(
                 form,
                 disabled=is_randomized,
+                save_btn=False,
                 attr={
                     'id': 'enrollment-randomization',
                     'method': 'POST',
