@@ -134,8 +134,8 @@ def available_reference_types(context, request):
     query = Session.query(models.ReferenceType)
 
     if term:
-        query = query.filter_by(
-            models.ReferenceType.title.ilike('%' + term + '%'))
+        query = query.filter(
+            models.ReferenceType.title.ilike(u'%' + term + u'%'))
 
     query = query.order_by(models.ReferenceType.title.asc()).limit(100)
 
