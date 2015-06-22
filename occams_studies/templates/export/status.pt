@@ -23,6 +23,10 @@
       <!--! Evaluate Knockout bindings only there is content to display -->
       <div style="display: none;" data-bind="visible: ready">
 
+        <!-- ko with: socketStatus -->
+          <div data-bind="css: css, text: text"></div>
+        <!-- /ko -->
+
         <!--! Status messsag to display if no content -->
         <div data-bind="ifnot: has_exports">
           <div

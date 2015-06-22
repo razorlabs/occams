@@ -8,6 +8,8 @@ function StatusViewModel(options) {
   self.pager = ko.observable();           // Pagination
   self.exports = ko.observableArray([]);  // Current exports in the view
 
+  self.socketStatus = ko.observable();    // Socket.io feedback
+
   self.has_exports = ko.computed(function(){
     return self.exports().length > 0;
   });
@@ -85,22 +87,34 @@ function StatusViewModel(options) {
      * Configures Socket.io to listen for progress notifications
      */
     // Use the template-embedded socket.io URL
-    var socket = io.connect(options.socketio_namespace, {resource: options.socketio_resource});
+    var socket = io.connect(
+      options.socketio_namespace,
+      {
+        resource: options.socketio_resource
+      }
+    );
+
     socket.on('connect', function(){
-      socket.on('export', function(data){
+      self.socketStatus(null);
+    });
 
-        var export_ = ko.utils.arrayFirst(self.exports(), function(e){
-          return e.id() == data['export_id'];
-        });
-
-        if (export_){
-          export_.count(data['count']);
-          export_.total(data['total']);
-          export_.status(data['status']);
-          export_.file_size(data['file_size']);
-        }
-
+    socket.on('export', function(data){
+      var export_ = ko.utils.arrayFirst(self.exports(), function(e){
+        return e.id() == data['export_id'];
       });
+
+      if (!export_){
+        return;
+      }
+
+      export_.count(data['count']);
+      export_.total(data['total']);
+      export_.status(data['status']);
+      export_.file_size(data['file_size']);
+    });
+
+    socket.on('connect_error', function(error){
+      self.socketStatus({css: 'alert alert-danger', text: error})
     });
 
     var query = parse_url_query(),

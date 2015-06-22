@@ -2,7 +2,7 @@ from __future__ import absolute_import
 import json
 
 from pyramid.view import view_config
-from pyramid.response import Response
+from pyramid.httpexceptions import HTTPOk, HTTPNotImplemented
 from socketio import socketio_manage
 from socketio.namespace import BaseNamespace
 
@@ -15,12 +15,20 @@ def socketio(request):  # pragma: nocover: don't need to unittest socketio.io
     Main socket.io handler for the application
     Pretty much registers socket.io namespaces
     """
+
+    # Check if the transport requested is not supported
+    if 'socketio' not in request.environ:
+        return HTTPNotImplemented()
+
     socketio_manage(
         request.environ,
         request=request,
         namespaces={
-            '/export': ExportNamespace})
-    return Response('OK')
+            '/export': ExportNamespace
+        }
+    )
+
+    return HTTPOk()
 
 
 class ExportNamespace(BaseNamespace):

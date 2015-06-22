@@ -41,6 +41,22 @@
         $('.ds-widget', $form).prop('disabled', event.target.checked);
       });
 
+
+      $form.on('click', '.js-fileinput-previous', function(event){
+        var $target = $(event.target),
+            $new = $($target.data('fileinput-new'));
+            ;
+        if ($target.prop('checked')){
+          $new.fileinput('clear');
+        }
+      });
+
+      $form.on('change filecleared', '.js-fileinput-new', function(event){
+          var $target = $(event.target),
+              $previous = $($target.data('fileinput-previous'))
+              ;
+          $previous.prop('checked', !$target.val());
+        });
     });
   };
 
