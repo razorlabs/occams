@@ -354,10 +354,12 @@ def randomize_ajax(context, request):
         if request.session[STAGE_KEY] == COMPLETE:
             report = build_report(Session, randomization_schema.name)
             data = form.data
+
+            # Get an unassigned entity that matches the input criteria
             query = (
                 Session.query(models.Stratum)
                 .filter(models.Stratum.study == context.study)
-                .filter(models.Stratum.patient != sa.null())
+                .filter(models.Stratum.patient == sa.null())
                 .join(models.Stratum.contexts)
                 .join(models.Context.entity)
                 .add_entity(models.Entity)
