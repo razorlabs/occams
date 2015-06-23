@@ -398,7 +398,7 @@ def randomize_ajax(context, request):
         template = '../templates/enrollment/randomize-verify.pt'
         Form = make_form(Session, randomization_schema, show_metadata=False)
         form = Form()
-    else:
+    elif request.session.get(STAGE_KEY) == CHALLENGE:
         template = '../templates/enrollment/randomize-challenge.pt'
         Form = _make_challenge_form(context, request)
         form = Form()
