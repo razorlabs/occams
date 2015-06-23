@@ -76,6 +76,53 @@ class TestEditJson(IntegrationFixture):
         from occams_studies.views.enrollment import edit_json as view
         return view(context, request)
 
+    def test_save(self, check_csrf_token):
+        from datetime import date
+        from pyramid import testing
+        from occams_studies import models, Session
+
+        _register_routes(self.config)
+
+        today = date.today()
+
+        study = models.Study(
+            name=u'somestudy',
+            title=u'Some Study',
+            short_title=u'sstudy',
+            code=u'000',
+            start_date=today,
+            consent_date=today)
+
+        patient = models.Patient(
+            site=models.Site(name=u'ucsd', title=u'UCSD'),
+            pid=u'12345')
+
+        Session.add_all([patient, study])
+        Session.flush()
+
+        payload = {
+            'study': str(study.id),
+            'consent_date': str(today),
+            'latest_consent_date': str(today),
+            'termination_date': str(today),
+            'reference_number': u'123'
+        }
+
+        response = self.call_view(
+            patient['enrollments'], testing.DummyRequest(json_body=payload))
+
+        enrollment = Session.query(models.Enrollment).get(response['id'])
+
+        actual = {
+            'study': str(enrollment.study.id),
+            'consent_date': str(enrollment.consent_date),
+            'latest_consent_date': str(enrollment.latest_consent_date),
+            'termination_date': str(enrollment.termination_date),
+            'reference_number': str(enrollment.reference_number)
+        }
+
+        self.assertEquals(payload, actual)
+
     def test_unique_consent(self, check_csrf_token):
         """
         It should allow multiple enrollments to a study, but a single consent.
