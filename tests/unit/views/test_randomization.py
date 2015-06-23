@@ -132,3 +132,41 @@ class TestRandomization(IntegrationFixture):
         self.call_view(enrollment, request)
 
         self.assertEquals(request.session['randomization_stage'], 3)
+
+    @mock.patch('occams_studies.views.enrollment.check_csrf_token')
+    def test_randid_assignment(self, check_csrf_token):
+        from pyramid import testing
+
+        from webob.multidict import MultiDict
+
+        self.config.include('pyramid_chameleon')
+        payload = MultiDict()
+
+        request = testing.DummyRequest(
+            post=payload,
+            matchdict={'enrollment': self.enrollment})
+
+        enrollment = self.enrollment
+
+        request.session['randomization_stage'] = 2
+
+        response = self.call_view(enrollment, request)
+
+        self.assertEquals(
+            response['enrollment']['stratum']['randid'], u'98765')
+        self.assertEquals(
+            response['enrollment']['stratum']['arm']['name'], u'tested')
+
+        request = testing.DummyRequest(
+            post=payload,
+            matchdict={'enrollment': self.enrollment2})
+
+        enrollment = self.enrollment2
+
+        request.session['randomization_stage'] = 2
+        response = self.call_view(enrollment, request)
+
+        self.assertEquals(
+            response['enrollment']['stratum']['randid'], u'98766')
+        self.assertEquals(
+            response['enrollment']['stratum']['arm']['name'], u'tested2')
