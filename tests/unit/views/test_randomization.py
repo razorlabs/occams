@@ -44,12 +44,30 @@ class TestRandomization(IntegrationFixture):
                 title=u'Tested',
                 study=self.study))
 
+        self.stratum = models.Stratum(
+            randid=u'98766',
+            block_number='111',
+            study=self.study,
+            arm=models.Arm(
+                name=u'tested2',
+                title=u'Tested2',
+                study=self.study))
+
         self.stratum.entities.add(models.Entity(schema=self.schema))
+
+        self.site = models.Site(name=u'ucsd', title=u'UCSD')
 
         self.enrollment = models.Enrollment(
             patient=models.Patient(
-                site=models.Site(name=u'ucsd', title=u'UCSD'),
+                site=self.site,
                 pid=u'12345'),
+            study=self.study,
+            consent_date=date.today())
+
+        self.enrollment2 = models.Enrollment(
+            patient=models.Patient(
+                site=self.site,
+                pid=u'12346'),
             study=self.study,
             consent_date=date.today())
 
@@ -63,14 +81,11 @@ class TestRandomization(IntegrationFixture):
     def test_challenge(self):
         from pyramid import testing
 
-        from occams import Session
-        from occams_studies import models as studies
-
         self.config.include('pyramid_chameleon')
         request = testing.DummyRequest()
         request.session = {}
 
-        enrollment = Session.query(studies.Enrollment).one()
+        enrollment = self.enrollment
 
         self.call_view(enrollment, request)
 
