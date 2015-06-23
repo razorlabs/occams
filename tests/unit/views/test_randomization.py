@@ -44,7 +44,7 @@ class TestRandomization(IntegrationFixture):
                 title=u'Tested',
                 study=self.study))
 
-        self.stratum = models.Stratum(
+        self.stratum2 = models.Stratum(
             randid=u'98766',
             block_number='111',
             study=self.study,
@@ -54,6 +54,7 @@ class TestRandomization(IntegrationFixture):
                 study=self.study))
 
         self.stratum.entities.add(models.Entity(schema=self.schema))
+        self.stratum2.entities.add(models.Entity(schema=self.schema))
 
         self.site = models.Site(name=u'ucsd', title=u'UCSD')
 
@@ -71,7 +72,8 @@ class TestRandomization(IntegrationFixture):
             study=self.study,
             consent_date=date.today())
 
-        Session.add_all([self.study, self.stratum, self.enrollment])
+        Session.add_all(
+            [self.study, self.stratum, self.stratum2, self.enrollment, self.enrollment2])
         Session.flush()
 
     def call_view(self, context, request):
