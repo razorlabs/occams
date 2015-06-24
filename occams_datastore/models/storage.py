@@ -45,15 +45,6 @@ class Context(Model, Referenceable, Modifiable, Auditable):
     # Discriminator column for the keys and associations
     external = Column(String, nullable=False)
 
-    @classmethod
-    def creator(cls, external):
-        """
-        Provide a 'creator' function to use with the association proxy.
-        """
-        return lambda entity: Context(
-            entity=entity,
-            external=external,)
-
     key = Column(Integer, nullable=False)
 
     @declared_attr
@@ -285,7 +276,7 @@ class HasEntities(object):
 
         cls.entities = association_proxy(
             'contexts', 'entity',
-            creator=Context.creator(name))
+            creator=lambda e: Context(entity=e, external=name))
 
         return relationship(
             Context,
@@ -293,7 +284,6 @@ class HasEntities(object):
                 '(%s.id == Context.key) & (Context.external == "%s")'
                 % (cls.__name__, name)),
             foreign_keys=[Context.key, Context.external],
-            cascade='all, delete-orphan',
             collection_class=set,
             backref=backref(
                 '%s_parent' % name,

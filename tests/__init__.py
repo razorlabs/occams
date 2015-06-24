@@ -22,10 +22,17 @@ def setup_package():
     from sqlalchemy import create_engine
     from testconfig import config
     from occams_datastore.models.events import register
+    from occams_datastore import models
     register(Session)
     db = config.get('db')
     engine = create_engine(db)
     Session.configure(bind=engine)
+    models.DataStoreModel.metadata.create_all(bind=Session.bind)
+
+
+def teardown_package():
+    from occams_datastore import models
+    models.DataStoreModel.metadata.drop_all(bind=Session.bind)
 
 
 def begin_func():

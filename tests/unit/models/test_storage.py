@@ -165,7 +165,7 @@ def check_entity_types(type, simple, update, collection):
         Session.query(ModelClass)
         .filter_by(attribute=schema.attributes[simpleName]))
     valueObject = valueQuery.one()
-    assert_equals(2, valueObject.revision)
+    assert_equals(1, valueObject.revision)
 
     # Update again
     entity[simpleName] = update
@@ -174,7 +174,7 @@ def check_entity_types(type, simple, update, collection):
 
     # Triple check auditing
     valueObject = valueQuery.one()
-    assert_equals(3, valueObject.revision)
+    assert_equals(2, valueObject.revision)
 
     order += 1
 

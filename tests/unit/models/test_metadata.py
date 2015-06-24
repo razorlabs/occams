@@ -70,8 +70,7 @@ def test_modifable_non_existent_user():
     It should fail if a non-existent user attemts to make a commti
     """
     from tests import Session
-    from tests import assert_raises
-    from occams_datastore.exc import NonExistentUserError
+    from tests import assert_raises_regexp
 
     # Clear any info set by setup function
     Session.remove()
@@ -79,5 +78,5 @@ def test_modifable_non_existent_user():
     record = ModifiableClass()
     Session.add(record)
 
-    with assert_raises(NonExistentUserError):
+    with assert_raises_regexp(AssertionError, 'not configured'):
         Session.flush()
