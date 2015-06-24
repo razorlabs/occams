@@ -127,6 +127,7 @@ def edit_json(context, request):
     enrollment.patient.modify_date = datetime.now()
     enrollment.consent_date = form.consent_date.data
     enrollment.latest_consent_date = form.latest_consent_date.data
+    enrollment.reference_number = form.reference_number.data
 
     if not form.study.data.termination_schema:
         enrollment.termination_date = form.termination_date.data
