@@ -393,7 +393,7 @@ class TestEditJson(IntegrationFixture):
 
 
 @mock.patch('occams_studies.views.patient.check_csrf_token')
-class TestDeleteJSON(IntegrationFixture):
+class TestDeleteJson(IntegrationFixture):
 
     def call_view(self, context, request):
         from occams_studies.views.patient import delete_json as view
@@ -422,3 +422,34 @@ class TestDeleteJSON(IntegrationFixture):
 
         self.assertIsNone(Session.query(models.Patient).get(patient_id))
         self.assertNotIn(u'12345', request.session['viewed'])
+
+    def test_cascade_entities(self, check_csrf_token):
+        """
+        It should delete associated entities
+        """
+
+        from datetime import date
+        from pyramid import testing
+        from occams_studies import models, Session
+
+        _register_routes(self.config)
+
+        schema = models.Schema(
+            name=u'somepatientform',
+            title=u'Some Patient Form',
+            publish_date=date.today())
+        entity = models.Entity(
+            collect_date=date.today(),
+            schema=schema)
+        patient = models.Patient(
+            site=models.Site(name=u'la', title=u'LA'),
+            pid=u'12345')
+        patient.entities.add(entity)
+        Session.add_all([patient, entity, schema])
+        Session.flush()
+
+        patient = Session.query(models.Patient).one()
+
+        self.call_view(patient, testing.DummyRequest())
+
+        self.assertEquals(0, Session.query(models.Entity).count())
