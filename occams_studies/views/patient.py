@@ -465,8 +465,9 @@ def edit_json(context, request):
     renderer='json')
 def delete_json(context, request):
     check_csrf_token(request)
-    patient = context
-    Session.delete(patient)
+
+    list(map(Session.delete, context.entities))
+    Session.delete(context)
     Session.flush()
 
     viewed = request.session.setdefault('viewed', OrderedDict())
@@ -480,7 +481,7 @@ def delete_json(context, request):
 
     msg = request.localizer.translate(
         _('Patient ${pid} was successfully removed'),
-        mapping={'pid': patient.pid})
+        mapping={'pid': context.pid})
     request.session.flash(msg, 'success')
     return {'__next__': request.current_route_path(_route_name='studies.main')}
 
