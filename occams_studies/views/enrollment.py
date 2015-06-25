@@ -405,7 +405,6 @@ def randomize_ajax(context, request):
         form.meta.entity = None
         form.meta.schema = randomization_schema
 
-
     return {
         'is_randomized': is_randomized,
         'enrollment': view_json(context, request),
@@ -416,7 +415,7 @@ def randomize_ajax(context, request):
             'form': render_form(
                 form,
                 disabled=is_randomized,
-                save_btn=False,
+                show_footer=False,
                 attr={
                     'id': 'enrollment-randomization',
                     'method': 'POST',
