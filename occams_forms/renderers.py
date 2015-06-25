@@ -391,6 +391,7 @@ def make_longform(session, schemata):
 def render_form(form,
                 cancel_url=None,
                 disabled=False,
+                show_footer=True,
                 attr=None):
     """
     Helper function to render a WTForm by OCCAMS standards
@@ -414,6 +415,7 @@ def render_form(form,
         'schema': schema,
         'entity': entity,
         'form': form,
+        'show_footer': show_footer,
         'metadata_disabled': metadata_disabled,
         'fields_disabled': fields_disabled,
         'attr': attr or {},
