@@ -55,7 +55,7 @@
   <!--! Show all input elements (if any) in the footer as inline so they don't
         obsruct visual formatting.
     -->
-  <div class="modal-footer form-inline" tal:condition="python: save_btn">
+  <div class="modal-footer form-inline" tal:condition="python: show_footer">
 
     <a href="${cancel_url}" class="btn btn-link" i18n:translate="">Cancel</a>
 
