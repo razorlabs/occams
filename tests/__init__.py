@@ -51,6 +51,8 @@ def setup_package():
     from occams_studies import Session, models
     from occams_roster import models as roster, Session as RosterSession
 
+    # parse db name from command line
+    # example: nosetests --tc=db:postgresql://plone:plone@/test
     db = config.get('db')
     studies_engine = create_engine(db)
     Session.configure(bind=studies_engine)
