@@ -708,3 +708,103 @@ class TestRandomizeAjax(IntegrationFixture):
             response['enrollment']['stratum']['randid'], u'98766')
         self.assertEquals(
             response['enrollment']['stratum']['arm']['name'], u'tested2')
+
+
+class TestRandomizeAjaxAssigned(IntegrationFixture):
+    """
+    Move this test to it's own class because we need to tweak the criteria
+    slightly to make it work for criteria-based randid assigment.
+    """
+
+    def call_view(self, context, request):
+        from occams_studies.views.enrollment import randomize_ajax as view
+        return view(context, request)
+
+    @mock.patch('occams_studies.views.enrollment.check_csrf_token')
+    def test_randid_assignment_with_criteria(self, check_csrf_token):
+        """
+        It should assign a randid given the criteria associated with a stratum
+        """
+        from datetime import date
+        from pyramid import testing
+        from webob.multidict import MultiDict
+        from occams import Session
+        from occams_studies import models
+
+        _register_routes(self.config)
+
+        schema = models.Schema(
+            name=u'criteria', title=u'Criteria', publish_date=date.today(),
+            attributes={
+                u'likes_icecream': models.Attribute(
+                    name=u'likes_icecream',
+                    title=u'Likes Ice Createm',
+                    type=u'choice',
+                    choices={
+                        u'0': models.Choice(name=u'0', title=u'No', order=0),
+                        u'1': models.Choice(name=u'1', title=u'Yes', order=1),
+                    },
+                    order=0,
+                )
+            })
+
+        study = models.Study(
+            name=u'somestudy',
+            title=u'Some Study',
+            short_title=u'study',
+            code=u'000',
+            start_date=date.today(),
+            consent_date=date.today(),
+            randomization_schema=schema,
+            is_randomized=True)
+
+        stratum = models.Stratum(
+            randid=u'98765',
+            block_number='111',
+            study=study,
+            arm=models.Arm(
+                name=u'real-sugar',
+                title=u'Real Sugar',
+                study=study))
+
+        stratum2 = models.Stratum(
+            randid=u'98766',
+            block_number='111',
+            study=study,
+            arm=models.Arm(
+                name=u'fake-sugar',
+                title=u'Fake Sugar',
+                study=study))
+
+        entity1 = models.Entity(schema=schema)
+        entity1['likes_icecream'] = u'0'
+        stratum.entities.add(entity1)
+
+        # If we submit yes, we'll be put into the 'fake sugar' arm of the study
+        entity2 = models.Entity(schema=schema)
+        entity2['likes_icecream'] = u'1'
+        stratum2.entities.add(entity2)
+
+        enrollment = models.Enrollment(
+            patient=models.Patient(
+                site=models.Site(name=u'ucsd', title=u'UCSD'),
+                pid=u'12345'),
+            study=study,
+            consent_date=date.today())
+
+        Session.add_all([study, stratum, stratum2, enrollment])
+        Session.flush()
+
+        self.config.include('pyramid_chameleon')
+        payload = MultiDict([('likes_icecream', u'1')])
+
+        request = testing.DummyRequest(
+            post=payload,
+            matchdict={'enrollment': enrollment})
+
+        request.session['randomization_stage'] = 2
+
+        response = self.call_view(enrollment, request)
+
+        self.assertEquals(
+            response['enrollment']['stratum']['randid'], u'98766')
