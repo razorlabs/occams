@@ -23,17 +23,21 @@
     ignore: '.select2-input, .select2-focusser',
     errorPlacement: function(error, element){
       error.addClass('help-block');
-      var $container = $(element).closest('.form-group').find('.errors').append(error);
-      if ($container.length < 1){
-        console.warn('Could not find closest ".form-group > .errors" for validation of:', element);
+
+      var $container = $(element).closest('.form-group').find('.errors');
+
+      if ($container.length > 0){
+        $container.append(error);
+      } else {
         $(error).insertAfter(element);
       }
+
     },
     onfocusout: function(element, event){
       // validate, but wait half a moment otherwise we might interrupt
       // something else the user intended on clicking on, such as cancel
-      var delay = 500; // just barely enough to click on something else
-      window.setTimeout(function(){$(element).valid();}, delay);
+      // http://stackoverflow.com/a/25797083/148781
+      window.setTimeout(function(){ this.element(element); }, 1);
     },
     highlight: function(element, errorClass, validClass){
       $(element)
