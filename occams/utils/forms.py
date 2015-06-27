@@ -65,10 +65,11 @@ def wtferrors(form):
                 for entry in field.entries:
                     inspect_field(entry)
 
-            if field.errors:
-                # Ignore field enclosure's children's errors
-                errors[field.id] = ' '.join(
-                    e for e in field.errors if not isinstance(e, (list, dict)))
+            # Only extract field-level messages (ignore sub-field errors)
+            msgs = [e for e in field.errors if isinstance(e, six.string_types)]
+
+            if msgs:
+                errors[field.id] = ' '.join(msgs)
 
     def inspect_form(form):
         for key, field in form._fields.items():
