@@ -205,7 +205,8 @@ function PatientView(options){
         },
         complete: function(){
           // Re-directing takes a while, keep the user in the modal if it's a record
-          if (!isNew){
+          // Also, remove rotating icon if there were errors
+          if (!isNew || self.errorMessage()){
             self.isSaving(false);
           }
         }
