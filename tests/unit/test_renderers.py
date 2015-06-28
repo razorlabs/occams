@@ -156,7 +156,7 @@ class TestMakeForm(IntegrationFixture):
 
         return schema
 
-    def test_skip_validation_if_pending_entry(self):
+    def test_skip_validation_if_to_pending_entry(self):
         from webob.multidict import MultiDict
         from occams_forms import Session
         from occams_forms.renderers import make_form, states, modes
@@ -166,6 +166,26 @@ class TestMakeForm(IntegrationFixture):
         form = Form(MultiDict({
             'ofworkflow_-state': states.PENDING_ENTRY,
         }))
+        self.assertTrue(form.validate(), form.errors)
+
+    def test_skip_validation_if_from_complete(self):
+        from webob.multidict import MultiDict
+        from occams_forms import Session, models
+        from occams_forms.renderers import \
+            make_form, states, modes, entity_data
+
+        schema = self._make_schema()
+        entity = models.Entity(
+            schema=schema,
+            state=(
+                Session.query(models.State)
+                .filter_by(name=states.COMPLETE)
+                .one()))
+        Form = make_form(Session, schema, entity=entity, transition=modes.ALL)
+        formdata = MultiDict({
+            'ofworkflow_-state': states.PENDING_CORRECTION,
+        })
+        form = Form(formdata, data=entity_data(entity))
         self.assertTrue(form.validate(), form.errors)
 
     def test_skip_validation_if_not_collected(self):
@@ -303,6 +323,7 @@ class TestApplyData(IntegrationFixture):
                     name=u'q1',
                     title=u'',
                     type='string',
+                    is_required=True,
                     order=0,
                 )
             })

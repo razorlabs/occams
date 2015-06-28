@@ -271,7 +271,6 @@ def make_form(session,
         setattr(Meta, 'entity', entity)
 
         def validate(self, **kw):
-
             status = True
 
             if 'ofworkflow_' in self:
@@ -281,6 +280,11 @@ def make_form(session,
                 # erase the data anyway
                 if self.ofworkflow_.state.data == states.PENDING_ENTRY:
                     return status
+
+            # Skip all validation if coming from a read-only state
+            if self.meta.entity \
+                    and self.meta.entity.state.name == states.COMPLETE:
+                return status
 
             if 'ofmetadata_' in self and self.ofmetadata_.not_done.data:
                 return status and self.ofmetadata_.validate(self)
