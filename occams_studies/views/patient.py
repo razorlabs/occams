@@ -540,7 +540,7 @@ def form(context, request):
         show_metadata = False
         allowed_versions = None
 
-    if request.has_permission('admin'):
+    if request.has_permission('retract'):
         transition = modes.ALL
     elif request.has_permission('transition'):
         transition = modes.AVAILABLE

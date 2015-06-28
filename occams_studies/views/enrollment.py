@@ -194,7 +194,7 @@ def terminate_ajax(context, request):
         msg = 'There is no "termination_date" configured on: {}'
         log.warn(msg.format(schema.name))
 
-    if request.has_permission('admin'):
+    if request.has_permission('retract'):
         transition = modes.ALL
     elif request.has_permission('transition'):
         transition = modes.AVAILABLE

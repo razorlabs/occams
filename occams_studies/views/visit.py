@@ -302,7 +302,7 @@ def form(context, request):
         .filter(models.Cycle.id.in_([cycle.id for cycle in visit.cycles])))
     allowed_versions = [s.publish_date for s in allowed_schemata]
 
-    if request.has_permission('admin'):
+    if request.has_permission('retract'):
         transition = modes.ALL
     elif request.has_permission('transition'):
         transition = modes.AVAILABLE
