@@ -158,6 +158,10 @@
       <tal:switch switch="option_cls">
         <tal:case case="string:RadioInput">
           <tal:fields define="this_field field" repeat="field this_field" metal:use-macro="macros.widget">
+            <!--If radio button is not selected, no data for field is included in the payload.
+            A default field with an empty string value helps solve this problem.
+            -->
+          <input type="hidden" name="${field.name}" value="" />
         </tal:case>
         <tal:case case="string:CheckboxInput">
           <tal:fields define="this_field field" repeat="field this_field" metal:use-macro="macros.widget">
