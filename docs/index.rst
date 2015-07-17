@@ -6,13 +6,14 @@
 Welcome to occams_studies's documentation!
 ==========================================
 
-Contents:
+Narrative documenation
+----------------------
 
 .. toctree::
    :maxdepth: 2
 
    roles_permissions
-
+   codebooks
 
 
 Indices and tables
