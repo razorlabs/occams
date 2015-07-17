@@ -192,7 +192,8 @@ def make_field(attribute):
 
     elif attribute.type == 'choice':
         kw['choices'] = [(c.name, c.title) for c in attribute.iterchoices()]
-        kw['coerce'] = lambda v: six.binary_type(v) if v is not None else None
+        # If true, parse as string, else return none
+        kw['coerce'] = lambda v: six.binary_type(v) if v else None
 
         if attribute.is_collection:
             field_class = wtforms.SelectMultipleField
