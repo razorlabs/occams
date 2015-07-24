@@ -22,13 +22,13 @@ class EnrollmentPlan(ExportPlan):
     def codebook(self):
 
         return iter([
-            row('id', self.name, types.NUMERIC,
+            row('id', self.name, types.NUMBER, decimal_places=0,
                 is_system=True, is_required=True),
             row('pid', self.name, types.STRING,
                 is_system=True, is_required=True),
             row('site', self.name, types.STRING,
                 is_system=True, is_required=True),
-            row('enrollment_id', self.name, types.NUMERIC,
+            row('enrollment_id', self.name, types.NUMBER, decimal_places=0,
                 is_system=True, is_required=True),
             row('study', self.name, types.STRING,
                 is_system=True, is_required=True),

@@ -15,6 +15,7 @@ HEADER = [
     'is_collection',
     'is_private',
     'type',
+    'decimal_places',
     'choices',
     'order',
     ]
@@ -33,17 +34,18 @@ class types:
     CHOICE = 'choice'
     STRING = 'string'
     TEXT = 'text'
-    BLOB = 'blob'
+    FILE = 'file'
     DATE = 'date'
     DATETIME = 'datetime'
     TIME = 'time'
-    NUMERIC = 'numeric'
+    NUMBER = 'number'
 
 
 def row(
     field,
     table,
     type,
+    decimal_places=None,
     choices=[],
     form=None,
     publish_date=None,
@@ -59,10 +61,15 @@ def row(
     Helper function to create an codebook row entry
     """
 
+    # Legacy fix, our clients don't understand BLOB
+    if type.lower() == 'blob':
+        type = types.FILE
+
     return {
         'field':          field,
         'table':          table,
         'type':           type,
+        'decimal_places': decimal_places,
         'form':           form,
         'publish_date':   publish_date,
         'title':          title,

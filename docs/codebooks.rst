@@ -60,22 +60,39 @@ is_private      TRUE                Flag indicating that the field contains
 type            string              The data type for the variable.
 
                                     Possible values are:
-                                        * boolean
-                                        * choice
-                                        * string
-                                        * text
-                                        * blob
-                                        * date
-                                        * datetime
-                                        * numeric
+                                        * boolean - true or false fields
+                                        * choice - fields with restricted
+                                                    answer choices
+                                        * string - single line text
+                                        * text - multiline text
+                                        * file - file uploads
+                                        * date - date fields
+                                        * datetime - date & time fields
+                                        * number (or numeric) - integers and decimals
+
+decimal_places  4                   For "number" types, the number of digits
+                                    after the decimal point. If left blank,
+                                    the system will assume any decimal place
+                                    for the value. A value of zero (0)
+                                    indicates the number is essentially an
+                                    integer. A number greater than zero
+                                    indicates the system should round the
+                                    number to the specified decimal place.
 
 choices         0=No;1=Yes;2=N/A    Available answer choices for the field.
                                     This only applies to variables of
-                                    type "choice".
-                                    Each answer choice is a numeric code
+                                    type "choice" or "boolean".
+                                    Each answer choice is a number code
                                     followed by an equals (=) sign followed
                                     by the displayed label, delimited by
-                                    semi-colon.
+                                    semi-colon:
+
+                                      123=label 1;874=label 2; 009=label 3
+
+                                    For boolean types, use this column
+                                    to indicate the correct labels for
+                                    true/false, such as:
+                                      1=true label;0=false label
 
                                     Please note that order is important.
 
@@ -88,21 +105,25 @@ order           3                   The display order of the field.
 System Variables
 ----------------
 
-In addition to the eCRF questions, the codebook must specify the system
+In addition to the eCRF questions, the codebook can specify the system
 variables to be used within the form.  These are meta data variables within
-each eCRF that OCCAMS manages on behalf of the user while interacting with
-the Studies application.
+each eCRF that the system manages on behalf of the user while interacting with
+the Studies application, and thus have no display order.
 
-Currently, these are not configurable and must be specified for documentation
-purposes.
+Each set of rows defining an eCRF must also include these rows as necessary.
 
-The following is a brief description of the required system variables:
+.. note:: It is highly recommended you include at least an "id", "pid", and
+          "form_name" value so that the data can be uniquely referenced.
+
+The following is a brief description of the available system variables:
 
 
 =================== ===============================================================
 Variable            Description
 =================== ===============================================================
 id                  The eCRF entry's unique system identification number.
+                    This value is very important as it's the only way the
+                    system is able to distinguish between records.
 pid                 The patient identifier that the entry belongs to.
 site                The patient's site string token.
 enrollment          The study code this entry was collected for.
@@ -135,26 +156,26 @@ modify_user         The last user who modified the entry.
 =================== ===============================================================
 
 
-The "boilerplate" system variables are as follows and must be included
-for each eCRF version:
+The following are sample system variables so that you can copy into your
+codebook:
 
 .. csv-table::
-    :header: table,form,publish_date,field,title,description,is_required,is_system,is_collection,is_private,type,choices,order
+    :header: table,form,publish_date,field,title,description,is_required,is_system,is_collection,is_private,type,decimal_places,choices,order
 
-    sample_ecrf,,,id,,,TRUE,TRUE,FALSE,FALSE,numeric,,
-    sample_ecrf,,,pid,,,TRUE,TRUE,FALSE,FALSE,string,,
-    sample_ecrf,,,site,,,TRUE,TRUE,FALSE,FALSE,string,,
-    sample_ecrf,,,enrollment,,,FALSE,TRUE,TRUE,FALSE,numeric,,
-    sample_ecrf,,,enrollment_ids,,,FALSE,TRUE,TRUE,FALSE,numeric,,
-    sample_ecrf,,,visit_cycles,,,FALSE,TRUE,TRUE,FALSE,string,,
-    sample_ecrf,,,visit_date,,,FALSE,TRUE,FALSE,FALSE,date,,
-    sample_ecrf,,,visit_id,,,FALSE,TRUE,FALSE,FALSE,numeric,,
-    sample_ecrf,,,form_name,,,TRUE,TRUE,FALSE,FALSE,string,,
-    sample_ecrf,,,form_publish_date,,,TRUE,TRUE,FALSE,FALSE,string,,
-    sample_ecrf,,,state,,,TRUE,TRUE,FALSE,FALSE,string,,
-    sample_ecrf,,,collect_date,,,TRUE,TRUE,FALSE,FALSE,date,,
-    sample_ecrf,,,not_done,,,TRUE,TRUE,FALSE,FALSE,boolean,,
-    sample_ecrf,,,create_date,,,TRUE,TRUE,FALSE,FALSE,date,,
-    sample_ecrf,,,create_user,,,TRUE,TRUE,FALSE,FALSE,string,,
-    sample_ecrf,,,modify_date,,,TRUE,TRUE,FALSE,FALSE,date,,
-    sample_ecrf,,,modify_user,,,TRUE,TRUE,FALSE,FALSE,string,,
+    sample_ecrf,,,id,,,TRUE,TRUE,FALSE,FALSE,number,0,,
+    sample_ecrf,,,pid,,,TRUE,TRUE,FALSE,FALSE,string,,,
+    sample_ecrf,,,site,,,TRUE,TRUE,FALSE,FALSE,string,,,
+    sample_ecrf,,,enrollment,,,FALSE,TRUE,TRUE,FALSE,number,0,,
+    sample_ecrf,,,enrollment_ids,,,FALSE,TRUE,TRUE,FALSE,number,0,,
+    sample_ecrf,,,visit_cycles,,,FALSE,TRUE,TRUE,FALSE,string,,,
+    sample_ecrf,,,visit_date,,,FALSE,TRUE,FALSE,FALSE,date,,,
+    sample_ecrf,,,visit_id,,,FALSE,TRUE,FALSE,FALSE,number,0,,
+    sample_ecrf,,,form_name,,,TRUE,TRUE,FALSE,FALSE,string,,,
+    sample_ecrf,,,form_publish_date,,,TRUE,TRUE,FALSE,FALSE,string,,,
+    sample_ecrf,,,state,,,TRUE,TRUE,FALSE,FALSE,string,,,
+    sample_ecrf,,,collect_date,,,TRUE,TRUE,FALSE,FALSE,date,,,
+    sample_ecrf,,,not_done,,,TRUE,TRUE,FALSE,FALSE,boolean,,,
+    sample_ecrf,,,create_date,,,TRUE,TRUE,FALSE,FALSE,date,,,
+    sample_ecrf,,,create_user,,,TRUE,TRUE,FALSE,FALSE,string,,,
+    sample_ecrf,,,modify_date,,,TRUE,TRUE,FALSE,FALSE,date,,,
+    sample_ecrf,,,modify_user,,,TRUE,TRUE,FALSE,FALSE,string,,,

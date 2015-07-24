@@ -45,7 +45,7 @@ class SymptomPlan(ExportPlan):
 
     def codebook(self):
         return iter([
-            row('id', self.name, types.NUMERIC,
+            row('id', self.name, types.NUMBER, decimal_places=0,
                 is_system=True, is_required=True),
             row('pid', self.name, types.STRING,
                 is_required=True, is_system=True),

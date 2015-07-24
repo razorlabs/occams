@@ -134,20 +134,20 @@ class SchemaPlan(ExportPlan):
 
     def codebook(self):
         knowns = [
-            row('id', self.name, types.NUMERIC,
+            row('id', self.name, types.NUMBER, decimal_places=0,
                 is_required=True, is_system=True),
             row('pid', self.name, types.STRING,
                 is_required=True, is_system=True),
             row('site', self.name, types.STRING,
                 is_required=True, is_system=True),
-            row('enrollment', self.name, types.NUMERIC,
+            row('enrollment', self.name, types.NUMBER, decimal_places=0,
                 is_collection=True, is_system=True),
-            row('enrollment_ids', self.name, types.NUMERIC,
+            row('enrollment_ids', self.name, types.NUMBER, decimal_places=0,
                 is_collection=True, is_system=True)]
 
         if self._is_aeh_partner_form:
             knowns.extend([
-                row('partner_id', self.name, types.NUMERIC,
+                row('partner_id', self.name, types.NUMBER, decimal_places=0,
                     is_required=True, is_system=True,
                     desc=u'The partner linkage ID this form was collected for.'),
                 row('parter_pid', self.name, types.STRING, is_system=True,
@@ -156,7 +156,7 @@ class SchemaPlan(ExportPlan):
 
         if self.has_rand:
             knowns.extend([
-                row('block_number', self.name, types.NUMERIC,
+                row('block_number', self.name, types.NUMBER, decimal_places=0,
                     is_required=True, is_system=True),
                 row('randid', self.name, types.STRING, is_required=True,
                     is_system=True),
@@ -167,7 +167,7 @@ class SchemaPlan(ExportPlan):
             row('visit_cycles', self.name, types.STRING, is_collection=True,
                 is_system=True),
             row('visit_date', self.name, types.DATE, is_system=True),
-            row('visit_id', self.name, types.NUMERIC, is_system=True),
+            row('visit_id', self.name, types.NUMBER, decimal_places=0, is_system=True),
             row('form_name', self.name, types.STRING,
                 is_required=True, is_system=True),
             row('form_publish_date', self.name, types.STRING,
@@ -196,6 +196,7 @@ class SchemaPlan(ExportPlan):
 
         for attribute in query:
             yield row(attribute.name, attribute.schema.name, attribute.type,
+                      decimal_places=attribute.decimal_places,
                       form=attribute.schema.title,
                       publish_date=attribute.schema.publish_date,
                       title=attribute.title,
