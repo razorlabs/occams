@@ -1,6 +1,7 @@
 from pyramid.httpexceptions import HTTPOk, HTTPBadRequest
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
+from sqlalchemy import orm
 import wtforms
 
 from occams.utils.forms import wtferrors, Form
@@ -8,7 +9,6 @@ from occams_datastore.models.schema import RE_VALID_NAME, RESERVED_WORDS
 
 from .. import _, models
 from ._utils import jquery_wtform_validator
-
 
 types = [
     {'name': 'choice', 'title': _(u'Answer choices')},
@@ -207,13 +207,20 @@ def delete_json(context, request):
     db_session.delete(context)
     return HTTPOk()
 
-
 def FieldFormFactory(context, request):
     db_session = request.db_session
 
+    if isinstance(context, models.AttributeFactory):
+        is_new = True
+        schema = context.__parent__
+    elif isinstance(context, models.Schema):
+        is_new = True
+        schema = context
+    elif isinstance(context, models.Attribute):
+        schema = context.schema
+        is_new = bool(orm.object_session(context))
+
     def unique_variable(form, field):
-        is_new = isinstance(context, models.AttributeFactory)
-        schema = context.__parent__ if is_new else context.schema
         query = (
             db_session.query(models.Attribute)
             .filter_by(name=field.data, schema=schema))
