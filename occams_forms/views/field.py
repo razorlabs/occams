@@ -7,6 +7,7 @@ from occams.utils.forms import wtferrors, Form
 from occams_datastore.models.schema import RE_VALID_NAME, RESERVED_WORDS
 
 from .. import _, models, Session
+from sqlalchemy import orm
 from ._utils import jquery_wtform_validator
 
 
@@ -203,11 +204,19 @@ def delete_json(context, request):
     return HTTPOk()
 
 
-def FieldFormFactory(context, request):
+def FieldFormFactory(context=None, request=None):
+
+    if isinstance(context, models.AttributeFactory):
+        is_new = True
+        schema = context.__parent__
+    elif isinstance(context, models.Schema):
+        is_new = True
+        schema = context
+    elif isinstance(context, models.Attribute):
+        schema = context.schema
+        is_new = bool(orm.object_session(context))
 
     def unique_variable(form, field):
-        is_new = isinstance(context, models.AttributeFactory)
-        schema = context.__parent__ if is_new else context.schema
         query = (
             Session.query(models.Attribute)
             .filter_by(name=field.data, schema=schema))
