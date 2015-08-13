@@ -261,7 +261,7 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
     __tablename__ = 'attribute'
 
     # Overide for maximum character lenght of 20
-    name = Column(String(20), nullable=False)
+    name = Column(String(100), nullable=False)
 
     schema_id = Column(Integer, nullable=False,)
 
