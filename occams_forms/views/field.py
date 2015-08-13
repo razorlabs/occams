@@ -242,7 +242,7 @@ def FieldFormFactory(context=None, request=None):
         name = wtforms.StringField(
             validators=[
                 wtforms.validators.InputRequired(),
-                wtforms.validators.Length(min=2, max=20),
+                wtforms.validators.Length(min=2, max=100),
                 wtforms.validators.Regexp(
                     RE_VALID_NAME,
                     message=_(u'Not a valid variable name')),
