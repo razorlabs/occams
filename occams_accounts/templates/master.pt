@@ -1,126 +1,15 @@
-<!DOCTYPE html>
-<html lang="${request.locale_name}" i18n:domain="occams_accounts">
+<html
+    i18n:domain="occams_accounts"
+    tal:define="
+      bundle_css  'accounts-css';
+      bundle_js   'accounts-js';
+      app_title   'Accounts';
+    "
+    metal:use-macro="load: occams:templates/layout.pt">
 
-  <head>
-    <meta charset="utf-8">
-    <meta tal:define="pkg import:occams_accounts" name="${pkg.__name__}" content="${pkg.__version__}" />
-    <title>${request.settings.app_title|'OCCAMS Accounts'}</title>
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <link tal:repeat="url request.webassets_env['accounts-css'].urls()" href="${url}" rel="stylesheet" type="text/css" />
-    <!--! Shortcut icons -->
-    <link
-        rel="shortcut icon"
-        href="${request.static_path('occams_accounts:static/images/favicon.ico')}"/>
-    <link rel="shortcut icon" sizes="1024x1024" href="${request.static_path('occams_accounts:static/images/favicon-highres.png')}" />
-    <link rel="shortcut icon" sizes="128x128" href="${request.static_path('occams_accounts:static/images/favicon.png')}" />
-    <link rel="apple-touch-icon" sizes="128x128" href="${request.static_path('occams_accounts:static/images/favicon.png')}" />
-    <link rel="apple-touch-icon-precomposed" sizes="128x128" href="${request.static_path('occams_accounts:static/images/favicon.png')}" />
-  </head>
-
-  <body
-      data-view-name="${request.matched_route.name}"
-      data-view-path="${request.current_route_path()}">
-
-    <!--! Wrap the content so we can push the footer to the bottom of the page -->
-    <div id="wrap">
-      <!--! Keep the app navbar separate from the content container -->
-      <!--! Don't show the navigation bar on the login page, it just looks weird -->
-      <nav
-          class="navbar navbar-default navbar-static-top hidden-print"
-          role="navigation"
-          tal:condition="request.authenticated_userid and request.matched_route.name != 'accounts.login'">
-
-        <div class="container">
-
-          <div class="navbar-header">
-            <button
-                type="button"
-                class="navbar-toggle"
-                data-toggle="collapse"
-                data-target=".navbar-collapse">
-              <span class="icon-bar"></span>
-              <span class="icon-bar"></span>
-              <span class="icon-bar"></span>
-            </button>
-            <a class="navbar-brand"
-                href="${request.route_path('accounts.main')}">OCCAMS Accounts</a>
-          </div> <!--/.navbar-header -->
-
-          <div class="collapse navbar-collapse">
-
-            <ul class="nav navbar-nav navbar-right"
-                tal:define="user request.environ['repoze.who.identity']['properties']|nothing;"
-                  tal:condition="user">
-              <li><p class="navbar-text">${user['first_name']}</p></li>
-              <li class="dropdown"
-                  tal:condition="request.apps">
-                <a href="#apps"
-                  role="button"
-                  class="dropdown-toggle"
-                  rel="tooltip"
-                  data-toggle="dropdown"
-                  data-placement="bottom"
-                  data-container="body"
-                  data-animation="false"
-                  title="Services"
-                  ><span class="glyphicon glyphicon-th"></span><span class="caret"></span></a>
-                <ul class="dropdown-menu" role="menu" aria-labelledby="Apps Menu">
-                  <tal:suites repeat="suite request.apps">
-                    <li role="presentation" class="dropdown-header">
-                      ${suite['title']}
-                    </li>
-                    <tal:apps repeat="app suite['apps']">
-                      <li role="presentation">
-                        <a href="${app['url']}" role="menuitem">${app['title']}</a>
-                      </li>
-                    </tal:apps>
-                    <li role="presentation" class="divider"
-                        tal:condition="not:repeat.suite.end"></li>
-                  </tal:suites>
-                </ul>
-              <li>
-                <a href="${request.route_path('accounts.logout')}"
-                    rel="tooltip"
-                    data-placement="bottom"
-                    data-container="body"
-                    data-animation="false"
-                    title="Log Out"
-                  ><span class="glyphicon glyphicon-log-out"></span></a>
-              </li>
-            </ul>
-
-          </div><!--/.nav-collapse -->
-
-        </div>
-      </nav>
-
-      <div class="container">
-        <main id="${request.matched_route.name}">
-          <metal:content-slot define-slot="content-slot" />
-        </main>
-      </div> <!-- /.container -->
-    </div> <!-- /#wrap -->
-
-    <footer id="footer">
-      <div class="container">
-        <p class="text-muted credit">
-          <span i18n:translate="">Developed by the</span>
-          <a href="http://bitcore.ucsd.edu" i18n:translate="">The Young Group at UCSD</a>
-        </p>
-      </div>
-    </footer>
-
-  </body>
-
-  <!--! Load scripts at the end so we don't block rendering -->
-  <script
-      tal:repeat="url request.webassets_env['accounts-js'].urls()"
-      src="${url}"
-      type="text/javascript"> </script>
-
-  <metal:content-slot define-slot="javascript-slot">
-    <!--! Slot for injecting extra javascript into the applciation (e.g. ko initialization) -->
-  </metal:content-slot>
+  <metal:navbar-header-slot fill-slot="navbar-header-slot">
+    <a class="navbar-brand"
+        href="${request.route_path('accounts.main')}">OCCAMS Accounts</a>
+  </metal:navbar-header-slot>
 
 </html>
