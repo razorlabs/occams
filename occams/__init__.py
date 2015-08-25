@@ -26,6 +26,7 @@ Session = scoped_session(sessionmaker(
     extension=zope.sqlalchemy.ZopeTransactionExtension()))
 occams_datastore.models.events.register(Session)
 
+from .settings import piwik_from_config
 from .security import RootFactory, groupfinder  # NOQA
 
 import os
@@ -33,11 +34,13 @@ import os
 here = os.path.dirname(os.path.realpath(__file__))
 
 settings_defaults = {
+    'piwik.enabled': False,
+
     'webassets.base_dir': os.path.join(here, 'static'),
     'webassets.base_url': '/static',
 
     'who.callback': 'occams.security.groupfinder'
-}
+    }
 
 
 def main(global_config, **settings):
@@ -52,6 +55,8 @@ def main(global_config, **settings):
     # Make sure we at least have te
     apps = aslist(settings.get('occams.apps') or '')
     settings['occams.apps'] = dict.fromkeys(apps)
+
+    settings.update(piwik_from_config(settings))
 
     config = Configurator(
         settings=settings,
@@ -80,7 +85,7 @@ def main(global_config, **settings):
     config.scan()
     config.commit()
 
-    # Appliation includes
+    # Application includes
 
     for name in six.iterkeys(settings['occams.apps']):
         config.include(name)

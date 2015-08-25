@@ -113,3 +113,22 @@ class ModelField(wtforms.Field):
                 if not self.data:
                     raise wtforms.validators.StopValidation(
                         self.gettext(u'Value not found'))
+
+
+class RequiredIf(wtforms.validators.Required):
+    """
+    Conditionally required validator
+    """
+
+    def __init__(self, other, *args, **kwargs):
+        self.other = other
+        super(RequiredIf, self).__init__(*args, **kwargs)
+
+    def __call__(self, form, field):
+        try:
+            other_field = getattr(form, self.other)
+        except AttributeError:
+            raise Exception('no field named "%s" in form' % self.other)
+        else:
+            if bool(other_field.data):
+                super(RequiredIf, self).__call__(form, field)

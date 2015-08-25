@@ -1,0 +1,231 @@
+<!--  Master Application Layout Template
+
+      This template provides a baseline layout for applications.
+
+      Its use is not required if apps want full control of the entire layout.
+-->
+<!DOCTYPE html>
+<html
+    lang="${request.locale_name}"
+    i18n:domain="occams"
+    tal:define="
+      bundle_css    bundle_css | 'occams-css';
+      bundle_js     bundle_js | 'occams-js';
+      css_container css_container | 'container';
+      fluid         fluid | False;
+      app_title     app_title | nothing;
+      org_title     request.registry.settings['occams.org.title'] | 'OCCAMS';
+      admin_url     admin_url|nothing;
+    ">
+
+  <head>
+    <meta charset="utf-8">
+
+    <title tal:condition="app_title">${org_title} - ${app_title}</title>
+    <title tal:condition="not:app_title">${org_title}</title>
+
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+    <!--! Style assets -->
+
+    <link
+        tal:define="
+          bundle request.webassets_env[bundle_css];
+          urls   bundle.urls();
+          "
+        tal:repeat="url urls" href="${url}" rel="stylesheet" type="text/css" />
+
+    <!-- Shortcut icons -->
+    <link rel="shortcut icon" href="${request.static_path('occams:static/images/favicon.ico')}"/>
+    <link rel="shortcut icon" sizes="1024x1024" href="${request.static_path('occams:static/images/favicon-highres.png')}">
+    <link rel="shortcut icon" sizes="128x128" href="${request.static_path('occams:static/images/favicon.png')}">
+    <link rel="apple-touch-icon" sizes="128x128" href="${request.static_path('occams:static/images/favicon.png')}">
+    <link rel="apple-touch-icon-precomposed" sizes="128x128" href="${request.static_path('occams:static/images/favicon.png')}">
+
+  </head>
+
+  <body
+      data-view-name="${request.matched_route.name}"
+      data-view-path="${request.current_route_path()}">
+
+    <div id="wrap">
+      <!--! Keep the app navbar separate from the content container -->
+
+      <metal:navbar-slot define-slot="navbar-slot">
+
+        <nav
+            class="navbar navbar-default navbar-static-top"
+            role="navigation"
+            i18n:domain="occams"
+            tal:define="user request.user|nothing;">
+
+          <div class="${css_container}">
+
+            <div class="navbar-header">
+              <button
+                  type="button"
+                  class="navbar-toggle"
+                  data-toggle="collapse"
+                  data-target=".navbar-collapse">
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </button>
+              <metal:navbar-header-slot define-slot="navbar-header-slot">
+                <a class="navbar-brand"
+                    href="${request.route_path('occams.main')}">OCCAMS</a>
+              </metal:navbar-header-slot>
+            </div> <!--/.navbar-header -->
+
+            <div class="collapse navbar-collapse">
+
+              <metal:navbar-nav-slot define-slot="navbar-nav-slot">
+              </metal:navbar-nav-slot>
+
+
+              <metal:navbar-user-slot define-slot="navbar-user-slot">
+                <ul class="nav navbar-nav navbar-right"
+                    tal:define="user request.environ['repoze.who.identity']['properties']|nothing;"
+                      tal:condition="user">
+                  <li><p class="navbar-text">${user['first_name']}</p></li>
+                  <li tal:condition="admin_url">
+                    <a  href="${admin_url}"
+                        rel="tooltip"
+                        data-placement="bottom"
+                        data-container="body"
+                        data-animation="false"
+                        title="Setup"
+                        i18n:attributes="title"
+                      ><span class="fa fa-cog"></span></a>
+                  </li>
+                  <li class="dropdown"
+                      tal:condition="request.apps">
+                    <a href="#apps"
+                      role="button"
+                      class="dropdown-toggle"
+                      rel="tooltip"
+                      data-toggle="dropdown"
+                      data-placement="bottom"
+                      data-container="body"
+                      data-animation="false"
+                      title="Services"
+                      ><span class="glyphicon glyphicon-th"></span><span class="caret"></span></a>
+                    <ul class="dropdown-menu" role="menu" aria-labelledby="Apps Menu">
+                      <tal:apps repeat="app request.apps">
+                        <li role="presentation">
+                          <a href="${request.route_path(app['route'])}" role="menuitem">${app['title']}</a>
+                        </li>
+                      </tal:apps>
+                    </ul>
+                  </li>
+                  <li>
+                    <a href="${request.route_path('accounts.logout')}"
+                        rel="tooltip"
+                        data-placement="bottom"
+                        data-container="body"
+                        data-animation="false"
+                        title="Log Out"
+                      ><span class="glyphicon glyphicon-log-out"></span></a>
+                  </li>
+                </ul>
+              </metal:navbar-user-slot>
+
+            </div><!--/.nav-collapse -->
+
+          </div>
+        </nav>
+
+      </metal:navbar-slot>
+
+      <main
+          id="view-${request.matched_route.name}"
+          class="${css_container}"
+          data-view-name="${request.matched_route.name}"
+          data-view-path="${request.current_route_path()}">
+
+        <tal:alerts
+            define="types python:['danger', 'warning', 'success', 'info']"
+            repeat="type types">
+          <div
+              class="alert alert-${type}"
+              tal:define="alerts python:request.session.pop_flash(type)"
+              tal:repeat="alert alerts">${alert}</div>
+        </tal:alerts>
+
+        <metal:content-slot define-slot="content-slot" />
+
+      </main>
+
+    </div> <!-- /#wrap -->
+
+
+    <footer id="footer">
+      <div class="${css_container}">
+        <p class="text-muted credit">
+          <span i18n:translate="">Developed by the</span>
+          <a href="https://bitcore.ucsd.edu" i18n:translate="">YoungLabs</a>.
+        </p>
+      </div>
+    </footer>
+
+
+    <!--! Javascript assets -->
+
+    <!--! Load scripts at the end so we don't block rendering -->
+    <script
+        tal:define="
+          bundle request.webassets_env[bundle_js];
+          urls   bundle.urls();
+          "
+        tal:repeat="url urls" src="${url}" type="text/javascript"></script>
+
+
+    <!--! Custom inline-Javascript
+
+          This slot is intented for page-specific javascript setup
+          (e.g. ko initilization).
+
+          It is highly-recommended this slot be used only for view-level inline
+          javascript, declaring it as an application-level slot would depliete its
+          usage and would need to be re-defined in a view that requires extra
+          javascript aside from those provided by the application.
+      -->
+
+    <metal:content-slot define-slot="javascript-slot" />
+
+
+    <!--! PIWIK Integration -->
+
+    <tal:piwik
+        define="
+          settings  request.registry.settings;
+          enabled   settings['piwik.enabled']|nothing;
+          url       settings['piwik.url']|nothing;
+          site      settings['piwik.site']|nothing;
+          autohttps not(url.startswith('/') or url.startswith('http'));
+          "
+        condition="enabled">
+      <!-- Piwik -->
+      <script type="text/javascript" tal:condition="not: autohttps">
+        var pkBaseURL = "${url}";
+        document.write(unescape("%3Cscript src='" + pkBaseURL + "/piwik.js' type='text/javascript'%3E%3C/script%3E"));
+      </script>
+      <script type="text/javascript" tal:condition="autohttps">
+        var pkBaseURL = ("https:" == document.location.protocol) ? "https://${url}" : "http://${url}";
+        document.write(unescape("%3Cscript src='" + pkBaseURL + "/piwik.js' type='text/javascript'%3E%3C/script%3E"));
+      </script>
+      <script type="text/javascript">
+        try {
+          var piwikTracker = Piwik.getTracker(pkBaseURL + "/piwik.php", ${site});
+          piwikTracker.trackPageView();
+          piwikTracker.enableLinkTracking();
+        } catch( err ) {}
+      </script>
+      <noscript><p><img src="${url}/piwik.php?idsite=${site}" style="border:0" alt="" /></p></noscript>
+      <!-- End Piwik Tracking Code -->
+    </tal:piwik>
+
+
+  </body>
+</html>
