@@ -15,7 +15,7 @@
 
     </div> <!-- /#views-patient-main -->
   </metal:content-slot>
-  <metal:content-slot fill-slot="javascript-extras-slot">
+  <metal:content-slot fill-slot="javascript-slot">
     <script>
       $(function(){
         ko.applyBindings(
