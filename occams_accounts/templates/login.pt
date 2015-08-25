@@ -1,4 +1,8 @@
 <html metal:use-macro="load: master.pt">
+
+  <!--! We don't need to show the navbar when logging in -->
+  <metal:navbar-slot fill-slot="navbar-slot" />
+
   <metal:content-slot fill-slot="content-slot">
     <form class="form-login"
         role="form"
@@ -13,4 +17,5 @@
       <button class="btn btn-lg btn-primary btn-block" type="submit" i18n:translate="">Log in</button>
     </form>
   </metal:content-slot>
+
 </html>
