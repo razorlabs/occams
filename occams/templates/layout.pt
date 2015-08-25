@@ -1,10 +1,9 @@
-<!--  Master Application Layout Template
+<!--! Master Application Layout Template
 
       This template provides a baseline layout for applications.
 
       Its use is not required if apps want full control of the entire layout.
--->
-<!DOCTYPE html>
+--><!DOCTYPE html>
 <html
     lang="${request.locale_name}"
     i18n:domain="occams"
@@ -203,7 +202,7 @@
           enabled   settings['piwik.enabled']|nothing;
           url       settings['piwik.url']|nothing;
           site      settings['piwik.site']|nothing;
-          autohttps not(url.startswith('/') or url.startswith('http'));
+          autohttps python:not(url.startswith('/') or url.startswith('http'))|nothing;
           "
         condition="enabled">
       <!-- Piwik -->
