@@ -160,7 +160,7 @@
     </div> <!-- /.row -->
   </metal:content-slot>
 
-  <metal:content-slot fill-slot="javascript-extras-slot">
+  <metal:content-slot fill-slot="javascript-slot">
     <script>
       $(setup_exports_faq);
     </script>

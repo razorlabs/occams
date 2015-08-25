@@ -41,7 +41,8 @@ class PidPlan(ExportPlan):
     def codebook(self):
         name = self.name
         knowns = [
-            row('id', name, types.NUMERIC, is_required=True, is_system=True),
+            row('id', name, types.NUMBER, decimal_places=0, is_required=True,
+                is_system=True),
             row('pid', name, types.STRING, is_required=True, is_system=True),
             row('site', name, types.STRING, is_required=True, is_system=True),
             row('early_id', name, types.STRING, is_system=True),

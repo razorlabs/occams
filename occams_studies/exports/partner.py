@@ -28,7 +28,7 @@ class PartnerPlan(ExportPlan):
 
     def codebook(self):
         return iter([
-            row('partner_id', self.name, types.NUMERIC,
+            row('partner_id', self.name, types.NUMBER,
                 is_system=True, is_required=True),
             row('partner_pid', self.name, types.STRING,
                 title=u'This Partner\'s Patient Entry',

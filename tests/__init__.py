@@ -151,7 +151,7 @@ class FunctionalFixture(unittest.TestCase):
             'debugtoolbar.enabled': True,
             'pyramid.debug_all': True,
 
-            'webassets.debug': True,
+            'webassets.debug': False,
             'webassets.auto_build': False,
 
             'occams.apps': 'occams_studies',
