@@ -546,8 +546,8 @@ def available_schemata(context, request):
             query = query.filter(
                 models.Schema.name != context.termination_schema.name)
 
-        query = query.filter(~models.Schema.name.in_(
-            Session.query(models.Schema.name)
+        query = query.filter(~models.Schema.id.in_(
+            Session.query(models.Schema.id)
             .select_from(models.Study)
             .filter(models.Study.id == context.id)
             .join(models.Study.schemata)

@@ -793,6 +793,38 @@ class TestAvailableSchemata(IntegrationFixture):
         self.assertEqual(1, len(result['schemata']))
         self.assertEqual('y', result['schemata'][0]['name'])
 
+    def test_exclude_schema_used_versions(self, check_csrf_token):
+        """
+        It should exclude general versions already used by the form (editing)
+        """
+        from datetime import date, timedelta
+        from pyramid import testing
+        from webob.multidict import MultiDict
+        from occams_studies import models, Session
+
+        today = date.today()
+        tomorrow = today + timedelta(days=1)
+
+        y0 = models.Schema(name='y', title=u'Y', publish_date=today)
+        y1 = models.Schema(name='y', title=u'Y', publish_date=tomorrow)
+
+        study = models.Study(
+            name=u'somestudy',
+            title=u'Some Study',
+            short_title=u'sstudy',
+            code=u'000',
+            start_date=date.today(),
+            consent_date=date.today(),
+            schemata=set([y0]))
+
+        Session.add_all([y0, y1, study])
+        Session.flush()
+
+        request = testing.DummyRequest(params=MultiDict())
+        result = self.call_view(study, request)
+        self.assertEqual(1, len(result['schemata']))
+        self.assertEqual(str(tomorrow), result['schemata'][0]['publish_date'])
+
 
 @mock.patch('occams_studies.views.study.check_csrf_token')
 class TestUploadRandomizationJson(IntegrationFixture):
