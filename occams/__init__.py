@@ -1,4 +1,6 @@
 from __future__ import unicode_literals
+import decimal
+import datetime
 import logging
 import pkg_resources
 
@@ -6,6 +8,7 @@ import six
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.config import Configurator
 from pyramid.i18n import TranslationStringFactory
+from pyramid.renderers import JSON
 from pyramid.settings import aslist
 from pyramid_who.whov2 import WhoV2AuthenticationPolicy
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -22,10 +25,15 @@ _ = TranslationStringFactory(__name__)
 
 log = logging.getLogger(__name__)
 
+#
+# Application database session. This session should only be used
+# withing the WSGI app, not in asynchronous processes (IE CELERY)
+#
 Session = scoped_session(sessionmaker(
     extension=zope.sqlalchemy.ZopeTransactionExtension()))
 occams_datastore.models.events.register(Session)
 
+from .settings import piwik_from_config
 from .security import RootFactory, groupfinder  # NOQA
 
 import os
@@ -33,11 +41,13 @@ import os
 here = os.path.dirname(os.path.realpath(__file__))
 
 settings_defaults = {
+    'piwik.enabled': False,
+
     'webassets.base_dir': os.path.join(here, 'static'),
     'webassets.base_url': '/static',
 
     'who.callback': 'occams.security.groupfinder'
-}
+    }
 
 
 def main(global_config, **settings):
@@ -52,6 +62,8 @@ def main(global_config, **settings):
     # Make sure we at least have te
     apps = aslist(settings.get('occams.apps') or '')
     settings['occams.apps'] = dict.fromkeys(apps)
+
+    settings.update(piwik_from_config(settings))
 
     config = Configurator(
         settings=settings,
@@ -70,17 +82,25 @@ def main(global_config, **settings):
     config.add_rewrite_rule(r'/(?P<path>.*)/', r'/%(path)s')
     config.include('pyramid_tm')
     config.include('pyramid_webassets')
+    config.add_renderer('json', JSON(
+        adapters=(
+            (decimal.Decimal, lambda obj, req: str(obj)),
+            (datetime.datetime, lambda obj, req: obj.isoformat()),
+            (datetime.date, lambda obj, req: obj.isoformat())
+        )),
+    )
     config.commit()
 
     # Main includes
     config.include('.assets')
+    config.include('.celery')
     config.include('.models')
     config.include('.routes')
     config.include('.security')
     config.scan()
     config.commit()
 
-    # Appliation includes
+    # Application includes
 
     for name in six.iterkeys(settings['occams.apps']):
         config.include(name)

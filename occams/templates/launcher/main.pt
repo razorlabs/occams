@@ -1,4 +1,4 @@
-<html metal:use-macro="load: master.pt">
+<html metal:use-macro="load: ../layout.pt">
   <metal:content-slot fill-slot="content-slot">
 
   <div class="list-group">
