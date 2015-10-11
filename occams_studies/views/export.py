@@ -16,8 +16,7 @@ import wtforms
 from occams.utils.forms import wtferrors, Form
 from occams.utils.pagination import Pagination
 
-from .. import _, log, models, Session, exports
-from ..tasks import celery,  make_export
+from .. import _, log, models, Session, exports, tasks
 
 
 @view_config(
@@ -56,7 +55,7 @@ def checkout(context, request):
     isn't left with an unresponsive page.
     """
 
-    exportables = exports.list_all(include_rand=False)
+    exportables = exports.list_all(Session, include_rand=False)
     limit = request.registry.settings.get('app.export.limit')
     exceeded = limit is not None and query_exports(request).count() > limit
     errors = {}
@@ -94,7 +93,7 @@ def checkout(context, request):
 
             def apply_after_commit(success):
                 if success:
-                    make_export.apply_async(
+                    tasks.make_export.apply_async(
                         args=[task_id],
                         task_id=task_id,
                         countdown=4)
@@ -124,7 +123,7 @@ def codebook(context, request):
     """
     Codebook viewer
     """
-    return {'exportables': exports.list_all().values()}
+    return {'exportables': exports.list_all(Session).values()}
 
 
 @view_config(
@@ -143,7 +142,7 @@ def codebook_json(context, request):
             row['publish_date'] = publish_date.isoformat()
         return row
 
-    exportables = exports.list_all()
+    exportables = exports.list_all(Session)
 
     file = request.GET.get('file')
 
@@ -205,7 +204,16 @@ def status_json(context, request):
     locale = negotiate_locale_name(request)
     localizer = get_localizer(request)
 
+    redis = request.redis
+
     def export2json(export):
+        # TODO: This doesn't actually work, I can't figure out how to get
+        #       the corect data out of redis
+        if export.status != 'complete':
+            data = redis.hgetall(export.redis_key)
+        else:
+            data = {}
+        log.debug('info: {}'.format(str(data)))
         count = len(export.contents)
         return {
             'id': export.id,
@@ -218,8 +226,8 @@ def status_json(context, request):
             'use_choice_labels': export.use_choice_labels,
             'expand_collections': export.expand_collections,
             'contents': sorted(export.contents, key=lambda v: v['title']),
-            'count': None,
-            'total': None,
+            'count': data.get('count'),
+            'total': data.get('total'),
             'file_size': (naturalsize(export.file_size)
                           if export.file_size else None),
             'download_url': request.route_path('studies.export_download',
@@ -250,7 +258,7 @@ def delete_json(context, request):
     export = context
     Session.delete(export)
     Session.flush()
-    celery.control.revoke(export.name)
+    tasks.app.control.revoke(export.name)
     return HTTPOk()
 
 

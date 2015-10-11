@@ -6,8 +6,8 @@ from tests import IntegrationFixture
 class TestListAll(IntegrationFixture):
 
     def test_no_schemata(self):
-        from occams_studies import exports
-        exportables = exports.list_all()
+        from occams_studies import exports, Session
+        exportables = exports.list_all(Session)
         self.assertItemsEqual(
             ['pid', 'enrollment', 'visit'],
             exportables.keys())

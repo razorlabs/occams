@@ -513,7 +513,7 @@
     </section> <!-- /#sites-section -->
 
   </metal:content-slot>
-  <metal:content-slot fill-slot="javascript-extras-slot">
+  <metal:content-slot fill-slot="javascript-slot">
     <script>
       $(function(){
         var sitesUrl = "${request.route_path('studies.sites')}";

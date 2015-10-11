@@ -15,7 +15,7 @@ from sqlalchemy import orm, null, cast, String, literal_column
 from occams_datastore.reporting import build_report
 from occams_datastore.utils.sql import group_concat, to_date
 
-from .. import Session, models
+from .. import models
 from .plan import ExportPlan
 from .codebook import types, row
 
@@ -25,11 +25,11 @@ class SchemaPlan(ExportPlan):
     is_system = False
 
     @classmethod
-    def from_sql(cls, record):
+    def from_sql(cls, db_session, record):
         """
         Creates a plan instance from an internal query inspection
         """
-        report = cls()
+        report = cls(db_session)
         report.name = record.name
         report.title = record.title
         report.has_private = record.has_private
@@ -39,78 +39,21 @@ class SchemaPlan(ExportPlan):
         return report
 
     @classmethod
-    def from_schema(cls, name):
+    def from_schema(cls, db_session, name):
         """
         Creates a plan from a schema name
         """
-        subquery = cls._query().subquery()
-        query = Session.query(subquery).filter(subquery.c.name == name)
-        return cls.from_sql(query.one())
+        subquery = _list_schemata_info(db_session).subquery()
+        query = db_session.query(subquery).filter(subquery.c.name == name)
+        return cls.from_sql(db_session, query.one())
 
     @classmethod
-    def _query(self):
-        InnerSchema = orm.aliased(models.Schema)
-        OuterSchema = orm.aliased(models.Schema)
-
-        schemata_query = (
-            Session.query(OuterSchema.name.label('name'))
-            .add_column(literal_column("'schema'").label('type'))
-            .add_column(
-                Session.query(models.Attribute)
-                .filter(models.Attribute.is_private)
-                .join(InnerSchema)
-                .filter(InnerSchema.name == OuterSchema.name)
-                .correlate(OuterSchema)
-                .exists()
-                .label('has_private'))
-            .add_column(
-                Session.query(models.Entity)
-                .join(models.Entity.contexts)
-                .filter(models.Context.external == 'stratum')
-                .join(models.Stratum, models.Context.key == models.Stratum.id)
-                .join(InnerSchema, models.Entity.schema)
-                .filter(InnerSchema.name == OuterSchema.name)
-                .correlate(OuterSchema)
-                .exists()
-                .label('has_rand'))
-            .add_column(
-                Session.query(InnerSchema.title)
-                .select_from(InnerSchema)
-                .filter(InnerSchema.name == OuterSchema.name)
-                .filter(InnerSchema.publish_date != null())
-                .filter(InnerSchema.retract_date == null())
-                .order_by(InnerSchema.publish_date.desc())
-                .limit(1)
-                .correlate(OuterSchema)
-                .as_scalar()
-                .label('title'))
-            .add_column(
-                Session.query(
-                    group_concat(to_date(InnerSchema.publish_date), ';'))
-                .filter(InnerSchema.name == OuterSchema.name)
-                .filter(InnerSchema.publish_date != null())
-                .filter(InnerSchema.retract_date == null())
-                .group_by(InnerSchema.name)
-                .correlate(OuterSchema)
-                .as_scalar()
-                .label('versions'))
-            .filter(OuterSchema.publish_date != null())
-            .filter(OuterSchema.retract_date == null()))
-
-        schemata_query = (
-            schemata_query
-            .group_by(OuterSchema.name)
-            .from_self())
-
-        return schemata_query
-
-    @classmethod
-    def list_all(cls, include_rand=True, include_private=True):
+    def list_all(cls, db_session, include_rand=True, include_private=True):
         """
         Lists all the schema plans
         """
-        subquery = cls._query().subquery()
-        query = Session.query(subquery)
+        subquery = _list_schemata_info(db_session).subquery()
+        query = db_session.query(subquery)
 
         if not include_rand:
             query = query.filter(~subquery.c.has_rand)
@@ -120,12 +63,12 @@ class SchemaPlan(ExportPlan):
 
         query = query.order_by(subquery.c.title)
 
-        return [cls.from_sql(r) for r in query]
+        return [cls.from_sql(db_session, r) for r in query]
 
     @property
     def _is_aeh_partner_form(self):
         return (
-            'aeh' in Session.bind.url.database
+            'aeh' in self.db_session.bind.url.database
             and self.name in (
                 'IPartnerBio',
                 'IPartnerContact',
@@ -133,21 +76,22 @@ class SchemaPlan(ExportPlan):
                 'IPartnerDisclosure'))
 
     def codebook(self):
+        session = self.db_session
         knowns = [
-            row('id', self.name, types.NUMERIC,
+            row('id', self.name, types.NUMBER, decimal_places=0,
                 is_required=True, is_system=True),
             row('pid', self.name, types.STRING,
                 is_required=True, is_system=True),
             row('site', self.name, types.STRING,
                 is_required=True, is_system=True),
-            row('enrollment', self.name, types.NUMERIC,
+            row('enrollment', self.name, types.NUMBER, decimal_places=0,
                 is_collection=True, is_system=True),
-            row('enrollment_ids', self.name, types.NUMERIC,
+            row('enrollment_ids', self.name, types.NUMBER, decimal_places=0,
                 is_collection=True, is_system=True)]
 
         if self._is_aeh_partner_form:
             knowns.extend([
-                row('partner_id', self.name, types.NUMERIC,
+                row('partner_id', self.name, types.NUMBER, decimal_places=0,
                     is_required=True, is_system=True,
                     desc=u'The partner linkage ID this form was collected for.'),
                 row('parter_pid', self.name, types.STRING, is_system=True,
@@ -156,7 +100,7 @@ class SchemaPlan(ExportPlan):
 
         if self.has_rand:
             knowns.extend([
-                row('block_number', self.name, types.NUMERIC,
+                row('block_number', self.name, types.NUMBER, decimal_places=0,
                     is_required=True, is_system=True),
                 row('randid', self.name, types.STRING, is_required=True,
                     is_system=True),
@@ -167,7 +111,7 @@ class SchemaPlan(ExportPlan):
             row('visit_cycles', self.name, types.STRING, is_collection=True,
                 is_system=True),
             row('visit_date', self.name, types.DATE, is_system=True),
-            row('visit_id', self.name, types.NUMERIC, is_system=True),
+            row('visit_id', self.name, types.NUMBER, decimal_places=0, is_system=True),
             row('form_name', self.name, types.STRING,
                 is_required=True, is_system=True),
             row('form_publish_date', self.name, types.STRING,
@@ -183,7 +127,7 @@ class SchemaPlan(ExportPlan):
             yield column
 
         query = (
-            Session.query(models.Attribute)
+            session.query(models.Attribute)
             .join(models.Schema)
             .filter(models.Schema.name == self.name)
             .filter(models.Schema.publish_date.in_(self.versions))
@@ -196,6 +140,7 @@ class SchemaPlan(ExportPlan):
 
         for attribute in query:
             yield row(attribute.name, attribute.schema.name, attribute.type,
+                      decimal_places=attribute.decimal_places,
                       form=attribute.schema.title,
                       publish_date=attribute.schema.publish_date,
                       title=attribute.title,
@@ -224,14 +169,14 @@ class SchemaPlan(ExportPlan):
              use_choice_labels=False,
              expand_collections=False,
              ignore_private=True):
-
+        session = self.db_session
         ids_query = (
-            Session.query(models.Schema.id)
+            session.query(models.Schema.id)
             .filter(models.Schema.publish_date.in_(self.versions)))
         ids = [id for id, in ids_query]
 
         report = build_report(
-            Session,
+            session,
             self.name,
             ids=ids,
             expand_collections=expand_collections,
@@ -239,9 +184,9 @@ class SchemaPlan(ExportPlan):
             ignore_private=ignore_private)
 
         query = (
-            Session.query(report.c.id.label('id'))
+            session.query(report.c.id.label('id'))
             .add_column(
-                Session.query(models.Patient.pid)
+                session.query(models.Patient.pid)
                 .join(models.Context,
                       (models.Context.external == u'patient')
                       & (models.Context.key == models.Patient.id))
@@ -250,7 +195,7 @@ class SchemaPlan(ExportPlan):
                 .as_scalar()
                 .label('pid'))
             .add_column(
-                Session.query(models.Site.name)
+                session.query(models.Site.name)
                 .select_from(models.Patient)
                 .join(models.Site)
                 .join(models.Context,
@@ -261,7 +206,7 @@ class SchemaPlan(ExportPlan):
                 .as_scalar()
                 .label('site'))
             .add_column(
-                Session.query(group_concat(models.Study.name, ';'))
+                session.query(group_concat(models.Study.name, ';'))
                 .select_from(models.Enrollment)
                 .join(models.Study)
                 .join(models.Context,
@@ -273,7 +218,7 @@ class SchemaPlan(ExportPlan):
                 .as_scalar()
                 .label('enrollment'))
             .add_column(
-                Session.query(group_concat(models.Enrollment.id, ';'))
+                session.query(group_concat(models.Enrollment.id, ';'))
                 .select_from(models.Enrollment)
                 .join(models.Context,
                       (models.Context.external == u'enrollment')
@@ -290,7 +235,7 @@ class SchemaPlan(ExportPlan):
             query = (
                 query
                 .add_column(
-                    Session.query(models.Partner.id)
+                    session.query(models.Partner.id)
                     .select_from(models.Partner)
                     .join(models.Context,
                           (models.Context.external == u'partner')
@@ -300,7 +245,7 @@ class SchemaPlan(ExportPlan):
                     .as_scalar()
                     .label('partner_id'))
                 .add_column(
-                    Session.query(PartnerPatient.pid)
+                    session.query(PartnerPatient.pid)
                     .select_from(models.Partner)
                     .join(PartnerPatient, models.Partner.enrolled_patient)
                     .join(models.Context,
@@ -315,7 +260,7 @@ class SchemaPlan(ExportPlan):
             query = (
                 query
                 .add_column(
-                    Session.query(models.Stratum.block_number)
+                    session.query(models.Stratum.block_number)
                     .select_from(models.Stratum)
                     .join(models.Context,
                           (models.Context.external == u'stratum')
@@ -325,7 +270,7 @@ class SchemaPlan(ExportPlan):
                     .as_scalar()
                     .label('block_number'))
                 .add_column(
-                    Session.query(models.Stratum.randid)
+                    session.query(models.Stratum.randid)
                     .select_from(models.Stratum)
                     .join(models.Context,
                           (models.Context.external == u'stratum')
@@ -335,7 +280,7 @@ class SchemaPlan(ExportPlan):
                     .as_scalar()
                     .label('randid'))
                 .add_column(
-                    Session.query(models.Arm.title)
+                    session.query(models.Arm.title)
                     .select_from(models.Stratum)
                     .join(models.Context,
                           (models.Context.external == u'stratum')
@@ -349,7 +294,7 @@ class SchemaPlan(ExportPlan):
         query = (
             query
             .add_column(
-                Session.query(group_concat(models.Study.title
+                session.query(group_concat(models.Study.title
                                            + literal_column(u"'('")
                                            + cast(models.Cycle.week, String)
                                            + literal_column(u"')'"),
@@ -366,7 +311,7 @@ class SchemaPlan(ExportPlan):
                 .as_scalar()
                 .label('visit_cycles'))
             .add_column(
-                Session.query(models.Visit.id)
+                session.query(models.Visit.id)
                 .select_from(models.Visit)
                 .join(models.Context,
                       (models.Context.external == u'visit')
@@ -376,7 +321,7 @@ class SchemaPlan(ExportPlan):
                 .as_scalar()
                 .label('visit_id'))
             .add_column(
-                Session.query(models.Visit.visit_date)
+                session.query(models.Visit.visit_date)
                 .select_from(models.Visit)
                 .join(models.Context,
                       (models.Context.external == u'visit')
@@ -391,3 +336,60 @@ class SchemaPlan(ExportPlan):
             *[c for c in report.columns if c.name != 'id'])
 
         return query
+
+
+def _list_schemata_info(db_session):
+    InnerSchema = orm.aliased(models.Schema)
+    OuterSchema = orm.aliased(models.Schema)
+
+    schemata_query = (
+        db_session.query(OuterSchema.name.label('name'))
+        .add_column(literal_column("'schema'").label('type'))
+        .add_column(
+            db_session.query(models.Attribute)
+            .filter(models.Attribute.is_private)
+            .join(InnerSchema)
+            .filter(InnerSchema.name == OuterSchema.name)
+            .correlate(OuterSchema)
+            .exists()
+            .label('has_private'))
+        .add_column(
+            db_session.query(models.Entity)
+            .join(models.Entity.contexts)
+            .filter(models.Context.external == 'stratum')
+            .join(models.Stratum, models.Context.key == models.Stratum.id)
+            .join(InnerSchema, models.Entity.schema)
+            .filter(InnerSchema.name == OuterSchema.name)
+            .correlate(OuterSchema)
+            .exists()
+            .label('has_rand'))
+        .add_column(
+            db_session.query(InnerSchema.title)
+            .select_from(InnerSchema)
+            .filter(InnerSchema.name == OuterSchema.name)
+            .filter(InnerSchema.publish_date != null())
+            .filter(InnerSchema.retract_date == null())
+            .order_by(InnerSchema.publish_date.desc())
+            .limit(1)
+            .correlate(OuterSchema)
+            .as_scalar()
+            .label('title'))
+        .add_column(
+            db_session.query(
+                group_concat(to_date(InnerSchema.publish_date), ';'))
+            .filter(InnerSchema.name == OuterSchema.name)
+            .filter(InnerSchema.publish_date != null())
+            .filter(InnerSchema.retract_date == null())
+            .group_by(InnerSchema.name)
+            .correlate(OuterSchema)
+            .as_scalar()
+            .label('versions'))
+        .filter(OuterSchema.publish_date != null())
+        .filter(OuterSchema.retract_date == null()))
+
+    schemata_query = (
+        schemata_query
+        .group_by(OuterSchema.name)
+        .from_self())
+
+    return schemata_query

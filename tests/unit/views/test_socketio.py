@@ -58,54 +58,6 @@ class TestExportNameSpace(IntegrationFixture):
         self.assertItemsEqual([], ns.get_initial_acl())
 
     @mock.patch('occams_studies.views.socketio.ExportNamespace.emit')
-    def test_listener_current_progress(self, emit):
-        """
-        It should emit current progress for the current authenticated user
-        """
-        from pyramid import testing
-        from occams_studies import models, Session
-        from occams_studies.views.socketio import ExportNamespace
-
-        Session.add(models.User(key=u'jane'))
-        Session.add(models.User(key=u'joe'))
-        Session.flush()
-
-        user = Session.query(models.User).filter_by(key='joe').one()
-        other_user = Session.query(models.User).filter_by(key='jane').one()
-        pending_export = models.Export(owner_user=user, contents=[],
-                                       status='pending')
-
-        def hgetall(*args):
-            return {
-                'export_id': pending_export.id,
-                'owner_user': pending_export.owner_user.key}
-
-        Session.add_all([
-            pending_export,
-            # thes should not be included in the resultset
-            models.Export(owner_user=other_user, contents=[],
-                          status='pending'),
-            models.Export(owner_user=user, contents=[], status='failed'),
-            models.Export(owner_user=user, contents=[], status='complete')])
-        Session.flush()
-
-        request = testing.DummyRequest(
-            has_permission=mock.Mock(return_value=True),
-            redis=mock.Mock(
-                hgetall=hgetall,
-                pubsub=lambda: mock.Mock(listen=lambda: [])),
-            environ={'socketio': mock.Mock(session={})})
-        ns = ExportNamespace(request.environ, '/export', request)
-        ns.session['user'] = 'joe'
-        ns.session['redis'] = request.redis
-        ns.listener()
-
-        emit.assert_called_once_with(
-            'export',
-            {'export_id': pending_export.id,
-             'owner_user': 'joe'})
-
-    @mock.patch('occams_studies.views.socketio.ExportNamespace.emit')
     def test_listener_broadcast(self, emit):
         """
         It should emit ongoing progress for the authenticated user

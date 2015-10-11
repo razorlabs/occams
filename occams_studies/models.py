@@ -1216,8 +1216,10 @@ class Export(Base, Referenceable, Modifiable, Auditable):
         Virtual attribute that returns the export's path in the filesystem
         """
         # XXX: This might come back and haunt us if Session is not configured
-        export_dir = Session.info['settings']['studies.export.dir']
-        return os.path.join(export_dir, self.name)
+        session = orm.object_session(self)
+        export_dir = session.info.get('settings', {}).get('studies.export.dir')
+        if export_dir:
+            return os.path.join(export_dir, self.name)
 
     @property
     def file_size(self):
@@ -1233,7 +1235,8 @@ class Export(Base, Referenceable, Modifiable, Auditable):
         Virtual attribute that returns the export's expiration date (if avail)
         """
         # XXX: This might come back and haunt us if Session is not configured
-        delta = Session.info['settings'].get('studies.export.expire')
+        session = orm.object_session(self)
+        delta = session.info.get('settings', {}).get('studies.export.expire')
         if delta:
             return self.modify_date + timedelta(delta)
 
