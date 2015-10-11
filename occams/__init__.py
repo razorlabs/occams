@@ -1,4 +1,6 @@
 from __future__ import unicode_literals
+import decimal
+import datetime
 import logging
 import pkg_resources
 
@@ -6,6 +8,7 @@ import six
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.config import Configurator
 from pyramid.i18n import TranslationStringFactory
+from pyramid.renderers import JSON
 from pyramid.settings import aslist
 from pyramid_who.whov2 import WhoV2AuthenticationPolicy
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -79,6 +82,13 @@ def main(global_config, **settings):
     config.add_rewrite_rule(r'/(?P<path>.*)/', r'/%(path)s')
     config.include('pyramid_tm')
     config.include('pyramid_webassets')
+    config.add_renderer('json', JSON(
+        adapters=(
+            (decimal.Decimal, lambda obj, req: str(obj)),
+            (datetime.datetime, lambda obj, req: obj.isoformat()),
+            (datetime.date, lambda obj, req: obj.isoformat())
+        )),
+    )
     config.commit()
 
     # Main includes
