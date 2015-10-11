@@ -12,7 +12,7 @@ Symptom Log
 from sqlalchemy import case, MetaData, Table
 from sqlalchemy.orm import aliased, mapper
 
-from .. import _, models, Session
+from .. import _, models
 from .plan import ExportPlan
 from .codebook import row, types
 
@@ -41,7 +41,7 @@ class SymptomPlan(ExportPlan):
 
     @property
     def is_enabled(self):
-        return 'aeh' in Session.bind.url.database
+        return 'aeh' in self.db_session.bind.url.database
 
     def codebook(self):
         return iter([
@@ -84,12 +84,16 @@ class SymptomPlan(ExportPlan):
              expand_collections=False,
              ignore_private=True):
 
+        session = self.db_session
         metadata = MetaData()
         symptom_table = Table(
-            'symptom', metadata, autoload=True, autoload_with=Session.bind)
+            'symptom',
+            metadata,
+            autoload=True,
+            autoload_with=self.db_session.bind)
         symptom_type_table = Table(
             'symptom_type', metadata, autoload=True,
-            autoload_with=Session.bind)
+            autoload_with=self.db_session.bind)
 
         class Symptom(object):
             pass
@@ -104,7 +108,7 @@ class SymptomPlan(ExportPlan):
         ModifyUser = aliased(models.User)
 
         query = (
-            Session.query(
+            session.query(
                 Symptom.id,
                 models.Patient.pid.label('pid'),
                 models.Site.name.label('site'),

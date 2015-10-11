@@ -9,7 +9,7 @@ Partner Linkage
 
 from sqlalchemy.orm import aliased
 
-from .. import _, models, Session
+from .. import _, models
 from .plan import ExportPlan
 from .codebook import row, types
 
@@ -24,7 +24,7 @@ class PartnerPlan(ExportPlan):
 
     @property
     def is_enabled(self):
-        return 'aeh' in Session.bind.url.database
+        return 'aeh' in self.db_session.bind.url.database
 
     def codebook(self):
         return iter([
@@ -58,12 +58,14 @@ class PartnerPlan(ExportPlan):
              expand_collections=False,
              ignore_private=True):
 
+        session = self.db_session
+
         CreateUser = aliased(models.User)
         ModifyUser = aliased(models.User)
         PartnerPatient = aliased(models.Patient)
 
         query = (
-            Session.query(
+            session.query(
                 models.Partner.id.label('partner_id'),
                 PartnerPatient.pid.label('partner_pid'),
                 models.Patient.pid.label('index_pid'),
@@ -76,9 +78,13 @@ class PartnerPlan(ExportPlan):
                 models.Partner.modify_date,
                 ModifyUser.key.label('modify_user'))
             .select_from(models.Partner)
-            .join(models.Patient, models.Partner.patient_id == models.Patient.id)
+            .join(
+                models.Patient,
+                models.Partner.patient_id == models.Patient.id)
             .join(models.Patient.site)
-            .outerjoin(PartnerPatient, PartnerPatient.id == models.Partner.enrolled_patient_id)  # NOQA
+            .outerjoin(
+                PartnerPatient,
+                PartnerPatient.id == models.Partner.enrolled_patient_id)
             .join(CreateUser, models.Partner.create_user_id == CreateUser.id)
             .join(ModifyUser, models.Partner.modify_user_id == ModifyUser.id)
             .order_by(models.Partner.id))

@@ -15,7 +15,7 @@ Formerly: avrcdataexport/sql/additional/SpecimenAliquot.sql
 from sqlalchemy import func, null
 from sqlalchemy.orm import aliased
 
-from .. import models, Session
+from .. import models
 from .plan import ExportPlan
 from .codebook import row, types
 
@@ -28,7 +28,7 @@ class LabPlan(ExportPlan):
 
     @property
     def is_enabled(self):
-        return any(n in Session.bind.url.database
+        return any(n in self.db_session.bind.url.database
                    for n in ['aeh', 'cctg', 'mhealth'])
 
     def codebook(self):
@@ -85,11 +85,13 @@ class LabPlan(ExportPlan):
         # Import here to avoid breaking installations that don't use lab.
         from occams_lims import models as lab
 
+        session = self.db_session
+
         AliquotLocation = aliased(lab.Location)
         SpecimenLocation = aliased(lab.Location)
 
         query = (
-            Session.query(
+            session.query(
                 lab.AliquotType.title.label('aliquot_type'),
                 lab.Aliquot.store_date.label('store_date'),
                 lab.Aliquot.volume.label('volume'),
@@ -121,10 +123,11 @@ class LabPlan(ExportPlan):
                 models.Patient.pid.label('pid'),
                 models.Patient.pid.label('our'),
                 models.Patient.nurse.label('nurse_email'),
-                (Session.query(models.PatientReference.reference_number)
+                (session.query(models.PatientReference.reference_number)
                  .join(models.ReferenceType)
                  .filter(models.ReferenceType.name == u'aeh_num')
-                 .filter(models.PatientReference.patient_id == models.Patient.id)
+                 .filter(
+                    models.PatientReference.patient_id == models.Patient.id)
                  .limit(1)
                  .correlate(models.Patient)
                  .as_scalar()

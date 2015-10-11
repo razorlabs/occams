@@ -6,8 +6,8 @@ from tests import IntegrationFixture
 class TestPidPlan(IntegrationFixture):
 
     def test_file_name(self):
-        from occams_studies import exports
-        plan = exports.PidPlan()
+        from occams_studies import exports, Session
+        plan = exports.PidPlan(Session)
         self.assertEqual(plan.file_name, 'pid.csv')
 
     def test_columns(self):
@@ -15,8 +15,8 @@ class TestPidPlan(IntegrationFixture):
         It should generate a table of all the pids in the database
         """
 
-        from occams_studies import exports
-        plan = exports.PidPlan()
+        from occams_studies import exports, Session
+        plan = exports.PidPlan(Session)
 
         codebook = list(plan.codebook())
         query = plan.data()
@@ -31,7 +31,7 @@ class TestPidPlan(IntegrationFixture):
         It should be able to generate reports without refs
         """
         from occams_studies import exports, models, Session
-        plan = exports.PidPlan()
+        plan = exports.PidPlan(Session)
 
         patient = models.Patient(
             pid=u'xxx-xxx',
@@ -58,9 +58,10 @@ class TestPidPlan(IntegrationFixture):
         It should generate a basic listing of all the PIDs in the database
         """
         from occams_studies import exports, models, Session
-        plan = exports.PidPlan()
+        plan = exports.PidPlan(Session)
 
-        reference_type = models.ReferenceType(name=u'med_num', title=u'Medical Number')
+        reference_type = models.ReferenceType(
+            name=u'med_num', title=u'Medical Number')
 
         patient = models.Patient(
             pid=u'xxx-xxx',
@@ -91,7 +92,7 @@ class TestPidPlan(IntegrationFixture):
         """
         from datetime import date
         from occams_studies import exports, models, Session
-        plan = exports.PidPlan()
+        plan = exports.PidPlan(Session)
 
         patient = models.Patient(
             pid=u'xxx-xxx',

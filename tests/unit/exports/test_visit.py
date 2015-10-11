@@ -4,16 +4,16 @@ from tests import IntegrationFixture
 class TestVisitPlan(IntegrationFixture):
 
     def test_file_name(self):
-        from occams_studies import exports
-        plan = exports.VisitPlan()
+        from occams_studies import exports, Session
+        plan = exports.VisitPlan(Session)
         self.assertEqual(plan.file_name, 'visit.csv')
 
     def test_columns(self):
         """
         It should generate a table of all the visits in the database
         """
-        from occams_studies import exports
-        plan = exports.VisitPlan()
+        from occams_studies import exports, Session
+        plan = exports.VisitPlan(Session)
 
         codebook = list(plan.codebook())
         query = plan.data()

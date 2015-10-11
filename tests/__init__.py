@@ -47,6 +47,7 @@ def setup_package():
     """
     from sqlalchemy import create_engine
     from testconfig import config
+    from occams import celery
     from occams_datastore import models as datastore
     from occams_studies import Session, models
     from occams_roster import models as roster, Session as RosterSession
@@ -56,6 +57,7 @@ def setup_package():
     db = config.get('db')
     studies_engine = create_engine(db)
     Session.configure(bind=studies_engine)
+    celery.Session.configure(bind=studies_engine)
 
     datastore.DataStoreModel.metadata.create_all(studies_engine)
     models.Base.metadata.create_all(studies_engine)
@@ -103,7 +105,8 @@ class IntegrationFixture(unittest.TestCase):
         Session.add_all([
             models.State(name=u'pending-entry', title=u'Pending Entry'),
             models.State(name=u'pending-review', title=u'Pending Review'),
-            models.State(name=u'pending-correction', title=u'Pending Correction'),
+            models.State(name=u'pending-correction',
+                         title=u'Pending Correction'),
             models.State(name=u'complete', title=u'Complete')
         ])
 
@@ -119,17 +122,19 @@ class FunctionalFixture(unittest.TestCase):
     Tests under this fixture will be very slow, so use sparingly.
     """
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
+        """
+        Sets up a singleton WSGI app
+        """
         import tempfile
         import six
-        import transaction
-        from webtest import TestApp
         from occams import main
-        from occams_studies import Session, models
+        from occams_studies import Session
 
         # The pyramid_who plugin requires a who file, so let's create a
         # barebones files for it...
-        self.who_ini = tempfile.NamedTemporaryFile()
+        who_ini = tempfile.NamedTemporaryFile()
         who = six.moves.configparser.ConfigParser()
         who.add_section('general')
         who.set('general', 'request_classifier',
@@ -137,39 +142,48 @@ class FunctionalFixture(unittest.TestCase):
         who.set('general', 'challenge_decider',
                 'repoze.who.classifiers:default_challenge_decider')
         who.set('general', 'remote_user_key', 'REMOTE_USER')
-        who.write(self.who_ini)
-        self.who_ini.flush()
+        who.write(who_ini)
+        who_ini.flush()
 
-        app = main({}, **{
+        wsgi = main({}, **{
             'redis.url': REDIS_URL,
             'redis.sessions.secret': 'sekrit',
 
-            'who.config_file': self.who_ini.name,
+            'who.config_file': who_ini.name,
             'who.identifier_id': '',
 
             # Enable regular error messages so we can see useful traceback
             'debugtoolbar.enabled': True,
             'pyramid.debug_all': True,
 
-            'webassets.debug': False,
-            'webassets.auto_build': False,
+            'webassets.debug': True,
 
             'occams.apps': 'occams_studies',
 
             'occams.db.url': Session.bind,
             'occams.groups': [],
 
+            'celery.broker.url': REDIS_URL,
+            'celery.backend.url': REDIS_URL,
+            'celery.blame': 'celery@localhost',
+
             'studies.export.dir': '/tmp',
-            'studies.export.user': 'celery@localhost',
-            'studies.celery.broker.url': REDIS_URL,
-            'studies.celery.backend.url': REDIS_URL,
             'studies.pid.package': 'occams.roster',
             'studies.blob.dir': '/tmp',
 
             'roster.db.url': 'sqlite://',
         })
 
-        self.app = TestApp(app)
+        who_ini.close()
+
+        cls.wsgi = wsgi
+
+    def setUp(self):
+        import transaction
+        from webtest import TestApp
+        from occams_studies import Session, models
+
+        app = TestApp(self.wsgi)
 
         # Add hard-coded workflow that needs to one day be replaced...
         with transaction.manager:
@@ -181,9 +195,12 @@ class FunctionalFixture(unittest.TestCase):
             Session.add_all([
                 models.State(name=u'pending-entry', title=u'Pending Entry'),
                 models.State(name=u'pending-review', title=u'Pending Review'),
-                models.State(name=u'pending-correction', title=u'Pending Correction'),
+                models.State(name=u'pending-correction',
+                             title=u'Pending Correction'),
                 models.State(name=u'complete', title=u'Complete')
             ])
+
+        self.app = app
 
     def tearDown(self):
         import transaction
@@ -203,7 +220,6 @@ class FunctionalFixture(unittest.TestCase):
             Session.execute('DELETE FROM "user" CASCADE')
             mark_changed(Session())
         Session.remove()
-        self.who_ini.close()
         del self.app
 
     def make_environ(self, userid=USERID, properties={}, groups=()):

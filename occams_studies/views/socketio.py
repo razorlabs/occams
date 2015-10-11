@@ -20,6 +20,11 @@ def socketio(request):  # pragma: nocover: don't need to unittest socketio.io
     if 'socketio' not in request.environ:
         return HTTPNotImplemented()
 
+    # TODO: Do not use SQLAlchemy in websockets, it is not stable
+    #       We'll have to figure out a way to broadcast events to the
+    #       WSGI-side
+    Session.remove()
+
     socketio_manage(
         request.environ,
         request=request,
@@ -68,17 +73,6 @@ class ExportNamespace(BaseNamespace):
         """
         userid = self.session['user']
         redis = self.session['redis']
-
-        pending_query = (
-            Session.query(models.Export)
-            .filter(models.Export.owner_user.has(key=userid))
-            .filter_by(status='pending'))
-
-        # emit current progress
-        for export in pending_query:
-            data = redis.hgetall(export.redis_key)
-            log.debug(data)
-            self.emit('export', data)
 
         pubsub = redis.pubsub()
         pubsub.subscribe('export')

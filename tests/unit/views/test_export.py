@@ -159,6 +159,7 @@ class TestStatusJSON(IntegrationFixture):
         """
         It should return the authenticated user's exports
         """
+        import mock
         from pyramid import testing
         from occams_studies import Session, models
 
@@ -189,7 +190,7 @@ class TestStatusJSON(IntegrationFixture):
         Session.flush()
 
         self.config.testing_securitypolicy(userid='joe')
-        request = testing.DummyRequest()
+        request = testing.DummyRequest(redis=mock.Mock())
         context = models.ExportFactory(request)
         export1.__parent__ = context
         export2.__parent__ = context
@@ -202,6 +203,7 @@ class TestStatusJSON(IntegrationFixture):
         It should not render expired exports.
         """
         from datetime import datetime, timedelta
+        import mock
         from pyramid import testing
         from occams_studies import Session, models
 
@@ -231,7 +233,7 @@ class TestStatusJSON(IntegrationFixture):
         Session.flush()
 
         self.config.testing_securitypolicy(userid='joe')
-        request = testing.DummyRequest()
+        request = testing.DummyRequest(redis=mock.Mock())
         context = models.ExportFactory(request)
         export.__parent__ = context
         response = self.call_view(context, request)
@@ -241,7 +243,7 @@ class TestStatusJSON(IntegrationFixture):
         export.create_date = export.modify_date = \
             now - timedelta(EXPIRE_DAYS + 1)
         Session.flush()
-        request = testing.DummyRequest()
+        request = testing.DummyRequest(redis=mock.Mock())
         context = models.ExportFactory(request)
         export.__parent__ = context
         response = self.call_view(context, request)
@@ -344,7 +346,7 @@ class TestCodebookDownload(IntegrationFixture):
         os.remove(name)
 
 
-@mock.patch('occams_studies.tasks.celery.control.revoke')
+@mock.patch('occams_studies.tasks.app.control.revoke')
 @mock.patch('occams_studies.views.export.check_csrf_token')
 class TestDelete(IntegrationFixture):
 

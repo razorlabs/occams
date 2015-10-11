@@ -16,7 +16,7 @@ from sqlalchemy.orm import aliased, mapper
 
 from occams_datastore.utils.sql import group_concat
 
-from .. import _, models, Session
+from .. import _, models
 from .plan import ExportPlan
 from .codebook import row, types
 
@@ -64,7 +64,7 @@ class CallLogPlan(ExportPlan):
 
     @property
     def is_enabled(self):
-        return 'cctg' in Session.bind.url.database
+        return 'cctg' in self.db_session.bind.url.database
 
     def codebook(self):
         return iter([
@@ -119,15 +119,17 @@ class CallLogPlan(ExportPlan):
              expand_collections=False,
              ignore_private=True):
 
+        session = self.db_session
+
         metadata = MetaData()
         patient_log_table = Table(
-            'patient_log', metadata, autoload=True, autoload_with=Session.bind)
+            'patient_log', metadata, autoload=True, autoload_with=session.bind)
         patient_log_nonresponse_type_table = Table(
             'patient_log_nonresponse_type', metadata, autoload=True,
-            autoload_with=Session.bind)
+            autoload_with=session.bind)
         log_response_table = Table(
             'log_responses', metadata, autoload=True,
-            autoload_with=Session.bind)
+            autoload_with=session.bind)
 
         class PatientLog(object):
             pass
@@ -141,7 +143,7 @@ class CallLogPlan(ExportPlan):
         CreateUser = aliased(models.User)
         ModifyUser = aliased(models.User)
         query = (
-            Session.query(
+            session.query(
                 PatientLog.id.label('id'),
                 models.Patient.pid.label('pid'),
                 models.Site.name.label('site'),
@@ -157,7 +159,7 @@ class CallLogPlan(ExportPlan):
                      whens=[(v, k) for k, v in contact_type_choices.items()])
                 .label('contact_type'),
 
-                Session.query(
+                session.query(
                      group_concat(
                         case(value=PatientLogNonResponseType.value,
                              whens=[(v, k) for k, v in non_response_type_choices.items()]),  # NOQA

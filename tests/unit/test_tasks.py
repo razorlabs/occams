@@ -1,19 +1,6 @@
 from tests import IntegrationFixture
 
-
 class TestIncludeme(IntegrationFixture):
-
-    def setUp(self):
-        super(TestIncludeme, self).setUp()
-        import mock
-
-        self.patch = mock.patch('occams_studies.tasks.celery.conf')
-        self.patch.start()
-
-    def tearDown(self):
-        super(TestIncludeme, self).tearDown()
-        import mock
-        mock.patch.stopall()
 
     def test_settings(self):
         """
@@ -21,8 +8,8 @@ class TestIncludeme(IntegrationFixture):
         """
         from tests import REDIS_URL
         input = {
-            'studies.celery.backend.url': REDIS_URL,
-            'studies.celery.broker.url': REDIS_URL,
+            'celery.backend.url': REDIS_URL,
+            'celery.broker.url': REDIS_URL,
             'studies.export.user': 'dummy',
             'studies.export.dir': '/tmp',
             'studies.export.limit': '1234',
@@ -43,58 +30,31 @@ class TestIncludeme(IntegrationFixture):
                 expected[key])
 
 
-class TestInit(IntegrationFixture):
-
-    def test_init(self):
-        """
-        It should use the pyramid application to initalize settings/resources
-        """
-        import mock
-        from occams_studies import Session, models
-        from occams_studies.tasks import on_preload_parsed
-
-        with mock.patch('occams_studies.tasks.bootstrap') as bootstrap:
-            bootstrap.return_value = {
-                'registry': mock.Mock(
-                    settings={
-                        'studies.export.user': 'celery_user',
-                    }),
-                'request': mock.Mock(redis=mock.Mock())}
-
-            with mock.patch('occams_studies.tasks.celery') as celery:
-                on_preload_parsed({'ini': 'app.ini'})
-
-                # App should now be configured with pyramid's settings
-                self.assertIn('studies.export.user', celery.settings)
-                self.assertIsNotNone(celery.redis)
-                self.assertIsNotNone(
-                    Session.query(models.User)
-                    .filter_by(key='celery_user')
-                    .first())
-
-
-class TestMakeExport(IntegrationFixture):
+class TestMakeExport:
 
     def setUp(self):
         super(TestMakeExport, self).setUp()
         import tempfile
         import mock
         from redis import StrictRedis
-        from occams_studies import models, Session
-        from occams_studies.tasks import celery
+
+        from occams.celery import app, Session
+        from occams_studies import models
         from tests import REDIS_URL
 
-        self.config.registry.settings['studies.export.dir'] = tempfile.mkdtemp()
+        tmpdir = tempfile.mkdtemp()
+        self.config.registry.settings['studies.export.dir'] = tmpdir
+        app.userid = 'dummy'
         self.config.registry.settings['studies.export.user'] = 'dummy'
         Session.add(models.User(key='dummy'))
         Session.flush()
-        self.celery = celery
+        self.celery = app
         self.celery.redis = StrictRedis.from_url(REDIS_URL)
         self.celery.settings = self.config.registry.settings
 
         # Block tasks from commiting to prevent test sideeffects
-        self.transaction = mock.patch('occams_studies.tasks.transaction')
-        self.transaction.start()
+        self.commitmock = mock.patch('occams_studies.tasks.Session.commit')
+        self.commitmock.start()
 
     def tearDown(self):
         super(TestMakeExport, self).tearDown()
@@ -108,8 +68,8 @@ class TestMakeExport(IntegrationFixture):
         It should generate a zip file containing the specified contents
         """
         from zipfile import ZipFile
-        from occams_studies import Session, models
-        from occams_studies.tasks import make_export
+        from occams.celery import Session
+        from occams_studies import models, tasks
 
         owner = models.User(key=u'joe')
         Session.info['blame'] = owner
@@ -124,10 +84,11 @@ class TestMakeExport(IntegrationFixture):
         Session.add(export)
         Session.flush()
 
-        make_export(export.name)
+        tasks.make_export(export.name)
 
         # @in_transaction removes the session metadata, so we gotta do this
         Session.info['settings'] = self.config.registry.settings
+        export = Session.merge(export)
 
         with ZipFile(export.path, 'r') as zfp:
             self.assertItemsEqual(['pid.csv', 'codebook.csv'], zfp.namelist())

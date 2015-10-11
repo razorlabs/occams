@@ -25,7 +25,7 @@ from .visit import VisitPlan
 from .symptom import SymptomPlan
 
 
-def list_all(include_rand=True, include_private=True):
+def list_all(db_session, include_rand=True, include_private=True):
     """
     Lists all available data files
 
@@ -37,13 +37,18 @@ def list_all(include_rand=True, include_private=True):
     An ordered dictionary (name, plan) items.
     """
     # System tables (one day...)
-    tables = [p for p in [EnrollmentPlan(), PidPlan(), VisitPlan(),
-                          # not system tables:
-                          LabPlan(),
-                          CallLogPlan(), PartnerPlan(), SymptomPlan()]
-              if p.is_enabled]
-    schemata = SchemaPlan.list_all(include_rand=include_rand,
-                                   include_private=include_private)
+    tables = [p for p in [
+        EnrollmentPlan(db_session), PidPlan(db_session), VisitPlan(db_session),
+        # not system tables:
+        LabPlan(db_session),
+        CallLogPlan(db_session),
+        PartnerPlan(db_session),
+        SymptomPlan(db_session)]
+        if p.is_enabled]
+    schemata = SchemaPlan.list_all(
+        db_session=db_session,
+        include_rand=include_rand,
+        include_private=include_private)
     merged = sorted(tables + schemata, key=lambda v: v.title)
     all = OrderedDict((i.name, i) for i in merged)
     return all

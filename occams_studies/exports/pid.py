@@ -21,7 +21,7 @@ from sqlalchemy.orm import aliased
 
 from occams_datastore.utils.sql import group_concat
 
-from .. import _, models, Session
+from .. import _, models
 from .plan import ExportPlan
 from .codebook import row, types
 
@@ -35,7 +35,7 @@ class PidPlan(ExportPlan):
     @reify
     def reftypes(self):
         return list(
-            Session.query(models.ReferenceType)
+            self.db_session.query(models.ReferenceType)
             .order_by(models.ReferenceType.name))
 
     def codebook(self):
@@ -67,8 +67,9 @@ class PidPlan(ExportPlan):
              use_choice_labels=False,
              expand_collections=False,
              ignore_private=True):
+        session = self.db_session
         query = (
-            Session.query(
+            session.query(
                 models.Patient.id.label('id'),
                 models.Site.name.label('site'),
                 models.Patient.pid.label('pid'))
@@ -77,7 +78,7 @@ class PidPlan(ExportPlan):
         # BBB 2014-02-20 (Marco): AEH needs Early Test
         EarlyTest = aliased(models.Enrollment)
         subquery = (
-            Session.query(EarlyTest.patient_id, EarlyTest.reference_number)
+            session.query(EarlyTest.patient_id, EarlyTest.reference_number)
             .filter(EarlyTest.study.has(
                 models.Study.code.in_([literal_column("'ET'"),
                                        literal_column("'LTW'"),
@@ -91,12 +92,13 @@ class PidPlan(ExportPlan):
         # Add every known reference number
         for reftype in self.reftypes:
             query = query.add_column(
-                Session.query(
+                session.query(
                     group_concat(
                         models.PatientReference.reference_number, ';'))
                 .filter(
                     models.PatientReference.patient_id == models.Patient.id)
-                .filter(models.PatientReference.reference_type_id == reftype.id)
+                .filter(
+                    models.PatientReference.reference_type_id == reftype.id)
                 .group_by(models.PatientReference.patient_id)
                 .correlate(models.Patient)
                 .as_scalar()
