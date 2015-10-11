@@ -22,6 +22,10 @@ _ = TranslationStringFactory(__name__)
 
 log = logging.getLogger(__name__)
 
+#
+# Application database session. This session should only be used
+# withing the WSGI app, not in asynchronous processes (IE CELERY)
+#
 Session = scoped_session(sessionmaker(
     extension=zope.sqlalchemy.ZopeTransactionExtension()))
 occams_datastore.models.events.register(Session)
@@ -79,6 +83,7 @@ def main(global_config, **settings):
 
     # Main includes
     config.include('.assets')
+    config.include('.celery')
     config.include('.models')
     config.include('.routes')
     config.include('.security')

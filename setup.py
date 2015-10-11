@@ -9,7 +9,7 @@ CHANGES = open(os.path.join(HERE, 'CHANGES.rst')).read()
 
 
 REQUIRES = [
-    'alembic>=0.7.6,<0.7.99',           # Database table upgrades
+    'alembic',                          # Database table upgrades
     'babel',                            # i18n
     'celery[redis]>=3.1,<3.1.99',       # Asynchronous queue API
     'cssmin',                           # CSS asset compression
