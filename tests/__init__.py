@@ -137,12 +137,15 @@ class FunctionalFixture(unittest.TestCase):
             'pyramid.debug_all': True,
 
             'webassets.debug': True,
-            'webassets.auto_build': False,
 
             'occams.apps': 'occams_forms',
 
             'occams.db.url': Session.bind,
             'occams.groups': [],
+
+            'celery.broker.url': REDIS_URL,
+            'celery.backend.url': REDIS_URL,
+            'celery.blame': 'celery@localhost',
 
             'roster.db.url': 'sqlite://',
         })
