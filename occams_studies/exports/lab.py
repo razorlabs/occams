@@ -15,7 +15,7 @@ Formerly: avrcdataexport/sql/additional/SpecimenAliquot.sql
 from sqlalchemy import func, null
 from sqlalchemy.orm import aliased
 
-from .. import models, Session
+from .. import models
 from .plan import ExportPlan
 from .codebook import row, types
 
@@ -28,7 +28,7 @@ class LabPlan(ExportPlan):
 
     @property
     def is_enabled(self):
-        return any(n in Session.bind.url.database
+        return any(n in self.db_session.bind.url.database
                    for n in ['aeh', 'cctg', 'mhealth'])
 
     def codebook(self):
@@ -36,20 +36,21 @@ class LabPlan(ExportPlan):
             row('aliquot_type', self.name, types.STRING,
                 is_required=True, is_system=True),
             row('store_date', self.name, types.DATE, is_system=True),
-            row('volume', self.name, types.NUMERIC, is_system=True),
-            row('cell_amount', self.name, types.NUMERIC, is_system=True),
+            row('volume', self.name, types.NUMBER, is_system=True),
+            row('cell_amount', self.name, types.NUMBER, is_system=True),
             row('aliquot_location', self.name, types.STRING, is_system=True),
             row('freezer', self.name, types.STRING, is_system=True),
             row('rack', self.name, types.STRING, is_system=True),
             row('box', self.name, types.STRING, is_system=True),
-            row('aliquot_count', self.name, types.NUMERIC,
+            row('aliquot_count', self.name, types.NUMBER, decimal_places=0,
                 is_required=True, is_system=True),
             row('aliquot_state', self.name, types.STRING,
                 is_required=True, is_system=True),
             row('sent_date', self.name, types.DATE, is_system=True),
             row('sent_name', self.name, types.STRING, is_system=True),
             row('sent_notes', self.name, types.STRING, is_system=True),
-            row('thawed_num', self.name, types.NUMERIC, is_system=True),
+            row('thawed_num', self.name, types.NUMBER, decimal_places=0,
+                is_system=True),
             row('special_instruction', self.name, types.STRING,
                 is_system=True),
             row('inventory_date', self.name, types.DATE, is_system=True),
@@ -63,7 +64,7 @@ class LabPlan(ExportPlan):
             row('specimen_destination', self.name, types.STRING,
                 is_system=True),
             row('specimen_state', self.name, types.STRING, is_system=True),
-            row('tubes', self.name, types.NUMERIC, is_system=True),
+            row('tubes', self.name, types.NUMBER, decimal_places=0, is_system=True),
             row('tube_type', self.name, types.STRING, is_system=True),
             row('specimen_notes', self.name, types.STRING, is_system=True),
             row('site', self.name, types.STRING,
@@ -84,11 +85,13 @@ class LabPlan(ExportPlan):
         # Import here to avoid breaking installations that don't use lab.
         from occams_lims import models as lab
 
+        session = self.db_session
+
         AliquotLocation = aliased(lab.Location)
         SpecimenLocation = aliased(lab.Location)
 
         query = (
-            Session.query(
+            session.query(
                 lab.AliquotType.title.label('aliquot_type'),
                 lab.Aliquot.store_date.label('store_date'),
                 lab.Aliquot.volume.label('volume'),
@@ -120,10 +123,11 @@ class LabPlan(ExportPlan):
                 models.Patient.pid.label('pid'),
                 models.Patient.pid.label('our'),
                 models.Patient.nurse.label('nurse_email'),
-                (Session.query(models.PatientReference.reference_number)
+                (session.query(models.PatientReference.reference_number)
                  .join(models.ReferenceType)
                  .filter(models.ReferenceType.name == u'aeh_num')
-                 .filter(models.PatientReference.patient_id == models.Patient.id)
+                 .filter(
+                    models.PatientReference.patient_id == models.Patient.id)
                  .limit(1)
                  .correlate(models.Patient)
                  .as_scalar()

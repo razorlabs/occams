@@ -371,7 +371,6 @@ def visits_cycle(context, request):
                 if request.has_permission('view', site)]
 
     if site_ids:
-
         visits_query = (
             Session.query(
                 models.Patient.pid,
@@ -388,7 +387,7 @@ def visits_cycle(context, request):
             .add_columns(*[
                 count_state_exp(state.name).label(state.name)
                 for state in states])
-            .filter(models.Patient.site.any(models.Site.id._in(site_ids)))
+            .filter(models.Patient.site.has(models.Site.id.in_(site_ids)))
             .group_by(
                 models.Patient.pid,
                 models.Visit.visit_date)
@@ -547,8 +546,8 @@ def available_schemata(context, request):
             query = query.filter(
                 models.Schema.name != context.termination_schema.name)
 
-        query = query.filter(~models.Schema.name.in_(
-            Session.query(models.Schema.name)
+        query = query.filter(~models.Schema.id.in_(
+            Session.query(models.Schema.id)
             .select_from(models.Study)
             .filter(models.Study.id == context.id)
             .join(models.Study.schemata)

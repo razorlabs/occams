@@ -27,10 +27,10 @@ class TestSchemaPlan(IntegrationFixture):
         Session.add_all([schema])
         Session.flush()
 
-        plans = exports.SchemaPlan.list_all(include_private=True)
+        plans = exports.SchemaPlan.list_all(Session, include_private=True)
         self.assertEqual(len(plans), 1)
 
-        plans = exports.SchemaPlan.list_all(include_private=False)
+        plans = exports.SchemaPlan.list_all(Session, include_private=False)
         self.assertEqual(len(plans), 0)
 
     def test_list_not_include_rand(self):
@@ -73,10 +73,10 @@ class TestSchemaPlan(IntegrationFixture):
         Session.add_all([schema, entity, stratum])
         Session.flush()
 
-        plans = exports.SchemaPlan.list_all(include_rand=True)
+        plans = exports.SchemaPlan.list_all(Session, include_rand=True)
         self.assertEqual(len(plans), 1)
 
-        plans = exports.SchemaPlan.list_all(include_rand=False)
+        plans = exports.SchemaPlan.list_all(Session, include_rand=False)
         self.assertEqual(len(plans), 0)
 
     def test_patient(self):
@@ -107,7 +107,7 @@ class TestSchemaPlan(IntegrationFixture):
         Session.add_all([schema, entity, patient])
         Session.flush()
 
-        plan = exports.SchemaPlan.from_schema(name=schema.name)
+        plan = exports.SchemaPlan.from_schema(Session, schema.name)
         codebook = list(plan.codebook())
         query = plan.data()
         codebook_columns = [c['field'] for c in codebook]
@@ -161,7 +161,7 @@ class TestSchemaPlan(IntegrationFixture):
             entities=[entity])
         Session.add_all([schema, entity, patient, study, enrollment])
 
-        plan = exports.SchemaPlan.from_schema(name=schema.name)
+        plan = exports.SchemaPlan.from_schema(Session, schema.name)
         codebook = list(plan.codebook())
         query = plan.data()
         codebook_columns = [c['field'] for c in codebook]
@@ -228,7 +228,7 @@ class TestSchemaPlan(IntegrationFixture):
         Session.add_all([schema, entity, patient, visit])
         Session.flush()
 
-        plan = exports.SchemaPlan.from_schema(name=schema.name)
+        plan = exports.SchemaPlan.from_schema(Session, schema.name)
         codebook = list(plan.codebook())
         query = plan.data()
         codebook_columns = [c['field'] for c in codebook]
@@ -297,7 +297,7 @@ class TestSchemaPlan(IntegrationFixture):
         Session.add_all([schema, entity, patient, enrollment, stratum])
         Session.flush()
 
-        plan = exports.SchemaPlan.from_schema(name=schema.name)
+        plan = exports.SchemaPlan.from_schema(Session, schema.name)
         codebook = list(plan.codebook())
         query = plan.data()
         codebook_columns = [c['field'] for c in codebook]

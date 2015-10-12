@@ -560,7 +560,7 @@
       </div><!-- /.modal -->
     </div> <!-- /:isReady -->
   </metal:content-slot>
-  <metal:content-slot fill-slot="javascript-extras-slot">
+  <metal:content-slot fill-slot="javascript-slot">
     <script>
       $(function(){
         var scheduleUrl = "${request.current_route_path(_route_name='studies.study_schedule')}",

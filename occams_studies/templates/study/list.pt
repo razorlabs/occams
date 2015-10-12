@@ -104,7 +104,7 @@
       </div> <!-- /#studies-section -->
     </div> <!-- /.row -->
   </metal:content-slot>
-  <metal:content-slot fill-slot="javascript-extras-slot">
+  <metal:content-slot fill-slot="javascript-slot">
     <script>
       $(function(){
         ko.applyBindings(new PatientView, document.getElementById('patients-section'));

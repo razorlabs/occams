@@ -6,7 +6,7 @@ Formerly: avrcdataexport/sql/additional/VisitStudy.sql
 
 from sqlalchemy.orm import aliased
 
-from .. import _, models, Session
+from .. import _, models
 from .plan import ExportPlan
 from .codebook import row, types
 
@@ -19,7 +19,7 @@ class VisitPlan(ExportPlan):
 
     def codebook(self):
         return iter([
-            row('id', self.name, types.NUMERIC,
+            row('id', self.name, types.NUMBER, decimal_places=0,
                 is_system=True, is_required=True),
             row('pid', self.name, types.STRING,
                 is_required=True, is_system=True),
@@ -43,10 +43,11 @@ class VisitPlan(ExportPlan):
              use_choice_labels=False,
              expand_collections=False,
              ignore_private=True):
+        session = self.db_session
         CreateUser = aliased(models.User)
         ModifyUser = aliased(models.User)
         query = (
-            Session.query(
+            session.query(
                 models.Visit.id.label('id'),
                 models.Patient.pid.label('pid'),
                 models.Site.name.label('site'),

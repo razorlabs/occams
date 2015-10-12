@@ -14,6 +14,9 @@ class ExportPlan(object):
 
     versions = []           # All versions avaialble
 
+    def __init__(self, db_session=None):
+        self.db_session = db_session
+
     @property
     def file_name(self):
         return self.name + '.csv'

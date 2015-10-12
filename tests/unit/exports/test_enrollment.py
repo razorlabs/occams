@@ -4,16 +4,16 @@ from tests import IntegrationFixture
 class TestEnrollmentPlan(IntegrationFixture):
 
     def test_file_name(self):
-        from occams_studies import exports
-        plan = exports.EnrollmentPlan()
+        from occams_studies import exports, Session
+        plan = exports.EnrollmentPlan(Session)
         self.assertEqual(plan.file_name, 'enrollment.csv')
 
     def test_columns(self):
         """
         It should generate a table of all the enrollments in the database
         """
-        from occams_studies import exports
-        plan = exports.EnrollmentPlan()
+        from occams_studies import exports, Session
+        plan = exports.EnrollmentPlan(Session)
 
         codebook = list(plan.codebook())
         query = plan.data()
