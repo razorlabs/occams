@@ -63,13 +63,15 @@ class PrintListTestCase(IntegrationFixture):
         It should be able to print a listing of exportables
         """
         import mock
+        from occams_studies import Session
         plan = self.makePlan()
         # force list_all to return only the test form
         with mock.patch('occams_studies.exports.list_all',
-                        return_value={plan.name: plan}):
+                        return_value={plan.name: plan}) as patch:
             cmd = self.getCommand()
             cmd([None, '--db', 'fake://', '--list'])
             output = self.getOutput()
+            patch.assert_called_once_with(Session)
             self.assertIn(plan.name, output)
 
     def test_print_list_with_private(self):
@@ -108,14 +110,16 @@ class PrintListTestCase(IntegrationFixture):
         """
         import os
         import mock
+        from occams_studies import Session
         from occams_studies.exports.codebook import FILE_NAME
         plan = self.makePlan()
         # force list_all to return only the test form
         with mock.patch('occams_studies.exports.list_all',
-                        return_value={plan.name: plan}):
+                        return_value={plan.name: plan}) as patch:
             cmd = self.getCommand()
             cmd([None, '--db', 'fake://', '--dir', self.dir, '--all'])
             files = os.listdir(self.dir)
+            patch.assert_called_once_with(Session)
             self.assertIn(plan.file_name, files)
             self.assertIn(FILE_NAME, files)
 

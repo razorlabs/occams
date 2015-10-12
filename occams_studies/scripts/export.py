@@ -122,7 +122,7 @@ def print_list(args):
         return star(row.is_system), star(row.has_private), star(row.has_rand), row.name, row.title  # NOQA
 
     header = ['sys', 'priv', 'rand', 'name', 'title']
-    rows = iter(format(e) for e in itervalues(exports.list_all()))
+    rows = iter(format(e) for e in itervalues(exports.list_all(Session)))
     print(tabulate(rows, header, tablefmt='simple'))
 
 
@@ -138,7 +138,7 @@ def make_export(args):
             or args.names):
         sys.exit('You must specifiy something to export!')
 
-    exportables = exports.list_all()
+    exportables = exports.list_all(Session)
 
     if args.atomic:
         out_dir = '%s-%s' % (args.dir.rstrip('/'), uuid.uuid4())
