@@ -42,3 +42,13 @@ def track_user_on_request(event):
     # The attacker cannot read or change the value of the cookie due to the
     # same-origin policy, and thus cannot guess the right GET/POST parameter
     request.response.set_cookie('csrf_token', request.session.get_csrf_token())
+
+
+@subscriber(NewRequest)
+def remove_session(event):
+    """
+    Removes session data on request complete
+    """
+    def remove(request):
+        Session.remove()
+    event.request.add_finished_callback(remove)
