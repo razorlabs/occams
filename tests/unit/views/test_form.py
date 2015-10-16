@@ -97,8 +97,7 @@ class TestAddJSON:
             'schema': schema.id,
             'collect_date': str(date.today()),
         }
-        factory = models.FormFactory(req)
-        factory.__parent__ = patient
+        factory = models.FormFactory(req, patient)
         self._call_fut(factory, req)
 
         contexts = db_session.query(models.Context).all()
@@ -143,8 +142,7 @@ class TestAddJSON:
             'schema': schema.id,
             'collect_date': str(date.today()),
         }
-        factory = models.FormFactory(req)
-        factory.__parent__ = visit
+        factory = models.FormFactory(req, visit)
         self._call_fut(factory, req)
 
         contexts = db_session.query(models.Context).all()

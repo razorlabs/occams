@@ -8,14 +8,14 @@ class TestAvailableReferenceTypes:
 
     def test_no_match(self, req, db_session):
 
-        from occams_studies import models, Session
+        from occams_studies import models
 
         reftype = models.ReferenceType(
             name=u'medical_number',
             title=u'Medical Number'
         )
 
-        Session.add(reftype)
+        db_session.add(reftype)
 
         req.GET = {'term': 'other'}
         factory = models.ReferenceTypeFactory(req)
@@ -27,14 +27,14 @@ class TestAvailableReferenceTypes:
 
     def test_match(self, req, db_session):
 
-        from occams_studies import models, Session
+        from occams_studies import models
 
         reftype = models.ReferenceType(
             name=u'medical_number',
             title=u'Medical Number'
         )
 
-        Session.add(reftype)
+        db_session.add(reftype)
 
         req.GET = {'term': 'med'}
         factory = models.ReferenceTypeFactory(req)

@@ -11,22 +11,23 @@ from occams_forms.renderers import \
     make_form, render_form, entity_data, \
     form2json, version2json
 
-from .. import _, models, Session
+from .. import _, models
 
 
 def list_json(context, request):
+    db_session = request.db_session
 
     external = context.__parent__
 
     query = (
-        Session.query(models.Entity)
+        db_session.query(models.Entity)
         .options(orm.joinedload('schema'), orm.joinedload('state'))
         .join(models.Schema)
         .join(models.Context)
         .filter_by(external=external.__tablename__, key=external.id)
         # Do not show PHI forms since there are dedicated tabs for them
         .filter(~models.Schema.id.in_(
-            Session.query(models.patient_schema_table.c.schema_id)
+            db_session.query(models.patient_schema_table.c.schema_id)
             .subquery()))
         .order_by(models.Schema.name, models.Entity.collect_date))
 
@@ -123,6 +124,7 @@ def available_schemata(context, request):
                   (useful for searching for a schema's publish dates)
         grouped -- (optional) groups all results by schema name
     """
+    db_session = request.db_session
 
     class SearchForm(Form):
         term = wtforms.StringField()
@@ -133,7 +135,7 @@ def available_schemata(context, request):
     form.validate()
 
     query = (
-        Session.query(models.Schema)
+        db_session.query(models.Schema)
         # only allow forms that are available to active studies
         .join(models.study_schema_table)
         .join(models.Study)
@@ -179,6 +181,7 @@ def markup_ajax(context, request):
     This usually happens when a user has requested a different version
     of the form that they are trying to enter.
     """
+    db_session = request.db_session
     version = request.GET.get('version')
     if not version:
         raise HTTPBadRequest()
@@ -187,11 +190,11 @@ def markup_ajax(context, request):
         schema = context.schema
     else:
         schema = (
-            Session.query(models.Schema)
+            db_session.query(models.Schema)
             .filter_by(name=context.schema.name, publish_date=version)
             .one())
         data = None
-    Form = make_form(Session, schema, enable_metadata=False)
+    Form = make_form(db_session, schema, enable_metadata=False)
     form = Form(request.POST, data=data)
     return render_form(form)
 
@@ -210,29 +213,30 @@ def markup_ajax(context, request):
     renderer='json')
 def add_json(context, request):
     check_csrf_token(request)
+    db_session = request.db_session
 
     def check_study_form(form, field):
         if isinstance(context.__parent__, models.Patient):
             query = (
-                Session.query(models.Schema)
+                db_session.query(models.Schema)
                 .join(models.study_schema_table)
                 .join(models.Study)
                 .filter(models.Study.start_date != sa.null())
                 .filter(models.Schema.id == field.data.id))
-            (exists,) = Session.query(query.exists()).one()
+            (exists,) = db_session.query(query.exists()).one()
             if not exists:
                 raise wtforms.ValidationError(request.localizer.translate(
                     _(u'This form is not assosiated with a study')))
         elif isinstance(context.__parent__, models.Visit):
             query = (
-                Session.query(models.Visit)
+                db_session.query(models.Visit)
                 .filter(models.Visit.id == context.__parent__.id)
                 .join(models.Visit.cycles)
                 .join(models.Cycle.study)
                 .filter(
                     models.Cycle.schemata.any(id=field.data.id)
                     | models.Study.schemata.any(id=field.data.id)))
-            (exists,) = Session.query(query.exists()).one()
+            (exists,) = db_session.query(query.exists()).one()
             if not exists:
                 raise wtforms.ValidationError(request.localizer.translate(
                     _('${schema} is not part of the studies for this visit'),
@@ -240,7 +244,7 @@ def add_json(context, request):
 
     class AddForm(Form):
         schema = ModelField(
-            session=Session,
+            db_session=db_session,
             class_=models.Schema,
             validators=[
                 wtforms.validators.InputRequired(),
@@ -254,7 +258,7 @@ def add_json(context, request):
         raise HTTPBadRequest(json={'errors': wtferrors(form)})
 
     default_state = (
-        Session.query(models.State)
+        db_session.query(models.State)
         .filter_by(name='pending-entry')
         .one())
 
@@ -273,7 +277,7 @@ def add_json(context, request):
         next = request.current_route_path(
             _route_name='studies.patient_form', form=entity.id)
 
-    Session.flush()
+    db_session.flush()
 
     request.session.flash(
         _('Successfully added new ${form}',
@@ -300,11 +304,12 @@ def bulk_delete_json(context, request):
     Deletes forms in bulk
     """
     check_csrf_token(request)
+    db_session = request.db_session
 
     class DeleteForm(Form):
         forms = wtforms.FieldList(
             ModelField(
-                session=Session,
+                db_session=db_session,
                 class_=models.Entity),
             validators=[
                 wtforms.validators.DataRequired()])
@@ -319,14 +324,14 @@ def bulk_delete_json(context, request):
     external = context.__parent__.__tablename__
     key = context.__parent__.id
 
-    (Session.query(models.Entity)
+    (db_session.query(models.Entity)
         .filter(models.Entity.id.in_(
-            Session.query(models.Context.entity_id)
+            db_session.query(models.Context.entity_id)
             .filter(models.Context.entity_id.in_(entity_ids))
             .filter(models.Context.external == external)
             .filter(models.Context.key == key)))
         .delete('fetch'))
 
-    Session.flush()
+    db_session.flush()
 
     return HTTPOk()

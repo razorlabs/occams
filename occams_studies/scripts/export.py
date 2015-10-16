@@ -13,8 +13,9 @@ from pyramid.paster import get_appsettings
 from six import itervalues
 from sqlalchemy import create_engine, engine_from_config
 from tabulate import tabulate
+from sqlalchemy.orm import sessionmaker
 
-from .. import Session, exports
+from .. import exports
 
 
 def parse_args(argv=sys.argv):
@@ -102,15 +103,15 @@ def main(argv=sys.argv):
     else:
         sys.exit('You must specify either a connection or app configuration')
 
-    Session.configure(bind=engine)
+    db_session = sessionmaker(bind=engine)()
 
     if args.list:
-        print_list(args)
+        print_list(args, db_session)
     else:
-        make_export(args)
+        make_export(args, db_session)
 
 
-def print_list(args):
+def print_list(args, db_session):
     """
     Prints tabulated list of available data files
     """
@@ -122,11 +123,11 @@ def print_list(args):
         return star(row.is_system), star(row.has_private), star(row.has_rand), row.name, row.title  # NOQA
 
     header = ['sys', 'priv', 'rand', 'name', 'title']
-    rows = iter(format(e) for e in itervalues(exports.list_all(Session)))
+    rows = iter(format(e) for e in itervalues(exports.list_all(db_session)))
     print(tabulate(rows, header, tablefmt='simple'))
 
 
-def make_export(args):
+def make_export(args, db_session):
     """
     Generates the export data files
     """
@@ -138,7 +139,7 @@ def make_export(args):
             or args.names):
         sys.exit('You must specifiy something to export!')
 
-    exportables = exports.list_all(Session)
+    exportables = exports.list_all(db_session)
 
     if args.atomic:
         out_dir = '%s-%s' % (args.dir.rstrip('/'), uuid.uuid4())

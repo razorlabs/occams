@@ -6,7 +6,7 @@ from pyramid.httpexceptions import HTTPOk, HTTPNotImplemented
 from socketio import socketio_manage
 from socketio.namespace import BaseNamespace
 
-from .. import log, models, Session
+from .. import log, models
 
 
 @view_config(route_name='socket.io')
@@ -19,11 +19,6 @@ def socketio(request):  # pragma: nocover: don't need to unittest socketio.io
     # Check if the transport requested is not supported
     if 'socketio' not in request.environ:
         return HTTPNotImplemented()
-
-    # TODO: Do not use SQLAlchemy in websockets, it is not stable
-    #       We'll have to figure out a way to broadcast events to the
-    #       WSGI-side
-    Session.remove()
 
     socketio_manage(
         request.environ,

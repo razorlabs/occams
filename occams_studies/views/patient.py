@@ -17,7 +17,7 @@ from occams_forms.renderers import \
     make_form, render_form, apply_data, entity_data, \
     form2json, modes
 
-from .. import _, log, models, Session
+from .. import _, log, models
 from . import (
     site as site_views,
     enrollment as enrollment_views,
@@ -35,9 +35,10 @@ def search_view(context, request):
     """
     Generates data for the search result listing web view.
     """
+    db_session = request.db_session
     sites = [
         site
-        for site in Session.query(models.Site).order_by(models.Site.title)
+        for site in db_session.query(models.Site).order_by(models.Site.title)
         if request.has_permission('view', site)]
 
     return {
@@ -71,6 +72,7 @@ def search_json(context, request):
                     __last_visit_date__ -- indicates the last interaction
                                            with the patient
     """
+    db_session = request.db_session
     per_page = 10
 
     class SearchForm(Form):
@@ -86,14 +88,14 @@ def search_json(context, request):
     form.validate()
 
     # Only include sites that the user is a member of
-    sites = Session.query(models.Site)
+    sites = db_session.query(models.Site)
     site_ids = [s.id for s in sites if request.has_permission('view', s)]
 
     query = (
-        Session.query(models.Patient)
+        db_session.query(models.Patient)
         .options(orm.joinedload(models.Patient.site))
         .add_column(
-            Session.query(models.Visit.visit_date)
+            db_session.query(models.Visit.visit_date)
             .filter(models.Visit.patient_id == models.Patient.id)
             .order_by(models.Visit.visit_date.desc())
             .limit(1)
@@ -147,6 +149,7 @@ def search_json(context, request):
     request_method='GET',
     renderer='../templates/patient/view.pt')
 def view(context, request):
+    db_session = request.db_session
 
     # Keep track of recently viewed
     viewed = request.session.setdefault('viewed', OrderedDict())
@@ -166,7 +169,7 @@ def view(context, request):
     return {
         'phi': get_phi_entities(context, request),
         'available_studies': (
-            Session.query(models.Study)
+            db_session.query(models.Study)
             .filter(models.Study.start_date != sa.sql.null())
             .order_by(models.Study.title.asc())),
         'patient': view_json(context, request),
@@ -174,7 +177,7 @@ def view(context, request):
             context['enrollments'], request)['enrollments'],
         'visits': visit_views.list_json(
             context['visits'], request)['visits'],
-        'is_lab_enabled': Session.bind.has_table('specimen')
+        'is_lab_enabled': db_session.bind.has_table('specimen')
         }
 
 
@@ -188,8 +191,9 @@ def available_studies(context, request):
     """
     Returns a list of studies that the patient can participate in
     """
+    db_session = request.db_session
     query = (
-        Session.query(models.Study)
+        db_session.query(models.Study)
         .filter(models.Study.start_date != sa.null()))
 
     if 'term' in request.GET:
@@ -213,9 +217,10 @@ def available_studies(context, request):
     xhr=True,
     renderer='json')
 def view_json(context, request):
+    db_session = request.db_session
     patient = context
     references_query = (
-        Session.query(models.PatientReference)
+        db_session.query(models.PatientReference)
         .filter_by(patient=patient)
         .join(models.PatientReference.reference_type)
         .options(orm.joinedload(models.PatientReference.reference_type))
@@ -245,8 +250,9 @@ def forms_list_json(context, request):
     """
     Returns a listing of available patient forms
     """
+    db_session = request.db_session
     query = (
-        Session.query(models.Schema)
+        db_session.query(models.Schema)
         .join(models.patient_schema_table)
         .order_by(
             models.Schema.name,
@@ -268,10 +274,11 @@ def forms_add_json(context, request):
     Updates the available patient forms
     """
     check_csrf_token(request)
+    db_session = request.db_session
 
     def check_not_study_form(form, field):
         studies = (
-            Session.query(models.Study)
+            db_session.query(models.Study)
             .filter(models.Study.schemata.any(id=field.data.id))
             .order_by(models.Study.title)
             .all())
@@ -282,7 +289,7 @@ def forms_add_json(context, request):
 
     def check_not_termination_form(form, field):
         studies = (
-            Session.query(models.Study)
+            db_session.query(models.Study)
             .filter(models.Study.termination_schema.has(name=field.data.name))
             .order_by(models.Study.title)
             .all())
@@ -293,7 +300,7 @@ def forms_add_json(context, request):
 
     def check_not_randomization_form(form, field):
         studies = (
-            Session.query(models.Study)
+            db_session.query(models.Study)
             .filter(models.Study.randomization_schema.has(
                 name=field.data.name))
             .order_by(models.Study.title)
@@ -305,9 +312,9 @@ def forms_add_json(context, request):
 
     def check_unique_form(form, field):
         exists = (
-            Session.query(sa.literal(True))
+            db_session.query(sa.literal(True))
             .filter(
-                Session.query(models.Schema)
+                db_session.query(models.Schema)
                 .join(models.patient_schema_table)
                 .filter(models.Schema.name == field.data.name)
                 .exists())
@@ -318,7 +325,7 @@ def forms_add_json(context, request):
 
     class AddForm(Form):
         form = ModelField(
-            session=Session,
+            db_session=db_session,
             class_=models.Schema,
             validators=[
                 wtforms.validators.InputRequired(),
@@ -332,11 +339,11 @@ def forms_add_json(context, request):
     if not form.validate():
         raise HTTPBadRequest(json={'errors': wtferrors(form)})
 
-    Session.execute(
+    db_session.execute(
         models.patient_schema_table.insert()
         .values(schema_id=form.form.data.id))
 
-    mark_changed(Session())
+    mark_changed(db_session())
 
     return form2json(form.form.data)
 
@@ -352,11 +359,12 @@ def forms_delete_json(context, request):
     Removes a required patient form.
     """
     check_csrf_token(request)
+    db_session = request.db_session
 
     def check_not_has_data(form, field):
         (exists,) = (
-            Session.query(
-                Session.query(models.Entity)
+            db_session.query(
+                db_session.query(models.Entity)
                 .filter_by(schema=field.data)
                 .exists())
             .one())
@@ -366,7 +374,7 @@ def forms_delete_json(context, request):
 
     class DeleteForm(Form):
         form = ModelField(
-            session=Session,
+            db_session=db_session,
             class_=models.Schema,
             validators=[
                 wtforms.validators.InputRequired(),
@@ -377,11 +385,11 @@ def forms_delete_json(context, request):
     if not form.validate():
         raise HTTPBadRequest(body='<br />'.join(form.form.errors))
 
-    Session.execute(
+    db_session.execute(
         models.patient_schema_table.delete()
         .where(models.patient_schema_table.c.schema_id == form.form.data.id))
 
-    mark_changed(Session())
+    mark_changed(db_session)
 
     return HTTPOk()
 
@@ -400,6 +408,7 @@ def forms_delete_json(context, request):
     renderer='json')
 def edit_json(context, request):
     check_csrf_token(request)
+    db_session = request.db_session
 
     is_new = isinstance(context, models.PatientFactory)
     form = PatientSchema(context, request).from_json(request.json_body)
@@ -411,7 +420,7 @@ def edit_json(context, request):
         # if any errors occurr after this, this PID is essentially wasted
         patient = models.Patient(
             pid=six.text_type(generate(form.site.data.name)))
-        Session.add(patient)
+        db_session.add(patient)
     else:
         patient = context
 
@@ -428,10 +437,10 @@ def edit_json(context, request):
                 del inputs[(r.reference_type.id, r.reference_number)]
             except KeyError:
                 # References not in the inputs indicate they have been removed
-                Session.delete(r)
+                db_session.delete(r)
 
         for r in six.itervalues(inputs):
-            Session.add(models.PatientReference(
+            db_session.add(models.PatientReference(
                 patient=patient,
                 reference_type=r['reference_type'],
                 reference_number=r['reference_number']))
@@ -439,10 +448,10 @@ def edit_json(context, request):
     # Add the patient forms
     if is_new:
         schemata_query = (
-            Session.query(models.Schema)
+            db_session.query(models.Schema)
             .join(models.patient_schema_table))
         pending_entry = (
-            Session.query(models.State)
+            db_session.query(models.State)
             .filter_by(name=u'pending-entry')
             .one())
         for schema in schemata_query:
@@ -451,8 +460,8 @@ def edit_json(context, request):
                 state=pending_entry
             ))
 
-    Session.flush()
-    Session.refresh(patient)
+    db_session.flush()
+    db_session.refresh(patient)
 
     return view_json(patient, request)
 
@@ -465,10 +474,11 @@ def edit_json(context, request):
     renderer='json')
 def delete_json(context, request):
     check_csrf_token(request)
+    db_session = request.db_session
 
-    list(map(Session.delete, context.entities))
-    Session.delete(context)
-    Session.flush()
+    list(map(db_session.delete, context.entities))
+    db_session.delete(context)
+    db_session.flush()
 
     viewed = request.session.setdefault('viewed', OrderedDict())
 
@@ -508,13 +518,14 @@ def form(context, request):
     XXX: Cannot merge into single view
         because of the way patient forms are handled
     """
+    db_session = request.db_session
 
     patient = context.__parent__.__parent__
     schema = context.schema
 
     (is_phi,) = (
-        Session.query(
-            Session.query(models.patient_schema_table)
+        db_session.query(
+            db_session.query(models.patient_schema_table)
             .filter_by(schema_id=schema.id)
             .exists())
         .one())
@@ -526,7 +537,7 @@ def form(context, request):
         # We cannot determine which study this form will be applied to
         # so just use any version from active studies
         available_schemata = (
-            Session.query(models.Schema)
+            db_session.query(models.Schema)
             .join(models.study_schema_table)
             .join(models.Study)
             .filter(models.Schema.publish_date != sa.null())
@@ -548,7 +559,7 @@ def form(context, request):
         transition = modes.AUTO
 
     Form = make_form(
-        Session,
+        db_session,
         context.schema,
         entity=context,
         show_metadata=show_metadata,
@@ -563,8 +574,8 @@ def form(context, request):
             raise HTTPForbidden()
         if form.validate():
             upload_dir = request.registry.settings['studies.blob.dir']
-            apply_data(Session, context, form.data, upload_dir)
-            Session.flush()
+            apply_data(db_session, context, form.data, upload_dir)
+            db_session.flush()
             request.session.flash(
                 _(u'Changes saved to: %s' % context.schema.title), 'success')
             return HTTPFound(location=previous_url)
@@ -586,8 +597,9 @@ def form(context, request):
 
 
 def get_phi_entities(context, request):
+    db_session = request.db_session
     return (
-        Session.query(models.Entity)
+        db_session.query(models.Entity)
         .join(models.Context)
         .filter(models.Context.external == u'patient')
         .filter(models.Context.key == context.id)
@@ -600,6 +612,7 @@ def PatientSchema(context, request):
     """
     Declares data format expected for managing patient properties
     """
+    db_session = request.db_session
 
     def check_reference_format(form, field):
         type_ = form.reference_type.data
@@ -613,7 +626,7 @@ def PatientSchema(context, request):
         type_ = form.reference_type.data
         number = form.reference_number.data
         query = (
-            Session.query(models.PatientReference)
+            db_session.query(models.PatientReference)
             .filter_by(reference_type=type_, reference_number=number))
         if isinstance(context, models.Patient):
             query = query.filter(models.PatientReference.patient != context)
@@ -629,7 +642,7 @@ def PatientSchema(context, request):
 
     class ReferenceForm(Form):
         reference_type = ModelField(
-            session=Session,
+            db_session=db_session,
             class_=models.ReferenceType,
             validators=[
                 wtforms.validators.InputRequired()])
@@ -641,7 +654,7 @@ def PatientSchema(context, request):
 
     class PatientForm(Form):
         site = ModelField(
-            session=Session,
+            db_session=db_session,
             class_=models.Site,
             validators=[
                 wtforms.validators.InputRequired(),
