@@ -11,27 +11,13 @@ from pyramid.i18n import TranslationStringFactory
 from pyramid.renderers import JSON
 from pyramid.settings import aslist
 from pyramid_who.whov2 import WhoV2AuthenticationPolicy
-from sqlalchemy.orm import scoped_session, sessionmaker
-import wtforms_json
-import zope.sqlalchemy
-
-wtforms_json.init()  # monkey-patch wtforms to accept JSON data
-
-import occams_datastore.models.events
+import wtforms_json; wtforms_json.init()
 
 __version__ = pkg_resources.require(__name__)[0].version
 
 _ = TranslationStringFactory(__name__)
 
 log = logging.getLogger(__name__)
-
-#
-# Application database session. This session should only be used
-# withing the WSGI app, not in asynchronous processes (IE CELERY)
-#
-Session = scoped_session(sessionmaker(
-    extension=zope.sqlalchemy.ZopeTransactionExtension()))
-occams_datastore.models.events.register(Session)
 
 from .settings import piwik_from_config
 from .security import RootFactory, groupfinder  # NOQA
