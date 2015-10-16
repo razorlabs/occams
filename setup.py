@@ -67,13 +67,13 @@ EXTRAS = {
 
     'test': [
         'pyramid_debugtoolbar',
-        'nose',
-        'nose-testconfig',
-        'coverage',
+        'pytest',
+        'pytest-cov',
+        'factory_boy',
+        'fake-factory',
         'WebTest',
         'beautifulsoup4',
         'mock',
-        'ddt'
     ],
 }
 
