@@ -1,23 +1,14 @@
-from tests import IntegrationFixture
 
+class TestAvailableReferenceTypes:
 
-def _register_routes(config):
-    config.add_route('studies.reference_type', '/r/{reference_type}')
-
-
-class TestAvailableReferenceTypes(IntegrationFixture):
-
-    def call_view(self, context, request):
+    def _call_fut(self, *args, **kw):
         from occams_studies.views.reference_type \
             import available_reference_types as view
-        return view(context, request)
+        return view(*args, **kw)
 
-    def test_no_match(self):
+    def test_no_match(self, req, db_session):
 
-        from pyramid import testing
         from occams_studies import models, Session
-
-        _register_routes(self.config)
 
         reftype = models.ReferenceType(
             name=u'medical_number',
@@ -26,21 +17,17 @@ class TestAvailableReferenceTypes(IntegrationFixture):
 
         Session.add(reftype)
 
-        request = testing.DummyRequest(params={'term': 'other'})
-        factory = models.ReferenceTypeFactory(request)
+        req.GET = {'term': 'other'}
+        factory = models.ReferenceTypeFactory(req)
 
-        response = self.call_view(factory, request)
+        res = self._call_fut(factory, req)
 
-        self.assertEquals(
-            0, len(response['reference_types']),
-            'Reference types were found when none were expected')
+        assert len(res['reference_types']) == 0, \
+            'Reference types were found when none were expected'
 
-    def test_match(self):
+    def test_match(self, req, db_session):
 
-        from pyramid import testing
         from occams_studies import models, Session
-
-        _register_routes(self.config)
 
         reftype = models.ReferenceType(
             name=u'medical_number',
@@ -49,11 +36,10 @@ class TestAvailableReferenceTypes(IntegrationFixture):
 
         Session.add(reftype)
 
-        request = testing.DummyRequest(params={'term': 'med'})
-        factory = models.ReferenceTypeFactory(request)
+        req.GET = {'term': 'med'}
+        factory = models.ReferenceTypeFactory(req)
 
-        response = self.call_view(factory, request)
+        res = self._call_fut(factory, req)
 
-        self.assertEquals(
-            1, len(response['reference_types']),
-            'Incorrect number of results received')
+        assert len(res['reference_types']) == 1, \
+            'Incorrect number of results received'

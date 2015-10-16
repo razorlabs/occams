@@ -1,43 +1,50 @@
-import mock
-
-from tests import IntegrationFixture
+import pytest
 
 
-@mock.patch('occams_studies.views.study.check_csrf_token')
-class TestEditJson(IntegrationFixture):
+@pytest.yield_fixture
+def check_csrf_token(config):
+    import mock
+    name = 'occams_studies.views.study.check_csrf_token'
+    with mock.patch(name) as patch:
+        yield patch
 
-    def call_view(self, context, request):
+
+class TestEditJson:
+
+    def _call_fut(self, *args, **kw):
         from occams_studies.views.study import edit_json as view
-        return view(context, request)
+        return view(*args, **kw)
 
-    def test_add(self, check_csrf_token):
+    def test_add(self, req, db_session, check_csrf_token):
         """
         It should be able to add a new study
         """
         from datetime import date
-        from pyramid import testing
-        from occams_studies import Session, models
+        from occams_studies import models
 
-        self.config.add_route('studies.study', '/{study}')
+        req.json_body = {
+            'title': u'Some study',
+            'short_title': u'sfstudy',
+            'code': u'111',
+            'consent_date': str(date.today())
+        }
 
-        self.call_view(models.StudyFactory(None), testing.DummyRequest(
-            json_body={
-                'title': u'Some study',
-                'short_title': u'sfstudy',
-                'code': u'111',
-                'consent_date': str(date.today())}))
+        self._call_fut(models.StudyFactory(None), req)
 
-        self.assertIsNotNone(
-            Session.query(models.Study).filter_by(name=u'some-study').first())
+        res = (
+            db_session.query(models.Study)
+            .filter_by(name=u'some-study')
+            .first())
 
-    def test_enforce_unique_name(self, check_csrf_token):
+        assert res is not None
+
+    def test_enforce_unique_name(self, req, db_session, check_csrf_token):
         """
         It should make sure the name stays unique when adding new studies
         """
         from datetime import date
-        from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_studies import models, Session
+        from occams_studies import models
 
         study = models.Study(
             name='some-study',
@@ -47,30 +54,28 @@ class TestEditJson(IntegrationFixture):
             start_date=date.today(),
             consent_date=date.today())
 
-        Session.add_all([study])
-        Session.flush()
+        db_session.add_all([study])
+        db_session.flush()
 
-        with self.assertRaises(HTTPBadRequest) as cm:
-            self.call_view(models.StudyFactory(None), testing.DummyRequest(
-                json_body={
-                    'title': u'Some Study',
-                    'short_title': u'sfstudy',
-                    'code': u'111',
-                    'consent_date': str(date.today())}))
+        req.json_body = {
+            'title': u'Some Study',
+            'short_title': u'sfstudy',
+            'code': u'111',
+            'consent_date': str(date.today())
+        }
 
-        self.assertIn(
-            'Does not yield a unique URL.',
-            cm.exception.json['errors']['title'])
+        with pytest.raises(HTTPBadRequest) as excinfo:
+            self._call_fut(models.StudyFactory(None), req)
 
-    def test_edit_unique_name(self, check_csrf_token):
+        assert 'Does not yield a unique URL.' in \
+            excinfo.value.json['errors']['title']
+
+    def test_edit_unique_name(self, req, db_session, check_csrf_token):
         """
         It should allow the study to be able to change its unique name
         """
         from datetime import date
-        from pyramid import testing
-        from occams_studies import models, Session
-
-        self.config.add_route('studies.study', '/{study}')
+        from occams_studies import models
 
         study = models.Study(
             name='some-study',
@@ -80,35 +85,34 @@ class TestEditJson(IntegrationFixture):
             start_date=date.today(),
             consent_date=date.today())
 
-        Session.add_all([study])
-        Session.flush()
-        response = self.call_view(study, testing.DummyRequest(
-            json_body={
-                'title': u'New Study Title',
-                'short_title': study.short_title,
-                'code': study.code,
-                'consent_date': str(study.consent_date)}))
+        db_session.add_all([study])
+        db_session.flush()
 
-        self.assertIsNotNone(response)
+        req.json_body = {
+            'title': u'New Study Title',
+            'short_title': study.short_title,
+            'code': study.code,
+            'consent_date': str(study.consent_date)
+        }
+
+        res = self._call_fut(study, req)
+
+        assert res is not None
 
 
-@mock.patch('occams_studies.views.study.check_csrf_token')
-class TestDeleteJson(IntegrationFixture):
+class TestDeleteJson:
 
-    def call_view(self, context, request):
+    def _call_fut(self, *args, **kw):
         from occams_studies.views.study import delete_json as view
-        return view(context, request)
+        return view(*args, **kw)
 
-    def test_no_enrollments(self, check_csrf_token):
+    def test_no_enrollments(self, req, db_session, check_csrf_token):
         """
         It should allow deleting of a study if it has no enrollments
         """
 
         from datetime import date
-        from pyramid import testing
-        from occams_studies import models, Session
-
-        self.config.add_route('studies.main', '/')
+        from occams_studies import models
 
         study = models.Study(
             name=u'somestudy',
@@ -118,23 +122,20 @@ class TestDeleteJson(IntegrationFixture):
             start_date=date.today(),
             consent_date=date.today())
 
-        Session.add_all([study])
-        Session.flush()
+        db_session.add_all([study])
+        db_session.flush()
 
-        self.call_view(study, testing.DummyRequest())
-        self.assertEqual(0, Session.query(models.Study).count())
+        self._call_fut(study, req)
+        assert 0 == db_session.query(models.Study).count()
 
-    def test_has_enrollments(self, check_csrf_token):
+    def test_has_enrollments(self, req, db_session, config, check_csrf_token):
         """
         It should not allow deletion of a study if it has enrollments
         (unless administrator)
         """
         from datetime import date
-        from pyramid import testing
         from pyramid.httpexceptions import HTTPForbidden
-        from occams_studies import models, Session
-
-        self.config.add_route('studies.main', '/')
+        from occams_studies import models
 
         study = models.Study(
             name=u'somestudy',
@@ -151,33 +152,31 @@ class TestDeleteJson(IntegrationFixture):
                 site=models.Site(name='ucsd', title=u'UCSD'),
                 pid=u'12345'))
 
-        Session.add_all([study, enrollment])
-        Session.flush()
+        db_session.add_all([study, enrollment])
+        db_session.flush()
 
         # Should not be able to delete if not an admin
-        self.config.testing_securitypolicy(permissive=False)
-        with self.assertRaises(HTTPForbidden):
-            self.call_view(study, testing.DummyRequest())
+        config.testing_securitypolicy(permissive=False)
+        with pytest.raises(HTTPForbidden):
+            self._call_fut(study, req)
 
-        self.config.testing_securitypolicy(permissive=True)
-        self.call_view(study, testing.DummyRequest())
-        self.assertEqual(0, Session.query(models.Study).count())
+        config.testing_securitypolicy(permissive=True)
+        self._call_fut(study, req)
+        assert 0 == db_session.query(models.Study).count()
 
 
-@mock.patch('occams_studies.views.study.check_csrf_token')
-class TestAddSchemaJson(IntegrationFixture):
+class TestAddSchemaJson:
 
-    def call_view(self, context, request):
+    def _call_fut(self, *args, **kw):
         from occams_studies.views.study import add_schema_json as view
-        return view(context, request)
+        return view(*args, **kw)
 
-    def test_basic(self, check_csrf_token):
+    def test_basic(self, req, db_session, check_csrf_token):
         """
         It should allow adding a schema to a study
         """
         from datetime import date
-        from pyramid import testing
-        from occams_studies import models, Session
+        from occams_studies import models
 
         schema = models.Schema(
             name='test', title=u'', publish_date=date.today())
@@ -190,21 +189,20 @@ class TestAddSchemaJson(IntegrationFixture):
             start_date=date.today(),
             consent_date=date.today())
 
-        Session.add_all([study, schema])
-        Session.flush()
+        db_session.add_all([study, schema])
+        db_session.flush()
 
-        self.call_view(study, testing.DummyRequest(
-            json_body={'schema': schema.name, 'versions': [schema.id]}))
+        req.json_body = {'schema': schema.name, 'versions': [schema.id]}
+        self._call_fut(study, req)
 
-        self.assertIn(schema, study.schemata)
+        assert schema in study.schemata
 
-    def test_update_cycles(self, check_csrf_token):
+    def test_update_cycles(self, req, db_session, check_csrf_token):
         """
         It should also update cycle versions
         """
         from datetime import date, timedelta
-        from pyramid import testing
-        from occams_studies import models, Session
+        from occams_studies import models
 
         today = date.today()
         tomorrow = today + timedelta(days=1)
@@ -225,24 +223,23 @@ class TestAddSchemaJson(IntegrationFixture):
             schemata=set([v1]),
             consent_date=date.today())
 
-        Session.add_all([study, v1, v2])
-        Session.flush()
+        db_session.add_all([study, v1, v2])
+        db_session.flush()
 
-        self.call_view(study, testing.DummyRequest(
-            json_body={'schema': v1.name, 'versions': [v2.id]}))
+        req.json_body = {'schema': v1.name, 'versions': [v2.id]}
+        self._call_fut(study, req)
 
-        self.assertIn(v2, study.schemata)
+        assert v2 in study.schemata
         # v2 should have been passed on to the cycle using it as well
-        self.assertIn(v2, cycle.schemata)
+        assert v2 in cycle.schemata
 
-    def test_fail_if_not_published(self, check_csrf_token):
+    def test_fail_if_not_published(self, req, db_session, check_csrf_token):
         """
         It should fail if the schema is not published
         """
         from datetime import date
-        from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_studies import models, Session
+        from occams_studies import models
 
         schema = models.Schema(name='test', title=u'')
 
@@ -254,30 +251,28 @@ class TestAddSchemaJson(IntegrationFixture):
             start_date=date.today(),
             consent_date=date.today())
 
-        Session.add_all([study, schema])
-        Session.flush()
+        db_session.add_all([study, schema])
+        db_session.flush()
 
-        Session.execute(
+        db_session.execute(
             models.patient_schema_table
             .insert()
             .values({'schema_id': schema.id}))
 
-        with self.assertRaises(HTTPBadRequest) as cm:
-            self.call_view(study, testing.DummyRequest(
-                json_body={'schema': schema.name, 'versions': [schema.id]}))
+        req.json_body = {'schema': schema.name, 'versions': [schema.id]}
+        with pytest.raises(HTTPBadRequest) as excinfo:
+            self._call_fut(study, req)
 
-        self.assertIn(
-            'not published',
-            cm.exception.json['errors']['versions-0'])
+        assert 'not published' in \
+            excinfo.value.json['errors']['versions-0']
 
-    def test_fail_if_not_same_schema(self, check_csrf_token):
+    def test_fail_if_not_same_schema(self, req, db_session, check_csrf_token):
         """
         It should fail if the schema and versions do not match
         """
         from datetime import date
-        from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_studies import models, Session
+        from occams_studies import models
 
         schema = models.Schema(
             name='test', title=u'', publish_date=date.today())
@@ -290,25 +285,23 @@ class TestAddSchemaJson(IntegrationFixture):
             start_date=date.today(),
             consent_date=date.today())
 
-        Session.add_all([study, schema])
-        Session.flush()
+        db_session.add_all([study, schema])
+        db_session.flush()
 
-        with self.assertRaises(HTTPBadRequest) as cm:
-            self.call_view(study, testing.DummyRequest(
-                json_body={'schema': u'otherform', 'versions': [schema.id]}))
+        req.json_body = {'schema': u'otherform', 'versions': [schema.id]}
+        with pytest.raises(HTTPBadRequest) as excinfo:
+            self._call_fut(study, req)
 
-        self.assertIn(
-            'Incorrect versions',
-            cm.exception.json['errors']['versions'])
+        assert 'Incorrect versions' in \
+            excinfo.value.json['errors']['versions']
 
-    def test_fail_if_patient_schema(self, check_csrf_token):
+    def test_fail_if_patient_schema(self, req, db_session, check_csrf_token):
         """
         It should not allow patient schemata to be used as study schemata
         """
         from datetime import date
-        from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_studies import models, Session
+        from occams_studies import models
 
         schema = models.Schema(
             name='test', title=u'', publish_date=date.today())
@@ -321,30 +314,30 @@ class TestAddSchemaJson(IntegrationFixture):
             start_date=date.today(),
             consent_date=date.today())
 
-        Session.add_all([study, schema])
-        Session.flush()
+        db_session.add_all([study, schema])
+        db_session.flush()
 
-        Session.execute(
+        db_session.execute(
             models.patient_schema_table
             .insert()
             .values({'schema_id': schema.id}))
 
-        with self.assertRaises(HTTPBadRequest) as cm:
-            self.call_view(study, testing.DummyRequest(
-                json_body={'schema': schema.name, 'versions': [schema.id]}))
+        req.json_body = {'schema': schema.name, 'versions': [schema.id]}
 
-        self.assertIn(
-            'already a patient form',
-            cm.exception.json['errors']['schema'].lower())
+        with pytest.raises(HTTPBadRequest) as excinfo:
+            self._call_fut(study, req)
 
-    def test_fail_if_randomization_schema(self, check_csrf_token):
+        assert 'already a patient form' in \
+            excinfo.value.json['errors']['schema'].lower()
+
+    def test_fail_if_randomization_schema(
+            self, req, db_session, check_csrf_token):
         """
         It should not allow randomization schemata to be used as study schemata
         """
         from datetime import date
-        from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_studies import models, Session
+        from occams_studies import models
 
         schema = models.Schema(
             name='test', title=u'', publish_date=date.today())
@@ -359,25 +352,25 @@ class TestAddSchemaJson(IntegrationFixture):
             is_randomized=True,
             randomization_schema=schema)
 
-        Session.add_all([study, schema])
-        Session.flush()
+        db_session.add_all([study, schema])
+        db_session.flush()
 
-        with self.assertRaises(HTTPBadRequest) as cm:
-            self.call_view(study, testing.DummyRequest(
-                json_body={'schema': schema.name, 'versions': [schema.id]}))
+        req.json_body = {'schema': schema.name, 'versions': [schema.id]}
 
-        self.assertIn(
-            'already a randomization form',
-            cm.exception.json['errors']['schema'].lower())
+        with pytest.raises(HTTPBadRequest) as excinfo:
+            self._call_fut(study, req)
 
-    def test_fail_if_termination_schema(self, check_csrf_token):
+        assert 'already a randomization form' in \
+            excinfo.value.json['errors']['schema'].lower()
+
+    def test_fail_if_termination_schema(
+            self, req, db_session, check_csrf_token):
         """
         It should not allow termination  schemata to be used as study schemata
         """
         from datetime import date
-        from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_studies import models, Session
+        from occams_studies import models
 
         schema = models.Schema(
             name='test', title=u'', publish_date=date.today())
@@ -391,32 +384,29 @@ class TestAddSchemaJson(IntegrationFixture):
             consent_date=date.today(),
             termination_schema=schema)
 
-        Session.add_all([study, schema])
-        Session.flush()
+        db_session.add_all([study, schema])
+        db_session.flush()
 
-        with self.assertRaises(HTTPBadRequest) as cm:
-            self.call_view(study, testing.DummyRequest(
-                json_body={'schema': schema.name, 'versions': [schema.id]}))
+        req.json_body = {'schema': schema.name, 'versions': [schema.id]}
+        with pytest.raises(HTTPBadRequest) as excinfo:
+            self._call_fut(study, req)
 
-        self.assertIn(
-            'already a termination form',
-            cm.exception.json['errors']['schema'].lower())
+        assert 'already a termination form' in \
+            excinfo.value.json['errors']['schema'].lower()
 
 
-@mock.patch('occams_studies.views.study.check_csrf_token')
-class TestDeleteSchemaJson(IntegrationFixture):
+class TestDeleteSchemaJson:
 
-    def call_view(self, context, request):
+    def _call_fut(self, *args, **kw):
         from occams_studies.views.study import delete_schema_json as view
-        return view(context, request)
+        return view(*args, **kw)
 
-    def test_success(self, check_csrf_token):
+    def test_success(self, req, db_session, check_csrf_token):
         """
         It should remove the schema from the study and cascade to its cycles
         """
         from datetime import date
-        from pyramid import testing
-        from occams_studies import models, Session
+        from occams_studies import models
 
         schema = models.Schema(
             name='test', title=u'', publish_date=date.today())
@@ -437,23 +427,22 @@ class TestDeleteSchemaJson(IntegrationFixture):
             cycles=[cycle],
             schemata=set([schema]))
 
-        Session.add_all([study, schema])
-        Session.flush()
+        db_session.add_all([study, schema])
+        db_session.flush()
 
-        self.call_view(study, testing.DummyRequest(
-            matchdict={'schema': schema.name}))
+        req.matchdict = {'schema': schema.name}
+        self._call_fut(study, req)
 
-        self.assertNotIn(schema, study.schemata)
-        self.assertNotIn(schema, cycle.schemata)
+        assert schema not in study.schemata
+        assert schema not in cycle.schemata
 
-    def test_not_found(self, check_csrf_token):
+    def test_not_found(self, req, db_session, check_csrf_token):
         """
         It should fail if the schema specified does not exist
         """
         from datetime import date
-        from pyramid import testing
         from pyramid.httpexceptions import HTTPNotFound
-        from occams_studies import models, Session
+        from occams_studies import models
 
         study = models.Study(
             name=u'somestudy',
@@ -463,29 +452,27 @@ class TestDeleteSchemaJson(IntegrationFixture):
             start_date=date.today(),
             consent_date=date.today())
 
-        Session.add_all([study])
-        Session.flush()
+        db_session.add_all([study])
+        db_session.flush()
 
-        with self.assertRaises(HTTPNotFound):
-            self.call_view(study, testing.DummyRequest(
-                matchdict={'schema': 'idonotexist'}))
+        req.matchdict = {'schema': 'idonotexist'}
+        with pytest.raises(HTTPNotFound):
+            self._call_fut(study, req)
 
 
-@mock.patch('occams_studies.views.study.check_csrf_token')
-class TestEditScheduleJson(IntegrationFixture):
+class TestEditScheduleJson:
 
-    def call_view(self, context, request):
+    def _call_fut(self, *args, **kw):
         from occams_studies.views.study import edit_schedule_json as view
-        return view(context, request)
+        return view(*args, **kw)
 
-    def test_schema_in_study(self, check_csrf_tokne):
+    def test_schema_in_study(self, req, db_session, check_csrf_token):
         """
         It should fail if the schema is not part of the study
         """
         from datetime import date
-        from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_studies import models, Session
+        from occams_studies import models
 
         schema = models.Schema(
             name='test', title=u'Test', publish_date=date.today())
@@ -504,28 +491,28 @@ class TestEditScheduleJson(IntegrationFixture):
             consent_date=date.today(),
             cycles=[cycle])
 
-        Session.add_all([study, schema])
-        Session.flush()
+        db_session.add_all([study, schema])
+        db_session.flush()
 
-        with self.assertRaises(HTTPBadRequest) as cm:
-            self.call_view(study, testing.DummyRequest(
-                json_body={
-                    'schema': schema.name,
-                    'cycle': cycle.id,
-                    'enabled': True}))
+        req.json_body = {
+            'schema': schema.name,
+            'cycle': cycle.id,
+            'enabled': True
+        }
 
-        self.assertIn(
-            'not a valid choice',
-            cm.exception.json['errors']['schema'].lower())
+        with pytest.raises(HTTPBadRequest) as excinfo:
+            self._call_fut(study, req)
 
-    def test_cycle_in_study(self, check_csrf_token):
+        assert 'not a valid choice' in \
+            excinfo.value.json['errors']['schema'].lower()
+
+    def test_cycle_in_study(self, req, db_session, check_csrf_token):
         """
         It should fail if the cycle is not part of the study
         """
         from datetime import date
-        from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_studies import models, Session
+        from occams_studies import models
 
         schema = models.Schema(
             name='test', title=u'Test', publish_date=date.today())
@@ -550,27 +537,27 @@ class TestEditScheduleJson(IntegrationFixture):
             consent_date=date.today(),
             schemata=set([schema]))
 
-        Session.add_all([study, schema, other_study])
-        Session.flush()
+        db_session.add_all([study, schema, other_study])
+        db_session.flush()
 
-        with self.assertRaises(HTTPBadRequest) as cm:
-            self.call_view(study, testing.DummyRequest(
-                json_body={
-                    'schema': schema.name,
-                    'cycle': other_cycle.id,
-                    'enabled': True}))
+        req.json_body = {
+            'schema': schema.name,
+            'cycle': other_cycle.id,
+            'enabled': True
+        }
 
-        self.assertIn(
-            'not a valid choice',
-            cm.exception.json['errors']['cycle'].lower())
+        with pytest.raises(HTTPBadRequest) as excinfo:
+            self._call_fut(study, req)
 
-    def test_enable(self, check_csrf_token):
+        assert 'not a valid choice' in \
+            excinfo.value.json['errors']['cycle'].lower()
+
+    def test_enable(self, req, db_session, check_csrf_token):
         """
         It should successfully add a schema to a cycle
         """
         from datetime import date
-        from pyramid import testing
-        from occams_studies import models, Session
+        from occams_studies import models
 
         schema = models.Schema(
             name='test', title=u'Test', publish_date=date.today())
@@ -590,24 +577,25 @@ class TestEditScheduleJson(IntegrationFixture):
             cycles=[cycle],
             schemata=set([schema]))
 
-        Session.add_all([study, schema])
-        Session.flush()
+        db_session.add_all([study, schema])
+        db_session.flush()
 
-        self.call_view(study, testing.DummyRequest(
-            json_body={
-                'schema': schema.name,
-                'cycle': cycle.id,
-                'enabled': True}))
+        req.json_body = {
+            'schema': schema.name,
+            'cycle': cycle.id,
+            'enabled': True
+        }
 
-        self.assertIn(schema, cycle.schemata)
+        self._call_fut(study, req)
 
-    def test_disable(self, check_csrf_token):
+        assert schema in cycle.schemata
+
+    def test_disable(self, req, db_session, check_csrf_token):
         """
         It should successfully disable schema from a cycle
         """
         from datetime import date
-        from pyramid import testing
-        from occams_studies import models, Session
+        from occams_studies import models
 
         schema = models.Schema(
             name='test', title=u'Test', publish_date=date.today())
@@ -628,91 +616,88 @@ class TestEditScheduleJson(IntegrationFixture):
             cycles=[cycle],
             schemata=set([schema]))
 
-        Session.add_all([study, schema])
-        Session.flush()
+        db_session.add_all([study, schema])
+        db_session.flush()
 
-        self.call_view(study, testing.DummyRequest(
-            json_body={
-                'schema': schema.name,
-                'cycle': cycle.id,
-                'enabled': False}))
+        req.json_body = {
+            'schema': schema.name,
+            'cycle': cycle.id,
+            'enabled': False
+        }
 
-        self.assertNotIn(schema, cycle.schemata)
+        self._call_fut(study, req)
+
+        assert schema not in cycle.schemata
 
 
-@mock.patch('occams_studies.views.study.check_csrf_token')
-class TestAvailableSchemata(IntegrationFixture):
+class TestAvailableSchemata:
 
-    def call_view(self, context, request):
+    def _call_fut(self, *args, **kw):
         from occams_studies.views.study import available_schemata as view
-        return view(context, request)
+        return view(*args, **kw)
 
-    def test_no_params(self, check_csrf_token):
+    def test_no_params(self, req, db_session, check_csrf_token):
         """
         It should just return all schemata if there is not study context
         """
         from datetime import date
-        from pyramid import testing
         from webob.multidict import MultiDict
-        from occams_studies import models, Session
+        from occams_studies import models
 
-        Session.add_all([
+        db_session.add_all([
             models.Schema(name='v', title=u'V', publish_date=date.today())])
-        Session.flush()
+        db_session.flush()
 
-        request = testing.DummyRequest(params=MultiDict())
-        result = self.call_view(models.StudyFactory(request), request)
-        self.assertEqual('v', result['schemata'][0]['name'])
+        req.GET = MultiDict()
+        res = self._call_fut(models.StudyFactory(req), req)
+        assert 'v' == res['schemata'][0]['name']
 
-    def test_term(self, check_csrf_token):
+    def test_term(self, req, db_session, check_csrf_token):
         """
         It should filter schemata by title or publish_date
         """
         from datetime import date
-        from pyramid import testing
         from webob.multidict import MultiDict
-        from occams_studies import models, Session
+        from occams_studies import models
 
-        Session.add_all([
+        db_session.add_all([
             models.Schema(name='v', title=u'V', publish_date=date.today()),
             models.Schema(name='xyz', title=u'XYZ', publish_date=date.today())
             ])
-        Session.flush()
+        db_session.flush()
 
-        request = testing.DummyRequest(params=MultiDict([('term', 'x')]))
-        result = self.call_view(models.StudyFactory(request), request)
-        self.assertEqual('xyz', result['schemata'][0]['name'])
+        req.GET = MultiDict([('term', 'x')])
+        res = self._call_fut(models.StudyFactory(req), req)
+        assert 'xyz' == res['schemata'][0]['name']
 
-    def test_schema(self, check_csrf_token):
+    def test_schema(self, req, db_session, check_csrf_token):
         """
         It should just return all publish_dates for the specific "schema"
         """
         from datetime import date, timedelta
-        from pyramid import testing
         from webob.multidict import MultiDict
-        from occams_studies import models, Session
+        from occams_studies import models
 
         today = date.today()
         tomorrow = date.today() + timedelta(days=1)
 
-        Session.add_all([
+        db_session.add_all([
             models.Schema(name='v', title=u'V', publish_date=today),
             models.Schema(name='v', title=u'V', publish_date=tomorrow),
             models.Schema(name='x', title=u'x', publish_date=today)])
-        Session.flush()
+        db_session.flush()
 
-        request = testing.DummyRequest(params=MultiDict([('schema', 'v')]))
-        result = self.call_view(models.StudyFactory(request), request)
-        self.assertEqual(2, len(result['schemata']))
+        req.GET = MultiDict([('schema', 'v')])
+        res = self._call_fut(models.StudyFactory(req), req)
+        assert 2 == len(res['schemata'])
 
-    def test_exclude_randomization(self, check_csrf_token):
+    def test_exclude_randomization(self, req, db_session, check_csrf_token):
         """
         It should exlude randomization forms used by the study (editing)
         """
         from datetime import date
-        from pyramid import testing
         from webob.multidict import MultiDict
-        from occams_studies import models, Session
+        from occams_studies import models
 
         x = models.Schema(name='x', title=u'x', publish_date=date.today())
         y = models.Schema(name='y', title=u'Y', publish_date=date.today())
@@ -727,22 +712,21 @@ class TestAvailableSchemata(IntegrationFixture):
             is_randomized=True,
             randomization_schema=x)
 
-        Session.add_all([x, y, study])
-        Session.flush()
+        db_session.add_all([x, y, study])
+        db_session.flush()
 
-        request = testing.DummyRequest(params=MultiDict())
-        result = self.call_view(study, request)
-        self.assertEqual(1, len(result['schemata']))
-        self.assertEqual('y', result['schemata'][0]['name'])
+        req.GET = MultiDict()
+        res = self._call_fut(study, req)
+        assert 1 == len(res['schemata'])
+        assert 'y' == res['schemata'][0]['name']
 
-    def test_exclude_termination(self, check_csrf_token):
+    def test_exclude_termination(self, req, db_session, check_csrf_token):
         """
         It should exlude termination forms used by the study (editing)
         """
         from datetime import date
-        from pyramid import testing
         from webob.multidict import MultiDict
-        from occams_studies import models, Session
+        from occams_studies import models
 
         x = models.Schema(name='x', title=u'x', publish_date=date.today())
         y = models.Schema(name='y', title=u'Y', publish_date=date.today())
@@ -756,22 +740,21 @@ class TestAvailableSchemata(IntegrationFixture):
             consent_date=date.today(),
             termination_schema=x)
 
-        Session.add_all([x, y, study])
-        Session.flush()
+        db_session.add_all([x, y, study])
+        db_session.flush()
 
-        request = testing.DummyRequest(params=MultiDict())
-        result = self.call_view(study, request)
-        self.assertEqual(1, len(result['schemata']))
-        self.assertEqual('y', result['schemata'][0]['name'])
+        req.GET = MultiDict()
+        res = self._call_fut(study, req)
+        assert 1 == len(res['schemata'])
+        assert 'y' == res['schemata'][0]['name']
 
-    def test_exclude_schema(self, check_csrf_token):
+    def test_exclude_schema(self, req, db_session, check_csrf_token):
         """
         It should exlude general forms used by the study (editing)
         """
         from datetime import date
-        from pyramid import testing
         from webob.multidict import MultiDict
-        from occams_studies import models, Session
+        from occams_studies import models
 
         x = models.Schema(name='x', title=u'x', publish_date=date.today())
         y = models.Schema(name='y', title=u'Y', publish_date=date.today())
@@ -785,22 +768,22 @@ class TestAvailableSchemata(IntegrationFixture):
             consent_date=date.today(),
             schemata=set([x]))
 
-        Session.add_all([x, y, study])
-        Session.flush()
+        db_session.add_all([x, y, study])
+        db_session.flush()
 
-        request = testing.DummyRequest(params=MultiDict())
-        result = self.call_view(study, request)
-        self.assertEqual(1, len(result['schemata']))
-        self.assertEqual('y', result['schemata'][0]['name'])
+        req.GET = MultiDict()
+        res = self._call_fut(study, req)
+        assert 1 == len(res['schemata'])
+        assert 'y' == res['schemata'][0]['name']
 
-    def test_exclude_schema_used_versions(self, check_csrf_token):
+    def test_exclude_schema_used_versions(
+            self, req, db_session, check_csrf_token):
         """
         It should exclude general versions already used by the form (editing)
         """
         from datetime import date, timedelta
-        from pyramid import testing
         from webob.multidict import MultiDict
-        from occams_studies import models, Session
+        from occams_studies import models
 
         today = date.today()
         tomorrow = today + timedelta(days=1)
@@ -817,32 +800,30 @@ class TestAvailableSchemata(IntegrationFixture):
             consent_date=date.today(),
             schemata=set([y0]))
 
-        Session.add_all([y0, y1, study])
-        Session.flush()
+        db_session.add_all([y0, y1, study])
+        db_session.flush()
 
-        request = testing.DummyRequest(params=MultiDict())
-        result = self.call_view(study, request)
-        self.assertEqual(1, len(result['schemata']))
-        self.assertEqual(str(tomorrow), result['schemata'][0]['publish_date'])
+        req.GET = MultiDict()
+        res = self._call_fut(study, req)
+        assert 1 == len(res['schemata'])
+        assert str(tomorrow) == res['schemata'][0]['publish_date']
 
 
-@mock.patch('occams_studies.views.study.check_csrf_token')
-class TestUploadRandomizationJson(IntegrationFixture):
+class TestUploadRandomizationJson:
 
-    def call_view(self, context, request):
+    def _call_fut(self, *args, **kw):
         from occams_studies.views.study import \
             upload_randomization_json as view
-        return view(context, request)
+        return view(*args, **kw)
 
-    def test_not_randomized(self, check_csrf_token):
+    def test_not_randomized(self, req, db_session, check_csrf_token):
         """
         It should only allow uploads if the study is randomized
         """
 
         from datetime import date
-        from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_studies import models, Session
+        from occams_studies import models
 
         study = models.Study(
             name=u'somestudy',
@@ -851,24 +832,23 @@ class TestUploadRandomizationJson(IntegrationFixture):
             code=u'000',
             consent_date=date.today())
 
-        Session.add(study)
-        Session.flush()
+        db_session.add(study)
+        db_session.flush()
 
-        with self.assertRaises(HTTPBadRequest) as cm:
-            self.call_view(study, testing.DummyRequest())
+        with pytest.raises(HTTPBadRequest) as excinfo:
+            self._call_fut(study, req)
 
-        self.assertTrue(check_csrf_token.called)
-        self.assertIn('not randomized', cm.exception.body)
+        assert check_csrf_token.called
+        assert 'not randomized' in excinfo.value.body
 
-    def test_valid_csv(self, check_csrf_token):
+    def test_valid_csv(self, req, db_session, check_csrf_token):
         """
         It should only accept CSV files
         """
         import tempfile
         from datetime import date
-        from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_studies import models, Session
+        from occams_studies import models
 
         schema = models.Schema(
             name='rand', title=u'Rand', publish_date=date.today())
@@ -882,8 +862,8 @@ class TestUploadRandomizationJson(IntegrationFixture):
             randomization_schema=schema,
             consent_date=date.today())
 
-        Session.add(study)
-        Session.flush()
+        db_session.add(study)
+        db_session.flush()
 
         class DummyUpload:
             pass
@@ -893,23 +873,22 @@ class TestUploadRandomizationJson(IntegrationFixture):
             upload.file = fp
             upload.filename = fp.name
 
-            with self.assertRaises(HTTPBadRequest) as cm:
-                self.call_view(study, testing.DummyRequest(
-                    post={'upload': upload}))
+            req.POST = {'upload': upload}
+            with pytest.raises(HTTPBadRequest) as excinfo:
+                self._call_fut(study, req)
 
-            self.assertTrue(check_csrf_token.called)
-            self.assertIn('must be CSV', cm.exception.body)
+            assert check_csrf_token.called
+            assert 'must be CSV' in excinfo.value.body
 
-    def test_incomplete_header(self, check_csrf_token):
+    def test_incomplete_header(self, req, db_session, check_csrf_token):
         """
         It should include randomization schema attribute names in the header
         """
         import tempfile
         import csv
         from datetime import date
-        from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_studies import models, Session
+        from occams_studies import models
 
         schema = models.Schema(
             name='rand', title=u'Rand', publish_date=date.today(),
@@ -929,8 +908,8 @@ class TestUploadRandomizationJson(IntegrationFixture):
             randomization_schema=schema,
             consent_date=date.today())
 
-        Session.add(study)
-        Session.flush()
+        db_session.add(study)
+        db_session.flush()
 
         class DummyUpload:
             pass
@@ -945,22 +924,21 @@ class TestUploadRandomizationJson(IntegrationFixture):
             writer.writerow(['ARM', 'STRATA', 'BLOCKID', 'RANDID'])
             fp.flush()
 
-            with self.assertRaises(HTTPBadRequest) as cm:
-                self.call_view(study, testing.DummyRequest(
-                    post={'upload': upload}))
+            with pytest.raises(HTTPBadRequest) as excinfo:
+                req.POST = {'upload': upload}
+                self._call_fut(study, req)
 
-            self.assertTrue(check_csrf_token.called)
-            self.assertIn('missing', cm.exception.body)
+            assert check_csrf_token.called
+            assert 'missing' in excinfo.value.body
 
-    def test_valid_upload(self, check_csrf_token):
+    def test_valid_upload(self, req, db_session, check_csrf_token):
         """
         It should be able to upload a perfectly valid CSV
         """
         import tempfile
         import csv
         from datetime import date
-        from pyramid import testing
-        from occams_studies import models, Session
+        from occams_studies import models
 
         schema = models.Schema(
             name='rand', title=u'Rand', publish_date=date.today(),
@@ -980,8 +958,8 @@ class TestUploadRandomizationJson(IntegrationFixture):
             randomization_schema=schema,
             consent_date=date.today())
 
-        Session.add_all([study])
-        Session.flush()
+        db_session.add_all([study])
+        db_session.flush()
 
         class DummyUpload:
             pass
@@ -997,25 +975,24 @@ class TestUploadRandomizationJson(IntegrationFixture):
             writer.writerow([u'UCSD', u'hints', u'1234567', u'987654', u'is smart'])  # noqa
             fp.flush()
 
-            self.call_view(study, testing.DummyRequest(
-                post={'upload': upload}))
+            req.POST = {'upload': upload}
+            self._call_fut(study, req)
 
-            stratum = Session.query(models.Stratum).one()
-            entity = Session.query(models.Entity).one()
-            self.assertEquals(stratum.arm.name, 'UCSD')
-            self.assertIn(entity, stratum.entities)
-            self.assertEquals(entity['criteria'], 'is smart')
+            stratum = db_session.query(models.Stratum).one()
+            entity = db_session.query(models.Entity).one()
+            assert stratum.arm.name == 'UCSD'
+            assert entity in stratum.entities
+            assert entity['criteria'] == 'is smart'
 
-    def test_duplicate_rids(self, check_csrf_token):
+    def test_duplicate_rids(self, req, db_session, check_csrf_token):
         """
         It should fail if the upload contains repeated rids
         """
         import tempfile
         import csv
         from datetime import date
-        from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_studies import models, Session
+        from occams_studies import models
 
         schema = models.Schema(
             name='rand', title=u'Rand', publish_date=date.today(),
@@ -1035,8 +1012,8 @@ class TestUploadRandomizationJson(IntegrationFixture):
             randomization_schema=schema,
             consent_date=date.today())
 
-        Session.add_all([study])
-        Session.flush()
+        db_session.add_all([study])
+        db_session.flush()
 
         class DummyUpload:
             pass
@@ -1052,13 +1029,13 @@ class TestUploadRandomizationJson(IntegrationFixture):
             writer.writerow([u'UCSD', u'hints', u'1234567', u'987654', u'is smart'])  # noqa
             fp.flush()
 
-            self.call_view(study, testing.DummyRequest(
-                post={'upload': upload}))
+            req.POST = {'upload': upload}
+            self._call_fut(study, req)
 
             fp.seek(0)
 
-            with self.assertRaises(HTTPBadRequest) as cm:
-                self.call_view(study, testing.DummyRequest(
-                    post={'upload': upload}))
+            with pytest.raises(HTTPBadRequest) as excinfo:
+                req.POST = {'upload': upload}
+                self._call_fut(study, req)
 
-            self.assertIn('existing reference numbers', cm.exception.body)
+            assert 'existing reference numbers' in excinfo.value.body

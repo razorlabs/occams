@@ -1,173 +1,154 @@
-from ddt import ddt, data
+import pytest
+from occams.testing import USERID, make_environ, get_csrf_token
 
-from tests import FunctionalFixture, USERID
 
-
-@ddt
-class TestPermissionsAbout(FunctionalFixture):
+class TestPermissionsAbout:
 
     url = '/studies/exports'
 
-    def setUp(self):
-        super(TestPermissionsAbout, self).setUp()
-
+    @pytest.fixture(autouse=True)
+    def populate(self, app, db_session):
         import transaction
-        from occams import Session
         from occams_datastore import models as datastore
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
-            Session.add(datastore.User(key=USERID))
+            db_session.add(datastore.User(key=USERID))
 
-    @data('administrator', 'consumer')
-    def test_allowed(self, group):
-        environ = self.make_environ(userid=USERID, groups=[group])
-        self.app.get(self.url, extra_environ=environ, status=200)
+    @pytest.mark.parametrize('group', ['administrator', 'consumer'])
+    def test_allowed(self, app, db_session, group):
+        environ = make_environ(userid=USERID, groups=[group])
+        app.get(self.url, extra_environ=environ, status=200)
 
-    @data(None)
-    def test_not_allowed(self, group):
-        environ = self.make_environ(userid=USERID, groups=[group])
-        self.app.get(self.url, extra_environ=environ, status=403)
+    @pytest.mark.parametrize('group', [None])
+    def test_not_allowed(self, app, db_session, group):
+        environ = make_environ(userid=USERID, groups=[group])
+        app.get(self.url, extra_environ=environ, status=403)
 
-    def test_not_authenticated(self):
-        self.app.get(self.url, status=401)
+    def test_not_authenticated(self, app, db_session):
+        app.get(self.url, status=401)
 
 
-@ddt
-class TestExportViewPermissionsFaq(FunctionalFixture):
+class TestExportViewPermissionsFaq:
 
     url = '/studies/exports/faq'
 
-    def setUp(self):
-        super(TestExportViewPermissionsFaq, self).setUp()
-
+    @pytest.fixture(autouse=True)
+    def populate(self, app, db_session):
         import transaction
-        from occams import Session
         from occams_datastore import models as datastore
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
-            Session.add(datastore.User(key=USERID))
+            db_session.add(datastore.User(key=USERID))
 
-    @data('administrator', 'manager', 'consumer')
-    def test_allowed(self, group):
-        environ = self.make_environ(userid=USERID, groups=[group])
-        self.app.get(self.url, extra_environ=environ, status=200)
+    @pytest.mark.parametrize('group', ['administrator', 'manager', 'consumer'])
+    def test_allowed(self, app, db_session, group):
+        environ = make_environ(userid=USERID, groups=[group])
+        app.get(self.url, extra_environ=environ, status=200)
 
-    @data(None)
-    def test_not_allowed(self, group):
-        environ = self.make_environ(userid=USERID, groups=[group])
-        self.app.get(self.url, extra_environ=environ, status=403)
+    @pytest.mark.parametrize('group', [None])
+    def test_not_allowed(self, app, db_session, group):
+        environ = make_environ(userid=USERID, groups=[group])
+        app.get(self.url, extra_environ=environ, status=403)
 
-    def test_not_authenticated(self):
-        self.app.get(self.url, status=401)
+    def test_not_authenticated(self, app, db_session):
+        app.get(self.url, status=401)
 
 
-@ddt
-class TestPermissionsCheckout(FunctionalFixture):
+class TestPermissionsCheckout:
 
     url = '/studies/exports/checkout'
 
-    def setUp(self):
-        super(TestPermissionsCheckout, self).setUp()
-
+    @pytest.fixture(autouse=True)
+    def populate(self, app, db_session):
         import transaction
-        from occams import Session
         from occams_datastore import models as datastore
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
-            Session.add(datastore.User(key=USERID))
+            db_session.add(datastore.User(key=USERID))
 
-    @data('administrator', 'manager', 'consumer')
-    def test_allowed(self, group):
-        environ = self.make_environ(userid=USERID, groups=[group])
-        self.app.get(self.url, extra_environ=environ, status=200)
+    @pytest.mark.parametrize('group', ['administrator', 'manager', 'consumer'])
+    def test_allowed(self, app, db_session, group):
+        environ = make_environ(userid=USERID, groups=[group])
+        app.get(self.url, extra_environ=environ, status=200)
 
-    @data(None)
-    def test_not_allowed(self, group):
-        environ = self.make_environ(userid=USERID, groups=[group])
-        self.app.get(self.url, extra_environ=environ, status=403)
+    @pytest.mark.parametrize('group', [None])
+    def test_not_allowed(self, app, db_session, group):
+        environ = make_environ(userid=USERID, groups=[group])
+        app.get(self.url, extra_environ=environ, status=403)
 
-    def test_not_authenticated(self):
-        self.app.get(self.url, status=401)
+    def test_not_authenticated(self, app, db_session):
+        app.get(self.url, status=401)
 
 
-@ddt
-class TestPermissionsStatus(FunctionalFixture):
+class TestPermissionsStatus:
 
     url = '/studies/exports/status'
 
-    def setUp(self):
-        super(TestPermissionsStatus, self).setUp()
-
+    @pytest.fixture(autouse=True)
+    def populate(self, app, db_session):
         import transaction
-        from occams import Session
         from occams_datastore import models as datastore
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
-            Session.add(datastore.User(key=USERID))
+            db_session.add(datastore.User(key=USERID))
 
-    @data('administrator', 'manager', 'consumer')
-    def test_allowed(self, group):
-        environ = self.make_environ(groups=[group])
-        self.app.get(self.url, extra_environ=environ, status=200)
+    @pytest.mark.parametrize('group', ['administrator', 'manager', 'consumer'])
+    def test_allowed(self, app, db_session, group):
+        environ = make_environ(groups=[group])
+        app.get(self.url, extra_environ=environ, status=200)
 
-    @data(None)
-    def test_not_allowed(self, group):
-        environ = self.make_environ(groups=[group])
-        self.app.get(self.url, extra_environ=environ, status=403)
+    @pytest.mark.parametrize('group', [None])
+    def test_not_allowed(self, app, db_session, group):
+        environ = make_environ(groups=[group])
+        app.get(self.url, extra_environ=environ, status=403)
 
-    def test_not_authenticated(self):
-        self.app.get(self.url, status=401)
+    def test_not_authenticated(self, app, db_session):
+        app.get(self.url, status=401)
 
 
-@ddt
-class TestPermissionsStatusJSON(FunctionalFixture):
+class TestPermissionsStatusJSON:
 
     url = '/studies/exports/status'
 
-    def setUp(self):
-        super(TestPermissionsStatusJSON, self).setUp()
-
+    @pytest.fixture(autouse=True)
+    def populate(self, app, db_session):
         import transaction
-        from occams import Session
         from occams_datastore import models as datastore
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
-            Session.add(datastore.User(key=USERID))
+            db_session.add(datastore.User(key=USERID))
 
-    @data('administrator', 'manager', 'consumer')
-    def test_allowed(self, group):
-        environ = self.make_environ(groups=[group])
-        self.app.get(self.url, extra_environ=environ, xhr=True, status=200)
+    @pytest.mark.parametrize('group', ['administrator', 'manager', 'consumer'])
+    def test_allowed(self, app, db_session, group):
+        environ = make_environ(groups=[group])
+        app.get(self.url, extra_environ=environ, xhr=True, status=200)
 
-    @data(None)
-    def test_not_allowed(self, group):
-        environ = self.make_environ(groups=[group])
-        self.app.get(self.url, extra_environ=environ, xhr=True, status=403)
+    @pytest.mark.parametrize('group', [None])
+    def test_not_allowed(self, app, db_session, group):
+        environ = make_environ(groups=[group])
+        app.get(self.url, extra_environ=environ, xhr=True, status=403)
 
-    def test_not_authenticated(self):
-        self.app.get(self.url, xhr=True, status=401)
+    def test_not_authenticated(self, app, db_session):
+        app.get(self.url, xhr=True, status=401)
 
 
-@ddt
-class TestPersmissionsDelete(FunctionalFixture):
+class TestPersmissionsDelete:
 
     url_fmt = '/studies/exports/{export}'
 
-    def setUp(self):
-        super(TestPersmissionsDelete, self).setUp()
-
+    @pytest.fixture(autouse=True)
+    def populate(self, app, db_session):
         import transaction
-        from occams import Session
         from occams_datastore import models as datastore
         from occams_studies import models
 
@@ -175,203 +156,196 @@ class TestPersmissionsDelete(FunctionalFixture):
         # Webtests will use a different scope for its transaction
         with transaction.manager:
             user = datastore.User(key=USERID)
-            Session.info['blame'] = user
-            Session.add(user)
+            db_session.info['blame'] = user
+            db_session.add(user)
             export = models.Export(owner_user=user)
-            Session.add(export)
-            Session.flush()
+            db_session.add(export)
+            db_session.flush()
             self.url = self.url_fmt.format(export=export.id)
 
     # None indicates current user
-    @data('administrator', 'manager', 'consumer', None)
-    def test_allowed(self, group):
-        environ = self.make_environ(groups=[group])
-        csrf_token = self.get_csrf_token(environ)
-        self.app.delete(
+    @pytest.mark.parametrize('group', [
+        'administrator', 'manager', 'consumer', None])
+    def test_allowed(self, app, db_session, group):
+        environ = make_environ(groups=[group])
+        csrf_token = get_csrf_token(app, environ)
+        app.delete(
             self.url,
             extra_environ=environ,
             headers={'X-CSRF-Token': csrf_token},
             xhr=True,
             status=200)
 
-    def test_not_owner(self):
+    def test_not_owner(self, app, db_session):
         import transaction
-        from occams_studies import Session, models
+        from occams_studies import models
         with transaction.manager:
-            Session.add(models.User(key='somebody_else'))
-        environ = self.make_environ(userid='somebody_else')
-        csrf_token = self.get_csrf_token(environ)
-        self.app.delete(
+            db_session.add(models.User(key='somebody_else'))
+        environ = make_environ(userid='somebody_else')
+        csrf_token = get_csrf_token(app, environ)
+        app.delete(
             self.url,
             extra_environ=environ,
             headers={'X-CSRF-Token': csrf_token},
             xhr=True,
             status=403)
 
-    def test_not_authenticated(self):
-        self.app.delete(self.url, xhr=True, status=401)
+    def test_not_authenticated(self, app, db_session):
+        app.delete(self.url, xhr=True, status=401)
 
 
-@ddt
-class TestPersmissionsCodebook(FunctionalFixture):
+class TestPersmissionsCodebook:
 
     url = '/studies/exports/codebook'
 
-    def setUp(self):
-        super(TestPersmissionsCodebook, self).setUp()
-
+    @pytest.fixture(autouse=True)
+    def populate(self, app, db_session):
         import transaction
-        from occams import Session
         from occams_datastore import models as datastore
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
-            Session.add(datastore.User(key=USERID))
+            db_session.add(datastore.User(key=USERID))
 
-    @data('administrator', 'manager', 'consumer')
-    def test_allowed(self, group):
-        environ = self.make_environ(groups=[group])
-        self.app.get(self.url, extra_environ=environ, status=200)
+    @pytest.mark.parametrize('group', ['administrator', 'manager', 'consumer'])
+    def test_allowed(self, app, db_session, group):
+        environ = make_environ(groups=[group])
+        app.get(self.url, extra_environ=environ, status=200)
 
-    @data(None)
-    def test_not_allowed(self, group):
-        environ = self.make_environ(groups=[group])
-        self.app.get(self.url, extra_environ=environ, status=403)
+    @pytest.mark.parametrize('group', [None])
+    def test_not_allowed(self, app, db_session, group):
+        environ = make_environ(groups=[group])
+        app.get(self.url, extra_environ=environ, status=403)
 
-    def test_not_authenticated(self):
-        self.app.get(self.url, status=401)
+    def test_not_authenticated(self, app, db_session):
+        app.get(self.url, status=401)
 
 
-@ddt
-class TestPersmissionsCodebookJSON(FunctionalFixture):
+class TestPersmissionsCodebookJSON:
 
     url = '/studies/exports/codebook'
 
-    def setUp(self):
-        super(TestPersmissionsCodebookJSON, self).setUp()
-
+    @pytest.fixture(autouse=True)
+    def populate(self, app, db_session):
         import transaction
-        from occams import Session
         from occams_datastore import models as datastore
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
-            Session.add(datastore.User(key=USERID))
+            db_session.add(datastore.User(key=USERID))
 
-    @data('administrator', 'manager', 'consumer')
-    def test_allowed(self, group):
-        environ = self.make_environ(groups=[group])
-        self.app.get(
+    @pytest.mark.parametrize('group', ['administrator', 'manager', 'consumer'])
+    def test_allowed(self, app, db_session, group):
+        environ = make_environ(groups=[group])
+        app.get(
             self.url,
             {'file': 'pid'},
             extra_environ=environ,
             xhr=True,
             status=200)
 
-    @data(None)
-    def test_not_allowed(self, group):
-        environ = self.make_environ(groups=[group])
-        self.app.get(
+    @pytest.mark.parametrize('group', [None])
+    def test_not_allowed(self, app, db_session, group):
+        environ = make_environ(groups=[group])
+        app.get(
             self.url,
             {'file': 'pid'},
             extra_environ=environ,
             xhr=True,
             status=403)
 
-    def test_not_authenticated(self):
-        self.app.get(self.url, status=401)
+    def test_not_authenticated(self, app, db_session):
+        app.get(self.url, status=401)
 
 
-@ddt
-class TestPersmissionsCodebookDownload(FunctionalFixture):
+class TestPersmissionsCodebookDownload:
 
     url = '/studies/exports/codebook?alt=csv'
 
-    def setUp(self):
-        super(TestPersmissionsCodebookDownload, self).setUp()
-
+    @pytest.fixture(autouse=True)
+    def populate(self, request, app, db_session):
+        import os
         import transaction
-        from occams import Session
         from occams_datastore import models as datastore
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
-            Session.add(datastore.User(key=USERID))
+            db_session.add(datastore.User(key=USERID))
 
         # XXX: need to somehow get the settings so we can consitently
         #      get the correct directory
         with open('/tmp/codebook.csv', 'w+') as fp:
             self.codebook_file_name = fp.name
 
-    def tearDown(self):
-        import os
-        os.unlink(self.codebook_file_name)
-        super(TestPersmissionsCodebookDownload, self).tearDown()
+        def rm():
+            os.unlink(self.codebook_file_name)
 
-    @data('administrator', 'manager', 'consumer')
-    def test_allowed(self, group):
-        environ = self.make_environ(groups=[group])
-        self.app.get(self.url, extra_environ=environ, status=200)
+        request.addfinalizer(rm)
 
-    @data(None)
-    def test_not_allowed(self, group):
-        environ = self.make_environ(groups=[group])
-        self.app.get(self.url, extra_environ=environ, status=403)
+    @pytest.mark.parametrize('group', ['administrator', 'manager', 'consumer'])
+    def test_allowed(self, app, db_session, group):
+        environ = make_environ(groups=[group])
+        app.get(self.url, extra_environ=environ, status=200)
 
-    def test_not_authenticated(self):
-        self.app.get(self.url, status=401)
+    @pytest.mark.parametrize('group', [None])
+    def test_not_allowed(self, app, db_session, group):
+        environ = make_environ(groups=[group])
+        app.get(self.url, extra_environ=environ, status=403)
+
+    def test_not_authenticated(self, app, db_session):
+        app.get(self.url, status=401)
 
 
-@ddt
-class TestPermissionsDownload(FunctionalFixture):
+class TestPermissionsDownload:
 
     url_fmt = '/studies/exports/{export}/download'
 
-    def setUp(self):
-        super(TestPermissionsDownload, self).setUp()
-
+    @pytest.fixture(autouse=True)
+    def populate(self, request, db_session):
+        import os
         import transaction
-        from occams_studies import Session, models
+        from occams_studies import models
         from occams_datastore import models as datastore
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
             user = datastore.User(key=USERID)
-            Session.info['blame'] = user
-            Session.add(user)
+            db_session.info['blame'] = user
+            db_session.add(user)
             export = models.Export(
                 name='myexport',
                 status='complete',
                 owner_user=user)
-            Session.add(export)
-            Session.flush()
+            db_session.add(export)
+            db_session.flush()
             self.url = self.url_fmt.format(export=export.id)
             with open('/tmp/myexport', 'w+') as fp:
                 self.export_file_name = fp.name
 
-    def tearDown(self):
-        import os
-        os.unlink(self.export_file_name)
-        super(TestPermissionsDownload, self).tearDown()
+        def rm():
+            os.unlink(self.export_file_name)
+
+        request.addfinalizer(rm)
 
     # "None" in this case indicates that the user is not a member of any group
     # But in this case it's the owner so it should still be allowed.
-    @data('administrator', 'manager', 'consumer', None)
-    def test_allowed(self, group):
-        environ = self.make_environ(groups=[group])
-        self.app.get(self.url, extra_environ=environ, status=200)
+    @pytest.mark.parametrize('group', [
+        'administrator', 'manager', 'consumer', None])
+    def test_allowed(self, app, db_session, group):
+        environ = make_environ(groups=[group])
+        app.get(self.url, extra_environ=environ, status=200)
 
-    def test_not_owner(self):
+    def test_not_owner(self, app, db_session):
         import transaction
-        from occams_studies import Session, models
+        from occams_studies import models
         with transaction.manager:
-            Session.add(models.User(key='somebody_else'))
-        environ = self.make_environ(userid='somebody_else')
-        self.app.get(self.url, extra_environ=environ, status=403)
+            db_session.add(models.User(key='somebody_else'))
+        environ = make_environ(userid='somebody_else')
+        app.get(self.url, extra_environ=environ, status=403)
 
-    def test_not_authenticated(self):
-        self.app.get(self.url, status=401)
+    def test_not_authenticated(self, app, db_session):
+        app.get(self.url, status=401)
