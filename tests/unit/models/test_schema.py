@@ -2,18 +2,14 @@
 Test case for schema implementations and services
 """
 
-from nose.tools import with_setup
-
-from tests import Session, begin_func, rollback_func
+import pytest
 
 
-@with_setup(begin_func, rollback_func)
-def test_schema_attribute():
+def test_schema_attribute(db_session):
     """
     It should implement full schema/attribute/subattribute hierarchies
     """
     from datetime import date
-    from tests import assert_in
     from occams_datastore import models
     schema = models.Schema(
         name=u'aform',
@@ -40,125 +36,115 @@ def test_schema_attribute():
                 })
             })
 
-    Session.add(schema)
-    Session.flush()
-    assert_in('section1', schema.attributes)
+    db_session.add(schema)
+    db_session.flush()
+    assert 'section1' in schema.attributes
     # Works both ways
-    assert_in('foo', schema.attributes)
-    assert_in('foo', schema.attributes['section1'].attributes)
+    assert 'foo' in schema.attributes
+    assert 'foo' in schema.attributes['section1'].attributes
 
 
-@with_setup(begin_func, rollback_func)
-def test_schema_defaults():
+def test_schema_defaults(db_session):
     """
     It should set schema defaults
     """
-    from tests import assert_is_none, assert_is_not_none, assert_equals
     from occams_datastore import models
 
-    Session.add(models.Schema(name=u'sample', title=u'Sample'))
-    Session.flush()
+    db_session.add(models.Schema(name=u'sample', title=u'Sample'))
+    db_session.flush()
 
-    schema = Session.query(models.Schema).one()
-    assert_is_none(schema.description)
-    assert_equals(schema.storage, 'eav')
-    assert_is_none(schema.is_association)
-    assert_is_not_none(schema.create_date)
-    assert_is_not_none(schema.create_user)
-    assert_is_not_none(schema.modify_date)
-    assert_is_not_none(schema.modify_user)
+    schema = db_session.query(models.Schema).one()
+    assert schema.description is None
+    assert schema.storage == 'eav'
+    assert schema.is_association is None
+    assert schema.create_date is not None
+    assert schema.create_user is not None
+    assert schema.modify_date is not None
+    assert schema.modify_user is not None
 
 
-@with_setup(begin_func, rollback_func)
-def test_schema_invalid_regexp_name():
+def test_schema_invalid_regexp_name(db_session):
     """
     It should prevent invalid names (See RE_VALID_NAME)
     """
     from datetime import date
     from occams_datastore import models
-    from tests import assert_raises
-    with assert_raises(ValueError):
-        Session.add(models.Schema(
+    with pytest.raises(ValueError):
+        db_session.add(models.Schema(
             name='555SomeForm',
             title=u'Foo',
             publish_date=date(2014, 3, 31)))
-        Session.flush()
+        db_session.flush()
 
 
-@with_setup(begin_func, rollback_func)
-def test_schema_unique_case_insensitive():
+def test_schema_unique_case_insensitive(db_session):
     """
     It should enforce case-insensitive schemata
     """
-    from tests import assert_raises
     from datetime import date
     import sqlalchemy.exc
     from occams_datastore import models
 
-    Session.add(models.Schema(
+    db_session.add(models.Schema(
         name='Foo',
         title=u'Foo',
         publish_date=date(2014, 3, 31)))
-    Session.flush()
+    db_session.flush()
 
-    Session.add(models.Schema(
+    db_session.add(models.Schema(
         name='foo',
         title=u'Foo',
         publish_date=date(2014, 3, 31)))
 
-    with assert_raises(sqlalchemy.exc.IntegrityError):
-        Session.flush()
+    with pytest.raises(sqlalchemy.exc.IntegrityError):
+        db_session.flush()
 
 
-@with_setup(begin_func, rollback_func)
-def test_schema_publish_date_unique():
+def test_schema_publish_date_unique(db_session):
     """
     It should enforce unique publish dates
     """
 
-    from tests import assert_raises
     from datetime import date
     import sqlalchemy.exc
     from occams_datastore import models
 
     # First version
-    Session.add(models.Schema(
+    db_session.add(models.Schema(
         name='Foo',
         title=u'Foo',
         publish_date=date(2014, 3, 31)))
-    Session.flush()
+    db_session.flush()
 
     # Draft version
-    Session.add(models.Schema(
+    db_session.add(models.Schema(
         name='Foo',
         title=u'Foo',
         publish_date=None))
-    Session.flush()
+    db_session.flush()
 
     # Add another published schema (not on the same date)
     # Publish, not on the same date
-    Session.add(models.Schema(
+    db_session.add(models.Schema(
         name='Foo',
         title=u'Foo',
         publish_date=date(2014, 4, 1)))
-    Session.flush()
+    db_session.flush()
 
     # New version, same date (wrong)
-    Session.add(models.Schema(
+    db_session.add(models.Schema(
         name='Foo',
         title=u'Foo',
         publish_date=date(2014, 4, 1)))
 
-    with assert_raises(sqlalchemy.exc.IntegrityError):
-        Session.flush()
+    with pytest.raises(sqlalchemy.exc.IntegrityError):
+        db_session.flush()
 
 
-@with_setup(begin_func, rollback_func)
-def test_schema_has_private():
+def test_schema_has_private(db_session):
     """
     It should be able to determine if a schema has private attributes
     """
-    from tests import assert_true, assert_false
     from datetime import date
     from occams_datastore import models
     schema = models.Schema(
@@ -173,10 +159,10 @@ def test_schema_has_private():
                 is_private=False,
                 order=0)
         })
-    Session.add(schema)
-    Session.flush()
+    db_session.add(schema)
+    db_session.flush()
 
-    assert_false(schema.has_private)
+    assert not schema.has_private
 
     schema.attributes['is_private'] = models.Attribute(
         name='is_private',
@@ -185,11 +171,10 @@ def test_schema_has_private():
         is_private=True,
         order=1)
 
-    assert_true(schema.has_private)
+    assert schema.has_private
 
 
-@with_setup(begin_func, rollback_func)
-def test_json():
+def test_json(db_session):
     """
     It should be able to load a schema from json data
     """
@@ -234,18 +219,16 @@ def test_json():
         }
     }
     """))
-    Session.add(schema1)
-    Session.flush()
+    db_session.add(schema1)
+    db_session.flush()
 
     json.dumps(schema1.to_json())
 
 
-@with_setup(begin_func, rollback_func)
-def test_attribute_defaults():
+def test_attribute_defaults(db_session):
     """
     It should set attribute defaults
     """
-    from tests import assert_equals
     from occams_datastore import models
 
     schema = models.Schema(name=u'Foo', title=u'Foo')
@@ -255,79 +238,68 @@ def test_attribute_defaults():
         title=u'Enter Foo',
         type=u'string',
         order=0)
-    Session.add(attribute)
-    Session.flush()
-    count = Session.query(models.Attribute).count()
-    assert_equals(count, 1, 'Found more than one entry')
+    db_session.add(attribute)
+    db_session.flush()
+    count = db_session.query(models.Attribute).count()
+    assert count, 1 == 'Found more than one entry'
 
 
-def test_attribute_invalid_regexp_name():
+@pytest.mark.parametrize('name', ['5', '5foo', 'foo_5', 'hiv_sex_3'])
+def test_attribute_invalid_regexp_name(db_session, name):
     """
     It should prevent invalid attribute names (See RE_VALID_NAME)
     """
     from datetime import date
     from occams_datastore import models
-    from tests import assert_raises
 
-    @with_setup(begin_func, rollback_func)
-    def check_(name):
-        schema = models.Schema(
-            name='SomeForm',
-            title=u'Foo',
-            publish_date=date(2014, 3, 31))
-        Session.add(schema)
-        Session.flush()
+    schema = models.Schema(
+        name='SomeForm',
+        title=u'Foo',
+        publish_date=date(2014, 3, 31))
+    db_session.add(schema)
+    db_session.flush()
 
-        with assert_raises(ValueError):
-            schema.attributes[name] = models.Attribute(
-                name=name,
-                title=u'My Attribute',
-                type=u'string',
-                order=1)
-
-    for name in ['5', '5foo', 'foo_5', 'hiv_sex_3']:
-        yield check_, name
-
-
-def test_attribute_valid_regexp_name():
-    """
-    It should vallow valid names (See RE_VALID_NAME)
-    """
-    from datetime import date
-    from occams_datastore import models
-
-    @with_setup(begin_func, rollback_func)
-    def check_(name):
-        schema = models.Schema(
-            name='SomeForm',
-            title=u'Foo',
-            publish_date=date(2014, 3, 31))
+    with pytest.raises(ValueError):
         schema.attributes[name] = models.Attribute(
             name=name,
             title=u'My Attribute',
             type=u'string',
             order=1)
 
-    for name in ['f', 'foo', 'foo_', 'foo5']:
-        yield check_, name
+
+@pytest.mark.parametrize('name', ['f', 'foo', 'foo_', 'foo5'])
+def test_attribute_valid_regexp_name(db_session, name):
+    """
+    It should vallow valid names (See RE_VALID_NAME)
+    """
+    from datetime import date
+    from occams_datastore import models
+
+    schema = models.Schema(
+        name='SomeForm',
+        title=u'Foo',
+        publish_date=date(2014, 3, 31))
+    schema.attributes[name] = models.Attribute(
+        name=name,
+        title=u'My Attribute',
+        type=u'string',
+        order=1)
 
 
-@with_setup(begin_func, rollback_func)
-def test_attributea_invalid_reserved_name():
+def test_attributea_invalid_reserved_name(db_session):
     """
     It should prevent reserved words as attribute names
     """
     from datetime import date
     from occams_datastore import models
-    from tests import assert_raises
     schema = models.Schema(
         name='SomeForm',
         title=u'Foo',
         publish_date=date(2014, 3, 31))
-    Session.add(schema)
-    Session.flush()
+    db_session.add(schema)
+    db_session.flush()
 
-    with assert_raises(ValueError):
+    with pytest.raises(ValueError):
         schema.attributes['while'] = models.Attribute(
             name=u'while',
             title=u'My Attribute',
@@ -335,12 +307,10 @@ def test_attributea_invalid_reserved_name():
             order=1)
 
 
-@with_setup(begin_func, rollback_func)
-def test_attribute_unique_case_insensitive():
+def test_attribute_unique_case_insensitive(db_session):
     """
     It should enforce case-insensitive attributes
     """
-    from tests import assert_raises
     from datetime import date
     import sqlalchemy.exc
     from occams_datastore import models
@@ -355,8 +325,8 @@ def test_attribute_unique_case_insensitive():
         title=u'My Attribute',
         type=u'string',
         order=0)
-    Session.add(schema)
-    Session.flush()
+    db_session.add(schema)
+    db_session.flush()
 
     schema.attributes['myattr'] = models.Attribute(
         name=u'myattr',
@@ -364,17 +334,15 @@ def test_attribute_unique_case_insensitive():
         type=u'string',
         order=1)
 
-    with assert_raises(sqlalchemy.exc.IntegrityError):
-        Session.flush()
+    with pytest.raises(sqlalchemy.exc.IntegrityError):
+        db_session.flush()
 
 
-@with_setup(begin_func, rollback_func)
-def test_choice_defaults():
+def test_choice_defaults(db_session):
     """
     It should set choice defaults
     """
 
-    from tests import assert_equals
     from occams_datastore import models
 
     schema = models.Schema(name=u'Foo', title=u'Foo')
@@ -391,84 +359,80 @@ def test_choice_defaults():
     choice3 = models.Choice(
         attribute=attribute, name='003', title=u'Baz', order=2)
 
-    Session.add_all([schema, attribute, choice1, choice2, choice3])
-    Session.flush()
-    count = Session.query(models.Choice).count()
-    assert_equals(count, 3, 'Did not find any choices')
+    db_session.add_all([schema, attribute, choice1, choice2, choice3])
+    db_session.flush()
+    count = db_session.query(models.Choice).count()
+    assert count, 3 == 'Did not find any choices'
 
 
-@with_setup(begin_func, rollback_func)
-def test_category_defaults():
+def test_category_defaults(db_session):
     """
     It should set category defaults
     """
 
-    from tests import assert_equals
     from occams_datastore import models
 
     category = models.Category(name='Tests', title=u'Test Schemata')
-    Session.add(category)
-    Session.flush()
+    db_session.add(category)
+    db_session.flush()
 
-    count = Session.query(models.Category).count()
-    assert_equals(count, 1)
+    count = db_session.query(models.Category).count()
+    assert count == 1
 
 
-@with_setup(begin_func, rollback_func)
-def test_add_category_to_schema():
+def test_add_category_to_schema(db_session):
     """
     Scheamta should be taggable via categories
     """
 
-    from tests import assert_equals, assert_items_equal
     from occams_datastore import models
 
     schema = models.Schema(name='Foo', title=u'')
-    Session.add(schema)
-    Session.flush()
+    db_session.add(schema)
+    db_session.flush()
 
-    assert_equals(len(schema.categories), 0)
+    assert len(schema.categories) == 0
     category1 = models.Category(name='Tests', title=u'Test Schemata')
     schema.categories.add(category1)
-    Session.flush()
-    assert_equals(len(schema.categories), 1)
-    assert_equals(len(category1.schemata), 1)
-    assert_items_equal([s.name for s in category1.schemata], ['Foo'])
+    db_session.flush()
+    assert len(schema.categories) == 1
+    assert len(category1.schemata) == 1
+    assert sorted([s.name for s in category1.schemata]) == sorted(['Foo'])
 
     schema.categories.add(category1)
-    Session.flush()
-    assert_equals(len(schema.categories), 1)
-    assert_equals(len(category1.schemata), 1)
+    db_session.flush()
+    assert len(schema.categories) == 1
+    assert len(category1.schemata) == 1
 
     category2 = models.Category(name='Bars', title=u'Bar Schemata')
     schema.categories.add(category2)
-    assert_equals(len(schema.categories), 2)
-    assert_items_equal([c.name for c in schema.categories], ['Tests', 'Bars'])
-    assert_items_equal([s.name for s in category2.schemata], ['Foo'])
+    assert len(schema.categories) == 2
+    assert sorted([c.name for c in schema.categories]) == \
+        sorted(['Tests', 'Bars'])
+    assert sorted([s.name for s in category2.schemata]) == sorted(['Foo'])
 
     # Now try a common use case: get all schema of a certain cateogry
     # First we'll need a second schema of the same category of another
     schema2 = models.Schema(name='Bar', title=u'')
     schema2.categories.add(category2)
-    Session.add(schema2)
-    Session.flush()
+    db_session.add(schema2)
+    db_session.flush()
 
     # Now we want all the schemata of a certain category
     schemata = (
-        Session.query(models.Schema)
+        db_session.query(models.Schema)
         .join(models.Schema.categories)
         .filter_by(name='Bars'))
 
     # Should be the ones we just marked
-    assert_items_equal([s.name for s in schemata], ['Foo', 'Bar'])
+    assert sorted([s.name for s in schemata]) == \
+        sorted(['Foo', 'Bar'])
 
 
-@with_setup(begin_func, rollback_func)
-def test_copy_schema_basic():
+def test_copy_schema_basic(db_session):
     """
     It should let the user copy schemata
     """
-    from tests import assert_equals
     from copy import deepcopy
     from occams_datastore import models
 
@@ -495,21 +459,21 @@ def test_copy_schema_basic():
                             '003': models.Choice(
                                 name='003', title=u'Baz', order=2)},
                         )})})
-    Session.add(schema)
-    Session.flush()
+    db_session.add(schema)
+    db_session.flush()
 
     schema_copy = deepcopy(schema)
-    Session.add(schema_copy)
-    Session.flush()
+    db_session.add(schema_copy)
+    db_session.flush()
 
     # The ones that matter for checksums
-    assert_equals(schema.name, schema_copy.name)
+    assert schema.name == schema_copy.name
     attribute = schema.attributes['foo']
     for prop in ('name', 'title', 'description', 'type',
                  'is_collection', 'is_required'):
         attribute_copy = schema_copy.attributes['foo']
-        assert_equals(getattr(attribute, prop), getattr(attribute_copy, prop))
+        assert getattr(attribute, prop) == getattr(attribute_copy, prop)
     for choice in schema.attributes['foo'].choices.values():
         choice_copy = schema_copy.attributes['foo'].choices[choice.name]
         for prop in ('name', 'title', 'order'):
-            assert_equals(getattr(choice, prop), getattr(choice_copy, prop))
+            assert getattr(choice, prop) == getattr(choice_copy, prop)
