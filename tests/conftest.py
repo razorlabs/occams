@@ -5,6 +5,13 @@ To run the tests you'll then need to run the following command:
 
     py.test --db=postgres://user:pass@host/db
 
+Also, you can reuse a database:
+
+    py.test --db=postgres://user:pass@host/db --reuse
+
+This is particularly handing while developing as it saves about a minute
+each time the tests are run.
+
 """
 
 import pytest
@@ -21,6 +28,8 @@ USERID = 'test_user'
 def pytest_addoption(parser):
     """
     Registers a command line argument for a database URL connection string
+
+    :param parser: The pytest command-line parser
     """
     parser.addoption('--db', action='store', help='db string for testing')
     parser.addoption('--reuse', action='store_true',
@@ -53,7 +62,7 @@ def create_tables(request):
     """
     Creates the database tables for the entire testing session
 
-    :param request: the testing context
+    :param request: The pytest context
 
     :returns: configured database session
     """
@@ -85,67 +94,106 @@ def create_tables(request):
 @pytest.yield_fixture
 def config(request):
     """
-    Configuration for integration testing
+    (Integration Testing) Instantiates a Pyramid testing configuration
+
+    :param request: The pytest context
     """
 
-    from sqlalchemy import create_engine
     from pyramid import testing
     import transaction
-    from occams_forms import models, Session as db_session
 
     db_url = request.config.getoption('--db')
 
-    engine = create_engine(db_url)
-    db_session.configure(bind=engine)
-    test_config = testing.setUp()
+    test_config = testing.setUp(settings={
+        'occams.db.url': db_url
+    })
 
-    blame = models.User(key=u'tester')
-    db_session.add(blame)
-    db_session.flush()
-    db_session.info['blame'] = blame
-    db_session.info['settings'] = test_config.registry.settings
-
-    _install_workflow(db_session)
-
+    # Load mimimum set of plugins
+    test_config.include('occams.models')
     test_config.include('occams_forms.routes')
 
     yield test_config
 
     testing.tearDown()
     transaction.abort()
-    db_session.remove()
 
 
 @pytest.fixture
-def req(config):
+def db_session(config):
     """
-    Returns a dummy request for testings.
+    (Integartion Testing) Instantiates a database session.
+
+    :param config: The pyramid testing configuartion
+
+    :returns: An instantiated sqalchemy database session
+    """
+    from occams_forms import models
+
+    db_session = config.registry['db_sessionmaker']()
+
+    # Pre-configure with a blame user
+    blame = models.User(key=USERID)
+    db_session.add(blame)
+    db_session.flush()
+    db_session.info['blame'] = blame
+
+    # Other expected settings
+    db_session.info['settings'] = config.registry.settings
+
+    # Hardcoded workflow
+    db_session.add_all([
+        models.State(name=u'pending-entry', title=u'Pending Entry'),
+        models.State(name=u'pending-review', title=u'Pending Review'),
+        models.State(name=u'pending-correction',
+                     title=u'Pending Correction'),
+        models.State(name=u'complete', title=u'Complete')
+    ])
+
+    return db_session
+
+
+@pytest.fixture
+def req(db_session):
+    """
+    (Integration Testing) Creates a dummy request
+
+    The request is setup with configuration CSRF values and the expected
+    ``db_session`` property, the goal being to be be as close to a real
+    database session as possible.
+
     Note that we must called it "req" as "request" is reserved by pytest.
+
+    :param db_session: The testing database session
+
+    :returns: a configured request object
     """
     import uuid
     import mock
     from pyramid.testing import DummyRequest
 
+    dummy_request = DummyRequest()
+
+    # Configurable csrf token
     csrf_token = str(uuid.uuid4())
     get_csrf_token = mock.Mock(return_value=csrf_token)
-
-    dummy_request = DummyRequest()
     dummy_request.session.get_csrf_token = get_csrf_token
     dummy_request.headers['X-CSRF-Token'] = csrf_token
 
+    # Attach database session for expected behavior
+    dummy_request.db_session = db_session
+    db_session.info['request'] = dummy_request
+
     return dummy_request
-
-
-@pytest.fixture
-def db_session(config):
-    from occams_forms import Session
-    return Session
 
 
 @pytest.fixture(scope='session')
 def wsgi(request):
     """
-    Sets up a singleton WSGI app
+    (Functional Testing) Sets up a full-stacked singleton WSGI app
+
+    :param request: The pytest context
+
+    :returns: a WSGI application
     """
     import tempfile
     import shutil
@@ -205,16 +253,35 @@ def wsgi(request):
 @pytest.yield_fixture
 def app(request, wsgi, db_session):
     """
-    Initiates a user request against a WSGI stack for functional testing
+    (Functional Testing) Initiates a user request against a WSGI stack
+
+    :param request: The pytest context
+    :param wsgi: An initialized WSGI stack
+    :param db_session: A database session for seting up pre-existing data
+
+    :returns: a test app request against the WSGI instance
     """
     import transaction
     from webtest import TestApp
     from zope.sqlalchemy import mark_changed
+    from occams_forms import models
+
+    # Save all changes up tho this point (db_session does some configuration)
+    with transaction.manager:
+        blame = models.User(key='workflow@localhost')
+        db_session.add(blame)
+        db_session.flush()
+        db_session.info['blame'] = blame
+
+        db_session.add_all([
+            models.State(name=u'pending-entry', title=u'Pending Entry'),
+            models.State(name=u'pending-review', title=u'Pending Review'),
+            models.State(name=u'pending-correction',
+                         title=u'Pending Correction'),
+            models.State(name=u'complete', title=u'Complete')
+        ])
 
     app = TestApp(wsgi)
-
-    with transaction.manager:
-        _install_workflow(db_session)
 
     yield app
 
@@ -226,23 +293,4 @@ def app(request, wsgi, db_session):
         db_session.execute('DELETE FROM "schema" CASCADE')
         db_session.execute('DELETE FROM "state" CASCADE')
         db_session.execute('DELETE FROM "user" CASCADE')
-        mark_changed(db_session())
-    db_session.remove()
-
-
-def _install_workflow(db_session):
-    from occams_forms import models
-
-    blame = models.User(key=u'installer')
-    db_session.add(blame)
-    db_session.flush()
-    db_session.info['blame'] = blame
-
-    # Add hard-coded default states
-    db_session.add_all([
-        models.State(name=u'pending-entry', title=u'Pending Entry'),
-        models.State(name=u'pending-review', title=u'Pending Review'),
-        models.State(name=u'pending-correction',
-                     title=u'Pending Correction'),
-        models.State(name=u'complete', title=u'Complete')
-    ])
+        mark_changed(db_session)

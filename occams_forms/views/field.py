@@ -6,7 +6,7 @@ import wtforms
 from occams.utils.forms import wtferrors, Form
 from occams_datastore.models.schema import RE_VALID_NAME, RESERVED_WORDS
 
-from .. import _, models, Session
+from .. import _, models
 from ._utils import jquery_wtform_validator
 
 
@@ -76,6 +76,8 @@ def move_json(context, request):
     """
     check_csrf_token(request)
 
+    db_session = request.db_session
+
     schema = context.schema
 
     def not_self(form, field):
@@ -123,7 +125,7 @@ def move_json(context, request):
     for i, a in enumerate(schema.iterlist()):
         a.order = i
 
-    Session.flush()
+    db_session.flush()
 
     return HTTPOk()
 
@@ -146,6 +148,8 @@ def edit_json(context, request):
     """
     check_csrf_token(request)
 
+    db_session = request.db_session
+
     form = FieldFormFactory(context, request).from_json(request.json_body)
 
     if not form.validate():
@@ -158,7 +162,7 @@ def edit_json(context, request):
     else:
         # Add the attribute and temporarily set to large display order
         attribute = models.Attribute(schema=context.__parent__, order=-1)
-        Session.add(attribute)
+        db_session.add(attribute)
 
     attribute.apply(form.data)
 
@@ -166,7 +170,7 @@ def edit_json(context, request):
         # now we can move the attribute
         move_json(attribute, request)
 
-    Session.flush()
+    db_session.flush()
 
     return view_json(attribute, request)
 
@@ -199,21 +203,23 @@ def delete_json(context, request):
     Deletes the field from the form
     """
     check_csrf_token(request)
-    Session.delete(context)
+    db_session = request.db_session
+    db_session.delete(context)
     return HTTPOk()
 
 
 def FieldFormFactory(context, request):
+    db_session = request.db_session
 
     def unique_variable(form, field):
         is_new = isinstance(context, models.AttributeFactory)
         schema = context.__parent__ if is_new else context.schema
         query = (
-            Session.query(models.Attribute)
+            db_session.query(models.Attribute)
             .filter_by(name=field.data, schema=schema))
         if not is_new:
             query = query.filter(models.Attribute.id != context.id)
-        (exists,) = Session.query(query.exists()).one()
+        (exists,) = db_session.query(query.exists()).one()
         if exists:
             raise wtforms.ValidationError(
                 _(u'Variable name already exists in this form'))
