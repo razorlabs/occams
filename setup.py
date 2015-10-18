@@ -11,7 +11,7 @@ REQUIRES = [
 ]
 
 EXTRAS = {
-    'test': ['nose', 'nose-testconfig', 'coverage', 'mock', 'ddt'],
+    'test': [],
 }
 
 
