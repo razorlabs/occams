@@ -251,7 +251,7 @@ def FieldFormFactory(context=None, request=None):
                     message=_(u'Can\'t use reserved programming word')),
                 unique_variable])
         title = wtforms.StringField(validators=[
-            wtforms.validators.InputRequired()])
+            wtforms.validators.Optional()])
         description = wtforms.StringField(
             widget=wtforms.widgets.TextInput(),
             validators=[wtforms.validators.Optional()])
