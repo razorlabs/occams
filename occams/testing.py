@@ -1,16 +1,7 @@
 """
 Common helper tools for testing
+DO NOT USE IN PRODUCTION
 """
-
-try:
-    import pytest
-except ImportError:
-    import warnings
-    warnings.warn(
-        'Attempting to import testing module in a non-testing setup',
-        warnings.ImportWarning)
-    pass
-
 
 USERID = 'test_user'
 
