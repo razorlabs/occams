@@ -57,7 +57,7 @@ class TestGenerator:
         It should create an unregisterd site when generating an OUR number
         """
         from occams_roster import generate, models, OUR_PATTERN
-        res = generate(u'AEH')
+        res = generate(db_session, u'AEH')
         assert OUR_PATTERN.match(res)
         assert 1 == db_session.query(models.Site).count()
 
@@ -69,7 +69,7 @@ class TestGenerator:
         db_session.add(models.Site(title=u'AEH'))
         db_session.flush()
 
-        res = generate(u'AEH')
+        res = generate(db_session, u'AEH')
         assert OUR_PATTERN.match(res)
         assert 1 == db_session.query(models.Site).count()
 
@@ -80,7 +80,7 @@ class TestGenerator:
         from occams_roster import generate, models, OUR_PATTERN
         # eventually it will create an invalid one and mark is as invactive
         for i in range(100):
-            generate(u'AEH')
+            generate(db_session, u'AEH')
         invalids_query = (
             db_session.query(models.Identifier)
             .filter_by(is_active=False))
