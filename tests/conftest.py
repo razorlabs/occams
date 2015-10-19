@@ -70,16 +70,12 @@ def create_tables(request):
     from sqlalchemy import create_engine
     from occams_datastore import models as datastore
     from occams_studies import models
-    from occams_roster import models as roster, Session as RosterSession
 
     db_url = request.config.getoption('--db')
     reuse = request.config.getoption('--reuse')
 
     engine = create_engine(db_url)
     url = engine.url
-
-    RosterSession.configure(bind=create_engine('sqlite://'))
-    roster.Base.metadata.create_all(RosterSession.bind)
 
     if not reuse:
         # This is very similar to the init_db script: create tables
@@ -202,10 +198,13 @@ def wsgi(request):
 
     :returns: a WSGI application
     """
+    import os
     import tempfile
     import shutil
+    import sqlalchemy as sa
     import six
     from occams import main
+    from occams_roster import models as roster
 
     # The pyramid_who plugin requires a who file, so let's create a
     # barebones files for it...
@@ -224,6 +223,12 @@ def wsgi(request):
 
     tmp_dir = tempfile.mkdtemp()
 
+    roster_path = os.path.join(tmp_dir, 'roster.db')
+    roster_url = 'sqlite:///{}'.format(roster_path)
+
+    roster_engine = sa.create_engine(roster_url)
+    roster.Base.metadata.create_all(roster_engine)
+
     wsgi = main({}, **{
         'redis.url': REDIS_URL,
         'redis.sessions.secret': 'sekrit',
@@ -237,7 +242,7 @@ def wsgi(request):
 
         'webassets.debug': True,
 
-        'occams.apps': 'occams_studies',
+        'occams.apps': ['occams_studies', 'occams_roster'],
 
         'occams.db.url': db_url,
         'occams.groups': [],
@@ -247,15 +252,16 @@ def wsgi(request):
         'celery.blame': 'celery@localhost',
 
         'studies.export.dir': '/tmp',
-        'studies.pid.package': 'occams.roster',
+        'studies.pid.package': 'occams_roster',
         'studies.blob.dir': '/tmp',
 
-        'roster.db.url': 'sqlite://',
+        'roster.db.url': roster_url,
     })
 
     who_ini.close()
 
     def cleanup():
+        os.unlink(roster_path)
         shutil.rmtree(tmp_dir)
 
     request.addfinalizer(cleanup)

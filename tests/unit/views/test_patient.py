@@ -331,7 +331,7 @@ class TestEditJson:
             generate.return_value = u'12345'
             res = self._call_fut(models.PatientFactory(req), req)
 
-        generate.assert_called_with(site_la.name)
+        assert generate.called
         assert check_csrf_token.called
         assert u'12345' == res['pid']
         assert site_la.id == res['site']['id']
