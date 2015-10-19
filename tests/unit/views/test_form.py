@@ -1,48 +1,39 @@
-from tests import IntegrationFixture
+class TestListJSON:
 
-
-class TestListJSON(IntegrationFixture):
-
-    def _call_view(self, context, request):
+    def _call_fut(self, *args, **kw):
         from occams_forms.views.form import list_json
-        return list_json(context, request)
+        return list_json(*args, **kw)
 
-    def test_empty(self):
+    def test_empty(self, req, db_session):
         """
         It should return an empty list if there are no schemata in the system
         """
-        from pyramid import testing
         from occams_forms import models
-        request = testing.DummyRequest()
-        result = self._call_view(models.FormFactory(request), request)
-        self.assertEqual([], result['forms'])
+        res = self._call_fut(models.FormFactory(req), req)
+        assert res['forms'] == []
 
-    def test_not_empty(self):
+    def test_not_empty(self, req, db_session):
         """
         It should return a listing of schemata with links to each version
         """
         from datetime import date
-        from pyramid import testing
-        from occams_forms import Session, models
+        from occams_forms import models
 
-        self.config.add_route('forms.version', '/versions/{version}')
-
-        Session.add(models.Schema(
+        db_session.add(models.Schema(
             name=u'sample',
             title=u'Sample',
             publish_date=date(2014, 6, 1)
         ))
-        Session.flush()
+        db_session.flush()
 
-        request = testing.DummyRequest()
-        result = self._call_view(models.FormFactory(request), request)
+        res = self._call_fut(models.FormFactory(req), req)
 
-        self.assertEqual(1, len(result['forms']))
+        assert 1 == len(res['forms'])
 
-        record = result['forms'][0]
-        self.assertEqual('sample', record['name'])
-        self.assertEqual(False, record['has_private'])
-        self.assertEqual('Sample', record['title'])
+        record = res['forms'][0]
+        assert 'sample' == record['name']
+        assert False == record['has_private']
+        assert 'Sample' == record['title']
 
         versions = record['versions']
-        self.assertEqual('2014-06-01', versions[0]['publish_date'])
+        assert '2014-06-01' == versions[0]['publish_date']

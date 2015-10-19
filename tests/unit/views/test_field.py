@@ -1,24 +1,27 @@
-import mock
-
-from tests import IntegrationFixture
+import pytest
 
 
-class TestListJSON(IntegrationFixture):
+@pytest.yield_fixture
+def check_csrf_token():
+    import mock
+    name = 'occams_forms.views.field.check_csrf_token'
+    with mock.patch(name) as patch:
+        yield patch
 
-    def _call_view(self, context, request):
+
+class TestListJSON:
+
+    def _call_fut(self, *args, **kw):
         from occams_forms.views.field import list_json
-        return list_json(context, request)
+        return list_json(*args, **kw)
 
-    def test_basic(self):
+    def test_basic(self, req, db_session):
         """
         It should return a listing of a form's attributes and sections
         """
         from datetime import date
-        from pyramid import testing
-        from occams_forms import Session, models
-        self.config.add_route('forms.fields', '/fields')
-        self.config.add_route('forms.field', '/field/{field}')
-        Session.add(models.Schema(
+        from occams_forms import models
+        db_session.add(models.Schema(
             name=u'myform',
             title=u'My Form',
             publish_date=date(2014, 7, 1),
@@ -39,28 +42,25 @@ class TestListJSON(IntegrationFixture):
                             title=u'My Sub Field',
                             type=u'string',
                             order=2)})}))
-        Session.flush()
-        request = testing.DummyRequest()
-        response = self._call_view(
-            models.FormFactory(request)['myform']['versions']['2014-07-01']['fields'],
-            request)
-        self.assertIn('fields', response)
+        db_session.flush()
+        res = self._call_fut(
+            models.FormFactory(req)['myform']['versions']['2014-07-01']['fields'],
+            req)
+        assert 'fields' in res
 
 
-class TestViewJSON(IntegrationFixture):
+class TestViewJSON:
 
-    def _call_view(self, context, request):
+    def _call_fut(self, *args, **kw):
         from occams_forms.views.field import view_json
-        return view_json(context, request)
+        return view_json(*args, **kw)
 
-    def test_basic(self):
+    def test_basic(self, req, db_session):
         """
         It should return the attribute's properties in JSON form
         """
         from datetime import date
-        from pyramid import testing
-        from occams_forms import Session, models
-        self.config.add_route('forms.field', '/field/{field}')
+        from occams_forms import models
         schema = models.Schema(
             name=u'myform',
             title=u'My Form',
@@ -71,28 +71,25 @@ class TestViewJSON(IntegrationFixture):
                     title=u'My Field',
                     type=u'string',
                     order=0)})
-        Session.add(schema)
-        Session.flush()
-        response = self._call_view(
-            schema.attributes['myfield'],
-            testing.DummyRequest())
-        self.assertEqual('myfield', response['name'])
+        db_session.add(schema)
+        db_session.flush()
+        res = self._call_fut(schema.attributes['myfield'], req)
+        assert 'myfield' == res['name']
 
 
-@mock.patch('occams_forms.views.field.check_csrf_token')
-class TestEditJSON(IntegrationFixture):
+class TestEditJSON:
 
-    def _call_view(self, context, request):
+    def _call_fut(self, *args, **kw):
         from occams_forms.views.field import edit_json as view
-        return view(context, request)
+        return view(*args, **kw)
 
-    def test_add_duplicate_variable_name(self, check_csrf_token):
+    def test_add_duplicate_variable_name(
+            self, req, db_session, check_csrf_token):
         """
         It should make sure the variable name is not repeated
         """
-        from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_forms import models, Session
+        from occams_forms import models
 
         schema = models.Schema(
             name='testform',
@@ -104,24 +101,23 @@ class TestEditJSON(IntegrationFixture):
                     type='string',
                     order=0)
                 })
-        Session.add(schema)
-        Session.flush()
+        db_session.add(schema)
+        db_session.flush()
 
-        request = testing.DummyRequest(json_body={'name': 'myvar'})
+        req.json_body = {'name': 'myvar'}
 
-        with self.assertRaises(HTTPBadRequest) as cm:
-            self._call_view(schema['fields'], request)
-        self.assertTrue(check_csrf_token.called)
-        self.assertIn(
-            'name already exists', cm.exception.json['errors']['name'].lower())
+        with pytest.raises(HTTPBadRequest) as excinfo:
+            self._call_fut(schema['fields'], req)
+        assert check_csrf_token.called
+        assert 'name already exists' in \
+            excinfo.value.json['errors']['name'].lower()
 
-    def test_add_section_into_section(self, check_csrf_token):
+    def test_add_section_into_section(self, req, db_session, check_csrf_token):
         """
         It should not allow adding a new section into a another section
         """
-        from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_forms import models, Session
+        from occams_forms import models
 
         schema = models.Schema(
             name='testform',
@@ -133,29 +129,28 @@ class TestEditJSON(IntegrationFixture):
                     type='section',
                     order=0)
                 })
-        Session.add(schema)
-        Session.flush()
+        db_session.add(schema)
+        db_session.flush()
 
-        request = testing.DummyRequest(json_body={
+        req.json_body = {
             'target': 'section1',
             'name': 'section2',
             'title': u'Section 2',
-            'type': 'section'})
+            'type': 'section'
+        }
 
-        with self.assertRaises(HTTPBadRequest) as cm:
-            self._call_view(schema['fields'], request)
+        with pytest.raises(HTTPBadRequest) as excinfo:
+            self._call_fut(schema['fields'], req)
 
-        self.assertIn(
-            'nested sections are not supported',
-            cm.exception.json['errors']['target'].lower())
+        assert 'nested sections are not supported' in \
+            excinfo.value.json['errors']['target'].lower()
 
 
-@mock.patch('occams_forms.views.field.check_csrf_token')
-class TestMoveJSON(IntegrationFixture):
+class TestMoveJSON:
 
-    def _call_view(self, context, request):
+    def _call_fut(self, *args, **kw):
         from occams_forms.views.field import move_json as view
-        return view(context, request)
+        return view(*args, **kw)
 
     def _comparable(self, schema):
         """
@@ -166,12 +161,11 @@ class TestMoveJSON(IntegrationFixture):
                  a.order
                  ) for a in schema.iterlist()]
 
-    def test_from_section_to_schema(self, check_csrf_token):
+    def test_from_section_to_schema(self, req, db_session, check_csrf_token):
         """
         It should be able to move a field from a section to the root
         """
-        from pyramid import testing
-        from occams_forms import models, Session
+        from occams_forms import models
 
         schema = models.Schema(
             name='testform',
@@ -190,26 +184,24 @@ class TestMoveJSON(IntegrationFixture):
                         },
                     order=0)
                 })
-        Session.add(schema)
-        Session.flush()
+        db_session.add(schema)
+        db_session.flush()
 
-        request = testing.DummyRequest(json_body={
+        req.json_body = {
             'target': None,
             'index': 1
-        })
+        }
 
-        self._call_view(schema.attributes['myvar'], request)
+        self._call_fut(schema.attributes['myvar'], req)
 
-        self.assertEqual(
-            [(None, 'section1', 0), (None, 'myvar', 1)],
-            self._comparable(schema))
+        assert sorted([(None, 'section1', 0), (None, 'myvar', 1)]) == \
+            sorted(self._comparable(schema))
 
-    def test_from_section_to_section(self, check_csrf_token):
+    def test_from_section_to_section(self, req, db_session, check_csrf_token):
         """
         It should be able to move a field from a section to another
         """
-        from pyramid import testing
-        from occams_forms import models, Session
+        from occams_forms import models
 
         schema = models.Schema(
             name='testform',
@@ -233,28 +225,27 @@ class TestMoveJSON(IntegrationFixture):
                     type='section',
                     order=2)
                 })
-        Session.add(schema)
-        Session.flush()
+        db_session.add(schema)
+        db_session.flush()
 
-        request = testing.DummyRequest(json_body={
+        req.json_body = {
             'target': 'section2',
             'index': 0
-        })
+        }
 
-        self._call_view(schema.attributes['myvar'], request)
+        self._call_fut(schema.attributes['myvar'], req)
 
-        self.assertEqual(
-            [(None, 'section1', 0),
-             (None, 'section2', 1),
-             ('section2', 'myvar', 2)],
-            self._comparable(schema))
+        assert sorted([
+            (None, 'section1', 0),
+            (None, 'section2', 1),
+            ('section2', 'myvar', 2)]) == \
+            sorted(self._comparable(schema))
 
-    def test_from_within_section(self, check_csrf_token):
+    def test_from_within_section(self, req, db_session, check_csrf_token):
         """
         It should be able to move a field within a section
         """
-        from pyramid import testing
-        from occams_forms import models, Session
+        from occams_forms import models
 
         schema = models.Schema(
             name='testform',
@@ -278,18 +269,18 @@ class TestMoveJSON(IntegrationFixture):
                         },
                     order=0),
                 })
-        Session.add(schema)
-        Session.flush()
+        db_session.add(schema)
+        db_session.flush()
 
-        request = testing.DummyRequest(json_body={
+        req.json_body = {
             'target': 'section1',
             'index': 1
-        })
+        }
 
-        self._call_view(schema.attributes['myvar'], request)
+        self._call_fut(schema.attributes['myvar'], req)
 
-        self.assertEqual(
-            [(None, 'section1', 0),
-             ('section1', 'myfoo', 1),
-             ('section1', 'myvar', 2)],
-            self._comparable(schema))
+        assert sorted([
+            (None, 'section1', 0),
+            ('section1', 'myfoo', 1),
+            ('section1', 'myvar', 2)]) == \
+            sorted(self._comparable(schema))

@@ -1,31 +1,28 @@
-from ddt import ddt, data
-from tests import FunctionalFixture, USERID
+import pytest
+
+from occams.testing import USERID, make_environ, get_csrf_token
 
 
-@ddt
-class TestPermissionForms(FunctionalFixture):
+class TestPermissionForms:
     ALL_ALLOWED = ('administrator', 'manager', 'editor', None)
     DEFAULT_ALLOWED = ('administrator', 'manager', 'editor')
     DEFAULT_NOT_ALLOWED = ('enterer', 'reviewer', 'member')
     ALLOWED_NO_EDITOR = ('administrator', 'manager')
     NOT_ALLOWED_W_EDITOR = ('editor', 'enterer', 'reviewer', 'member')
 
-    def setUp(self):
-        super(TestPermissionForms, self).setUp()
-
+    @pytest.fixture(autouse=True)
+    def populate(self, db_session):
         from datetime import date
-
         import transaction
-        from occams import Session
         from occams_datastore import models as datastore
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
             user = datastore.User(key=USERID)
-            Session.info['blame'] = user
-            Session.add(user)
-            Session.flush()
+            db_session.info['blame'] = user
+            db_session.add(user)
+            db_session.flush()
 
             form_published = datastore.Schema(
                 name=u'test_schema',
@@ -38,22 +35,7 @@ class TestPermissionForms(FunctionalFixture):
                 title=u'test_title2',
             )
 
-            Session.add_all([
-                datastore.State(
-                    name=u'pending-entry',
-                    title=u'pending-entry'),
-                datastore.State(
-                    name=u'pending-review',
-                    title=u'pending-review'),
-                datastore.State(
-                    name=u'pending-correction',
-                    title=u'pending-correction'),
-                datastore.State(
-                    name=u'complete',
-                    title=u'complete')
-            ])
-
-            Session.add(datastore.Attribute(
+            db_session.add(datastore.Attribute(
                 name=u'test_field',
                 title=u'test_title',
                 description=u'test_desc',
@@ -62,7 +44,7 @@ class TestPermissionForms(FunctionalFixture):
                 order=0
             ))
 
-            Session.add(datastore.Attribute(
+            db_session.add(datastore.Attribute(
                 name=u'text_box2',
                 title=u'text_box2',
                 description=u'text_box_desc2',
@@ -71,7 +53,7 @@ class TestPermissionForms(FunctionalFixture):
                 order=1
             ))
 
-            Session.add(datastore.Attribute(
+            db_session.add(datastore.Attribute(
                 name=u'test_field2',
                 title=u'test_title2',
                 description=u'test_desc2',
@@ -80,7 +62,7 @@ class TestPermissionForms(FunctionalFixture):
                 order=0
             ))
 
-            Session.add(datastore.Attribute(
+            db_session.add(datastore.Attribute(
                 name=u'text_box2',
                 title=u'text_box2',
                 description=u'text_box_desc2',
@@ -89,44 +71,44 @@ class TestPermissionForms(FunctionalFixture):
                 order=1
             ))
 
-            Session.flush()
+            db_session.flush()
 
     # tests for forms
 
-    @data(*ALL_ALLOWED)
-    def test_forms_view(self, group):
+    @pytest.mark.parametrize('group', ALL_ALLOWED)
+    def test_forms_view(self, app, db_session, group):
         url = '/forms'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get(url, extra_environ=environ)
-        self.assertEquals(200, response.status_code)
+        environ = make_environ(userid=USERID, groups=[group])
+        res = app.get(url, extra_environ=environ)
+        assert 200 == res.status_code
 
-    def test_not_authenticated_forms(self):
+    def test_not_authenticated_forms(self, app, db_session):
         url = '/forms'
-        response = self.app.get(url, status='*')
-        self.assertEquals(401, response.status_code)
+        res = app.get(url, status='*')
+        assert 401 == res.status_code
 
-    @data(*ALL_ALLOWED)
-    def test_forms_view_xhr(self, group):
+    @pytest.mark.parametrize('group', ALL_ALLOWED)
+    def test_forms_view_xhr(self, app, db_session, group):
         url = '/forms'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get(url, extra_environ=environ, xhr=True)
-        self.assertEquals(200, response.status_code)
+        environ = make_environ(userid=USERID, groups=[group])
+        res = app.get(url, extra_environ=environ, xhr=True)
+        assert 200 == res.status_code
 
-    def test_not_authenticated_forms_xhr(self):
+    def test_not_authenticated_forms_xhr(self, app, db_session):
         url = '/forms'
-        response = self.app.get(url, status='*', xhr=True)
-        self.assertEquals(401, response.status_code)
+        res = app.get(url, status='*', xhr=True)
+        assert 401 == res.status_code
 
-    @data(*DEFAULT_ALLOWED)
-    def test_forms_upload_json(self, group):
+    @pytest.mark.parametrize('group', DEFAULT_ALLOWED)
+    def test_forms_upload_json(self, app, db_session, group):
         import json
 
         url = '/forms?files'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
         data = {
             'title': 'OMG',
@@ -135,7 +117,7 @@ class TestPermissionForms(FunctionalFixture):
             "name": 'omg'
         }
 
-        response = self.app.post(
+        res = app.post(
             url,
             extra_environ=environ,
             status='*',
@@ -146,16 +128,16 @@ class TestPermissionForms(FunctionalFixture):
             },
             xhr=True)
 
-        self.assertEquals(200, response.status_code)
+        assert 200 == res.status_code
 
-    @data(*DEFAULT_NOT_ALLOWED)
-    def test_not_allowed_forms_upload_json(self, group):
+    @pytest.mark.parametrize('group', DEFAULT_NOT_ALLOWED)
+    def test_not_allowed_forms_upload_json(self, app, db_session, group):
         import json
 
         url = '/forms?files'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
         data = {
             'title': 'OMG',
@@ -164,7 +146,7 @@ class TestPermissionForms(FunctionalFixture):
             "name": 'omg'
         }
 
-        response = self.app.post(
+        res = app.post(
             url,
             extra_environ=environ,
             status='*',
@@ -175,19 +157,19 @@ class TestPermissionForms(FunctionalFixture):
             },
             xhr=True)
 
-        self.assertEquals(403, response.status_code)
+        assert 403 == res.status_code
 
-    def test_not_authenticated_files_upload(self):
+    def test_not_authenticated_files_upload(self, app, db_session):
         url = '/forms?files'
-        response = self.app.post(url, status='*', xhr=True)
-        self.assertEquals(401, response.status_code)
+        res = app.post(url, status='*', xhr=True)
+        assert 401 == res.status_code
 
-    @data(*DEFAULT_ALLOWED)
-    def test_forms_add_json_validate(self, group):
+    @pytest.mark.parametrize('group', DEFAULT_ALLOWED)
+    def test_forms_add_json_validate(self, app, db_session, group):
         url = '/forms?validate'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
         data = {
             'name': u'test_form',
@@ -197,7 +179,7 @@ class TestPermissionForms(FunctionalFixture):
             'hasVersions': False
         }
 
-        response = self.app.get(
+        res = app.get(
             url,
             extra_environ=environ,
             status='*',
@@ -208,14 +190,14 @@ class TestPermissionForms(FunctionalFixture):
             xhr=True,
             params=data)
 
-        self.assertEquals(200, response.status_code)
+        assert 200 == res.status_code
 
-    @data(*DEFAULT_NOT_ALLOWED)
-    def test_not_allowed_forms_add_json_validate(self, group):
+    @pytest.mark.parametrize('group', DEFAULT_NOT_ALLOWED)
+    def test_not_allowed_forms_add_json_validate(self, app, db_session, group):
         url = '/forms?validate'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
         data = {
             'name': u'test_form',
@@ -225,7 +207,7 @@ class TestPermissionForms(FunctionalFixture):
             'hasVersions': False
         }
 
-        response = self.app.get(
+        res = app.get(
             url,
             extra_environ=environ,
             status='*',
@@ -236,20 +218,20 @@ class TestPermissionForms(FunctionalFixture):
             xhr=True,
             params=data)
 
-        self.assertEquals(403, response.status_code)
+        assert 403 == res.status_code
 
-    def test_not_authenticated_validate_field(self):
+    def test_not_authenticated_validate_field(self, app, db_session):
         url = '/forms?validate'
 
-        response = self.app.get(url, status='*', xhr=True)
-        self.assertEquals(401, response.status_code)
+        res = app.get(url, status='*', xhr=True)
+        assert 401 == res.status_code
 
-    @data(*DEFAULT_ALLOWED)
-    def test_forms_add(self, group):
+    @pytest.mark.parametrize('group', DEFAULT_ALLOWED)
+    def test_forms_add(self, app, db_session, group):
         url = '/forms'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
         data = {
             'name': 'test_form',
@@ -259,7 +241,7 @@ class TestPermissionForms(FunctionalFixture):
             'hasVersions': False
         }
 
-        response = self.app.post_json(
+        res = app.post_json(
             url,
             extra_environ=environ,
             status='*',
@@ -269,14 +251,14 @@ class TestPermissionForms(FunctionalFixture):
             },
             params=data)
 
-        self.assertEquals(200, response.status_code)
+        assert 200 == res.status_code
 
-    @data(*DEFAULT_NOT_ALLOWED)
-    def test_not_allowed_forms_add(self, group):
+    @pytest.mark.parametrize('group', DEFAULT_NOT_ALLOWED)
+    def test_not_allowed_forms_add(self, app, db_session, group):
         url = '/forms'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
         data = {
             'name': 'test_form',
@@ -286,7 +268,7 @@ class TestPermissionForms(FunctionalFixture):
             'hasVersions': False
         }
 
-        response = self.app.post_json(
+        res = app.post_json(
             url,
             extra_environ=environ,
             status='*',
@@ -296,113 +278,113 @@ class TestPermissionForms(FunctionalFixture):
             },
             params=data)
 
-        self.assertEquals(403, response.status_code)
+        assert 403 == res.status_code
 
-    def test_not_authenticated_forms_add(self):
+    def test_not_authenticated_forms_add(self, app, db_session):
         url = '/forms'
-        response = self.app.post_json(url, status='*')
-        self.assertEquals(401, response.status_code)
+        res = app.post_json(url, status='*')
+        assert 401 == res.status_code
 
     # tests for workflows
 
-    @data(*ALL_ALLOWED)
-    def test_forms_workflows(self, group):
+    @pytest.mark.parametrize('group', ALL_ALLOWED)
+    def test_forms_workflows(self, app, db_session, group):
         url = '/forms/workflows/default'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get(url, extra_environ=environ)
-        self.assertEquals(200, response.status_code)
+        environ = make_environ(userid=USERID, groups=[group])
+        res = app.get(url, extra_environ=environ)
+        assert 200 == res.status_code
 
-    def test_not_authenticated_workflows_default(self):
+    def test_not_authenticated_workflows_default(self, app, db_session):
         url = '/forms/workflows/default'
-        response = self.app.get(url, status='*')
-        self.assertEquals(401, response.status_code)
+        res = app.get(url, status='*')
+        assert 401 == res.status_code
 
     # test for versions
 
-    @data(*ALL_ALLOWED)
-    def test_forms_versions(self, group):
+    @pytest.mark.parametrize('group', ALL_ALLOWED)
+    def test_forms_versions(self, app, db_session, group):
         url = '/forms/test_schema/versions/2015-01-01'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get(url, extra_environ=environ)
-        self.assertEquals(200, response.status_code)
+        environ = make_environ(userid=USERID, groups=[group])
+        res = app.get(url, extra_environ=environ)
+        assert 200 == res.status_code
 
-    def test_not_authenticated_versions(self):
+    def test_not_authenticated_versions(self, app, db_session):
         url = '/forms/test_schema/versions/2015-01-01'
-        response = self.app.get(url, status='*')
-        self.assertEquals(401, response.status_code)
+        res = app.get(url, status='*')
+        assert 401 == res.status_code
 
-    @data(*ALL_ALLOWED)
-    def test_forms_versions_xhr(self, group):
+    @pytest.mark.parametrize('group', ALL_ALLOWED)
+    def test_forms_versions_xhr(self, app, db_session, group):
         # test same url with xhr
         url = '/forms/test_schema/versions/2015-01-01'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get(url, extra_environ=environ, xhr=True)
-        self.assertEquals(200, response.status_code)
+        environ = make_environ(userid=USERID, groups=[group])
+        res = app.get(url, extra_environ=environ, xhr=True)
+        assert 200 == res.status_code
 
-    def test_not_authenticated_versions_xhr(self):
+    def test_not_authenticated_versions_xhr(self, app, db_session):
         url = '/forms/test_schema/versions/2015-01-01'
-        response = self.app.get(url, status='*', xhr=True)
-        self.assertEquals(401, response.status_code)
+        res = app.get(url, status='*', xhr=True)
+        assert 401 == res.status_code
 
-    @data(*ALL_ALLOWED)
-    def test_forms_versions_download_json(self, group):
+    @pytest.mark.parametrize('group', ALL_ALLOWED)
+    def test_forms_versions_download_json(self, app, db_session, group):
         url = '/forms/test_schema/versions/2015-01-01?download=json'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get(url, extra_environ=environ)
-        self.assertEquals(200, response.status_code)
+        environ = make_environ(userid=USERID, groups=[group])
+        res = app.get(url, extra_environ=environ)
+        assert 200 == res.status_code
 
-    def test_not_authenticated_versions_download_json(self):
+    def test_not_authenticated_versions_download_json(self, app, db_session):
         url = '/forms/test_schema/versions/2015-01-01?download=json'
-        response = self.app.get(url, status='*')
-        self.assertEquals(401, response.status_code)
+        res = app.get(url, status='*')
+        assert 401 == res.status_code
 
     # tests for versions preview
 
-    @data(*ALL_ALLOWED)
-    def test_forms_versions_preview(self, group):
+    @pytest.mark.parametrize('group', ALL_ALLOWED)
+    def test_forms_versions_preview(self, app, db_session, group):
         url = '/forms/test_schema/versions/2015-01-01/preview'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get(url, extra_environ=environ)
-        self.assertEquals(200, response.status_code)
+        environ = make_environ(userid=USERID, groups=[group])
+        res = app.get(url, extra_environ=environ)
+        assert 200 == res.status_code
 
-    def test_not_authenticated_preview(self):
+    def test_not_authenticated_preview(self, app, db_session):
         url = '/forms/test_schema/versions/2015-01-01/preview'
-        response = self.app.get(url, status='*')
-        self.assertEquals(401, response.status_code)
+        res = app.get(url, status='*')
+        assert 401 == res.status_code
 
-    @data(*ALL_ALLOWED)
-    def test_forms_versions_preview_post(self, group):
+    @pytest.mark.parametrize('group', ALL_ALLOWED)
+    def test_forms_versions_preview_post(self, app, db_session, group):
         url = '/forms/test_schema/versions/2015-01-01/preview'
 
         data = {}
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.post(
+        environ = make_environ(userid=USERID, groups=[group])
+        res = app.post(
             url,
             extra_environ=environ,
             status='*',
             params=data)
 
-        self.assertEquals(200, response.status_code)
+        assert 200 == res.status_code
 
-    def test_not_authenticated_preview_post(self):
+    def test_not_authenticated_preview_post(self, app, db_session):
         url = '/forms/test_schema/versions/2015-01-01/preview'
-        response = self.app.post(url, status='*')
-        self.assertEquals(401, response.status_code)
+        res = app.post(url, status='*')
+        assert 401 == res.status_code
 
     # tests for version edit
 
-    @data(*ALLOWED_NO_EDITOR)
-    def test_forms_versions_edit(self, group):
+    @pytest.mark.parametrize('group', ALLOWED_NO_EDITOR)
+    def test_forms_versions_edit(self, app, db_session, group):
         url = '/forms/test_schema/versions/2015-01-01'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
         data = {
             '__url__': url,
@@ -414,7 +396,7 @@ class TestPermissionForms(FunctionalFixture):
             'publish_date': '2015-01-01'
         }
 
-        response = self.app.put_json(
+        res = app.put_json(
             url,
             extra_environ=environ,
             status='*',
@@ -424,14 +406,14 @@ class TestPermissionForms(FunctionalFixture):
             },
             params=data)
 
-        self.assertEquals(200, response.status_code)
+        assert 200 == res.status_code
 
-    @data(*NOT_ALLOWED_W_EDITOR)
-    def test_not_allowed_forms_versions_edit(self, group):
+    @pytest.mark.parametrize('group', NOT_ALLOWED_W_EDITOR)
+    def test_not_allowed_forms_versions_edit(self, app, db_session, group):
         url = '/forms/test_schema/versions/2015-01-01'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
         data = {
             '__url__': url,
@@ -443,7 +425,7 @@ class TestPermissionForms(FunctionalFixture):
             'publish_date': '2015-01-01'
         }
 
-        response = self.app.put_json(
+        res = app.put_json(
             url,
             extra_environ=environ,
             status='*',
@@ -453,24 +435,23 @@ class TestPermissionForms(FunctionalFixture):
             },
             params=data)
 
-        self.assertEquals(403, response.status_code)
+        assert 403 == res.status_code
 
-    def test_not_authenticated_versions_edit(self):
+    def test_not_authenticated_versions_edit(self, app, db_session):
         url = '/forms/test_schema/versions/2015-01-01'
-        response = self.app.put_json(url, status='*')
-        self.assertEquals(401, response.status_code)
+        res = app.put_json(url, status='*')
+        assert 401 == res.status_code
 
-    @data(*DEFAULT_ALLOWED)
-    def test_forms_versions_edit_unpublished(self, group):
-        from occams import Session
+    @pytest.mark.parametrize('group', DEFAULT_ALLOWED)
+    def test_forms_versions_edit_unpublished(self, app, db_session, group):
         from occams_datastore import models as datastore
 
         url = '/forms/test_schema2/versions/{}'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
-        form_id = Session.query(datastore.Schema.id).filter(
+        form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema2').scalar()
 
         data = {
@@ -483,7 +464,7 @@ class TestPermissionForms(FunctionalFixture):
             'publish_date': '2015-01-01'
         }
 
-        response = self.app.put_json(
+        res = app.put_json(
             url.format(form_id),
             extra_environ=environ,
             status='*',
@@ -493,19 +474,19 @@ class TestPermissionForms(FunctionalFixture):
             },
             params=data)
 
-        self.assertEquals(200, response.status_code)
+        assert 200 == res.status_code
 
-    @data(*DEFAULT_NOT_ALLOWED)
-    def test_not_allowed_forms_versions_edit_unpublished(self, group):
-        from occams import Session
+    @pytest.mark.parametrize('group', DEFAULT_NOT_ALLOWED)
+    def test_not_allowed_forms_versions_edit_unpublished(
+            self, app, db_session, group):
         from occams_datastore import models as datastore
 
         url = '/forms/test_schema2/versions/{}'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
-        form_id = Session.query(datastore.Schema.id).filter(
+        form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema2').scalar()
 
         data = {
@@ -518,7 +499,7 @@ class TestPermissionForms(FunctionalFixture):
             'publish_date': '2015-01-01'
         }
 
-        response = self.app.put_json(
+        res = app.put_json(
             url.format(form_id),
             extra_environ=environ,
             status='*',
@@ -528,26 +509,26 @@ class TestPermissionForms(FunctionalFixture):
             },
             params=data)
 
-        self.assertEquals(403, response.status_code)
+        assert 403 == res.status_code
 
-    def test_not_authenticated_versions_edit_unpublished(self):
-        from occams import Session
+    def test_not_authenticated_versions_edit_unpublished(
+            self, app, db_session):
         from occams_datastore import models as datastore
 
         url = '/forms/test_schema2/versions/{}'
 
-        form_id = Session.query(datastore.Schema.id).filter(
+        form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema2').scalar()
 
-        response = self.app.put_json(url.format(form_id), status='*')
-        self.assertEquals(401, response.status_code)
+        res = app.put_json(url.format(form_id), status='*')
+        assert 401 == res.status_code
 
-    @data(*ALLOWED_NO_EDITOR)
-    def test_forms_versions_edit_publish(self, group):
+    @pytest.mark.parametrize('group', ALLOWED_NO_EDITOR)
+    def test_forms_versions_edit_publish(self, app, db_session, group):
         url = '/forms/test_schema/versions/2015-01-01?publish'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
         data = {
             '__url__': url,
@@ -559,7 +540,7 @@ class TestPermissionForms(FunctionalFixture):
             'publish_date': '2015-01-01'
         }
 
-        response = self.app.put_json(
+        res = app.put_json(
             url,
             extra_environ=environ,
             status='*',
@@ -569,14 +550,15 @@ class TestPermissionForms(FunctionalFixture):
             },
             params=data)
 
-        self.assertEquals(200, response.status_code)
+        assert 200 == res.status_code
 
-    @data(*NOT_ALLOWED_W_EDITOR)
-    def test_not_allowed_forms_versions_edit_publish(self, group):
+    @pytest.mark.parametrize('group', NOT_ALLOWED_W_EDITOR)
+    def test_not_allowed_forms_versions_edit_publish(
+            self, app, db_session, group):
         url = '/forms/test_schema/versions/2015-01-01?publish'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
         data = {
             '__url__': url,
@@ -588,7 +570,7 @@ class TestPermissionForms(FunctionalFixture):
             'publish_date': '2015-01-01'
         }
 
-        response = self.app.put_json(
+        res = app.put_json(
             url,
             extra_environ=environ,
             status='*',
@@ -598,19 +580,19 @@ class TestPermissionForms(FunctionalFixture):
             },
             params=data)
 
-        self.assertEquals(403, response.status_code)
+        assert 403 == res.status_code
 
-    def test_not_authenticated_versions_edit_publish(self):
+    def test_not_authenticated_versions_edit_publish(self, app, db_session):
         url = '/forms/test_schema/versions/2015-01-01?publish'
-        response = self.app.put_json(url, status='*')
-        self.assertEquals(401, response.status_code)
+        res = app.put_json(url, status='*')
+        assert 401 == res.status_code
 
-    @data(*DEFAULT_ALLOWED)
-    def test_forms_versions_post_draft(self, group):
+    @pytest.mark.parametrize('group', DEFAULT_ALLOWED)
+    def test_forms_versions_post_draft(self, app, db_session, group):
         url = '/forms/test_schema/versions/2015-01-01?draft'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
         data = {
             '__url__': url,
@@ -622,7 +604,7 @@ class TestPermissionForms(FunctionalFixture):
             'publish_date': '2015-01-01'
         }
 
-        response = self.app.post(
+        res = app.post(
             url,
             extra_environ=environ,
             status='*',
@@ -633,14 +615,15 @@ class TestPermissionForms(FunctionalFixture):
             xhr=True,
             params=data)
 
-        self.assertEquals(200, response.status_code)
+        assert 200 == res.status_code
 
-    @data(*DEFAULT_NOT_ALLOWED)
-    def test_not_allowed_forms_versions_post_draft(self, group):
+    @pytest.mark.parametrize('group', DEFAULT_NOT_ALLOWED)
+    def test_not_allowed_forms_versions_post_draft(
+            self, app, db_session, group):
         url = '/forms/test_schema/versions/2015-01-01?draft'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
         data = {
             '__url__': url,
@@ -652,7 +635,7 @@ class TestPermissionForms(FunctionalFixture):
             'publish_date': '2015-01-01'
         }
 
-        response = self.app.post(
+        res = app.post(
             url,
             extra_environ=environ,
             status='*',
@@ -663,90 +646,89 @@ class TestPermissionForms(FunctionalFixture):
             xhr=True,
             params=data)
 
-        self.assertEquals(403, response.status_code)
+        assert 403 == res.status_code
 
-    def test_not_authenticated_versions_post_draft(self):
+    def test_not_authenticated_versions_post_draft(self, app, db_session):
         url = '/forms/test_schema/versions/2015-01-01?draft'
-        response = self.app.post(url, status='*')
-        self.assertEquals(401, response.status_code)
+        res = app.post(url, status='*')
+        assert 401 == res.status_code
 
     # test forms version editor
 
-    @data(*ALLOWED_NO_EDITOR)
-    def test_forms_versions_editor(self, group):
+    @pytest.mark.parametrize('group', ALLOWED_NO_EDITOR)
+    def test_forms_versions_editor(self, app, db_session, group):
         url = '/forms/test_schema/versions/2015-01-01/editor'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.get(url, extra_environ=environ, status='*')
-        self.assertEquals(200, response.status_code)
+        environ = make_environ(userid=USERID, groups=[group])
+        res = app.get(url, extra_environ=environ, status='*')
+        assert 200 == res.status_code
 
-    @data(*NOT_ALLOWED_W_EDITOR)
-    def test_not_allowed_forms_versions_editor(self, group):
+    @pytest.mark.parametrize('group', NOT_ALLOWED_W_EDITOR)
+    def test_not_allowed_forms_versions_editor(self, app, db_session, group):
         url = '/forms/test_schema/versions/2015-01-01/editor'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        response = self.app.delete(url, extra_environ=environ, status='*')
-        self.assertEquals(403, response.status_code)
+        environ = make_environ(userid=USERID, groups=[group])
+        res = app.delete(url, extra_environ=environ, status='*')
+        assert 403 == res.status_code
 
-    def test_not_authenticated_versions_editor(self):
+    def test_not_authenticated_versions_editor(self, app, db_session):
         url = '/forms/test_schema/versions/2015-01-01/editor'
-        response = self.app.get(url, status='*')
-        self.assertEquals(401, response.status_code)
+        res = app.get(url, status='*')
+        assert 401 == res.status_code
 
-    @data(*DEFAULT_ALLOWED)
-    def test_forms_versions_editor_unpublished(self, group):
-        from occams import Session
+    @pytest.mark.parametrize('group', DEFAULT_ALLOWED)
+    def test_forms_versions_editor_unpublished(self, app, db_session, group):
         from occams_datastore import models as datastore
 
         url = '/forms/test_schema2/versions/{}/editor'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
+        environ = make_environ(userid=USERID, groups=[group])
 
-        form_id = Session.query(datastore.Schema.id).filter(
+        form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema2').scalar()
 
-        response = self.app.get(
+        res = app.get(
             url.format(form_id), extra_environ=environ, status='*')
 
-        self.assertEquals(200, response.status_code)
+        assert 200 == res.status_code
 
-    @data(*DEFAULT_NOT_ALLOWED)
-    def test_not_allowed_forms_versions_editor_unpublished(self, group):
-        from occams import Session
+    @pytest.mark.parametrize('group', DEFAULT_NOT_ALLOWED)
+    def test_not_allowed_forms_versions_editor_unpublished(
+            self, app, db_session, group):
         from occams_datastore import models as datastore
 
         url = '/forms/test_schema2/versions/{}/editor'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
+        environ = make_environ(userid=USERID, groups=[group])
 
-        form_id = Session.query(datastore.Schema.id).filter(
+        form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema2').scalar()
 
-        response = self.app.get(
+        res = app.get(
             url.format(form_id), extra_environ=environ, status='*')
 
-        self.assertEquals(403, response.status_code)
+        assert 403 == res.status_code
 
-    def test_not_authenticated_versions_editor_unpublished(self):
-        from occams import Session
+    def test_not_authenticated_versions_editor_unpublished(
+            self, app, db_session):
         from occams_datastore import models as datastore
 
         url = '/forms/test_schema2/versions/{}/editor'
 
-        form_id = Session.query(datastore.Schema.id).filter(
+        form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema2').scalar()
 
-        response = self.app.get(url.format(form_id), status='*')
-        self.assertEquals(401, response.status_code)
+        res = app.get(url.format(form_id), status='*')
+        assert 401 == res.status_code
 
     # test forms version delete
 
-    @data(*ALLOWED_NO_EDITOR)
-    def test_forms_versions_delete(self, group):
+    @pytest.mark.parametrize('group', ALLOWED_NO_EDITOR)
+    def test_forms_versions_delete(self, app, db_session, group):
         url = '/forms/test_schema/versions/2015-01-01'
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
-        response = self.app.delete(
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
+        res = app.delete(
             url,
             extra_environ=environ,
             xhr=True,
@@ -757,14 +739,14 @@ class TestPermissionForms(FunctionalFixture):
             }
         )
 
-        self.assertEquals(200, response.status_code)
+        assert 200 == res.status_code
 
-    @data(*NOT_ALLOWED_W_EDITOR)
-    def test_not_allowed_forms_versions_delete(self, group):
+    @pytest.mark.parametrize('group', NOT_ALLOWED_W_EDITOR)
+    def test_not_allowed_forms_versions_delete(self, app, db_session, group):
         url = '/forms/test_schema/versions/2015-01-01'
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
-        response = self.app.delete(
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
+        res = app.delete(
             url,
             extra_environ=environ,
             xhr=True,
@@ -775,26 +757,25 @@ class TestPermissionForms(FunctionalFixture):
             }
         )
 
-        self.assertEquals(403, response.status_code)
+        assert 403 == res.status_code
 
-    def test_not_authenticated_versions_delete(self):
+    def test_not_authenticated_versions_delete(self, app, db_session):
         url = '/forms/test_schema/versions/2015-01-01'
-        response = self.app.delete(url, status='*')
-        self.assertEquals(401, response.status_code)
+        res = app.delete(url, status='*')
+        assert 401 == res.status_code
 
-    @data(*DEFAULT_ALLOWED)
-    def test_forms_versions_delete_unpublished(self, group):
-        from occams import Session
+    @pytest.mark.parametrize('group', DEFAULT_ALLOWED)
+    def test_forms_versions_delete_unpublished(self, app, db_session, group):
         from occams_datastore import models as datastore
 
         url = '/forms/test_schema2/versions/{}'
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
-        form_id = Session.query(datastore.Schema.id).filter(
+        form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema2').scalar()
 
-        response = self.app.delete(
+        res = app.delete(
             url.format(form_id),
             extra_environ=environ,
             xhr=True,
@@ -805,21 +786,21 @@ class TestPermissionForms(FunctionalFixture):
             }
         )
 
-        self.assertEquals(200, response.status_code)
+        assert 200 == res.status_code
 
-    @data(*DEFAULT_NOT_ALLOWED)
-    def test_not_allowed_forms_versions_delete_unpublished(self, group):
-        from occams import Session
+    @pytest.mark.parametrize('group', DEFAULT_NOT_ALLOWED)
+    def test_not_allowed_forms_versions_delete_unpublished(
+            self, app, db_session, group):
         from occams_datastore import models as datastore
 
         url = '/forms/test_schema2/versions/{}'
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
-        form_id = Session.query(datastore.Schema.id).filter(
+        form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema2').scalar()
 
-        response = self.app.delete(
+        res = app.delete(
             url.format(form_id),
             extra_environ=environ,
             xhr=True,
@@ -830,30 +811,30 @@ class TestPermissionForms(FunctionalFixture):
             }
         )
 
-        self.assertEquals(403, response.status_code)
+        assert 403 == res.status_code
 
-    def test_not_authenticated_versions_unpublished_delete(self):
-        from occams import Session
+    def test_not_authenticated_versions_unpublished_delete(
+            self, app, db_session):
         from occams_datastore import models as datastore
 
         url = '/forms/test_schema2/versions/{}'
 
-        form_id = Session.query(datastore.Schema.id).filter(
+        form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema2').scalar()
 
-        response = self.app.delete(url.format(form_id), status='*')
-        self.assertEquals(401, response.status_code)
+        res = app.delete(url.format(form_id), status='*')
+        assert 401 == res.status_code
 
     # tests for fields
 
-    @data(*ALL_ALLOWED)
-    def test_view_field_json(self, group):
+    @pytest.mark.parametrize('group', ALL_ALLOWED)
+    def test_view_field_json(self, app, db_session, group):
         url = '/forms/test_schema/versions/2015-01-01/fields/test_field'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
-        response = self.app.get(
+        res = app.get(
             url,
             status='*',
             xhr=True,
@@ -862,26 +843,26 @@ class TestPermissionForms(FunctionalFixture):
                 'X-CSRF-Token': csrf_token,
                 'X-REQUESTED-WITH': str('XMLHttpRequest')
             })
-        self.assertEquals(200, response.status_code)
+        assert 200 == res.status_code
 
-    def test_not_authenticated_view_field_json(self):
+    def test_not_authenticated_view_field_json(self, app, db_session):
         url = '/forms/test_schema/versions/2015-01-01/fields/test_field'
 
-        response = self.app.delete(url, status='*', xhr=True)
-        self.assertEquals(401, response.status_code)
+        res = app.delete(url, status='*', xhr=True)
+        assert 401 == res.status_code
 
-    @data(*ALLOWED_NO_EDITOR)
-    def test_move_field(self, group):
+    @pytest.mark.parametrize('group', ALLOWED_NO_EDITOR)
+    def test_move_field(self, app, db_session, group):
         url = '/forms/test_schema/versions/2015-01-01/fields/text_box2?move'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
         data = {
             'index': 0
         }
 
-        response = self.app.put_json(
+        res = app.put_json(
             url,
             status='*',
             extra_environ=environ,
@@ -891,20 +872,20 @@ class TestPermissionForms(FunctionalFixture):
             },
             params=data)
 
-        self.assertEquals(200, response.status_code)
+        assert 200 == res.status_code
 
-    @data(*NOT_ALLOWED_W_EDITOR)
-    def test_not_allowed_move_field(self, group):
+    @pytest.mark.parametrize('group', NOT_ALLOWED_W_EDITOR)
+    def test_not_allowed_move_field(self, app, db_session, group):
         url = '/forms/test_schema/versions/2015-01-01/fields/text_box2?move'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
         data = {
             'index': 0
         }
 
-        response = self.app.put_json(
+        res = app.put_json(
             url,
             status='*',
             extra_environ=environ,
@@ -914,32 +895,31 @@ class TestPermissionForms(FunctionalFixture):
             },
             params=data)
 
-        self.assertEquals(403, response.status_code)
+        assert 403 == res.status_code
 
-    def test_not_authenticated_move_field(self):
+    def test_not_authenticated_move_field(self, app, db_session):
         url = '/forms/test_schema/versions/2015-01-01/fields/text_box2?move'
 
-        response = self.app.put(url, status='*', xhr=True)
-        self.assertEquals(401, response.status_code)
+        res = app.put(url, status='*', xhr=True)
+        assert 401 == res.status_code
 
-    @data(*DEFAULT_ALLOWED)
-    def test_move_field_unpublished(self, group):
-        from occams import Session
+    @pytest.mark.parametrize('group', DEFAULT_ALLOWED)
+    def test_move_field_unpublished(self, app, db_session, group):
         from occams_datastore import models as datastore
 
         url = '/forms/test_schema2/versions/{}/fields/text_box2?move'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
-        form_id = Session.query(datastore.Schema.id).filter(
+        form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema2').scalar()
 
         data = {
             'index': 0
         }
 
-        response = self.app.put_json(
+        res = app.put_json(
             url.format(form_id),
             status='*',
             extra_environ=environ,
@@ -949,26 +929,25 @@ class TestPermissionForms(FunctionalFixture):
             },
             params=data)
 
-        self.assertEquals(200, response.status_code)
+        assert 200 == res.status_code
 
-    @data(*DEFAULT_NOT_ALLOWED)
-    def test_not_allowed_move_field_unpublished(self, group):
-        from occams import Session
+    @pytest.mark.parametrize('group', DEFAULT_NOT_ALLOWED)
+    def test_not_allowed_move_field_unpublished(self, app, db_session, group):
         from occams_datastore import models as datastore
 
         url = '/forms/test_schema2/versions/{}/fields/text_box2?move'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
-        form_id = Session.query(datastore.Schema.id).filter(
+        form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema2').scalar()
 
         data = {
             'index': 0
         }
 
-        response = self.app.put_json(
+        res = app.put_json(
             url.format(form_id),
             status='*',
             extra_environ=environ,
@@ -978,26 +957,25 @@ class TestPermissionForms(FunctionalFixture):
             },
             params=data)
 
-        self.assertEquals(403, response.status_code)
+        assert 403 == res.status_code
 
-    def test_not_authenticated_move_field_unpublished(self):
-        from occams import Session
+    def test_not_authenticated_move_field_unpublished(self, app, db_session):
         from occams_datastore import models as datastore
 
         url = '/forms/test_schema2/versions/{}/fields/text_box2?move'
 
-        form_id = Session.query(datastore.Schema.id).filter(
+        form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema2').scalar()
 
-        response = self.app.put(url.format(form_id), status='*', xhr=True)
-        self.assertEquals(401, response.status_code)
+        res = app.put(url.format(form_id), status='*', xhr=True)
+        assert 401 == res.status_code
 
-    @data(*DEFAULT_ALLOWED)
-    def test_add_field(self, group):
+    @pytest.mark.parametrize('group', DEFAULT_ALLOWED)
+    def test_add_field(self, app, db_session, group):
         url = '/forms/test_schema/versions/2015-01-01/fields'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
         data = {
             'choiceInputType': 'radio',
@@ -1015,7 +993,7 @@ class TestPermissionForms(FunctionalFixture):
             'index': 0
         }
 
-        response = self.app.post_json(
+        res = app.post_json(
             url,
             extra_environ=environ,
             status='*',
@@ -1026,14 +1004,14 @@ class TestPermissionForms(FunctionalFixture):
             params=data
         )
 
-        self.assertEquals(200, response.status_code)
+        assert 200 == res.status_code
 
-    @data(*DEFAULT_NOT_ALLOWED)
-    def test_not_allowed_add_field(self, group):
+    @pytest.mark.parametrize('group', DEFAULT_NOT_ALLOWED)
+    def test_not_allowed_add_field(self, app, db_session, group):
         url = '/forms/test_schema/versions/2015-01-01/fields'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
         data = {
             'choiceInputType': 'radio',
@@ -1052,7 +1030,7 @@ class TestPermissionForms(FunctionalFixture):
 
         }
 
-        response = self.app.post_json(
+        res = app.post_json(
             url,
             extra_environ=environ,
             status='*',
@@ -1063,19 +1041,19 @@ class TestPermissionForms(FunctionalFixture):
             params=data
         )
 
-        self.assertEquals(403, response.status_code)
+        assert 403 == res.status_code
 
-    def test_not_authenticated_add_field(self):
+    def test_not_authenticated_add_field(self, app, db_session):
         url = '/forms/test_schema/versions/2015-01-01/fields'
-        response = self.app.post(url, status='*', xhr=True)
-        self.assertEquals(401, response.status_code)
+        res = app.post(url, status='*', xhr=True)
+        assert 401 == res.status_code
 
-    @data(*ALLOWED_NO_EDITOR)
-    def test_edit_field(self, group):
+    @pytest.mark.parametrize('group', ALLOWED_NO_EDITOR)
+    def test_edit_field(self, app, db_session, group):
         url = '/forms/test_schema/versions/2015-01-01/fields/test_field'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
         data = {
             'name': 'test_field_add',
@@ -1083,7 +1061,7 @@ class TestPermissionForms(FunctionalFixture):
             'title': 'updated title'
         }
 
-        response = self.app.put_json(
+        res = app.put_json(
             url,
             extra_environ=environ,
             status='*',
@@ -1094,14 +1072,14 @@ class TestPermissionForms(FunctionalFixture):
             params=data
         )
 
-        self.assertEquals(200, response.status_code)
+        assert 200 == res.status_code
 
-    @data(*NOT_ALLOWED_W_EDITOR)
-    def test_not_allowed_edit_field(self, group):
+    @pytest.mark.parametrize('group', NOT_ALLOWED_W_EDITOR)
+    def test_not_allowed_edit_field(self, app, db_session, group):
         url = '/forms/test_schema/versions/2015-01-01/fields/test_field'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
         data = {
             'name': 'test_field_add',
@@ -1109,7 +1087,7 @@ class TestPermissionForms(FunctionalFixture):
             'title': 'updated title'
         }
 
-        response = self.app.put_json(
+        res = app.put_json(
             url,
             extra_environ=environ,
             status='*',
@@ -1120,25 +1098,24 @@ class TestPermissionForms(FunctionalFixture):
             params=data
         )
 
-        self.assertEquals(403, response.status_code)
+        assert 403 == res.status_code
 
-    def test_not_authenticated_edit_field(self):
+    def test_not_authenticated_edit_field(self, app, db_session):
         url = '/forms/test_schema/versions/2015-01-01/fields/test_field'
-        response = self.app.put(url, status='*', xhr=True)
-        self.assertEquals(401, response.status_code)
+        res = app.put(url, status='*', xhr=True)
+        assert 401 == res.status_code
 
-    @data(*DEFAULT_ALLOWED)
-    def test_edit_field_unpublished(self, group):
-        from occams import Session
+    @pytest.mark.parametrize('group', DEFAULT_ALLOWED)
+    def test_edit_field_unpublished(self, app, db_session, group):
         from occams_datastore import models as datastore
 
         url = '/forms/test_schema2/versions/{}/fields/test_field2'
 
-        form_id = Session.query(datastore.Schema.id).filter(
+        form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema2').scalar()
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
         data = {
             'name': 'test_field_add',
@@ -1146,7 +1123,7 @@ class TestPermissionForms(FunctionalFixture):
             'title': 'updated title'
         }
 
-        response = self.app.put_json(
+        res = app.put_json(
             url.format(form_id),
             extra_environ=environ,
             status='*',
@@ -1157,20 +1134,19 @@ class TestPermissionForms(FunctionalFixture):
             params=data
         )
 
-        self.assertEquals(200, response.status_code)
+        assert 200 == res.status_code
 
-    @data(*DEFAULT_NOT_ALLOWED)
-    def test_not_allowed_edit_field_unpublished(self, group):
-        from occams import Session
+    @pytest.mark.parametrize('group', DEFAULT_NOT_ALLOWED)
+    def test_not_allowed_edit_field_unpublished(self, app, db_session, group):
         from occams_datastore import models as datastore
 
         url = '/forms/test_schema2/versions/{}/fields/test_field2'
 
-        form_id = Session.query(datastore.Schema.id).filter(
+        form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema2').scalar()
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
         data = {
             'name': 'test_field_add',
@@ -1178,7 +1154,7 @@ class TestPermissionForms(FunctionalFixture):
             'title': 'updated title'
         }
 
-        response = self.app.put_json(
+        res = app.put_json(
             url.format(form_id),
             extra_environ=environ,
             status='*',
@@ -1189,26 +1165,25 @@ class TestPermissionForms(FunctionalFixture):
             params=data
         )
 
-        self.assertEquals(403, response.status_code)
+        assert 403 == res.status_code
 
-    def test_not_authenticated_edit_field_unpublised(self):
-        from occams import Session
+    def test_not_authenticated_edit_field_unpublised(self, app, db_session):
         from occams_datastore import models as datastore
 
         url = '/forms/test_schema2/versions/{}/fields/test_field2'
 
-        form_id = Session.query(datastore.Schema.id).filter(
+        form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema2').scalar()
 
-        response = self.app.put(url.format(form_id), status='*', xhr=True)
-        self.assertEquals(401, response.status_code)
+        res = app.put(url.format(form_id), status='*', xhr=True)
+        assert 401 == res.status_code
 
-    @data(*ALLOWED_NO_EDITOR)
-    def test_edit_validate_fields(self, group):
+    @pytest.mark.parametrize('group', ALLOWED_NO_EDITOR)
+    def test_edit_validate_fields(self, app, db_session, group):
         url = '/forms/test_schema/versions/2015-01-01/fields?validate'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
         data = {
             'choiceInputType': 'radio',
@@ -1226,7 +1201,7 @@ class TestPermissionForms(FunctionalFixture):
             'index': 0
         }
 
-        response = self.app.put_json(
+        res = app.put_json(
             url,
             extra_environ=environ,
             status='*',
@@ -1237,14 +1212,14 @@ class TestPermissionForms(FunctionalFixture):
             params=data
         )
 
-        self.assertEquals(200, response.status_code)
+        assert 200 == res.status_code
 
-    @data(*NOT_ALLOWED_W_EDITOR)
-    def test_not_allowed_edit_validate_fields(self, group):
+    @pytest.mark.parametrize('group', NOT_ALLOWED_W_EDITOR)
+    def test_not_allowed_edit_validate_fields(self, app, db_session, group):
         url = '/forms/test_schema/versions/2015-01-01/fields?validate'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
         data = {
             'choiceInputType': 'radio',
@@ -1262,7 +1237,7 @@ class TestPermissionForms(FunctionalFixture):
             'index': 0
         }
 
-        response = self.app.put_json(
+        res = app.put_json(
             url,
             extra_environ=environ,
             status='*',
@@ -1273,26 +1248,25 @@ class TestPermissionForms(FunctionalFixture):
             params=data
         )
 
-        self.assertEquals(403, response.status_code)
+        assert 403 == res.status_code
 
-    def test_not_authenticated_edit_validate_fields(self):
+    def test_not_authenticated_edit_validate_fields(self, app, db_session):
         url = '/forms/test_schema/versions/2015-01-01/fields?validate'
 
-        response = self.app.put(url, status='*', xhr=True)
-        self.assertEquals(401, response.status_code)
+        res = app.put(url, status='*', xhr=True)
+        assert 401 == res.status_code
 
-    @data(*DEFAULT_ALLOWED)
-    def test_edit_validate_fields_unpublished(self, group):
-        from occams import Session
+    @pytest.mark.parametrize('group', DEFAULT_ALLOWED)
+    def test_edit_validate_fields_unpublished(self, app, db_session, group):
         from occams_datastore import models as datastore
 
         url = '/forms/test_schema2/versions/{}/fields?validate'
 
-        form_id = Session.query(datastore.Schema.id).filter(
+        form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema2').scalar()
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
         data = {
             'choiceInputType': 'radio',
@@ -1310,7 +1284,7 @@ class TestPermissionForms(FunctionalFixture):
             'index': 0
         }
 
-        response = self.app.put_json(
+        res = app.put_json(
             url.format(form_id),
             extra_environ=environ,
             status='*',
@@ -1321,20 +1295,20 @@ class TestPermissionForms(FunctionalFixture):
             params=data
         )
 
-        self.assertEquals(200, response.status_code)
+        assert 200 == res.status_code
 
-    @data(*DEFAULT_NOT_ALLOWED)
-    def test_not_allowed_edit_validate_fields_unpublished(self, group):
-        from occams import Session
+    @pytest.mark.parametrize('group', DEFAULT_NOT_ALLOWED)
+    def test_not_allowed_edit_validate_fields_unpublished(
+            self, app, db_session, group):
         from occams_datastore import models as datastore
 
         url = '/forms/test_schema2/versions/{}/fields?validate'
 
-        form_id = Session.query(datastore.Schema.id).filter(
+        form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema2').scalar()
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
         data = {
             'choiceInputType': 'radio',
@@ -1352,7 +1326,7 @@ class TestPermissionForms(FunctionalFixture):
             'index': 0
         }
 
-        response = self.app.put_json(
+        res = app.put_json(
             url.format(form_id),
             extra_environ=environ,
             status='*',
@@ -1363,29 +1337,29 @@ class TestPermissionForms(FunctionalFixture):
             params=data
         )
 
-        self.assertEquals(403, response.status_code)
+        assert 403 == res.status_code
 
-    def test_not_authenticated_edit_validate_fields_unpublished(self):
-        from occams import Session
+    def test_not_authenticated_edit_validate_fields_unpublished(
+            self, app, db_session):
         from occams_datastore import models as datastore
 
         url = '/forms/test_schema2/versions/{}/fields?validate'
 
-        form_id = Session.query(datastore.Schema.id).filter(
+        form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema2').scalar()
 
-        response = self.app.put(url.format(form_id), status='*', xhr=True)
-        self.assertEquals(401, response.status_code)
+        res = app.put(url.format(form_id), status='*', xhr=True)
+        assert 401 == res.status_code
 
-    @data(*ALLOWED_NO_EDITOR)
-    def test_edit_validate_field(self, group):
+    @pytest.mark.parametrize('group', ALLOWED_NO_EDITOR)
+    def test_edit_validate_field(self, app, db_session, group):
         url = '/forms/test_schema/versions/2015-01-01/fields/' \
               'test_field?validate'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
-        response = self.app.get(
+        res = app.get(
             url,
             extra_environ=environ,
             status='*',
@@ -1395,17 +1369,17 @@ class TestPermissionForms(FunctionalFixture):
             }
         )
 
-        self.assertEquals(200, response.status_code)
+        assert 200 == res.status_code
 
-    @data(*NOT_ALLOWED_W_EDITOR)
-    def test_not_allowed_edit_validate_field(self, group):
+    @pytest.mark.parametrize('group', NOT_ALLOWED_W_EDITOR)
+    def test_not_allowed_edit_validate_field(self, app, db_session, group):
         url = '/forms/test_schema/versions/2015-01-01/fields/' \
               'test_field?validate'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
-        response = self.app.get(
+        res = app.get(
             url,
             extra_environ=environ,
             status='*',
@@ -1415,16 +1389,16 @@ class TestPermissionForms(FunctionalFixture):
             }
         )
 
-        self.assertEquals(403, response.status_code)
+        assert 403 == res.status_code
 
-    def test_not_authenticated_edit_validate_field(self):
+    def test_not_authenticated_edit_validate_field(self, app, db_session):
         url = '/forms/test_schema/versions/2015-01-01/fields/' \
               'test_field?validate'
 
-        environ = self.make_environ(userid=USERID)
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID)
+        csrf_token = get_csrf_token(app, environ)
 
-        response = self.app.get(
+        res = app.get(
             url,
             status='*',
             headers={
@@ -1433,23 +1407,22 @@ class TestPermissionForms(FunctionalFixture):
             }
         )
 
-        self.assertEquals(401, response.status_code)
+        assert 401 == res.status_code
 
-    @data(*DEFAULT_ALLOWED)
-    def test_edit_validate_field_unpublished(self, group):
-        from occams import Session
+    @pytest.mark.parametrize('group', DEFAULT_ALLOWED)
+    def test_edit_validate_field_unpublished(self, app, db_session, group):
         from occams_datastore import models as datastore
 
         url = '/forms/test_schema2/versions/{}/fields/' \
               'test_field2?validate'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
-        form_id = Session.query(datastore.Schema.id).filter(
+        form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema2').scalar()
 
-        response = self.app.get(
+        res = app.get(
             url.format(form_id),
             extra_environ=environ,
             status='*',
@@ -1459,23 +1432,23 @@ class TestPermissionForms(FunctionalFixture):
             }
         )
 
-        self.assertEquals(200, response.status_code)
+        assert 200 == res.status_code
 
-    @data(*DEFAULT_NOT_ALLOWED)
-    def test_not_allowed_edit_validate_field_unpublished(self, group):
-        from occams import Session
+    @pytest.mark.parametrize('group', DEFAULT_NOT_ALLOWED)
+    def test_not_allowed_edit_validate_field_unpublished(
+            self, app, db_session, group):
         from occams_datastore import models as datastore
 
         url = '/forms/test_schema2/versions/{}/fields/' \
               'test_field2?validate'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
-        form_id = Session.query(datastore.Schema.id).filter(
+        form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema2').scalar()
 
-        response = self.app.get(
+        res = app.get(
             url.format(form_id),
             extra_environ=environ,
             status='*',
@@ -1485,22 +1458,22 @@ class TestPermissionForms(FunctionalFixture):
             }
         )
 
-        self.assertEquals(403, response.status_code)
+        assert 403 == res.status_code
 
-    def test_not_authenticated_edit_validate_field_unpublished(self):
-        from occams import Session
+    def test_not_authenticated_edit_validate_field_unpublished(
+            self, app, db_session):
         from occams_datastore import models as datastore
 
         url = '/forms/test_schema2/versions/{}/fields/' \
               'test_field2?validate'
 
-        environ = self.make_environ(userid=USERID)
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID)
+        csrf_token = get_csrf_token(app, environ)
 
-        form_id = Session.query(datastore.Schema.id).filter(
+        form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema2').scalar()
 
-        response = self.app.get(
+        res = app.get(
             url.format(form_id),
             status='*',
             headers={
@@ -1509,16 +1482,16 @@ class TestPermissionForms(FunctionalFixture):
             }
         )
 
-        self.assertEquals(401, response.status_code)
+        assert 401 == res.status_code
 
-    @data(*ALLOWED_NO_EDITOR)
-    def test_delete_field(self, group):
+    @pytest.mark.parametrize('group', ALLOWED_NO_EDITOR)
+    def test_delete_field(self, app, db_session, group):
         url = '/forms/test_schema/versions/2015-01-01/fields/test_field'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
-        response = self.app.delete(
+        res = app.delete(
             url,
             extra_environ=environ,
             status='*',
@@ -1529,16 +1502,16 @@ class TestPermissionForms(FunctionalFixture):
             xhr=True
         )
 
-        self.assertEquals(200, response.status_code)
+        assert 200 == res.status_code
 
-    @data(*NOT_ALLOWED_W_EDITOR)
-    def test_not_allowed_delete_field(self, group):
+    @pytest.mark.parametrize('group', NOT_ALLOWED_W_EDITOR)
+    def test_not_allowed_delete_field(self, app, db_session, group):
         url = '/forms/test_schema/versions/2015-01-01/fields/test_field'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
-        response = self.app.delete(
+        res = app.delete(
             url,
             extra_environ=environ,
             status='*',
@@ -1549,28 +1522,27 @@ class TestPermissionForms(FunctionalFixture):
             xhr=True
         )
 
-        self.assertEquals(403, response.status_code)
+        assert 403 == res.status_code
 
-    def test_not_authenticated_delete_field(self):
+    def test_not_authenticated_delete_field(self, app, db_session):
         url = '/forms/test_schema/versions/2015-01-01/fields/test_field'
 
-        response = self.app.delete(url, status='*', xhr=True)
-        self.assertEquals(401, response.status_code)
+        res = app.delete(url, status='*', xhr=True)
+        assert 401 == res.status_code
 
-    @data(*DEFAULT_ALLOWED)
-    def test_delete_field_unpublished(self, group):
-        from occams import Session
+    @pytest.mark.parametrize('group', DEFAULT_ALLOWED)
+    def test_delete_field_unpublished(self, app, db_session, group):
         from occams_datastore import models as datastore
 
         url = '/forms/test_schema2/versions/{}/fields/test_field2'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
-        form_id = Session.query(datastore.Schema.id).filter(
+        form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema2').scalar()
 
-        response = self.app.delete(
+        res = app.delete(
             url.format(form_id),
             extra_environ=environ,
             status='*',
@@ -1581,22 +1553,22 @@ class TestPermissionForms(FunctionalFixture):
             xhr=True
         )
 
-        self.assertEquals(200, response.status_code)
+        assert 200 == res.status_code
 
-    @data(*DEFAULT_NOT_ALLOWED)
-    def test_not_allowed_delete_field_unpublished(self, group):
-        from occams import Session
+    @pytest.mark.parametrize('group', DEFAULT_NOT_ALLOWED)
+    def test_not_allowed_delete_field_unpublished(
+            self, app, db_session, group):
         from occams_datastore import models as datastore
 
         url = '/forms/test_schema2/versions/{}/fields/test_field2'
 
-        environ = self.make_environ(userid=USERID, groups=[group])
-        csrf_token = self.get_csrf_token(environ)
+        environ = make_environ(userid=USERID, groups=[group])
+        csrf_token = get_csrf_token(app, environ)
 
-        form_id = Session.query(datastore.Schema.id).filter(
+        form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema2').scalar()
 
-        response = self.app.delete(
+        res = app.delete(
             url.format(form_id),
             extra_environ=environ,
             status='*',
@@ -1607,17 +1579,16 @@ class TestPermissionForms(FunctionalFixture):
             xhr=True
         )
 
-        self.assertEquals(403, response.status_code)
+        assert 403 == res.status_code
 
-    def test_not_authenticated_delete_field_unpublished(self):
-        from occams import Session
+    def test_not_authenticated_delete_field_unpublished(self, app, db_session):
         from occams_datastore import models as datastore
 
         url = '/forms/test_schema2/versions/{}/fields/test_field2'
 
-        form_id = Session.query(datastore.Schema.id).filter(
+        form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema2').scalar()
 
-        response = self.app.delete(url.format(form_id), status='*', xhr=True)
+        res = app.delete(url.format(form_id), status='*', xhr=True)
 
-        self.assertEquals(401, response.status_code)
+        assert 401 == res.status_code

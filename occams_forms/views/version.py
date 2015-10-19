@@ -14,7 +14,7 @@ import wtforms.ext.dateutil.fields
 
 from occams.utils.forms import Form
 
-from .. import _, models, Session
+from .. import _, models
 from . import field as field_views
 from ..renderers import make_form, render_form, apply_data
 
@@ -77,7 +77,8 @@ def preview(context, request):
     """
     Preview form for test-drivining.
     """
-    form_class = make_form(Session, context, show_metadata=False)
+    db_session = request.db_session
+    form_class = make_form(db_session, context, show_metadata=False)
     form = form_class(request.POST)
     form_id = 'form-preview'
     entity = None
@@ -86,12 +87,12 @@ def preview(context, request):
         upload_path = tempfile.mkdtemp()
         entity = models.Entity(schema=context)
         try:
-            apply_data(Session, entity, form.patch_data, upload_path)
+            apply_data(db_session, entity, form.patch_data, upload_path)
         finally:
             shutil.rmtree(upload_path)
 
         # Remove from session so entity or attributes don't persist in db
-        Session.expunge(entity)
+        db_session.expunge(entity)
 
     return {
         'entity': entity,
@@ -117,11 +118,12 @@ def preview(context, request):
     renderer='json')
 def publish_json(context, request):
     check_csrf_token(request)
+    db_session = request.db_session
 
     def check_unique_publish_date(form, field):
         (exists,) = (
-            Session.query(
-                Session.query(models.Schema)
+            db_session.query(
+                db_session.query(models.Schema)
                 .filter_by(name=context.name, publish_date=field.data)
                 .filter(models.Schema.id != context.id)
                 .exists())
@@ -162,7 +164,7 @@ def publish_json(context, request):
     context.publish_date = form.publish_date.data
     context.retract_date = form.retract_date.data
 
-    Session.flush()
+    db_session.flush()
 
     return view_json(context, request)
 
@@ -187,6 +189,7 @@ class SchemaForm(Form):
 def edit_json(context, request):
     check_csrf_token(request)
 
+    db_session = request.db_session
     form = SchemaForm.from_json(request.json_body)
 
     if not form.validate():
@@ -194,7 +197,7 @@ def edit_json(context, request):
 
     context.title = form.title.data
     context.description = form.description.data
-    Session.flush()
+    db_session.flush()
 
     request.session.flash(_(u'Changes saved'), 'success')
 
@@ -221,13 +224,14 @@ def draft_json(context, request):
     Drafts a new version of a published form.
     """
     check_csrf_token(request)
+    db_session = request.db_session
     schema = context
     if not schema.publish_date:
         raise HTTPBadRequest(json={
             'user_message': _(u'Cannot draft new from unpublished version')})
     draft = deepcopy(schema)
-    Session.add(draft)
-    Session.flush()
+    db_session.add(draft)
+    db_session.flush()
     request.session.flash(_(u'Successfully drafted new version'))
     return {
         # Hint the next resource to look for data
@@ -248,8 +252,9 @@ def delete_json(context, request):
     Edits form version metadata (not the fields)
     """
     check_csrf_token(request)
+    db_session = request.db_session
 
-    Session.delete(context)
+    db_session.delete(context)
 
     if context.publish_date:
         msg = _(u'Successfully deleted ${name} version ${version}',

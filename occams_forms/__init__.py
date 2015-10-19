@@ -2,11 +2,7 @@ import logging
 import pkg_resources
 
 from pyramid.i18n import TranslationStringFactory
-import wtforms_json
-
-from occams import Session
-
-wtforms_json.init()  # monkey-patch wtforms to accept JSON data
+import wtforms_json; wtforms_json.init()  # monkey-patch wtforms to accept JSON data
 
 log = logging.getLogger('occams').getChild(__name__)
 
