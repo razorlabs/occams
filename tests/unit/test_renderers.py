@@ -1,46 +1,32 @@
-from ddt import ddt, data, unpack
+import pytest
 import wtforms.fields.html5
 import wtforms.ext.dateutil.fields
 
 from occams_forms.fields import FileField
 
-from tests import IntegrationFixture
 
-
-class annotatedlist(list):
-    pass
-
-
-def expect_type(type_, class_):
-    r = annotatedlist([type_, class_])
-    setattr(r, '__name__', 'test_types_%s_to_%s' % (type_, class_.__name__))
-    return r
-
-
-@ddt
-class TestMakeField(IntegrationFixture):
+class TestMakeField:
 
     def test_unknown(self):
         from occams_forms import models
         from occams_forms.renderers import make_field
         attribute = models.Attribute(name=u'f', title=u'F', type='unknown')
-        with self.assertRaises(Exception):
+        with pytest.raises(Exception):
             make_field(attribute)
 
-    @data(
-        expect_type('string', wtforms.StringField),
-        expect_type('text', wtforms.TextAreaField),
-        expect_type('blob', FileField),
-        expect_type('date', wtforms.ext.dateutil.fields.DateField),
-        expect_type('datetime', wtforms.ext.dateutil.fields.DateTimeField),
-        expect_type('section', wtforms.FormField))
-    @unpack
+    @pytest.mark.parametrize('type_,class_', [
+        ('string', wtforms.StringField),
+        ('text', wtforms.TextAreaField),
+        ('blob', FileField),
+        ('date', wtforms.ext.dateutil.fields.DateField),
+        ('datetime', wtforms.ext.dateutil.fields.DateTimeField),
+        ('section', wtforms.FormField)])
     def test_basic_types(self, type_, class_):
         from occams_forms import models
         from occams_forms.renderers import make_field
         attribute = models.Attribute(name=u'f', title=u'F', type=type_)
         field = make_field(attribute)
-        self.assertIs(field.field_class, class_)
+        assert field.field_class is class_
 
     def test_integer(self):
         from occams_forms import models
@@ -48,14 +34,14 @@ class TestMakeField(IntegrationFixture):
         attribute = models.Attribute(
             name=u'f', title=u'F', type='number', decimal_places=0)
         field = make_field(attribute)
-        self.assertIs(field.field_class, wtforms.fields.html5.IntegerField)
+        assert field.field_class is wtforms.fields.html5.IntegerField
 
     def test_decimal_any(self):
         from occams_forms import models
         from occams_forms.renderers import make_field
         attribute = models.Attribute(name=u'f', title=u'F', type='number')
         field = make_field(attribute)
-        self.assertIs(field.field_class, wtforms.fields.html5.DecimalField)
+        assert field.field_class is wtforms.fields.html5.DecimalField
 
     def test_decimal_precision(self):
         from occams_forms import models
@@ -63,7 +49,7 @@ class TestMakeField(IntegrationFixture):
         attribute = models.Attribute(
             name=u'f', title=u'F', type='number', decimal_places=1)
         field = make_field(attribute)
-        self.assertIs(field.field_class, wtforms.fields.html5.DecimalField)
+        assert field.field_class is wtforms.fields.html5.DecimalField
 
     def test_choice_single(self):
         from occams_forms import models
@@ -71,7 +57,7 @@ class TestMakeField(IntegrationFixture):
         attribute = models.Attribute(
             name=u'f', title=u'F', type='choice', is_collection=False)
         field = make_field(attribute)
-        self.assertIs(field.field_class, wtforms.SelectField)
+        assert field.field_class is wtforms.SelectField
 
     def test_choice_multi(self):
         from occams_forms import models
@@ -79,7 +65,7 @@ class TestMakeField(IntegrationFixture):
         attribute = models.Attribute(
             name=u'f', title=u'F', type='choice', is_collection=True)
         field = make_field(attribute)
-        self.assertIs(field.field_class, wtforms.SelectMultipleField)
+        assert field.field_class is wtforms.SelectMultipleField
 
     def test_string_min_max(self):
         from occams_forms import models
@@ -91,8 +77,7 @@ class TestMakeField(IntegrationFixture):
             value_min=1, value_max=12)
         field = make_field(attribute)
         field = field.bind(wtforms.Form(), attribute.name)
-        self.assertTrue(
-            any(isinstance(v, Length) for v in field.validators))
+        assert any(isinstance(v, Length) for v in field.validators)
 
     def test_number_min_max(self):
         from occams_forms import models
@@ -104,8 +89,7 @@ class TestMakeField(IntegrationFixture):
             value_min=1, value_max=12)
         field = make_field(attribute)
         field = field.bind(wtforms.Form(), attribute.name)
-        self.assertTrue(
-            any(isinstance(v, NumberRange) for v in field.validators))
+        assert any(isinstance(v, NumberRange) for v in field.validators)
 
     def test_daterange_date(self):
         from occams_forms import models
@@ -116,8 +100,7 @@ class TestMakeField(IntegrationFixture):
             name=u'daterange_test', title=u'daterange_test', type='date')
         field = make_field(attribute)
         field = field.bind(wtforms.Form(), attribute.name)
-        self.assertTrue(
-            any(isinstance(v, DateRange) for v in field.validators))
+        assert any(isinstance(v, DateRange) for v in field.validators)
 
     def test_daterange_datetime(self):
         from occams_forms import models
@@ -128,15 +111,14 @@ class TestMakeField(IntegrationFixture):
             name=u'daterange_test', title=u'daterange_test', type='datetime')
         field = make_field(attribute)
         field = field.bind(wtforms.Form(), attribute.name)
-        self.assertTrue(
-            any(isinstance(v, DateRange) for v in field.validators))
+        assert any(isinstance(v, DateRange) for v in field.validators)
 
 
-class TestMakeForm(IntegrationFixture):
+class TestMakeForm:
 
-    def _make_schema(self):
+    def _make_schema(self, db_session):
         from datetime import date
-        from occams_forms import models, Session
+        from occams_forms import models
         schema = models.Schema(
             name=u'dymmy_schema',
             title=u'Dummy Schema',
@@ -151,67 +133,65 @@ class TestMakeForm(IntegrationFixture):
                 )
             })
 
-        Session.add(schema)
-        Session.flush()
+        db_session.add(schema)
+        db_session.flush()
 
         return schema
 
-    def test_skip_validation_if_to_pending_entry(self):
+    def test_skip_validation_if_to_pending_entry(self, db_session):
         from webob.multidict import MultiDict
-        from occams_forms import Session
         from occams_forms.renderers import make_form, states, modes
 
-        schema = self._make_schema()
-        Form = make_form(Session, schema, transition=modes.ALL)
+        schema = self._make_schema(db_session)
+        Form = make_form(db_session, schema, transition=modes.ALL)
         form = Form(MultiDict({
             'ofworkflow_-state': states.PENDING_ENTRY,
         }))
-        self.assertTrue(form.validate(), form.errors)
+        assert form.validate(), form.errors
 
-    def test_skip_validation_if_from_complete(self):
+    def test_skip_validation_if_from_complete(self, db_session):
         from webob.multidict import MultiDict
-        from occams_forms import Session, models
+        from occams_forms import models
         from occams_forms.renderers import \
             make_form, states, modes, entity_data
 
-        schema = self._make_schema()
+        schema = self._make_schema(db_session)
         entity = models.Entity(
             schema=schema,
             state=(
-                Session.query(models.State)
+                db_session.query(models.State)
                 .filter_by(name=states.COMPLETE)
                 .one()))
-        Form = make_form(Session, schema, entity=entity, transition=modes.ALL)
+        Form = make_form(
+            db_session, schema, entity=entity, transition=modes.ALL)
         formdata = MultiDict({
             'ofworkflow_-state': states.PENDING_CORRECTION,
         })
         form = Form(formdata, data=entity_data(entity))
-        self.assertTrue(form.validate(), form.errors)
+        assert form.validate(), form.errors
 
-    def test_skip_validation_if_not_collected(self):
+    def test_skip_validation_if_not_collected(self, db_session):
         from datetime import date
         from webob.multidict import MultiDict
-        from occams_forms import Session
         from occams_forms.renderers import make_form
 
-        schema = self._make_schema()
-        Form = make_form(Session, schema)
+        schema = self._make_schema(db_session)
+        Form = make_form(db_session, schema)
 
         form = Form(MultiDict({
             'ofmetadata_-collect_date': str(date.today()),
             'ofmetadata_-version': str(schema.publish_date),
             'ofmetadata_-not_done': '1',
         }))
-        self.assertTrue(form.validate(), form.errors)
+        assert form.validate(), form.errors
 
-    def test_validation_if_collected(self):
+    def test_validation_if_collected(self, db_session):
         from datetime import date
         from webob.multidict import MultiDict
-        from occams_forms import Session
         from occams_forms.renderers import make_form
 
-        schema = self._make_schema()
-        Form = make_form(Session, schema)
+        schema = self._make_schema(db_session)
+        Form = make_form(db_session, schema)
 
         form = Form(MultiDict({
             'ofmetadata_-collect_date': str(date.today()),
@@ -219,20 +199,19 @@ class TestMakeForm(IntegrationFixture):
             'ofmetadata_-not_done': '',
         }))
 
-        self.assertFalse(form.validate())
-        self.assertIn('dummy_field', form.errors)
+        assert not form.validate()
+        assert 'dummy_field' in form.errors
 
 
-@ddt
-class TestRenderForm(IntegrationFixture):
+class TestRenderForm:
 
-    def setUp(self):
-        super(TestRenderForm, self).setUp()
-        self.config.include('pyramid_chameleon')
+    @pytest.fixture(autouse=True)
+    def include_templating(self, config):
+        config.include('pyramid_chameleon')
 
-    def _make_form(self):
+    def _make_form(self, db_session):
         from datetime import date
-        from occams_forms import models, Session
+        from occams_forms import models
         from occams_forms.renderers import make_form
 
         schema = models.Schema(
@@ -249,23 +228,24 @@ class TestRenderForm(IntegrationFixture):
             })
 
         entity = models.Entity(schema=schema)
-        Session.add(entity)
-        Session.flush()
+        db_session.add(entity)
+        db_session.flush()
 
-        return make_form(Session, schema, entity=entity)
+        return make_form(db_session, schema, entity=entity)
 
-    @data('pending-entry', 'pending-review', 'pending-correction')
-    def test_enabled_for_editable_states(self, state):
+    @pytest.mark.parametrize('state', [
+        'pending-entry', 'pending-review', 'pending-correction'])
+    def test_enabled_for_editable_states(self, db_session, state):
 
-        from occams_forms import models, Session
+        from occams_forms import models
         from occams_forms.renderers import render_form
         from bs4 import BeautifulSoup
 
-        Form = self._make_form()
+        Form = self._make_form(db_session)
         form = Form()
 
         form.meta.entity.state = (
-            Session.query(models.State)
+            db_session.query(models.State)
             .filter_by(name=state)
             .one())
 
@@ -274,19 +254,19 @@ class TestRenderForm(IntegrationFixture):
 
         field = soup.find(id='dummy_field')
 
-        self.assertFalse(field.has_attr('disabled'))
+        assert not field.has_attr('disabled')
 
-    def test_disabled_if_complete(self):
+    def test_disabled_if_complete(self, db_session):
 
-        from occams_forms import models, Session
+        from occams_forms import models
         from occams_forms.renderers import render_form, states
         from bs4 import BeautifulSoup
 
-        Form = self._make_form()
+        Form = self._make_form(db_session)
         form = Form()
 
         form.meta.entity.state = (
-            Session.query(models.State)
+            db_session.query(models.State)
             .filter_by(name=states.COMPLETE)
             .one())
 
@@ -295,21 +275,23 @@ class TestRenderForm(IntegrationFixture):
 
         field = soup.find(id='dummy_field')
 
-        self.assertTrue(field.has_attr('disabled'))
+        assert field.has_attr('disabled')
 
 
-class TestApplyData(IntegrationFixture):
+class TestApplyData:
 
-    def setUp(self):
-        super(TestApplyData, self).setUp()
+    @pytest.fixture(autouse=True)
+    def tmpdir(self, request):
         import tempfile
+        import shutil
         self.tmpdir = tempfile.mkdtemp()
 
-    def tearDown(self):
-        import shutil
-        shutil.rmtree(self.tmpdir)
+        def rm():
+            shutil.rmtree(self.tmpdir)
 
-    def _call(self, *args, **kw):
+        request.addfinalizer(rm)
+
+    def _call_fut(self, *args, **kw):
         from occams_forms.renderers import apply_data
         return apply_data(*args, **kw)
 
@@ -330,9 +312,8 @@ class TestApplyData(IntegrationFixture):
         entity = models.Entity(schema=schema)
         return entity
 
-    def test_clear_if_not_done(self):
+    def test_clear_if_not_done(self, db_session):
         from datetime import date
-        from occams_forms import Session
 
         entity = self._make_entity()
         entity['q1'] = u'Some value'
@@ -343,13 +324,12 @@ class TestApplyData(IntegrationFixture):
             'version': entity.schema.publish_date
         }}
 
-        self._call(Session, entity, formdata, self.tmpdir)
+        self._call_fut(db_session, entity, formdata, self.tmpdir)
 
-        self.assertIsNone(entity['q1'])
+        assert entity['q1'] is None
 
-    def test_clear_if_pending_entry(self):
+    def test_clear_if_pending_entry(self, db_session):
         from datetime import date
-        from occams_forms import Session
         from occams_forms.renderers import states
 
         entity = self._make_entity()
@@ -366,16 +346,15 @@ class TestApplyData(IntegrationFixture):
             }
         }
 
-        self._call(Session, entity, formdata, self.tmpdir)
+        self._call_fut(db_session, entity, formdata, self.tmpdir)
 
-        self.assertFalse(entity.not_done)
-        self.assertIsNone(entity['q1'])
+        assert not entity.not_done
+        assert entity['q1'] is None
 
-    def test_unknown_state_to_pending_entry(self):
+    def test_unknown_state_to_pending_entry(self, db_session):
         """
         It should clear data if transitioning to "Pending Entry"
         """
-        from occams_forms import Session
         from occams_forms.renderers import states
 
         entity = self._make_entity()
@@ -387,13 +366,12 @@ class TestApplyData(IntegrationFixture):
             }
         }
 
-        self._call(Session, entity, formdata, self.tmpdir)
+        self._call_fut(db_session, entity, formdata, self.tmpdir)
 
-        self.assertEquals(entity.state.name, states.PENDING_ENTRY)
-        self.assertIsNone(entity['q1'])
+        assert entity.state.name == states.PENDING_ENTRY
+        assert entity['q1'] is None
 
-    def test_pending_entry_to_pending_correction(self):
-        from occams_forms import Session
+    def test_pending_entry_to_pending_correction(self, db_session):
         from occams_forms.renderers import states
 
         entity = self._make_entity()
@@ -406,13 +384,12 @@ class TestApplyData(IntegrationFixture):
             'q1': u'Some new value'
         }
 
-        self._call(Session, entity, formdata, self.tmpdir)
+        self._call_fut(db_session, entity, formdata, self.tmpdir)
 
-        self.assertEquals(entity.state.name, states.PENDING_CORRECTION)
-        self.assertEquals(entity['q1'], formdata['q1'])
+        assert entity.state.name == states.PENDING_CORRECTION
+        assert entity['q1'] == formdata['q1']
 
-    def test_pending_entry_to_pending_review(self):
-        from occams_forms import Session
+    def test_pending_entry_to_pending_review(self, db_session):
         from occams_forms.renderers import states
 
         entity = self._make_entity()
@@ -425,13 +402,12 @@ class TestApplyData(IntegrationFixture):
             'q1': u'Some new value'
         }
 
-        self._call(Session, entity, formdata, self.tmpdir)
+        self._call_fut(db_session, entity, formdata, self.tmpdir)
 
-        self.assertEquals(entity.state.name, states.PENDING_REVIEW)
-        self.assertEquals(entity['q1'], formdata['q1'])
+        assert entity.state.name == states.PENDING_REVIEW
+        assert entity['q1'] == formdata['q1']
 
-    def test_pending_entry_to_complete(self):
-        from occams_forms import Session
+    def test_pending_entry_to_complete(self, db_session):
         from occams_forms.renderers import states
 
         entity = self._make_entity()
@@ -444,18 +420,18 @@ class TestApplyData(IntegrationFixture):
             'q1': u'Some new value'
         }
 
-        self._call(Session, entity, formdata, self.tmpdir)
+        self._call_fut(db_session, entity, formdata, self.tmpdir)
 
-        self.assertEquals(entity.state.name, states.COMPLETE)
-        self.assertEquals(entity['q1'], formdata['q1'])
+        assert entity.state.name == states.COMPLETE
+        assert entity['q1'] == formdata['q1']
 
-    def test_pending_review_to_complete(self):
-        from occams_forms import Session, models
+    def test_pending_review_to_complete(self, db_session):
+        from occams_forms import models
         from occams_forms.renderers import states
 
         entity = self._make_entity()
         entity.state = (
-            Session.query(models.State)
+            db_session.query(models.State)
             .filter_by(name=states.PENDING_REVIEW)
             .one())
         entity['q1'] = u'Some value'
@@ -467,14 +443,13 @@ class TestApplyData(IntegrationFixture):
             'q1': u'Last minute changes'
         }
 
-        self._call(Session, entity, formdata, self.tmpdir)
+        self._call_fut(db_session, entity, formdata, self.tmpdir)
 
-        self.assertEquals(entity.state.name, states.COMPLETE)
-        self.assertEquals(entity['q1'], formdata['q1'])
+        assert entity.state.name == states.COMPLETE
+        assert entity['q1'] == formdata['q1']
 
-    def test_auto_pending_entry_to_pending_review(self):
+    def test_auto_pending_entry_to_pending_review(self, db_session):
 
-        from occams_forms import Session
         from occams_forms.renderers import states
 
         entity = self._make_entity()
@@ -482,31 +457,31 @@ class TestApplyData(IntegrationFixture):
 
         formdata = {'q1': 'Some new value'}
 
-        self._call(Session, entity, formdata, self.tmpdir)
+        self._call_fut(db_session, entity, formdata, self.tmpdir)
 
-        self.assertEquals(entity.state.name, states.PENDING_REVIEW)
-        self.assertEqual(entity['q1'], formdata['q1'])
+        assert entity.state.name == states.PENDING_REVIEW
+        assert entity['q1'] == formdata['q1']
 
-    def test_auto_pending_correction_to_pending_review(self):
+    def test_auto_pending_correction_to_pending_review(self, db_session):
 
-        from occams_forms import Session, models
+        from occams_forms import models
         from occams_forms.renderers import states
 
         entity = self._make_entity()
         entity.state = (
-            Session.query(models.State)
+            db_session.query(models.State)
             .filter_by(name=states.PENDING_CORRECTION)
             .one())
         entity['q1'] = u'Some value'
 
         formdata = {'q1': 'Some new value'}
 
-        self._call(Session, entity, formdata, self.tmpdir)
+        self._call_fut(db_session, entity, formdata, self.tmpdir)
 
-        self.assertEquals(entity.state.name, states.PENDING_REVIEW)
-        self.assertEqual(entity['q1'], formdata['q1'])
+        assert entity.state.name == states.PENDING_REVIEW
+        assert entity['q1'] == formdata['q1']
 
-    def test_file_is_deleted(self):
+    def test_file_is_deleted(self, db_session):
         """
         Test file is deleted on the system after a non-FieldStorage
         object is passed to apply_data
@@ -516,7 +491,6 @@ class TestApplyData(IntegrationFixture):
         from datetime import date
 
         from occams_forms import models
-        from occams_forms import Session
 
         from mock import Mock
 
@@ -540,10 +514,10 @@ class TestApplyData(IntegrationFixture):
 
         entity['q1'] = Mock(path=fullpath)
 
-        self._call(Session, entity, formdata, self.tmpdir)
-        self.assertFalse(os.path.exists(fullpath))
+        self._call_fut(db_session, entity, formdata, self.tmpdir)
+        assert not os.path.exists(fullpath)
 
-    def test_previous_file_is_deleted(self):
+    def test_previous_file_is_deleted(self, db_session):
         """
         Test if previous file is deleted from the
         system after a new non-FieldStoarage object
@@ -555,7 +529,6 @@ class TestApplyData(IntegrationFixture):
         from datetime import date
 
         from occams_forms import models
-        from occams_forms import Session
 
         from mock import Mock
 
@@ -585,13 +558,13 @@ class TestApplyData(IntegrationFixture):
 
         entity['q1'] = Mock(path=fullpath)
 
-        self._call(Session, entity, formdata, self.tmpdir)
+        self._call_fut(db_session, entity, formdata, self.tmpdir)
 
         formdata = {'q1': u''}
-        self._call(Session, entity, formdata, self.tmpdir)
-        self.assertFalse(os.path.exists(fullpath))
+        self._call_fut(db_session, entity, formdata, self.tmpdir)
+        assert not os.path.exists(fullpath)
 
-    def test_old_file_is_deleted_after_update(self):
+    def test_old_file_is_deleted_after_update(self, db_session):
         """
         Test if previous file is deleted from the
         system after a new FieldStoarage object
@@ -602,7 +575,6 @@ class TestApplyData(IntegrationFixture):
         from datetime import date
 
         from occams_forms import models
-        from occams_forms import Session
 
         from mock import Mock
 
@@ -632,7 +604,7 @@ class TestApplyData(IntegrationFixture):
 
         entity['q1'] = Mock(path=fullpath)
 
-        self._call(Session, entity, formdata, self.tmpdir)
+        self._call_fut(db_session, entity, formdata, self.tmpdir)
 
         form_update = cgi.FieldStorage()
         form_update.filename = u'test2.txt'
@@ -641,11 +613,11 @@ class TestApplyData(IntegrationFixture):
         form_update.file.seek(0)
 
         formdata2 = {'q1': form_update}
-        self._call(Session, entity, formdata2, self.tmpdir)
+        self._call_fut(db_session, entity, formdata2, self.tmpdir)
 
-        self.assertFalse(os.path.exists(fullpath))
+        assert not os.path.exists(fullpath)
 
-    def test_file_is_inserted_to_db(self):
+    def test_file_is_inserted_to_db(self, db_session):
         """
         Test if a new record is inserted to value_blob
         table after a FieldStorage object is passed to apply_data
@@ -657,7 +629,6 @@ class TestApplyData(IntegrationFixture):
 
         from occams_forms import models
         from occams_datastore import models as datastore
-        from occams_forms import Session
 
         from mock import Mock
 
@@ -687,13 +658,14 @@ class TestApplyData(IntegrationFixture):
 
         entity['q1'] = Mock(path=fullpath)
 
-        self._call(Session, entity, formdata, self.tmpdir)
+        self._call_fut(db_session, entity, formdata, self.tmpdir)
 
-        blob = Session.query(datastore.ValueBlob).filter_by(
+        blob = db_session.query(datastore.ValueBlob).filter_by(
             file_name=u'test.txt').one()
-        self.assertEquals(blob.file_name, u'test.txt')
+        assert blob.file_name == u'test.txt'
 
-    def test_old_file_is_deleted_db_after_empty_string_applied(self):
+    def test_old_file_is_deleted_db_after_empty_string_applied(
+            self, db_session):
         """
         Test if previous file is deleted from db after
         a non-FieldStoarage is passed to apply_data
@@ -705,7 +677,6 @@ class TestApplyData(IntegrationFixture):
 
         from occams_forms import models
         from occams_datastore import models as datastore
-        from occams_forms import Session
 
         from mock import Mock
 
@@ -735,16 +706,17 @@ class TestApplyData(IntegrationFixture):
 
         entity['q1'] = Mock(path=fullpath)
 
-        self._call(Session, entity, formdata, self.tmpdir)
+        self._call_fut(db_session, entity, formdata, self.tmpdir)
 
         formdata = {'q1': u''}
-        self._call(Session, entity, formdata, self.tmpdir)
+        self._call_fut(db_session, entity, formdata, self.tmpdir)
 
-        blob = Session.query(datastore.ValueBlob).filter_by(
+        blob = db_session.query(datastore.ValueBlob).filter_by(
             file_name=u'test.txt').first()
-        self.assertEquals(blob, None)
 
-    def test_one_record_exists_db_after_update(self):
+        assert blob is None
+
+    def test_one_record_exists_db_after_update(self, db_session):
         """
         Test if one updated record exists in value_blob tbl
         after FieldStorage object passed to apply_data
@@ -756,7 +728,6 @@ class TestApplyData(IntegrationFixture):
 
         from occams_forms import models
         from occams_datastore import models as datastore
-        from occams_forms import Session
 
         from mock import Mock
 
@@ -786,9 +757,9 @@ class TestApplyData(IntegrationFixture):
 
         entity['q1'] = Mock(path=fullpath)
 
-        self._call(Session, entity, formdata, self.tmpdir)
+        self._call_fut(db_session, entity, formdata, self.tmpdir)
 
-        blob = Session.query(datastore.ValueBlob).one()
+        blob = db_session.query(datastore.ValueBlob).one()
         entity_id = blob.entity.id
 
         form_update = cgi.FieldStorage()
@@ -798,9 +769,9 @@ class TestApplyData(IntegrationFixture):
         form_update.file.seek(0)
 
         formdata2 = {'q1': form_update}
-        self._call(Session, entity, formdata2, self.tmpdir)
+        self._call_fut(db_session, entity, formdata2, self.tmpdir)
 
-        blob = Session.query(datastore.ValueBlob).filter_by(
+        blob = db_session.query(datastore.ValueBlob).filter_by(
             file_name=u'test2.txt').first()
         entity_id_after_update = blob.entity_id
-        self.assertEquals(entity_id, entity_id_after_update)
+        assert entity_id == entity_id_after_update

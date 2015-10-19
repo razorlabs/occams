@@ -8,22 +8,13 @@ README = open(os.path.join(HERE, 'README.rst')).read()
 CHANGES = open(os.path.join(HERE, 'CHANGES.rst')).read()
 
 REQUIRES = [
-    'alembic',                          # Database table upgrades
-    'six',                              # Py 2 & 3 compatibility
     'filemagic',
 
     'occams',
 ]
 
 EXTRAS = {
-    'test': [
-        'nose',
-        'nose-testconfig',
-        'coverage',
-        'WebTest',
-        'beautifulsoup4',
-        'mock',
-        'ddt'],
+    'test': []
 }
 
 
@@ -92,9 +83,9 @@ setup(
         'Topic :: Utilities',
     ],
     keywords='OCCAMS datastore database eav',
-    author='UCSD BIT Core Team',
-    author_email='bitcore@ucsd.edu',
-    url='https://bitbutcket.org/ucsdbitcore/occams_forms',
+    author='Young Labs',
+    author_email='younglabs@ucsd.edu',
+    url='https://github.com/younglabs/occams_forms',
     license='GPL',
     packages=find_packages(),
     include_package_data=True,

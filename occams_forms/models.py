@@ -1,7 +1,6 @@
 from pyramid.security import Allow, Authenticated, ALL_PERMISSIONS
 from sqlalchemy import orm
 
-from occams import Session
 from occams_datastore.models import *  # NOQA
 
 
@@ -17,15 +16,16 @@ class FormFactory(object):
         self.request = request
 
     def __getitem__(self, key):
+        db_session = self.request.db_session
         (exists,) = (
-            Session.query(
-                Session.query(Schema)
+            db_session.query(
+                db_session.query(Schema)
                 .filter_by(name=key)
                 .exists())
             .one())
         if not exists:
             raise KeyError
-        item = Form()
+        item = Form(self.request)
         item.__name__ = key
         item.__parent__ = self
         return item
@@ -37,9 +37,12 @@ class Form(object):
         (Allow, Authenticated, 'view')
         ]
 
+    def __init__(self, request):
+        self.request = request
+
     def __getitem__(self, key):
         if key == 'versions':
-            item = VersionFactory()
+            item = VersionFactory(self.request)
             item.__name__ = key
             item.__parent__ = self
             return item
@@ -53,9 +56,13 @@ class VersionFactory(object):
         (Allow, 'editor', ('view', 'add')),
         (Allow, Authenticated, 'view')]
 
+    def __init__(self, request):
+        self.request = request
+
     def __getitem__(self, key):
+        db_session = self.request.db_session
         query = (
-            Session.query(Schema)
+            db_session.query(Schema)
             .filter_by(name=self.__parent__.__name__))
         try:
             key = int(key)
@@ -89,8 +96,10 @@ def schema_acl(self):
 
 
 def schema_getitem(self, key):
+    db_session = orm.object_session(self)
+    request = db_session.info['request']
     if key == 'fields':
-        item = AttributeFactory()
+        item = AttributeFactory(request)
         item.__name__ = key
         item.__parent__ = self
         return item
@@ -115,10 +124,14 @@ class AttributeFactory(object):
                 (Allow, 'manager', ('view', 'edit', 'delete')),
                 (Allow, 'editor', 'view')]
 
+    def __init__(self, request):
+        self.request = request
+
     def __getitem__(self, key):
+        db_session = self.request.db_session
         try:
             attribute = (
-                Session.query(Attribute)
+                db_session.query(Attribute)
                 .filter_by(schema=self.__parent__, name=key)
                 .one())
         except orm.exc.NoResultFound:

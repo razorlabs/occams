@@ -1,6 +1,6 @@
 from pyramid.view import view_config
 
-from .. import Session, models
+from .. import models
 
 
 @view_config(
@@ -12,7 +12,9 @@ def view(context, request):
     Displays default workflow
     """
 
-    states = Session.query(models.State).order_by(models.State.name)
+    db_session = request.db_session
+
+    states = db_session.query(models.State).order_by(models.State.name)
 
     return {
         'states': iter(states),

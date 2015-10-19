@@ -9,7 +9,7 @@ import wtforms
 
 from occams.utils.forms import Form
 
-from .. import _, Session, models
+from .. import _, models
 from ._utils import jquery_wtform_validator
 
 
@@ -46,6 +46,8 @@ def upload(context, request):
     """
     check_csrf_token(request)
 
+    db_session = request.db_session
+
     files = request.POST.getall('files')
 
     if len(files) < 1:
@@ -53,8 +55,8 @@ def upload(context, request):
             'user_message': _(u'Nothing uploaded')})
 
     schemata = [models.Schema.from_json(json.load(u.file)) for u in files]
-    Session.add_all(schemata)
-    Session.flush()
+    db_session.add_all(schemata)
+    db_session.flush()
 
     return get_list_data(request, names=[s.name for s in schemata])
 
@@ -66,6 +68,7 @@ def upload(context, request):
     request_param='validate',
     renderer='json')
 def validate_value_json(context, request):
+    FormForm = FormFormFactory(context, request)
     return jquery_wtform_validator(FormForm, context, request)
 
 
@@ -81,26 +84,31 @@ def add(context, request):
     """
     check_csrf_token(request)
 
+    db_session = request.db_session
+
+    FormForm = FormFormFactory(context, request)
+
     form = FormForm.from_json(request.json_body)
 
     if not form.validate():
         raise HTTPBadRequest(json={'errors': form.errors})
 
     schema = models.Schema(**form.data)
-    Session.add(schema)
-    Session.flush()
+    db_session.add(schema)
+    db_session.flush()
 
     return get_list_data(request, names=[schema.name])['forms'][0]
 
 
 def get_list_data(request, names=None):
+    db_session = request.db_session
     InnerSchema = orm.aliased(models.Schema)
     InnerAttribute = orm.aliased(models.Attribute)
     query = (
-        Session.query(models.Schema.name)
+        db_session.query(models.Schema.name)
         .add_column(
-            Session.query(
-                Session.query(InnerAttribute)
+            db_session.query(
+                db_session.query(InnerAttribute)
                 .join(InnerSchema, InnerAttribute.schema)
                 .filter(InnerSchema.name == models.Schema.name)
                 .filter(InnerAttribute.is_private)
@@ -109,7 +117,7 @@ def get_list_data(request, names=None):
             .as_scalar()
             .label('has_private'))
         .add_column(
-            Session.query(InnerSchema.title)
+            db_session.query(InnerSchema.title)
             .filter(InnerSchema.name == models.Schema.name)
             .order_by(
                 InnerSchema.publish_date == sa.null(),
@@ -127,7 +135,7 @@ def get_list_data(request, names=None):
     def jsonify(row):
         values = row._asdict()
         versions = (
-            Session.query(models.Schema)
+            db_session.query(models.Schema)
             .filter(models.Schema.name == row.name)
             .order_by(models.Schema.publish_date == sa.null(),
                       models.Schema.publish_date.desc()))
@@ -149,27 +157,31 @@ def get_list_data(request, names=None):
     }
 
 
-def check_unique_name(form, field):
-    (exists,) = (
-        Session.query(
-            Session.query(models.Schema)
-            .filter_by(name=field.data.lower())
-            .exists())
-        .one())
-    if exists:
-        raise wtforms.ValidationError(_(u'Form name already in use'))
+def FormFormFactory(context, request):
+    db_session = request.db_session
 
+    def check_unique_name(form, field):
+        (exists,) = (
+            db_session.query(
+                db_session.query(models.Schema)
+                .filter_by(name=field.data.lower())
+                .exists())
+            .one())
+        if exists:
+            raise wtforms.ValidationError(_(u'Form name already in use'))
 
-class FormForm(Form):
+    class FormForm(Form):
 
-    name = wtforms.StringField(
-        validators=[
-            wtforms.validators.InputRequired(),
-            wtforms.validators.Length(min=3, max=32),
-            wtforms.validators.Regexp('^[a-zA-Z_][a-zA-Z0-9_]+$'),
-            check_unique_name])
+        name = wtforms.StringField(
+            validators=[
+                wtforms.validators.InputRequired(),
+                wtforms.validators.Length(min=3, max=32),
+                wtforms.validators.Regexp('^[a-zA-Z_][a-zA-Z0-9_]+$'),
+                check_unique_name])
 
-    title = wtforms.StringField(
-        validators=[
-            wtforms.validators.InputRequired(),
-            wtforms.validators.Length(min=3, max=128)])
+        title = wtforms.StringField(
+            validators=[
+                wtforms.validators.InputRequired(),
+                wtforms.validators.Length(min=3, max=128)])
+
+    return FormForm
