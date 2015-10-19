@@ -1,5 +1,6 @@
 """
 Common helper tools for testing
+DO NOT USE IN PRODUCTION
 """
 
 USERID = 'test_user'
