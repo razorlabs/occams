@@ -1,9 +1,7 @@
-from nose.tools import with_setup
+import pytest
+
 from sqlalchemy import Column, Integer
-
 from occams_datastore.models import ModelClass, Modifiable
-
-from tests import begin_func, rollback_func
 
 
 Base = ModelClass('Base')
@@ -12,71 +10,66 @@ Base = ModelClass('Base')
 class ModifiableClass(Base, Modifiable):
     """
     Sample case of a class using ``Modifiable``'s functionality
+
+    We define this outside of a fixture to let SQLalchemy fully
+    evaluate all modules (otheriwise pytest get's stuck indefinitely)
     """
     __tablename__ = 'modifiable'
     id = Column(Integer, primary_key=True)
 
 
-def setup_module():
-    from tests import Session
-    Base.metadata.create_all(Session.bind)
+@pytest.fixture(autouse=True, scope='module')
+def create_tables(request, engine):
+    Base.metadata.create_all(engine)
+
+    def drop_tables():
+        Base.metadata.drop_all(engine)
+
+    request.addfinalizer(drop_tables)
 
 
-def teardown_module():
-    from tests import Session
-    Base.metadata.drop_all(Session.bind)
-
-
-@with_setup(begin_func, rollback_func)
-def test_modifiable_basic():
+def test_modifiable_basic(db_session):
     """
     It should annotate the record with modification dates
     """
-    from tests import Session
-    from tests import assert_is_not_none
 
     record = ModifiableClass()
-    Session.add(record)
-    Session.flush()
+    db_session.add(record)
+    db_session.flush()
 
-    assert_is_not_none(record.create_date)
-    assert_is_not_none(record.create_user_id)
-    assert_is_not_none(record.modify_date)
-    assert_is_not_none(record.modify_user_id)
+    assert record.create_date is not None
+    assert record.create_user_id is not None
+    assert record.modify_date is not None
+    assert record.modify_user_id is not None
 
 
-@with_setup(begin_func, rollback_func)
-def test_modifiable_invalid_date():
+def test_modifiable_invalid_date(db_session):
     """
     It should not allow use of inconsitent timelines
     """
-    from tests import Session
-    from tests import assert_raises
     import datetime
     from sqlalchemy.exc import IntegrityError
 
     record = ModifiableClass()
-    Session.add(record)
-    Session.flush()
+    db_session.add(record)
+    db_session.flush()
 
     record.create_date += datetime.timedelta(1)
-    with assert_raises(IntegrityError):
-        Session.commit()
+    with pytest.raises(IntegrityError):
+        db_session.flush()
 
 
-@with_setup(begin_func, rollback_func)
-def test_modifable_non_existent_user():
+def test_modifable_non_existent_user(db_session):
     """
     It should fail if a non-existent user attemts to make a commti
     """
-    from tests import Session
-    from tests import assert_raises_regexp
 
-    # Clear any info set by setup function
-    Session.remove()
+    db_session.info = {}
 
     record = ModifiableClass()
-    Session.add(record)
+    db_session.add(record)
 
-    with assert_raises_regexp(AssertionError, 'not configured'):
-        Session.flush()
+    with pytest.raises(AssertionError) as excinfo:
+        db_session.flush()
+
+    assert 'not configured' in str(excinfo.value)

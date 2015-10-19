@@ -9,12 +9,13 @@ HERE = os.path.abspath(os.path.dirname(__file__))
 REQUIRES = [
     'alembic',
     'six',
-    'SQLAlchemy>=1.0.4,<1.0.99']
+    'SQLAlchemy'
+]
 
 EXTRAS = {
     'postgresql': ['psycopg2'],
-    'test': ['nose', 'coverage', 'nose-testconfig']
-    }
+    'test': ['pytest', 'pytest-cov'],
+}
 
 
 if sys.version_info < (2, 7):
