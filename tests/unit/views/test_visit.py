@@ -1,21 +1,26 @@
-import mock
-
-from tests import IntegrationFixture
+import pytest
 
 
-class TestCyclesJson(IntegrationFixture):
+@pytest.yield_fixture
+def check_csrf_token(config):
+    import mock
+    name = 'occams_studies.views.study.check_csrf_token'
+    with mock.patch(name) as patch:
+        yield patch
 
-    def call_view(self, context, request):
+
+class TestCyclesJson:
+
+    def _call_fut(self, *args, **kw):
         from occams_studies.views.visit import cycles_json as view
-        return view(context, request)
+        return view(*args, **kw)
 
-    def test_by_query(self):
+    def test_by_query(self, req, db_session,):
         """
         It should allow fetching via search terms (typical use)
         """
         from datetime import date
-        from pyramid import testing
-        from occams_studies import models, Session
+        from occams_studies import models
         from webob.multidict import MultiDict
 
         study = models.Study(
@@ -36,21 +41,20 @@ class TestCyclesJson(IntegrationFixture):
         study.cycles.append(cycle1)
         study.cycles.append(cycle2)
 
-        Session.add_all([patient, study])
-        Session.flush()
+        db_session.add_all([patient, study])
+        db_session.flush()
 
-        response = self.call_view(patient['visits'], testing.DummyRequest(
-            params=MultiDict([('q', u'foo')])))
+        req.GET = MultiDict([('q', u'foo')])
+        res = self._call_fut(patient['visits'], req)
 
-        self.assertEqual(cycle1.id, response['cycles'][0]['id'])
+        assert cycle1.id == res['cycles'][0]['id']
 
-    def test_by_ids(self):
+    def test_by_ids(self, req, db_session,):
         """
         It should allow search via direct ids (for pre-entered values)
         """
         from datetime import date
-        from pyramid import testing
-        from occams_studies import models, Session
+        from occams_studies import models
         from webob.multidict import MultiDict
 
         study = models.Study(
@@ -71,28 +75,27 @@ class TestCyclesJson(IntegrationFixture):
         study.cycles.append(cycle1)
         study.cycles.append(cycle2)
 
-        Session.add_all([patient, study])
-        Session.flush()
+        db_session.add_all([patient, study])
+        db_session.flush()
 
-        response = self.call_view(patient['visits'], testing.DummyRequest(
-            params=MultiDict([('ids', cycle1.id)])))
+        req.GET = MultiDict([('ids', cycle1.id)])
+        res = self._call_fut(patient['visits'], req)
 
-        self.assertEqual(cycle1.id, response['cycles'][0]['id'])
+        assert cycle1.id == res['cycles'][0]['id']
 
 
-class TestValidateCycles(IntegrationFixture):
+class TestValidateCycles:
 
-    def call_view(self, context, request):
+    def _call_fut(self, *args, **kw):
         from occams_studies.views.visit import validate_cycles as view
-        return view(context, request)
+        return view(*args, **kw)
 
-    def test_call_success(self):
+    def test_call_success(self, req, db_session,):
         """
-        It should be able to validate cycles via GET (for AJAX request)
+        It should be able to validate cycles via GET (for AJAX req)
         """
         from datetime import date
-        from pyramid import testing
-        from occams_studies import models, Session
+        from occams_studies import models
         from webob.multidict import MultiDict
 
         study = models.Study(
@@ -113,82 +116,74 @@ class TestValidateCycles(IntegrationFixture):
         study.cycles.append(cycle1)
         study.cycles.append(cycle2)
 
-        Session.add_all([patient, study])
-        Session.flush()
+        db_session.add_all([patient, study])
+        db_session.flush()
 
-        response = self.call_view(patient['visits'], testing.DummyRequest(
-            params=MultiDict([
-                ('cycles', ','.join(map(str, [cycle1.id, cycle2.id])))
-            ])))
+        req.GET = MultiDict([
+            ('cycles', ','.join(map(str, [cycle1.id, cycle2.id])))])
 
-        self.assertTrue(response)
+        res = self._call_fut(patient['visits'], req)
 
-    def test_call_fail(self):
+        assert res
+
+    def test_call_fail(self, req, db_session,):
         """
         It should return an validation error string if the cycles are invalid
         """
-        from pyramid import testing
         from webob.multidict import MultiDict
-        from occams_studies import models, Session
+        from occams_studies import models
 
         patient = models.Patient(
             site=models.Site(name=u'ucsd', title=u'UCSD'),
             pid=u'12345')
 
-        Session.add_all([patient])
-        Session.flush()
+        db_session.add_all([patient])
+        db_session.flush()
 
-        response = self.call_view(patient['visits'], testing.DummyRequest(
-            params=MultiDict([('cycles', '123')])))
-        self.assertIn('not found', response.lower())
+        req.GET = MultiDict([('cycles', '123')])
+        res = self._call_fut(patient['visits'], req)
+        assert 'not found' in res.lower()
 
 
-@mock.patch('occams_studies.views.visit.check_csrf_token')
-class TestEditJson(IntegrationFixture):
+class TestEditJson:
 
-    def call_view(self, context, request):
+    def _call_fut(self, *args, **kw):
         from occams_studies.views.visit import edit_json as view
-        return view(context, request)
+        return view(*args, **kw)
 
-    def test_valid_cycle(self, check_csrf_token):
+    def test_valid_cycle(self, req, db_session, check_csrf_token):
         """
         It should only allow existing cycles
         """
         from datetime import date
-        from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_studies import models, Session
-
-        self.config.add_route('studies.patient', '/{patient}')
-        self.config.add_route('studies.visit', '/{patient}/{visit}')
+        from occams_studies import models
 
         patient = models.Patient(
             site=models.Site(name=u'ucsd', title=u'UCSD'),
             pid=u'12345')
 
-        Session.add_all([patient])
-        Session.flush()
+        db_session.add_all([patient])
+        db_session.flush()
 
-        with self.assertRaises(HTTPBadRequest) as cm:
-            self.call_view(patient['visits'], testing.DummyRequest(
-                json_body={
-                    'cycles': ['123'],
-                    'visit_date': str(date.today())}))
+        req.json_body = {
+            'cycles': ['123'],
+            'visit_date': str(date.today())
+        }
 
-        self.assertIn(
-            'not found', cm.exception.json['errors']['cycles-0'].lower())
+        with pytest.raises(HTTPBadRequest) as excinfo:
+            self._call_fut(patient['visits'], req)
 
-    def test_unique_cycle(self, check_csrf_token):
+        assert 'not found' in \
+            excinfo.value.json['errors']['cycles-0'].lower()
+
+    def test_unique_cycle(self, req, db_session, check_csrf_token):
         """
         It should not allow repeat cycles (unless it's interim)
         """
         from datetime import date, timedelta
-        from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_studies import models, Session
-
-        self.config.add_route('studies.patient', '/{patient}')
-        self.config.add_route('studies.visit', '/{patient}/{visit}')
+        from occams_studies import models
 
         study = models.Study(
             name=u'somestudy',
@@ -209,40 +204,34 @@ class TestEditJson(IntegrationFixture):
         visit = models.Visit(
             patient=patient, cycles=[cycle], visit_date=date.today())
 
-        Session.add_all([patient, study, visit])
-        Session.flush()
+        db_session.add_all([patient, study, visit])
+        db_session.flush()
 
-        def make_request():
-            return self.call_view(patient['visits'], testing.DummyRequest(
-                json_body={
-                    'cycles': [cycle.id],
-                    'visit_date': str(date.today() + timedelta(days=1))}
-                ))
+        req.json_body = {
+            'cycles': [cycle.id],
+            'visit_date': str(date.today() + timedelta(days=1))
+        }
 
-        with self.assertRaises(HTTPBadRequest) as cm:
-            make_request()
+        with pytest.raises(HTTPBadRequest) as excinfo:
+            self._call_fut(patient['visits'], req)
 
-        self.assertIn(
-            'already in use',
-            cm.exception.json['errors']['cycles-0'].lower())
+        assert 'already in use' in \
+            excinfo.value.json['errors']['cycles-0'].lower()
 
         # The exception is interims
         cycle.is_interim = True
-        Session.flush()
-        response = make_request()
-        self.assertIsNotNone(response)
+        db_session.flush()
+        res = self._call_fut(patient['visits'], req)
 
-    def test_unique_visit_date(self, check_csrf_token):
+        assert res is not None
+
+    def test_unique_visit_date(self, req, db_session, check_csrf_token):
         """
         It should not allow duplicate visit dates
         """
         from datetime import date
-        from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_studies import models, Session
-
-        self.config.add_route('studies.patient', '/{patient}')
-        self.config.add_route('studies.visit', '/{patient}/{visit}')
+        from occams_studies import models
 
         study = models.Study(
             name=u'somestudy',
@@ -267,39 +256,30 @@ class TestEditJson(IntegrationFixture):
             cycles=[cycle1],
             visit_date=date.today())
 
-        Session.add_all([patient, study, visit])
-        Session.flush()
+        db_session.add_all([patient, study, visit])
+        db_session.flush()
+
+        req.json_body = {
+            'cycles': [cycle2.id],
+            'visit_date': str(date.today())
+        }
 
         # Update the visit, should allow to update the date
-        self.call_view(visit, testing.DummyRequest(
-            json_body={
-                'cycles': [cycle2.id],
-                'visit_date': str(date.today())}
-            ))
+        self._call_fut(visit, req)
 
         # New visits cannot share dates
-        with self.assertRaises(HTTPBadRequest) as cm:
-            self.call_view(patient['visits'], testing.DummyRequest(
-                json_body={
-                    'cycles': [cycle2.id],
-                    'visit_date': str(date.today())}
-                ))
+        with pytest.raises(HTTPBadRequest) as excinfo:
+            self._call_fut(patient['visits'], req)
 
-        self.assertIn(
-            'already exists',
-            cm.exception.json['errors']['visit_date'])
+        assert 'already exists' in \
+            excinfo.value.json['errors']['visit_date']
 
-    def test_include_forms(self, check_csrf_token):
+    def test_include_forms(self, req, db_session, check_csrf_token):
         """
         It should allow the user to create cycle forms
         """
         from datetime import date, timedelta
-        from pyramid import testing
-        from occams_studies import models, Session
-
-        self.config.add_route('studies.patient', '/{patient}')
-        self.config.add_route('studies.visit', '/{patient}/{visit}')
-        self.config.add_route('studies.visit_form', '/forms/{form}')
+        from occams_studies import models
 
         form1 = models.Schema(
             name='form1', title=u'', publish_date=date.today())
@@ -328,59 +308,52 @@ class TestEditJson(IntegrationFixture):
             site=models.Site(name=u'ucsd', title=u'UCSD'),
             pid=u'12345')
 
-        Session.add_all([patient, study])
-        Session.flush()
+        db_session.add_all([patient, study])
+        db_session.flush()
 
-        response = self.call_view(patient['visits'], testing.DummyRequest(
-            json_body={
-                'cycles': [cycle1.id],
-                'visit_date': str(date.today() + timedelta(days=1)),
-                'include_forms': True}
-            ))
+        req.json_body = {
+            'cycles': [cycle1.id],
+            'visit_date': str(date.today() + timedelta(days=1)),
+            'include_forms': True
+        }
 
-        self.assertItemsEqual(
-            ['form1'],
-            [e['schema']['name'] for e in response['entities']])
+        res = self._call_fut(patient['visits'], req)
 
-        contexts = Session.query(models.Context).all()
+        assert ['form1'] == \
+            [e['schema']['name'] for e in res['entities']]
 
-        self.assertItemsEqual(
-            ['patient', 'visit'],
-            [c.external for c in contexts])
+        contexts = db_session.query(models.Context).all()
 
-        visit = Session.query(models.Visit).get(response['id'])
+        assert sorted(['patient', 'visit']) == \
+            sorted([c.external for c in contexts])
+
+        visit = db_session.query(models.Visit).get(res['id'])
 
         # Update to demonstrate forms can still be added on edit
-        response = self.call_view(visit, testing.DummyRequest(
-            json_body={
-                'cycles': [cycle1.id, cycle2.id],
-                'visit_date': str(date.today() + timedelta(days=1)),
-                'include_forms': True}
-            ))
+        req.json_body = {
+            'cycles': [cycle1.id, cycle2.id],
+            'visit_date': str(date.today() + timedelta(days=1)),
+            'include_forms': True
+        }
 
-        self.assertItemsEqual(
-            ['form1', 'form2'],
-            [e['schema']['name'] for e in response['entities']])
+        res = self._call_fut(visit, req)
 
-        contexts = Session.query(models.Context).all()
+        assert sorted(['form1', 'form2']) == \
+            sorted([e['schema']['name'] for e in res['entities']])
 
-        self.assertItemsEqual(
-            [(x, e['id'])
-             for e in response['entities']
-             for x in ('patient', 'visit')],
-            [(c.external, c.entity_id) for c in contexts])
+        contexts = db_session.query(models.Context).all()
 
-    def test_include_relative_form(self, check_csrf_token):
+        assert sorted([(x, e['id'])
+                       for e in res['entities']
+                       for x in ('patient', 'visit')]) == \
+            sorted([(c.external, c.entity_id) for c in contexts])
+
+    def test_include_relative_form(self, req, db_session, check_csrf_token):
         """
         It should use the latest version of the form relative to the visit date
         """
         from datetime import date, timedelta
-        from pyramid import testing
-        from occams_studies import models, Session
-
-        self.config.add_route('studies.patient', '/{patient}')
-        self.config.add_route('studies.visit', '/{patient}/{visit}')
-        self.config.add_route('studies.visit_form', '/forms/{form}')
+        from occams_studies import models
 
         t0 = date.today()
         t1 = t0 + timedelta(days=1)
@@ -404,31 +377,27 @@ class TestEditJson(IntegrationFixture):
             site=models.Site(name=u'ucsd', title=u'UCSD'),
             pid=u'12345')
 
-        Session.add_all([patient, study])
-        Session.flush()
+        db_session.add_all([patient, study])
+        db_session.flush()
 
-        response = self.call_view(patient['visits'], testing.DummyRequest(
-            json_body={
-                'cycles': [cycle1.id],
-                'visit_date': str(t1),
-                'include_forms': True}
-            ))
+        req.json_body = {
+            'cycles': [cycle1.id],
+            'visit_date': str(t1),
+            'include_forms': True
+        }
 
-        self.assertEqual(1, len(response['entities']))
-        self.assertEqual(
-            str(t0), response['entities'][0]['schema']['publish_date'])
+        res = self._call_fut(patient['visits'], req)
 
-    def test_include_not_retracted_form(self, check_csrf_token):
+        assert 1 == len(res['entities'])
+        assert str(t0) == res['entities'][0]['schema']['publish_date']
+
+    def test_include_not_retracted_form(
+            self, req, db_session, check_csrf_token):
         """
         It should not use retracted forms, even if there are the most recent
         """
         from datetime import date, timedelta
-        from pyramid import testing
-        from occams_studies import models, Session
-
-        self.config.add_route('studies.patient', '/{patient}')
-        self.config.add_route('studies.visit', '/{patient}/{visit}')
-        self.config.add_route('studies.visit_form', '/forms/{form}')
+        from occams_studies import models
 
         t0 = date.today()
         t1 = t0 + timedelta(days=1)
@@ -445,37 +414,34 @@ class TestEditJson(IntegrationFixture):
         cycle1 = models.Cycle(name='week-1', title=u'', week=1)
         cycle1.schemata.update([
             models.Schema(name='form1', title=u'', publish_date=t0),
-            models.Schema(name='form1', title=u'', publish_date=t2, retract_date=t2)])
+            models.Schema(name='form1', title=u'', publish_date=t2,
+                          retract_date=t2)])
         study.cycles.append(cycle1)
 
         patient = models.Patient(
             site=models.Site(name=u'ucsd', title=u'UCSD'),
             pid=u'12345')
 
-        Session.add_all([patient, study])
-        Session.flush()
+        db_session.add_all([patient, study])
+        db_session.flush()
 
-        response = self.call_view(patient['visits'], testing.DummyRequest(
-            json_body={
-                'cycles': [cycle1.id],
-                'visit_date': str(t2),
-                'include_forms': True}
-            ))
+        req.json_body = {
+            'cycles': [cycle1.id],
+            'visit_date': str(t2),
+            'include_forms': True
+        }
 
-        self.assertEqual(1, len(response['entities']))
-        self.assertEqual(
-            str(t0), response['entities'][0]['schema']['publish_date'])
+        res = self._call_fut(patient['visits'], req)
 
-    def test_update_patient(self, check_csrf_token):
+        assert 1 == len(res['entities'])
+        assert str(t0) == res['entities'][0]['schema']['publish_date']
+
+    def test_update_patient(self, req, db_session, check_csrf_token):
         """
         It should also mark the patient as modified
         """
         from datetime import date
-        from pyramid import testing
-        from occams_studies import models, Session
-
-        self.config.add_route('studies.patient', '/{patient}')
-        self.config.add_route('studies.visit', '/{patient}/{visit}')
+        from occams_studies import models
 
         study = models.Study(
             name=u'somestudy',
@@ -491,35 +457,33 @@ class TestEditJson(IntegrationFixture):
             site=models.Site(name=u'ucsd', title=u'UCSD'),
             pid=u'12345')
 
-        Session.add_all([patient, study])
-        Session.flush()
+        db_session.add_all([patient, study])
+        db_session.flush()
 
         old_modify_date = patient.modify_date
 
-        self.call_view(patient['visits'], testing.DummyRequest(
-            json_body={
-                'cycles': [str(cycle1.id)],
-                'visit_date': str(date.today())}))
+        req.json_body = {
+            'cycles': [str(cycle1.id)],
+            'visit_date': str(date.today())
+        }
 
-        self.assertLess(old_modify_date, patient.modify_date)
+        self._call_fut(patient['visits'], req)
+
+        assert old_modify_date < patient.modify_date
 
 
-@mock.patch('occams_studies.views.visit.check_csrf_token')
-class TestDeleteJson(IntegrationFixture):
+class TestDeleteJson:
 
-    def call_view(self, context, request):
+    def _call_fut(self, *args, **kw):
         from occams_studies.views.visit import delete_json as view
-        return view(context, request)
+        return view(*args, **kw)
 
-    def test_update_patient(self, check_csrf_token):
+    def test_update_patient(self, req, db_session, check_csrf_token):
         """
         It should also mark the patient as modified
         """
         from datetime import date
-        from pyramid import testing
-        from occams_studies import models, Session
-
-        self.config.add_route('studies.patient', '/{patient}')
+        from occams_studies import models
 
         patient = models.Patient(
             site=models.Site(name=u'ucsd', title=u'UCSD'),
@@ -529,22 +493,19 @@ class TestDeleteJson(IntegrationFixture):
             patient=patient,
             visit_date=date.today())
 
-        Session.add_all([patient, visit])
-        Session.flush()
+        db_session.add_all([patient, visit])
+        db_session.flush()
 
         old_modify_date = patient.modify_date
-        self.call_view(visit, testing.DummyRequest())
-        self.assertLess(old_modify_date, patient.modify_date)
+        self._call_fut(visit, req)
+        assert old_modify_date < patient.modify_date
 
-    def test_cascade_forms(self, check_csrf_token):
+    def test_cascade_forms(self, req, db_session, check_csrf_token):
         """
         It should remove all visit-associated forms.
         """
         from datetime import date
-        from pyramid import testing
-        from occams_studies import models, Session
-
-        self.config.add_route('studies.patient', '/{patient}')
+        from occams_studies import models
 
         schema = models.Schema(
             name=u'sample',
@@ -584,32 +545,30 @@ class TestDeleteJson(IntegrationFixture):
             schema=schema,
             collect_date=date.today()))
 
-        Session.add_all([patient, enrollment, study, visit])
-        Session.flush()
+        db_session.add_all([patient, enrollment, study, visit])
+        db_session.flush()
 
         visit_id = visit.id
 
-        self.call_view(visit, testing.DummyRequest())
+        self._call_fut(visit, req)
 
-        self.assertIsNone(Session.query(models.Visit).get(visit_id))
-        self.assertEquals(0, Session.query(models.Entity).count())
+        assert db_session.query(models.Visit).get(visit_id) is None
+        assert 0 == db_session.query(models.Entity).count()
 
 
-@mock.patch('occams_studies.views.form.check_csrf_token')
-class TestFormDeleteJson(IntegrationFixture):
+class TestFormDeleteJson:
 
-    def call_view(self, context, request):
+    def _call_fut(self, *args, **kw):
         from occams_studies.views.form import bulk_delete_json as view
-        return view(context, request)
+        return view(*args, **kw)
 
-    def test_success(self, check_csrf_token):
+    def test_success(self, req, db_session, check_csrf_token):
         """
         It should allow removal of entities from a visit.
         """
         from datetime import date, timedelta
-        from pyramid import testing
         from pyramid.httpexceptions import HTTPOk
-        from occams_studies import models, Session
+        from occams_studies import models
 
         cycle = models.Cycle(name='week-1', title=u'', week=1)
 
@@ -629,7 +588,7 @@ class TestFormDeleteJson(IntegrationFixture):
         site = models.Site(name=u'ucsd', title=u'UCSD')
 
         default_state = (
-            Session.query(models.State)
+            db_session.query(models.State)
             .filter_by(name=u'pending-entry')
             .one())
 
@@ -645,19 +604,19 @@ class TestFormDeleteJson(IntegrationFixture):
             schema=schema, collect_date=t_a, state=default_state)
         list(map(visit_a.entities.add, [entity_a_1, entity_a_2, entity_a_3]))
 
-        Session.add_all([visit_a, study])
-        Session.flush()
+        db_session.add_all([visit_a, study])
+        db_session.flush()
 
-        response = self.call_view(visit_a['forms'], testing.DummyRequest(
-            json_body={
-                'forms': [entity_a_2.id, entity_a_3.id]
-                }))
+        req.json_body = {
+            'forms': [entity_a_2.id, entity_a_3.id]
+        }
+
+        res = self._call_fut(visit_a['forms'], req)
 
         # refresh the session so we can get a correct listing
-        Session.expunge_all()
-        visit_a = Session.query(models.Visit).get(visit_a.id)
+        db_session.expunge_all()
+        visit_a = db_session.query(models.Visit).get(visit_a.id)
 
-        self.assertIsInstance(response, HTTPOk)
-        self.assertItemsEqual(
-            [e.id for e in [entity_a_1]],
-            [e.id for e in visit_a.entities])
+        assert isinstance(res, HTTPOk)
+        assert sorted([e.id for e in [entity_a_1]]) == \
+            sorted([e.id for e in visit_a.entities])
