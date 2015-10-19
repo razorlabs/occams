@@ -2,7 +2,7 @@ import re
 
 from sqlalchemy.orm.exc import NoResultFound
 
-from . import models, Session
+from . import models
 
 
 OUR_PATTERN = re.compile(
@@ -14,28 +14,28 @@ OUR_PATTERN = re.compile(
     re.IGNORECASE | re.VERBOSE)
 
 
-def generate(site_name):
+def generate(db_session, site_name):
     """
     Generates an OUR number for the distributor
     """
     try:
         # attempt to find an existing site registration
-        site = Session.query(models.Site).filter_by(title=site_name).one()
+        site = db_session.query(models.Site).filter_by(title=site_name).one()
     except NoResultFound:
         # none found, so automatically register the content
         site = models.Site(title=site_name)
-        Session.add(site)
+        db_session.add(site)
 
     while True:
         identifier = models.Identifier(origin=site)
-        Session.add(identifier)
-        Session.flush()
+        db_session.add(identifier)
+        db_session.flush()
 
         our_number = identifier.our_number
 
         if not OUR_PATTERN.match(our_number):
             identifier.is_active = False
-            Session.flush()
+            db_session.flush()
             continue
 
         return our_number
