@@ -1,12 +1,13 @@
-from tests import IntegrationFixture
+import pytest
 
-class TestIncludeme(IntegrationFixture):
 
-    def test_settings(self):
+class TestIncludeme:
+
+    def test_settings(self, config):
         """
         It should be able to sanitize export-specific settings
         """
-        from tests import REDIS_URL
+        from tests.conftest import REDIS_URL
         input = {
             'celery.backend.url': REDIS_URL,
             'celery.broker.url': REDIS_URL,
@@ -22,46 +23,14 @@ class TestIncludeme(IntegrationFixture):
         expected['studies.export.expire'] = \
             int(expected['studies.export.expire'])
 
-        self.config.registry.settings.update(input)
-        self.config.include('occams_studies.tasks')
+        config.registry.settings.update(input)
+        config.include('occams_studies.tasks')
         for key in input.keys():
-            self.assertEquals(
-                self.config.registry.settings[key],
-                expected[key])
+            assert config.registry.settings[key] == expected[key]
 
 
+@pytest.mark.usefixtures('celery')
 class TestMakeExport:
-
-    def setUp(self):
-        super(TestMakeExport, self).setUp()
-        import tempfile
-        import mock
-        from redis import StrictRedis
-
-        from occams.celery import app, Session
-        from occams_studies import models
-        from tests import REDIS_URL
-
-        tmpdir = tempfile.mkdtemp()
-        self.config.registry.settings['studies.export.dir'] = tmpdir
-        app.userid = 'dummy'
-        self.config.registry.settings['studies.export.user'] = 'dummy'
-        Session.add(models.User(key='dummy'))
-        Session.flush()
-        self.celery = app
-        self.celery.redis = StrictRedis.from_url(REDIS_URL)
-        self.celery.settings = self.config.registry.settings
-
-        # Block tasks from commiting to prevent test sideeffects
-        self.commitmock = mock.patch('occams_studies.tasks.Session.commit')
-        self.commitmock.start()
-
-    def tearDown(self):
-        super(TestMakeExport, self).tearDown()
-        import shutil
-        import mock
-        shutil.rmtree(self.celery.settings['studies.export.dir'])
-        mock.patch.stopall()
 
     def test_zip(self):
         """
@@ -73,7 +42,6 @@ class TestMakeExport:
 
         owner = models.User(key=u'joe')
         Session.info['blame'] = owner
-        Session.info['settings'] = self.config.registry.settings
         Session.add(owner)
         Session.flush()
 
@@ -87,8 +55,8 @@ class TestMakeExport:
         tasks.make_export(export.name)
 
         # @in_transaction removes the session metadata, so we gotta do this
-        Session.info['settings'] = self.config.registry.settings
         export = Session.merge(export)
-
         with ZipFile(export.path, 'r') as zfp:
-            self.assertItemsEqual(['pid.csv', 'codebook.csv'], zfp.namelist())
+            file_names = zfp.namelist()
+
+        assert sorted(['pid.csv', 'codebook.csv']) == sorted(file_names)

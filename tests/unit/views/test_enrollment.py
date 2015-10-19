@@ -1,30 +1,18 @@
-import mock
-
-from tests import IntegrationFixture
+import pytest
 
 
-def _register_routes(config):
-    config.add_route('studies.patient', '/p/{patient}')
-    config.add_route('studies.enrollment', '/e/{enrollment}')
-    config.add_route('studies.enrollment_randomization', '/e/{enrollment}/rand')
-    config.add_route('studies.enrollment_termination', '/e/{enrollment}/term')
+class TestViewJson:
 
-
-class TestViewJson(IntegrationFixture):
-
-    def call_view(self, context, request):
+    def _call_fut(self, *args, **kw):
         from occams_studies.views.enrollment import view_json as view
-        return view(context, request)
+        return view(*args, **kw)
 
-    def test_hide_blinded_randomization(self):
+    def test_hide_blinded_randomization(self, req, db_session):
         """
         It should not include randomization status if study is blinded
         """
         from datetime import date
-        from pyramid import testing
-        from occams_studies import models, Session
-
-        _register_routes(self.config)
+        from occams_studies import models
 
         schema = models.Schema(name=u'criteria', title=u'Criteria')
 
@@ -53,35 +41,29 @@ class TestViewJson(IntegrationFixture):
                     title=u'Tested',
                     study=study)))
 
-        Session.add(enrollment)
-        Session.flush()
+        db_session.add(enrollment)
+        db_session.flush()
 
         study.is_blinded = False
-        Session.flush()
-        request = testing.DummyRequest()
-        response = self.call_view(enrollment, request)
-        self.assertIsNotNone(response['stratum']['arm'])
+        db_session.flush()
+        res = self._call_fut(enrollment, req)
+        assert res['stratum']['arm'] is not None
 
         study.is_blinded = True
-        Session.flush()
-        request = testing.DummyRequest()
-        response = self.call_view(enrollment, request)
-        self.assertIsNone(response['stratum']['arm'])
+        db_session.flush()
+        res = self._call_fut(enrollment, req)
+        assert res['stratum']['arm'] is None
 
 
-@mock.patch('occams_studies.views.enrollment.check_csrf_token')
-class TestEditJson(IntegrationFixture):
+class TestEditJson:
 
-    def call_view(self, context, request):
+    def _call_fut(self, *args, **kw):
         from occams_studies.views.enrollment import edit_json as view
-        return view(context, request)
+        return view(*args, **kw)
 
-    def test_save(self, check_csrf_token):
+    def test_save(self, req, db_session):
         from datetime import date
-        from pyramid import testing
-        from occams_studies import models, Session
-
-        _register_routes(self.config)
+        from occams_studies import models
 
         today = date.today()
 
@@ -97,8 +79,8 @@ class TestEditJson(IntegrationFixture):
             site=models.Site(name=u'ucsd', title=u'UCSD'),
             pid=u'12345')
 
-        Session.add_all([patient, study])
-        Session.flush()
+        db_session.add_all([patient, study])
+        db_session.flush()
 
         payload = {
             'study': str(study.id),
@@ -108,10 +90,10 @@ class TestEditJson(IntegrationFixture):
             'reference_number': u'123'
         }
 
-        response = self.call_view(
-            patient['enrollments'], testing.DummyRequest(json_body=payload))
+        req.json_body = payload
+        res = self._call_fut(patient['enrollments'], req)
 
-        enrollment = Session.query(models.Enrollment).get(response['id'])
+        enrollment = db_session.query(models.Enrollment).get(res['id'])
 
         actual = {
             'study': str(enrollment.study.id),
@@ -121,18 +103,16 @@ class TestEditJson(IntegrationFixture):
             'reference_number': str(enrollment.reference_number)
         }
 
-        self.assertEquals(payload, actual)
+        assert payload == actual
 
-    def test_unique_consent(self, check_csrf_token):
+    def test_unique_consent(self, req, db_session):
         """
         It should allow multiple enrollments to a study, but a single consent.
         """
         from datetime import date
-        from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_studies import models, Session
-
-        _register_routes(self.config)
+        import pytest
+        from occams_studies import models
 
         study = models.Study(
             name=u'somestudy',
@@ -146,44 +126,39 @@ class TestEditJson(IntegrationFixture):
             site=models.Site(name=u'ucsd', title=u'UCSD'),
             pid=u'12345')
 
-        Session.add_all([patient, study])
-        Session.flush()
+        db_session.add_all([patient, study])
+        db_session.flush()
 
         consent_date = date.today()
 
-        def make_request():
-            self.call_view(patient['enrollments'], testing.DummyRequest(
-                json_body={
-                    'study': str(study.id),
-                    'consent_date': str(consent_date),
-                    'latest_consent_date': str(consent_date),
-                    }
-                ))
+        req.json_body = {
+            'study': str(study.id),
+            'consent_date': str(consent_date),
+            'latest_consent_date': str(consent_date),
+        }
 
-        make_request()
+        self._call_fut(patient['enrollments'], req)
 
-        self.assertIsNotNone(
-            Session.query(models.Enrollment)
-            .filter_by(patient=patient, study=study).one())
+        assert (
+            db_session.query(models.Enrollment)
+            .filter_by(patient=patient, study=study)
+            .one()) is not None
 
         # Try adding it again, it should fail
-        with self.assertRaises(HTTPBadRequest) as cm:
-            make_request()
+        with pytest.raises(HTTPBadRequest) as excinfo:
+            self._call_fut(patient['enrollments'], req)
 
-        self.assertIn(
-            'This enrollment already exists.',
-            cm.exception.json['errors']['consent_date'])
+        assert 'This enrollment already exists.' in \
+            excinfo.value.json['errors']['consent_date']
 
-    def test_disable_study_update(self, check_csrf_token):
+    def test_disable_study_update(self, req, db_session):
         """
         It should not allow a enrollment's study to be changed
         """
         from datetime import date
-        from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_studies import models, Session
-
-        _register_routes(self.config)
+        import pytest
+        from occams_studies import models
 
         study1 = models.Study(
             name=u'somestudy',
@@ -210,34 +185,31 @@ class TestEditJson(IntegrationFixture):
             patient=patient,
             consent_date=date.today())
 
-        Session.add_all([patient, enrollment, study1, study2])
-        Session.flush()
+        db_session.add_all([patient, enrollment, study1, study2])
+        db_session.flush()
 
         consent_date = date.today()
 
-        with self.assertRaises(HTTPBadRequest) as cm:
-            self.call_view(enrollment, testing.DummyRequest(
-                json_body={
-                    'study': str(study2.id),
-                    'consent_date': str(consent_date),
-                    'latest_consent_date': str(consent_date),
-                    }
-                ))
+        req.json_body = {
+            'study': str(study2.id),
+            'consent_date': str(consent_date),
+            'latest_consent_date': str(consent_date),
+        }
 
-        self.assertIn(
-            'Cannot change an enrollment\'s study.',
-            cm.exception.json['errors']['study'])
+        with pytest.raises(HTTPBadRequest) as excinfo:
+            self._call_fut(enrollment, req)
 
-    def test_timeline_start_date(self, check_csrf_token):
+        assert 'Cannot change an enrollment\'s study.' in \
+            excinfo.value.json['errors']['study']
+
+    def test_timeline_start_date(self, req, db_session):
         """
         It should not allow consent dates before the study start date
         """
         from datetime import date, timedelta
-        from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_studies import models, Session
-
-        _register_routes(self.config)
+        import pytest
+        from occams_studies import models
 
         today = date.today()
         invalid_date = today - timedelta(days=100)
@@ -256,32 +228,29 @@ class TestEditJson(IntegrationFixture):
             site=models.Site(name=u'ucsd', title=u'UCSD'),
             pid=u'12345')
 
-        Session.add_all([patient, study])
-        Session.flush()
+        db_session.add_all([patient, study])
+        db_session.flush()
 
-        with self.assertRaises(HTTPBadRequest) as cm:
-            self.call_view(patient['enrollments'], testing.DummyRequest(
-                json_body={
-                    'study': str(study.id),
-                    'consent_date': str(invalid_date),
-                    'latest_consent_date': str(invalid_date),
-                    }
-                ))
+        req.json_body = {
+            'study': str(study.id),
+            'consent_date': str(invalid_date),
+            'latest_consent_date': str(invalid_date),
+        }
 
-        self.assertIn(
-            'Cannot enroll before the study start date',
-            cm.exception.json['errors']['latest_consent_date'])
+        with pytest.raises(HTTPBadRequest) as excinfo:
+            self._call_fut(patient['enrollments'], req)
 
-    def test_timeline_end_date(self, check_csrf_token):
+        assert 'Cannot enroll before the study start date' in \
+            excinfo.value.json['errors']['latest_consent_date']
+
+    def test_timeline_end_date(self, req, db_session):
         """
         It should not allow consent dates after the study end date
         """
         from datetime import date, timedelta
-        from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_studies import models, Session
-
-        _register_routes(self.config)
+        import pytest
+        from occams_studies import models
 
         today = date.today()
         t1 = today - timedelta(days=5)
@@ -302,31 +271,27 @@ class TestEditJson(IntegrationFixture):
             site=models.Site(name=u'ucsd', title=u'UCSD'),
             pid=u'12345')
 
-        Session.add_all([patient, study])
-        Session.flush()
+        db_session.add_all([patient, study])
+        db_session.flush()
 
-        with self.assertRaises(HTTPBadRequest) as cm:
-            self.call_view(patient['enrollments'], testing.DummyRequest(
-                json_body={
-                    'study': str(study.id),
-                    'consent_date': str(invalid_date),
-                    'latest_consent_date': str(invalid_date),
-                    }
-                ))
+        req.json_body = {
+            'study': str(study.id),
+            'consent_date': str(invalid_date),
+            'latest_consent_date': str(invalid_date),
+        }
 
-        self.assertIn(
-            'Cannot enroll after the study end date',
-            cm.exception.json['errors']['latest_consent_date'])
+        with pytest.raises(HTTPBadRequest) as excinfo:
+            self._call_fut(patient['enrollments'], req)
 
-    def test_update_patient(self, check_csrf_token):
+        assert 'Cannot enroll after the study end date' in \
+            excinfo.value.json['errors']['latest_consent_date']
+
+    def test_update_patient(self, req, db_session):
         """
         It should mark the patient as updated
         """
         from datetime import date
-        from pyramid import testing
-        from occams_studies import models, Session
-
-        _register_routes(self.config)
+        from occams_studies import models
 
         study = models.Study(
             name=u'somestudy',
@@ -340,25 +305,24 @@ class TestEditJson(IntegrationFixture):
             site=models.Site(name=u'ucsd', title=u'UCSD'),
             pid=u'12345')
 
-        Session.add_all([patient, study])
-        Session.flush()
+        db_session.add_all([patient, study])
+        db_session.flush()
 
         old_modify_date = patient.modify_date
-        self.call_view(patient['enrollments'], testing.DummyRequest(
-            json_body={
-                'study': study.id,
-                'consent_date': str(date.today()),
-                'latest_consent_date': str(date.today())
-                }))
-        self.assertLess(old_modify_date, patient.modify_date)
+        req.json_body = {
+            'study': study.id,
+            'consent_date': str(date.today()),
+            'latest_consent_date': str(date.today())
+        }
 
-    def test_temination_date_disabled_if_form_configured(self, csrf_token):
+        self._call_fut(patient['enrollments'], req)
+        assert old_modify_date < patient.modify_date
+
+    def test_temination_date_disabled_if_form_configured(
+            self, req, db_session):
 
         from datetime import date, timedelta
-        from pyramid import testing
-        from occams_studies import models, Session
-
-        _register_routes(self.config)
+        from occams_studies import models
 
         today = date.today()
         t1 = today - timedelta(days=5)
@@ -395,29 +359,27 @@ class TestEditJson(IntegrationFixture):
             consent_date=t1,
             termination_date=t3)
 
-        Session.add_all([enrollment])
-        Session.flush()
+        db_session.add_all([enrollment])
+        db_session.flush()
 
-        self.call_view(enrollment, testing.DummyRequest(
-            json_body={
-                'study': study.id,
-                'consent_date': str(t1),
-                'latest_consent_date': str(t2),
-                'termination_date': str(t4)
-                }
-            ))
+        req.json_body = {
+            'study': study.id,
+            'consent_date': str(t1),
+            'latest_consent_date': str(t2),
+            'termination_date': str(t4)
+        }
+
+        self._call_fut(enrollment, req)
 
         # Termination date should not have changed because
         # it's controlled via termination schema
-        self.assertEquals(t3, enrollment.termination_date)
+        assert t3 == enrollment.termination_date
 
-    def test_temination_date_enabled_if_no_termination(self, csrf_token):
+    def test_temination_date_enabled_if_no_termination(
+            self, req, db_session):
 
         from datetime import date, timedelta
-        from pyramid import testing
-        from occams_studies import models, Session
-
-        _register_routes(self.config)
+        from occams_studies import models
 
         today = date.today()
         t1 = today - timedelta(days=5)
@@ -443,39 +405,35 @@ class TestEditJson(IntegrationFixture):
             consent_date=t1,
             termination_date=t3)
 
-        Session.add_all([enrollment])
-        Session.flush()
+        db_session.add_all([enrollment])
+        db_session.flush()
 
-        self.call_view(enrollment, testing.DummyRequest(
-            json_body={
-                'study': study.id,
-                'consent_date': str(t1),
-                'latest_consent_date': str(t2),
-                'termination_date': str(t4)
-                }
-            ))
+        req.json_body = {
+            'study': study.id,
+            'consent_date': str(t1),
+            'latest_consent_date': str(t2),
+            'termination_date': str(t4)
+        }
+
+        self._call_fut(enrollment, req)
 
         # Termination date should have changed because there
         # is not termination schema that controls it
-        self.assertEquals(t4, enrollment.termination_date)
+        assert t4 == enrollment.termination_date
 
 
-@mock.patch('occams_studies.views.enrollment.check_csrf_token')
-class TestDeleteJson(IntegrationFixture):
+class TestDeleteJson:
 
-    def call_view(self, context, request):
+    def _call_fut(self, *args, **kw):
         from occams_studies.views.enrollment import delete_json as view
-        return view(context, request)
+        return view(*args, **kw)
 
-    def test_update_patient(self, check_csrf_token):
+    def test_update_patient(self, req, db_session):
         """
         It should mark the patient as updated
         """
         from datetime import date
-        from pyramid import testing
-        from occams_studies import models, Session
-
-        _register_routes(self.config)
+        from occams_studies import models
 
         study = models.Study(
             name=u'somestudy',
@@ -494,22 +452,19 @@ class TestDeleteJson(IntegrationFixture):
             patient=patient,
             consent_date=date.today())
 
-        Session.add_all([patient, enrollment, study])
-        Session.flush()
+        db_session.add_all([patient, enrollment, study])
+        db_session.flush()
 
         old_modify_date = patient.modify_date
-        self.call_view(enrollment, testing.DummyRequest())
-        self.assertLess(old_modify_date, patient.modify_date)
+        self._call_fut(enrollment, req)
+        assert old_modify_date < patient.modify_date
 
-    def test_cascade_forms(self, check_csrf_token):
+    def test_cascade_forms(self, req, db_session):
         """
         It should also remove termination forms.
         """
         from datetime import date
-        from pyramid import testing
-        from occams_studies import models, Session
-
-        _register_routes(self.config)
+        from occams_studies import models
 
         schema = models.Schema(
             name=u'termination',
@@ -537,28 +492,24 @@ class TestDeleteJson(IntegrationFixture):
             schema=schema,
             collect_date=date.today()))
 
-        Session.add_all([patient, enrollment, study])
-        Session.flush()
+        db_session.add_all([patient, enrollment, study])
+        db_session.flush()
 
         enrollment_id = enrollment.id
 
-        self.call_view(enrollment, testing.DummyRequest())
+        self._call_fut(enrollment, req)
 
-        self.assertIsNone(Session.query(models.Enrollment).get(enrollment_id))
-        self.assertEquals(0, Session.query(models.Entity).count())
+        assert db_session.query(models.Enrollment).get(enrollment_id) is None
+        assert 0 == db_session.query(models.Entity).count()
 
 
-class TestRandomizeAjax(IntegrationFixture):
+class TestRandomizeAjax:
 
-    def setUp(self):
-        super(TestRandomizeAjax, self).setUp()
+    @pytest.fixture(autouse=True)
+    def install_randomization_data(self, db_session):
 
         from datetime import date
-
-        from occams import Session
         from occams_studies import models
-
-        _register_routes(self.config)
 
         self.schema = models.Schema(
             name=u'criteria', title=u'Criteria', publish_date=date.today())
@@ -610,128 +561,123 @@ class TestRandomizeAjax(IntegrationFixture):
             study=self.study,
             consent_date=date.today())
 
-        Session.add_all(
-            [self.study, self.stratum, self.stratum2, self.enrollment, self.enrollment2])
-        Session.flush()
+        db_session.add_all(
+            [self.study, self.stratum, self.stratum2,
+             self.enrollment, self.enrollment2])
+        db_session.flush()
 
-    def call_view(self, context, request):
+    def _call_fut(self, *args, **kw):
         from occams_studies.views.enrollment import randomize_ajax as view
-        return view(context, request)
+        return view(*args, **kw)
 
-    def test_challenge(self):
-        from pyramid import testing
+    def test_challenge(self, req, db_session, config):
 
-        self.config.include('pyramid_chameleon')
-        request = testing.DummyRequest()
-        request.session = {}
+        config.include('pyramid_chameleon')
+        req.session = {}
 
         enrollment = self.enrollment
 
-        self.call_view(enrollment, request)
+        self._call_fut(enrollment, req)
 
-        self.assertEquals(request.session['randomization_stage'], 0)
+        assert req.session['randomization_stage'] == 0
 
-    @mock.patch('occams_studies.views.enrollment.check_csrf_token')
-    def test_transition_from_enter_to_verify(self, check_csrf_token):
-        from pyramid import testing
+    def test_transition_from_enter_to_verify(self, req, db_session, config):
 
         from webob.multidict import MultiDict
 
-        self.config.include('pyramid_chameleon')
+        config.include('pyramid_chameleon')
         payload = MultiDict()
-        request = testing.DummyRequest(
-            post=payload,
-            matchdict={'enrollment': self.enrollment})
+        req.method = 'POST'
+        req.POST = payload
+        req.matchdict = {
+            'patient': self.enrollment.patient,
+            'enrollment': self.enrollment
+        }
 
         enrollment = self.enrollment
 
-        request.session['randomization_stage'] = 1
+        req.session['randomization_stage'] = 1
 
-        self.call_view(enrollment, request)
+        self._call_fut(enrollment, req)
 
-        self.assertEquals(request.session['randomization_stage'], 2)
+        assert req.session['randomization_stage'] == 2
 
-    @mock.patch('occams_studies.views.enrollment.check_csrf_token')
-    def test_transition_from_verify_to_complete(self, check_csrf_token):
-        from pyramid import testing
+    def test_transition_from_verify_to_complete(self, req, db_session, config):
 
         from webob.multidict import MultiDict
 
-        self.config.include('pyramid_chameleon')
+        config.include('pyramid_chameleon')
         payload = MultiDict()
-        request = testing.DummyRequest(
-            post=payload,
-            matchdict={'enrollment': self.enrollment})
+        req.method = 'POST'
+        req.POST = payload
+        req.matchdict = {
+            'patient': self.enrollment.patient,
+            'enrollment': self.enrollment
+        }
 
         enrollment = self.enrollment
 
-        request.session['randomization_stage'] = 2
+        req.session['randomization_stage'] = 2
 
-        self.call_view(enrollment, request)
+        self._call_fut(enrollment, req)
 
-        self.assertEquals(request.session['randomization_stage'], 3)
+        assert req.session['randomization_stage'] == 3
 
-    @mock.patch('occams_studies.views.enrollment.check_csrf_token')
-    def test_randid_assignment(self, check_csrf_token):
-        from pyramid import testing
+    def test_randid_assignment(self, req, db_session, config):
 
         from webob.multidict import MultiDict
 
-        self.config.include('pyramid_chameleon')
+        config.include('pyramid_chameleon')
         payload = MultiDict()
 
-        request = testing.DummyRequest(
-            post=payload,
-            matchdict={'enrollment': self.enrollment})
+        req.method = 'POST'
+        req.POST = payload
+        req.matchdict = {
+            'patient': self.enrollment.patient,
+            'enrollment': self.enrollment
+        }
 
         enrollment = self.enrollment
 
-        request.session['randomization_stage'] = 2
+        req.session['randomization_stage'] = 2
 
-        response = self.call_view(enrollment, request)
+        res = self._call_fut(enrollment, req)
 
-        self.assertEquals(
-            response['enrollment']['stratum']['randid'], u'98765')
-        self.assertEquals(
-            response['enrollment']['stratum']['arm']['name'], u'tested')
+        assert res['enrollment']['stratum']['randid'] == u'98765'
+        assert res['enrollment']['stratum']['arm']['name'] == u'tested'
 
-        request = testing.DummyRequest(
-            post=payload,
-            matchdict={'enrollment': self.enrollment2})
+        req.POST = payload
+        req.matchdict = {
+            'patient': self.enrollment2.patient,
+            'enrollment': self.enrollment2
+        }
 
         enrollment = self.enrollment2
 
-        request.session['randomization_stage'] = 2
-        response = self.call_view(enrollment, request)
+        req.session['randomization_stage'] = 2
+        res = self._call_fut(enrollment, req)
 
-        self.assertEquals(
-            response['enrollment']['stratum']['randid'], u'98766')
-        self.assertEquals(
-            response['enrollment']['stratum']['arm']['name'], u'tested2')
+        assert res['enrollment']['stratum']['randid'] == u'98766'
+        assert res['enrollment']['stratum']['arm']['name'] == u'tested2'
 
 
-class TestRandomizeAjaxAssigned(IntegrationFixture):
+class TestRandomizeAjaxAssigned:
     """
     Move this test to it's own class because we need to tweak the criteria
     slightly to make it work for criteria-based randid assigment.
     """
 
-    def call_view(self, context, request):
+    def _call_fut(self, *args, **kw):
         from occams_studies.views.enrollment import randomize_ajax as view
-        return view(context, request)
+        return view(*args, **kw)
 
-    @mock.patch('occams_studies.views.enrollment.check_csrf_token')
-    def test_randid_assignment_with_criteria(self, check_csrf_token):
+    def test_randid_assignment_with_criteria(self, req, db_session, config):
         """
         It should assign a randid given the criteria associated with a stratum
         """
         from datetime import date
-        from pyramid import testing
         from webob.multidict import MultiDict
-        from occams import Session
         from occams_studies import models
-
-        _register_routes(self.config)
 
         schema = models.Schema(
             name=u'criteria', title=u'Criteria', publish_date=date.today(),
@@ -792,19 +738,20 @@ class TestRandomizeAjaxAssigned(IntegrationFixture):
             study=study,
             consent_date=date.today())
 
-        Session.add_all([study, stratum, stratum2, enrollment])
-        Session.flush()
+        db_session.add_all([study, stratum, stratum2, enrollment])
+        db_session.flush()
 
-        self.config.include('pyramid_chameleon')
+        config.include('pyramid_chameleon')
         payload = MultiDict([('likes_icecream', u'1')])
 
-        request = testing.DummyRequest(
-            post=payload,
-            matchdict={'enrollment': enrollment})
+        req.method = 'POST'
+        req.POST = payload
+        req.matchdict = {
+            'patient': enrollment.patient,
+            'enrollment': enrollment
+        }
+        req.session['randomization_stage'] = 2
 
-        request.session['randomization_stage'] = 2
+        res = self._call_fut(enrollment, req)
 
-        response = self.call_view(enrollment, request)
-
-        self.assertEquals(
-            response['enrollment']['stratum']['randid'], u'98766')
+        assert res['enrollment']['stratum']['randid'] == u'98766'

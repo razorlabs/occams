@@ -8,7 +8,7 @@ import wtforms
 from occams.utils.forms import wtferrors, Form
 from occams_forms.renderers import form2json
 
-from .. import _, models, Session
+from .. import _, models
 
 
 @view_config(
@@ -45,6 +45,7 @@ def view_json(context, request):
     renderer='json')
 def edit_json(context, request):
     check_csrf_token(request)
+    db_session = request.db_session
 
     form = CycleSchema(context, request).from_json(request.json_body)
 
@@ -53,7 +54,7 @@ def edit_json(context, request):
 
     if isinstance(context, models.CycleFactory):
         cycle = models.Cycle(study=context.__parent__)
-        Session.add(cycle)
+        db_session.add(cycle)
     else:
         cycle = context
 
@@ -62,7 +63,7 @@ def edit_json(context, request):
     cycle.week = form.week.data
     cycle.is_interim = form.is_interim.data
 
-    Session.flush()
+    db_session.flush()
 
     return view_json(cycle, request)
 
@@ -75,10 +76,11 @@ def edit_json(context, request):
     renderer='json')
 def delete_json(context, request):
     check_csrf_token(request)
+    db_session = request.db_session
 
     (has_visits,) = (
-        Session.query(
-            Session.query(models.Visit)
+        db_session.query(
+            db_session.query(models.Visit)
             .filter(models.Visit.cycles.any(id=context.id))
             .exists())
         .one())
@@ -86,24 +88,26 @@ def delete_json(context, request):
     if has_visits and not request.has_permission('admin', context):
         raise HTTPForbidden(_(u'Cannot delete a cycle with visits'))
 
-    Session.delete(context)
-    Session.flush()
+    db_session.delete(context)
+    db_session.flush()
 
     return {
-        '__next__': request.route_path('studies.study', study=context.study.name),
+        '__next__': request.route_path(
+            'studies.study', study=context.study.name),
         'message': _(u'Successfully removed "${cycle}"',
                      mapping={'cycle': context.title})
         }
 
 
 def CycleSchema(context, request):
+    db_session = request.db_session
 
     def check_unique_url(form, field):
         slug = six.text_type(slugify(field.data))
-        query = Session.query(models.Cycle).filter_by(name=slug)
+        query = db_session.query(models.Cycle).filter_by(name=slug)
         if isinstance(context, models.Cycle):
             query = query.filter(models.Cycle.id != context.id)
-        (exists,) = Session.query(query.exists()).one()
+        (exists,) = db_session.query(query.exists()).one()
         if exists:
             raise wtforms.ValidationError(request.localizer.translate(_(
                 u'Does not yield a unique URL.')))

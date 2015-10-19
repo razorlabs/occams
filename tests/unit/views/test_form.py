@@ -1,20 +1,18 @@
-import mock
-
-from tests import IntegrationFixture
+import pytest
 
 
-class TestViewJSON(IntegrationFixture):
+class TestViewJSON:
 
-    def call_view(self, context, request):
+    def _call_fut(self, *args, **kw):
         from occams_studies.views.form import view_json as view
-        return view(context, request)
+        return view(*args, **kw)
 
-    def test_with_state(self):
+    def test_with_state(self, req, db_session):
         """
         It should generate state data is available
         """
-        from pyramid import testing
-        from occams_studies import models, Session
+        import mock
+        from occams_studies import models
         from datetime import date
 
         myfirst = models.Schema(
@@ -25,26 +23,25 @@ class TestViewJSON(IntegrationFixture):
         mydata = models.Entity(
             schema=myfirst,
             state=(
-                Session.query(models.State)
+                db_session.query(models.State)
                 .filter_by(name=u'pending-entry')
                 .one()))
-        Session.add(mydata)
-        Session.flush()
+        db_session.add(mydata)
+        db_session.flush()
         mydata.__parent__ = mock.MagicMock()
         mydata.__parent__.__parent__ = mock.MagicMock()
 
-        request = testing.DummyRequest()
-        request.session.changed = mock.Mock()
-        response = self.call_view(mydata, request)
+        req.session.changed = mock.Mock()
+        res = self._call_fut(mydata, req)
 
-        self.assertIsNotNone(response['state'])
+        assert res['state'] is not None
 
-    def test_without_state(self):
+    def test_without_state(self, req, db_session):
         """
         It should generate none if no state data is available
         """
-        from pyramid import testing
-        from occams_studies import models, Session
+        import mock
+        from occams_studies import models
         from datetime import date
 
         myfirst = models.Schema(
@@ -53,31 +50,26 @@ class TestViewJSON(IntegrationFixture):
             publish_date=date.today()
         )
         mydata = models.Entity(schema=myfirst)
-        Session.add(mydata)
-        Session.flush()
+        db_session.add(mydata)
+        db_session.flush()
         mydata.__parent__ = mock.MagicMock()
         mydata.__parent__.__parent__ = mock.MagicMock()
 
-        request = testing.DummyRequest()
-        request.session.changed = mock.Mock()
-        response = self.call_view(mydata, request)
+        req.session.changed = mock.Mock()
+        res = self._call_fut(mydata, req)
 
-        self.assertIsNone(response['state'])
+        assert res['state'] is None
 
 
-@mock.patch('occams_studies.views.form.check_csrf_token')
-class TestAddJSON(IntegrationFixture):
+class TestAddJSON:
 
-    def call_view(self, context, request):
+    def _call_fut(self, *args, **kw):
         from occams_studies.views.form import add_json as view
-        return view(context, request)
+        return view(*args, **kw)
 
-    def test_add_to_patient(self, check_csrf_token):
+    def test_add_to_patient(self, req, db_session):
         from datetime import date
-        from pyramid import testing
-        from occams_studies import models, Session
-
-        self.config.add_route('studies.patient_form', '/p/f/{form}')
+        from occams_studies import models
 
         schema = models.Schema(
             name=u'schema',
@@ -96,28 +88,26 @@ class TestAddJSON(IntegrationFixture):
         site = models.Site(name=u'somewhere', title=u'Somewhere')
         patient = models.Patient(pid=u'12345', site=site)
 
-        Session.add_all([study, patient])
-        Session.flush()
+        db_session.add_all([study, patient])
+        db_session.flush()
 
-        request = testing.DummyRequest(json_body={
+        req.method = 'POST'
+        req.matchdict = {'patient': patient}
+        req.json_body = {
             'schema': schema.id,
             'collect_date': str(date.today()),
-        })
-        factory = models.FormFactory(request)
-        factory.__parent__ = patient
-        self.call_view(factory, request)
+        }
+        factory = models.FormFactory(req, patient)
+        self._call_fut(factory, req)
 
-        contexts = Session.query(models.Context).all()
+        contexts = db_session.query(models.Context).all()
 
-        self.assertEquals(1, len(contexts))
-        self.assertEquals(schema, contexts[0].entity.schema)
+        assert len(contexts) == 1
+        assert contexts[0].entity.schema == schema
 
-    def test_add_to_visit(self, check_csrf_token):
+    def test_add_to_visit(self, req, db_session):
         from datetime import date
-        from pyramid import testing
-        from occams_studies import models, Session
-
-        self.config.add_route('studies.visit_form', '/v/f/{form}')
+        from occams_studies import models
 
         schema = models.Schema(
             name=u'schema',
@@ -144,38 +134,36 @@ class TestAddJSON(IntegrationFixture):
         visit = models.Visit(
             patient=patient, visit_date=date.today(), cycles=[cycle])
 
-        Session.add_all([study, patient, visit])
-        Session.flush()
+        db_session.add_all([study, patient, visit])
+        db_session.flush()
 
-        request = testing.DummyRequest(json_body={
+        req.matchdict = {'patient': patient, 'visit': visit}
+        req.json_body = {
             'schema': schema.id,
             'collect_date': str(date.today()),
-        })
-        factory = models.FormFactory(request)
-        factory.__parent__ = visit
-        self.call_view(factory, request)
+        }
+        factory = models.FormFactory(req, visit)
+        self._call_fut(factory, req)
 
-        contexts = Session.query(models.Context).all()
+        contexts = db_session.query(models.Context).all()
 
-        self.assertEquals(2, len(contexts))
-        self.assertItemsEqual(
-            ['patient', 'visit'],
-            [c.external for c in contexts])
+        assert len(contexts) == 2
+        assert sorted(['patient', 'visit']) == \
+            sorted([c.external for c in contexts])
 
-    def test_multiple(self, check_csrf_token):
+    def test_multiple(self, req, db_session):
         """
         It should allow adding multiple instances of the same form
         TODO: cant do multiple, no time
         """
 
-    def test_not_in_study(self, check_csrf_token):
+    def test_not_in_study(self, req, db_session):
         """
         It should fail if the form is not part of the study
         """
         from datetime import date, timedelta
-        from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_studies import models, Session
+        from occams_studies import models
 
         cycle = models.Cycle(name='week-1', title=u'', week=1)
 
@@ -198,15 +186,15 @@ class TestAddJSON(IntegrationFixture):
         visit_a = models.Visit(
             patient=patient_a, cycles=[cycle], visit_date=t_a)
 
-        Session.add_all([schema, visit_a, study])
-        Session.flush()
+        db_session.add_all([schema, visit_a, study])
+        db_session.flush()
 
-        with self.assertRaises(HTTPBadRequest) as cm:
-            self.call_view(visit_a['forms'], testing.DummyRequest(
-                json_body={
-                    'schema': schema.id,
-                    }))
+        req.json_body = {
+            'schema': schema.id,
+        }
 
-        self.assertIn(
-            'is not part of the studies',
-            cm.exception.json['errors']['schema'])
+        with pytest.raises(HTTPBadRequest) as excinfo:
+            self._call_fut(visit_a['forms'], req)
+
+        assert 'is not part of the studies' in \
+            excinfo.value.json['errors']['schema']

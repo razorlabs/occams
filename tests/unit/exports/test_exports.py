@@ -1,31 +1,27 @@
 # -*- coding: utf-8 -*-
 
-from tests import IntegrationFixture
+
+class TestListAll:
+
+    def test_no_schemata(self, db_session):
+        from occams_studies import exports
+        exportables = exports.list_all(db_session)
+        assert sorted(['pid', 'enrollment', 'visit']) == \
+            sorted(exportables.keys())
 
 
-class TestListAll(IntegrationFixture):
+class TestWriteData:
 
-    def test_no_schemata(self):
-        from occams_studies import exports, Session
-        exportables = exports.list_all(Session)
-        self.assertItemsEqual(
-            ['pid', 'enrollment', 'visit'],
-            exportables.keys())
-
-
-class TestWriteData(IntegrationFixture):
-
-    def test_unicode(self):
+    def test_unicode(self, db_session):
         """
         It should be able to export unicode strings
         """
         from contextlib import closing
         import six
         from sqlalchemy import literal_column, Integer, Unicode
-        from occams_studies import Session
         from occams_studies import exports
 
-        query = Session.query(
+        query = db_session.query(
             literal_column(u"'420'", Integer).label(u'anumeric'),
             literal_column(u"'¿Qué pasa?'", Unicode).label(u'astring'),
             )
@@ -35,13 +31,13 @@ class TestWriteData(IntegrationFixture):
             fp.seek(0)
             rows = [r for r in exports.csv.reader(fp)]
 
-        self.assertItemsEqual(['anumeric', 'astring'], rows[0])
-        self.assertItemsEqual([u'420', u'¿Qué pasa?'], rows[1])
+        assert sorted(['anumeric', 'astring']) == sorted(rows[0])
+        assert sorted([u'420', u'¿Qué pasa?']) == sorted(rows[1])
 
 
-class TestDumpCodeBook(IntegrationFixture):
+class TestDumpCodeBook:
 
-    def test_header(self):
+    def test_header(self, db_session):
         """
         It should have the standard codebook header.
         """
@@ -54,4 +50,4 @@ class TestDumpCodeBook(IntegrationFixture):
             fp.seek(0)
             fieldnames = exports.csv.DictReader(fp).fieldnames
 
-        self.assertItemsEqual(fieldnames, exports.codebook.HEADER)
+        assert sorted(fieldnames) == sorted(exports.codebook.HEADER)

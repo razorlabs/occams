@@ -1,24 +1,18 @@
-import mock
-
-from tests import IntegrationFixture
+import pytest
 
 
-@mock.patch('occams_studies.views.cycle.check_csrf_token')
-class TestEditJson(IntegrationFixture):
+class TestEditJson:
 
-    def call_view(self, context, request):
+    def _call_fut(self, *args, **kw):
         from occams_studies.views.cycle import edit_json as view
-        return view(context, request)
+        return view(*args, **kw)
 
-    def test_add(self, check_csrf_token):
+    def test_add(self, req, db_session):
         """
         It should be able to add a new cycle
         """
         from datetime import date
-        from pyramid import testing
-        from occams_studies import Session, models
-
-        self.config.add_route('studies.cycle', '/{study}/{cycle}')
+        from occams_studies import models
 
         study = models.Study(
             name=u'somestudy',
@@ -28,28 +22,27 @@ class TestEditJson(IntegrationFixture):
             start_date=date.today(),
             consent_date=date.today())
 
-        Session.add_all([study])
-        Session.flush()
+        db_session.add_all([study])
+        db_session.flush()
 
-        self.call_view(study['cycles'], testing.DummyRequest(
-            json_body={
-                'name': 'week-1',
-                'title': u'Week 1',
-                'week': 1}))
+        req.json_body = {
+            'name': 'week-1',
+            'title': u'Week 1',
+            'week': 1
+        }
 
-        self.assertEqual(1, study.cycles.count())
-        self.assertEqual('week-1', study.cycles[0].name)
+        self._call_fut(study['cycles'], req)
 
-    def test_enforce_unique_name(self, check_csrf_token):
+        assert 1 == study.cycles.count()
+        assert 'week-1' == study.cycles[0].name
+
+    def test_enforce_unique_name(self, req, db_session):
         """
         It should make sure the name stays unique when adding new cycles
         """
         from datetime import date
-        from pyramid import testing
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_studies import models, Session
-
-        self.config.add_route('studies.cycle', '/{study}/{cycle}')
+        from occams_studies import models
 
         cycle = models.Cycle(name='week-1', title=u'Week 1', week=1)
 
@@ -62,28 +55,26 @@ class TestEditJson(IntegrationFixture):
             consent_date=date.today(),
             cycles=[cycle])
 
-        Session.add_all([study])
-        Session.flush()
+        db_session.add_all([study])
+        db_session.flush()
 
-        with self.assertRaises(HTTPBadRequest) as cm:
-            self.call_view(study['cycles'], testing.DummyRequest(
-                json_body={
-                    'title': u'Week 1',
-                    'week': 2}))
+        req.json_body = {
+            'title': u'Week 1',
+            'week': 2
+        }
 
-        self.assertIn(
-            'not yield a unique',
-            cm.exception.json['errors']['title'].lower())
+        with pytest.raises(HTTPBadRequest) as excinfo:
+            self._call_fut(study['cycles'], req)
 
-    def test_edit_unique_name(self, check_csrf_token):
+        assert 'not yield a unique' in \
+            excinfo.value.json['errors']['title'].lower()
+
+    def test_edit_unique_name(self, req, db_session):
         """
         It should allow the cycle to be able to change its unique name
         """
         from datetime import date
-        from pyramid import testing
-        from occams_studies import models, Session
-
-        self.config.add_route('studies.cycle', '/{study}/{cycle}')
+        from occams_studies import models
 
         cycle = models.Cycle(name='week-1', title=u'Week 1', week=1)
 
@@ -96,35 +87,32 @@ class TestEditJson(IntegrationFixture):
             consent_date=date.today(),
             cycles=[cycle])
 
-        Session.add_all([study])
-        Session.flush()
+        db_session.add_all([study])
+        db_session.flush()
 
-        response = self.call_view(cycle, testing.DummyRequest(
-            json_body={
-                'name': 'somestudy',
-                'title': cycle.title,
-                'week': cycle.week}))
+        req.json_body = {
+            'name': 'somestudy',
+            'title': cycle.title,
+            'week': cycle.week
+        }
 
-        self.assertIsNotNone(response)
+        res = self._call_fut(cycle, req)
+        assert res is not None
 
 
-@mock.patch('occams_studies.views.cycle.check_csrf_token')
-class TestDeleteJson(IntegrationFixture):
+class TestDeleteJson:
 
-    def call_view(self, context, request):
+    def _call_fut(self, *args, **kw):
         from occams_studies.views.cycle import delete_json as view
-        return view(context, request)
+        return view(*args, **kw)
 
-    def test_no_visit(self, check_csrf_token):
+    def test_no_visit(self, req, db_session):
         """
         It should allow deleting of a cycle if it has no visits
         """
 
         from datetime import date
-        from pyramid import testing
-        from occams_studies import models, Session
-
-        self.config.add_route('studies.study', '/{study}')
+        from occams_studies import models
 
         cycle = models.Cycle(name='week-1', title=u'Week 1', week=1)
 
@@ -137,23 +125,20 @@ class TestDeleteJson(IntegrationFixture):
             consent_date=date.today(),
             cycles=[cycle])
 
-        Session.add_all([study])
-        Session.flush()
+        db_session.add_all([study])
+        db_session.flush()
 
-        self.call_view(cycle, testing.DummyRequest())
-        self.assertEqual(0, study.cycles.count())
+        self._call_fut(cycle, req)
+        assert 0 == study.cycles.count()
 
-    def test_has_visits(self, check_csrf_token):
+    def test_has_visits(self, req, db_session, config):
         """
         It should not allow deletion of a cycle if it has visit
         (unless administrator)
         """
         from datetime import date
-        from pyramid import testing
         from pyramid.httpexceptions import HTTPForbidden
-        from occams_studies import models, Session
-
-        self.config.add_route('studies.study', '/{study}')
+        from occams_studies import models
 
         cycle = models.Cycle(name='week-1', title=u'Week 1', week=1)
 
@@ -178,14 +163,14 @@ class TestDeleteJson(IntegrationFixture):
         visit = models.Visit(
             patient=patient, visit_date=date.today(), cycles=[cycle])
 
-        Session.add_all([study, enrollment, visit])
-        Session.flush()
+        db_session.add_all([study, enrollment, visit])
+        db_session.flush()
 
         # Should not be able to delete if not an admin
-        self.config.testing_securitypolicy(permissive=False)
-        with self.assertRaises(HTTPForbidden):
-            self.call_view(cycle, testing.DummyRequest())
+        config.testing_securitypolicy(permissive=False)
+        with pytest.raises(HTTPForbidden):
+            self._call_fut(cycle, req)
 
-        self.config.testing_securitypolicy(permissive=True)
-        self.call_view(cycle, testing.DummyRequest())
-        self.assertEqual(0, study.cycles.count())
+        config.testing_securitypolicy(permissive=True)
+        self._call_fut(cycle, req)
+        assert 0 == study.cycles.count()

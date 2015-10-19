@@ -8,9 +8,6 @@ CHANGES = open(os.path.join(HERE, 'CHANGES.rst')).read()
 
 
 REQUIRES = [
-    'alembic',                          # Database table upgrades
-    'humanize',                         # human readable measurements
-
     'occams',
     'occams_datastore',                 # EAV
     'occams_roster',
@@ -18,14 +15,7 @@ REQUIRES = [
 ]
 
 EXTRAS = {
-    'test': [
-        'nose',
-        'nose-testconfig',
-        'coverage',
-        'WebTest',
-        'beautifulsoup4',
-        'mock',
-        'ddt'],
+    'test': []
 }
 
 
@@ -88,9 +78,9 @@ setup(
         "Topic :: Internet :: WWW/HTTP",
         "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
     ],
-    author='UCSD BIT Core Team',
-    author_email='bitcore@ucsd.edu',
-    url='https://bitbutcket.org/ucsdbitcore/occams_studies',
+    author='Young Labs',
+    author_email='younglabs@ucsd.edu',
+    url='https://github.com/younglabs/occams_studies',
     keywords='web wsgi bfg pylons pyramid',
     packages=find_packages(),
     include_package_data=True,
@@ -98,7 +88,6 @@ setup(
     install_requires=REQUIRES,
     extras_require=EXTRAS,
     tests_require=EXTRAS['test'],
-    test_suite='nose.collector',
     cmdclass={'develop': _custom_develop},
     entry_points="""\
     [console_scripts]

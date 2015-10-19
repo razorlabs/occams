@@ -16,7 +16,7 @@ import wtforms
 from occams.utils.forms import wtferrors, Form
 from occams.utils.pagination import Pagination
 
-from .. import _, log, models, Session, exports, tasks
+from .. import _, log, models, exports, tasks
 
 
 @view_config(
@@ -54,8 +54,8 @@ def checkout(context, request):
     The actual exporting process is then queued in a another thread so the user
     isn't left with an unresponsive page.
     """
-
-    exportables = exports.list_all(Session, include_rand=False)
+    db_session = request.db_session
+    exportables = exports.list_all(db_session, include_rand=False)
     limit = request.registry.settings.get('app.export.limit')
     exceeded = limit is not None and query_exports(request).count() > limit
     errors = {}
@@ -81,11 +81,11 @@ def checkout(context, request):
             errors = wtferrors(form)
         else:
             task_id = six.text_type(str(uuid.uuid4()))
-            Session.add(models.Export(
+            db_session.add(models.Export(
                 name=task_id,
                 expand_collections=form.expand_collections.data,
                 use_choice_labels=form.use_choice_labels.data,
-                owner_user=(Session.query(models.User)
+                owner_user=(db_session.query(models.User)
                             .filter_by(key=request.authenticated_userid)
                             .one()),
                 contents=[exportables[k].to_json() for k in form.contents.data]
@@ -123,7 +123,8 @@ def codebook(context, request):
     """
     Codebook viewer
     """
-    return {'exportables': exports.list_all(Session).values()}
+    db_session = request.db_session
+    return {'exportables': exports.list_all(db_session).values()}
 
 
 @view_config(
@@ -135,6 +136,7 @@ def codebook_json(context, request):
     """
     Loads codebook rows for the specified data file
     """
+    db_session = request.db_session
 
     def massage(row):
         publish_date = row['publish_date']
@@ -142,7 +144,7 @@ def codebook_json(context, request):
             row['publish_date'] = publish_date.isoformat()
         return row
 
-    exportables = exports.list_all(Session)
+    exportables = exports.list_all(db_session)
 
     file = request.GET.get('file')
 
@@ -254,10 +256,11 @@ def delete_json(context, request):
     """
     Handles delete delete AJAX request
     """
+    db_session = request.db_session
     check_csrf_token(request)
     export = context
-    Session.delete(export)
-    Session.flush()
+    db_session.delete(export)
+    db_session.flush()
     tasks.app.control.revoke(export.name)
     return HTTPOk()
 
@@ -288,11 +291,12 @@ def query_exports(request):
     """
     Helper method to query current exports for the authenticated user
     """
+    db_session = request.db_session
     userid = request.authenticated_userid
     export_expire = request.registry.settings.get('studies.export.expire')
 
     query = (
-        Session.query(models.Export)
+        db_session.query(models.Export)
         .filter(models.Export.owner_user.has(key=userid)))
 
     if export_expire:

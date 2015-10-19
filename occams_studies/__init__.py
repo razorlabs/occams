@@ -7,8 +7,6 @@ import wtforms_json
 
 wtforms_json.init()  # monkey-patch wtforms to accept JSON data
 
-from occams import Session
-
 log = logging.getLogger('occams').getChild(__name__)
 
 _ = TranslationStringFactory(__name__)

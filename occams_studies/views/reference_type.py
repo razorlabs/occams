@@ -6,7 +6,7 @@ import wtforms
 
 from occams.utils.forms import wtferrors, Form
 
-from .. import _, models, Session
+from .. import _, models
 
 
 @view_config(
@@ -14,8 +14,9 @@ from .. import _, models, Session
     permission='view',
     renderer='json')
 def list_json(context, request):
+    db_session = request.db_session
     query = (
-        Session.query(models.ReferenceType)
+        db_session.query(models.ReferenceType)
         .order_by(models.ReferenceType.title))
     return {
         'reference_types': [view_json(r, request) for r in query]
@@ -52,14 +53,18 @@ def view_json(context, request):
 def edit_json(context, request):
     check_csrf_token(request)
 
+    db_session = request.db_session
+
     is_new = isinstance(context, models.ReferenceTypeFactory)
 
     def check_unique(form, field):
-        query = Session.query(models.ReferenceType).filter_by(name=field.data)
+        query = (
+            db_session.query(models.ReferenceType)
+            .filter_by(name=field.data))
         if not is_new:
             query = query.filter(models.ReferenceType.id != context.id)
         exists = (
-            Session.query(sa.literal(True)).filter(query.exists()).scalar())
+            db_session.query(sa.literal(True)).filter(query.exists()).scalar())
         if exists:
             raise wtforms.ValidationError(request.localizer.translate(
                 _(u'Already exists')))
@@ -89,13 +94,13 @@ def edit_json(context, request):
 
     if is_new:
         reference_type = models.ReferenceType()
-        Session.add(reference_type)
+        db_session.add(reference_type)
     else:
         reference_type = context
 
     form.populate_obj(reference_type)
 
-    Session.flush()
+    db_session.flush()
 
     return view_json(reference_type, request)
 
@@ -107,18 +112,19 @@ def edit_json(context, request):
     renderer='json')
 def delete_json(context, request):
     check_csrf_token(request)
+    db_session = request.db_session
     exists = (
-        Session.query(sa.literal(True))
+        db_session.query(sa.literal(True))
         .filter(
-            Session.query(models.PatientReference)
+            db_session.query(models.PatientReference)
             .filter_by(reference_type=context)
             .exists())
         .scalar())
     if exists:
         raise HTTPBadRequest(
             body=_(u'This reference number still has data associated with it'))
-    Session.delete(context)
-    Session.flush()
+    db_session.delete(context)
+    db_session.flush()
     return HTTPOk()
 
 
@@ -129,9 +135,10 @@ def delete_json(context, request):
     request_param='vocabulary=available_reference_types',
     renderer='json')
 def available_reference_types(context, request):
+    db_session = request.db_session
     term = (request.GET.get('term') or '').strip()
 
-    query = Session.query(models.ReferenceType)
+    query = db_session.query(models.ReferenceType)
 
     if term:
         query = query.filter(

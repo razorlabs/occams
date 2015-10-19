@@ -17,8 +17,6 @@ from occams_datastore.models import (  # NOQA
     User, Schema, Attribute, Choice, State, Entity, Context)
 from occams_datastore.utils.sql import JSON
 
-from . import Session, log
-
 
 Base = ModelClass(u'Base')
 
@@ -92,8 +90,9 @@ class StudyFactory(object):
         self.request = request
 
     def __getitem__(self, key):
+        db_session = self.request.db_session
         try:
-            study = Session.query(Study).filter_by(name=key).one()
+            study = db_session.query(Study).filter_by(name=key).one()
         except orm.exc.NoResultFound:
             raise KeyError
         study.__parent__ = self
@@ -234,7 +233,8 @@ class Study(Base, Referenceable, Describeable, Modifiable, Auditable):
 
     def __getitem__(self, key):
         if key == 'cycles':
-            return CycleFactory(self)
+            db_session = orm.object_session(self)
+            return CycleFactory(db_session.info['request'], self)
 
     def check(self, reference_number):
         if not self.reference_pattern:
@@ -286,12 +286,14 @@ class CycleFactory(object):
         (Allow, Authenticated, 'view')
         ]
 
-    def __init__(self, parent):
+    def __init__(self, request, parent):
+        self.request = request
         self.__parent__ = parent
 
     def __getitem__(self, key):
+        db_session = self.request.db_session
         try:
-            cycle = Session.query(Cycle).filter_by(name=key).one()
+            cycle = db_session.query(Cycle).filter_by(name=key).one()
         except orm.exc.NoResultFound:
             raise KeyError
         cycle.__parent__ = self
@@ -389,6 +391,8 @@ class PatientFactory(object):
 
     @property
     def __acl__(self):
+        db_session = self.request.db_session
+
         acl = [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
             (Allow, groups.manager(), ('view', 'add'))
@@ -397,7 +401,7 @@ class PatientFactory(object):
         # Grant access to any member of any site and
         # filter patients within the view listing based
         # on which sites the user has access.
-        for site in Session.query(Site):
+        for site in db_session.query(Site):
             acl.extend([
                 (Allow, groups.enterer(site), ('view', 'add')),
                 (Allow, groups.reviewer(site), ('view',)),
@@ -413,9 +417,10 @@ class PatientFactory(object):
         self.request = request
 
     def __getitem__(self, key):
+        db_session = self.request.db_session
         try:
             patient = (
-                Session.query(Patient)
+                db_session.query(Patient)
                 .options(orm.joinedload('site'))
                 .filter_by(pid=key)
                 .one())
@@ -446,8 +451,9 @@ class SiteFactory(object):
         self.request = request
 
     def __getitem__(self, key):
+        db_session = self.request.db_session
         try:
-            site = Session.query(Site).filter_by(name=key).one()
+            site = db_session.query(Site).filter_by(name=key).one()
         except orm.exc.NoResultFound:
             raise KeyError
         site.__parent__ = self
@@ -549,12 +555,14 @@ class Patient(Base, Referenceable, Modifiable, HasEntities, Auditable):
     # visits backref'd from visit
 
     def __getitem__(self, key):
+        db_session = orm.object_session(self)
+        request = db_session.info['request']
         if key == 'enrollments':
-            return EnrollmentFactory(self)
+            return EnrollmentFactory(request, self)
         elif key == 'visits':
-            return VisitFactory(self)
+            return VisitFactory(request, self)
         elif key == 'forms':
-            return FormFactory(self)
+            return FormFactory(request, self)
         raise KeyError
 
     @declared_attr
@@ -581,9 +589,10 @@ class ReferenceTypeFactory(object):
         self.request = request
 
     def __getitem__(self, key):
+        db_session = self.request.db_session
         try:
             reference_type = (
-                Session.query(ReferenceType).filter_by(name=key).one())
+                db_session.query(ReferenceType).filter_by(name=key).one())
         except orm.exc.NoResultFound:
             raise KeyError
         reference_type.__parent__ = self
@@ -733,13 +742,15 @@ class EnrollmentFactory(object):
             (Allow, groups.consumer(site), 'view'),
             ]
 
-    def __init__(self, parent):
+    def __init__(self, request, parent):
+        self.request = request
         self.__parent__ = parent
 
     def __getitem__(self, key):
+        db_session = self.request.db_session
         try:
             enrollment = (
-                Session.query(Enrollment)
+                db_session.query(Enrollment)
                 .options(orm.joinedload('patient').joinedload('site'))
                 .filter_by(id=key).one())
         except orm.exc.NoResultFound:
@@ -960,17 +971,19 @@ class VisitFactory(object):
             (Allow, groups.consumer(site), 'view'),
         ]
 
-    def __init__(self, parent):
+    def __init__(self, request, parent):
+        self.request = request
         self.__parent__ = parent
 
     def __getitem__(self, key):
+        db_session = self.request.db_session
         try:
             key = datetime.strptime(key, '%Y-%m-%d').date()
         except ValueError:
             raise KeyError
         try:
             visit = (
-                Session.query(Visit)
+                db_session.query(Visit)
                 .options(orm.joinedload('patient').joinedload('site'))
                 .filter_by(patient=self.__parent__)
                 .filter_by(visit_date=key)
@@ -1043,8 +1056,8 @@ class Visit(Base, Referenceable, Modifiable, HasEntities, Auditable):
 
     def __getitem__(self, key):
         if key == 'forms':
-
-            return FormFactory(self)
+            db_session = orm.object_session(self)
+            return FormFactory(db_session.info['request'], self)
 
     @declared_attr
     def __table_args__(cls):
@@ -1078,13 +1091,15 @@ class FormFactory(object):
             (Allow, groups.consumer(site), 'view')
             ]
 
-    def __init__(self, parent):
+    def __init__(self, request, parent):
+        self.request = request
         self.__parent__ = parent
 
     def __getitem__(self, key):
+        db_session = self.request.db_session
         try:
             entity = (
-                Session.query(Entity)
+                db_session.query(Entity)
                 .options(orm.joinedload('state'))
                 .filter_by(id=key)
                 .one())
@@ -1098,7 +1113,7 @@ class FormFactory(object):
         # to make this look prety...
         if not entity.state:
             entity.state = (
-                Session.query(State)
+                db_session.query(State)
                 .filter_by(name='pending-entry')
                 .one())
 
@@ -1144,9 +1159,10 @@ class ExportFactory(object):
         self.request = request
 
     def __getitem__(self, key):
+        db_session = self.request.db_session
         try:
             export = (
-                Session.query(Export)
+                db_session.query(Export)
                 .options(orm.joinedload('owner_user'))
                 .filter_by(id=key)
                 .one())

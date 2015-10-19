@@ -5,7 +5,7 @@ import wtforms
 from occams.utils.forms import Form
 from occams_forms.renderers import form2json, version2json
 
-from .. import Session, models
+from .. import models
 
 
 @view_config(
@@ -36,6 +36,7 @@ def available_schemata(context, request):
                   (useful for searching for a schema's publish dates)
         grouped -- (optional) groups all results by schema name
     """
+    db_session = request.db_session
 
     class SearchForm(Form):
         term = wtforms.StringField()
@@ -46,24 +47,24 @@ def available_schemata(context, request):
     form.validate()
 
     query = (
-        Session.query(models.Schema)
+        db_session.query(models.Schema)
         .filter(models.Schema.publish_date != sa.null())
         .filter(models.Schema.retract_date == sa.null())
         .filter(~models.Schema.name.in_(
             # Exclude study forms
-            Session.query(models.Schema.name)
+            db_session.query(models.Schema.name)
             .join(models.study_schema_table)
             .union(
                 # Exclude randomzation forms
-                Session.query(models.Schema.name)
+                db_session.query(models.Schema.name)
                 .join(models.Study.randomization_schema),
 
                 # Exclude termination forms
-                Session.query(models.Schema.name)
+                db_session.query(models.Schema.name)
                 .join(models.Study.termination_schema),
 
                 # Exclude already selected patient forms
-                Session.query(models.Schema.name)
+                db_session.query(models.Schema.name)
                 .join(models.patient_schema_table))
             .correlate(None)
             .subquery())))

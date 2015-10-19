@@ -1,22 +1,20 @@
-from ddt import ddt, data
-from tests import IntegrationFixture
+import pytest
 
 
-@ddt
-class TestPidPlan(IntegrationFixture):
+class TestPidPlan:
 
-    def test_file_name(self):
-        from occams_studies import exports, Session
-        plan = exports.PidPlan(Session)
-        self.assertEqual(plan.file_name, 'pid.csv')
+    def test_file_name(self, db_session):
+        from occams_studies import exports
+        plan = exports.PidPlan(db_session)
+        assert plan.file_name == 'pid.csv'
 
-    def test_columns(self):
+    def test_columns(self, db_session):
         """
         It should generate a table of all the pids in the database
         """
 
-        from occams_studies import exports, Session
-        plan = exports.PidPlan(Session)
+        from occams_studies import exports
+        plan = exports.PidPlan(db_session)
 
         codebook = list(plan.codebook())
         query = plan.data()
@@ -24,21 +22,21 @@ class TestPidPlan(IntegrationFixture):
         codebook_columns = [c['field'] for c in codebook]
         data_columns = [c['name'] for c in query.column_descriptions]
 
-        self.assertItemsEqual(codebook_columns, data_columns)
+        assert sorted(codebook_columns) == sorted(data_columns)
 
-    def test_data_without_refs(self):
+    def test_data_without_refs(self, db_session):
         """
         It should be able to generate reports without refs
         """
-        from occams_studies import exports, models, Session
-        plan = exports.PidPlan(Session)
+        from occams_studies import exports, models
+        plan = exports.PidPlan(db_session)
 
         patient = models.Patient(
             pid=u'xxx-xxx',
             site=models.Site(name=u'someplace', title=u'Some Place')
         )
 
-        Session.add(patient)
+        db_session.add(patient)
 
         codebook = list(plan.codebook())
         query = plan.data()
@@ -46,19 +44,19 @@ class TestPidPlan(IntegrationFixture):
         codebook_columns = [c['field'] for c in codebook]
         data_columns = [c['name'] for c in query.column_descriptions]
 
-        self.assertItemsEqual(codebook_columns, data_columns)
+        assert sorted(codebook_columns) == sorted(data_columns)
 
         data = query.one()._asdict()
-        self.assertEqual(data['pid'], patient.pid)
-        self.assertEqual(data['site'], patient.site.name)
-        self.assertIsNone(data['early_id'])
+        assert data['pid'] == patient.pid
+        assert data['site'] == patient.site.name
+        assert data['early_id'] is None
 
-    def test_data_with_refs(self):
+    def test_data_with_refs(self, db_session):
         """
         It should generate a basic listing of all the PIDs in the database
         """
-        from occams_studies import exports, models, Session
-        plan = exports.PidPlan(Session)
+        from occams_studies import exports, models
+        plan = exports.PidPlan(db_session)
 
         reference_type = models.ReferenceType(
             name=u'med_num', title=u'Medical Number')
@@ -73,26 +71,26 @@ class TestPidPlan(IntegrationFixture):
             site=models.Site(name=u'someplace', title=u'Some Place')
         )
 
-        Session.add(patient)
+        db_session.add(patient)
 
         codebook = list(plan.codebook())
         query = plan.data()
 
         codebook_columns = [c['field'] for c in codebook]
         data_columns = [c['name'] for c in query.column_descriptions]
-        self.assertItemsEqual(codebook_columns, data_columns)
+        assert sorted(codebook_columns) == sorted(data_columns)
 
         data = query.one()._asdict()
-        self.assertEqual(data['med_num'], '999')
+        assert data['med_num'] == '999'
 
-    @data(u'ET', u'LTW', u'CVCT')
-    def test_data_with_early_test(self, study_code):
+    @pytest.mark.parametrize('study_code', [u'ET', u'LTW', u'CVCT'])
+    def test_data_with_early_test(self, db_session, study_code):
         """
         It should output earlytest ids (for backwards-compatibilty)
         """
         from datetime import date
-        from occams_studies import exports, models, Session
-        plan = exports.PidPlan(Session)
+        from occams_studies import exports, models
+        plan = exports.PidPlan(db_session)
 
         patient = models.Patient(
             pid=u'xxx-xxx',
@@ -110,10 +108,8 @@ class TestPidPlan(IntegrationFixture):
                 )
             ])
 
-        Session.add(patient)
+        db_session.add(patient)
 
         query = plan.data()
         data = query.one()._asdict()
-        self.assertEqual(
-            data['early_id'],
-            patient.enrollments[0].reference_number)
+        assert data['early_id'] == patient.enrollments[0].reference_number

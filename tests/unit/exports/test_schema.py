@@ -1,15 +1,12 @@
-from tests import IntegrationFixture
+class TestSchemaPlan:
 
-
-class TestSchemaPlan(IntegrationFixture):
-
-    def test_list_not_include_private(self):
+    def test_list_not_include_private(self, db_session):
         """
         It should not include private data if specified.
         Note this is not the same as de-identification)
         """
         from datetime import date
-        from occams_studies import Session, models, exports
+        from occams_studies import models, exports
 
         schema = models.Schema(
             name=u'contact',
@@ -24,21 +21,21 @@ class TestSchemaPlan(IntegrationFixture):
                     is_private=True
                 )})
 
-        Session.add_all([schema])
-        Session.flush()
+        db_session.add_all([schema])
+        db_session.flush()
 
-        plans = exports.SchemaPlan.list_all(Session, include_private=True)
-        self.assertEqual(len(plans), 1)
+        plans = exports.SchemaPlan.list_all(db_session, include_private=True)
+        assert len(plans) == 1
 
-        plans = exports.SchemaPlan.list_all(Session, include_private=False)
-        self.assertEqual(len(plans), 0)
+        plans = exports.SchemaPlan.list_all(db_session, include_private=False)
+        assert len(plans) == 0
 
-    def test_list_not_include_rand(self):
+    def test_list_not_include_rand(self, db_session):
         """
         It should not include randomization data if specified.
         """
         from datetime import date, timedelta
-        from occams_studies import Session, models, exports
+        from occams_studies import models, exports
 
         schema = models.Schema(
             name=u'vitals',
@@ -70,21 +67,21 @@ class TestSchemaPlan(IntegrationFixture):
             block_number=12384,
             randid=u'8484',
             entities=[entity])
-        Session.add_all([schema, entity, stratum])
-        Session.flush()
+        db_session.add_all([schema, entity, stratum])
+        db_session.flush()
 
-        plans = exports.SchemaPlan.list_all(Session, include_rand=True)
-        self.assertEqual(len(plans), 1)
+        plans = exports.SchemaPlan.list_all(db_session, include_rand=True)
+        assert len(plans) == 1
 
-        plans = exports.SchemaPlan.list_all(Session, include_rand=False)
-        self.assertEqual(len(plans), 0)
+        plans = exports.SchemaPlan.list_all(db_session, include_rand=False)
+        assert len(plans) == 0
 
-    def test_patient(self):
+    def test_patient(self, db_session):
         """
         It should add patient-specific metadata to the report
         """
         from datetime import date
-        from occams_studies import Session, models, exports
+        from occams_studies import models, exports
 
         schema = models.Schema(
             name=u'contact',
@@ -104,29 +101,29 @@ class TestSchemaPlan(IntegrationFixture):
             site=models.Site(name='ucsd', title=u'UCSD'),
             pid=u'12345',
             entities=[entity])
-        Session.add_all([schema, entity, patient])
-        Session.flush()
+        db_session.add_all([schema, entity, patient])
+        db_session.flush()
 
-        plan = exports.SchemaPlan.from_schema(Session, schema.name)
+        plan = exports.SchemaPlan.from_schema(db_session, schema.name)
         codebook = list(plan.codebook())
         query = plan.data()
         codebook_columns = [c['field'] for c in codebook]
         data_columns = [c['name'] for c in query.column_descriptions]
         record = query.one()
-        self.assertItemsEqual(codebook_columns, data_columns)
-        self.assertEquals(record.site, patient.site.name)
-        self.assertEquals(record.pid, patient.pid)
-        self.assertIsNone(record.enrollment)
-        self.assertIsNone(record.visit_cycles)
-        self.assertIsNone(record.visit_date)
-        self.assertEquals(record.collect_date, entity.collect_date)
+        assert sorted(codebook_columns) == sorted(data_columns)
+        assert record.site == patient.site.name
+        assert record.pid == patient.pid
+        assert record.enrollment is None
+        assert record.visit_cycles is None
+        assert record.visit_date is None
+        assert record.collect_date == entity.collect_date
 
-    def test_enrollment(self):
+    def test_enrollment(self, db_session):
         """
         It should add enrollment-specific metadata to the report
         """
         from datetime import date, timedelta
-        from occams_studies import Session, models, exports
+        from occams_studies import models, exports
 
         schema = models.Schema(
             name=u'termination',
@@ -159,28 +156,28 @@ class TestSchemaPlan(IntegrationFixture):
             latest_consent_date=date.today() - timedelta(3),
             termination_date=date.today(),
             entities=[entity])
-        Session.add_all([schema, entity, patient, study, enrollment])
+        db_session.add_all([schema, entity, patient, study, enrollment])
 
-        plan = exports.SchemaPlan.from_schema(Session, schema.name)
+        plan = exports.SchemaPlan.from_schema(db_session, schema.name)
         codebook = list(plan.codebook())
         query = plan.data()
         codebook_columns = [c['field'] for c in codebook]
         data_columns = [c['name'] for c in query.column_descriptions]
         record = query.one()
-        self.assertItemsEqual(codebook_columns, data_columns)
-        self.assertEquals(record.site, patient.site.name)
-        self.assertEquals(record.pid, patient.pid)
-        self.assertEquals(record.enrollment, enrollment.study.name)
-        self.assertEquals(record.enrollment_ids, str(enrollment.id))
-        self.assertIsNone(record.visit_cycles)
-        self.assertEquals(record.collect_date, entity.collect_date)
+        assert sorted(codebook_columns) == sorted(data_columns)
+        assert record.site == patient.site.name
+        assert record.pid == patient.pid
+        assert record.enrollment == enrollment.study.name
+        assert record.enrollment_ids == str(enrollment.id)
+        assert record.visit_cycles is None
+        assert record.collect_date == entity.collect_date
 
-    def test_visit(self):
+    def test_visit(self, db_session):
         """
         It should add visit-specific metadata to the report
         """
         from datetime import date, timedelta
-        from occams_studies import Session, models, exports
+        from occams_studies import models, exports
 
         schema = models.Schema(
             name=u'vitals',
@@ -225,32 +222,31 @@ class TestSchemaPlan(IntegrationFixture):
                         consent_date=date.today() - timedelta(365),
                         title=u'Study 2'))],
             entities=[entity])
-        Session.add_all([schema, entity, patient, visit])
-        Session.flush()
+        db_session.add_all([schema, entity, patient, visit])
+        db_session.flush()
 
-        plan = exports.SchemaPlan.from_schema(Session, schema.name)
+        plan = exports.SchemaPlan.from_schema(db_session, schema.name)
         codebook = list(plan.codebook())
         query = plan.data()
         codebook_columns = [c['field'] for c in codebook]
         data_columns = [c['name'] for c in query.column_descriptions]
         record = query.one()
-        self.assertItemsEqual(codebook_columns, data_columns)
-        self.assertEquals(record.site, patient.site.name)
-        self.assertEquals(record.pid, patient.pid)
-        self.assertIsNone(record.enrollment)
+        assert sorted(codebook_columns) == sorted(data_columns)
+        assert record.site == patient.site.name
+        assert record.pid == patient.pid
+        assert record.enrollment is None
         cyclefmt = '{cycle.study.title}({cycle.week})'
-        self.assertItemsEqual(
-            record.visit_cycles.split(';'),
-            [cyclefmt.format(cycle=c) for c in visit.cycles])
-        self.assertEquals(str(record.visit_id), str(visit.id))
-        self.assertEquals(record.collect_date, entity.collect_date)
+        assert sorted(record.visit_cycles.split(';')) == \
+            sorted([cyclefmt.format(cycle=c) for c in visit.cycles])
+        assert str(record.visit_id) == str(visit.id)
+        assert record.collect_date == entity.collect_date
 
-    def test_rand(self):
+    def test_rand(self, db_session):
         """
         It should add randomization-specific metadata to the report
         """
         from datetime import date, timedelta
-        from occams_studies import Session, models, exports
+        from occams_studies import models, exports
 
         schema = models.Schema(
             name=u'vitals',
@@ -294,21 +290,21 @@ class TestSchemaPlan(IntegrationFixture):
             latest_consent_date=date.today() - timedelta(3),
             termination_date=date.today(),
             entities=[entity])
-        Session.add_all([schema, entity, patient, enrollment, stratum])
-        Session.flush()
+        db_session.add_all([schema, entity, patient, enrollment, stratum])
+        db_session.flush()
 
-        plan = exports.SchemaPlan.from_schema(Session, schema.name)
+        plan = exports.SchemaPlan.from_schema(db_session, schema.name)
         codebook = list(plan.codebook())
         query = plan.data()
         codebook_columns = [c['field'] for c in codebook]
         data_columns = [c['name'] for c in query.column_descriptions]
         record = query.one()
-        self.assertItemsEqual(codebook_columns, data_columns)
-        self.assertEquals(record.site, patient.site.name)
-        self.assertEquals(record.pid, patient.pid)
-        self.assertEquals(record.enrollment, enrollment.study.name)
-        self.assertEquals(record.enrollment_ids, str(enrollment.id))
-        self.assertEquals(record.collect_date, entity.collect_date)
-        self.assertEquals(record.block_number, stratum.block_number)
-        self.assertEquals(record.arm_name, stratum.arm.title)
-        self.assertEquals(record.randid, stratum.randid)
+        assert sorted(codebook_columns) == sorted(data_columns)
+        assert record.site == patient.site.name
+        assert record.pid == patient.pid
+        assert record.enrollment == enrollment.study.name
+        assert record.enrollment_ids == str(enrollment.id)
+        assert record.collect_date == entity.collect_date
+        assert record.block_number == stratum.block_number
+        assert record.arm_name == stratum.arm.title
+        assert record.randid == stratum.randid

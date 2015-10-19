@@ -20,7 +20,7 @@ from occams.utils.forms import Form, wtferrors, ModelField
 from occams.utils.pagination import Pagination
 from occams_forms.renderers import form2json, version2json
 
-from .. import _, models, Session
+from .. import _, models
 from . import cycle as cycle_views
 
 
@@ -31,8 +31,16 @@ def add_studies(event):
     """
     if event['renderer_info'].type != '.pt':
         return
-    studies_query = Session.query(models.Study).order_by(models.Study.title)
-    event.rendering_val['available_studies'] = studies_query.all()
+
+    request = event['request']
+
+    # Some calls to pyramid.renderers.render may not have specified a request
+    if request is not None:
+        db_session = request.db_session
+        studies_query = (
+            db_session.query(models.Study)
+            .order_by(models.Study.title))
+        event.rendering_val['available_studies'] = studies_query.all()
 
 
 @view_config(
@@ -40,11 +48,12 @@ def add_studies(event):
     permission='view',
     renderer='../templates/study/list.pt')
 def list_(request):
+    db_session = request.db_session
     studies_query = (
-        Session.query(models.Study)
+        db_session.query(models.Study)
         .order_by(models.Study.title.asc()))
 
-    sites_query = Session.query(models.Site)
+    sites_query = db_session.query(models.Site)
     site_ids = [s.id for s in sites_query if request.has_permission('view', s)]
 
     if not site_ids:
@@ -54,7 +63,7 @@ def list_(request):
     else:
 
         modified_query = (
-            Session.query(models.Patient)
+            db_session.query(models.Patient)
             .filter(models.Patient.site.has(models.Site.id.in_(site_ids)))
             .order_by(models.Patient.modify_date.desc())
             .limit(10))
@@ -134,6 +143,7 @@ def enrollments(context, request):
     """
     Displays enrollment summary and allows the user to filter by date.
     """
+    db_session = request.db_session
 
     statuses = {
         'active': models.Enrollment.termination_date == sa.null(),
@@ -152,25 +162,26 @@ def enrollments(context, request):
     form = FilterForm(request.GET)
     form.validate()
 
-    sites_query = Session.query(models.Site)
-    site_ids = [s.id for s in sites_query if request.has_permission('view', s)]
+    sites_query = db_session.query(models.Site)
+    site_ids = [s.id for s in sites_query
+                if request.has_permission('view', s)]
 
     if site_ids:
 
         enrollments_query = (
-            Session.query(
+            db_session.query(
                 models.Patient.pid,
                 models.Enrollment.reference_number,
                 models.Enrollment.consent_date,
                 models.Enrollment.latest_consent_date,
                 models.Enrollment.termination_date)
-            .add_columns(*[expr.label(name) for name, expr in statuses.items()])
+            .add_columns(
+                *[expr.label(name) for name, expr in statuses.items()])
             .select_from(models.Enrollment)
             .join(models.Enrollment.patient)
             .join(models.Enrollment.study)
             .filter(models.Enrollment.study == context)
             .order_by(models.Enrollment.consent_date.desc()))
-
 
         if form.start.data:
             enrollments_query = enrollments_query.filter(
@@ -231,6 +242,7 @@ def visits(context, request):
         * enrollment activity
         * randomization stats
     """
+    db_session = request.db_session
     today = date.today()
     this_month_begin = date(today.year, today.month, 1)
     last_month_end = this_month_begin - timedelta(days=1)
@@ -238,7 +250,7 @@ def visits(context, request):
 
     if context.is_randomized:
         arms_query = (
-            Session.query(
+            db_session.query(
                 sa.func.coalesce(
                     models.Arm.title,
                     sa.literal_column(_('\'(not randomized)\''))
@@ -257,10 +269,10 @@ def visits(context, request):
     else:
         arms_query = []
 
-    states = Session.query(models.State).order_by('id').all()
+    states = db_session.query(models.State).order_by('id').all()
 
     cycles_query = (
-        Session.query(models.Cycle.name, models.Cycle.title)
+        db_session.query(models.Cycle.name, models.Cycle.title)
         .filter_by(study=context)
         .join(models.Cycle.visits)
         .add_column(
@@ -323,16 +335,17 @@ def visits_cycle(context, request):
     This view displays summary statistics about visits that are related to
     this cycle, as well as a listing of those visits for reference.
     """
+    db_session = request.db_session
 
     cycle = (
-        Session.query(models.Cycle)
+        db_session.query(models.Cycle)
         .filter_by(study=context, name=request.matchdict['cycle'])
         .first())
 
     if not cycle:
         raise HTTPNotFound()
 
-    states = Session.query(models.State).order_by('id').all()
+    states = db_session.query(models.State).order_by('id').all()
 
     data = {
         'states': states,
@@ -350,7 +363,7 @@ def visits_cycle(context, request):
             cycle.visits.filter(models.Visit.entities.any(state=state))
             .count())
         data['data_summary'][state.name] = (
-            Session.query(models.Entity)
+            db_session.query(models.Entity)
             .join(models.Entity.contexts)
             .join(
                 models.Visit,
@@ -367,12 +380,12 @@ def visits_cycle(context, request):
                 else_=sa.null()))
 
     site_ids = [site.id
-                for site in Session.query(models.Site)
+                for site in db_session.query(models.Site)
                 if request.has_permission('view', site)]
 
     if site_ids:
         visits_query = (
-            Session.query(
+            db_session.query(
                 models.Patient.pid,
                 models.Visit.visit_date)
             .select_from(models.Visit)
@@ -394,7 +407,8 @@ def visits_cycle(context, request):
             .order_by(models.Visit.visit_date.desc()))
 
         if by_state:
-            visits_query = visits_query.having(count_state_exp(by_state.name) > 0)
+            visits_query = visits_query.having(
+                count_state_exp(by_state.name) > 0)
 
         total_visits = visits_query.count()
 
@@ -451,6 +465,7 @@ def visits_cycle(context, request):
     renderer='json')
 def edit_json(context, request):
     check_csrf_token(request)
+    db_session = request.db_session
 
     form = StudySchema(context, request).from_json(request.json_body)
 
@@ -459,7 +474,7 @@ def edit_json(context, request):
 
     if isinstance(context, models.StudyFactory):
         study = models.Study()
-        Session.add(study)
+        db_session.add(study)
     else:
         study = context
 
@@ -476,7 +491,7 @@ def edit_json(context, request):
     study.randomization_schema = \
         None if not study.is_randomized else form.randomization_form.data
 
-    Session.flush()
+    db_session.flush()
 
     return view_json(study, request)
 
@@ -506,6 +521,7 @@ def available_schemata(context, request):
                   (useful for searching for a schema's publish dates)
         grouped -- (optional) groups all results by schema name
     """
+    db_session = request.db_session
 
     class SearchForm(Form):
         term = wtforms.StringField()
@@ -516,12 +532,12 @@ def available_schemata(context, request):
     form.validate()
 
     query = (
-        Session.query(models.Schema)
+        db_session.query(models.Schema)
         .filter(models.Schema.publish_date != sa.null())
         .filter(models.Schema.retract_date == sa.null())
         .filter(~models.Schema.name.in_(
             # Exclude patient schemata
-            Session.query(models.Schema.name)
+            db_session.query(models.Schema.name)
             .join(models.patient_schema_table)
             .subquery())))
 
@@ -547,7 +563,7 @@ def available_schemata(context, request):
                 models.Schema.name != context.termination_schema.name)
 
         query = query.filter(~models.Schema.id.in_(
-            Session.query(models.Schema.id)
+            db_session.query(models.Schema.id)
             .select_from(models.Study)
             .filter(models.Study.id == context.id)
             .join(models.Study.schemata)
@@ -576,9 +592,10 @@ def available_schemata(context, request):
 def delete_json(context, request):
     check_csrf_token(request)
 
+    db_session = request.db_session
     (has_enrollments,) = (
-        Session.query(
-            Session.query(models.Enrollment)
+        db_session.query(
+            db_session.query(models.Enrollment)
             .filter_by(study=context)
             .exists())
         .one())
@@ -586,8 +603,8 @@ def delete_json(context, request):
     if has_enrollments and not request.has_permission('admin', context):
         raise HTTPForbidden(_(u'Cannot delete a study with enrollments'))
 
-    Session.delete(context)
-    Session.flush()
+    db_session.delete(context)
+    db_session.flush()
 
     msg = _(u'Successfully deleted ${study}',
             mapping={'study': context.title})
@@ -604,11 +621,12 @@ def delete_json(context, request):
     renderer='json')
 def add_schema_json(context, request):
     check_csrf_token(request)
+    db_session = request.db_session
 
     def check_not_patient_schema(form, field):
         (exists,) = (
-            Session.query(
-                Session.query(models.Schema)
+            db_session.query(
+                db_session.query(models.Schema)
                 .join(models.patient_schema_table)
                 .filter(models.Schema.name == field.data)
                 .exists())
@@ -652,7 +670,7 @@ def add_schema_json(context, request):
                 check_not_termination_schema])
         versions = wtforms.FieldList(
             ModelField(
-                session=Session,
+                db_session=db_session,
                 class_=models.Schema,
                 validators=[
                     wtforms.validators.InputRequired(),
@@ -677,7 +695,7 @@ def add_schema_json(context, request):
 
     # Get a list of cycles to update
     cycles = (
-        Session.query(models.Cycle)
+        db_session.query(models.Cycle)
         .options(orm.joinedload(models.Cycle.schemata))
         .filter(models.Cycle.study == context)
         .filter(models.Cycle.schemata.any(name=form.schema.data)))
@@ -698,11 +716,12 @@ def add_schema_json(context, request):
     renderer='json')
 def delete_schema_json(context, request):
     check_csrf_token(request)
+    db_session = request.db_session
     schema_name = request.matchdict.get('schema')
 
     (exists,) = (
-        Session.query(
-            Session.query(models.Study)
+        db_session.query(
+            db_session.query(models.Study)
             .filter(models.Study.schemata.any(name=schema_name))
             .filter(models.Study.id == context.id)
             .exists())
@@ -712,32 +731,32 @@ def delete_schema_json(context, request):
         raise HTTPNotFound()
 
     # Remove from cycles
-    Session.execute(
+    db_session.execute(
         models.cycle_schema_table.delete()
         .where(
             models.cycle_schema_table.c.cycle_id.in_(
-                Session.query(models.Cycle.id)
+                db_session.query(models.Cycle.id)
                 .filter_by(study=context)
                 .subquery())
             & models.cycle_schema_table.c.schema_id.in_(
-                Session.query(models.Schema.id)
+                db_session.query(models.Schema.id)
                 .filter_by(name=schema_name)
                 .subquery())))
 
     # Remove from study
-    Session.execute(
+    db_session.execute(
         models.study_schema_table.delete()
         .where(
             (models.study_schema_table.c.study_id == context.id)
             & (models.study_schema_table.c.schema_id.in_(
-                Session.query(models.Schema.id)
+                db_session.query(models.Schema.id)
                 .filter_by(name=schema_name)
                 .subquery()))))
 
-    mark_changed(Session())
+    mark_changed(db_session)
 
     # Expire relations so they load their updated values
-    Session.expire_all()
+    db_session.expire_all()
 
     return HTTPOk()
 
@@ -758,6 +777,7 @@ def edit_schedule_json(context, request):
         enabled -- true/false
     """
     check_csrf_token(request)
+    db_session = request.db_session
 
     def check_cycle_association(form, field):
         if field.data.study != context:
@@ -766,11 +786,11 @@ def edit_schedule_json(context, request):
 
     def check_form_association(form, field):
         query = (
-            Session.query(models.Schema)
+            db_session.query(models.Schema)
             .join(models.study_schema_table)
             .filter(models.Schema.name == field.data)
             .filter(models.study_schema_table.c.study_id == context.id))
-        (exists,) = Session.query(query.exists()).one()
+        (exists,) = db_session.query(query.exists()).one()
         if not exists:
             raise wtforms.ValidationError(request.localizer.translate(_(
                 u'Not a valid choice')))
@@ -781,7 +801,7 @@ def edit_schedule_json(context, request):
                 wtforms.validators.InputRequired(),
                 check_form_association])
         cycle = ModelField(
-            session=Session,
+            db_session=db_session,
             class_=models.Cycle,
             validators=[
                 wtforms.validators.InputRequired(),
@@ -830,6 +850,7 @@ def upload_randomization_json(context, request):
     """
 
     check_csrf_token(request)
+    db_session = request.db_session
 
     if not context.is_randomized:
         # No form check required as its checked via database constraint
@@ -865,7 +886,7 @@ def upload_randomization_json(context, request):
     arms = dict([(arm.name, arm) for arm in context.arms])
 
     # Default to comple state since they're generated by a statistician
-    complete = Session.query(models.State).filter_by(name=u'complete').one()
+    complete = db_session.query(models.State).filter_by(name=u'complete').one()
 
     for row in reader:
         arm_name = row[fieldnames['ARM']]
@@ -882,7 +903,7 @@ def upload_randomization_json(context, request):
         if 'STRATA' in fieldnames:
             stratum.label = row[fieldnames['STRATA']]
 
-        Session.add(stratum)
+        db_session.add(stratum)
 
         entity = models.Entity(
             schema=context.randomization_schema, state=complete)
@@ -893,7 +914,7 @@ def upload_randomization_json(context, request):
         stratum.entities.add(entity)
 
     try:
-        Session.flush()
+        db_session.flush()
     except sa.exc.IntegrityError as e:
         if 'uq_stratum_reference_number' in e.message:
             raise HTTPBadRequest(body=_(
@@ -907,13 +928,14 @@ def StudySchema(context, request):
     """
     Returns a validator for incoming study modification data
     """
+    db_session = request.db_session
 
     def check_unique_url(form, field):
         slug = slugify(field.data)
-        query = Session.query(models.Study).filter_by(name=slug)
+        query = db_session.query(models.Study).filter_by(name=slug)
         if isinstance(context, models.Study):
             query = query.filter(models.Study.id != context.id)
-        (exists,) = Session.query(query.exists()).one()
+        (exists,) = db_session.query(query.exists()).one()
         if exists:
             raise wtforms.ValidationError(request.localizer.translate(_(
                 u'Does not yield a unique URL.')))
@@ -940,7 +962,7 @@ def StudySchema(context, request):
         consent_date = DateField()
         start_date = DateField()
         termination_form = ModelField(
-            session=Session,
+            db_session=db_session,
             class_=models.Schema,
             validators=[
                 wtforms.validators.Optional(),
@@ -948,7 +970,7 @@ def StudySchema(context, request):
         is_randomized = wtforms.BooleanField()
         is_blinded = wtforms.BooleanField()
         randomzation_form = ModelField(
-            session=Session,
+            db_session=db_session,
             class_=models.Schema)
 
     return StudyForm
