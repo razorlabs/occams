@@ -67,13 +67,13 @@ EXTRAS = {
 
     'test': [
         'pyramid_debugtoolbar',
-        'nose',
-        'nose-testconfig',
-        'coverage',
+        'pytest',
+        'pytest-cov',
+        'factory_boy',
+        'fake-factory',
         'WebTest',
         'beautifulsoup4',
         'mock',
-        'ddt'
     ],
 }
 
@@ -146,9 +146,9 @@ setup(
         "Topic :: Internet :: WWW/HTTP",
         "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
     ],
-    author='UCSD BIT Core Team',
-    author_email='bitcore@ucsd.edu',
-    url='https://bitbutcket.org/ucsdbitcore/occams',
+    author='Young Labs',
+    author_email='younglabs@ucsd.edu',
+    url='https://github.com/younglabs/occams',
     keywords='web wsgi bfg pylons pyramid',
     packages=find_packages(),
     include_package_data=True,
