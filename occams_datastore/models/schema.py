@@ -14,7 +14,7 @@ from sqlalchemy import(
     Table, Column,
     PrimaryKeyConstraint,
     CheckConstraint, UniqueConstraint, ForeignKeyConstraint, Index,
-    Boolean, Enum, Date, Integer, String, UnicodeText)
+    Boolean, Enum, Date, Integer, String, Unicode, UnicodeText)
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import backref, relationship, validates
@@ -28,7 +28,6 @@ from ..utils.sql import CaseInsensitive
 
 RE_VALID_NAME = re.compile(r"""
     ^
-    (?!.*_[0-9]+)       # Cannot end with underscore follwed by digits
     [a-z]               # Must start with character
     [a-z0-9_]*          # Can contains letters digits and underscores
     $
@@ -262,6 +261,9 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
 
     # Overide for maximum character lenght of 20
     name = Column(String(100), nullable=False)
+
+    # Overide for nullable=True
+    title = Column(Unicode, nullable=True)
 
     schema_id = Column(Integer, nullable=False,)
 
