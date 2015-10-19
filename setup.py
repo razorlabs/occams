@@ -11,7 +11,7 @@ REQUIRES = [
 ]
 
 EXTRAS = {
-    'test': ['nose', 'nose-testconfig', 'coverage', 'mock', 'ddt'],
+    'test': [],
 }
 
 
@@ -62,9 +62,9 @@ setup(
         u'Topic :: Utilities',
         ],
     keywords=u'OCCAMS HIVe BEAST database roster clinical sqlalchemy',
-    author=u'BIT Core Development Team',
-    author_email=u'bitcore@ucsd.edu',
-    url=u'https://bitbucket.org/ucsdbitcore/occams.roster.git',
+    author=u'Young Labs',
+    author_email=u'younglabs@ucsd.edu',
+    url=u'https://github.com/younglabs/occams_roster',
     license=u'GPL',
     packages=find_packages(),
     include_package_data=True,
@@ -72,7 +72,6 @@ setup(
     install_requires=REQUIRES,
     extras_require=EXTRAS,
     tests_require=EXTRAS['test'],
-    test_suite='nose.collector',
     entry_points="""
     [console_scripts]
     or_initdb = occams_roster.scripts.initdb:main
