@@ -207,6 +207,7 @@ def delete_json(context, request):
     db_session.delete(context)
     return HTTPOk()
 
+
 def FieldFormFactory(context, request):
     db_session = request.db_session
 
