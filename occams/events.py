@@ -6,8 +6,6 @@ from pyramid.events import subscriber, NewResponse, NewRequest
 
 from occams_datastore import models as datastore
 
-from . import Session
-
 
 @subscriber(NewResponse)
 def vary_json(event):
@@ -25,14 +23,11 @@ def track_user_on_request(event):
     Annotates the database session with the current user.
     """
     request = event.request
-
-    # Keep track of the request so we can generate model URLs
-    Session.info['request'] = request
-    Session.info['settings'] = request.registry.settings
+    db_session = request.db_session
 
     if request.authenticated_userid is not None:
-        Session.info['blame'] = (
-            Session.query(datastore.User)
+        db_session.info['blame'] = (
+            db_session.query(datastore.User)
             .filter_by(key=request.authenticated_userid)
             .one())
 

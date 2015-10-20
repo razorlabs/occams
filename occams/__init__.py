@@ -1,4 +1,6 @@
 from __future__ import unicode_literals
+import decimal
+import datetime
 import logging
 import pkg_resources
 
@@ -6,25 +8,16 @@ import six
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.config import Configurator
 from pyramid.i18n import TranslationStringFactory
+from pyramid.renderers import JSON
 from pyramid.settings import aslist
 from pyramid_who.whov2 import WhoV2AuthenticationPolicy
-from sqlalchemy.orm import scoped_session, sessionmaker
-import wtforms_json
-import zope.sqlalchemy
-
-wtforms_json.init()  # monkey-patch wtforms to accept JSON data
-
-import occams_datastore.models.events
+import wtforms_json; wtforms_json.init()
 
 __version__ = pkg_resources.require(__name__)[0].version
 
 _ = TranslationStringFactory(__name__)
 
 log = logging.getLogger(__name__)
-
-Session = scoped_session(sessionmaker(
-    extension=zope.sqlalchemy.ZopeTransactionExtension()))
-occams_datastore.models.events.register(Session)
 
 from .settings import piwik_from_config
 from .security import RootFactory, groupfinder  # NOQA
@@ -75,10 +68,18 @@ def main(global_config, **settings):
     config.add_rewrite_rule(r'/(?P<path>.*)/', r'/%(path)s')
     config.include('pyramid_tm')
     config.include('pyramid_webassets')
+    config.add_renderer('json', JSON(
+        adapters=(
+            (decimal.Decimal, lambda obj, req: str(obj)),
+            (datetime.datetime, lambda obj, req: obj.isoformat()),
+            (datetime.date, lambda obj, req: obj.isoformat())
+        )),
+    )
     config.commit()
 
     # Main includes
     config.include('.assets')
+    config.include('.celery')
     config.include('.models')
     config.include('.routes')
     config.include('.security')

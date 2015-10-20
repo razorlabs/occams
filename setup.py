@@ -9,7 +9,7 @@ CHANGES = open(os.path.join(HERE, 'CHANGES.rst')).read()
 
 
 REQUIRES = [
-    'alembic>=0.7.6,<0.7.99',           # Database table upgrades
+    'alembic',                          # Database table upgrades
     'babel',                            # i18n
     'celery[redis]>=3.1,<3.1.99',       # Asynchronous queue API
     'cssmin',                           # CSS asset compression
@@ -67,13 +67,13 @@ EXTRAS = {
 
     'test': [
         'pyramid_debugtoolbar',
-        'nose',
-        'nose-testconfig',
-        'coverage',
+        'pytest',
+        'pytest-cov',
+        'factory_boy',
+        'fake-factory',
         'WebTest',
         'beautifulsoup4',
         'mock',
-        'ddt'
     ],
 }
 
@@ -146,9 +146,9 @@ setup(
         "Topic :: Internet :: WWW/HTTP",
         "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
     ],
-    author='UCSD BIT Core Team',
-    author_email='bitcore@ucsd.edu',
-    url='https://bitbutcket.org/ucsdbitcore/occams',
+    author='Young Labs',
+    author_email='younglabs@ucsd.edu',
+    url='https://github.com/younglabs/occams',
     keywords='web wsgi bfg pylons pyramid',
     packages=find_packages(),
     include_package_data=True,

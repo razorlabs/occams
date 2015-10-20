@@ -1,7 +1,10 @@
-import six
 import sqlalchemy as sa
+from sqlalchemy.orm import sessionmaker
+import zope.sqlalchemy
 
-from . import Session, log
+import occams_datastore.models.events
+
+from . import log
 
 
 def includeme(config):
@@ -10,8 +13,28 @@ def includeme(config):
     """
     settings = config.registry.settings
 
-    # tests will override the session, use the setting for everything else
-    if isinstance(settings['occams.db.url'], six.string_types):
-        Session.configure(bind=sa.engine_from_config(settings, 'occams.db.'))
+    maker = sessionmaker()
+    zope.sqlalchemy.register(maker)
+    occams_datastore.models.events.register(maker)
 
-    log.info('Connected to: "%s"' % repr(Session.bind.url))
+    engine = sa.engine_from_config(settings, 'occams.db.')
+    maker.configure(bind=engine)
+
+    config.registry['db_sessionmaker'] = maker
+    config.add_request_method(_get_db_session, 'db_session', reify=True)
+
+    log.info('Connected to: "%s"' % repr(engine.url))
+
+
+def _get_db_session(request):
+    db_session = request.registry['db_sessionmaker']()
+    # Keep track of the request so we can generate model URLs
+    db_session.info['request'] = request
+    db_session.info['settings'] = request.registry.settings
+
+    def close_session(request):
+        db_session.close()
+
+    request.add_finished_callback(close_session)
+
+    return db_session
