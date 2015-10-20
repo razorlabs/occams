@@ -31,4 +31,10 @@ def _get_db_session(request):
     # Keep track of the request so we can generate model URLs
     db_session.info['request'] = request
     db_session.info['settings'] = request.registry.settings
+
+    def close_session(request):
+        db_session.close()
+
+    request.add_finished_callback(close_session)
+
     return db_session
