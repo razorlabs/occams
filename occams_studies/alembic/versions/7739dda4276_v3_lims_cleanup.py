@@ -109,14 +109,14 @@ def upgrade_aliquot_type_units():
         sa.sql.column('amount'))
 
     volume_unit = op.inline_literal(u'mL')
-    # cell_unit = op.inline_literal(u'x10^6')
+    cell_unit = op.inline_literal(u'x10^6')
 
     op.execute(
         aliquot_type_table.update()
         .values(
             units=sa.case(value=aliquot_type_table.c.name, whens=[
                 # CCTG
-                (op.inline_literal(u'pbmc'), volume_unit),
+                (op.inline_literal(u'pbmc'), cell_unit)
                 (op.inline_literal(u'plasma'), volume_unit),
                 (op.inline_literal(u'swab'), sa.null()),
                 (op.inline_literal(u'urine'), volume_unit),
