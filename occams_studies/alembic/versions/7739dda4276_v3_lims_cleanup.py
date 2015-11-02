@@ -99,47 +99,77 @@ def upgrade_aliquot_type_units():
 
     aliquot_type_table = sa.sql.table(
         'aliquottype',
+        sa.sql.column('id'),
         sa.sql.column('name'),
         sa.sql.column('units'))
 
     aliquot_table = sa.sql.table(
         'aliquot',
+        sa.sql.column('aliquot_type_id'),
         sa.sql.column('cell_amount'),
         sa.sql.column('volume'),
         sa.sql.column('amount'))
 
-    volume_unit = op.inline_literal(u'mL')
-    cell_unit = op.inline_literal(u'x10^6')
+    types = {
+        'cell_amount': {
+            'units': op.inline_literal(u'x10^6'),
+            'column': aliquot_table.c.cell_amount,
+        },
+        'volume': {
+            'units': op.inline_literal(u'mL'),
+            'column': aliquot_table.c.volume,
+        },
+        'each': {
+            'units': op.inline_literal(u'ea'),
+            'column': sa.case([
+                ((aliquot_table.c.cell_amount > op.inline_literal(0)),
+                    aliquot_table.c.cell_amount),
+                ((aliquot_table.c.volume > op.inline_literal(0)),
+                    aliquot_table.c.volume)
+            ])
+
+        },
+    }
+
+    columns = {
+        u'blood-spot': types['each'],
+        u'csf': types['volume'],
+        u'csfpellet': types['each'],
+        u'gscells': types['cell_amount'],
+        u'gsplasma': types['volume'],
+        u'heparin-plasma': types['volume'],
+        u'lymphoid': types['each'],
+        u'pbmc': types['cell_amount'],
+        u'plasma': types['volume'],
+        u'rs-gut': types['each'],
+        u'serum': types['volume'],
+        u'swab': types['each'],
+        u'ti-gut': types['each'],
+        u'urine': types['volume'],
+        u'wb-plasma': types['volume'],
+        u'whole-blood': types['volume'],
+    }
 
     op.execute(
         aliquot_type_table.update()
         .values(
             units=sa.case(value=aliquot_type_table.c.name, whens=[
-                # CCTG
-                (op.inline_literal(u'pbmc'), cell_unit)
-                (op.inline_literal(u'plasma'), volume_unit),
-                (op.inline_literal(u'swab'), sa.null()),
-                (op.inline_literal(u'urine'), volume_unit),
-                (op.inline_literal(u'blood-spot'), sa.null()),
-                (op.inline_literal(u'wb-plasma'), volume_unit),
-                (op.inline_literal(u'whole-blood'), volume_unit),
-
-                # MHEALTH
-                (op.inline_literal(u'heparin-plasma'), volume_unit),
-
+                (column_name, type_['units'])
+                for column_name, type_ in columns.items()
             ], else_=sa.null()))
     )
 
     op.execute(
         aliquot_table.update()
+        .where(aliquot_type_table.c.id == aliquot_table.c.aliquot_type_id)
         .values(
-            # The label logic uses these heuristics
-            amount=sa.case([
-                ((aliquot_table.c.cell_amount > 0),
-                    aliquot_table.c.cell_amount),
-                ((aliquot_table.c.volume > 0), aliquot_table.c.volume),
+            # Using the units of measure, pull in the correct value
+            amount=sa.case(value=aliquot_type_table.c.name, whens=[
+                (column_name, type_['column'])
+                for column_name, type_ in columns.items()
             ], else_=sa.null()))
     )
 
+    op.alter_column('aliquottype', 'units', nullable=False)
     op.drop_column('aliquot', 'cell_amount')
     op.drop_column('aliquot', 'volume')
