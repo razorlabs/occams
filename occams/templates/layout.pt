@@ -73,7 +73,7 @@
               </button>
               <metal:navbar-header-slot define-slot="navbar-header-slot">
                 <a class="navbar-brand"
-                    href="${request.route_path('occams.main')}">OCCAMS</a>
+                    href="${request.route_path('occams.index')}">OCCAMS</a>
               </metal:navbar-header-slot>
             </div> <!--/.navbar-header -->
 

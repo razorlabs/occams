@@ -27,7 +27,6 @@ REQUIRES = [
     'pyramid_tm',                       # Centralized transations
     'pyramid_redis_sessions',           # HTTP session with redis backend
     'pyramid_redis',
-    'pyramid_rewrite',                  # Allows urls to end in "/"
     'pyramid_webassets',                # Asset management (ala grunt)
     'pyramid_who',                      # User authentication
     'six',                              # Py 2 & 3 compatibilty

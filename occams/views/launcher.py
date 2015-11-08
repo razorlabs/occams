@@ -2,11 +2,11 @@ from pyramid.view import view_config
 
 
 @view_config(
-    route_name='occams.main',
+    route_name='occams.index',
     permission='view',
-    renderer='../templates/launcher/main.pt'
+    renderer='../templates/launcher/index.pt'
     )
-def main(context, request):
+def index(context, request):
     """
     Renders all available applciations
     """
