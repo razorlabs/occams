@@ -4,7 +4,7 @@ from occams.testing import USERID, make_environ, get_csrf_token
 
 class TestPermissionsStudyList:
 
-    url = '/studies'
+    url = '/studies/'
 
     @pytest.fixture(autouse=True)
     def populate(self, app, db_session):
@@ -30,7 +30,7 @@ class TestPermissionsStudyList:
 
 class TestPermissionsStudyAdd:
 
-    url = '/studies'
+    url = '/studies/'
 
     @pytest.fixture(autouse=True)
     def populate(self, app, db_session):

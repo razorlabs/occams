@@ -4,7 +4,7 @@
   -->
 <nav tal:define="section section|request.current_route_path(_query={})">
   <ul class="nav nav-header">
-    <li tal:define="url request.current_route_path(_route_name='studies.main', _query={})">
+    <li tal:define="url request.current_route_path(_route_name='studies.index', _query={})">
       <a href="${url}"><span class="fa fa-chevron-left"></span></a>
     </li>
     <li tal:define="url request.current_route_path(_route_name='studies.study', _query={})"
