@@ -14,6 +14,7 @@ __version__ = pkg_resources.require(__name__)[0].version
 
 
 def includeme(config):
+
     # App-specific configurations
     config.include('.assets')
     config.include('.routes')
