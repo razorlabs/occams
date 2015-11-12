@@ -54,7 +54,7 @@ def login(request):
             referrer = request.GET.get('referrer')
             if not referrer or request.route_path('accounts.login') in referrer:
                 # TODO: Maybe send the user to their user dashboard instead?
-                referrer = request.route_path('occams.main')
+                referrer = request.route_path('occams.index')
 
             return HTTPFound(location=referrer, headers=headers)
 
