@@ -97,6 +97,5 @@ setup(
     cmdclass={'develop': _custom_develop},
     entry_points="""\
     [console_scripts]
-    of_initdb = occams_forms.scripts.initdb:main
     """,
 )
