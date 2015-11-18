@@ -244,7 +244,7 @@ def test_attribute_defaults(db_session):
     assert count, 1 == 'Found more than one entry'
 
 
-@pytest.mark.parametrize('name', ['5', '5foo', 'foo_5', 'hiv_sex_3'])
+@pytest.mark.parametrize('name', ['5', '5foo'])
 def test_attribute_invalid_regexp_name(db_session, name):
     """
     It should prevent invalid attribute names (See RE_VALID_NAME)
