@@ -1,13 +1,15 @@
 import pytest
 
-from sqlalchemy import Column, Integer
-from occams_datastore.models import ModelClass, Modifiable
+from sqlalchemy import Column, Integer, MetaData
+from occams_datastore.models import Base, Modifiable
 
 
-Base = ModelClass('Base')
+class TestModel(Base):
+    __abstract__ = True
+    metadata = MetaData()
 
 
-class ModifiableClass(Base, Modifiable):
+class ModifiableClass(TestModel, Modifiable):
     """
     Sample case of a class using ``Modifiable``'s functionality
 
@@ -20,10 +22,10 @@ class ModifiableClass(Base, Modifiable):
 
 @pytest.fixture(autouse=True, scope='module')
 def create_tables(request, engine):
-    Base.metadata.create_all(engine)
+    TestModel.metadata.create_all(engine)
 
     def drop_tables():
-        Base.metadata.drop_all(engine)
+        TestModel.metadata.drop_all(engine)
 
     request.addfinalizer(drop_tables)
 

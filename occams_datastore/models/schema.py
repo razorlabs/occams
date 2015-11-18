@@ -20,7 +20,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import backref, relationship, validates
 from sqlalchemy.orm.collections import attribute_mapped_collection
 
-from . import DataStoreModel as Model
+from . import DataStoreModel
 from .metadata import Referenceable, Describeable, Modifiable
 from .auditing import Auditable
 from ..utils.sql import CaseInsensitive
@@ -58,7 +58,8 @@ RESERVED_WORDS = frozenset(
     .split())
 
 
-class Category(Model, Referenceable, Describeable, Modifiable, Auditable):
+class Category(
+        DataStoreModel, Referenceable, Describeable, Modifiable, Auditable):
     """
     Logical categories for schemata in order to be able to group them.
     """
@@ -73,7 +74,7 @@ class Category(Model, Referenceable, Describeable, Modifiable, Auditable):
 
 schema_category_table = Table(
     'schema_category',
-    Model.metadata,
+    DataStoreModel.metadata,
     Column('schema_id', Integer),
     Column('category_id', Integer),
     PrimaryKeyConstraint('schema_id', 'category_id'),
@@ -89,7 +90,8 @@ schema_category_table = Table(
         ondelete='CASCADE'))
 
 
-class Schema(Model, Referenceable, Describeable, Modifiable, Auditable):
+class Schema(
+        DataStoreModel, Referenceable, Describeable, Modifiable, Auditable):
     """
     An object that describes how an EAV schema is generated.
     Typically, an EAV schema represents a group of attributes that represent
@@ -245,7 +247,8 @@ Index(
     unique=True)
 
 
-class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
+class Attribute(
+        DataStoreModel, Referenceable, Describeable, Modifiable, Auditable):
     """
     An object that describes how an EAV attribute is generated.
     Typically, an attribute is a meaningful property in the class data set.
@@ -597,7 +600,8 @@ Index(
     unique=True)
 
 
-class Choice(Model, Referenceable, Describeable, Modifiable, Auditable):
+class Choice(
+        DataStoreModel, Referenceable, Describeable, Modifiable, Auditable):
     """
     Possible value constraints for an attribute.
     Note objects of this type are not versioned, as they are merely an

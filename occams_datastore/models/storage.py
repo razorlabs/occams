@@ -22,7 +22,7 @@ from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import hybrid_property
 
 from ..exc import ConstraintError, InvalidEntitySchemaError
-from . import DataStoreModel as Model
+from . import DataStoreModel
 from .auditing import Auditable
 from .metadata import Referenceable, Describeable, Modifiable
 from .schema import Schema, Attribute, Choice
@@ -36,7 +36,7 @@ def enforceSchemaState(entity):
         raise InvalidEntitySchemaError(entity.schema.name)
 
 
-class Context(Model, Referenceable, Modifiable, Auditable):
+class Context(DataStoreModel, Referenceable, Modifiable, Auditable):
 
     __tablename__ = 'context'
 
@@ -97,7 +97,7 @@ def grouped_collection(keyfunc):
     return lambda: GroupedCollection(keyfunc)
 
 
-class State(Model, Referenceable, Describeable, Modifiable, Auditable):
+class State(DataStoreModel, Referenceable, Describeable, Modifiable, Auditable):
     """
     An entity state to keep track of the entity's progress through some
     externally defined work flow.
@@ -110,7 +110,7 @@ class State(Model, Referenceable, Describeable, Modifiable, Auditable):
         return (UniqueConstraint('name'),)
 
 
-class Entity(Model, Referenceable, Modifiable, Auditable):
+class Entity(DataStoreModel, Referenceable, Modifiable, Auditable):
     """
     An object that describes how an EAV object is generated.
     """
@@ -342,7 +342,7 @@ def TypeMappingClass(typeName, className, tableName, valueType, index=True):
         def _value(cls):
             return Column('value', cls.__valuetype__)
 
-    class_ = type(className, (Model, _ValueBaseMixin), dict(
+    class_ = type(className, (DataStoreModel, _ValueBaseMixin), dict(
         __tablename__=tableName,
         __valuetype__=valueType,
         __typename__=typeName))
