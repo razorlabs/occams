@@ -27,7 +27,12 @@ def engine(request):
     reuse = request.config.getoption('--reuse')
     engine = create_engine(db_url)
     if not reuse:
-        models.DataStoreModel.metadata.create_all(bind=engine)
+        with engine.begin() as connection:
+            connection.info['blame'] = 'test_installer'
+            models.DataStoreModel.metadata.create_all(connection)
+            # Clear states since we'll be truncating on tear down
+            connection.execute('DELETE FROM state')
+
     yield engine
     if not reuse:
         models.DataStoreModel.metadata.drop_all(bind=engine)

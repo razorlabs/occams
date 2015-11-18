@@ -83,6 +83,5 @@ setup(
     test_suite='nose.collector',
     entry_points="""\
     [console_scripts]
-    od_initdb = occams_datastore.scripts.initdb:main
     """
 )
