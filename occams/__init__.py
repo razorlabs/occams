@@ -89,10 +89,12 @@ def main(global_config, **settings):
 
     for name in six.iterkeys(settings['occams.apps']):
         app = import_module(name)
-        if not hasattr(app, '__prefix__'):
+        prefix = getattr(app, '__prefix__', None)
+        if not prefix:
             log.warn(u'{} does not have a prefix'.format(name))
-            continue
-        config.include(name, route_prefix=app.__prefix__)
+            config.include(app)
+        else:
+            config.include(app, route_prefix=prefix)
     config.commit()
 
     config.add_request_method(_apps, name=str('apps'), reify=True)
