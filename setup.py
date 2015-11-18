@@ -162,5 +162,6 @@ setup(
     main = occams:main
     [console_scripts]
     occams_buildassets = occams.scripts.buildassets:main
+    occams_initdb = occams.scripts.initdb:main
     """,
 )
