@@ -81,14 +81,14 @@ def create_tables(request):
         # This is very similar to the init_db script: create tables
         # and pre-populate with expected data
         datastore.DataStoreModel.metadata.create_all(engine)
-        models.Base.metadata.create_all(engine)
+        models.StudiesModel.metadata.create_all(engine)
 
     def drop_tables():
         if url.drivername == 'sqlite':
             if url.database not in ('', ':memory:'):
                 os.unlink(url.database)
         elif not reuse:
-            models.Base.metadata.drop_all(engine)
+            models.StudiesModel.metadata.drop_all(engine)
             datastore.DataStoreModel.metadata.drop_all(engine)
 
     request.addfinalizer(drop_tables)

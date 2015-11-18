@@ -10,7 +10,7 @@ from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import hybrid_property
 
 from occams_datastore.models import (  # NOQA
-    ModelClass,
+    Base,
     Auditable,
     Referenceable, Describeable, Modifiable, HasEntities,
     Category,
@@ -18,7 +18,10 @@ from occams_datastore.models import (  # NOQA
 from occams_datastore.utils.sql import JSON
 
 
-Base = ModelClass(u'Base')
+class StudiesModel(Base):
+    __abstract__ = True
+    # TODO: move this to 'studies' schema'
+    metadata = sa.MetaData()
 
 
 class groups:
@@ -102,7 +105,7 @@ class StudyFactory(object):
 # Configured forms for the study
 study_schema_table = sa.Table(
     'study_schema',
-    Base.metadata,
+    StudiesModel.metadata,
     sa.Column(
         'study_id',
         sa.Integer(),
@@ -124,7 +127,7 @@ study_schema_table = sa.Table(
 # Configured forms for the cycle
 cycle_schema_table = sa.Table(
     'cycle_schema',
-    Base.metadata,
+    StudiesModel.metadata,
     sa.Column(
         'cycle_id',
         sa.Integer(),
@@ -143,7 +146,7 @@ cycle_schema_table = sa.Table(
         primary_key=True))
 
 
-class Study(Base, Referenceable, Describeable, Modifiable, Auditable):
+class Study(StudiesModel, Referenceable, Describeable, Modifiable, Auditable):
 
     __tablename__ = 'study'
 
@@ -300,7 +303,7 @@ class CycleFactory(object):
         return cycle
 
 
-class Cycle(Base, Referenceable, Describeable, Modifiable, Auditable):
+class Cycle(StudiesModel, Referenceable, Describeable, Modifiable, Auditable):
     """
     Study schedule represented as week cycles
     """
@@ -354,7 +357,7 @@ class Cycle(Base, Referenceable, Describeable, Modifiable, Auditable):
                 cls.__tablename__))
 
 
-class Arm(Base, Referenceable, Describeable,  Modifiable, Auditable):
+class Arm(StudiesModel, Referenceable, Describeable,  Modifiable, Auditable):
     """
     A group of study strata
     """
@@ -460,7 +463,7 @@ class SiteFactory(object):
         return site
 
 
-class Site(Base, Referenceable, Describeable, Modifiable, Auditable):
+class Site(StudiesModel, Referenceable, Describeable, Modifiable, Auditable):
     """
     A facility within an organization
     """
@@ -494,7 +497,7 @@ class Site(Base, Referenceable, Describeable, Modifiable, Auditable):
 # Configured forms to add to a patient (globally)
 patient_schema_table = sa.Table(
     'patient_schema',
-    Base.metadata,
+    StudiesModel.metadata,
     sa.Column(
         'schema_id',
         sa.Integer(),
@@ -505,7 +508,7 @@ patient_schema_table = sa.Table(
         primary_key=True))
 
 
-class Patient(Base, Referenceable, Modifiable, HasEntities, Auditable):
+class Patient(StudiesModel, Referenceable, Modifiable, HasEntities, Auditable):
 
     __tablename__ = 'patient'
 
@@ -599,7 +602,7 @@ class ReferenceTypeFactory(object):
         return reference_type
 
 
-class ReferenceType(Base, Referenceable, Describeable, Modifiable):
+class ReferenceType(StudiesModel, Referenceable, Describeable, Modifiable):
     """
     Reference type sources
     """
@@ -628,7 +631,7 @@ class ReferenceType(Base, Referenceable, Describeable, Modifiable):
             )
 
 
-class PatientReference(Base, Referenceable, Modifiable, Auditable):
+class PatientReference(StudiesModel, Referenceable, Modifiable, Auditable):
     """
     References to a studies subject from other sources
     """
@@ -673,7 +676,7 @@ class PatientReference(Base, Referenceable, Modifiable, Auditable):
                 name=u'uq_%s_reference' % cls.__tablename__))
 
 
-class Partner(Base, Referenceable, Modifiable, HasEntities, Auditable):
+class Partner(StudiesModel, Referenceable, Modifiable, HasEntities, Auditable):
     """
     A subject's partner.
     """
@@ -762,7 +765,7 @@ class EnrollmentFactory(object):
 # Configured forms for termination
 termination_schema_table = sa.Table(
     'termination_schema',
-    Base.metadata,
+    StudiesModel.metadata,
     sa.Column(
         'schema_id',
         sa.Integer(),
@@ -773,7 +776,8 @@ termination_schema_table = sa.Table(
         primary_key=True))
 
 
-class Enrollment(Base,  Referenceable, Modifiable, HasEntities, Auditable):
+class Enrollment(
+        StudiesModel,  Referenceable, Modifiable, HasEntities, Auditable):
     """
     A patient's participation in a study.
     """
@@ -867,7 +871,7 @@ class Enrollment(Base,  Referenceable, Modifiable, HasEntities, Auditable):
                 name='ck_%s_lifespan' % cls.__tablename__))
 
 
-class Stratum(Base, Referenceable, Modifiable, HasEntities, Auditable):
+class Stratum(StudiesModel, Referenceable, Modifiable, HasEntities, Auditable):
     """
     A possible study enrollment assignement.
     Useful for enrolling randomized patients.
@@ -996,7 +1000,7 @@ class VisitFactory(object):
 
 visit_cycle_table = sa.Table(
     'visit_cycle',
-    Base.metadata,
+    StudiesModel.metadata,
     sa.Column(
         'visit_id',
         sa.Integer,
@@ -1015,7 +1019,7 @@ visit_cycle_table = sa.Table(
         primary_key=True))
 
 
-class Visit(Base, Referenceable, Modifiable, HasEntities, Auditable):
+class Visit(StudiesModel, Referenceable, Modifiable, HasEntities, Auditable):
 
     __tablename__ = 'visit'
 
@@ -1172,7 +1176,7 @@ class ExportFactory(object):
         return export
 
 
-class Export(Base, Referenceable, Modifiable, Auditable):
+class Export(StudiesModel, Referenceable, Modifiable, Auditable):
     """
     Metadata about an export, such as file contents and experation date.
     """
