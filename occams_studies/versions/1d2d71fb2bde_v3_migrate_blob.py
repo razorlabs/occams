@@ -9,6 +9,7 @@ Create Date: 2014-12-09 14:37:45.200430
 # revision identifiers, used by Alembic.
 revision = '1d2d71fb2bde'
 down_revision = '2eb2629708b3'
+branch_labels = None
 
 from alembic import op, context
 import six

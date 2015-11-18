@@ -91,7 +91,6 @@ setup(
     cmdclass={'develop': _custom_develop},
     entry_points="""\
     [console_scripts]
-    os_initdb = occams_studies.scripts.initdb:main
     os_export = occams_studies.scripts.export:main
     """,
 )
