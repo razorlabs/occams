@@ -219,7 +219,7 @@ def FieldFormFactory(context, request):
         schema = context
     elif isinstance(context, models.Attribute):
         schema = context.schema
-        is_new = bool(orm.object_session(context))
+        is_new = not bool(orm.object_session(context))
 
     def unique_variable(form, field):
         query = (
