@@ -423,6 +423,7 @@ def render_form(form,
         'show_footer': show_footer,
         'metadata_disabled': metadata_disabled,
         'fields_disabled': fields_disabled,
+        'disabled': disabled,
         'attr': attr or {},
     })
 
