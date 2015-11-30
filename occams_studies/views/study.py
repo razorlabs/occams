@@ -93,7 +93,10 @@ def list_(request):
     permission='view',
     renderer='../templates/study/view.pt')
 def view(context, request):
-    return {'study': view_json(context, request)}
+    return {
+        'rid_disabled': not request.has_permission('edit'),
+        'study': view_json(context, request)
+    }
 
 
 @view_config(

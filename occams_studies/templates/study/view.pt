@@ -11,7 +11,9 @@
               data-label-text="Grid"
               />
           <!-- ko if: randomization_form -->
-            <button class="btn btn-default" data-bind="click: $root.startUploadRids">
+            <button class="btn btn-default"
+                    tal:attributes="disabled rid_disabled"
+                    data-bind="click: $root.startUploadRids">
               <span class="fa fa-random"></span>
               Upload RIDs
               <!-- ko if: $root.isUploading -->
