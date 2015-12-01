@@ -2,6 +2,7 @@ from __future__ import unicode_literals
 import decimal
 import datetime
 import logging
+from importlib import import_module
 import pkg_resources
 
 import six
@@ -64,8 +65,6 @@ def main(global_config, **settings):
     config.include('pyramid_chameleon')
     config.include('pyramid_redis')
     config.include('pyramid_redis_sessions')
-    config.include('pyramid_rewrite')
-    config.add_rewrite_rule(r'/(?P<path>.*)/', r'/%(path)s')
     config.include('pyramid_tm')
     config.include('pyramid_webassets')
     config.add_renderer('json', JSON(
@@ -89,7 +88,13 @@ def main(global_config, **settings):
     # Application includes
 
     for name in six.iterkeys(settings['occams.apps']):
-        config.include(name)
+        app = import_module(name)
+        prefix = getattr(app, '__prefix__', None)
+        if not prefix:
+            log.warn(u'{} does not have a prefix'.format(name))
+            config.include(app)
+        else:
+            config.include(app, route_prefix=prefix)
     config.commit()
 
     config.add_request_method(_apps, name=str('apps'), reify=True)
