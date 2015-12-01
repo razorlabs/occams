@@ -44,7 +44,7 @@ def add_studies(event):
 
 
 @view_config(
-    route_name='studies.main',
+    route_name='studies.index',
     permission='view',
     renderer='../templates/study/list.pt')
 def list_(request):
@@ -452,7 +452,7 @@ def visits_cycle(context, request):
 
 
 @view_config(
-    route_name='studies.main',
+    route_name='studies.index',
     permission='add',
     request_method='POST',
     xhr=True,
@@ -497,7 +497,7 @@ def edit_json(context, request):
 
 
 @view_config(
-    route_name='studies.main',
+    route_name='studies.index',
     permission='edit',
     xhr=True,
     request_param='vocabulary=available_schemata',
@@ -610,7 +610,7 @@ def delete_json(context, request):
             mapping={'study': context.title})
     request.session.flash(msg, 'success')
 
-    return {'__next__': request.route_path('studies.main')}
+    return {'__next__': request.route_path('studies.index')}
 
 
 @view_config(

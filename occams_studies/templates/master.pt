@@ -12,7 +12,7 @@
 
   <metal:navbar-header-slot fill-slot="navbar-header-slot">
     <a class="navbar-brand"
-        href="${request.route_path('studies.main')}">OCCAMS Studies</a>
+        href="${request.route_path('studies.index')}">OCCAMS Studies</a>
   </metal:navbar-header-slot>
 
   <metal:navbar-nav-slot fill-slot="navbar-nav-slot">
@@ -22,7 +22,7 @@
       <li tal:define="
             factory import:occams_studies.models.StudyFactory;
             studies factory(request);
-            url request.route_path('studies.main');
+            url request.route_path('studies.index');
             current_study request.matchdict['study']|nothing;
             active request.matched_route.name.startswith('stud');"
           tal:attributes="class python:'active' if active else ''"

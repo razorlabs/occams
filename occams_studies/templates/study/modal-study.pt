@@ -6,7 +6,7 @@
       <form
           class="form-horizontal"
           method="POST"
-          action="${request.route_path('studies.main')}"
+          action="${request.route_path('studies.index')}"
           data-bind="validate: {}, submit: $parent.saveStudy">
         <div class="modal-header">
           <!-- ko if: id -->

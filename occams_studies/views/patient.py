@@ -493,7 +493,7 @@ def delete_json(context, request):
         _('Patient ${pid} was successfully removed'),
         mapping={'pid': context.pid})
     request.session.flash(msg, 'success')
-    return {'__next__': request.current_route_path(_route_name='studies.main')}
+    return {'__next__': request.current_route_path(_route_name='studies.index')}
 
 
 @view_config(
