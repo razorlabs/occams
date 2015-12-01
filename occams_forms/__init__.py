@@ -19,7 +19,7 @@ def includeme(config):
         'name': 'forms',
         'title': _(u'Forms'),
         'package': 'occams_forms',
-        'route': 'forms.main',
+        'route': 'forms.index',
         'version': __version__
     }
 

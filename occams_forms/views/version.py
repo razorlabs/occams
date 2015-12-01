@@ -268,5 +268,5 @@ def delete_json(context, request):
 
     return {
         # Hint the next resource to look for data
-        '__next__': request.current_route_path(_route_name='forms.main')
+        '__next__': request.current_route_path(_route_name='forms.index')
         }

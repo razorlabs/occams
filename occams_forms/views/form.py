@@ -14,7 +14,7 @@ from ._utils import jquery_wtform_validator
 
 
 @view_config(
-    route_name='forms.main',
+    route_name='forms.index',
     permission='view',
     renderer='../templates/form/list.pt')
 def list_(request):
@@ -22,7 +22,7 @@ def list_(request):
 
 
 @view_config(
-    route_name='forms.main',
+    route_name='forms.index',
     permission='view',
     xhr=True,
     renderer='json')
@@ -34,7 +34,7 @@ def list_json(context, request):
 
 
 @view_config(
-    route_name='forms.main',
+    route_name='forms.index',
     permission='add',
     request_method='POST',
     request_param='files',
@@ -62,7 +62,7 @@ def upload(context, request):
 
 
 @view_config(
-    route_name='forms.main',
+    route_name='forms.index',
     permission='add',
     xhr=True,
     request_param='validate',
@@ -73,7 +73,7 @@ def validate_value_json(context, request):
 
 
 @view_config(
-    route_name='forms.main',
+    route_name='forms.index',
     permission='add',
     request_method='POST',
     xhr=True,

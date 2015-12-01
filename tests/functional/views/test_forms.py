@@ -77,27 +77,27 @@ class TestPermissionForms:
 
     @pytest.mark.parametrize('group', ALL_ALLOWED)
     def test_forms_view(self, app, db_session, group):
-        url = '/forms'
+        url = '/forms/'
 
         environ = make_environ(userid=USERID, groups=[group])
         res = app.get(url, extra_environ=environ)
         assert 200 == res.status_code
 
     def test_not_authenticated_forms(self, app, db_session):
-        url = '/forms'
+        url = '/forms/'
         res = app.get(url, status='*')
         assert 401 == res.status_code
 
     @pytest.mark.parametrize('group', ALL_ALLOWED)
     def test_forms_view_xhr(self, app, db_session, group):
-        url = '/forms'
+        url = '/forms/'
 
         environ = make_environ(userid=USERID, groups=[group])
         res = app.get(url, extra_environ=environ, xhr=True)
         assert 200 == res.status_code
 
     def test_not_authenticated_forms_xhr(self, app, db_session):
-        url = '/forms'
+        url = '/forms/'
         res = app.get(url, status='*', xhr=True)
         assert 401 == res.status_code
 
@@ -105,7 +105,7 @@ class TestPermissionForms:
     def test_forms_upload_json(self, app, db_session, group):
         import json
 
-        url = '/forms?files'
+        url = '/forms/?files'
 
         environ = make_environ(userid=USERID, groups=[group])
         csrf_token = get_csrf_token(app, environ)
@@ -134,7 +134,7 @@ class TestPermissionForms:
     def test_not_allowed_forms_upload_json(self, app, db_session, group):
         import json
 
-        url = '/forms?files'
+        url = '/forms/?files'
 
         environ = make_environ(userid=USERID, groups=[group])
         csrf_token = get_csrf_token(app, environ)
@@ -160,13 +160,13 @@ class TestPermissionForms:
         assert 403 == res.status_code
 
     def test_not_authenticated_files_upload(self, app, db_session):
-        url = '/forms?files'
+        url = '/forms/?files'
         res = app.post(url, status='*', xhr=True)
         assert 401 == res.status_code
 
     @pytest.mark.parametrize('group', DEFAULT_ALLOWED)
     def test_forms_add_json_validate(self, app, db_session, group):
-        url = '/forms?validate'
+        url = '/forms/?validate'
 
         environ = make_environ(userid=USERID, groups=[group])
         csrf_token = get_csrf_token(app, environ)
@@ -194,7 +194,7 @@ class TestPermissionForms:
 
     @pytest.mark.parametrize('group', DEFAULT_NOT_ALLOWED)
     def test_not_allowed_forms_add_json_validate(self, app, db_session, group):
-        url = '/forms?validate'
+        url = '/forms/?validate'
 
         environ = make_environ(userid=USERID, groups=[group])
         csrf_token = get_csrf_token(app, environ)
@@ -221,14 +221,14 @@ class TestPermissionForms:
         assert 403 == res.status_code
 
     def test_not_authenticated_validate_field(self, app, db_session):
-        url = '/forms?validate'
+        url = '/forms/?validate'
 
         res = app.get(url, status='*', xhr=True)
         assert 401 == res.status_code
 
     @pytest.mark.parametrize('group', DEFAULT_ALLOWED)
     def test_forms_add(self, app, db_session, group):
-        url = '/forms'
+        url = '/forms/'
 
         environ = make_environ(userid=USERID, groups=[group])
         csrf_token = get_csrf_token(app, environ)
@@ -255,7 +255,7 @@ class TestPermissionForms:
 
     @pytest.mark.parametrize('group', DEFAULT_NOT_ALLOWED)
     def test_not_allowed_forms_add(self, app, db_session, group):
-        url = '/forms'
+        url = '/forms/'
 
         environ = make_environ(userid=USERID, groups=[group])
         csrf_token = get_csrf_token(app, environ)
@@ -281,7 +281,7 @@ class TestPermissionForms:
         assert 403 == res.status_code
 
     def test_not_authenticated_forms_add(self, app, db_session):
-        url = '/forms'
+        url = '/forms/'
         res = app.post_json(url, status='*')
         assert 401 == res.status_code
 
