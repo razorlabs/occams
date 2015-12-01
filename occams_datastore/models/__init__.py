@@ -1,27 +1,16 @@
-from sqlalchemy import MetaData
+import sqlalchemy as sa
 from sqlalchemy.ext.declarative import declarative_base
 
 
-def get_class_factory():
-    """
-    Utility for creating new inheritable SQLAlchemy base model class
-    with a common declarative base.
-    """
-
-    base = declarative_base()
-
-    def ModelClassFactory(class_name, bases=[]):
-        return type(str(class_name), tuple([base] + bases), {
-            '__abstract__': True,
-            'metadata': MetaData()})
-
-    return ModelClassFactory
+# Use this to create an app-specific table model-base
+# DO NOT directly subclass this in your app's table models....
+Base = declarative_base()
 
 
-# This is the method to use in client modules
-ModelClass = get_class_factory()
-
-DataStoreModel = ModelClass('DataStoreModel')
+class DataStoreModel(Base):
+    __abstract__ = True
+    # TODO: Use dedicated 'datastore' schema
+    metadata = sa.MetaData()
 
 
 from .auditing import Auditable  # NOQA

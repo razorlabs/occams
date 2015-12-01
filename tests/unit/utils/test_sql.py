@@ -1,15 +1,17 @@
 import pytest
 
-from sqlalchemy import Column, Integer
+from sqlalchemy import Column, Integer, MetaData
 
-from occams_datastore.models import ModelClass
+from occams_datastore.models import Base
 from occams_datastore.utils.sql import JSON
 
 
-Base = ModelClass('Base')
+class TestModel(Base):
+    __abstract__ = True
+    metadata = MetaData()
 
 
-class SomeMapping(Base):
+class SomeMapping(TestModel):
     """
     We define this outside of a fixture to let SQLalchemy fully
     evaluate all modules (otheriwise pytest get's stuck indefinitely)
@@ -21,10 +23,10 @@ class SomeMapping(Base):
 
 @pytest.fixture(autouse=True, scope='module')
 def create_tables(request, engine):
-    Base.metadata.create_all(engine)
+    TestModel.metadata.create_all(engine)
 
     def drop_tables():
-        Base.metadata.drop_all(engine)
+        TestModel.metadata.drop_all(engine)
 
     request.addfinalizer(drop_tables)
 

@@ -14,13 +14,13 @@ from sqlalchemy import(
     Table, Column,
     PrimaryKeyConstraint,
     CheckConstraint, UniqueConstraint, ForeignKeyConstraint, Index,
-    Boolean, Enum, Date, Integer, String, UnicodeText)
+    Boolean, Enum, Date, Integer, String, Unicode, UnicodeText)
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import backref, relationship, validates
 from sqlalchemy.orm.collections import attribute_mapped_collection
 
-from . import DataStoreModel as Model
+from . import DataStoreModel
 from .metadata import Referenceable, Describeable, Modifiable
 from .auditing import Auditable
 from ..utils.sql import CaseInsensitive
@@ -28,7 +28,6 @@ from ..utils.sql import CaseInsensitive
 
 RE_VALID_NAME = re.compile(r"""
     ^
-    (?!.*_[0-9]+)       # Cannot end with underscore follwed by digits
     [a-z]               # Must start with character
     [a-z0-9_]*          # Can contains letters digits and underscores
     $
@@ -59,7 +58,8 @@ RESERVED_WORDS = frozenset(
     .split())
 
 
-class Category(Model, Referenceable, Describeable, Modifiable, Auditable):
+class Category(
+        DataStoreModel, Referenceable, Describeable, Modifiable, Auditable):
     """
     Logical categories for schemata in order to be able to group them.
     """
@@ -74,7 +74,7 @@ class Category(Model, Referenceable, Describeable, Modifiable, Auditable):
 
 schema_category_table = Table(
     'schema_category',
-    Model.metadata,
+    DataStoreModel.metadata,
     Column('schema_id', Integer),
     Column('category_id', Integer),
     PrimaryKeyConstraint('schema_id', 'category_id'),
@@ -90,7 +90,8 @@ schema_category_table = Table(
         ondelete='CASCADE'))
 
 
-class Schema(Model, Referenceable, Describeable, Modifiable, Auditable):
+class Schema(
+        DataStoreModel, Referenceable, Describeable, Modifiable, Auditable):
     """
     An object that describes how an EAV schema is generated.
     Typically, an EAV schema represents a group of attributes that represent
@@ -246,7 +247,8 @@ Index(
     unique=True)
 
 
-class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
+class Attribute(
+        DataStoreModel, Referenceable, Describeable, Modifiable, Auditable):
     """
     An object that describes how an EAV attribute is generated.
     Typically, an attribute is a meaningful property in the class data set.
@@ -261,7 +263,10 @@ class Attribute(Model, Referenceable, Describeable, Modifiable, Auditable):
     __tablename__ = 'attribute'
 
     # Overide for maximum character lenght of 20
-    name = Column(String(20), nullable=False)
+    name = Column(String(100), nullable=False)
+
+    # Overide for nullable=True
+    title = Column(Unicode, nullable=True)
 
     schema_id = Column(Integer, nullable=False,)
 
@@ -595,7 +600,8 @@ Index(
     unique=True)
 
 
-class Choice(Model, Referenceable, Describeable, Modifiable, Auditable):
+class Choice(
+        DataStoreModel, Referenceable, Describeable, Modifiable, Auditable):
     """
     Possible value constraints for an attribute.
     Note objects of this type are not versioned, as they are merely an

@@ -3,6 +3,7 @@ Common metadata modules
 """
 
 from sqlalchemy import (
+    event,
     text,
     Column,
     CheckConstraint, UniqueConstraint, ForeignKey,
@@ -10,7 +11,7 @@ from sqlalchemy import (
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import object_session, relationship
 
-from . import DataStoreModel as Model
+from . import DataStoreModel
 
 
 def updateMetadata(instance, created):
@@ -60,7 +61,7 @@ class Describeable(object):
     description = Column(UnicodeText)
 
 
-class User(Model, Referenceable):
+class User(DataStoreModel, Referenceable):
     """
     A simple 'blame' user for audit trails
     """
@@ -90,6 +91,17 @@ class User(Model, Referenceable):
             CheckConstraint(
                 'create_date <= modify_date',
                 name='ck_%s_valid_timeline' % cls.__tablename__))
+
+
+@event.listens_for(User.__table__, 'after_create')
+def register_installer(target, connection, **kw):
+    """
+    Blames the current user conducting the installation.
+    Expects the connection to be annotated with an info "blame" key.
+
+    """
+    blame = connection.info['blame']
+    connection.execute(target.insert().values(key=blame))
 
 
 class Modifiable(object):

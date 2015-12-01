@@ -22,9 +22,9 @@ from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import hybrid_property
 
 from ..exc import ConstraintError, InvalidEntitySchemaError
-from . import DataStoreModel as Model
+from . import DataStoreModel
 from .auditing import Auditable
-from .metadata import Referenceable, Describeable, Modifiable
+from .metadata import Referenceable, Describeable, Modifiable, User
 from .schema import Schema, Attribute, Choice
 
 
@@ -36,7 +36,7 @@ def enforceSchemaState(entity):
         raise InvalidEntitySchemaError(entity.schema.name)
 
 
-class Context(Model, Referenceable, Modifiable, Auditable):
+class Context(DataStoreModel, Referenceable, Modifiable, Auditable):
 
     __tablename__ = 'context'
 
@@ -97,7 +97,7 @@ def grouped_collection(keyfunc):
     return lambda: GroupedCollection(keyfunc)
 
 
-class State(Model, Referenceable, Describeable, Modifiable, Auditable):
+class State(DataStoreModel, Referenceable, Describeable, Modifiable, Auditable):
     """
     An entity state to keep track of the entity's progress through some
     externally defined work flow.
@@ -110,7 +110,46 @@ class State(Model, Referenceable, Describeable, Modifiable, Auditable):
         return (UniqueConstraint('name'),)
 
 
-class Entity(Model, Referenceable, Modifiable, Auditable):
+@event.listens_for(State.__table__, 'after_create')
+def populate_default_states(target, connection, **kw):
+    """
+    We currently only ship with hard-coded states.
+
+    This method expectecs the current connection to be annotated with
+    a user in the info "blame" key. This user is ideally created after the
+    "user" table is created.
+    """
+
+    blame = connection.info['blame']
+    user_table = User.__table__
+
+    result = connection.execute(
+        user_table
+        .select()
+        .where(user_table.c.key == blame))
+
+    user = result.fetchone()
+    blame_id = user['id']
+
+    def state(**kw):
+        values = kw.copy()
+        values.update({
+            'create_user_id': blame_id,
+            'modify_user_id': blame_id,
+            'revision': 1
+        })
+        return values
+
+    connection.execute(target.insert().values([
+        state(name=u'pending-entry', title=u'Pending Entry'),
+        state(name=u'in-progress', title=u'In Progress'),
+        state(name=u'pending-review', title=u'Pending Review'),
+        state(name=u'pending-correction', title=u'Pending Correction'),
+        state(name=u'complete', title=u'Complete'),
+    ]))
+
+
+class Entity(DataStoreModel, Referenceable, Modifiable, Auditable):
     """
     An object that describes how an EAV object is generated.
     """
@@ -342,7 +381,7 @@ def TypeMappingClass(typeName, className, tableName, valueType, index=True):
         def _value(cls):
             return Column('value', cls.__valuetype__)
 
-    class_ = type(className, (Model, _ValueBaseMixin), dict(
+    class_ = type(className, (DataStoreModel, _ValueBaseMixin), dict(
         __tablename__=tableName,
         __valuetype__=valueType,
         __typename__=typeName))
