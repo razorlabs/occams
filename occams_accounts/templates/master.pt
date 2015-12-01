@@ -9,7 +9,7 @@
 
   <metal:navbar-header-slot fill-slot="navbar-header-slot">
     <a class="navbar-brand"
-        href="${request.route_path('accounts.main')}">OCCAMS Accounts</a>
+        href="${request.route_path('accounts.index')}">OCCAMS Accounts</a>
   </metal:navbar-header-slot>
 
 </html>
