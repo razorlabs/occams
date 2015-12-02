@@ -34,7 +34,6 @@ def includeme(config):
         rel('bower_components/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js'),
         rel('bower_components/bootstrap-fileinput/js/fileinput.min.js'),
         rel('bower_components/bootstrap-switch/dist/js/bootstrap-switch.min.js'),
-        rel('bower_components/socket.io-client/dist/socket.io.min.js'),
         # App-specific scripts can be loaded in any order
         Bundle(
             *[os.path.join(root, filename)

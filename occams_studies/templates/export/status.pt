@@ -230,8 +230,7 @@
     $(function(){
       ko.applyBindings(
         new StatusViewModel({
-          socketio_resource: "${request.route_path('socket.io', remaining='').strip('/')}",
-          socketio_namespace: '/export'
+          notifications_url: "${request.route_path('studies.exports_notifications')}",
         }),
         document.getElementById('exports_status')
       );

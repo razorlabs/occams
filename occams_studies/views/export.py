@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import json
 import os
 import uuid
 
@@ -245,6 +246,46 @@ def status_json(context, request):
         'pager': pagination.serialize(),
         'exports': [export2json(e) for e in exports_query]
     }
+
+
+@view_config(
+    route_name='studies.exports_notifications',
+    permission='view')
+def notifications(context, request):
+    """
+    Yields server-sent events containing status updates of current exports
+    REQUIRES GUNICORN WITH GEVENT WORKER
+    """
+
+    # Close DB connections so we don't hog them while polling
+    request.db_session.close()
+
+    def listener():
+        pubsub = request.redis.pubsub()
+        pubsub.subscribe('export')
+
+        sse_payload = 'id:{0}\nevent: progress\ndata:{1}\n\n'
+
+        # emit subsequent progress
+        for message in pubsub.listen():
+
+            if message['type'] != 'message':
+                continue
+
+            data = json.loads(message['data'])
+
+            if data['owner_user'] != request.authenticated_userid:
+                continue
+
+            log.debug(data)
+            yield sse_payload.format(str(uuid.uuid4()), json.dumps(data))
+
+    response = request.response
+    response.content_type = 'text/event-stream'
+    response.cache_control = 'no-cache'
+    response.app_iter = listener()
+
+    return response
 
 
 @view_config(

@@ -235,6 +235,84 @@ class TestStatusJSON:
         assert len(exports) == 0
 
 
+class TestNotifications:
+
+    def _call_fut(self, *args, **kw):
+        from occams_studies.views.export import notifications
+        return notifications(*args, **kw)
+
+    def test_ignore_nonmessages(self, req, db_session, config):
+        """
+        It should not yield other types of pubsub broadcasts
+        """
+        import mock
+        from occams_studies import models
+
+        def listen():
+            return [{
+                'type': 'misc',
+                'data': 'random data'
+            }]
+
+        req.redis = mock.Mock(pubsub=lambda: mock.Mock(listen=listen))
+
+        res = self._call_fut(models.ExportFactory(req), req)
+
+        notifications = list(res.app_iter)
+
+        assert not notifications
+
+    def test_ignore_nonowner(self, req, db_session, config):
+        """
+        It should not yield pubsub "message" broadcasts if they
+        don't belong to the autheticated user.
+        """
+        import json
+        import mock
+        from occams_studies import models
+
+        config.testing_securitypolicy(userid='somoneelse')
+
+        def listen():
+            return [{
+                'type': 'message',
+                'data': json.dumps({'owner_user': 'jane', 'export_id': 123})
+            }]
+
+        req.redis = mock.Mock(pubsub=lambda: mock.Mock(listen=listen))
+
+        res = self._call_fut(models.ExportFactory(req), req)
+
+        notifications = list(res.app_iter)
+
+        assert not notifications
+
+    def test_yield_pubsub_owner_messages(self, req, db_session, config):
+        """
+        It should only yield pubsub "message" broadcasts to the owner
+        """
+        import json
+        import mock
+        from occams_studies import models
+
+        config.testing_securitypolicy(userid='jane')
+
+        def listen():
+            return [{
+                'type': 'message',
+                'data': json.dumps({'owner_user': 'jane', 'export_id': 123})
+            }]
+
+        req.redis = mock.Mock(pubsub=lambda: mock.Mock(listen=listen))
+
+        res = self._call_fut(models.ExportFactory(req), req)
+
+        notifications = list(res.app_iter)
+
+        assert notifications
+        assert '"export_id": 123' in notifications[0]
+
+
 class TestCodebookJSON:
 
     def _call_fut(self, *args, **kw):
