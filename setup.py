@@ -13,12 +13,12 @@ REQUIRES = [
     'babel',                            # i18n
     'celery[redis]>=3.1,<3.1.99',       # Asynchronous queue API
     'cssmin',                           # CSS asset compression
-    'gevent-socketio>=0.3.6,<0.3.99',   # websockets
-    'gunicorn',                         # WSGI server
+    'gevent',
+    'gunicorn==19.3',                   # WSGI server
+                                        # Use 19.3 as 19.4 has some issues
     'humanize',                         # human readable measurements
     'jsmin',                            # JS asset compression
     'lingua',                           # i18n
-    'gevent-socketio',
     'python-dateutil',                  # Date parsing
     'python-slugify',                   # path-friendly filenames
     'pyramid>=1.5',                     # Framework
