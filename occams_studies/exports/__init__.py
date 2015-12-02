@@ -17,12 +17,10 @@ except ImportError:  # pragma: nocover
 from . import codebook
 from .calllog import CallLogPlan
 from .enrollment import EnrollmentPlan
-from .partner import PartnerPlan
 from .pid import PidPlan
 from .lab import LabPlan
 from .schema import SchemaPlan
 from .visit import VisitPlan
-from .symptom import SymptomPlan
 
 
 def list_all(db_session, include_rand=True, include_private=True):
@@ -41,9 +39,7 @@ def list_all(db_session, include_rand=True, include_private=True):
         EnrollmentPlan(db_session), PidPlan(db_session), VisitPlan(db_session),
         # not system tables:
         LabPlan(db_session),
-        CallLogPlan(db_session),
-        PartnerPlan(db_session),
-        SymptomPlan(db_session)]
+        CallLogPlan(db_session)]
         if p.is_enabled]
     schemata = SchemaPlan.list_all(
         db_session=db_session,
