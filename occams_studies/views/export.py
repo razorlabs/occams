@@ -283,6 +283,8 @@ def notifications(context, request):
     response = request.response
     response.content_type = 'text/event-stream'
     response.cache_control = 'no-cache'
+    # Set reverse proxies (if any, i.e nginx) not to buffer this connection
+    response.headers['X-Accel-Buffering'] = 'no'
     response.app_iter = listener()
 
     return response
