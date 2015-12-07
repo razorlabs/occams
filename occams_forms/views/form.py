@@ -175,7 +175,7 @@ def FormFormFactory(context, request):
         name = wtforms.StringField(
             validators=[
                 wtforms.validators.InputRequired(),
-                wtforms.validators.Length(min=3, max=32),
+                wtforms.validators.Length(min=3, max=100),
                 wtforms.validators.Regexp('^[a-zA-Z_][a-zA-Z0-9_]+$'),
                 check_unique_name])
 
