@@ -64,17 +64,17 @@ git changes/history the next time your run pip install on a git
 repo, which can lead you to lose a lot of work and sanity::
 
   > cd src
-  > git clone git@bitbucket.org:YOURID/occams
+  > git clone git@github.com:YOURID/occams
 
 If you plan on working on add-ons, it is recommended you install the
 following as well::
 
-  > git clone git@bitbucket.org:YOURID/occams_datastore
-  > git clone git@bitbucket.org:YOURID/occams_forms
-  > git clone git@bitbucket.org:YOURID/occams_accounts
-  > git clone git@bitbucket.org:YOURID/occams_roster
-  > git clone git@bitbucket.org:YOURID/occams_studies
-  > git clone git@bitbucket.org:YOURID/occams_lims
+  > git clone git@github.com:YOURID/occams_datastore
+  > git clone git@github.com:YOURID/occams_forms
+  > git clone git@github.com:YOURID/occams_accounts
+  > git clone git@github.com:YOURID/occams_roster
+  > git clone git@github.com:YOURID/occams_studies
+  > git clone git@github.com:YOURID/occams_lims
 
 
 Now that your projects are checked out, copy and update the ``requirements.txt``
@@ -94,7 +94,7 @@ your desired development environment settings::
 Install the appropriate database tables::
 
   > createdb -U DBADMIN -O DBUSER DBNAME
-  > os_initdb etc/development.ini
+  > occams_initdb etc/development.ini
 
 
 Start the web service::
@@ -105,7 +105,43 @@ Start the web service::
 If you applications are using asynchronous tasks, you'll need to start the
 celery worker::
 
-  > celery worker --autoreload --app "occams.studies.tasks" --loglevel INFO --without-gossip --ini etc/development.ini
+  > celery worker --autoreload --app occams --loglevel INFO --without-gossip --ini etc/development.ini
+
+
+Creating your own app
+---------------------
+
+**TODO**
+
+Database Migrations
++++++++++++++++++++
+
+If your app depends on OCCAMS's database structure, it is advised you use `alembic branchpoints`__
+with a dedicated label for your project.
+
+.. _alembic: https://alembic.readthedocs.org/en/latest/branches.html#working-with-multiple-bases
+
+__ alembic_
+
+Use ``alembic history`` to inspect the current history of OCCAMS application database structures.
+Ideally, your project should follow it's only independent history,
+were you might depend on certain dependant database structure changes. If this is the case, please
+refer to the following scenarios:
+
+If your project begins as an independent database structure::
+
+  > alembic -c /path/to/ini revision -m "MESSAGE" --head=base --branch-label=MYAPP --version-path=/path/to/app/versions
+
+
+If your project begins depending on a specific database structure::
+
+  > alembic -c /path/to/ini revision -m "MESSAGE" --head=REVISION --splice --branch-label=MYAPP --version-path=/path/to/app/versions
+
+
+If your project's revision depends on a certain project's revision::
+
+  > alembic -c /path/to/ini revision -m "MESSAGE" --head=MYAPP@base --depends-on=REVISION --version-path=/path/to/app/versions
+
 
 
 Configuration
