@@ -49,16 +49,16 @@ Make sure you have the required node packages installed::
 
 Create a virtual environment for your work::
 
-  > virtualenv myproject
-  > source occams/bin/activate
+  > virtualenv MYPROJECT
+  > source MYPROJECT/bin/activate
 
 Next, create the necesary directories::
 
-  > cd myproject
+  > cd MYPROJECT
   > mkdir -p  etc  var/exports  var/blobs  src
 
 You'll need to git checkout the web application. If you are
-using your own forks, change ``ucsdbitcore`` to yours. The reason we
+using your own forks, change ``younglabs`` to yours. The reason we
 checkout each project individually is because pip will replace all
 git changes/history the next time your run pip install on a git
 repo, which can lead you to lose a lot of work and sanity::
