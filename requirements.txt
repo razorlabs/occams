@@ -10,7 +10,7 @@
 -e git+https://github.com/m-martinez/who_ldap@userdata_dict#egg=who_ldap
 
 
-### In-house
+### OCCAMS
 
 # NOTE:
 # These settings are not recommend for development. Instead it is highly
@@ -18,9 +18,10 @@
 # instead of the git links.
 
 -e git+https://github.com/younglabs/occams_datastore@master#egg=occams_datastore[test]
+-e git+https://github.com/younglabs/occams@master#egg=occams[test,docs,ldap,postgresql]
+
 -e git+https://github.com/younglabs/occams_accounts@master#egg=occams_accounts[test]
 -e git+https://github.com/younglabs/occams_forms@master#egg=occams_forms[test]
 -e git+https://github.com/younglabs/occams_roster@master#egg=occams_roster[test]
 -e git+https://github.com/younglabs/occams_studies@master#egg=occams_studies[test]
 -e git+https://github.com/younglabs/occams_lims@master#egg=occams_lims[test]
--e git+https://github.com/younglabs/occams@master#egg=occams[test,docs,ldap,postgresql]
