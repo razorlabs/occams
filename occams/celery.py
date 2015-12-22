@@ -17,7 +17,7 @@ import celery.signals
 from celery.utils.log import get_task_logger
 import six
 from pyramid.settings import aslist
-from pyramid.paster import get_appsettings
+from pyramid.paster import bootstrap
 import redis
 import sqlalchemy as sa
 from sqlalchemy import orm
@@ -57,17 +57,7 @@ def includeme(config):
     :param config: Pyramid configuration object
 
     """
-
-    config_celery(config.registry.settings)
-
-
-def config_celery(settings):
-    """
-    Helper function for configuring from both Pyramid and Celery processes
-
-    :param settings: A dictionary of parsed settings
-
-    """
+    settings = config.registry.settings
 
     assert 'celery.blame' in settings, 'Must specify an blame user'
 
@@ -138,8 +128,12 @@ def on_preload_parsed(options, **kw):
     Called when the main Celery process parses a configuration file
     """
     # Have the pyramid app initialize all settings
-    settings = get_appsettings(options['ini'])
-    config_celery(settings)
+    # We need to load th actual application since it evaluates all the
+    # settings, it *should* not interfere with any threadlocal stuff
+    # (hence the closer call)
+    env = bootstrap(options['ini'])
+    env['closer']()
+    del env
 
 
 @celery.signals.celeryd_init.connect
