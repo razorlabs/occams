@@ -56,7 +56,9 @@ def checkout(context, request):
     isn't left with an unresponsive page.
     """
     db_session = request.db_session
-    exportables = exports.list_all(db_session, include_rand=False)
+    plans = request.registry.settings['studies.export.plans']
+    exportables = exports.list_all(
+        plans, request.db_session, include_rand=False)
     limit = request.registry.settings.get('app.export.limit')
     exceeded = limit is not None and query_exports(request).count() > limit
     errors = {}
@@ -125,7 +127,8 @@ def codebook(context, request):
     Codebook viewer
     """
     db_session = request.db_session
-    return {'exportables': exports.list_all(db_session).values()}
+    plans = request.registry.settings['studies.export.plans']
+    return {'exportables': exports.list_all(plans, db_session).values()}
 
 
 @view_config(
@@ -145,7 +148,8 @@ def codebook_json(context, request):
             row['publish_date'] = publish_date.isoformat()
         return row
 
-    exportables = exports.list_all(db_session)
+    plans = request.registry.settings['studies.export.plans']
+    exportables = exports.list_all(plans, db_session)
 
     file = request.GET.get('file')
 

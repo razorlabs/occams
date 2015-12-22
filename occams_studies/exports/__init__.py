@@ -5,6 +5,8 @@ This module does the actual heavy-lifting wereas the others just
 offer an interface (gui or cli, etc)
 """
 
+import inspect
+
 try:
     import unicodecsv as csv
 except ImportError:  # pragma: nocover
@@ -14,16 +16,21 @@ try:
 except ImportError:  # pragma: nocover
     from collections import OrderedDict
 
+from pyramid.config import aslist
+from pyramid.path import DottedNameResolver
+
+from .. import log
 from . import codebook
-from .calllog import CallLogPlan
-from .enrollment import EnrollmentPlan
-from .pid import PidPlan
-from .lab import LabPlan
-from .schema import SchemaPlan
-from .visit import VisitPlan
 
 
-def list_all(db_session, include_rand=True, include_private=True):
+def includeme(config):
+    resolver = DottedNameResolver()
+    settings = config.registry.settings
+    names = aslist(settings.get('studies.export.plans') or '')
+    settings['studies.export.plans'] = [resolver.resolve(n) for n in names]
+
+
+def list_all(plans, db_session, include_rand=True, include_private=True):
     """
     Lists all available data files
 
@@ -34,18 +41,24 @@ def list_all(db_session, include_rand=True, include_private=True):
     Returns:
     An ordered dictionary (name, plan) items.
     """
-    # System tables (one day...)
-    tables = [p for p in [
-        EnrollmentPlan(db_session), PidPlan(db_session), VisitPlan(db_session),
-        # not system tables:
-        LabPlan(db_session),
-        CallLogPlan(db_session)]
-        if p.is_enabled]
-    schemata = SchemaPlan.list_all(
-        db_session=db_session,
-        include_rand=include_rand,
-        include_private=include_private)
-    merged = sorted(tables + schemata, key=lambda v: v.title)
+
+    def iterplans():
+        for plan in plans:
+            if inspect.isclass(plan):
+                yield plan(db_session)
+            elif inspect.ismethod(plan):
+                exportables = plan(
+                    db_session,
+                    include_rand=include_rand,
+                    include_private=include_private
+                )
+
+                for exportable in exportables:
+                    yield exportable
+            else:
+                log.error('{} is unsupported plan type'.format(plan))
+
+    merged = sorted(iterplans(), key=lambda v: v.title.lower())
     all = OrderedDict((i.name, i) for i in merged)
     return all
 

@@ -256,6 +256,12 @@ def wsgi(request):
         'celery.blame': 'celery@localhost',
 
         'studies.export.dir': '/tmp',
+        'studies.export.plans': [
+            'occams_studies.exports.pid.PidPlan',
+            'occams_studies.exports.enrollment.EnrollmentPlan',
+            'occams_studies.exports.visit.VisitPlan',
+            'occams_studies.exports.schema.SchemaPlan.list_all',
+        ],
         'studies.pid.package': 'occams_roster',
         'studies.blob.dir': '/tmp',
 

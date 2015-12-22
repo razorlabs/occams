@@ -62,10 +62,6 @@ class CallLogPlan(ExportPlan):
 
     has_private = True
 
-    @property
-    def is_enabled(self):
-        return 'cctg' in self.db_session.bind.url.database
-
     def codebook(self):
         return iter([
             row('id', self.name, types.NUMBER, decimal_places=0,

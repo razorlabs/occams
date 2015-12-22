@@ -3,11 +3,17 @@
 
 class TestListAll:
 
-    def test_no_schemata(self, db_session):
+    def test_list(self, db_session):
         from occams_studies import exports
-        exportables = exports.list_all(db_session)
-        assert sorted(['pid', 'enrollment', 'visit']) == \
-            sorted(exportables.keys())
+        from occams_studies.exports.plan import ExportPlan
+
+        class SomePlan(ExportPlan):
+            name = 'someplan'
+            title = u'Some Plan'
+
+        plans = [SomePlan]
+        exportables = exports.list_all(plans, db_session)
+        assert sorted(['someplan']) == sorted(exportables.keys())
 
 
 class TestWriteData:

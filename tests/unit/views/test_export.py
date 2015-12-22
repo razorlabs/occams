@@ -21,10 +21,13 @@ class TestAdd:
         """
         from datetime import date
         from occams_studies import models
+        from occams_studies.exports.schema import SchemaPlan
+
+        req.registry.settings['studies.export.plans'] = [SchemaPlan.list_all]
 
         # No schemata
         res = self._call_fut(models.ExportFactory(req), req)
-        assert len(res['exportables']) == 3  # Only pre-cooked
+        assert len(res['exportables']) == 0  # Only pre-cooked
 
         # Not-yet-published schemata
         schema = models.Schema(
@@ -32,13 +35,13 @@ class TestAdd:
         db_session.add(schema)
         db_session.flush()
         res = self._call_fut(models.ExportFactory(req), req)
-        assert len(res['exportables']) == 3
+        assert len(res['exportables']) == 0
 
         # Published schemata
         schema.publish_date = date.today()
         db_session.flush()
         res = self._call_fut(models.ExportFactory(req), req)
-        assert len(res['exportables']) == 4
+        assert len(res['exportables']) == 1
 
     def test_post_empty(self, req, db_session):
         """
@@ -46,6 +49,8 @@ class TestAdd:
         """
         from webob.multidict import MultiDict
         from occams_studies import models
+        from occams_studies.exports.schema import SchemaPlan
+        req.registry.settings['studies.export.plans'] = [SchemaPlan.list_all]
         req.method = 'POST'
         req.POST = MultiDict()
         res = self._call_fut(models.ExportFactory(req), req)
@@ -57,7 +62,9 @@ class TestAdd:
         """
         from webob.multidict import MultiDict
         from occams_studies import models
+        from occams_studies.exports.schema import SchemaPlan
         config.testing_securitypolicy(userid='tester', permissive=True)
+        req.registry.settings['studies.export.plans'] = [SchemaPlan.list_all]
         req.method = 'POST'
         req.POST = MultiDict([('contents', 'does_not_exist')])
         res = self._call_fut(models.ExportFactory(req), req)
@@ -72,8 +79,10 @@ class TestAdd:
         from pyramid.httpexceptions import HTTPFound
         from webob.multidict import MultiDict
         from occams_studies import models
+        from occams_studies.exports.schema import SchemaPlan
 
         req.registry.settings['app.export.dir'] = '/tmp'
+        req.registry.settings['studies.export.plans'] = [SchemaPlan.list_all]
 
         blame = models.User(key=u'joe')
         db_session.add(blame)
@@ -106,8 +115,10 @@ class TestAdd:
         from datetime import date
         from webob.multidict import MultiDict
         from occams_studies import models
+        from occams_studies.exports.schema import SchemaPlan
 
         config.registry.settings['app.export.limit'] = 0
+        req.registry.settings['studies.export.plans'] = [SchemaPlan.list_all]
 
         blame = models.User(key=u'joe')
         db_session.add(blame)
@@ -327,8 +338,10 @@ class TestCodebookJSON:
         from webob.multidict import MultiDict
         import pytest
         from occams_studies import models
+        from occams_studies.exports.schema import SchemaPlan
 
         req.GET = MultiDict([('file', '')])
+        req.registry.settings['studies.export.plans'] = [SchemaPlan.list_all]
 
         with pytest.raises(HTTPBadRequest):
             self._call_fut(models.ExportFactory(req), req)
@@ -341,8 +354,10 @@ class TestCodebookJSON:
         from webob.multidict import MultiDict
         import pytest
         from occams_studies import models
+        from occams_studies.exports.schema import SchemaPlan
 
         req.GET = MultiDict([('file', 'i_dont_exist')])
+        req.registry.settings['studies.export.plans'] = [SchemaPlan.list_all]
 
         with pytest.raises(HTTPBadRequest):
             self._call_fut(models.ExportFactory(req), req)
@@ -354,6 +369,7 @@ class TestCodebookJSON:
         from datetime import date
         from webob.multidict import MultiDict
         from occams_studies import models
+        from occams_studies.exports.schema import SchemaPlan
 
         db_session.add(models.Schema(
             name=u'aform',
@@ -371,6 +387,7 @@ class TestCodebookJSON:
         db_session.flush()
 
         req.GET = MultiDict([('file', 'aform')])
+        req.registry.settings['studies.export.plans'] = [SchemaPlan.list_all]
         res = self._call_fut(models.ExportFactory(req), req)
         assert res is not None
 

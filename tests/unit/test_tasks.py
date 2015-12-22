@@ -39,6 +39,7 @@ class TestMakeExport:
         from zipfile import ZipFile
         from occams.celery import Session
         from occams_studies import models, tasks
+        from occams_studies.exports.pid import PidPlan
 
         owner = models.User(key=u'joe')
         Session.info['blame'] = owner
@@ -52,6 +53,7 @@ class TestMakeExport:
         Session.add(export)
         Session.flush()
 
+        tasks.app.settings['studies.export.plans'] = [PidPlan]
         tasks.make_export(export.name)
 
         # @in_transaction removes the session metadata, so we gotta do this
