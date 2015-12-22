@@ -21,7 +21,6 @@ class TestViewJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             randomization_schema=schema,
             is_randomized=True)
@@ -72,7 +71,6 @@ class TestEditJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=today,
             consent_date=today)
 
         patient = models.Patient(
@@ -119,7 +117,6 @@ class TestEditJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         patient = models.Patient(
@@ -165,7 +162,6 @@ class TestEditJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         study2 = models.Study(
@@ -173,7 +169,6 @@ class TestEditJson:
             title=u'Other Study',
             short_title=u'ostudy',
             code=u'111',
-            start_date=date.today(),
             consent_date=date.today())
 
         patient = models.Patient(
@@ -202,90 +197,6 @@ class TestEditJson:
         assert 'Cannot change an enrollment\'s study.' in \
             excinfo.value.json['errors']['study']
 
-    def test_timeline_start_date(self, req, db_session):
-        """
-        It should not allow consent dates before the study start date
-        """
-        from datetime import date, timedelta
-        from pyramid.httpexceptions import HTTPBadRequest
-        import pytest
-        from occams_studies import models
-
-        today = date.today()
-        invalid_date = today - timedelta(days=100)
-        t1 = today - timedelta(days=5)
-        t2 = today
-
-        study = models.Study(
-            name=u'somestudy',
-            title=u'Some Study',
-            short_title=u'sstudy',
-            code=u'000',
-            start_date=t1,
-            consent_date=t2)
-
-        patient = models.Patient(
-            site=models.Site(name=u'ucsd', title=u'UCSD'),
-            pid=u'12345')
-
-        db_session.add_all([patient, study])
-        db_session.flush()
-
-        req.json_body = {
-            'study': str(study.id),
-            'consent_date': str(invalid_date),
-            'latest_consent_date': str(invalid_date),
-        }
-
-        with pytest.raises(HTTPBadRequest) as excinfo:
-            self._call_fut(patient['enrollments'], req)
-
-        assert 'Cannot enroll before the study start date' in \
-            excinfo.value.json['errors']['latest_consent_date']
-
-    def test_timeline_end_date(self, req, db_session):
-        """
-        It should not allow consent dates after the study end date
-        """
-        from datetime import date, timedelta
-        from pyramid.httpexceptions import HTTPBadRequest
-        import pytest
-        from occams_studies import models
-
-        today = date.today()
-        t1 = today - timedelta(days=5)
-        t2 = today
-        t3 = today + timedelta(days=100)
-        invalid_date = today + timedelta(days=200)
-
-        study = models.Study(
-            name=u'somestudy',
-            title=u'Some Study',
-            short_title=u'sstudy',
-            code=u'000',
-            start_date=t1,
-            end_date=t3,
-            consent_date=t2)
-
-        patient = models.Patient(
-            site=models.Site(name=u'ucsd', title=u'UCSD'),
-            pid=u'12345')
-
-        db_session.add_all([patient, study])
-        db_session.flush()
-
-        req.json_body = {
-            'study': str(study.id),
-            'consent_date': str(invalid_date),
-            'latest_consent_date': str(invalid_date),
-        }
-
-        with pytest.raises(HTTPBadRequest) as excinfo:
-            self._call_fut(patient['enrollments'], req)
-
-        assert 'Cannot enroll after the study end date' in \
-            excinfo.value.json['errors']['latest_consent_date']
-
     def test_update_patient(self, req, db_session):
         """
         It should mark the patient as updated
@@ -298,7 +209,6 @@ class TestEditJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         patient = models.Patient(
@@ -335,7 +245,6 @@ class TestEditJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=t1,
             consent_date=t3,
             termination_schema=models.Schema(
                 name=u'termination',
@@ -392,7 +301,6 @@ class TestEditJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=t1,
             consent_date=t3)
 
         patient = models.Patient(
@@ -440,7 +348,6 @@ class TestDeleteJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         patient = models.Patient(
@@ -476,7 +383,6 @@ class TestDeleteJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         patient = models.Patient(
@@ -519,7 +425,6 @@ class TestRandomizeAjax:
             title=u'Some Study',
             short_title=u'study',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             randomization_schema=self.schema,
             is_randomized=True)
@@ -699,7 +604,6 @@ class TestRandomizeAjaxAssigned:
             title=u'Some Study',
             short_title=u'study',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             randomization_schema=schema,
             is_randomized=True)

@@ -28,7 +28,6 @@ class TestCyclesJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         cycle1 = models.Cycle(name='week-1', title=u'Foo Week 1', week=1)
@@ -62,7 +61,6 @@ class TestCyclesJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         cycle1 = models.Cycle(name='week-1', title=u'Foo Week 1', week=1)
@@ -103,7 +101,6 @@ class TestValidateCycles:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         cycle1 = models.Cycle(name='week-1', title=u'Foo Week 1', week=1)
@@ -190,7 +187,6 @@ class TestEditJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         cycle = models.Cycle(name='week-1', title=u'', week=1)
@@ -238,7 +234,6 @@ class TestEditJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         cycle1 = models.Cycle(name='week-1', title=u'', week=1)
@@ -292,7 +287,6 @@ class TestEditJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         cycle1 = models.Cycle(name='week-1', title=u'', week=1)
@@ -364,7 +358,6 @@ class TestEditJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         cycle1 = models.Cycle(name='week-1', title=u'', week=1)
@@ -408,7 +401,6 @@ class TestEditJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         cycle1 = models.Cycle(name='week-1', title=u'', week=1)
@@ -448,7 +440,6 @@ class TestEditJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         cycle1 = models.Cycle(study=study, name='week-1', title=u'', week=1)
@@ -517,7 +508,6 @@ class TestDeleteJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         cycle = models.Cycle(
@@ -580,7 +570,6 @@ class TestFormDeleteJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             cycles=[cycle],
             schemata=set([schema]))

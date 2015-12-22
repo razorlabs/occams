@@ -51,7 +51,6 @@ class TestEditJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         db_session.add_all([study])
@@ -82,7 +81,6 @@ class TestEditJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         db_session.add_all([study])
@@ -119,7 +117,6 @@ class TestDeleteJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         db_session.add_all([study])
@@ -142,7 +139,6 @@ class TestDeleteJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         enrollment = models.Enrollment(
@@ -186,7 +182,6 @@ class TestAddSchemaJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         db_session.add_all([study, schema])
@@ -218,7 +213,6 @@ class TestAddSchemaJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             cycles=[cycle],
             schemata=set([v1]),
             consent_date=date.today())
@@ -248,7 +242,6 @@ class TestAddSchemaJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         db_session.add_all([study, schema])
@@ -282,7 +275,6 @@ class TestAddSchemaJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         db_session.add_all([study, schema])
@@ -311,7 +303,6 @@ class TestAddSchemaJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         db_session.add_all([study, schema])
@@ -347,7 +338,6 @@ class TestAddSchemaJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             is_randomized=True,
             randomization_schema=schema)
@@ -380,7 +370,6 @@ class TestAddSchemaJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             termination_schema=schema)
 
@@ -422,7 +411,6 @@ class TestDeleteSchemaJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             cycles=[cycle],
             schemata=set([schema]))
@@ -449,7 +437,6 @@ class TestDeleteSchemaJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         db_session.add_all([study])
@@ -487,7 +474,6 @@ class TestEditScheduleJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             cycles=[cycle])
 
@@ -524,7 +510,6 @@ class TestEditScheduleJson:
             title=u'Other Study',
             short_title=u'ostudy',
             code=u'111',
-            start_date=date.today(),
             consent_date=date.today(),
             cycles=[other_cycle])
 
@@ -533,7 +518,6 @@ class TestEditScheduleJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             schemata=set([schema]))
 
@@ -572,7 +556,6 @@ class TestEditScheduleJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             cycles=[cycle],
             schemata=set([schema]))
@@ -611,7 +594,6 @@ class TestEditScheduleJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             cycles=[cycle],
             schemata=set([schema]))
@@ -707,7 +689,6 @@ class TestAvailableSchemata:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             is_randomized=True,
             randomization_schema=x)
@@ -736,7 +717,6 @@ class TestAvailableSchemata:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             termination_schema=x)
 
@@ -764,7 +744,6 @@ class TestAvailableSchemata:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             schemata=set([x]))
 
@@ -796,7 +775,6 @@ class TestAvailableSchemata:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             schemata=set([y0]))
 

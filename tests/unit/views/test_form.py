@@ -81,7 +81,6 @@ class TestAddJSON:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             schemata=set([schema]))
 
@@ -119,7 +118,6 @@ class TestAddJSON:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             schemata=set([schema]))
 
@@ -175,7 +173,6 @@ class TestAddJSON:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             cycles=[cycle])
 

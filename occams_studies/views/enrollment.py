@@ -77,7 +77,6 @@ def view_json(context, request):
             'title': study.title,
             'is_randomized': study.is_randomized,
             'is_blinded': study.is_blinded,
-            'start_date': study.start_date.isoformat(),
             },
         'stratum':
             None if not (study.is_randomized and enrollment.stratum) else {
@@ -448,29 +447,15 @@ def EnrollmentSchema(context, request):
                 u'Cannot change an enrollment\'s study.')))
 
     def check_consent_timeline(form, field):
-        start = form.study.data.start_date
-        end = form.study.data.end_date
         consent = form.consent_date.data
         latest = form.latest_consent_date.data
-        if start is None:
-            raise wtforms.ValidationError(request.localizer.translate(_(
-                u'Study has not started yet.')))
-        if consent < start:
-            raise wtforms.ValidationError(request.localizer.translate(
-                _('Cannot enroll before the study start date: ${date}'),
-                mapping={'date': start.isoformat()}))
         if not (consent <= latest):
             raise wtforms.ValidationError(request.localizer.translate(
                 _(u'Inconsistent enrollment dates')))
-        if end and latest > end:
-            raise wtforms.ValidationError(request.localizer.translate(
-                _('Cannot enroll after the study end date: ${date}'),
-                mapping={'date': end.isoformat()}))
 
     def check_termination_timeline(form, field):
         latest = form.latest_consent_date.data
         termination = form.termination_date.data
-        end = form.study.data.end_date
         if form.study.data.termination_schema:
             return
         if latest is None or termination is None:
@@ -478,10 +463,6 @@ def EnrollmentSchema(context, request):
         if termination < latest:
             raise wtforms.ValidationError(request.localizer.translate(
                 _(u'Inconsistent termination dates')))
-        if end and termination > end:
-            raise wtforms.ValidationError(request.localizer.translate(
-                _('Cannot terminate after the study end date: ${date}'),
-                mapping={'date': end.isoformat()}))
 
     def check_reference(form, field):
         study = form.study.data

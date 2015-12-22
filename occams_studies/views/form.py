@@ -138,8 +138,7 @@ def available_schemata(context, request):
         db_session.query(models.Schema)
         # only allow forms that are available to active studies
         .join(models.study_schema_table)
-        .join(models.Study)
-        .filter(models.Study.start_date != sa.null()))
+        .join(models.Study))
 
     if form.schema.data:
         query = query.filter(models.Schema.name == form.schema.data)
@@ -221,7 +220,6 @@ def add_json(context, request):
                 db_session.query(models.Schema)
                 .join(models.study_schema_table)
                 .join(models.Study)
-                .filter(models.Study.start_date != sa.null())
                 .filter(models.Schema.id == field.data.id))
             (exists,) = db_session.query(query.exists()).one()
             if not exists:

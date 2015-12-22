@@ -99,7 +99,6 @@ class TestSearchJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
         site_la = models.Site(name=u'la', title=u'LA')
         patient = models.Patient(

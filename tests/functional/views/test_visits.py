@@ -41,7 +41,6 @@ class TestPermissionsVisitsView:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12)
             )
 
             db_session.add(study)
@@ -130,7 +129,6 @@ class TestPermissionsVisitsAdd:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12)
             )
 
             cycle = studies.Cycle(
@@ -248,7 +246,6 @@ class TestPermissionsVisitView:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12)
             )
 
             cycle = studies.Cycle(
@@ -365,7 +362,6 @@ class TestPermissionsVisitDelete:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12)
             )
 
             cycle = studies.Cycle(
@@ -480,7 +476,6 @@ class TestPermissionsVisitEdit:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12)
             )
 
             cycle = studies.Cycle(
@@ -616,7 +611,6 @@ class TestPermissionsVisitFormsAdd:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12),
                 schemata=set([form])
             )
 
@@ -743,7 +737,6 @@ class TestPermissionsVisitFormsDelete:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12),
                 schemata=set([form])
             )
 
@@ -865,7 +858,6 @@ class TestPermissionsVisitFormView:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12),
                 schemata=set([form])
             )
 
@@ -991,7 +983,6 @@ class TestPermissionsVisitFormEdit:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12),
                 schemata=set([form])
             )
 

@@ -18,10 +18,6 @@
     <span class="text-muted" i18n:translate="">Consent Date:</span>
     <code>${context.consent_date}</code>
   </li>
-  <li tal:condition="context.start_date">
-    <span class="text-muted" i18n:translate="">Lifecycle:</span>
-    <code>${context.start_date} - ${context.end_date|nohting}</code>
-  </li>
   <li tal:condition="python:context.termination_schema">
     <span class="text-muted" i18n:translate="">Enrollment Forms:</span>
     <strong tal:condition="context.termination_schema">${context.termination_schema.title}</strong>

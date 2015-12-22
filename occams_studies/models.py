@@ -199,20 +199,6 @@ class Study(StudiesModel, Referenceable, Describeable, Modifiable, Auditable):
         doc='Flag for randomized studies to indicate that '
             'they are also blinded')
 
-    is_locked = sa.Column(
-        sa.Boolean(),
-        server_default=sa.sql.false(),
-        doc='If set, data for this study cannot me modified anymore')
-
-    start_date = sa.Column(
-        sa.Date(),
-        doc='If set, this study is available for data entry on or '
-            'after this date')
-
-    end_date = sa.Column(
-        sa.Date(),
-        doc='If set, data can only be entered before or after this date')
-
     reference_pattern = sa.Column(
         sa.Unicode,
         doc='Reference number pattern regular expresssion')
@@ -270,15 +256,7 @@ class Study(StudiesModel, Referenceable, Describeable, Modifiable, Auditable):
                 OR
                 (is_randomized AND randomization_schema_id IS NOT NULL)
                 """,
-                name='ck_%s_randomization_schema_id' % cls.__tablename__),
-            sa.CheckConstraint(
-                """
-                start_date <= consent_date
-                AND (
-                    end_date IS NULL
-                    OR consent_date <= end_date)
-                """,
-                name='ck_%s_lifespan' % cls.__tablename__))
+                name='ck_%s_randomization_schema_id' % cls.__tablename__),)
 
 
 class CycleFactory(object):

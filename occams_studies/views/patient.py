@@ -170,7 +170,6 @@ def view(context, request):
         'phi': get_phi_entities(context, request),
         'available_studies': (
             db_session.query(models.Study)
-            .filter(models.Study.start_date != sa.sql.null())
             .order_by(models.Study.title.asc())),
         'patient': view_json(context, request),
         'enrollments': enrollment_views.list_json(
@@ -192,9 +191,7 @@ def available_studies(context, request):
     Returns a list of studies that the patient can participate in
     """
     db_session = request.db_session
-    query = (
-        db_session.query(models.Study)
-        .filter(models.Study.start_date != sa.null()))
+    query = db_session.query(models.Study)
 
     if 'term' in request.GET:
         wildcard = u'%' + request.GET['term'] + u'%'
@@ -541,8 +538,7 @@ def form(context, request):
             .join(models.study_schema_table)
             .join(models.Study)
             .filter(models.Schema.publish_date != sa.null())
-            .filter(models.Schema.retract_date == sa.null())
-            .filter(models.Study.start_date != sa.null()))
+            .filter(models.Schema.retract_date == sa.null()))
         allowed_versions = sorted(set(
             s.publish_date for s in available_schemata))
     else:

@@ -114,8 +114,6 @@ def view_json(context, request, deep=True):
         'code': study.code,
         'short_title': study.short_title,
         'consent_date': study.consent_date.isoformat(),
-        'start_date': study.start_date and study.start_date.isoformat(),
-        'end_date': study.end_date and study.end_date.isoformat(),
         'reference_pattern': study.reference_pattern,
         'reference_hint': study.reference_hint,
         'is_randomized': study.is_randomized,
@@ -486,7 +484,6 @@ def edit_json(context, request):
     study.code = form.code.data
     study.short_title = form.short_title.data
     study.consent_date = form.consent_date.data
-    study.start_date = form.start_date.data
     study.termination_schema = form.termination_form.data
     study.is_randomized = form.is_randomized.data
     study.is_blinded = \
@@ -963,7 +960,6 @@ def StudySchema(context, request):
                 wtforms.validators.InputRequired(),
                 wtforms.validators.Length(min=1, max=8)])
         consent_date = DateField()
-        start_date = DateField()
         termination_form = ModelField(
             db_session=db_session,
             class_=models.Schema,

@@ -516,7 +516,6 @@ class TestPermissionsPatientFormsAdd:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12),
                 schemata=set([form])
             )
 
@@ -632,7 +631,6 @@ class TestPermissionsPatientFormsDelete:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12),
                 schemata=set([form])
             )
 
@@ -741,7 +739,6 @@ class TestPermissionsPatientFormView:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12),
                 schemata=set([form])
             )
 
@@ -842,7 +839,6 @@ class TestPermissionsPatientFormsEdit:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12),
                 schemata=set([form])
             )
 
