@@ -16,8 +16,7 @@ import sqlalchemy as sa
 
 
 def upgrade():
-    op.drop_constraint('ck_study_lifespan')
-    op.drop_column('study', 'stop_date')
+    op.drop_constraint('ck_study_lifespan', 'study')
     op.drop_column('study', 'start_date')
     op.drop_column('study', 'is_locked')
 
