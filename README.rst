@@ -44,18 +44,18 @@ These instructions are intended for contributors only.
 
 Make sure you have the required node packages installed::
 
-  > npm install -g bower
-  > npm install -g less
+  $ npm install -g bower
+  $ npm install -g less
 
 Create a virtual environment for your work::
 
-  > virtualenv MYPROJECT
-  > source MYPROJECT/bin/activate
+  $ virtualenv MYPROJECT
+  $ source MYPROJECT/bin/activate
 
 Next, create the necesary directories::
 
-  > cd MYPROJECT
-  > mkdir -p  etc  var/exports  var/blobs  src
+  $ cd MYPROJECT
+  $ mkdir -p  etc  var/exports  var/blobs  src
 
 You'll need to git checkout the web application. If you are
 using your own forks, change ``younglabs`` to yours. The reason we
@@ -63,49 +63,49 @@ checkout each project individually is because pip will replace all
 git changes/history the next time your run pip install on a git
 repo, which can lead you to lose a lot of work and sanity::
 
-  > cd src
-  > git clone git@github.com:YOURID/occams
+  $ cd src
+  $ git clone git@github.com:YOURID/occams
 
 If you plan on working on add-ons, it is recommended you install the
 following as well::
 
-  > git clone git@github.com:YOURID/occams_datastore
-  > git clone git@github.com:YOURID/occams_forms
-  > git clone git@github.com:YOURID/occams_accounts
-  > git clone git@github.com:YOURID/occams_roster
-  > git clone git@github.com:YOURID/occams_studies
-  > git clone git@github.com:YOURID/occams_lims
+  $ git clone git@github.com:YOURID/occams_datastore
+  $ git clone git@github.com:YOURID/occams_forms
+  $ git clone git@github.com:YOURID/occams_accounts
+  $ git clone git@github.com:YOURID/occams_roster
+  $ git clone git@github.com:YOURID/occams_studies
+  $ git clone git@github.com:YOURID/occams_lims
 
 
 Now that your projects are checked out, copy and update the ``requirements.txt``
 found in the ``occams`` project directory.::
 
-  > cd $VIRTUAL_ENV
-  > cp src/occams/requirements.txt .
-  > vim requirements.txt
-  > pip install -U -r requirements.txt
+  $ cd $VIRTUAL_ENV
+  $ cp src/occams/requirements.txt .
+  $ vim requirements.txt
+  $ pip install -U -r requirements.txt
 
 Once everything is installed you'll need to configure the application with
 your desired development environment settings::
 
-  > cp src/occams/development.ini etc
-  > vim etc/development.ini
+  $ cp src/occams/sample.ini etc/development.ini
+  $ vim etc/development.ini
 
 Install the appropriate database tables::
 
-  > createdb -U DBADMIN -O DBUSER DBNAME
-  > occams_initdb etc/development.ini
+  $ createdb -U DBADMIN -O DBUSER DBNAME
+  $ occams_initdb etc/development.ini
 
 
 Start the web service::
 
-  > gunicorn --reload --paste etc/development.ini
+  $ gunicorn --reload --paste etc/development.ini
 
 
 If you applications are using asynchronous tasks, you'll need to start the
 celery worker::
 
-  > celery worker --autoreload --app occams --loglevel INFO --without-gossip --ini etc/development.ini
+  $ celery worker --autoreload --app occams --loglevel INFO --without-gossip --ini etc/development.ini
 
 
 Creating your own app
@@ -130,21 +130,14 @@ refer to the following scenarios:
 
 If your project begins as an independent database structure::
 
-  > alembic -c /path/to/ini revision -m "MESSAGE" --head=base --branch-label=MYAPP --version-path=/path/to/app/versions
+  $ alembic -c /path/to/ini revision -m "MESSAGE" --head=base --branch-label=MYAPP --version-path=/path/to/app/versions
 
 
 If your project begins depending on a specific database structure::
 
-  > alembic -c /path/to/ini revision -m "MESSAGE" --head=REVISION --splice --branch-label=MYAPP --version-path=/path/to/app/versions
+  $ alembic -c /path/to/ini revision -m "MESSAGE" --head=REVISION --splice --branch-label=MYAPP --version-path=/path/to/app/versions
 
 
 If your project's revision depends on a certain project's revision::
 
-  > alembic -c /path/to/ini revision -m "MESSAGE" --head=MYAPP@base --depends-on=REVISION --version-path=/path/to/app/versions
-
-
-
-Configuration
--------------
-
-**TODO**
+  $ alembic -c /path/to/ini revision -m "MESSAGE" --head=MYAPP@base --depends-on=REVISION --version-path=/path/to/app/versions
