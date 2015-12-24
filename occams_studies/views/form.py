@@ -7,6 +7,7 @@ import wtforms
 from wtforms.ext.dateutil.fields import DateField
 
 from occams.utils.forms import wtferrors, ModelField, Form
+from occams_datastore import models as datastore
 from occams_forms.renderers import \
     make_form, render_form, entity_data, \
     form2json, version2json
@@ -20,16 +21,16 @@ def list_json(context, request):
     external = context.__parent__
 
     query = (
-        db_session.query(models.Entity)
+        db_session.query(datastore.Entity)
         .options(orm.joinedload('schema'), orm.joinedload('state'))
-        .join(models.Schema)
-        .join(models.Context)
+        .join(datastore.Schema)
+        .join(datastore.Context)
         .filter_by(external=external.__tablename__, key=external.id)
         # Do not show PHI forms since there are dedicated tabs for them
-        .filter(~models.Schema.id.in_(
+        .filter(~datastore.Schema.id.in_(
             db_session.query(models.patient_schema_table.c.schema_id)
             .subquery()))
-        .order_by(models.Schema.name, models.Entity.collect_date))
+        .order_by(datastore.Schema.name, datastore.Entity.collect_date))
 
     def fake_traverse(entity):
         entity.__parent__ = context
@@ -135,24 +136,25 @@ def available_schemata(context, request):
     form.validate()
 
     query = (
-        db_session.query(models.Schema)
+        db_session.query(datastore.Schema)
         # only allow forms that are available to active studies
         .join(models.study_schema_table)
         .join(models.Study))
 
     if form.schema.data:
-        query = query.filter(models.Schema.name == form.schema.data)
+        query = query.filter(datastore.Schema.name == form.schema.data)
 
     if form.term.data:
         wildcard = u'%' + form.term.data + u'%'
         query = query.filter(
-            models.Schema.title.ilike(wildcard)
-            | sa.cast(models.Schema.publish_date, sa.Unicode).ilike(wildcard))
+            datastore.Schema.title.ilike(wildcard)
+            | sa.cast(datastore.Schema.publish_date,
+                      sa.Unicode).ilike(wildcard))
 
     query = (
         query.order_by(
-            models.Schema.title,
-            models.Schema.publish_date.asc())
+            datastore.Schema.title,
+            datastore.Schema.publish_date.asc())
         .limit(100))
 
     return {
@@ -189,7 +191,7 @@ def markup_ajax(context, request):
         schema = context.schema
     else:
         schema = (
-            db_session.query(models.Schema)
+            db_session.query(datastore.Schema)
             .filter_by(name=context.schema.name, publish_date=version)
             .one())
         data = None
@@ -217,10 +219,10 @@ def add_json(context, request):
     def check_study_form(form, field):
         if isinstance(context.__parent__, models.Patient):
             query = (
-                db_session.query(models.Schema)
+                db_session.query(datastore.Schema)
                 .join(models.study_schema_table)
                 .join(models.Study)
-                .filter(models.Schema.id == field.data.id))
+                .filter(datastore.Schema.id == field.data.id))
             (exists,) = db_session.query(query.exists()).one()
             if not exists:
                 raise wtforms.ValidationError(request.localizer.translate(
@@ -243,7 +245,7 @@ def add_json(context, request):
     class AddForm(Form):
         schema = ModelField(
             db_session=db_session,
-            class_=models.Schema,
+            class_=datastore.Schema,
             validators=[
                 wtforms.validators.InputRequired(),
                 check_study_form])
@@ -256,11 +258,11 @@ def add_json(context, request):
         raise HTTPBadRequest(json={'errors': wtferrors(form)})
 
     default_state = (
-        db_session.query(models.State)
+        db_session.query(datastore.State)
         .filter_by(name='pending-entry')
         .one())
 
-    entity = models.Entity(
+    entity = datastore.Entity(
         schema=form.schema.data,
         collect_date=form.collect_date.data,
         state=default_state)
@@ -308,7 +310,7 @@ def bulk_delete_json(context, request):
         forms = wtforms.FieldList(
             ModelField(
                 db_session=db_session,
-                class_=models.Entity),
+                class_=datastore.Entity),
             validators=[
                 wtforms.validators.DataRequired()])
 
@@ -322,12 +324,12 @@ def bulk_delete_json(context, request):
     external = context.__parent__.__tablename__
     key = context.__parent__.id
 
-    (db_session.query(models.Entity)
-        .filter(models.Entity.id.in_(
-            db_session.query(models.Context.entity_id)
-            .filter(models.Context.entity_id.in_(entity_ids))
-            .filter(models.Context.external == external)
-            .filter(models.Context.key == key)))
+    (db_session.query(datastore.Entity)
+        .filter(datastore.Entity.id.in_(
+            db_session.query(datastore.Context.entity_id)
+            .filter(datastore.Context.entity_id.in_(entity_ids))
+            .filter(datastore.Context.external == external)
+            .filter(datastore.Context.key == key)))
         .delete('fetch'))
 
     db_session.flush()

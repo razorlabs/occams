@@ -9,16 +9,11 @@ from sqlalchemy import orm
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import hybrid_property
 
-from occams_datastore.models import (  # NOQA
-    Base,
-    Auditable,
-    Referenceable, Describeable, Modifiable, HasEntities,
-    Category,
-    User, Schema, Attribute, Choice, State, Entity, Context)
+from occams_datastore import models as datastore
 from occams_datastore.utils.sql import JSON
 
 
-class StudiesModel(Base):
+class StudiesModel(datastore.Base):
     __abstract__ = True
     # TODO: move this to 'studies' schema'
     metadata = sa.MetaData()
@@ -118,7 +113,7 @@ study_schema_table = sa.Table(
         'schema_id',
         sa.Integer(),
         sa.ForeignKey(
-            Schema.id,
+            datastore.Schema.id,
             name='fk_study_schema_schema_id',
             ondelete='CASCADE'),
         primary_key=True))
@@ -140,13 +135,17 @@ cycle_schema_table = sa.Table(
         'schema_id',
         sa.Integer(),
         sa.ForeignKey(
-            Schema.id,
+            datastore.Schema.id,
             name='fk_cycle_schema_schema_id',
             ondelete='CASCADE'),
         primary_key=True))
 
 
-class Study(StudiesModel, Referenceable, Describeable, Modifiable, Auditable):
+class Study(StudiesModel,
+            datastore.Referenceable,
+            datastore.Describeable,
+            datastore.Modifiable,
+            datastore.Auditable):
 
     __tablename__ = 'study'
 
@@ -185,13 +184,13 @@ class Study(StudiesModel, Referenceable, Describeable, Modifiable, Auditable):
     randomization_schema_id = sa.Column(sa.Integer())
 
     randomization_schema = orm.relationship(
-        Schema,
+        datastore.Schema,
         foreign_keys=[randomization_schema_id])
 
     termination_schema_id = sa.Column(sa.Integer())
 
     termination_schema = orm.relationship(
-        Schema,
+        datastore.Schema,
         foreign_keys=[termination_schema_id])
 
     is_blinded = sa.Column(
@@ -216,7 +215,7 @@ class Study(StudiesModel, Referenceable, Describeable, Modifiable, Auditable):
     # arms backref'd from arms
 
     schemata = orm.relationship(
-        Schema,
+        datastore.Schema,
         secondary=study_schema_table,
         collection_class=set)
 
@@ -239,14 +238,14 @@ class Study(StudiesModel, Referenceable, Describeable, Modifiable, Auditable):
             sa.Index('ix_%s_code' % cls.__tablename__, 'code'),
             sa.ForeignKeyConstraint(
                 columns=['randomization_schema_id'],
-                refcolumns=[Schema.id],
+                refcolumns=[datastore.Schema.id],
                 name='fk_%s_randomization_schema_id' % cls.__tablename__,
                 ondelete='SET NULL'),
             sa.Index('ix_%s_randomization_schema_id',
                      'randomization_schema_id'),
             sa.ForeignKeyConstraint(
                 columns=['termination_schema_id'],
-                refcolumns=[Schema.id],
+                refcolumns=[datastore.Schema.id],
                 name='fk_%s_termination_schema_id' % cls.__tablename__,
                 ondelete='SET NULL'),
             sa.Index('ix_%s_termination_schema_id', 'termination_schema_id'),
@@ -281,7 +280,11 @@ class CycleFactory(object):
         return cycle
 
 
-class Cycle(StudiesModel, Referenceable, Describeable, Modifiable, Auditable):
+class Cycle(StudiesModel,
+            datastore.Referenceable,
+            datastore.Describeable,
+            datastore.Modifiable,
+            datastore.Auditable):
     """
     Study schedule represented as week cycles
     """
@@ -311,7 +314,7 @@ class Cycle(StudiesModel, Referenceable, Describeable, Modifiable, Auditable):
     # visits backref'd from visit
 
     schemata = orm.relationship(
-        Schema,
+        datastore.Schema,
         secondary=cycle_schema_table,
         collection_class=set)
 
@@ -335,7 +338,11 @@ class Cycle(StudiesModel, Referenceable, Describeable, Modifiable, Auditable):
                 cls.__tablename__))
 
 
-class Arm(StudiesModel, Referenceable, Describeable,  Modifiable, Auditable):
+class Arm(StudiesModel,
+          datastore.Referenceable,
+          datastore.Describeable,
+          datastore.Modifiable,
+          datastore.Auditable):
     """
     A group of study strata
     """
@@ -441,7 +448,11 @@ class SiteFactory(object):
         return site
 
 
-class Site(StudiesModel, Referenceable, Describeable, Modifiable, Auditable):
+class Site(StudiesModel,
+           datastore.Referenceable,
+           datastore.Describeable,
+           datastore.Modifiable,
+           datastore.Auditable):
     """
     A facility within an organization
     """
@@ -480,13 +491,17 @@ patient_schema_table = sa.Table(
         'schema_id',
         sa.Integer(),
         sa.ForeignKey(
-            Schema.id,
+            datastore.Schema.id,
             name='fk_patient_schema_schema_id',
             ondelete='CASCADE'),
         primary_key=True))
 
 
-class Patient(StudiesModel, Referenceable, Modifiable, HasEntities, Auditable):
+class Patient(StudiesModel,
+              datastore.Referenceable,
+              datastore.Modifiable,
+              datastore.HasEntities,
+              datastore.Auditable):
 
     __tablename__ = 'patient'
 
@@ -580,7 +595,10 @@ class ReferenceTypeFactory(object):
         return reference_type
 
 
-class ReferenceType(StudiesModel, Referenceable, Describeable, Modifiable):
+class ReferenceType(StudiesModel,
+                    datastore.Referenceable,
+                    datastore.Describeable,
+                    datastore.Modifiable):
     """
     Reference type sources
     """
@@ -609,7 +627,10 @@ class ReferenceType(StudiesModel, Referenceable, Describeable, Modifiable):
             )
 
 
-class PatientReference(StudiesModel, Referenceable, Modifiable, Auditable):
+class PatientReference(StudiesModel,
+                       datastore.Referenceable,
+                       datastore.Modifiable,
+                       datastore.Auditable):
     """
     References to a studies subject from other sources
     """
@@ -654,7 +675,11 @@ class PatientReference(StudiesModel, Referenceable, Modifiable, Auditable):
                 name=u'uq_%s_reference' % cls.__tablename__))
 
 
-class Partner(StudiesModel, Referenceable, Modifiable, HasEntities, Auditable):
+class Partner(StudiesModel,
+              datastore.Referenceable,
+              datastore.Modifiable,
+              datastore.HasEntities,
+              datastore.Auditable):
     """
     A subject's partner.
     """
@@ -748,14 +773,17 @@ termination_schema_table = sa.Table(
         'schema_id',
         sa.Integer(),
         sa.ForeignKey(
-            Schema.id,
+            datastore.Schema.id,
             name='fk_termination_schema_schema_id',
             ondelete='CASCADE'),
         primary_key=True))
 
 
-class Enrollment(
-        StudiesModel,  Referenceable, Modifiable, HasEntities, Auditable):
+class Enrollment(StudiesModel,
+                 datastore.Referenceable,
+                 datastore.Modifiable,
+                 datastore.HasEntities,
+                 datastore.Auditable):
     """
     A patient's participation in a study.
     """
@@ -849,7 +877,11 @@ class Enrollment(
                 name='ck_%s_lifespan' % cls.__tablename__))
 
 
-class Stratum(StudiesModel, Referenceable, Modifiable, HasEntities, Auditable):
+class Stratum(StudiesModel,
+              datastore.Referenceable,
+              datastore.Modifiable,
+              datastore.HasEntities,
+              datastore.Auditable):
     """
     A possible study enrollment assignement.
     Useful for enrolling randomized patients.
@@ -997,7 +1029,11 @@ visit_cycle_table = sa.Table(
         primary_key=True))
 
 
-class Visit(StudiesModel, Referenceable, Modifiable, HasEntities, Auditable):
+class Visit(StudiesModel,
+            datastore.Referenceable,
+            datastore.Modifiable,
+            datastore.HasEntities,
+            datastore.Auditable):
 
     __tablename__ = 'visit'
 
@@ -1081,7 +1117,7 @@ class FormFactory(object):
         db_session = self.request.db_session
         try:
             entity = (
-                db_session.query(Entity)
+                db_session.query(datastore.Entity)
                 .options(orm.joinedload('state'))
                 .filter_by(id=key)
                 .one())
@@ -1095,7 +1131,7 @@ class FormFactory(object):
         # to make this look prety...
         if not entity.state:
             entity.state = (
-                db_session.query(State)
+                db_session.query(datastore.State)
                 .filter_by(name='pending-entry')
                 .one())
 
@@ -1126,7 +1162,7 @@ def _entity_acl(self):
         (Allow, groups.consumer(site), 'view')
     ]
 
-Entity.__acl__ = property(_entity_acl)
+datastore.Entity.__acl__ = property(_entity_acl)
 
 
 class ExportFactory(object):
@@ -1154,7 +1190,10 @@ class ExportFactory(object):
         return export
 
 
-class Export(StudiesModel, Referenceable, Modifiable, Auditable):
+class Export(StudiesModel,
+             datastore.Referenceable,
+             datastore.Modifiable,
+             datastore.Auditable):
     """
     Metadata about an export, such as file contents and experation date.
     """
@@ -1180,7 +1219,7 @@ class Export(StudiesModel, Referenceable, Modifiable, Auditable):
 
     owner_user_id = sa.Column(sa.Integer, nullable=False)
 
-    owner_user = orm.relationship(User, foreign_keys=[owner_user_id])
+    owner_user = orm.relationship(datastore.User, foreign_keys=[owner_user_id])
 
     expand_collections = sa.Column(sa.Boolean, nullable=False, default=False)
 
@@ -1247,7 +1286,7 @@ class Export(StudiesModel, Referenceable, Modifiable, Auditable):
         return (
             sa.ForeignKeyConstraint(
                 columns=[cls.owner_user_id],
-                refcolumns=[User.id],
+                refcolumns=[datastore.User.id],
                 name=u'fk_%s_owner_user_id' % cls.__tablename__,
                 ondelete='CASCADE'),
             sa.UniqueConstraint(

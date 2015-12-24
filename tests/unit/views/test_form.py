@@ -11,19 +11,19 @@ class TestViewJSON:
         """
         It should generate state data is available
         """
-        import mock
-        from occams_studies import models
         from datetime import date
+        import mock
+        from occams_datastore import models as datastore
 
-        myfirst = models.Schema(
+        myfirst = datastore.Schema(
             name=u'myfirst',
             title=u'My First Schema',
             publish_date=date.today()
         )
-        mydata = models.Entity(
+        mydata = datastore.Entity(
             schema=myfirst,
             state=(
-                db_session.query(models.State)
+                db_session.query(datastore.State)
                 .filter_by(name=u'pending-entry')
                 .one()))
         db_session.add(mydata)
@@ -41,15 +41,15 @@ class TestViewJSON:
         It should generate none if no state data is available
         """
         import mock
-        from occams_studies import models
+        from occams_datastore import models as datastore
         from datetime import date
 
-        myfirst = models.Schema(
+        myfirst = datastore.Schema(
             name=u'myfirst',
             title=u'My First Schema',
             publish_date=date.today()
         )
-        mydata = models.Entity(schema=myfirst)
+        mydata = datastore.Entity(schema=myfirst)
         db_session.add(mydata)
         db_session.flush()
         mydata.__parent__ = mock.MagicMock()
@@ -69,9 +69,10 @@ class TestAddJSON:
 
     def test_add_to_patient(self, req, db_session):
         from datetime import date
+        from occams_datastore import models as datastore
         from occams_studies import models
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name=u'schema',
             title=u'Schema',
             publish_date=date.today())
@@ -99,16 +100,17 @@ class TestAddJSON:
         factory = models.FormFactory(req, patient)
         self._call_fut(factory, req)
 
-        contexts = db_session.query(models.Context).all()
+        contexts = db_session.query(datastore.Context).all()
 
         assert len(contexts) == 1
         assert contexts[0].entity.schema == schema
 
     def test_add_to_visit(self, req, db_session):
         from datetime import date
+        from occams_datastore import models as datastore
         from occams_studies import models
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name=u'schema',
             title=u'Schema',
             publish_date=date.today())
@@ -143,7 +145,7 @@ class TestAddJSON:
         factory = models.FormFactory(req, visit)
         self._call_fut(factory, req)
 
-        contexts = db_session.query(models.Context).all()
+        contexts = db_session.query(datastore.Context).all()
 
         assert len(contexts) == 2
         assert sorted(['patient', 'visit']) == \
@@ -161,11 +163,12 @@ class TestAddJSON:
         """
         from datetime import date, timedelta
         from pyramid.httpexceptions import HTTPBadRequest
+        from occams_datastore import models as datastore
         from occams_studies import models
 
         cycle = models.Cycle(name='week-1', title=u'', week=1)
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name=u'sample', title=u'', publish_date=date.today())
 
         study = models.Study(

@@ -12,9 +12,10 @@ class TestViewJson:
         It should not include randomization status if study is blinded
         """
         from datetime import date
+        from occams_datastore import models as datastore
         from occams_studies import models
 
-        schema = models.Schema(name=u'criteria', title=u'Criteria')
+        schema = datastore.Schema(name=u'criteria', title=u'Criteria')
 
         study = models.Study(
             name=u'somestudy',
@@ -232,6 +233,7 @@ class TestEditJson:
             self, req, db_session):
 
         from datetime import date, timedelta
+        from occams_datastore import models as datastore
         from occams_studies import models
 
         today = date.today()
@@ -246,12 +248,12 @@ class TestEditJson:
             short_title=u'sstudy',
             code=u'000',
             consent_date=t3,
-            termination_schema=models.Schema(
+            termination_schema=datastore.Schema(
                 name=u'termination',
                 title=u'Termination',
                 publish_date=t1,
                 attributes={
-                    'termination_date': models.Attribute(
+                    'termination_date': datastore.Attribute(
                         name=u'termination_date',
                         title=u'Termination Date',
                         type=u'date',
@@ -371,9 +373,10 @@ class TestDeleteJson:
         It should also remove termination forms.
         """
         from datetime import date
+        from occams_datastore import models as datastore
         from occams_studies import models
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name=u'termination',
             title=u'Termination',
             publish_date=date.today())
@@ -394,7 +397,7 @@ class TestDeleteJson:
             patient=patient,
             consent_date=date.today())
 
-        enrollment.entities.add(models.Entity(
+        enrollment.entities.add(datastore.Entity(
             schema=schema,
             collect_date=date.today()))
 
@@ -406,7 +409,7 @@ class TestDeleteJson:
         self._call_fut(enrollment, req)
 
         assert db_session.query(models.Enrollment).get(enrollment_id) is None
-        assert 0 == db_session.query(models.Entity).count()
+        assert 0 == db_session.query(datastore.Entity).count()
 
 
 class TestRandomizeAjax:
@@ -415,9 +418,10 @@ class TestRandomizeAjax:
     def install_randomization_data(self, db_session):
 
         from datetime import date
+        from occams_datastore import models as datastore
         from occams_studies import models
 
-        self.schema = models.Schema(
+        self.schema = datastore.Schema(
             name=u'criteria', title=u'Criteria', publish_date=date.today())
 
         self.study = models.Study(
@@ -447,8 +451,8 @@ class TestRandomizeAjax:
                 title=u'Tested2',
                 study=self.study))
 
-        self.stratum.entities.add(models.Entity(schema=self.schema))
-        self.stratum2.entities.add(models.Entity(schema=self.schema))
+        self.stratum.entities.add(datastore.Entity(schema=self.schema))
+        self.stratum2.entities.add(datastore.Entity(schema=self.schema))
 
         self.site = models.Site(name=u'ucsd', title=u'UCSD')
 
@@ -582,18 +586,21 @@ class TestRandomizeAjaxAssigned:
         """
         from datetime import date
         from webob.multidict import MultiDict
+        from occams_datastore import models as datastore
         from occams_studies import models
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name=u'criteria', title=u'Criteria', publish_date=date.today(),
             attributes={
-                u'likes_icecream': models.Attribute(
+                u'likes_icecream': datastore.Attribute(
                     name=u'likes_icecream',
                     title=u'Likes Ice Createm',
                     type=u'choice',
                     choices={
-                        u'0': models.Choice(name=u'0', title=u'No', order=0),
-                        u'1': models.Choice(name=u'1', title=u'Yes', order=1),
+                        u'0': datastore.Choice(
+                            name=u'0', title=u'No', order=0),
+                        u'1': datastore.Choice(
+                            name=u'1', title=u'Yes', order=1),
                     },
                     order=0,
                 )
@@ -626,12 +633,12 @@ class TestRandomizeAjaxAssigned:
                 title=u'Fake Sugar',
                 study=study))
 
-        entity1 = models.Entity(schema=schema)
+        entity1 = datastore.Entity(schema=schema)
         entity1['likes_icecream'] = u'0'
         stratum.entities.add(entity1)
 
         # If we submit yes, we'll be put into the 'fake sugar' arm of the study
-        entity2 = models.Entity(schema=schema)
+        entity2 = datastore.Entity(schema=schema)
         entity2['likes_icecream'] = u'1'
         stratum2.entities.add(entity2)
 

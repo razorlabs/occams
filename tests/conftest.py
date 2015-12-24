@@ -134,12 +134,13 @@ def db_session(config):
 
     :returns: An instantiated sqalchemy database session
     """
+    from occams_datastore import models as datastore
     from occams_studies import models
 
     db_session = config.registry['db_sessionmaker']()
 
     # Pre-configure with a blame user
-    blame = models.User(key=USERID)
+    blame = datastore.User(key=USERID)
     db_session.add(blame)
     db_session.flush()
     db_session.info['blame'] = blame
@@ -149,11 +150,11 @@ def db_session(config):
 
     # Hardcoded workflow
     db_session.add_all([
-        models.State(name=u'pending-entry', title=u'Pending Entry'),
-        models.State(name=u'pending-review', title=u'Pending Review'),
-        models.State(name=u'pending-correction',
-                     title=u'Pending Correction'),
-        models.State(name=u'complete', title=u'Complete')
+        datastore.State(name=u'pending-entry', title=u'Pending Entry'),
+        datastore.State(name=u'pending-review', title=u'Pending Review'),
+        datastore.State(name=u'pending-correction',
+                        title=u'Pending Correction'),
+        datastore.State(name=u'complete', title=u'Complete')
     ])
 
     return db_session
@@ -293,21 +294,21 @@ def app(request, wsgi, db_session):
     import transaction
     from webtest import TestApp
     from zope.sqlalchemy import mark_changed
-    from occams_studies import models
+    from occams_datastore import models as datastore
 
     # Save all changes up tho this point (db_session does some configuration)
     with transaction.manager:
-        blame = models.User(key='workflow@localhost')
+        blame = datastore.User(key='workflow@localhost')
         db_session.add(blame)
         db_session.flush()
         db_session.info['blame'] = blame
 
         db_session.add_all([
-            models.State(name=u'pending-entry', title=u'Pending Entry'),
-            models.State(name=u'pending-review', title=u'Pending Review'),
-            models.State(name=u'pending-correction',
-                         title=u'Pending Correction'),
-            models.State(name=u'complete', title=u'Complete')
+            datastore.State(name=u'pending-entry', title=u'Pending Entry'),
+            datastore.State(name=u'pending-review', title=u'Pending Review'),
+            datastore.State(name=u'pending-correction',
+                            title=u'Pending Correction'),
+            datastore.State(name=u'complete', title=u'Complete')
         ])
 
     app = TestApp(wsgi)
@@ -343,7 +344,8 @@ def celery(request):
     from redis import StrictRedis
     from sqlalchemy import create_engine
     from occams.celery import Session
-    from occams_studies import tasks, models
+    from occams_datastore import models as datastore
+    from occams_studies import tasks
 
     settings = {
         'studies.export.dir': tempfile.mkdtemp(),
@@ -357,7 +359,7 @@ def celery(request):
     db_url = request.config.getoption('--db')
     engine = create_engine(db_url)
     Session.configure(bind=engine, info={'settings': settings})
-    Session.add(models.User(key=settings['celery.blame']))
+    Session.add(datastore.User(key=settings['celery.blame']))
     Session.flush()
 
     commitmock = mock.patch('occams_studies.tasks.Session.commit')

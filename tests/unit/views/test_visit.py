@@ -274,12 +274,13 @@ class TestEditJson:
         It should allow the user to create cycle forms
         """
         from datetime import date, timedelta
+        from occams_datastore import models as datastore
         from occams_studies import models
 
-        form1 = models.Schema(
+        form1 = datastore.Schema(
             name='form1', title=u'', publish_date=date.today())
 
-        form2 = models.Schema(
+        form2 = datastore.Schema(
             name='form2', title=u'', publish_date=date.today())
 
         study = models.Study(
@@ -316,7 +317,7 @@ class TestEditJson:
         assert ['form1'] == \
             [e['schema']['name'] for e in res['entities']]
 
-        contexts = db_session.query(models.Context).all()
+        contexts = db_session.query(datastore.Context).all()
 
         assert sorted(['patient', 'visit']) == \
             sorted([c.external for c in contexts])
@@ -335,7 +336,7 @@ class TestEditJson:
         assert sorted(['form1', 'form2']) == \
             sorted([e['schema']['name'] for e in res['entities']])
 
-        contexts = db_session.query(models.Context).all()
+        contexts = db_session.query(datastore.Context).all()
 
         assert sorted([(x, e['id'])
                        for e in res['entities']
@@ -347,6 +348,7 @@ class TestEditJson:
         It should use the latest version of the form relative to the visit date
         """
         from datetime import date, timedelta
+        from occams_datastore import models as datastore
         from occams_studies import models
 
         t0 = date.today()
@@ -362,8 +364,8 @@ class TestEditJson:
 
         cycle1 = models.Cycle(name='week-1', title=u'', week=1)
         cycle1.schemata.update([
-            models.Schema(name='form1', title=u'', publish_date=t0),
-            models.Schema(name='form1', title=u'', publish_date=t2)])
+            datastore.Schema(name='form1', title=u'', publish_date=t0),
+            datastore.Schema(name='form1', title=u'', publish_date=t2)])
         study.cycles.append(cycle1)
 
         patient = models.Patient(
@@ -390,6 +392,7 @@ class TestEditJson:
         It should not use retracted forms, even if there are the most recent
         """
         from datetime import date, timedelta
+        from occams_datastore import models as datastore
         from occams_studies import models
 
         t0 = date.today()
@@ -405,9 +408,9 @@ class TestEditJson:
 
         cycle1 = models.Cycle(name='week-1', title=u'', week=1)
         cycle1.schemata.update([
-            models.Schema(name='form1', title=u'', publish_date=t0),
-            models.Schema(name='form1', title=u'', publish_date=t2,
-                          retract_date=t2)])
+            datastore.Schema(name='form1', title=u'', publish_date=t0),
+            datastore.Schema(name='form1', title=u'', publish_date=t2,
+                             retract_date=t2)])
         study.cycles.append(cycle1)
 
         patient = models.Patient(
@@ -496,9 +499,10 @@ class TestDeleteJson:
         It should remove all visit-associated forms.
         """
         from datetime import date
+        from occams_datastore import models as datastore
         from occams_studies import models
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name=u'sample',
             title=u'Some Sample',
             publish_date=date.today())
@@ -531,7 +535,7 @@ class TestDeleteJson:
             cycles=[cycle],
             visit_date=date.today())
 
-        visit.entities.add(models.Entity(
+        visit.entities.add(datastore.Entity(
             schema=schema,
             collect_date=date.today()))
 
@@ -543,7 +547,7 @@ class TestDeleteJson:
         self._call_fut(visit, req)
 
         assert db_session.query(models.Visit).get(visit_id) is None
-        assert 0 == db_session.query(models.Entity).count()
+        assert 0 == db_session.query(datastore.Entity).count()
 
 
 class TestFormDeleteJson:
@@ -558,11 +562,12 @@ class TestFormDeleteJson:
         """
         from datetime import date, timedelta
         from pyramid.httpexceptions import HTTPOk
+        from occams_datastore import models as datastore
         from occams_studies import models
 
         cycle = models.Cycle(name='week-1', title=u'', week=1)
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name=u'sample', title=u'', publish_date=date.today())
 
         study = models.Study(
@@ -577,7 +582,7 @@ class TestFormDeleteJson:
         site = models.Site(name=u'ucsd', title=u'UCSD')
 
         default_state = (
-            db_session.query(models.State)
+            db_session.query(datastore.State)
             .filter_by(name=u'pending-entry')
             .one())
 
@@ -585,11 +590,11 @@ class TestFormDeleteJson:
         patient_a = models.Patient(site=site, pid=u'12345')
         visit_a = models.Visit(
             patient=patient_a, cycles=[cycle], visit_date=t_a)
-        entity_a_1 = models.Entity(
+        entity_a_1 = datastore.Entity(
             schema=schema, collect_date=t_a, state=default_state)
-        entity_a_2 = models.Entity(
+        entity_a_2 = datastore.Entity(
             schema=schema, collect_date=t_a, state=default_state)
-        entity_a_3 = models.Entity(
+        entity_a_3 = datastore.Entity(
             schema=schema, collect_date=t_a, state=default_state)
         list(map(visit_a.entities.add, [entity_a_1, entity_a_2, entity_a_3]))
 

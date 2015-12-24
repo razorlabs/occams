@@ -16,6 +16,7 @@ import wtforms
 
 from occams.utils.forms import wtferrors, Form
 from occams.utils.pagination import Pagination
+from occams_datastore import models as datastore
 
 from .. import _, log, models, exports, tasks
 
@@ -88,7 +89,7 @@ def checkout(context, request):
                 name=task_id,
                 expand_collections=form.expand_collections.data,
                 use_choice_labels=form.use_choice_labels.data,
-                owner_user=(db_session.query(models.User)
+                owner_user=(db_session.query(datastore.User)
                             .filter_by(key=request.authenticated_userid)
                             .one()),
                 contents=[exportables[k].to_json() for k in form.contents.data]

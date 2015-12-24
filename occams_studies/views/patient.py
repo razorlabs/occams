@@ -13,6 +13,7 @@ from zope.sqlalchemy import mark_changed
 
 from occams.utils.forms import wtferrors, ModelField, Form
 from occams_roster import generate
+from occams_datastore import models as datastore
 from occams_forms.renderers import \
     make_form, render_form, apply_data, entity_data, \
     form2json, modes
@@ -249,11 +250,11 @@ def forms_list_json(context, request):
     """
     db_session = request.db_session
     query = (
-        db_session.query(models.Schema)
+        db_session.query(datastore.Schema)
         .join(models.patient_schema_table)
         .order_by(
-            models.Schema.name,
-            models.Schema.publish_date))
+            datastore.Schema.name,
+            datastore.Schema.publish_date))
 
     return {
         'forms': [form2json(s) for s in query]
@@ -311,9 +312,9 @@ def forms_add_json(context, request):
         exists = (
             db_session.query(sa.literal(True))
             .filter(
-                db_session.query(models.Schema)
+                db_session.query(datastore.Schema)
                 .join(models.patient_schema_table)
-                .filter(models.Schema.name == field.data.name)
+                .filter(datastore.Schema.name == field.data.name)
                 .exists())
             .scalar())
         if exists:
@@ -323,7 +324,7 @@ def forms_add_json(context, request):
     class AddForm(Form):
         form = ModelField(
             db_session=db_session,
-            class_=models.Schema,
+            class_=datastore.Schema,
             validators=[
                 wtforms.validators.InputRequired(),
                 check_not_study_form,
@@ -361,7 +362,7 @@ def forms_delete_json(context, request):
     def check_not_has_data(form, field):
         (exists,) = (
             db_session.query(
-                db_session.query(models.Entity)
+                db_session.query(datastore.Entity)
                 .filter_by(schema=field.data)
                 .exists())
             .one())
@@ -372,7 +373,7 @@ def forms_delete_json(context, request):
     class DeleteForm(Form):
         form = ModelField(
             db_session=db_session,
-            class_=models.Schema,
+            class_=datastore.Schema,
             validators=[
                 wtforms.validators.InputRequired(),
                 check_not_has_data])
@@ -445,14 +446,14 @@ def edit_json(context, request):
     # Add the patient forms
     if is_new:
         schemata_query = (
-            db_session.query(models.Schema)
+            db_session.query(datastore.Schema)
             .join(models.patient_schema_table))
         pending_entry = (
-            db_session.query(models.State)
+            db_session.query(datastore.State)
             .filter_by(name=u'pending-entry')
             .one())
         for schema in schemata_query:
-            patient.entities.add(models.Entity(
+            patient.entities.add(datastore.Entity(
                 schema=schema,
                 state=pending_entry
             ))
@@ -490,7 +491,9 @@ def delete_json(context, request):
         _('Patient ${pid} was successfully removed'),
         mapping={'pid': context.pid})
     request.session.flash(msg, 'success')
-    return {'__next__': request.current_route_path(_route_name='studies.index')}
+    return {
+        '__next__': request.current_route_path(_route_name='studies.index')
+    }
 
 
 @view_config(
@@ -534,11 +537,11 @@ def form(context, request):
         # We cannot determine which study this form will be applied to
         # so just use any version from active studies
         available_schemata = (
-            db_session.query(models.Schema)
+            db_session.query(datastore.Schema)
             .join(models.study_schema_table)
             .join(models.Study)
-            .filter(models.Schema.publish_date != sa.null())
-            .filter(models.Schema.retract_date == sa.null()))
+            .filter(datastore.Schema.publish_date != sa.null())
+            .filter(datastore.Schema.retract_date == sa.null()))
         allowed_versions = sorted(set(
             s.publish_date for s in available_schemata))
     else:
@@ -595,13 +598,13 @@ def form(context, request):
 def get_phi_entities(context, request):
     db_session = request.db_session
     return (
-        db_session.query(models.Entity)
-        .join(models.Context)
-        .filter(models.Context.external == u'patient')
-        .filter(models.Context.key == context.id)
-        .join(models.Entity.schema)
+        db_session.query(datastore.Entity)
+        .join(datastore.Context)
+        .filter(datastore.Context.external == u'patient')
+        .filter(datastore.Context.key == context.id)
+        .join(datastore.Entity.schema)
         .join(models.patient_schema_table)
-        .order_by(models.Schema.title))
+        .order_by(datastore.Schema.title))
 
 
 def PatientSchema(context, request):

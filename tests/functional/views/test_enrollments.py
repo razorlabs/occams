@@ -548,7 +548,7 @@ class TestPermissionsEnrollmentTermination:
                 publish_date=date(2015, 1, 1)
             )
 
-            form.attributes['termination_date'] = studies.Attribute(
+            form.attributes['termination_date'] = datastore.Attribute(
                 name=u'termination_date',
                 title=u'termination_date',
                 type=u'datetime',

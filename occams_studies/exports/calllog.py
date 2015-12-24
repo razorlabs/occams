@@ -14,6 +14,7 @@ CCTG Patient Call Log
 from sqlalchemy import case, MetaData, Table, literal
 from sqlalchemy.orm import aliased, mapper
 
+from occams_datastore import models as datastore
 from occams_datastore.utils.sql import group_concat
 
 from .. import _, models
@@ -136,8 +137,8 @@ class CallLogPlan(ExportPlan):
         mapper(PatientLog, patient_log_table)
         mapper(PatientLogNonResponseType, patient_log_nonresponse_type_table)
 
-        CreateUser = aliased(models.User)
-        ModifyUser = aliased(models.User)
+        CreateUser = aliased(datastore.User)
+        ModifyUser = aliased(datastore.User)
         query = (
             session.query(
                 PatientLog.id.label('id'),

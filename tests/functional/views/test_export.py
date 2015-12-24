@@ -206,9 +206,9 @@ class TestPersmissionsDelete:
 
     def test_not_owner(self, app, db_session):
         import transaction
-        from occams_studies import models
+        from occams_datastore import models as datastore
         with transaction.manager:
-            db_session.add(models.User(key='somebody_else'))
+            db_session.add(datastore.User(key='somebody_else'))
         environ = make_environ(userid='somebody_else')
         csrf_token = get_csrf_token(app, environ)
         app.delete(
@@ -369,9 +369,9 @@ class TestPermissionsDownload:
 
     def test_not_owner(self, app, db_session):
         import transaction
-        from occams_studies import models
+        from occams_datastore import models as datastore
         with transaction.manager:
-            db_session.add(models.User(key='somebody_else'))
+            db_session.add(datastore.User(key='somebody_else'))
         environ = make_environ(userid='somebody_else')
         app.get(self.url, extra_environ=environ, status=403)
 

@@ -743,7 +743,7 @@ class TestPermissionsPatientFormView:
             )
 
             state = (
-                db_session.query(studies.State)
+                db_session.query(datastore.State)
                 .filter_by(name=u'pending-entry')
                 .one())
 
@@ -843,7 +843,7 @@ class TestPermissionsPatientFormsEdit:
             )
 
             state = (
-                db_session.query(studies.State)
+                db_session.query(datastore.State)
                 .filter_by(name=u'pending-entry')
                 .one())
 
