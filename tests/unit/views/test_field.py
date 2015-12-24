@@ -20,24 +20,25 @@ class TestListJSON:
         It should return a listing of a form's attributes and sections
         """
         from datetime import date
+        from occams_datastore import models as datastore
         from occams_forms import models
-        db_session.add(models.Schema(
+        db_session.add(datastore.Schema(
             name=u'myform',
             title=u'My Form',
             publish_date=date(2014, 7, 1),
             attributes={
-                'myfield': models.Attribute(
+                'myfield': datastore.Attribute(
                     name=u'myfield',
                     title=u'My Field',
                     type=u'string',
                     order=0),
-                'sec1': models.Attribute(
+                'sec1': datastore.Attribute(
                     name=u'sec1',
                     title=u'Section 1',
                     type='section',
                     order=1,
                     attributes={
-                        'mysubfield': models.Attribute(
+                        'mysubfield': datastore.Attribute(
                             name=u'mysubfield',
                             title=u'My Sub Field',
                             type=u'string',
@@ -60,13 +61,13 @@ class TestViewJSON:
         It should return the attribute's properties in JSON form
         """
         from datetime import date
-        from occams_forms import models
-        schema = models.Schema(
+        from occams_datastore import models as datastore
+        schema = datastore.Schema(
             name=u'myform',
             title=u'My Form',
             publish_date=date(2014, 7, 1),
             attributes={
-                'myfield': models.Attribute(
+                'myfield': datastore.Attribute(
                     name=u'myfield',
                     title=u'My Field',
                     type=u'string',
@@ -89,13 +90,13 @@ class TestEditJSON:
         It should make sure the variable name is not repeated
         """
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_forms import models
+        from occams_datastore import models as datastore
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name='testform',
             title=u'Test Form',
             attributes={
-                'myvar': models.Attribute(
+                'myvar': datastore.Attribute(
                     name='myvar',
                     title=u'My Var',
                     type='string',
@@ -117,13 +118,13 @@ class TestEditJSON:
         It should not allow adding a new section into a another section
         """
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_forms import models
+        from occams_datastore import models as datastore
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name='testform',
             title=u'Test Form',
             attributes={
-                'section1': models.Attribute(
+                'section1': datastore.Attribute(
                     name='section1',
                     title=u'Section 1',
                     type='section',
@@ -165,18 +166,18 @@ class TestMoveJSON:
         """
         It should be able to move a field from a section to the root
         """
-        from occams_forms import models
+        from occams_datastore import models as datastore
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name='testform',
             title=u'Test Form',
             attributes={
-                'section1': models.Attribute(
+                'section1': datastore.Attribute(
                     name='section1',
                     title=u'Section 1',
                     type='section',
                     attributes={
-                        'myvar': models.Attribute(
+                        'myvar': datastore.Attribute(
                             name='myvar',
                             title=u'My Var',
                             type='string',
@@ -201,25 +202,25 @@ class TestMoveJSON:
         """
         It should be able to move a field from a section to another
         """
-        from occams_forms import models
+        from occams_datastore import models as datastore
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name='testform',
             title=u'Test Form',
             attributes={
-                'section1': models.Attribute(
+                'section1': datastore.Attribute(
                     name='section1',
                     title=u'Section 1',
                     type='section',
                     attributes={
-                        'myvar': models.Attribute(
+                        'myvar': datastore.Attribute(
                             name='myvar',
                             title=u'My Var',
                             type='string',
                             order=1)
                         },
                     order=0),
-                'section2': models.Attribute(
+                'section2': datastore.Attribute(
                     name='section2',
                     title=u'Section 2',
                     type='section',
@@ -245,23 +246,23 @@ class TestMoveJSON:
         """
         It should be able to move a field within a section
         """
-        from occams_forms import models
+        from occams_datastore import models as datastore
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name='testform',
             title=u'Test Form',
             attributes={
-                'section1': models.Attribute(
+                'section1': datastore.Attribute(
                     name='section1',
                     title=u'Section 1',
                     type='section',
                     attributes={
-                        'myvar': models.Attribute(
+                        'myvar': datastore.Attribute(
                             name='myvar',
                             title=u'My Var',
                             type='string',
                             order=1),
-                        'myfoo': models.Attribute(
+                        'myfoo': datastore.Attribute(
                             name='myfoo',
                             title=u'My Foo',
                             type='string',

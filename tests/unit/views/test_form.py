@@ -17,9 +17,10 @@ class TestListJSON:
         It should return a listing of schemata with links to each version
         """
         from datetime import date
+        from occams_datastore import models as datastore
         from occams_forms import models
 
-        db_session.add(models.Schema(
+        db_session.add(datastore.Schema(
             name=u'sample',
             title=u'Sample',
             publish_date=date(2014, 6, 1)

@@ -1,7 +1,7 @@
 from pyramid.security import Allow, Authenticated, ALL_PERMISSIONS
 from sqlalchemy import orm
 
-from occams_datastore.models import *  # NOQA
+from occams_datastore import models as datastore
 
 
 class FormFactory(object):
@@ -19,7 +19,7 @@ class FormFactory(object):
         db_session = self.request.db_session
         (exists,) = (
             db_session.query(
-                db_session.query(Schema)
+                db_session.query(datastore.Schema)
                 .filter_by(name=key)
                 .exists())
             .one())
@@ -62,7 +62,7 @@ class VersionFactory(object):
     def __getitem__(self, key):
         db_session = self.request.db_session
         query = (
-            db_session.query(Schema)
+            db_session.query(datastore.Schema)
             .filter_by(name=self.__parent__.__name__))
         try:
             key = int(key)
@@ -105,8 +105,8 @@ def schema_getitem(self, key):
         return item
 
 
-Schema.__acl__ = property(schema_acl)
-Schema.__getitem__ = schema_getitem
+datastore.Schema.__acl__ = property(schema_acl)
+datastore.Schema.__getitem__ = schema_getitem
 
 
 class AttributeFactory(object):
@@ -131,7 +131,7 @@ class AttributeFactory(object):
         db_session = self.request.db_session
         try:
             attribute = (
-                db_session.query(Attribute)
+                db_session.query(datastore.Attribute)
                 .filter_by(schema=self.__parent__, name=key)
                 .one())
         except orm.exc.NoResultFound:
@@ -156,4 +156,4 @@ def attribute_acl(self):
             (Allow, 'editor', 'view')]
 
 
-Attribute.__acl__ = property(attribute_acl)
+datastore.Attribute.__acl__ = property(attribute_acl)

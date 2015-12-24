@@ -8,9 +8,9 @@ from occams_forms.fields import FileField
 class TestMakeField:
 
     def test_unknown(self):
-        from occams_forms import models
+        from occams_datastore import models as datastore
         from occams_forms.renderers import make_field
-        attribute = models.Attribute(name=u'f', title=u'F', type='unknown')
+        attribute = datastore.Attribute(name=u'f', title=u'F', type='unknown')
         with pytest.raises(Exception):
             make_field(attribute)
 
@@ -22,57 +22,57 @@ class TestMakeField:
         ('datetime', wtforms.ext.dateutil.fields.DateTimeField),
         ('section', wtforms.FormField)])
     def test_basic_types(self, type_, class_):
-        from occams_forms import models
+        from occams_datastore import models as datastore
         from occams_forms.renderers import make_field
-        attribute = models.Attribute(name=u'f', title=u'F', type=type_)
+        attribute = datastore.Attribute(name=u'f', title=u'F', type=type_)
         field = make_field(attribute)
         assert field.field_class is class_
 
     def test_integer(self):
-        from occams_forms import models
+        from occams_datastore import models as datastore
         from occams_forms.renderers import make_field
-        attribute = models.Attribute(
+        attribute = datastore.Attribute(
             name=u'f', title=u'F', type='number', decimal_places=0)
         field = make_field(attribute)
         assert field.field_class is wtforms.fields.html5.IntegerField
 
     def test_decimal_any(self):
-        from occams_forms import models
+        from occams_datastore import models as datastore
         from occams_forms.renderers import make_field
-        attribute = models.Attribute(name=u'f', title=u'F', type='number')
+        attribute = datastore.Attribute(name=u'f', title=u'F', type='number')
         field = make_field(attribute)
         assert field.field_class is wtforms.fields.html5.DecimalField
 
     def test_decimal_precision(self):
-        from occams_forms import models
+        from occams_datastore import models as datastore
         from occams_forms.renderers import make_field
-        attribute = models.Attribute(
+        attribute = datastore.Attribute(
             name=u'f', title=u'F', type='number', decimal_places=1)
         field = make_field(attribute)
         assert field.field_class is wtforms.fields.html5.DecimalField
 
     def test_choice_single(self):
-        from occams_forms import models
+        from occams_datastore import models as datastore
         from occams_forms.renderers import make_field
-        attribute = models.Attribute(
+        attribute = datastore.Attribute(
             name=u'f', title=u'F', type='choice', is_collection=False)
         field = make_field(attribute)
         assert field.field_class is wtforms.SelectField
 
     def test_choice_multi(self):
-        from occams_forms import models
+        from occams_datastore import models as datastore
         from occams_forms.renderers import make_field
-        attribute = models.Attribute(
+        attribute = datastore.Attribute(
             name=u'f', title=u'F', type='choice', is_collection=True)
         field = make_field(attribute)
         assert field.field_class is wtforms.SelectMultipleField
 
     def test_string_min_max(self):
-        from occams_forms import models
+        from occams_datastore import models as datastore
         from occams_forms.renderers import make_field
         import wtforms
         from wtforms.validators import Length
-        attribute = models.Attribute(
+        attribute = datastore.Attribute(
             name=u'string_test', title=u'string_test', type='string',
             value_min=1, value_max=12)
         field = make_field(attribute)
@@ -80,11 +80,11 @@ class TestMakeField:
         assert any(isinstance(v, Length) for v in field.validators)
 
     def test_number_min_max(self):
-        from occams_forms import models
+        from occams_datastore import models as datastore
         from occams_forms.renderers import make_field
         import wtforms
         from wtforms.validators import NumberRange
-        attribute = models.Attribute(
+        attribute = datastore.Attribute(
             name=u'number_test', title=u'number_test', type='number',
             value_min=1, value_max=12)
         field = make_field(attribute)
@@ -92,22 +92,22 @@ class TestMakeField:
         assert any(isinstance(v, NumberRange) for v in field.validators)
 
     def test_daterange_date(self):
-        from occams_forms import models
+        from occams_datastore import models as datastore
         from occams_forms.renderers import make_field
         import wtforms
         from wtforms_components import DateRange
-        attribute = models.Attribute(
+        attribute = datastore.Attribute(
             name=u'daterange_test', title=u'daterange_test', type='date')
         field = make_field(attribute)
         field = field.bind(wtforms.Form(), attribute.name)
         assert any(isinstance(v, DateRange) for v in field.validators)
 
     def test_daterange_datetime(self):
-        from occams_forms import models
+        from occams_datastore import models as datastore
         from occams_forms.renderers import make_field
         import wtforms
         from wtforms_components import DateRange
-        attribute = models.Attribute(
+        attribute = datastore.Attribute(
             name=u'daterange_test', title=u'daterange_test', type='datetime')
         field = make_field(attribute)
         field = field.bind(wtforms.Form(), attribute.name)
@@ -118,13 +118,13 @@ class TestMakeForm:
 
     def _make_schema(self, db_session):
         from datetime import date
-        from occams_forms import models
-        schema = models.Schema(
+        from occams_datastore import models as datastore
+        schema = datastore.Schema(
             name=u'dymmy_schema',
             title=u'Dummy Schema',
             publish_date=date.today(),
             attributes={
-                'dummy_field': models.Attribute(
+                'dummy_field': datastore.Attribute(
                     name=u'dummy_field',
                     title=u'Dummy Field',
                     type='string',
@@ -151,15 +151,15 @@ class TestMakeForm:
 
     def test_skip_validation_if_from_complete(self, db_session):
         from webob.multidict import MultiDict
-        from occams_forms import models
+        from occams_datastore import models as datastore
         from occams_forms.renderers import \
             make_form, states, modes, entity_data
 
         schema = self._make_schema(db_session)
-        entity = models.Entity(
+        entity = datastore.Entity(
             schema=schema,
             state=(
-                db_session.query(models.State)
+                db_session.query(datastore.State)
                 .filter_by(name=states.COMPLETE)
                 .one()))
         Form = make_form(
@@ -211,15 +211,15 @@ class TestRenderForm:
 
     def _make_form(self, db_session):
         from datetime import date
-        from occams_forms import models
+        from occams_datastore import models as datastore
         from occams_forms.renderers import make_form
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name=u'dymmy_schema',
             title=u'Dummy Schema',
             publish_date=date.today(),
             attributes={
-                'dummy_field': models.Attribute(
+                'dummy_field': datastore.Attribute(
                     name=u'dummy_field',
                     title=u'Dummy Field',
                     type='string',
@@ -227,7 +227,7 @@ class TestRenderForm:
                 )
             })
 
-        entity = models.Entity(schema=schema)
+        entity = datastore.Entity(schema=schema)
         db_session.add(entity)
         db_session.flush()
 
@@ -237,7 +237,7 @@ class TestRenderForm:
         'pending-entry', 'pending-review', 'pending-correction'])
     def test_enabled_for_editable_states(self, db_session, state):
 
-        from occams_forms import models
+        from occams_datastore import models as datastore
         from occams_forms.renderers import render_form
         from bs4 import BeautifulSoup
 
@@ -245,7 +245,7 @@ class TestRenderForm:
         form = Form()
 
         form.meta.entity.state = (
-            db_session.query(models.State)
+            db_session.query(datastore.State)
             .filter_by(name=state)
             .one())
 
@@ -258,7 +258,7 @@ class TestRenderForm:
 
     def test_disabled_if_complete(self, db_session):
 
-        from occams_forms import models
+        from occams_datastore import models as datastore
         from occams_forms.renderers import render_form, states
         from bs4 import BeautifulSoup
 
@@ -266,7 +266,7 @@ class TestRenderForm:
         form = Form()
 
         form.meta.entity.state = (
-            db_session.query(models.State)
+            db_session.query(datastore.State)
             .filter_by(name=states.COMPLETE)
             .one())
 
@@ -297,11 +297,11 @@ class TestApplyData:
 
     def _make_entity(self):
         from datetime import date
-        from occams_forms import models
-        schema = models.Schema(
+        from occams_datastore import models as datastore
+        schema = datastore.Schema(
             name=u'test', title=u'', publish_date=date.today(),
             attributes={
-                'q1': models.Attribute(
+                'q1': datastore.Attribute(
                     name=u'q1',
                     title=u'',
                     type='string',
@@ -309,7 +309,7 @@ class TestApplyData:
                     order=0,
                 )
             })
-        entity = models.Entity(schema=schema)
+        entity = datastore.Entity(schema=schema)
         return entity
 
     def test_clear_if_not_done(self, db_session):
@@ -426,12 +426,12 @@ class TestApplyData:
         assert entity['q1'] == formdata['q1']
 
     def test_pending_review_to_complete(self, db_session):
-        from occams_forms import models
+        from occams_datastore import models as datastore
         from occams_forms.renderers import states
 
         entity = self._make_entity()
         entity.state = (
-            db_session.query(models.State)
+            db_session.query(datastore.State)
             .filter_by(name=states.PENDING_REVIEW)
             .one())
         entity['q1'] = u'Some value'
@@ -464,12 +464,12 @@ class TestApplyData:
 
     def test_auto_pending_correction_to_pending_review(self, db_session):
 
-        from occams_forms import models
+        from occams_datastore import models as datastore
         from occams_forms.renderers import states
 
         entity = self._make_entity()
         entity.state = (
-            db_session.query(models.State)
+            db_session.query(datastore.State)
             .filter_by(name=states.PENDING_CORRECTION)
             .one())
         entity['q1'] = u'Some value'
@@ -490,14 +490,14 @@ class TestApplyData:
         import os
         from datetime import date
 
-        from occams_forms import models
+        from occams_datastore import models as datastore
 
         from mock import Mock
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name=u'test', title=u'', publish_date=date.today(),
             attributes={
-                'q1': models.Attribute(
+                'q1': datastore.Attribute(
                     name=u'q1',
                     title=u'',
                     type='blob',
@@ -505,7 +505,7 @@ class TestApplyData:
                 )
             })
 
-        entity = models.Entity(schema=schema)
+        entity = datastore.Entity(schema=schema)
 
         formdata = {'q1': u''}
 
@@ -528,14 +528,14 @@ class TestApplyData:
         import cgi
         from datetime import date
 
-        from occams_forms import models
+        from occams_datastore import models as datastore
 
         from mock import Mock
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name=u'test', title=u'', publish_date=date.today(),
             attributes={
-                'q1': models.Attribute(
+                'q1': datastore.Attribute(
                     name=u'q1',
                     title=u'',
                     type='blob',
@@ -543,7 +543,7 @@ class TestApplyData:
                 )
             })
 
-        entity = models.Entity(schema=schema)
+        entity = datastore.Entity(schema=schema)
 
         form = cgi.FieldStorage()
         form.filename = u'test.txt'
@@ -574,14 +574,14 @@ class TestApplyData:
         import cgi
         from datetime import date
 
-        from occams_forms import models
+        from occams_datastore import models as datastore
 
         from mock import Mock
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name=u'test', title=u'', publish_date=date.today(),
             attributes={
-                'q1': models.Attribute(
+                'q1': datastore.Attribute(
                     name=u'q1',
                     title=u'',
                     type='blob',
@@ -589,7 +589,7 @@ class TestApplyData:
                 )
             })
 
-        entity = models.Entity(schema=schema)
+        entity = datastore.Entity(schema=schema)
 
         form = cgi.FieldStorage()
         form.filename = u'test.txt'
@@ -627,15 +627,14 @@ class TestApplyData:
         import cgi
         from datetime import date
 
-        from occams_forms import models
         from occams_datastore import models as datastore
 
         from mock import Mock
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name=u'test', title=u'', publish_date=date.today(),
             attributes={
-                'q1': models.Attribute(
+                'q1': datastore.Attribute(
                     name=u'q1',
                     title=u'',
                     type='blob',
@@ -643,7 +642,7 @@ class TestApplyData:
                 )
             })
 
-        entity = models.Entity(schema=schema)
+        entity = datastore.Entity(schema=schema)
 
         form = cgi.FieldStorage()
         form.filename = u'test.txt'
@@ -675,15 +674,14 @@ class TestApplyData:
         import cgi
         from datetime import date
 
-        from occams_forms import models
         from occams_datastore import models as datastore
 
         from mock import Mock
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name=u'test', title=u'', publish_date=date.today(),
             attributes={
-                'q1': models.Attribute(
+                'q1': datastore.Attribute(
                     name=u'q1',
                     title=u'',
                     type='blob',
@@ -691,7 +689,7 @@ class TestApplyData:
                 )
             })
 
-        entity = models.Entity(schema=schema)
+        entity = datastore.Entity(schema=schema)
 
         form = cgi.FieldStorage()
         form.filename = u'test.txt'
@@ -726,15 +724,14 @@ class TestApplyData:
         import cgi
         from datetime import date
 
-        from occams_forms import models
         from occams_datastore import models as datastore
 
         from mock import Mock
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name=u'test', title=u'', publish_date=date.today(),
             attributes={
-                'q1': models.Attribute(
+                'q1': datastore.Attribute(
                     name=u'q1',
                     title=u'',
                     type='blob',
@@ -742,7 +739,7 @@ class TestApplyData:
                 )
             })
 
-        entity = models.Entity(schema=schema)
+        entity = datastore.Entity(schema=schema)
 
         form = cgi.FieldStorage()
         form.filename = u'test.txt'

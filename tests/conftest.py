@@ -131,12 +131,12 @@ def db_session(config):
 
     :returns: An instantiated sqalchemy database session
     """
-    from occams_forms import models
+    from occams_datastore import models as datastore
 
     db_session = config.registry['db_sessionmaker']()
 
     # Pre-configure with a blame user
-    blame = models.User(key=USERID)
+    blame = datastore.User(key=USERID)
     db_session.add(blame)
     db_session.flush()
     db_session.info['blame'] = blame
@@ -146,11 +146,11 @@ def db_session(config):
 
     # Hardcoded workflow
     db_session.add_all([
-        models.State(name=u'pending-entry', title=u'Pending Entry'),
-        models.State(name=u'pending-review', title=u'Pending Review'),
-        models.State(name=u'pending-correction',
-                     title=u'Pending Correction'),
-        models.State(name=u'complete', title=u'Complete')
+        datastore.State(name=u'pending-entry', title=u'Pending Entry'),
+        datastore.State(name=u'pending-review', title=u'Pending Review'),
+        datastore.State(name=u'pending-correction',
+                        title=u'Pending Correction'),
+        datastore.State(name=u'complete', title=u'Complete')
     ])
 
     return db_session
@@ -268,21 +268,21 @@ def app(request, wsgi, db_session):
     import transaction
     from webtest import TestApp
     from zope.sqlalchemy import mark_changed
-    from occams_forms import models
+    from occams_datastore import models as datastore
 
     # Save all changes up tho this point (db_session does some configuration)
     with transaction.manager:
-        blame = models.User(key='workflow@localhost')
+        blame = datastore.User(key='workflow@localhost')
         db_session.add(blame)
         db_session.flush()
         db_session.info['blame'] = blame
 
         db_session.add_all([
-            models.State(name=u'pending-entry', title=u'Pending Entry'),
-            models.State(name=u'pending-review', title=u'Pending Review'),
-            models.State(name=u'pending-correction',
-                         title=u'Pending Correction'),
-            models.State(name=u'complete', title=u'Complete')
+            datastore.State(name=u'pending-entry', title=u'Pending Entry'),
+            datastore.State(name=u'pending-review', title=u'Pending Review'),
+            datastore.State(name=u'pending-correction',
+                            title=u'Pending Correction'),
+            datastore.State(name=u'complete', title=u'Complete')
         ])
 
     app = TestApp(wsgi)

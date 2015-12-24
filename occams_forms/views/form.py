@@ -8,8 +8,9 @@ from sqlalchemy import orm
 import wtforms
 
 from occams.utils.forms import Form
+from occams_datastore import models as datastore
 
-from .. import _, models
+from .. import _
 from ._utils import jquery_wtform_validator
 
 
@@ -54,7 +55,7 @@ def upload(context, request):
         raise HTTPBadRequest(json={
             'user_message': _(u'Nothing uploaded')})
 
-    schemata = [models.Schema.from_json(json.load(u.file)) for u in files]
+    schemata = [datastore.Schema.from_json(json.load(u.file)) for u in files]
     db_session.add_all(schemata)
     db_session.flush()
 
@@ -93,7 +94,7 @@ def add(context, request):
     if not form.validate():
         raise HTTPBadRequest(json={'errors': form.errors})
 
-    schema = models.Schema(**form.data)
+    schema = datastore.Schema(**form.data)
     db_session.add(schema)
     db_session.flush()
 
@@ -102,43 +103,43 @@ def add(context, request):
 
 def get_list_data(request, names=None):
     db_session = request.db_session
-    InnerSchema = orm.aliased(models.Schema)
-    InnerAttribute = orm.aliased(models.Attribute)
+    InnerSchema = orm.aliased(datastore.Schema)
+    InnerAttribute = orm.aliased(datastore.Attribute)
     query = (
-        db_session.query(models.Schema.name)
+        db_session.query(datastore.Schema.name)
         .add_column(
             db_session.query(
                 db_session.query(InnerAttribute)
                 .join(InnerSchema, InnerAttribute.schema)
-                .filter(InnerSchema.name == models.Schema.name)
+                .filter(InnerSchema.name == datastore.Schema.name)
                 .filter(InnerAttribute.is_private)
-                .correlate(models.Schema)
+                .correlate(datastore.Schema)
                 .exists())
             .as_scalar()
             .label('has_private'))
         .add_column(
             db_session.query(InnerSchema.title)
-            .filter(InnerSchema.name == models.Schema.name)
+            .filter(InnerSchema.name == datastore.Schema.name)
             .order_by(
                 InnerSchema.publish_date == sa.null(),
                 InnerSchema.publish_date.desc())
             .limit(1)
-            .correlate(models.Schema)
+            .correlate(datastore.Schema)
             .as_scalar()
             .label('title'))
-        .group_by(models.Schema.name)
-        .order_by(models.Schema.name))
+        .group_by(datastore.Schema.name)
+        .order_by(datastore.Schema.name))
 
     if names:
-        query = query.filter(models.Schema.name.in_(names))
+        query = query.filter(datastore.Schema.name.in_(names))
 
     def jsonify(row):
         values = row._asdict()
         versions = (
-            db_session.query(models.Schema)
-            .filter(models.Schema.name == row.name)
-            .order_by(models.Schema.publish_date == sa.null(),
-                      models.Schema.publish_date.desc()))
+            db_session.query(datastore.Schema)
+            .filter(datastore.Schema.name == row.name)
+            .order_by(datastore.Schema.publish_date == sa.null(),
+                      datastore.Schema.publish_date.desc()))
         values['versions'] = [{
             '__url__':  request.route_path(
                 'forms.version',
@@ -163,7 +164,7 @@ def FormFormFactory(context, request):
     def check_unique_name(form, field):
         (exists,) = (
             db_session.query(
-                db_session.query(models.Schema)
+                db_session.query(datastore.Schema)
                 .filter_by(name=field.data.lower())
                 .exists())
             .one())

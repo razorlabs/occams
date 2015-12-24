@@ -5,6 +5,7 @@ from sqlalchemy import orm
 import wtforms
 
 from occams.utils.forms import wtferrors, Form
+from occams_datastore import models as datastore
 from occams_datastore.models.schema import RE_VALID_NAME, RESERVED_WORDS
 
 from .. import _, models
@@ -161,7 +162,7 @@ def edit_json(context, request):
         attribute = context
     else:
         # Add the attribute and temporarily set to large display order
-        attribute = models.Attribute(schema=context.__parent__, order=-1)
+        attribute = datastore.Attribute(schema=context.__parent__, order=-1)
         db_session.add(attribute)
 
     attribute.apply(form.data)
@@ -214,19 +215,19 @@ def FieldFormFactory(context, request):
     if isinstance(context, models.AttributeFactory):
         is_new = True
         schema = context.__parent__
-    elif isinstance(context, models.Schema):
+    elif isinstance(context, datastore.Schema):
         is_new = True
         schema = context
-    elif isinstance(context, models.Attribute):
+    elif isinstance(context, datastore.Attribute):
         schema = context.schema
         is_new = not bool(orm.object_session(context))
 
     def unique_variable(form, field):
         query = (
-            db_session.query(models.Attribute)
+            db_session.query(datastore.Attribute)
             .filter_by(name=field.data, schema=schema))
         if not is_new:
-            query = query.filter(models.Attribute.id != context.id)
+            query = query.filter(datastore.Attribute.id != context.id)
         (exists,) = db_session.query(query.exists()).one()
         if exists:
             raise wtforms.ValidationError(
