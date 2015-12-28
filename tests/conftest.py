@@ -135,7 +135,6 @@ def db_session(config):
     :returns: An instantiated sqalchemy database session
     """
     from occams_datastore import models as datastore
-    from occams_studies import models
 
     db_session = config.registry['db_sessionmaker']()
 
@@ -192,6 +191,27 @@ def req(db_session):
     db_session.info['request'] = dummy_request
 
     return dummy_request
+
+
+@pytest.fixture
+def factories(db_session):
+    """
+    Configures the data factories
+
+    :param db_session: testing session fixture
+    :returns: the configured factories module
+    """
+
+    import inspect
+    from . import factories
+
+    classes = inspect.getmembers(factories, inspect.isclass)
+
+    for class_name, class_ in classes:
+        if hasattr(class_, '_meta') and hasattr(class_._meta, 'model'):
+            class_._meta.sqlalchemy_session = db_session
+
+    return factories
 
 
 @pytest.fixture(scope='session')

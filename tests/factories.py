@@ -41,7 +41,7 @@ class AttributeFactory(SQLAlchemyModelFactory):
         model = datastore.Attribute
     name = factory.Sequence(lambda n: 'var_{}'.format(n))
     title = factory.Faker('setence')
-    description = factory('paragraph')
+    description = factory.Faker('paragraph')
     type = 'string'
     order = factory.Sequence(lambda n: n)
 
@@ -120,12 +120,12 @@ class EnrollmentFactory(SQLAlchemyModelFactory):
 
 class StratumFactory(SQLAlchemyModelFactory):
     class Meta:
-        model = studies.Stramum
+        model = studies.Stratum
     study = factory.SubFactory(StudyFactory)
     arm = factory.SubFactory(ArmFactory)
     label = factory.Faker('word')
-    block_number = factory.Factory('pyint')
-    randid = factory.Factory('uuid4')
+    block_number = factory.Faker('pyint')
+    randid = factory.Faker('uuid4')
 
 
 class VisitFactory(SQLAlchemyModelFactory):
