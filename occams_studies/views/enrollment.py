@@ -450,9 +450,11 @@ def EnrollmentSchema(context, request):
     def check_consent_timeline(form, field):
         consent = form.consent_date.data
         latest = form.latest_consent_date.data
-        if not (consent <= latest):
+        # This validator is used on both latest_consent and consent,
+        # so we need to check that both have been validated before proceeding.
+        if consent and latest and not consent <= latest:
             raise wtforms.ValidationError(request.localizer.translate(
-                _(u'Inconsistent enrollment dates')))
+                _(u'Inconsistent consent dates')))
 
     def check_termination_timeline(form, field):
         latest = form.latest_consent_date.data
@@ -509,7 +511,8 @@ def EnrollmentSchema(context, request):
         consent_date = DateField(
             validators=[
                 wtforms.validators.InputRequired(),
-                check_unique])
+                check_unique,
+                check_consent_timeline])
         latest_consent_date = DateField(
             validators=[
                 wtforms.validators.InputRequired(),

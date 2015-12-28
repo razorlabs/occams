@@ -149,6 +149,64 @@ class TestEditJson:
         assert 'This enrollment already exists.' in \
             excinfo.value.json['errors']['consent_date']
 
+    def test_missing_consent(self, req, db_session, factories):
+        """
+        It should require latest date
+        """
+
+        from datetime import date
+        from pyramid.httpexceptions import HTTPBadRequest
+        import pytest
+
+        study = factories.StudyFactory.create()
+        patient = factories.PatientFactory.create()
+
+        db_session.add_all([patient, study])
+        db_session.flush()
+
+        consent_date = date.today()
+
+        req.json_body = {
+            'study': str(study.id),
+            'consent_date': None,
+            'latest_consent_date': str(consent_date),
+        }
+
+        with pytest.raises(HTTPBadRequest) as excinfo:
+            self._call_fut(patient['enrollments'], req)
+
+        assert 'required' in \
+            excinfo.value.json['errors']['consent_date']
+
+    def test_missing_latest_consent(self, req, db_session, factories):
+        """
+        It should require latest consent date
+        """
+
+        from datetime import date
+        from pyramid.httpexceptions import HTTPBadRequest
+        import pytest
+
+        study = factories.StudyFactory.create()
+        patient = factories.PatientFactory.create()
+
+        db_session.add_all([patient, study])
+        db_session.flush()
+
+        consent_date = date.today()
+
+        req.json_body = {
+            'study': str(study.id),
+            'consent_date': str(consent_date),
+            'latest_consent_date': None
+        }
+
+        with pytest.raises(HTTPBadRequest) as excinfo:
+            self._call_fut(patient['enrollments'], req)
+
+        assert 'required' in \
+            excinfo.value.json['errors']['latest_consent_date']
+
     def test_disable_study_update(self, req, db_session):
         """
         It should not allow a enrollment's study to be changed
