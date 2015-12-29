@@ -60,4 +60,4 @@ def main(argv=sys.argv):
             print(error)
 
         alembic_cfg.attributes['connection'] = connection
-        command.stamp(alembic_cfg, 'head')
+        command.stamp(alembic_cfg, 'heads')
