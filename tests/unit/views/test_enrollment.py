@@ -7,41 +7,25 @@ class TestViewJson:
         from occams_studies.views.enrollment import view_json as view
         return view(*args, **kw)
 
-    def test_hide_blinded_randomization(self, req, db_session):
+    def test_hide_blinded_randomization(self, req, db_session, factories):
         """
         It should not include randomization status if study is blinded
         """
-        from datetime import date
-        from occams_datastore import models as datastore
-        from occams_studies import models
 
-        schema = datastore.Schema(name=u'criteria', title=u'Criteria')
+        schema = factories.SchemaFactory.create()
 
-        study = models.Study(
-            name=u'somestudy',
-            title=u'Some Study',
-            short_title=u'sstudy',
-            code=u'000',
-            consent_date=date.today(),
+        study = factories.StudyFactory.create(
             randomization_schema=schema,
-            is_randomized=True)
+            is_randomized=True
+        )
 
-        enrollment = models.Enrollment(
-            patient=models.Patient(
-                site=models.Site(name=u'ucsd', title=u'UCSD'),
-                pid=u'12345'),
+        enrollment = factories.EnrollmentFactory(
             study=study,
-            consent_date=date.today(),
-            stratum=models.Stratum(
-                randid=u'98765',
-                block_number='111',
-                study=study,
-                arm=models.Arm(
-                    name=u'tested',
-                    title=u'Tested',
-                    study=study)))
+            stratum=factories.StratumFactory(
+                arm__study=study
+            )
+        )
 
-        db_session.add(enrollment)
         db_session.flush()
 
         study.is_blinded = False
@@ -61,25 +45,15 @@ class TestEditJson:
         from occams_studies.views.enrollment import edit_json as view
         return view(*args, **kw)
 
-    def test_save(self, req, db_session):
+    def test_save(self, req, db_session, factories):
         from datetime import date
         from occams_studies import models
 
-        today = date.today()
-
-        study = models.Study(
-            name=u'somestudy',
-            title=u'Some Study',
-            short_title=u'sstudy',
-            code=u'000',
-            consent_date=today)
-
-        patient = models.Patient(
-            site=models.Site(name=u'ucsd', title=u'UCSD'),
-            pid=u'12345')
-
-        db_session.add_all([patient, study])
+        study = factories.StudyFactory.create()
+        patient = factories.PatientFactory.create()
         db_session.flush()
+
+        today = date.today()
 
         payload = {
             'study': str(study.id),
@@ -104,27 +78,16 @@ class TestEditJson:
 
         assert payload == actual
 
-    def test_unique_consent(self, req, db_session):
+    def test_unique_consent(self, req, db_session, factories):
         """
         It should allow multiple enrollments to a study, but a single consent.
         """
         from datetime import date
         from pyramid.httpexceptions import HTTPBadRequest
-        import pytest
         from occams_studies import models
 
-        study = models.Study(
-            name=u'somestudy',
-            title=u'Some Study',
-            short_title=u'sstudy',
-            code=u'000',
-            consent_date=date.today())
-
-        patient = models.Patient(
-            site=models.Site(name=u'ucsd', title=u'UCSD'),
-            pid=u'12345')
-
-        db_session.add_all([patient, study])
+        study = factories.StudyFactory.create()
+        patient = factories.PatientFactory.create()
         db_session.flush()
 
         consent_date = date.today()
@@ -156,12 +119,9 @@ class TestEditJson:
 
         from datetime import date
         from pyramid.httpexceptions import HTTPBadRequest
-        import pytest
 
         study = factories.StudyFactory.create()
         patient = factories.PatientFactory.create()
-
-        db_session.add_all([patient, study])
         db_session.flush()
 
         consent_date = date.today()
@@ -185,12 +145,9 @@ class TestEditJson:
 
         from datetime import date
         from pyramid.httpexceptions import HTTPBadRequest
-        import pytest
 
         study = factories.StudyFactory.create()
         patient = factories.PatientFactory.create()
-
-        db_session.add_all([patient, study])
         db_session.flush()
 
         consent_date = date.today()
@@ -207,39 +164,20 @@ class TestEditJson:
         assert 'required' in \
             excinfo.value.json['errors']['latest_consent_date']
 
-    def test_disable_study_update(self, req, db_session):
+    def test_disable_study_update(self, req, db_session, factories):
         """
         It should not allow a enrollment's study to be changed
         """
         from datetime import date
         from pyramid.httpexceptions import HTTPBadRequest
-        import pytest
-        from occams_studies import models
 
-        study1 = models.Study(
-            name=u'somestudy',
-            title=u'Some Study',
-            short_title=u'sstudy',
-            code=u'000',
-            consent_date=date.today())
-
-        study2 = models.Study(
-            name=u'otherstudy',
-            title=u'Other Study',
-            short_title=u'ostudy',
-            code=u'111',
-            consent_date=date.today())
-
-        patient = models.Patient(
-            site=models.Site(name=u'ucsd', title=u'UCSD'),
-            pid=u'12345')
-
-        enrollment = models.Enrollment(
+        study1 = factories.StudyFactory.create()
+        study2 = factories.StudyFactory.create()
+        patient = factories.PatientFactory.create()
+        enrollment = factories.EnrollmentFactory.create(
             study=study1,
             patient=patient,
-            consent_date=date.today())
-
-        db_session.add_all([patient, enrollment, study1, study2])
+            consent_date=study1.consent_date)
         db_session.flush()
 
         consent_date = date.today()
@@ -256,25 +194,14 @@ class TestEditJson:
         assert 'Cannot change an enrollment\'s study.' in \
             excinfo.value.json['errors']['study']
 
-    def test_update_patient(self, req, db_session):
+    def test_update_patient(self, req, db_session, factories):
         """
         It should mark the patient as updated
         """
         from datetime import date
-        from occams_studies import models
 
-        study = models.Study(
-            name=u'somestudy',
-            title=u'Some Study',
-            short_title=u'sstudy',
-            code=u'000',
-            consent_date=date.today())
-
-        patient = models.Patient(
-            site=models.Site(name=u'ucsd', title=u'UCSD'),
-            pid=u'12345')
-
-        db_session.add_all([patient, study])
+        study = factories.StudyFactory.create()
+        patient = factories.PatientFactory.create()
         db_session.flush()
 
         old_modify_date = patient.modify_date
@@ -288,11 +215,12 @@ class TestEditJson:
         assert old_modify_date < patient.modify_date
 
     def test_temination_date_disabled_if_form_configured(
-            self, req, db_session):
+            self, req, db_session, factories):
+        """
+        Termination date is populated via form when available
+        """
 
         from datetime import date, timedelta
-        from occams_datastore import models as datastore
-        from occams_studies import models
 
         today = date.today()
         t1 = today - timedelta(days=5)
@@ -300,39 +228,28 @@ class TestEditJson:
         t3 = today + timedelta(days=100)
         t4 = today + timedelta(days=200)
 
-        study = models.Study(
-            name=u'somestudy',
-            title=u'Some Study',
-            short_title=u'sstudy',
-            code=u'000',
-            consent_date=t3,
-            termination_schema=datastore.Schema(
-                name=u'termination',
-                title=u'Termination',
-                publish_date=t1,
-                attributes={
-                    'termination_date': datastore.Attribute(
-                        name=u'termination_date',
-                        title=u'Termination Date',
-                        type=u'date',
-                        order=0)
-                }))
-
-        patient = models.Patient(
-            site=models.Site(name=u'ucsd', title=u'UCSD'),
-            pid=u'12345')
-
-        enrollment = models.Enrollment(
-            study=study,
-            patient=patient,
+        enrollment = factories.EnrollmentFactory.create(
+            study=factories.StudyFactory.create(
+                consent_date=t3,
+                termination_schema=factories.SchemaFactory.create(
+                    publish_date=t1,
+                    attributes={
+                        'termination_date': factories.AttributeFactory(
+                            name='termination_date',
+                            type='date'
+                        )
+                    }
+                )
+            ),
+            patient=factories.PatientFactory.create(),
             consent_date=t1,
-            termination_date=t3)
+            termination_date=t3
+        )
 
-        db_session.add_all([enrollment])
         db_session.flush()
 
         req.json_body = {
-            'study': study.id,
+            'study': enrollment.study.id,
             'consent_date': str(t1),
             'latest_consent_date': str(t2),
             'termination_date': str(t4)
@@ -345,10 +262,12 @@ class TestEditJson:
         assert t3 == enrollment.termination_date
 
     def test_temination_date_enabled_if_no_termination(
-            self, req, db_session):
+            self, req, db_session, factories):
+        """
+        Termination date is populated directly through form is unavailable
+        """
 
         from datetime import date, timedelta
-        from occams_studies import models
 
         today = date.today()
         t1 = today - timedelta(days=5)
@@ -356,28 +275,18 @@ class TestEditJson:
         t3 = today + timedelta(days=100)
         t4 = today + timedelta(days=200)
 
-        study = models.Study(
-            name=u'somestudy',
-            title=u'Some Study',
-            short_title=u'sstudy',
-            code=u'000',
-            consent_date=t3)
-
-        patient = models.Patient(
-            site=models.Site(name=u'ucsd', title=u'UCSD'),
-            pid=u'12345')
-
-        enrollment = models.Enrollment(
-            study=study,
-            patient=patient,
+        enrollment = factories.EnrollmentFactory.create(
+            study=factories.StudyFactory.create(
+                consent_date=t3,
+            ),
+            patient=factories.PatientFactory.create(),
             consent_date=t1,
-            termination_date=t3)
-
-        db_session.add_all([enrollment])
+            termination_date=t3
+        )
         db_session.flush()
 
         req.json_body = {
-            'study': study.id,
+            'study': enrollment.study.id,
             'consent_date': str(t1),
             'latest_consent_date': str(t2),
             'termination_date': str(t4)
@@ -396,70 +305,27 @@ class TestDeleteJson:
         from occams_studies.views.enrollment import delete_json as view
         return view(*args, **kw)
 
-    def test_update_patient(self, req, db_session):
+    def test_update_patient(self, req, db_session, factories):
         """
         It should mark the patient as updated
         """
-        from datetime import date
-        from occams_studies import models
-
-        study = models.Study(
-            name=u'somestudy',
-            title=u'Some Study',
-            short_title=u'sstudy',
-            code=u'000',
-            consent_date=date.today())
-
-        patient = models.Patient(
-            site=models.Site(name=u'ucsd', title=u'UCSD'),
-            pid=u'12345')
-
-        enrollment = models.Enrollment(
-            study=study,
-            patient=patient,
-            consent_date=date.today())
-
-        db_session.add_all([patient, enrollment, study])
+        enrollment = factories.EnrollmentFactory.create()
+        patient = enrollment.patient
         db_session.flush()
 
         old_modify_date = patient.modify_date
         self._call_fut(enrollment, req)
         assert old_modify_date < patient.modify_date
 
-    def test_cascade_forms(self, req, db_session):
+    def test_cascade_forms(self, req, db_session, factories):
         """
         It should also remove termination forms.
         """
-        from datetime import date
         from occams_datastore import models as datastore
         from occams_studies import models
 
-        schema = datastore.Schema(
-            name=u'termination',
-            title=u'Termination',
-            publish_date=date.today())
-
-        study = models.Study(
-            name=u'somestudy',
-            title=u'Some Study',
-            short_title=u'sstudy',
-            code=u'000',
-            consent_date=date.today())
-
-        patient = models.Patient(
-            site=models.Site(name=u'ucsd', title=u'UCSD'),
-            pid=u'12345')
-
-        enrollment = models.Enrollment(
-            study=study,
-            patient=patient,
-            consent_date=date.today())
-
-        enrollment.entities.add(datastore.Entity(
-            schema=schema,
-            collect_date=date.today()))
-
-        db_session.add_all([patient, enrollment, study])
+        enrollment = factories.EnrollmentFactory.create()
+        enrollment.entities.add(factories.EntityFactory.create())
         db_session.flush()
 
         enrollment_id = enrollment.id
@@ -473,64 +339,40 @@ class TestDeleteJson:
 class TestRandomizeAjax:
 
     @pytest.fixture(autouse=True)
-    def install_randomization_data(self, db_session):
-
-        from datetime import date
-        from occams_datastore import models as datastore
+    def install_randomization_data(self, db_session, factories):
         from occams_studies import models
 
-        self.schema = datastore.Schema(
-            name=u'criteria', title=u'Criteria', publish_date=date.today())
-
-        self.study = models.Study(
-            name=u'somestudy',
-            title=u'Some Study',
-            short_title=u'study',
-            code=u'000',
-            consent_date=date.today(),
+        self.schema = factories.SchemaFactory.create()
+        self.study = factories.StudyFactory(
             randomization_schema=self.schema,
-            is_randomized=True)
-
-        self.stratum = models.Stratum(
-            randid=u'98765',
-            block_number='111',
+            is_randomized=True
+        )
+        self.stratum = factories.StratumFactory(
             study=self.study,
-            arm=models.Arm(
-                name=u'tested',
-                title=u'Tested',
-                study=self.study))
-
-        self.stratum2 = models.Stratum(
-            randid=u'98766',
-            block_number='111',
+            arm__study=self.study
+        )
+        self.stratum2 = factories.StratumFactory(
             study=self.study,
-            arm=models.Arm(
-                name=u'tested2',
-                title=u'Tested2',
-                study=self.study))
+            arm__study=self.study
+        )
 
-        self.stratum.entities.add(datastore.Entity(schema=self.schema))
-        self.stratum2.entities.add(datastore.Entity(schema=self.schema))
+        self.stratum.entities.add(factories.EntityFactory.create(
+            schema=self.schema
+        ))
+        self.stratum2.entities.add(factories.EntityFactory.create(
+            schema=self.schema
+        ))
 
         self.site = models.Site(name=u'ucsd', title=u'UCSD')
 
-        self.enrollment = models.Enrollment(
-            patient=models.Patient(
-                site=self.site,
-                pid=u'12345'),
-            study=self.study,
-            consent_date=date.today())
+        self.enrollment = factories.EnrollmentFactory.create(
+            study=self.study
+        )
 
-        self.enrollment2 = models.Enrollment(
-            patient=models.Patient(
-                site=self.site,
-                pid=u'12346'),
-            study=self.study,
-            consent_date=date.today())
+        self.enrollment2 = factories.EnrollmentFactory.create(
+            study=self.study
+        )
 
-        db_session.add_all(
-            [self.study, self.stratum, self.stratum2,
-             self.enrollment, self.enrollment2])
         db_session.flush()
 
     def _call_fut(self, *args, **kw):
@@ -610,8 +452,9 @@ class TestRandomizeAjax:
 
         res = self._call_fut(enrollment, req)
 
-        assert res['enrollment']['stratum']['randid'] == u'98765'
-        assert res['enrollment']['stratum']['arm']['name'] == u'tested'
+        assert res['enrollment']['stratum']['randid'] == self.stratum.randid
+        assert res['enrollment']['stratum']['arm']['name'] == \
+            self.stratum.arm.name
 
         req.POST = payload
         req.matchdict = {
@@ -624,8 +467,9 @@ class TestRandomizeAjax:
         req.session['randomization_stage'] = 2
         res = self._call_fut(enrollment, req)
 
-        assert res['enrollment']['stratum']['randid'] == u'98766'
-        assert res['enrollment']['stratum']['arm']['name'] == u'tested2'
+        assert res['enrollment']['stratum']['randid'] == self.stratum2.randid
+        assert res['enrollment']['stratum']['arm']['name'] == \
+            self.stratum2.arm.name
 
 
 class TestRandomizeAjaxAssigned:
@@ -638,76 +482,51 @@ class TestRandomizeAjaxAssigned:
         from occams_studies.views.enrollment import randomize_ajax as view
         return view(*args, **kw)
 
-    def test_randid_assignment_with_criteria(self, req, db_session, config):
+    def test_randid_assignment_with_criteria(
+            self, req, db_session, config, factories):
         """
         It should assign a randid given the criteria associated with a stratum
         """
-        from datetime import date
         from webob.multidict import MultiDict
-        from occams_datastore import models as datastore
-        from occams_studies import models
 
-        schema = datastore.Schema(
-            name=u'criteria', title=u'Criteria', publish_date=date.today(),
+        schema = factories.SchemaFactory.create(
             attributes={
-                u'likes_icecream': datastore.Attribute(
+                u'likes_icecream': factories.AttributeFactory.create(
                     name=u'likes_icecream',
-                    title=u'Likes Ice Createm',
                     type=u'choice',
                     choices={
-                        u'0': datastore.Choice(
-                            name=u'0', title=u'No', order=0),
-                        u'1': datastore.Choice(
-                            name=u'1', title=u'Yes', order=1),
+                        u'0': factories.ChoiceFactory.create(name=u'0'),
+                        u'1': factories.ChoiceFactory.create(name=u'1'),
                     },
-                    order=0,
                 )
-            })
+            }
+        )
 
-        study = models.Study(
-            name=u'somestudy',
-            title=u'Some Study',
-            short_title=u'study',
-            code=u'000',
-            consent_date=date.today(),
+        study = factories.StudyFactory.create(
             randomization_schema=schema,
-            is_randomized=True)
+            is_randomized=True
+        )
 
-        stratum = models.Stratum(
-            randid=u'98765',
-            block_number='111',
+        stratum1 = factories.StratumFactory.create(
             study=study,
-            arm=models.Arm(
-                name=u'real-sugar',
-                title=u'Real Sugar',
-                study=study))
+            arm__study=study
+        )
 
-        stratum2 = models.Stratum(
-            randid=u'98766',
-            block_number='111',
+        stratum2 = factories.StratumFactory.create(
             study=study,
-            arm=models.Arm(
-                name=u'fake-sugar',
-                title=u'Fake Sugar',
-                study=study))
+            arm__study=study
+        )
 
-        entity1 = datastore.Entity(schema=schema)
+        entity1 = factories.EntityFactory.create(schema=schema)
         entity1['likes_icecream'] = u'0'
-        stratum.entities.add(entity1)
+        stratum1.entities.add(entity1)
 
         # If we submit yes, we'll be put into the 'fake sugar' arm of the study
-        entity2 = datastore.Entity(schema=schema)
+        entity2 = factories.EntityFactory.create(schema=schema)
         entity2['likes_icecream'] = u'1'
         stratum2.entities.add(entity2)
 
-        enrollment = models.Enrollment(
-            patient=models.Patient(
-                site=models.Site(name=u'ucsd', title=u'UCSD'),
-                pid=u'12345'),
-            study=study,
-            consent_date=date.today())
-
-        db_session.add_all([study, stratum, stratum2, enrollment])
+        enrollment = factories.EnrollmentFactory.create(study=study)
         db_session.flush()
 
         config.include('pyramid_chameleon')
@@ -723,4 +542,4 @@ class TestRandomizeAjaxAssigned:
 
         res = self._call_fut(enrollment, req)
 
-        assert res['enrollment']['stratum']['randid'] == u'98766'
+        assert res['enrollment']['stratum']['randid'] == stratum2.randid

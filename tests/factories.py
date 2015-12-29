@@ -40,7 +40,7 @@ class AttributeFactory(SQLAlchemyModelFactory):
     class Meta:
         model = datastore.Attribute
     name = factory.Sequence(lambda n: 'var_{}'.format(n))
-    title = factory.Faker('setence')
+    title = factory.Faker('sentence')
     description = factory.Faker('paragraph')
     type = 'string'
     order = factory.Sequence(lambda n: n)
