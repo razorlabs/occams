@@ -341,7 +341,7 @@ def forms_add_json(context, request):
         models.patient_schema_table.insert()
         .values(schema_id=form.form.data.id))
 
-    mark_changed(db_session())
+    mark_changed(db_session)
 
     return form2json(form.form.data)
 
