@@ -19,7 +19,6 @@ class TestEditJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         db_session.add_all([study])
@@ -51,7 +50,6 @@ class TestEditJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             cycles=[cycle])
 
@@ -83,7 +81,6 @@ class TestEditJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             cycles=[cycle])
 
@@ -121,7 +118,6 @@ class TestDeleteJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             cycles=[cycle])
 
@@ -147,7 +143,6 @@ class TestDeleteJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             cycles=[cycle])
 

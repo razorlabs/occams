@@ -99,7 +99,6 @@ class TestSearchJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
         site_la = models.Site(name=u'la', title=u'LA')
         patient = models.Patient(
@@ -373,13 +372,14 @@ class TestDeleteJson:
         """
 
         from datetime import date
+        from occams_datastore import models as datastore
         from occams_studies import models
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name=u'somepatientform',
             title=u'Some Patient Form',
             publish_date=date.today())
-        entity = models.Entity(
+        entity = datastore.Entity(
             collect_date=date.today(),
             schema=schema)
         patient = models.Patient(
@@ -393,4 +393,4 @@ class TestDeleteJson:
 
         self._call_fut(patient, req)
 
-        assert 0 == db_session.query(models.Entity).count()
+        assert 0 == db_session.query(datastore.Entity).count()

@@ -11,12 +11,6 @@
     <span class="text-muted" i18n:translate="">Consent Date:</span>
     <code data-bind="text: consent_date"></code>
   </li>
-  <!-- ko if: start_date -->
-    <li>
-      <span class="text-muted" i18n:translate="">Lifecycle:</span>
-      <code><!-- ko text: start_date --><!-- /ko --> - <!-- ko text: end_date --><!-- /ko --></code>
-    </li>
-  <!-- /ko -->
   <li>
     <span class="text-muted" i18n:translate="">Enrollment Forms:</span>
     <!-- ko foreach: enrollmentForms -->

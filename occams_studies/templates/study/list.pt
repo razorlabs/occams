@@ -90,12 +90,6 @@
                   <span class="text-muted" i18n:translate="">Label:</span>
                   <span data-bind="text: short_title"></span>
                 </li>
-                <!-- ko if: start_date -->
-                  <li>
-                    <span class="text-muted" i18n:translate="">Lifecycle:</span>
-                    <code><!-- ko text: start_date --><!-- /ko --> - <!-- ko text: end_date --><!-- /ko --></code>
-                  </li>
-                <!-- /ko -->
               </ul>
             </a>
           </div> <!-- /.list-group -->

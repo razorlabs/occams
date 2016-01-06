@@ -42,7 +42,6 @@ class TestPermissionsCyclesAdd:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12)
             )
 
             db_session.add(study)
@@ -137,7 +136,6 @@ class TestPermissionsCyclesDelete:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12)
             )
 
             cycle = studies.Cycle(
@@ -232,7 +230,6 @@ class TestPermissionsCyclesEdit:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12)
             )
 
             cycle = studies.Cycle(
@@ -337,7 +334,6 @@ class TestPermissionsCyclesView:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12)
             )
 
             cycle = studies.Cycle(
