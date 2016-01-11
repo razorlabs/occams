@@ -1,3 +1,7 @@
+#
+# Production-level requirements
+#
+
 ### Forks
 
 # repoze.who has a bug that was fixed but has yet to be published, so we
@@ -6,12 +10,18 @@
 -e git+https://github.com/m-martinez/who_ldap@userdata_dict#egg=who_ldap
 
 
-### In-house
+### OCCAMS
 
--e git+https://bitbucket.org/ucsdbitcore/occams_datastore@master#egg=occams_datastore[test]
--e git+https://bitbucket.org/ucsdbitcore/occams_accounts@master#egg=occams_accounts[test]
--e git+https://bitbucket.org/ucsdbitcore/occams_forms@master#egg=occams_forms[test]
--e git+https://bitbucket.org/ucsdbitcore/occams_roster@master#egg=occams_roster[test]
--e git+https://bitbucket.org/ucsdbitcore/occams_studies@master#egg=occams_studies[test]
--e git+https://bitbucket.org/ucsdbitcore/occams_lims@master#egg=occams_lims[test]
--e git+https://bitbucket.org/ucsdbitcore/occams@master#egg=occams[test,ldap,gunicorn,postgresql]
+# NOTE:
+# These settings are not recommend for development. Instead it is highly
+# advised you clone the desired repositories and use the full local path
+# instead of the git links.
+
+-e git+https://github.com/younglabs/occams_datastore@master#egg=occams_datastore[test]
+-e git+https://github.com/younglabs/occams@master#egg=occams[test,docs,ldap,postgresql]
+
+-e git+https://github.com/younglabs/occams_accounts@master#egg=occams_accounts[test]
+-e git+https://github.com/younglabs/occams_forms@master#egg=occams_forms[test]
+-e git+https://github.com/younglabs/occams_roster@master#egg=occams_roster[test]
+-e git+https://github.com/younglabs/occams_studies@master#egg=occams_studies[test]
+-e git+https://github.com/younglabs/occams_lims@master#egg=occams_lims[test]

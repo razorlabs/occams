@@ -23,15 +23,15 @@ log = logging.getLogger(__name__)
 from .settings import piwik_from_config
 from .security import RootFactory, groupfinder  # NOQA
 
-import os
-
-here = os.path.dirname(os.path.realpath(__file__))
 
 settings_defaults = {
     'piwik.enabled': False,
 
-    'webassets.base_dir': os.path.join(here, 'static'),
-    'webassets.base_url': '/static',
+    # Ignored unless static_view is set to true
+    # static_view needs to be false in order to allow multiple asset locations
+    'webassets.base_dir': 'occams:static',
+    'webassets.base_url': 'static',
+    'webassets.static_view': False,
 
     'who.callback': 'occams.security.groupfinder'
     }
