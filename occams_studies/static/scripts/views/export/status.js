@@ -83,22 +83,12 @@ function StatusViewModel(options) {
   };
 
   +function(){
-    /**
-     * Configures Socket.io to listen for progress notifications
-     */
-    // Use the template-embedded socket.io URL
-    var socket = io.connect(
-      options.socketio_namespace,
-      {
-        resource: options.socketio_resource
-      }
-    );
 
-    socket.on('connect', function(){
-      self.socketStatus(null);
-    });
+    var source = new EventSource(options.notifications_url);
 
-    socket.on('export', function(data){
+    source.addEventListener('progress', function(event){
+      var data = JSON.parse(event.data);
+
       var export_ = ko.utils.arrayFirst(self.exports(), function(e){
         return e.id() == data['export_id'];
       });
@@ -111,10 +101,6 @@ function StatusViewModel(options) {
       export_.total(data['total']);
       export_.status(data['status']);
       export_.file_size(data['file_size']);
-    });
-
-    socket.on('connect_error', function(error){
-      self.socketStatus({css: 'alert alert-danger', text: error})
     });
 
     var query = parse_url_query(),

@@ -6,14 +6,15 @@ class TestSchemaPlan:
         Note this is not the same as de-identification)
         """
         from datetime import date
-        from occams_studies import models, exports
+        from occams_datastore import models as datastore
+        from occams_studies.exports.schema import SchemaPlan
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name=u'contact',
             title=u'Contact Details',
             publish_date=date.today(),
             attributes={
-                'foo': models.Attribute(
+                'foo': datastore.Attribute(
                     name='foo',
                     title=u'',
                     type='string',
@@ -24,10 +25,10 @@ class TestSchemaPlan:
         db_session.add_all([schema])
         db_session.flush()
 
-        plans = exports.SchemaPlan.list_all(db_session, include_private=True)
+        plans = SchemaPlan.list_all(db_session, include_private=True)
         assert len(plans) == 1
 
-        plans = exports.SchemaPlan.list_all(db_session, include_private=False)
+        plans = SchemaPlan.list_all(db_session, include_private=False)
         assert len(plans) == 0
 
     def test_list_not_include_rand(self, db_session):
@@ -35,20 +36,22 @@ class TestSchemaPlan:
         It should not include randomization data if specified.
         """
         from datetime import date, timedelta
-        from occams_studies import models, exports
+        from occams_datastore import models as datastore
+        from occams_studies import models
+        from occams_studies.exports.schema import SchemaPlan
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name=u'vitals',
             title=u'Vitals',
             publish_date=date.today(),
             attributes={
-                'foo': models.Attribute(
+                'foo': datastore.Attribute(
                     name='foo',
                     title=u'',
                     type='string',
                     order=0,
                 )})
-        entity = models.Entity(
+        entity = datastore.Entity(
             collect_date=date.today(),
             schema=schema)
         study = models.Study(
@@ -70,10 +73,10 @@ class TestSchemaPlan:
         db_session.add_all([schema, entity, stratum])
         db_session.flush()
 
-        plans = exports.SchemaPlan.list_all(db_session, include_rand=True)
+        plans = SchemaPlan.list_all(db_session, include_private=True)
         assert len(plans) == 1
 
-        plans = exports.SchemaPlan.list_all(db_session, include_rand=False)
+        plans = SchemaPlan.list_all(db_session, include_rand=False)
         assert len(plans) == 0
 
     def test_patient(self, db_session):
@@ -81,20 +84,22 @@ class TestSchemaPlan:
         It should add patient-specific metadata to the report
         """
         from datetime import date
-        from occams_studies import models, exports
+        from occams_datastore import models as datastore
+        from occams_studies import models
+        from occams_studies.exports.schema import SchemaPlan
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name=u'contact',
             title=u'Contact Details',
             publish_date=date.today(),
             attributes={
-                'foo': models.Attribute(
+                'foo': datastore.Attribute(
                     name='foo',
                     title=u'',
                     type='string',
                     order=0,
                 )})
-        entity = models.Entity(
+        entity = datastore.Entity(
             schema=schema,
             collect_date=date.today())
         patient = models.Patient(
@@ -104,7 +109,7 @@ class TestSchemaPlan:
         db_session.add_all([schema, entity, patient])
         db_session.flush()
 
-        plan = exports.SchemaPlan.from_schema(db_session, schema.name)
+        plan = SchemaPlan.from_schema(db_session, schema.name)
         codebook = list(plan.codebook())
         query = plan.data()
         codebook_columns = [c['field'] for c in codebook]
@@ -123,20 +128,22 @@ class TestSchemaPlan:
         It should add enrollment-specific metadata to the report
         """
         from datetime import date, timedelta
-        from occams_studies import models, exports
+        from occams_datastore import models as datastore
+        from occams_studies import models
+        from occams_studies.exports.schema import SchemaPlan
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name=u'termination',
             title=u'Termination',
             publish_date=date.today(),
             attributes={
-                'foo': models.Attribute(
+                'foo': datastore.Attribute(
                     name='foo',
                     title=u'',
                     type='string',
                     order=0,
                 )})
-        entity = models.Entity(
+        entity = datastore.Entity(
             schema=schema,
             collect_date=date.today())
         patient = models.Patient(
@@ -158,7 +165,7 @@ class TestSchemaPlan:
             entities=[entity])
         db_session.add_all([schema, entity, patient, study, enrollment])
 
-        plan = exports.SchemaPlan.from_schema(db_session, schema.name)
+        plan = SchemaPlan.from_schema(db_session, schema.name)
         codebook = list(plan.codebook())
         query = plan.data()
         codebook_columns = [c['field'] for c in codebook]
@@ -177,20 +184,22 @@ class TestSchemaPlan:
         It should add visit-specific metadata to the report
         """
         from datetime import date, timedelta
-        from occams_studies import models, exports
+        from occams_datastore import models as datastore
+        from occams_studies import models
+        from occams_studies.exports.schema import SchemaPlan
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name=u'vitals',
             title=u'Vitals',
             publish_date=date.today(),
             attributes={
-                'foo': models.Attribute(
+                'foo': datastore.Attribute(
                     name='foo',
                     title=u'',
                     type='string',
                     order=0,
                 )})
-        entity = models.Entity(
+        entity = datastore.Entity(
             collect_date=date.today(),
             schema=schema)
         patient = models.Patient(
@@ -225,7 +234,7 @@ class TestSchemaPlan:
         db_session.add_all([schema, entity, patient, visit])
         db_session.flush()
 
-        plan = exports.SchemaPlan.from_schema(db_session, schema.name)
+        plan = SchemaPlan.from_schema(db_session, schema.name)
         codebook = list(plan.codebook())
         query = plan.data()
         codebook_columns = [c['field'] for c in codebook]
@@ -246,20 +255,22 @@ class TestSchemaPlan:
         It should add randomization-specific metadata to the report
         """
         from datetime import date, timedelta
-        from occams_studies import models, exports
+        from occams_datastore import models as datastore
+        from occams_studies import models
+        from occams_studies.exports.schema import SchemaPlan
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name=u'vitals',
             title=u'Vitals',
             publish_date=date.today(),
             attributes={
-                'foo': models.Attribute(
+                'foo': datastore.Attribute(
                     name='foo',
                     title=u'',
                     type='string',
                     order=0,
                 )})
-        entity = models.Entity(
+        entity = datastore.Entity(
             collect_date=date.today(),
             schema=schema)
         patient = models.Patient(
@@ -293,7 +304,7 @@ class TestSchemaPlan:
         db_session.add_all([schema, entity, patient, enrollment, stratum])
         db_session.flush()
 
-        plan = exports.SchemaPlan.from_schema(db_session, schema.name)
+        plan = SchemaPlan.from_schema(db_session, schema.name)
         codebook = list(plan.codebook())
         query = plan.data()
         codebook_columns = [c['field'] for c in codebook]

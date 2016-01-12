@@ -51,7 +51,6 @@ class TestEditJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         db_session.add_all([study])
@@ -82,7 +81,6 @@ class TestEditJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         db_session.add_all([study])
@@ -119,7 +117,6 @@ class TestDeleteJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         db_session.add_all([study])
@@ -142,7 +139,6 @@ class TestDeleteJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         enrollment = models.Enrollment(
@@ -176,9 +172,10 @@ class TestAddSchemaJson:
         It should allow adding a schema to a study
         """
         from datetime import date
+        from occams_datastore import models as datastore
         from occams_studies import models
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name='test', title=u'', publish_date=date.today())
 
         study = models.Study(
@@ -186,7 +183,6 @@ class TestAddSchemaJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         db_session.add_all([study, schema])
@@ -202,13 +198,14 @@ class TestAddSchemaJson:
         It should also update cycle versions
         """
         from datetime import date, timedelta
+        from occams_datastore import models as datastore
         from occams_studies import models
 
         today = date.today()
         tomorrow = today + timedelta(days=1)
 
-        v1 = models.Schema(name=u'test', title=u'', publish_date=today)
-        v2 = models.Schema(name=u'test', title=u'', publish_date=tomorrow)
+        v1 = datastore.Schema(name=u'test', title=u'', publish_date=today)
+        v2 = datastore.Schema(name=u'test', title=u'', publish_date=tomorrow)
 
         cycle = models.Cycle(
             name=u'wk-001', title=u'WK-001', schemata=set([v1]))
@@ -218,7 +215,6 @@ class TestAddSchemaJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             cycles=[cycle],
             schemata=set([v1]),
             consent_date=date.today())
@@ -239,16 +235,16 @@ class TestAddSchemaJson:
         """
         from datetime import date
         from pyramid.httpexceptions import HTTPBadRequest
+        from occams_datastore import models as datastore
         from occams_studies import models
 
-        schema = models.Schema(name='test', title=u'')
+        schema = datastore.Schema(name='test', title=u'')
 
         study = models.Study(
             name=u'somestudy',
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         db_session.add_all([study, schema])
@@ -272,9 +268,10 @@ class TestAddSchemaJson:
         """
         from datetime import date
         from pyramid.httpexceptions import HTTPBadRequest
+        from occams_datastore import models as datastore
         from occams_studies import models
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name='test', title=u'', publish_date=date.today())
 
         study = models.Study(
@@ -282,7 +279,6 @@ class TestAddSchemaJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         db_session.add_all([study, schema])
@@ -301,9 +297,10 @@ class TestAddSchemaJson:
         """
         from datetime import date
         from pyramid.httpexceptions import HTTPBadRequest
+        from occams_datastore import models as datastore
         from occams_studies import models
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name='test', title=u'', publish_date=date.today())
 
         study = models.Study(
@@ -311,7 +308,6 @@ class TestAddSchemaJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         db_session.add_all([study, schema])
@@ -337,9 +333,10 @@ class TestAddSchemaJson:
         """
         from datetime import date
         from pyramid.httpexceptions import HTTPBadRequest
+        from occams_datastore import models as datastore
         from occams_studies import models
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name='test', title=u'', publish_date=date.today())
 
         study = models.Study(
@@ -347,7 +344,6 @@ class TestAddSchemaJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             is_randomized=True,
             randomization_schema=schema)
@@ -370,9 +366,10 @@ class TestAddSchemaJson:
         """
         from datetime import date
         from pyramid.httpexceptions import HTTPBadRequest
+        from occams_datastore import models as datastore
         from occams_studies import models
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name='test', title=u'', publish_date=date.today())
 
         study = models.Study(
@@ -380,7 +377,6 @@ class TestAddSchemaJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             termination_schema=schema)
 
@@ -406,9 +402,10 @@ class TestDeleteSchemaJson:
         It should remove the schema from the study and cascade to its cycles
         """
         from datetime import date
+        from occams_datastore import models as datastore
         from occams_studies import models
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name='test', title=u'', publish_date=date.today())
 
         cycle = models.Cycle(
@@ -422,7 +419,6 @@ class TestDeleteSchemaJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             cycles=[cycle],
             schemata=set([schema]))
@@ -449,7 +445,6 @@ class TestDeleteSchemaJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today())
 
         db_session.add_all([study])
@@ -472,9 +467,10 @@ class TestEditScheduleJson:
         """
         from datetime import date
         from pyramid.httpexceptions import HTTPBadRequest
+        from occams_datastore import models as datastore
         from occams_studies import models
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name='test', title=u'Test', publish_date=date.today())
 
         cycle = models.Cycle(
@@ -487,7 +483,6 @@ class TestEditScheduleJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             cycles=[cycle])
 
@@ -512,9 +507,10 @@ class TestEditScheduleJson:
         """
         from datetime import date
         from pyramid.httpexceptions import HTTPBadRequest
+        from occams_datastore import models as datastore
         from occams_studies import models
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name='test', title=u'Test', publish_date=date.today())
 
         other_cycle = models.Cycle(name=u'week-1', title=u'Title', week=1)
@@ -524,7 +520,6 @@ class TestEditScheduleJson:
             title=u'Other Study',
             short_title=u'ostudy',
             code=u'111',
-            start_date=date.today(),
             consent_date=date.today(),
             cycles=[other_cycle])
 
@@ -533,7 +528,6 @@ class TestEditScheduleJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             schemata=set([schema]))
 
@@ -557,9 +551,10 @@ class TestEditScheduleJson:
         It should successfully add a schema to a cycle
         """
         from datetime import date
+        from occams_datastore import models as datastore
         from occams_studies import models
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name='test', title=u'Test', publish_date=date.today())
 
         cycle = models.Cycle(
@@ -572,7 +567,6 @@ class TestEditScheduleJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             cycles=[cycle],
             schemata=set([schema]))
@@ -595,9 +589,10 @@ class TestEditScheduleJson:
         It should successfully disable schema from a cycle
         """
         from datetime import date
+        from occams_datastore import models as datastore
         from occams_studies import models
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name='test', title=u'Test', publish_date=date.today())
 
         cycle = models.Cycle(
@@ -611,7 +606,6 @@ class TestEditScheduleJson:
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             cycles=[cycle],
             schemata=set([schema]))
@@ -642,10 +636,11 @@ class TestAvailableSchemata:
         """
         from datetime import date
         from webob.multidict import MultiDict
+        from occams_datastore import models as datastore
         from occams_studies import models
 
         db_session.add_all([
-            models.Schema(name='v', title=u'V', publish_date=date.today())])
+            datastore.Schema(name='v', title=u'V', publish_date=date.today())])
         db_session.flush()
 
         req.GET = MultiDict()
@@ -658,11 +653,13 @@ class TestAvailableSchemata:
         """
         from datetime import date
         from webob.multidict import MultiDict
+        from occams_datastore import models as datastore
         from occams_studies import models
 
         db_session.add_all([
-            models.Schema(name='v', title=u'V', publish_date=date.today()),
-            models.Schema(name='xyz', title=u'XYZ', publish_date=date.today())
+            datastore.Schema(name='v', title=u'V', publish_date=date.today()),
+            datastore.Schema(
+                name='xyz', title=u'XYZ', publish_date=date.today())
             ])
         db_session.flush()
 
@@ -676,15 +673,16 @@ class TestAvailableSchemata:
         """
         from datetime import date, timedelta
         from webob.multidict import MultiDict
+        from occams_datastore import models as datastore
         from occams_studies import models
 
         today = date.today()
         tomorrow = date.today() + timedelta(days=1)
 
         db_session.add_all([
-            models.Schema(name='v', title=u'V', publish_date=today),
-            models.Schema(name='v', title=u'V', publish_date=tomorrow),
-            models.Schema(name='x', title=u'x', publish_date=today)])
+            datastore.Schema(name='v', title=u'V', publish_date=today),
+            datastore.Schema(name='v', title=u'V', publish_date=tomorrow),
+            datastore.Schema(name='x', title=u'x', publish_date=today)])
         db_session.flush()
 
         req.GET = MultiDict([('schema', 'v')])
@@ -697,17 +695,17 @@ class TestAvailableSchemata:
         """
         from datetime import date
         from webob.multidict import MultiDict
+        from occams_datastore import models as datastore
         from occams_studies import models
 
-        x = models.Schema(name='x', title=u'x', publish_date=date.today())
-        y = models.Schema(name='y', title=u'Y', publish_date=date.today())
+        x = datastore.Schema(name='x', title=u'x', publish_date=date.today())
+        y = datastore.Schema(name='y', title=u'Y', publish_date=date.today())
 
         study = models.Study(
             name=u'somestudy',
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             is_randomized=True,
             randomization_schema=x)
@@ -726,17 +724,17 @@ class TestAvailableSchemata:
         """
         from datetime import date
         from webob.multidict import MultiDict
+        from occams_datastore import models as datastore
         from occams_studies import models
 
-        x = models.Schema(name='x', title=u'x', publish_date=date.today())
-        y = models.Schema(name='y', title=u'Y', publish_date=date.today())
+        x = datastore.Schema(name='x', title=u'x', publish_date=date.today())
+        y = datastore.Schema(name='y', title=u'Y', publish_date=date.today())
 
         study = models.Study(
             name=u'somestudy',
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             termination_schema=x)
 
@@ -754,17 +752,17 @@ class TestAvailableSchemata:
         """
         from datetime import date
         from webob.multidict import MultiDict
+        from occams_datastore import models as datastore
         from occams_studies import models
 
-        x = models.Schema(name='x', title=u'x', publish_date=date.today())
-        y = models.Schema(name='y', title=u'Y', publish_date=date.today())
+        x = datastore.Schema(name='x', title=u'x', publish_date=date.today())
+        y = datastore.Schema(name='y', title=u'Y', publish_date=date.today())
 
         study = models.Study(
             name=u'somestudy',
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             schemata=set([x]))
 
@@ -783,20 +781,20 @@ class TestAvailableSchemata:
         """
         from datetime import date, timedelta
         from webob.multidict import MultiDict
+        from occams_datastore import models as datastore
         from occams_studies import models
 
         today = date.today()
         tomorrow = today + timedelta(days=1)
 
-        y0 = models.Schema(name='y', title=u'Y', publish_date=today)
-        y1 = models.Schema(name='y', title=u'Y', publish_date=tomorrow)
+        y0 = datastore.Schema(name='y', title=u'Y', publish_date=today)
+        y1 = datastore.Schema(name='y', title=u'Y', publish_date=tomorrow)
 
         study = models.Study(
             name=u'somestudy',
             title=u'Some Study',
             short_title=u'sstudy',
             code=u'000',
-            start_date=date.today(),
             consent_date=date.today(),
             schemata=set([y0]))
 
@@ -848,9 +846,10 @@ class TestUploadRandomizationJson:
         import tempfile
         from datetime import date
         from pyramid.httpexceptions import HTTPBadRequest
+        from occams_datastore import models as datastore
         from occams_studies import models
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name='rand', title=u'Rand', publish_date=date.today())
 
         study = models.Study(
@@ -888,12 +887,13 @@ class TestUploadRandomizationJson:
         import csv
         from datetime import date
         from pyramid.httpexceptions import HTTPBadRequest
+        from occams_datastore import models as datastore
         from occams_studies import models
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name='rand', title=u'Rand', publish_date=date.today(),
             attributes={
-                'criteria': models.Attribute(
+                'criteria': datastore.Attribute(
                     name='criteria',
                     title=u'Criteria',
                     type='string',
@@ -938,12 +938,13 @@ class TestUploadRandomizationJson:
         import tempfile
         import csv
         from datetime import date
+        from occams_datastore import models as datastore
         from occams_studies import models
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name='rand', title=u'Rand', publish_date=date.today(),
             attributes={
-                'criteria': models.Attribute(
+                'criteria': datastore.Attribute(
                     name='criteria',
                     title=u'Criteria',
                     type='string',
@@ -979,7 +980,7 @@ class TestUploadRandomizationJson:
             self._call_fut(study, req)
 
             stratum = db_session.query(models.Stratum).one()
-            entity = db_session.query(models.Entity).one()
+            entity = db_session.query(datastore.Entity).one()
             assert stratum.arm.name == 'UCSD'
             assert entity in stratum.entities
             assert entity['criteria'] == 'is smart'
@@ -992,12 +993,13 @@ class TestUploadRandomizationJson:
         import csv
         from datetime import date
         from pyramid.httpexceptions import HTTPBadRequest
+        from occams_datastore import models as datastore
         from occams_studies import models
 
-        schema = models.Schema(
+        schema = datastore.Schema(
             name='rand', title=u'Rand', publish_date=date.today(),
             attributes={
-                'criteria': models.Attribute(
+                'criteria': datastore.Attribute(
                     name='criteria',
                     title=u'Criteria',
                     type='string',

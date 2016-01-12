@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import json
 import os
 import uuid
 
@@ -15,6 +16,7 @@ import wtforms
 
 from occams.utils.forms import wtferrors, Form
 from occams.utils.pagination import Pagination
+from occams_datastore import models as datastore
 
 from .. import _, log, models, exports, tasks
 
@@ -55,7 +57,9 @@ def checkout(context, request):
     isn't left with an unresponsive page.
     """
     db_session = request.db_session
-    exportables = exports.list_all(db_session, include_rand=False)
+    plans = request.registry.settings['studies.export.plans']
+    exportables = exports.list_all(
+        plans, request.db_session, include_rand=False)
     limit = request.registry.settings.get('app.export.limit')
     exceeded = limit is not None and query_exports(request).count() > limit
     errors = {}
@@ -85,7 +89,7 @@ def checkout(context, request):
                 name=task_id,
                 expand_collections=form.expand_collections.data,
                 use_choice_labels=form.use_choice_labels.data,
-                owner_user=(db_session.query(models.User)
+                owner_user=(db_session.query(datastore.User)
                             .filter_by(key=request.authenticated_userid)
                             .one()),
                 contents=[exportables[k].to_json() for k in form.contents.data]
@@ -124,7 +128,8 @@ def codebook(context, request):
     Codebook viewer
     """
     db_session = request.db_session
-    return {'exportables': exports.list_all(db_session).values()}
+    plans = request.registry.settings['studies.export.plans']
+    return {'exportables': exports.list_all(plans, db_session).values()}
 
 
 @view_config(
@@ -144,7 +149,8 @@ def codebook_json(context, request):
             row['publish_date'] = publish_date.isoformat()
         return row
 
-    exportables = exports.list_all(db_session)
+    plans = request.registry.settings['studies.export.plans']
+    exportables = exports.list_all(plans, db_session)
 
     file = request.GET.get('file')
 
@@ -245,6 +251,48 @@ def status_json(context, request):
         'pager': pagination.serialize(),
         'exports': [export2json(e) for e in exports_query]
     }
+
+
+@view_config(
+    route_name='studies.exports_notifications',
+    permission='view')
+def notifications(context, request):
+    """
+    Yields server-sent events containing status updates of current exports
+    REQUIRES GUNICORN WITH GEVENT WORKER
+    """
+
+    # Close DB connections so we don't hog them while polling
+    request.db_session.close()
+
+    def listener():
+        pubsub = request.redis.pubsub()
+        pubsub.subscribe('export')
+
+        sse_payload = 'id:{0}\nevent: progress\ndata:{1}\n\n'
+
+        # emit subsequent progress
+        for message in pubsub.listen():
+
+            if message['type'] != 'message':
+                continue
+
+            data = json.loads(message['data'])
+
+            if data['owner_user'] != request.authenticated_userid:
+                continue
+
+            log.debug(data)
+            yield sse_payload.format(str(uuid.uuid4()), json.dumps(data))
+
+    response = request.response
+    response.content_type = 'text/event-stream'
+    response.cache_control = 'no-cache'
+    # Set reverse proxies (if any, i.e nginx) not to buffer this connection
+    response.headers['X-Accel-Buffering'] = 'no'
+    response.app_iter = listener()
+
+    return response
 
 
 @view_config(

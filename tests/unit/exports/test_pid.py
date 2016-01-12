@@ -3,9 +3,12 @@ import pytest
 
 class TestPidPlan:
 
+    def _create_one(self, *args, **kw):
+        from occams_studies.exports.pid import PidPlan
+        return PidPlan(*args, **kw)
+
     def test_file_name(self, db_session):
-        from occams_studies import exports
-        plan = exports.PidPlan(db_session)
+        plan = self._create_one(db_session)
         assert plan.file_name == 'pid.csv'
 
     def test_columns(self, db_session):
@@ -13,8 +16,7 @@ class TestPidPlan:
         It should generate a table of all the pids in the database
         """
 
-        from occams_studies import exports
-        plan = exports.PidPlan(db_session)
+        plan = self._create_one(db_session)
 
         codebook = list(plan.codebook())
         query = plan.data()
@@ -28,8 +30,8 @@ class TestPidPlan:
         """
         It should be able to generate reports without refs
         """
-        from occams_studies import exports, models
-        plan = exports.PidPlan(db_session)
+        from occams_studies import models
+        plan = self._create_one(db_session)
 
         patient = models.Patient(
             pid=u'xxx-xxx',
@@ -55,8 +57,9 @@ class TestPidPlan:
         """
         It should generate a basic listing of all the PIDs in the database
         """
-        from occams_studies import exports, models
-        plan = exports.PidPlan(db_session)
+        from occams_studies import models
+
+        plan = self._create_one(db_session)
 
         reference_type = models.ReferenceType(
             name=u'med_num', title=u'Medical Number')
@@ -89,8 +92,9 @@ class TestPidPlan:
         It should output earlytest ids (for backwards-compatibilty)
         """
         from datetime import date
-        from occams_studies import exports, models
-        plan = exports.PidPlan(db_session)
+        from occams_studies import models
+
+        plan = self._create_one(db_session)
 
         patient = models.Patient(
             pid=u'xxx-xxx',

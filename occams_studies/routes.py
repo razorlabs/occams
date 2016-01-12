@@ -13,8 +13,6 @@ def includeme(config):
 
     config.add_static_view(path='occams_studies:static',    name='/static', cache_max_age=3600)
 
-    config.add_route('socket.io',                           '/socket.io/*remaining')
-
     config.add_route('studies.settings',                    '/settings')
 
     config.add_route('studies.sites',                       '/sites',                           factory=models.SiteFactory)
@@ -26,6 +24,7 @@ def includeme(config):
     config.add_route('studies.exports',                     '/exports',                         factory=models.ExportFactory)
     config.add_route('studies.exports_checkout',            '/exports/checkout',                factory=models.ExportFactory)
     config.add_route('studies.exports_status',              '/exports/status',                  factory=models.ExportFactory)
+    config.add_route('studies.exports_notifications',       '/exports/notifications',           factory=models.ExportFactory)
     config.add_route('studies.exports_faq',                 '/exports/faq',                     factory=models.ExportFactory)
     config.add_route('studies.exports_codebook',            '/exports/codebook',                factory=models.ExportFactory)
     config.add_route('studies.export',                      '/exports/{export:\d+}',            factory=models.ExportFactory, traverse='/{export}')

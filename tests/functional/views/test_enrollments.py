@@ -40,7 +40,6 @@ class TestPermissionsEnrollmentsListView:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12)
             )
 
             db_session.add(studies.Enrollment(
@@ -120,7 +119,6 @@ class TestPermissionsEnrollmentsAdd:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12)
             )
 
             db_session.add(studies.Enrollment(
@@ -230,7 +228,6 @@ class TestPermissionsEnrollmentView:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12)
             )
 
             db_session.add(studies.Enrollment(
@@ -331,7 +328,6 @@ class TestPermissionsEnrollmentEdit:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12)
             )
 
             db_session.add(studies.Enrollment(
@@ -453,7 +449,6 @@ class TestPermissionsEnrollmentDelete:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12)
             )
 
             db_session.add(studies.Enrollment(
@@ -553,7 +548,7 @@ class TestPermissionsEnrollmentTermination:
                 publish_date=date(2015, 1, 1)
             )
 
-            form.attributes['termination_date'] = studies.Attribute(
+            form.attributes['termination_date'] = datastore.Attribute(
                 name=u'termination_date',
                 title=u'termination_date',
                 type=u'datetime',
@@ -567,7 +562,6 @@ class TestPermissionsEnrollmentTermination:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12),
                 termination_schema=form
             )
 

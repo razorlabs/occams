@@ -19,6 +19,7 @@ from pyramid.decorator import reify
 from sqlalchemy import literal_column
 from sqlalchemy.orm import aliased
 
+from occams_datastore import models as datastore
 from occams_datastore.utils.sql import group_concat
 
 from .. import _, models
@@ -104,8 +105,8 @@ class PidPlan(ExportPlan):
                 .as_scalar()
                 .label(reftype.name))
 
-        CreateUser = aliased(models.User)
-        ModifyUser = aliased(models.User)
+        CreateUser = aliased(datastore.User)
+        ModifyUser = aliased(datastore.User)
 
         query = (
             query

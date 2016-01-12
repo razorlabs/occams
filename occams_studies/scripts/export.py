@@ -9,11 +9,9 @@ import shutil
 import sys
 import uuid
 
-from pyramid.paster import get_appsettings
+from pyramid.paster import bootstrap
 from six import itervalues
-from sqlalchemy import create_engine, engine_from_config
 from tabulate import tabulate
-from sqlalchemy.orm import sessionmaker
 
 from .. import exports
 
@@ -22,12 +20,6 @@ def parse_args(argv=sys.argv):
     parser = argparse.ArgumentParser(description='Generate export data files.')
 
     conn_group = parser.add_argument_group('Connection options')
-    conn_group.add_argument(
-        '--db',
-        metavar='DBURI',
-        dest='db',
-        help='Database URL')
-
     conn_group.add_argument(
         '-c', '--config',
         metavar='INI',
@@ -96,22 +88,15 @@ def parse_args(argv=sys.argv):
 def main(argv=sys.argv):
     args = parse_args(argv[1:])
 
-    if args.config:
-        engine = engine_from_config(get_appsettings(args.config), 'occams.db.')
-    elif args.db:
-        engine = create_engine(args.db)
-    else:
-        sys.exit('You must specify either a connection or app configuration')
-
-    db_session = sessionmaker(bind=engine)()
+    env = bootstrap(args.config)
 
     if args.list:
-        print_list(args, db_session)
+        print_list(args, env)
     else:
-        make_export(args, db_session)
+        make_export(args, env)
 
 
-def print_list(args, db_session):
+def print_list(args, env):
     """
     Prints tabulated list of available data files
     """
@@ -123,11 +108,14 @@ def print_list(args, db_session):
         return star(row.is_system), star(row.has_private), star(row.has_rand), row.name, row.title  # NOQA
 
     header = ['sys', 'priv', 'rand', 'name', 'title']
-    rows = iter(format(e) for e in itervalues(exports.list_all(db_session)))
+    db_session = env['request'].db_session
+    plans = env['registry'].settings['studies.export.plans']
+    rows = iter(format(e) for e in itervalues(
+        exports.list_all(plans, db_session)))
     print(tabulate(rows, header, tablefmt='simple'))
 
 
-def make_export(args, db_session):
+def make_export(args, env):
     """
     Generates the export data files
     """
@@ -139,7 +127,9 @@ def make_export(args, db_session):
             or args.names):
         sys.exit('You must specifiy something to export!')
 
-    exportables = exports.list_all(db_session)
+    db_session = env['request'].db_session
+    plans = env['registry'].settings['studies.export.plans']
+    exportables = exports.list_all(plans, db_session)
 
     if args.atomic:
         out_dir = '%s-%s' % (args.dir.rstrip('/'), uuid.uuid4())

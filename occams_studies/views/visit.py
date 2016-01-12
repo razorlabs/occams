@@ -9,6 +9,7 @@ import wtforms
 from wtforms.ext.dateutil.fields import DateField
 
 from occams.utils.forms import wtferrors, ModelField, Form
+from occams_datastore import models as datastore
 from occams_forms.renderers import \
     make_form, render_form, apply_data, entity_data, modes
 
@@ -199,7 +200,7 @@ def edit_json(context, request):
 
     # TODO: hard coded for now, will be removed when workflows are in place
     default_state = (
-        db_session.query(models.State)
+        db_session.query(datastore.State)
         .filter_by(name='pending-entry').one())
 
     # Update collect date for those forms that were never modified
@@ -214,30 +215,31 @@ def edit_json(context, request):
         # find the most recent cycle form version relative to the visit
         recents = (
             db_session.query(
-                models.Schema.name.label('name'),
-                sa.func.max(models.Schema.publish_date).label('publish_date'))
+                datastore.Schema.name.label('name'),
+                sa.func.max(
+                    datastore.Schema.publish_date).label('publish_date'))
             .join(models.Cycle.schemata)
             .filter(models.Cycle.id.in_([c.id for c in visit.cycles]))
-            .filter(models.Schema.publish_date <= visit.visit_date)
-            .filter(models.Schema.retract_date == sa.null())
-            .group_by(models.Schema.name)
+            .filter(datastore.Schema.publish_date <= visit.visit_date)
+            .filter(datastore.Schema.retract_date == sa.null())
+            .group_by(datastore.Schema.name)
             .subquery('max_version'))
 
         # retrive the full schema record of the previous find
         schemata_query = (
-            db_session.query(models.Schema)
+            db_session.query(datastore.Schema)
             .join(recents, (
-                (models.Schema.name == recents.c.name)
-                & (models.Schema.publish_date == recents.c.publish_date))))
+                (datastore.Schema.name == recents.c.name)
+                & (datastore.Schema.publish_date == recents.c.publish_date))))
 
         # Ignore already-added schemata
         if isinstance(context, models.Visit) and visit.entities:
             schemata_query = schemata_query.filter(
-                ~models.Schema.name.in_(
+                ~datastore.Schema.name.in_(
                     [entity.schema.name for entity in visit.entities]))
 
         for schema in schemata_query:
-            entity = models.Entity(
+            entity = datastore.Entity(
                 schema=schema,
                 collect_date=visit.visit_date,
                 state=default_state)
@@ -301,7 +303,7 @@ def form(context, request):
     db_session = request.db_session
     visit = context.__parent__.__parent__
     allowed_schemata = (
-        db_session.query(models.Schema)
+        db_session.query(datastore.Schema)
         .join(models.study_schema_table)
         .join(models.Study)
         .join(models.Cycle)

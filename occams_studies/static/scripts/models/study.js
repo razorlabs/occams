@@ -11,8 +11,6 @@ function Study(data){
   self.short_title = ko.observable();
   self.code = ko.observable();
   self.consent_date = ko.observable();
-  self.start_date = ko.observable();
-  self.end_date = ko.observable();
   self.termination_form = ko.observable();
   self.is_randomized = ko.observable();
   self.is_blinded = ko.observable();
@@ -49,8 +47,6 @@ function Study(data){
     self.short_title(data.short_title);
     self.code(data.code);
     self.consent_date(data.consent_date);
-    self.start_date(data.start_date);
-    self.end_date(data.end_date);
     self.reference_pattern = ko.observable(data.reference_pattern);
     self.reference_hint = ko.observable(data.reference_hint);
     self.termination_form(data.termination_form ? new StudyForm(data.termination_form) : null);

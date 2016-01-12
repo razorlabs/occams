@@ -29,21 +29,21 @@ class TestPrintList:
     #       were passed a db_session
 
     @pytest.fixture(autouse=True)
-    def initialize(self, request, db_session):
+    def initialize(self, request, db_session, req):
         import tempfile
         import shutil
         import mock
 
+        req.registry.settings['studies.export.plans'] = []
+
         # Don't configure the session since we already did that in the
         # the package setup
-        self.create_engine_patch = mock.patch(
-            'occams_studies.scripts.export.create_engine',
-            return_value=db_session.bind
-            ).start()
-        self.engine_from_config_patch = mock.patch(
-            'occams_studies.scripts.export.engine_from_config',
-            return_value=db_session.bind
-            ).start()
+        self.bootstrap_patch = mock.patch(
+            'occams_studies.scripts.export.bootstrap',
+            return_value={
+                'request': req,
+                'registry': req.registry,
+            }).start()
 
         self.dir = tempfile.mkdtemp()
 
@@ -73,7 +73,7 @@ class TestPrintList:
         # force list_all to return only the test form
         with mock.patch('occams_studies.exports.list_all',
                         return_value={plan.name: plan}):
-            output = self._call_fut([None, '--db', 'fake://', '--list'])
+            output = self._call_fut([None, '--config', 'fake.ini', '--list'])
             assert plan.name in output
 
     def test_print_list_with_private(self, plan):
@@ -85,7 +85,7 @@ class TestPrintList:
         # force list_all to return only the test form
         with mock.patch('occams_studies.exports.list_all',
                         return_value={plan.name: plan}):
-            output = self._call_fut([None, '--db', 'fake://', '--list'])
+            output = self._call_fut([None, '--config', 'fake.ini', '--list'])
             assert '*' in output
 
     def test_print_list_with_rand(self, plan):
@@ -97,7 +97,7 @@ class TestPrintList:
         # force list_all to return only the test form
         with mock.patch('occams_studies.exports.list_all',
                         return_value={plan.name: plan}):
-            output = self._call_fut([None, '--db', 'fake://', '--list'])
+            output = self._call_fut([None, '--config', 'fake.ini', '--list'])
             assert '*' in output
 
     def test_make_export_all(self, db_session, plan):
@@ -111,7 +111,7 @@ class TestPrintList:
         with mock.patch('occams_studies.exports.list_all',
                         return_value={plan.name: plan}):
             self._call_fut(
-                [None, '--db', 'fake://', '--dir', self.dir, '--all'])
+                [None, '--config', 'fake.ini', '--dir', self.dir, '--all'])
             files = os.listdir(self.dir)
             assert plan.file_name in files
             assert FILE_NAME in files
@@ -126,12 +126,12 @@ class TestPrintList:
         with mock.patch('occams_studies.exports.list_all',
                         return_value={plan.name: plan}):
             self._call_fut(
-                [None, '--db', 'fake://', '--dir', self.dir, '--all-private'])
+                [None, '--config', 'fake.ini', '--dir', self.dir, '--all-private'])
             assert plan.file_name not in os.listdir(self.dir)
 
             plan.has_private = True
             self._call_fut(
-                [None, '--db', 'fake://', '--dir', self.dir, '--all-private'])
+                [None, '--config', 'fake.ini', '--dir', self.dir, '--all-private'])
             assert plan.file_name in os.listdir(self.dir)
 
     def test_make_export_public(self, plan):
@@ -145,12 +145,12 @@ class TestPrintList:
                         return_value={plan.name: plan}):
             plan.has_private = True
             self._call_fut(
-                [None, '--db', 'fake://', '--dir', self.dir, '--all-public'])
+                [None, '--config', 'fake.ini', '--dir', self.dir, '--all-public'])
             assert plan.file_name not in os.listdir(self.dir)
 
             plan.has_private = False
             self._call_fut(
-                [None, '--db', 'fake://', '--dir', self.dir, '--all-public'])
+                [None, '--config', 'fake.ini', '--dir', self.dir, '--all-public'])
             assert plan.file_name in os.listdir(self.dir)
 
     def test_make_export_rand(self, plan):
@@ -163,12 +163,12 @@ class TestPrintList:
         with mock.patch('occams_studies.exports.list_all',
                         return_value={plan.name: plan}):
             self._call_fut(
-                [None, '--db', 'fake://', '--dir', self.dir, '--all-rand'])
+                [None, '--config', 'fake.ini', '--dir', self.dir, '--all-rand'])
             assert plan.file_name not in os.listdir(self.dir)
 
             plan.has_rand = True
             self._call_fut(
-                [None, '--db', 'fake://', '--dir', self.dir, '--all-rand'])
+                [None, '--config', 'fake.ini', '--dir', self.dir, '--all-rand'])
             assert plan.file_name in os.listdir(self.dir)
 
     def test_make_export_by_name(self, plan):
@@ -181,37 +181,8 @@ class TestPrintList:
         with mock.patch('occams_studies.exports.list_all',
                         return_value={plan.name: plan}):
             self._call_fut(
-                [None, '--db', 'fake://', '--dir', self.dir, plan.name])
+                [None, '--config', 'fake.ini', '--dir', self.dir, plan.name])
             assert plan.file_name in os.listdir(self.dir)
-
-    def test_make_export_with_config(self):
-        """
-        It should be able to export using an app configuration file
-        """
-        import tempfile
-        import mock
-        # force list_all to return only the test form
-        with tempfile.NamedTemporaryFile() as fp:
-            fp.write("""
-[app:main]
-use = egg:occams
-occams.db.url = fake://
-""")
-            fp.flush()
-            with mock.patch('occams_studies.exports.list_all',
-                            return_value={}):
-                self._call_fut(
-                    [None, '--config', fp.name, '--all', '--dir', self.dir])
-                assert self.engine_from_config_patch.called
-
-    def test_make_export_no_connection(self):
-        """
-        It should require a connection
-        """
-        import re
-        with pytest.raises(SystemExit) as excinfo:
-            self._call_fut([None, '--dir', self.dir])
-        assert re.match('.*configuration.*', str(excinfo.value))
 
     def test_make_export_nothing_specified(self, plan):
         """
@@ -222,7 +193,7 @@ occams.db.url = fake://
         with pytest.raises(SystemExit):
             with mock.patch('occams_studies.exports.list_all',
                             return_value={plan.name: plan}):
-                self._call_fut([None, '--db', 'fake://', '--dir', self.dir])
+                self._call_fut([None, '--config', 'fake.ini', '--dir', self.dir])
 
     def test_make_export_atomic(self, plan):
         """
@@ -235,7 +206,7 @@ occams.db.url = fake://
         with mock.patch('occams_studies.exports.list_all',
                         return_value={plan.name: plan}):
             self._call_fut(
-                [None, '--db', 'fake://', '--all', '--dir', dest_dir,
+                [None, '--config', 'fake.ini', '--all', '--dir', dest_dir,
                     '--atomic'])
         assert os.path.islink(dest_dir), 'Not a symlink'
 
@@ -253,7 +224,7 @@ occams.db.url = fake://
         with mock.patch('occams_studies.exports.list_all',
                         return_value={plan.name: plan}):
             self._call_fut(
-                [None, '--db', 'fake://', '--all', '--dir', dest_dir,
+                [None, '--config', 'fake.ini', '--all', '--dir', dest_dir,
                     '--atomic'])
         assert not os.path.exists(old_dir), 'Was not removed'
 
@@ -268,5 +239,5 @@ occams.db.url = fake://
         with mock.patch('occams_studies.exports.list_all',
                         return_value={}):
             self._call_fut(
-                [None, '--db', 'fake://', '--all', '--dir', dest_dir])
+                [None, '--config', 'fake.ini', '--all', '--dir', dest_dir])
         assert os.path.isdir(dest_dir)

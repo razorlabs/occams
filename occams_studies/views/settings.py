@@ -3,6 +3,7 @@ import sqlalchemy as sa
 import wtforms
 
 from occams.utils.forms import Form
+from occams_datastore import models as datastore
 from occams_forms.renderers import form2json, version2json
 
 from .. import models
@@ -47,41 +48,42 @@ def available_schemata(context, request):
     form.validate()
 
     query = (
-        db_session.query(models.Schema)
-        .filter(models.Schema.publish_date != sa.null())
-        .filter(models.Schema.retract_date == sa.null())
-        .filter(~models.Schema.name.in_(
+        db_session.query(datastore.Schema)
+        .filter(datastore.Schema.publish_date != sa.null())
+        .filter(datastore.Schema.retract_date == sa.null())
+        .filter(~datastore.Schema.name.in_(
             # Exclude study forms
-            db_session.query(models.Schema.name)
+            db_session.query(datastore.Schema.name)
             .join(models.study_schema_table)
             .union(
                 # Exclude randomzation forms
-                db_session.query(models.Schema.name)
+                db_session.query(datastore.Schema.name)
                 .join(models.Study.randomization_schema),
 
                 # Exclude termination forms
-                db_session.query(models.Schema.name)
+                db_session.query(datastore.Schema.name)
                 .join(models.Study.termination_schema),
 
                 # Exclude already selected patient forms
-                db_session.query(models.Schema.name)
+                db_session.query(datastore.Schema.name)
                 .join(models.patient_schema_table))
             .correlate(None)
             .subquery())))
 
     if form.schema.data:
-        query = query.filter(models.Schema.name == form.schema.data)
+        query = query.filter(datastore.Schema.name == form.schema.data)
 
     if form.term.data:
         wildcard = u'%' + form.term.data + u'%'
         query = query.filter(
-            models.Schema.title.ilike(wildcard)
-            | sa.cast(models.Schema.publish_date, sa.Unicode).ilike(wildcard))
+            datastore.Schema.title.ilike(wildcard)
+            | sa.cast(datastore.Schema.publish_date,
+                      sa.Unicode).ilike(wildcard))
 
     query = (
         query.order_by(
-            models.Schema.title,
-            models.Schema.publish_date.asc())
+            datastore.Schema.title,
+            datastore.Schema.publish_date.asc())
         .limit(100))
 
     return {

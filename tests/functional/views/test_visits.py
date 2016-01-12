@@ -41,7 +41,6 @@ class TestPermissionsVisitsView:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12)
             )
 
             db_session.add(study)
@@ -130,7 +129,6 @@ class TestPermissionsVisitsAdd:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12)
             )
 
             cycle = studies.Cycle(
@@ -248,7 +246,6 @@ class TestPermissionsVisitView:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12)
             )
 
             cycle = studies.Cycle(
@@ -365,7 +362,6 @@ class TestPermissionsVisitDelete:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12)
             )
 
             cycle = studies.Cycle(
@@ -480,7 +476,6 @@ class TestPermissionsVisitEdit:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12)
             )
 
             cycle = studies.Cycle(
@@ -616,7 +611,6 @@ class TestPermissionsVisitFormsAdd:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12),
                 schemata=set([form])
             )
 
@@ -743,7 +737,6 @@ class TestPermissionsVisitFormsDelete:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12),
                 schemata=set([form])
             )
 
@@ -760,7 +753,7 @@ class TestPermissionsVisitFormsDelete:
                 visit_date='2015-01-01'
             )
 
-            entity = studies.Entity(
+            entity = datastore.Entity(
                 schema=form,
                 collect_date=date(2015, 1, 1)
             )
@@ -774,7 +767,6 @@ class TestPermissionsVisitFormsDelete:
     @pytest.mark.parametrize('group', ['administrator', 'manager'])
     def test_allowed(self, app, db_session, group):
         from occams_datastore import models as datastore
-        from occams_studies import models as studies
 
         environ = make_environ(userid=USERID, groups=[group])
         csrf_token = get_csrf_token(app, environ)
@@ -782,8 +774,8 @@ class TestPermissionsVisitFormsDelete:
         form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema').scalar()
 
-        entity_id = db_session.query(studies.Entity.id).filter(
-            studies.Entity.schema_id == form_id).scalar()
+        entity_id = db_session.query(datastore.Entity.id).filter(
+            datastore.Entity.schema_id == form_id).scalar()
 
         res = app.delete_json(
             self.url,
@@ -865,7 +857,6 @@ class TestPermissionsVisitFormView:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12),
                 schemata=set([form])
             )
 
@@ -882,7 +873,7 @@ class TestPermissionsVisitFormView:
                 visit_date='2015-01-01'
             )
 
-            entity = studies.Entity(
+            entity = datastore.Entity(
                 schema=form,
                 collect_date=date(2015, 1, 1)
             )
@@ -898,15 +889,14 @@ class TestPermissionsVisitFormView:
         'UCSD:consumer', 'UCSD:member'])
     def test_allowed(self, app, db_session, group):
         from occams_datastore import models as datastore
-        from occams_studies import models as studies
 
         environ = make_environ(userid=USERID, groups=[group])
 
         form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema').scalar()
 
-        entity_id = db_session.query(studies.Entity.id).filter(
-            studies.Entity.schema_id == form_id).scalar()
+        entity_id = db_session.query(datastore.Entity.id).filter(
+            datastore.Entity.schema_id == form_id).scalar()
 
         res = app.get(
             self.url.format(entity_id), extra_environ=environ)
@@ -918,15 +908,14 @@ class TestPermissionsVisitFormView:
         'UCLA:consumer', 'UCLA:member'])
     def test_not_allowed(self, app, db_session, group):
         from occams_datastore import models as datastore
-        from occams_studies import models as studies
 
         environ = make_environ(userid=USERID, groups=[group])
 
         form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema').scalar()
 
-        entity_id = db_session.query(studies.Entity.id).filter(
-            studies.Entity.schema_id == form_id).scalar()
+        entity_id = db_session.query(datastore.Entity.id).filter(
+            datastore.Entity.schema_id == form_id).scalar()
 
         res = app.get(
             self.url.format(entity_id), extra_environ=environ, status='*')
@@ -935,13 +924,12 @@ class TestPermissionsVisitFormView:
 
     def test_not_authenticated(self, app, db_session):
         from occams_datastore import models as datastore
-        from occams_studies import models as studies
 
         form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema').scalar()
 
-        entity_id = db_session.query(studies.Entity.id).filter(
-            studies.Entity.schema_id == form_id).scalar()
+        entity_id = db_session.query(datastore.Entity.id).filter(
+            datastore.Entity.schema_id == form_id).scalar()
 
         app.get(self.url.format(entity_id), status=401)
 
@@ -991,7 +979,6 @@ class TestPermissionsVisitFormEdit:
                 is_randomized=False,
                 title=u'test_title',
                 short_title=u'test_short',
-                start_date=date(2014, 12, 12),
                 schemata=set([form])
             )
 
@@ -1008,7 +995,7 @@ class TestPermissionsVisitFormEdit:
                 visit_date='2015-01-01'
             )
 
-            entity = studies.Entity(
+            entity = datastore.Entity(
                 schema=form,
                 collect_date=date(2015, 1, 1)
             )
@@ -1023,15 +1010,14 @@ class TestPermissionsVisitFormEdit:
         'administrator', 'manager', 'UCSD:enterer'])
     def test_allowed(self, app, db_session, group):
         from occams_datastore import models as datastore
-        from occams_studies import models as studies
 
         environ = make_environ(userid=USERID, groups=[group])
 
         form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema').scalar()
 
-        entity_id = db_session.query(studies.Entity.id).filter(
-            studies.Entity.schema_id == form_id).scalar()
+        entity_id = db_session.query(datastore.Entity.id).filter(
+            datastore.Entity.schema_id == form_id).scalar()
 
         res = app.post(
             self.url.format(entity_id), extra_environ=environ)
@@ -1043,15 +1029,14 @@ class TestPermissionsVisitFormEdit:
         'UCLA:enterer', None])
     def test_not_allowed(self, app, db_session, group):
         from occams_datastore import models as datastore
-        from occams_studies import models as studies
 
         environ = make_environ(userid=USERID, groups=[group])
 
         form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema').scalar()
 
-        entity_id = db_session.query(studies.Entity.id).filter(
-            studies.Entity.schema_id == form_id).scalar()
+        entity_id = db_session.query(datastore.Entity.id).filter(
+            datastore.Entity.schema_id == form_id).scalar()
 
         res = app.post(
             self.url.format(entity_id), extra_environ=environ, status='*')
@@ -1060,12 +1045,11 @@ class TestPermissionsVisitFormEdit:
 
     def test_not_authenticated(self, app, db_session):
         from occams_datastore import models as datastore
-        from occams_studies import models as studies
 
         form_id = db_session.query(datastore.Schema.id).filter(
             datastore.Schema.name == u'test_schema').scalar()
 
-        entity_id = db_session.query(studies.Entity.id).filter(
-            studies.Entity.schema_id == form_id).scalar()
+        entity_id = db_session.query(datastore.Entity.id).filter(
+            datastore.Entity.schema_id == form_id).scalar()
 
         app.post(self.url.format(entity_id), status=401)

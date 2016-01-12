@@ -12,6 +12,7 @@ from wtforms.ext.dateutil.fields import DateField
 from occams.utils.forms import wtferrors, ModelField, Form
 from occams_forms.renderers import \
     make_form, render_form, apply_data, entity_data, modes
+from occams_datastore import models as datastore
 from occams_datastore.reporting import build_report
 
 from .. import _, log, models
@@ -77,7 +78,6 @@ def view_json(context, request):
             'title': study.title,
             'is_randomized': study.is_randomized,
             'is_blinded': study.is_blinded,
-            'start_date': study.start_date.isoformat(),
             },
         'stratum':
             None if not (study.is_randomized and enrollment.stratum) else {
@@ -164,21 +164,21 @@ def terminate_ajax(context, request):
     db_session = request.db_session
     try:
         entity = (
-            db_session.query(models.Entity)
-            .join(models.Entity.schema)
-            .filter(models.Schema.name.in_(
+            db_session.query(datastore.Entity)
+            .join(datastore.Entity.schema)
+            .filter(datastore.Schema.name.in_(
                 # Only search for forms being used as temrination forms
-                db_session.query(models.Schema.name)
+                db_session.query(datastore.Schema.name)
                 .join(models.Study.termination_schema)
                 .subquery()))
-            .join(models.Context)
+            .join(datastore.Context)
             .filter_by(external='enrollment', key=context.id)
             .one())
     except orm.exc.MultipleResultsFound:
         raise Exception('Should only have one...')
     except orm.exc.NoResultFound:
         schema = context.study.termination_schema
-        entity = models.Entity(schema=schema)
+        entity = datastore.Entity(schema=schema)
         # XXX: This is really bad form as we're applying
         # side-effects to a GET request, but there is no time
         # to make this look prety...
@@ -190,7 +190,7 @@ def terminate_ajax(context, request):
 
     if not entity.state:
         entity.state = (
-            db_session.query(models.State)
+            db_session.query(datastore.State)
             .filter_by(name='pending-entry')
             .one())
 
@@ -241,8 +241,8 @@ def _get_randomization_form(context, request):
     db_session = request.db_session
     try:
         entity = (
-            db_session.query(models.Entity)
-            .join(models.Entity.contexts)
+            db_session.query(datastore.Entity)
+            .join(datastore.Entity.contexts)
             .filter_by(external='stratum', key=context.stratum.id)
             .one())
     except orm.exc.MultipleResultsFound:
@@ -370,9 +370,9 @@ def randomize_ajax(context, request):
                 .filter(models.Stratum.study == context.study)
                 .filter(models.Stratum.patient == sa.null())
                 .join(models.Stratum.contexts)
-                .join(models.Context.entity)
-                .add_entity(models.Entity)
-                .join(report, report.c.id == models.Entity.id)
+                .join(datastore.Context.entity)
+                .add_entity(datastore.Entity)
+                .join(report, report.c.id == datastore.Entity.id)
                 .filter(sa.and_(
                     *[(getattr(report.c, k) == v) for k, v in data.items()]))
                 .order_by(models.Stratum.id.asc())
@@ -388,7 +388,7 @@ def randomize_ajax(context, request):
             is_randomized = True
             stratum.patient = context.patient
             entity.state = (
-                db_session.query(models.State)
+                db_session.query(datastore.State)
                 .filter_by(name=u'complete')
                 .one())
             entity.collect_date = date.today()
@@ -448,29 +448,17 @@ def EnrollmentSchema(context, request):
                 u'Cannot change an enrollment\'s study.')))
 
     def check_consent_timeline(form, field):
-        start = form.study.data.start_date
-        end = form.study.data.end_date
         consent = form.consent_date.data
         latest = form.latest_consent_date.data
-        if start is None:
-            raise wtforms.ValidationError(request.localizer.translate(_(
-                u'Study has not started yet.')))
-        if consent < start:
+        # This validator is used on both latest_consent and consent,
+        # so we need to check that both have been validated before proceeding.
+        if consent and latest and not consent <= latest:
             raise wtforms.ValidationError(request.localizer.translate(
-                _('Cannot enroll before the study start date: ${date}'),
-                mapping={'date': start.isoformat()}))
-        if not (consent <= latest):
-            raise wtforms.ValidationError(request.localizer.translate(
-                _(u'Inconsistent enrollment dates')))
-        if end and latest > end:
-            raise wtforms.ValidationError(request.localizer.translate(
-                _('Cannot enroll after the study end date: ${date}'),
-                mapping={'date': end.isoformat()}))
+                _(u'Inconsistent consent dates')))
 
     def check_termination_timeline(form, field):
         latest = form.latest_consent_date.data
         termination = form.termination_date.data
-        end = form.study.data.end_date
         if form.study.data.termination_schema:
             return
         if latest is None or termination is None:
@@ -478,10 +466,6 @@ def EnrollmentSchema(context, request):
         if termination < latest:
             raise wtforms.ValidationError(request.localizer.translate(
                 _(u'Inconsistent termination dates')))
-        if end and termination > end:
-            raise wtforms.ValidationError(request.localizer.translate(
-                _('Cannot terminate after the study end date: ${date}'),
-                mapping={'date': end.isoformat()}))
 
     def check_reference(form, field):
         study = form.study.data
@@ -527,7 +511,8 @@ def EnrollmentSchema(context, request):
         consent_date = DateField(
             validators=[
                 wtforms.validators.InputRequired(),
-                check_unique])
+                check_unique,
+                check_consent_timeline])
         latest_consent_date = DateField(
             validators=[
                 wtforms.validators.InputRequired(),

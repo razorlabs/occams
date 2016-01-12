@@ -142,6 +142,34 @@ class TestPermissionsStatusJSON:
         app.get(self.url, xhr=True, status=401)
 
 
+class TestPermissionsNotifications:
+
+    url = '/studies/exports/notifications'
+
+    @pytest.fixture(autouse=True)
+    def populate(self, app, db_session):
+        import transaction
+        from occams_datastore import models as datastore
+
+        # Any view-dependent data goes here
+        # Webtests will use a different scope for its transaction
+        with transaction.manager:
+            db_session.add(datastore.User(key=USERID))
+
+    @pytest.mark.parametrize('group', ['administrator', 'manager', 'consumer'])
+    def test_allowed(self, app, db_session, group):
+        environ = make_environ(groups=[group])
+        app.get(self.url, extra_environ=environ, xhr=True, status=200)
+
+    @pytest.mark.parametrize('group', [None])
+    def test_not_allowed(self, app, db_session, group):
+        environ = make_environ(groups=[group])
+        app.get(self.url, extra_environ=environ, xhr=True, status=403)
+
+    def test_not_authenticated(self, app, db_session):
+        app.get(self.url, xhr=True, status=401)
+
+
 class TestPersmissionsDelete:
 
     url_fmt = '/studies/exports/{export}'
@@ -178,9 +206,9 @@ class TestPersmissionsDelete:
 
     def test_not_owner(self, app, db_session):
         import transaction
-        from occams_studies import models
+        from occams_datastore import models as datastore
         with transaction.manager:
-            db_session.add(models.User(key='somebody_else'))
+            db_session.add(datastore.User(key='somebody_else'))
         environ = make_environ(userid='somebody_else')
         csrf_token = get_csrf_token(app, environ)
         app.delete(
@@ -341,9 +369,9 @@ class TestPermissionsDownload:
 
     def test_not_owner(self, app, db_session):
         import transaction
-        from occams_studies import models
+        from occams_datastore import models as datastore
         with transaction.manager:
-            db_session.add(models.User(key='somebody_else'))
+            db_session.add(datastore.User(key='somebody_else'))
         environ = make_environ(userid='somebody_else')
         app.get(self.url, extra_environ=environ, status=403)
 

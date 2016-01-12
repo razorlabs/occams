@@ -31,6 +31,7 @@ def includeme(config):
     }
 
     config.include('.assets')
+    config.include('.exports')
     config.include('.routes')
     config.include('.tasks')
     config.scan()

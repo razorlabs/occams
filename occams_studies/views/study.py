@@ -18,6 +18,7 @@ from zope.sqlalchemy import mark_changed
 
 from occams.utils.forms import Form, wtferrors, ModelField
 from occams.utils.pagination import Pagination
+from occams_datastore import models as datastore
 from occams_forms.renderers import form2json, version2json
 
 from .. import _, models
@@ -93,7 +94,10 @@ def list_(request):
     permission='view',
     renderer='../templates/study/view.pt')
 def view(context, request):
-    return {'study': view_json(context, request)}
+    return {
+        'rid_disabled': not request.has_permission('edit'),
+        'study': view_json(context, request)
+    }
 
 
 @view_config(
@@ -111,8 +115,6 @@ def view_json(context, request, deep=True):
         'code': study.code,
         'short_title': study.short_title,
         'consent_date': study.consent_date.isoformat(),
-        'start_date': study.start_date and study.start_date.isoformat(),
-        'end_date': study.end_date and study.end_date.isoformat(),
         'reference_pattern': study.reference_pattern,
         'reference_hint': study.reference_hint,
         'is_randomized': study.is_randomized,
@@ -269,7 +271,7 @@ def visits(context, request):
     else:
         arms_query = []
 
-    states = db_session.query(models.State).order_by('id').all()
+    states = db_session.query(datastore.State).order_by('id').all()
 
     cycles_query = (
         db_session.query(models.Cycle.name, models.Cycle.title)
@@ -278,15 +280,15 @@ def visits(context, request):
         .add_column(
             sa.func.count(models.Visit.id.distinct()).label('visits_count'))
         .join(
-            models.Context,
-            (models.Context.external == sa.sql.literal_column("'visit'"))
-            & (models.Context.key == models.Visit.id))
-        .join(models.Context.entity)
-        .join(models.Entity.state)
+            datastore.Context,
+            (datastore.Context.external == sa.sql.literal_column("'visit'"))
+            & (datastore.Context.key == models.Visit.id))
+        .join(datastore.Context.entity)
+        .join(datastore.Entity.state)
         .add_columns(*[
             sa.func.count(
                 sa.sql.case([
-                    (models.State.name == state.name, sa.true())],
+                    (datastore.State.name == state.name, sa.true())],
                     else_=sa.null())).label(state.name) for state in states])
         .group_by(models.Cycle.name, models.Cycle.title, models.Cycle.week)
         .order_by(models.Cycle.week.asc()))
@@ -345,7 +347,7 @@ def visits_cycle(context, request):
     if not cycle:
         raise HTTPNotFound()
 
-    states = db_session.query(models.State).order_by('id').all()
+    states = db_session.query(datastore.State).order_by('id').all()
 
     data = {
         'states': states,
@@ -363,20 +365,20 @@ def visits_cycle(context, request):
             cycle.visits.filter(models.Visit.entities.any(state=state))
             .count())
         data['data_summary'][state.name] = (
-            db_session.query(models.Entity)
-            .join(models.Entity.contexts)
+            db_session.query(datastore.Entity)
+            .join(datastore.Entity.contexts)
             .join(
                 models.Visit,
-                (models.Context.external == 'visit')
-                & (models.Visit.id == models.Context.key))
+                (datastore.Context.external == 'visit')
+                & (models.Visit.id == datastore.Context.key))
             .filter(models.Visit.cycles.any(id=cycle.id))
-            .filter(models.Entity.state == state)
+            .filter(datastore.Entity.state == state)
             .count())
 
     def count_state_exp(name):
         return sa.func.count(
             sa.sql.case([
-                (models.State.name == name, sa.true())],
+                (datastore.State.name == name, sa.true())],
                 else_=sa.null()))
 
     site_ids = [site.id
@@ -392,11 +394,12 @@ def visits_cycle(context, request):
             .filter(models.Visit.cycles.any(id=cycle.id))
             .join(models.Visit.patient)
             .join(
-                models.Context,
-                (models.Context.external == sa.sql.literal_column(u"'visit'"))
-                & (models.Context.key == models.Visit.id))
-            .join(models.Context.entity)
-            .join(models.Entity.state)
+                datastore.Context,
+                (datastore.Context.external
+                    == sa.sql.literal_column(u"'visit'"))
+                & (datastore.Context.key == models.Visit.id))
+            .join(datastore.Context.entity)
+            .join(datastore.Entity.state)
             .add_columns(*[
                 count_state_exp(state.name).label(state.name)
                 for state in states])
@@ -483,7 +486,6 @@ def edit_json(context, request):
     study.code = form.code.data
     study.short_title = form.short_title.data
     study.consent_date = form.consent_date.data
-    study.start_date = form.start_date.data
     study.termination_schema = form.termination_form.data
     study.is_randomized = form.is_randomized.data
     study.is_blinded = \
@@ -532,23 +534,24 @@ def available_schemata(context, request):
     form.validate()
 
     query = (
-        db_session.query(models.Schema)
-        .filter(models.Schema.publish_date != sa.null())
-        .filter(models.Schema.retract_date == sa.null())
-        .filter(~models.Schema.name.in_(
+        db_session.query(datastore.Schema)
+        .filter(datastore.Schema.publish_date != sa.null())
+        .filter(datastore.Schema.retract_date == sa.null())
+        .filter(~datastore.Schema.name.in_(
             # Exclude patient schemata
-            db_session.query(models.Schema.name)
+            db_session.query(datastore.Schema.name)
             .join(models.patient_schema_table)
             .subquery())))
 
     if form.schema.data:
-        query = query.filter(models.Schema.name == form.schema.data)
+        query = query.filter(datastore.Schema.name == form.schema.data)
 
     if form.term.data:
         wildcard = u'%' + form.term.data + u'%'
         query = query.filter(
-            models.Schema.title.ilike(wildcard)
-            | sa.cast(models.Schema.publish_date, sa.Unicode).ilike(wildcard))
+            datastore.Schema.title.ilike(wildcard)
+            | sa.cast(datastore.Schema.publish_date,
+                      sa.Unicode).ilike(wildcard))
 
     if isinstance(context, models.Study):
 
@@ -556,14 +559,14 @@ def available_schemata(context, request):
 
         if context.randomization_schema:
             query = query.filter(
-                models.Schema.name != context.randomization_schema.name)
+                datastore.Schema.name != context.randomization_schema.name)
 
         if context.termination_schema:
             query = query.filter(
-                models.Schema.name != context.termination_schema.name)
+                datastore.Schema.name != context.termination_schema.name)
 
-        query = query.filter(~models.Schema.id.in_(
-            db_session.query(models.Schema.id)
+        query = query.filter(~datastore.Schema.id.in_(
+            db_session.query(datastore.Schema.id)
             .select_from(models.Study)
             .filter(models.Study.id == context.id)
             .join(models.Study.schemata)
@@ -571,8 +574,8 @@ def available_schemata(context, request):
 
     query = (
         query.order_by(
-            models.Schema.title,
-            models.Schema.publish_date.asc())
+            datastore.Schema.title,
+            datastore.Schema.publish_date.asc())
         .limit(100))
 
     return {
@@ -626,9 +629,9 @@ def add_schema_json(context, request):
     def check_not_patient_schema(form, field):
         (exists,) = (
             db_session.query(
-                db_session.query(models.Schema)
+                db_session.query(datastore.Schema)
                 .join(models.patient_schema_table)
-                .filter(models.Schema.name == field.data)
+                .filter(datastore.Schema.name == field.data)
                 .exists())
             .one())
         if exists:
@@ -671,7 +674,7 @@ def add_schema_json(context, request):
         versions = wtforms.FieldList(
             ModelField(
                 db_session=db_session,
-                class_=models.Schema,
+                class_=datastore.Schema,
                 validators=[
                     wtforms.validators.InputRequired(),
                     check_published]),
@@ -739,7 +742,7 @@ def delete_schema_json(context, request):
                 .filter_by(study=context)
                 .subquery())
             & models.cycle_schema_table.c.schema_id.in_(
-                db_session.query(models.Schema.id)
+                db_session.query(datastore.Schema.id)
                 .filter_by(name=schema_name)
                 .subquery())))
 
@@ -749,7 +752,7 @@ def delete_schema_json(context, request):
         .where(
             (models.study_schema_table.c.study_id == context.id)
             & (models.study_schema_table.c.schema_id.in_(
-                db_session.query(models.Schema.id)
+                db_session.query(datastore.Schema.id)
                 .filter_by(name=schema_name)
                 .subquery()))))
 
@@ -786,9 +789,9 @@ def edit_schedule_json(context, request):
 
     def check_form_association(form, field):
         query = (
-            db_session.query(models.Schema)
+            db_session.query(datastore.Schema)
             .join(models.study_schema_table)
-            .filter(models.Schema.name == field.data)
+            .filter(datastore.Schema.name == field.data)
             .filter(models.study_schema_table.c.study_id == context.id))
         (exists,) = db_session.query(query.exists()).one()
         if not exists:
@@ -886,7 +889,10 @@ def upload_randomization_json(context, request):
     arms = dict([(arm.name, arm) for arm in context.arms])
 
     # Default to comple state since they're generated by a statistician
-    complete = db_session.query(models.State).filter_by(name=u'complete').one()
+    complete = (
+        db_session.query(datastore.State)
+        .filter_by(name=u'complete')
+        .one())
 
     for row in reader:
         arm_name = row[fieldnames['ARM']]
@@ -905,7 +911,7 @@ def upload_randomization_json(context, request):
 
         db_session.add(stratum)
 
-        entity = models.Entity(
+        entity = datastore.Entity(
             schema=context.randomization_schema, state=complete)
 
         for key in formkeys:
@@ -960,10 +966,9 @@ def StudySchema(context, request):
                 wtforms.validators.InputRequired(),
                 wtforms.validators.Length(min=1, max=8)])
         consent_date = DateField()
-        start_date = DateField()
         termination_form = ModelField(
             db_session=db_session,
-            class_=models.Schema,
+            class_=datastore.Schema,
             validators=[
                 wtforms.validators.Optional(),
                 check_has_termination_date])
@@ -971,6 +976,6 @@ def StudySchema(context, request):
         is_blinded = wtforms.BooleanField()
         randomzation_form = ModelField(
             db_session=db_session,
-            class_=models.Schema)
+            class_=datastore.Schema)
 
     return StudyForm
