@@ -84,7 +84,7 @@ function VisitView(options){
           self.isSaving(true);
         },
         success: function(data, textStatus, jqXHR){
-          var visit = self.visit();
+          var visit = self.visit;
           visit.update(data);
           history.replaceState({}, visit.visit_date(), visit.__url__());
           self.clear();
