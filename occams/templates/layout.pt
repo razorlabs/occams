@@ -14,7 +14,7 @@
       fluid         fluid | False;
       app_title     app_title | nothing;
       org_title     request.registry.settings['occams.org.title'] | 'OCCAMS';
-      production    request.registry.settings['production_deployment'];
+      production    request.registry.settings['production_deployment'] | False;
       admin_url     admin_url|nothing;
     ">
 
