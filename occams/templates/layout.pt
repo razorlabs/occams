@@ -14,6 +14,7 @@
       fluid         fluid | False;
       app_title     app_title | nothing;
       org_title     request.registry.settings['occams.org.title'] | 'OCCAMS';
+      production    request.registry.settings['production_deployment'];
       admin_url     admin_url|nothing;
     ">
 
@@ -54,10 +55,10 @@
       <metal:navbar-slot define-slot="navbar-slot">
 
         <nav
-            class="navbar navbar-default navbar-static-top"
             role="navigation"
             i18n:domain="occams"
-            tal:define="user request.user|nothing;">
+            tal:define="user request.user|nothing;"
+            tal:attributes="class 'navbar navbar-default navbar-static-top' if production else 'navbar navbar-inverse navbar-static-top'">>
 
           <div class="${css_container}">
 
