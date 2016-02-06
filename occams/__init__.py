@@ -12,6 +12,7 @@ from pyramid.i18n import TranslationStringFactory
 from pyramid.renderers import JSON
 from pyramid.settings import aslist
 from pyramid_who.whov2 import WhoV2AuthenticationPolicy
+from pyramid.settings import asbool
 import wtforms_json; wtforms_json.init()
 
 __version__ = pkg_resources.require(__name__)[0].version
@@ -51,6 +52,11 @@ def main(global_config, **settings):
     settings['occams.apps'] = dict.fromkeys(apps)
 
     settings.update(piwik_from_config(settings))
+
+    # determine if deployment is production
+    production_deployment = asbool(settings.get(
+        'production_deployment', 'false'))
+    settings['production_deployment'] = production_deployment
 
     config = Configurator(
         settings=settings,
