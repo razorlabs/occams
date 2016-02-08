@@ -58,13 +58,13 @@
             role="navigation"
             i18n:domain="occams"
             tal:define="user request.user|nothing;"
-            tal:attributes="class 'navbar navbar-default navbar-static-top' if production else 'navbar navbar-inverse navbar-static-top'">>
+            tal:attributes="class 'navbar navbar-default navbar-static-top' if production else 'navbar navbar-inverse navbar-static-top'">
 
           <div class="${css_container}">
 
             <div class="navbar-header">
               <span class="fa fa-exclamation-triangle is_dev"
-                     tal:condition="python: production == False"></span>
+                     tal:condition="not:production"></span>
               <button
                   type="button"
                   class="navbar-toggle"

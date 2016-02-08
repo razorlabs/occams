@@ -55,7 +55,7 @@ def main(global_config, **settings):
 
     # determine if deployment is production
     production_deployment = asbool(settings.get(
-        'occams.production', 'false'))
+        'occams.production', 'true'))
     settings['occams.production'] = production_deployment
 
     config = Configurator(
