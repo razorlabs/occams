@@ -14,7 +14,7 @@
       fluid         fluid | False;
       app_title     app_title | nothing;
       org_title     request.registry.settings['occams.org.title'] | 'OCCAMS';
-      production    request.registry.settings['production_deployment'] | False;
+      production    request.registry.settings['occams.production'] | True;
       admin_url     admin_url|nothing;
     ">
 
@@ -63,6 +63,8 @@
           <div class="${css_container}">
 
             <div class="navbar-header">
+              <span class="fa fa-exclamation-triangle is_dev"
+                     tal:condition="python: production == False"></span>
               <button
                   type="button"
                   class="navbar-toggle"
@@ -72,10 +74,15 @@
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
               </button>
+
               <metal:navbar-header-slot define-slot="navbar-header-slot">
+
+
                 <a class="navbar-brand"
                     href="${request.route_path('occams.index')}">OCCAMS</a>
+
               </metal:navbar-header-slot>
+
             </div> <!--/.navbar-header -->
 
             <div class="collapse navbar-collapse">
