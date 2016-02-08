@@ -63,8 +63,7 @@
           <div class="${css_container}">
 
             <div class="navbar-header">
-              <span class="fa fa-exclamation-triangle is_dev"
-                     tal:condition="not:production"></span>
+
               <button
                   type="button"
                   class="navbar-toggle"
@@ -86,9 +85,14 @@
 
             <div class="collapse navbar-collapse">
 
+              <p class="navbar-text" tal:condition="development">
+                <span class="fa fa-bug text-danger"
+                      title="Development Mode"
+                      i18n:attributes="title"></span>
+              </p>
+
               <metal:navbar-nav-slot define-slot="navbar-nav-slot">
               </metal:navbar-nav-slot>
-
 
               <metal:navbar-user-slot define-slot="navbar-user-slot">
                 <ul class="nav navbar-nav navbar-right"
