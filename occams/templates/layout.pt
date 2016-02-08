@@ -14,7 +14,7 @@
       fluid         fluid | False;
       app_title     app_title | nothing;
       org_title     request.registry.settings['occams.org.title'] | 'OCCAMS';
-      production    request.registry.settings['occams.production'] | True;
+      development   request.registry.settings['occams.development'] | False;
       admin_url     admin_url|nothing;
     ">
 
@@ -58,7 +58,7 @@
             role="navigation"
             i18n:domain="occams"
             tal:define="user request.user|nothing;"
-            tal:attributes="class 'navbar navbar-default navbar-static-top' if production else 'navbar navbar-inverse navbar-static-top'">
+            tal:attributes="class 'navbar navbar-inverse navbar-static-top' if development else 'navbar navbar-default navbar-static-top'">
 
           <div class="${css_container}">
 
@@ -76,7 +76,6 @@
               </button>
 
               <metal:navbar-header-slot define-slot="navbar-header-slot">
-
 
                 <a class="navbar-brand"
                     href="${request.route_path('occams.index')}">OCCAMS</a>

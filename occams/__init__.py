@@ -53,10 +53,8 @@ def main(global_config, **settings):
 
     settings.update(piwik_from_config(settings))
 
-    # determine if deployment is production
-    production_deployment = asbool(settings.get(
-        'occams.production', 'true'))
-    settings['occams.production'] = production_deployment
+    # determine if deployment is development
+    settings['occams.development'] = asbool(settings.get('occams.development'))
 
     config = Configurator(
         settings=settings,
