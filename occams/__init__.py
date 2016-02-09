@@ -95,7 +95,8 @@ def main(global_config, **settings):
         app = import_module(name)
         prefix = getattr(app, '__prefix__', None)
         if not prefix:
-            log.warn(u'{} does not have a prefix'.format(name))
+            # These should only appear in debug-mode during app development
+            log.debug(u'{} does not have a prefix'.format(name))
             config.include(app)
         else:
             config.include(app, route_prefix=prefix)
