@@ -381,7 +381,7 @@ def cleanup_patient():
             AND schema.publish_date != '2013-02-26'
             """)
 
-        op.excecute(
+        op.execute(
             """
             UPDATE entity
             SET schema_id = (
