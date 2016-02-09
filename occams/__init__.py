@@ -2,6 +2,7 @@ from __future__ import unicode_literals
 import decimal
 import datetime
 import logging
+from importlib import import_module
 import pkg_resources
 
 import six
@@ -11,6 +12,7 @@ from pyramid.i18n import TranslationStringFactory
 from pyramid.renderers import JSON
 from pyramid.settings import aslist
 from pyramid_who.whov2 import WhoV2AuthenticationPolicy
+from pyramid.settings import asbool
 import wtforms_json; wtforms_json.init()
 
 __version__ = pkg_resources.require(__name__)[0].version
@@ -22,15 +24,15 @@ log = logging.getLogger(__name__)
 from .settings import piwik_from_config
 from .security import RootFactory, groupfinder  # NOQA
 
-import os
-
-here = os.path.dirname(os.path.realpath(__file__))
 
 settings_defaults = {
     'piwik.enabled': False,
 
-    'webassets.base_dir': os.path.join(here, 'static'),
-    'webassets.base_url': '/static',
+    # Ignored unless static_view is set to true
+    # static_view needs to be false in order to allow multiple asset locations
+    'webassets.base_dir': 'occams:static',
+    'webassets.base_url': 'static',
+    'webassets.static_view': False,
 
     'who.callback': 'occams.security.groupfinder'
     }
@@ -51,6 +53,9 @@ def main(global_config, **settings):
 
     settings.update(piwik_from_config(settings))
 
+    # determine if deployment is development
+    settings['occams.development'] = asbool(settings.get('occams.development'))
+
     config = Configurator(
         settings=settings,
         root_factory=RootFactory,
@@ -64,8 +69,6 @@ def main(global_config, **settings):
     config.include('pyramid_chameleon')
     config.include('pyramid_redis')
     config.include('pyramid_redis_sessions')
-    config.include('pyramid_rewrite')
-    config.add_rewrite_rule(r'/(?P<path>.*)/', r'/%(path)s')
     config.include('pyramid_tm')
     config.include('pyramid_webassets')
     config.add_renderer('json', JSON(
@@ -89,7 +92,14 @@ def main(global_config, **settings):
     # Application includes
 
     for name in six.iterkeys(settings['occams.apps']):
-        config.include(name)
+        app = import_module(name)
+        prefix = getattr(app, '__prefix__', None)
+        if not prefix:
+            # These should only appear in debug-mode during app development
+            log.debug(u'{} does not have a prefix'.format(name))
+            config.include(app)
+        else:
+            config.include(app, route_prefix=prefix)
     config.commit()
 
     config.add_request_method(_apps, name=str('apps'), reify=True)

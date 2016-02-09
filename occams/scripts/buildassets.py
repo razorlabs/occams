@@ -5,9 +5,10 @@ Currently request time takes about 30 seconds for the first access
 because Pyramid needs to compile all the templates and static assets.
 """
 import argparse
+import logging
 import sys
 
-from pyramid.paster import bootstrap
+from pyramid.paster import bootstrap, setup_logging
 import webassets.script
 
 parser = argparse.ArgumentParser(description='Builds application assets')
@@ -24,6 +25,9 @@ def main(argv=sys.argv):
         parser.print_help()
         exit(0)
 
+    setup_logging(args.config)
     app_env = bootstrap(args.config)
     assets_env = app_env['request'].webassets_env
-    webassets.script.main(['build'], assets_env)
+    assets_log = logging.getLogger('webassets')
+    cmd_env = webassets.script.CommandLineEnvironment(assets_env, assets_log)
+    cmd_env.build()

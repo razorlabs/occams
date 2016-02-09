@@ -14,6 +14,7 @@
       fluid         fluid | False;
       app_title     app_title | nothing;
       org_title     request.registry.settings['occams.org.title'] | 'OCCAMS';
+      development   request.registry.settings['occams.development'] | False;
       admin_url     admin_url|nothing;
     ">
 
@@ -54,14 +55,15 @@
       <metal:navbar-slot define-slot="navbar-slot">
 
         <nav
-            class="navbar navbar-default navbar-static-top"
             role="navigation"
             i18n:domain="occams"
-            tal:define="user request.user|nothing;">
+            tal:define="user request.user|nothing;"
+            tal:attributes="class 'navbar navbar-inverse navbar-static-top' if development else 'navbar navbar-default navbar-static-top'">
 
           <div class="${css_container}">
 
             <div class="navbar-header">
+
               <button
                   type="button"
                   class="navbar-toggle"
@@ -71,17 +73,26 @@
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
               </button>
+
               <metal:navbar-header-slot define-slot="navbar-header-slot">
+
                 <a class="navbar-brand"
-                    href="${request.route_path('occams.main')}">OCCAMS</a>
+                    href="${request.route_path('occams.index')}">OCCAMS</a>
+
               </metal:navbar-header-slot>
+
             </div> <!--/.navbar-header -->
 
             <div class="collapse navbar-collapse">
 
+              <p class="navbar-text" tal:condition="development">
+                <span class="fa fa-bug text-danger"
+                      title="Development Mode"
+                      i18n:attributes="title"></span>
+              </p>
+
               <metal:navbar-nav-slot define-slot="navbar-nav-slot">
               </metal:navbar-nav-slot>
-
 
               <metal:navbar-user-slot define-slot="navbar-user-slot">
                 <ul class="nav navbar-nav navbar-right"

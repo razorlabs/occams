@@ -1,4 +1,9 @@
-from pyramid.view import forbidden_view_config, view_config
+from pyramid.view import forbidden_view_config, notfound_view_config, view_config
+
+
+@notfound_view_config(append_slash=True)
+def notfound(exc, request):
+    return exc
 
 
 @forbidden_view_config(renderer='../templates/error/forbidden.pt')
