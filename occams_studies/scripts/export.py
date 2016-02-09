@@ -9,7 +9,7 @@ import shutil
 import sys
 import uuid
 
-from pyramid.paster import bootstrap
+from pyramid.paster import bootstrap, setup_logging
 from six import itervalues
 from tabulate import tabulate
 
@@ -88,6 +88,7 @@ def parse_args(argv=sys.argv):
 def main(argv=sys.argv):
     args = parse_args(argv[1:])
 
+    setup_logging(args.config)
     env = bootstrap(args.config)
 
     if args.list:
