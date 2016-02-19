@@ -61,6 +61,36 @@ class TestViewJSON:
         assert res['state'] is None
 
 
+class Test_markup_ajax:
+
+    def _call_fut(self, *args, **kw):
+        from occams_studies.views.form import markup_ajax as view
+        return view(*args, **kw)
+
+    def test_no_metadata(self, req, db_session, config, factories):
+        """
+        It should not include metadata when rendering via AJAX
+        """
+        from bs4 import BeautifulSoup
+        from webob.multidict import MultiDict
+
+        config.include('pyramid_chameleon')
+
+        entity = factories.EntityFactory()
+        db_session.flush()
+
+        req.context = context = entity
+        req.POST = MultiDict()
+        req.GET = MultiDict([
+            ('version', str(entity.schema.publish_date))
+        ])
+        res = self._call_fut(context, req)
+
+        soup = BeautifulSoup(res)
+        assert len(soup.find_all(class_='entity')) < 1, \
+            'Found entity metada when it should not have'
+
+
 class TestAddJSON:
 
     def _call_fut(self, *args, **kw):
