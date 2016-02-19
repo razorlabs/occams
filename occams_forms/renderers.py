@@ -257,7 +257,7 @@ def make_form(session,
     formdata -- (optional) incoming data for lookahead purposes:
                 * if ``version`` changes, then the specified version will
                   override the ``schema`` parameter
-    enable_metadata -- (optional) enables metada entry of the form
+    show_metadata -- (optional) includes entity metadata fields
     allowed_versions -- list of schemata versions that can override ``schema``
 
     Returns:
@@ -389,7 +389,7 @@ def make_longform(session, schemata):
         pass
 
     for schema in schemata:
-        form = make_form(session, schema, enable_metadata=False)
+        form = make_form(session, schema, show_metadata=False)
         setattr(LongForm, schema.name, wtforms.FormField(form))
 
     return LongForm
