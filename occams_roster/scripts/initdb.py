@@ -4,7 +4,7 @@ import sys
 from pyramid.paster import get_appsettings, setup_logging
 from sqlalchemy import engine_from_config
 
-from occams.roster.models import Base
+from occams_roster.models import Base
 
 
 def usage(argv):
@@ -20,5 +20,5 @@ def main(argv=sys.argv):
     config_uri = argv[1]
     setup_logging(config_uri)
     settings = get_appsettings(config_uri)
-    engine = engine_from_config(settings, 'rosterdb.')
+    engine = engine_from_config(settings, 'roster.db.')
     Base.metadata.create_all(engine, checkfirst=True)
