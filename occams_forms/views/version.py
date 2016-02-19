@@ -13,8 +13,9 @@ import wtforms.widgets.html5
 import wtforms.ext.dateutil.fields
 
 from occams.utils.forms import Form
+from occams_datastore import models as datastore
 
-from .. import _, models
+from .. import _
 from . import field as field_views
 from ..renderers import make_form, render_form, apply_data
 
@@ -85,7 +86,7 @@ def preview(context, request):
 
     if request.method == 'POST' and form.validate():
         upload_path = tempfile.mkdtemp()
-        entity = models.Entity(schema=context)
+        entity = datastore.Entity(schema=context)
         try:
             apply_data(db_session, entity, form.patch_data, upload_path)
         finally:
@@ -123,9 +124,9 @@ def publish_json(context, request):
     def check_unique_publish_date(form, field):
         (exists,) = (
             db_session.query(
-                db_session.query(models.Schema)
+                db_session.query(datastore.Schema)
                 .filter_by(name=context.name, publish_date=field.data)
-                .filter(models.Schema.id != context.id)
+                .filter(datastore.Schema.id != context.id)
                 .exists())
             .one())
         if exists:

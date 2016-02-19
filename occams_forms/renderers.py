@@ -22,7 +22,9 @@ import wtforms.widgets.html5
 import wtforms.ext.dateutil.fields
 from wtforms_components import DateRange
 
-from . import _, models, log
+from occams_datastore import models as datastore
+
+from . import _, log
 from .fields import FileField
 
 
@@ -96,7 +98,7 @@ def form2json(schemata):
     if isinstance(schemata, collections.Iterable):
         schemata = sorted(schemata, key=by_name)
         return [make_json(g) for k, g in groupby(schemata, by_name)]
-    elif isinstance(schemata, models.Schema):
+    elif isinstance(schemata, datastore.Schema):
         return make_json([schemata])
 
 
@@ -298,7 +300,7 @@ def make_form(session,
         # If there was a version change so we render the correct form
         if formdata and 'ofmetadata_-version' in formdata:
             schema = (
-                session.query(models.Schema)
+                session.query(datastore.Schema)
                 .filter_by(
                     name=schema.name,
                     publish_date=formdata['ofmetadata_-version'])
@@ -311,10 +313,10 @@ def make_form(session,
         allowed_versions = sorted(set(allowed_versions))
 
         actual_versions = [(str(p), str(p)) for (p,) in (
-            session.query(models.Schema.publish_date)
-            .filter(models.Schema.name == schema.name)
-            .filter(models.Schema.publish_date.in_(allowed_versions))
-            .order_by(models.Schema.publish_date.asc())
+            session.query(datastore.Schema.publish_date)
+            .filter(datastore.Schema.name == schema.name)
+            .filter(datastore.Schema.publish_date.in_(allowed_versions))
+            .order_by(datastore.Schema.publish_date.asc())
             .all())]
 
         if len(allowed_versions) != len(actual_versions):
@@ -353,9 +355,9 @@ def make_form(session,
     if allowed_states:
 
         allowed_states = (
-            session.query(models.State)
-            .filter(models.State.name.in_(allowed_states))
-            .order_by(models.State.title)
+            session.query(datastore.State)
+            .filter(datastore.State.name.in_(allowed_states))
+            .order_by(datastore.State.title)
         )
 
         choices = [('', '')] \
@@ -423,6 +425,7 @@ def render_form(form,
         'show_footer': show_footer,
         'metadata_disabled': metadata_disabled,
         'fields_disabled': fields_disabled,
+        'disabled': disabled,
         'attr': attr or {},
     })
 
@@ -473,7 +476,7 @@ def apply_data(session, entity, data, upload_path):
     # States are the only metadata that can change regardless of transition
     if previous_state != next_state:
         entity.state = (
-            session.query(models.State).filter_by(name=next_state).one())
+            session.query(datastore.State).filter_by(name=next_state).one())
 
     # Do not update data if we're transitioning from a readonly-state
     if previous_state == states.COMPLETE:
@@ -487,7 +490,7 @@ def apply_data(session, entity, data, upload_path):
             entity.not_done = metadata['not_done']
         entity.collect_date = metadata['collect_date']
         entity.schema = (
-            session.query(models.Schema)
+            session.query(datastore.Schema)
             .filter_by(
                 name=entity.schema.name,
                 publish_date=metadata['version'])
@@ -561,13 +564,13 @@ def apply_data(session, entity, data, upload_path):
                 with magic.Magic(flags=magic.MAGIC_MIME_TYPE) as m:
                     mime_type = m.id_filename(dest_path)
 
-                value = models.BlobInfo(original_name, dest_path, mime_type)
+                value = datastore.BlobInfo(original_name, dest_path, mime_type)
 
             else:
 
                 value = None
 
-            if isinstance(entity[attribute.name], models.BlobInfo):
+            if isinstance(entity[attribute.name], datastore.BlobInfo):
                 os.unlink(entity[attribute.name].path)
 
         else:

@@ -1,6 +1,6 @@
 from pyramid.view import view_config
 
-from .. import models
+from occams_datastore import models as datastore
 
 
 @view_config(
@@ -14,7 +14,7 @@ def view(context, request):
 
     db_session = request.db_session
 
-    states = db_session.query(models.State).order_by(models.State.name)
+    states = db_session.query(datastore.State).order_by(datastore.State.name)
 
     return {
         'states': iter(states),
