@@ -38,7 +38,7 @@
             <div id="of-empty"
                 class="text-muted"
                 data-bind="fadeVisible: { if: !$root.isDragging(), duration: 'fast' }">
-              <h4 i18n:translate="">This form does not have any fields addded yet.</h4>
+              <h4 i18n:translate="">This form does not have any fields added yet.</h4>
               <p i18n:translate="">To add new fields, drag an item from the types menu.</p>
             </div>
           <!-- /ko -->
