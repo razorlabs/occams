@@ -195,7 +195,7 @@ def markup_ajax(context, request):
             .filter_by(name=context.schema.name, publish_date=version)
             .one())
         data = None
-    Form = make_form(db_session, schema, enable_metadata=False)
+    Form = make_form(db_session, schema, show_metadata=False)
     form = Form(request.POST, data=data)
     return render_form(form)
 

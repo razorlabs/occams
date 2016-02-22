@@ -28,8 +28,10 @@
       // Load the specified version of the form
       $form.on('change', '[name="ofmetadata_-version"]', function(event){
         $.get(window.location, {'version': event.target.value}, function(data, textStatus, jqXHR){
-          $form.children().not('.entity').remove();
-          $form.append($(data).children());
+          var $body = $form.find('.modal-body');
+          $body.children().not('.entity').remove();
+          $body.append($('<hr />'));
+          $body.append($(data).find('.modal-body').children());
         });
       });
 
