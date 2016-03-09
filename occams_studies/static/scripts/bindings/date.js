@@ -2,17 +2,6 @@
   "use strict";
 
   /**
-   * Check if the browser supports (and can actually validate) dates
-   */
-  window.supportsDateInput = +function() {
-    var input = document.createElement('input');
-    input.setAttribute('type','date');
-    var notADateValue = 'not-a-date';
-    input.setAttribute('value', notADateValue);
-    return !(input.value === notADateValue);
-  }();
-
-  /**
    * Formats a value to a localized datetime string
    */
   ko.bindingHandlers.datetimeText = {
