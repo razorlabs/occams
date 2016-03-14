@@ -2,25 +2,6 @@
   "use strict";
 
   /**
-   * Check if the browser supports (and can actually validate) dates
-   */
-  window.supportsDateInput = +function() {
-    var input = document.createElement('input');
-    input.setAttribute('type','date');
-    var notADateValue = 'not-a-date';
-    input.setAttribute('value', notADateValue);
-    return !(input.value === notADateValue);
-  }();
-
-  // Apply datetime widget to non-ko-bound elements
-  $(function(){
-    if (!supportsDateInput){
-      $('input[type=date]:not([data-bind]),.js-date:not([data-bind])').datetimepicker({pickTime: false});
-      $('input[type=datetime]:not([data-bind]),.js-datetime:not([data-bind])').datetimepicker();
-    }
-  });
-
-  /**
    * Formats a value to a localized datetime string
    */
   ko.bindingHandlers.datetimeText = {
