@@ -114,16 +114,18 @@ def view_json(context, request):
     renderer='json')
 def available_schemata(context, request):
     """
-    Returns a listing of available schemata for the study
+    Returns a list of available schemata for the given context
 
-    The results will try to exclude schemata configured for patients,
-    or schemata that is currently used by the context study (if editing).
+    Criteria for available schemata:
+        * Must be configured for a study (i.e NOT patient/enrollment forms)
+        * Must NOT be retracted
 
     GET parameters:
-        term -- (optional) filters by schema title or publish date
         schema -- (optional) only shows results for specific schema name
                   (useful for searching for a schema's publish dates)
+        term -- (optional) filters by schema title or publish date
         grouped -- (optional) groups all results by schema name
+
     """
     db_session = request.db_session
 
@@ -139,7 +141,8 @@ def available_schemata(context, request):
         db_session.query(datastore.Schema)
         # only allow forms that are available to active studies
         .join(models.study_schema_table)
-        .join(models.Study))
+        .join(models.Study)
+        .filter(datastore.Schema.retract_date == sa.null()))
 
     if form.schema.data:
         query = query.filter(datastore.Schema.name == form.schema.data)
@@ -157,11 +160,14 @@ def available_schemata(context, request):
             datastore.Schema.publish_date.asc())
         .limit(100))
 
+    if form.grouped.data:
+        schemata = form2json(query)
+    else:
+        schemata = [version2json(i) for i in query]
+
     return {
         '__query__': form.data,
-        'schemata': (form2json(query)
-                     if form.grouped.data
-                     else [version2json(i) for i in query])
+        'schemata': schemata
     }
 
 
