@@ -1,7 +1,7 @@
 import pytest
 
 
-class TestViewJSON:
+class Test_view_json:
 
     def _call_fut(self, *args, **kw):
         from occams_studies.views.form import view_json as view
@@ -61,6 +61,32 @@ class TestViewJSON:
         assert res['state'] is None
 
 
+class Test_available_schemata:
+
+    def _call_fut(self, *args, **kw):
+        from occams_studies.views.form import available_schemata as view
+        return view(*args, **kw)
+
+    def test_exclude_retracted(self, req, db_session, config, factories):
+        """
+        It should not include metadata when rendering via AJAX
+        """
+        from datetime import date
+        from webob.multidict import MultiDict
+
+        schema = factories.SchemaFactory.create(
+            publish_date=date.today(), retract_date=date.today())
+        study = factories.StudyFactory.create(schemata=set([schema]))
+        visit = factories.VisitFactory()
+        db_session.flush()
+
+        req.context = context = visit
+        req.GET = MultiDict([('term', schema.title)])
+        res = self._call_fut(context, req)
+
+        assert len(res['schemata']) == 0, 'Retracted form was not excluded'
+
+
 class Test_markup_ajax:
 
     def _call_fut(self, *args, **kw):
@@ -91,7 +117,7 @@ class Test_markup_ajax:
             'Found entity metada when it should not have'
 
 
-class TestAddJSON:
+class Test_add_json:
 
     def _call_fut(self, *args, **kw):
         from occams_studies.views.form import add_json as view
