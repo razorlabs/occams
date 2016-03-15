@@ -16,6 +16,7 @@ from datetime import date, datetime
 import magic
 from pyramid.renderers import render
 import six
+import sqlalchemy as sa
 import wtforms
 import wtforms.fields.html5
 import wtforms.widgets.html5
@@ -316,6 +317,7 @@ def make_form(session,
             session.query(datastore.Schema.publish_date)
             .filter(datastore.Schema.name == schema.name)
             .filter(datastore.Schema.publish_date.in_(allowed_versions))
+            .filter(datastore.Schema.retract_date == sa.null())
             .order_by(datastore.Schema.publish_date.asc())
             .all())]
 
