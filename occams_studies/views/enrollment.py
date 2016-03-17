@@ -208,7 +208,19 @@ def terminate_ajax(context, request):
     Form = make_form(
         db_session, schema,
         entity=entity, transition=transition, show_metadata=False)
+
     form = Form(request.POST, data=entity_data(entity))
+
+    def validate_termination_date(form, field):
+        if not (field.data >= context.latest_consent_date):
+            raise wtforms.ValidationError(request.localizer.translate(
+                _(u'Termination must be on or after latest consent (${date})'),
+                mapping={'date': context.latest_consent_date}
+            ))
+
+    # Inject a validator into the termination form so that we
+    # ensure that the termination date provided is valid
+    form.termination_date.validators.append(validate_termination_date)
 
     if request.method == 'POST':
         check_csrf_token(request)
