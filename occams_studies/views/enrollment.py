@@ -20,6 +20,11 @@ from occams_datastore.reporting import build_report
 from .. import _, log, models
 
 
+RAND_CHALLENGE, RAND_ENTER, RAND_VERIFY = range(3)
+
+RAND_INFO_KEY = 'randomization_info'
+
+
 @view_config(
     route_name='studies.enrollments',
     permission='view',
@@ -322,35 +327,66 @@ def randomize_print(context, request):
     renderer='json')
 def randomize_ajax(context, request):
     """
+    Procesess a patient's randomiation by conmpleting randomization form
+
+    Rules:
+
+    * The user can only randomize one patient at a time.
+    * If another randomization is in progress, both are restarted.
+    * A randomization session may not "continue" from another.
+
+    In order to address a single randomization at a time, the process assigns
+    a "process id" or ``procid`` for the duration of the process, this way
+    if a new process begins it will have a different token which will not
+    match the current process and nullify everything. This is done by
+    passing the ``procid`` via POST or GET depending on the phase of data
+    entry.
+
+    The process goes as follows:
+
+    # CHALLENGE: Upon first request the user will be issued a ``procid``
+      token this token will remain unchainged for the duration of the
+      randomization process. If it changes, the process restarts. The goal
+      of the challenge stage is to ensure the user confirms their intent
+      to randomize.
+    # ENTER: After passing the challenge stage, the user will then have
+      oppertunity to enter the randomization schema form data that will
+      be used to determine assignement to the study arm.
+    # VERIFY: The user will then have to verify the data again to ensure
+      accurate responses. If the user fails this stage, they will have
+      to pass the ENTER stage again. Upon sucessfull verification the
+      ``procid`` expires and the patient is randomized. The user will not
+      be shown the challenge/entry forms again and only the randomization
+      information information will be rendered for future reference to the
+      user.
     """
 
     db_session = request.db_session
     enrollment = context
 
-    CHALLENGE, ENTER, VERIFY = range(3)
-    INFO_KEY = 'randomization_info'
-
     if not enrollment.is_randomized:
-        if 'procid' not in request.params:
-            request.session[INFO_KEY] = {
-                'procid': str(uuid.uuid4()),
-                'stage': CHALLENGE,
+        if 'procid' not in request.GET and 'procid' not in request.POST:
+            internal_procid = str(uuid.uuid4())
+            request.session[RAND_INFO_KEY] = {
+                'procid': internal_procid,
+                'stage': RAND_CHALLENGE,
                 'formdata': None
             }
             return HTTPFound(
                location=request.current_route_path(
-                    _query={'procid': request.session[INFO_KEY]['procid']}))
+                    _query={'procid': internal_procid}))
 
-        external_procid = request.params.get('procid')
-        internal_procid = (request.session.get(INFO_KEY) or {}).get('procid')
+        external_procid = request.GET.get('procid') or request.POST.get('procid')
+        internal_procid = request.session.get(RAND_INFO_KEY, {}).get('procid')
 
         if external_procid is not None and external_procid != internal_procid:
             try:
-                del request.session[INFO_KEY]
+                del request.session[RAND_INFO_KEY]
             except KeyError:
                 pass
             request.session.flash(
-                _(u'You have another randomization in progress, starting over.'),
+                _(u'You have another randomization in progress, '
+                  u'starting over.'),
                 'warning')
             return HTTPFound(location=request.current_route_path(_query={}))
 
@@ -363,19 +399,18 @@ def randomize_ajax(context, request):
                 'warning')
             return HTTPFound(location=request.current_route_path(_query={}))
 
-        if request.session[INFO_KEY]['stage'] == CHALLENGE:
+        if request.session[RAND_INFO_KEY]['stage'] == RAND_CHALLENGE:
             Form = _make_challenge_form(enrollment, request)
             form = Form(request.POST)
             if not form.validate():
                 raise HTTPBadRequest(json={'errors': wtferrors(form)})
             else:
-                request.session[INFO_KEY]['stage'] = ENTER
+                request.session[RAND_INFO_KEY]['stage'] = RAND_ENTER
                 request.session.changed()
                 return HTTPFound(location=request.current_route_path(
-                    _query={'procid': request.session[INFO_KEY]['procid']})
-                )
+                    _query={'procid': internal_procid}))
 
-        elif request.session[INFO_KEY]['stage'] == ENTER:
+        elif request.session[RAND_INFO_KEY]['stage'] == RAND_ENTER:
             Form = make_form(
                 db_session,
                 enrollment.study.randomization_schema,
@@ -384,14 +419,13 @@ def randomize_ajax(context, request):
             if not form.validate():
                 raise HTTPBadRequest(json={'errors': wtferrors(form)})
             else:
-                request.session[INFO_KEY]['stage'] = VERIFY
-                request.session[INFO_KEY]['formdata'] = form.data
+                request.session[RAND_INFO_KEY]['stage'] = RAND_VERIFY
+                request.session[RAND_INFO_KEY]['formdata'] = form.data
                 request.session.changed()
                 return HTTPFound(location=request.current_route_path(
-                    _query={'procid': request.session[INFO_KEY]['procid']})
-                )
+                    _query={'procid': internal_procid}))
 
-        elif request.session[INFO_KEY]['stage'] == VERIFY:
+        elif request.session[RAND_INFO_KEY]['stage'] == RAND_VERIFY:
             Form = make_form(
                 db_session,
                 enrollment.study.randomization_schema,
@@ -400,13 +434,14 @@ def randomize_ajax(context, request):
             if not form.validate():
                 raise HTTPBadRequest(json={'errors': wtferrors(form)})
             else:
-                previous_data = request.session[INFO_KEY].get('formdata') or {}
+                previous_data = \
+                    request.session[RAND_INFO_KEY].get('formdata') or {}
                 # ensure entered values match previous values
-                for field, value in previous_data.items():
-                    if value != form.data.get(field):
+                for field, value in form.data.items():
+                    if value != previous_data.get(field):
                         # start over
-                        request.session[INFO_KEY]['stage'] = ENTER
-                        request.session[INFO_KEY]['formdata'] = None
+                        request.session[RAND_INFO_KEY]['stage'] = RAND_ENTER
+                        request.session[RAND_INFO_KEY]['formdata'] = None
                         request.session.flash(
                             _(u'Your responses do not match previously '
                               u'entered responses. '
@@ -449,8 +484,9 @@ def randomize_ajax(context, request):
                     enrollment.patient.entities.add(entity)
                     enrollment.entities.add(entity)
                     db_session.flush()
-                    del request.session[INFO_KEY]
-                    request.session.flash(_(u'Randomization complete'), 'success')
+                    del request.session[RAND_INFO_KEY]
+                    request.session.flash(
+                        _(u'Randomization complete'), 'success')
                     return HTTPFound(
                         location=request.current_route_path(_query={}))
 
@@ -458,20 +494,20 @@ def randomize_ajax(context, request):
             request.session.flash(
                 _(u'Unable to determine randomization state. Restarting'),
                 'warning')
-            del request.session[INFO_KEY]
+            del request.session[RAND_INFO_KEY]
             return HTTPFound(location=request.current_route_path(_query={}))
 
     if enrollment.is_randomized:
         template = '../templates/enrollment/randomize-view.pt'
         form = _get_randomized_form(enrollment, request)
-    elif request.session[INFO_KEY]['stage'] == CHALLENGE:
+    elif request.session[RAND_INFO_KEY]['stage'] == RAND_CHALLENGE:
         template = '../templates/enrollment/randomize-challenge.pt'
         Form = _make_challenge_form(enrollment, request)
         Form.procid = wtforms.HiddenField()
         form = Form(procid=internal_procid)
         form.meta.entity = None
         form.meta.schema = enrollment.study.randomization_schema
-    elif request.session[INFO_KEY]['stage'] == ENTER:
+    elif request.session[RAND_INFO_KEY]['stage'] == RAND_ENTER:
         template = '../templates/enrollment/randomize-enter.pt'
         Form = make_form(
             db_session,
@@ -479,7 +515,7 @@ def randomize_ajax(context, request):
             show_metadata=False)
         Form.procid = wtforms.HiddenField()
         form = Form(procid=internal_procid)
-    elif request.session[INFO_KEY]['stage'] == VERIFY:
+    elif request.session[RAND_INFO_KEY]['stage'] == RAND_VERIFY:
         template = '../templates/enrollment/randomize-verify.pt'
         Form = make_form(
             db_session,

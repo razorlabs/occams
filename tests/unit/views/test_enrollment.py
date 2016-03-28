@@ -1,6 +1,14 @@
 import pytest
 
 
+@pytest.yield_fixture
+def check_csrf_token(config):
+    import mock
+    name = 'occams_studies.views.enrollment.check_csrf_token'
+    with mock.patch(name) as patch:
+        yield patch
+
+
 class TestViewJson:
 
     def _call_fut(self, *args, **kw):
@@ -336,158 +344,174 @@ class TestDeleteJson:
         assert 0 == db_session.query(datastore.Entity).count()
 
 
-class TestRandomizeAjax:
+class Test_randomization_ajax:
 
-    @pytest.fixture(autouse=True)
-    def install_randomization_data(self, db_session, factories):
-        from occams_studies import models
+    def _call_fut(self, *args, **kw):
+        from occams_studies.views.enrollment import randomize_ajax as view
+        return view(*args, **kw)
 
-        self.schema = factories.SchemaFactory.create()
-        self.study = factories.StudyFactory(
-            randomization_schema=self.schema,
-            is_randomized=True
+    def test_challenge(self, req, db_session, config, factories):
+        """
+        It should set to CHALLENGE mode when no session is found
+        """
+        import mock
+        from occams_studies.views.enrollment import \
+            RAND_INFO_KEY, RAND_CHALLENGE
+
+        config.include('pyramid_chameleon')
+
+        enrollment = factories.EnrollmentFactory.create(
+            study__is_randomized=True,
+            study__randomization_schema=factories.SchemaFactory.create(),
         )
-        self.stratum = factories.StratumFactory(
-            study=self.study,
-            arm__study=self.study
-        )
-        self.stratum2 = factories.StratumFactory(
-            study=self.study,
-            arm__study=self.study
-        )
-
-        self.stratum.entities.add(factories.EntityFactory.create(
-            schema=self.schema
-        ))
-        self.stratum2.entities.add(factories.EntityFactory.create(
-            schema=self.schema
-        ))
-
-        self.site = models.Site(name=u'ucsd', title=u'UCSD')
-
-        self.enrollment = factories.EnrollmentFactory.create(
-            study=self.study
-        )
-
-        self.enrollment2 = factories.EnrollmentFactory.create(
-            study=self.study
-        )
-
         db_session.flush()
 
-    def _call_fut(self, *args, **kw):
-        from occams_studies.views.enrollment import randomize_ajax as view
-        return view(*args, **kw)
-
-    def test_challenge(self, req, db_session, config):
-
-        config.include('pyramid_chameleon')
-        req.session = {}
-
-        enrollment = self.enrollment
+        req.current_route_path = mock.Mock(return_value='/a/b/c')
+        req.session[RAND_INFO_KEY] = None
 
         self._call_fut(enrollment, req)
 
-        assert req.session['randomization_stage'] == 0
+        assert req.session[RAND_INFO_KEY]['stage'] == RAND_CHALLENGE
 
-    def test_transition_from_enter_to_verify(self, req, db_session, config):
+    def test_transition_from_enter_to_verify(
+            self, req, db_session, config, factories):
+        """
+        It should transition from ENTER to VERIFY on successfull submit
+        """
 
+        import uuid
+        import mock
         from webob.multidict import MultiDict
+        from occams_studies.views.enrollment import \
+            RAND_INFO_KEY, RAND_ENTER, RAND_VERIFY
 
         config.include('pyramid_chameleon')
-        payload = MultiDict()
-        req.method = 'POST'
-        req.POST = payload
-        req.matchdict = {
-            'patient': self.enrollment.patient,
-            'enrollment': self.enrollment
+
+        enrollment = factories.EnrollmentFactory.create(
+            study__is_randomized=True,
+            study__randomization_schema=factories.SchemaFactory.create(),
+        )
+
+        procid = str(uuid.uuid4())
+        req.current_route_path = mock.Mock(return_value='/a/b/c')
+        req.session[RAND_INFO_KEY] = {
+            'procid': procid,
+            'stage': RAND_ENTER,
+            'formdata': {}
         }
-
-        enrollment = self.enrollment
-
-        req.session['randomization_stage'] = 1
+        req.method = 'POST'
+        req.POST = MultiDict({'procid': procid})
 
         self._call_fut(enrollment, req)
 
-        assert req.session['randomization_stage'] == 2
+        assert req.session[RAND_INFO_KEY]['stage'] == RAND_VERIFY
 
-    def test_transition_from_verify_to_complete(self, req, db_session, config):
+    def test_transition_from_verify_to_complete(
+            self, req, db_session, config, factories):
+        """
+        It should randomize the patient on successful submit from VERIFY
+        """
 
+        import uuid
+        import mock
         from webob.multidict import MultiDict
+        from occams_studies.views.enrollment import \
+            RAND_INFO_KEY, RAND_VERIFY
 
         config.include('pyramid_chameleon')
-        payload = MultiDict()
         req.method = 'POST'
-        req.POST = payload
-        req.matchdict = {
-            'patient': self.enrollment.patient,
-            'enrollment': self.enrollment
+        req.POST = MultiDict()
+
+        enrollment = factories.EnrollmentFactory.create(
+            study__is_randomized=True,
+            study__randomization_schema=factories.SchemaFactory.create(),
+        )
+        stratum = factories.StratumFactory(study=enrollment.study)
+        stratum.entities.add(factories.EntityFactory.create(
+            schema=enrollment.study.randomization_schema
+        ))
+        db_session.flush()
+
+        procid = str(uuid.uuid4())
+        req.current_route_path = mock.Mock(return_value='/a/b/c')
+        req.session[RAND_INFO_KEY] = {
+            'procid': procid,
+            'stage': RAND_VERIFY,
+            'formdata': {}
         }
-
-        enrollment = self.enrollment
-
-        req.session['randomization_stage'] = 2
+        req.POST = MultiDict({'procid': procid})
 
         self._call_fut(enrollment, req)
 
-        assert req.session['randomization_stage'] == 3
+        assert RAND_INFO_KEY not in req.session
 
-    def test_randid_assignment(self, req, db_session, config):
+    def test_randid_assignment(self, req, db_session, config, factories):
+        """
+        It should assign randomiation ids sequentially
+        """
 
+        import uuid
+        import mock
         from webob.multidict import MultiDict
+        from occams_studies.views.enrollment import \
+            RAND_INFO_KEY, RAND_VERIFY
 
         config.include('pyramid_chameleon')
-        payload = MultiDict()
 
         req.method = 'POST'
-        req.POST = payload
-        req.matchdict = {
-            'patient': self.enrollment.patient,
-            'enrollment': self.enrollment
+        req.POST = MultiDict()
+
+        study = factories.StudyFactory.create(
+            is_randomized=True,
+            randomization_schema=factories.SchemaFactory.create())
+        stratum1 = factories.StratumFactory(study=study)
+        stratum1.entities.add(factories.EntityFactory.create(
+            schema=study.randomization_schema
+        ))
+        stratum2 = factories.StratumFactory(study=study)
+        stratum2.entities.add(factories.EntityFactory.create(
+            schema=study.randomization_schema
+        ))
+
+        enrollment1 = factories.EnrollmentFactory.create(study=study)
+        enrollment2 = factories.EnrollmentFactory.create(study=study)
+        db_session.flush()
+
+        procid = str(uuid.uuid4())
+        req.current_route_path = mock.Mock(return_value='/a/b/c')
+        req.session[RAND_INFO_KEY] = {
+            'procid': procid,
+            'stage': RAND_VERIFY,
+            'formdata': {}
         }
+        req.POST = MultiDict({'procid': procid})
 
-        enrollment = self.enrollment
+        res = self._call_fut(enrollment1, req)
 
-        req.session['randomization_stage'] = 2
+        db_session.refresh(enrollment1)
+        assert enrollment1.stratum == stratum1
 
-        res = self._call_fut(enrollment, req)
-
-        assert res['enrollment']['stratum']['randid'] == self.stratum.randid
-        assert res['enrollment']['stratum']['arm']['name'] == \
-            self.stratum.arm.name
-
-        req.POST = payload
-        req.matchdict = {
-            'patient': self.enrollment2.patient,
-            'enrollment': self.enrollment2
+        req.session[RAND_INFO_KEY] = {
+            'procid': procid,
+            'stage': RAND_VERIFY,
+            'formdata': {}
         }
+        req.POST = MultiDict({'procid': procid})
+        res = self._call_fut(enrollment2, req)
 
-        enrollment = self.enrollment2
-
-        req.session['randomization_stage'] = 2
-        res = self._call_fut(enrollment, req)
-
-        assert res['enrollment']['stratum']['randid'] == self.stratum2.randid
-        assert res['enrollment']['stratum']['arm']['name'] == \
-            self.stratum2.arm.name
-
-
-class TestRandomizeAjaxAssigned:
-    """
-    Move this test to it's own class because we need to tweak the criteria
-    slightly to make it work for criteria-based randid assigment.
-    """
-
-    def _call_fut(self, *args, **kw):
-        from occams_studies.views.enrollment import randomize_ajax as view
-        return view(*args, **kw)
+        db_session.refresh(enrollment2)
+        assert enrollment2.stratum == stratum2
 
     def test_randid_assignment_with_criteria(
             self, req, db_session, config, factories):
         """
         It should assign a randid given the criteria associated with a stratum
         """
+        import uuid
+        import mock
         from webob.multidict import MultiDict
+        from occams_studies.views.enrollment import \
+            RAND_INFO_KEY, RAND_VERIFY
 
         schema = factories.SchemaFactory.create(
             attributes={
@@ -507,15 +531,8 @@ class TestRandomizeAjaxAssigned:
             is_randomized=True
         )
 
-        stratum1 = factories.StratumFactory.create(
-            study=study,
-            arm__study=study
-        )
-
-        stratum2 = factories.StratumFactory.create(
-            study=study,
-            arm__study=study
-        )
+        stratum1 = factories.StratumFactory.create(study=study)
+        stratum2 = factories.StratumFactory.create(study=study)
 
         entity1 = factories.EntityFactory.create(schema=schema)
         entity1['likes_icecream'] = u'0'
@@ -530,16 +547,18 @@ class TestRandomizeAjaxAssigned:
         db_session.flush()
 
         config.include('pyramid_chameleon')
-        payload = MultiDict([('likes_icecream', u'1')])
 
+        procid = str(uuid.uuid4())
+        req.current_route_path = mock.Mock(return_value='/a/b/c')
         req.method = 'POST'
-        req.POST = payload
-        req.matchdict = {
-            'patient': enrollment.patient,
-            'enrollment': enrollment
+        payload = {'procid': procid, 'likes_icecream': u'1'}
+        req.POST = MultiDict(payload)
+        req.session[RAND_INFO_KEY] = {
+            'procid': procid,
+            'stage': RAND_VERIFY,
+            'formdata': payload
         }
-        req.session['randomization_stage'] = 2
-
         res = self._call_fut(enrollment, req)
 
-        assert res['enrollment']['stratum']['randid'] == stratum2.randid
+        db_session.refresh(enrollment)
+        assert enrollment.stratum == stratum2
