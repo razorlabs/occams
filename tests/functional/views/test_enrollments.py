@@ -640,82 +640,217 @@ class TestPermissionsEnrollmentTermination:
         app.get(self.url.format(enrollment_id), status=401, xhr=True)
 
 
-@pytest.mark.parametrize('count', xrange(100))
-def test_randomize_ajax(app, db_session, factories, count):
+class TestPermissionsEnrollmentRandomization:
 
-    import transaction
-    from occams_studies import models as studies
+    @pytest.fixture(autouse=True)
+    def populate(self, app, db_session, factories):
+        import transaction
 
-    with transaction.manager:
-        db_session.info['blame'] = factories.UserFactory.create(key=USERID)
-        db_session.flush()
+        with transaction.manager:
+            db_session.info['blame'] = factories.UserFactory.create(key=USERID)
+            db_session.flush()
 
-        study = factories.StudyFactory.create(
-            is_randomized=True,
-            randomization_schema=factories.SchemaFactory.create(),
+            study = factories.StudyFactory.create(
+                is_randomized=True,
+                randomization_schema=factories.SchemaFactory.create(),
+            )
+
+            stratum = factories.StratumFactory.create(study=study)
+
+            stratum.entities.add(
+                factories.EntityFactory.create(
+                    schema=study.randomization_schema)
+            )
+
+            factories.EnrollmentFactory.create(
+                patient=factories.PatientFactory.create(),
+                study=study
+            )
+
+    @pytest.mark.parametrize('group', ['administrator', 'manager'])
+    def test_randomize_ajax_allowed(self, app, db_session, factories, group):
+        import uuid
+
+        from occams_studies import models as studies
+
+        enrollment = db_session.query(studies.Enrollment).one()
+
+        url = '/studies/patients/{pid}/enrollments/{eid}/randomization'.format(
+            pid=enrollment.patient.pid,
+            eid=enrollment.id
         )
 
-        stratum = factories.StratumFactory.create(study=study)
+        environ = make_environ(userid=USERID, groups=[group])
 
-        stratum.entities.add(
-            factories.EntityFactory.create(schema=study.randomization_schema)
+        headers = {
+            'X-CSRF-Token': get_csrf_token(app, environ),
+            'X-REQUESTED-WITH': str('XMLHttpRequest')
+        }
+
+        res = app.get(
+            url,
+            extra_environ=environ,
+            status='*',
+            headers=headers,
+            xhr=True,
         )
 
-        enrollment = factories.EnrollmentFactory.create(
-            patient=factories.PatientFactory.create(),
-            study=study
+        assert 302 == res.status_code
+
+        procid = str(uuid.uuid4())
+
+        # CHALLENGE
+        res = app.post(
+            url,
+            extra_environ=environ,
+            status='*',
+            headers=headers,
+            xhr=True,
+            params={'procid': procid}
         )
 
-    enrollment = db_session.query(studies.Enrollment).one()
+        assert 302 == res.status_code
 
-    url = '/studies/patients/{pid}/enrollments/{eid}/randomization'.format(
-        pid=enrollment.patient.pid,
-        eid=enrollment.id
-    )
+        # ENTRY
+        res = app.post(
+            url,
+            extra_environ=environ,
+            status='*',
+            headers=headers,
+            xhr=True,
+            params={'procid': procid}
+        )
 
-    environ = make_environ(userid=USERID, groups=['manager'])
+        assert 302 == res.status_code
 
-    headers = {
-        'X-CSRF-Token': get_csrf_token(app, environ),
-        'X-REQUESTED-WITH': str('XMLHttpRequest')
-    }
+        # VERIFY
+        res = app.post(
+            url,
+            extra_environ=environ,
+            status='*',
+            headers=headers,
+            xhr=True,
+            params={'procid': procid}
+        )
 
-    res = app.get(
-        url,
-        extra_environ=environ,
-        status='*',
-        headers=headers,
-        xhr=True,
-    )
-    assert 200 == res.status_code
+        assert 302 == res.status_code
 
-    # CHALLENGE
-    res = app.post(
-        url,
-        extra_environ=environ,
-        status='*',
-        headers=headers,
-        xhr=True,
-        params={'confirm': enrollment.reference_number}
-    )
-    assert 200 == res.status_code
+    @pytest.mark.parametrize('group', ['UCSD:reviewer', 'UCSD:member', 'None'])
+    def test_randomize_ajax_not_allowed(self, app, db_session, factories, group):
+        import uuid
 
-    # ENTRY
-    res = app.post(
-        url,
-        extra_environ=environ,
-        status='*',
-        headers=headers,
-        xhr=True,
-    )
-    assert 200 == res.status_code
+        from occams_studies import models as studies
 
-    # VERIFY
-    res = app.post(
-        url,
-        extra_environ=environ,
-        status='*',
-        headers=headers,
-        xhr=True,
-    )
-    assert 302 == res.status_code
+        enrollment = db_session.query(studies.Enrollment).one()
+
+        url = '/studies/patients/{pid}/enrollments/{eid}/randomization'.format(
+            pid=enrollment.patient.pid,
+            eid=enrollment.id
+        )
+
+        environ = make_environ(userid=USERID, groups=[group])
+
+        headers = {
+            'X-CSRF-Token': get_csrf_token(app, environ),
+            'X-REQUESTED-WITH': str('XMLHttpRequest')
+        }
+
+        res = app.get(
+            url,
+            extra_environ=environ,
+            status='*',
+            headers=headers,
+            xhr=True,
+        )
+
+        assert 403 == res.status_code
+
+        procid = str(uuid.uuid4())
+
+        # CHALLENGE
+        res = app.post(
+            url,
+            extra_environ=environ,
+            status='*',
+            headers=headers,
+            xhr=True,
+            params={'procid': procid}
+        )
+
+        assert 403 == res.status_code
+
+        # ENTRY
+        res = app.post(
+            url,
+            extra_environ=environ,
+            status='*',
+            headers=headers,
+            xhr=True,
+            params={'procid': procid}
+        )
+
+        assert 403 == res.status_code
+
+        # VERIFY
+        res = app.post(
+            url,
+            extra_environ=environ,
+            status='*',
+            headers=headers,
+            xhr=True,
+            params={'procid': procid}
+        )
+
+        assert 403 == res.status_code
+
+    def test_not_authenticated(self, app, db_session):
+        import uuid
+
+        from occams_studies import models as studies
+
+        enrollment = db_session.query(studies.Enrollment).one()
+
+        url = '/studies/patients/{pid}/enrollments/{eid}/randomization'.format(
+            pid=enrollment.patient.pid,
+            eid=enrollment.id
+        )
+
+        res = app.get(
+            url,
+            status='*',
+            xhr=True,
+        )
+
+        assert 401 == res.status_code
+
+        procid = str(uuid.uuid4())
+
+        # CHALLENGE
+        res = app.post(
+            url,
+            status='*',
+            xhr=True,
+            params={'procid': procid}
+        )
+
+        assert 401 == res.status_code
+
+        # ENTRY
+        res = app.post(
+            url,
+            status='*',
+            xhr=True,
+            params={'procid': procid}
+        )
+
+        assert 401 == res.status_code
+
+        # VERIFY
+        res = app.post(
+            url,
+            status='*',
+            xhr=True,
+            params={'procid': procid}
+        )
+
+        assert 401 == res.status_code
