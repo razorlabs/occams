@@ -1,6 +1,8 @@
 from datetime import datetime, date
+import uuid
 
-from pyramid.httpexceptions import HTTPBadRequest, HTTPOk, HTTPNotFound
+from pyramid.httpexceptions import \
+    HTTPBadRequest, HTTPFound, HTTPOk, HTTPNotFound
 from pyramid.renderers import render
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
@@ -65,9 +67,9 @@ def view_json(context, request):
             enrollment=enrollment.id),
         '__can_edit__':
             bool(request.has_permission('edit', context)),
-        '__can_terminate__':
-            bool(request.has_permission('terminate', context))
-            and bool(study.termination_schema),
+        '__can_terminate__': bool(
+            request.has_permission('terminate', context) and
+            study.termination_schema),
         '__can_randomize__': can_randomize,
         '__can_delete__':
             bool(request.has_permission('delete', context)),
@@ -93,10 +95,10 @@ def view_json(context, request):
         'consent_date': enrollment.consent_date.isoformat(),
         'latest_consent_date': enrollment.latest_consent_date.isoformat(),
         'termination_date': (
-            enrollment.termination_date
-            and enrollment.termination_date.isoformat()),
+            enrollment.termination_date and
+            enrollment.termination_date.isoformat()),
         'reference_number': enrollment.reference_number,
-        }
+    }
 
 
 @view_config(
@@ -249,7 +251,7 @@ def terminate_ajax(context, request):
     )
 
 
-def _get_randomization_form(context, request):
+def _get_randomized_form(context, request):
     db_session = request.db_session
     try:
         entity = (
@@ -309,7 +311,7 @@ def _make_challenge_form(context, request):
     permission='randomize',
     renderer='../templates/enrollment/randomize-print.pt')
 def randomize_print(context, request):
-    form = _get_randomization_form(context, request)
+    form = _get_randomized_form(context, request)
     return {'form': render_form(form, disabled=True)}
 
 
@@ -319,129 +321,185 @@ def randomize_print(context, request):
     xhr=True,
     renderer='json')
 def randomize_ajax(context, request):
+    """
+    """
+
     db_session = request.db_session
+    enrollment = context
 
-    STAGE_KEY = 'randomization_stage'
-    DATA_KEY = 'randomization_data'
-    CHALLENGE, ENTER, VERIFY, COMPLETE = range(4)
+    CHALLENGE, ENTER, VERIFY = range(3)
+    INFO_KEY = 'randomization_info'
 
-    is_randomized = bool(context.stratum)
-    randomization_schema = context.study.randomization_schema
-    error_message = None
+    if not enrollment.is_randomized:
+        if 'procid' not in request.params:
+            request.session[INFO_KEY] = {
+                'procid': str(uuid.uuid4()),
+                'stage': CHALLENGE,
+                'formdata': None
+            }
+            return HTTPFound(
+               location=request.current_route_path(
+                    _query={'procid': request.session[INFO_KEY]['procid']}))
 
-    # Reset randomization process if not posting data
-    if request.method != 'POST':
-        request.session[STAGE_KEY] = CHALLENGE
-        request.session[DATA_KEY] = {}
+        external_procid = request.params.get('procid')
+        internal_procid = (request.session.get(INFO_KEY) or {}).get('procid')
 
-    else:
-        # Validate
+        if external_procid is not None and external_procid != internal_procid:
+            del request.session[INFO_KEY]
+            request.session.flash(
+                _(u'You have another randomization in progress, starting over.'),
+                'warning')
+            return HTTPFound(location=request.current_route_path(_query={}))
+
+    if request.method == 'POST':
         check_csrf_token(request)
-        if is_randomized:
-            raise HTTPBadRequest(
-                body=_(u'This patient is already randomized for this study'))
-        if request.session.get(STAGE_KEY) in (ENTER, VERIFY):
-            Form = make_form(
-                db_session, randomization_schema, show_metadata=False)
-        else:
-            Form = _make_challenge_form(context, request)
-        form = Form(request.POST)
-        if not form.validate():
-            raise HTTPBadRequest(json={'errors': wtferrors(form)})
 
-        # Determine next state
-        if request.session.get(STAGE_KEY) == ENTER:
-            request.session[STAGE_KEY] = VERIFY
-            request.session[DATA_KEY] = form.data
-        elif request.session[STAGE_KEY] == VERIFY:
-            previous_data = request.session.get(DATA_KEY) or {}
-            # ensure entered values match previous values
-            for field, value in previous_data.items():
-                if value != form.data.get(field):
-                    # start over
-                    request.session[STAGE_KEY] = ENTER
-                    request.session[DATA_KEY] = None
-                    error_message = _(
-                        u'Your responses do not match previously entered '
-                        u'responses. '
-                        u'You will need to reenter your responses.')
-                    break
+        if enrollment.is_randomized:
+            request.session.flash(
+                _(u'This patient is already randomized for this study'),
+                'warning')
+            return HTTPFound(location=request.current_route_path(_query={}))
+
+        if request.session[INFO_KEY]['stage'] == CHALLENGE:
+            Form = _make_challenge_form(enrollment, request)
+            form = Form(request.POST)
+            if not form.validate():
+                raise HTTPBadRequest(json={'errors': wtferrors(form)})
             else:
-                request.session[STAGE_KEY] = COMPLETE
+                request.session[INFO_KEY]['stage'] = ENTER
+                request.session.changed()
+                return HTTPFound(location=request.current_route_path(
+                    _query={'procid': request.session[INFO_KEY]['procid']})
+                )
+
+        elif request.session[INFO_KEY]['stage'] == ENTER:
+            Form = make_form(
+                db_session,
+                enrollment.study.randomization_schema,
+                show_metadata=False)
+            form = Form(request.POST)
+            if not form.validate():
+                raise HTTPBadRequest(json={'errors': wtferrors(form)})
+            else:
+                request.session[INFO_KEY]['stage'] = VERIFY
+                request.session[INFO_KEY]['formdata'] = form.data
+                request.session.changed()
+                return HTTPFound(location=request.current_route_path(
+                    _query={'procid': request.session[INFO_KEY]['procid']})
+                )
+
+        elif request.session[INFO_KEY]['stage'] == VERIFY:
+            Form = make_form(
+                db_session,
+                enrollment.study.randomization_schema,
+                show_metadata=False)
+            form = Form(request.POST)
+            if not form.validate():
+                raise HTTPBadRequest(json={'errors': wtferrors(form)})
+            else:
+                previous_data = request.session[INFO_KEY].get('formdata') or {}
+                # ensure entered values match previous values
+                for field, value in previous_data.items():
+                    if value != form.data.get(field):
+                        # start over
+                        request.session[INFO_KEY]['stage'] = ENTER
+                        request.session[INFO_KEY]['formdata'] = None
+                        request.session.flash(
+                            _(u'Your responses do not match previously '
+                              u'entered responses. '
+                              u'You will need to reenter your responses.'),
+                            'warning')
+                        break
+                else:
+                    report = build_report(
+                        db_session, enrollment.study.randomization_schema.name)
+                    data = form.data
+
+                    # Get an unassigned entity that matches the input criteria
+                    query = (
+                        db_session.query(models.Stratum)
+                        .filter(models.Stratum.study == enrollment.study)
+                        .filter(models.Stratum.patient == sa.null())
+                        .join(models.Stratum.contexts)
+                        .join(datastore.Context.entity)
+                        .add_entity(datastore.Entity)
+                        .join(report, report.c.id == datastore.Entity.id)
+                        .filter(sa.and_(
+                            *[(getattr(report.c, k) == v)
+                                for k, v in data.items()]))
+                        .order_by(models.Stratum.id.asc())
+                        .limit(1))
+
+                    try:
+                        (stratum, entity) = query.one()
+                    except orm.exc.NoResultFound:
+                        raise HTTPBadRequest(
+                            body=_(u'Randomization numbers depleted'))
+
+                    # so far so good, set the contexts and complete the request
+                    stratum.patient = enrollment.patient
+                    entity.state = (
+                        db_session.query(datastore.State)
+                        .filter_by(name=u'complete')
+                        .one())
+                    entity.collect_date = date.today()
+                    enrollment.patient.entities.add(entity)
+                    enrollment.entities.add(entity)
+                    db_session.flush()
+                    del request.session[INFO_KEY]
+                    request.session.flash(_(u'Randomization complete'), 'success')
+                    return HTTPFound(
+                        location=request.current_route_path(_query={}))
+
         else:
-            request.session[STAGE_KEY] = ENTER
+            request.session.flash(
+                _(u'Unable to determine randomization state. Restarting'),
+                'warning')
+            del request.session[INFO_KEY]
+            return HTTPFound(location=request.current_route_path(_query={}))
 
-        # Determine if the workflow should finish
-        if request.session[STAGE_KEY] == COMPLETE:
-            report = build_report(db_session, randomization_schema.name)
-            data = form.data
-
-            # Get an unassigned entity that matches the input criteria
-            query = (
-                db_session.query(models.Stratum)
-                .filter(models.Stratum.study == context.study)
-                .filter(models.Stratum.patient == sa.null())
-                .join(models.Stratum.contexts)
-                .join(datastore.Context.entity)
-                .add_entity(datastore.Entity)
-                .join(report, report.c.id == datastore.Entity.id)
-                .filter(sa.and_(
-                    *[(getattr(report.c, k) == v) for k, v in data.items()]))
-                .order_by(models.Stratum.id.asc())
-                .limit(1))
-
-            try:
-                (stratum, entity) = query.one()
-            except orm.exc.NoResultFound:
-                raise HTTPBadRequest(
-                    body=_(u'No more stratification numbers available!'))
-
-            # so far so good, set the contexts and complete the request
-            is_randomized = True
-            stratum.patient = context.patient
-            entity.state = (
-                db_session.query(datastore.State)
-                .filter_by(name=u'complete')
-                .one())
-            entity.collect_date = date.today()
-            context.patient.entities.add(entity)
-            context.entities.add(entity)
-            db_session.flush()
-            db_session.refresh(context)
-
-    # Choose next form to render for data entry
-    if is_randomized:
+    if enrollment.is_randomized:
         template = '../templates/enrollment/randomize-view.pt'
-        form = _get_randomization_form(context, request)
-    elif request.session.get(STAGE_KEY) == ENTER:
-        template = '../templates/enrollment/randomize-enter.pt'
-        Form = make_form(db_session, randomization_schema, show_metadata=False)
-        form = Form()
-    elif request.session.get(STAGE_KEY) == VERIFY:
-        template = '../templates/enrollment/randomize-verify.pt'
-        Form = make_form(db_session, randomization_schema, show_metadata=False)
-        form = Form()
-    elif request.session.get(STAGE_KEY) == CHALLENGE:
+        form = _get_randomized_form(enrollment, request)
+    elif request.session[INFO_KEY]['stage'] == CHALLENGE:
         template = '../templates/enrollment/randomize-challenge.pt'
-        Form = _make_challenge_form(context, request)
-        form = Form()
+        Form = _make_challenge_form(enrollment, request)
+        Form.procid = wtforms.HiddenField()
+        form = Form(procid=internal_procid)
         form.meta.entity = None
-        form.meta.schema = randomization_schema
+        form.meta.schema = enrollment.study.randomization_schema
+    elif request.session[INFO_KEY]['stage'] == ENTER:
+        template = '../templates/enrollment/randomize-enter.pt'
+        Form = make_form(
+            db_session,
+            enrollment.study.randomization_schema,
+            show_metadata=False)
+        Form.procid = wtforms.HiddenField()
+        form = Form(procid=internal_procid)
+    elif request.session[INFO_KEY]['stage'] == VERIFY:
+        template = '../templates/enrollment/randomize-verify.pt'
+        Form = make_form(
+            db_session,
+            enrollment.study.randomization_schema,
+            show_metadata=False)
+        form = Form()
+        Form.procid = wtforms.HiddenField()
+        form = Form(procid=internal_procid)
 
     return {
-        'is_randomized': is_randomized,
-        'enrollment': view_json(context, request),
+        'is_randomized': enrollment.is_randomized,
+        'enrollment': view_json(enrollment, request),
         'content': render(template, {
-            'error': error_message,
-            'context': context,
+            'context': enrollment,
             'request': request,
             'form': render_form(
                 form,
-                disabled=is_randomized,
+                disabled=enrollment.is_randomized,
                 show_footer=False,
                 attr={
                     'id': 'enrollment-randomization',
                     'method': 'POST',
+                    'action': request.current_route_path(),
                     'role': 'form',
                     'data-bind':
                         'formentry: {}, submit: $root.randomizeEnrollment'

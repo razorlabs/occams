@@ -638,3 +638,84 @@ class TestPermissionsEnrollmentTermination:
             studies.Study.name == u'test_study').scalar()
 
         app.get(self.url.format(enrollment_id), status=401, xhr=True)
+
+
+@pytest.mark.parametrize('count', xrange(100))
+def test_randomize_ajax(app, db_session, factories, count):
+
+    import transaction
+    from occams_studies import models as studies
+
+    with transaction.manager:
+        db_session.info['blame'] = factories.UserFactory.create(key=USERID)
+        db_session.flush()
+
+        study = factories.StudyFactory.create(
+            is_randomized=True,
+            randomization_schema=factories.SchemaFactory.create(),
+        )
+
+        stratum = factories.StratumFactory.create(study=study)
+
+        stratum.entities.add(
+            factories.EntityFactory.create(schema=study.randomization_schema)
+        )
+
+        enrollment = factories.EnrollmentFactory.create(
+            patient=factories.PatientFactory.create(),
+            study=study
+        )
+
+    enrollment = db_session.query(studies.Enrollment).one()
+
+    url = '/studies/patients/{pid}/enrollments/{eid}/randomization'.format(
+        pid=enrollment.patient.pid,
+        eid=enrollment.id
+    )
+
+    environ = make_environ(userid=USERID, groups=['manager'])
+
+    headers = {
+        'X-CSRF-Token': get_csrf_token(app, environ),
+        'X-REQUESTED-WITH': str('XMLHttpRequest')
+    }
+
+    res = app.get(
+        url,
+        extra_environ=environ,
+        status='*',
+        headers=headers,
+        xhr=True,
+    )
+    assert 200 == res.status_code
+
+    # CHALLENGE
+    res = app.post(
+        url,
+        extra_environ=environ,
+        status='*',
+        headers=headers,
+        xhr=True,
+        params={'confirm': enrollment.reference_number}
+    )
+    assert 200 == res.status_code
+
+    # ENTRY
+    res = app.post(
+        url,
+        extra_environ=environ,
+        status='*',
+        headers=headers,
+        xhr=True,
+    )
+    assert 200 == res.status_code
+
+    # VERIFY
+    res = app.post(
+        url,
+        extra_environ=environ,
+        status='*',
+        headers=headers,
+        xhr=True,
+    )
+    assert 302 == res.status_code
