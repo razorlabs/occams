@@ -345,7 +345,10 @@ def randomize_ajax(context, request):
         internal_procid = (request.session.get(INFO_KEY) or {}).get('procid')
 
         if external_procid is not None and external_procid != internal_procid:
-            del request.session[INFO_KEY]
+            try:
+                del request.session[INFO_KEY]
+            except KeyError:
+                pass
             request.session.flash(
                 _(u'You have another randomization in progress, starting over.'),
                 'warning')
