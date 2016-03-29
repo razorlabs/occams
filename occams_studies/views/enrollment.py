@@ -449,7 +449,8 @@ def randomize_ajax(context, request):
                               u'entered responses. '
                               u'You will need to reenter your responses.'),
                             'warning')
-                        break
+                        return HTTPFound(location=request.current_route_path(
+                            _query={'procid': internal_procid}))
                 else:
                     report = build_report(
                         db_session, enrollment.study.randomization_schema.name)
