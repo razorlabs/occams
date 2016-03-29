@@ -365,6 +365,8 @@ def randomize_ajax(context, request):
     enrollment = context
 
     if not enrollment.is_randomized:
+        # Ensure a ``procid`` is assigned for the duration of the process
+        # This way, if a new request mismatches, we can expire the operation
         if 'procid' not in request.GET and 'procid' not in request.POST:
             internal_procid = str(uuid.uuid4())
             request.session[RAND_INFO_KEY] = {

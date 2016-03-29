@@ -350,6 +350,127 @@ class Test_randomization_ajax:
         from occams_studies.views.enrollment import randomize_ajax as view
         return view(*args, **kw)
 
+    def test_get_randomized_view(self, req, db_session, config, factories):
+        """
+        It should render randomization details for randomized enrollment
+        """
+        import mock
+        from occams_studies.views.enrollment import \
+            RAND_INFO_KEY
+
+        config.include('pyramid_chameleon')
+
+        study = factories.StudyFactory.create(
+            is_randomized=True,
+            randomization_schema=factories.SchemaFactory.create())
+        stratum = factories.StratumFactory.create(study=study)
+        stratum.entities.add(factories.EntityFactory.create(
+            schema=study.randomization_schema))
+        enrollment = factories.EnrollmentFactory.create(
+            study=study,
+            stratum=stratum)
+        db_session.flush()
+
+        req.current_route_path = mock.Mock(return_value='/a/b/c')
+        req.session[RAND_INFO_KEY] = None
+
+        res = self._call_fut(enrollment, req)
+
+        assert 'Randomization Status' in res['content']
+
+    def test_get_challenge_view(self, req, db_session, config, factories):
+        """
+        It should render the challenge form first when beginning randomization
+        """
+        import uuid
+        import mock
+        from webob.multidict import MultiDict
+        from occams_studies.views.enrollment import \
+            RAND_INFO_KEY, RAND_CHALLENGE
+
+        config.include('pyramid_chameleon')
+
+        study = factories.StudyFactory.create(
+            is_randomized=True,
+            randomization_schema=factories.SchemaFactory.create())
+        enrollment = factories.EnrollmentFactory.create(study=study)
+        db_session.flush()
+
+        procid = str(uuid.uuid4())
+        req.current_route_path = mock.Mock(return_value='/a/b/c')
+        req.session[RAND_INFO_KEY] = {
+            'stage': RAND_CHALLENGE,
+            'procid': procid,
+            'formdata': None,
+        }
+        req.GET = MultiDict({'procid': procid})
+
+        res = self._call_fut(enrollment, req)
+
+        assert '(Step 1 of 3)' in res['content']
+
+    def test_get_enter_view(self, req, db_session, config, factories):
+        """
+        It should render the enter form when at the ENTER stage
+        """
+        import uuid
+        import mock
+        from webob.multidict import MultiDict
+        from occams_studies.views.enrollment import \
+            RAND_INFO_KEY, RAND_ENTER
+
+        config.include('pyramid_chameleon')
+
+        study = factories.StudyFactory.create(
+            is_randomized=True,
+            randomization_schema=factories.SchemaFactory.create())
+        enrollment = factories.EnrollmentFactory.create(study=study)
+        db_session.flush()
+
+        procid = str(uuid.uuid4())
+        req.current_route_path = mock.Mock(return_value='/a/b/c')
+        req.session[RAND_INFO_KEY] = {
+            'stage': RAND_ENTER,
+            'procid': procid,
+            'formdata': None,
+        }
+        req.GET = MultiDict({'procid': procid})
+
+        res = self._call_fut(enrollment, req)
+
+        assert '(Step 2 of 3)' in res['content']
+
+    def test_get_verify_view(self, req, db_session, config, factories):
+        """
+        It should render the verify form when at the VERIFY stage
+        """
+        import uuid
+        import mock
+        from webob.multidict import MultiDict
+        from occams_studies.views.enrollment import \
+            RAND_INFO_KEY, RAND_VERIFY
+
+        config.include('pyramid_chameleon')
+
+        study = factories.StudyFactory.create(
+            is_randomized=True,
+            randomization_schema=factories.SchemaFactory.create())
+        enrollment = factories.EnrollmentFactory.create(study=study)
+        db_session.flush()
+
+        procid = str(uuid.uuid4())
+        req.current_route_path = mock.Mock(return_value='/a/b/c')
+        req.session[RAND_INFO_KEY] = {
+            'stage': RAND_VERIFY,
+            'procid': procid,
+            'formdata': None,
+        }
+        req.GET = MultiDict({'procid': procid})
+
+        res = self._call_fut(enrollment, req)
+
+        assert '(Step 3 of 3)' in res['content']
+
     def test_challenge(self, req, db_session, config, factories):
         """
         It should set to CHALLENGE mode when no session is found
@@ -489,6 +610,8 @@ class Test_randomization_ajax:
         res = self._call_fut(enrollment1, req)
 
         db_session.refresh(enrollment1)
+
+        assert res.status_code == 302
         assert enrollment1.stratum == stratum1
 
         req.session[RAND_INFO_KEY] = {
@@ -500,6 +623,8 @@ class Test_randomization_ajax:
         res = self._call_fut(enrollment2, req)
 
         db_session.refresh(enrollment2)
+
+        assert res.status_code == 302
         assert enrollment2.stratum == stratum2
 
     def test_randid_assignment_with_criteria(
@@ -561,4 +686,6 @@ class Test_randomization_ajax:
         res = self._call_fut(enrollment, req)
 
         db_session.refresh(enrollment)
+
+        assert res.status_code == 302
         assert enrollment.stratum == stratum2
