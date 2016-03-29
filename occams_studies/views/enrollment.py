@@ -327,7 +327,7 @@ def randomize_print(context, request):
     renderer='json')
 def randomize_ajax(context, request):
     """
-    Procesess a patient's randomiation by conmpleting randomization form
+    Procesess a patient's randomiation by completing randomization form
 
     Rules:
 
@@ -350,7 +350,7 @@ def randomize_ajax(context, request):
       of the challenge stage is to ensure the user confirms their intent
       to randomize.
     # ENTER: After passing the challenge stage, the user will then have
-      oppertunity to enter the randomization schema form data that will
+      opportunity to enter the randomization schema form data that will
       be used to determine assignement to the study arm.
     # VERIFY: The user will then have to verify the data again to ensure
       accurate responses. If the user fails this stage, they will have
@@ -379,10 +379,12 @@ def randomize_ajax(context, request):
         external_procid = request.GET.get('procid') or request.POST.get('procid')
         internal_procid = request.session.get(RAND_INFO_KEY, {}).get('procid')
 
+        # compare internal and external ID to determine if a new process has
+        # been initiated in a new tab
         if external_procid is not None and external_procid != internal_procid:
             try:
                 del request.session[RAND_INFO_KEY]
-            except KeyError:
+            except KeyError:  # pragma: no cover
                 pass
             request.session.flash(
                 _(u'You have another randomization in progress, '
