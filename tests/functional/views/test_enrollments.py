@@ -49,8 +49,8 @@ class TestPermissionsEnrollmentsListView:
             ))
 
     @pytest.mark.parametrize('group', [
-        'administrator', 'manager', 'UCSD:enterer', 'UCSD:reviewer',
-        'UCSD:consumer', 'UCSD:member'])
+        'administrator', 'manager', 'UCSD:coordinator', 'UCSD:enterer',
+        'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member'])
     def test_allowed(self, app, db_session, group):
         environ = make_environ(userid=USERID, groups=[group])
 
@@ -64,7 +64,8 @@ class TestPermissionsEnrollmentsListView:
         assert 200 == res.status_code
 
     @pytest.mark.parametrize('group', [
-        'UCLA:enterer', 'UCLA:reviewer', 'UCLA:consumer', 'UCLA:member'])
+        'UCLA:coordinator', 'UCLA:enterer', 'UCLA:reviewer',
+        'UCLA:consumer', 'UCLA:member'])
     def test_not_allowed(self, app, db_session, group):
         environ = make_environ(userid=USERID, groups=[group])
 
@@ -128,7 +129,7 @@ class TestPermissionsEnrollmentsAdd:
             ))
 
     @pytest.mark.parametrize('group', [
-        'administrator', 'manager', 'UCSD:enterer'])
+        'administrator', 'manager', 'UCSD:coordinator', 'UCSD:enterer'])
     def test_allowed(self, app, db_session, group):
         from occams_studies import models as studies
 
@@ -158,7 +159,7 @@ class TestPermissionsEnrollmentsAdd:
 
     @pytest.mark.parametrize('group', [
         'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member',
-        'UCLA:enterer', None])
+        'UCLA:coordinator', 'UCLA:enterer', None])
     def test_not_allowed(self, app, db_session, group):
         from occams_studies import models as studies
 
@@ -237,8 +238,8 @@ class TestPermissionsEnrollmentView:
             ))
 
     @pytest.mark.parametrize('group', [
-        'administrator', 'manager', 'UCSD:enterer', 'UCSD:reviewer',
-        'UCSD:consumer', 'UCSD:member'])
+        'administrator', 'manager', 'UCSD:coordinator', 'UCSD:enterer',
+        'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member'])
     def test_allowed(self, app, db_session, group):
         from occams_studies import models as studies
 
@@ -260,7 +261,8 @@ class TestPermissionsEnrollmentView:
         assert 200 == res.status_code
 
     @pytest.mark.parametrize('group', [
-        'UCLA:enterer', 'UCLA:reviewer', 'UCLA:consumer', 'UCLA:member'])
+        'UCLA:coordinator', 'UCLA:enterer', 'UCLA:reviewer',
+        'UCLA:consumer', 'UCLA:member'])
     def test_not_allowed(self, app, db_session, group):
         from occams_studies import models as studies
 
@@ -337,7 +339,7 @@ class TestPermissionsEnrollmentEdit:
             ))
 
     @pytest.mark.parametrize('group', [
-        'administrator', 'manager', 'UCSD:enterer'])
+        'administrator', 'manager', 'UCSD:coordinator', 'UCSD:enterer'])
     def test_allowed(self, app, db_session, group):
         from occams_studies import models as studies
 
@@ -371,7 +373,8 @@ class TestPermissionsEnrollmentEdit:
         assert 200 == res.status_code
 
     @pytest.mark.parametrize('group', [
-        'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member', 'UCLA:enterer', None])
+        'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member',
+        'UCLA:coordinator', 'UCLA:enterer', None])
     def test_not_allowed(self, app, db_session, group):
         from occams_studies import models as studies
 
@@ -457,7 +460,8 @@ class TestPermissionsEnrollmentDelete:
                 consent_date=date(2014, 12, 22)
             ))
 
-    @pytest.mark.parametrize('group', ['administrator', 'manager'])
+    @pytest.mark.parametrize('group', [
+        'administrator', 'manager', 'UCSD:coordinator'])
     def test_allowed(self, app, db_session, group):
         from occams_studies import models as studies
 
@@ -480,7 +484,8 @@ class TestPermissionsEnrollmentDelete:
         assert 200 == res.status_code
 
     @pytest.mark.parametrize('group', [
-        'UCSD:enterer', 'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member', None])
+        'UCSD:enterer', 'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member',
+        'UCLA:coordinator', None])
     def test_not_allowed(self, app, db_session, group):
         from occams_studies import models as studies
 
@@ -572,7 +577,7 @@ class TestPermissionsEnrollmentTermination:
             ))
 
     @pytest.mark.parametrize('group', [
-        'administrator', 'manager', 'UCSD:enterer'])
+        'administrator', 'manager', 'UCSD:coordinator', 'UCSD:enterer'])
     def test_allowed(self, app, db_session, group):
         from occams_studies import models as studies
 
@@ -602,7 +607,8 @@ class TestPermissionsEnrollmentTermination:
         assert 200 == res.status_code
 
     @pytest.mark.parametrize('group', [
-        'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member', 'UCLA:enterer', None])
+        'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member',
+        'UCLA:coordinator', 'UCLA:enterer', None])
     def test_not_allowed(self, app, db_session, group):
         from occams_studies import models as studies
 

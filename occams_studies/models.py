@@ -49,6 +49,10 @@ class groups:
         return groups.principal(site=site, group='manager')
 
     @staticmethod
+    def coordinator(site=None):
+        return groups.principal(site=site, group='coordinator')
+
+    @staticmethod
     def reviewer(site=None):
         return groups.principal(site=site, group='reviewer')
 
@@ -391,6 +395,7 @@ class PatientFactory(object):
         # on which sites the user has access.
         for site in db_session.query(Site):
             acl.extend([
+                (Allow, groups.coordinator(site), ('view', 'add')),
                 (Allow, groups.enterer(site), ('view', 'add')),
                 (Allow, groups.reviewer(site), ('view',)),
                 (Allow, groups.consumer(site), ('view',)),
@@ -468,6 +473,7 @@ class Site(StudiesModel,
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
             (Allow, groups.manager(), ('view', 'edit', 'delete')),
+            (Allow, groups.coordinator(self), ('view',)),
             (Allow, groups.enterer(self), ('view',)),
             (Allow, groups.consumer(self), ('view',)),
             (Allow, groups.reviewer(self), ('view',)),
@@ -515,8 +521,9 @@ class Patient(StudiesModel,
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
             (Allow, groups.manager(), ('view', 'edit', 'delete')),
-            (Allow, groups.reviewer(site), ('view',)),
+            (Allow, groups.coordinator(site), ('view', 'edit', 'delete')),
             (Allow, groups.enterer(site), ('view', 'edit')),
+            (Allow, groups.reviewer(site), ('view',)),
             (Allow, groups.consumer(site), 'view'),
             (Allow, groups.member(site), 'view')
             ]
@@ -743,8 +750,9 @@ class EnrollmentFactory(object):
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
             (Allow, groups.manager(), ('view', 'add')),
-            (Allow, groups.reviewer(site), ('view')),
+            (Allow, groups.coordinator(site), ('view', 'add')),
             (Allow, groups.enterer(site), ('view', 'add')),
+            (Allow, groups.reviewer(site), ('view')),
             (Allow, groups.consumer(site), 'view'),
             ]
 
@@ -800,6 +808,7 @@ class Enrollment(StudiesModel,
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
             (Allow, groups.manager(), ('view', 'edit', 'delete', 'randomize', 'terminate')),  # NOQA
+            (Allow, groups.coordinator(site), ('view', 'edit', 'delete', 'randomize', 'terminate')),  # NOQA
             (Allow, groups.reviewer(site), ('view')),  # NOQA
             (Allow, groups.enterer(site), ('view', 'edit', 'terminate')),  # NOQA
             (Allow, groups.consumer(site), 'view')
@@ -984,8 +993,9 @@ class VisitFactory(object):
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
             (Allow, groups.manager(), ('view', 'add')),
-            (Allow, groups.reviewer(site), ('view')),
+            (Allow, groups.coordinator(site), ('view', 'add')),
             (Allow, groups.enterer(site), ('view', 'add')),
+            (Allow, groups.reviewer(site), ('view')),
             (Allow, groups.consumer(site), 'view'),
         ]
 
@@ -1051,8 +1061,9 @@ class Visit(StudiesModel,
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
             (Allow, groups.manager(), ('view', 'edit', 'delete')),  # NOQA
-            (Allow, groups.reviewer(site), ('view')),  # NOQA
+            (Allow, groups.coordinator(site), ('view', 'edit', 'delete')),  # NOQA
             (Allow, groups.enterer(site), ('view', 'edit')),  # NOQA
+            (Allow, groups.reviewer(site), ('view')),  # NOQA
             (Allow, groups.consumer(site), 'view')
             ]
 
@@ -1109,6 +1120,7 @@ class FormFactory(object):
         return [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
             (Allow, groups.manager(), ('view', 'add')),
+            (Allow, groups.coordinator(site), ('view', 'add')),
             (Allow, groups.enterer(site), ('view', 'add')),
             (Allow, groups.consumer(site), 'view')
             ]
@@ -1161,6 +1173,7 @@ def _entity_acl(self):
     return [
         (Allow, groups.administrator(), ALL_PERMISSIONS),
         (Allow, groups.manager(), ('view', 'edit', 'delete', 'retract')),
+        (Allow, groups.coordinator(site), ('view', 'edit', 'delete')),
         (Allow, groups.reviewer(site), ('view', 'transition')),
         (Allow, groups.enterer(site), ('view', 'edit', 'delete')),
         (Allow, groups.consumer(site), 'view')
