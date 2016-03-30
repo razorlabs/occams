@@ -11,6 +11,14 @@
       <h4 class="modal-title" i18n:translate="">Randomization Status</h4>
   </div>
   <div class="modal-body">
+    <tal:alerts
+        define="types python:['danger', 'warning', 'success', 'info']"
+        repeat="type types">
+      <div
+          class="alert alert-${type}"
+          tal:define="alerts python:request.session.pop_flash(type)"
+          tal:repeat="alert alerts">${alert}</div>
+    </tal:alerts>
     <div metal:use-macro="load: randomize-details.pt"></div>
   </div> <!-- /.modal-body -->
   <div class="modal-footer">

@@ -803,7 +803,7 @@ class Enrollment(StudiesModel,
             (Allow, groups.reviewer(site), ('view')),  # NOQA
             (Allow, groups.enterer(site), ('view', 'edit', 'terminate')),  # NOQA
             (Allow, groups.consumer(site), 'view')
-            ]
+        ]
 
     patient_id = sa.Column(sa.Integer, nullable=False,)
 
@@ -846,6 +846,10 @@ class Enrollment(StudiesModel,
         doc='Identification number within study')
 
     # stratum backref'd from straum
+
+    @property
+    def is_randomized(self):
+        return bool(self.stratum)
 
     @declared_attr
     def __table_args__(cls):

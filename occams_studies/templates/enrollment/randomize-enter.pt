@@ -4,7 +4,14 @@
   </div>
   <div class="modal-body">
 
-    <div class="alert alert-danger" i18n:translate="" tal:condition="error">${error}</div>
+    <tal:alerts
+        define="types python:['danger', 'warning', 'success', 'info']"
+        repeat="type types">
+      <div
+          class="alert alert-${type}"
+          tal:define="alerts python:request.session.pop_flash(type)"
+          tal:repeat="alert alerts">${alert}</div>
+    </tal:alerts>
 
     <form tal:replace="structure: form"></form>
 
