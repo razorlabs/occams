@@ -340,7 +340,8 @@ def randomize_ajax(context, request):
     if a new process begins it will have a different token which will not
     match the current process and nullify everything. This is done by
     passing the ``procid`` via POST or GET depending on the phase of data
-    entry.
+    entry and matching it against the session-stored ``procid``. If the they
+    do not match, the operation is cancelled.
 
     The process goes as follows:
 
