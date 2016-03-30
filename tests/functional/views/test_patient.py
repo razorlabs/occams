@@ -29,8 +29,8 @@ class TestPermissionsPatientList:
             db_session.flush()
 
     @pytest.mark.parametrize('group', [
-        'administrator', 'manager', 'UCSD:enterer', 'UCSD:reviewer',
-        'UCSD:consumer', 'UCSD:member'])
+        'administrator', 'manager', 'UCSD:coordinator', 'UCSD:enterer',
+        'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member'])
     def test_allowed(self, app, db_session, group):
         environ = make_environ(userid=USERID, groups=[group])
         res = app.get(self.url, extra_environ=environ)
@@ -66,7 +66,7 @@ class TestPermissionsPatientAdd:
             db_session.flush()
 
     @pytest.mark.parametrize('group', [
-        'administrator', 'manager', 'UCSD:enterer'])
+        'administrator', 'manager', 'UCSD:coordinator', 'UCSD:enterer'])
     def test_allowed(self, app, db_session, group):
         from occams_studies import models as studies
 
@@ -95,7 +95,7 @@ class TestPermissionsPatientAdd:
 
     @pytest.mark.parametrize('group', [
         'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member',
-        'UCLA:enterer', None])
+        'UCLA:coordinator', 'UCLA:enterer', None])
     def test_not_allowed(self, app, db_session, group):
         from occams_studies import models as studies
 
@@ -159,8 +159,8 @@ class TestPermissionsPatientView:
             ))
 
     @pytest.mark.parametrize('group', [
-        'administrator', 'manager', 'UCSD:enterer', 'UCSD:reviewer',
-        'UCSD:consumer', 'UCSD:member'])
+        'administrator', 'manager', 'UCSD:coordinator', 'UCSD:enterer',
+        'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member'])
     def test_allowed(self, app, db_session, group):
         environ = make_environ(userid=USERID, groups=[group])
         res = app.get(
@@ -169,7 +169,7 @@ class TestPermissionsPatientView:
         assert 200 == res.status_code
 
     @pytest.mark.parametrize('group', [
-        'UCLA:enterer', 'UCLA:reviewer',
+        'UCLA:coordinator', 'UCLA:enterer', 'UCLA:reviewer',
         'UCLA:consumer', 'UCLA:member'])
     def test_not_allowed(self, app, db_session, group):
         environ = make_environ(userid=USERID, groups=[group])
@@ -213,7 +213,8 @@ class TestPermissionsPatientDelete:
                 pid=u'123'
             ))
 
-    @pytest.mark.parametrize('group', ['administrator', 'manager'])
+    @pytest.mark.parametrize('group', [
+        'administrator', 'manager', 'UCSD:coordinator'])
     def test_allowed(self, app, db_session, group):
         from occams_studies import models as studies
 
@@ -244,7 +245,7 @@ class TestPermissionsPatientDelete:
 
     @pytest.mark.parametrize('group', [
         'UCSD:enterer', 'UCSD:reviewer', 'UCSD:consumer',
-        'UCSD:member', None])
+        'UCSD:member', 'UCLA:coorindator', None])
     def test_not_allowed(self, app, db_session, group):
         from occams_studies import models as studies
 
@@ -308,7 +309,7 @@ class TestPermissionsPatientEdit:
             ))
 
     @pytest.mark.parametrize('group', [
-        'administrator', 'manager', 'UCSD:enterer'])
+        'administrator', 'manager', 'UCSD:coordinator', 'UCSD:enterer'])
     def test_allowed(self, app, db_session, group):
         from occams_studies import models as studies
 
@@ -339,7 +340,7 @@ class TestPermissionsPatientEdit:
 
     @pytest.mark.parametrize('group', [
         'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member',
-        'UCLA:enterer', None])
+        'UCLA:coorindator', 'UCLA:enterer', None])
     def test_not_allowed(self, app, db_session, group):
         from occams_studies import models as studies
 
@@ -452,8 +453,8 @@ class TestPermissionsPatientFormsView:
             ))
 
     @pytest.mark.parametrize('group', [
-        'administrator', 'manager', 'UCSD:enterer', 'UCSD:reviewer',
-        'UCSD:consumer', 'UCSD:member'])
+        'administrator', 'manager', 'UCSD:coordinator', 'UCSD:enterer',
+        'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member'])
     def test_allowed(self, app, db_session, group):
         environ = make_environ(userid=USERID, groups=[group])
         res = app.get(self.url, extra_environ=environ, status='*')
@@ -461,7 +462,8 @@ class TestPermissionsPatientFormsView:
         assert 200 == res.status_code
 
     @pytest.mark.parametrize('group', [
-        'UCLA:enterer', 'UCLA:reviewer', 'UCLA:consumer', 'UCLA:member'])
+        'UCLA:coordinator', 'UCLA:enterer', 'UCLA:reviewer',
+        'UCLA:consumer', 'UCLA:member'])
     def test_not_allowed(self, app, db_session, group):
         environ = make_environ(userid=USERID, groups=[group])
         res = app.get(self.url, extra_environ=environ, status='*')
@@ -526,7 +528,7 @@ class TestPermissionsPatientFormsAdd:
             ))
 
     @pytest.mark.parametrize('group', [
-        'administrator', 'manager', 'UCSD:enterer'])
+        'administrator', 'manager', 'UCSD:coordinator', 'UCSD:enterer'])
     def test_allowed(self, app, db_session, group):
         from occams_datastore import models as datastore
 
@@ -555,7 +557,8 @@ class TestPermissionsPatientFormsAdd:
         assert 200 == res.status_code
 
     @pytest.mark.parametrize('group', [
-        'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member', 'UCLA:enterer', None])
+        'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member',
+        'UCLA:coordinator', 'UCLA:enterer', None])
     def test_not_allowed(self, app, db_session, group):
         from occams_datastore import models as datastore
 
@@ -645,7 +648,8 @@ class TestPermissionsPatientFormsDelete:
             db_session.flush()
             self.entity_id = entity.id
 
-    @pytest.mark.parametrize('group', ['administrator', 'manager'])
+    @pytest.mark.parametrize('group', [
+        'administrator', 'manager', 'UCSD:coordinator'])
     def test_allowed(self, app, db_session, group):
 
         environ = make_environ(userid=USERID, groups=[group])
@@ -669,7 +673,8 @@ class TestPermissionsPatientFormsDelete:
 
     @pytest.mark.parametrize('group', [
         'UCSD:enterer', 'UCSD:reviewer', 'UCSD:consumer',
-        'UCSD:member', None])
+        'UCSD:member',
+        'UCLA:coordinator', None])
     def test_not_allowed(self, app, db_session, group):
 
         environ = make_environ(userid=USERID, groups=[group])
@@ -760,7 +765,7 @@ class TestPermissionsPatientFormView:
             ))
 
     @pytest.mark.parametrize('group', [
-        'administrator', 'manager', 'UCSD:enterer',
+        'administrator', 'manager', 'UCSD:coordinator', 'UCSD:enterer',
         'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member'])
     def test_allowed(self, app, db_session, group):
         from occams_datastore import models as datastore
@@ -774,8 +779,8 @@ class TestPermissionsPatientFormView:
         assert 200 == res.status_code
 
     @pytest.mark.parametrize('group', [
-        'UCLA:enterer', 'UCLA:reviewer',
-        'UCLA:consumer', 'UCLA:member'])
+        'UCLA:coordinator', 'UCLA:enterer',
+        'UCLA:reviewer', 'UCLA:consumer', 'UCLA:member'])
     def test_not_allowed(self, app, db_session, group):
         from occams_datastore import models as datastore
 
@@ -860,7 +865,7 @@ class TestPermissionsPatientFormsEdit:
             ))
 
     @pytest.mark.parametrize('group', [
-        'administrator', 'manager', 'UCSD:enterer'])
+        'administrator', 'manager', 'UCSD:coordinator', 'UCSD:enterer'])
     def test_allowed(self, app, db_session, group):
         from occams_datastore import models as datastore
 
@@ -875,7 +880,7 @@ class TestPermissionsPatientFormsEdit:
 
     @pytest.mark.parametrize('group', [
         'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member',
-        'UCLA:enterer', 'UCLA:enterer', None])
+        'UCLA:coordinator', 'UCLA:enterer', 'UCLA:enterer', None])
     def test_not_allowed(self, app, db_session, group):
         from occams_datastore import models as datastore
 

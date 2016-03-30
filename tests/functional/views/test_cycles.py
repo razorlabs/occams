@@ -70,7 +70,8 @@ class TestPermissionsCyclesAdd:
         assert 200 == res.status_code
 
     @pytest.mark.parametrize('group', [
-        'UCSD:enterer', 'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member', None])
+        'UCSD:enterer', 'UCSD:coordinator', 'UCSD:reviewer',
+        'UCSD:consumer', 'UCSD:member', None])
     def test_not_allowed(self, app, group):
         environ = make_environ(userid=USERID, groups=[group])
         csrf_token = get_csrf_token(app, environ)
@@ -168,7 +169,8 @@ class TestPermissionsCyclesDelete:
         assert 200 == res.status_code
 
     @pytest.mark.parametrize('group', [
-        'UCSD:enterer', 'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member', None])
+        'UCSD:coordinator', 'UCSD:enterer', 'UCSD:reviewer',
+        'UCSD:consumer', 'UCSD:member', None])
     def test_not_allowed(self, app, group):
         environ = make_environ(userid=USERID, groups=[group])
         csrf_token = get_csrf_token(app, environ)
@@ -267,7 +269,8 @@ class TestPermissionsCyclesEdit:
         assert 200 == res.status_code
 
     @pytest.mark.parametrize('group', [
-        'UCSD:enterer', 'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member', None])
+        'UCSD:coordinator', 'UCSD:enterer', 'UCSD:reviewer',
+        'UCSD:consumer', 'UCSD:member', None])
     def test_not_allowed(self, app, group):
         environ = make_environ(userid=USERID, groups=[group])
         csrf_token = get_csrf_token(app, environ)
@@ -348,8 +351,8 @@ class TestPermissionsCyclesView:
             db_session.add(cycle)
 
     @pytest.mark.parametrize('group', [
-        'administrator', 'manager', 'enterer', 'reviewer',
-        'consumer', 'member'])
+        'administrator', 'manager', 'coordinator', 'enterer',
+        'reviewer', 'consumer', 'member'])
     def test_allowed(self, app, group):
         environ = make_environ(userid=USERID, groups=[group])
         csrf_token = get_csrf_token(app, environ)

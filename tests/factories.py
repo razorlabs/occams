@@ -122,7 +122,9 @@ class StratumFactory(SQLAlchemyModelFactory):
     class Meta:
         model = studies.Stratum
     study = factory.SubFactory(StudyFactory)
-    arm = factory.SubFactory(ArmFactory)
+    arm = factory.SubFactory(
+        ArmFactory,
+        study=factory.SelfAttribute('..study'))
     label = factory.Faker('word')
     block_number = factory.Faker('pyint')
     randid = factory.Faker('uuid4')
