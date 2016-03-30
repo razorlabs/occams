@@ -497,6 +497,9 @@ def randomize_ajax(context, request):
                         location=request.current_route_path(_query={}))
 
         else:
+            log.warn(
+                u'Detected unknown randomization stage: {}'.format(
+                    str(request.session[RAND_INFO_KEY])))
             request.session.flash(
                 _(u'Unable to determine randomization state. Restarting'),
                 'warning')
