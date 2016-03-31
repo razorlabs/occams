@@ -303,13 +303,12 @@ function PatientView(options){
           if (data.is_randomized){
             var item = self.selectedItem();
             item.update(data.enrollment);
-            self.clear();
           } else {
             // Keep rendering the form until the enrollment is
             // randomized. The server will keep track of the process
             editable.randomization_ui(null);
-            editable.randomization_ui(data.content);
           }
+          editable.randomization_ui(data.content);
         },
         complete: function(){
           self.isSaving(false);
