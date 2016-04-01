@@ -131,7 +131,7 @@
           <thead>
             <tr>
               <!-- "width: auto" affects cell width, neect to use div -->
-              <th i18n:translate=""><div class="form">Visit Forms</div></th>
+              <th i18n:translate=""><div class="form">Visit Forms<div class="badge pull-right">Version Count</div></div></th>
               <!-- ko foreach: study.cycles -->
                 <th class="rotated js-popover">
                   <span class="rotated-container">
