@@ -40,7 +40,7 @@
 
           </div> <!-- /.form-group -->
           <div>
-            <label i18n:translate="">Reference Numbers</label>
+            <label i18n:translate="">External IDs</label>
             <!-- ko foreach: references -->
               <div class="row">
                 <div class="form-group col-sm-5 " tal:define="name 'reference_type'">
@@ -89,10 +89,10 @@
               <button class="btn btn-link" data-bind="click: addReference">
                 <span class="fa fa-plus"></span>
                 <!-- ko ifnot: hasReferences -->
-                  <span i18n:translate="">Add another reference number</span>
+                  <span i18n:translate="">Add an external ID</span>
                 <!-- /ko -->
                 <!-- ko if: hasReferences -->
-                  <span i18n:translate="">Add a reference number</span>
+                  <span i18n:translate="">Add another external ID </span>
                 <!-- /ko -->
               </button>
             </div>
