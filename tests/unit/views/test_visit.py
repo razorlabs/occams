@@ -9,7 +9,7 @@ def check_csrf_token(config):
         yield patch
 
 
-class TestCyclesJson:
+class Test_cycles_json:
 
     def _call_fut(self, *args, **kw):
         from occams_studies.views.visit import cycles_json as view
@@ -82,7 +82,7 @@ class TestCyclesJson:
         assert cycle1.id == res['cycles'][0]['id']
 
 
-class TestValidateCycles:
+class Test_validate_cycles:
 
     def _call_fut(self, *args, **kw):
         from occams_studies.views.visit import validate_cycles as view
@@ -142,7 +142,7 @@ class TestValidateCycles:
         assert 'not found' in res.lower()
 
 
-class TestEditJson:
+class Test_edit_json:
 
     def _call_fut(self, *args, **kw):
         from occams_studies.views.visit import edit_json as view
@@ -220,6 +220,56 @@ class TestEditJson:
         res = self._call_fut(patient['visits'], req)
 
         assert res is not None
+
+    def test_update_add_extra_cycle(
+            self, req, db_session, check_csrf_token, factories):
+        """
+        It should be able to update the cycles for a visit from single to multi
+        """
+
+        study = factories.StudyFactory.create()
+        cycle1 = factories.CycleFactory.create(study=study)
+        cycle2 = factories.CycleFactory.create(study=study)
+        visit = factories.VisitFactory.create(cycles=[cycle1])
+        db_session.flush()
+
+        req.json_body = {
+            'cycles': [cycle1.id, cycle2.id],
+            'visit_date': str(visit.visit_date)
+        }
+        res = self._call_fut(visit, req)
+
+        db_session.refresh(visit)
+
+        assert cycle1 in visit.cycles
+        assert cycle2 in visit.cycles
+
+    def test_update_remove_extra_cycle(
+            self, req, db_session, check_csrf_token, factories):
+        """
+        It should be able to update the cycles for a visit from single to multi
+
+        This test is in reference to an issue where we cannot loop through
+        a list while updating it. It only happens on removing the first item.
+        """
+
+        study = factories.StudyFactory.create()
+        cycle1 = factories.CycleFactory.create(study=study)
+        cycle2 = factories.CycleFactory.create(study=study)
+        visit = factories.VisitFactory.create(cycles=[cycle1, cycle2])
+        db_session.flush()
+
+        req.json_body = {
+            'cycles': [cycle2.id],
+            'visit_date': str(visit.visit_date)
+        }
+
+        res = self._call_fut(visit, req)
+
+        db_session.refresh(visit)
+
+        assert cycle1 not in visit.cycles
+        assert cycle2 in visit.cycles
 
     def test_unique_visit_date(self, req, db_session, check_csrf_token):
         """
@@ -466,7 +516,7 @@ class TestEditJson:
         assert old_modify_date < patient.modify_date
 
 
-class TestDeleteJson:
+class Test_delete_json:
 
     def _call_fut(self, *args, **kw):
         from occams_studies.views.visit import delete_json as view
@@ -550,7 +600,7 @@ class TestDeleteJson:
         assert 0 == db_session.query(datastore.Entity).count()
 
 
-class TestFormDeleteJson:
+class Test_form_delete_json:
 
     def _call_fut(self, *args, **kw):
         from occams_studies.views.form import bulk_delete_json as view

@@ -189,14 +189,10 @@ def edit_json(context, request):
     visit.patient.modify_date = datetime.now()
     visit.visit_date = form.visit_date.data
 
-    # Filter only new cycles and prune removed/existing cycles
-    incoming_cycles = set(form.cycles.data)
-    for cycle in visit.cycles:
-        if cycle not in incoming_cycles:
-            visit.cycles.remove(cycle)
-        else:
-            incoming_cycles.remove(cycle)
-    visit.cycles.extend(list(incoming_cycles))
+    # Set the entire list and let sqlalchemy prune the orphans
+    visit.cycles = form.cycles.data
+
+    db_session.flush()
 
     # TODO: hard coded for now, will be removed when workflows are in place
     default_state = (
@@ -255,7 +251,7 @@ def edit_json(context, request):
             .one())
         location_id = visit.patient.site.lab_location.id
         for cycle in visit.cycles:
-            if cycle in incoming_cycles:
+            if cycle in form.cycles.data:
                 for specimen_type in cycle.specimen_types:
                     db_session.add(lab.Specimen(
                         patient=visit.patient,
