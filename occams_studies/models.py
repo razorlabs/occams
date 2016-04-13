@@ -379,6 +379,43 @@ class Arm(StudiesModel,
                 cls.__tablename__))
 
 
+class ExternalService(StudiesModel,
+                      datastore.Referenceable,
+                      datastore.Describeable,
+                      datastore.Modifiable,
+                      datastore.Auditable):
+    """
+    A way to dynamically link participand to external services
+    """
+
+    __tablename__ = 'external_service'
+
+    study_id = sa.Column(sa.Integer, nullable=False)
+
+    study = orm.relationship(Study, backref='external_services')
+
+    url_template = sa.Column(
+        sa.String,
+        nullable=False,
+        doc=u'Interpolateable string to generate based on patient data.'
+    )
+
+    @declared_attr
+    def __table_args__(cls):
+        return (
+            sa.ForeignKeyConstraint(
+                columns=[cls.study_id],
+                refcolumns=[Study.id],
+                name=u'fk_%s_study_id' % cls.__tablename__,
+                ondelete='CASCADE'),
+            sa.UniqueConstraint(
+                'study_id',
+                'name',
+                name=u'uq_%s_name' %
+                cls.__tablename__)
+        )
+
+
 class PatientFactory(object):
 
     @property
