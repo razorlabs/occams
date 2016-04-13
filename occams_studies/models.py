@@ -385,7 +385,7 @@ class ExternalService(StudiesModel,
                       datastore.Modifiable,
                       datastore.Auditable):
     """
-    A way to dynamically link participand to external services
+    A way to dynamically link participant to external services
     """
 
     __tablename__ = 'external_service'
