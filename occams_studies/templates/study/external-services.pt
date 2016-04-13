@@ -1,0 +1,16 @@
+<html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
+  <metal:content-slot fill-slot="content-slot">
+    <header class="page-header">
+      <div class="btn-toolbar pull-right">
+        <button class="btn btn-default">
+          <span class="fa fa-plus"></span>
+          Create External Service
+        </button>
+      </div>
+      <h1 i18n:translate="">${context.title}</h1>
+      <ul metal:use-macro="load: header-details-server.pt" />
+      <nav metal:use-macro="load: header-nav.pt" />
+    </header>
+    This is the external services page.
+  </metal:content-slot>
+</html>
