@@ -36,10 +36,10 @@ def list_(context, request):
     Returns a listing of external service JSON records for the study
     """
     db_session = request.db_session
-    study = context
+    study = context.__parent__
 
     query = (
-        db_session(models.ExernalService)
+        db_session.query(models.ExternalService)
         .filter_by(study=study)
         .order_by(models.ExternalService.title)
     )
