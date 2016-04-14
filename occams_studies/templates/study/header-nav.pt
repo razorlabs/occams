@@ -11,7 +11,7 @@
         tal:attributes="class python:'active' if section == url else ''">
       <a href="${url}" i18n:translate="">Details</a>
     </li>
-    <li tal:define="url request.current_route_path(_route_name='studies.external_services', _query={})"
+    <li tal:define="url request.current_route_path(_route_name='studies.study_external_services', _query={})"
         tal:attributes="class python:'active' if section == url else ''">
       <a href="${url}" i18n:translate="">External Services</a>
     </li>
