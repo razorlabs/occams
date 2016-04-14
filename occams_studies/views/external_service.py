@@ -10,7 +10,7 @@ from .. import _, models
 
 
 @view_config(
-    route_name='studies.external_services',
+    route_name='studies.study_external_services',
     permission='view',
     renderer='../templates/study/external-services.pt'
 )
