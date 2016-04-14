@@ -22,7 +22,7 @@ def view(context, request):
     services created for the study.
     """
 
-    return {}
+    return {'study': context.__parent__}
 
 
 @view_config(

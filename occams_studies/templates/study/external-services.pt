@@ -7,7 +7,7 @@
           Create External Service
         </button>
       </div>
-      <h1 i18n:translate="">${context.title}</h1>
+      <h1 i18n:translate="">${study.title}</h1>
       <ul metal:use-macro="load: header-details-server.pt" />
       <nav metal:use-macro="load: header-nav.pt" />
     </header>
