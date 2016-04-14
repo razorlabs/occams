@@ -225,8 +225,13 @@ class Study(StudiesModel,
 
     def __getitem__(self, key):
         if key == 'cycles':
-            db_session = orm.object_session(self)
-            return CycleFactory(db_session.info['request'], self)
+            factory = CycleFactory
+        elif key == 'external-services':
+            factory = ExternalServiceFactory
+        else:
+            return None
+        db_session = orm.object_session(self)
+        return factory(db_session.info['request'], self)
 
     def check(self, reference_number):
         if not self.reference_pattern:
@@ -377,6 +382,33 @@ class Arm(StudiesModel,
                 'name',
                 name=u'uq_%s_name' %
                 cls.__tablename__))
+
+
+class ExternalServiceFactory(object):
+
+    __acl__ = [
+        (Allow, groups.administrator(), ALL_PERMISSIONS),
+        (Allow, groups.manager(), ('view', 'add')),
+        (Allow, Authenticated, 'view')
+        ]
+
+    def __init__(self, request, parent):
+        self.request = request
+        self.__parent__ = parent
+
+    def __getitem__(self, key):
+        db_session = self.request.db_session
+        study = self.__parent__
+        try:
+            service = (
+                db_session.query(ExternalService)
+                .filter_by(study=study, name=key)
+                .one())
+        except orm.exc.NoResultFound:
+            raise KeyError
+        else:
+            service.__parent__ = self
+            return service
 
 
 class ExternalService(StudiesModel,
