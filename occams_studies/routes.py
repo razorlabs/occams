@@ -57,6 +57,7 @@ def includeme(config):
     config.add_route('studies.study_schedule',              '/{study}/schedule',        factory=models.StudyFactory, traverse='/{study}')
     config.add_route('studies.study_enrollments',           '/{study}/enrollments',     factory=models.StudyFactory, traverse='/{study}')
     config.add_route('studies.external_services',           '/{study}/external-services', factory=models.StudyFactory, traverse='/{study}')
+    config.add_route('studies.external_service',            '/{study}/external-services/{service}', factory=models.StudyFactory, traverse='/{study}/{service}')
     config.add_route('studies.study_visits',                '/{study}/visits',          factory=models.StudyFactory, traverse='/{study}')
     config.add_route('studies.study_visits_cycle',          '/{study}/visits/{cycle}',  factory=models.StudyFactory, traverse='/{study}')
     config.add_route('studies.study_schemata',              '/{study}/schemata',        factory=models.StudyFactory, traverse='/{study}')
