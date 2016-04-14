@@ -15,6 +15,7 @@ from .. import _, models
     renderer='../templates/study/external-services.pt'
 )
 def view(context, request):
+
     return {}
 
 
@@ -31,31 +32,31 @@ def list_(context, request):
     db_session = request.db_session
 
     query = (
-        db_session(models.ExernalService)
+        db_session.query(models.ExternalService)
+        .filter_by(study_id=context.id)
         .order_by(models.ExternalService.title)
     )
-    # we need to filter by study here right?
 
     return {
         'external_services': [view_json(s, request) for s in query]
     }
 
 
-# @view_config(
-#     route_name='studies.external_service',
-#     permission='view',
-#     xhr=True,
-#     renderer='json'
-# )
-# def view_json(context, request):
-#     return {
-#         '__url_': request.current_route_path(),
-#         'id': context.id,
-#         'name': context.name,
-#         'title': context.title,
-#         'description': context.description,
-#         'url_template': context.url_template,
-#     }
+@view_config(
+    route_name='studies.study_external_service',
+    permission='view',
+    xhr=True,
+    renderer='json'
+)
+def view_json(context, request):
+    return {
+        '__url_': request.current_route_path(),
+        'id': context.id,
+        'name': context.name,
+        'title': context.title,
+        'description': context.description,
+        'url_template': context.url_template,
+    }
 
 
 # @view_config(
