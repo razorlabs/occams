@@ -4,7 +4,7 @@ from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 import wtforms
 
-from occams.utils.form import wtferrors, Form
+from occams.utils.forms import wtferrors, Form
 
 from .. import _, models
 
@@ -34,6 +34,7 @@ def list_(context, request):
         db_session(models.ExernalService)
         .order_by(models.ExternalService.title)
     )
+    # we need to filter by study here right?
 
     return {
         'external_services': [view_json(s, request) for s in query]
