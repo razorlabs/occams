@@ -11,6 +11,19 @@
       <ul metal:use-macro="load: header-details-server.pt" />
       <nav metal:use-macro="load: header-nav.pt" />
     </header>
-    This is the external services page.
+
+    <table class="table table-bordered table-hover table-striped">
+      <thead>
+        <tr>
+          <th i18n:translate="">Title</th>
+          <th i18n:translate="">Description</th>
+          <th i18n:translate="">Url Template</th>
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+
+
   </metal:content-slot>
 </html>
