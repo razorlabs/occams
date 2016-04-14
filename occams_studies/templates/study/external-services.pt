@@ -13,7 +13,7 @@
     </header>
 
     <!-- ko ifnot: isReady -->
-    <div class="text-center"><span class="fa fa-refresh fa-spin"></span></div>
+      <div class="text-center"><span class="fa fa-refresh fa-spin"></span></div>
     <!-- /ko -->
 
     <div  style="display: none;" data-bind="visible: isReady">
@@ -49,7 +49,7 @@
       <!-- /ko -->
 
       <!-- ko ifnot: hasExternalServices -->
-      <div i18n:translate="">There are no external services configured for this study.</div>
+      <div class="well well-lg" i18n:translate="">There are no external services configured for this study.</div>
       <!-- /ko -->
 
     </div>
