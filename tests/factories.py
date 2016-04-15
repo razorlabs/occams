@@ -69,6 +69,14 @@ class StudyFactory(SQLAlchemyModelFactory, FakeDescribeable):
     consent_date = factory.Faker('date_time_this_year')
 
 
+class ExternalServiceFactory(SQLAlchemyModelFactory, FakeDescribeable):
+    class Meta:
+        model = studies.ExternalService
+
+    url_template = factory.Faker('url')
+    study = factory.SubFactory(StudyFactory)
+
+
 class CycleFactory(SQLAlchemyModelFactory, FakeDescribeable):
     class Meta:
         model = studies.Cycle
