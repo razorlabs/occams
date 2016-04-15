@@ -1,5 +1,5 @@
 from slugify import slugify
-from pyramid.httpexceptions import HTTPBadRequest, HTTPFound
+from pyramid.httpexceptions import HTTPBadRequest, HTTPSeeOther
 from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 import wtforms
@@ -60,13 +60,18 @@ def view_json(context, request):
     Returns a single JSON record for the study's external service
     """
     return {
-        '__url_': request.current_route_path(),
+        '__url__': request.route_path(
+            'studies.external_service',
+            study=context.study.name,
+            service=context.name
+        ),
         'id': context.id,
         'name': context.name,
         'title': context.title,
         'description': context.description,
         'url_template': context.url_template,
     }
+
 
 @view_config(
     route_name='studies.external_service',
@@ -94,12 +99,12 @@ def delete_json(context, request):
         study=study.name,
     )
 
-    return HTTPFound(location=success_url)
+    return HTTPSeeOther(location=success_url)
 
 
 @view_config(
     route_name='studies.external_services',
-    permission='edit',
+    permission='add',
     xhr=True,
     request_method='POST',
     renderer='json'
@@ -137,7 +142,7 @@ def edit_json(context, request):
     service.name = slugify(form.title.data)
     service.title = form.title.data
     service.description = form.description.data
-    service.url_format = form.url_format.data
+    service.url_template = form.url_template.data
     db_session.flush()
 
     success_url = request.route_path(
@@ -146,7 +151,7 @@ def edit_json(context, request):
         service=service.name
     )
 
-    return HTTPFound(location=success_url)
+    return HTTPSeeOther(location=success_url)
 
 
 def ExternalServiceForm(context, request):

@@ -1,22 +1,23 @@
 <html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
   <metal:content-slot fill-slot="content-slot">
-    <header class="page-header">
-      <div class="btn-toolbar pull-right">
-        <button class="btn btn-default">
-          <span class="fa fa-plus"></span>
-          Create External Service
-        </button>
-      </div>
-      <h1 i18n:translate="">${context.title}</h1>
-      <ul metal:use-macro="load: header-details-server.pt" />
-      <nav metal:use-macro="load: header-nav.pt" />
-    </header>
 
     <!-- ko ifnot: isReady -->
       <div class="text-center"><span class="fa fa-refresh fa-spin"></span></div>
     <!-- /ko -->
 
     <div  style="display: none;" data-bind="visible: isReady">
+
+      <header class="page-header">
+        <div class="btn-toolbar pull-right">
+          <button class="btn btn-default" data-bind="click: startAddExternalService">
+            <span class="fa fa-plus"></span>
+            Create External Service
+          </button>
+        </div>
+        <h1 i18n:translate="">${context.title}</h1>
+        <ul metal:use-macro="load: header-details-server.pt" />
+        <nav metal:use-macro="load: header-nav.pt" />
+      </header>
 
       <!-- ko if: hasExternalServices -->
       <table class="table table-bordered table-hover table-striped">
@@ -35,10 +36,10 @@
             <td data-bind="text: url_template"></td>
             <td>
               <div class="of-controls btn-group">
-                <button type="button" class="btn btn-default" data-bind="click: $root.startDelete">
+                <button type="button" class="btn btn-default" data-bind="click: $root.startDeleteExternalService">
                   <span class="glyphicon glyphicon-trash"></span>
                 </button>
-                <button type="button" class="btn btn-default" data-bind="click: $root.startEdit">
+                <button type="button" class="btn btn-default" data-bind="click: $root.startEditExternalService">
                   <span class="glyphicon glyphicon-pencil"></span>
                 </button>
               </div>
@@ -51,6 +52,124 @@
       <!-- ko ifnot: hasExternalServices -->
       <div class="well well-lg" i18n:translate="">There are no external services configured for this study.</div>
       <!-- /ko -->
+
+      <div class="modal fade" data-bind="modalVisible: $root.inDeleteMode">
+        <div class="modal-dialog" data-bind="if: $root.inDeleteMode">
+          <div class="modal-content" data-bind="with: $root.selectedService">
+            <form data-bind="submit: $root.deleteService">
+              <div class="modal-header">
+                <h4 class="modal-title" i18n:translate="">Confirm Delete</h4>
+              </div>
+              <div class="modal-body">
+                <!-- ko if: $root.hasErrorMessages -->
+                  <div class="alert alert-danger">
+                    <p i18n:translate="">
+                      Could not complete the request for the following reasons:
+                    </p>
+                    <ul data-bind="foreach: $root.errorMessages">
+                      <li data-bind="text: $data"></li>
+                    </ul>
+                  </div>
+                <!-- /ko -->
+                <p i18n:translate="">You are about to delete the external service. This is an irreversable action. Are you sure you want to proceed?</p>
+                <dl class="dl-horizontal">
+                  <dt>Title<dt><dd><span data-bind="text: title"></span></dd>
+                  <dt>URL<dt><dd><code data-bind="text: url_template"></code></dd>
+                </dl>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-bind="click: $root.clear" i18n:translate="">Cancel</button>
+                <button type="submit" class="btn btn-danger">
+                  <span i18n:translate="">Delete</span>
+                  <!-- ko if: $root.isSaving -->
+                    <span class="fa fa-refresh fa-spin"></span>
+                  <!-- /ko -->
+                </button>
+              </div>
+            </form>
+          </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+      </div><!-- /.modal -->
+
+      <div class="modal fade" data-bind="modalVisible: $root.inEditMode">
+        <div class="modal-dialog" data-bind="if: $root.inEditMode">
+          <div class="modal-content" data-bind="with: $root.editableService">
+            <form
+                role="form"
+                data-bind="submit: $root.saveService, validate: {}">
+              <div class="modal-header">
+
+                <!-- ko if: isNew -->
+                  <h4 class="modal-title" i18n:translate="">Edit External Service</h4>
+                <!--/ko -->
+                <!-- ko ifnot: isNew -->
+                  <h4 class="modal-title" i18n:translate="">Add External Service</h4>
+                <!-- /ko -->
+              </div>
+              <div class="modal-body">
+                <!-- ko if: $root.hasErrorMessages -->
+                  <div class="alert alert-danger">
+                    <p i18n:translate="">
+                      Could not complete the request for the following reasons:
+                    </p>
+                    <ul data-bind="foreach: $root.errorMessages">
+                      <li data-bind="text: $data"></li>
+                    </ul>
+                  </div>
+                <!-- /ko -->
+                <div class="form-group" tal:define="name 'title'">
+                  <label i18n:translate="" for="${name}" class="required">Link Text</label>
+                  <p class="help-block" i18n:translate="">
+                    The clickable link that will appear in the "External Services"
+                    section of the patient view.
+                  </p>
+                  <input type="text"
+                      class="form-control"
+                      required
+                      id="${name}"
+                      data-bind="
+                        value: ${name}" />
+                </div> <!-- /.form-group -->
+                <div class="form-group" tal:define="name 'description'">
+                  <label i18n:translate="" for="${name}">Description</label>
+                  <textarea
+                      class="form-control"
+                      id="${name}"
+                      data-bind="
+                        value: ${name}"></textarea>
+                </div> <!-- /.form-group -->
+                <div class="form-group" tal:define="name 'url_template'">
+                  <label i18n:translate="" for="${name}" class="required">URL Template</label>
+                  <p class="help-block" i18n:translate="">
+                    The template string of the URL to generate.
+                  </p>
+
+                  <input type="text"
+                      class="form-control"
+                      required
+                      id="${name}"
+                      data-bind="
+                        value: ${name}" />
+                </div> <!-- /.form-group -->
+              </div> <!-- /.modal-body -->
+              <div class="modal-footer">
+                <button
+                    type="button"
+                    class="btn btn-link"
+                    data-bind="click: $root.clear"
+                    i18n:translate="">Cancel</button>
+                <button type="submit" class="btn btn-primary">
+                  <span i18n:translate="">Save</span>
+                  <!-- ko if: $root.isSaving -->
+                    <span class="fa fa-refresh fa-spin"></span>
+                  <!-- /ko -->
+                </button>
+              </div>
+            </form>
+          </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+      </div><!-- /.modal -->
+
 
     </div>
 
