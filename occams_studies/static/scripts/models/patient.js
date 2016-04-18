@@ -8,6 +8,7 @@ function Patient(data){
   self.pid = ko.observable();
   self.site = ko.observable();
   self.references = ko.observableArray();
+  self.external_services = ko.observableArray()
 
   self.isNew = ko.pureComputed(function(){
     return !self.id();
@@ -17,15 +18,23 @@ function Patient(data){
     return self.references().length > 0;
   });
 
+  self.hasExternalServices = ko.pureComputed(function(){
+    return self.external_services().length > 0;
+  });
+
   self.update = function(data){
     data = data || {};
     self.__url__(data.__url__);
     self.id(data.id);
     self.pid(data.pid);
     self.site(data.site ? new Site(data.site) : null);
-    self.references((data.references || []).map(function(value){
-      return new Reference(value);
+    self.references((data.references || []).map(function(datum){
+      return new Reference(datum);
     }));
+    // Do not use an observablt for external refereces since we're
+    // not managing them from the patient view, we're rendering
+    // the output of the configurations
+    self.external_services(data.external_services || []);
     self.references.sort(function(a, b){
       return a.reference_type().title().localeCompare(b.reference_type().title());
     });

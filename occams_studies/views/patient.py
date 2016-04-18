@@ -1,6 +1,8 @@
 from collections import OrderedDict
 from datetime import datetime
+import hashlib
 
+from chameleon import PageTextTemplate
 from pyramid.httpexceptions import \
     HTTPBadRequest, HTTPFound, HTTPForbidden, HTTPOk
 from pyramid.session import check_csrf_token
@@ -222,7 +224,20 @@ def view_json(context, request):
         .filter_by(patient=patient)
         .join(models.PatientReference.reference_type)
         .options(orm.joinedload(models.PatientReference.reference_type))
-        .order_by(models.ReferenceType.title.asc()))
+        .order_by(models.ReferenceType.title.asc())
+    )
+
+    def md5_callback(*args):
+        return hashlib.md5(''.join(args)).hexdigest()
+
+    def render_service(service, enrollment):
+        result = PageTextTemplate(service.url_template).render(**{
+            'pid': enrollment.patient.pid,
+            'reference_number': enrollment.reference_number,
+            'md5': md5_callback
+        })
+        return result
+
     return {
         '__url__': request.route_path('studies.patient', patient=patient.pid),
         'id': patient.id,
@@ -231,12 +246,18 @@ def view_json(context, request):
         'references': [{
             'reference_type': reference_type_views.view_json(
                 reference.reference_type,
-                request),
+                request
+            ),
             'reference_number': reference.reference_number
-            } for reference in references_query],
+        } for reference in references_query],
+        'external_services': [{
+            'label': service.title,
+            'url': render_service(service, enrollment),
+        } for enrollment in patient.enrollments
+          for service in enrollment.study.external_services],
         'create_date': patient.create_date.isoformat(),
         'modify_date': patient.modify_date.isoformat()
-        }
+    }
 
 
 @view_config(
