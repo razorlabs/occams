@@ -74,7 +74,37 @@ class Test_view_json:
         """
         It should generate URLs for enrollment study external services
         """
-        assert False
+        study = factories.StudyFactory.create()
+        patient = factories.PatientFactory.create()
+        enrollment = factories.EnrollmentFactory.create(
+            study=study,
+            patient=patient
+        )
+
+        base_url = u'https://my_app/location'
+        params = '?pid=${pid}&reference_number=${reference_number}'
+        url = '{}{}'.format(base_url, params)
+
+        factories.ExternalServiceFactory.create(
+            study=study,
+            url_template=url
+        )
+
+        db_session.flush()
+
+        req.method = 'GET'
+
+        res = self._call_fut(patient, req)
+
+        pid = res['pid']
+        reference_number = enrollment.reference_number
+
+        expected = u'https://my_app/location?pid={}&reference_number={}'.format(
+            pid, reference_number)
+
+        actual = res['external_services'][0]['url']
+
+        assert actual == expected
 
 
 class Test_search_json:
