@@ -25,17 +25,17 @@
           <tr>
             <th i18n:translate="">Title</th>
             <th i18n:translate="">Description</th>
-            <th i18n:translate="">Url Template</th>
-            <th i18n:translate="">Options</th>
+            <th i18n:translate="">URL Template</th>
+            <th i18n:translate=""></th>
           </tr>
         </thead>
         <tbody data-bind="foreach: externalServices">
           <tr>
             <td data-bind="text: title"></td>
-            <td data-bind="text: description"></td>
-            <td data-bind="text: url_template"></td>
+            <td class="multiline" data-bind="text: description"></td>
+            <td><code data-bind="text: url_template"></code></td>
             <td>
-              <div class="of-controls btn-group">
+              <div class="of-controls btn-group pull-right">
                 <button type="button" class="btn btn-default" data-bind="click: $root.startDeleteExternalService">
                   <span class="glyphicon glyphicon-trash"></span>
                 </button>
@@ -135,6 +135,7 @@
                   <textarea
                       class="form-control"
                       id="${name}"
+                      rows="6"
                       data-bind="
                         value: ${name}"></textarea>
                 </div> <!-- /.form-group -->
