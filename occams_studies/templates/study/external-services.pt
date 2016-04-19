@@ -107,15 +107,8 @@
                 <!-- /ko -->
               </div>
               <div class="modal-body">
-                <!-- ko if: $root.hasErrorMessages -->
-                  <div class="alert alert-danger">
-                    <p i18n:translate="">
-                      Could not complete the request for the following reasons:
-                    </p>
-                    <ul data-bind="foreach: $root.errorMessages">
-                      <li data-bind="text: $data"></li>
-                    </ul>
-                  </div>
+                <!-- ko with: $parent.errorMessage -->
+                  <div class="alert alert-danger" data-bind="text: $data"></div>
                 <!-- /ko -->
                 <div class="form-group" tal:define="name 'title'">
                   <label i18n:translate="" for="${name}" class="required">Link Text</label>
@@ -127,6 +120,7 @@
                       class="form-control"
                       required
                       id="${name}"
+                      name="${name}"
                       data-bind="
                         value: ${name}" />
                 </div> <!-- /.form-group -->
@@ -135,6 +129,7 @@
                   <textarea
                       class="form-control"
                       id="${name}"
+                      name="${name}"
                       rows="6"
                       data-bind="
                         value: ${name}"></textarea>
@@ -149,6 +144,7 @@
                       class="form-control"
                       required
                       id="${name}"
+                      name="${name}"
                       data-bind="
                         value: ${name}" />
                 </div> <!-- /.form-group -->

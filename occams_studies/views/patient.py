@@ -1,8 +1,6 @@
 from collections import OrderedDict
-from datetime import datetime
-import hashlib
 
-from chameleon import PageTextTemplate
+from datetime import datetime
 from pyramid.httpexceptions import \
     HTTPBadRequest, HTTPFound, HTTPForbidden, HTTPOk
 from pyramid.session import check_csrf_token
@@ -28,6 +26,7 @@ from . import (
     reference_type as reference_type_views,
     study as study_views,
     form as form_views)
+from .external_service import render_url
 
 
 @view_config(
@@ -227,17 +226,6 @@ def view_json(context, request):
         .order_by(models.ReferenceType.title.asc())
     )
 
-    def md5_callback(*args):
-        return hashlib.md5(''.join(args)).hexdigest()
-
-    def render_service(service, enrollment):
-        result = PageTextTemplate(service.url_template).render(**{
-            'pid': enrollment.patient.pid,
-            'reference_number': enrollment.reference_number,
-            'md5': md5_callback
-        })
-        return result
-
     return {
         '__url__': request.route_path('studies.patient', patient=patient.pid),
         'id': patient.id,
@@ -252,7 +240,10 @@ def view_json(context, request):
         } for reference in references_query],
         'external_services': [{
             'label': service.title,
-            'url': render_service(service, enrollment),
+            'url': render_url(service.url_template, raise_=False, **{
+                'pid': enrollment.patient.pid,
+                'reference_number': enrollment.reference_number,
+            }),
         } for enrollment in patient.enrollments
           for service in enrollment.study.external_services],
         'create_date': patient.create_date.isoformat(),

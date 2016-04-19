@@ -15,6 +15,8 @@ function ExternalServicesView(options){
     return self.externalServices().length > 0
   });
 
+  self.errorMessage = ko.observable();
+
   // Modal states
   var VIEW = 'view', EDIT = 'edit',  DELETE = 'delete';
   self.mode = ko.observable();

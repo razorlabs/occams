@@ -1,3 +1,6 @@
+import hashlib
+
+from chameleon import PageTextTemplate
 from slugify import slugify
 from pyramid.httpexceptions import HTTPBadRequest, HTTPSeeOther
 from pyramid.session import check_csrf_token
@@ -154,6 +157,28 @@ def edit_json(context, request):
     return HTTPSeeOther(location=success_url)
 
 
+def render_url(url_template, raise_=True, fallback=None, **kw):
+
+    def md5_callback(*args):
+        return hashlib.md5(''.join(args)).hexdigest()
+
+    fallback = fallback or '#malformed-url'
+
+    template_parameters = dict.fromkeys(['pid', 'reference_number', 'md5'], '')
+    template_parameters.update(kw)
+    template_parameters['md5'] = md5_callback
+
+    try:
+        result = PageTextTemplate(url_template).render(**template_parameters)
+    except:
+        if raise_:
+            raise
+        else:
+            return fallback
+
+    return result
+
+
 def ExternalServiceForm(context, request):
     db_session = request.db_session
 
@@ -169,6 +194,18 @@ def ExternalServiceForm(context, request):
             raise wtforms.ValidationError(request.localizer.translate(_(
                 u'Another external service with this name exists.')))
 
+    def check_renders_correctly(form, field):
+        try:
+            render_url(field.data)
+        except NameError as e:
+            raise wtforms.ValidationError(request.localizer.translate(
+                _(u'Unsupported template variables: ${names}'),
+                mapping={'names': e.message}))
+        except Exception as e:
+            raise wtforms.ValidationError(request.localizer.translate(
+                _(u'Unexpected erorr: ${message}'),
+                mapping={'message': e.message}))
+
     class _ExternalServiceForm(Form):
         title = wtforms.StringField(
             validators=[
@@ -178,6 +215,9 @@ def ExternalServiceForm(context, request):
         description = wtforms.TextField(
             validators=[wtforms.validators.optional()])
         url_template = wtforms.StringField(
-            validators=[wtforms.validators.input_required()])
+            validators=[
+                wtforms.validators.input_required(),
+                check_renders_correctly
+                ])
 
     return _ExternalServiceForm
