@@ -255,6 +255,11 @@ function PatientView(options){
           self.enrollments.sort(function(left, right){
             return left.consent_date() > right.consent_date() ? -1 : 1;
           });
+
+          $.getJSON(self.patient.__url__(), function(data){
+              self.patient.update(data)
+          });
+
           self.clear();
         },
         complete: function(){
@@ -331,6 +336,9 @@ function PatientView(options){
       success: function(data, textStatus, jqXHR){
         self.enrollments.remove(item);
         self.clear();
+        $.getJSON(self.patient.__url__(), function(data){
+            self.patient.update(data)
+        });
       },
       complete: function(){
         self.isSaving(false);
