@@ -9,7 +9,7 @@ def check_csrf_token(config):
         yield patch
 
 
-class TestView:
+class Test_view:
 
     def _call_fut(self, *args, **kw):
         from occams_studies.views.patient import view
@@ -64,7 +64,50 @@ class TestView:
         assert 10 == len(req.session['viewed'])
 
 
-class TestSearchJson:
+class Test_view_json:
+
+    def _call_fut(self, *args, **kw):
+        from occams_studies.views.patient import view_json as view
+        return view(*args, **kw)
+
+    def test_external_services_rendiring(self, req, db_session, factories):
+        """
+        It should generate URLs for enrollment study external services
+        """
+        study = factories.StudyFactory.create()
+        patient = factories.PatientFactory.create()
+        enrollment = factories.EnrollmentFactory.create(
+            study=study,
+            patient=patient
+        )
+
+        base_url = u'https://my_app/location'
+        params = '?pid=${pid}&reference_number=${reference_number}'
+        url = '{}{}'.format(base_url, params)
+
+        factories.ExternalServiceFactory.create(
+            study=study,
+            url_template=url
+        )
+
+        db_session.flush()
+
+        req.method = 'GET'
+
+        res = self._call_fut(patient, req)
+
+        pid = res['pid']
+        reference_number = enrollment.reference_number
+
+        expected = u'https://my_app/location?pid={}&reference_number={}'.format(
+            pid, reference_number)
+
+        actual = res['external_services'][0]['url']
+
+        assert actual == expected
+
+
+class Test_search_json:
 
     def _call_fut(self, *args, **kw):
         from occams_studies.views.patient import search_json as view
@@ -141,7 +184,7 @@ class TestSearchJson:
         assert patient.pid == res['patients'][0]['pid']
 
 
-class TestEditJson:
+class Test_edit_json:
 
     def _call_fut(self, *args, **kw):
         from occams_studies.views.patient import edit_json as view
@@ -339,7 +382,7 @@ class TestEditJson:
              for r in res['references']]
 
 
-class TestDeleteJson:
+class Test_delete_json:
 
     def _call_fut(self, *args, **kw):
         from occams_studies.views.patient import delete_json as view

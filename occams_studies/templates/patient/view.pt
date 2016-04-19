@@ -22,44 +22,69 @@
         <div metal:use-macro="load: ../visit/modal-visit-edit.pt"></div>
       </header>
 
-      <div class="row">
-        <div class="col-sm-4">
-          <div class="panel panel-default" data-bind="with: patient">
-            <div class="panel-heading clearfix">
-              <div class="btn-toolbar pull-right">
-                <button class="btn btn-link btn-xs"
-                    data-bind="click: $root.startEditPatient"
-                    tal:condition="request.has_permission('edit')">
-                  <span class="fa fa-list"></span>
-                  <span i18n:translate="">Manage</span>
-                </button>
+      <div class="col-sm-4">
+        <div class="row">
+          <div class="col-sm-12">
+            <div class="panel panel-default" data-bind="with: patient">
+              <div class="panel-heading clearfix">
+                <div class="btn-toolbar pull-right">
+                  <button class="btn btn-link btn-xs"
+                      data-bind="click: $root.startEditPatient"
+                      tal:condition="request.has_permission('edit')">
+                    <span class="fa fa-list"></span>
+                    <span i18n:translate="">Manage</span>
+                  </button>
+                </div>
+                <h4 class="panel-title" i18n:translate="">External IDs</h4>
               </div>
-              <h4 class="panel-title" i18n:translate="">External IDs</h4>
-            </div>
-            <!-- ko ifnot: hasReferences -->
-              <div class="panel-body">
-                <p class="text-muted text-center" i18n:translate="">No references</p>
+              <!-- ko ifnot: hasReferences -->
+                <div class="panel-body">
+                  <p class="text-muted text-center" i18n:translate="">No references</p>
+                </div>
+              <!-- /ko -->
+              <!-- ko if: hasReferences -->
+                <table class="table table-striped">
+                  <colgroup>
+                    <col class="col-sm-8" />
+                    <col class="col-sm-4" />
+                  </colgroup>
+                  <tbody data-bind="foreach: references">
+                    <tr>
+                      <!-- ko with: reference_type -->
+                        <td data-bind="text: title"></td>
+                      <!-- /ko -->
+                      <td><code data-bind="text: reference_number"></code></td>
+                    </tr>
+                  </tbody>
+                </table>
+              <!-- /ko -->
+            </div> <!-- /.panel -->
+          </div> <!-- /.col-sm-12 -->
+        </div> <!-- /.row -->
+
+        <div class="row">
+          <div class="col-sm-12">
+            <div class="panel panel-default" data-bind="with: patient">
+              <div class="panel-heading clearfix">
+                <h4 class="panel-title" i18n:translate="">External Services</h4>
               </div>
-            <!-- /ko -->
-            <!-- ko if: hasReferences -->
-              <table class="table table-striped">
-                <colgroup>
-                  <col class="col-sm-8" />
-                  <col class="col-sm-4" />
-                </colgroup>
-                <tbody data-bind="foreach: references">
-                  <tr>
-                    <!-- ko with: reference_type -->
-                      <td data-bind="text: title"></td>
-                    <!-- /ko -->
-                    <td><code data-bind="text: reference_number"></code></td>
-                  </tr>
-                </tbody>
-              </table>
-            <!-- /ko -->
-          </div> <!-- /.panel -->
-        </div> <!-- /.col-sm-4 -->
-        <div class="col-sm-8">
+              <!-- ko ifnot: hasExternalServices -->
+                <div class="panel-body">
+                  <p class="text-muted text-center" i18n:translate="">No external services</p>
+                </div>
+              <!-- /ko -->
+              <!-- ko if: hasExternalServices -->
+                <div   class="list-group" data-bind="foreach: external_services">
+                  <a class="list-group-item" target="_blank" data-bind="attr: {href: url}, text: label"></a>
+                </div>
+              <!-- /ko -->
+            </div> <!-- /.panel -->
+          </div> <!-- /.col-sm-12 -->
+        </div> <!-- /.row -->
+      </div> <!-- /.col-sm-4 -->
+
+      <div class="col-sm-8">
+        <div class="row">
           <div class="panel panel-default"
               tal:condition="request.has_permission('view', context['enrollments'])">
             <div class="panel-heading clearfix">
@@ -163,75 +188,75 @@
               </table>
             <!-- /ko -->
           </div> <!-- /.panel -->
-        </div> <!-- /.col-sm-8 -->
-      </div> <!-- /.row -->
+        </div> <!-- /.row -->
 
-      <div id="visits" class="panel panel-default"
-          tal:condition="request.has_permission('view', context['visits'])">
-        <div class="panel-heading clearfix">
-          <div class="btn-toolbar pull-right">
-            <button class="btn btn-link btn-xs"
-                data-bind="click: $root.startAddVisit"
-                tal:condition="request.has_permission('add', context['visits'])">
-              <span class="fa fa-plus"></span>
-              <span i18n:translate="">Add Visit</span>
-            </button>
-          </div>
-          <h4 class="panel-title" i18n:translate="">Visits</h4>
-        </div>
-        <!-- ko ifnot: hasVisits -->
-          <div class="panel-body">
-            <p class="text-muted text-center" i18n:translate="">No visits</p>
-          </div>
-        <!-- /ko -->
-        <!-- ko if: hasVisits -->
-          <table class="table table-hover table-striped">
-            <colgroup>
-              <col class="col-sm-2" />
-              <col class="col-sm-4" />
-              <col class="col-sm-5" />
-              <col class="col-sm-1" />
-            </colgroup>
-            <thead>
-              <tr>
-                <th i18n:translate="">Visit Date</th>
-                <th i18n:translate="">Cycles</th>
-                <th i18n:translate="">Progress</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody data-bind="foreach: visits">
-              <tr>
-                <td><code data-bind="text: visit_date"></code></td>
-                <td data-bind="foreach: cycles">
-                  <div data-bind="text: title"></div>
-                </td>
-                <td>
-                  <div class="progress" data-bind="if: hasEntities">
-                    <!-- ko foreach: progress -->
-                      <div
-                          data-bind="
-                            css: css,
-                            tooltip: {title: state.title, placement: 'bottom'},
-                            style: {width: percent + '%'}">
-                        <span data-bind="text: count"></span>
+        <div class="row">
+          <div id="visits" class="panel panel-default"
+              tal:condition="request.has_permission('view', context['visits'])">
+            <div class="panel-heading clearfix">
+              <div class="btn-toolbar pull-right">
+                <button class="btn btn-link btn-xs"
+                    data-bind="click: $root.startAddVisit"
+                    tal:condition="request.has_permission('add', context['visits'])">
+                  <span class="fa fa-plus"></span>
+                  <span i18n:translate="">Add Visit</span>
+                </button>
+              </div>
+              <h4 class="panel-title" i18n:translate="">Visits</h4>
+            </div>
+            <!-- ko ifnot: hasVisits -->
+              <div class="panel-body">
+                <p class="text-muted text-center" i18n:translate="">No visits</p>
+              </div>
+            <!-- /ko -->
+            <!-- ko if: hasVisits -->
+              <table class="table table-hover table-striped">
+                <colgroup>
+                  <col class="col-sm-2" />
+                  <col class="col-sm-4" />
+                  <col class="col-sm-5" />
+                  <col class="col-sm-1" />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th i18n:translate="">Visit Date</th>
+                    <th i18n:translate="">Cycles</th>
+                    <th i18n:translate="">Progress</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody data-bind="foreach: visits">
+                  <tr>
+                    <td><code data-bind="text: visit_date"></code></td>
+                    <td data-bind="foreach: cycles">
+                      <div data-bind="text: title"></div>
+                    </td>
+                    <td>
+                      <div class="progress" data-bind="if: hasEntities">
+                        <!-- ko foreach: progress -->
+                          <div
+                              data-bind="
+                                css: css,
+                                tooltip: {title: state.title, placement: 'bottom'},
+                                style: {width: percent + '%'}">
+                            <span data-bind="text: count"></span>
+                          </div>
+                        <!-- /ko -->
                       </div>
-                    <!-- /ko -->
-                  </div>
-                </td>
-                <td class="text-right">
-                  <a class="btn btn-link"
-                      data-bind="attr: {href: __url__}">
-                    <span class="fa fa-chevron-right"></span>
-                  </a>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        <!-- /ko -->
-      </div> <!-- /.panel -->
-
-
+                    </td>
+                    <td class="text-right">
+                      <a class="btn btn-link"
+                          data-bind="attr: {href: __url__}">
+                        <span class="fa fa-chevron-right"></span>
+                      </a>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            <!-- /ko -->
+          </div> <!-- /.panel -->
+        </div> <!-- /.row -->
+      </div> <!-- /.col-sm-8 -->
     </div> <!-- /#views-patient-main -->
   </metal:content-slot>
   <metal:content-slot fill-slot="javascript-slot">
