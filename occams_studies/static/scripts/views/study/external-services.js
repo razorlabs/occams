@@ -30,6 +30,7 @@ function ExternalServicesView(options){
    */
   self.clear = function(){
     self.mode(null);
+    self.errorMessage(null);
     self.selectedService(null);
     self.editableService(null);
   };
