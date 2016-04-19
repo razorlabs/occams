@@ -2,5 +2,5 @@
     data-bind="click: startDelete"
     tal:condition="request.has_permission('delete')">
   <span class="fa fa-trash-o"></span>
-  <span i18n:translate="">Delete</span>
+  <span i18n:translate="">Delete Visit</span>
 </button>
