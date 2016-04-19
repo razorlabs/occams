@@ -17,7 +17,7 @@
               <div class="btn-group">
                 <button
                     class="btn btn-default"
-                    tal:condition="request.has_permission('form_add')"
+                    tal:condition="request.has_permission('add')"
                     data-bind="click: startUploader">
                   <span class="glyphicon glyphicon-upload"></span>
                   <span i18n:translate="">Upload</span>
@@ -27,7 +27,7 @@
                 </button>
                 <button
                     class="btn btn-default"
-                    tal:condition="request.has_permission('form_add')"
+                    tal:condition="request.has_permission('add')"
                     data-bind="click: startEditor">
                   <span class="glyphicon glyphicon-plus"></span>
                   <span i18n:translate="">Create</span>
