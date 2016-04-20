@@ -447,7 +447,7 @@ class Attribute(
                 "value_max IS NULL OR value_max >= 0",
                 name='ck_%s_unsigned_value_max' % cls.__tablename__),
             CheckConstraint(
-                "value_min < value_max",
+                "value_min <= value_max",
                 name='ck_%s_valid_value' % cls.__tablename__),
             CheckConstraint(
                 "CASE WHEN type != 'number' THEN decimal_places IS NULL END",
