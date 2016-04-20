@@ -227,14 +227,24 @@ def make_field(attribute):
     if attribute.value_min or attribute.value_max:
         # for string min and max are used to test length
         if attribute.type == 'string':
+            if attribute.value_min == attribute.value_max:
+                message = u'Field must be %(min)s characters long.'
+            else:
+                message = None
             kw['validators'].append(wtforms.validators.Length(
                 min=attribute.value_min,
-                max=attribute.value_max))
+                max=attribute.value_max,
+                message=message))
         # for number min and max are used to test the value
         elif attribute.type == 'number':
+            if attribute.value_min == attribute.value_max:
+                message = u'Number must be %(min)s.'
+            else:
+                message = None
             kw['validators'].append(wtforms.validators.NumberRange(
                 min=attribute.value_min,
-                max=attribute.value_max))
+                max=attribute.value_max,
+                message=message))
 
     if attribute.pattern:
         kw['validators'].append(wtforms.validators.Regexp(attribute.pattern))
