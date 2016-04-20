@@ -274,9 +274,9 @@
       });
     </script>
     <tal:json define="json import:json">
-      <script id="patient-data" type="application/json">${json.dumps(patient)}</script>
-      <script id="enrollments-data" type="application/json">${json.dumps(enrollments)}</script>
-      <script id="visits-data" type="application/json">${json.dumps(visits)}</script>
+      <script id="patient-data" type="application/json">${structure: json.dumps(patient)}</script>
+      <script id="enrollments-data" type="application/json">${structure: json.dumps(enrollments)}</script>
+      <script id="visits-data" type="application/json">${structure: json.dumps(visits)}</script>
     </tal:json>
   </metal:content-slot>
 </html>
