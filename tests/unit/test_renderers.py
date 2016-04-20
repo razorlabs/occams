@@ -79,6 +79,18 @@ class TestMakeField:
         field = field.bind(wtforms.Form(), attribute.name)
         assert any(isinstance(v, Length) for v in field.validators)
 
+    def test_string_min_max_same_value(self):
+        from occams_datastore import models as datastore
+        from occams_forms.renderers import make_field
+        import wtforms
+        from wtforms.validators import Length
+        attribute = datastore.Attribute(
+            name=u'string_test', title=u'string_test', type='string',
+            value_min=3, value_max=3)
+        field = make_field(attribute)
+        field = field.bind(wtforms.Form(), attribute.name)
+        assert any(isinstance(v, Length) for v in field.validators)
+
     def test_number_min_max(self):
         from occams_datastore import models as datastore
         from occams_forms.renderers import make_field
@@ -87,6 +99,18 @@ class TestMakeField:
         attribute = datastore.Attribute(
             name=u'number_test', title=u'number_test', type='number',
             value_min=1, value_max=12)
+        field = make_field(attribute)
+        field = field.bind(wtforms.Form(), attribute.name)
+        assert any(isinstance(v, NumberRange) for v in field.validators)
+
+    def test_number_min_max_same_number(self):
+        from occams_datastore import models as datastore
+        from occams_forms.renderers import make_field
+        import wtforms
+        from wtforms.validators import NumberRange
+        attribute = datastore.Attribute(
+            name=u'number_test', title=u'number_test', type='number',
+            value_min=3, value_max=3)
         field = make_field(attribute)
         field = field.bind(wtforms.Form(), attribute.name)
         assert any(isinstance(v, NumberRange) for v in field.validators)
