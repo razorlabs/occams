@@ -232,9 +232,25 @@ def make_field(attribute):
             else:
                 message = None
             kw['validators'].append(wtforms.validators.Length(
-                min=attribute.value_min,
-                max=attribute.value_max,
+                min=attribute.value_min if attribute.value_min is not None else -1,
+                max=attribute.value_max if attribute.value_max is not None else -1,
                 message=message))
+        if attribute.type == 'choice' and attribute.is_collection:
+            if attribute.value_min == attribute.value_max:
+                message = u'Field must be %(min)s characters long.'
+            elif attribute.value_min is not None \
+                    and attribute.value_max is None:
+                message = u'Field must have at least %(min)s selected.'
+            elif attribute.value_min is None \
+                    and attribute.value_max is not None:
+                message = u'Field must have at most %(max)s selected.'
+            else:
+                message = None
+            kw['validators'].append(wtforms.validators.Length(
+                min=attribute.value_min if attribute.value_min is not None else -1,
+                max=attribute.value_max if attribute.value_max is not None else -1,
+                message=message))
+
         # for number min and max are used to test the value
         elif attribute.type == 'number':
             if attribute.value_min == attribute.value_max:

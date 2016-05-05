@@ -91,6 +91,32 @@ class TestMakeField:
         field = field.bind(wtforms.Form(), attribute.name)
         assert any(isinstance(v, Length) for v in field.validators)
 
+    def test_multiple_choice_min_max(self):
+        from occams_datastore import models as datastore
+        from occams_forms.renderers import make_field
+        import wtforms
+        from wtforms.validators import Length
+        attribute = datastore.Attribute(
+            name=u'choice', title=u'choice_test', type='choice',
+            is_collection=True,
+            value_min=1, value_max=12)
+        field = make_field(attribute)
+        field = field.bind(wtforms.Form(), attribute.name)
+        assert any(isinstance(v, Length) for v in field.validators)
+
+    def test_multiple_choice_min_max_same_value(self):
+        from occams_datastore import models as datastore
+        from occams_forms.renderers import make_field
+        import wtforms
+        from wtforms.validators import Length
+        attribute = datastore.Attribute(
+            name=u'choice', title=u'choice_test', type='choice',
+            is_collection=True,
+            value_min=3, value_max=3)
+        field = make_field(attribute)
+        field = field.bind(wtforms.Form(), attribute.name)
+        assert any(isinstance(v, Length) for v in field.validators)
+
     def test_number_min_max(self):
         from occams_datastore import models as datastore
         from occams_forms.renderers import make_field
