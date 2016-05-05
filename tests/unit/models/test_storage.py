@@ -409,7 +409,81 @@ def check_value_max_constraint(db_session, type_, limit, below, equal, over):
         entity['boolean'] = True
 
 
-def test_validator_constraint(db_session):
+def test_validator_min_constraint(db_session):
+    """
+    It should validate string/number value min/max
+    """
+    from datetime import date
+    from occams_datastore import models
+    from occams_datastore.exc import ConstraintError
+
+    schema = models.Schema(name=u'Foo', title=u'',
+                           publish_date=date(2000, 1, 1))
+    s1 = models.Attribute(
+        schema=schema, name='s1', title=u'Section 1', type='section', order=0)
+    models.Attribute(
+        schema=schema,
+        parent_attribute=s1,
+        name=u'test',
+        title=u'',
+        type=u'string',
+        is_required=False,
+        value_min=3,
+        order=0)
+    db_session.add(schema)
+    db_session.flush()
+
+    entity = models.Entity(schema=schema)
+    db_session.add(entity)
+
+    entity['test'] = None
+
+    with pytest.raises(ConstraintError):
+        entity['test'] = u'f'
+
+    entity['test'] = u'foo'
+    db_session.flush()
+    assert 'foo' == entity['test']
+
+
+def test_validator_max_constraint(db_session):
+    """
+    It should validate string/number value min/max
+    """
+    from datetime import date
+    from occams_datastore import models
+    from occams_datastore.exc import ConstraintError
+
+    schema = models.Schema(name=u'Foo', title=u'',
+                           publish_date=date(2000, 1, 1))
+    s1 = models.Attribute(
+        schema=schema, name='s1', title=u'Section 1', type='section', order=0)
+    models.Attribute(
+        schema=schema,
+        parent_attribute=s1,
+        name=u'test',
+        title=u'',
+        type=u'string',
+        is_required=False,
+        value_max=3,
+        order=0)
+    db_session.add(schema)
+    db_session.flush()
+
+    entity = models.Entity(schema=schema)
+    db_session.add(entity)
+
+    entity['test'] = None
+
+    with pytest.raises(ConstraintError):
+        entity['test'] = u'foobar'
+
+    entity['test'] = u'foo'
+    db_session.flush()
+    assert 'foo' == entity['test']
+
+
+def test_validator_pattern_constraint(db_session):
     """
     It should validate against string pattern constraints
     """
