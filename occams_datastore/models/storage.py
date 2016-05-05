@@ -459,52 +459,60 @@ ValueBlob.value = property(get_blob, set_blob)
 
 def validateValue(target, value, oldvalue, initiator):
     """
-    Attempts to make sure that valid values are set to an entity
+    Attempts to make sure that valid values are set to an entity,
+    Limitation: can only check one value at a time and does not work
+    for multiple choice
     """
     attribute = target.attribute
 
     # Don't check None values, as the user may want to create empty/placeholder
     # scheamta
-    if value is None:
+    if attribute.is_collection or value is None:
         return
 
-    def compareable(type_, check, interpreted):
+    def check_length(func, op, limit, value):
         """
-        Local helper function to convert the check expression and target value
-        into a equally comparable values
+        Perform limit check operation
+        :param func: Callback function to perform the actual operation,
+                     must return true for pass
+        :param op: label for the function
+        :param limit: raw limit value (an integer)
+        :param value: value to validate
         """
-        if type_ in ('string', 'text'):
-            interpreted = len(value)
-        elif type_ in ('number'):
-            check = Decimal(check)
-        elif type_ in ('date'):
-            check = date.fromtimestamp(check)
-        elif type_ in ('datetime'):
-            check = datetime.fromtimestamp(check)
+        if attribute.type in ('string', 'text'):
+            value = len(value)
+        elif attribute.type in ('number'):
+            limit = Decimal(limit)
+        elif attribute.type in ('date'):
+            limit = date.fromtimestamp(limit)
+        elif attribute.type in ('datetime'):
+            limit = datetime.fromtimestamp(limit)
         else:
             raise NotImplementedError(
-                'Cannot coerce limit for type: %s' % type_)
-        return check, interpreted
+                'Cannot coerce limit for type: %s' % attribute.type)
+
+        if not func(value, limit):
+            raise ConstraintError(
+                attribute.schema.name,
+                attribute.name,
+                limit, op, value,
+                value)
 
     if attribute.value_min is not None:
-        check, interpreted = compareable(
-            attribute.type, attribute.value_min, value)
-
-        if interpreted < check:
-            raise ConstraintError(
-                attribute.schema.name, attribute.name, check, '<', interpreted,
-                value)
+        check_length(
+            lambda length, limit: limit <= length,
+            '<=',
+            attribute.value_min,
+            value
+        )
 
     if attribute.value_max is not None:
-        check, interpreted = compareable(
-            attribute.type, attribute.value_max, value)
-
-        if interpreted > check:
-            raise ConstraintError(
-                attribute.schema.name, attribute.name, check, '>', interpreted,
-                value)
-
-    # TODO: collections
+        check_length(
+            lambda length, limit: limit >= length,
+            '>=',
+            attribute.value_max,
+            value
+        )
 
     if attribute.pattern is not None \
             and not re.match(attribute.pattern, str(value)):
