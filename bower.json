@@ -11,9 +11,9 @@
   },
   "version": "2.0.12",
   "authors": [
-    "Marco Martinez <mam002@ucsd.edu>"
+    "The YoungLabs <younglabs@ucsd.edu>"
   ],
-  "license": "MIT",
+  "license": "BSD",
   "private": true,
   "ignore": [
     "**/.*",
