@@ -344,6 +344,49 @@ class TestDeleteJson:
         assert 0 == db_session.query(datastore.Entity).count()
 
 
+class Test_terminate_ajax:
+
+    def _call_fut(self, *args, **kw):
+        from occams_studies.views.enrollment import terminate_ajax as view
+        return view(*args, **kw)
+
+    def test_context_attach_on_crate(self, req, db_session, config, factories):
+        """
+        It should create a new termination schema and attach when none is found
+        """
+        import mock
+        from webob.multidict import MultiDict
+
+        config.include('pyramid_chameleon')
+
+        termination_schema = factories.SchemaFactory.create()
+        termination_schema.attributes['termination_date'] = \
+            factories.AttributeFactory.create(
+                name='termination_date',
+                title='Termination Date',
+                type='date',
+                order=0
+            )
+        study = factories.StudyFactory.create(
+            termination_schema=termination_schema)
+        enrollment = factories.EnrollmentFactory.create(study=study)
+        db_session.flush()
+
+        req.current_route_path = mock.Mock(return_value='/a/b/c')
+        req.POST = MultiDict()
+        res = self._call_fut(enrollment, req)
+
+        db_session.refresh(enrollment)
+
+        enrollment_entities = list(enrollment.entities)
+        assert len(enrollment_entities)
+        assert enrollment_entities[0].schema == termination_schema
+
+        patient_entities = list(enrollment.patient.entities)
+        assert len(patient_entities)
+        assert patient_entities[0].schema == termination_schema
+
+
 class Test_randomization_ajax:
 
     def _call_fut(self, *args, **kw):
