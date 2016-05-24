@@ -350,7 +350,7 @@ class Test_terminate_ajax:
         from occams_studies.views.enrollment import terminate_ajax as view
         return view(*args, **kw)
 
-    def test_context_attach_on_crate(self, req, db_session, config, factories):
+    def test_context_attach_on_create(self, req, db_session, config, factories):
         """
         It should create a new termination schema and attach when none is found
         """
