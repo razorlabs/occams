@@ -6,6 +6,10 @@ OCCAMS DataStore
     :target: https://travis-ci.org/younglabs/occams_datastore
     :alt: Master Travis CI Status
 
+.. image:: https://coveralls.io/repos/github/younglabs/occams_datastore/badge.svg?branch=master
+    :target: https://coveralls.io/github/younglabs/occams_datastore?branch=master
+    :alt: Coveralls.io Coverage
+
 API and backend for managing sparse data that is changing over time,
 namely clinical research data.
 
