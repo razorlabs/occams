@@ -13,7 +13,12 @@ before_script:
   - psql -c 'create database travis_ci_test;' -U postgres
 
 # command to install dependencies
-install: "pip install -e .[postgresql,test]"
+install:
+  - "pip install python-coveralls"
+  - "pip install -e .[postgresql,test]"
 
 # command to run tests
 script: "py.test --db=postgresql://postgres:@/travis_ci_test"
+
+after_success:
+  - coveralls
