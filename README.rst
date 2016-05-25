@@ -2,6 +2,10 @@
 OCCAMS DataStore
 ================
 
+.. image:: https://travis-ci.org/younglabs/occams_datastore.svg?branch=master
+    :target: https://travis-ci.org/younglabs/occams_datastore
+    :alt: Master Travis CI Status
+
 API and backend for managing sparse data that is changing over time,
 namely clinical research data.
 
