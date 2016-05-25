@@ -192,6 +192,7 @@ def terminate_ajax(context, request):
         # If you remove this line you will be creating random termination
         # entries...
         context.entities.add(entity)
+        context.patient.entities.add(entity)
     else:
         schema = entity.schema
 
