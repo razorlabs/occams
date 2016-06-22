@@ -29,6 +29,7 @@ REQUIRES = [
     'pyramid_redis',
     'pyramid_webassets',                # Asset management (ala grunt)
     'pyramid_who',                      # User authentication
+    'repoze.who>=2.3.0',
     'six',                              # Py 2 & 3 compatibilty
     'SQLAlchemy',                       # Database ORM
     'tabulate',                         # ASCII tables for CLI pretty-print
@@ -55,7 +56,7 @@ EXTRAS = {
         'sphinx-autobuild'
     ],
 
-    'ldap': ['who_ldap'],               # LDAP authorization
+    'ldap': ['who_ldap>=3.2.0'],               # LDAP authorization
 
     'sqlite': [],
 
@@ -73,6 +74,7 @@ EXTRAS = {
         'WebTest',
         'beautifulsoup4',
         'mock',
+        'who_dev>=0.0.2',
     ],
 }
 
