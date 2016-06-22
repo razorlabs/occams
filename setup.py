@@ -21,7 +21,7 @@ REQUIRES = [
     'lingua',                           # i18n
     'python-dateutil',                  # Date parsing
     'python-slugify',                   # path-friendly filenames
-    'pyramid>=1.5',                     # Framework
+    'pyramid>=1.7',                     # Framework
     'pyramid_chameleon',                # Templating
     'pyramid_exclog',                   # Logging for production
     'pyramid_tm',                       # Centralized transations
