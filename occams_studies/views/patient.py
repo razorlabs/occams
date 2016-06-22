@@ -552,6 +552,7 @@ def form(context, request):
             db_session.query(datastore.Schema)
             .join(models.study_schema_table)
             .join(models.Study)
+            .filter(datastore.Schema.name == context.schema.name)
             .filter(datastore.Schema.publish_date != sa.null())
             .filter(datastore.Schema.retract_date == sa.null()))
         allowed_versions = sorted(set(

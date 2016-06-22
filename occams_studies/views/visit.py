@@ -303,6 +303,7 @@ def form(context, request):
         .join(models.study_schema_table)
         .join(models.Study)
         .join(models.Cycle)
+        .filter(datastore.Schema.name == context.schema.name)
         .filter(models.Cycle.id.in_([cycle.id for cycle in visit.cycles])))
     allowed_versions = [s.publish_date for s in allowed_schemata]
 
