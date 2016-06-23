@@ -8,7 +8,7 @@ Create Date: 2015-12-22 12:44:33.926495
 
 # revision identifiers, used by Alembic.
 revision = '425e1e704a65'
-down_revision = '1d2d71fb2bde'
+down_revision = None
 branch_labels = ('datastore',)
 
 from alembic import op
