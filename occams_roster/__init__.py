@@ -18,7 +18,7 @@ def includeme(config):
     """
     settings = config.registry.settings
     engine = engine_from_config(settings, 'roster.db.')
-    config.registry['db_sessionmaker'].configure(binds={
+    config.registry['dbsession_factory'].configure(binds={
         models.Site: engine,
         models.Identifier: engine
     })
