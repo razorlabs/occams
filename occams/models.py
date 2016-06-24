@@ -1,4 +1,4 @@
-import sqlalchemy as sa
+from sqlalchemy import engine_from_config
 from sqlalchemy.orm import sessionmaker
 import zope.sqlalchemy
 
@@ -7,34 +7,69 @@ import occams_datastore.models.events
 from . import log
 
 
+def get_engine(settings, prefix='sqlalchemy.'):
+    engine = engine_from_config(settings, prefix)
+    log.info('Connected to: "%s"' % repr(engine.url))
+    return engine
+
+
+def get_session_factory(engine):
+    factory = sessionmaker()
+    factory.configure(bind=engine)
+    return factory
+
+
+def get_tm_session(session_factory, transaction_manager, info=None):
+    """
+    Get a ``sqlalchemy.orm.Session`` instance backed by a transaction.
+
+    This function will hook the session to the transaction manager which
+    will take care of committing any changes.
+
+    - When using pyramid_tm it will automatically be committed or aborted
+      depending on whether an exception is raised.
+
+    - When using scripts you should wrap the session in a manager yourself.
+      For example::
+
+          import transaction
+
+          engine = get_engine(settings)
+          session_factory = get_session_factory(engine)
+          with transaction.manager:
+              dbsession = get_tm_session(session_factory, transaction.manager)
+
+    """
+    dbsession = session_factory()
+
+    if info:
+        dbsession.info.update(info)
+
+    occams_datastore.models.events.register(dbsession)
+    zope.sqlalchemy.register(
+        dbsession, transaction_manager=transaction_manager)
+    return dbsession
+
+
 def includeme(config):
     """
-    Configures database connection
+    Initialize the model for a Pyramid app.
     """
-    settings = config.registry.settings
+    settings = config.get_settings()
 
-    maker = sessionmaker()
-    zope.sqlalchemy.register(maker)
-    occams_datastore.models.events.register(maker)
+    # use pyramid_tm to hook the transaction lifecycle to the request
+    config.include('pyramid_tm')
 
-    engine = sa.engine_from_config(settings, 'occams.db.')
-    maker.configure(bind=engine)
+    engine = get_engine(settings, prefix='occams.db.')
+    session_factory = get_session_factory(engine)
+    config.registry['dbsession_factory'] = session_factory
 
-    config.registry['db_sessionmaker'] = maker
-    config.add_request_method(_get_db_session, 'db_session', reify=True)
-
-    log.info('Connected to: "%s"' % repr(engine.url))
-
-
-def _get_db_session(request):
-    db_session = request.registry['db_sessionmaker']()
-    # Keep track of the request so we can generate model URLs
-    db_session.info['request'] = request
-    db_session.info['settings'] = request.registry.settings
-
-    def close_session(request):
-        db_session.close()
-
-    request.add_finished_callback(close_session)
-
-    return db_session
+    # make request.dbsession available for use in Pyramid
+    config.add_request_method(
+        # r.tm is the transaction manager used by pyramid_tm
+        lambda r: get_tm_session(
+            session_factory,
+            r.tm, info={'request': r, 'settings': r.registry.settings}),
+        'db_session',
+        reify=True
+    )

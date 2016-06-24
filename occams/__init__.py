@@ -69,7 +69,6 @@ def main(global_config, **settings):
     config.include('pyramid_chameleon')
     config.include('pyramid_redis')
     config.include('pyramid_redis_sessions')
-    config.include('pyramid_tm')
     config.include('pyramid_webassets')
     config.add_renderer('json', JSON(
         adapters=(
