@@ -46,7 +46,7 @@ def includeme(config):
     config.add_route('studies.visit',                       '/patients/{patient}/visits/{visit}',               factory=models.PatientFactory, traverse='/{patient}/visits/{visit}')
 
     config.add_route('studies.visit_forms',                 '/patients/{patient}/visits/{visit}/forms',         factory=models.PatientFactory, traverse='/{patient}/visits/{visit}/forms')
-    config.add_route('studies.visit_form',                  '/patients/{patient}/visits/{visit}/forms/{form}',  factory=models.PatientFactory, traverse='/{patient}/visits/{visit}/forms/{form}')
+    config.add_route('studies.visit_form',                  '/patients/{patient}/visits/{visit}/forms/{form:\d+}',  factory=models.PatientFactory, traverse='/{patient}/visits/{visit}/forms/{form}')
 
 
     config.add_route('studies.cycles',                      '/{study}/cycles',                      factory=models.StudyFactory, traverse='/{study}/cycles')
