@@ -87,7 +87,13 @@ function FormListView() {
           headers: {'X-CSRF-Token': $.cookie('csrf_token')},
           processData: false,  // tell jQuery not to process the data
           contentType: false,  // tell jQuery not to set contentType
-          error: handleXHRError({logger: self.errorMessage}),
+          error: function(jqXHR, textStatus, errorThrown){
+            var message = jqXHR.responseJSON.user_message;
+            if (message === undefined){
+              message = 'Unexpected error occurred'
+            }
+            alert(message);
+          },
           beforeSend: function(){
             self.isUploading(true);
           },

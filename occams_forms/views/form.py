@@ -52,14 +52,24 @@ def upload(context, request):
     files = request.POST.getall('files')
 
     if len(files) < 1:
-        raise HTTPBadRequest(json={
-            'user_message': _(u'Nothing uploaded')})
+        raise HTTPBadRequest(json={'user_message': _(u'Nothing uploaded')})
 
-    schemata = [datastore.Schema.from_json(json.load(u.file)) for u in files]
-    db_session.add_all(schemata)
-    db_session.flush()
+    names = []
 
-    return get_list_data(request, names=[s.name for s in schemata])
+    for file_info in files:
+        try:
+            data = json.load(file_info.file)
+        except ValueError:
+            raise HTTPBadRequest(
+                json={'user_message': _(u'Invalid file format uploaded')})
+        else:
+            schema = datastore.Schema.from_json(data)
+            schema.publish_date = schema.retract_date = None
+            db_session.add(schema)
+            db_session.flush()
+            names.append(schema.name)
+
+    return get_list_data(request, names=names)
 
 
 @view_config(
