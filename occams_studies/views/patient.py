@@ -486,7 +486,10 @@ def delete_json(context, request):
     check_csrf_token(request)
     db_session = request.db_session
 
-    list(map(db_session.delete, context.entities))
+    for entity in context.entities:
+        db_session.delete(entity)
+    db_session.flush()
+
     db_session.delete(context)
     db_session.flush()
 
