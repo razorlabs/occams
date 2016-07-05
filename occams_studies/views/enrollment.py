@@ -57,7 +57,7 @@ def view_json(context, request):
     study = context.study
     patient = context.patient
     can_randomize = bool(request.has_permission('randomize', context))
-    return {
+    data = {
         '__url__': request.route_path(
             'studies.enrollment',
             patient=patient.pid,
@@ -86,17 +86,7 @@ def view_json(context, request):
             'is_randomized': study.is_randomized,
             'is_blinded': study.is_blinded,
             },
-        'stratum':
-            None if not (study.is_randomized and enrollment.stratum) else {
-                'id': enrollment.stratum.id,
-                'arm': None if study.is_blinded or not can_randomize else {
-                    'id': enrollment.stratum.arm.id,
-                    'name': enrollment.stratum.arm.name,
-                    'title': enrollment.stratum.arm.title,
-                },
-                'randid':
-                    enrollment.stratum.randid if not study.is_blinded else None
-                },
+        'stratum': None,
         'consent_date': enrollment.consent_date.isoformat(),
         'latest_consent_date': enrollment.latest_consent_date.isoformat(),
         'termination_date': (
@@ -104,6 +94,30 @@ def view_json(context, request):
             enrollment.termination_date.isoformat()),
         'reference_number': enrollment.reference_number,
     }
+
+    if study.is_randomized:
+        has_stratum = any(
+            entity.schema.name == study.randomization_schema.name
+            for entity in enrollment.entities
+        )
+        if has_stratum:
+            data['stratum'] = {
+                'id': enrollment.stratum.id,
+                'arm': None,
+                'randid': None
+            }
+
+            if not study.is_blinded and can_randomize:
+                data['stratum']['arm'] = {
+                    'id': enrollment.stratum.arm.id,
+                    'name': enrollment.stratum.arm.name,
+                    'title': enrollment.stratum.arm.title,
+                }
+
+            if not study.is_blinded:
+                data['stratum']['randid'] = enrollment.stratum.randid
+
+    return data
 
 
 @view_config(

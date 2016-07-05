@@ -15,6 +15,38 @@ class TestViewJson:
         from occams_studies.views.enrollment import view_json as view
         return view(*args, **kw)
 
+    def test_distinguish_ambiguous_enrollment(
+            self, req, db_session, factories):
+        """
+        It should be able to distiguish which enrollment has randomization data
+        """
+
+        schema = factories.SchemaFactory.create()
+
+        study = factories.StudyFactory.create(
+            randomization_schema=schema,
+            is_randomized=True,
+        )
+
+        enrollment1 = factories.EnrollmentFactory(
+            study=study,
+            stratum=factories.StratumFactory(
+                arm__study=study
+            )
+        )
+        entity = factories.EntityFactory.create(schema=schema)
+        enrollment1.entities.add(entity)
+
+        enrollment2 = factories.EnrollmentFactory(study=study)
+
+        db_session.flush()
+
+        res = self._call_fut(enrollment1, req)
+        assert res['stratum'] is not None
+
+        res = self._call_fut(enrollment2, req)
+        assert res['stratum'] is None
+
     def test_hide_blinded_randomization(self, req, db_session, factories):
         """
         It should not include randomization status if study is blinded
@@ -24,7 +56,8 @@ class TestViewJson:
 
         study = factories.StudyFactory.create(
             randomization_schema=schema,
-            is_randomized=True
+            is_randomized=True,
+            is_blinded=True,
         )
 
         enrollment = factories.EnrollmentFactory(
@@ -34,17 +67,41 @@ class TestViewJson:
             )
         )
 
+        entity = factories.EntityFactory.create(schema=schema)
+        enrollment.entities.add(entity)
+
         db_session.flush()
 
-        study.is_blinded = False
-        db_session.flush()
-        res = self._call_fut(enrollment, req)
-        assert res['stratum']['arm'] is not None
-
-        study.is_blinded = True
-        db_session.flush()
         res = self._call_fut(enrollment, req)
         assert res['stratum']['arm'] is None
+
+    def test_show_unblinded_randomization(self, req, db_session, factories):
+        """
+        It should show randomization status if the study is not blinded
+        """
+
+        schema = factories.SchemaFactory.create()
+
+        study = factories.StudyFactory.create(
+            randomization_schema=schema,
+            is_randomized=True,
+            is_blinded=False,
+        )
+
+        enrollment = factories.EnrollmentFactory(
+            study=study,
+            stratum=factories.StratumFactory(
+                arm__study=study
+            )
+        )
+
+        entity = factories.EntityFactory.create(schema=schema)
+        enrollment.entities.add(entity)
+
+        db_session.flush()
+
+        res = self._call_fut(enrollment, req)
+        assert res['stratum']['arm'] is not None
 
 
 class TestEditJson:
