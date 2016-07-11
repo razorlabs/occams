@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 
 from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPFound
 from pyramid.session import check_csrf_token
@@ -7,6 +7,7 @@ import sqlalchemy as sa
 from sqlalchemy import orm
 import wtforms
 from wtforms.ext.dateutil.fields import DateField
+from wtforms_components import DateRange
 
 from occams.utils.forms import wtferrors, ModelField, Form
 from occams_datastore import models as datastore
@@ -404,6 +405,7 @@ def VisitSchema(context, request):
         visit_date = DateField(
             validators=[
                 wtforms.validators.InputRequired(),
+                DateRange(min=date(1900, 1, 1)),
                 unique_visit_date])
         include_forms = wtforms.BooleanField()
         include_specimen = wtforms.BooleanField()

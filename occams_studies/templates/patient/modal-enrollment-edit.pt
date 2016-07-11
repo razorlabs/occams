@@ -50,6 +50,7 @@
                 class="form-control"
                 required
                 id="${name}"
+                name="${name}"
                 data-type-hint="date"
                 placeholder="YYYY-MM-DD"
                 data-date-format="YYYY-MM-DD"
@@ -58,8 +59,7 @@
                 data-rule-dateISO
                 data-bind="
                   value: ${name},
-                  datetimepicker: {},
-                  uniqueName: true" />
+                  datetimepicker: {}" />
           </div> <!-- /.form-group -->
           <div class="form-group" tal:define="name 'latest_consent_date'">
             <label i18n:translate="" for="${name}" class="required">Current Consent Date</label>
@@ -67,6 +67,7 @@
                 class="form-control"
                 required
                 id="${name}"
+                name="${name}"
                 placeholder="YYYY-MM-DD"
                 data-type-hint="date"
                 data-date-format="YYYY-MM-DD"
@@ -77,8 +78,7 @@
                 data-msg-greaterThanEqualTo="Must be after consent date"
                 data-bind="
                   value: ${name},
-                  datetimepicker: {},
-                  uniqueName: true" />
+                  datetimepicker: {}" />
           </div> <!-- /.form-group -->
 
           <!--! Termination is edited manually only if there is no termination schema -->

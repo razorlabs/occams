@@ -10,6 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy import orm
 import wtforms
 from wtforms.ext.dateutil.fields import DateField
+from wtforms_components import DateRange
 
 from occams.utils.forms import wtferrors, ModelField, Form
 from occams_forms.renderers import \
@@ -644,15 +645,18 @@ def EnrollmentSchema(context, request):
         consent_date = DateField(
             validators=[
                 wtforms.validators.InputRequired(),
+                DateRange(min=date(1900, 1, 1)),
                 check_unique,
                 check_consent_timeline])
         latest_consent_date = DateField(
             validators=[
                 wtforms.validators.InputRequired(),
+                DateRange(min=date(1900, 1, 1)),
                 check_consent_timeline])
         termination_date = DateField(
             validators=[
                 wtforms.validators.Optional(),
+                DateRange(min=date(1900, 1, 1)),
                 check_termination_timeline])
         reference_number = wtforms.StringField(
             validators=[

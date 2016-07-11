@@ -14,6 +14,7 @@ import sqlalchemy as sa
 from sqlalchemy import orm
 import wtforms
 from wtforms.ext.dateutil.fields import DateField
+from wtforms_components import DateRange
 from zope.sqlalchemy import mark_changed
 
 from occams.utils.forms import Form, wtferrors, ModelField
@@ -965,7 +966,11 @@ def StudySchema(context, request):
             validators=[
                 wtforms.validators.InputRequired(),
                 wtforms.validators.Length(min=1, max=8)])
-        consent_date = DateField()
+        consent_date = DateField(
+            validators=[
+                wtforms.validators.Optional(),
+                DateRange(min=date(1900, 1, 1)),
+            ])
         termination_form = ModelField(
             db_session=db_session,
             class_=datastore.Schema,
