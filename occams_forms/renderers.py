@@ -7,11 +7,11 @@ and associated plugins must be enabled.
 
 from __future__ import division
 import collections
+from datetime import date, datetime
 import os
 from itertools import groupby
 import uuid
 import cgi
-from datetime import date, datetime
 
 import magic
 from pyramid.renderers import render
@@ -357,7 +357,10 @@ def make_form(session,
             collect_date = wtforms.ext.dateutil.fields.DateField(
                 _(u'Collect Date'),
                 widget=wtforms.widgets.html5.DateInput(),
-                validators=[wtforms.validators.InputRequired()])
+                validators=[
+                    wtforms.validators.InputRequired(),
+                    DateRange(min=date(1900, 1, 1)),
+                ])
             version = wtforms.SelectField(
                 _(u'Version'),
                 choices=actual_versions,
