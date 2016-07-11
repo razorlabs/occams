@@ -132,8 +132,13 @@ def db_session(config):
     :returns: An instantiated sqalchemy database session
     """
     from occams_datastore import models as datastore
+    import occams_datastore.models.events
+    import zope.sqlalchemy
 
-    db_session = config.registry['db_sessionmaker']()
+    db_session = config.registry['dbsession_factory']()
+
+    occams_datastore.models.events.register(db_session)
+    zope.sqlalchemy.register(db_session)
 
     # Pre-configure with a blame user
     blame = datastore.User(key=USERID)
