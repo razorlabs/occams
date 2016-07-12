@@ -1,4 +1,5 @@
 from copy import deepcopy
+from datetime import date
 import json
 import shutil
 import tempfile
@@ -11,6 +12,7 @@ from pyramid.view import view_config
 import wtforms
 import wtforms.widgets.html5
 import wtforms.ext.dateutil.fields
+from wtforms_components import DateRange
 
 from occams.utils.forms import Form
 from occams_datastore import models as datastore
@@ -149,12 +151,16 @@ def publish_json(context, request):
         publish_date = wtforms.ext.dateutil.fields.DateField(
             validators=[
                 wtforms.validators.Optional(),
-                check_unique_publish_date],
+                DateRange(min=date(1900, 1, 1)),
+                check_unique_publish_date
+            ],
             widget=wtforms.widgets.html5.DateInput())
         retract_date = wtforms.ext.dateutil.fields.DateField(
             validators=[
                 wtforms.validators.Optional(),
-                check_valid_timeline],
+                DateRange(min=date(1900, 1, 1)),
+                check_valid_timeline
+            ],
             widget=wtforms.widgets.html5.DateInput())
 
     form = PublishForm.from_json(request.json_body)
