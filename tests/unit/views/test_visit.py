@@ -393,34 +393,25 @@ class Test_edit_json:
                        for x in ('patient', 'visit')]) == \
             sorted([(c.external, c.entity_id) for c in contexts])
 
-    def test_include_relative_form(self, req, db_session, check_csrf_token):
+    def test_include_relative_form(
+            self, req, db_session, check_csrf_token, factories):
         """
-        It should use the latest version of the form relative to the visit date
+        It should use the latest version of a form at the time of collect date
         """
         from datetime import date, timedelta
-        from occams_datastore import models as datastore
-        from occams_studies import models
 
         t0 = date.today()
         t1 = t0 + timedelta(days=1)
         t2 = t1 + timedelta(days=1)
 
-        study = models.Study(
-            name=u'somestudy',
-            title=u'Some Study',
-            short_title=u'sstudy',
-            code=u'000',
-            consent_date=date.today())
-
-        cycle1 = models.Cycle(name='week-1', title=u'', week=1)
+        study = factories.StudyFactory.create()
+        cycle1 = factories.CycleFactory.create(study=study)
         cycle1.schemata.update([
-            datastore.Schema(name='form1', title=u'', publish_date=t0),
-            datastore.Schema(name='form1', title=u'', publish_date=t2)])
-        study.cycles.append(cycle1)
+            factories.SchemaFactory(name='form1', publish_date=t0),
+            factories.SchemaFactory(name='form1', publish_date=t2),
+        ])
 
-        patient = models.Patient(
-            site=models.Site(name=u'ucsd', title=u'UCSD'),
-            pid=u'12345')
+        patient = factories.PatientFactory.create()
 
         db_session.add_all([patient, study])
         db_session.flush()
@@ -435,6 +426,41 @@ class Test_edit_json:
 
         assert 1 == len(res['entities'])
         assert str(t0) == res['entities'][0]['schema']['publish_date']
+
+    def test_include_relative_form_before_publish_date(
+            self, req, db_session, check_csrf_token, factories):
+        """
+        It should use the letest form version if none would have been available
+        at the time of collection.
+        """
+        from datetime import date, timedelta
+
+        t0 = date.today()
+        t1 = t0 + timedelta(days=1)
+        t2 = t1 + timedelta(days=1)
+
+        study = factories.StudyFactory.create()
+        cycle1 = factories.CycleFactory.create(study=study)
+        cycle1.schemata.update([
+            factories.SchemaFactory(name='form1', publish_date=t1),
+            factories.SchemaFactory(name='form1', publish_date=t2)
+        ])
+
+        patient = factories.PatientFactory.create()
+
+        db_session.add_all([patient, study])
+        db_session.flush()
+
+        req.json_body = {
+            'cycles': [cycle1.id],
+            'visit_date': str(t0),
+            'include_forms': True
+        }
+
+        res = self._call_fut(patient['visits'], req)
+
+        assert 1 == len(res['entities'])
+        assert str(t1) == res['entities'][0]['schema']['publish_date']
 
     def test_include_not_retracted_form(
             self, req, db_session, check_csrf_token):
