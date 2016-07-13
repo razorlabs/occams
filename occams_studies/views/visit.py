@@ -209,25 +209,30 @@ def edit_json(context, request):
 
     if form.include_forms.data:
 
-        # find the most recent cycle form version relative to the visit
-        recents = (
+        relative_schema = (
             db_session.query(
+                datastore.Schema.id.label('id'),
                 datastore.Schema.name.label('name'),
-                sa.func.max(
-                    datastore.Schema.publish_date).label('publish_date'))
+                datastore.Schema.publish_date.label('publish_date'),
+                sa.func.row_number().over(
+                    partition_by=datastore.Schema.name,
+                    order_by=(
+                        # Rank by versions before the visit date or closest
+                        (datastore.Schema.publish_date <= visit.visit_date).desc(),
+                        sa.func.abs(datastore.Schema.publish_date - visit.visit_date).asc()
+                    ),
+                ).label('row_number'))
             .join(models.Cycle.schemata)
             .filter(models.Cycle.id.in_([c.id for c in visit.cycles]))
-            .filter(datastore.Schema.publish_date <= visit.visit_date)
             .filter(datastore.Schema.retract_date == sa.null())
-            .group_by(datastore.Schema.name)
-            .subquery('max_version'))
+            .cte('relative_schema')
+        )
 
-        # retrive the full schema record of the previous find
         schemata_query = (
             db_session.query(datastore.Schema)
-            .join(recents, (
-                (datastore.Schema.name == recents.c.name)
-                & (datastore.Schema.publish_date == recents.c.publish_date))))
+            .join(relative_schema, relative_schema.c.id == datastore.Schema.id)
+            .filter(relative_schema.c.row_number == 1)
+        )
 
         # Ignore already-added schemata
         if isinstance(context, models.Visit) and visit.entities:
