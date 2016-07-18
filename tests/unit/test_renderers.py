@@ -50,6 +50,9 @@ class TestMakeField:
             name=u'f', title=u'F', type='number', decimal_places=1)
         field = make_field(attribute)
         assert field.field_class is wtforms.fields.html5.DecimalField
+        assert field.kwargs['places'] == 1
+        assert field.kwargs['rounding'] == u'ROUND_UP'
+
 
     def test_choice_single(self):
         from occams_datastore import models as datastore

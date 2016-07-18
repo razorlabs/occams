@@ -12,6 +12,8 @@ import os
 from itertools import groupby
 import uuid
 import cgi
+from datetime import date, datetime
+from decimal import ROUND_UP
 
 import magic
 from pyramid.renderers import render
@@ -169,6 +171,8 @@ def make_field(attribute):
                 ndigits = abs(attribute.decimal_places)
                 step = round(1 / pow(10, ndigits), ndigits)
                 kw['widget'] = wtforms.widgets.html5.NumberInput(step)
+                kw['places'] = attribute.decimal_places
+                kw['rounding'] = ROUND_UP
 
     elif attribute.type == 'string':
         field_class = wtforms.StringField
