@@ -12,7 +12,6 @@ import os
 from itertools import groupby
 import uuid
 import cgi
-from datetime import date, datetime
 from decimal import ROUND_UP
 
 import magic
