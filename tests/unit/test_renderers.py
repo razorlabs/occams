@@ -53,7 +53,6 @@ class TestMakeField:
         assert field.kwargs['places'] == 1
         assert field.kwargs['rounding'] == u'ROUND_UP'
 
-
     def test_choice_single(self):
         from occams_datastore import models as datastore
         from occams_forms.renderers import make_field
