@@ -143,6 +143,7 @@ How do I run the tests?
 Create a test user and database to run the tests.
 
 ::
+
     > psql -U occams -h `docker-machine ip forms-develop` -c "CREATE USER test"
     > psql -U occams -h `docker-machine ip forms-develop` -c "CREATE DATABASE test OWNER test"
     > docker-compose run app py.test --db postgresql://test@postgres/test --redis redis://redis/9
@@ -152,6 +153,7 @@ How do I check the logs?
 ''''''''''''''''''''''''
 
 ::
+
     > docker-compose logs -f
 
 How do I access the database?
@@ -165,6 +167,7 @@ How do I restart the application?
 '''''''''''''''''''''''''''''''''
 
 ::
+
     > docker-compose restart app
 
 
@@ -172,6 +175,7 @@ How do I reset the database and start over again?
 '''''''''''''''''''''''''''''''''''''''''''''''''
 
 ::
+
     > docker-compose down
     > docker volume rm occams_db
     > docker-compose up -d
