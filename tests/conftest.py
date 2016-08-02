@@ -20,8 +20,6 @@ from sqlalchemy.schema import CreateTable
 from sqlalchemy.ext.compiler import compiles
 
 
-REDIS_URL = 'redis://localhost/9'
-
 USERID = 'test_user'
 
 
@@ -32,6 +30,7 @@ def pytest_addoption(parser):
     :param parser: The pytest command-line parser
     """
     parser.addoption('--db', action='store', help='db string for testing')
+    parser.addoption('--redis', action='store', help='redis host for testing')
     parser.addoption('--reuse', action='store_true',
                      help='Reuses existing database')
 
@@ -223,11 +222,13 @@ def wsgi(request):
     who_ini.flush()
 
     db_url = request.config.getoption('--db')
+    redis_url = request.config.getoption('--redis')
 
     tmp_dir = tempfile.mkdtemp()
 
     wsgi = main({}, **{
-        'redis.url': REDIS_URL,
+        'redis.url': redis_url,
+        'redis.sessions.url': redis_url,
         'redis.sessions.secret': 'sekrit',
 
         'who.config_file': who_ini.name,
@@ -244,8 +245,8 @@ def wsgi(request):
         'occams.db.url': db_url,
         'occams.groups': [],
 
-        'celery.broker.url': REDIS_URL,
-        'celery.backend.url': REDIS_URL,
+        'celery.broker.url': redis_url,
+        'celery.backend.url': redis_url,
         'celery.blame': 'celery@localhost',
     })
 

@@ -5,12 +5,8 @@ from setuptools.command.develop import develop as _develop
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(HERE, 'README.rst')).read()
-CHANGES = open(os.path.join(HERE, 'CHANGES.rst')).read()
 
 REQUIRES = [
-    'filemagic',
-
-    'occams',
 ]
 
 EXTRAS = {
