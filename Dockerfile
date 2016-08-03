@@ -2,7 +2,7 @@
 #
 # Installs the web application in "edit" mode so that modifications are
 # immediately reflected .
-
+#
 # DO NOT USE FOR PRODUCTION
 
 FROM centos:7
