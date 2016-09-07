@@ -7,10 +7,57 @@ HERE = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(HERE, 'README.rst')).read()
 
 REQUIRES = [
+    #
+    # Package dependencies
+    #
+    # NOTE: If you edit these requirements, make sure you update the
+    # requirements-develop.txt file
+    #
+    'alembic',
+    'babel',
+    'celery[redis]>=3.1,<3.1.99',
+    'cssmin',
+    'filemagic',
+    'gevent',
+    'gunicorn==19.3',
+    'humanize',
+    'jsmin',
+    'lingua',
+    'psycopg2',
+    'python-dateutil',
+    'python-slugify',
+    'pyramid>=1.7',
+    'pyramid_chameleon',
+    'pyramid_exclog',
+    'pyramid_tm',
+    'pyramid_redis_sessions',
+    'pyramid_redis',
+    'pyramid_webassets',
+    'pyramid_who',
+    'repoze.who>=2.3.0',
+    'six',
+    'SQLAlchemy',
+    'tabulate',
+    'wtforms>=2.0.0',
+    'wtforms-json',
+    'wtforms-components',
+    'zope.sqlalchemy',
 ]
 
 EXTRAS = {
-    'test': []
+    'test': [
+        # Development packages
+        'sphinx',
+        'sphinx-autobuild',
+        'pyramid_debugtoolbar',
+        'pytest',
+        'pytest-cov',
+        'fake-factory',
+        'WebTest',
+        'beautifulsoup4',
+        'mock',
+        'who_dev>=0.0.2',
+    ]
 }
 
 

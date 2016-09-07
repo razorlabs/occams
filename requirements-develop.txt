@@ -1,3 +1,14 @@
+#
+# Environment packages
+#
+# This file is mostily a duplicate of what is in setup.py so that
+# Docker can cache the dependency installation step. If this file was not
+# present you will have to re-install all dependencies every time you make
+# code change in development.
+#
+# NOTE: If you edit this file, make sure to update setup.py
+#
+
 alembic
 babel
 celery[redis]>=3.1,<3.1.99
