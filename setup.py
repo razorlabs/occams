@@ -42,6 +42,10 @@ REQUIRES = [
     'wtforms-json',
     'wtforms-components',
     'zope.sqlalchemy',
+
+    'occams',
+    'occams_datastore',
+    'occams_accounts',
 ]
 
 EXTRAS = {
