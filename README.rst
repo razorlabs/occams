@@ -128,16 +128,27 @@ Ideally, your project should follow it's only independent history,
 were you might depend on certain dependant database structure changes. If this is the case, please
 refer to the following scenarios:
 
-If your project begins as an independent database structure::
+New Projects
+''''''''''''
+
+If your project **begins as an independent** database structure::
 
   $ alembic -c /path/to/ini revision -m "MESSAGE" --head=base --branch-label=MYAPP --version-path=/path/to/app/versions
 
 
-If your project begins depending on a specific database structure::
+If your project **begins depending** on a specific database structure::
 
   $ alembic -c /path/to/ini revision -m "MESSAGE" --head=REVISION --splice --branch-label=MYAPP --version-path=/path/to/app/versions
 
+Existing Projects
+'''''''''''''''''
 
-If your project's revision depends on a certain project's revision::
+If your project's revision **continues** the history::
+
+  $ alembic -c /path/to/ini revision -m "MESSAGE" --head=MYAPP@head --version-path=/path/to/app/versions
+
+If your project's revision depends on a **another** project's revision::
 
   $ alembic -c /path/to/ini revision -m "MESSAGE" --head=MYAPP@base --depends-on=REVISION --version-path=/path/to/app/versions
+  
+
