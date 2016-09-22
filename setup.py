@@ -1,69 +1,21 @@
 import os
+import re
 from setuptools import setup, find_packages
 from setuptools.command.develop import develop as _develop
 
+
+def yield_packages(path):
+    """Simple parser for requirements.txt files"""
+    with open(path) as requirements:
+        for line in requirements:
+            if re.match('^[a-zA-Z]', line):
+                yield line.strip()
+
+
 HERE = os.path.abspath(os.path.dirname(__file__))
+REQUIRES = list(yield_packages(os.path.join(HERE, 'requirements.txt')))
+DEVELOP = list(yield_packages(os.path.join(HERE, 'requirements-develop.txt')))
 README = open(os.path.join(HERE, 'README.rst')).read()
-
-
-REQUIRES = [
-    #
-    # Package dependencies
-    #
-    # NOTE: If you edit these requirements, make sure you update the
-    # requirements-develop.txt file
-    #
-    'alembic',
-    'babel',
-    'celery[redis]>=3.1,<3.1.99',
-    'cssmin',
-    'filemagic',
-    'gevent',
-    'gunicorn==19.3',
-    'humanize',
-    'jsmin',
-    'lingua',
-    'psycopg2',
-    'python-dateutil',
-    'python-slugify',
-    'pyramid>=1.7',
-    'pyramid_chameleon',
-    'pyramid_exclog',
-    'pyramid_tm',
-    'pyramid_redis_sessions',
-    'pyramid_redis',
-    'pyramid_webassets',
-    'pyramid_who',
-    'repoze.who>=2.3.0',
-    'six',
-    'SQLAlchemy',
-    'tabulate',
-    'wtforms>=2.0.0',
-    'wtforms-json',
-    'wtforms-components',
-    'zope.sqlalchemy',
-
-    'occams_datastore',
-    'occams',
-    'occams_accounts',
-    'occams_forms',
-    'occams_roster',
-]
-
-EXTRAS = {
-    'test': [
-        'sphinx',
-        'sphinx-autobuild',
-        'pyramid_debugtoolbar',
-        'pytest',
-        'pytest-cov',
-        'fake-factory',
-        'WebTest',
-        'beautifulsoup4',
-        'mock',
-        'who_dev>=0.0.2',
-    ]
-}
 
 
 def get_version():
@@ -125,17 +77,17 @@ setup(
         "Topic :: Internet :: WWW/HTTP",
         "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
     ],
-    author='The YoungLabs',
+    author='RazorLabs',
     author_email='younglabs@ucsd.edu',
-    url='https://github.com/younglabs/occams_studies',
+    url='https://github.com/razorlabs/occams_studies',
     keywords='web wsgi bfg pylons pyramid',
     license='BSD',
     packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
     install_requires=REQUIRES,
-    extras_require=EXTRAS,
-    tests_require=EXTRAS['test'],
+    extras_require={'develop': DEVELOP, 'test': DEVELOP},
+    tests_require=DEVELOP,
     cmdclass={'develop': _custom_develop},
     entry_points="""\
     [console_scripts]

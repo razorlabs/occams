@@ -16,7 +16,7 @@ RUN npm install -g less && npm install -g bower
 RUN echo '{ "allow_root": true }' > /root/.bowerrc
 
 # Install dependencies first so they are cached
-COPY ./requirements-develop.txt /tmp
+COPY ./requirements*.txt /tmp/
 RUN pip install --upgrade -r /tmp/requirements-develop.txt
 
 ADD ./ /app
