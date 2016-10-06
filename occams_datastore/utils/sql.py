@@ -5,7 +5,7 @@ Cross-vendor compatibility functions
 import json
 
 from sqlalchemy import func, collate
-from sqlalchemy.dialects import postgres
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.expression import FunctionElement
 from sqlalchemy.types import TypeDecorator, TEXT, VARCHAR
