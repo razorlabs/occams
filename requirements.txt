@@ -25,7 +25,7 @@ pyramid_webassets
 pyramid_who
 repoze.who>=2.3.0
 six
-SQLAlchemy
+SQLAlchemy>=1.0.0,<1.1.0
 tabulate
 wtforms>=2.0.0
 wtforms-json
