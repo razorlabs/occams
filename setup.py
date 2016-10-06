@@ -9,7 +9,7 @@ HERE = os.path.abspath(os.path.dirname(__file__))
 REQUIRES = [
     'alembic',
     'six',
-    'SQLAlchemy'
+    'SQLAlchemy>=1.0.0,<1.1.0'
 ]
 
 EXTRAS = {
