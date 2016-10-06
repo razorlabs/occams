@@ -96,7 +96,7 @@ class JSON(TypeDecorator):
 
     def load_dialect_impl(self, dialect):
         if dialect.name == 'postgresql':
-            impl = postgres.JSON()
+            impl = postgresql.JSON()
         else:
             impl = TEXT()
         return dialect.type_descriptor(impl)
