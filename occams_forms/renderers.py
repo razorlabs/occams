@@ -562,12 +562,7 @@ def apply_data(session, entity, data, upload_path):
                 dest_path = os.path.join(upload_path, generated_path)
 
                 # create a directory excluding the filename
-                try:
-                    os.makedirs(os.path.dirname(dest_path))
-                except OSError as error:
-                    msg = 'Create directory error for blob upload preview: ' \
-                          '{} - {}'
-                    log.warn(msg.format(dest_path, error))
+                os.makedirs(os.path.dirname(dest_path))
 
                 # Write to a temporary file to prevent using incomplete files
                 temp_dest_path = dest_path + '~'
