@@ -197,20 +197,30 @@ def make_field(attribute):
         kw['validators'].append(DateRange(min=datetime(1899, 12, 31)))
 
     elif attribute.type == 'choice':
-        kw['choices'] = [(c.name, c.title) for c in attribute.iterchoices()]
+        choices = list(attribute.iterchoices())
+
+        if len(choices) > 10:
+            attribute_widget = 'select'
+            label = '{choice.title} - [ {choice.name} ]'
+        else:
+            attribute_widget = None
+            label = '{choice.title}'
+
+        kw['choices'] = [(c.name, label.format(choice=c)) for c in choices]
+
         # If true, parse as string, else return none
         kw['coerce'] = lambda v: six.binary_type(v) if v else None
 
         if attribute.is_collection:
             field_class = wtforms.SelectMultipleField
-            if attribute.widget == 'select':
+            if attribute_widget == 'select':
                 kw['widget'] = wtforms.widgets.Select(multiple=True)
             else:
                 kw['widget'] = wtforms.widgets.ListWidget(prefix_label=False)
                 kw['option_widget'] = wtforms.widgets.CheckboxInput()
         else:
             field_class = wtforms.SelectField
-            if attribute.widget == 'select':
+            if attribute_widget == 'select':
                 kw['widget'] = wtforms.widgets.Select()
             else:
                 kw['widget'] = wtforms.widgets.ListWidget(prefix_label=False)
