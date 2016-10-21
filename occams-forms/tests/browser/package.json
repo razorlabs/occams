@@ -1,0 +1,11 @@
+{
+    "name": "occams.forms.test"
+  , "version": "3.0.0"
+  , "description": "Unit tests for form javascript form editor scripts."
+  , "devDependencies": {
+        "chai": "*"
+      , "mocha": "*"
+      , "serve": "*"
+      , "sinon": "%"
+    }
+}

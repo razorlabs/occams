@@ -1,0 +1,92 @@
+<!--! Master Datastore Form rendering tempalte
+
+      This
+
+  -->
+<form
+    class="js-formentry"
+    enctype="multipart/form-data"
+    tal:attributes="attr|nothing"
+    tal:define="macros load:wtforms.pt">
+
+  <!--! We use the "modal-*" classes in case the form
+        is rendered inside of a modal window. The desired stylist outcomes
+        should be similar:
+          * header with title and id,
+          * body with form
+          * footer with form actions
+        all sperated by a visual separator
+  -->
+
+  <div class="modal-header">
+    <div class="pull-right" tal:condition="entity">
+      <ul class="list-inline">
+        <li>
+          <span class="text-muted">ID:</span>
+          <code>${entity.id}</code>
+        </li>
+        <li>
+          <span class="text-muted">State:</span>
+          <!--! TODO: maybe one day we'll have a customizable workfow... -->
+          <tal:state define="state entity.state" switch="state.name|nothing">
+            <span tal:case="string:pending-entry" class="label label-danger">${state.title}</span>
+            <span tal:case="string:in-progress" class="label label-info">${state.title}</span>
+            <span tal:case="string:pending-review" class="label label-warning">${state.title}</span>
+            <span tal:case="string:pending-correction" class="label label-primary">${state.title}</span>
+            <span tal:case="string:complete" class="label label-success">${state.title}</span>
+            <span tal:case="default" class="label label-default">Unknown</span>
+          </tal:state>
+        </li>
+      </ul>
+    </div>
+    <h4 class="modal-title">${schema.title}</h4>
+  </div>
+
+  <div class="modal-body">
+
+    <div class="alert alert-danger" tal:condition="form.errors">
+      <strong>Please see error messages below.</strong>
+    </div>
+
+    <metal:fields use-macro="macros.fields" />
+
+  </div>
+
+  <!--! Show all input elements (if any) in the footer as inline so they don't
+        obsruct visual formatting.
+    -->
+  <div class="modal-footer form-inline" tal:condition="python: show_footer">
+
+    <a href="${cancel_url}" class="btn btn-link" i18n:translate="">Cancel</a>
+
+    <!--! We want the workflow transtion drop down to be the only updaable element
+          in the page (if the use can select one, that is)
+      -->
+    <tal:submit tal:define="field form.ofworkflow_.state|nothing">
+      <div class="form-group ${'has-error' if field.errors else ''}" tal:omit-tag="not:field">
+        <span class="input-group select2-bootstrap-append" tal:omit-tag="not:field">
+          <tal:field condition="field">
+            ${field(class_='form-control js-select2', placeholder=field.label.text)}
+          </tal:field>
+          <span class="input-group-btn" tal:omit-tag="not:field">
+
+            <!--! This button, should at the very least show up (if writable) -->
+            <button
+                type="submit"
+                class="btn btn-primary"
+                tal:define="state_name entity.state.name|'pending-entry'"
+                tal:condition="python: field or state_name != 'complete'"
+                tal:attributes="disabled disabled"
+                i18n:translate="">Save</button>
+
+          </span>
+        </span>
+        <div class="errors" tal:condition="field">
+          <div class="help-block" tal:repeat="error field.errors">${error}</div>
+        </div>
+      </div>
+    </tal:submit>
+
+  </div>
+
+</form>
