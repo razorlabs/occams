@@ -18,7 +18,7 @@ python-slugify
 pyramid>=1.7
 pyramid_chameleon
 pyramid_exclog
-pyramid_tm>=0.12.0,<1.0.0
+pyramid_tm==0.12.1
 pyramid_redis_sessions
 pyramid_redis
 pyramid_webassets
