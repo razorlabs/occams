@@ -1,0 +1,34 @@
+<div class="modal-content">
+  <div class="modal-header">
+    <h4 class="modal-title" i18n:translate="">Randomize Patient (Step 3 of 3)</h4>
+  </div>
+  <div class="modal-body">
+
+    <div class="alert alert-info" i18n:translate="">Please verify your responses before finalizing</div>
+
+    <tal:alerts
+        define="types python:['danger', 'warning', 'success', 'info']"
+        repeat="type types">
+      <div
+          class="alert alert-${type}"
+          tal:define="alerts python:request.session.pop_flash(type)"
+          tal:repeat="alert alerts">${alert}</div>
+    </tal:alerts>
+
+    <form tal:replace="structure: form"></form>
+
+  </div> <!-- /.modal-body -->
+  <div class="modal-footer">
+      <button
+          type="button"
+          class="btn btn-link"
+          data-bind="click: $root.clear"
+          i18n:translate="">Cancel</button>
+      <button type="submit" class="btn btn-primary" form="enrollment-randomization">
+        <span i18n:translate="">Finalize</span>
+        <!-- ko if: $root.isSaving -->
+          <span class="fa fa-refresh fa-spin"></span>
+        <!-- /ko -->
+      </button>
+  </div>
+</div><!-- /.modal-content -->

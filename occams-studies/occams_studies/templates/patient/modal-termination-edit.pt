@@ -1,0 +1,7 @@
+<div class="modal fade" data-bind="modalVisible: $root.showTerminateEnrollment">
+  <div class="modal-dialog modal-lg" data-bind="if: $root.showTerminateEnrollment">
+    <div class="modal-content" data-bind="with: $root.editableItem">
+      <div data-bind="htmlBind: termination_ui"></div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->

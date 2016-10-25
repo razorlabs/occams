@@ -1,0 +1,240 @@
+<html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
+  <metal:content-slot fill-slot="content-slot">
+    <div id="exports_status">
+      <header class="page-header">
+        <h1 i18n:translate="">Exports</h1>
+        <nav metal:use-macro="load: header-nav.pt" />
+      </header>
+      <tal:alerts repeat="type ('error', 'warning', 'info', 'success')">
+        <div
+            class="alert alert-${type}"
+            tal:repeat="msg request.session.pop_flash(type)">
+          <button type="button" class="close" data-dismiss="alert"
+              aria-hidden="true">&times;</button>
+          ${msg}
+        </div>
+      </tal:alerts>
+
+      <p class="text-center" data-bind="visible:!ready()">
+        <span i18n:translate="">Loading...</span>
+        <span class="fa fa-spin fa-refresh"></span>
+      </p>
+
+      <!--! Evaluate Knockout bindings only there is content to display -->
+      <div style="display: none;" data-bind="visible: ready">
+
+        <!-- ko with: socketStatus -->
+          <div data-bind="css: css, text: text"></div>
+        <!-- /ko -->
+
+        <!--! Status messsag to display if no content -->
+        <div data-bind="ifnot: has_exports">
+          <div
+              class="alert alert-info"
+              i18n:translate="">
+            You have no exports pending.
+          </div>
+        </div>
+
+        <!--! Export status panels -->
+        <div data-bind="template: {foreach: exports}">
+          <div data-bind="attr: { id:       'export-' + id(),
+                                  'class':  'export panel panel-' + status()}">
+            <div class="panel-heading clearfix">
+              <div class="pull-right export-status">
+                <span
+                    class="label label-warning"
+                    data-bind="if:status() == 'pending'"
+                    i18n:translate="">In Progess</span>
+                <span
+                    class="label label-danger"
+                    data-bind="if:status() == 'failed'"
+                    i18n:translate="">Failed</span>
+                <div data-bind="if:status() == 'complete'" class="text-muted">
+                  <small>
+                    <span>
+                      Created on <span data-bind="text:create_date"></span>
+                    </span>
+                    <br/>
+                    <span data-bind="if:expire_date">
+                      Available until <span data-bind="text:expire_date"></span>
+                    </span>
+                  </small>
+                </div>
+              </div>
+              <h3 class="panel-title export-title" data-bind="text:title"></h3>
+              <ul class="details list-inline">
+                <li>
+                  <small class="text-muted" i18n:translate="">Choices:</small>
+                  <!-- ko if: use_choice_labels -->
+                    <small>Labels</small>
+                  <!-- /ko -->
+                  <!-- ko ifnot: use_choice_labels -->
+                    <small>Codes</small>
+                  <!-- /ko -->
+                </li>
+                <li>
+                  <small class="text-muted" i18n:translate="">Multi-Selects:</small>
+                  <!-- ko if: expand_collections -->
+                    <small>Split</small>
+                  <!-- /ko -->
+                  <!-- ko ifnot: expand_collections -->
+                    <small>Delimited</small>
+                  <!-- /ko -->
+                </li>
+              </ul>
+            </div> <!-- panel-heading -->
+            <div class="panel-body">
+              <!-- ko if: status() == 'pending' -->
+                <div class="progress progress-striped active">
+                  <div
+                      class="progress-bar"
+                      role="progressbar"
+                      aria-valuenow="0"
+                      aria-valuemin="0"
+                      aria-valuemax="100"
+                      data-bind="
+                        attr: {'aria-valuenow': progress},
+                        style: {'width': progress() + '%'}">
+                    <span class="sr-only" data-bind="text: progress"></span>
+                  </div>
+                </div>
+                <hr />
+              <!-- /ko -->
+              <!-- ko if: status() == 'complete' -->
+                <a  target="_blank"
+                    i18n:translate=""
+                    class="btn btn-primary"
+                    data-bind="attr: {href: download_url}"
+                    ><span class="glyphicon glyphicon-download-alt"></span> Download</a>
+                <span class="export-file">
+                  export.zip &bull; <span data-bind="text:file_size"></span>
+                </span>
+                <hr />
+              <!-- /ko -->
+              <div class="export-controls">
+                <button
+                    class="btn btn-link export-contents-toggle collapsed"
+                    data-toggle="collapse"
+                    data-bind="
+                      attr: {
+                        'data-target': '#export-collapse-' + id()
+                      }"
+                    i18n:translate=""
+                  >Contents</button>
+                <button
+                    class="btn btn-link pull-right"
+                    data-bind="click: $root.confirmDelete"
+                    i18n:translate=""
+                    >Delete export</button>
+              </div>
+            </div> <!-- /panel-body -->
+            <div
+                class="collapse table-responsive export-contents"
+                data-bind="attr: {id: 'export-collapse-' + id()}">
+              <table class="table table-condensed">
+                <thead>
+                  <tr>
+                    <th class="has_private">
+                      <span class="glyphicon glyphicon-user"></span>
+                    </th>
+                    <th class="title" i18n:translate="">Title</th>
+                    <th class="name" i18n:translate="">Name</th>
+                    <th class="version" i18n:translate="">Version</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- ko foreach: contents -->
+                    <tr>
+                      <td>
+                        <!-- ko if: has_private -->
+                          <span
+                              class="glyphicon glyphicon-user"
+                            title="Has private information"></span>
+                        <!-- /ko -->
+                      </td>
+                      <td class="title" data-bind="text:title"></td>
+                      <td class="name"><code data-bind="text:name"></code></td>
+                      <td class="version">
+                        <!-- ko foreach: versions -->
+                          <p data-bind="text: $data"></p>
+                        <!-- /ko -->
+                      </td>
+                    </tr>
+                  <!-- /ko -->
+                </tbody>
+              </table>
+            </div> <!-- /#export-collapse -->
+          </div> <!-- /.panel -->
+        </div> <!-- /#exports -->
+
+        <div data-bind="with: pager">
+          <!-- ko if: total_count > per_page -->
+          <ul class="pager">
+            <li class="previous" data-bind="css: {'disabled': is_first}">
+              <a data-bind="
+                  click: $root.onPageClick,
+                  attr: {
+                    'data-page': previous_page,
+                    'href': '?page=' + previous_page}">&larr; Newer</a>
+            </li>
+            <li class="next" data-bind="css: {'disabled': is_last}">
+              <a data-bind="
+                  click: $root.onPageClick,
+                  attr: {
+                    'data-page': next_page,
+                    'href': '?page=' + next_page}">Older &rarr;</a>
+            </li>
+          </ul>
+          <!-- /ko -->
+        </div>
+
+       </div> <!-- /visible -->
+
+      <!--! Modal for confirming that the user wants to cancel an export -->
+      <div
+          class="modal fade"
+          tabindex="-1"
+          role="dialog"
+          aria-hidden="true"
+          data-bind="modalVisible: selectedExport">
+        <div class="modal-dialog">
+          <div class="modal-content" data-bind="with: selectedExport">
+            <div class="modal-header">
+              <button type="button"
+                  class="close"
+                  data-dismiss="modal"
+                  aria-hidden="true">&times;</button>
+              <h4 class="modal-title">Confirm Delete</h4>
+            </div>
+            <div class="modal-body">
+              You are about to delete <strong data-bind="text:title"></strong>
+              This action will cancel the process if it has not completed.
+              Are you sure you want to continue?
+            </div>
+            <div class="modal-footer">
+              <button type="button"
+                  class="btn btn-link"
+                  data-dismiss="modal">Cancel</button>
+              <button type="button"
+                  class="btn btn-danger"
+                  data-bind="click: $root.deleteExport">Yes, I'm sure.</button>
+            </div>
+          </div>
+        </div>
+      </div><!-- /.modal -->
+    </div>
+  </metal:content-slot>
+  <metal:content-slot fill-slot="javascript-slot">
+  <script>
+    $(function(){
+      ko.applyBindings(
+        new StatusViewModel({
+          notifications_url: "${request.route_path('studies.exports_notifications')}",
+        }),
+        document.getElementById('exports_status')
+      );
+    });
+  </script>
+ </metal:content-slot>
+</html>

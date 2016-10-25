@@ -1,0 +1,114 @@
+<html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
+  <metal:content-slot fill-slot="content-slot">
+    <div class="row">
+      <div id="patients-section" class="col-sm-4" style="display: none" data-bind="visible: isReady">
+        <p>
+          <button class="btn btn-primary"
+              data-bind=" click: startAddPatient"
+              tal:define="models import:occams_studies.models"
+              tal:condition="request.has_permission('add', models.PatientFactory(request))">
+            <span class="fa fa-user"></span>
+            <span i18n:translate="">Add Patient</span>
+          </button>
+        </p>
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <h3 class="panel-title" i18n:translate="">Recently Viewed Patients</h3>
+          </div>
+          <div class="panel-body" tal:condition="viewed_count <= 0">
+            <p class="text-muted text-center" i18n:translate="">Nothing viewed recently</p>
+          </div>
+          <ul class="list-group" tal:condition="viewed_count > 0">
+            <tal:patients tal:define="humanize import:humanize" repeat="patient viewed">
+              <li class="list-group-item">
+                <a href="${request.route_path('studies.patient', patient=patient.pid)}">${patient.pid}</a>
+                &bull;
+                <small class="text-muted">
+                  ${humanize.naturaltime(patient['view_date'])}
+                </small>
+              </li>
+            </tal:patients>
+          </ul>
+        </div> <!-- .panel -->
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <h3 class="panel-title" i18n:translate="">Recently Modified Patients</h3>
+          </div>
+          <div class="panel-body" tal:condition="modified_count <= 0">
+            <p class="text-muted text-center" i18n:translate="">Nothing viewed recently</p>
+          </div>
+          <ul class="list-group" tal:condition="modified > 0">
+            <tal:patients tal:define="humanize import:humanize" repeat="patient modified">
+              <li class="list-group-item">
+                <a href="${request.route_path('studies.patient', patient=patient.pid)}">${patient.pid}</a>
+                &bull;
+                <small class="text-muted">
+                  ${humanize.naturaltime(patient.modify_date)}
+                  <span i18n:translate="">by</span>
+                  ${patient.modify_user.key}
+                </small>
+              </li>
+            </tal:patients>
+          </ul>
+        </div> <!-- .panel -->
+        <div metal:use-macro="load: ../patient/modal-patient-edit.pt"></div>
+      </div> <!-- /#patients-section.col-sm-4 -->
+      <div id="studies-section" class="col-sm-8" style="display: none;" data-bind="visible: isReady">
+        <p class="clearfix">
+          <button
+              tal:define="models import:occams_studies.models"
+              tal:condition="request.has_permission('add', models.StudyFactory(request))"
+              class="btn btn-default pull-right"
+              data-bind="click: startAddStudy"><span class="fa fa-mortar-board"></span> Add Study</button>
+        </p>
+        <!-- ko ifnot: hasStudies -->
+          <div class="well well-lg">
+            <span i18n:translate="">No studies have been created yet.</span>
+            <button class="btn btn-link" data-bind="click: startAddStudy">Add one</button>
+          </div>
+        <!-- /ko -->
+        <!-- ko if: hasStudies -->
+          <div class="list-group" data-bind="foreach: studies">
+            <a class="list-group-item" data-bind="attr: {href: __url__}">
+              <h4 class="list-group-item-heading">
+                <span data-bind="text: title"></span>
+                <small>
+                  <!-- ko if: is_randomized -->
+                    <span class="fa fa-random" title="Randomized" i18n:attributes="title"></span>
+                  <!-- /ko -->
+                  <!-- ko if: is_blinded -->
+                    <span class="fa fa-eye-slash" title="Blinded" i18n:attributes="title"></span>
+                  <!-- /ko -->
+                </small>
+              </h4>
+              <ul class="details list-inline">
+                <li>
+                  <span class="text-muted" i18n:translate="">Code:</span>
+                  <span data-bind="text: code"></span>
+                </li>
+                <li>
+                  <span class="text-muted" i18n:translate="">Label:</span>
+                  <span data-bind="text: short_title"></span>
+                </li>
+              </ul>
+            </a>
+          </div> <!-- /.list-group -->
+        <!-- /ko -->
+        <div metal:use-macro="load: modal-study.pt"></div>
+      </div> <!-- /#studies-section -->
+    </div> <!-- /.row -->
+  </metal:content-slot>
+  <metal:content-slot fill-slot="javascript-slot">
+    <script>
+      $(function(){
+        ko.applyBindings(new PatientView, document.getElementById('patients-section'));
+
+        var studiesData = JSON.parse($('#studies-data').text());
+        ko.applyBindings(new StudyListingView(studiesData), document.getElementById('studies-section'));
+      });
+    </script>
+    <tal:json define="json import: json">
+      <script id="studies-data" type="application/json">${json.dumps(studies_data)}</script>
+    </tal:json>
+  </metal:content-slot>
+</html>

@@ -1,0 +1,41 @@
+<div class="modal fade" data-bind="modalVisible: $root.showDeleteEnrollment">
+  <div class="modal-dialog" data-bind="if: $root.showDeleteEnrollment">
+    <div class="modal-content" data-bind="with: $root.selectedItem">
+      <form data-bind="submit: $root.deleteEnrollment">
+        <div class="modal-header">
+          <h4 class="modal-title" i18n:translate="">Confirm Delete</h4>
+        </div>
+        <div class="modal-body">
+          <!-- ko if: $root.hasErrorMessages -->
+            <div class="alert alert-danger">
+              <p i18n:translate="">
+                Could not complete the request for the following reasons:
+              </p>
+              <ul data-bind="foreach: $root.errorMessages">
+                <li data-bind="text: $data"></li>
+              </ul>
+            </div>
+          <!-- /ko -->
+          <p i18n:translate="">You are about to delete the following enrollment. This is an irreversable action. Are you sure you want to proceed?</p>
+          <dl class="dl-horizontal">
+            <dt>Study<dt><dd><span data-bind="text: study.title"></span></dd>
+            <dt>Consent<dt><dd><code data-bind="text: consent_date"></code></dd>
+            <!-- ko if: reference_number -->
+              <dt>Reference #<dt><dd><code data-bind="text: reference_number"></code></dd>
+            <!-- /ko -->
+          </dl>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-bind="click: $root.clear" i18n:translate="">Cancel</button>
+          <button type="submit" class="btn btn-danger">
+            <span i18n:translate="">Delete</span>
+            <!-- ko if: $root.isSaving -->
+              <span class="fa fa-refresh fa-spin"></span>
+            <!-- /ko -->
+          </button>
+        </div>
+      </form>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+

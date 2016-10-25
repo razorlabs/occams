@@ -1,0 +1,25 @@
+<nav tal:define="section section|request.current_route_path()">
+  <ul class="nav nav-header">
+    <li tal:define="url request.current_route_path(_route_name='studies.exports')"
+        tal:attributes="class python:'active' if section == url else ''">
+      <a href="${url}">Overview</a>
+    </li>
+    <li tal:define="url request.current_route_path(_route_name='studies.exports_checkout')"
+        tal:attributes="class python:'active' if section == url else ''">
+      <a href="${url}">Create an Export</a>
+    </li>
+    <li tal:define="url request.current_route_path(_route_name='studies.exports_status')"
+        tal:attributes="class python:'active' if section == url else ''">
+      <a href="${url}">My Exports</a>
+    </li>
+    <li tal:define="url request.current_route_path(_route_name='studies.exports_codebook')"
+        tal:attributes="class python:'active' if section == url else ''">
+      <a href="${url}">Codebook</a>
+    </li>
+    <li tal:define="url request.current_route_path(_route_name='studies.exports_faq')"
+        tal:attributes="class python:'active' if section == url else ''">
+      <a href="${url}">FAQ</a>
+    </li>
+  </ul>
+</nav>
+

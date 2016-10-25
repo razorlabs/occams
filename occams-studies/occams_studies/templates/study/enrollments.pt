@@ -1,0 +1,124 @@
+<html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
+  <metal:content-slot fill-slot="content-slot">
+
+    <header class="page-header">
+      <h1 i18n:translate="">${context.title}</h1>
+      <ul metal:use-macro="load: header-details-server.pt" />
+      <nav metal:use-macro="load: header-nav.pt" />
+    </header>
+
+    <table class="table table-bordered table-condensed">
+      <thead>
+        <tr>
+          <th i18n:translate="">Active</th>
+          <th i18n:translate="">Terminated</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><a href="${request.current_route_path(_query={'status': 'active'})}">${total_active}</a></td>
+          <td><a href="${request.current_route_path(_query={'status': 'terminated'})}">${total_terminated}</a></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="alert alert-info" tal:condition="not:enrollments">
+      No enrollments found.
+    </div>
+
+    <tal:enrollments condition="enrollments">
+      <div class="row">
+        <div class="col-md-6">
+          <span i18n:translate="">
+            Enrollments
+            <strong i18n:name="offset">${offset_start}</strong> - <strong i18n:name="offset_end">${offset_end}</strong>
+            of
+            <strong i18n:name="total">${pagination.total_count}</strong>.
+            <span tal:condition="params['status']" tal:switch="params['status']">
+              <span i18n:translate="">Filterted by</span>
+              <strong tal:case="'active'" i18n:translate="">Active</strong>
+              <strong tal:case="'terminated'" i18n:translate="">Terminated</strong>
+              <a href="${request.current_route_path(_query={
+                'status': None,
+                'start': params['start'],
+                'end': params['end']})}"><span class="fa fa-close"></span></a>
+            </span>
+          </span>
+        </div>
+        <div class="col-md-6 text-right">
+          <form class="form-inline" role="form" action="${request.current_route_path(_query={'status': params['status']})}" method="GET">
+            <div class="form-group" tal:define="name 'start'">
+              <label class="sr-only" for="${name}" i18n:translate="">From</label>
+              <input
+                  type="date"
+                  class="form-control"
+                  id="${name}"
+                  name="${name}"
+                  data-date-format="YYYY-MM-DD"
+                  value="${params[name]}"
+                  placeholder="From"
+                  i18n:attributes="placeholder" />
+            </div>
+            <div class="form-group" tal:define="name 'end'">
+              <label class="sr-only" for="${name}" i18n:translate="">To</label>
+              <input
+                  type="date"
+                  class="form-control"
+                  id="${name}"
+                  name="${name}"
+                  data-date-format="YYYY-MM-DD"
+                  value="${params[name]}"
+                  placeholder="To"
+                  i18n:attributes="placeholder" />
+            </div>
+            <a href="${request.current_route_path(_query={'status': params['status']})}" class="btn btn-default"><span class="fa fa-close"></span></a>
+            <button type="submit" class="btn btn-default"><span class="fa fa-filter"></span></button>
+          </form>
+        </div>
+      </div>
+
+      <br />
+
+      <table class="table table-bordered table-hover table-striped">
+        <thead>
+          <tr>
+            <th i18n:translate="">PID</th>
+            <th i18n:translate="">Enrollment IDs</th>
+            <th i18n:translate="">Enrollment Date</th>
+            <th i18n:translate="">Termination Date</th>
+            <th i18n:translate="">Consent Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr tal:repeat="enrollment enrollments">
+            <td><a href="${request.route_path('studies.patient', patient=enrollment.pid)}">${enrollment.pid}</a></td>
+            <td>${enrollment.reference_number}</td>
+            <td>${enrollment.consent_date}</td>
+            <td>${enrollment.termination_date}</td>
+            <td>${enrollment.latest_consent_date}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <ul class="pagination">
+        <li class="${'disabled' if pagination.is_first else ''}">
+          <a href="${make_page_url(1)}">&laquo;</a>
+        </li>
+        <li class="${'disabled' if not pagination.has_previous else ''}">
+          <a href="${make_page_url(pagination.previous_page)}">&lsaquo;</a>
+        </li>
+        <li tal:repeat="page pagination.iter_pages(left_edge=0, left_current=2, right_current=5, right_edge=0)" class="${'active' if page == pagination.page else ''}">
+          <a href="${make_page_url(page)}" tal:condition="page">${page}<span class="sr-only" i18n:translate="">(current)</span></a>
+        </li>
+        <li class="${'disabled' if not pagination.has_next else ''}">
+          <a href="${make_page_url(pagination.next_page)}">&rsaquo;</a>
+        </li>
+        <li class="${'disabled' if pagination.is_last else ''}">
+          <a href="${make_page_url(pagination.pages)}">&raquo;</a>
+        </li>
+      </ul>
+    </tal:enrollments>
+
+  </metal:content-slot>
+</html>
+

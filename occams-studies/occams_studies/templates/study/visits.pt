@@ -1,0 +1,116 @@
+<html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
+  <metal:content-slot fill-slot="content-slot">
+
+    <header class="page-header">
+      <h1 i18n:translate="">${context.title}</h1>
+      <ul metal:use-macro="load: header-details-server.pt" />
+      <nav metal:use-macro="load: header-nav.pt" />
+    </header>
+
+    <div class="row">
+      <div class="col-md-4">
+        <table class="table table-bordered">
+          <thead>
+            <tr>
+              <th></th>
+              <th i18n:translate="">Enrolled</th>
+              <th i18n:translate="">Terminated</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th i18n:translate="">This month</th>
+              <td>${start_this_month}</td>
+              <td>${end_this_month}</td>
+            </tr>
+            <tr>
+              <th i18n:translate="">Last month</th>
+              <td>${start_last_month}</td>
+              <td>${end_last_month}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="col-md-4">
+        <table class="table table-bordered">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Total Enrollments</th>
+            </tr>
+            <tr>
+              <th i18n:translate="">To Date</th>
+              <td>${all_time}</td>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th i18n:translate="">Active</th>
+              <td>${active}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="col-md-4">
+        <table class="table table-bordered">
+          <thead>
+            <tr>
+              <th>Arm</th>
+              <th i18n:translate="">Total Enrollments</th>
+            </tr>
+          </thead>
+          <tbody tal:condition="context.is_randomized">
+            <tr tal:repeat="arm arms">
+              <th>${arm.title}</th>
+              <td>${arm.enrollment_count}</td>
+            </tr>
+          </tbody>
+          <tbody tal:condition="not:context.is_randomized">
+            <td colspan="2" class="active">
+              <em i18n:translate="">This study is not randomized</em>
+            </td>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="alert alert-info" tal:condition="not:has_cycles" i18n:translate="">
+      No cycle information has been added yet
+    </div>
+
+    <div class="table-responsive table-scrollable" tal:condition="has_cycles">
+      <table class="table table-bordered table-striped">
+        <thead>
+          <tr>
+            <th rowspan="2" i18n:translate="">Cycle</th>
+            <th rowspan="2" i18n:translate="">Visits</th>
+            <th colspan="${cycles_count}" i18n:translate="">Visits by data-entry state (Not mutually exclusive)</th>
+          </tr>
+          <tr>
+            <th tal:repeat="state states">${state.title}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr tal:repeat="cycle cycles">
+            <td>
+              <a href="${request.current_route_path(_route_name='studies.study_visits_cycle', cycle=cycle.name)}">${cycle.title}</a>
+            </td>
+            <td>
+              <span
+                  tal:define="value cycle.visits_count"
+                  tal:condition="value > 0"
+                  tal:replace="value"></span>
+            </td>
+            <td tal:repeat="state states">
+              <a href="${request.current_route_path(_route_name='studies.study_visits_cycle', cycle=cycle.name, _query={'by_state': state.name})}"
+                  tal:define="value python:getattr(cycle, state.name)"
+                  tal:condition="value > 0">${value}</a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </metal:content-slot>
+</html>
+

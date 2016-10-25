@@ -1,0 +1,34 @@
+<div class="modal fade" data-bind="modalVisible: $root.showDeletePatient">
+  <div class="modal-dialog" data-bind="if: $root.showDeletePatient">
+    <div class="modal-content">
+      <form data-bind="submit: $root.deletePatient">
+        <div class="modal-header">
+          <h4 class="modal-title" i18n:translate="">Confirm Delete</h4>
+        </div>
+        <div class="modal-body">
+          <!-- ko if: $root.hasErrorMessages -->
+            <div class="alert alert-danger">
+              <p i18n:translate="">
+                Could not complete the request for the following reasons:
+              </p>
+              <ul data-bind="foreach: $root.errorMessages">
+                <li data-bind="text: $data"></li>
+              </ul>
+            </div>
+          <!-- /ko -->
+          <p i18n:translate="">You are about to delete this patient. This is an irreversable action. Are you sure you want to proceed?</p>
+        </div> <!-- /.modal-body -->
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-bind="click: $root.clear">Cancel</button>
+          <button type="submit" class="btn btn-danger" i18n:translate="">
+            <span i18n:translate="">Delete</span>
+            <!-- ko if: $root.isSaving -->
+              <span class="fa fa-refresh fa-spin"></span>
+            <!-- /ko -->
+          </button>
+        </div>
+      </form>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+

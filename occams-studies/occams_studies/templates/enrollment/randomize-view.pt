@@ -1,0 +1,31 @@
+<div class="modal-content">
+  <div class="modal-header">
+      <div class="btn-toolbar pull-right">
+        <div class="btn-group">
+          <a class="btn btn-default"
+            target="_blank"
+            href="${request.current_route_path(_route_name='studies.enrollment_randomization')}">
+              <span class="fa fa-print"></span> <span i18n:translate="">Print</span></a>
+        </div>
+      </div>
+      <h4 class="modal-title" i18n:translate="">Randomization Status</h4>
+  </div>
+  <div class="modal-body">
+    <tal:alerts
+        define="types python:['danger', 'warning', 'success', 'info']"
+        repeat="type types">
+      <div
+          class="alert alert-${type}"
+          tal:define="alerts python:request.session.pop_flash(type)"
+          tal:repeat="alert alerts">${alert}</div>
+    </tal:alerts>
+    <div metal:use-macro="load: randomize-details.pt"></div>
+  </div> <!-- /.modal-body -->
+  <div class="modal-footer">
+    <button
+        type="button"
+        class="btn btn-link"
+        data-bind="click: $root.clear"
+        i18n:translate="">Close</button>
+  </div>
+</div><!-- /.modal-content -->

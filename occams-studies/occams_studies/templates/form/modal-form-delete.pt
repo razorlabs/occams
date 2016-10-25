@@ -1,0 +1,35 @@
+<div class="modal fade" data-bind="modalVisible: $root.showDeleteForm">
+  <div class="modal-dialog" data-bind="if: $root.showDeleteForm">
+    <div class="modal-content">
+      <form
+          role="form"
+          class="form-horizontal"
+          data-bind="
+            submit: $root.deleteForms,
+            validate: {}">
+        <div class="modal-header">
+          <h4 class="modal-title" i18n:translate="">Delete Selected Forms</h4>
+        </div>
+        <div class="modal-body">
+          <p i18n:translate="">
+            You are about to delete the selected forms.
+            This is an irreversable action. Are you sure you want to proceed?
+          </p>
+        </div> <!-- /.modal-body -->
+        <div class="modal-footer">
+          <button
+              type="button"
+              class="btn btn-link"
+              data-bind="click: $root.clear"
+              i18n:translate="">Cancel</button>
+          <button type="submit" class="btn btn-danger">
+            <span i18n:translate="">Delete</span>
+            <!-- ko if: $root.isSaving -->
+              <span class="fa fa-refresh fa-spin"></span>
+            <!-- /ko -->
+          </button>
+        </div>
+      </form>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->

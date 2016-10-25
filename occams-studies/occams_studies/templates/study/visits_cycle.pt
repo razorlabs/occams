@@ -1,0 +1,100 @@
+<html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
+  <metal:content-slot fill-slot="content-slot">
+
+    <header class="page-header">
+      <h1>${context.title} <small>${cycle.title}</small></h1>
+      <a href="${request.current_route_path(_route_name='studies.study_visits', _query={})}">
+        <span class="fa fa-chevron-left"></span>
+        <span i18n:translate="">Back to study visits.</span>
+      </a>
+    </header>
+
+    <table class="table table-bordered">
+      <thead>
+        <tr>
+          <th></th>
+          <th tal:repeat="state states">${state.title}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th i18n:translate="">Visits</th>
+          <td tal:repeat="state states">
+            <a href="${request.current_route_path(_query={'by_state': state.name})}"
+                tal:define="value python:visits_summary[state.name]"
+                tal:condition="value > 0">${value}</a>
+          </td>
+        </tr>
+        <tr>
+          <th i18n:translate="">Entries</th>
+          <td tal:repeat="state states">
+            <a href="${request.current_route_path(_query={'by_state': state.name})}"
+                tal:define="value python:data_summary[state.name]"
+                tal:condition="value > 0">${value}</a>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p tal:condition="visits">
+      <span i18n:translate="">
+        Visits
+        <strong i18n:name="offset">${offset_start}</strong> - <strong i18n:name="offset_end">${offset_end}</strong>
+        of
+        <strong i18n:name="total">${total_visits}</strong>.
+      </span>
+      <span i18n:translate="" tal:condition="by_state">
+        Filtered by <strong i18n:name="by_state">${by_state.title}</strong>
+      </span>
+      <a href="${request.current_route_path(_query={})}"
+        tal:condition="by_state"><span class="fa fa-close"></span></a>
+    </p>
+
+    <table class="table table-bordered table-striped" tal:condition="visits">
+      <thead>
+        <tr>
+          <th rowspan="2" i18n:translate="">PID</th>
+          <th rowspan="2" i18n:translate="">Visit Date</th>
+          <th colspan="${len(states)}" i18n:translate="" >Data summary by state</th>
+        </tr>
+        <tr>
+          <th tal:repeat="state states"
+              tal:attributes="class python:'info' if by_state and state.id == by_state.id else ''">${state.title}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr tal:repeat="visit visits">
+          <td><a href="${request.route_path('studies.patient', patient=visit.pid)}">${visit.pid}</a></td>
+          <td><a href="${request.route_path('studies.visit', patient=visit.pid, visit=visit.visit_date)}">${visit.visit_date}</a></td>
+          <td tal:repeat="state states"
+              tal:attributes="class python:'info' if by_state and state.id == by_state.id else ''">
+            <span
+                tal:define="value python:getattr(visit, state.name)"
+                tal:condition="value > 0"
+                tal:replace="value"></span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <ul class="pagination" tal:condition="visits">
+      <li class="${'disabled' if pagination.is_first else ''}">
+        <a href="${make_page_url(1)}">&laquo;</a>
+      </li>
+      <li class="${'disabled' if not pagination.has_previous else ''}">
+        <a href="${make_page_url(pagination.previous_page)}">&lsaquo;</a>
+      </li>
+      <li tal:repeat="page pagination.iter_pages(left_edge=0, left_current=2, right_current=5, right_edge=0)" class="${'active' if page == pagination.page else ''}">
+        <a href="${make_page_url(page)}" tal:condition="page">${page}<span class="sr-only" i18n:translate="">(current)</span></a>
+      </li>
+      <li class="${'disabled' if not pagination.has_next else ''}">
+        <a href="${make_page_url(pagination.next_page)}">&rsaquo;</a>
+      </li>
+      <li class="${'disabled' if pagination.is_last else ''}">
+        <a href="${make_page_url(pagination.pages)}">&raquo;</a>
+      </li>
+    </ul>
+
+  </metal:content-slot>
+</html>
+

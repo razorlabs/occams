@@ -1,0 +1,123 @@
+<html i18n:domain="occams.studies" metal:use-macro="load: ../master.pt">
+  <metal:content-slot fill-slot="content-slot">
+    <div id="exports_codebook">
+      <header class="page-header">
+        <h1 i18n:translate="">Exports</h1>
+        <nav metal:use-macro="load: header-nav.pt" />
+      </header>
+
+      <div style="display: none;" data-bind="visible: ready">
+        <div class="row">
+          <div class="col-sm-6">
+            <select
+                data-placeholder="Select a data file..."
+                i18n:attributes="data-placeholder"
+                class="form-control"
+                data-bind="
+                  event: {change: onSelection},
+                  value: selected,
+                  select2: {allowClear: true}">
+              <option selected></option>
+              <option tal:repeat="file exportables" value="${file.name}">${file.name}.csv</option>
+            </select>
+          </div>
+          <div class="col-sm-1 text-left">
+            <span data-bind="visible:loading" class="fa fa-spin fa-refresh"></span>
+          </div>
+          <div class="col-sm-5 text-right">
+            <a class="btn btn-primary"
+                href="${request.route_path('studies.exports_codebook', _query={'alt': 'csv'})}"
+                target="_blank">
+              <span class="glyphicon glyphicon-book"></span>
+              <span i18n:translate="">Download Entire Codebook</span>
+            </a>
+          </div>
+        </div>
+
+        <br />
+
+        <div id="export-codebook-table" class="table-responsive" data-bind="if: selected">
+          <table class="table">
+            <thead>
+              <tr>
+                <th class="field">Variable</th>
+                <th class="version">Version</th>
+                <th class="question">Question</th>
+                <th class="type">Type</th>
+                <th class="is_system">
+                  <span class="glyphicon glyphicon-wrench"
+                      title="System"
+                      i18n:attributes="title"></span>
+                </th>
+                <th class="is_private">
+                  <span class="glyphicon glyphicon-user"
+                    title="Private"
+                    i18n:attributes="title"></span>
+                </th>
+                <th class="is_collection">
+                  <span class="glyphicon glyphicon-list"
+                    title="Multiple Choice"
+                    i18n:attributes="title"></span>
+                </th>
+                <th class="codes">Codes</th>
+              </tr>
+            </thead>
+            <tbody data-bind="foreach: rows">
+              <tr>
+                <td class="field"><code data-bind="text: field"></code></td>
+                <td class="version"><span data-bind="text: publish_date"></span></td>
+                <td class="question">
+                  <label data-bind="text: title, visible: title, css: {'required': is_required}"></label>
+                  <p class="help-block"  data-bind="visible: description, text: description"></p>
+                </td>
+                <td class="type"><code data-bind="text: type"></code></td>
+                <td class="is_system">
+                  <span data-bind="visible: is_system"
+                      class="glyphicon glyphicon-wrench"
+                      title="System"
+                      i18n:translate="title"></span>
+                </td>
+                <td class="is_private">
+                  <span data-bind="visible: is_private"
+                      class="glyphicon glyphicon-user"
+                      title="Private"
+                      i18n:translate="title"></span>
+                </td>
+                <td class="is_collection">
+                    <span data-bind="visible: is_collection"
+                        class="glyphicon glyphicon-list"
+                        title="Multiple Choice"
+                        i18n:translate="title"></span>
+                </td>
+                <td class="codes">
+                  <table data-bind="if: choices">
+                    <tbody data-bind="foreach: choices">
+                      <tr>
+                        <td class="code"><code data-bind="text: $data[0]"></code></td>
+                        <td class="title"><span data-bind="text: $data[1]"></span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- ko ifnot: selected -->
+          <div class="well well-lg" i18n:translate="">Nothing selected</div>
+        <!-- /ko -->
+      </div>
+    </div>
+  </metal:content-slot>
+  <metal:content-slot fill-slot="javascript-slot">
+    <script>
+      $(function(){
+        ko.applyBindings(
+          new CodebookViewModel,
+          document.getElementById('exports_codebook')
+        );
+      });
+    </script>
+  </metal:content-slot>
+</html>
