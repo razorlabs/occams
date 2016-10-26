@@ -1,0 +1,137 @@
+<html
+    i18n:domain="occams"
+    tal:define="
+      bundle_css  'main-css';
+      bundle_js   'main-js';
+    "
+    metal:use-macro="load: occams:templates/layout.pt">
+
+  <metal:navbar-header-slot fill-slot="navbar-header-slot">
+    <a class="navbar-brand"
+        href="${request.route_path('accounts.index')}">OCCAMS</a>
+  </metal:navbar-header-slot>
+
+  <metal:navbar-nav-slot fill-slot="navbar-nav-slot">
+    <ul class="nav navbar-nav"
+        tal:define="section request.current_route_path(_query={})">
+
+      <li tal:define="
+            factory import:occams_studies.models.StudyFactory;
+            studies factory(request);
+            url request.route_path('studies.index');
+            current_study request.matchdict['study']|nothing;
+            active request.matched_route.name.startswith('stud');"
+          tal:attributes="class python:'active' if active else ''"
+          tal:condition="request.has_permission('view', studies)"
+          id="studies-menu"
+          class="dropdown">
+        <a  id="studies-dropdown"
+            href="${url}"
+            data-toggle="dropdown">Studies <span class="caret"></span></a>
+        <ul class="dropdown-menu"
+            role="menu"
+            aria-labelledby="studies-dropdown">
+          <li role="presentation"
+              tal:repeat="study available_studies"
+              class="${'active' if current_study == study.name else ''}">
+            <!--! The study will inevitably be updated, so it's good to
+                  also come back and update the menu via jquery (since
+                  this part is not bound to knockout).
+            -->
+            <a role="menuitem"
+                class="js-study-option"
+                data-id="${study.id}"
+                tabindex="-1"
+                href="${request.route_path('studies.study', study=study.name)}">${study.title}</a>
+          </li>
+        </ul>
+      </li> <!-- /#studies-menu -->
+
+      <li tal:define="
+            factory import:occams_studies.models.ExportFactory;
+            exports factory(request);
+            url request.route_path('studies.exports');
+            active request.matched_route.name.startswith('studies.export');"
+          tal:attributes="class python:'active' if active else ''"
+          tal:condition="request.has_permission('view', exports)"
+          id="exports-menu"
+          class="dropdown">
+
+        <a  id="exports-dropdown"
+            href="${url}"
+            data-toggle="dropdown"
+            i18n:translate="">Exports <span class="caret"></span></a>
+        <ul class="dropdown-menu"
+            role="menu"
+            aria-labelledby="exports-dropdown">
+          <li role="presentation"
+              tal:define="route string:studies.exports"
+              class="${'active' if request.matched_route.name == route else ''}">
+            <a role="menuitem" tabindex="-1" href="${request.route_path(route)}" i18n:translate="">Overview</a>
+          </li>
+          <li role="presentation"
+              tal:define="route string:studies.exports_checkout"
+              class="${'active' if request.matched_route.name == route else ''}">
+            <a role="menuitem" tabindex="-1" href="${request.route_path(route)}" i18n:translate="">Create an Export</a>
+          </li>
+          <li role="presentation"
+              tal:define="route string:studies.exports_status"
+              class="${'active' if request.matched_route.name == route else ''}">
+            <a role="menuitem" tabindex="-1" href="${request.route_path(route)}" i18n:translate="">My Exports</a>
+          </li>
+          <li role="presentation"
+              tal:define="route string:studies.exports_codebook"
+              class="${'active' if request.matched_route.name == route else ''}">
+            <a role="menuitem" tabindex="-1" href="${request.route_path(route)}" i18n:translate="">Codebook</a>
+          </li>
+          <li role="presentation"
+              tal:define="route string:studies.exports_faq"
+              class="${'active' if request.matched_route.name == route else ''}">
+            <a role="menuitem" tabindex="-1" href="${request.route_path(route)}" i18n:translate="">FAQ</a>
+          </li>
+        </ul>
+      </li> <!-- /#exports-menu -->
+
+      <li tal:define="url request.route_path('forms.index')"
+          tal:attributes="class python:'active' if url == section else ''"
+          tal:condition="request.has_permission('view')">
+        <a href="${url}" i18n:translate="">Forms</a>
+      </li>
+      <li tal:define="url request.route_path('forms.workflow')"
+          tal:attributes="class python:'active' if url == section else ''"
+          tal:condition="request.has_permission('view')">
+        <a href="${url}" i18n:translate="">Workflows</a>
+      </li>
+
+    </ul>
+
+    <!--! Search box: do not display if already in the search view -->
+    <form class="navbar-form navbar-left" role="search"
+        method="GET"
+        action="${request.route_path('studies.patients')}"
+        tal:define="
+          factory import:occams_studies.models.PatientFactory;
+          patients factory(request)"
+        tal:condition="
+          request.has_permission('view', patients)
+            and request.matched_route.name != 'studies.patients'">
+      <div class="form-group">
+        <label class="sr-only" for="search">Search</label>
+        <div class="input-group">
+          <input
+              type="search"
+              class="form-control"
+              name="query"
+              placeholder="Search for Patient"
+              i18n:attributes="placeholder">
+          <span class="input-group-btn">
+            <button type="submit" class="btn btn-default"
+              ><span class="glyphicon glyphicon-search"></span></button>
+          </span>
+        </div>
+      </div>
+    </form>
+
+  </metal:navbar-nav-slot>
+
+</html>
