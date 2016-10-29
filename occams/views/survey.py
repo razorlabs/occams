@@ -1,4 +1,3 @@
-from collections import OrderedDict
 
 from datetime import datetime
 from pyramid.httpexceptions import \
@@ -8,12 +7,13 @@ from pyramid.view import view_config
 import six
 import sqlalchemy as sa
 from sqlalchemy import orm
+
+
+#stuff I will likely eventually need
 import wtforms
 import wtforms.fields.html5
-from zope.sqlalchemy import mark_changed
 
 from occams.utils.forms import wtferrors, ModelField, Form
-from occams_roster import generate
 from occams_datastore import models as datastore
 from occams_forms.renderers import \
     make_form, render_form, apply_data, entity_data, \
@@ -30,7 +30,7 @@ from . import (
 from .external_service import render_url
 from pyramid.response import Response
 from pyramid.renderers import render
-from occams_forms.renderers import \
+from ../renderers import \
     make_form, render_form, entity_data, \
     form2json, version2json, modes
 
