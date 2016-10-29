@@ -1258,3 +1258,57 @@ class Export(Base,
             sa.Index(
                 'ix_%s_owner_user_id' % cls.__tablename__,
                 cls.owner_user_id))
+
+class Survey(StudiesModel, datastore.Referenceable):
+    """
+        A survey object
+    """
+
+    __tablename__ = 'survey'
+
+
+    entity_id = sa.Column(sa.ForeignKey(datastore.Entity.id,
+        ondelete='CASCADE'), nullable=False)
+
+    access_code = sa.Column(sa.String, nullable=False)
+    url = sa.Column(sa.String, nullable=False)
+    expire_date = sa.Column(sa.DateTime, nullable=True)
+    status = sa.Column(sa.String, nullable=False)
+    complete_date = sa.Column(sa.DateTime, nullable=True)
+    create_date = sa.Column(sa.DateTime,
+        server_default=sa.text('CURRENT_TIMESTAMP'))
+    create_user_id = sa.Column(sa.ForeignKey(datastore.User.id))
+
+    #@declared_attr
+    #def __table_args__(cls):
+    #    return (
+        #    sa.ForeignKeyConstraint(
+        #    columns=[cls.entity_id],
+        #    refcolumns=[datastore.Entity.id],
+        #    name=u'fk_{0}_entity_id'.format(cls.__tablename__),
+        #    ondelete='CASCASE'
+        #    ),
+    #        sa.UniqueConstraint(
+    #        'url', name='uq_{0}_url'.format(cls.__tablename__))
+    #        ,)
+
+class SurveyFactory(object):
+    __acl__ = [
+        (Allow, Authenticated, 'view')
+    ]
+
+    def __init__(self, request):
+        self.request = request
+
+    def __getitem__(self, key):
+        db_session = self.request.db_session
+        try:
+            survey = (
+                db_session.query(Survey)
+                .filter_by(url=key)
+                .one()
+            )
+        except orm.exc.NoResultFound:
+            raise KeyError
+
+        return survey
